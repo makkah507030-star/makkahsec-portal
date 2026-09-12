@@ -19,4 +19,4 @@ export const isConfigured = Boolean(url && key);
 
 /** اسم المستخدم = رقم الهوية. Supabase Auth يحتاج بريدًا، فنبني بريدًا داخليًا ثابتًا. */
 export const idToEmail = (nationalId) =>
-  `${String(nationalId).trim()}@makkahsec.local`;
+  `${String(nationalId).trim()}@makkahsec.com`;
