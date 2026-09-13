@@ -88,7 +88,7 @@ export default function Accounts() {
             </div>
 
             {confirming === t.key ? (
-              <div className="mt-4 rounded-lg bg-late/5 p-3">
+              <div className="mt-4 rounded-sm2 bg-late/5 p-3">
                 <p className="text-sm leading-relaxed">
                   سيُنشأ <b className="num">{st.missing}</b> حسابًا لـ{t.label}.
                   العملية قد تستغرق دقيقة. هل تريد المتابعة؟
@@ -135,7 +135,7 @@ export default function Accounts() {
               <p className="mt-1 text-sm text-absent">
                 فشل <span className="num">{result.failed}</span> — راجعها:
               </p>
-              <div className="mt-2 max-h-48 overflow-auto rounded-lg bg-white">
+              <div className="mt-2 max-h-48 overflow-auto rounded-sm2 bg-white">
                 {(result.failures ?? []).map((f, i) => (
                   <div key={i} className="border-b border-line px-3 py-2 last:border-0">
                     <p className="text-sm">{f.name}</p>

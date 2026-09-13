@@ -1,100 +1,178 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { todayISO, todayLabel, todayDow, GRADE_NAMES } from "../../lib/schoolTime";
 
 export default function Dashboard() {
-  const [s, setS] = useState(null);
+  const [d, setD] = useState(null);
+  const date = todayISO();
+  const dow = todayDow();
 
   useEffect(() => {
     (async () => {
-      const [students, classes, devices, unmatched, lastImport, noDevice] =
-        await Promise.all([
-          supabase.from("students").select("id", { count: "exact", head: true }).eq("is_active", true),
-          supabase.from("classes").select("id", { count: "exact", head: true }),
-          supabase.from("devices").select("serial_no, label, last_seen, is_active"),
-          supabase.from("unmatched_logs").select("id", { count: "exact", head: true }).eq("resolved", false),
-          supabase.from("import_logs").select("import_type, status, started_at").order("started_at", { ascending: false }).limit(1),
-          supabase.from("v_students_without_device").select("id", { count: "exact", head: true }),
-        ]);
+      const { data: st } = await supabase.from("settings")
+        .select("key, value").in("key", ["active_year", "active_term"]);
+      const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
+      const year = m.active_year ?? "";
+      const term = Number(m.active_term ?? 1);
 
-      setS({
+      const [students, classes, teachers, guardians, devices, unmatched,
+             noDevice, lastImport, todaySched, todayMarked] = await Promise.all([
+        supabase.from("students").select("id", { count: "exact", head: true }).eq("is_active", true),
+        supabase.from("classes").select("id", { count: "exact", head: true }).eq("academic_year", year),
+        supabase.from("teachers").select("id", { count: "exact", head: true }).eq("is_active", true),
+        supabase.from("guardians").select("id", { count: "exact", head: true }).eq("is_active", true),
+        supabase.from("devices").select("serial_no, label, last_seen"),
+        supabase.from("unmatched_logs").select("id", { count: "exact", head: true }).eq("resolved", false),
+        supabase.from("v_students_without_device").select("id", { count: "exact", head: true }),
+        supabase.from("import_logs").select("import_type, status, started_at")
+          .order("started_at", { ascending: false }).limit(1),
+        dow
+          ? supabase.from("schedule")
+              .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
+              .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
+          : Promise.resolve({ data: [] }),
+        supabase.from("class_attendance").select("schedule_id").eq("attend_date", date),
+      ]);
+
+      const doneSet = new Set((todayMarked.data ?? []).map((r) => r.schedule_id));
+      const sched = todaySched.data ?? [];
+      const unmarked = sched.filter((s) => !doneSet.has(s.id))
+        .sort((a, b) => a.period_no - b.period_no);
+
+      setD({
+        year, term,
         students: students.count ?? 0,
         classes: classes.count ?? 0,
+        teachers: teachers.count ?? 0,
+        guardians: guardians.count ?? 0,
         devices: devices.data ?? [],
         unmatched: unmatched.count ?? 0,
-        lastImport: lastImport.data?.[0] ?? null,
         noDevice: noDevice.count ?? 0,
+        lastImport: lastImport.data?.[0] ?? null,
+        schedCount: sched.length,
+        unmarked,
       });
     })();
-  }, []);
+  }, [date, dow]);
 
-  if (!s) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!d) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+
+  const marked = d.schedCount - d.unmarked.length;
+  const pct = d.schedCount ? Math.round((marked / d.schedCount) * 100) : 0;
 
   return (
     <div className="space-y-5">
-      <h1 className="text-lg font-bold">الرئيسية</h1>
+      <header>
+        <h1 className="text-lg font-bold">{todayLabel()}</h1>
+        <p className="mt-0.5 text-sm text-muted">
+          العام <span className="num">{d.year}</span> · الفصل <span className="num">{d.term}</span>
+        </p>
+      </header>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card label="الطلاب" value={s.students} />
-        <Card label="الفصول" value={s.classes} />
-        <Card label="بلا ربط بصمة" value={s.noDevice} warn={s.noDevice > 0} />
-        <Card label="سجلات غير مطابقة" value={s.unmatched} warn={s.unmatched > 0} />
-      </div>
+      {/* ===== ما يحتاج متابعة اليوم ===== */}
+      {dow ? (
+        <section className="overflow-hidden rounded-card bg-mint-deep text-white shadow-card">
+          <div className="flex items-end justify-between px-5 pt-4">
+            <div>
+              <p className="text-xs text-white/60">تحضير اليوم</p>
+              <p className="mt-1 text-2xl font-bold leading-none">
+                <span className="num">{marked}</span>
+                <span className="text-base font-medium text-white/60"> / {d.schedCount}</span>
+              </p>
+            </div>
+            <p className="num text-3xl font-bold leading-none">{pct}%</p>
+          </div>
+          <div className="mt-3 h-1.5 bg-white/15">
+            <div className="h-full bg-white/80 transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        </section>
+      ) : (
+        <section className="card px-5 py-4">
+          <p className="text-sm text-muted">لا حصص اليوم — الأسبوع الدراسي من الأحد إلى الخميس.</p>
+        </section>
+      )}
 
+      {d.unmarked.length > 0 && (
+        <section className="card overflow-hidden">
+          <h2 className="border-b border-line px-4 py-3 text-sm font-semibold">
+            حصص لم تُحضَّر <span className="num text-late">({d.unmarked.length})</span>
+          </h2>
+          <div className="max-h-72 overflow-auto">
+            {d.unmarked.map((s) => (
+              <div key={s.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
+                <span className="num w-8 shrink-0 rounded-md bg-warning-light py-1 text-center text-xs font-bold text-warning">
+                  {s.period_no}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{s.teachers?.full_name ?? "—"}</p>
+                  <p className="truncate text-xs text-muted">
+                    {s.subjects?.name ?? "—"} · فصل <span className="num">{s.classes?.class_no}</span>
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ===== أرقام المدرسة ===== */}
+      <section className="card divide-y divide-line">
+        <h2 className="px-4 py-3 text-sm font-semibold">المدرسة</h2>
+        <div className="grid grid-cols-2 divide-x divide-x-reverse divide-line sm:grid-cols-4">
+          <Fig label="طالب" value={d.students} to="/students" />
+          <Fig label="ولي أمر" value={d.guardians} />
+          <Fig label="معلم" value={d.teachers} />
+          <Fig label="فصل" value={d.classes} />
+        </div>
+      </section>
+
+      {/* ===== البصمة ===== */}
       <section className="card overflow-hidden">
-        <h2 className="border-b border-line px-4 py-3 text-sm font-semibold">
-          أجهزة البصمة
-        </h2>
-        {s.devices.length === 0 ? (
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold">أجهزة البصمة</h2>
+          {d.noDevice > 0 && (
+            <span className="chip bg-late/10 text-late">
+              <span className="num">{d.noDevice}</span>&nbsp;طالبًا بلا ربط
+            </span>
+          )}
+        </div>
+        {d.devices.length === 0 ? (
           <p className="px-4 py-4 text-sm text-muted">لم تُسجَّل أجهزة بعد.</p>
         ) : (
-          s.devices.map((d) => (
-            <div
-              key={d.serial_no}
-              className="flex items-center justify-between border-b border-line px-4 py-3 last:border-0"
-            >
+          d.devices.map((v) => (
+            <div key={v.serial_no}
+                 className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-0">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{d.label ?? d.serial_no}</p>
-                <p className="num truncate text-xs text-muted">{d.serial_no}</p>
+                <p className="truncate text-sm font-medium">{v.label ?? v.serial_no}</p>
+                <p className="num truncate text-xs text-faint">{v.serial_no}</p>
               </div>
-              <span
-                className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
-                  d.last_seen
-                    ? "bg-present/10 text-present"
-                    : "bg-late/10 text-late"
-                }`}
-              >
-                {d.last_seen
-                  ? new Date(d.last_seen).toLocaleString("ar-SA")
-                  : "لم يتصل بعد"}
+              <span className={`chip shrink-0 ${v.last_seen ? "bg-present/10 text-present" : "bg-warning-light text-warning"}`}>
+                {v.last_seen ? new Date(v.last_seen).toLocaleString("ar-SA") : "لم يتصل بعد"}
               </span>
             </div>
           ))
         )}
       </section>
 
-      <section className="card p-4">
-        <h2 className="mb-2 text-sm font-semibold">آخر استيراد</h2>
-        {s.lastImport ? (
-          <p className="text-sm text-muted">
-            {s.lastImport.import_type} —{" "}
-            {new Date(s.lastImport.started_at).toLocaleString("ar-SA")} (
-            {s.lastImport.status})
-          </p>
-        ) : (
-          <p className="text-sm text-muted">لم يُنفَّذ استيراد بعد.</p>
-        )}
+      <section className="card px-4 py-3">
+        <h2 className="text-sm font-semibold">آخر استيراد</h2>
+        <p className="mt-1 text-sm text-muted">
+          {d.lastImport
+            ? `${d.lastImport.import_type} — ${new Date(d.lastImport.started_at).toLocaleString("ar-SA")}`
+            : "لم يُنفَّذ استيراد بعد."}
+        </p>
       </section>
     </div>
   );
 }
 
-function Card({ label, value, warn }) {
-  return (
-    <div className="card p-4">
-      <p className={`num text-2xl font-bold ${warn ? "text-late" : "text-ink"}`}>
-        {value}
-      </p>
-      <p className="mt-0.5 text-sm text-muted">{label}</p>
+function Fig({ label, value, to }) {
+  const body = (
+    <div className="px-4 py-3.5">
+      <p className="num text-2xl font-bold leading-none">{value}</p>
+      <p className="mt-1 text-xs text-muted">{label}</p>
     </div>
   );
+  return to ? <Link to={to} className="block hover:bg-canvas">{body}</Link> : body;
 }

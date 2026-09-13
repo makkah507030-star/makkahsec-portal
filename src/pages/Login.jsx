@@ -45,7 +45,7 @@ export default function Login() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-canvas p-6">
       <div className="w-full max-w-sm">
         <div className="mb-7 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl2 bg-brand text-xl font-bold text-white">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl2 bg-mint-deep text-xl font-bold text-white">
             م
           </div>
           <h1 className="text-xl font-bold leading-snug">
@@ -81,7 +81,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <p className="mb-4 rounded-lg bg-absent/10 px-3 py-2 text-sm text-absent">
+            <p className="mb-4 rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">
               {error}
             </p>
           )}

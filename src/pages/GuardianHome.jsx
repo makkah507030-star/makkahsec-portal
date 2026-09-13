@@ -55,8 +55,8 @@ export default function GuardianHome() {
               onClick={() => setActive(c)}
               className={
                 active?.id === c.id
-                  ? "rounded-lg bg-brand px-3.5 py-2 text-sm font-semibold text-white"
-                  : "rounded-lg border border-line bg-white px-3.5 py-2 text-sm font-medium"
+                  ? "rounded-sm2 bg-mint-deep px-3.5 py-2 text-sm font-semibold text-white"
+                  : "rounded-sm2 border border-line bg-white px-3.5 py-2 text-sm font-medium"
               }
             >
               {c.full_name}
