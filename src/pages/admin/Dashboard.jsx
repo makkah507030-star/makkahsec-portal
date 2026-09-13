@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { todayISO, todayLabel, todayDow, GRADE_NAMES } from "../../lib/schoolTime";
+import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
+
+const SHORTCUTS = [
+  { to: "/students",    title: "الطلاب",     body: "البحث والفلترة والتقارير" },
+  { to: "/permissions", title: "الاستئذان",  body: "رفع استئذان داخلي" },
+  { to: "/accounts",    title: "الحسابات",   body: "إنشاء حسابات الدخول" },
+  { to: "/staff",       title: "الإدارة",    body: "أعضاء الإدارة وأدوارهم" },
+  { to: "/import",      title: "الاستيراد",  body: "بيانات نور والجدول" },
+];
 
 export default function Dashboard() {
   const [d, setD] = useState(null);
@@ -64,38 +72,43 @@ export default function Dashboard() {
   return (
     <div className="space-y-5">
       <header>
-        <h1 className="text-lg font-bold">{todayLabel()}</h1>
+        <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
         <p className="mt-0.5 text-sm text-muted">
           العام <span className="num">{d.year}</span> · الفصل <span className="num">{d.term}</span>
         </p>
       </header>
 
-      {/* ===== ما يحتاج متابعة اليوم ===== */}
+      {/* تحضير اليوم */}
       {dow ? (
-        <section className="overflow-hidden rounded-card bg-mint-deep text-white shadow-card">
-          <div className="flex items-end justify-between px-5 pt-4">
+        <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-5">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs text-white/60">تحضير اليوم</p>
-              <p className="mt-1 text-2xl font-bold leading-none">
+              <p className="text-xs font-medium text-[#6AA786]">تحضير اليوم</p>
+              <p className="mt-1.5 text-3xl font-bold leading-none text-mint-deep">
                 <span className="num">{marked}</span>
-                <span className="text-base font-medium text-white/60"> / {d.schedCount}</span>
+                <span className="text-lg font-medium text-muted"> / {d.schedCount}</span>
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                {d.unmarked.length === 0
+                  ? "اكتمل تحضير جميع الحصص."
+                  : `بقيت ${d.unmarked.length} حصة بلا تحضير.`}
               </p>
             </div>
-            <p className="num text-3xl font-bold leading-none">{pct}%</p>
+            <p className="num text-4xl font-bold leading-none text-mint-deep">{pct}%</p>
           </div>
-          <div className="mt-3 h-1.5 bg-white/15">
-            <div className="h-full bg-white/80 transition-all" style={{ width: `${pct}%` }} />
+          <div className="mt-4 h-2 overflow-hidden rounded-pill bg-white">
+            <div className="h-full rounded-pill bg-[#6AA786] transition-all" style={{ width: `${pct}%` }} />
           </div>
         </section>
       ) : (
-        <section className="card px-5 py-4">
+        <section className="rounded-card border border-line bg-white px-5 py-4">
           <p className="text-sm text-muted">لا حصص اليوم — الأسبوع الدراسي من الأحد إلى الخميس.</p>
         </section>
       )}
 
       {d.unmarked.length > 0 && (
         <section className="card overflow-hidden">
-          <h2 className="border-b border-line px-4 py-3 text-sm font-semibold">
+          <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
             حصص لم تُحضَّر <span className="num text-late">({d.unmarked.length})</span>
           </h2>
           <div className="max-h-72 overflow-auto">
@@ -116,21 +129,35 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* ===== أرقام المدرسة ===== */}
-      <section className="card divide-y divide-line">
-        <h2 className="px-4 py-3 text-sm font-semibold">المدرسة</h2>
-        <div className="grid grid-cols-2 divide-x divide-x-reverse divide-line sm:grid-cols-4">
-          <Fig label="طالب" value={d.students} to="/students" />
-          <Fig label="ولي أمر" value={d.guardians} />
-          <Fig label="معلم" value={d.teachers} />
-          <Fig label="فصل" value={d.classes} />
+      {/* أرقام المدرسة */}
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Fig label="طالب"    value={d.students}  to="/students" />
+        <Fig label="ولي أمر" value={d.guardians} />
+        <Fig label="معلم"    value={d.teachers} />
+        <Fig label="فصل"     value={d.classes} />
+      </section>
+
+      {/* اختصارات الأقسام */}
+      <section>
+        <h2 className="mb-3 text-sm font-semibold text-ink">الأقسام</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {SHORTCUTS.map((s) => (
+            <Link
+              key={s.to}
+              to={s.to}
+              className="rounded-card border border-line bg-white p-4 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
+            >
+              <p className="text-sm font-bold text-mint-deep">{s.title}</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted">{s.body}</p>
+            </Link>
+          ))}
         </div>
       </section>
 
-      {/* ===== البصمة ===== */}
+      {/* البصمة */}
       <section className="card overflow-hidden">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold">أجهزة البصمة</h2>
+          <h2 className="text-sm font-semibold text-ink">أجهزة البصمة</h2>
           {d.noDevice > 0 && (
             <span className="chip bg-late/10 text-late">
               <span className="num">{d.noDevice}</span>&nbsp;طالبًا بلا ربط
@@ -156,7 +183,7 @@ export default function Dashboard() {
       </section>
 
       <section className="card px-4 py-3">
-        <h2 className="text-sm font-semibold">آخر استيراد</h2>
+        <h2 className="text-sm font-semibold text-ink">آخر استيراد</h2>
         <p className="mt-1 text-sm text-muted">
           {d.lastImport
             ? `${d.lastImport.import_type} — ${new Date(d.lastImport.started_at).toLocaleString("ar-SA")}`
@@ -169,10 +196,12 @@ export default function Dashboard() {
 
 function Fig({ label, value, to }) {
   const body = (
-    <div className="px-4 py-3.5">
-      <p className="num text-2xl font-bold leading-none">{value}</p>
-      <p className="mt-1 text-xs text-muted">{label}</p>
+    <div className="rounded-card border border-line bg-white px-4 py-4">
+      <p className="num text-2xl font-bold leading-none text-mint-deep">{value}</p>
+      <p className="mt-1.5 text-xs text-muted">{label}</p>
     </div>
   );
-  return to ? <Link to={to} className="block hover:bg-canvas">{body}</Link> : body;
+  return to
+    ? <Link to={to} className="block transition-colors hover:opacity-80">{body}</Link>
+    : body;
 }
