@@ -356,27 +356,27 @@ async function writeRows(type, rows, year, onProgress) {
   }));
   await upsertBatched("students", students, "national_id", (p) => onProgress(Math.round(p * 0.4)));
 
-  // 2) أولياء الأمور (المكرر يُدمج بهويته)
+  // 2) أولياء الأمور — الدمج بالجوال لأن نور لا يوفّر الهوية
   const gMap = new Map();
   rows.forEach((r) =>
-    gMap.set(r.guardian_id, {
-      national_id: r.guardian_id,
+    gMap.set(r.guardian_mobile, {
+      national_id: r.guardian_id || null,
       full_name: r.guardian_name,
       mobile: r.guardian_mobile,
     })
   );
-  await upsertBatched("guardians", [...gMap.values()], "national_id",
+  await upsertBatched("guardians", [...gMap.values()], "mobile",
     (p) => onProgress(40 + Math.round(p * 0.2)));
 
   // 3) جلب المعرّفات
   const [{ data: sRows }, { data: gRows }, { data: cRows }] = await Promise.all([
     supabase.from("students").select("id, national_id"),
-    supabase.from("guardians").select("id, national_id"),
+    supabase.from("guardians").select("id, mobile"),
     supabase.from("classes").select("id, class_no").eq("academic_year", year),
   ]);
 
   const sId = new Map((sRows ?? []).map((r) => [r.national_id, r.id]));
-  const gId = new Map((gRows ?? []).map((r) => [r.national_id, r.id]));
+  const gId = new Map((gRows ?? []).map((r) => [r.mobile, r.id]));
   const cId = new Map((cRows ?? []).map((r) => [r.class_no, r.id]));
 
   const missingClasses = [...new Set(rows.map((r) => r.class_no))]
@@ -390,7 +390,7 @@ async function writeRows(type, rows, year, onProgress) {
 
   // 4) الربط والتسجيل
   const links = rows.map((r) => ({
-    guardian_id: gId.get(r.guardian_id),
+    guardian_id: gId.get(r.guardian_mobile),
     student_id: sId.get(r.national_id),
     relation: r.relation,
   })).filter((r) => r.guardian_id && r.student_id);
