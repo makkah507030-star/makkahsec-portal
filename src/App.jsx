@@ -11,6 +11,8 @@ import Accounts from "./pages/admin/Accounts.jsx";
 import Attendance from "./pages/teacher/Attendance.jsx";
 import StudentHome from "./pages/StudentHome.jsx";
 import GuardianHome from "./pages/GuardianHome.jsx";
+import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
+import AdminStaff from "./pages/admin/AdminStaff.jsx";
 
 export default function App() {
   const { session, profile, loading } = useSession();
@@ -68,10 +70,15 @@ export default function App() {
             />
             <Route path="/students" element={<Students />} />
             <Route path="/accounts" element={<Accounts />} />
+            <Route path="/staff" element={<AdminStaff />} />
           </>
         )}
         {profile.role === "teacher" && (
           <Route path="/attendance" element={<Attendance />} />
+        )}
+        {/* الاستئذان: متاح للإدارة وللمعلمين المخوّلين — الصفحة نفسها تتحقق من الصلاحية */}
+        {(profile.role === "admin" || profile.role === "teacher") && (
+          <Route path="/permissions" element={<PermissionRequestPage />} />
         )}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

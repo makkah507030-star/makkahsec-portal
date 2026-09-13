@@ -9,7 +9,7 @@ const NAV = {
     { to: "/students",    label: "الطلاب" },
     { to: "/accounts",    label: "الحسابات" },
     { to: "/permissions", label: "الاستئذان" },
-    { to: "/staff", label: "الإدارة" },
+    { to: "/staff",       label: "الإدارة" },
   ],
   teacher:  [{ to: "/", label: "التحضير" }],
   student:  [{ to: "/", label: "الرئيسية" }],
@@ -91,5 +91,3 @@ export default function Layout({ children }) {
     </div>
   );
 }
-
-

@@ -27,6 +27,7 @@ export default function Attendance() {
   const [marks, setMarks] = useState({});
   const [excused, setExcused] = useState(new Set());
   const [punched, setPunched] = useState(new Set());
+  const [permits, setPermits] = useState({}); // student_id -> { by, note }
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const [year, setYear] = useState("");
@@ -79,19 +80,57 @@ export default function Attendance() {
         .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"));
       setStudents(list);
       const ids = list.map((s) => s.id);
-      if (!ids.length) return;
+      if (!ids.length) { setPermits({}); return; }
 
-      const [{ data: existing }, { data: exc }, { data: daily }] = await Promise.all([
-        supabase.from("class_attendance").select("student_id, status")
-          .eq("schedule_id", active.id).eq("attend_date", date),
-        supabase.from("excused_absences").select("student_id")
-          .lte("date_from", date).gte("date_to", date).in("student_id", ids),
-        supabase.from("daily_attendance").select("student_id")
-          .eq("attend_date", date).in("student_id", ids),
-      ]);
+      const [{ data: existing }, { data: exc }, { data: daily }, { data: perms }] =
+        await Promise.all([
+          supabase.from("class_attendance").select("student_id, status")
+            .eq("schedule_id", active.id).eq("attend_date", date),
+          supabase.from("excused_absences").select("student_id")
+            .lte("date_from", date).gte("date_to", date).in("student_id", ids),
+          supabase.from("daily_attendance").select("student_id")
+            .eq("attend_date", date).in("student_id", ids),
+          supabase.from("permission_request_students")
+            .select("student_id, permission_requests!inner(scope, period_numbers, note, created_by, request_date)")
+            .in("student_id", ids)
+            .eq("permission_requests.request_date", date),
+        ]);
+
       const excSet = new Set((exc ?? []).map((r) => r.student_id));
       setExcused(excSet);
       setPunched(new Set((daily ?? []).map((r) => r.student_id)));
+
+      // الاستئذانات التي تغطي هذه الحصة تحديدًا
+      const covering = (perms ?? []).filter((p) => {
+        const r = p.permission_requests;
+        if (!r) return false;
+        if (r.scope === "day") return true;
+        return (r.period_numbers ?? []).includes(active.period_no);
+      });
+
+      if (covering.length) {
+        const raiserIds = [...new Set(covering.map((p) => p.permission_requests.created_by))];
+        const [{ data: tchs }, { data: grs }] = await Promise.all([
+          supabase.from("teachers").select("user_id, full_name").in("user_id", raiserIds),
+          supabase.from("permission_grantors").select("user_id, title").in("user_id", raiserIds),
+        ]);
+        const nameBy  = Object.fromEntries((tchs ?? []).map((t) => [t.user_id, t.full_name]));
+        const titleBy = Object.fromEntries((grs  ?? []).map((g) => [g.user_id, g.title]));
+
+        const map = {};
+        covering.forEach((p) => {
+          const r = p.permission_requests;
+          map[p.student_id] = {
+            by: nameBy[r.created_by] ?? titleBy[r.created_by] ?? "الإدارة",
+            title: titleBy[r.created_by] ?? null,
+            note: r.note ?? null,
+          };
+        });
+        setPermits(map);
+      } else {
+        setPermits({});
+      }
+
       const init = {};
       list.forEach((s) => { init[s.id] = excSet.has(s.id) ? "excused" : "present"; });
       (existing ?? []).forEach((r) => { init[r.student_id] = r.status; });
@@ -194,6 +233,7 @@ export default function Attendance() {
           {students.map((s, i) => {
             const cur = marks[s.id] ?? "present";
             const edge = cur === "present" ? "" : EDGE[cur];
+            const permit = permits[s.id];
             return (
               <div key={s.id} className={`px-3 py-2.5 ${edge}`}
                    style={cur === "present" ? undefined : { boxShadow: "inset 3px 0 0 currentColor" }}>
@@ -201,8 +241,18 @@ export default function Attendance() {
                   <span className="num w-6 shrink-0 text-xs text-faint">{i + 1}</span>
                   <p className="flex-1 truncate text-sm font-medium text-ink">{s.full_name}</p>
                   {!punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
+                  {permit && <span className="chip shrink-0 bg-mint-light text-mint-deep">مستأذن</span>}
                   {excused.has(s.id) && <span className="chip shrink-0 bg-excused/10 text-excused">استئذان</span>}
                 </div>
+
+                {permit && (
+                  <p className="mb-1.5 pr-8 text-[11px] leading-relaxed text-muted">
+                    استئذان داخلي — بواسطة {permit.by}
+                    {permit.title ? ` (${permit.title})` : ""}
+                    {permit.note ? ` · ${permit.note}` : ""}
+                  </p>
+                )}
+
                 <div className="flex gap-1 pr-8">
                   {ORDER.map((k) => (
                     <button key={k} onClick={() => setMarks((m) => ({ ...m, [s.id]: k }))}
