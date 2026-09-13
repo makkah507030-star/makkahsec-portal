@@ -6,6 +6,7 @@ const NAV = {
     { to: "/", label: "الرئيسية" },
     { to: "/import", label: "الاستيراد" },
     { to: "/students", label: "الطلاب" },
+    { to: "/accounts", label: "الحسابات" },
   ],
   teacher: [
     { to: "/", label: "الرئيسية" },
