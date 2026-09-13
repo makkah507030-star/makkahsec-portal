@@ -13,6 +13,7 @@ import StudentHome from "./pages/StudentHome.jsx";
 import GuardianHome from "./pages/GuardianHome.jsx";
 import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
 import AdminStaff from "./pages/admin/AdminStaff.jsx";
+import Landing from "./pages/Landing.jsx";
 
 export default function App() {
   const { session, profile, loading } = useSession();
@@ -28,7 +29,9 @@ export default function App() {
   if (!session) {
     return (
       <Routes>
-        <Route path="*" element={<Login />} />
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
