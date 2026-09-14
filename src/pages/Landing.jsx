@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import logoFull from "../assets/logo-full-mint.png";
 import logoIcon from "../assets/icon-mint.png";
 import CalendarTimeline from "../components/CalendarTimeline.jsx";
@@ -23,8 +23,9 @@ const SECTIONS = [
     body: "الاطلاع على حضور أبنائكم وإشعارات المدرسة فور صدورها.",
   },
   {
-    title: "التقويم والاعتماد",
-    body: "التقويم الدراسي وملفات الاعتماد المدرسي في مكان واحد.",
+    title: "أدلة الاستخدام",
+    body: "أدلة إرشادية بصيغة PDF لكل فئة، تشرح الخدمات وطريقة الاستفادة منها.",
+    to: "/guides",
   },
   {
     title: "الدعم الفني",
@@ -128,13 +129,27 @@ export default function Landing() {
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {SECTIONS.map((s) => (
-            <article
-              key={s.title}
-              className="rounded-card border border-line bg-white p-5 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
-            >
-              <h3 className="text-sm font-bold text-mint-deep">{s.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
-            </article>
+            s.to ? (
+              <Link
+                key={s.title}
+                to={s.to}
+                className="rounded-card border border-line bg-white p-5 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
+              >
+                <h3 className="text-sm font-bold text-mint-deep">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
+                <span className="mt-3 inline-block text-xs font-semibold text-[#6AA786]">
+                  تصفّح الأدلة ←
+                </span>
+              </Link>
+            ) : (
+              <article
+                key={s.title}
+                className="rounded-card border border-line bg-white p-5 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
+              >
+                <h3 className="text-sm font-bold text-mint-deep">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
+              </article>
+            )
           ))}
         </div>
       </section>

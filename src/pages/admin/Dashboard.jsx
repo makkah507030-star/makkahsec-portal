@@ -15,6 +15,7 @@ const SHORTCUTS = [
   { to: "/season",      title: "التوقيت الزمني", body: "الصيفي والشتوي ومهلة التأخر" },
   { to: "/password-reset", title: "استعادة كلمة المرور", body: "إعادة تعيين لأي مستخدم" },
   { to: "/news-admin",  title: "الأخبار",    body: "نشر أخبار المدرسة" },
+  { to: "/guides-admin", title: "الأدلة",    body: "رفع أدلة الاستخدام" },
   { to: "/feedback-admin", title: "الملاحظات", body: "ملاحظات المستخدمين على النسخة التجريبية" },
 ];
 

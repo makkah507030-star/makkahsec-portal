@@ -22,6 +22,7 @@ const ADMIN_GROUPS = [
     title: "المحتوى",
     items: [
       { to: "/news-admin",     label: "الأخبار",   perm: "news",     icon: "news" },
+      { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/feedback-admin", label: "الملاحظات", perm: "feedback", icon: "chat" },
     ],
   },
@@ -60,6 +61,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     key:    "M14 7a4 4 0 1 1-5.6 5.6L3 18v3h3l5.4-5.4A4 4 0 0 1 14 7Z",
     shield: "M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z",
     lock:   "M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3",
+    book:   "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z",
   }[name];
 
   return (

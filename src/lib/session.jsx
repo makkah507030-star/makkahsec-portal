@@ -162,6 +162,7 @@ export const PERMISSIONS = [
   { key: "staff",          label: "الإدارة",            desc: "أعضاء الإدارة وأدوارهم" },
   { key: "import",         label: "الاستيراد",          desc: "بيانات نور والجدول" },
   { key: "news",           label: "الأخبار",            desc: "نشر أخبار المدرسة" },
+  { key: "guides",         label: "الأدلة",             desc: "رفع أدلة الاستخدام" },
   { key: "feedback",       label: "الملاحظات",          desc: "ملاحظات المستخدمين" },
   { key: "password_reset", label: "استعادة كلمة المرور", desc: "إعادة تعيين لأي مستخدم" },
 ];

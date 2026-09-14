@@ -16,6 +16,8 @@ import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
 import AdminStaff from "./pages/admin/AdminStaff.jsx";
 import Landing from "./pages/Landing.jsx";
 import NewsList from "./pages/NewsList.jsx";
+import Guides from "./pages/Guides.jsx";
+import GuidesAdmin from "./pages/admin/GuidesAdmin.jsx";
 import NewsArticle from "./pages/NewsArticle.jsx";
 import NewsAdmin from "./pages/admin/NewsAdmin.jsx";
 import PasswordReset from "./pages/admin/PasswordReset.jsx";
@@ -40,6 +42,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/news" element={<NewsList />} />
+        <Route path="/guides" element={<Guides />} />
         <Route path="/news/:slug" element={<NewsArticle />} />
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/login" element={<Login />} />
@@ -95,6 +98,7 @@ export default function App() {
             {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
             {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
+            {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
             {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
             {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
           </>
@@ -110,6 +114,7 @@ export default function App() {
           <Route path="/permissions" element={<PermissionRequestPage />} />
         )}
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/guides" element={<Guides />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>
