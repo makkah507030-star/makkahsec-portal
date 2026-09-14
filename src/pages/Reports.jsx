@@ -4,6 +4,7 @@ import { useSession } from "../lib/session.jsx";
 import { GRADE_NAMES, STATUS } from "../lib/schoolTime";
 import { exportToExcel, printReport, STUDENT_DEPUTY_NAME } from "../lib/exportUtils";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
+import { fmtGreg, fmtTime12 } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 
@@ -265,7 +266,7 @@ function StudentReport({ scopeIds }) {
   const headers = ["م", "التاريخ", "الحصة", "المادة", "الحالة"];
   const table = () =>
     (rows ?? []).map((r, i) => [
-      i + 1, r.attend_date, r.schedule?.period_no ?? "",
+      i + 1, fmtGreg(r.attend_date + "T00:00:00"), r.schedule?.period_no ?? "",
       r.schedule?.subjects?.name ?? "", label(r.status),
     ]);
 
@@ -352,7 +353,7 @@ function StudentReport({ scopeIds }) {
               {rows.map((r, i) => (
                 <div key={i} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="min-w-0">
-                    <p className="num text-sm font-medium text-ink">{r.attend_date}</p>
+                    <p className="num text-sm font-medium text-ink">{fmtGreg(r.attend_date + "T00:00:00")}</p>
                     <p className="mt-0.5 truncate text-xs text-muted">
                       الحصة <span className="num">{r.schedule?.period_no}</span> ·{" "}
                       {r.schedule?.subjects?.name ?? "—"}
@@ -602,7 +603,7 @@ function EscapeReport({ scopeIds }) {
       r.national_id,
       r.name,
       r.class_no,
-      r.punch ? new Date(r.punch).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" }) : "",
+      r.punch ? fmtTime12(r.punch) : "",
       r.absentPeriods.join("، "),
       r.firstAbsent,
       r.likelyEscape ? "هروب مُرجَّح" : "غياب من البداية",
@@ -664,10 +665,7 @@ function EscapeReport({ scopeIds }) {
                   <p className="mt-0.5 text-xs text-muted">
                     فصل <span className="num">{r.class_no}</span> · بصم{" "}
                     <span className="num">
-                      {r.punch
-                        ? new Date(r.punch).toLocaleTimeString("ar-SA", {
-                            hour: "2-digit", minute: "2-digit" })
-                        : "—"}
+{r.punch ? fmtTime12(r.punch) : "—"}
                     </span>
                   </p>
                 </div>

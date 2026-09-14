@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { fmtBoth, fmtTime12 } from "./dates";
 
 // اسم مدير المدرسة — يظهر في ترويسة وتذييل التقارير المطبوعة
 export const PRINCIPAL_NAME = "عبدالله بن حسن سلمان الفيفي";
@@ -33,7 +34,7 @@ export function exportToExcel(rows, fileName = "تقرير", sheetName = "الب
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = new Date().toISOString().slice(0, 10); // اسم الملف يبقى ISO للترتيب
   XLSX.writeFile(wb, `${fileName}-${stamp}.xlsx`);
 }
 
@@ -57,7 +58,8 @@ export function printReport({
     return;
   }
 
-  const today = new Date().toLocaleDateString("ar-SA");
+  const now = new Date();
+  const today = `${fmtBoth(now)} · ${fmtTime12(now)}`;
 
   const html = `
 <!doctype html>

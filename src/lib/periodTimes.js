@@ -52,11 +52,15 @@ export function nowMinutes(d = new Date()) {
   return d.getHours() * 60 + d.getMinutes();
 }
 
-// "07:50:00" → "7:50"
+// "07:50:00" → "7:50 ص"
 export function fmtTime(t) {
   if (!t) return "";
-  const [h, m] = String(t).split(":");
-  return `${Number(h)}:${m}`;
+  const [hRaw, mRaw] = String(t).split(":");
+  const h = Number(hRaw);
+  const m = (mRaw ?? "00").padStart(2, "0");
+  const suffix = h < 12 ? "ص" : "م";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${m} ${suffix}`;
 }
 
 // "7:00 — 7:50"

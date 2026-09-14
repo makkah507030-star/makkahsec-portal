@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { fmtGreg } from "../lib/dates";
 import { useSession } from "../lib/session.jsx";
 import { exportToExcel, printReport, STUDENT_DEPUTY_NAME } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
@@ -90,7 +91,7 @@ export default function PermissionLog() {
       (r.permission_request_students ?? []).forEach((s) => {
         out.push([
           out.length + 1,
-          r.request_date,
+          fmtGreg(r.request_date + "T00:00:00"),
           s.students?.national_id ?? "",
           s.students?.full_name ?? "",
           scopeText(r),
@@ -180,7 +181,7 @@ export default function PermissionLog() {
           return (
             <article key={r.id} className="card p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="num chip bg-mint-tint text-mint-deep">{r.request_date}</span>
+                <span className="num chip bg-mint-tint text-mint-deep">{fmtGreg(r.request_date + "T00:00:00")}</span>
                 <span className="chip bg-gray-tint text-muted">{scopeText(r)}</span>
                 <span className="num chip bg-gray-tint text-muted">
                   {students.length} طالب

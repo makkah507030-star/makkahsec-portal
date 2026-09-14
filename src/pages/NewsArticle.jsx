@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { fmtBoth } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 
-const dateFmt = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+
 
 // يستخرج معرّف الفيديو من أي صيغة رابط يوتيوب
 function youtubeId(url) {
@@ -77,7 +74,7 @@ export default function NewsArticle() {
           <article>
             {item.published_at && (
               <p className="text-xs text-muted">
-                {dateFmt.format(new Date(item.published_at))}
+                {fmtBoth(item.published_at)}
               </p>
             )}
             <h1 className="mt-2 text-2xl font-bold leading-snug text-ink md:text-3xl">

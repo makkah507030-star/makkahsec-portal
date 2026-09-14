@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
 import ColorLegend from "../../components/ColorLegend.jsx";
+import { fmtDateTime } from "../../lib/dates";
 
 const SHORTCUTS = [
   { to: "/students",    title: "الطلاب",     body: "البحث والفلترة والتقارير" },
@@ -212,7 +213,7 @@ export default function Dashboard() {
                 <p className="num truncate text-xs text-faint">{v.serial_no}</p>
               </div>
               <span className={`chip shrink-0 ${v.last_seen ? "bg-present/10 text-present" : "bg-warning-light text-warning"}`}>
-                {v.last_seen ? new Date(v.last_seen).toLocaleString("ar-SA") : "لم يتصل بعد"}
+                {v.last_seen ? fmtDateTime(v.last_seen) : "لم يتصل بعد"}
               </span>
             </div>
           ))
@@ -233,7 +234,7 @@ export default function Dashboard() {
         <h2 className="text-sm font-semibold text-ink">آخر استيراد</h2>
         <p className="mt-1 text-sm text-muted">
           {d.lastImport
-            ? `${d.lastImport.import_type} — ${new Date(d.lastImport.started_at).toLocaleString("ar-SA")}`
+            ? `${d.lastImport.import_type} — ${fmtDateTime(d.lastImport.started_at)}`
             : "لم يُنفَّذ استيراد بعد."}
         </p>
       </section>

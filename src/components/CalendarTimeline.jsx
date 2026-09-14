@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { fmtGreg, fmtHijri } from "../lib/dates";
 
 const KIND_LABEL = {
   holiday:    "إجازة",
@@ -9,10 +10,7 @@ const KIND_LABEL = {
   term_end:   "نهاية",
 };
 
-const dayFmt = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
-  day: "numeric",
-  month: "long",
-});
+
 
 function daysUntil(dateStr) {
   const today = new Date();
@@ -93,14 +91,13 @@ export default function CalendarTimeline() {
                       {e.title}
                     </h3>
                     <p className="mt-2 text-xs text-muted">
-                      {dayFmt.format(new Date(e.start_date + "T00:00:00"))}
+                      {fmtGreg(e.start_date + "T00:00:00")}
                       {e.end_date &&
-                        ` — ${dayFmt.format(new Date(e.end_date + "T00:00:00"))}`}
+                        ` — ${fmtGreg(e.end_date + "T00:00:00")}`}
                     </p>
                     {e.hijri_label && (
-                      <p className="mt-0.5 text-xs text-faint">
-                        <span className="num">{e.hijri_label}</span>
-                        <span> هـ</span>
+                      <p className="num mt-0.5 text-xs text-faint">
+                        {fmtHijri(e.start_date + "T00:00:00")}
                       </p>
                     )}
                     <span className="chip mt-3 inline-block bg-mint-tint text-mint-deep">

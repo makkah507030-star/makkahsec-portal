@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { fmtGreg, fmtTime12 } from "../lib/dates";
 import { useSession } from "../lib/session.jsx";
 import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
@@ -195,7 +196,7 @@ export default function StudentHome() {
           records.map((r, i) => (
             <div key={i} className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 last:border-0">
               <div className="min-w-0">
-                <p className="num text-sm text-ink">{r.attend_date}</p>
+                <p className="num text-sm text-ink">{fmtGreg(r.attend_date + "T00:00:00")}</p>
                 <p className="truncate text-xs text-muted">
                   الحصة <span className="num">{r.schedule?.period_no ?? "—"}</span> ·{" "}
                   {r.schedule?.subjects?.name ?? "—"}
@@ -237,7 +238,7 @@ export default function StudentHome() {
         ) : (
           punches.map((d, i) => (
             <div key={i} className="flex items-center justify-between border-b border-line px-4 py-2.5 last:border-0">
-              <span className="num text-sm text-ink">{d.attend_date}</span>
+              <span className="num text-sm text-ink">{fmtGreg(d.attend_date + "T00:00:00")}</span>
               <span className="flex items-center gap-2">
                 {(() => {
                   const li = lateInfo(ptimes, d.punch_time);
@@ -248,9 +249,7 @@ export default function StudentHome() {
                   ) : null;
                 })()}
                 <span className="num text-xs text-muted">
-                  {new Date(d.punch_time).toLocaleTimeString("ar-SA", {
-                    hour: "2-digit", minute: "2-digit",
-                  })}
+{fmtTime12(d.punch_time)}
                 </span>
               </span>
             </div>

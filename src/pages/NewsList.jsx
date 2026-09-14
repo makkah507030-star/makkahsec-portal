@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { fmtBoth } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 
-const dateFmt = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+
 
 export default function NewsList() {
   const [items, setItems] = useState(null);
@@ -66,7 +63,7 @@ export default function NewsList() {
               <div className="p-4">
                 {n.published_at && (
                   <p className="text-xs text-muted">
-                    {dateFmt.format(new Date(n.published_at))}
+                    {fmtBoth(n.published_at)}
                   </p>
                 )}
                 <h2 className="mt-1.5 text-sm font-bold leading-snug text-ink group-hover:text-mint-deep">
