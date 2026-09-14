@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
+import PermissionLog from "../components/PermissionLog.jsx";
 
 const GRADES = [1, 2, 3];
 const MAX_PERIODS = 7; // أقصى عدد حصص باليوم (الأحد/الاثنين = 7)
@@ -27,6 +28,7 @@ export default function PermissionRequestPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null); // { ok: bool, message: string }
+  const [tab, setTab] = useState("new");
 
   // تحقق من الصلاحية: إدارة أو معلم مخوّل (grantor نشط)
   useEffect(() => {
@@ -172,11 +174,31 @@ export default function PermissionRequestPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-bold text-ink">رفع استئذان داخلي</h1>
+        <h1 className="text-lg font-bold text-ink">الاستئذان الداخلي</h1>
         {grantorTitle && (
           <p className="text-xs text-faint">بصفتك: {grantorTitle}</p>
         )}
       </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <button onClick={() => setTab("new")}
+          className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
+            tab === "new" ? "bg-mint-deep text-white"
+                          : "border border-line bg-paper text-muted hover:bg-canvas"}`}>
+          رفع استئذان
+        </button>
+        <button onClick={() => setTab("log")}
+          className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
+            tab === "log" ? "bg-mint-deep text-white"
+                          : "border border-line bg-paper text-muted hover:bg-canvas"}`}>
+          السجل
+        </button>
+      </div>
+
+      {tab === "log" && <PermissionLog />}
+
+      {tab === "new" && (
+      <div className="space-y-5">
 
       {/* اختيار الصف والفصل */}
       <div className="flex flex-wrap gap-3">
@@ -319,6 +341,8 @@ export default function PermissionRequestPage() {
       >
         {submitting ? "جارِ الإرسال..." : "رفع الاستئذان"}
       </button>
+      </div>
+      )}
     </div>
   );
 }
