@@ -5,7 +5,7 @@ import { fmtBoth, fmtTime12 } from "./dates";
 export const PRINCIPAL_NAME = "عبدالله بن حسن سلمان الفيفي";
 
 // وكيل شؤون الطلاب — يظهر في تقارير الطلاب وأولياء الأمور
-export const STUDENT_DEPUTY_NAME = "فهد بن نايف المعبدي";
+export const STUDENT_DEPUTY_NAME = "فهد بن نايف ماطر المعبدي";
 
 /**
  * تصدير بيانات إلى ملف Excel
