@@ -3,18 +3,20 @@ import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
 
-const NAV = {
-  admin: [
-    { to: "/",            label: "الرئيسية" },
-    { to: "/import",      label: "الاستيراد" },
-    { to: "/students",    label: "الطلاب" },
-    { to: "/accounts",    label: "الحسابات" },
-    { to: "/reports",     label: "التقارير" },
-    { to: "/permissions", label: "الاستئذان" },
-    { to: "/staff",       label: "الإدارة" },
-    { to: "/news-admin",  label: "الأخبار" },
-  ],
-  teacher:  [
+// عناصر الإدارة مربوطة بمفاتيح الصلاحيات
+const ADMIN_NAV = [
+  { to: "/",            label: "الرئيسية",  perm: null },
+  { to: "/import",      label: "الاستيراد", perm: "import" },
+  { to: "/students",    label: "الطلاب",    perm: "students" },
+  { to: "/reports",     label: "التقارير",  perm: "reports" },
+  { to: "/permissions", label: "الاستئذان", perm: "permissions" },
+  { to: "/accounts",    label: "الحسابات",  perm: "accounts" },
+  { to: "/staff",       label: "الإدارة",   perm: "staff" },
+  { to: "/news-admin",  label: "الأخبار",   perm: "news" },
+];
+
+const OTHER_NAV = {
+  teacher: [
     { to: "/",        label: "التحضير" },
     { to: "/reports", label: "التقارير" },
   ],
@@ -23,13 +25,17 @@ const NAV = {
 };
 
 export default function Layout({ children }) {
-  const { profile, adminRoles, signOut } = useSession();
+  const { profile, adminRoles, signOut, can } = useSession();
   const navigate = useNavigate();
-  const items = NAV[profile?.role] ?? [];
+
+  const items =
+    profile?.role === "admin"
+      ? ADMIN_NAV.filter((i) => !i.perm || can(i.perm))
+      : OTHER_NAV[profile?.role] ?? [];
 
   const subtitle =
     profile?.role === "admin" && adminRoles.length
-      ? adminRoles.map((r) => ADMIN_ROLE_LABEL[r]).join(" · ")
+      ? adminRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" · ")
       : ROLE_LABEL[profile?.role] ?? "";
 
   return (
@@ -61,11 +67,11 @@ export default function Layout({ children }) {
 
         {items.length > 1 && (
           <nav className="hidden border-t border-line sm:block">
-            <div className="mx-auto flex max-w-5xl gap-1 px-2">
+            <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-2">
               {items.map((i) => (
                 <NavLink key={i.to} to={i.to} end={i.to === "/"}
                   className={({ isActive }) =>
-                    `border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                    `shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                       isActive ? "border-mint-deep text-mint-deep"
                                : "border-transparent text-muted hover:text-ink"}`}>
                   {i.label}
@@ -82,11 +88,11 @@ export default function Layout({ children }) {
 
       {items.length > 1 && (
         <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-white sm:hidden">
-          <div className="flex" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+          <div className="flex overflow-x-auto" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
             {items.map((i) => (
               <NavLink key={i.to} to={i.to} end={i.to === "/"}
                 className={({ isActive }) =>
-                  `flex-1 py-3 text-center text-xs font-semibold ${
+                  `min-w-[4.5rem] flex-1 py-3 text-center text-xs font-semibold ${
                     isActive ? "text-mint-deep" : "text-faint"}`}>
                 {i.label}
               </NavLink>
