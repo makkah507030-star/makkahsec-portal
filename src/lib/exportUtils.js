@@ -1,5 +1,11 @@
 import * as XLSX from "xlsx";
 
+// اسم مدير المدرسة — يظهر في ترويسة وتذييل التقارير المطبوعة
+export const PRINCIPAL_NAME = "عبدالله بن حسن سلمان الفيفي";
+
+// وكيل شؤون الطلاب — يظهر في تقارير الطلاب وأولياء الأمور
+export const STUDENT_DEPUTY_NAME = "فهد بن نايف المعبدي";
+
 /**
  * تصدير بيانات إلى ملف Excel
  * @param {Array<Object>} rows - الصفوف (كائنات جاهزة بعناوين عربية)
@@ -40,8 +46,11 @@ export function exportToExcel(rows, fileName = "تقرير", sheetName = "الب
  * @param {Array<Array>} opts.rows - الصفوف كمصفوفات
  * @param {string} [opts.logoUrl] - رابط شعار المدرسة
  * @param {string} [opts.moeLogoUrl] - رابط شعار وزارة التعليم
+ * @param {{title:string,name:string}} [opts.secondSignature] - توقيع إضافي (يمين)
  */
-export function printReport({ title, subtitle, headers, rows, logoUrl, moeLogoUrl }) {
+export function printReport({
+  title, subtitle, headers, rows, logoUrl, moeLogoUrl, secondSignature,
+}) {
   const win = window.open("", "_blank");
   if (!win) {
     alert("يرجى السماح بالنوافذ المنبثقة لإتمام الطباعة.");
@@ -90,6 +99,15 @@ export function printReport({ title, subtitle, headers, rows, logoUrl, moeLogoUr
   tfoot td {
     border: none; padding-top: 14px; font-size: 11px; color: #6B6B6B;
   }
+  .sign {
+    margin-top: 34px; display: flex; justify-content: space-between;
+    page-break-inside: avoid;
+  }
+  .sign.one { justify-content: flex-end; }
+  .sign-box { text-align: center; min-width: 230px; }
+  .sign-title { margin: 0; font-size: 11px; color: #6B6B6B; }
+  .sign-name  { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: #101010; }
+  .sign-line  { margin: 22px 0 0; font-size: 11px; color: #6B6B6B; }
   @media print {
     body { padding: 0; }
     thead { display: table-header-group; }
@@ -131,6 +149,20 @@ export function printReport({ title, subtitle, headers, rows, logoUrl, moeLogoUr
         .join("")}
     </tbody>
   </table>
+
+  <div class="sign ${secondSignature ? "" : "one"}">
+    ${secondSignature ? `
+    <div class="sign-box">
+      <p class="sign-title">${secondSignature.title}</p>
+      <p class="sign-name">${secondSignature.name}</p>
+      <p class="sign-line">التوقيع: ..............................</p>
+    </div>` : ""}
+    <div class="sign-box">
+      <p class="sign-title">مدير المدرسة</p>
+      <p class="sign-name">${PRINCIPAL_NAME}</p>
+      <p class="sign-line">التوقيع: ..............................</p>
+    </div>
+  </div>
 </body>
 </html>`;
 

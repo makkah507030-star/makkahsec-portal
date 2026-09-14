@@ -19,6 +19,7 @@ import NewsList from "./pages/NewsList.jsx";
 import NewsArticle from "./pages/NewsArticle.jsx";
 import NewsAdmin from "./pages/admin/NewsAdmin.jsx";
 import PasswordReset from "./pages/admin/PasswordReset.jsx";
+import SeasonSwitch from "./pages/admin/SeasonSwitch.jsx";
 import Reports from "./pages/Reports.jsx";
 import Feedback from "./pages/Feedback.jsx";
 import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
@@ -79,6 +80,7 @@ export default function App() {
         <Route path="/" element={home} />
         {profile.role === "admin" && (
           <>
+            {can("import") && <Route path="/season" element={<SeasonSwitch />} />}
             {can("import") && (
               <Route
                 path="/import"

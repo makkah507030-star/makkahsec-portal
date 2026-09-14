@@ -2,13 +2,16 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
+import ColorLegend from "../../components/ColorLegend.jsx";
 
 const SHORTCUTS = [
   { to: "/students",    title: "الطلاب",     body: "البحث والفلترة والتقارير" },
+  { to: "/reports",     title: "التقارير",   body: "الحضور والغياب والتصدير" },
   { to: "/permissions", title: "الاستئذان",  body: "رفع استئذان داخلي" },
   { to: "/accounts",    title: "الحسابات",   body: "إنشاء حسابات الدخول" },
   { to: "/staff",       title: "الإدارة",    body: "أعضاء الإدارة وأدوارهم" },
   { to: "/import",      title: "الاستيراد",  body: "بيانات نور والجدول" },
+  { to: "/season",      title: "التوقيت الزمني", body: "الصيفي والشتوي ومهلة التأخر" },
   { to: "/password-reset", title: "استعادة كلمة المرور", body: "إعادة تعيين لأي مستخدم" },
   { to: "/news-admin",  title: "الأخبار",    body: "نشر أخبار المدرسة" },
   { to: "/feedback-admin", title: "الملاحظات", body: "ملاحظات المستخدمين على النسخة التجريبية" },
@@ -46,6 +49,23 @@ export default function Dashboard() {
         supabase.from("class_attendance").select("schedule_id").eq("attend_date", date),
       ]);
 
+      // حالات "بصم ولم يحضر" اليوم
+      let escapeCount = 0;
+      try {
+        const { data: punches } = await supabase
+          .from("daily_attendance").select("student_id").eq("attend_date", date);
+        const ids = (punches ?? []).map((p) => p.student_id);
+        if (ids.length) {
+          const { data: abs } = await supabase
+            .from("class_attendance")
+            .select("student_id")
+            .eq("attend_date", date)
+            .eq("status", "absent")
+            .in("student_id", ids);
+          escapeCount = new Set((abs ?? []).map((r) => r.student_id)).size;
+        }
+      } catch (_) { /* تجاهل */ }
+
       const doneSet = new Set((todayMarked.data ?? []).map((r) => r.schedule_id));
       const sched = todaySched.data ?? [];
       const unmarked = sched.filter((s) => !doneSet.has(s.id))
@@ -63,6 +83,7 @@ export default function Dashboard() {
         lastImport: lastImport.data?.[0] ?? null,
         schedCount: sched.length,
         unmarked,
+        escapeCount,
       });
     })();
   }, [date, dow]);
@@ -107,6 +128,19 @@ export default function Dashboard() {
         <section className="rounded-card border border-line bg-white px-5 py-4">
           <p className="text-sm text-muted">لا حصص اليوم — الأسبوع الدراسي من الأحد إلى الخميس.</p>
         </section>
+      )}
+
+      {d.escapeCount > 0 && (
+        <Link to="/reports"
+          className="flex items-center justify-between gap-3 rounded-card border border-absent/30 bg-absent/5 px-5 py-4 transition-colors hover:bg-absent/10">
+          <div>
+            <p className="text-sm font-bold text-absent">بصم ولم يحضر</p>
+            <p className="mt-0.5 text-xs text-muted">
+              طلاب دخلوا المدرسة وغابوا عن حصصهم اليوم.
+            </p>
+          </div>
+          <span className="num text-2xl font-bold text-absent">{d.escapeCount}</span>
+        </Link>
       )}
 
       {d.unmarked.length > 0 && (
@@ -184,6 +218,16 @@ export default function Dashboard() {
           ))
         )}
       </section>
+
+      <ColorLegend
+        items={[
+          { chip: "bg-warning-light text-warning", sample: "رقم الحصة", label: "حصة لم تُحضَّر" },
+          { chip: "bg-present/10 text-present", sample: "متصل", label: "جهاز بصمة يعمل" },
+          { chip: "bg-warning-light text-warning", sample: "لم يتصل بعد", label: "جهاز لم يتصل" },
+          { chip: "bg-late/10 text-late", sample: "بلا ربط", label: "طلاب بلا رقم بصمة" },
+          { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر", label: "دخل وغاب عن الحصص" },
+        ]}
+      />
 
       <section className="card px-4 py-3">
         <h2 className="text-sm font-semibold text-ink">آخر استيراد</h2>

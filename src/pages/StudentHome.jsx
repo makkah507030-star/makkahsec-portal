@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
+import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
+import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime, lateInfo } from "../lib/periodTimes";
 
 const LABEL = { absent: "غائب", late: "متأخر", excused: "مستأذن" };
 const TONE = {
@@ -17,9 +19,23 @@ export default function StudentHome() {
   const [records, setRecords] = useState([]);
   const [grades, setGrades] = useState([]);
   const [punches, setPunches] = useState([]);
+  const [ptimes, setPtimes] = useState([]);
+  const [nowPeriod, setNowPeriod] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const dow = todayDow();
+
+  useEffect(() => {
+    let timer;
+    (async () => {
+      const { rows } = await loadPeriodTimes();
+      setPtimes(rows);
+      const tick = () => setNowPeriod(currentPeriodNo(rows));
+      tick();
+      timer = setInterval(tick, 60000);
+    })();
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -98,6 +114,8 @@ export default function StudentHome() {
     return c;
   }, [records]);
 
+  const ptMap = byPeriodNo(ptimes);
+
   if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
 
   if (!me) {
@@ -128,6 +146,8 @@ export default function StudentHome() {
         ))}
       </section>
 
+      <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
+
       {/* جدول اليوم */}
       <section className="card overflow-hidden">
         <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
@@ -149,8 +169,16 @@ export default function StudentHome() {
                 <p className="truncate text-sm font-medium text-ink">
                   {s.subjects?.name ?? "—"}
                 </p>
-                <p className="truncate text-xs text-muted">{s.teachers?.full_name ?? "—"}</p>
+                <p className="truncate text-xs text-muted">
+                  {s.teachers?.full_name ?? "—"}
+                  {ptMap[s.period_no] && (
+                    <span className="num"> · {fmtRange(ptMap[s.period_no])}</span>
+                  )}
+                </p>
               </div>
+              {nowPeriod === s.period_no && (
+                <span className="chip shrink-0 bg-mint-deep text-white">الآن</span>
+              )}
             </div>
           ))
         )}
@@ -210,10 +238,20 @@ export default function StudentHome() {
           punches.map((d, i) => (
             <div key={i} className="flex items-center justify-between border-b border-line px-4 py-2.5 last:border-0">
               <span className="num text-sm text-ink">{d.attend_date}</span>
-              <span className="num text-xs text-muted">
-                {new Date(d.punch_time).toLocaleTimeString("ar-SA", {
-                  hour: "2-digit", minute: "2-digit",
-                })}
+              <span className="flex items-center gap-2">
+                {(() => {
+                  const li = lateInfo(ptimes, d.punch_time);
+                  return li?.isLate ? (
+                    <span className="chip bg-late/10 text-late">
+                      متأخر <span className="num">{li.minutes}</span> د
+                    </span>
+                  ) : null;
+                })()}
+                <span className="num text-xs text-muted">
+                  {new Date(d.punch_time).toLocaleTimeString("ar-SA", {
+                    hour: "2-digit", minute: "2-digit",
+                  })}
+                </span>
               </span>
             </div>
           ))
