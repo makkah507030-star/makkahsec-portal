@@ -9,6 +9,9 @@ const SHORTCUTS = [
   { to: "/accounts",    title: "الحسابات",   body: "إنشاء حسابات الدخول" },
   { to: "/staff",       title: "الإدارة",    body: "أعضاء الإدارة وأدوارهم" },
   { to: "/import",      title: "الاستيراد",  body: "بيانات نور والجدول" },
+  { to: "/password-reset", title: "استعادة كلمة المرور", body: "إعادة تعيين لأي مستخدم" },
+  { to: "/news-admin",  title: "الأخبار",    body: "نشر أخبار المدرسة" },
+  { to: "/feedback-admin", title: "الملاحظات", body: "ملاحظات المستخدمين على النسخة التجريبية" },
 ];
 
 export default function Dashboard() {

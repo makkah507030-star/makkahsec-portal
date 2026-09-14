@@ -1,6 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
+import TrialBanner from "./TrialBanner.jsx";
 
 const NAV = {
   admin: [
@@ -8,10 +9,15 @@ const NAV = {
     { to: "/import",      label: "الاستيراد" },
     { to: "/students",    label: "الطلاب" },
     { to: "/accounts",    label: "الحسابات" },
+    { to: "/reports",     label: "التقارير" },
     { to: "/permissions", label: "الاستئذان" },
     { to: "/staff",       label: "الإدارة" },
+    { to: "/news-admin",  label: "الأخبار" },
   ],
-  teacher:  [{ to: "/", label: "التحضير" }],
+  teacher:  [
+    { to: "/",        label: "التحضير" },
+    { to: "/reports", label: "التقارير" },
+  ],
   student:  [{ to: "/", label: "الرئيسية" }],
   guardian: [{ to: "/", label: "الرئيسية" }],
 };
@@ -28,6 +34,8 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-tint">
+      <TrialBanner />
+
       <header className="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
           <div className="flex min-w-0 items-center gap-2.5">

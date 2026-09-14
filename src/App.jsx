@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
 import Layout from "./components/Layout.jsx";
 import Login from "./pages/Login.jsx";
+import ChangePassword from "./pages/ChangePassword.jsx";
 import Dashboard from "./pages/admin/Dashboard.jsx";
 // شاشة الاستيراد تُحمّل عند فتحها فقط (مكتبة Excel ثقيلة)
 const Import = lazy(() => import("./pages/admin/Import.jsx"));
@@ -14,6 +15,13 @@ import GuardianHome from "./pages/GuardianHome.jsx";
 import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
 import AdminStaff from "./pages/admin/AdminStaff.jsx";
 import Landing from "./pages/Landing.jsx";
+import NewsList from "./pages/NewsList.jsx";
+import NewsArticle from "./pages/NewsArticle.jsx";
+import NewsAdmin from "./pages/admin/NewsAdmin.jsx";
+import PasswordReset from "./pages/admin/PasswordReset.jsx";
+import Reports from "./pages/Reports.jsx";
+import Feedback from "./pages/Feedback.jsx";
+import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
 
 export default function App() {
   const { session, profile, loading } = useSession();
@@ -30,6 +38,9 @@ export default function App() {
     return (
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/news" element={<NewsList />} />
+        <Route path="/news/:slug" element={<NewsArticle />} />
+        <Route path="/feedback" element={<Feedback />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -48,6 +59,11 @@ export default function App() {
         </div>
       </div>
     );
+  }
+
+  // إجبار تغيير كلمة المرور قبل أي استخدام
+  if (profile.must_change_pw) {
+    return <ChangePassword />;
   }
 
   const home = {
@@ -74,15 +90,22 @@ export default function App() {
             <Route path="/students" element={<Students />} />
             <Route path="/accounts" element={<Accounts />} />
             <Route path="/staff" element={<AdminStaff />} />
+            <Route path="/news-admin" element={<NewsAdmin />} />
+            <Route path="/password-reset" element={<PasswordReset />} />
+            <Route path="/feedback-admin" element={<FeedbackAdmin />} />
           </>
         )}
         {profile.role === "teacher" && (
           <Route path="/attendance" element={<Attendance />} />
         )}
+        {(profile.role === "admin" || profile.role === "teacher") && (
+          <Route path="/reports" element={<Reports />} />
+        )}
         {/* الاستئذان: متاح للإدارة وللمعلمين المخوّلين — الصفحة نفسها تتحقق من الصلاحية */}
         {(profile.role === "admin" || profile.role === "teacher") && (
           <Route path="/permissions" element={<PermissionRequestPage />} />
         )}
+        <Route path="/feedback" element={<Feedback />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

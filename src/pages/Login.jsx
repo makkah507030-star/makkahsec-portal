@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase, idToEmail, isConfigured } from "../lib/supabase";
+import logoIcon from "../assets/icon-mint.png";
 
 export default function Login() {
   const [nationalId, setNationalId] = useState("");
@@ -26,7 +28,7 @@ export default function Login() {
 
   if (!isConfigured) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-6">
+      <div className="flex min-h-screen items-center justify-center bg-gray-tint p-6">
         <div className="card max-w-md p-6">
           <h1 className="mb-2 text-lg font-bold">الإعدادات ناقصة</h1>
           <p className="text-sm leading-relaxed text-muted">
@@ -42,15 +44,14 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-canvas p-6">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-tint p-6">
       <div className="w-full max-w-sm">
         <div className="mb-7 text-center">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl2 bg-mint-deep text-xl font-bold text-white">
-            م
-          </div>
-          <h1 className="text-xl font-bold leading-snug">
+          <img src={logoIcon} alt="" className="mx-auto mb-4 h-14 w-14 object-contain" />
+          <h1 className="text-xl font-bold leading-snug text-ink">
             بوابة مكة الثانوية الرقمية
           </h1>
+          <p className="mt-1.5 text-sm text-muted">مدرسة مكة الثانوية</p>
         </div>
 
         <form onSubmit={submit} className="card p-5">
@@ -94,6 +95,13 @@ export default function Login() {
         <p className="mt-4 text-center text-xs leading-relaxed text-muted">
           نسيت كلمة المرور؟ راجع إدارة المدرسة لإعادة تعيينها.
         </p>
+
+        <Link
+          to="/"
+          className="mx-auto mt-3 block text-center text-xs font-medium text-[#6AA786] hover:text-mint-deep"
+        >
+          العودة للصفحة الرئيسية
+        </Link>
       </div>
     </div>
   );

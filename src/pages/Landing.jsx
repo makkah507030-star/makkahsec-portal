@@ -1,6 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import logoFull from "../assets/logo-full-mint.png";
 import logoIcon from "../assets/icon-mint.png";
+import CalendarTimeline from "../components/CalendarTimeline.jsx";
+import NewsSlider from "../components/NewsSlider.jsx";
+import TrialBanner from "../components/TrialBanner.jsx";
 
 const SECTIONS = [
   {
@@ -33,7 +36,7 @@ const LINKS = [
   { name: "وزارة التعليم", url: "https://moe.gov.sa" },
   { name: "منصة مدرستي", url: "https://schools.madrasati.sa" },
   { name: "نظام نور", url: "https://noor.moe.gov.sa" },
-  { name: "بوابة التعليم", url: "https://schools.moe.gov.sa" },
+  { name: "بوابة التعليم", url: "https://edugate.moe.gov.sa/" },
 ];
 
 export default function Landing() {
@@ -41,6 +44,8 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-white">
+      <TrialBanner />
+
       {/* شريط علوي */}
       <header className="sticky top-0 z-10 border-b border-line bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3.5">
@@ -108,22 +113,11 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* أرقام المدرسة */}
-      <section className="border-b border-line bg-white">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-x-reverse divide-line px-5 md:grid-cols-4">
-          {[
-            ["855", "طالبًا"],
-            ["55", "معلمًا"],
-            ["28", "فصلًا دراسيًا"],
-            ["1387", "هـ سنة التأسيس"],
-          ].map(([n, label]) => (
-            <div key={label} className="px-4 py-7 text-center">
-              <p className="num text-2xl font-bold text-mint-deep">{n}</p>
-              <p className="mt-1 text-xs text-muted">{label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* أخبار المدرسة */}
+      <NewsSlider />
+
+      {/* التقويم الدراسي */}
+      <CalendarTimeline />
 
       {/* الأقسام */}
       <section id="sections" className="mx-auto max-w-6xl px-5 py-16">
@@ -169,12 +163,22 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* مدير المدرسة */}
+      <section className="bg-white px-5 py-12">
+        <div className="mx-auto max-w-6xl">
+          <div className="rounded-card border border-[#CCF2DB] bg-mint-tint px-6 py-7 text-center">
+            <p className="text-xs font-medium text-[#6AA786]">مدير المدرسة</p>
+            <p className="mt-2 text-lg font-bold text-mint-deep">
+              عبدالله بن حسن سلمان الفيفي
+            </p>
+          </div>
+        </div>
+      </section>
+
       <footer className="border-t border-line bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-6 text-xs text-muted">
           <p>مدرسة مكة الثانوية — بوابة إلكترونية داخلية.</p>
-          <p>
-            تأسست عام <span className="num">1387</span>هـ
-          </p>
+          <p>مكة المكرمة — المملكة العربية السعودية</p>
         </div>
       </footer>
     </div>
