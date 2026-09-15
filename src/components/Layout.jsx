@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
+import NotificationBell from "./NotificationBell.jsx";
 
 /* أقسام قائمة الإدارة — مجمّعة منطقيًا */
 const ADMIN_GROUPS = [
@@ -22,6 +23,7 @@ const ADMIN_GROUPS = [
     title: "المحتوى",
     items: [
       { to: "/news-admin",     label: "الأخبار",   perm: "news",     icon: "news" },
+      { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/feedback-admin", label: "الملاحظات", perm: "feedback", icon: "chat" },
     ],
@@ -62,6 +64,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     shield: "M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z",
     lock:   "M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3",
     book:   "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z",
+    bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
   }[name];
 
   return (
@@ -91,13 +94,39 @@ export default function Layout({ children }) {
       : ROLE_LABEL[profile?.role] ?? "";
 
   const Brand = ({ compact }) => (
-    <div className="flex min-w-0 items-center gap-2.5">
+    <NavLink to="/" end className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80">
       <img src={logoIcon} alt="" className="h-9 w-9 shrink-0 object-contain" />
       <div className="min-w-0">
         <p className="truncate text-sm font-bold leading-tight text-ink">
           بوابة مكة الثانوية
         </p>
-        {!compact && <p className="truncate text-xs text-muted">{subtitle}</p>}
+        {!compact && <p className="truncate text-xs text-muted">مدرسة مكة الثانوية</p>}
+      </div>
+    </NavLink>
+  );
+
+  const Actions = () => (
+    <div className="flex shrink-0 items-center gap-2">
+      <NotificationBell />
+      <SignOut />
+    </div>
+  );
+
+  // الاسم والدور — نسخة مدمجة للشريط العلوي
+  const UserInline = () => (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-mint-tint">
+        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-mint-deep"
+             stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold leading-tight text-ink">
+          {profile?.full_name ?? profile?.username ?? "—"}
+        </p>
+        <p className="truncate text-[11px] leading-tight text-muted">{subtitle}</p>
       </div>
     </div>
   );
@@ -133,14 +162,14 @@ export default function Layout({ children }) {
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
           </button>
-          <Brand compact />
-          <SignOut />
+          <UserInline />
+          <Actions />
         </header>
 
         <div className="mx-auto flex max-w-[1400px]">
           {/* القائمة الجانبية — سطح المكتب */}
           <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-l border-line bg-white lg:flex">
-            <div className="border-b border-line px-4 py-4">
+            <div className="flex h-[4.5rem] items-center border-b border-line px-4">
               <Brand />
             </div>
 
@@ -164,9 +193,6 @@ export default function Layout({ children }) {
               ))}
             </nav>
 
-            <div className="border-t border-line px-4 py-3">
-              <SignOut />
-            </div>
           </aside>
 
           {/* القائمة المنسدلة — الجوال */}
@@ -175,15 +201,17 @@ export default function Layout({ children }) {
               <div className="fixed inset-0 z-40 bg-ink/30 lg:hidden"
                    onClick={() => setOpen(false)} />
               <aside className="fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-white shadow-xl lg:hidden">
-                <div className="flex items-center justify-between border-b border-line px-4 py-4">
-                  <Brand />
-                  <button onClick={() => setOpen(false)} aria-label="إغلاق"
+                <div className="border-b border-line px-4 py-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <Brand compact />
+                    <button onClick={() => setOpen(false)} aria-label="إغلاق"
                           className="rounded-sm2 p-1.5 text-muted hover:bg-canvas">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
-                         stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                      <path d="M6 6l12 12M18 6 6 18" />
-                    </svg>
-                  </button>
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                           stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                        <path d="M6 6l12 12M18 6 6 18" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
 
                 <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
@@ -210,9 +238,19 @@ export default function Layout({ children }) {
             </>
           )}
 
-          <main className="min-w-0 flex-1 px-4 py-5 sm:px-6">
-            <div className="mx-auto max-w-5xl">{children}</div>
-          </main>
+          <div className="flex min-w-0 flex-1 flex-col">
+            {/* شريط علوي — سطح المكتب */}
+            <header className="sticky top-0 z-20 hidden h-[4.5rem] border-b border-line bg-white/95 backdrop-blur lg:block">
+              <div className="mx-auto flex h-full max-w-5xl items-center justify-between gap-3 px-6">
+                <UserInline />
+                <Actions />
+              </div>
+            </header>
+
+            <main className="min-w-0 flex-1 px-4 py-5 sm:px-6">
+              <div className="mx-auto max-w-5xl">{children}</div>
+            </main>
+          </div>
         </div>
       </div>
     );
@@ -224,9 +262,20 @@ export default function Layout({ children }) {
       <TrialBanner />
 
       <header className="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
-          <Brand />
-          <SignOut />
+        <div className="mx-auto flex h-[4.5rem] max-w-5xl items-center justify-between gap-3 px-4">
+          <div className="flex min-w-0 items-center gap-4">
+            <Brand compact />
+            <span className="hidden h-8 w-px bg-line sm:block" />
+            <span className="hidden min-w-0 sm:block">
+              <UserInline />
+            </span>
+          </div>
+          <Actions />
+        </div>
+
+        {/* الاسم والدور — على الشاشات الضيقة */}
+        <div className="mx-auto flex max-w-5xl items-center border-t border-line px-4 py-2 sm:hidden">
+          <UserInline />
         </div>
 
         {items.length > 1 && (

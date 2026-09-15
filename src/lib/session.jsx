@@ -163,6 +163,7 @@ export const PERMISSIONS = [
   { key: "import",         label: "الاستيراد",          desc: "بيانات نور والجدول" },
   { key: "news",           label: "الأخبار",            desc: "نشر أخبار المدرسة" },
   { key: "guides",         label: "الأدلة",             desc: "رفع أدلة الاستخدام" },
+  { key: "notifications",  label: "الإشعارات",          desc: "إرسال التعاميم والتنبيهات" },
   { key: "feedback",       label: "الملاحظات",          desc: "ملاحظات المستخدمين" },
   { key: "password_reset", label: "استعادة كلمة المرور", desc: "إعادة تعيين لأي مستخدم" },
 ];

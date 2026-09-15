@@ -19,6 +19,7 @@ const SHORTCUTS = [
   { to: "/password-reset", title: "استعادة كلمة المرور", body: "إعادة تعيين لأي مستخدم" },
   { to: "/news-admin",  title: "الأخبار",    body: "نشر أخبار المدرسة" },
   { to: "/guides-admin", title: "الأدلة",    body: "رفع أدلة الاستخدام" },
+  { to: "/notifications", title: "الإشعارات", body: "إرسال التعاميم والتنبيهات" },
   { to: "/feedback-admin", title: "الملاحظات", body: "ملاحظات المستخدمين على النسخة التجريبية" },
 ];
 

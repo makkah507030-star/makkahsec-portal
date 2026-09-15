@@ -17,6 +17,20 @@ const SOLID = {
   late:    "bg-late text-white font-semibold",
   excused: "bg-excused text-white font-semibold",
 };
+// ألوان صندوق الإحصائيات — أصناف ثابتة لأن Tailwind لا يقرأ المبنية ديناميكيًا
+const COUNT_TONE = {
+  present: "text-present",
+  absent:  "text-absent",
+  late:    "text-late",
+  excused: "text-excused",
+};
+const COUNT_DOT = {
+  present: "bg-present",
+  absent:  "bg-absent",
+  late:    "bg-late",
+  excused: "bg-excused",
+};
+
 const EDGE = {
   absent:  "text-absent bg-absent/[.04]",
   late:    "text-late bg-late/[.04]",
@@ -280,11 +294,16 @@ export default function Attendance() {
             <span className="num">{students.length}</span> طالبًا
           </p>
         </div>
-        <div className="mt-4 grid grid-cols-4 border-t border-[#CCF2DB]">
+        <div className="mt-4 grid grid-cols-4 border-t border-[#CCF2DB] bg-white/50">
           {ORDER.map((k) => (
-            <div key={k} className="border-l border-[#CCF2DB] px-2 py-2.5 text-center last:border-l-0">
-              <p className="num text-lg font-bold leading-none text-mint-deep">{counts[k]}</p>
-              <p className="mt-1 text-[11px] text-muted">{STATUS[k].label}</p>
+            <div key={k} className="border-l border-[#CCF2DB] px-2 py-3 text-center last:border-l-0">
+              <p className={`num text-xl font-bold leading-none ${COUNT_TONE[k]}`}>
+                {counts[k]}
+              </p>
+              <p className="mt-1.5 flex items-center justify-center gap-1.5 text-[11px] text-muted">
+                <span className={`h-2 w-2 rounded-full ${COUNT_DOT[k]}`} />
+                {STATUS[k].label}
+              </p>
             </div>
           ))}
         </div>

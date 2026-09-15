@@ -20,6 +20,7 @@ import Guides from "./pages/Guides.jsx";
 import GuidesAdmin from "./pages/admin/GuidesAdmin.jsx";
 import NewsArticle from "./pages/NewsArticle.jsx";
 import NewsAdmin from "./pages/admin/NewsAdmin.jsx";
+import NotificationsAdmin from "./pages/admin/NotificationsAdmin.jsx";
 import PasswordReset from "./pages/admin/PasswordReset.jsx";
 import SeasonSwitch from "./pages/admin/SeasonSwitch.jsx";
 import Reports from "./pages/Reports.jsx";
@@ -98,6 +99,7 @@ export default function App() {
             {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
             {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
+            {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
             {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
             {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
             {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
