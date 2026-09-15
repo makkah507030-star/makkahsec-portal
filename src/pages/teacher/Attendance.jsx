@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { todayDow, todayISO, todayLabel, GRADE_NAMES, STATUS } from "../../lib/schoolTime";
+import ColorLegend, { ATTENDANCE_LEGEND } from "../../components/ColorLegend.jsx";
+import {
+  loadPeriodTimes, byPeriodNo, currentPeriodNo, nearestPeriodNo, fmtRange,
+} from "../../lib/periodTimes";
 
 const ORDER = ["present", "absent", "late", "excused"];
 
@@ -28,12 +32,30 @@ export default function Attendance() {
   const [excused, setExcused] = useState(new Set());
   const [punched, setPunched] = useState(new Set());
   const [permits, setPermits] = useState({}); // student_id -> { by, note }
+  const [returns, setReturns] = useState({}); // student_id -> { from_period }
+  const [busyReturn, setBusyReturn] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const [year, setYear] = useState("");
   const [loading, setLoading] = useState(true);
+  const [me, setMe] = useState(null);
+  const [ptimes, setPtimes] = useState([]);
+  const [nowPeriod, setNowPeriod] = useState(null);
   const date = todayISO();
   const dow = todayDow();
+
+  // التوقيت الزمني + تحديث الحصة الجارية كل دقيقة
+  useEffect(() => {
+    let timer;
+    (async () => {
+      const { rows } = await loadPeriodTimes();
+      setPtimes(rows);
+      const tick = () => setNowPeriod(currentPeriodNo(rows));
+      tick();
+      timer = setInterval(tick, 60000);
+    })();
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -47,7 +69,8 @@ export default function Attendance() {
       setYear(y);
 
       const { data: t0 } = await supabase.from("teachers")
-        .select("id").eq("user_id", uid).maybeSingle();
+        .select("id, full_name, specialization").eq("user_id", uid).maybeSingle();
+      setMe(t0 ?? null);
       if (!t0 || !dow) { setLoading(false); return; }
 
       const { data } = await supabase.from("schedule")
@@ -63,7 +86,12 @@ export default function Attendance() {
           .in("schedule_id", list.map((p) => p.id));
         const doneSet = new Set((done ?? []).map((r) => r.schedule_id));
         setMarked(doneSet);
-        setActive(list.find((p) => !doneSet.has(p.id)) ?? list[0]);
+
+        // الحصة الافتراضية: الجارية الآن إن وُجدت، وإلا أول حصة غير محضَّرة
+        const { rows: pt } = await loadPeriodTimes();
+        const near = nearestPeriodNo(pt);
+        const byNow = list.find((p) => p.period_no === near);
+        setActive(byNow ?? list.find((p) => !doneSet.has(p.id)) ?? list[0]);
       }
       setLoading(false);
     })();
@@ -82,7 +110,7 @@ export default function Attendance() {
       const ids = list.map((s) => s.id);
       if (!ids.length) { setPermits({}); return; }
 
-      const [{ data: existing }, { data: exc }, { data: daily }, { data: perms }] =
+      const [{ data: existing }, { data: exc }, { data: daily }, { data: perms }, { data: rets }] =
         await Promise.all([
           supabase.from("class_attendance").select("student_id, status")
             .eq("schedule_id", active.id).eq("attend_date", date),
@@ -94,28 +122,40 @@ export default function Attendance() {
             .select("student_id, permission_requests!inner(scope, period_numbers, note, created_by, request_date)")
             .in("student_id", ids)
             .eq("permission_requests.request_date", date),
+          supabase.from("permission_returns")
+            .select("student_id, from_period")
+            .eq("return_date", date)
+            .in("student_id", ids),
         ]);
+
+      setReturns(Object.fromEntries((rets ?? []).map((r) => [r.student_id, r])));
 
       const excSet = new Set((exc ?? []).map((r) => r.student_id));
       setExcused(excSet);
       setPunched(new Set((daily ?? []).map((r) => r.student_id)));
 
       // الاستئذانات التي تغطي هذه الحصة تحديدًا
+      const retMap = Object.fromEntries((rets ?? []).map((r) => [r.student_id, r]));
       const covering = (perms ?? []).filter((p) => {
         const r = p.permission_requests;
         if (!r) return false;
+        // من سجّل المعلم عودته من حصة سابقة أو هذه الحصة لم يعد مستأذنًا
+        const ret = retMap[p.student_id];
+        if (ret && active.period_no >= ret.from_period) return false;
         if (r.scope === "day") return true;
         return (r.period_numbers ?? []).includes(active.period_no);
       });
 
       if (covering.length) {
         const raiserIds = [...new Set(covering.map((p) => p.permission_requests.created_by))];
-        const [{ data: tchs }, { data: grs }] = await Promise.all([
-          supabase.from("teachers").select("user_id, full_name").in("user_id", raiserIds),
+        const [{ data: usrs }, { data: grs }] = await Promise.all([
+          supabase.from("users").select("id, full_name, username").in("id", raiserIds),
           supabase.from("permission_grantors").select("user_id, title").in("user_id", raiserIds),
         ]);
-        const nameBy  = Object.fromEntries((tchs ?? []).map((t) => [t.user_id, t.full_name]));
-        const titleBy = Object.fromEntries((grs  ?? []).map((g) => [g.user_id, g.title]));
+        const nameBy  = Object.fromEntries(
+          (usrs ?? []).map((u) => [u.id, u.full_name ?? u.username])
+        );
+        const titleBy = Object.fromEntries((grs ?? []).map((g) => [g.user_id, g.title]));
 
         const map = {};
         covering.forEach((p) => {
@@ -137,6 +177,50 @@ export default function Attendance() {
       setMarks(init);
     })();
   }, [active, date]);
+
+  // تسجيل عودة الطالب للفصل — تسري من هذه الحصة فما بعدها
+  const markReturned = async (studentId) => {
+    if (!active) return;
+    setBusyReturn(studentId);
+    const row = {
+      student_id: studentId,
+      return_date: date,
+      from_period: active.period_no,
+      returned_by: session?.user?.id ?? null,
+    };
+    const { error } = await supabase
+      .from("permission_returns")
+      .upsert(row, { onConflict: "student_id,return_date" });
+    setBusyReturn(null);
+    if (error) { setMsg({ ok: false, text: "تعذّر التسجيل: " + error.message }); return; }
+
+    setReturns((r) => ({ ...r, [studentId]: row }));
+    setPermits((p) => {
+      const n = { ...p };
+      delete n[studentId];
+      return n;
+    });
+    setMarks((m) => ({ ...m, [studentId]: "present" }));
+  };
+
+  // التراجع عن تسجيل العودة
+  const undoReturn = async (studentId) => {
+    setBusyReturn(studentId);
+    const { error } = await supabase
+      .from("permission_returns")
+      .delete()
+      .eq("student_id", studentId)
+      .eq("return_date", date);
+    setBusyReturn(null);
+    if (error) { setMsg({ ok: false, text: "تعذّر التراجع: " + error.message }); return; }
+
+    setReturns((r) => {
+      const n = { ...r };
+      delete n[studentId];
+      return n;
+    });
+    setActive((a) => ({ ...a })); // إعادة تحميل بيانات الحصة
+  };
 
   const counts = useMemo(() => {
     const c = { present: 0, absent: 0, late: 0, excused: 0 };
@@ -161,35 +245,58 @@ export default function Attendance() {
   };
 
   if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
-  if (!dow) return <Empty title="اليوم عطلة" body="الأسبوع الدراسي من الأحد إلى الخميس." />;
+  if (!dow)
+    return (
+      <div className="space-y-4">
+        <TeacherCard me={me} />
+        <Empty title="اليوم عطلة" body="الأسبوع الدراسي من الأحد إلى الخميس." />
+      </div>
+    );
   if (!periods.length)
-    return <Empty title={`لا حصص لك ${todayLabel()}`}
-                  body="إن كان هذا غير صحيح، راجع الإدارة للتأكد من الجدول الدراسي." />;
+    return (
+      <div className="space-y-4">
+        <TeacherCard me={me} />
+        <Empty title={`لا حصص لك ${todayLabel()}`}
+               body="إن كان هذا غير صحيح، راجع الإدارة للتأكد من الجدول الدراسي." />
+      </div>
+    );
 
   const grade = active?.classes?.grade;
   const allDone = marked.size === periods.length;
+  const ptMap = byPeriodNo(ptimes);
+  const ptimeOf = (no) => (no == null ? null : ptMap[no] ?? null);
 
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-card bg-mint-deep text-white shadow-card">
+      <TeacherCard me={me} />
+
+      <section className="overflow-hidden rounded-card border border-[#CCF2DB] bg-mint-tint">
         <div className="px-5 pt-4">
-          <p className="text-xs text-white/60">
-            {todayLabel()} · الحصة <span className="num">{active?.period_no}</span>
-          </p>
-          <h1 className="mt-1 text-xl font-bold leading-tight">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-medium text-[#6AA786]">
+              {todayLabel()} · الحصة <span className="num">{active?.period_no}</span>
+              {ptimeOf(active?.period_no) && (
+                <span className="num"> · {fmtRange(ptimeOf(active?.period_no))}</span>
+              )}
+            </p>
+            {nowPeriod === active?.period_no && (
+              <span className="chip bg-mint-deep text-white">جارية الآن</span>
+            )}
+          </div>
+          <h1 className="mt-1 text-xl font-bold leading-tight text-ink">
             {active?.subjects?.name ?? "بلا مادة"}
           </h1>
-          <p className="mt-0.5 text-sm text-white/75">
+          <p className="mt-0.5 text-sm text-muted">
             فصل <span className="num">{active?.classes?.class_no}</span>
             {grade ? ` · ${GRADE_NAMES[grade]}` : ""} ·{" "}
             <span className="num">{students.length}</span> طالبًا
           </p>
         </div>
-        <div className="mt-4 grid grid-cols-4 border-t border-white/15">
+        <div className="mt-4 grid grid-cols-4 border-t border-[#CCF2DB]">
           {ORDER.map((k) => (
-            <div key={k} className="border-l border-white/15 px-2 py-2.5 text-center last:border-l-0">
-              <p className="num text-lg font-bold leading-none">{counts[k]}</p>
-              <p className="mt-1 text-[11px] text-white/60">{STATUS[k].label}</p>
+            <div key={k} className="border-l border-[#CCF2DB] px-2 py-2.5 text-center last:border-l-0">
+              <p className="num text-lg font-bold leading-none text-mint-deep">{counts[k]}</p>
+              <p className="mt-1 text-[11px] text-muted">{STATUS[k].label}</p>
             </div>
           ))}
         </div>
@@ -205,15 +312,22 @@ export default function Attendance() {
                 className={[
                   "shrink-0 rounded-card border px-3 py-2 text-right transition-colors",
                   on ? "border-mint-deep bg-mint-tint" : done ? "border-line bg-paper" : "border-line bg-warning-light",
+                  nowPeriod === p.period_no && !on ? "ring-1 ring-mint-deep" : "",
                 ].join(" ")}>
                 <span className="flex items-center gap-1.5">
                   <span className={`h-1.5 w-1.5 rounded-full ${done ? "bg-present" : "bg-faint"}`} />
                   <span className="num text-sm font-bold">{p.period_no}</span>
+                  {nowPeriod === p.period_no && (
+                    <span className="text-[10px] font-semibold text-mint-deep">الآن</span>
+                  )}
                 </span>
                 <span className="mt-0.5 block whitespace-nowrap text-xs text-muted">
                   {p.subjects?.name ?? "—"}
                 </span>
-                <span className="num mt-0.5 block text-[11px] text-faint">{p.classes?.class_no}</span>
+                <span className="num mt-0.5 block whitespace-nowrap text-[11px] text-faint">
+                  {p.classes?.class_no}
+                  {ptimeOf(p.period_no) ? ` · ${fmtRange(ptimeOf(p.period_no))}` : ""}
+                </span>
               </button>
             );
           })}
@@ -232,25 +346,70 @@ export default function Attendance() {
         <div className="card divide-y divide-line overflow-hidden">
           {students.map((s, i) => {
             const cur = marks[s.id] ?? "present";
-            const edge = cur === "present" ? "" : EDGE[cur];
             const permit = permits[s.id];
+            const ret = returns[s.id];
+            const returnedHere = ret && active?.period_no >= ret.from_period;
+
+            // المستأذن له تظليل خاص يتقدّم على تظليل الحالة
+            const edge = permit
+              ? "text-excused bg-excused/[.08]"
+              : cur === "present" ? "" : EDGE[cur];
+
             return (
               <div key={s.id} className={`px-3 py-2.5 ${edge}`}
-                   style={cur === "present" ? undefined : { boxShadow: "inset 3px 0 0 currentColor" }}>
+                   style={(permit || cur !== "present")
+                     ? { boxShadow: "inset 3px 0 0 currentColor" }
+                     : undefined}>
                 <div className="mb-1.5 flex items-baseline gap-2">
                   <span className="num w-6 shrink-0 text-xs text-faint">{i + 1}</span>
                   <p className="flex-1 truncate text-sm font-medium text-ink">{s.full_name}</p>
                   {!punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
-                  {permit && <span className="chip shrink-0 bg-mint-light text-mint-deep">مستأذن</span>}
+                  {punched.has(s.id) && cur === "absent" && (
+                    <span className="chip shrink-0 bg-absent/10 font-semibold text-absent">
+                      بصم ولم يحضر
+                    </span>
+                  )}
+                  {permit && (
+                    <span className="chip shrink-0 bg-excused/15 font-semibold text-excused">مستأذن</span>
+                  )}
+                  {returnedHere && (
+                    <span className="chip shrink-0 bg-present/10 font-semibold text-present">
+                      عاد للفصل
+                    </span>
+                  )}
                   {excused.has(s.id) && <span className="chip shrink-0 bg-excused/10 text-excused">استئذان</span>}
                 </div>
 
                 {permit && (
-                  <p className="mb-1.5 pr-8 text-[11px] leading-relaxed text-muted">
-                    استئذان داخلي — بواسطة {permit.by}
-                    {permit.title ? ` (${permit.title})` : ""}
-                    {permit.note ? ` · ${permit.note}` : ""}
-                  </p>
+                  <div className="mb-2 pr-8">
+                    <p className="text-[11px] leading-relaxed text-muted">
+                      استئذان داخلي — بواسطة {permit.by}
+                      {permit.title ? ` (${permit.title})` : ""}
+                      {permit.note ? ` · ${permit.note}` : ""}
+                    </p>
+                    <button
+                      onClick={() => markReturned(s.id)}
+                      disabled={busyReturn === s.id}
+                      className="mt-1.5 rounded-pill border border-present/40 bg-present/10 px-3 py-1 text-[11px] font-semibold text-present transition-colors hover:bg-present/20 disabled:opacity-50"
+                    >
+                      {busyReturn === s.id ? "جارٍ التسجيل…" : "عاد للفصل — ارفع الاستئذان"}
+                    </button>
+                  </div>
+                )}
+
+                {returnedHere && (
+                  <div className="mb-2 pr-8">
+                    <p className="text-[11px] leading-relaxed text-muted">
+                      سجّلت عودته من الحصة <span className="num">{ret.from_period}</span> فما بعدها.
+                    </p>
+                    <button
+                      onClick={() => undoReturn(s.id)}
+                      disabled={busyReturn === s.id}
+                      className="mt-1 text-[11px] font-medium text-absent hover:underline disabled:opacity-50"
+                    >
+                      تراجع
+                    </button>
+                  </div>
                 )}
 
                 <div className="flex gap-1 pr-8">
@@ -267,6 +426,16 @@ export default function Attendance() {
           })}
         </div>
       )}
+
+      <ColorLegend
+        items={[
+          ...ATTENDANCE_LEGEND,
+          { chip: "bg-warning-light text-warning", sample: "لم يبصم", label: "لا بصمة صباحية" },
+          { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر", label: "دخل المدرسة وغاب عن الحصة" },
+          { chip: "bg-present/10 text-present", sample: "عاد للفصل", label: "رفع المعلم استئذانه" },
+          { chip: "bg-excused/15 text-excused", sample: "مستأذن", label: "استئذان داخلي — الصف مظلَّل" },
+        ]}
+      />
 
       {msg && (
         <p className={`rounded-card px-4 py-2.5 text-sm font-medium ${
@@ -285,6 +454,30 @@ export default function Attendance() {
       </div>
       <div className="h-16 sm:hidden" />
     </div>
+  );
+}
+
+function TeacherCard({ me }) {
+  if (!me) return null;
+  return (
+    <section className="flex items-center gap-3.5 rounded-card border border-line bg-white p-4">
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-mint-tint">
+        <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6 text-mint-deep"
+             stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+          <path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" />
+          <path d="M22 10v5" />
+        </svg>
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-base font-bold leading-tight text-ink">
+          {me.full_name}
+        </p>
+        <p className="mt-0.5 truncate text-xs text-muted">
+          معلم{me.specialization ? ` · ${me.specialization}` : ""}
+        </p>
+      </div>
+    </section>
   );
 }
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { fmtGreg } from "../lib/dates";
 import { useSession } from "../lib/session.jsx";
-import { exportToExcel, printReport } from "../lib/exportUtils";
+import { exportToExcel, printReport, STUDENT_DEPUTY_NAME } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 
@@ -20,6 +21,7 @@ export default function PermissionLog() {
   const [titles, setTitles] = useState({}); // user_id -> صفة
   const [raiser, setRaiser] = useState("all");
   const [busy, setBusy] = useState(null);
+  const [returns, setReturns] = useState([]);
 
   const load = async () => {
     setRows(null);
@@ -43,6 +45,14 @@ export default function PermissionLog() {
     const { data } = await q;
     const list = data ?? [];
     setRows(list);
+
+    // عودات الطلاب المسجّلة من المعلمين خلال نفس الفترة
+    const { data: rets } = await supabase
+      .from("permission_returns")
+      .select("student_id, return_date, from_period, returned_by")
+      .gte("return_date", from)
+      .lte("return_date", to);
+    setReturns(rets ?? []);
 
     const ids = [...new Set(list.map((r) => r.created_by).filter(Boolean))];
     if (ids.length) {
@@ -90,7 +100,7 @@ export default function PermissionLog() {
       (r.permission_request_students ?? []).forEach((s) => {
         out.push([
           out.length + 1,
-          r.request_date,
+          fmtGreg(r.request_date + "T00:00:00"),
           s.students?.national_id ?? "",
           s.students?.full_name ?? "",
           scopeText(r),
@@ -157,6 +167,7 @@ export default function PermissionLog() {
                 rows: flatRows(),
                 logoUrl: new URL(logoIcon, window.location.origin).href,
                 moeLogoUrl: new URL(moeLogo, window.location.origin).href,
+                secondSignature: { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
               })}
             className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-40">
             طباعة / PDF
@@ -179,7 +190,7 @@ export default function PermissionLog() {
           return (
             <article key={r.id} className="card p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="num chip bg-mint-tint text-mint-deep">{r.request_date}</span>
+                <span className="num chip bg-mint-tint text-mint-deep">{fmtGreg(r.request_date + "T00:00:00")}</span>
                 <span className="chip bg-gray-tint text-muted">{scopeText(r)}</span>
                 <span className="num chip bg-gray-tint text-muted">
                   {students.length} طالب
@@ -195,12 +206,22 @@ export default function PermissionLog() {
               )}
 
               <div className="mt-3 flex flex-wrap gap-1.5">
-                {students.map((s) => (
-                  <span key={s.student_id}
-                        className="rounded-pill border border-line px-2.5 py-1 text-xs text-muted">
-                    {s.students?.full_name ?? "—"}
-                  </span>
-                ))}
+                {students.map((s) => {
+                  const ret = returns.find(
+                    (x) => x.student_id === s.student_id && x.return_date === r.request_date
+                  );
+                  return (
+                    <span key={s.student_id}
+                      className={`rounded-pill border px-2.5 py-1 text-xs ${
+                        ret ? "border-present/40 bg-present/10 text-present"
+                            : "border-line text-muted"}`}>
+                      {s.students?.full_name ?? "—"}
+                      {ret && (
+                        <span className="num"> · عاد من الحصة {ret.from_period}</span>
+                      )}
+                    </span>
+                  );
+                })}
               </div>
 
               {canDelete(r) && (
