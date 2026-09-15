@@ -215,13 +215,30 @@ export default function Dashboard() {
       </section>
 
       <ColorLegend
-        items={[
-          { color: "bg-late", label: "العدد الأحمر: فصول لم تُحضَّر في تلك الحصة" },
-          { chip: "bg-present/10 text-present", sample: "مكتمل", label: "صندوق أخضر: اكتمل تحضير الحصة" },
-          { chip: "bg-present/10 text-present", sample: "متصل", label: "جهاز بصمة يعمل" },
-          { chip: "bg-warning-light text-warning", sample: "لم يتصل بعد", label: "جهاز لم يتصل" },
-          { chip: "bg-late/10 text-late", sample: "بلا ربط", label: "طلاب بلا رقم بصمة" },
-          { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر", label: "دخل وغاب عن الحصص" },
+        groups={[
+          {
+            title: "حصص اليوم",
+            items: [
+              { color: "bg-late", label: "عدّاد أحمر", note: "عدد الفصول التي لم تُحضَّر في تلك الحصة" },
+              { chip: "bg-present/10 text-present", sample: "أخضر", label: "اكتمل تحضير الحصة" },
+            ],
+          },
+          {
+            title: "تنبيهات ومتابعة",
+            items: [
+              { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر",
+                label: "طلاب دخلوا المدرسة وغابوا عن حصصهم" },
+              { chip: "bg-late/10 text-late", sample: "بلا ربط",
+                label: "طلاب بلا رقم في جهاز البصمة" },
+            ],
+          },
+          {
+            title: "أجهزة البصمة",
+            items: [
+              { chip: "bg-present/10 text-present", sample: "متصل", label: "الجهاز يعمل ويرسل البيانات" },
+              { chip: "bg-warning-light text-warning", sample: "لم يتصل", label: "لم يصل منه أي اتصال بعد" },
+            ],
+          },
         ]}
       />
 

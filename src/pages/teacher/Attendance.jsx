@@ -407,15 +407,32 @@ export default function Attendance() {
       )}
 
       <ColorLegend
-        items={[
-          ...ATTENDANCE_LEGEND,
-          { chip: "bg-warning-light text-warning", sample: "لم يبصم", label: "لا بصمة صباحية" },
-          { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر", label: "دخل المدرسة وغاب عن الحصة" },
-          { chip: "bg-present/10 text-present", sample: "عاد للفصل", label: "أنهت الإدارة استئذانه" },
-          { chip: "bg-present/10 text-present", sample: "3 · 12%", label: "غيابه عن حصصك — أقل من 20%" },
-          { chip: "bg-late/12 text-late", sample: "5 · 25%", label: "غيابه عن حصصك — 20% فأكثر" },
-          { chip: "bg-absent/12 text-absent", sample: "8 · 34%", label: "غيابه عن حصصك — 30% فأكثر" },
-          { chip: "bg-excused/15 text-excused", sample: "مستأذن", label: "استئذان من الإدارة — لا يعدّله المعلم" },
+        groups={[
+          {
+            title: "حالات التحضير",
+            items: ATTENDANCE_LEGEND,
+          },
+          {
+            title: "شارات بجانب اسم الطالب",
+            items: [
+              { chip: "bg-warning-light text-warning", sample: "لم يبصم",
+                label: "لا بصمة دخول صباحية", note: "غالبًا غائب عن المدرسة" },
+              { chip: "bg-excused/15 text-excused", sample: "مستأذن",
+                label: "استئذان من الإدارة", note: "لا يعدّله المعلم" },
+              { chip: "bg-present/10 text-present", sample: "عاد للفصل",
+                label: "أنهت الإدارة استئذانه" },
+              { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر",
+                label: "دخل المدرسة وغاب عن الحصة", note: "تأكّد قبل الحفظ" },
+            ],
+          },
+          {
+            title: "صندوق الغياب — نسبة غيابه عن حصصك",
+            items: [
+              { chip: "bg-present/10 text-present", sample: "3 · 12%", label: "أقل من 20%" },
+              { chip: "bg-late/12 text-late",       sample: "5 · 25%", label: "20% فأكثر" },
+              { chip: "bg-absent/12 text-absent",   sample: "8 · 34%", label: "30% فأكثر" },
+            ],
+          },
         ]}
       />
 
