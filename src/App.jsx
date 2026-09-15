@@ -110,7 +110,7 @@ export default function App() {
           <Route path="/reports" element={<Reports />} />
         )}
         {/* الاستئذان: متاح للإدارة وللمعلمين المخوّلين — الصفحة نفسها تتحقق من الصلاحية */}
-        {(profile.role === "teacher" || (profile.role === "admin" && can("permissions"))) && (
+        {profile.role === "admin" && can("permissions") && (
           <Route path="/permissions" element={<PermissionRequestPage />} />
         )}
         <Route path="/feedback" element={<Feedback />} />

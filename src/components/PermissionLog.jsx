@@ -22,6 +22,8 @@ export default function PermissionLog() {
   const [raiser, setRaiser] = useState("all");
   const [busy, setBusy] = useState(null);
   const [returns, setReturns] = useState([]);
+  const [busyReturn, setBusyReturn] = useState(null);
+  const [periodPick, setPeriodPick] = useState(null); // { requestId, studentId }
 
   const load = async () => {
     setRows(null);
@@ -92,6 +94,37 @@ export default function PermissionLog() {
   };
 
   const canDelete = (r) => isAdmin || r.created_by === profile?.id;
+
+  // إنهاء استئذان طالب من حصة معيّنة فما بعدها
+  const endPermission = async (studentId, requestDate, fromPeriod) => {
+    setBusyReturn(studentId + requestDate);
+    const { error } = await supabase.from("permission_returns").upsert(
+      {
+        student_id: studentId,
+        return_date: requestDate,
+        from_period: fromPeriod,
+        returned_by: profile?.id ?? null,
+      },
+      { onConflict: "student_id,return_date" }
+    );
+    setBusyReturn(null);
+    setPeriodPick(null);
+    if (error) { alert("تعذّر إنهاء الاستئذان: " + error.message); return; }
+    await load();
+  };
+
+  // التراجع عن الإنهاء
+  const undoEnd = async (studentId, requestDate) => {
+    setBusyReturn(studentId + requestDate);
+    const { error } = await supabase
+      .from("permission_returns")
+      .delete()
+      .eq("student_id", studentId)
+      .eq("return_date", requestDate);
+    setBusyReturn(null);
+    if (error) { alert("تعذّر التراجع: " + error.message); return; }
+    await load();
+  };
 
   // صف لكل طالب (أوضح للتصدير والطباعة)
   const flatRows = () => {
@@ -205,21 +238,69 @@ export default function PermissionLog() {
                 <p className="mt-2.5 text-sm leading-relaxed text-ink">{r.note}</p>
               )}
 
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="mt-3 space-y-1.5">
                 {students.map((s) => {
                   const ret = returns.find(
                     (x) => x.student_id === s.student_id && x.return_date === r.request_date
                   );
+                  const key = s.student_id + r.request_date;
+                  const picking =
+                    periodPick?.requestId === r.id && periodPick?.studentId === s.student_id;
+
                   return (
-                    <span key={s.student_id}
-                      className={`rounded-pill border px-2.5 py-1 text-xs ${
-                        ret ? "border-present/40 bg-present/10 text-present"
-                            : "border-line text-muted"}`}>
-                      {s.students?.full_name ?? "—"}
-                      {ret && (
-                        <span className="num"> · عاد من الحصة {ret.from_period}</span>
+                    <div key={s.student_id}
+                      className={`rounded-sm2 border px-3 py-2 ${
+                        ret ? "border-present/40 bg-present/10" : "border-line bg-white"}`}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`min-w-0 flex-1 truncate text-xs ${
+                          ret ? "text-present" : "text-ink"}`}>
+                          {s.students?.full_name ?? "—"}
+                        </span>
+
+                        {ret ? (
+                          <>
+                            <span className="num chip bg-present/15 text-present">
+                              أُنهي من الحصة {ret.from_period}
+                            </span>
+                            {isAdmin && (
+                              <button
+                                onClick={() => undoEnd(s.student_id, r.request_date)}
+                                disabled={busyReturn === key}
+                                className="shrink-0 text-[11px] font-medium text-absent hover:underline disabled:opacity-50">
+                                تراجع
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          isAdmin && (
+                            <button
+                              onClick={() =>
+                                setPeriodPick(picking ? null : { requestId: r.id, studentId: s.student_id })}
+                              className="shrink-0 rounded-pill border border-present/40 bg-present/10 px-3 py-1 text-[11px] font-semibold text-present hover:bg-present/20">
+                              عاد للفصل
+                            </button>
+                          )
+                        )}
+                      </div>
+
+                      {picking && (
+                        <div className="mt-2 border-t border-line pt-2">
+                          <p className="text-[11px] text-muted">
+                            من أي حصة عاد؟ (يسري عليها وما بعدها)
+                          </p>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
+                              <button key={n}
+                                onClick={() => endPermission(s.student_id, r.request_date, n)}
+                                disabled={busyReturn === key}
+                                className="num rounded-sm2 border border-line px-2.5 py-1 text-xs font-medium text-ink hover:border-present hover:bg-present/10 disabled:opacity-50">
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       )}
-                    </span>
+                    </div>
                   );
                 })}
               </div>

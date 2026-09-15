@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
 import ColorLegend from "../../components/ColorLegend.jsx";
+import { printReport, ACADEMIC_DEPUTY_NAME } from "../../lib/exportUtils";
+import logoIcon from "../../assets/icon-mint.png";
+import moeLogo from "../../assets/moe-logo.png";
 import { fmtDateTime } from "../../lib/dates";
 
 const SHORTCUTS = [
@@ -21,6 +24,7 @@ const SHORTCUTS = [
 
 export default function Dashboard() {
   const [d, setD] = useState(null);
+  const [openPeriod, setOpenPeriod] = useState(null);
   const date = todayISO();
   const dow = todayDow();
 
@@ -73,6 +77,13 @@ export default function Dashboard() {
       const unmarked = sched.filter((s) => !doneSet.has(s.id))
         .sort((a, b) => a.period_no - b.period_no);
 
+      // إجمالي الحصص المجدولة لكل رقم حصة
+      const totals = {};
+      sched.forEach((s) => { totals[s.period_no] = (totals[s.period_no] ?? 0) + 1; });
+      const periodTotals = Object.entries(totals)
+        .map(([period_no, total]) => ({ period_no: Number(period_no), total }))
+        .sort((a, b) => a.period_no - b.period_no);
+
       setD({
         year, term,
         students: students.count ?? 0,
@@ -85,6 +96,7 @@ export default function Dashboard() {
         lastImport: lastImport.data?.[0] ?? null,
         schedCount: sched.length,
         unmarked,
+        periodTotals,
         escapeCount,
       });
     })();
@@ -145,27 +157,8 @@ export default function Dashboard() {
         </Link>
       )}
 
-      {d.unmarked.length > 0 && (
-        <section className="card overflow-hidden">
-          <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-            حصص لم تُحضَّر <span className="num text-late">({d.unmarked.length})</span>
-          </h2>
-          <div className="max-h-72 overflow-auto">
-            {d.unmarked.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
-                <span className="num w-8 shrink-0 rounded-md bg-warning-light py-1 text-center text-xs font-bold text-warning">
-                  {s.period_no}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{s.teachers?.full_name ?? "—"}</p>
-                  <p className="truncate text-xs text-muted">
-                    {s.subjects?.name ?? "—"} · فصل <span className="num">{s.classes?.class_no}</span>
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+      {d.schedCount > 0 && (
+        <UnmarkedByPeriod d={d} open={openPeriod} setOpen={setOpenPeriod} dayLabel={todayLabel()} />
       )}
 
       {/* أرقام المدرسة */}
@@ -223,7 +216,8 @@ export default function Dashboard() {
 
       <ColorLegend
         items={[
-          { chip: "bg-warning-light text-warning", sample: "رقم الحصة", label: "حصة لم تُحضَّر" },
+          { color: "bg-late", label: "العدد الأحمر: فصول لم تُحضَّر في تلك الحصة" },
+          { chip: "bg-present/10 text-present", sample: "مكتمل", label: "صندوق أخضر: اكتمل تحضير الحصة" },
           { chip: "bg-present/10 text-present", sample: "متصل", label: "جهاز بصمة يعمل" },
           { chip: "bg-warning-light text-warning", sample: "لم يتصل بعد", label: "جهاز لم يتصل" },
           { chip: "bg-late/10 text-late", sample: "بلا ربط", label: "طلاب بلا رقم بصمة" },
@@ -240,6 +234,165 @@ export default function Dashboard() {
         </p>
       </section>
     </div>
+  );
+}
+
+/* حصص اليوم مجمّعة حسب رقم الحصة */
+function UnmarkedByPeriod({ d, open, setOpen, dayLabel }) {
+  // تجميع غير المحضَّر حسب رقم الحصة
+  const byPeriod = {};
+  d.unmarked.forEach((s) => {
+    (byPeriod[s.period_no] ??= []).push(s);
+  });
+
+  // إجمالي حصص اليوم لكل رقم حصة (لمعرفة المكتمل)
+  const totalByPeriod = {};
+  (d.periodTotals ?? []).forEach((p) => { totalByPeriod[p.period_no] = p.total; });
+
+  const periods = [...new Set([
+    ...Object.keys(byPeriod).map(Number),
+    ...Object.keys(totalByPeriod).map(Number),
+  ])].sort((a, b) => a - b);
+
+  if (!periods.length) return null;
+
+  const rows = open != null ? (byPeriod[open] ?? []) : [];
+
+  const marked = d.schedCount - d.unmarked.length;
+  const pct = d.schedCount ? Math.round((marked / d.schedCount) * 100) : 0;
+
+  const printIt = (onlyPeriod = null) => {
+    const list = onlyPeriod != null ? [onlyPeriod] : periods;
+    const tableRows = [];
+
+    list
+      .filter((n) => (byPeriod[n] ?? []).length > 0)
+      .forEach((n) => {
+        byPeriod[n]
+          .slice()
+          .sort((a, b) => (a.classes?.class_no ?? 0) - (b.classes?.class_no ?? 0))
+          .forEach((s) => {
+            tableRows.push([
+              tableRows.length + 1,
+              n,
+              s.classes?.class_no ?? "",
+              s.subjects?.name ?? "",
+              s.teachers?.full_name ?? "",
+            ]);
+          });
+      });
+
+    if (!tableRows.length) return;
+
+    const isPeriod = onlyPeriod != null;
+    const headers = isPeriod
+      ? ["م", "الفصل", "المادة", "المعلم"]
+      : ["م", "الحصة", "الفصل", "المادة", "المعلم"];
+
+    // تقرير الحصة لا يحتاج عمود رقم الحصة
+    const rows = isPeriod
+      ? tableRows.map((r, i) => [i + 1, r[2], r[3], r[4]])
+      : tableRows;
+
+    printReport({
+      title: isPeriod
+        ? `لم تُحضَّر — الحصة ${onlyPeriod}`
+        : "الحصص التي لم تُحضَّر",
+      subtitle: isPeriod
+        ? `${dayLabel} · ${tableRows.length} فصل`
+        : `${dayLabel} · المحضَّر ${marked} من ${d.schedCount} (${pct}%)`,
+      headers,
+      rows,
+      logoUrl: new URL(logoIcon, window.location.origin).href,
+      moeLogoUrl: new URL(moeLogo, window.location.origin).href,
+      secondSignature: { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME },
+      hideSignatureLine: true,
+    });
+  };
+
+  return (
+    <section className="card overflow-hidden">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-4 py-3">
+        <h2 className="text-sm font-semibold text-ink">حصص اليوم</h2>
+        {d.unmarked.length > 0 ? (
+          <span className="text-xs text-muted">
+            <span className="num font-semibold text-late">{d.unmarked.length}</span> حصة لم تُحضَّر
+          </span>
+        ) : (
+          <span className="text-xs font-medium text-present">اكتمل التحضير</span>
+        )}
+      </div>
+
+      {d.unmarked.length > 0 && (
+        <div className="flex flex-wrap gap-2 border-b border-line px-4 py-3">
+          <button onClick={() => printIt()}
+            className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas">
+            تقرير اليوم — PDF
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2 px-4 py-4">
+        {periods.map((n) => {
+          const left = (byPeriod[n] ?? []).length;
+          const done = left === 0;
+          const on = open === n;
+          return (
+            <button
+              key={n}
+              onClick={() => setOpen(on ? null : n)}
+              disabled={done}
+              className={`relative flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-card border transition-colors ${
+                done
+                  ? "border-present/30 bg-present/10 text-present"
+                  : on
+                  ? "border-mint-deep bg-mint-tint text-mint-deep"
+                  : "border-line bg-white text-ink hover:border-[#CCF2DB] hover:bg-canvas"
+              }`}
+            >
+              <span className="num text-lg font-bold leading-none">{n}</span>
+              <span className="mt-0.5 text-[10px] leading-none text-muted">الحصة</span>
+
+              {!done && (
+                <span className="num absolute -top-1.5 -left-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-late px-1 text-[10px] font-bold text-white">
+                  {left}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {open != null && rows.length > 0 && (
+        <div className="border-t border-line">
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-tint px-4 py-2">
+            <p className="text-xs font-medium text-muted">
+              لم تُحضَّر في الحصة <span className="num">{open}</span> ·{" "}
+              <span className="num">{rows.length}</span> فصل
+            </p>
+            <button onClick={() => printIt(open)}
+              className="rounded-sm2 border border-line bg-white px-3 py-1 text-xs font-medium text-ink hover:bg-canvas">
+              تقرير الحصة — PDF
+            </button>
+          </div>
+          <div className="max-h-64 overflow-auto">
+            {rows.map((s) => (
+              <div key={s.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
+                <span className="num w-10 shrink-0 rounded-md bg-mint-tint py-1 text-center text-xs font-bold text-mint-deep">
+                  {s.classes?.class_no}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">
+                    {s.teachers?.full_name ?? "—"}
+                  </p>
+                  <p className="truncate text-xs text-muted">{s.subjects?.name ?? "—"}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -33,7 +33,6 @@ export default function Attendance() {
   const [punched, setPunched] = useState(new Set());
   const [permits, setPermits] = useState({}); // student_id -> { by, note }
   const [returns, setReturns] = useState({}); // student_id -> { from_period }
-  const [busyReturn, setBusyReturn] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const [year, setYear] = useState("");
@@ -177,50 +176,6 @@ export default function Attendance() {
       setMarks(init);
     })();
   }, [active, date]);
-
-  // تسجيل عودة الطالب للفصل — تسري من هذه الحصة فما بعدها
-  const markReturned = async (studentId) => {
-    if (!active) return;
-    setBusyReturn(studentId);
-    const row = {
-      student_id: studentId,
-      return_date: date,
-      from_period: active.period_no,
-      returned_by: session?.user?.id ?? null,
-    };
-    const { error } = await supabase
-      .from("permission_returns")
-      .upsert(row, { onConflict: "student_id,return_date" });
-    setBusyReturn(null);
-    if (error) { setMsg({ ok: false, text: "تعذّر التسجيل: " + error.message }); return; }
-
-    setReturns((r) => ({ ...r, [studentId]: row }));
-    setPermits((p) => {
-      const n = { ...p };
-      delete n[studentId];
-      return n;
-    });
-    setMarks((m) => ({ ...m, [studentId]: "present" }));
-  };
-
-  // التراجع عن تسجيل العودة
-  const undoReturn = async (studentId) => {
-    setBusyReturn(studentId);
-    const { error } = await supabase
-      .from("permission_returns")
-      .delete()
-      .eq("student_id", studentId)
-      .eq("return_date", date);
-    setBusyReturn(null);
-    if (error) { setMsg({ ok: false, text: "تعذّر التراجع: " + error.message }); return; }
-
-    setReturns((r) => {
-      const n = { ...r };
-      delete n[studentId];
-      return n;
-    });
-    setActive((a) => ({ ...a })); // إعادة تحميل بيانات الحصة
-  };
 
   const counts = useMemo(() => {
     const c = { present: 0, absent: 0, late: 0, excused: 0 };
@@ -381,35 +336,17 @@ export default function Attendance() {
                 </div>
 
                 {permit && (
-                  <div className="mb-2 pr-8">
-                    <p className="text-[11px] leading-relaxed text-muted">
-                      استئذان داخلي — بواسطة {permit.by}
-                      {permit.title ? ` (${permit.title})` : ""}
-                      {permit.note ? ` · ${permit.note}` : ""}
-                    </p>
-                    <button
-                      onClick={() => markReturned(s.id)}
-                      disabled={busyReturn === s.id}
-                      className="mt-1.5 rounded-pill border border-present/40 bg-present/10 px-3 py-1 text-[11px] font-semibold text-present transition-colors hover:bg-present/20 disabled:opacity-50"
-                    >
-                      {busyReturn === s.id ? "جارٍ التسجيل…" : "عاد للفصل — ارفع الاستئذان"}
-                    </button>
-                  </div>
+                  <p className="mb-1.5 pr-8 text-[11px] leading-relaxed text-muted">
+                    استئذان داخلي — بواسطة {permit.by}
+                    {permit.title ? ` (${permit.title})` : ""}
+                    {permit.note ? ` · ${permit.note}` : ""}
+                  </p>
                 )}
 
                 {returnedHere && (
-                  <div className="mb-2 pr-8">
-                    <p className="text-[11px] leading-relaxed text-muted">
-                      سجّلت عودته من الحصة <span className="num">{ret.from_period}</span> فما بعدها.
-                    </p>
-                    <button
-                      onClick={() => undoReturn(s.id)}
-                      disabled={busyReturn === s.id}
-                      className="mt-1 text-[11px] font-medium text-absent hover:underline disabled:opacity-50"
-                    >
-                      تراجع
-                    </button>
-                  </div>
+                  <p className="mb-1.5 pr-8 text-[11px] leading-relaxed text-muted">
+                    أنهت الإدارة استئذانه من الحصة <span className="num">{ret.from_period}</span> فما بعدها.
+                  </p>
                 )}
 
                 <div className="flex gap-1 pr-8">

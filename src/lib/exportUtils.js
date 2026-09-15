@@ -7,6 +7,9 @@ export const PRINCIPAL_NAME = "عبدالله بن حسن سلمان الفيف�
 // وكيل شؤون الطلاب — يظهر في تقارير الطلاب وأولياء الأمور
 export const STUDENT_DEPUTY_NAME = "فهد بن نايف ماطر المعبدي";
 
+// وكيل الشؤون التعليمية
+export const ACADEMIC_DEPUTY_NAME = "فهد بن سعود حضرواي";
+
 /**
  * تصدير بيانات إلى ملف Excel
  * @param {Array<Object>} rows - الصفوف (كائنات جاهزة بعناوين عربية)
@@ -48,9 +51,11 @@ export function exportToExcel(rows, fileName = "تقرير", sheetName = "الب
  * @param {string} [opts.logoUrl] - رابط شعار المدرسة
  * @param {string} [opts.moeLogoUrl] - رابط شعار وزارة التعليم
  * @param {{title:string,name:string}} [opts.secondSignature] - توقيع إضافي (يمين)
+ * @param {boolean} [opts.hideSignatureLine] - إخفاء سطر "التوقيع: ....."
  */
 export function printReport({
   title, subtitle, headers, rows, logoUrl, moeLogoUrl, secondSignature,
+  hideSignatureLine = false,
 }) {
   const win = window.open("", "_blank");
   if (!win) {
@@ -157,12 +162,12 @@ export function printReport({
     <div class="sign-box">
       <p class="sign-title">${secondSignature.title}</p>
       <p class="sign-name">${secondSignature.name}</p>
-      <p class="sign-line">التوقيع: ..............................</p>
+      ${hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..............................</p>`}
     </div>` : ""}
     <div class="sign-box">
       <p class="sign-title">مدير المدرسة</p>
       <p class="sign-name">${PRINCIPAL_NAME}</p>
-      <p class="sign-line">التوقيع: ..............................</p>
+      ${hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..............................</p>`}
     </div>
   </div>
 </body>

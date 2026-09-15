@@ -34,22 +34,7 @@ export default function PermissionRequestPage() {
   useEffect(() => {
     (async () => {
       if (!profile) return;
-      if (profile.role === "admin") {
-        setAllowed(true);
-        return;
-      }
-      const { data } = await supabase
-        .from("permission_grantors")
-        .select("title, active")
-        .eq("user_id", profile.id)
-        .maybeSingle();
-
-      if (data?.active) {
-        setAllowed(true);
-        setGrantorTitle(data.title ?? "");
-      } else {
-        setAllowed(false);
-      }
+      setAllowed(profile.role === "admin");
     })();
   }, [profile]);
 
@@ -166,7 +151,7 @@ export default function PermissionRequestPage() {
   if (allowed === false) {
     return (
       <div className="rounded-2xl border border-line bg-white p-6 text-sm text-faint">
-        ليست لديك صلاحية رفع استئذان. تواصل مع الإدارة لتفعيل الصلاحية إن لزم.
+        رفع الاستئذان متاح للإدارة المدرسية فقط.
       </div>
     );
   }
