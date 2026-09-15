@@ -7,7 +7,8 @@ import {
   loadPeriodTimes, byPeriodNo, currentPeriodNo, nearestPeriodNo, fmtRange,
 } from "../../lib/periodTimes";
 
-const ORDER = ["present", "absent", "late", "excused"];
+const ORDER = ["present", "absent", "late", "excused"];        // للعدادات والعرض
+const TEACHER_ORDER = ["present", "absent", "late"];           // ما يختاره المعلم
 
 // أصناف ثابتة — Tailwind لا يقرأ الأصناف المبنية ديناميكيًا
 const SOLID = {
@@ -38,7 +39,9 @@ export default function Attendance() {
   const [year, setYear] = useState("");
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
+  const [mySchedIds, setMySchedIds] = useState([]);
   const [ptimes, setPtimes] = useState([]);
+  const [absStats, setAbsStats] = useState({}); // student_id -> { absent, total }
   const [nowPeriod, setNowPeriod] = useState(null);
   const date = todayISO();
   const dow = todayDow();
@@ -79,6 +82,7 @@ export default function Attendance() {
 
       const list = data ?? [];
       setPeriods(list);
+      setMySchedIds(list.map((p) => p.id));
       if (list.length) {
         const { data: done } = await supabase.from("class_attendance")
           .select("schedule_id").eq("attend_date", date)
@@ -145,6 +149,7 @@ export default function Attendance() {
         return (r.period_numbers ?? []).includes(active.period_no);
       });
 
+      let map = {};
       if (covering.length) {
         const raiserIds = [...new Set(covering.map((p) => p.permission_requests.created_by))];
         const [{ data: usrs }, { data: grs }] = await Promise.all([
@@ -156,7 +161,6 @@ export default function Attendance() {
         );
         const titleBy = Object.fromEntries((grs ?? []).map((g) => [g.user_id, g.title]));
 
-        const map = {};
         covering.forEach((p) => {
           const r = p.permission_requests;
           map[p.student_id] = {
@@ -173,9 +177,38 @@ export default function Attendance() {
       const init = {};
       list.forEach((s) => { init[s.id] = excSet.has(s.id) ? "excused" : "present"; });
       (existing ?? []).forEach((r) => { init[r.student_id] = r.status; });
+
+      // الاستئذان الداخلي قرار إداري — يُثبَّت على الطالب المشمول به
+      Object.keys(map ?? {}).forEach((sid) => { init[sid] = "excused"; });
+
+      // ومن أنهت الإدارة استئذانه يعود للحالات العادية
+      (rets ?? []).forEach((r) => {
+        if (active.period_no >= r.from_period && init[r.student_id] === "excused") {
+          const saved = (existing ?? []).find((e) => e.student_id === r.student_id);
+          init[r.student_id] = saved && saved.status !== "excused" ? saved.status : "present";
+        }
+      });
+
       setMarks(init);
+
+      // إحصاء غياب كل طالب عن حصص هذا المعلم خلال الفصل الحالي
+      if (mySchedIds.length) {
+        const { data: hist } = await supabase
+          .from("class_attendance")
+          .select("student_id, status")
+          .in("student_id", ids)
+          .in("schedule_id", mySchedIds);
+
+        const stats = {};
+        (hist ?? []).forEach((r) => {
+          const st = (stats[r.student_id] ??= { absent: 0, total: 0 });
+          st.total += 1;
+          if (r.status === "absent") st.absent += 1;
+        });
+        setAbsStats(stats);
+      }
     })();
-  }, [active, date]);
+  }, [active, date, mySchedIds]);
 
   const counts = useMemo(() => {
     const c = { present: 0, absent: 0, late: 0, excused: 0 };
@@ -317,6 +350,7 @@ export default function Attendance() {
                      : undefined}>
                 <div className="mb-1.5 flex items-baseline gap-2">
                   <span className="num w-6 shrink-0 text-xs text-faint">{i + 1}</span>
+                  <AbsenceBox stat={absStats[s.id]} />
                   <p className="flex-1 truncate text-sm font-medium text-ink">{s.full_name}</p>
                   {!punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
                   {punched.has(s.id) && cur === "absent" && (
@@ -349,15 +383,23 @@ export default function Attendance() {
                   </p>
                 )}
 
-                <div className="flex gap-1 pr-8">
-                  {ORDER.map((k) => (
-                    <button key={k} onClick={() => setMarks((m) => ({ ...m, [s.id]: k }))}
-                      className={`flex-1 rounded-sm2 py-2 text-sm transition-colors ${
-                        cur === k ? SOLID[k] : "text-muted hover:bg-canvas"}`}>
-                      {STATUS[k].label}
-                    </button>
-                  ))}
-                </div>
+                {permit ? (
+                  <div className="pr-8">
+                    <div className={`rounded-sm2 py-2 text-center text-sm ${SOLID.excused}`}>
+                      {STATUS.excused.label} — بقرار الإدارة
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-1 pr-8">
+                    {TEACHER_ORDER.map((k) => (
+                      <button key={k} onClick={() => setMarks((m) => ({ ...m, [s.id]: k }))}
+                        className={`flex-1 rounded-sm2 py-2 text-sm transition-colors ${
+                          cur === k ? SOLID[k] : "text-muted hover:bg-canvas"}`}>
+                        {STATUS[k].label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -369,8 +411,11 @@ export default function Attendance() {
           ...ATTENDANCE_LEGEND,
           { chip: "bg-warning-light text-warning", sample: "لم يبصم", label: "لا بصمة صباحية" },
           { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر", label: "دخل المدرسة وغاب عن الحصة" },
-          { chip: "bg-present/10 text-present", sample: "عاد للفصل", label: "رفع المعلم استئذانه" },
-          { chip: "bg-excused/15 text-excused", sample: "مستأذن", label: "استئذان داخلي — الصف مظلَّل" },
+          { chip: "bg-present/10 text-present", sample: "عاد للفصل", label: "أنهت الإدارة استئذانه" },
+          { chip: "bg-present/10 text-present", sample: "3 · 12%", label: "غيابه عن حصصك — أقل من 20%" },
+          { chip: "bg-late/12 text-late", sample: "5 · 25%", label: "غيابه عن حصصك — 20% فأكثر" },
+          { chip: "bg-absent/12 text-absent", sample: "8 · 34%", label: "غيابه عن حصصك — 30% فأكثر" },
+          { chip: "bg-excused/15 text-excused", sample: "مستأذن", label: "استئذان من الإدارة — لا يعدّله المعلم" },
         ]}
       />
 
@@ -391,6 +436,27 @@ export default function Attendance() {
       </div>
       <div className="h-16 sm:hidden" />
     </div>
+  );
+}
+
+/* صندوق غياب الطالب عند هذا المعلم */
+function AbsenceBox({ stat }) {
+  if (!stat || stat.total === 0 || stat.absent === 0) return null;
+
+  const pct = Math.round((stat.absent / stat.total) * 100);
+  const tone =
+    pct >= 30 ? "bg-absent/12 text-absent border-absent/30"
+    : pct >= 20 ? "bg-late/12 text-late border-late/30"
+    : "bg-present/10 text-present border-present/30";
+
+  return (
+    <span
+      title={`غاب ${stat.absent} من ${stat.total} حصة عندك`}
+      className={`flex shrink-0 flex-col items-center justify-center rounded-sm2 border px-2 py-0.5 leading-none ${tone}`}
+    >
+      <span className="num text-sm font-bold">{stat.absent}</span>
+      <span className="num text-[9px] opacity-80">{pct}%</span>
+    </span>
   );
 }
 

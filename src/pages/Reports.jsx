@@ -13,6 +13,7 @@ const TABS = [
   { key: "student", label: "تقرير طالب" },
   { key: "period",  label: "تقرير فترة" },
   { key: "escape",  label: "بصم ولم يحضر" },
+  { key: "days",    label: "أيام الغياب" },
 ];
 
 const NON_PRESENT = ["absent", "late", "excused"];
@@ -74,6 +75,7 @@ export default function Reports() {
       {tab === "student" && <StudentReport scopeIds={scopeIds} />}
       {tab === "period"  && <PeriodReport scopeIds={scopeIds} />}
       {tab === "escape"  && <EscapeReport scopeIds={scopeIds} />}
+      {tab === "days"    && <AbsenceDaysReport scopeIds={scopeIds} />}
     </div>
   );
 }
@@ -692,6 +694,233 @@ function EscapeReport({ scopeIds }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============ أيام الغياب الكاملة (التميز والمتجاوزون) ============ */
+
+const YELLOW_AT = 10;
+const RED_AT = 15;
+
+function AbsenceDaysReport({ scopeIds }) {
+  const [from, setFrom] = useState(daysAgo(120));
+  const [to, setTo] = useState(todayStr());
+  const [rows, setRows] = useState(null);
+  const [view, setView] = useState("over");   // over | best
+  const [grade, setGrade] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      setRows(null);
+
+      // كل سجلات الحضور في الفترة
+      let q = supabase
+        .from("class_attendance")
+        .select("student_id, attend_date, status, students(full_name, national_id), schedule(classes(class_no, grade))")
+        .gte("attend_date", from)
+        .lte("attend_date", to)
+        .limit(20000);
+      q = applyScope(q, scopeIds);
+
+      const { data } = await q;
+
+      // تجميع: لكل طالب ولكل يوم — هل غاب كل حصصه؟
+      const byStudent = new Map();
+
+      (data ?? []).forEach((r) => {
+        const id = r.student_id;
+        if (!byStudent.has(id)) {
+          byStudent.set(id, {
+            id,
+            name: r.students?.full_name ?? "",
+            national_id: r.students?.national_id ?? "",
+            class_no: r.schedule?.classes?.class_no ?? 0,
+            grade: r.schedule?.classes?.grade ?? 0,
+            days: new Map(), // date -> { total, absent }
+          });
+        }
+        const st = byStudent.get(id);
+        const d = (st.days.get(r.attend_date) ?? { total: 0, absent: 0 });
+        d.total += 1;
+        if (r.status === "absent") d.absent += 1;
+        st.days.set(r.attend_date, d);
+      });
+
+      // يوم غياب كامل = غاب عن جميع حصص ذلك اليوم
+      const out = [...byStudent.values()].map((st) => {
+        let full = 0, partial = 0, present = 0;
+        st.days.forEach((d) => {
+          if (d.absent === 0) present += 1;
+          else if (d.absent === d.total) full += 1;
+          else partial += 1;
+        });
+        return {
+          id: st.id, name: st.name, national_id: st.national_id,
+          class_no: st.class_no, grade: st.grade,
+          fullDays: full, partialDays: partial, presentDays: present,
+          recordedDays: st.days.size,
+        };
+      });
+
+      setRows(out);
+    })();
+  }, [from, to, scopeIds]);
+
+  const filtered = useMemo(() => {
+    let list = (rows ?? []).filter((r) => !grade || r.grade === grade);
+    if (view === "over") {
+      list = list.filter((r) => r.fullDays >= YELLOW_AT)
+                 .sort((a, b) => b.fullDays - a.fullDays);
+    } else {
+      // التميز: الأقل غيابًا، ومن لديه سجل حضور فعلي
+      list = list.filter((r) => r.recordedDays >= 5)
+                 .sort((a, b) =>
+                   a.fullDays - b.fullDays ||
+                   a.partialDays - b.partialDays ||
+                   b.presentDays - a.presentDays)
+                 .slice(0, 100);
+    }
+    return list;
+  }, [rows, view, grade]);
+
+  const counts = useMemo(() => {
+    const c = { yellow: 0, red: 0, clean: 0 };
+    (rows ?? []).forEach((r) => {
+      if (r.fullDays >= RED_AT) c.red += 1;
+      else if (r.fullDays >= YELLOW_AT) c.yellow += 1;
+      if (r.fullDays === 0 && r.partialDays === 0) c.clean += 1;
+    });
+    return c;
+  }, [rows]);
+
+  const headers = view === "over"
+    ? ["م", "رقم الهوية", "اسم الطالب", "الفصل", "أيام غياب كاملة", "أيام غياب جزئي", "الحالة"]
+    : ["م", "رقم الهوية", "اسم الطالب", "الفصل", "أيام غياب كاملة", "أيام غياب جزئي", "أيام حضور"];
+
+  const table = () =>
+    filtered.map((r, i) =>
+      view === "over"
+        ? [i + 1, r.national_id, r.name, r.class_no, r.fullDays, r.partialDays,
+           r.fullDays >= RED_AT ? "تجاوز 15 يومًا" : "تجاوز 10 أيام"]
+        : [i + 1, r.national_id, r.name, r.class_no, r.fullDays, r.partialDays, r.presentDays]
+    );
+
+  return (
+    <div className="space-y-4">
+      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+        يوم الغياب الكامل هو يوم غاب فيه الطالب عن جميع حصصه المسجّلة. والغياب الجزئي
+        يعني غيابه عن بعض الحصص دون بعض.
+      </p>
+
+      <div className="flex flex-wrap gap-1.5">
+        <Pill on={view === "over"} onClick={() => setView("over")}>
+          المتجاوزون <span className="num">({counts.yellow + counts.red})</span>
+        </Pill>
+        <Pill on={view === "best"} onClick={() => setView("best")}>
+          التميز السلوكي
+        </Pill>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm text-muted">من</label>
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
+               className="rounded-sm2 border border-line px-3 py-2 text-sm" />
+        <label className="text-sm text-muted">إلى</label>
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
+               className="rounded-sm2 border border-line px-3 py-2 text-sm" />
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <Pill on={!grade} onClick={() => setGrade(0)}>كل الصفوف</Pill>
+        {[1, 2, 3].map((g) => (
+          <Pill key={g} on={grade === g} onClick={() => setGrade(g)}>{GRADE_NAMES[g]}</Pill>
+        ))}
+      </div>
+
+      {rows && view === "over" && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-card border border-line bg-white px-4 py-3 text-center">
+            <p className="num text-2xl font-bold leading-none text-absent">{counts.red}</p>
+            <p className="mt-1.5 text-xs text-muted">تجاوز 15 يومًا</p>
+          </div>
+          <div className="rounded-card border border-line bg-white px-4 py-3 text-center">
+            <p className="num text-2xl font-bold leading-none text-late">{counts.yellow}</p>
+            <p className="mt-1.5 text-xs text-muted">تجاوز 10 أيام</p>
+          </div>
+          <div className="rounded-card border border-line bg-white px-4 py-3 text-center">
+            <p className="num text-2xl font-bold leading-none text-present">{counts.clean}</p>
+            <p className="mt-1.5 text-xs text-muted">سجل نظيف</p>
+          </div>
+        </div>
+      )}
+
+      <ExportBar
+        disabled={!filtered.length}
+        onExcel={() =>
+          exportToExcel(
+            table().map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]]))),
+            view === "over" ? `المتجاوزون-${from}_${to}` : `التميز-السلوكي-${from}_${to}`,
+            view === "over" ? "المتجاوزون" : "التميز"
+          )}
+        onPrint={() =>
+          printReport({
+            title: view === "over"
+              ? "الطلاب المتجاوزون لحد الغياب"
+              : "مرشحو جائزة التميز السلوكي",
+            subtitle: `${from} — ${to}`,
+            headers, rows: table(), ...logos(),
+          })}
+      />
+
+      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+
+      {rows && filtered.length === 0 ? (
+        <Empty
+          title={view === "over" ? "لا متجاوزين" : "لا بيانات كافية"}
+          body={view === "over"
+            ? "لا يوجد طلاب تجاوزوا 10 أيام غياب في هذه الفترة."
+            : "لا توجد سجلات حضور كافية لترشيح الطلاب."} />
+      ) : (
+        <div className="card divide-y divide-line overflow-hidden">
+          {filtered.slice(0, 300).map((r, i) => {
+            const red = r.fullDays >= RED_AT;
+            const yellow = !red && r.fullDays >= YELLOW_AT;
+            return (
+              <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  {view === "best" && (
+                    <span className="num w-7 shrink-0 text-center text-sm font-bold text-faint">
+                      {i + 1}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink">{r.name}</p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      فصل <span className="num">{r.class_no}</span> ·{" "}
+                      <span className="num">{r.national_id}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span className={`num chip ${
+                    red ? "bg-absent/10 font-semibold text-absent"
+                    : yellow ? "bg-late/10 font-semibold text-late"
+                    : "bg-present/10 text-present"}`}>
+                    {r.fullDays} يوم كامل
+                  </span>
+                  {r.partialDays > 0 && (
+                    <span className="num chip bg-gray-tint text-muted">
+                      {r.partialDays} جزئي
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
