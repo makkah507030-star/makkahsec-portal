@@ -16,15 +16,18 @@ import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
 import AdminStaff from "./pages/admin/AdminStaff.jsx";
 import Landing from "./pages/Landing.jsx";
 import NewsList from "./pages/NewsList.jsx";
+import Guides from "./pages/Guides.jsx";
+import GuidesAdmin from "./pages/admin/GuidesAdmin.jsx";
 import NewsArticle from "./pages/NewsArticle.jsx";
 import NewsAdmin from "./pages/admin/NewsAdmin.jsx";
 import PasswordReset from "./pages/admin/PasswordReset.jsx";
+import SeasonSwitch from "./pages/admin/SeasonSwitch.jsx";
 import Reports from "./pages/Reports.jsx";
 import Feedback from "./pages/Feedback.jsx";
 import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
 
 export default function App() {
-  const { session, profile, loading } = useSession();
+  const { session, profile, loading, can } = useSession();
 
   if (loading) {
     return (
@@ -39,6 +42,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/news" element={<NewsList />} />
+        <Route path="/guides" element={<Guides />} />
         <Route path="/news/:slug" element={<NewsArticle />} />
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/login" element={<Login />} />
@@ -79,33 +83,38 @@ export default function App() {
         <Route path="/" element={home} />
         {profile.role === "admin" && (
           <>
-            <Route
-              path="/import"
-              element={
-                <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
-                  <Import />
-                </Suspense>
-              }
-            />
-            <Route path="/students" element={<Students />} />
-            <Route path="/accounts" element={<Accounts />} />
-            <Route path="/staff" element={<AdminStaff />} />
-            <Route path="/news-admin" element={<NewsAdmin />} />
-            <Route path="/password-reset" element={<PasswordReset />} />
-            <Route path="/feedback-admin" element={<FeedbackAdmin />} />
+            {can("import") && <Route path="/season" element={<SeasonSwitch />} />}
+            {can("import") && (
+              <Route
+                path="/import"
+                element={
+                  <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                    <Import />
+                  </Suspense>
+                }
+              />
+            )}
+            {can("students") && <Route path="/students" element={<Students />} />}
+            {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
+            {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
+            {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
+            {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
+            {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
+            {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
           </>
         )}
         {profile.role === "teacher" && (
           <Route path="/attendance" element={<Attendance />} />
         )}
-        {(profile.role === "admin" || profile.role === "teacher") && (
+        {(profile.role === "teacher" || (profile.role === "admin" && can("reports"))) && (
           <Route path="/reports" element={<Reports />} />
         )}
         {/* الاستئذان: متاح للإدارة وللمعلمين المخوّلين — الصفحة نفسها تتحقق من الصلاحية */}
-        {(profile.role === "admin" || profile.role === "teacher") && (
+        {(profile.role === "teacher" || (profile.role === "admin" && can("permissions"))) && (
           <Route path="/permissions" element={<PermissionRequestPage />} />
         )}
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/guides" element={<Guides />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

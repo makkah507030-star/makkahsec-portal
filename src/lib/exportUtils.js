@@ -1,4 +1,11 @@
 import * as XLSX from "xlsx";
+import { fmtBoth, fmtTime12 } from "./dates";
+
+// اسم مدير المدرسة — يظهر في ترويسة وتذييل التقارير المطبوعة
+export const PRINCIPAL_NAME = "عبدالله بن حسن سلمان الفيفي";
+
+// وكيل شؤون الطلاب — يظهر في تقارير الطلاب وأولياء الأمور
+export const STUDENT_DEPUTY_NAME = "فهد بن نايف ماطر المعبدي";
 
 /**
  * تصدير بيانات إلى ملف Excel
@@ -27,7 +34,7 @@ export function exportToExcel(rows, fileName = "تقرير", sheetName = "الب
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-  const stamp = new Date().toISOString().slice(0, 10);
+  const stamp = new Date().toISOString().slice(0, 10); // اسم الملف يبقى ISO للترتيب
   XLSX.writeFile(wb, `${fileName}-${stamp}.xlsx`);
 }
 
@@ -40,15 +47,19 @@ export function exportToExcel(rows, fileName = "تقرير", sheetName = "الب
  * @param {Array<Array>} opts.rows - الصفوف كمصفوفات
  * @param {string} [opts.logoUrl] - رابط شعار المدرسة
  * @param {string} [opts.moeLogoUrl] - رابط شعار وزارة التعليم
+ * @param {{title:string,name:string}} [opts.secondSignature] - توقيع إضافي (يمين)
  */
-export function printReport({ title, subtitle, headers, rows, logoUrl, moeLogoUrl }) {
+export function printReport({
+  title, subtitle, headers, rows, logoUrl, moeLogoUrl, secondSignature,
+}) {
   const win = window.open("", "_blank");
   if (!win) {
     alert("يرجى السماح بالنوافذ المنبثقة لإتمام الطباعة.");
     return;
   }
 
-  const today = new Date().toLocaleDateString("ar-SA");
+  const now = new Date();
+  const today = `${fmtBoth(now)} · ${fmtTime12(now)}`;
 
   const html = `
 <!doctype html>
@@ -90,6 +101,15 @@ export function printReport({ title, subtitle, headers, rows, logoUrl, moeLogoUr
   tfoot td {
     border: none; padding-top: 14px; font-size: 11px; color: #6B6B6B;
   }
+  .sign {
+    margin-top: 34px; display: flex; justify-content: space-between;
+    page-break-inside: avoid;
+  }
+  .sign.one { justify-content: flex-end; }
+  .sign-box { text-align: center; min-width: 230px; }
+  .sign-title { margin: 0; font-size: 11px; color: #6B6B6B; }
+  .sign-name  { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: #101010; }
+  .sign-line  { margin: 22px 0 0; font-size: 11px; color: #6B6B6B; }
   @media print {
     body { padding: 0; }
     thead { display: table-header-group; }
@@ -131,6 +151,20 @@ export function printReport({ title, subtitle, headers, rows, logoUrl, moeLogoUr
         .join("")}
     </tbody>
   </table>
+
+  <div class="sign ${secondSignature ? "" : "one"}">
+    ${secondSignature ? `
+    <div class="sign-box">
+      <p class="sign-title">${secondSignature.title}</p>
+      <p class="sign-name">${secondSignature.name}</p>
+      <p class="sign-line">التوقيع: ..............................</p>
+    </div>` : ""}
+    <div class="sign-box">
+      <p class="sign-title">مدير المدرسة</p>
+      <p class="sign-name">${PRINCIPAL_NAME}</p>
+      <p class="sign-line">التوقيع: ..............................</p>
+    </div>
+  </div>
 </body>
 </html>`;
 

@@ -3,21 +3,26 @@ import { supabase, isConfigured } from "./supabase";
 
 const SessionContext = createContext(null);
 
+// الأدوار التي تملك صلاحية كاملة دائمًا
+const SUPER_ROLES = ["principal", "tech_support"];
+
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);   // صف من جدول users
+  const [profile, setProfile] = useState(null);
   const [adminRoles, setAdminRoles] = useState([]);
+  const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadProfile = useCallback(async (userId) => {
     if (!userId) {
       setProfile(null);
       setAdminRoles([]);
+      setPermissions([]);
       return;
     }
     const { data: u } = await supabase
       .from("users")
-      .select("id, username, role, is_active, must_change_pw")
+      .select("id, username, full_name, role, is_active, must_change_pw")
       .eq("id", userId)
       .maybeSingle();
 
@@ -28,9 +33,25 @@ export function SessionProvider({ children }) {
         .from("admin_roles")
         .select("role_type")
         .eq("user_id", userId);
-      setAdminRoles((roles ?? []).map((r) => r.role_type));
+
+      const list = (roles ?? []).map((r) => r.role_type);
+      setAdminRoles(list);
+
+      // صلاحية كاملة للمدير والدعم الفني
+      if (list.some((r) => SUPER_ROLES.includes(r))) {
+        setPermissions(["*"]);
+      } else if (list.length) {
+        const { data: perms } = await supabase
+          .from("role_permissions")
+          .select("permission")
+          .in("role_type", list);
+        setPermissions([...new Set((perms ?? []).map((p) => p.permission))]);
+      } else {
+        setPermissions([]);
+      }
     } else {
       setAdminRoles([]);
+      setPermissions([]);
     }
   }, []);
 
@@ -65,13 +86,24 @@ export function SessionProvider({ children }) {
     setSession(null);
     setProfile(null);
     setAdminRoles([]);
+    setPermissions([]);
   };
 
   const hasAdminRole = (...roles) => roles.some((r) => adminRoles.includes(r));
 
+  // هل يملك المستخدم هذه الصلاحية؟
+  const can = (perm) =>
+    permissions.includes("*") || permissions.includes(perm);
+
+  const isSuper = adminRoles.some((r) => SUPER_ROLES.includes(r));
+
   return (
     <SessionContext.Provider
-      value={{ session, profile, adminRoles, loading, signOut, hasAdminRole, reload: () => loadProfile(session?.user?.id) }}
+      value={{
+        session, profile, adminRoles, permissions, loading,
+        signOut, hasAdminRole, can, isSuper,
+        reload: () => loadProfile(session?.user?.id),
+      }}
     >
       {children}
     </SessionContext.Provider>
@@ -92,9 +124,45 @@ export const ROLE_LABEL = {
 };
 
 export const ADMIN_ROLE_LABEL = {
-  principal: "مدير المدرسة",
-  deputy: "الوكيل",
-  counselor: "الموجه الطلابي",
-  clerk: "الإداري",
+  principal:       "مدير المدرسة",
+  deputy_academic: "وكيل الشؤون التعليمية",
+  deputy_school:   "وكيل الشؤون المدرسية",
+  deputy_students: "وكيل شؤون الطلاب",
+  counselor_1:     "الموجه الطلابي 1",
+  counselor_2:     "الموجه الطلابي 2",
+  counselor_3:     "الموجه الطلابي 3",
+  clerk:           "المساعد الإداري",
   activity_leader: "رائد النشاط",
+  tech_support:    "الدعم الفني",
+  // أدوار قديمة (للتوافق مع بيانات سابقة)
+  deputy:          "الوكيل",
+  counselor:       "الموجه الطلابي",
 };
+
+// الأدوار المتاحة للإسناد في شاشة الإدارة
+export const ASSIGNABLE_ROLES = [
+  "principal",
+  "deputy_academic",
+  "deputy_school",
+  "deputy_students",
+  "counselor_1",
+  "counselor_2",
+  "counselor_3",
+  "clerk",
+  "activity_leader",
+  "tech_support",
+];
+
+// مفاتيح الصلاحيات وأسماؤها
+export const PERMISSIONS = [
+  { key: "students",       label: "الطلاب",             desc: "البحث والفلترة والتقارير" },
+  { key: "reports",        label: "التقارير",           desc: "تقارير الحضور والغياب" },
+  { key: "permissions",    label: "الاستئذان",          desc: "رفع الاستئذان والسجل" },
+  { key: "accounts",       label: "الحسابات",           desc: "إنشاء حسابات الدخول" },
+  { key: "staff",          label: "الإدارة",            desc: "أعضاء الإدارة وأدوارهم" },
+  { key: "import",         label: "الاستيراد",          desc: "بيانات نور والجدول" },
+  { key: "news",           label: "الأخبار",            desc: "نشر أخبار المدرسة" },
+  { key: "guides",         label: "الأدلة",             desc: "رفع أدلة الاستخدام" },
+  { key: "feedback",       label: "الملاحظات",          desc: "ملاحظات المستخدمين" },
+  { key: "password_reset", label: "استعادة كلمة المرور", desc: "إعادة تعيين لأي مستخدم" },
+];

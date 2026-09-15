@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { fmtDateTime } from "../../lib/dates";
+import ColorLegend from "../../components/ColorLegend.jsx";
 
 const CAT_LABEL = {
   bug: "مشكلة تقنية",
@@ -14,9 +16,7 @@ const STATUS = [
   { key: "done",        label: "تمت",         cls: "bg-present/10 text-present" },
 ];
 
-const dateFmt = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
-  day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-});
+
 
 export default function FeedbackAdmin() {
   const [rows, setRows] = useState(null);
@@ -74,6 +74,14 @@ export default function FeedbackAdmin() {
         ))}
       </div>
 
+      <ColorLegend
+        items={[
+          { chip: "bg-warning-light text-warning", sample: "جديدة", label: "لم تُراجع" },
+          { chip: "bg-late/10 text-late", sample: "قيد المعالجة", label: "تحت العمل" },
+          { chip: "bg-present/10 text-present", sample: "تمت", label: "مغلقة" },
+        ]}
+      />
+
       {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
 
       {rows && filtered.length === 0 && (
@@ -97,7 +105,7 @@ export default function FeedbackAdmin() {
                   <span className="chip bg-gray-tint text-muted">{f.role_label}</span>
                 )}
                 <span className="ms-auto text-xs text-faint">
-                  {dateFmt.format(new Date(f.created_at))}
+                  {fmtDateTime(f.created_at)}
                 </span>
               </div>
 

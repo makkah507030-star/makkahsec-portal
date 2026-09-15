@@ -1,12 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { fmtBoth } from "../lib/dates";
 
-const dateFmt = new Intl.DateTimeFormat("ar-SA-u-ca-gregory", {
-  day: "numeric",
-  month: "long",
-  year: "numeric",
-});
+
 
 export default function NewsSlider() {
   const [items, setItems] = useState(null);
@@ -78,7 +75,7 @@ export default function NewsSlider() {
             <div className="flex flex-col justify-center p-6 md:p-8">
               {current.published_at && (
                 <p className="text-xs text-muted">
-                  {dateFmt.format(new Date(current.published_at))}
+                  {fmtBoth(current.published_at)}
                 </p>
               )}
               <h3 className="mt-2 text-lg font-bold leading-snug text-ink group-hover:text-mint-deep md:text-xl">

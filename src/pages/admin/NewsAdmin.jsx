@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
+import ColorLegend from "../../components/ColorLegend.jsx";
 
 const empty = {
   id: null,
@@ -208,6 +209,14 @@ export default function NewsAdmin() {
           </p>
         )}
       </section>
+
+      <ColorLegend
+        items={[
+          { chip: "bg-present/10 text-present", sample: "منشور", label: "ظاهر للزوار" },
+          { chip: "bg-warning-light text-warning", sample: "مسودة", label: "غير ظاهر" },
+          { chip: "bg-mint-tint text-mint-deep", sample: "سلايدر", label: "يظهر في الواجهة" },
+        ]}
+      />
 
       {/* القائمة */}
       <section className="card overflow-hidden">

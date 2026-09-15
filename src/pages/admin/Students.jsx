@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
-import { exportToExcel, printReport } from "../../lib/exportUtils";
+import { exportToExcel, printReport, STUDENT_DEPUTY_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -101,6 +101,7 @@ export default function Students() {
       subtitle: filterLabel,
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
+      secondSignature: { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
       headers: ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "ولي الأمر", "الجوال"],
       rows: filtered.map((r, i) => {
         const g = guardians.get(r.student_id);
