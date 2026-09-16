@@ -47,6 +47,7 @@ const OTHER_NAV = {
     { to: "/",        label: "التحضير" },
     { to: "/records", label: "السجلات" },
     { to: "/reports", label: "التقارير" },
+    { to: "/notify",  label: "الإشعارات" },
   ],
   student:  [{ to: "/", label: "الرئيسية" }],
   guardian: [{ to: "/", label: "الرئيسية" }],

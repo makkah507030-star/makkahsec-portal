@@ -468,6 +468,12 @@ export function printReport(opts) {
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
 
+  /* صف إجمالي مميّز داخل جدول عادي */
+  tbody td.total {
+    background: ${TINT}; color: ${DEEP}; font-weight: 700;
+    border-top: 2px solid ${MINT};
+  }
+
   /* توسيط صارم لكل الخلايا ما عدا الاسم */
   table th, table td { text-align: center; vertical-align: middle; }
   table .name { text-align: right !important; }

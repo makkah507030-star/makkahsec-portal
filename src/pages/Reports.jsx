@@ -12,6 +12,7 @@ const TAB_GROUPS = [
   {
     title: "تقارير اليوم الدراسي",
     tabs: [
+      { key: "daily_rate", label: "معدل الحضور اليومي" },
       { key: "days", label: "أيام الغياب" },
     ],
   },
@@ -92,6 +93,7 @@ export default function Reports() {
       {tab === "daily"   && <DailyReport scopeIds={scopeIds} />}
       {tab === "student" && <StudentReport scopeIds={scopeIds} />}
       {tab === "period"  && <PeriodReport scopeIds={scopeIds} />}
+      {tab === "daily_rate" && <DailyRateReport />}
       {tab === "days"    && <AbsenceDaysReport scopeIds={scopeIds} />}
     </div>
   );
@@ -549,6 +551,180 @@ function PeriodReport({ scopeIds }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ==================== معدل الحضور اليومي ==================== */
+
+function DailyRateReport() {
+  const [from, setFrom] = useState(daysAgo(120));
+  const [to, setTo] = useState(todayStr());
+  const [rows, setRows] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      setRows(null);
+      const { data, error } = await supabase.rpc("official_status_by_day", {
+        p_from: from, p_to: to,
+      });
+      if (error) { console.error(error); setRows([]); return; }
+      setRows(data ?? []);
+    })();
+  }, [from, to]);
+
+  const withPct = useMemo(
+    () =>
+      (rows ?? []).map((r) => {
+        const resolved = r.present + r.absent;
+        return {
+          ...r,
+          pct: resolved ? Math.round((r.present / resolved) * 100) : null,
+        };
+      }),
+    [rows]
+  );
+
+  const totals = useMemo(() => {
+    const t = (rows ?? []).reduce(
+      (acc, r) => {
+        acc.present += r.present;
+        acc.absent += r.absent;
+        acc.pending += r.pending;
+        return acc;
+      },
+      { present: 0, absent: 0, pending: 0 }
+    );
+    const resolved = t.present + t.absent;
+    t.pct = resolved ? Math.round((t.present / resolved) * 100) : null;
+    return t;
+  }, [rows]);
+
+  const headers = ["م", "التاريخ", "حاضر", "غائب", "نسبة الحضور"];
+  const dayRows = withPct.map((r, i) => [
+    i + 1, fmtGreg(r.attend_date + "T00:00:00"), r.present, r.absent,
+    r.pct != null ? `${r.pct}%` : "—",
+  ]);
+  const totalPlain = ["", "الإجمالي — الفصل الدراسي", totals.present, totals.absent,
+    totals.pct != null ? `${totals.pct}%` : "—"];
+
+  // للتصدير: Excel يحتاج قيمًا مباشرة
+  const table = () => [...dayRows, totalPlain];
+
+  // للطباعة: صف الإجمالي بصنف مميَّز يُلوَّن في PDF
+  const tablePdf = () => [
+    ...dayRows,
+    totalPlain.map((v) => ({ text: String(v), cls: "total" })),
+  ];
+
+  const printIt = () =>
+    printReport({
+      title: "معدل الحضور والغياب اليومي",
+      subtitle: `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")}`,
+      headers, rows: tablePdf(),
+      logoUrl: new URL(logoIcon, window.location.origin).href,
+      moeLogoUrl: new URL(moeLogo, window.location.origin).href,
+      signatures: [
+        { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
+        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+      ],
+    });
+
+  const excelIt = () =>
+    exportStyledExcel({
+      title: "معدل الحضور والغياب اليومي",
+      subtitle: `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")}`,
+      headers, rows: table(),
+      fileName: `معدل-الحضور-اليومي-${from}_${to}`,
+      sheetName: "المعدل اليومي",
+      signatures: [
+        { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
+        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+      ],
+    });
+
+  return (
+    <div className="space-y-4">
+      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+        نسبة الحضور محسوبة يوميًا بنفس قاعدة الحضور الرسمي (الحصتان الأولى
+        والثانية)، وفي آخر السجل مجموع وإجمالي نسبة الفصل الدراسي كاملًا.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm text-muted">من</label>
+        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
+               className="rounded-sm2 border border-line px-3 py-2 text-sm" />
+        <label className="text-sm text-muted">إلى</label>
+        <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
+               className="rounded-sm2 border border-line px-3 py-2 text-sm" />
+      </div>
+
+      {rows && rows.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-card border border-line bg-white px-4 py-3 text-center">
+            <p className="num text-2xl font-bold leading-none text-mint-deep">
+              {totals.pct != null ? `${totals.pct}%` : "—"}
+            </p>
+            <p className="mt-1.5 text-xs text-muted">نسبة الفصل كاملًا</p>
+          </div>
+          <div className="rounded-card border border-line bg-white px-4 py-3 text-center">
+            <p className="num text-2xl font-bold leading-none text-ink">{rows.length}</p>
+            <p className="mt-1.5 text-xs text-muted">يوم دراسي مسجَّل</p>
+          </div>
+          <div className="rounded-card border border-line bg-white px-4 py-3 text-center">
+            <p className="num text-2xl font-bold leading-none text-absent">
+              {totals.absent.toLocaleString("ar")}
+            </p>
+            <p className="mt-1.5 text-xs text-muted">إجمالي حالات الغياب</p>
+          </div>
+        </div>
+      )}
+
+      <ExportBar
+        disabled={!rows?.length}
+        onExcel={excelIt}
+        onPrint={printIt}
+      />
+
+      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {rows && rows.length === 0 && (
+        <Empty title="لا بيانات" body="لا توجد أيام دراسية مسجَّلة في هذه الفترة." />
+      )}
+
+      {withPct.length > 0 && (
+        <div className="card divide-y divide-line overflow-hidden">
+          {withPct.map((r) => (
+            <div key={r.attend_date} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <span className="num text-sm font-medium text-ink">
+                {fmtGreg(r.attend_date + "T00:00:00")}
+              </span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="num chip bg-present/10 text-present">{r.present}</span>
+                <span className="num chip bg-absent/10 text-absent">{r.absent}</span>
+                {r.pending > 0 && (
+                  <span className="num chip bg-warning-light text-warning">{r.pending} لم يُحضَّر</span>
+                )}
+                <span className="num w-12 text-left text-sm font-bold text-mint-deep">
+                  {r.pct != null ? `${r.pct}%` : "—"}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          <div className="flex items-center justify-between gap-3 bg-mint-tint px-4 py-3">
+            <span className="text-sm font-bold text-mint-deep">
+              الإجمالي — الفصل الدراسي كاملًا
+            </span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="num chip bg-present/15 font-semibold text-present">{totals.present}</span>
+              <span className="num chip bg-absent/15 font-semibold text-absent">{totals.absent}</span>
+              <span className="num w-12 text-left text-base font-bold text-mint-deep">
+                {totals.pct != null ? `${totals.pct}%` : "—"}
+              </span>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -11,6 +11,7 @@ import Students from "./pages/admin/Students.jsx";
 import Accounts from "./pages/admin/Accounts.jsx";
 import Attendance from "./pages/teacher/Attendance.jsx";
 import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
+import TeacherNotify from "./pages/teacher/TeacherNotify.jsx";
 import StudentHome from "./pages/StudentHome.jsx";
 import GuardianHome from "./pages/GuardianHome.jsx";
 import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
@@ -114,6 +115,7 @@ export default function App() {
           <>
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/records" element={<TeacherRecords />} />
+            <Route path="/notify" element={<TeacherNotify />} />
           </>
         )}
         {(profile.role === "teacher" || (profile.role === "admin" && can("reports"))) && (
