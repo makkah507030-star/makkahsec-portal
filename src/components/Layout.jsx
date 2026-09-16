@@ -12,9 +12,11 @@ const ADMIN_GROUPS = [
     items: [{ to: "/", label: "الرئيسية", perm: null, icon: "home" }],
   },
   {
-    title: "الطلاب والمتابعة",
+    title: "شؤون الطلاب",
     items: [
       { to: "/students",    label: "الطلاب",    perm: "students",    icon: "users" },
+      { to: "/attendance-overview", label: "الحضور والغياب", perm: "reports", icon: "check" },
+      { to: "/period-attendance", label: "تحضير الحصص اليومية", perm: "reports", icon: "clock" },
       { to: "/reports",     label: "التقارير",  perm: "reports",     icon: "chart" },
       { to: "/permissions", label: "الاستئذان", perm: "permissions", icon: "ticket" },
     ],
@@ -66,6 +68,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     lock:   "M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3",
     book:   "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z",
     bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+    check:  "M20 6 9 17l-5-5",
   }[name];
 
   return (

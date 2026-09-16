@@ -422,6 +422,19 @@ export default function TeacherRecords() {
           </button>
         </div>
 
+        <div className="flex gap-2.5 rounded-card border border-[#F5D98C] bg-[#FFF8E6] px-3.5 py-3">
+          <svg viewBox="0 0 24 24" fill="none" className="mt-0.5 h-4 w-4 shrink-0 text-warning"
+               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 9v4M12 16.5h.01" />
+            <path d="M10.3 3.9 2.7 17.3a1.8 1.8 0 0 0 1.56 2.7h15.48a1.8 1.8 0 0 0 1.56-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z" />
+          </svg>
+          <p className="text-xs leading-relaxed text-[#8A6416]">
+            <span className="font-bold">مهم قبل الطباعة:</span> اختر اتجاه الصفحة{" "}
+            <span className="font-bold">أفقي (Landscape)</span> من نافذة الطباعة
+            حتى يظهر الجدول كاملاً بشكل سليم دون اقتصاص.
+          </p>
+        </div>
+
         <div className="rounded-sm2 bg-gray-tint px-3 py-2.5 text-xs leading-relaxed text-muted">
           يُفتح التقرير في نافذة الطباعة مباشرة. ولطباعة فصل معيّن فقط، حدّده
           أعلاه قبل الضغط، أو اختر نطاق الصفحات من نافذة الطباعة.
