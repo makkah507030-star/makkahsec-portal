@@ -260,7 +260,7 @@ export function printReport(opts) {
   const {
     title, subtitle, headers, headerRows, rows,
     sections, logoUrl, moeLogoUrl, cover,
-    signatures, secondSignature, hideSignatureLine = false,
+    signatures, secondSignature, hideSignatureLine = false, hideSignatures = false,
     note, tableClass, landscape = false,
   } = opts;
 
@@ -275,7 +275,7 @@ export function printReport(opts) {
         { title: "مدير المدرسة", name: PRINCIPAL_NAME },
       ];
 
-  const signBlock = `
+  const signBlock = hideSignatures ? "" : `
   <div class="sign ${signList.length === 1 ? "one" : signList.length >= 3 ? "three" : ""}">
     ${signList
       .map(
@@ -327,12 +327,12 @@ export function printReport(opts) {
       <div class="cover-list">
         <p class="cover-list-title">${cover.groupsTitle ?? "المواد والفصول"}</p>
         <table class="mini">
-          <thead><tr><th>م</th><th>المادة</th><th>الصف</th><th>الفصل</th><th>الطلاب</th></tr></thead>
+          <thead><tr><th>م</th><th>المادة</th><th>الصف</th><th>الفصل</th></tr></thead>
           <tbody>
             ${cover.groups
               .map(
                 (g, i) => `
-            <tr><td>${i + 1}</td><td>${g.subject}</td><td>${g.grade}</td><td>${g.class_no}</td><td>${g.count ?? ""}</td></tr>`
+            <tr><td>${i + 1}</td><td>${g.subject}</td><td>${g.grade}</td><td>${g.class_no}</td></tr>`
               )
               .join("")}
           </tbody>
@@ -403,6 +403,11 @@ export function printReport(opts) {
     </div>
 
     <table class="${sec.tableClass ?? tableClass ?? ""}">
+      ${
+        sec.colWidths?.length
+          ? `<colgroup>${sec.colWidths.map((w) => `<col style="width:${w}" />`).join("")}</colgroup>`
+          : ""
+      }
       <thead>${buildHead(sec.headerRows, sec.headers)}</thead>
       <tbody>${buildBody(sec.rows)}</tbody>
     </table>
@@ -463,36 +468,41 @@ export function printReport(opts) {
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
 
-  /* سجلات مضغوطة — مضبوطة لتستوعب فصلًا كاملًا في صفحة */
+  /* توسيط صارم لكل الخلايا ما عدا الاسم */
+  table th, table td { text-align: center; vertical-align: middle; }
+  table .name { text-align: right !important; }
+
+  /* كشف رصد الدرجات */
   table.compact { font-size: 9.5px; table-layout: fixed; }
   table.compact thead th { padding: 5px 3px; font-size: 8.5px; line-height: 1.3; }
-  table.compact tbody td { padding: 4px 3px; white-space: nowrap; }
+  table.compact tbody td { padding: 3px 3px; }
   table.compact .name {
-    text-align: right; padding-right: 6px; width: 27%;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    padding-right: 7px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
   }
-  table.compact tbody td:first-child { width: 4%; }
-  table.compact tbody td:nth-child(2) { width: 13%; }
 
-  /* سجل المتابعة — رأس رمادي موحّد مع عمود المجموع */
+  /* سجل المتابعة */
   table.follow { font-size: 9.5px; table-layout: fixed; }
-  table.follow thead th {
-    background: ${ZEBRA}; color: ${INK}; border-color: #C9C9C9;
-    padding: 5px 3px; font-size: 8.5px; line-height: 1.3;
+  table.follow thead th { padding: 5px 2px; font-size: 8.5px; line-height: 1.3; }
+  table.follow thead th.score {
+    background: #fff; height: 30px; font-size: 9px; color: ${GRAY};
+    font-weight: 600; letter-spacing: 0.5px;
   }
-  table.follow thead th.score { background: #fff; height: 22px; }
   table.follow thead th.slot {
-    background: #FAFAFA; font-weight: 600; font-size: 8px; color: ${GRAY};
+    background: #F7FBF9; font-weight: 600; font-size: 7.5px; color: ${GRAY};
+    padding: 3px 1px;
   }
-  table.follow thead th.total-h { background: #E4E4E4; font-weight: 700; }
-  table.follow tbody td { padding: 5px 3px; border-color: #DDD; }
+  table.follow thead th.total-h {
+    background: #E4E4E4; color: ${INK}; border-color: #C9C9C9; font-weight: 700;
+  }
+  table.follow thead th.slot { border-color: ${MINT}; }
+  table.follow tbody td { padding: 4px 2px; border-color: #DDD; }
+  table.follow tbody td.slot { padding: 4px 1px; }
   table.follow .name {
-    text-align: right; padding-right: 6px; width: 17%;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    padding-right: 7px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
   }
-  table.follow tbody td:first-child { width: 3.5%; }
-  table.follow .total { background: ${ZEBRA}; width: 6%; }
-  table.follow tbody tr:nth-child(even) { background: #FAFAFA; }
+  table.follow .total { background: ${ZEBRA}; }
 
   /* الملاحظة والتوقيعات */
   .note {

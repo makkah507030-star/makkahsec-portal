@@ -138,14 +138,12 @@ export default function TeacherRecords() {
       ["المعلم", me?.full_name ?? ""],
       ...(me?.specialization ? [["التخصص", me.specialization]] : []),
       ["عدد الفصول", String(chosen.length)],
-      ["إجمالي الطلاب", String(chosen.reduce((n, g) => n + g.students.length, 0))],
       ...extra,
     ],
     groups: chosen.map((g) => ({
       subject: g.subject,
       grade: GRADE_NAMES[g.grade] ?? g.grade,
       class_no: g.class_no,
-      count: g.students.length,
     })),
     year: `العام الدراسي ${year} — الفصل الدراسي ${term}`,
   });
@@ -160,7 +158,15 @@ export default function TeacherRecords() {
       const { headerRows } = buildGradeHeader(cfg);
       const blanks = gradeBlankCount(cfg);
 
+      // م · هوية · اسم عريض · باقي الأعمدة بالتساوي
+      const rest = blanks;
+      const colWidths = [
+        "3.5%", "10%", "19%",
+        ...Array.from({ length: rest }, () => `${(67.5 / rest).toFixed(2)}%`),
+      ];
+
       return {
+        colWidths,
         title: `كشف رصد درجات مادة ${g.subject}`,
         subtitle: `${GRADE_NAMES[g.grade] ?? ""} · فصل ${g.class_no} · ${g.students.length} طالبًا`,
         headerRows,
@@ -176,10 +182,10 @@ export default function TeacherRecords() {
 
     printReport({
       title: "كشف رصد الدرجات",
+      landscape: true,
       sections,
       cover: {
         title: "كشف رصد الدرجات",
-        subtitle: me?.full_name ?? "",
         groupsTitle: "المواد والفصول المشمولة",
         ...coverBase(),
       },
@@ -212,7 +218,7 @@ export default function TeacherRecords() {
 
     // 2) خانة الدرجة الكلية لكل قسم
     const row2 = FOLLOW_SECTIONS.map((sec) => ({
-      text: "", colspan: secWidth(sec), cls: "score",
+      text: "الدرجة  (                    )", colspan: secWidth(sec), cls: "score",
     }));
 
     // 3) أسماء البنود
@@ -222,7 +228,9 @@ export default function TeacherRecords() {
 
     // 4) خانة درجة كل بند
     const row4 = FOLLOW_SECTIONS.flatMap((sec) =>
-      sec.items.map((it) => ({ text: "", colspan: it.slots, cls: "score" }))
+      sec.items.map((it) => ({
+        text: "الدرجة  (              )", colspan: it.slots, cls: "score",
+      }))
     );
 
     // 5) أرقام المتابعات تحت البنود متعددة الأعمدة
@@ -234,6 +242,27 @@ export default function TeacherRecords() {
       )
     );
 
+    // أعمدة المتابعة ضيقة (علامة بسيطة)، والاسم عريض
+    const slotCount = FOLLOW_SECTIONS.flatMap((sec) =>
+      sec.items.filter((it) => it.slots > 1).map((it) => it.slots)
+    ).reduce((a, b) => a + b, 0);
+    const singleCount = FOLLOW_SECTIONS.flatMap((sec) =>
+      sec.items.filter((it) => it.slots === 1)
+    ).length;
+
+    const colWidths = [
+      "3%",   // م
+      "15%",  // الاسم
+      ...FOLLOW_SECTIONS.flatMap((sec) =>
+        sec.items.flatMap((it) =>
+          Array.from({ length: it.slots }, () =>
+            it.slots > 1 ? `${(58 / slotCount).toFixed(2)}%` : `${(18 / singleCount).toFixed(2)}%`
+          )
+        )
+      ),
+      "6%",   // المجموع النهائي
+    ];
+
     const sections = [];
     ["الفترة الأولى", "الفترة الثانية"].forEach((period) => {
       chosen.forEach((g) => {
@@ -242,10 +271,17 @@ export default function TeacherRecords() {
           subtitle: `${GRADE_NAMES[g.grade] ?? ""} · فصل ${g.class_no} · ${g.students.length} طالبًا`,
           headerRows: [row1, row2, row3, row4, row5],
           tableClass: "follow",
+          colWidths,
           rows: g.students.map((s, i) => [
             i + 1,
             { text: s.full_name ?? "", cls: "name" },
-            ...Array.from({ length: totalCols }, () => ({ text: "", cls: "blank" })),
+            ...FOLLOW_SECTIONS.flatMap((sec) =>
+              sec.items.flatMap((it) =>
+                Array.from({ length: it.slots }, () => ({
+                  text: "", cls: it.slots > 1 ? "blank slot" : "blank",
+                }))
+              )
+            ),
             { text: "", cls: "blank total" },
           ]),
         });
@@ -258,15 +294,15 @@ export default function TeacherRecords() {
       sections,
       cover: {
         title: "سجل المتابعة",
-        subtitle: me?.full_name ?? "",
         groupsTitle: "المواد والفصول المشمولة",
         ...coverBase([["الفترات", "سجل مستقل لكل فترة"]]),
       },
-      note: "تُكتب الدرجة الكلية لكل قسم وبند في الخانات البيضاء، والأرقام أسفلها لمتابعات متعددة خلال الفترة.",
+      note: "تُكتب الدرجة الكلية لكل قسم وبند في خانات «الدرجة»، والأعمدة المرقّمة لمتابعات متعددة خلال الفترة.",
       signatures: [
         { title: "معلم المادة", name: me?.full_name ?? "" },
         { title: "مدير المدرسة", name: PRINCIPAL_NAME },
       ],
+      hideSignatureLine: true,
       ...logos(),
     });
 
