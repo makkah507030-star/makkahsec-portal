@@ -1,4 +1,6 @@
-import * as XLSX from "xlsx";
+// xlsx-js-style: نسخة مجانية من SheetJS تدعم تنسيق الخلايا
+// (مكتبة xlsx الأساسية تتجاهل الألوان والخطوط بصمت)
+import XLSX from "xlsx-js-style";
 import { fmtBoth, fmtTime12 } from "./dates";
 
 // اسم مدير المدرسة — يظهر في ترويسة وتذييل التقارير المطبوعة
@@ -9,6 +11,15 @@ export const STUDENT_DEPUTY_NAME = "فهد بن نايف ماطر المعبدي
 
 // وكيل الشؤون التعليمية
 export const ACADEMIC_DEPUTY_NAME = "فهد بن سعود حضرواي";
+
+/* ألوان الهوية المستخدمة في التقارير المطبوعة */
+const DEEP  = "#3E6350";
+const MINT  = "#89D7AD";
+const LIGHT = "#CCF2DB";
+const TINT  = "#EDFAF2";
+const INK   = "#101010";
+const GRAY  = "#6B6B6B";
+const ZEBRA = "#F4F4F4";
 
 /**
  * تصدير بيانات إلى ملف Excel
@@ -21,7 +32,6 @@ export function exportToExcel(rows, fileName = "تقرير", sheetName = "الب
 
   const ws = XLSX.utils.json_to_sheet(rows);
 
-  // عرض الأعمدة تلقائيًا حسب أطول قيمة
   const keys = Object.keys(rows[0]);
   ws["!cols"] = keys.map((k) => {
     const maxLen = Math.max(
@@ -31,156 +41,562 @@ export function exportToExcel(rows, fileName = "تقرير", sheetName = "الب
     return { wch: Math.min(Math.max(maxLen + 2, 10), 40) };
   });
 
-  // اتجاه الورقة من اليمين لليسار
   ws["!views"] = [{ RTL: true }];
 
   const wb = XLSX.utils.book_new();
+  wb.Workbook = { Views: [{ RTL: true }] };
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
 
-  const stamp = new Date().toISOString().slice(0, 10); // اسم الملف يبقى ISO للترتيب
+  const stamp = new Date().toISOString().slice(0, 10);
   XLSX.writeFile(wb, `${fileName}-${stamp}.xlsx`);
 }
 
 /**
- * طباعة جدول بترويسة المدرسة (يفتح نافذة طباعة يمكن الحفظ منها كـ PDF)
+ * تصدير Excel بتنسيق يطابق تقارير PDF:
+ * ترويسة رسمية، وعنوان، ورأس جدول ملوّن، وحدود، وتذييل بالتوقيعات.
+ *
  * @param {Object} opts
- * @param {string} opts.title - عنوان التقرير
- * @param {string} [opts.subtitle] - سطر فرعي (الفلاتر المطبّقة مثلاً)
- * @param {string[]} opts.headers - عناوين الأعمدة
- * @param {Array<Array>} opts.rows - الصفوف كمصفوفات
- * @param {string} [opts.logoUrl] - رابط شعار المدرسة
- * @param {string} [opts.moeLogoUrl] - رابط شعار وزارة التعليم
- * @param {{title:string,name:string}} [opts.secondSignature] - توقيع إضافي (يمين)
- * @param {boolean} [opts.hideSignatureLine] - إخفاء سطر "التوقيع: ....."
+ * @param {string}   opts.title
+ * @param {string}   [opts.subtitle]
+ * @param {string[]} opts.headers
+ * @param {Array[]}  opts.rows
+ * @param {string}   [opts.fileName]
+ * @param {string}   [opts.sheetName]
+ * @param {{title:string,name:string}[]} [opts.signatures]
+ * @param {string}   [opts.note]
  */
-export function printReport({
-  title, subtitle, headers, rows, logoUrl, moeLogoUrl, secondSignature,
-  hideSignatureLine = false,
+export function exportStyledExcel({
+  title,
+  subtitle,
+  headers,
+  rows,
+  fileName = "تقرير",
+  sheetName = "التقرير",
+  signatures,
+  note,
 }) {
-  const win = window.open("", "_blank");
-  if (!win) {
-    alert("يرجى السماح بالنوافذ المنبثقة لإتمام الطباعة.");
-    return;
+  if (!headers?.length) return;
+
+  const cols = headers.length;
+  const aoa = [];
+
+  // الترويسة الرسمية
+  aoa.push(["المملكة العربية السعودية"]);
+  aoa.push(["وزارة التعليم"]);
+  aoa.push(["الإدارة العامة للتعليم بمنطقة مكة المكرمة"]);
+  aoa.push(["مدرسة مكة الثانوية"]);
+  aoa.push([]);
+
+  // العنوان
+  aoa.push([title]);
+  if (subtitle) aoa.push([subtitle]);
+  aoa.push([`تاريخ الإصدار: ${fmtBoth(new Date())}`]);
+  aoa.push([]);
+
+  const headRow = aoa.length;       // فهرس صف رأس الجدول
+  aoa.push(headers);
+  rows.forEach((r) => aoa.push(r));
+  const lastRow = aoa.length - 1;
+
+  // الملاحظة والتوقيعات
+  if (note) { aoa.push([]); aoa.push([note]); }
+
+  const signList = signatures?.length
+    ? signatures
+    : [{ title: "مدير المدرسة", name: PRINCIPAL_NAME }];
+
+  aoa.push([]);
+  aoa.push([]);
+  aoa.push(signList.map((s) => s.title));
+  aoa.push(signList.map((s) => s.name));
+  aoa.push(signList.map(() => "التوقيع: ....................."));
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // عرض الأعمدة
+  ws["!cols"] = headers.map((h, i) => {
+    const maxLen = Math.max(
+      String(h).length,
+      ...rows.map((r) => String(r[i] ?? "").length)
+    );
+    return { wch: Math.min(Math.max(maxLen + 3, 9), 38) };
+  });
+
+  // دمج خلايا الترويسة والعنوان
+  const merges = [];
+  for (let r = 0; r < 4; r++) {
+    merges.push({ s: { r, c: 0 }, e: { r, c: cols - 1 } });
+  }
+  merges.push({ s: { r: 5, c: 0 }, e: { r: 5, c: cols - 1 } });
+  if (subtitle) merges.push({ s: { r: 6, c: 0 }, e: { r: 6, c: cols - 1 } });
+  merges.push({ s: { r: subtitle ? 7 : 6, c: 0 }, e: { r: subtitle ? 7 : 6, c: cols - 1 } });
+  ws["!merges"] = merges;
+
+  ws["!views"] = [{ RTL: true }];
+
+  /* ---------- التنسيق ---------- */
+  const border = {
+    top:    { style: "thin", color: { rgb: "FFE6E6E6" } },
+    bottom: { style: "thin", color: { rgb: "FFE6E6E6" } },
+    left:   { style: "thin", color: { rgb: "FFE6E6E6" } },
+    right:  { style: "thin", color: { rgb: "FFE6E6E6" } },
+  };
+
+  const setStyle = (r, c, style) => {
+    const ref = XLSX.utils.encode_cell({ r, c });
+    if (!ws[ref]) ws[ref] = { t: "s", v: "" };
+    ws[ref].s = { ...(ws[ref].s ?? {}), ...style };
+  };
+
+  // الترويسة
+  for (let r = 0; r < 4; r++) {
+    setStyle(r, 0, {
+      font: { name: "Arial", sz: r === 3 ? 13 : 10, bold: r === 3, color: { rgb: "FF3E6350" } },
+      alignment: { horizontal: "center", readingOrder: 2 },
+    });
   }
 
-  const now = new Date();
-  const today = `${fmtBoth(now)} · ${fmtTime12(now)}`;
+  // العنوان
+  setStyle(5, 0, {
+    font: { name: "Arial", sz: 15, bold: true, color: { rgb: "FF101010" } },
+    alignment: { horizontal: "center", readingOrder: 2 },
+  });
+  if (subtitle) {
+    setStyle(6, 0, {
+      font: { name: "Arial", sz: 10, color: { rgb: "FF6B6B6B" } },
+      alignment: { horizontal: "center", readingOrder: 2 },
+    });
+  }
+  setStyle(subtitle ? 7 : 6, 0, {
+    font: { name: "Arial", sz: 9, color: { rgb: "FF6B6B6B" } },
+    alignment: { horizontal: "center", readingOrder: 2 },
+  });
 
-  const html = `
-<!doctype html>
+  // رأس الجدول
+  for (let c = 0; c < cols; c++) {
+    setStyle(headRow, c, {
+      font: { name: "Arial", sz: 11, bold: true, color: { rgb: "FF3E6350" } },
+      fill: { patternType: "solid", fgColor: { rgb: "FFEDFAF2" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true, readingOrder: 2 },
+      border: {
+        top:    { style: "thin", color: { rgb: "FFCCF2DB" } },
+        bottom: { style: "thin", color: { rgb: "FFCCF2DB" } },
+        left:   { style: "thin", color: { rgb: "FFCCF2DB" } },
+        right:  { style: "thin", color: { rgb: "FFCCF2DB" } },
+      },
+    });
+  }
+
+  // صفوف البيانات
+  for (let r = headRow + 1; r <= lastRow; r++) {
+    const zebra = (r - headRow) % 2 === 0;
+    for (let c = 0; c < cols; c++) {
+      setStyle(r, c, {
+        font: { name: "Arial", sz: 10, color: { rgb: "FF101010" } },
+        alignment: { horizontal: c === 0 ? "center" : "right", vertical: "center", readingOrder: 2 },
+        border,
+        ...(zebra ? { fill: { patternType: "solid", fgColor: { rgb: "FFFAFAFA" } } } : {}),
+      });
+    }
+  }
+
+  // التوقيعات
+  const signTitleRow = aoa.length - 3;
+  const signNameRow  = aoa.length - 2;
+  const signLineRow  = aoa.length - 1;
+  for (let c = 0; c < signList.length; c++) {
+    setStyle(signTitleRow, c, {
+      font: { name: "Arial", sz: 9, color: { rgb: "FF6B6B6B" } },
+      alignment: { horizontal: "center", readingOrder: 2 },
+    });
+    setStyle(signNameRow, c, {
+      font: { name: "Arial", sz: 11, bold: true, color: { rgb: "FF101010" } },
+      alignment: { horizontal: "center", readingOrder: 2 },
+    });
+    setStyle(signLineRow, c, {
+      font: { name: "Arial", sz: 9, color: { rgb: "FF6B6B6B" } },
+      alignment: { horizontal: "center", readingOrder: 2 },
+    });
+  }
+
+  // ارتفاع الصفوف
+  ws["!rows"] = aoa.map((_, i) =>
+    i === headRow ? { hpt: 26 } : i === 5 ? { hpt: 24 } : { hpt: 18 }
+  );
+
+  const wb = XLSX.utils.book_new();
+  wb.Workbook = { Views: [{ RTL: true }] };
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `${fileName}-${stamp}.xlsx`);
+}
+
+/**
+ * طباعة تقرير أو سجل متعدد الصفحات.
+ *
+ * يقبل شكلين:
+ *   - جدول واحد : { headers | headerRows, rows }
+ *   - عدة أقسام : { sections: [{ title, subtitle, headerRows, rows, tableClass }] }
+ *     كل قسم يبدأ في صفحة جديدة.
+ *
+ * @param {Object} opts
+ * @param {string}  opts.title
+ * @param {string}  [opts.subtitle]
+ * @param {string[]} [opts.headers]
+ * @param {Array[]} [opts.headerRows]
+ * @param {Array[]} [opts.rows]
+ * @param {Array}   [opts.sections]
+ * @param {string}  [opts.logoUrl]
+ * @param {string}  [opts.moeLogoUrl]
+ * @param {Object}  [opts.cover]      - { title, subtitle, rows: [[k,v]], groups, year }
+ * @param {Array}   [opts.signatures] - [{ title, name }]
+ * @param {boolean} [opts.hideSignatureLine]
+ * @param {string}  [opts.note]
+ * @param {string}  [opts.tableClass]
+ * @param {boolean} [opts.landscape]
+ */
+export function printReport(opts) {
+  const {
+    title, subtitle, headers, headerRows, rows,
+    sections, logoUrl, moeLogoUrl, cover,
+    signatures, secondSignature, hideSignatureLine = false,
+    note, tableClass, landscape = false,
+  } = opts;
+
+  const now = new Date();
+  const stampText = `${fmtBoth(now)} · ${fmtTime12(now)}`;
+
+  /* ---------- التوقيعات ---------- */
+  const signList = signatures?.length
+    ? signatures
+    : [
+        ...(secondSignature ? [secondSignature] : []),
+        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+      ];
+
+  const signBlock = `
+  <div class="sign ${signList.length === 1 ? "one" : signList.length >= 3 ? "three" : ""}">
+    ${signList
+      .map(
+        (sg) => `
+    <div class="sign-box">
+      <p class="sign-title">${sg.title}</p>
+      <p class="sign-name">${sg.name}</p>
+      ${hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..........................</p>`}
+    </div>`
+      )
+      .join("")}
+  </div>`;
+
+  /* ---------- الترويسة الرسمية ---------- */
+  const headBlock = `
+  <div class="head">
+    <div class="side">${moeLogoUrl ? `<img src="${moeLogoUrl}" alt="" />` : ""}</div>
+    <div class="txt">
+      <p class="l1">المملكة العربية السعودية — وزارة التعليم</p>
+      <p class="l2">مدرسة مكة الثانوية</p>
+      <p class="l3">الإدارة العامة للتعليم بمنطقة مكة المكرمة</p>
+    </div>
+    <div class="side">${logoUrl ? `<img src="${logoUrl}" alt="" />` : ""}</div>
+  </div>`;
+
+  /* ---------- الغلاف ---------- */
+  const coverBlock = cover
+    ? `
+  <section class="cover">
+    ${headBlock}
+
+    <div class="cover-body">
+      ${logoUrl ? `<img class="cover-logo" src="${logoUrl}" alt="" />` : ""}
+      <h1>${cover.title ?? title}</h1>
+      ${cover.subtitle ? `<p class="cover-sub">${cover.subtitle}</p>` : ""}
+
+      <div class="cover-card">
+        ${(cover.rows ?? [])
+          .map(
+            (r) => `
+        <div class="crow"><span class="k">${r[0]}</span><span class="v">${r[1] ?? ""}</span></div>`
+          )
+          .join("")}
+      </div>
+
+      ${
+        cover.groups?.length
+          ? `
+      <div class="cover-list">
+        <p class="cover-list-title">${cover.groupsTitle ?? "المواد والفصول"}</p>
+        <table class="mini">
+          <thead><tr><th>م</th><th>المادة</th><th>الصف</th><th>الفصل</th><th>الطلاب</th></tr></thead>
+          <tbody>
+            ${cover.groups
+              .map(
+                (g, i) => `
+            <tr><td>${i + 1}</td><td>${g.subject}</td><td>${g.grade}</td><td>${g.class_no}</td><td>${g.count ?? ""}</td></tr>`
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </div>`
+          : ""
+      }
+
+      ${cover.year ? `<p class="cover-year">${cover.year}</p>` : ""}
+    </div>
+
+    <div class="cover-foot">
+      <span>تاريخ الإصدار: ${stampText}</span>
+      <span>بوابة مكة الثانوية الرقمية</span>
+    </div>
+  </section>`
+    : "";
+
+  /* ---------- بناء رأس جدول ---------- */
+  const buildHead = (hRows, hFlat) =>
+    hRows?.length
+      ? hRows
+          .map(
+            (hr) =>
+              `<tr>${hr
+                .map((c) =>
+                  typeof c === "object"
+                    ? `<th${c.cls ? ` class="${c.cls}"` : ""}${
+                        c.colspan ? ` colspan="${c.colspan}"` : ""
+                      }${c.rowspan ? ` rowspan="${c.rowspan}"` : ""}>${c.text ?? ""}</th>`
+                    : `<th>${c}</th>`
+                )
+                .join("")}</tr>`
+          )
+          .join("")
+      : `<tr>${(hFlat ?? []).map((h) => `<th>${h}</th>`).join("")}</tr>`;
+
+  const buildBody = (bRows) =>
+    (bRows ?? [])
+      .map(
+        (r) =>
+          `<tr>${r
+            .map((c) =>
+              c && typeof c === "object"
+                ? `<td${c.cls ? ` class="${c.cls}"` : ""}${
+                    c.colspan ? ` colspan="${c.colspan}"` : ""
+                  }>${c.text ?? ""}</td>`
+                : `<td>${c ?? ""}</td>`
+            )
+            .join("")}</tr>`
+      )
+      .join("");
+
+  /* ---------- الأقسام ---------- */
+  const list = sections?.length
+    ? sections
+    : [{ title, subtitle, headers, headerRows, rows, tableClass, note }];
+
+  const sectionsHtml = list
+    .map(
+      (sec, i) => `
+  <section class="sheet${i > 0 || cover ? " newpage" : ""}">
+    ${headBlock}
+
+    <div class="meta">
+      <span class="m-title">${sec.title ?? title}</span>
+      ${sec.subtitle ? `<span class="m-sub">${sec.subtitle}</span>` : ""}
+    </div>
+
+    <table class="${sec.tableClass ?? tableClass ?? ""}">
+      <thead>${buildHead(sec.headerRows, sec.headers)}</thead>
+      <tbody>${buildBody(sec.rows)}</tbody>
+    </table>
+
+    ${sec.note ?? note ? `<p class="note">${sec.note ?? note}</p>` : ""}
+    ${signBlock}
+  </section>`
+    )
+    .join("");
+
+  /* ---------- الأنماط ---------- */
+  const css = `
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, sans-serif;
+    color: ${INK}; background: #fff;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  section { padding: 0 2mm; }
+  .newpage { page-break-before: always; }
+
+  /* ترويسة */
+  .head {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border-bottom: 2px solid ${DEEP}; padding-bottom: 8px; margin-bottom: 10px;
+  }
+  .head .side { width: 88px; display: flex; align-items: center; justify-content: center; }
+  .head .side img { max-height: 50px; max-width: 84px; }
+  .head .txt { flex: 1; text-align: center; }
+  .head .l1 { margin: 0; font-size: 10.5px; color: ${GRAY}; }
+  .head .l2 { margin: 2px 0 0; font-size: 14px; font-weight: 700; color: ${DEEP}; }
+  .head .l3 { margin: 2px 0 0; font-size: 9.5px; color: ${GRAY}; }
+
+  /* سطر التقرير */
+  .meta {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 10px; margin-bottom: 8px;
+  }
+  .meta .m-title { font-size: 13px; font-weight: 700; color: ${INK}; }
+  .meta .m-sub { font-size: 10.5px; color: ${GRAY}; }
+
+  /* الجداول */
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
+  thead th {
+    background: ${LIGHT}; color: ${DEEP}; font-weight: 700;
+    border: 1px solid ${MINT}; padding: 6px 4px; text-align: center;
+    line-height: 1.35;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  tbody td {
+    border: 1px solid #DDD; padding: 6px 4px; text-align: center;
+  }
+  tbody tr:nth-child(even) {
+    background: ${ZEBRA};
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
+  /* سجلات مضغوطة — مضبوطة لتستوعب فصلًا كاملًا في صفحة */
+  table.compact { font-size: 9.5px; table-layout: fixed; }
+  table.compact thead th { padding: 5px 3px; font-size: 8.5px; line-height: 1.3; }
+  table.compact tbody td { padding: 4px 3px; white-space: nowrap; }
+  table.compact .name {
+    text-align: right; padding-right: 6px; width: 27%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  table.compact tbody td:first-child { width: 4%; }
+  table.compact tbody td:nth-child(2) { width: 13%; }
+
+  /* سجل المتابعة — رأس رمادي موحّد مع عمود المجموع */
+  table.follow { font-size: 9.5px; table-layout: fixed; }
+  table.follow thead th {
+    background: ${ZEBRA}; color: ${INK}; border-color: #C9C9C9;
+    padding: 5px 3px; font-size: 8.5px; line-height: 1.3;
+  }
+  table.follow thead th.score { background: #fff; height: 22px; }
+  table.follow thead th.slot {
+    background: #FAFAFA; font-weight: 600; font-size: 8px; color: ${GRAY};
+  }
+  table.follow thead th.total-h { background: #E4E4E4; font-weight: 700; }
+  table.follow tbody td { padding: 5px 3px; border-color: #DDD; }
+  table.follow .name {
+    text-align: right; padding-right: 6px; width: 17%;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  table.follow tbody td:first-child { width: 3.5%; }
+  table.follow .total { background: ${ZEBRA}; width: 6%; }
+  table.follow tbody tr:nth-child(even) { background: #FAFAFA; }
+
+  /* الملاحظة والتوقيعات */
+  .note {
+    margin-top: 10px; font-size: 9.5px; color: ${GRAY}; line-height: 1.6;
+    border-right: 3px solid ${LIGHT}; padding-right: 8px;
+  }
+  .sign {
+    margin-top: 18px; display: flex; justify-content: space-between;
+    page-break-inside: avoid;
+  }
+  .sign.one { justify-content: flex-end; }
+  .sign.three { justify-content: space-around; }
+  .sign-box { text-align: center; min-width: 170px; }
+  .sign-title { margin: 0; font-size: 9.5px; color: ${GRAY}; }
+  .sign-name { margin: 3px 0 0; font-size: 11px; font-weight: 700; color: ${INK}; }
+  .sign-line { margin: 16px 0 0; font-size: 9.5px; color: ${GRAY}; }
+
+  /* الغلاف */
+  .cover { display: flex; flex-direction: column; min-height: 96vh; }
+  .cover-body { flex: 1; text-align: center; padding-top: 6mm; }
+  .cover-logo { height: 84px; margin: 0 auto 14px; display: block; }
+  .cover h1 {
+    margin: 0 0 6px; font-size: 26px; font-weight: 700; color: ${DEEP};
+    letter-spacing: -0.2px;
+  }
+  .cover-sub { margin: 0 0 18px; font-size: 14px; color: ${GRAY}; }
+  .cover-card {
+    max-width: 420px; margin: 0 auto 16px; text-align: right;
+    border: 1px solid ${LIGHT}; border-radius: 10px; overflow: hidden;
+  }
+  .cover-card .crow {
+    display: flex; justify-content: space-between; gap: 12px;
+    padding: 9px 16px; font-size: 12px; border-bottom: 1px solid #EEF6F1;
+  }
+  .cover-card .crow:nth-child(odd) { background: ${TINT}; }
+  .cover-card .crow:last-child { border-bottom: none; }
+  .cover-card .k { color: ${GRAY}; }
+  .cover-card .v { font-weight: 700; color: ${INK}; }
+
+  .cover-list { max-width: 560px; margin: 0 auto; }
+  .cover-list-title {
+    margin: 0 0 6px; font-size: 11px; font-weight: 700; color: ${DEEP};
+    text-align: right;
+  }
+  table.mini { font-size: 10px; }
+  table.mini thead th { padding: 5px 4px; font-size: 9.5px; }
+  table.mini tbody td { padding: 5px 4px; }
+
+  .cover-year { margin-top: 16px; font-size: 11px; color: ${GRAY}; }
+  .cover-foot {
+    display: flex; justify-content: space-between;
+    border-top: 1px solid ${LIGHT}; padding-top: 6px;
+    font-size: 9.5px; color: ${GRAY};
+  }
+
+  @media print {
+    section { padding: 0; }
+    @page { margin: 10mm; ${landscape ? "size: A4 landscape;" : "size: A4 portrait;"} }
+  }`;
+
+  const html = `<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8" />
 <title>${title}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: "IBM Plex Sans Arabic", system-ui, sans-serif;
-    margin: 0; padding: 24px; color: #101010;
-  }
-  .head {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    border-bottom: 2px solid #3E6350; padding-bottom: 12px; margin-bottom: 6px;
-  }
-  .head .side { display: flex; align-items: center; }
-  .head .moe img    { height: 56px; width: auto; }
-  .head .school img { height: 48px; width: auto; }
-  .head .txt { flex: 1; text-align: center; }
-  .head h1 { margin: 0; font-size: 16px; color: #3E6350; font-weight: 700; }
-  .head h2 { margin: 2px 0 0; font-size: 13px; color: #3E6350; font-weight: 600; }
-  .head p  { margin: 2px 0 0; font-size: 11px; color: #6B6B6B; }
-  .meta {
-    display: flex; justify-content: space-between;
-    font-size: 11px; color: #6B6B6B; margin-bottom: 14px;
-  }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  thead th {
-    background: #EDFAF2; color: #3E6350; font-weight: 600;
-    border: 1px solid #CCF2DB; padding: 7px 8px; text-align: right;
-  }
-  tbody td { border: 1px solid #E6E6E6; padding: 6px 8px; }
-  tbody tr:nth-child(even) { background: #FAFAFA; }
-  tfoot td {
-    border: none; padding-top: 14px; font-size: 11px; color: #6B6B6B;
-  }
-  .sign {
-    margin-top: 34px; display: flex; justify-content: space-between;
-    page-break-inside: avoid;
-  }
-  .sign.one { justify-content: flex-end; }
-  .sign-box { text-align: center; min-width: 230px; }
-  .sign-title { margin: 0; font-size: 11px; color: #6B6B6B; }
-  .sign-name  { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: #101010; }
-  .sign-line  { margin: 22px 0 0; font-size: 11px; color: #6B6B6B; }
-  @media print {
-    body { padding: 0; }
-    thead { display: table-header-group; }
-    tr { page-break-inside: avoid; }
-    @page { margin: 14mm; }
-  }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>${css}</style>
 </head>
 <body>
-  <div class="head">
-    <div class="side moe">
-      ${moeLogoUrl ? `<img src="${moeLogoUrl}" alt="وزارة التعليم" />` : ""}
-    </div>
-    <div class="txt">
-      <h1>المملكة العربية السعودية — وزارة التعليم</h1>
-      <h2>مدرسة مكة الثانوية</h2>
-      <p>بوابة مكة الثانوية الرقمية</p>
-    </div>
-    <div class="side school">
-      ${logoUrl ? `<img src="${logoUrl}" alt="شعار المدرسة" />` : ""}
-    </div>
-  </div>
-
-  <div class="meta">
-    <span><strong>${title}</strong>${subtitle ? ` — ${subtitle}` : ""}</span>
-    <span>تاريخ الطباعة: ${today} · عدد السجلات: ${rows.length}</span>
-  </div>
-
-  <table>
-    <thead>
-      <tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr>
-    </thead>
-    <tbody>
-      ${rows
-        .map(
-          (r) =>
-            `<tr>${r.map((c) => `<td>${c ?? ""}</td>`).join("")}</tr>`
-        )
-        .join("")}
-    </tbody>
-  </table>
-
-  <div class="sign ${secondSignature ? "" : "one"}">
-    ${secondSignature ? `
-    <div class="sign-box">
-      <p class="sign-title">${secondSignature.title}</p>
-      <p class="sign-name">${secondSignature.name}</p>
-      ${hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..............................</p>`}
-    </div>` : ""}
-    <div class="sign-box">
-      <p class="sign-title">مدير المدرسة</p>
-      <p class="sign-name">${PRINCIPAL_NAME}</p>
-      ${hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..............................</p>`}
-    </div>
-  </div>
+${coverBlock}
+${sectionsHtml}
 </body>
 </html>`;
 
-  win.document.write(html);
-  win.document.close();
+  /* ---------- الطباعة عبر إطار مخفي ----------
+     تتفادى حاجب النوافذ المنبثقة، ولا تُظهر about:blank في التذييل. */
+  const old = document.getElementById("__print_frame__");
+  if (old) old.remove();
 
-  // انتظر تحميل الخط والشعار قبل فتح نافذة الطباعة
-  win.onload = () => {
-    setTimeout(() => {
-      win.focus();
-      win.print();
-    }, 400);
+  const frame = document.createElement("iframe");
+  frame.id = "__print_frame__";
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText =
+    "position:fixed;inset:0;width:0;height:0;border:0;visibility:hidden;";
+  document.body.appendChild(frame);
+
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const run = () => {
+    try {
+      frame.contentWindow.focus();
+      frame.contentWindow.print();
+    } catch (e) {
+      console.error("print failed:", e);
+    }
+    setTimeout(() => frame.remove(), 1500);
   };
+
+  // انتظار تحميل الخطوط والصور
+  if (doc.readyState === "complete") setTimeout(run, 500);
+  else frame.onload = () => setTimeout(run, 500);
 }

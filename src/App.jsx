@@ -10,6 +10,7 @@ const Import = lazy(() => import("./pages/admin/Import.jsx"));
 import Students from "./pages/admin/Students.jsx";
 import Accounts from "./pages/admin/Accounts.jsx";
 import Attendance from "./pages/teacher/Attendance.jsx";
+import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
 import StudentHome from "./pages/StudentHome.jsx";
 import GuardianHome from "./pages/GuardianHome.jsx";
 import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
@@ -106,7 +107,10 @@ export default function App() {
           </>
         )}
         {profile.role === "teacher" && (
-          <Route path="/attendance" element={<Attendance />} />
+          <>
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/records" element={<TeacherRecords />} />
+          </>
         )}
         {(profile.role === "teacher" || (profile.role === "admin" && can("reports"))) && (
           <Route path="/reports" element={<Reports />} />

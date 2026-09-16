@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
-import { exportToExcel, printReport, STUDENT_DEPUTY_NAME } from "../../lib/exportUtils";
+import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -78,22 +78,36 @@ export default function Students() {
     setQ(""); setGrade(0); setCls(0); setTrack(""); setOnlyNoGuardian(false);
   };
 
-  const handleExcel = () => {
-    const data = filtered.map((r, i) => {
+  const excelHeaders = ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "المسار", "ولي الأمر", "جوال ولي الأمر"];
+
+  const excelRows = () =>
+    filtered.map((r, i) => {
       const g = guardians.get(r.student_id);
-      return {
-        "م": i + 1,
-        "رقم الهوية": r.national_id ?? "",
-        "اسم الطالب": r.full_name ?? "",
-        "الصف": GRADE_NAMES[r.grade] ?? r.grade,
-        "الفصل": r.class_no ?? "",
-        "المسار": trackName(r.track),
-        "ولي الأمر": g?.full_name ?? "",
-        "جوال ولي الأمر": g?.mobile ?? "",
-      };
+      return [
+        i + 1,
+        r.national_id ?? "",
+        r.full_name ?? "",
+        GRADE_NAMES[r.grade] ?? r.grade,
+        r.class_no ?? "",
+        trackName(r.track),
+        g?.full_name ?? "",
+        g?.mobile ?? "",
+      ];
     });
-    exportToExcel(data, "قائمة-الطلاب", "الطلاب");
-  };
+
+  const handleExcel = () =>
+    exportStyledExcel({
+      title: "قائمة الطلاب",
+      subtitle: filterLabel,
+      headers: excelHeaders,
+      rows: excelRows(),
+      fileName: "قائمة-الطلاب",
+      sheetName: "الطلاب",
+      signatures: [
+        { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
+        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+      ],
+    });
 
   const handlePrint = () => {
     printReport({

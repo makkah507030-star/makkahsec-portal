@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { GRADE_NAMES, STATUS } from "../lib/schoolTime";
-import { exportToExcel, printReport, STUDENT_DEPUTY_NAME } from "../lib/exportUtils";
+import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { fmtGreg, fmtTime12 } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
@@ -103,6 +103,11 @@ function ExportBar({ disabled, onExcel, onPrint }) {
   );
 }
 
+const SIGNS = [
+  { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
+  { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+];
+
 const logos = () => ({
   logoUrl: new URL(logoIcon, window.location.origin).href,
   moeLogoUrl: new URL(moeLogo, window.location.origin).href,
@@ -181,10 +186,15 @@ function DailyReport({ scopeIds }) {
       <ExportBar
         disabled={!filtered.length}
         onExcel={() =>
-          exportToExcel(
-            table().map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]]))),
-            `غياب-${date}`, "الغياب"
-          )}
+          exportStyledExcel({
+            title: "تقرير الغياب اليومي",
+            subtitle: date,
+            headers,
+            rows: table(),
+            fileName: `غياب-${date}`,
+            sheetName: "الغياب",
+            signatures: SIGNS,
+          })}
         onPrint={() =>
           printReport({
             title: "تقرير الغياب اليومي",
@@ -333,10 +343,15 @@ function StudentReport({ scopeIds }) {
           <ExportBar
             disabled={!rows?.length}
             onExcel={() =>
-              exportToExcel(
-                table().map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]]))),
-                `سجل-${student.full_name}`, "السجل"
-              )}
+              exportStyledExcel({
+            title: `سجل حضور: ${student.full_name}`,
+            subtitle: `${from} — ${to} · فصل ${student.class_no}`,
+            headers,
+            rows: table(),
+            fileName: `سجل-${student.full_name}`,
+            sheetName: "السجل",
+            signatures: SIGNS,
+          })}
             onPrint={() =>
               printReport({
                 title: `سجل حضور: ${student.full_name}`,
@@ -474,10 +489,15 @@ function PeriodReport({ scopeIds }) {
       <ExportBar
         disabled={!filtered.length}
         onExcel={() =>
-          exportToExcel(
-            table().map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]]))),
-            `ملخص-الغياب-${from}_${to}`, "الملخص"
-          )}
+          exportStyledExcel({
+            title: "ملخص الغياب والتأخر",
+            subtitle: `${from} — ${to}`,
+            headers,
+            rows: table(),
+            fileName: `ملخص-الغياب-${from}_${to}`,
+            sheetName: "الملخص",
+            signatures: SIGNS,
+          })}
         onPrint={() =>
           printReport({
             title: "ملخص الغياب والتأخر",
@@ -641,10 +661,15 @@ function EscapeReport({ scopeIds }) {
       <ExportBar
         disabled={!rows?.length}
         onExcel={() =>
-          exportToExcel(
-            table().map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]]))),
-            `بصم-ولم-يحضر-${date}`, "الحالات"
-          )}
+          exportStyledExcel({
+            title: "تقرير: بصم ولم يحضر",
+            subtitle: date,
+            headers,
+            rows: table(),
+            fileName: `بصم-ولم-يحضر-${date}`,
+            sheetName: "الحالات",
+            signatures: SIGNS,
+          })}
         onPrint={() =>
           printReport({
             title: "تقرير: بصم ولم يحضر",
@@ -860,11 +885,19 @@ function AbsenceDaysReport({ scopeIds }) {
       <ExportBar
         disabled={!filtered.length}
         onExcel={() =>
-          exportToExcel(
-            table().map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]]))),
-            view === "over" ? `المتجاوزون-${from}_${to}` : `التميز-السلوكي-${from}_${to}`,
-            view === "over" ? "المتجاوزون" : "التميز"
-          )}
+          exportStyledExcel({
+            title: view === "over"
+              ? "الطلاب المتجاوزون لحد الغياب"
+              : "مرشحو جائزة التميز السلوكي",
+            subtitle: `${from} — ${to}`,
+            headers,
+            rows: table(),
+            fileName: view === "over"
+              ? `المتجاوزون-${from}_${to}`
+              : `التميز-السلوكي-${from}_${to}`,
+            sheetName: view === "over" ? "المتجاوزون" : "التميز",
+            signatures: SIGNS,
+          })}
         onPrint={() =>
           printReport({
             title: view === "over"

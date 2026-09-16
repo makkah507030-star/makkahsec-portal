@@ -43,6 +43,7 @@ const ADMIN_GROUPS = [
 const OTHER_NAV = {
   teacher: [
     { to: "/",        label: "التحضير" },
+    { to: "/records", label: "السجلات" },
     { to: "/reports", label: "التقارير" },
   ],
   student:  [{ to: "/", label: "الرئيسية" }],

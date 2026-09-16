@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
 import ColorLegend from "../../components/ColorLegend.jsx";
-import { printReport, ACADEMIC_DEPUTY_NAME } from "../../lib/exportUtils";
+import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fmtDateTime } from "../../lib/dates";
@@ -279,6 +279,50 @@ function UnmarkedByPeriod({ d, open, setOpen, dayLabel }) {
   const marked = d.schedCount - d.unmarked.length;
   const pct = d.schedCount ? Math.round((marked / d.schedCount) * 100) : 0;
 
+  const buildRows = (onlyPeriod = null) => {
+    const list = onlyPeriod != null ? [onlyPeriod] : periods;
+    const out = [];
+    list
+      .filter((n) => (byPeriod[n] ?? []).length > 0)
+      .forEach((n) => {
+        byPeriod[n]
+          .slice()
+          .sort((a, b) => (a.classes?.class_no ?? 0) - (b.classes?.class_no ?? 0))
+          .forEach((s) => {
+            out.push([
+              out.length + 1, n,
+              s.classes?.class_no ?? "",
+              s.subjects?.name ?? "",
+              s.teachers?.full_name ?? "",
+            ]);
+          });
+      });
+    return out;
+  };
+
+  const excelIt = (onlyPeriod = null) => {
+    const all = buildRows(onlyPeriod);
+    if (!all.length) return;
+    const isPeriod = onlyPeriod != null;
+
+    exportStyledExcel({
+      title: isPeriod ? `لم تُحضَّر — الحصة ${onlyPeriod}` : "الحصص التي لم تُحضَّر",
+      subtitle: isPeriod
+        ? `${dayLabel} · ${all.length} فصل`
+        : `${dayLabel} · المحضَّر ${marked} من ${d.schedCount} (${pct}%)`,
+      headers: isPeriod
+        ? ["م", "الفصل", "المادة", "المعلم"]
+        : ["م", "الحصة", "الفصل", "المادة", "المعلم"],
+      rows: isPeriod ? all.map((r, i) => [i + 1, r[2], r[3], r[4]]) : all,
+      fileName: isPeriod ? `لم-تحضر-حصة-${onlyPeriod}` : "الحصص-غير-المحضرة",
+      sheetName: "الحصص",
+      signatures: [
+        { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME },
+        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+      ],
+    });
+  };
+
   const printIt = (onlyPeriod = null) => {
     const list = onlyPeriod != null ? [onlyPeriod] : periods;
     const tableRows = [];
@@ -347,6 +391,10 @@ function UnmarkedByPeriod({ d, open, setOpen, dayLabel }) {
             className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas">
             تقرير اليوم — PDF
           </button>
+          <button onClick={() => excelIt()}
+            className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas">
+            تقرير اليوم — Excel
+          </button>
         </div>
       )}
 
@@ -388,10 +436,16 @@ function UnmarkedByPeriod({ d, open, setOpen, dayLabel }) {
               لم تُحضَّر في الحصة <span className="num">{open}</span> ·{" "}
               <span className="num">{rows.length}</span> فصل
             </p>
-            <button onClick={() => printIt(open)}
-              className="rounded-sm2 border border-line bg-white px-3 py-1 text-xs font-medium text-ink hover:bg-canvas">
-              تقرير الحصة — PDF
-            </button>
+            <div className="flex gap-1.5">
+              <button onClick={() => printIt(open)}
+                className="rounded-sm2 border border-line bg-white px-3 py-1 text-xs font-medium text-ink hover:bg-canvas">
+                PDF
+              </button>
+              <button onClick={() => excelIt(open)}
+                className="rounded-sm2 border border-line bg-white px-3 py-1 text-xs font-medium text-ink hover:bg-canvas">
+                Excel
+              </button>
+            </div>
           </div>
           <div className="max-h-64 overflow-auto">
             {rows.map((s) => (

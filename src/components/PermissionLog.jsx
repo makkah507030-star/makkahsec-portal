@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtGreg } from "../lib/dates";
 import { useSession } from "../lib/session.jsx";
-import { exportToExcel, printReport, STUDENT_DEPUTY_NAME } from "../lib/exportUtils";
+import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 
@@ -183,10 +183,18 @@ export default function PermissionLog() {
           <button
             disabled={!totalStudents}
             onClick={() =>
-              exportToExcel(
-                flatRows().map((r) => Object.fromEntries(headers.map((h, i) => [h, r[i]]))),
-                `سجل-الاستئذان-${from}_${to}`, "الاستئذان"
-              )}
+              exportStyledExcel({
+                title: "سجل الاستئذان الداخلي",
+                subtitle: `${from} — ${to}`,
+                headers,
+                rows: flatRows(),
+                fileName: `سجل-الاستئذان-${from}_${to}`,
+                sheetName: "الاستئذان",
+                signatures: [
+                  { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
+                  { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+                ],
+              })}
             className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-40">
             تصدير Excel
           </button>
