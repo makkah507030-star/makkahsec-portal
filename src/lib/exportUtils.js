@@ -485,8 +485,8 @@ export function printReport(opts) {
   table.follow { font-size: 9.5px; table-layout: fixed; }
   table.follow thead th { padding: 5px 2px; font-size: 8.5px; line-height: 1.3; }
   table.follow thead th.score {
-    background: #fff; height: 30px; font-size: 9px; color: ${GRAY};
-    font-weight: 600; letter-spacing: 0.5px;
+    background: #fff; height: 38px; font-size: 10px; color: ${GRAY};
+    font-weight: 600; letter-spacing: 1px; white-space: nowrap;
   }
   table.follow thead th.slot {
     background: #F7FBF9; font-weight: 600; font-size: 7.5px; color: ${GRAY};

@@ -29,6 +29,8 @@ const FOLLOW_SECTIONS = [
   },
 ];
 
+const clean = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
+
 export default function TeacherRecords() {
   const { session } = useSession();
   const [me, setMe] = useState(null);
@@ -154,15 +156,15 @@ export default function TeacherRecords() {
     setBusy(true);
 
     const sections = chosen.map((g) => {
-      const cfg = configFor(g.subject);
+      const cfg = configFor(g.subject, g.grade);
       const { headerRows } = buildGradeHeader(cfg);
       const blanks = gradeBlankCount(cfg);
 
       // م · هوية · اسم عريض · باقي الأعمدة بالتساوي
       const rest = blanks;
       const colWidths = [
-        "3.5%", "10%", "19%",
-        ...Array.from({ length: rest }, () => `${(67.5 / rest).toFixed(2)}%`),
+        "3.5%", "24%",
+        ...Array.from({ length: rest }, () => `${(72.5 / rest).toFixed(2)}%`),
       ];
 
       return {
@@ -173,7 +175,6 @@ export default function TeacherRecords() {
         tableClass: "compact",
         rows: g.students.map((s, i) => [
           i + 1,
-          s.national_id ?? "",
           { text: s.full_name ?? "", cls: "name" },
           ...Array.from({ length: blanks }, () => ({ text: "", cls: "blank" })),
         ]),
@@ -218,7 +219,7 @@ export default function TeacherRecords() {
 
     // 2) خانة الدرجة الكلية لكل قسم
     const row2 = FOLLOW_SECTIONS.map((sec) => ({
-      text: "الدرجة  (                    )", colspan: secWidth(sec), cls: "score",
+      text: "الدرجة  (                              )", colspan: secWidth(sec), cls: "score",
     }));
 
     // 3) أسماء البنود
@@ -229,7 +230,7 @@ export default function TeacherRecords() {
     // 4) خانة درجة كل بند
     const row4 = FOLLOW_SECTIONS.flatMap((sec) =>
       sec.items.map((it) => ({
-        text: "الدرجة  (              )", colspan: it.slots, cls: "score",
+        text: "الدرجة  (                    )", colspan: it.slots, cls: "score",
       }))
     );
 
@@ -252,11 +253,11 @@ export default function TeacherRecords() {
 
     const colWidths = [
       "3%",   // م
-      "15%",  // الاسم
+      "20%",  // الاسم — عرض يكفي لمعظم الأسماء الرباعية دون انقطاع
       ...FOLLOW_SECTIONS.flatMap((sec) =>
         sec.items.flatMap((it) =>
           Array.from({ length: it.slots }, () =>
-            it.slots > 1 ? `${(58 / slotCount).toFixed(2)}%` : `${(18 / singleCount).toFixed(2)}%`
+            it.slots > 1 ? `${(53 / slotCount).toFixed(2)}%` : `${(18 / singleCount).toFixed(2)}%`
           )
         )
       ),
@@ -336,7 +337,7 @@ export default function TeacherRecords() {
   }
 
   const totalStudents = chosen.reduce((n, g) => n + g.students.length, 0);
-  const unknown = chosen.filter((g) => !isKnownSubject(g.subject));
+  const unknown = chosen.filter((g) => !isKnownSubject(g.subject, g.grade));
 
   return (
     <div className="space-y-5">
@@ -386,7 +387,7 @@ export default function TeacherRecords() {
                 <span className="num chip shrink-0 bg-mint-tint text-mint-deep">
                   {g.students.length} طالبًا
                 </span>
-                {!isKnownSubject(g.subject) && (
+                {!isKnownSubject(g.subject, g.grade) && (
                   <span className="chip shrink-0 bg-warning-light text-warning">
                     توزيع افتراضي
                   </span>

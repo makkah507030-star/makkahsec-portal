@@ -11,6 +11,125 @@
 
 const MHAM = { label: "المهام الأدائية والمشاركة والتفاعل", max: 40 };
 
+/**
+ * توزيع الصف الثاني — نسخة مستقلة عن الأول
+ * (بعض المواد تتطابق أرقامها مع الأول، لكنها تُدار بإعداد خاص بالصف)
+ */
+export const GRADE_CONFIGS_G2 = {
+  "الرياضيات": {
+    periodGroups: [
+      { label: "اختبارات قصيرة", cols: [{ label: "تقويمات تحريرية", max: 20 }] },
+      { label: "تقييم مستمر", cols: [MHAM] },
+    ],
+  },
+  "الفيزياء": {
+    periodGroups: [
+      { label: "تقييم مستمر", cols: [
+        { label: "تقويمات تحريرية وتطبيقات عملية", max: 20 },
+        MHAM,
+      ]},
+    ],
+  },
+  "الكيمياء": {
+    periodGroups: [
+      { label: "تقييم مستمر", cols: [
+        { label: "تقويمات تحريرية وتطبيقات عملية", max: 20 },
+        MHAM,
+      ]},
+    ],
+  },
+  "الأحياء": {
+    periodGroups: [
+      { label: "تقييم مستمر", cols: [
+        { label: "تقويمات تحريرية وتطبيقات عملية", max: 20 },
+        MHAM,
+      ]},
+    ],
+  },
+  "اللغة الإنجليزية": {
+    periodGroups: [
+      { label: "اختبارات قصيرة", cols: [{ label: "تقويمات شفهية وتحريرية", max: 20 }] },
+      { label: "تقييم مستمر", cols: [MHAM] },
+    ],
+  },
+  "الكفايات اللغوية": {
+    periodGroups: [
+      { label: "اختبارات قصيرة", cols: [{ label: "تقويمات شفهية وتحريرية", max: 20 }] },
+      { label: "تقييم مستمر", cols: [MHAM] },
+    ],
+  },
+  "التاريخ": {
+    periodGroups: [
+      { label: "اختبارات قصيرة", cols: [{ label: "تقويمات تحريرية", max: 60 }] },
+      { label: "تقييم مستمر", cols: [MHAM] },
+    ],
+  },
+};
+
+/**
+ * توزيع الصف الثالث — نسخة مستقلة عن الأول والثاني
+ */
+export const GRADE_CONFIGS_G3 = {
+  "الرياضيات": {
+    periodGroups: [
+      { label: "اختبارات قصيرة", cols: [{ label: "تقويمات تحريرية", max: 20 }] },
+      { label: "تقييم مستمر", cols: [MHAM] },
+    ],
+  },
+  "الفيزياء": {
+    periodGroups: [
+      { label: "تقييم مستمر", cols: [
+        { label: "تقويمات تحريرية وتطبيقات عملية", max: 20 },
+        MHAM,
+      ]},
+    ],
+  },
+  "الكيمياء": {
+    periodGroups: [
+      { label: "تقييم مستمر", cols: [
+        { label: "تقويمات تحريرية وتطبيقات عملية", max: 20 },
+        MHAM,
+      ]},
+    ],
+  },
+  "علوم الأرض والفضاء": {
+    periodGroups: [
+      { label: "تقييم مستمر", cols: [
+        { label: "تقويمات تحريرية وتطبيقات عملية", max: 20 },
+        MHAM,
+      ]},
+    ],
+  },
+  "اللغة الإنجليزية": {
+    periodGroups: [
+      { label: "اختبارات قصيرة", cols: [{ label: "تقويمات شفهية وتحريرية", max: 20 }] },
+      { label: "تقييم مستمر", cols: [MHAM] },
+    ],
+  },
+  "البحث ومصادر التعلم": {
+    periodGroups: [
+      { label: "اختبارات قصيرة", cols: [{ label: "تقويمات تحريرية", max: 60 }] },
+      { label: "تقييم مستمر", cols: [MHAM] },
+    ],
+  },
+  "التربية الصحية والبدنية": {
+    periodGroups: [
+      { label: "تقييم مستمر", cols: [
+        { label: "تقويمات تحريرية وأدوات تقويم متنوعة", max: 60 },
+        MHAM,
+      ]},
+    ],
+  },
+  "التقنية الرقمية": {
+    periodGroups: [
+      { label: "تقييم مستمر", cols: [
+        { label: "تقويمات تحريرية وتطبيقات عملية", max: 60 },
+        MHAM,
+      ]},
+    ],
+  },
+};
+
 export const GRADE_CONFIGS = {
   "الرياضيات": {
     periodGroups: [
@@ -85,6 +204,19 @@ export const GRADE_CONFIGS = {
 };
 
 /** التوزيع الافتراضي لمادة غير مُعرّفة */
+/**
+ * توزيع مادة النشاط — بنية مختلفة جذريًا عن باقي المواد:
+ * عمودان فقط بدرجة (50) لكل منهما، بلا مجموعات فرعية (اختبارات/تقييم مستمر).
+ */
+export const ACTIVITY_CONFIG = {
+  periodGroups: [
+    { label: null, cols: [
+      { label: "مهام أدائية", max: 50 },
+      { label: "مشاركة وتفاعل", max: 50 },
+    ]},
+  ],
+};
+
 export const DEFAULT_CONFIG = {
   periodGroups: [
     { label: "اختبارات قصيرة", cols: [{ label: "تقويمات تحريرية", max: 20 }] },
@@ -92,30 +224,46 @@ export const DEFAULT_CONFIG = {
   ],
 };
 
-/** مطابقة اسم المادة مع التوزيع (تتسامح مع اختلاف بسيط في الصياغة) */
-export function configFor(subjectName) {
-  if (!subjectName) return DEFAULT_CONFIG;
+const clean = (t) =>
+  String(t).replace(/\s+/g, " ").replace(/[أإآ]/g, "ا").trim();
 
-  const clean = (t) =>
-    String(t).replace(/\s+/g, " ").replace(/[أإآ]/g, "ا").trim();
-
+/** يبحث عن مادة داخل مجموعة إعدادات معيّنة (تطابق تام ثم جزئي) */
+function lookup(subjectName, table) {
   const target = clean(subjectName);
-
-  // مطابقة تامة
-  for (const [k, v] of Object.entries(GRADE_CONFIGS)) {
+  for (const [k, v] of Object.entries(table)) {
     if (clean(k) === target) return v;
   }
-  // مطابقة جزئية
-  for (const [k, v] of Object.entries(GRADE_CONFIGS)) {
+  for (const [k, v] of Object.entries(table)) {
     const ck = clean(k);
     if (target.includes(ck) || ck.includes(target)) return v;
   }
-  return DEFAULT_CONFIG;
+  return null;
 }
 
-/** هل المادة معرّفة في نور؟ (لتنبيه المستخدم) */
-export function isKnownSubject(subjectName) {
-  return configFor(subjectName) !== DEFAULT_CONFIG;
+/** خريطة الصف → مجموعة إعداداته الخاصة */
+const GRADE_TABLES = {
+  1: GRADE_CONFIGS,     // الأول الثانوي
+  2: GRADE_CONFIGS_G2,  // الثاني الثانوي
+  3: GRADE_CONFIGS_G3,  // الثالث الثانوي
+};
+
+/**
+ * مطابقة اسم المادة مع توزيعها — حسب الصف إن حُدّد، وإلا يبحث في توزيع
+ * الصف الأول للتوافق مع الاستدعاءات القديمة.
+ */
+export function configFor(subjectName, grade) {
+  if (!subjectName) return DEFAULT_CONFIG;
+
+  // النشاط له توزيع ثابت واحد لكل الصفوف
+  if (clean(subjectName) === "النشاط") return ACTIVITY_CONFIG;
+
+  const table = GRADE_TABLES[grade] ?? GRADE_CONFIGS;
+  return lookup(subjectName, table) ?? DEFAULT_CONFIG;
+}
+
+/** هل المادة معرّفة في نور لهذا الصف؟ (لتنبيه المستخدم) */
+export function isKnownSubject(subjectName, grade) {
+  return configFor(subjectName, grade) !== DEFAULT_CONFIG;
 }
 
 /**
@@ -129,7 +277,6 @@ export function buildGradeHeader(config) {
 
   const row1 = [
     { text: "م", rowspan: 2 },
-    { text: "رقم الهوية", rowspan: 2 },
     { text: "اسم الطالب", rowspan: 2 },
     { text: "الفترة الأولى", colspan: perPeriod },
     { text: "الفترة الثانية", colspan: perPeriod },
