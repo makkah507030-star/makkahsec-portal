@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
+
+const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
 import ColorLegend from "../../components/ColorLegend.jsx";
 import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
@@ -113,7 +115,7 @@ export default function Dashboard() {
       <header>
         <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
         <p className="mt-0.5 text-sm text-muted">
-          العام <span className="num">{d.year}</span> · الفصل <span className="num">{d.term}</span>
+          العام <span className="num">{d.year}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
         </p>
       </header>
 

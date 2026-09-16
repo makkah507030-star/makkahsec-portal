@@ -542,12 +542,13 @@ export function printReport(opts) {
   .cover-card .k { color: ${GRAY}; }
   .cover-card .v { font-weight: 700; color: ${INK}; }
 
-  .cover-list { max-width: 560px; margin: 0 auto; }
+  .cover-list { max-width: 480px; margin: 0 auto; }
   .cover-list-title {
-    margin: 0 0 6px; font-size: 11px; font-weight: 700; color: ${DEEP};
-    text-align: right;
+    margin: 0 0 8px; font-size: 11px; font-weight: 700; color: ${DEEP};
+    text-align: center;
   }
-  table.mini { font-size: 10px; }
+  table.mini { font-size: 10px; margin: 0 auto; }
+  table.mini th, table.mini td { text-align: center; }
   table.mini thead th { padding: 5px 4px; font-size: 9.5px; }
   table.mini tbody td { padding: 5px 4px; }
 

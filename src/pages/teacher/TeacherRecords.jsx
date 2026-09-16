@@ -7,6 +7,8 @@ import { configFor, isKnownSubject, buildGradeHeader, gradeBlankCount } from "..
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
+const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
+
 /* سجل المتابعة — الأقسام وبنودها
    slots: عدد أعمدة المتابعة تحت البند (متابعة في أوقات متعددة) */
 const FOLLOW_SLOTS = 5;
@@ -147,7 +149,7 @@ export default function TeacherRecords() {
       grade: GRADE_NAMES[g.grade] ?? g.grade,
       class_no: g.class_no,
     })),
-    year: `العام الدراسي ${year} — الفصل الدراسي ${term}`,
+    year: `العام الدراسي ${year} — الفصل الدراسي ${TERM_LABEL[term] ?? term}`,
   });
 
   /* ---------- سجل رصد الدرجات: ملف واحد لكل المواد والفصول ---------- */
@@ -219,7 +221,7 @@ export default function TeacherRecords() {
 
     // 2) خانة الدرجة الكلية لكل قسم
     const row2 = FOLLOW_SECTIONS.map((sec) => ({
-      text: "الدرجة  (                              )", colspan: secWidth(sec), cls: "score",
+      text: "الدرجة", colspan: secWidth(sec), cls: "score",
     }));
 
     // 3) أسماء البنود
@@ -230,7 +232,7 @@ export default function TeacherRecords() {
     // 4) خانة درجة كل بند
     const row4 = FOLLOW_SECTIONS.flatMap((sec) =>
       sec.items.map((it) => ({
-        text: "الدرجة  (                    )", colspan: it.slots, cls: "score",
+        text: "الدرجة", colspan: it.slots, cls: "score",
       }))
     );
 
