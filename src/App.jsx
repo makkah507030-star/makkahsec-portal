@@ -12,6 +12,7 @@ import Accounts from "./pages/admin/Accounts.jsx";
 import Attendance from "./pages/teacher/Attendance.jsx";
 import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
 import TeacherNotify from "./pages/teacher/TeacherNotify.jsx";
+import MySchedule from "./pages/teacher/MySchedule.jsx";
 import StudentHome from "./pages/StudentHome.jsx";
 import GuardianHome from "./pages/GuardianHome.jsx";
 import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
@@ -25,6 +26,10 @@ import NewsAdmin from "./pages/admin/NewsAdmin.jsx";
 import NotificationsAdmin from "./pages/admin/NotificationsAdmin.jsx";
 import AttendanceOverview from "./pages/admin/AttendanceOverview.jsx";
 import PeriodAttendance from "./pages/admin/PeriodAttendance.jsx";
+import GeneralScheduleMaster from "./pages/admin/GeneralScheduleMaster.jsx";
+import TeacherSchedules from "./pages/admin/TeacherSchedules.jsx";
+import StudentSchedules from "./pages/admin/StudentSchedules.jsx";
+import ScheduleImport from "./pages/admin/ScheduleImport.jsx";
 import PasswordReset from "./pages/admin/PasswordReset.jsx";
 import SeasonSwitch from "./pages/admin/SeasonSwitch.jsx";
 import Reports from "./pages/Reports.jsx";
@@ -106,6 +111,14 @@ export default function App() {
             {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
             {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
+            {can("import") && (
+              <>
+                <Route path="/general-schedule" element={<GeneralScheduleMaster />} />
+                <Route path="/teacher-schedules" element={<TeacherSchedules />} />
+                <Route path="/student-schedules" element={<StudentSchedules />} />
+                <Route path="/schedule-import" element={<ScheduleImport />} />
+              </>
+            )}
             {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
             {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
             {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
@@ -116,6 +129,7 @@ export default function App() {
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/records" element={<TeacherRecords />} />
             <Route path="/notify" element={<TeacherNotify />} />
+            <Route path="/schedule" element={<MySchedule />} />
           </>
         )}
         {(profile.role === "teacher" || (profile.role === "admin" && can("reports"))) && (

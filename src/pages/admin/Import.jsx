@@ -1,14 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
-import {
-  IMPORT_TYPES,
-  readSheet,
-  validateRows,
-  readSmartSchedule,
-  normalizeArabic,
-  stripGradeSuffix,
-} from "../../lib/importer";
+import { IMPORT_TYPES, readSheet, validateRows } from "../../lib/importer";
 
 const BATCH = 400;
 
@@ -21,6 +14,7 @@ export default function Import() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
   const [year, setYear] = useState(null);
+  const [yearLabel, setYearLabel] = useState(null);
   const [term, setTerm] = useState(null);
 
   const def = IMPORT_TYPES[type] ?? { label: "الجدول الذكي", required: [] };
@@ -30,10 +24,11 @@ export default function Import() {
     supabase
       .from("settings")
       .select("key, value")
-      .in("key", ["active_year", "active_term"])
+      .in("key", ["active_year", "active_term", "active_year_label"])
       .then(({ data }) => {
         const m = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
         setYear(m.active_year ?? null);
+        setYearLabel(m.active_year_label ?? m.active_year ?? null);
         setTerm(m.active_term ? Number(m.active_term) : null);
       });
   }, []);
@@ -47,22 +42,6 @@ export default function Import() {
       return;
     }
     try {
-      if (type === "smart") {
-        const raw = await readSmartSchedule(file);
-        const res = await matchSmart(raw, year, term);
-        setReport({
-          sheetName: "Cells",
-          total: raw.length,
-          valid: res.valid,
-          rejected: res.rejected,
-          newCount: res.valid.length,
-          updateCount: 0,
-          missingCount: res.existing,
-        });
-        setStage("preview");
-        return;
-      }
-
       const { rows, sheetName } = await readSheet(file, def.required);
       const { valid, rejected } = validateRows(type, rows);
 
@@ -149,7 +128,7 @@ export default function Import() {
         </p>
         <p className="mt-2 text-sm">
           السنة الدراسية:{" "}
-          <span className="num font-semibold text-mint-deep">{year ?? "…"}</span>
+          <span className="num font-semibold text-mint-deep">{yearLabel ?? "…"}</span>
           <span className="text-muted"> · الفصل </span>
           <span className="num font-semibold text-mint-deep">{term ?? "…"}</span>
           <span className="text-muted"> — تُؤخذ من إعدادات النظام، لا من الملف.</span>
@@ -162,7 +141,7 @@ export default function Import() {
           <div>
             <label className="label">نوع البيانات</label>
             <div className="flex flex-wrap gap-2">
-              {[...Object.entries(IMPORT_TYPES), ["smart", { label: "الجدول الذكي" }]].map(([k, v]) => (
+              {Object.entries(IMPORT_TYPES).filter(([k]) => k !== "schedule").map(([k, v]) => (
                 <button
                   key={k}
                   onClick={() => setType(k)}
@@ -176,17 +155,14 @@ export default function Import() {
                 </button>
               ))}
             </div>
-            {type === "smart" ? (
-              <p className="mt-2.5 text-xs leading-relaxed text-muted">
-                ارفع ملف xlsx المُصدَّر من برنامج الجدول الذكي كما هو — بلا تعديل.
-                يُقرأ الجدول كاملًا ويُطابَق مع المعلمين والمواد في النظام.
-              </p>
-            ) : (
-              <p className="mt-2.5 text-xs leading-relaxed text-muted">
-                الأعمدة المطلوبة:{" "}
-                <span className="num">{def.required.join(" · ")}</span>
-              </p>
-            )}
+            <p className="mt-2.5 text-xs leading-relaxed text-muted">
+              الأعمدة المطلوبة:{" "}
+              <span className="num">{def.required.join(" · ")}</span>
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-mint-deep">
+              لاستيراد الجدول الذكي، انتقل إلى «الشؤون التعليمية ← استيراد الجدول الذكي»
+              في القائمة الجانبية.
+            </p>
           </div>
 
           <div>
@@ -326,19 +302,6 @@ function Stat({ label, value, tone }) {
 /* ================================================================== */
 
 async function compareWithDb(type, valid, year, term) {
-  if (type === "schedule") {
-    const { data } = await supabase
-      .from("schedule")
-      .select("id")
-      .eq("academic_year", year)
-      .eq("term", term);
-    return {
-      newCount: valid.length,
-      updateCount: 0,
-      missingCount: (data ?? []).length,
-    };
-  }
-
   if (type === "classes") {
     const { data } = await supabase
       .from("classes")
@@ -370,69 +333,6 @@ async function compareWithDb(type, valid, year, term) {
 /* ================================================================== */
 
 async function writeRows(type, rows, year, term, onProgress) {
-  if (type === "smart") {
-    await upsertBatched(
-      "schedule",
-      rows.map(({ __row, ...r }) => ({ ...r, term, academic_year: year })),
-      "class_id,day_of_week,period_no,term,academic_year",
-      onProgress
-    );
-    return;
-  }
-
-  if (type === "schedule") {
-    const [{ data: tRows }, { data: cRows }, { data: sRows }] = await Promise.all([
-      supabase.from("teachers").select("id, national_id"),
-      supabase.from("classes").select("id, class_no, grade").eq("academic_year", year),
-      supabase.from("subjects").select("id, name, grade, term").eq("term", term),
-    ]);
-
-    const tId = new Map((tRows ?? []).map((r) => [r.national_id, r.id]));
-    const cRow = new Map((cRows ?? []).map((r) => [r.class_no, r]));
-    const sId = new Map(
-      (sRows ?? []).map((r) => [`${r.name}|${r.grade}`, r.id])
-    );
-
-    const missT = [...new Set(rows.map((r) => r.teacher_nid))].filter((n) => !tId.has(n));
-    if (missT.length) {
-      throw new Error(`معلمون غير موجودين: ${missT.join("، ")}. استورد المعلمين أولًا.`);
-    }
-    const missC = [...new Set(rows.map((r) => r.class_no))].filter((n) => !cRow.has(n));
-    if (missC.length) {
-      throw new Error(`فصول غير موجودة: ${missC.join("، ")}`);
-    }
-
-    const missS = [];
-    const payload = rows.map((r) => {
-      const c = cRow.get(r.class_no);
-      const key = `${r.subject_name}|${c.grade}`;
-      if (!sId.has(key)) missS.push(`${r.subject_name} (صف ${c.grade})`);
-      return {
-        teacher_id: tId.get(r.teacher_nid),
-        subject_id: sId.get(key),
-        class_id: c.id,
-        day_of_week: r.day_of_week,
-        period_no: r.period_no,
-        term,
-        academic_year: year,
-      };
-    });
-
-    if (missS.length) {
-      throw new Error(
-        `مواد غير موجودة للفصل ${term}: ${[...new Set(missS)].join("، ")}`
-      );
-    }
-
-    await upsertBatched(
-      "schedule",
-      payload,
-      "class_id,day_of_week,period_no,term,academic_year",
-      onProgress
-    );
-    return;
-  }
-
   if (type === "classes") {
     await upsertBatched(
       "classes",
@@ -528,74 +428,4 @@ async function upsertBatched(table, rows, onConflict, onProgress) {
     if (error) throw new Error(`${table}: ${error.message}`);
     onProgress?.(Math.round(((i + chunk.length) / rows.length) * 100));
   }
-}
-
-
-/* ================================================================== */
-/* مطابقة الجدول الذكي مع بيانات النظام                                */
-/* ================================================================== */
-
-async function matchSmart(raw, year, term) {
-  const [{ data: tRows }, { data: cRows }, { data: sRows },
-         { data: aRows }, { data: exRows }] = await Promise.all([
-    supabase.from("teachers").select("id, full_name"),
-    supabase.from("classes").select("id, class_no, grade").eq("academic_year", year),
-    supabase.from("subjects").select("id, name, grade").eq("term", term),
-    supabase.from("subject_aliases").select("external_name, grade, subject_name"),
-    supabase.from("schedule").select("id").eq("academic_year", year).eq("term", term),
-  ]);
-
-  const tId = new Map((tRows ?? []).map((r) => [normalizeArabic(r.full_name), r.id]));
-  const cRow = new Map((cRows ?? []).map((r) => [r.class_no, r]));
-  const sId = new Map(
-    (sRows ?? []).map((r) => [`${normalizeArabic(r.name)}|${r.grade}`, r.id])
-  );
-  const alias = new Map(
-    (aRows ?? []).map((r) => [`${normalizeArabic(r.external_name)}|${r.grade}`, r.subject_name])
-  );
-
-  const valid = [];
-  const rejected = [];
-  const seen = new Set();
-
-  for (const r of raw) {
-    const errors = [];
-    const c = cRow.get(r.class_no);
-    if (!c) errors.push(`الفصل ${r.class_no} غير موجود`);
-
-    const tKey = normalizeArabic(r.teacher_name);
-    const teacherId = tId.get(tKey);
-    if (!teacherId) errors.push(`المعلم غير مسجّل: ${r.teacher_name}`);
-
-    let subjectId = null;
-    if (c) {
-      const aliasName = alias.get(`${normalizeArabic(r.subject_name)}|${c.grade}`);
-      const candidate = aliasName
-        ? normalizeArabic(aliasName)
-        : normalizeArabic(stripGradeSuffix(r.subject_name));
-      subjectId = sId.get(`${candidate}|${c.grade}`);
-      if (!subjectId) {
-        errors.push(`المادة غير مطابقة: ${r.subject_name} (صف ${c.grade})`);
-      }
-    }
-
-    const slot = `${r.class_no}|${r.day_of_week}|${r.period_no}`;
-    if (seen.has(slot)) errors.push("تعارض: الفصل له حصة أخرى في نفس الوقت");
-    seen.add(slot);
-
-    if (errors.length) {
-      rejected.push({ __row: r.__row, __errors: errors });
-    } else {
-      valid.push({
-        __row: r.__row,
-        teacher_id: teacherId,
-        subject_id: subjectId,
-        class_id: c.id,
-        day_of_week: r.day_of_week,
-        period_no: r.period_no,
-      });
-    }
-  }
-
-  return { valid, rejected, existing: (exRows ?? []).length };
 }

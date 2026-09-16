@@ -50,9 +50,10 @@ export default function TeacherRecords() {
       if (!uid) return;
 
       const { data: st } = await supabase
-        .from("settings").select("key, value").in("key", ["active_year", "active_term"]);
+        .from("settings").select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const y = m.active_year ?? "";
+      const yearLabel = m.active_year_label ?? y;
       const t = Number(m.active_term ?? 1);
       setYear(y);
       setTerm(t);
@@ -149,7 +150,7 @@ export default function TeacherRecords() {
       grade: GRADE_NAMES[g.grade] ?? g.grade,
       class_no: g.class_no,
     })),
-    year: `العام الدراسي ${year} — الفصل الدراسي ${TERM_LABEL[term] ?? term}`,
+    year: `العام الدراسي ${yearLabel} — الفصل الدراسي ${TERM_LABEL[term] ?? term}`,
   });
 
   /* ---------- سجل رصد الدرجات: ملف واحد لكل المواد والفصول ---------- */

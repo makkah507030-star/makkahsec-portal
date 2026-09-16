@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { fmtGreg, fmtTime12 } from "../lib/dates";
 import { useSession } from "../lib/session.jsx";
 import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
+import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime, lateInfo } from "../lib/periodTimes";
 
@@ -17,6 +18,8 @@ export default function StudentHome() {
   const { session, profile } = useSession();
   const [me, setMe] = useState(null);
   const [schedule, setSchedule] = useState([]);
+  const [weekSchedule, setWeekSchedule] = useState(null);
+  const [showWeek, setShowWeek] = useState(false);
   const [records, setRecords] = useState([]);
   const [grades, setGrades] = useState([]);
   const [punches, setPunches] = useState([]);
@@ -84,6 +87,17 @@ export default function StudentHome() {
           .eq("day_of_week", dow)
           .order("period_no");
         setSchedule(sch ?? []);
+      }
+
+      // الجدول الأسبوعي الكامل (لكل الأيام)
+      if (enr?.class_id) {
+        const { data: week } = await supabase
+          .from("schedule")
+          .select("id, day_of_week, period_no, start_time, end_time, subjects(name), teachers(full_name)")
+          .eq("class_id", enr.class_id)
+          .eq("academic_year", m.active_year ?? "")
+          .eq("term", Number(m.active_term ?? 1));
+        setWeekSchedule(week ?? []);
       }
 
       const [{ data: rec }, { data: g }, { data: d }] = await Promise.all([
@@ -182,6 +196,36 @@ export default function StudentHome() {
               )}
             </div>
           ))
+        )}
+      </section>
+
+      {/* الجدول الأسبوعي الكامل */}
+      <section className="card overflow-hidden">
+        <button onClick={() => setShowWeek((v) => !v)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right">
+          <h2 className="text-sm font-semibold text-ink">الجدول الأسبوعي الكامل</h2>
+          <svg viewBox="0 0 24 24" fill="none"
+               className={`h-4 w-4 text-muted transition-transform ${showWeek ? "rotate-180" : ""}`}
+               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        {showWeek && (
+          <div className="border-t border-line p-4">
+            {!weekSchedule ? (
+              <p className="text-sm text-muted">جارٍ التحميل…</p>
+            ) : (
+              <WeeklyGrid
+                rows={weekSchedule}
+                cell={(r) => (
+                  <div>
+                    <p className="text-xs font-bold text-ink">{r.subjects?.name}</p>
+                    <p className="text-[11px] text-muted">{r.teachers?.full_name}</p>
+                  </div>
+                )}
+              />
+            )}
+          </div>
         )}
       </section>
 

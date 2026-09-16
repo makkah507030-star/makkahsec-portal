@@ -22,6 +22,15 @@ const ADMIN_GROUPS = [
     ],
   },
   {
+    title: "الشؤون التعليمية",
+    items: [
+      { to: "/general-schedule",  label: "الجدول العام",          perm: "import", icon: "grid" }, // جدول شامل بالفصول والمعلمين معًا
+      { to: "/teacher-schedules", label: "جداول المعلمين",        perm: "import", icon: "chalk" },
+      { to: "/student-schedules", label: "جداول الطلاب",          perm: "import", icon: "users" },
+      { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
+    ],
+  },
+  {
     title: "المحتوى",
     items: [
       { to: "/news-admin",     label: "الأخبار",   perm: "news",     icon: "news" },
@@ -44,10 +53,11 @@ const ADMIN_GROUPS = [
 
 const OTHER_NAV = {
   teacher: [
-    { to: "/",        label: "التحضير" },
-    { to: "/records", label: "السجلات" },
-    { to: "/reports", label: "التقارير" },
-    { to: "/notify",  label: "الإشعارات" },
+    { to: "/",         label: "التحضير" },
+    { to: "/schedule", label: "جدولي" },
+    { to: "/records",  label: "السجلات" },
+    { to: "/reports",  label: "التقارير" },
+    { to: "/notify",   label: "الإشعارات" },
   ],
   student:  [{ to: "/", label: "الرئيسية" }],
   guardian: [{ to: "/", label: "الرئيسية" }],
@@ -63,6 +73,8 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     news:   "M4 5h12v14H4zM16 8h4v9a2 2 0 0 1-4 0zM7 9h6M7 12h6M7 15h4",
     chat:   "M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4Z",
     upload: "M12 16V4m-5 5 5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
+    grid:   "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+    chalk:  "M4 19v-3l11-11 3 3-11 11H4ZM14 6l3 3",
     clock:  "M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
     key:    "M14 7a4 4 0 1 1-5.6 5.6L3 18v3h3l5.4-5.4A4 4 0 0 1 14 7Z",
     shield: "M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z",
@@ -261,26 +273,20 @@ export default function Layout({ children }) {
     );
   }
 
-  /* ============ باقي الفئات: شريط أفقي كما هو ============ */
+  /* ============ باقي الفئات: شريط علوي + قائمة منسدلة من ☰ في الجوال ============ */
   return (
     <div className="flex min-h-screen flex-col bg-gray-tint">
       <TrialBanner />
 
-      <header className="sticky top-0 z-10 border-b border-line bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-[4.5rem] max-w-5xl items-center justify-between gap-3 px-4">
+      <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
+        {/* سطح المكتب: شريط واحد بالاسم والروابط الأفقية */}
+        <div className="mx-auto hidden h-[4.5rem] max-w-5xl items-center justify-between gap-3 px-4 sm:flex">
           <div className="flex min-w-0 items-center gap-4">
             <Brand compact />
-            <span className="hidden h-8 w-px bg-line sm:block" />
-            <span className="hidden min-w-0 sm:block">
-              <UserInline />
-            </span>
+            <span className="h-8 w-px bg-line" />
+            <UserInline />
           </div>
           <Actions />
-        </div>
-
-        {/* الاسم والدور — على الشاشات الضيقة */}
-        <div className="mx-auto flex max-w-5xl items-center border-t border-line px-4 py-2 sm:hidden">
-          <UserInline />
         </div>
 
         {items.length > 1 && (
@@ -298,26 +304,55 @@ export default function Layout({ children }) {
             </div>
           </nav>
         )}
+
+        {/* الجوال: زر ☰ يفتح قائمة منسدلة، بدل شريط أسفل الشاشة */}
+        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:hidden">
+          <button onClick={() => setOpen(true)} aria-label="القائمة"
+                  className="rounded-sm2 border border-line p-2 text-muted hover:bg-canvas">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <UserInline />
+          <Actions />
+        </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-5 pb-24 sm:pb-8">
+      {/* القائمة المنسدلة — الجوال */}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40 bg-ink/30 sm:hidden"
+               onClick={() => setOpen(false)} />
+          <aside className="fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-white shadow-xl sm:hidden">
+            <div className="border-b border-line px-4 py-4">
+              <div className="flex items-center justify-between gap-2">
+                <Brand compact />
+                <button onClick={() => setOpen(false)} aria-label="إغلاق"
+                        className="rounded-sm2 p-1.5 text-muted hover:bg-canvas">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                       stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+              {items.map((i) => (
+                <NavLink key={i.to} to={i.to} end={i.to === "/"}
+                         onClick={() => setOpen(false)} className={linkClass}>
+                  <span className="truncate">{i.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+          </aside>
+        </>
+      )}
+
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-5">
         {children}
       </main>
-
-      {items.length > 1 && (
-        <nav className="fixed inset-x-0 bottom-0 border-t border-line bg-white sm:hidden">
-          <div className="flex overflow-x-auto" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
-            {items.map((i) => (
-              <NavLink key={i.to} to={i.to} end={i.to === "/"}
-                className={({ isActive }) =>
-                  `min-w-[4.5rem] flex-1 py-3 text-center text-xs font-semibold ${
-                    isActive ? "text-mint-deep" : "text-faint"}`}>
-                {i.label}
-              </NavLink>
-            ))}
-          </div>
-        </nav>
-      )}
     </div>
   );
 }

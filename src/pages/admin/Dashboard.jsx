@@ -20,9 +20,10 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       const { data: st } = await supabase.from("settings")
-        .select("key, value").in("key", ["active_year", "active_term"]);
+        .select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const year = m.active_year ?? "";
+      const yearLabel = m.active_year_label ?? year;
       const term = Number(m.active_term ?? 1);
 
       const [students, classes, teachers, guardians, devices, unmatched,
@@ -74,7 +75,7 @@ export default function Dashboard() {
         .sort((a, b) => a.period_no - b.period_no);
 
       setD({
-        year, term,
+        year, term, yearLabel,
         students: students.count ?? 0,
         classes: classes.count ?? 0,
         teachers: teachers.count ?? 0,
@@ -101,7 +102,7 @@ export default function Dashboard() {
       <header>
         <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
         <p className="mt-0.5 text-sm text-muted">
-          العام <span className="num">{d.year}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
+          العام <span className="num">{d.yearLabel}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
         </p>
       </header>
 
