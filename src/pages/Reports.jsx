@@ -8,13 +8,24 @@ import { fmtGreg, fmtTime12 } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 
-const TABS = [
-  { key: "daily",   label: "تقرير يومي" },
-  { key: "student", label: "تقرير طالب" },
-  { key: "period",  label: "تقرير فترة" },
-  { key: "escape",  label: "بصم ولم يحضر" },
-  { key: "days",    label: "أيام الغياب" },
+const TAB_GROUPS = [
+  {
+    title: "تقارير اليوم الدراسي",
+    tabs: [
+      { key: "days", label: "أيام الغياب" },
+    ],
+  },
+  {
+    title: "تقارير الحصص",
+    tabs: [
+      { key: "daily",   label: "تقرير يومي" },
+      { key: "student", label: "تقرير طالب" },
+      { key: "period",  label: "تقرير فترة" },
+    ],
+  },
 ];
+
+const TABS = TAB_GROUPS.flatMap((g) => g.tabs);
 
 const NON_PRESENT = ["absent", "late", "excused"];
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -58,14 +69,21 @@ export default function Reports() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {TABS.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === t.key ? "bg-mint-deep text-white"
-                            : "border border-line bg-paper text-muted hover:bg-canvas"}`}>
-            {t.label}
-          </button>
+      <div className="space-y-3">
+        {TAB_GROUPS.map((g) => (
+          <div key={g.title}>
+            <p className="mb-1.5 text-[11px] font-semibold text-faint">{g.title}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {g.tabs.map((t) => (
+                <button key={t.key} onClick={() => setTab(t.key)}
+                  className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
+                    tab === t.key ? "bg-mint-deep text-white"
+                                  : "border border-line bg-paper text-muted hover:bg-canvas"}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -74,7 +92,6 @@ export default function Reports() {
       {tab === "daily"   && <DailyReport scopeIds={scopeIds} />}
       {tab === "student" && <StudentReport scopeIds={scopeIds} />}
       {tab === "period"  && <PeriodReport scopeIds={scopeIds} />}
-      {tab === "escape"  && <EscapeReport scopeIds={scopeIds} />}
       {tab === "days"    && <AbsenceDaysReport scopeIds={scopeIds} />}
     </div>
   );
@@ -538,195 +555,6 @@ function PeriodReport({ scopeIds }) {
   );
 }
 
-/* ==================== بصم ولم يحضر (الهروب) ==================== */
-
-function EscapeReport({ scopeIds }) {
-  const [date, setDate] = useState(todayStr());
-  const [rows, setRows] = useState(null);
-
-  useEffect(() => {
-    (async () => {
-      setRows(null);
-
-      // 1) من بصم اليوم
-      const { data: punches } = await supabase
-        .from("daily_attendance")
-        .select("student_id, punch_time")
-        .eq("attend_date", date);
-
-      const punchedIds = (punches ?? []).map((p) => p.student_id);
-      if (!punchedIds.length) { setRows([]); return; }
-
-      const punchBy = Object.fromEntries(
-        (punches ?? []).map((p) => [p.student_id, p.punch_time])
-      );
-
-      // 2) سجلات حصص اليوم لهؤلاء الطلاب
-      let q = supabase
-        .from("class_attendance")
-        .select("student_id, status, students(full_name, national_id), schedule(period_no, classes(class_no, grade), subjects(name))")
-        .eq("attend_date", date)
-        .in("student_id", punchedIds);
-      q = applyScope(q, scopeIds);
-
-      const { data: recs } = await q;
-
-      // 3) تجميع حسب الطالب
-      const map = new Map();
-      (recs ?? []).forEach((r) => {
-        const id = r.student_id;
-        if (!map.has(id)) {
-          map.set(id, {
-            id,
-            name: r.students?.full_name ?? "",
-            national_id: r.students?.national_id ?? "",
-            class_no: r.schedule?.classes?.class_no ?? 0,
-            punch: punchBy[id],
-            absentPeriods: [],
-            presentPeriods: [],
-          });
-        }
-        const row = map.get(id);
-        const pn = r.schedule?.period_no;
-        if (pn == null) return;
-        if (r.status === "absent") row.absentPeriods.push(pn);
-        else if (r.status !== "excused") row.presentPeriods.push(pn);
-      });
-
-      // 4) من غاب عن حصة أو أكثر رغم البصمة
-      const out = [...map.values()]
-        .filter((r) => r.absentPeriods.length > 0)
-        .map((r) => {
-          r.absentPeriods.sort((a, b) => a - b);
-          r.presentPeriods.sort((a, b) => a - b);
-          const firstAbsent = r.absentPeriods[0];
-          const attendedBefore = r.presentPeriods.some((p) => p < firstAbsent);
-          return {
-            ...r,
-            firstAbsent,
-            // حضر حصصًا ثم غاب = هروب أرجح
-            likelyEscape: attendedBefore,
-          };
-        })
-        .sort((a, b) =>
-          Number(b.likelyEscape) - Number(a.likelyEscape) ||
-          b.absentPeriods.length - a.absentPeriods.length
-        );
-
-      setRows(out);
-    })();
-  }, [date, scopeIds]);
-
-  const headers = ["م", "رقم الهوية", "اسم الطالب", "الفصل", "وقت البصمة", "حصص الغياب", "أول حصة غياب", "التصنيف"];
-
-  const table = () =>
-    (rows ?? []).map((r, i) => [
-      i + 1,
-      r.national_id,
-      r.name,
-      r.class_no,
-      r.punch ? fmtTime12(r.punch) : "",
-      r.absentPeriods.join("، "),
-      r.firstAbsent,
-      r.likelyEscape ? "هروب مُرجَّح" : "غياب من البداية",
-    ]);
-
-  const escapes = (rows ?? []).filter((r) => r.likelyEscape).length;
-
-  return (
-    <div className="space-y-4">
-      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
-        طلاب سجّلوا بصمة الدخول الصباحية، لكنهم غابوا عن حصة أو أكثر في اليوم نفسه.
-      </p>
-
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="text-sm font-medium text-ink">التاريخ:</label>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-               className="rounded-sm2 border border-line px-3 py-2 text-sm" />
-      </div>
-
-      {rows && rows.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-card border border-line bg-white px-4 py-3 text-center">
-            <p className="num text-2xl font-bold leading-none text-absent">{escapes}</p>
-            <p className="mt-1.5 text-xs text-muted">هروب مُرجَّح</p>
-          </div>
-          <div className="rounded-card border border-line bg-white px-4 py-3 text-center">
-            <p className="num text-2xl font-bold leading-none text-late">{rows.length - escapes}</p>
-            <p className="mt-1.5 text-xs text-muted">غياب من بداية اليوم</p>
-          </div>
-        </div>
-      )}
-
-      <ExportBar
-        disabled={!rows?.length}
-        onExcel={() =>
-          exportStyledExcel({
-            title: "تقرير: بصم ولم يحضر",
-            subtitle: date,
-            headers,
-            rows: table(),
-            fileName: `بصم-ولم-يحضر-${date}`,
-            sheetName: "الحالات",
-            signatures: SIGNS,
-          })}
-        onPrint={() =>
-          printReport({
-            title: "تقرير: بصم ولم يحضر",
-            subtitle: date,
-            headers, rows: table(), ...logos(),
-          })}
-      />
-
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
-
-      {rows && rows.length === 0 ? (
-        <Empty title="لا حالات" body="لا يوجد طلاب بصموا وغابوا عن حصصهم في هذا اليوم." />
-      ) : (
-        <div className="card divide-y divide-line overflow-hidden">
-          {rows?.map((r) => (
-            <div key={r.id} className="px-4 py-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">{r.name}</p>
-                  <p className="mt-0.5 text-xs text-muted">
-                    فصل <span className="num">{r.class_no}</span> · بصم{" "}
-                    <span className="num">
-{r.punch ? fmtTime12(r.punch) : "—"}
-                    </span>
-                  </p>
-                </div>
-                <span className={`chip shrink-0 ${
-                  r.likelyEscape ? "bg-absent/10 font-semibold text-absent"
-                                 : "bg-late/10 text-late"}`}>
-                  {r.likelyEscape ? "هروب مُرجَّح" : "غياب من البداية"}
-                </span>
-              </div>
-
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className="text-xs text-faint">حصص الغياب:</span>
-                {r.absentPeriods.map((p) => (
-                  <span key={p} className="num chip bg-absent/10 text-absent">{p}</span>
-                ))}
-                {r.presentPeriods.length > 0 && (
-                  <>
-                    <span className="ms-2 text-xs text-faint">حضر:</span>
-                    {r.presentPeriods.map((p) => (
-                      <span key={p} className="num chip bg-present/10 text-present">{p}</span>
-                    ))}
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ============ أيام الغياب الكاملة (التميز والمتجاوزون) ============ */
-
 const YELLOW_AT = 10;
 const RED_AT = 15;
 
@@ -838,6 +666,15 @@ function AbsenceDaysReport({ scopeIds }) {
       <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
         يوم الغياب الكامل هو يوم غاب فيه الطالب عن جميع حصصه المسجّلة. والغياب الجزئي
         يعني غيابه عن بعض الحصص دون بعض.
+      </p>
+
+      <p className="rounded-sm2 bg-gray-tint px-3.5 py-2.5 text-xs leading-relaxed text-muted">
+        لمتابعة اليوم الحالي لحظيًا — الحضور الرسمي، الطلاب المفقودون، والتأخر
+        الصباحي — راجع قسم{" "}
+        <a href="/attendance-overview" className="font-semibold text-mint-deep hover:underline">
+          «الحضور والغياب»
+        </a>{" "}
+        في القائمة الجانبية.
       </p>
 
       <div className="flex flex-wrap gap-1.5">

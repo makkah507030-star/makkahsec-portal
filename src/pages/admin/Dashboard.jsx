@@ -11,22 +11,6 @@ import moeLogo from "../../assets/moe-logo.png";
 import { fmtDateTime } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 
-const SHORTCUTS = [
-  { to: "/students",    title: "الطلاب",     body: "البحث والفلترة والتقارير" },
-  { to: "/attendance-overview", title: "الحضور والغياب", body: "الحالة الرسمية والتأخر الصباحي" },
-  { to: "/period-attendance", title: "تحضير الحصص اليومية", body: "الحصص التي حُضِّرت ولم تُحضَّر" },
-  { to: "/reports",     title: "التقارير",   body: "الحضور والغياب والتصدير" },
-  { to: "/permissions", title: "الاستئذان",  body: "رفع استئذان داخلي" },
-  { to: "/accounts",    title: "الحسابات",   body: "إنشاء حسابات الدخول" },
-  { to: "/staff",       title: "الإدارة",    body: "أعضاء الإدارة وأدوارهم" },
-  { to: "/import",      title: "الاستيراد",  body: "بيانات نور والجدول" },
-  { to: "/season",      title: "التوقيت الزمني", body: "الصيفي والشتوي ومهلة التأخر" },
-  { to: "/password-reset", title: "استعادة كلمة المرور", body: "إعادة تعيين لأي مستخدم" },
-  { to: "/news-admin",  title: "الأخبار",    body: "نشر أخبار المدرسة" },
-  { to: "/guides-admin", title: "الأدلة",    body: "رفع أدلة الاستخدام" },
-  { to: "/notifications", title: "الإشعارات", body: "إرسال التعاميم والتنبيهات" },
-  { to: "/feedback-admin", title: "الملاحظات", body: "ملاحظات المستخدمين على النسخة التجريبية" },
-];
 
 export default function Dashboard() {
   const [d, setD] = useState(null);
@@ -178,23 +162,6 @@ export default function Dashboard() {
       )}
 
 
-
-      {/* اختصارات الأقسام */}
-      <section>
-        <h2 className="mb-3 text-sm font-semibold text-ink">الأقسام</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {SHORTCUTS.map((s) => (
-            <Link
-              key={s.to}
-              to={s.to}
-              className="rounded-card border border-line bg-white p-4 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
-            >
-              <p className="text-sm font-bold text-mint-deep">{s.title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted">{s.body}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
 
       {/* البصمة */}
       <section className="card overflow-hidden">

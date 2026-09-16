@@ -79,14 +79,20 @@ function PeriodGroup({ title, tone, rows, open, setOpen }) {
 
   const toneClasses = {
     present: { badge: "bg-present", box: "border-present/30 bg-present/10 text-present" },
-    warning: { badge: "bg-late", box: "border-line bg-white text-ink hover:border-[#CCF2DB] hover:bg-canvas" },
+    warning: { badge: "bg-absent", box: "border-line bg-white text-ink hover:border-absent/30 hover:bg-absent/5" },
   }[tone];
 
   return (
     <section className="card overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <h2 className="text-sm font-semibold text-ink">حصص {title}</h2>
-        <span className="num chip bg-gray-tint text-muted">{rows.length}</span>
+      <div className={`flex items-center justify-between gap-3 border-b px-4 py-3 ${
+        tone === "warning" ? "border-absent/30 bg-absent/5" : "border-present/30 bg-present/5"}`}>
+        <h2 className={`text-sm font-semibold ${tone === "warning" ? "text-absent" : "text-present"}`}>
+          حصص {title}
+        </h2>
+        <span className={`num chip ${
+          tone === "warning" ? "bg-absent/15 text-absent" : "bg-present/15 text-present"}`}>
+          {rows.length}
+        </span>
       </div>
 
       {periods.length === 0 ? (
@@ -156,8 +162,8 @@ function ReportButtons({ d }) {
       title: "تقرير تحضير الحصص اليومية",
       subtitle: todayLabel(),
       sections: [
-        { title: "الحصص التي حُضِّرت", subtitle: `${d.done.length} حصة`, headers, rows: rowsOf(d.done) },
-        { title: "الحصص التي لم تُحضَّر", subtitle: `${d.left.length} حصة`, headers, rows: rowsOf(d.left) },
+        { title: "الحصص التي حُضِّرت", subtitle: `${d.done.length} حصة`, headers, rows: rowsOf(d.done), tableClass: "success" },
+        { title: "الحصص التي لم تُحضَّر", subtitle: `${d.left.length} حصة`, headers, rows: rowsOf(d.left), tableClass: "danger" },
       ],
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,

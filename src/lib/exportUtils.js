@@ -504,6 +504,16 @@ export function printReport(opts) {
   }
   table.follow .total { background: ${ZEBRA}; }
 
+  /* جدول تنبيهي — لقوائم الغياب/عدم التحضير */
+  table.danger thead th {
+    background: #FBE2E2; color: #A23B3B; border-color: #EBB8B8;
+  }
+
+  /* جدول إيجابي — لقوائم الحضور/الإنجاز */
+  table.success thead th {
+    background: #DFF3E6; color: #3E6350; border-color: #B9E6C9;
+  }
+
   /* الملاحظة والتوقيعات */
   .note {
     margin-top: 10px; font-size: 9.5px; color: ${GRAY}; line-height: 1.6;
