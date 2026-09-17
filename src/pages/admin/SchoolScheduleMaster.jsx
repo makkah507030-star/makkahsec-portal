@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtGreg } from "../../lib/dates";
 import { printReport, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { buildMasterPrintSections } from "../../lib/scheduleGrid";
@@ -7,7 +8,7 @@ import MasterGrid from "../../components/MasterGrid.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
-export default function GeneralScheduleMaster() {
+export default function SchoolScheduleMaster() {
   const [rows, setRows] = useState(null);
   const [year, setYear] = useState("");
   const [yearLabel, setYearLabel] = useState("");
@@ -25,7 +26,7 @@ export default function GeneralScheduleMaster() {
 
       const { data } = await supabase
         .from("schedule")
-        .select("id, class_id, day_of_week, period_no, start_time, end_time, classes(id, class_no, grade), subjects(name), teachers(full_name)")
+        .select("id, teacher_id, day_of_week, period_no, start_time, end_time, classes(class_no, grade), subjects(name), teachers(id, full_name)")
         .eq("academic_year", y).eq("term", t);
       setRows(data ?? []);
     })();
@@ -34,27 +35,27 @@ export default function GeneralScheduleMaster() {
   const { entities, rowsByEntity } = useMemo(() => {
     if (!rows) return { entities: [], rowsByEntity: new Map() };
     const map = new Map();
-    const byClass = new Map();
+    const byTeacher = new Map();
     rows.forEach((r) => {
-      const cid = r.class_id;
-      if (!cid) return;
-      if (!map.has(cid)) map.set(cid, `فصل ${r.classes?.class_no ?? ""}`);
-      if (!byClass.has(cid)) byClass.set(cid, []);
-      byClass.get(cid).push(r);
+      const tid = r.teacher_id;
+      if (!tid) return;
+      if (!map.has(tid)) map.set(tid, r.teachers?.full_name ?? "—");
+      if (!byTeacher.has(tid)) byTeacher.set(tid, []);
+      byTeacher.get(tid).push(r);
     });
     const ents = [...map.entries()]
       .map(([id, label]) => ({ id, label }))
-      .sort((a, b) => a.label.localeCompare(b.label, "ar", { numeric: true }));
-    return { entities: ents, rowsByEntity: byClass };
+      .sort((a, b) => a.label.localeCompare(b.label, "ar"));
+    return { entities: ents, rowsByEntity: byTeacher };
   }, [rows]);
 
-  const cellShort = (r) => `${(r.subjects?.name ?? "").slice(0, 6)}`;
-  const cellText = (r) => `${r.subjects?.name ?? ""} — ${r.teachers?.full_name ?? ""}`;
+  const cellShort = (r) => `${r.classes?.class_no ?? ""}·${(r.subjects?.name ?? "").slice(0, 6)}`;
+  const cellText = (r) => `فصل ${r.classes?.class_no ?? ""} — ${r.subjects?.name ?? ""}`;
 
   const printIt = () => {
-    const sections = buildMasterPrintSections(entities, rowsByEntity, cellText, "الفصل");
+    const sections = buildMasterPrintSections(entities, rowsByEntity, cellText, "المعلم");
     printReport({
-      title: "الجدول العام — جدول الفصول",
+      title: "الجدول المدرسي — جدول المعلمين العام",
       subtitle: `${yearLabel} · الفصل الدراسي ${term} · ${fmtGreg(new Date())}`,
       sections,
       landscape: true,
@@ -74,9 +75,9 @@ export default function GeneralScheduleMaster() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold text-ink">الجدول العام</h1>
+          <h1 className="text-lg font-bold text-ink">الجدول المدرسي</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            جدول جميع الفصول وحصصها في مكان واحد، حسب اليوم.
+            جدول جميع المعلمين وحصصهم في مكان واحد، حسب اليوم.
           </p>
         </div>
         <button onClick={printIt} disabled={!entities.length}
@@ -92,7 +93,7 @@ export default function GeneralScheduleMaster() {
         </div>
       ) : (
         <section className="card p-4">
-          <MasterGrid entities={entities} rowsByEntity={rowsByEntity} cell={cellShort} entityHeader="الفصل" />
+          <MasterGrid entities={entities} rowsByEntity={rowsByEntity} cell={cellShort} entityHeader="المعلم" />
         </section>
       )}
     </div>

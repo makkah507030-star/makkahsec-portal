@@ -12,6 +12,7 @@ export default function MySchedule() {
   const [me, setMe] = useState(null);
   const [rows, setRows] = useState(null);
   const [year, setYear] = useState("");
+  const [yearLabel, setYearLabel] = useState("");
   const [term, setTerm] = useState(1);
 
   useEffect(() => {
@@ -23,7 +24,7 @@ export default function MySchedule() {
         .from("settings").select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const y = m.active_year ?? "";
-      const yearLabel = m.active_year_label ?? y;
+      setYearLabel(m.active_year_label ?? y);
       const t = Number(m.active_term ?? 1);
       setYear(y); setTerm(t);
 

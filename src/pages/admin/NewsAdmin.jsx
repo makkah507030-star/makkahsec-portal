@@ -24,6 +24,8 @@ const makeSlug = (t) =>
 
 export default function NewsAdmin() {
   const { profile } = useSession();
+  const isTeacher = profile?.role === "teacher"; // مسودات فقط — لا نشر مباشر
+
   const [list, setList] = useState(null);
   const [form, setForm] = useState(empty);
   const [uploading, setUploading] = useState(false);
@@ -31,14 +33,19 @@ export default function NewsAdmin() {
   const [msg, setMsg] = useState(null);
 
   const load = async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("news")
-      .select("id, title, slug, cover_url, is_published, is_featured, published_at, created_at")
+      .select("id, title, slug, cover_url, is_published, is_featured, published_at, created_at, created_by")
       .order("created_at", { ascending: false });
+
+    // المعلم يرى مسوداته الخاصة فقط، لا أخبار المدرسة كاملة
+    if (isTeacher) query = query.eq("created_by", profile.id);
+
+    const { data } = await query;
     setList(data ?? []);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [profile?.id]);
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -71,6 +78,9 @@ export default function NewsAdmin() {
     setSaving(true);
     setMsg(null);
 
+    // المعلم: تُحفظ دائمًا كمسودة بانتظار موافقة الإدارة، بغض النظر عن أي شيء
+    const isPublished = isTeacher ? false : form.is_published;
+
     const payload = {
       title: form.title.trim(),
       slug: (form.slug.trim() || makeSlug(form.title)) || null,
@@ -78,9 +88,9 @@ export default function NewsAdmin() {
       body: form.body.trim() || null,
       cover_url: form.cover_url || null,
       video_url: form.video_url.trim() || null,
-      is_published: form.is_published,
+      is_published: isPublished,
       is_featured: form.is_featured,
-      published_at: form.is_published ? new Date().toISOString() : null,
+      published_at: isPublished ? new Date().toISOString() : null,
       created_by: profile?.id ?? null,
     };
 
@@ -93,7 +103,12 @@ export default function NewsAdmin() {
       setMsg({ ok: false, text: error.message });
       return;
     }
-    setMsg({ ok: true, text: form.id ? "حُدّث الخبر." : "نُشر الخبر." });
+    setMsg({
+      ok: true,
+      text: isTeacher
+        ? "حُفظت كمسودة — بانتظار مراجعة الإدارة قبل النشر."
+        : form.id ? "حُدّث الخبر." : "نُشر الخبر.",
+    });
     setForm(empty);
     await load();
   };
@@ -115,6 +130,9 @@ export default function NewsAdmin() {
   };
 
   const togglePublish = async (n) => {
+    // المعلم لا يملك صلاحية النشر إطلاقًا — الزر لا يظهر له أصلاً،
+    // لكن نتحقق هنا أيضًا كطبقة حماية إضافية
+    if (isTeacher) return;
     await supabase.from("news").update({
       is_published: !n.is_published,
       published_at: !n.is_published ? new Date().toISOString() : null,
@@ -125,9 +143,13 @@ export default function NewsAdmin() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-bold text-ink">أخبار المدرسة</h1>
+        <h1 className="text-lg font-bold text-ink">
+          {isTeacher ? "أخبار الأنشطة — مسوداتي" : "أخبار المدرسة"}
+        </h1>
         <p className="mt-1 text-sm text-muted">
-          الأخبار المنشورة والمميّزة تظهر في سلايدر الصفحة الرئيسية.
+          {isTeacher
+            ? "تُحفظ مساهماتك كمسودة، ولا تظهر للزوار إلا بعد مراجعة الإدارة ونشرها."
+            : "الأخبار المنشورة والمميّزة تظهر في سلايدر الصفحة الرئيسية."}
         </p>
       </div>
 
@@ -181,21 +203,31 @@ export default function NewsAdmin() {
         </div>
 
         <div className="flex flex-wrap gap-5">
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={form.is_published}
-                   onChange={(e) => set("is_published", e.target.checked)} />
-            منشور
-          </label>
+          {/* خيار النشر يظهر للإدارة فقط — المعلم دائمًا مسودة */}
+          {!isTeacher && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={form.is_published}
+                     onChange={(e) => set("is_published", e.target.checked)} />
+              منشور
+            </label>
+          )}
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={form.is_featured}
                    onChange={(e) => set("is_featured", e.target.checked)} />
-            يظهر في السلايدر
+            يظهر في السلايدر (بعد النشر)
           </label>
         </div>
 
+        {isTeacher && (
+          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-xs leading-relaxed text-warning">
+            ستُحفظ هذه المساهمة كمسودة، ولن تظهر للزوار إلا بعد مراجعتها ونشرها
+            من إدارة المدرسة.
+          </p>
+        )}
+
         <div className="flex flex-wrap gap-2">
           <button className="btn-primary" onClick={save} disabled={saving || uploading}>
-            {saving ? "جارٍ الحفظ…" : form.id ? "حفظ التعديلات" : "نشر الخبر"}
+            {saving ? "جارٍ الحفظ…" : isTeacher ? "حفظ كمسودة" : form.id ? "حفظ التعديلات" : "نشر الخبر"}
           </button>
           {form.id && (
             <button className="btn-ghost" onClick={() => setForm(empty)}>إلغاء</button>
@@ -221,12 +253,14 @@ export default function NewsAdmin() {
       {/* القائمة */}
       <section className="card overflow-hidden">
         <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-          كل الأخبار {list && <span className="num text-muted">({list.length})</span>}
+          {isTeacher ? "مسوداتي" : "كل الأخبار"} {list && <span className="num text-muted">({list.length})</span>}
         </h2>
 
         {!list && <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>}
         {list?.length === 0 && (
-          <p className="px-4 py-6 text-sm text-muted">لا توجد أخبار بعد.</p>
+          <p className="px-4 py-6 text-sm text-muted">
+            {isTeacher ? "لم تُضف أي مساهمة بعد." : "لا توجد أخبار بعد."}
+          </p>
         )}
 
         <div className="divide-y divide-line">
@@ -250,9 +284,11 @@ export default function NewsAdmin() {
                 </div>
               </div>
               <div className="flex shrink-0 gap-3 text-xs font-medium">
-                <button onClick={() => togglePublish(n)} className="text-mint-deep hover:underline">
-                  {n.is_published ? "إلغاء النشر" : "نشر"}
-                </button>
+                {!isTeacher && (
+                  <button onClick={() => togglePublish(n)} className="text-mint-deep hover:underline">
+                    {n.is_published ? "إلغاء النشر" : "نشر"}
+                  </button>
+                )}
                 <button onClick={() => edit(n.id)} className="text-muted hover:underline">
                   تحرير
                 </button>

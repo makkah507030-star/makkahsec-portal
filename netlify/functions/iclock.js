@@ -25,6 +25,31 @@ const text = (body, status = 200) => ({
   body: String(body),
 });
 
+/**
+ * وقت استلام الخادم بتوقيت الرياض — لا نعتمد على ساعة الجهاز نفسه.
+ *
+ * سبب هذا القرار: جهاز البصمة الحالي بلا بطارية داخلية (RTC)، فتُعاد
+ * ساعته تلقائيًا لتاريخ افتراضي خاطئ (غالبًا سنة 2000) عند كل انقطاع
+ * كهرباء — وهذا يحدث يوميًا في هذه المدرسة (الجهاز يُطفأ آخر اليوم).
+ * فبدل رفض كل البصمات بسبب "فترة زمنية غير صالحة"، نتجاهل الطابع
+ * الزمني الذي يرسله الجهاز تمامًا، ونعتمد فقط على لحظة وصول الطلب
+ * لخادمنا — وهي دقيقة دائمًا بغض النظر عن حالة الجهاز.
+ */
+function riyadhNow() {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Riyadh",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(new Date()).map((p) => [p.type, p.value]));
+  const attendDate = `${parts.year}-${parts.month}-${parts.day}`;
+  const punchTime = new Date(
+    `${attendDate}T${parts.hour}:${parts.minute}:${parts.second}${TZ_OFFSET}`
+  );
+  return { attendDate, punchTime };
+}
+
 exports.handler = async (event) => {
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -37,6 +62,9 @@ exports.handler = async (event) => {
   // كل طلب بلا رقم تسلسلي يُرفض
   if (!sn) return text("ERROR: missing SN", 400);
 
+  // تسجيل تشخيصي — يظهر في Netlify Logs، يفيد عند أي التباس مستقبلي
+  console.log(`iclock: SN received = "${sn}" (length: ${sn.length}) | path=${path}`);
+
   try {
     // ---------- التحقق أن الجهاز مسجّل ومفعّل ----------
     const devRes = await admin
@@ -44,6 +72,13 @@ exports.handler = async (event) => {
       .select("serial_no, is_active")
       .eq("serial_no", sn)
       .maybeSingle();
+
+    // فشل الاستعلام نفسه (اتصال بقاعدة البيانات، صلاحية، إلخ) —
+    // هذا مختلف تمامًا عن "الجهاز غير موجود"، ويجب ألا يُعامَل كذلك
+    if (devRes.error) {
+      console.error("iclock: device lookup failed:", devRes.error);
+      return text("ERROR: database lookup failed — " + devRes.error.message, 500);
+    }
 
     const device = devRes.data;
     if (!device) {
@@ -109,17 +144,18 @@ exports.handler = async (event) => {
 
       for (const line of lines) {
         // الصيغة: PIN <tab> DateTime <tab> Status <tab> Verify ...
+        // ملاحظة: عمود DateTime (parts[1]) يُقرأ من سجل الوصول فقط
+        // (لمعرفة أن السطر بصمة فعلية لا سطرًا فارغًا) — لا نستخدم
+        // قيمته الزمنية إطلاقًا لأن ساعة الجهاز غير موثوقة، ونعتمد
+        // بدلًا منها وقت استلام الخادم (riyadhNow) دائمًا.
         const parts = line.split("\t");
         if (parts.length < 2) continue;
 
         const uid = String(parts[0]).trim();
-        const stamp = String(parts[1]).trim(); // 2026-09-14 07:12:33
-        if (!uid || !stamp) continue;
+        const stampRaw = String(parts[1]).trim();
+        if (!uid || !stampRaw) continue;
 
-        const punchTime = new Date(stamp.replace(" ", "T") + TZ_OFFSET);
-        if (isNaN(punchTime.getTime())) continue;
-
-        const attendDate = stamp.slice(0, 10);
+        const { attendDate, punchTime } = riyadhNow();
 
         // مطابقة الطالب برقمه في الجهاز
         const stuRes = await admin

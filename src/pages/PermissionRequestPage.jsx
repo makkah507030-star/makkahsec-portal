@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
+import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import PermissionLog from "../components/PermissionLog.jsx";
 
 const GRADES = [1, 2, 3];
 const MAX_PERIODS = 7; // أقصى عدد حصص باليوم (الأحد/الاثنين = 7)
 
 export default function PermissionRequestPage() {
-  const { profile, hasAdminRole } = useSession();
+  const { profile } = useSession();
+  const { granted: grantedTabs, ready: grantedReady } = useTeacherGrantedTabs();
 
   const [allowed, setAllowed] = useState(null); // null = يتحقق, true/false بعدها
-  const [grantorTitle, setGrantorTitle] = useState("");
 
   const [grade, setGrade] = useState(1);
   const [classNo, setClassNo] = useState(null);
@@ -30,13 +31,17 @@ export default function PermissionRequestPage() {
   const [result, setResult] = useState(null); // { ok: bool, message: string }
   const [tab, setTab] = useState("new");
 
-  // تحقق من الصلاحية: إدارة أو معلم مخوّل (grantor نشط)
+  // تحقق من الصلاحية: إدارة، أو معلم مُنح صلاحية الاستئذان صراحة
   useEffect(() => {
-    (async () => {
-      if (!profile) return;
-      setAllowed(profile.role === "admin");
-    })();
-  }, [profile]);
+    if (!profile) return;
+    if (profile.role === "admin") { setAllowed(true); return; }
+    if (profile.role === "teacher") {
+      if (!grantedReady) return; // انتظر اكتمال التحقق قبل الحكم
+      setAllowed(grantedTabs.has("permissions"));
+      return;
+    }
+    setAllowed(false);
+  }, [profile, grantedTabs, grantedReady]);
 
   // جلب أرقام الفصول المتاحة للصف المختار
   useEffect(() => {
@@ -151,7 +156,7 @@ export default function PermissionRequestPage() {
   if (allowed === false) {
     return (
       <div className="rounded-2xl border border-line bg-white p-6 text-sm text-faint">
-        رفع الاستئذان متاح للإدارة المدرسية فقط.
+        رفع الاستئذان متاح للإدارة المدرسية، أو المعلمين المخوّلين صراحة.
       </div>
     );
   }
@@ -160,8 +165,10 @@ export default function PermissionRequestPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">الاستئذان الداخلي</h1>
-        {grantorTitle && (
-          <p className="text-xs text-faint">بصفتك: {grantorTitle}</p>
+        {profile.role === "teacher" && (
+          <p className="mt-1 text-xs text-mint-deep">
+            صلاحية ممنوحة لك من إدارة المدرسة — بإمكانك رفع استئذان لأي طالب في المدرسة.
+          </p>
         )}
       </div>
 
