@@ -54,6 +54,12 @@ const ADMIN_GROUPS = [
       { to: "/password-reset", label: "استعادة كلمة المرور", perm: "password_reset", icon: "lock" },
     ],
   },
+  {
+    title: "الدعم الفني",
+    items: [
+      { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
+    ],
+  },
 ];
 
 const OTHER_NAV = {
@@ -90,6 +96,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
     check:  "M20 6 9 17l-5-5",
     megaphone: "M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H10l9 4V5l-9 4H5a2 2 0 0 0-2 2Zm7-2v6",
+    wrench: "M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2Z",
   }[name];
 
   return (
@@ -108,7 +115,12 @@ export default function Layout({ children }) {
   const isAdmin = profile?.role === "admin";
 
   const groups = ADMIN_GROUPS
-    .map((g) => ({ ...g, items: g.items.filter((i) => !i.perm || can(i.perm)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) =>
+        i.techOnly ? adminRoles.includes("tech_support") : !i.perm || can(i.perm)
+      ),
+    }))
     .filter((g) => g.items.length);
 
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
