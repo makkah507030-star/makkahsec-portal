@@ -21,6 +21,7 @@ export function useNotifications(session) {
     const { data } = await supabase
       .from("notification_recipients")
       .select("read_at, notifications(id, title, body, kind, link, created_at)")
+      .eq("user_id", session.user.id)
       .order("read_at", { ascending: true, nullsFirst: true })
       .limit(50);
 
