@@ -47,7 +47,7 @@ export default function Landing() {
     <div className="min-h-screen bg-white">
       <TrialBanner />
 
-      {/* شريط علوي */}
+      {/* شريط علوي — نقطة الدخول الوحيدة للبوابة، ثابت طوال الصفحة */}
       <header className="sticky top-0 z-10 border-b border-line bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-5 py-3.5">
           <div className="flex items-center gap-2.5">
@@ -59,9 +59,9 @@ export default function Landing() {
           </div>
           <button
             onClick={() => navigate("/login")}
-            className="rounded-pill bg-[#6AA786] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-mint-deep"
+            className="rounded-pill bg-mint-deep px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#6AA786]"
           >
-            تسجيل الدخول
+            الدخول للبوابة
           </button>
         </div>
       </header>
@@ -80,7 +80,7 @@ export default function Landing() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 py-16 md:grid-cols-[1.1fr_.9fr] md:py-20">
           <div>
             <p className="text-sm font-semibold text-[#6AA786]">
-              العام الدراسي <span className="num">1447–1448</span>هـ
+              العام الدراسي <span className="num">1448–1449</span>هـ
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.35] text-ink md:text-[2.6rem]">
               كل ما تحتاجه المدرسة
@@ -92,13 +92,8 @@ export default function Landing() {
               وأولياء الأمور والطلاب — لمتابعة الحضور والجداول والتقارير في مكان واحد.
             </p>
 
+            {/* بلا زر دخول مكرّر هنا — الزر الوحيد ثابت في الشريط العلوي */}
             <div className="mt-8 flex flex-wrap gap-3">
-              <button
-                onClick={() => navigate("/login")}
-                className="rounded-pill bg-mint-deep px-7 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#6AA786]"
-              >
-                الدخول إلى البوابة
-              </button>
               <a
                 href="#sections"
                 className="rounded-pill border border-[#CCF2DB] bg-white px-7 py-3 text-sm font-semibold text-mint-deep transition-colors hover:bg-mint-tint"
@@ -124,7 +119,7 @@ export default function Landing() {
       <section id="sections" className="mx-auto max-w-6xl px-5 py-16">
         <h2 className="text-xl font-bold text-ink">أقسام البوابة</h2>
         <p className="mt-1.5 text-sm text-muted">
-          لكل فئة في المدرسة واجهتها الخاصة بعد تسجيل الدخول.
+          لكل فئة في المدرسة واجهتها الخاصة بعد الدخول للبوابة.
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
