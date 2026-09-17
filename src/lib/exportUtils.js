@@ -468,6 +468,12 @@ export function printReport(opts) {
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
 
+  /* صف إجمالي مميّز داخل جدول عادي */
+  tbody td.total {
+    background: ${TINT}; color: ${DEEP}; font-weight: 700;
+    border-top: 2px solid ${MINT};
+  }
+
   /* توسيط صارم لكل الخلايا ما عدا الاسم */
   table th, table td { text-align: center; vertical-align: middle; }
   table .name { text-align: right !important; }
@@ -503,6 +509,16 @@ export function printReport(opts) {
     overflow: hidden; text-overflow: ellipsis;
   }
   table.follow .total { background: ${ZEBRA}; }
+
+  /* جدول تنبيهي — لقوائم الغياب/عدم التحضير */
+  table.danger thead th {
+    background: #FBE2E2; color: #A23B3B; border-color: #EBB8B8;
+  }
+
+  /* جدول إيجابي — لقوائم الحضور/الإنجاز */
+  table.success thead th {
+    background: #DFF3E6; color: #3E6350; border-color: #B9E6C9;
+  }
 
   /* الملاحظة والتوقيعات */
   .note {

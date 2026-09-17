@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
@@ -9,34 +9,21 @@ import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } 
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fmtDateTime } from "../../lib/dates";
+import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 
-const SHORTCUTS = [
-  { to: "/students",    title: "الطلاب",     body: "البحث والفلترة والتقارير" },
-  { to: "/reports",     title: "التقارير",   body: "الحضور والغياب والتصدير" },
-  { to: "/permissions", title: "الاستئذان",  body: "رفع استئذان داخلي" },
-  { to: "/accounts",    title: "الحسابات",   body: "إنشاء حسابات الدخول" },
-  { to: "/staff",       title: "الإدارة",    body: "أعضاء الإدارة وأدوارهم" },
-  { to: "/import",      title: "الاستيراد",  body: "بيانات نور والجدول" },
-  { to: "/season",      title: "التوقيت الزمني", body: "الصيفي والشتوي ومهلة التأخر" },
-  { to: "/password-reset", title: "استعادة كلمة المرور", body: "إعادة تعيين لأي مستخدم" },
-  { to: "/news-admin",  title: "الأخبار",    body: "نشر أخبار المدرسة" },
-  { to: "/guides-admin", title: "الأدلة",    body: "رفع أدلة الاستخدام" },
-  { to: "/notifications", title: "الإشعارات", body: "إرسال التعاميم والتنبيهات" },
-  { to: "/feedback-admin", title: "الملاحظات", body: "ملاحظات المستخدمين على النسخة التجريبية" },
-];
 
 export default function Dashboard() {
   const [d, setD] = useState(null);
-  const [openPeriod, setOpenPeriod] = useState(null);
   const date = todayISO();
   const dow = todayDow();
 
   useEffect(() => {
     (async () => {
       const { data: st } = await supabase.from("settings")
-        .select("key, value").in("key", ["active_year", "active_term"]);
+        .select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const year = m.active_year ?? "";
+      const yearLabel = m.active_year_label ?? year;
       const term = Number(m.active_term ?? 1);
 
       const [students, classes, teachers, guardians, devices, unmatched,
@@ -88,7 +75,7 @@ export default function Dashboard() {
         .sort((a, b) => a.period_no - b.period_no);
 
       setD({
-        year, term,
+        year, term, yearLabel,
         students: students.count ?? 0,
         classes: classes.count ?? 0,
         teachers: teachers.count ?? 0,
@@ -115,9 +102,20 @@ export default function Dashboard() {
       <header>
         <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
         <p className="mt-0.5 text-sm text-muted">
-          العام <span className="num">{d.year}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
+          العام <span className="num">{d.yearLabel}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
         </p>
       </header>
+
+      {/* أرقام المدرسة */}
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Fig label="طالب"    value={d.students}  to="/students" />
+        <Fig label="ولي أمر" value={d.guardians} />
+        <Fig label="معلم"    value={d.teachers} />
+        <Fig label="فصل"     value={d.classes} />
+      </section>
+
+      {dow > 0 && <MissingStudentsBox date={date} />}
+      {dow > 0 && <OfficialStatusBox date={date} />}
 
       {/* تحضير اليوم */}
       {dow ? (
@@ -140,6 +138,10 @@ export default function Dashboard() {
           <div className="mt-4 h-2 overflow-hidden rounded-pill bg-white">
             <div className="h-full rounded-pill bg-[#6AA786] transition-all" style={{ width: `${pct}%` }} />
           </div>
+          <Link to="/period-attendance"
+            className="mt-3 inline-block text-xs font-semibold text-mint-deep hover:underline">
+            التفاصيل والإجراءات ←
+          </Link>
         </section>
       ) : (
         <section className="rounded-card border border-line bg-white px-5 py-4">
@@ -160,34 +162,7 @@ export default function Dashboard() {
         </Link>
       )}
 
-      {d.schedCount > 0 && (
-        <UnmarkedByPeriod d={d} open={openPeriod} setOpen={setOpenPeriod} dayLabel={todayLabel()} />
-      )}
 
-      {/* أرقام المدرسة */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Fig label="طالب"    value={d.students}  to="/students" />
-        <Fig label="ولي أمر" value={d.guardians} />
-        <Fig label="معلم"    value={d.teachers} />
-        <Fig label="فصل"     value={d.classes} />
-      </section>
-
-      {/* اختصارات الأقسام */}
-      <section>
-        <h2 className="mb-3 text-sm font-semibold text-ink">الأقسام</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {SHORTCUTS.map((s) => (
-            <Link
-              key={s.to}
-              to={s.to}
-              className="rounded-card border border-line bg-white p-4 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
-            >
-              <p className="text-sm font-bold text-mint-deep">{s.title}</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted">{s.body}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
 
       {/* البصمة */}
       <section className="card overflow-hidden">
@@ -257,216 +232,228 @@ export default function Dashboard() {
   );
 }
 
-/* حصص اليوم مجمّعة حسب رقم الحصة */
-function UnmarkedByPeriod({ d, open, setOpen, dayLabel }) {
-  // تجميع غير المحضَّر حسب رقم الحصة
-  const byPeriod = {};
-  d.unmarked.forEach((s) => {
-    (byPeriod[s.period_no] ??= []).push(s);
-  });
+/* ==================== صندوق الحضور والغياب الرسمي ==================== */
 
-  // إجمالي حصص اليوم لكل رقم حصة (لمعرفة المكتمل)
-  const totalByPeriod = {};
-  (d.periodTotals ?? []).forEach((p) => { totalByPeriod[p.period_no] = p.total; });
+function OfficialStatusBox({ date }) {
+  const [ptimes, setPtimes] = useState(null);
+  const [nowPeriod, setNowPeriod] = useState(null);
+  const [data, setData] = useState(null);
 
-  const periods = [...new Set([
-    ...Object.keys(byPeriod).map(Number),
-    ...Object.keys(totalByPeriod).map(Number),
-  ])].sort((a, b) => a - b);
+  useEffect(() => {
+    let timer;
+    (async () => {
+      const { rows } = await loadPeriodTimes();
+      setPtimes(rows);
+      const tick = () => setNowPeriod(currentPeriodNo(rows));
+      tick();
+      timer = setInterval(tick, 60000);
+    })();
+    return () => clearInterval(timer);
+  }, []);
 
-  if (!periods.length) return null;
+  const period2Done = useMemo(() => {
+    if (!ptimes) return false;
+    const p2 = ptimes.find((r) => r.kind === "period" && r.period_no === 2);
+    if (!p2) return false;
+    return nowPeriod == null || nowPeriod > 2;
+  }, [ptimes, nowPeriod]);
 
-  const rows = open != null ? (byPeriod[open] ?? []) : [];
+  useEffect(() => {
+    if (!period2Done) return;
+    (async () => {
+      const { data: rows, error } = await supabase.rpc("official_daily_status", { p_date: date });
+      if (error) { console.error(error); return; }
+      setData(rows ?? []);
+    })();
+  }, [date, period2Done]);
 
-  const marked = d.schedCount - d.unmarked.length;
-  const pct = d.schedCount ? Math.round((marked / d.schedCount) * 100) : 0;
+  if (!period2Done) {
+    return (
+      <section className="rounded-card border border-line bg-white p-5">
+        <p className="text-sm font-semibold text-ink">الحضور والغياب الرسمي</p>
+        <p className="mt-1.5 text-xs text-muted">
+          يُحتسب اعتمادًا على الحصتين الأولى والثانية، ويظهر هنا بعد انتهائهما.
+        </p>
+      </section>
+    );
+  }
 
-  const buildRows = (onlyPeriod = null) => {
-    const list = onlyPeriod != null ? [onlyPeriod] : periods;
-    const out = [];
-    list
-      .filter((n) => (byPeriod[n] ?? []).length > 0)
-      .forEach((n) => {
-        byPeriod[n]
-          .slice()
-          .sort((a, b) => (a.classes?.class_no ?? 0) - (b.classes?.class_no ?? 0))
-          .forEach((s) => {
-            out.push([
-              out.length + 1, n,
-              s.classes?.class_no ?? "",
-              s.subjects?.name ?? "",
-              s.teachers?.full_name ?? "",
-            ]);
-          });
-      });
-    return out;
-  };
+  if (!data) {
+    return <section className="rounded-card border border-line bg-white p-5">
+      <p className="text-sm text-muted">جارٍ حساب الحضور الرسمي…</p>
+    </section>;
+  }
 
-  const excelIt = (onlyPeriod = null) => {
-    const all = buildRows(onlyPeriod);
-    if (!all.length) return;
-    const isPeriod = onlyPeriod != null;
-
-    exportStyledExcel({
-      title: isPeriod ? `لم تُحضَّر — الحصة ${onlyPeriod}` : "الحصص التي لم تُحضَّر",
-      subtitle: isPeriod
-        ? `${dayLabel} · ${all.length} فصل`
-        : `${dayLabel} · المحضَّر ${marked} من ${d.schedCount} (${pct}%)`,
-      headers: isPeriod
-        ? ["م", "الفصل", "المادة", "المعلم"]
-        : ["م", "الحصة", "الفصل", "المادة", "المعلم"],
-      rows: isPeriod ? all.map((r, i) => [i + 1, r[2], r[3], r[4]]) : all,
-      fileName: isPeriod ? `لم-تحضر-حصة-${onlyPeriod}` : "الحصص-غير-المحضرة",
-      sheetName: "الحصص",
-      signatures: [
-        { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME },
-        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
-      ],
-    });
-  };
-
-  const printIt = (onlyPeriod = null) => {
-    const list = onlyPeriod != null ? [onlyPeriod] : periods;
-    const tableRows = [];
-
-    list
-      .filter((n) => (byPeriod[n] ?? []).length > 0)
-      .forEach((n) => {
-        byPeriod[n]
-          .slice()
-          .sort((a, b) => (a.classes?.class_no ?? 0) - (b.classes?.class_no ?? 0))
-          .forEach((s) => {
-            tableRows.push([
-              tableRows.length + 1,
-              n,
-              s.classes?.class_no ?? "",
-              s.subjects?.name ?? "",
-              s.teachers?.full_name ?? "",
-            ]);
-          });
-      });
-
-    if (!tableRows.length) return;
-
-    const isPeriod = onlyPeriod != null;
-    const headers = isPeriod
-      ? ["م", "الفصل", "المادة", "المعلم"]
-      : ["م", "الحصة", "الفصل", "المادة", "المعلم"];
-
-    // تقرير الحصة لا يحتاج عمود رقم الحصة
-    const rows = isPeriod
-      ? tableRows.map((r, i) => [i + 1, r[2], r[3], r[4]])
-      : tableRows;
-
-    printReport({
-      title: isPeriod
-        ? `لم تُحضَّر — الحصة ${onlyPeriod}`
-        : "الحصص التي لم تُحضَّر",
-      subtitle: isPeriod
-        ? `${dayLabel} · ${tableRows.length} فصل`
-        : `${dayLabel} · المحضَّر ${marked} من ${d.schedCount} (${pct}%)`,
-      headers,
-      rows,
-      logoUrl: new URL(logoIcon, window.location.origin).href,
-      moeLogoUrl: new URL(moeLogo, window.location.origin).href,
-      secondSignature: { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME },
-      hideSignatureLine: true,
-    });
-  };
+  const present = data.filter((r) => r.official === "present").length;
+  const absent = data.filter((r) => r.official === "absent").length;
+  const pending = data.filter((r) => r.official === "pending").length;
+  const resolved = present + absent;
+  const pct = resolved ? Math.round((present / resolved) * 100) : null;
 
   return (
-    <section className="card overflow-hidden">
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-4 py-3">
-        <h2 className="text-sm font-semibold text-ink">حصص اليوم</h2>
-        {d.unmarked.length > 0 ? (
-          <span className="text-xs text-muted">
-            <span className="num font-semibold text-late">{d.unmarked.length}</span> حصة لم تُحضَّر
-          </span>
-        ) : (
-          <span className="text-xs font-medium text-present">اكتمل التحضير</span>
-        )}
-      </div>
-
-      {d.unmarked.length > 0 && (
-        <div className="flex flex-wrap gap-2 border-b border-line px-4 py-3">
-          <button onClick={() => printIt()}
-            className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas">
-            تقرير اليوم — PDF
-          </button>
-          <button onClick={() => excelIt()}
-            className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas">
-            تقرير اليوم — Excel
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-wrap gap-2 px-4 py-4">
-        {periods.map((n) => {
-          const left = (byPeriod[n] ?? []).length;
-          const done = left === 0;
-          const on = open === n;
-          return (
-            <button
-              key={n}
-              onClick={() => setOpen(on ? null : n)}
-              disabled={done}
-              className={`relative flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-card border transition-colors ${
-                done
-                  ? "border-present/30 bg-present/10 text-present"
-                  : on
-                  ? "border-mint-deep bg-mint-tint text-mint-deep"
-                  : "border-line bg-white text-ink hover:border-[#CCF2DB] hover:bg-canvas"
-              }`}
-            >
-              <span className="num text-lg font-bold leading-none">{n}</span>
-              <span className="mt-0.5 text-[10px] leading-none text-muted">الحصة</span>
-
-              {!done && (
-                <span className="num absolute -top-1.5 -left-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-late px-1 text-[10px] font-bold text-white">
-                  {left}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {open != null && rows.length > 0 && (
-        <div className="border-t border-line">
-          <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-tint px-4 py-2">
-            <p className="text-xs font-medium text-muted">
-              لم تُحضَّر في الحصة <span className="num">{open}</span> ·{" "}
-              <span className="num">{rows.length}</span> فصل
+    <Link to="/attendance-overview"
+      className="block rounded-card border border-[#CCF2DB] bg-mint-tint p-5 transition-colors hover:bg-mint-tint/70">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-medium text-[#6AA786]">الحضور والغياب الرسمي</p>
+          <div className="mt-1.5 flex items-baseline gap-4">
+            <p className="text-3xl font-bold leading-none text-mint-deep">
+              {pct != null ? <span className="num">{pct}%</span> : "—"}
+              <span className="text-sm font-medium text-muted"> حضور</span>
             </p>
-            <div className="flex gap-1.5">
-              <button onClick={() => printIt(open)}
-                className="rounded-sm2 border border-line bg-white px-3 py-1 text-xs font-medium text-ink hover:bg-canvas">
-                PDF
-              </button>
-              <button onClick={() => excelIt(open)}
-                className="rounded-sm2 border border-line bg-white px-3 py-1 text-xs font-medium text-ink hover:bg-canvas">
-                Excel
-              </button>
+            <p className="text-3xl font-bold leading-none text-absent">
+              {pct != null ? <span className="num">{100 - pct}%</span> : "—"}
+              <span className="text-sm font-medium text-muted"> غياب</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-4 text-center">
+          <div>
+            <p className="num text-xl font-bold text-present">{present}</p>
+            <p className="text-[11px] text-muted">حاضر</p>
+          </div>
+          <div>
+            <p className="num text-xl font-bold text-absent">{absent}</p>
+            <p className="text-[11px] text-muted">غائب</p>
+          </div>
+          {pending > 0 && (
+            <div>
+              <p className="num text-xl font-bold text-warning">{pending}</p>
+              <p className="text-[11px] text-muted">لم يتم تحضيره</p>
             </div>
-          </div>
-          <div className="max-h-64 overflow-auto">
-            {rows.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
-                <span className="num w-10 shrink-0 rounded-md bg-mint-tint py-1 text-center text-xs font-bold text-mint-deep">
-                  {s.classes?.class_no}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">
-                    {s.teachers?.full_name ?? "—"}
-                  </p>
-                  <p className="truncate text-xs text-muted">{s.subjects?.name ?? "—"}</p>
-                </div>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ==================== صندوق الطلاب المفقودين ==================== */
+/* حالة طارئة تظهر فورًا — لا تنتظر اكتمال الحصتين الأولى والثانية معًا */
+
+function MissingStudentsBox({ date }) {
+  const [rows, setRows] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const [openId, setOpenId] = useState(null);
+  const [timeline, setTimeline] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.rpc("missing_students", { p_date: date });
+      if (error) { console.error(error); setRows([]); return; }
+      setRows(data ?? []);
+    })();
+  }, [date]);
+
+  const toggleStudent = async (r) => {
+    if (openId === r.student_id) { setOpenId(null); return; }
+    setOpenId(r.student_id);
+    setTimeline(null);
+    const { data, error } = await supabase.rpc("student_day_timeline", {
+      p_date: date, p_student_id: r.student_id,
+    });
+    if (error) { console.error(error); setTimeline([]); return; }
+    setTimeline(data ?? []);
+  };
+
+  if (!rows || rows.length === 0) return null;
+
+  return (
+    <section className="overflow-hidden rounded-card border border-absent/30 bg-absent/5">
+      <button onClick={() => setExpanded((v) => !v)}
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-right">
+        <div>
+          <p className="text-sm font-bold text-absent">طلاب مفقودون خلال اليوم</p>
+          <p className="mt-0.5 text-xs text-muted">اضغط لعرض القائمة والتفاصيل</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="num text-2xl font-bold text-absent">{rows.length}</span>
+          <svg viewBox="0 0 24 24" fill="none"
+               className={`h-4 w-4 text-absent transition-transform ${expanded ? "rotate-180" : ""}`}
+               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="max-h-80 overflow-y-auto border-t border-absent/15">
+          {rows.map((r) => {
+            const open = openId === r.student_id;
+            return (
+              <div key={r.student_id} className="border-b border-absent/10 last:border-0">
+                <button onClick={() => toggleStudent(r)}
+                  className="flex w-full items-center justify-between gap-3 px-5 py-2.5 text-right hover:bg-absent/5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink">{r.full_name}</p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      فصل <span className="num">{r.class_no}</span> · آخر حضور ح
+                      <span className="num">{r.last_seen_period}</span> · فُقد في ح
+                      <span className="num font-semibold text-absent">{r.missing_period}</span>
+                    </p>
+                  </div>
+                  <svg viewBox="0 0 24 24" fill="none"
+                       className={`h-3.5 w-3.5 shrink-0 text-faint transition-transform ${open ? "rotate-180" : ""}`}
+                       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+
+                {open && (
+                  <div className="bg-white px-5 py-3">
+                    {!timeline ? (
+                      <p className="text-xs text-muted">جارٍ التحميل…</p>
+                    ) : (
+                      <StudentTimeline rows={timeline} missingPeriod={r.missing_period} />
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
     </section>
+  );
+}
+
+function StudentTimeline({ rows, missingPeriod }) {
+  const punch = rows[0]?.punch_time;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-xs">
+        <span className="chip bg-mint-tint text-mint-deep">البصمة الصباحية</span>
+        <span className="num text-muted">
+          {punch
+            ? new Date(punch).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })
+            : "لا توجد بصمة مسجّلة"}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {rows.map((p) => {
+          const isMissing = p.period_no === missingPeriod;
+          const tone =
+            p.status === "absent"
+              ? "border-absent/40 bg-absent/10 text-absent"
+              : p.status === "late"
+              ? "border-late/40 bg-late/10 text-late"
+              : p.status === "excused"
+              ? "border-excused/40 bg-excused/10 text-excused"
+              : "border-present/40 bg-present/10 text-present";
+          return (
+            <span key={p.period_no}
+              className={`rounded-sm2 border px-2.5 py-1.5 text-xs ${tone} ${isMissing ? "ring-2 ring-absent" : ""}`}>
+              <span className="num font-semibold">ح{p.period_no}</span>
+              <span className="mx-1 text-faint">·</span>
+              {p.subject ?? "—"}
+              {isMissing && <span className="mr-1 font-bold">◀ هنا</span>}
+            </span>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
