@@ -6,6 +6,7 @@ import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
 import NotificationBell from "./NotificationBell.jsx";
+import AnnouncementModal from "./AnnouncementModal.jsx";
 
 /* أقسام قائمة الإدارة — مجمّعة منطقيًا */
 const ADMIN_GROUPS = [
@@ -38,6 +39,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/news-admin",     label: "الأخبار",   perm: "news",     icon: "news" },
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
+      { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/feedback-admin", label: "الملاحظات", perm: "feedback", icon: "chat" },
     ],
@@ -87,6 +89,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     book:   "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z",
     bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
     check:  "M20 6 9 17l-5-5",
+    megaphone: "M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H10l9 4V5l-9 4H5a2 2 0 0 0-2 2Zm7-2v6",
   }[name];
 
   return (
@@ -180,6 +183,7 @@ export default function Layout({ children }) {
   if (isAdmin) {
     return (
       <div className="min-h-screen bg-gray-tint">
+        <AnnouncementModal />
         <TrialBanner />
 
         {/* شريط علوي للجوال */}
@@ -288,6 +292,7 @@ export default function Layout({ children }) {
   /* ============ باقي الفئات: شريط علوي + قائمة منسدلة من ☰ في الجوال ============ */
   return (
     <div className="flex min-h-screen flex-col bg-gray-tint">
+      <AnnouncementModal />
       <TrialBanner />
 
       <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
