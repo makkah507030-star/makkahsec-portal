@@ -38,6 +38,7 @@ export default function TeacherRecords() {
   const [me, setMe] = useState(null);
   const [groups, setGroups] = useState(null); // [{ key, subject, class_id, class_no, grade, students }]
   const [year, setYear] = useState("");
+  const [yearLabel, setYearLabel] = useState("");
   const [term, setTerm] = useState(1);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -50,9 +51,10 @@ export default function TeacherRecords() {
       if (!uid) return;
 
       const { data: st } = await supabase
-        .from("settings").select("key, value").in("key", ["active_year", "active_term"]);
+        .from("settings").select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const y = m.active_year ?? "";
+      setYearLabel(m.active_year_label ?? y);
       const t = Number(m.active_term ?? 1);
       setYear(y);
       setTerm(t);
@@ -149,7 +151,7 @@ export default function TeacherRecords() {
       grade: GRADE_NAMES[g.grade] ?? g.grade,
       class_no: g.class_no,
     })),
-    year: `العام الدراسي ${year} — الفصل الدراسي ${TERM_LABEL[term] ?? term}`,
+    year: `العام الدراسي ${yearLabel} — الفصل الدراسي ${TERM_LABEL[term] ?? term}`,
   });
 
   /* ---------- سجل رصد الدرجات: ملف واحد لكل المواد والفصول ---------- */
@@ -420,6 +422,19 @@ export default function TeacherRecords() {
                   className="rounded-sm2 border border-line bg-paper px-5 py-2.5 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-40">
             سجل المتابعة
           </button>
+        </div>
+
+        <div className="flex gap-2.5 rounded-card border border-[#F5D98C] bg-[#FFF8E6] px-3.5 py-3">
+          <svg viewBox="0 0 24 24" fill="none" className="mt-0.5 h-4 w-4 shrink-0 text-warning"
+               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 9v4M12 16.5h.01" />
+            <path d="M10.3 3.9 2.7 17.3a1.8 1.8 0 0 0 1.56 2.7h15.48a1.8 1.8 0 0 0 1.56-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z" />
+          </svg>
+          <p className="text-xs leading-relaxed text-[#8A6416]">
+            <span className="font-bold">مهم قبل الطباعة:</span> اختر اتجاه الصفحة{" "}
+            <span className="font-bold">أفقي (Landscape)</span> من نافذة الطباعة
+            حتى يظهر الجدول كاملاً بشكل سليم دون اقتصاص.
+          </p>
         </div>
 
         <div className="rounded-sm2 bg-gray-tint px-3 py-2.5 text-xs leading-relaxed text-muted">
