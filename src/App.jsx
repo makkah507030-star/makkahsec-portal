@@ -39,11 +39,15 @@ import Reports from "./pages/Reports.jsx";
 import Feedback from "./pages/Feedback.jsx";
 import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
 import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin.jsx";
+import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
+import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
+import { useMaintenance } from "./lib/useMaintenance.js";
 
 export default function App() {
-  const { session, profile, loading, can } = useSession();
+  const { session, profile, loading, can, adminRoles } = useSession();
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
+  const maintenance = useMaintenance(session);
 
   if (loading) {
     return (
@@ -79,6 +83,19 @@ export default function App() {
         </div>
       </div>
     );
+  }
+
+  // وضع الصيانة: يحجب البوابة عن الجميع ما عدا الدعم الفني
+  if (maintenance.loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-muted">جارٍ التحميل…</p>
+      </div>
+    );
+  }
+  const isTechSupport = adminRoles.includes("tech_support");
+  if (maintenance.enabled && !isTechSupport) {
+    return <MaintenanceScreen message={maintenance.message} />;
   }
 
   // إجبار تغيير كلمة المرور قبل أي استخدام
@@ -126,6 +143,7 @@ export default function App() {
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
             {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
             {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
+            {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
             {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
             {can("import") && (
