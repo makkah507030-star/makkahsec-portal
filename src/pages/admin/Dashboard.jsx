@@ -102,7 +102,7 @@ export default function Dashboard() {
       <header>
         <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
         <p className="mt-0.5 text-sm text-muted">
-          العام <span className="num">{d.yearLabel}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
+          العام <span className="num">{d.yearLabel}</span>هـ · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
         </p>
       </header>
 
