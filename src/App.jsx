@@ -1,6 +1,8 @@
 import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
+import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
+import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
 import Layout from "./components/Layout.jsx";
 import Login from "./pages/Login.jsx";
 import ChangePassword from "./pages/ChangePassword.jsx";
@@ -11,6 +13,7 @@ import Students from "./pages/admin/Students.jsx";
 import Accounts from "./pages/admin/Accounts.jsx";
 import Attendance from "./pages/teacher/Attendance.jsx";
 import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
+import TeacherPermissions from "./pages/admin/TeacherPermissions.jsx";
 import TeacherNotify from "./pages/teacher/TeacherNotify.jsx";
 import MySchedule from "./pages/teacher/MySchedule.jsx";
 import StudentHome from "./pages/StudentHome.jsx";
@@ -38,6 +41,8 @@ import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
 
 export default function App() {
   const { session, profile, loading, can } = useSession();
+  const { hidden: hiddenTabs } = useTeacherHiddenTabs();
+  const { granted: grantedTabs } = useTeacherGrantedTabs();
 
   if (loading) {
     return (
@@ -80,9 +85,18 @@ export default function App() {
     return <ChangePassword />;
   }
 
+  const teacherHome = hiddenTabs.has("attendance") ? (
+    <div className="card px-6 py-12 text-center">
+      <p className="font-semibold text-ink">تبويب التحضير غير متاح لحسابك</p>
+      <p className="mt-1.5 text-sm text-muted">اختر تبويبًا آخر من القائمة الجانبية.</p>
+    </div>
+  ) : (
+    <Attendance />
+  );
+
   const home = {
     admin: <Dashboard />,
-    teacher: <Attendance />,
+    teacher: teacherHome,
     student: <StudentHome />,
     guardian: <GuardianHome />,
   }[profile.role] ?? <p>دور غير معروف</p>;
@@ -107,6 +121,7 @@ export default function App() {
             {can("students") && <Route path="/students" element={<Students />} />}
             {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
             {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
+            {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
             {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
@@ -126,19 +141,33 @@ export default function App() {
         )}
         {profile.role === "teacher" && (
           <>
-            <Route path="/attendance" element={<Attendance />} />
-            <Route path="/records" element={<TeacherRecords />} />
-            <Route path="/notify" element={<TeacherNotify />} />
-            <Route path="/schedule" element={<MySchedule />} />
+            {!hiddenTabs.has("attendance") && (
+              <Route path="/attendance" element={<Attendance />} />
+            )}
+            {!hiddenTabs.has("records") && (
+              <Route path="/records" element={<TeacherRecords />} />
+            )}
+            {!hiddenTabs.has("notify") && (
+              <Route path="/notify" element={<TeacherNotify />} />
+            )}
+            {!hiddenTabs.has("schedule") && (
+              <Route path="/schedule" element={<MySchedule />} />
+            )}
           </>
         )}
-        {(profile.role === "teacher" || (profile.role === "admin" && can("reports"))) && (
+        {((profile.role === "teacher" && !hiddenTabs.has("reports")) ||
+          (profile.role === "admin" && can("reports"))) && (
           <Route path="/reports" element={<Reports />} />
         )}
         {/* الاستئذان: متاح للإدارة وللمعلمين المخوّلين — الصفحة نفسها تتحقق من الصلاحية */}
-        {profile.role === "admin" && can("permissions") && (
+        {(profile.role === "admin" && can("permissions")) ||
+         (profile.role === "teacher" && grantedTabs.has("permissions")) ? (
           <Route path="/permissions" element={<PermissionRequestPage />} />
-        )}
+        ) : null}
+        {/* الأخبار للمعلمين المخوّلين — مسودات فقط، الصفحة نفسها تفرض هذا القيد */}
+        {profile.role === "teacher" && grantedTabs.has("news") ? (
+          <Route path="/news-admin" element={<NewsAdmin />} />
+        ) : null}
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="*" element={<Navigate to="/" replace />} />

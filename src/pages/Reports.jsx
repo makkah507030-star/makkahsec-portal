@@ -12,7 +12,7 @@ const TAB_GROUPS = [
   {
     title: "تقارير اليوم الدراسي",
     tabs: [
-      { key: "daily_rate", label: "معدل الحضور اليومي" },
+      { key: "daily_rate", label: "معدل الحضور اليومي", teacherHidden: true },
       { key: "days", label: "أيام الغياب" },
     ],
   },
@@ -27,6 +27,14 @@ const TAB_GROUPS = [
 ];
 
 const TABS = TAB_GROUPS.flatMap((g) => g.tabs);
+
+/** يستبعد تبويبات غير مناسبة للمعلم (عامة على مستوى المدرسة كلها) */
+function visibleGroups(isTeacher) {
+  if (!isTeacher) return TAB_GROUPS;
+  return TAB_GROUPS
+    .map((g) => ({ ...g, tabs: g.tabs.filter((t) => !t.teacherHidden) }))
+    .filter((g) => g.tabs.length > 0);
+}
 
 const NON_PRESENT = ["absent", "late", "excused"];
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -71,7 +79,7 @@ export default function Reports() {
       </div>
 
       <div className="space-y-3">
-        {TAB_GROUPS.map((g) => (
+        {visibleGroups(isTeacher).map((g) => (
           <div key={g.title}>
             <p className="mb-1.5 text-[11px] font-semibold text-faint">{g.title}</p>
             <div className="flex flex-wrap gap-1.5">
@@ -93,7 +101,7 @@ export default function Reports() {
       {tab === "daily"   && <DailyReport scopeIds={scopeIds} />}
       {tab === "student" && <StudentReport scopeIds={scopeIds} />}
       {tab === "period"  && <PeriodReport scopeIds={scopeIds} />}
-      {tab === "daily_rate" && <DailyRateReport />}
+      {tab === "daily_rate" && !isTeacher && <DailyRateReport />}
       {tab === "days"    && <AbsenceDaysReport scopeIds={scopeIds} />}
     </div>
   );

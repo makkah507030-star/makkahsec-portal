@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
+import { useTeacherHiddenTabs } from "../lib/useTeacherHiddenTabs.js";
+import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
 import NotificationBell from "./NotificationBell.jsx";
@@ -28,6 +30,7 @@ const ADMIN_GROUPS = [
       { to: "/teacher-schedules", label: "جداول المعلمين",        perm: "import", icon: "chalk" },
       { to: "/student-schedules", label: "جداول الطلاب",          perm: "import", icon: "users" },
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
+      { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
     ],
   },
   {
@@ -53,11 +56,13 @@ const ADMIN_GROUPS = [
 
 const OTHER_NAV = {
   teacher: [
-    { to: "/",         label: "التحضير" },
-    { to: "/schedule", label: "جدولي" },
-    { to: "/records",  label: "السجلات" },
-    { to: "/reports",  label: "التقارير" },
-    { to: "/notify",   label: "الإشعارات" },
+    { to: "/",         label: "التحضير",  tabKey: "attendance" },
+    { to: "/schedule", label: "جدولي",    tabKey: "schedule" },
+    { to: "/records",  label: "السجلات",  tabKey: "records" },
+    { to: "/reports",  label: "التقارير", tabKey: "reports" },
+    { to: "/notify",   label: "الإشعارات", tabKey: "notify" },
+    { to: "/permissions", label: "الاستئذان", extraTabKey: "permissions" },
+    { to: "/news-admin",  label: "الأخبار",   extraTabKey: "news" },
   ],
   student:  [{ to: "/", label: "الرئيسية" }],
   guardian: [{ to: "/", label: "الرئيسية" }],
@@ -103,7 +108,14 @@ export default function Layout({ children }) {
     .map((g) => ({ ...g, items: g.items.filter((i) => !i.perm || can(i.perm)) }))
     .filter((g) => g.items.length);
 
-  const items = isAdmin ? [] : OTHER_NAV[profile?.role] ?? [];
+  const { hidden: hiddenTabs } = useTeacherHiddenTabs();
+  const { granted: grantedTabs } = useTeacherGrantedTabs();
+  const items = isAdmin
+    ? []
+    : (OTHER_NAV[profile?.role] ?? []).filter((i) => {
+        if (i.extraTabKey) return grantedTabs.has(i.extraTabKey);
+        return !i.tabKey || !hiddenTabs.has(i.tabKey);
+      });
 
   const subtitle =
     isAdmin && adminRoles.length
