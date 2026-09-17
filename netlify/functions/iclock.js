@@ -62,6 +62,9 @@ exports.handler = async (event) => {
   // كل طلب بلا رقم تسلسلي يُرفض
   if (!sn) return text("ERROR: missing SN", 400);
 
+  // تسجيل تشخيصي — يظهر في Netlify Logs، يفيد عند أي التباس مستقبلي
+  console.log(`iclock: SN received = "${sn}" (length: ${sn.length}) | path=${path}`);
+
   try {
     // ---------- التحقق أن الجهاز مسجّل ومفعّل ----------
     const devRes = await admin
@@ -69,6 +72,13 @@ exports.handler = async (event) => {
       .select("serial_no, is_active")
       .eq("serial_no", sn)
       .maybeSingle();
+
+    // فشل الاستعلام نفسه (اتصال بقاعدة البيانات، صلاحية، إلخ) —
+    // هذا مختلف تمامًا عن "الجهاز غير موجود"، ويجب ألا يُعامَل كذلك
+    if (devRes.error) {
+      console.error("iclock: device lookup failed:", devRes.error);
+      return text("ERROR: database lookup failed — " + devRes.error.message, 500);
+    }
 
     const device = devRes.data;
     if (!device) {
