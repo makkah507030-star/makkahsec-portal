@@ -38,6 +38,7 @@ import SeasonSwitch from "./pages/admin/SeasonSwitch.jsx";
 import Reports from "./pages/Reports.jsx";
 import Feedback from "./pages/Feedback.jsx";
 import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
+import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin.jsx";
 
 export default function App() {
   const { session, profile, loading, can } = useSession();
@@ -124,6 +125,7 @@ export default function App() {
             {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
             {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
+            {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
             {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
             {can("import") && (
