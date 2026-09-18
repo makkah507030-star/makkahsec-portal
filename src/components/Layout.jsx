@@ -157,9 +157,31 @@ export default function Layout({ children }) {
 
   const Actions = () => (
     <div className="flex shrink-0 items-center gap-2">
+      <PreviewSite />
       <NotificationBell />
       <SignOut />
     </div>
+  );
+
+  // معاينة سريعة للصفحة الرئيسية العامة في تبويب جديد — للوصول السريع بعد أي تعديل
+  const PreviewSite = () => (
+    <a
+      href="/"
+      target="_blank"
+      rel="noopener noreferrer"
+      title="الصفحة الرئيسية للبوابة"
+      className="flex shrink-0 items-center gap-1.5 rounded-pill border border-line px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint hover:text-mint-deep sm:px-3.5"
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none"
+           stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5" />
+      </svg>
+      <span className="hidden sm:inline">الصفحة الرئيسية للبوابة</span>
+      <svg viewBox="0 0 24 24" className="hidden h-3 w-3 shrink-0 sm:block" fill="none"
+           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 17 17 7M9 7h8v8" />
+      </svg>
+    </a>
   );
 
   // الاسم والدور — نسخة مدمجة للشريط العلوي
