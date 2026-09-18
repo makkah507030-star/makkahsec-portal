@@ -98,10 +98,6 @@ export default function Students() {
     return parts.join(" · ") || "كل الطلاب";
   }, [track, grade, cls, onlyNoGuardian, q]);
 
-  const resetFilters = () => {
-    setQ(""); setGrade(0); setCls(0); setTrack(""); setOnlyNoGuardian(false);
-  };
-
   // عدد الطلاب لكل صف (ضمن المسار المختار إن وجد)
   const countByGrade = useMemo(() => {
     const src = track ? (rows ?? []).filter((r) => r.track === track) : (rows ?? []);
@@ -180,8 +176,6 @@ export default function Students() {
   };
 
   if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
-
-  const hasFilters = q || grade || cls || track || onlyNoGuardian;
 
   return (
     <div className="space-y-4">
@@ -278,19 +272,13 @@ export default function Students() {
       {(cls > 0 || searching || onlyNoGuardian) && (
         <>
           {/* فلاتر إضافية */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            {noGuardianCount > 0 && (
+          {noGuardianCount > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5">
               <Pill on={onlyNoGuardian} onClick={() => setOnlyNoGuardian((v) => !v)}>
                 بلا ولي أمر <span className="num">({noGuardianCount})</span>
               </Pill>
-            )}
-            {hasFilters && (
-              <button onClick={resetFilters}
-                className="shrink-0 rounded-pill px-3 py-1.5 text-sm font-medium text-absent hover:bg-absent/5">
-                مسح الفلاتر
-              </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* أزرار التصدير */}
           <div className="flex flex-wrap items-center gap-2">
