@@ -42,6 +42,7 @@ import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
+import ExamCountdown from "./components/ExamCountdown.jsx";
 
 export default function App() {
   const { session, profile, loading, can, adminRoles } = useSession();
@@ -109,7 +110,10 @@ export default function App() {
       <p className="mt-1.5 text-sm text-muted">اختر تبويبًا آخر من القائمة الجانبية.</p>
     </div>
   ) : (
-    <Attendance />
+    <div className="space-y-5">
+      <ExamCountdown />
+      <Attendance />
+    </div>
   );
 
   const home = {
