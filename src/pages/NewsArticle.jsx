@@ -82,24 +82,29 @@ export default function NewsArticle() {
             <h1 className="mt-2 text-2xl font-bold leading-snug text-ink md:text-3xl">
               {item.title}
             </h1>
+
+            {/* شريط الحساب الناشر — عرضي رفيع أسفل العنوان، بدل صورة غلاف كبيرة */}
+            {item.cover_theme ? (
+              <NewsCoverCard
+                role={item.cover_theme}
+                compact
+                className="mt-4 h-16 w-full rounded-card border border-line sm:h-[4.5rem]"
+              />
+            ) : item.cover_url && (
+              <img
+                src={item.cover_url}
+                alt=""
+                className="mt-4 h-24 w-full rounded-card border border-line object-cover sm:h-28"
+              />
+            )}
+
             {item.excerpt && (
               <p className="mt-4 text-base leading-relaxed text-muted">
                 {item.excerpt}
               </p>
             )}
 
-            {item.cover_theme ? (
-              <NewsCoverCard
-                role={item.cover_theme}
-                className="mt-7 aspect-[16/9] w-full rounded-card border border-line"
-              />
-            ) : item.cover_url && (
-              <img
-                src={item.cover_url}
-                alt=""
-                className="mt-7 w-full rounded-card border border-line object-cover"
-              />
-            )}
+            <ArticleImageSlider images={item.body_images} />
 
             {youtubeId(item.video_url) && (
               <div className="mt-7 aspect-video overflow-hidden rounded-card border border-line">
@@ -120,8 +125,6 @@ export default function NewsArticle() {
                 ))}
               </div>
             )}
-
-            <ArticleImageSlider images={item.body_images} />
           </article>
         )}
       </main>
