@@ -5,6 +5,7 @@ import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime, lateInfo } from "../lib/periodTimes";
+import ExamCountdown from "../components/ExamCountdown.jsx";
 
 const LABEL = { absent: "غائب", late: "متأخر", excused: "مستأذن" };
 const TONE = {
@@ -175,6 +176,8 @@ export default function GuardianHome() {
           </p>
         )}
       </header>
+
+      <ExamCountdown />
 
       {loading ? (
         <p className="py-6 text-center text-sm text-muted">جارٍ التحميل…</p>

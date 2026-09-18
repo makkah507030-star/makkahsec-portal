@@ -4,6 +4,7 @@ import logoIcon from "../assets/icon-mint.png";
 import CalendarTimeline from "../components/CalendarTimeline.jsx";
 import NewsSlider from "../components/NewsSlider.jsx";
 import TrialBanner from "../components/TrialBanner.jsx";
+import ExamCountdown from "../components/ExamCountdown.jsx";
 
 const SECTIONS = [
   {
@@ -108,6 +109,11 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* العد التنازلي للاختبارات النهائية */}
+      <div className="mx-auto max-w-6xl px-5 pt-10">
+        <ExamCountdown />
+      </div>
 
       {/* أخبار المدرسة */}
       <NewsSlider />

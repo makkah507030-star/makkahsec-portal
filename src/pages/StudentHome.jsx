@@ -6,6 +6,7 @@ import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime, lateInfo } from "../lib/periodTimes";
+import ExamCountdown from "../components/ExamCountdown.jsx";
 
 const LABEL = { absent: "غائب", late: "متأخر", excused: "مستأذن" };
 const TONE = {
@@ -150,6 +151,8 @@ export default function StudentHome() {
           {GRADE_NAMES[me.grade] ?? ""} · فصل <span className="num">{me.class_no}</span>
         </p>
       </header>
+
+      <ExamCountdown />
 
       {/* ملخص */}
       <section className="grid grid-cols-3 gap-3">

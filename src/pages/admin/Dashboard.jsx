@@ -11,6 +11,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fmtDateTime } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
+import ExamCountdown from "../../components/ExamCountdown.jsx";
 
 
 export default function Dashboard() {
@@ -106,6 +107,8 @@ export default function Dashboard() {
           العام <span className="num">{d.yearLabel}</span>هـ · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
         </p>
       </header>
+
+      <ExamCountdown />
 
       {/* أرقام المدرسة */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
