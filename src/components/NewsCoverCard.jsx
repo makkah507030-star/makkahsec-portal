@@ -52,14 +52,14 @@ export default function NewsCoverCard({ role, className = "", compact = false })
       <div className="absolute -top-6 -left-6 h-20 w-20 rounded-full bg-white/10" />
       <div className="absolute -bottom-8 -right-4 h-24 w-24 rounded-full bg-white/10" />
 
-      <div className={`relative flex flex-col ${compact ? "items-end text-right" : "items-center text-center"}`}>
-        <span className={`font-bold leading-tight text-white drop-shadow-sm ${compact ? "text-[15px]" : "text-sm"}`}>
+      <div className={`relative w-fit ${compact ? "text-right" : "text-center"}`} dir="rtl">
+        <p className={`w-full font-bold leading-tight text-white drop-shadow-sm ${compact ? "text-[15px]" : "text-sm"}`}>
           {label}
-        </span>
+        </p>
         {person && (
-          <span className="mt-0.5 text-[12px] font-medium leading-tight text-white/80">
+          <p className="mt-0.5 w-full text-[12px] font-medium leading-tight text-white/80">
             {person}
-          </span>
+          </p>
         )}
       </div>
 
