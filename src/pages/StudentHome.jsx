@@ -116,10 +116,15 @@ export default function StudentHome() {
     })();
   }, [session, dow]);
 
+  // عدد الأيام (وليس الحصص) التي فيها حالة غياب/تأخر/استئذان على الأقل
   const totals = useMemo(() => {
-    const c = { absent: 0, late: 0, excused: 0 };
-    records.forEach((r) => { c[r.status] = (c[r.status] ?? 0) + 1; });
-    return c;
+    const days = { absent: new Set(), late: new Set(), excused: new Set() };
+    records.forEach((r) => { days[r.status]?.add(r.attend_date); });
+    return {
+      absent: days.absent.size,
+      late: days.late.size,
+      excused: days.excused.size,
+    };
   }, [records]);
 
   const ptMap = byPeriodNo(ptimes);
