@@ -140,6 +140,7 @@ export const ADMIN_ROLE_LABEL = {
   student_voice:   "برنامج صوت الطالب",
   makkah_sport:    "مكة سبورت",
   safety_security: "مسؤول الأمن والسلامة",
+  health_counselor: "الموجه الصحي",
   // أدوار قديمة (للتوافق مع بيانات سابقة)
   deputy:          "الوكيل",
   counselor:       "الموجه الطلابي",
@@ -163,6 +164,7 @@ export const ASSIGNABLE_ROLES = [
   "student_voice",
   "makkah_sport",
   "safety_security",
+  "health_counselor",
 ];
 
 // تدرّج لوني مميّز لكل حساب إداري — يُستخدم في بطاقة غلاف الأخبار
@@ -184,6 +186,7 @@ export const ROLE_COVER_HUE = {
   student_voice:   104,
   makkah_sport:    128,
   safety_security: 356,
+  health_counselor: 188,
 };
 
 // يبني تدرّجًا لونيًا CSS من قيمة hue الخاصة بالحساب
@@ -204,6 +207,7 @@ export const ROLE_PERSON_NAME = {
   tech_support:    "الأستاذ: محمد بن حسن الحازمي",
   deputy_school:   "الأستاذ: غالي بن ستر السلمي",
   safety_security: "الأستاذ: بندر بن معيض الحارثي",
+  health_counselor: "الأستاذ: أيمن بن جميل المحمادي",
 };
 
 // مفاتيح الصلاحيات وأسماؤها
