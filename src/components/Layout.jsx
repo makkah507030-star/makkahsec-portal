@@ -18,6 +18,7 @@ const ADMIN_GROUPS = [
     title: "شؤون الطلاب",
     items: [
       { to: "/students",    label: "الطلاب",    perm: "students",    icon: "users" },
+      { to: "/records-manual", label: "تعديل السجلات", perm: "records", icon: "edit" },
       { to: "/attendance-overview", label: "الحضور والغياب", perm: "reports", icon: "check" },
       { to: "/period-attendance", label: "تحضير الحصص اليومية", perm: "reports", icon: "clock" },
       { to: "/reports",     label: "التقارير",  perm: "reports",     icon: "chart" },
@@ -97,6 +98,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     check:  "M20 6 9 17l-5-5",
     megaphone: "M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H10l9 4V5l-9 4H5a2 2 0 0 0-2 2Zm7-2v6",
     wrench: "M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2Z",
+    edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
   }[name];
 
   return (
