@@ -156,6 +156,7 @@ export const ASSIGNABLE_ROLES = [
 // مفاتيح الصلاحيات وأسماؤها
 export const PERMISSIONS = [
   { key: "students",       label: "الطلاب",             desc: "البحث والفلترة والتقارير" },
+  { key: "records",        label: "تعديل السجلات",       desc: "إضافة وتعديل الطلاب والمعلمين وأولياء الأمور يدويًا" },
   { key: "reports",        label: "التقارير",           desc: "تقارير الحضور والغياب" },
   { key: "permissions",    label: "الاستئذان",          desc: "رفع الاستئذان والسجل" },
   { key: "accounts",       label: "الحسابات",           desc: "إنشاء حسابات الدخول" },

@@ -9,6 +9,7 @@ import ChangePassword from "./pages/ChangePassword.jsx";
 import Dashboard from "./pages/admin/Dashboard.jsx";
 // شاشة الاستيراد تُحمّل عند فتحها فقط (مكتبة Excel ثقيلة)
 const Import = lazy(() => import("./pages/admin/Import.jsx"));
+const Records = lazy(() => import("./pages/admin/Records.jsx"));
 import Students from "./pages/admin/Students.jsx";
 import Accounts from "./pages/admin/Accounts.jsx";
 import Attendance from "./pages/teacher/Attendance.jsx";
@@ -141,6 +142,16 @@ export default function App() {
               />
             )}
             {can("students") && <Route path="/students" element={<Students />} />}
+            {can("records") && (
+              <Route
+                path="/records-manual"
+                element={
+                  <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                    <Records />
+                  </Suspense>
+                }
+              />
+            )}
             {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
             {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
             {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}

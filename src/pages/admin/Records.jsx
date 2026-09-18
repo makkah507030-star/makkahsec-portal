@@ -1,0 +1,861 @@
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "../../lib/supabase";
+import { GRADE_NAMES } from "../../lib/schoolTime";
+import { cleanIdentity, cleanMobile, cleanText, guessIdentityType } from "../../lib/importer";
+
+const TRACK_LABEL = { common_year: "السنة المشتركة", general_track: "المسار العام" };
+const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
+
+const TABS = [
+  { key: "students", label: "الطلاب" },
+  { key: "teachers", label: "المعلمون" },
+  { key: "guardians", label: "أولياء الأمور" },
+];
+
+export default function Records() {
+  const [tab, setTab] = useState("students");
+  const [year, setYear] = useState(null);
+  const [yearLabel, setYearLabel] = useState(null);
+
+  useEffect(() => {
+    supabase
+      .from("settings")
+      .select("key, value")
+      .in("key", ["active_year", "active_year_label"])
+      .then(({ data }) => {
+        const m = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+        setYear(m.active_year ?? null);
+        setYearLabel(m.active_year_label ?? m.active_year ?? null);
+      });
+  }, []);
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-lg font-bold">إدارة السجلات</h1>
+        <p className="mt-1 text-sm leading-relaxed text-muted">
+          إضافة وتعديل بيانات الطلاب والمعلمين وأولياء الأمور يدويًا دون الرجوع لملفات
+          الاستيراد. أي تعديل هنا ينعكس فورًا في كل شاشات البوابة المرتبطة.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={
+              tab === t.key
+                ? "rounded-pill bg-mint-deep px-4 py-1.5 text-sm font-semibold text-white"
+                : "rounded-pill border border-line bg-paper px-4 py-1.5 text-sm font-medium text-muted hover:bg-canvas"
+            }
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "students" && <StudentsTab year={year} yearLabel={yearLabel} />}
+      {tab === "teachers" && <TeachersTab />}
+      {tab === "guardians" && <GuardiansTab />}
+    </div>
+  );
+}
+
+/* ============================================================= */
+/* أدوات مشتركة                                                   */
+/* ============================================================= */
+
+function Banner({ err, msg }) {
+  if (!err && !msg) return null;
+  return (
+    <div
+      className={`rounded-sm2 px-3 py-2 text-sm ${
+        err ? "bg-absent/10 text-absent" : "bg-present/10 text-present"
+      }`}
+    >
+      {err || msg}
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="text-xs text-muted">{label}</label>
+      <div className="mt-1">{children}</div>
+    </div>
+  );
+}
+
+/* ============================================================= */
+/* تبويب الطلاب                                                   */
+/* ============================================================= */
+
+function StudentsTab({ year, yearLabel }) {
+  const [rows, setRows] = useState(null);
+  const [classes, setClasses] = useState([]);
+  const [enrollMap, setEnrollMap] = useState(new Map()); // student_id -> class_id
+  const [guardianMap, setGuardianMap] = useState(new Map()); // student_id -> {id, full_name, mobile}
+  const [guardians, setGuardians] = useState([]);
+  const [q, setQ] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const load = async () => {
+    const [{ data: s }, { data: g }] = await Promise.all([
+      supabase
+        .from("students")
+        .select("id, national_id, full_name, identity_type, user_id")
+        .order("full_name"),
+      supabase.from("guardians").select("id, full_name, mobile").order("full_name"),
+    ]);
+    setRows(s ?? []);
+    setGuardians(g ?? []);
+
+    if (year) {
+      const { data: cls } = await supabase
+        .from("classes")
+        .select("id, class_no, grade, track")
+        .eq("academic_year", year)
+        .order("class_no");
+      setClasses(cls ?? []);
+
+      const { data: en } = await supabase
+        .from("student_enrollment")
+        .select("student_id, class_id")
+        .eq("academic_year", year);
+      setEnrollMap(new Map((en ?? []).map((r) => [r.student_id, r.class_id])));
+    } else {
+      setClasses([]);
+      setEnrollMap(new Map());
+    }
+
+    const { data: gs } = await supabase
+      .from("guardian_student")
+      .select("student_id, guardians(id, full_name, mobile)");
+    const m = new Map();
+    (gs ?? []).forEach((r) => {
+      const gg = Array.isArray(r.guardians) ? r.guardians[0] : r.guardians;
+      if (gg && (gg.full_name || gg.mobile)) m.set(r.student_id, gg);
+    });
+    setGuardianMap(m);
+  };
+
+  useEffect(() => {
+    load();
+  }, [year]);
+
+  const classesById = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
+
+  const filtered = useMemo(() => {
+    const term = q.trim();
+    if (!term) return rows ?? [];
+    return (rows ?? []).filter(
+      (r) => r.full_name?.includes(term) || r.national_id?.includes(term)
+    );
+  }, [rows, q]);
+
+  const unlinkGuardian = async (studentId) => {
+    if (!confirm("إزالة ربط ولي الأمر عن هذا الطالب؟")) return;
+    await supabase.from("guardian_student").delete().eq("student_id", studentId);
+    await load();
+  };
+
+  const saveStudent = async (form, existing) => {
+    setBusy(true);
+    setErr("");
+    setMsg("");
+    try {
+      const national_id = cleanIdentity(form.national_id);
+      const full_name = cleanText(form.full_name);
+      if (!national_id) throw new Error("رقم الهوية مطلوب");
+      if (!full_name) throw new Error("اسم الطالب مطلوب");
+
+      let studentId = existing?.id;
+      if (existing) {
+        const { error } = await supabase
+          .from("students")
+          .update({ national_id, full_name })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase
+          .from("students")
+          .insert({ national_id, full_name, identity_type: guessIdentityType(national_id) })
+          .select("id")
+          .single();
+        if (error) throw error;
+        studentId = data.id;
+      }
+
+      // مزامنة الاسم في حساب الدخول إن وُجد (لا نُغيّر اسم المستخدم/رقم الهوية هناك)
+      if (existing?.user_id) {
+        await supabase.from("users").update({ full_name }).eq("id", existing.user_id);
+      }
+
+      if (form.classId) {
+        if (!year) throw new Error("لم تُضبط السنة الدراسية النشطة في الإعدادات");
+        const { error } = await supabase
+          .from("student_enrollment")
+          .upsert(
+            { student_id: studentId, class_id: form.classId, academic_year: year, status: "active" },
+            { onConflict: "student_id,academic_year" }
+          );
+        if (error) throw error;
+      }
+
+      let guardianId = form.guardianId || null;
+      if (form.newGuardianName || form.newGuardianMobile) {
+        const mobile = cleanMobile(form.newGuardianMobile);
+        if (!mobile) throw new Error("رقم جوال ولي الأمر الجديد غير صالح");
+        const { data: gRow, error: gErr } = await supabase
+          .from("guardians")
+          .upsert({ full_name: cleanText(form.newGuardianName) || null, mobile }, { onConflict: "mobile" })
+          .select("id")
+          .single();
+        if (gErr) throw gErr;
+        guardianId = gRow.id;
+      }
+      if (guardianId) {
+        const { error } = await supabase
+          .from("guardian_student")
+          .upsert({ guardian_id: guardianId, student_id: studentId }, { onConflict: "guardian_id,student_id" });
+        if (error) throw error;
+      }
+
+      setMsg(existing ? "تم حفظ تعديلات الطالب." : "تمت إضافة الطالب.");
+      setAdding(false);
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      setErr(e.message ?? String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+
+  return (
+    <div className="space-y-4">
+      {!year && (
+        <div className="card border-late/30 bg-late/5 px-4 py-3 text-sm text-late">
+          لم تُضبط السنة الدراسية النشطة في الإعدادات — يمكنك إضافة الطالب وبياناته، لكن
+          لن يمكن تعيين فصله حتى تُضبط السنة من صفحة «التوقيت الزمني».
+        </div>
+      )}
+      {yearLabel && (
+        <p className="text-xs text-muted">
+          السنة الدراسية الحالية: <span className="num font-semibold text-mint-deep">{yearLabel}</span>
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className="field flex-1"
+          placeholder="بحث بالاسم أو رقم الهوية"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <button
+          className="btn-primary shrink-0"
+          onClick={() => {
+            setAdding((v) => !v);
+            setEditingId(null);
+            setErr("");
+            setMsg("");
+          }}
+        >
+          {adding ? "إلغاء" : "+ إضافة طالب"}
+        </button>
+      </div>
+
+      <Banner err={err} msg={msg} />
+
+      {adding && (
+        <StudentForm
+          classes={classes}
+          guardians={guardians}
+          busy={busy}
+          onCancel={() => setAdding(false)}
+          onSave={(form) => saveStudent(form)}
+        />
+      )}
+
+      <p className="text-sm text-muted">
+        <span className="num font-semibold text-ink">{filtered.length}</span> من{" "}
+        <span className="num">{rows.length}</span>
+      </p>
+
+      <div className="card divide-y divide-line overflow-hidden">
+        {filtered.slice(0, 200).map((r) => {
+          const classId = enrollMap.get(r.id);
+          const cls = classId ? classesById.get(classId) : null;
+          const g = guardianMap.get(r.id);
+          const editing = editingId === r.id;
+          return (
+            <div key={r.id} className="px-4 py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{r.full_name}</p>
+                  <p className="num mt-0.5 text-right text-xs text-faint">{r.national_id}</p>
+                  <p className="mt-1 text-xs text-muted">
+                    {cls ? `${GRADE_NAMES[cls.grade] ?? cls.grade} · فصل ${cls.class_no}` : "بلا فصل معيّن"}
+                  </p>
+                  {g ? (
+                    <p className="mt-1 truncate text-xs text-muted">
+                      ولي الأمر: {g.full_name} · <span className="num">{g.mobile}</span>{" "}
+                      <button
+                        onClick={() => unlinkGuardian(r.id)}
+                        className="text-absent hover:underline"
+                      >
+                        إزالة الربط
+                      </button>
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-xs text-late">بلا ولي أمر مسجّل</p>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingId(editing ? null : r.id);
+                    setAdding(false);
+                    setErr("");
+                    setMsg("");
+                  }}
+                  className="shrink-0 text-xs font-medium text-mint-deep hover:underline"
+                >
+                  {editing ? "إغلاق" : "تعديل"}
+                </button>
+              </div>
+
+              {editing && (
+                <div className="mt-3">
+                  <StudentForm
+                    classes={classes}
+                    guardians={guardians}
+                    existing={r}
+                    initialClassId={classId ?? ""}
+                    initialGuardian={g}
+                    busy={busy}
+                    onCancel={() => setEditingId(null)}
+                    onSave={(form) => saveStudent(form, r)}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-muted">لا نتائج.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StudentForm({ classes, guardians, existing, initialClassId, initialGuardian, busy, onSave, onCancel }) {
+  const [fullName, setFullName] = useState(existing?.full_name ?? "");
+  const [nationalId, setNationalId] = useState(existing?.national_id ?? "");
+  const [grade, setGrade] = useState(() => {
+    const c = classes.find((c) => c.id === initialClassId);
+    return c?.grade ?? "";
+  });
+  const [classId, setClassId] = useState(initialClassId ?? "");
+  const [guardianId, setGuardianId] = useState(initialGuardian?.id ?? "");
+  const [newGuardianName, setNewGuardianName] = useState("");
+  const [newGuardianMobile, setNewGuardianMobile] = useState("");
+
+  const classesForGrade = classes.filter((c) => !grade || c.grade === Number(grade));
+
+  const submit = (e) => {
+    e.preventDefault();
+    onSave({
+      full_name: fullName,
+      national_id: nationalId,
+      classId: classId || null,
+      guardianId: guardianId || null,
+      newGuardianName,
+      newGuardianMobile,
+    });
+  };
+
+  return (
+    <form onSubmit={submit} className="card space-y-3 border-[#CCF2DB] bg-mint-tint/40 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="الاسم الكامل">
+          <input className="field" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+        </Field>
+        <Field label="رقم الهوية">
+          <input
+            className="field num"
+            value={nationalId}
+            onChange={(e) => setNationalId(e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="الصف">
+          <select
+            className="field"
+            value={grade}
+            onChange={(e) => {
+              setGrade(e.target.value);
+              setClassId("");
+            }}
+          >
+            <option value="">— اختر —</option>
+            {[1, 2, 3].map((g) => (
+              <option key={g} value={g}>
+                {GRADE_NAMES[g]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="الفصل">
+          <select className="field" value={classId} onChange={(e) => setClassId(e.target.value)} disabled={!grade}>
+            <option value="">— اختر —</option>
+            {classesForGrade.map((c) => (
+              <option key={c.id} value={c.id}>
+                فصل {c.class_no} · {trackName(c.track)}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+
+      <div className="border-t border-[#CCF2DB] pt-3">
+        <p className="text-xs font-semibold text-mint-deep">ولي الأمر</p>
+        <div className="mt-2 grid gap-3 sm:grid-cols-2">
+          <Field label="اختيار ولي أمر مسجّل مسبقًا">
+            <select className="field" value={guardianId} onChange={(e) => setGuardianId(e.target.value)}>
+              <option value="">— بدون تغيير —</option>
+              {guardians.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.full_name || "بلا اسم"} — {g.mobile}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="أو أضِف وليًا جديدًا: الاسم">
+              <input className="field" value={newGuardianName} onChange={(e) => setNewGuardianName(e.target.value)} />
+            </Field>
+            <Field label="جوال ولي الأمر الجديد">
+              <input
+                className="field num"
+                value={newGuardianMobile}
+                onChange={(e) => setNewGuardianMobile(e.target.value)}
+              />
+            </Field>
+          </div>
+        </div>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+          تعبئة حقلَي «ولي الأمر الجديد» تُنشئ وليًا جديدًا وتربطه بالطالب، وتتجاوز الاختيار من
+          القائمة إن كانا معًا.
+        </p>
+      </div>
+
+      <div className="flex gap-2">
+        <button type="submit" className="btn-primary" disabled={busy}>
+          {busy ? "جارٍ الحفظ…" : "حفظ"}
+        </button>
+        <button type="button" onClick={onCancel} className="btn-ghost">
+          إلغاء
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ============================================================= */
+/* تبويب المعلمين                                                 */
+/* ============================================================= */
+
+function TeachersTab() {
+  const [rows, setRows] = useState(null);
+  const [q, setQ] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const load = async () => {
+    const { data } = await supabase
+      .from("teachers")
+      .select("id, national_id, full_name, mobile, specialization, user_id")
+      .order("full_name");
+    setRows(data ?? []);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const term = q.trim();
+    if (!term) return rows ?? [];
+    return (rows ?? []).filter(
+      (r) => r.full_name?.includes(term) || r.national_id?.includes(term)
+    );
+  }, [rows, q]);
+
+  const save = async (form, existing) => {
+    setBusy(true);
+    setErr("");
+    setMsg("");
+    try {
+      const national_id = cleanIdentity(form.national_id);
+      const full_name = cleanText(form.full_name);
+      if (!national_id) throw new Error("رقم الهوية مطلوب");
+      if (!full_name) throw new Error("اسم المعلم مطلوب");
+      const mobile = form.mobile ? cleanMobile(form.mobile) : "";
+      if (form.mobile && !mobile) throw new Error("رقم الجوال غير صالح");
+      const specialization = cleanText(form.specialization) || null;
+
+      if (existing) {
+        const { error } = await supabase
+          .from("teachers")
+          .update({ national_id, full_name, mobile: mobile || null, specialization })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("teachers")
+          .insert({ national_id, full_name, mobile: mobile || null, specialization });
+        if (error) throw error;
+      }
+
+      if (existing?.user_id) {
+        await supabase.from("users").update({ full_name }).eq("id", existing.user_id);
+      }
+
+      setMsg(existing ? "تم حفظ تعديلات المعلم." : "تمت إضافة المعلم.");
+      setAdding(false);
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      setErr(e.message ?? String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className="field flex-1"
+          placeholder="بحث بالاسم أو رقم الهوية"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <button
+          className="btn-primary shrink-0"
+          onClick={() => {
+            setAdding((v) => !v);
+            setEditingId(null);
+            setErr("");
+            setMsg("");
+          }}
+        >
+          {adding ? "إلغاء" : "+ إضافة معلم"}
+        </button>
+      </div>
+
+      <Banner err={err} msg={msg} />
+
+      {adding && <TeacherForm busy={busy} onCancel={() => setAdding(false)} onSave={(f) => save(f)} />}
+
+      <p className="text-sm text-muted">
+        <span className="num font-semibold text-ink">{filtered.length}</span> من{" "}
+        <span className="num">{rows.length}</span>
+      </p>
+
+      <div className="card divide-y divide-line overflow-hidden">
+        {filtered.slice(0, 200).map((r) => {
+          const editing = editingId === r.id;
+          return (
+            <div key={r.id} className="px-4 py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{r.full_name}</p>
+                  <p className="num mt-0.5 text-right text-xs text-faint">{r.national_id}</p>
+                  <p className="mt-1 text-xs text-muted">
+                    {r.mobile ? <span className="num">{r.mobile}</span> : "بلا جوال"}
+                    {r.specialization ? ` · ${r.specialization}` : ""}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingId(editing ? null : r.id);
+                    setAdding(false);
+                    setErr("");
+                    setMsg("");
+                  }}
+                  className="shrink-0 text-xs font-medium text-mint-deep hover:underline"
+                >
+                  {editing ? "إغلاق" : "تعديل"}
+                </button>
+              </div>
+              {editing && (
+                <div className="mt-3">
+                  <TeacherForm
+                    existing={r}
+                    busy={busy}
+                    onCancel={() => setEditingId(null)}
+                    onSave={(f) => save(f, r)}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-muted">لا نتائج.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TeacherForm({ existing, busy, onSave, onCancel }) {
+  const [fullName, setFullName] = useState(existing?.full_name ?? "");
+  const [nationalId, setNationalId] = useState(existing?.national_id ?? "");
+  const [mobile, setMobile] = useState(existing?.mobile ?? "");
+  const [specialization, setSpecialization] = useState(existing?.specialization ?? "");
+
+  const submit = (e) => {
+    e.preventDefault();
+    onSave({ full_name: fullName, national_id: nationalId, mobile, specialization });
+  };
+
+  return (
+    <form onSubmit={submit} className="card space-y-3 border-[#CCF2DB] bg-mint-tint/40 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="الاسم الكامل">
+          <input className="field" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+        </Field>
+        <Field label="رقم الهوية">
+          <input className="field num" value={nationalId} onChange={(e) => setNationalId(e.target.value)} required />
+        </Field>
+        <Field label="رقم الجوال">
+          <input className="field num" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+        </Field>
+        <Field label="التخصص">
+          <input className="field" value={specialization} onChange={(e) => setSpecialization(e.target.value)} />
+        </Field>
+      </div>
+      <div className="flex gap-2">
+        <button type="submit" className="btn-primary" disabled={busy}>
+          {busy ? "جارٍ الحفظ…" : "حفظ"}
+        </button>
+        <button type="button" onClick={onCancel} className="btn-ghost">
+          إلغاء
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* ============================================================= */
+/* تبويب أولياء الأمور                                            */
+/* ============================================================= */
+
+function GuardiansTab() {
+  const [rows, setRows] = useState(null);
+  const [linkCount, setLinkCount] = useState(new Map());
+  const [q, setQ] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const load = async () => {
+    const [{ data }, { data: links }] = await Promise.all([
+      supabase.from("guardians").select("id, national_id, full_name, mobile, user_id").order("full_name"),
+      supabase.from("guardian_student").select("guardian_id"),
+    ]);
+    setRows(data ?? []);
+    const m = new Map();
+    (links ?? []).forEach((r) => m.set(r.guardian_id, (m.get(r.guardian_id) ?? 0) + 1));
+    setLinkCount(m);
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const term = q.trim();
+    if (!term) return rows ?? [];
+    return (rows ?? []).filter(
+      (r) => r.full_name?.includes(term) || r.mobile?.includes(term) || r.national_id?.includes(term)
+    );
+  }, [rows, q]);
+
+  const save = async (form, existing) => {
+    setBusy(true);
+    setErr("");
+    setMsg("");
+    try {
+      const full_name = cleanText(form.full_name);
+      const mobile = cleanMobile(form.mobile);
+      const national_id = form.national_id ? cleanIdentity(form.national_id) : null;
+      if (!full_name) throw new Error("اسم ولي الأمر مطلوب");
+      if (!mobile) throw new Error("رقم الجوال غير صالح");
+
+      if (existing) {
+        const { error } = await supabase
+          .from("guardians")
+          .update({ full_name, mobile, national_id })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("guardians")
+          .upsert({ full_name, mobile, national_id }, { onConflict: "mobile" });
+        if (error) throw error;
+      }
+
+      if (existing?.user_id) {
+        await supabase.from("users").update({ full_name }).eq("id", existing.user_id);
+      }
+
+      setMsg(existing ? "تم حفظ تعديلات ولي الأمر." : "تمت إضافة ولي الأمر.");
+      setAdding(false);
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      setErr(e.message ?? String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          className="field flex-1"
+          placeholder="بحث بالاسم أو الجوال أو رقم الهوية"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <button
+          className="btn-primary shrink-0"
+          onClick={() => {
+            setAdding((v) => !v);
+            setEditingId(null);
+            setErr("");
+            setMsg("");
+          }}
+        >
+          {adding ? "إلغاء" : "+ إضافة ولي أمر"}
+        </button>
+      </div>
+
+      <Banner err={err} msg={msg} />
+
+      <p className="text-xs leading-relaxed text-muted">
+        رقم الجوال هو المعرّف الأساسي لولي الأمر (ويُستخدم اسم مستخدم لحساب دخوله) — لا يمكن أن
+        يشترك وليّا أمر في نفس رقم الجوال.
+      </p>
+
+      {adding && <GuardianForm busy={busy} onCancel={() => setAdding(false)} onSave={(f) => save(f)} />}
+
+      <p className="text-sm text-muted">
+        <span className="num font-semibold text-ink">{filtered.length}</span> من{" "}
+        <span className="num">{rows.length}</span>
+      </p>
+
+      <div className="card divide-y divide-line overflow-hidden">
+        {filtered.slice(0, 200).map((r) => {
+          const editing = editingId === r.id;
+          return (
+            <div key={r.id} className="px-4 py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{r.full_name || "بلا اسم"}</p>
+                  <p className="num mt-0.5 text-right text-xs text-faint">{r.mobile}</p>
+                  <p className="mt-1 text-xs text-muted">
+                    {r.national_id ? <span className="num">{r.national_id}</span> : "بلا رقم هوية"} ·{" "}
+                    <span className="num">{linkCount.get(r.id) ?? 0}</span> طالب مرتبط
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditingId(editing ? null : r.id);
+                    setAdding(false);
+                    setErr("");
+                    setMsg("");
+                  }}
+                  className="shrink-0 text-xs font-medium text-mint-deep hover:underline"
+                >
+                  {editing ? "إغلاق" : "تعديل"}
+                </button>
+              </div>
+              {editing && (
+                <div className="mt-3">
+                  <GuardianForm
+                    existing={r}
+                    busy={busy}
+                    onCancel={() => setEditingId(null)}
+                    onSave={(f) => save(f, r)}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-muted">لا نتائج.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GuardianForm({ existing, busy, onSave, onCancel }) {
+  const [fullName, setFullName] = useState(existing?.full_name ?? "");
+  const [mobile, setMobile] = useState(existing?.mobile ?? "");
+  const [nationalId, setNationalId] = useState(existing?.national_id ?? "");
+
+  const submit = (e) => {
+    e.preventDefault();
+    onSave({ full_name: fullName, mobile, national_id: nationalId });
+  };
+
+  return (
+    <form onSubmit={submit} className="card space-y-3 border-[#CCF2DB] bg-mint-tint/40 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="الاسم الكامل">
+          <input className="field" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+        </Field>
+        <Field label="رقم الجوال">
+          <input className="field num" value={mobile} onChange={(e) => setMobile(e.target.value)} required />
+        </Field>
+        <Field label="رقم الهوية (اختياري)">
+          <input className="field num" value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
+        </Field>
+      </div>
+      <div className="flex gap-2">
+        <button type="submit" className="btn-primary" disabled={busy}>
+          {busy ? "جارٍ الحفظ…" : "حفظ"}
+        </button>
+        <button type="button" onClick={onCancel} className="btn-ghost">
+          إلغاء
+        </button>
+      </div>
+    </form>
+  );
+}
