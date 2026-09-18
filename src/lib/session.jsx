@@ -134,6 +134,11 @@ export const ADMIN_ROLE_LABEL = {
   clerk:           "المساعد الإداري",
   activity_leader: "رائد النشاط",
   tech_support:    "الدعم الفني",
+  media_portal:    "البوابة الإعلامية",
+  gifted_program:  "برنامج الموهوبين",
+  globe_program:   "برنامج جلوب البيئي العالمي",
+  student_voice:   "برنامج صوت الطالب",
+  makkah_sport:    "مكة سبورت",
   // أدوار قديمة (للتوافق مع بيانات سابقة)
   deputy:          "الوكيل",
   counselor:       "الموجه الطلابي",
@@ -151,6 +156,11 @@ export const ASSIGNABLE_ROLES = [
   "clerk",
   "activity_leader",
   "tech_support",
+  "media_portal",
+  "gifted_program",
+  "globe_program",
+  "student_voice",
+  "makkah_sport",
 ];
 
 // مفاتيح الصلاحيات وأسماؤها
