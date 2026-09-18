@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
 import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
@@ -53,6 +53,7 @@ export default function App() {
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const maintenance = useMaintenance(session);
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -66,6 +67,7 @@ export default function App() {
     return (
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/home" element={<Landing />} />
         <Route path="/news" element={<NewsList />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="/news/:slug" element={<NewsArticle />} />
@@ -106,6 +108,12 @@ export default function App() {
   // إجبار تغيير كلمة المرور قبل أي استخدام
   if (profile.must_change_pw) {
     return <ChangePassword />;
+  }
+
+  // معاينة الصفحة الرئيسية العامة للبوابة حتى للمستخدم المسجّل دخوله —
+  // بدون هذا الاستثناء يُعاد توجيه "/" تلقائيًا للوحة تحكمه بدل الصفحة العامة
+  if (location.pathname === "/home") {
+    return <Landing />;
   }
 
   const teacherHome = hiddenTabs.has("attendance") ? (

@@ -164,9 +164,11 @@ export default function Layout({ children }) {
   );
 
   // معاينة سريعة للصفحة الرئيسية العامة (الموقع المنشور) في تبويب جديد — للوصول السريع بعد أي تعديل
+  // يستخدم مسار /home المخصص كي يعرض الصفحة العامة فعليًا حتى وأنت مسجّل الدخول،
+  // بدل "/" التي تُحوّلك تلقائيًا للوحة التحكم
   const PreviewSite = () => (
     <a
-      href="https://makkahsec.com/"
+      href="/home"
       target="_blank"
       rel="noopener noreferrer"
       title="الصفحة الرئيسية للبوابة"
