@@ -141,6 +141,8 @@ export const ADMIN_ROLE_LABEL = {
   makkah_sport:    "مكة سبورت",
   safety_security: "مسؤول الأمن والسلامة",
   health_counselor: "الموجه الصحي",
+  science_labs:     "مختبرات العلوم",
+  computer_lab:     "معمل الحاسب الآلي",
   // أدوار قديمة (للتوافق مع بيانات سابقة)
   deputy:          "الوكيل",
   counselor:       "الموجه الطلابي",
@@ -165,6 +167,8 @@ export const ASSIGNABLE_ROLES = [
   "makkah_sport",
   "safety_security",
   "health_counselor",
+  "science_labs",
+  "computer_lab",
 ];
 
 // تدرّج لوني مميّز لكل حساب إداري — يُستخدم في بطاقة غلاف الأخبار
@@ -187,6 +191,8 @@ export const ROLE_COVER_HUE = {
   makkah_sport:    128,
   safety_security: 356,
   health_counselor: 188,
+  science_labs:     68,
+  computer_lab:    236,
 };
 
 // يبني تدرّجًا لونيًا CSS من قيمة hue الخاصة بالحساب
@@ -220,7 +226,7 @@ export const PERMISSIONS = [
   { key: "accounts",       label: "الحسابات",           desc: "إنشاء حسابات الدخول" },
   { key: "staff",          label: "الإدارة",            desc: "أعضاء الإدارة وأدوارهم" },
   { key: "import",         label: "الاستيراد",          desc: "بيانات نور والجدول" },
-  { key: "news",           label: "الأخبار",            desc: "نشر أخبار المدرسة" },
+  { key: "news",           label: "الأخبار والمقالات",   desc: "نشر أخبار المدرسة ومقالاتها" },
   { key: "guides",         label: "الأدلة",             desc: "رفع أدلة الاستخدام" },
   { key: "notifications",  label: "الإشعارات",          desc: "إرسال التعاميم والتنبيهات" },
   { key: "feedback",       label: "الملاحظات",          desc: "ملاحظات المستخدمين" },

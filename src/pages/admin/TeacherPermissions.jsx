@@ -12,7 +12,7 @@ const CORE_TABS = [
 
 const EXTRA_TABS = [
   { key: "permissions", label: "الاستئذان", hint: "صلاحية كاملة — رفع استئذان لأي طالب" },
-  { key: "news",        label: "الأخبار",   hint: "مسودات فقط — تحتاج موافقة الإدارة قبل النشر" },
+  { key: "news",        label: "الأخبار والمقالات",   hint: "مسودات فقط — تحتاج موافقة الإدارة قبل النشر" },
 ];
 
 export default function TeacherPermissions() {

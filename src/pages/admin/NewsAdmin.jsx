@@ -159,12 +159,12 @@ export default function NewsAdmin() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">
-          {isTeacher ? "أخبار الأنشطة — مسوداتي" : "أخبار المدرسة"}
+          {isTeacher ? "الأخبار والمقالات — مسوداتي" : "الأخبار والمقالات"}
         </h1>
         <p className="mt-1 text-sm text-muted">
           {isTeacher
             ? "تُحفظ مساهماتك كمسودة، ولا تظهر للزوار إلا بعد مراجعة الإدارة ونشرها."
-            : "الأخبار المنشورة والمميّزة تظهر في سلايدر الصفحة الرئيسية."}
+            : "الأخبار والمقالات المنشورة والمميّزة تظهر في سلايدر الصفحة الرئيسية."}
         </p>
       </div>
 
@@ -292,7 +292,7 @@ export default function NewsAdmin() {
       {/* القائمة */}
       <section className="card overflow-hidden">
         <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-          {isTeacher ? "مسوداتي" : "كل الأخبار"} {list && <span className="num text-muted">({list.length})</span>}
+          {isTeacher ? "مسوداتي" : "كل الأخبار والمقالات"} {list && <span className="num text-muted">({list.length})</span>}
         </h2>
 
         {!list && <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>}

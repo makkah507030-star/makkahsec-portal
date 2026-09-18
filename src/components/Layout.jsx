@@ -40,7 +40,7 @@ const ADMIN_GROUPS = [
   {
     title: "المحتوى",
     items: [
-      { to: "/news-admin",     label: "الأخبار",   perm: "news",     icon: "news" },
+      { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
@@ -74,7 +74,7 @@ const OTHER_NAV = {
     { to: "/reports",  label: "التقارير", tabKey: "reports" },
     { to: "/notify",   label: "الإشعارات", tabKey: "notify" },
     { to: "/permissions", label: "الاستئذان", extraTabKey: "permissions" },
-    { to: "/news-admin",  label: "الأخبار",   extraTabKey: "news" },
+    { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
   ],
   student:  [{ to: "/", label: "الرئيسية" }],
   guardian: [{ to: "/", label: "الرئيسية" }],

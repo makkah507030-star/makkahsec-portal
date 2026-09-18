@@ -48,9 +48,9 @@ export default function NewsSlider() {
     <section className="border-b border-line bg-white">
       <div className="mx-auto max-w-6xl px-5 py-14">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-xl font-bold text-ink">أخبار المدرسة</h2>
+          <h2 className="text-xl font-bold text-ink">الأخبار والمقالات</h2>
           <Link to="/news" className="text-sm font-medium text-[#6AA786] hover:text-mint-deep">
-            كل الأخبار
+            كل الأخبار والمقالات
           </Link>
         </div>
 

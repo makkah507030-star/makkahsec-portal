@@ -46,7 +46,7 @@ export default function NewsArticle() {
             to="/news"
             className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep"
           >
-            كل الأخبار
+            كل الأخبار والمقالات
           </Link>
         </div>
       </header>

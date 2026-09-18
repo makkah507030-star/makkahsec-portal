@@ -39,7 +39,7 @@ export default function NewsList() {
       </header>
 
       <main className="mx-auto max-w-5xl px-5 py-10">
-        <h1 className="text-2xl font-bold text-ink">أخبار المدرسة</h1>
+        <h1 className="text-2xl font-bold text-ink">الأخبار والمقالات</h1>
 
         {!items && <p className="py-16 text-center text-sm text-muted">جارٍ التحميل…</p>}
 
