@@ -53,22 +53,29 @@ export default function Students() {
     return [...new Set(src.map((r) => r.grade))].sort((a, b) => a - b);
   }, [rows, track]);
 
-  // عدد الطلاب بلا ولي أمر (يُستخدم لإظهار الفلتر عند الحاجة فقط)
-  const noGuardianCount = useMemo(
-    () => (rows ?? []).filter((r) => !guardians.get(r.student_id)).length,
-    [rows, guardians]
-  );
-
-  const filtered = useMemo(() => {
+  // الطلاب ضمن النطاق المعروض حاليًا (الصف/الفصل/المسار/البحث) بلا فلتر
+  // "بلا ولي أمر" — يُستخدم لحساب عدد صحيح مطابق لما سيظهر فعليًا عند
+  // تفعيل الفلتر، بدل عدّ كل المدرسة بينما القائمة تعرض فصلًا واحدًا فقط
+  const scoped = useMemo(() => {
     const term = q.trim();
     return (rows ?? []).filter((r) =>
       (!grade || r.grade === grade) &&
       (!cls || r.class_no === cls) &&
       (!track || r.track === track) &&
-      (!onlyNoGuardian || !guardians.get(r.student_id)) &&
       (!term || r.full_name?.includes(term) || r.national_id?.includes(term))
     );
-  }, [rows, q, grade, cls, track, onlyNoGuardian, guardians]);
+  }, [rows, q, grade, cls, track]);
+
+  // عدد الطلاب بلا ولي أمر ضمن النطاق المعروض (يُستخدم لإظهار الفلتر عند الحاجة فقط)
+  const noGuardianCount = useMemo(
+    () => scoped.filter((r) => !guardians.get(r.student_id)).length,
+    [scoped, guardians]
+  );
+
+  const filtered = useMemo(
+    () => scoped.filter((r) => !onlyNoGuardian || !guardians.get(r.student_id)),
+    [scoped, onlyNoGuardian, guardians]
+  );
 
   // وصف الفلاتر المطبّقة (يظهر في رأس التقرير المطبوع)
   const filterLabel = useMemo(() => {
