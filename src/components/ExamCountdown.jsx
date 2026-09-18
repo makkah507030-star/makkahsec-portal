@@ -41,10 +41,11 @@ export default function ExamCountdown() {
           <p className="text-xs font-medium text-[#6AA786]">
             العد التنازلي لموعد الاختبارات النهائية للفصل الدراسي الأول
           </p>
-          <p className="mt-1 text-sm text-muted">
-            الأحد الموافق{" "}
-            <bdi dir="ltr">{fmtGreg(EXAM_DATE)}م</bdi> ·{" "}
-            <bdi dir="ltr">{fmtHijri(EXAM_DATE)}</bdi>
+          <p className="mt-1 text-sm font-bold text-ink">
+            الأحد الموافق <bdi dir="ltr">{fmtHijri(EXAM_DATE)}</bdi>
+          </p>
+          <p className="text-sm font-bold text-ink">
+            <bdi dir="ltr">{fmtGreg(EXAM_DATE)}م</bdi>
           </p>
         </div>
 
