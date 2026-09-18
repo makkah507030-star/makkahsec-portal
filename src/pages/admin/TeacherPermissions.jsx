@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 
 const CORE_TABS = [
   { key: "attendance", label: "التحضير" },
+  { key: "substitute", label: "الانتظار" },
   { key: "schedule",   label: "جدولي" },
   { key: "records",    label: "السجلات" },
   { key: "reports",    label: "التقارير" },

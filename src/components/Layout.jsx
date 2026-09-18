@@ -33,6 +33,7 @@ const ADMIN_GROUPS = [
       { to: "/student-schedules", label: "جداول الطلاب",          perm: "import", icon: "users" },
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
+      { to: "/substitute-report", label: "تقرير حصص الانتظار", perm: "reports", icon: "chart" },
     ],
   },
   {
@@ -66,6 +67,7 @@ const ADMIN_GROUPS = [
 const OTHER_NAV = {
   teacher: [
     { to: "/",         label: "التحضير",  tabKey: "attendance" },
+    { to: "/substitute", label: "الانتظار", tabKey: "substitute" },
     { to: "/schedule", label: "جدولي",    tabKey: "schedule" },
     { to: "/records",  label: "السجلات",  tabKey: "records" },
     { to: "/reports",  label: "التقارير", tabKey: "reports" },

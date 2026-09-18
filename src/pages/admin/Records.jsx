@@ -99,6 +99,8 @@ function StudentsTab({ year, yearLabel }) {
   const [guardianMap, setGuardianMap] = useState(new Map()); // student_id -> {id, full_name, mobile}
   const [guardians, setGuardians] = useState([]);
   const [q, setQ] = useState("");
+  const [gradeSel, setGradeSel] = useState(0); // 0 | 1 | 2 | 3 | "unassigned"
+  const [clsSel, setClsSel] = useState(0); // 0 | class id
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -151,13 +153,52 @@ function StudentsTab({ year, yearLabel }) {
 
   const classesById = useMemo(() => new Map(classes.map((c) => [c.id, c])), [classes]);
 
+  // نتصفح بالبطاقات (صف ثم فصل) ما لم يكن فيه بحث نصي فعّال — بنفس أسلوب صفحة الطلاب
+  const searching = q.trim().length > 0;
+  const browsingGrades = !searching && !gradeSel;
+  const browsingClasses = !searching && gradeSel && gradeSel !== "unassigned" && !clsSel;
+  const showList = searching || clsSel || gradeSel === "unassigned";
+
+  const gradesList = useMemo(
+    () => [...new Set(classes.map((c) => c.grade))].sort((a, b) => a - b),
+    [classes]
+  );
+  const classesForGrade = useMemo(
+    () => classes.filter((c) => c.grade === gradeSel),
+    [classes, gradeSel]
+  );
+  const countByGrade = useMemo(() => {
+    const m = new Map();
+    (rows ?? []).forEach((r) => {
+      const c = classesById.get(enrollMap.get(r.id));
+      if (c) m.set(c.grade, (m.get(c.grade) ?? 0) + 1);
+    });
+    return m;
+  }, [rows, enrollMap, classesById]);
+  const countByClass = useMemo(() => {
+    const m = new Map();
+    (rows ?? []).forEach((r) => {
+      const cid = enrollMap.get(r.id);
+      if (cid) m.set(cid, (m.get(cid) ?? 0) + 1);
+    });
+    return m;
+  }, [rows, enrollMap]);
+  const unassignedCount = useMemo(
+    () => (rows ?? []).filter((r) => !enrollMap.has(r.id)).length,
+    [rows, enrollMap]
+  );
+
   const filtered = useMemo(() => {
     const term = q.trim();
-    if (!term) return rows ?? [];
-    return (rows ?? []).filter(
-      (r) => r.full_name?.includes(term) || r.national_id?.includes(term)
-    );
-  }, [rows, q]);
+    if (term) {
+      return (rows ?? []).filter(
+        (r) => r.full_name?.includes(term) || r.national_id?.includes(term)
+      );
+    }
+    if (gradeSel === "unassigned") return (rows ?? []).filter((r) => !enrollMap.has(r.id));
+    if (clsSel) return (rows ?? []).filter((r) => enrollMap.get(r.id) === clsSel);
+    return [];
+  }, [rows, q, gradeSel, clsSel, enrollMap]);
 
   const unlinkGuardian = async (studentId) => {
     if (!confirm("إزالة ربط ولي الأمر عن هذا الطالب؟")) return;
@@ -286,6 +327,93 @@ function StudentsTab({ year, yearLabel }) {
         />
       )}
 
+      {/* مسار التصفح: كل الطلاب ‹ الصف ‹ الفصل */}
+      {!browsingGrades && (
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm text-muted">
+          <button
+            onClick={() => { setGradeSel(0); setClsSel(0); }}
+            className="font-medium text-mint-deep hover:underline"
+          >
+            كل الطلاب
+          </button>
+          {gradeSel === "unassigned" && (
+            <>
+              <span>‹</span>
+              <span className="font-semibold text-ink">بلا فصل معيّن</span>
+            </>
+          )}
+          {gradeSel && gradeSel !== "unassigned" && (
+            <>
+              <span>‹</span>
+              <button
+                onClick={() => setClsSel(0)}
+                className={
+                  browsingClasses ? "font-semibold text-ink" : "font-medium text-mint-deep hover:underline"
+                }
+              >
+                {GRADE_NAMES[gradeSel]}
+              </button>
+            </>
+          )}
+          {clsSel && (
+            <>
+              <span>‹</span>
+              <span className="num font-semibold text-ink">
+                فصل {classesById.get(clsSel)?.class_no}
+              </span>
+            </>
+          )}
+          {searching && <span className="text-faint">— نتائج بحث في كل الطلاب</span>}
+        </nav>
+      )}
+
+      {/* الخطوة 1: اختيار الصف */}
+      {browsingGrades && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {gradesList.map((g) => (
+            <button
+              key={g}
+              onClick={() => { setGradeSel(g); setClsSel(0); }}
+              className="card flex items-center justify-between px-4 py-4 text-right hover:bg-canvas"
+            >
+              <span className="font-semibold text-ink">{GRADE_NAMES[g]}</span>
+              <span className="num rounded-pill bg-mint-tint px-2.5 py-1 text-xs font-bold text-mint-deep">
+                {countByGrade.get(g) ?? 0}
+              </span>
+            </button>
+          ))}
+          {unassignedCount > 0 && (
+            <button
+              onClick={() => { setGradeSel("unassigned"); setClsSel(0); }}
+              className="card flex items-center justify-between border-late/30 bg-late/5 px-4 py-4 text-right hover:bg-late/10"
+            >
+              <span className="font-semibold text-late">بلا فصل معيّن</span>
+              <span className="num rounded-pill bg-late/15 px-2.5 py-1 text-xs font-bold text-late">
+                {unassignedCount}
+              </span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* الخطوة 2: اختيار الفصل */}
+      {browsingClasses && (
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+          {classesForGrade.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setClsSel(c.id)}
+              className="card flex flex-col items-center gap-1 px-3 py-4 hover:bg-canvas"
+            >
+              <span className="num text-lg font-bold text-ink">{c.class_no}</span>
+              <span className="num text-xs text-muted">{countByClass.get(c.id) ?? 0} طالب</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showList && (
+      <>
       <p className="text-sm text-muted">
         <span className="num font-semibold text-ink">{filtered.length}</span> من{" "}
         <span className="num">{rows.length}</span>
@@ -354,6 +482,8 @@ function StudentsTab({ year, yearLabel }) {
           <p className="px-4 py-8 text-center text-sm text-muted">لا نتائج.</p>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -496,9 +626,10 @@ function TeachersTab() {
     load();
   }, []);
 
+  const searching = q.trim().length > 0;
   const filtered = useMemo(() => {
     const term = q.trim();
-    if (!term) return rows ?? [];
+    if (!term) return [];
     return (rows ?? []).filter(
       (r) => r.full_name?.includes(term) || r.national_id?.includes(term)
     );
@@ -573,54 +704,61 @@ function TeachersTab() {
 
       {adding && <TeacherForm busy={busy} onCancel={() => setAdding(false)} onSave={(f) => save(f)} />}
 
-      <p className="text-sm text-muted">
-        <span className="num font-semibold text-ink">{filtered.length}</span> من{" "}
-        <span className="num">{rows.length}</span>
-      </p>
+      {!searching ? (
+        <p className="card px-4 py-8 text-center text-sm text-muted">
+          اكتب اسمًا أو رقم هوية في مربع البحث لعرض المعلمين.
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-muted">
+            <span className="num font-semibold text-ink">{filtered.length}</span> نتيجة
+          </p>
 
-      <div className="card divide-y divide-line overflow-hidden">
-        {filtered.slice(0, 200).map((r) => {
-          const editing = editingId === r.id;
-          return (
-            <div key={r.id} className="px-4 py-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{r.full_name}</p>
-                  <p className="num mt-0.5 text-right text-xs text-faint">{r.national_id}</p>
-                  <p className="mt-1 text-xs text-muted">
-                    {r.mobile ? <span className="num">{r.mobile}</span> : "بلا جوال"}
-                    {r.specialization ? ` · ${r.specialization}` : ""}
-                  </p>
+          <div className="card divide-y divide-line overflow-hidden">
+            {filtered.slice(0, 200).map((r) => {
+              const editing = editingId === r.id;
+              return (
+                <div key={r.id} className="px-4 py-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{r.full_name}</p>
+                      <p className="num mt-0.5 text-right text-xs text-faint">{r.national_id}</p>
+                      <p className="mt-1 text-xs text-muted">
+                        {r.mobile ? <span className="num">{r.mobile}</span> : "بلا جوال"}
+                        {r.specialization ? ` · ${r.specialization}` : ""}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditingId(editing ? null : r.id);
+                        setAdding(false);
+                        setErr("");
+                        setMsg("");
+                      }}
+                      className="shrink-0 text-xs font-medium text-mint-deep hover:underline"
+                    >
+                      {editing ? "إغلاق" : "تعديل"}
+                    </button>
+                  </div>
+                  {editing && (
+                    <div className="mt-3">
+                      <TeacherForm
+                        existing={r}
+                        busy={busy}
+                        onCancel={() => setEditingId(null)}
+                        onSave={(f) => save(f, r)}
+                      />
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => {
-                    setEditingId(editing ? null : r.id);
-                    setAdding(false);
-                    setErr("");
-                    setMsg("");
-                  }}
-                  className="shrink-0 text-xs font-medium text-mint-deep hover:underline"
-                >
-                  {editing ? "إغلاق" : "تعديل"}
-                </button>
-              </div>
-              {editing && (
-                <div className="mt-3">
-                  <TeacherForm
-                    existing={r}
-                    busy={busy}
-                    onCancel={() => setEditingId(null)}
-                    onSave={(f) => save(f, r)}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-muted">لا نتائج.</p>
-        )}
-      </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-muted">لا نتائج.</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -693,9 +831,10 @@ function GuardiansTab() {
     load();
   }, []);
 
+  const searching = q.trim().length > 0;
   const filtered = useMemo(() => {
     const term = q.trim();
-    if (!term) return rows ?? [];
+    if (!term) return [];
     return (rows ?? []).filter(
       (r) => r.full_name?.includes(term) || r.mobile?.includes(term) || r.national_id?.includes(term)
     );
@@ -773,54 +912,61 @@ function GuardiansTab() {
 
       {adding && <GuardianForm busy={busy} onCancel={() => setAdding(false)} onSave={(f) => save(f)} />}
 
-      <p className="text-sm text-muted">
-        <span className="num font-semibold text-ink">{filtered.length}</span> من{" "}
-        <span className="num">{rows.length}</span>
-      </p>
+      {!searching ? (
+        <p className="card px-4 py-8 text-center text-sm text-muted">
+          اكتب اسمًا أو جوالًا أو رقم هوية في مربع البحث لعرض أولياء الأمور.
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-muted">
+            <span className="num font-semibold text-ink">{filtered.length}</span> نتيجة
+          </p>
 
-      <div className="card divide-y divide-line overflow-hidden">
-        {filtered.slice(0, 200).map((r) => {
-          const editing = editingId === r.id;
-          return (
-            <div key={r.id} className="px-4 py-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{r.full_name || "بلا اسم"}</p>
-                  <p className="num mt-0.5 text-right text-xs text-faint">{r.mobile}</p>
-                  <p className="mt-1 text-xs text-muted">
-                    {r.national_id ? <span className="num">{r.national_id}</span> : "بلا رقم هوية"} ·{" "}
-                    <span className="num">{linkCount.get(r.id) ?? 0}</span> طالب مرتبط
-                  </p>
+          <div className="card divide-y divide-line overflow-hidden">
+            {filtered.slice(0, 200).map((r) => {
+              const editing = editingId === r.id;
+              return (
+                <div key={r.id} className="px-4 py-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{r.full_name || "بلا اسم"}</p>
+                      <p className="num mt-0.5 text-right text-xs text-faint">{r.mobile}</p>
+                      <p className="mt-1 text-xs text-muted">
+                        {r.national_id ? <span className="num">{r.national_id}</span> : "بلا رقم هوية"} ·{" "}
+                        <span className="num">{linkCount.get(r.id) ?? 0}</span> طالب مرتبط
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditingId(editing ? null : r.id);
+                        setAdding(false);
+                        setErr("");
+                        setMsg("");
+                      }}
+                      className="shrink-0 text-xs font-medium text-mint-deep hover:underline"
+                    >
+                      {editing ? "إغلاق" : "تعديل"}
+                    </button>
+                  </div>
+                  {editing && (
+                    <div className="mt-3">
+                      <GuardianForm
+                        existing={r}
+                        busy={busy}
+                        onCancel={() => setEditingId(null)}
+                        onSave={(f) => save(f, r)}
+                      />
+                    </div>
+                  )}
                 </div>
-                <button
-                  onClick={() => {
-                    setEditingId(editing ? null : r.id);
-                    setAdding(false);
-                    setErr("");
-                    setMsg("");
-                  }}
-                  className="shrink-0 text-xs font-medium text-mint-deep hover:underline"
-                >
-                  {editing ? "إغلاق" : "تعديل"}
-                </button>
-              </div>
-              {editing && (
-                <div className="mt-3">
-                  <GuardianForm
-                    existing={r}
-                    busy={busy}
-                    onCancel={() => setEditingId(null)}
-                    onSave={(f) => save(f, r)}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-        {filtered.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-muted">لا نتائج.</p>
-        )}
-      </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-muted">لا نتائج.</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

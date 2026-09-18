@@ -13,6 +13,7 @@ const Records = lazy(() => import("./pages/admin/Records.jsx"));
 import Students from "./pages/admin/Students.jsx";
 import Accounts from "./pages/admin/Accounts.jsx";
 import Attendance from "./pages/teacher/Attendance.jsx";
+import SubstitutePeriod from "./pages/teacher/SubstitutePeriod.jsx";
 import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
 import TeacherPermissions from "./pages/admin/TeacherPermissions.jsx";
 import TeacherNotify from "./pages/teacher/TeacherNotify.jsx";
@@ -30,6 +31,7 @@ import NewsAdmin from "./pages/admin/NewsAdmin.jsx";
 import NotificationsAdmin from "./pages/admin/NotificationsAdmin.jsx";
 import AttendanceOverview from "./pages/admin/AttendanceOverview.jsx";
 import PeriodAttendance from "./pages/admin/PeriodAttendance.jsx";
+import SubstituteReport from "./pages/admin/SubstituteReport.jsx";
 import GeneralScheduleMaster from "./pages/admin/GeneralScheduleMaster.jsx";
 import TeacherSchedules from "./pages/admin/TeacherSchedules.jsx";
 import StudentSchedules from "./pages/admin/StudentSchedules.jsx";
@@ -161,6 +163,7 @@ export default function App() {
             {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
             {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
+            {can("reports") && <Route path="/substitute-report" element={<SubstituteReport />} />}
             {can("import") && (
               <>
                 <Route path="/general-schedule" element={<GeneralScheduleMaster />} />
@@ -178,6 +181,9 @@ export default function App() {
           <>
             {!hiddenTabs.has("attendance") && (
               <Route path="/attendance" element={<Attendance />} />
+            )}
+            {!hiddenTabs.has("substitute") && (
+              <Route path="/substitute" element={<SubstitutePeriod />} />
             )}
             {!hiddenTabs.has("records") && (
               <Route path="/records" element={<TeacherRecords />} />
