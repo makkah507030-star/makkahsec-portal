@@ -139,7 +139,7 @@ export default function Accounts() {
                 {(result.failures ?? []).map((f, i) => (
                   <div key={i} className="border-b border-line px-3 py-2 last:border-0">
                     <p className="text-sm">{f.name}</p>
-                    <p className="num text-xs text-muted">{f.login} — {f.reason}</p>
+                    <p className="num text-right text-xs text-muted">{f.login} — {f.reason}</p>
                   </div>
                 ))}
               </div>

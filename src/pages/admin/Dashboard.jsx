@@ -186,7 +186,7 @@ export default function Dashboard() {
                  className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-0">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{v.label ?? v.serial_no}</p>
-                <p className="num truncate text-xs text-faint">{v.serial_no}</p>
+                <p className="num truncate text-right text-xs text-faint">{v.serial_no}</p>
               </div>
               <span className={`chip shrink-0 ${v.last_seen ? "bg-present/10 text-present" : "bg-warning-light text-warning"}`}>
                 {v.last_seen ? fmtDateTime(v.last_seen) : "لم يتصل بعد"}

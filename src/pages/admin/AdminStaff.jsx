@@ -211,7 +211,7 @@ function MemberRow({ member, onSave }) {
           <p className="truncate text-sm font-medium text-ink">
             {member.full_name ?? member.username}
           </p>
-          <p className="num text-xs text-muted">{member.username}</p>
+          <p className="num text-right text-xs text-muted">{member.username}</p>
         </div>
 
         {!editing && (

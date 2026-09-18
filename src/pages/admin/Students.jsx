@@ -275,7 +275,7 @@ export default function Students() {
                   <div key={r.student_id} className="flex items-start justify-between gap-3 px-4 py-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{r.full_name}</p>
-                      <p className="num mt-0.5 text-xs text-faint">{r.national_id}</p>
+                      <p className="num mt-0.5 text-right text-xs text-faint">{r.national_id}</p>
                       {g ? (
                         <p className="mt-1 truncate text-xs text-muted">
                           {g.full_name} · <span className="num">{g.mobile}</span>
