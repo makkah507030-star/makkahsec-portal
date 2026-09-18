@@ -43,9 +43,8 @@ export default function ExamCountdown() {
           </p>
           <p className="mt-1 text-sm text-muted">
             الأحد الموافق{" "}
-            <span className="num">
-              {fmtGreg(EXAM_DATE)}م · {fmtHijri(EXAM_DATE)}
-            </span>
+            <bdi dir="ltr">{fmtGreg(EXAM_DATE)}م</bdi> ·{" "}
+            <bdi dir="ltr">{fmtHijri(EXAM_DATE)}</bdi>
           </p>
         </div>
 
