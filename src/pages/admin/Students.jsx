@@ -119,9 +119,11 @@ export default function Students() {
   const browsingGrades = !searching && !grade;
   const browsingClasses = !searching && grade > 0 && !cls;
 
+  // الصف والفصل والمسار تظهر في عنوان التقرير (filterLabel) وليست مكررة في
+  // كل صف؛ استُبدلت بعمود "ملاحظات" فارغ للاستخدام اليدوي
   const excelHeaders = includeGuardianInReport
-    ? ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "المسار", "ولي الأمر", "جوال ولي الأمر"]
-    : ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "المسار"];
+    ? ["م", "رقم الهوية", "اسم الطالب", "ولي الأمر", "جوال ولي الأمر", "ملاحظات"]
+    : ["م", "رقم الهوية", "اسم الطالب", "ملاحظات"];
 
   const excelRows = () =>
     filtered.map((r, i) => {
@@ -130,11 +132,9 @@ export default function Students() {
         i + 1,
         r.national_id ?? "",
         r.full_name ?? "",
-        GRADE_NAMES[r.grade] ?? r.grade,
-        r.class_no ?? "",
-        trackName(r.track),
       ];
-      return includeGuardianInReport ? [...base, g?.full_name ?? "", g?.mobile ?? ""] : base;
+      const withGuardian = includeGuardianInReport ? [...base, g?.full_name ?? "", g?.mobile ?? ""] : base;
+      return [...withGuardian, ""];
     });
 
   const handleExcel = () =>
@@ -159,18 +159,17 @@ export default function Students() {
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       secondSignature: { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
       headers: includeGuardianInReport
-        ? ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "ولي الأمر", "الجوال"]
-        : ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل"],
+        ? ["م", "رقم الهوية", "اسم الطالب", "ولي الأمر", "الجوال", "ملاحظات"]
+        : ["م", "رقم الهوية", "اسم الطالب", "ملاحظات"],
       rows: filtered.map((r, i) => {
         const g = guardians.get(r.student_id);
         const base = [
           i + 1,
           r.national_id ?? "",
           r.full_name ?? "",
-          GRADE_NAMES[r.grade] ?? r.grade,
-          r.class_no ?? "",
         ];
-        return includeGuardianInReport ? [...base, g?.full_name ?? "", g?.mobile ?? ""] : base;
+        const withGuardian = includeGuardianInReport ? [...base, g?.full_name ?? "", g?.mobile ?? ""] : base;
+        return [...withGuardian, ""];
       }),
     });
   };
