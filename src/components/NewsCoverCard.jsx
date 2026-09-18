@@ -44,8 +44,8 @@ export default function NewsCoverCard({ role, className = "", compact = false })
 
   return (
     <div
-      className={`relative flex items-center justify-center overflow-hidden ${
-        compact ? "gap-3 px-4" : "px-3"
+      className={`relative flex items-center overflow-hidden ${
+        compact ? "justify-between gap-3 px-5" : "justify-center px-3"
       } ${className}`}
       style={{ background: coverGradient(hue) }}
     >
