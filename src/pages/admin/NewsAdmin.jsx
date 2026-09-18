@@ -12,10 +12,14 @@ const empty = {
   body: "",
   cover_url: "",
   cover_theme: "",
+  body_images: ["", "", "", ""],
   video_url: "",
   is_published: false,
   is_featured: true,
 };
+
+// الحد الأقصى لحجم كل صورة داخل المقال — 2 ميجابايت
+const MAX_BODY_IMAGE_BYTES = 2 * 1024 * 1024;
 
 // توليد slug عربي-صديق
 const makeSlug = (t) =>
@@ -87,6 +91,44 @@ export default function NewsAdmin() {
     }
   };
 
+  // رفع صورة في أحد حقول صور المقال (حتى 4 صور)، برفض أي ملف يتجاوز الحجم المسموح
+  const handleBodyImageUpload = async (idx, file) => {
+    if (!file) return;
+    if (file.size > MAX_BODY_IMAGE_BYTES) {
+      setMsg({ ok: false, text: `حجم الصورة كبير جدًا — الحد الأقصى ${MAX_BODY_IMAGE_BYTES / 1024 / 1024} ميجابايت.` });
+      return;
+    }
+    setUploading(true);
+    setMsg(null);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("news").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("news").getPublicUrl(path);
+      setForm((f) => {
+        const arr = [...f.body_images];
+        arr[idx] = data.publicUrl;
+        return { ...f, body_images: arr };
+      });
+    } catch (e) {
+      setMsg({ ok: false, text: "تعذّر رفع الصورة: " + (e.message ?? e) });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeBodyImage = (idx) => {
+    setForm((f) => {
+      const arr = [...f.body_images];
+      arr[idx] = "";
+      return { ...f, body_images: arr };
+    });
+  };
+
   const save = async () => {
     if (form.title.trim().length < 3) {
       setMsg({ ok: false, text: "العنوان مطلوب." });
@@ -107,6 +149,7 @@ export default function NewsAdmin() {
       // الإدارية تُخزَّن لها البطاقة فقط، والمعلم يبقى برفع الصورة كالسابق
       cover_url: form.cover_url || null,
       cover_theme: isTeacher ? null : (form.cover_theme || null),
+      body_images: form.body_images.filter(Boolean),
       video_url: form.video_url.trim() || null,
       is_published: isPublished,
       is_featured: form.is_featured,
@@ -136,9 +179,11 @@ export default function NewsAdmin() {
   const edit = async (id) => {
     const { data } = await supabase.from("news").select("*").eq("id", id).maybeSingle();
     if (data) {
+      const imgs = Array.isArray(data.body_images) ? data.body_images : [];
       setForm({ ...empty, ...data, slug: data.slug ?? "", excerpt: data.excerpt ?? "",
                 body: data.body ?? "", cover_url: data.cover_url ?? "",
                 cover_theme: data.cover_theme ?? "",
+                body_images: [imgs[0] ?? "", imgs[1] ?? "", imgs[2] ?? "", imgs[3] ?? ""],
                 video_url: data.video_url ?? "" });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -198,6 +243,34 @@ export default function NewsAdmin() {
           <textarea className="field mt-1" rows={8} value={form.body}
                     onChange={(e) => set("body", e.target.value)}
                     placeholder="اترك سطرًا فارغًا بين الفقرات." />
+        </div>
+
+        <div>
+          <label className="text-xs text-muted">صور المقال (حتى 4 صور)</label>
+          <p className="mt-1 text-xs text-faint">
+            الحد الأقصى لحجم كل صورة: {MAX_BODY_IMAGE_BYTES / 1024 / 1024} ميجابايت — أي ملف أكبر من ذلك
+            يُرفض تلقائيًا ولا يُرفع.
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {form.body_images.map((url, i) => (
+              <div key={i} className="rounded-sm2 border border-line p-2">
+                <p className="text-[11px] text-muted">صورة {i + 1}</p>
+                {url ? (
+                  <div className="mt-1.5 space-y-1.5">
+                    <img src={url} alt="" className="h-20 w-full rounded-sm2 border border-line object-cover" />
+                    <button onClick={() => removeBodyImage(i)}
+                            className="text-[11px] font-medium text-absent hover:underline">
+                      إزالة
+                    </button>
+                  </div>
+                ) : (
+                  <input type="file" accept="image/*" className="mt-1.5 block w-full text-[11px]"
+                         onChange={(e) => handleBodyImageUpload(i, e.target.files?.[0])} />
+                )}
+              </div>
+            ))}
+          </div>
+          {uploading && <p className="mt-1 text-xs text-muted">جارٍ الرفع…</p>}
         </div>
 
         {isTeacher ? (

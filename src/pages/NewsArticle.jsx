@@ -26,7 +26,7 @@ export default function NewsArticle() {
       const isUuid = /^[0-9a-f-]{36}$/i.test(slug);
       const { data } = await supabase
         .from("news")
-        .select("title, excerpt, body, cover_url, cover_theme, video_url, published_at")
+        .select("title, excerpt, body, cover_url, cover_theme, body_images, video_url, published_at")
         .eq("is_published", true)
         .eq(isUuid ? "id" : "slug", slug)
         .maybeSingle();
@@ -116,6 +116,15 @@ export default function NewsArticle() {
               <div className="mt-7 space-y-4 text-[15px] leading-[1.9] text-ink">
                 {item.body.split(/\n{2,}/).map((p, i) => (
                   <p key={i}>{p}</p>
+                ))}
+              </div>
+            )}
+
+            {Array.isArray(item.body_images) && item.body_images.length > 0 && (
+              <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {item.body_images.map((url, i) => (
+                  <img key={i} src={url} alt=""
+                       className="w-full rounded-card border border-line object-cover" />
                 ))}
               </div>
             )}
