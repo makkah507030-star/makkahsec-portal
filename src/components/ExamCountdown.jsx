@@ -5,6 +5,12 @@ import { fmtGreg, fmtHijri } from "../lib/dates";
 // الأحد 1448/07/25هـ = الأحد 2027/01/03م (تم التحقق من التطابق)
 const EXAM_DATE = new Date("2027-01-03T00:00:00+03:00");
 
+// LRM (U+200E) قبل الحرف العربي اللاحق يمنع قفزه إلى بداية الرقم
+// عند وضعه داخل كتلة نص لاتينية بمحاذاة عربية (مشكلة اتجاه معروفة)
+const LRM = "‎";
+const HIJRI_LABEL = `${fmtHijri(EXAM_DATE, false)}${LRM}هـ`;
+const GREG_LABEL = `${fmtGreg(EXAM_DATE)}${LRM}م`;
+
 function diffParts(target) {
   const ms = target.getTime() - Date.now();
   if (ms <= 0) return null;
@@ -38,14 +44,14 @@ export default function ExamCountdown() {
     <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-[#6AA786]">
+          <p className="text-sm font-bold text-[#6AA786]">
             العد التنازلي لموعد الاختبارات النهائية للفصل الدراسي الأول
           </p>
           <p className="mt-1 text-sm font-bold text-ink">
-            الأحد الموافق <bdi dir="ltr">{fmtHijri(EXAM_DATE)}</bdi>
+            الأحد الموافق <bdi dir="ltr">{HIJRI_LABEL}</bdi>
           </p>
           <p className="text-sm font-bold text-ink">
-            <bdi dir="ltr">{fmtGreg(EXAM_DATE)}م</bdi>
+            <bdi dir="ltr">{GREG_LABEL}</bdi>
           </p>
         </div>
 
