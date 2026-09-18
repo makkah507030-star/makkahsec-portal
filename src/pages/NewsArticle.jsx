@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { fmtBoth } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import NewsCoverCard from "../components/NewsCoverCard.jsx";
+import ArticleImageSlider from "../components/ArticleImageSlider.jsx";
 
 
 
@@ -120,14 +121,7 @@ export default function NewsArticle() {
               </div>
             )}
 
-            {Array.isArray(item.body_images) && item.body_images.length > 0 && (
-              <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                {item.body_images.map((url, i) => (
-                  <img key={i} src={url} alt=""
-                       className="w-full rounded-card border border-line object-cover" />
-                ))}
-              </div>
-            )}
+            <ArticleImageSlider images={item.body_images} />
           </article>
         )}
       </main>
