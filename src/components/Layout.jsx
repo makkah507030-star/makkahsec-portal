@@ -163,10 +163,10 @@ export default function Layout({ children }) {
     </div>
   );
 
-  // معاينة سريعة للصفحة الرئيسية العامة في تبويب جديد — للوصول السريع بعد أي تعديل
+  // معاينة سريعة للصفحة الرئيسية العامة (الموقع المنشور) في تبويب جديد — للوصول السريع بعد أي تعديل
   const PreviewSite = () => (
     <a
-      href="/"
+      href="https://makkahsec.com/"
       target="_blank"
       rel="noopener noreferrer"
       title="الصفحة الرئيسية للبوابة"
