@@ -97,7 +97,6 @@ function StudentsTab({ year, yearLabel }) {
   const [classes, setClasses] = useState([]);
   const [enrollMap, setEnrollMap] = useState(new Map()); // student_id -> class_id
   const [guardianMap, setGuardianMap] = useState(new Map()); // student_id -> {id, full_name, mobile}
-  const [guardians, setGuardians] = useState([]);
   const [q, setQ] = useState("");
   const [gradeSel, setGradeSel] = useState(0); // 0 | 1 | 2 | 3 | "unassigned"
   const [clsSel, setClsSel] = useState(0); // 0 | class id
@@ -108,15 +107,11 @@ function StudentsTab({ year, yearLabel }) {
   const [msg, setMsg] = useState("");
 
   const load = async () => {
-    const [{ data: s }, { data: g }] = await Promise.all([
-      supabase
-        .from("students")
-        .select("id, national_id, full_name, identity_type, user_id")
-        .order("full_name"),
-      supabase.from("guardians").select("id, full_name, mobile").order("full_name"),
-    ]);
+    const { data: s } = await supabase
+      .from("students")
+      .select("id, national_id, full_name, identity_type, user_id")
+      .order("full_name");
     setRows(s ?? []);
-    setGuardians(g ?? []);
 
     if (year) {
       const { data: cls } = await supabase
@@ -249,7 +244,7 @@ function StudentsTab({ year, yearLabel }) {
         if (error) throw error;
       }
 
-      let guardianId = form.guardianId || null;
+      let guardianId = null;
       if (form.newGuardianName || form.newGuardianMobile) {
         const mobile = cleanMobile(form.newGuardianMobile);
         if (!mobile) throw new Error("رقم جوال ولي الأمر الجديد غير صالح");
@@ -320,7 +315,6 @@ function StudentsTab({ year, yearLabel }) {
       {adding && (
         <StudentForm
           classes={classes}
-          guardians={guardians}
           busy={busy}
           onCancel={() => setAdding(false)}
           onSave={(form) => saveStudent(form)}
@@ -465,7 +459,6 @@ function StudentsTab({ year, yearLabel }) {
                 <div className="mt-3">
                   <StudentForm
                     classes={classes}
-                    guardians={guardians}
                     existing={r}
                     initialClassId={classId ?? ""}
                     initialGuardian={g}
@@ -488,7 +481,7 @@ function StudentsTab({ year, yearLabel }) {
   );
 }
 
-function StudentForm({ classes, guardians, existing, initialClassId, initialGuardian, busy, onSave, onCancel }) {
+function StudentForm({ classes, existing, initialClassId, initialGuardian, busy, onSave, onCancel }) {
   const [fullName, setFullName] = useState(existing?.full_name ?? "");
   const [nationalId, setNationalId] = useState(existing?.national_id ?? "");
   const [grade, setGrade] = useState(() => {
@@ -496,7 +489,6 @@ function StudentForm({ classes, guardians, existing, initialClassId, initialGuar
     return c?.grade ?? "";
   });
   const [classId, setClassId] = useState(initialClassId ?? "");
-  const [guardianId, setGuardianId] = useState(initialGuardian?.id ?? "");
   const [newGuardianName, setNewGuardianName] = useState("");
   const [newGuardianMobile, setNewGuardianMobile] = useState("");
 
@@ -508,7 +500,6 @@ function StudentForm({ classes, guardians, existing, initialClassId, initialGuar
       full_name: fullName,
       national_id: nationalId,
       classId: classId || null,
-      guardianId: guardianId || null,
       newGuardianName,
       newGuardianMobile,
     });
@@ -559,34 +550,35 @@ function StudentForm({ classes, guardians, existing, initialClassId, initialGuar
 
       <div className="border-t border-[#CCF2DB] pt-3">
         <p className="text-xs font-semibold text-mint-deep">ولي الأمر</p>
-        <div className="mt-2 grid gap-3 sm:grid-cols-2">
-          <Field label="اختيار ولي أمر مسجّل مسبقًا">
-            <select className="field" value={guardianId} onChange={(e) => setGuardianId(e.target.value)}>
-              <option value="">— بدون تغيير —</option>
-              {guardians.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.full_name || "بلا اسم"} — {g.mobile}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="أو أضِف وليًا جديدًا: الاسم">
-              <input className="field" value={newGuardianName} onChange={(e) => setNewGuardianName(e.target.value)} />
-            </Field>
-            <Field label="جوال ولي الأمر الجديد">
-              <input
-                className="field num"
-                value={newGuardianMobile}
-                onChange={(e) => setNewGuardianMobile(e.target.value)}
-              />
-            </Field>
+        {initialGuardian ? (
+          <div className="mt-2 rounded-sm2 border border-line bg-paper px-3 py-2.5">
+            <p className="text-sm text-ink">
+              {initialGuardian.full_name || "بلا اسم"} · <span className="num">{initialGuardian.mobile}</span>
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted">
+              مربوط بهذا الطالب — لتغييره، أزل الربط الحالي أولًا من زر «إزالة الربط» في
+              القائمة، ثم عدّل الطالب من جديد لإسناد ولي أمر آخر.
+            </p>
           </div>
-        </div>
-        <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-          تعبئة حقلَي «ولي الأمر الجديد» تُنشئ وليًا جديدًا وتربطه بالطالب، وتتجاوز الاختيار من
-          القائمة إن كانا معًا.
-        </p>
+        ) : (
+          <>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              <Field label="اسم ولي الأمر الجديد">
+                <input className="field" value={newGuardianName} onChange={(e) => setNewGuardianName(e.target.value)} />
+              </Field>
+              <Field label="جوال ولي الأمر الجديد">
+                <input
+                  className="field num"
+                  value={newGuardianMobile}
+                  onChange={(e) => setNewGuardianMobile(e.target.value)}
+                />
+              </Field>
+            </div>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+              تعبئة الحقلين تُنشئ وليًا جديدًا وتربطه بالطالب مباشرة.
+            </p>
+          </>
+        )}
       </div>
 
       <div className="flex gap-2">
