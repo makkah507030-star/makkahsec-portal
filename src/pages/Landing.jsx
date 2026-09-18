@@ -196,6 +196,14 @@ export default function Landing() {
           <p>مدرسة مكة الثانوية — بوابة إلكترونية داخلية.</p>
           <p>مكة المكرمة — المملكة العربية السعودية</p>
         </div>
+        <div className="border-t border-line px-5 py-3 text-center text-[11px] text-faint">
+          جميع الحقوق محفوظة{" "}
+          <bdi dir="ltr" className="num">
+            © 2026
+          </bdi>{" "}
+          لمدرسة مكة الثانوية | تم التطوير بواسطة محمد بن حسن الحازمي / محضر
+          معلم حاسب آلي
+        </div>
       </footer>
     </div>
   );
