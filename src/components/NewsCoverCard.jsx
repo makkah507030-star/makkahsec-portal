@@ -44,8 +44,8 @@ export default function NewsCoverCard({ role, className = "", compact = false })
 
   return (
     <div
-      className={`relative flex items-center overflow-hidden ${
-        compact ? "justify-between gap-3 px-4" : "justify-center px-3"
+      className={`relative flex items-center justify-center overflow-hidden ${
+        compact ? "gap-3 px-4" : "px-3"
       } ${className}`}
       style={{ background: coverGradient(hue) }}
     >
@@ -53,19 +53,19 @@ export default function NewsCoverCard({ role, className = "", compact = false })
       <div className="absolute -bottom-8 -right-4 h-24 w-24 rounded-full bg-white/10" />
 
       <div className={`relative flex flex-col ${compact ? "items-end text-right" : "items-center text-center"}`}>
-        <span className={`font-bold leading-tight text-white drop-shadow-sm ${compact ? "text-[14px]" : "text-sm"}`}>
+        <span className={`font-bold leading-tight text-white drop-shadow-sm ${compact ? "text-[15px]" : "text-sm"}`}>
           {label}
         </span>
         {person && (
-          <span className="mt-0.5 text-[11px] font-medium leading-tight text-white/80">
+          <span className="mt-0.5 text-[12px] font-medium leading-tight text-white/80">
             {person}
           </span>
         )}
       </div>
 
       {compact && (
-        <span className="relative grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white/15">
-          <RoleIcon role={role} className="h-[16px] w-[16px] text-white" />
+        <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/20 ring-1 ring-white/25">
+          <RoleIcon role={role} className="h-[22px] w-[22px] text-white" />
         </span>
       )}
     </div>

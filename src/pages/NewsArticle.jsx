@@ -88,7 +88,7 @@ export default function NewsArticle() {
               <NewsCoverCard
                 role={item.cover_theme}
                 compact
-                className="mt-4 h-16 w-full rounded-card border border-line sm:h-[4.5rem]"
+                className="mt-4 h-20 w-full rounded-card border border-line sm:h-24"
               />
             ) : item.cover_url && (
               <img
