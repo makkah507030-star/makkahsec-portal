@@ -28,15 +28,13 @@ export default function Dashboard() {
       const yearLabel = m.active_year_label ?? year;
       const term = Number(m.active_term ?? 1);
 
-      const [students, classes, teachers, guardians, devices, unmatched,
-             noDevice, lastImport, todaySched, todayMarked] = await Promise.all([
+      const [students, classes, teachers, guardians, unmatched,
+             lastImport, todaySched, todayMarked] = await Promise.all([
         supabase.from("students").select("id", { count: "exact", head: true }).eq("is_active", true),
         supabase.from("classes").select("id", { count: "exact", head: true }).eq("academic_year", year),
         supabase.from("teachers").select("id", { count: "exact", head: true }).eq("is_active", true),
         supabase.from("guardians").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("devices").select("serial_no, label, last_seen"),
         supabase.from("unmatched_logs").select("id", { count: "exact", head: true }).eq("resolved", false),
-        supabase.from("v_students_without_device").select("id", { count: "exact", head: true }),
         supabase.from("import_logs").select("import_type, status, started_at")
           .order("started_at", { ascending: false }).limit(1),
         dow
@@ -82,9 +80,7 @@ export default function Dashboard() {
         classes: classes.count ?? 0,
         teachers: teachers.count ?? 0,
         guardians: guardians.count ?? 0,
-        devices: devices.data ?? [],
         unmatched: unmatched.count ?? 0,
-        noDevice: noDevice.count ?? 0,
         lastImport: lastImport.data?.[0] ?? null,
         schedCount: sched.length,
         unmarked,
@@ -168,34 +164,6 @@ export default function Dashboard() {
 
 
 
-      {/* البصمة */}
-      <section className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold text-ink">أجهزة البصمة</h2>
-          {d.noDevice > 0 && (
-            <span className="chip bg-late/10 text-late">
-              <span className="num">{d.noDevice}</span>&nbsp;طالبًا بلا ربط
-            </span>
-          )}
-        </div>
-        {d.devices.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">لم تُسجَّل أجهزة بعد.</p>
-        ) : (
-          d.devices.map((v) => (
-            <div key={v.serial_no}
-                 className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-0">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{v.label ?? v.serial_no}</p>
-                <p className="num truncate text-right text-xs text-faint">{v.serial_no}</p>
-              </div>
-              <span className={`chip shrink-0 ${v.last_seen ? "bg-present/10 text-present" : "bg-warning-light text-warning"}`}>
-                {v.last_seen ? fmtDateTime(v.last_seen) : "لم يتصل بعد"}
-              </span>
-            </div>
-          ))
-        )}
-      </section>
-
       <ColorLegend
         groups={[
           {
@@ -212,13 +180,6 @@ export default function Dashboard() {
                 label: "طلاب دخلوا المدرسة وغابوا عن حصصهم" },
               { chip: "bg-late/10 text-late", sample: "بلا ربط",
                 label: "طلاب بلا رقم في جهاز البصمة" },
-            ],
-          },
-          {
-            title: "أجهزة البصمة",
-            items: [
-              { chip: "bg-present/10 text-present", sample: "متصل", label: "الجهاز يعمل ويرسل البيانات" },
-              { chip: "bg-warning-light text-warning", sample: "لم يتصل", label: "لم يصل منه أي اتصال بعد" },
             ],
           },
         ]}
