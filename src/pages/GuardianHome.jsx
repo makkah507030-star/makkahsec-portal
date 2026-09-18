@@ -200,7 +200,7 @@ export default function GuardianHome() {
           </section>
 
           {/* جدول اليوم — لا يظهر إطلاقًا في أيام العطلة الأسبوعية */}
-          {dow && (
+          {Boolean(dow) && (
             <section className="card overflow-hidden">
               <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
                 جدول {todayLabel()}
