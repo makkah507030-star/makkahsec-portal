@@ -26,7 +26,14 @@ export default function Students() {
       setRows(data ?? []);
       const { data: gs } = await supabase.from("guardian_student")
         .select("student_id, guardians(full_name, mobile)");
-      setGuardians(new Map((gs ?? []).map((r) => [r.student_id, r.guardians])));
+      // بعض الروابط قد تعود بمصفوفة فارغة أو ولي أمر محذوف (رابط يتيم) —
+      // لا نُدرجها في الخريطة حتى لا يُحسب الطالب خطأً كأن له ولي أمر
+      const map = new Map();
+      (gs ?? []).forEach((r) => {
+        const g = Array.isArray(r.guardians) ? r.guardians[0] : r.guardians;
+        if (g && (g.full_name || g.mobile)) map.set(r.student_id, g);
+      });
+      setGuardians(map);
     })();
   }, []);
 
