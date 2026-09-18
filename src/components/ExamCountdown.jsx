@@ -1,15 +1,10 @@
 import { useEffect, useState } from "react";
 import { fmtGreg, fmtHijri } from "../lib/dates";
+import BidiDate from "./BidiDate.jsx";
 
 // موعد الاختبارات النهائية للفصل الدراسي الأول
 // الأحد 1448/07/25هـ = الأحد 2027/01/03م (تم التحقق من التطابق)
 const EXAM_DATE = new Date("2027-01-03T00:00:00+03:00");
-
-// LRM (U+200E) قبل الحرف العربي اللاحق يمنع قفزه إلى بداية الرقم
-// عند وضعه داخل كتلة نص لاتينية بمحاذاة عربية (مشكلة اتجاه معروفة)
-const LRM = "‎";
-const HIJRI_LABEL = `${fmtHijri(EXAM_DATE, false)}${LRM}هـ`;
-const GREG_LABEL = `${fmtGreg(EXAM_DATE)}${LRM}م`;
 
 function diffParts(target) {
   const ms = target.getTime() - Date.now();
@@ -48,10 +43,11 @@ export default function ExamCountdown() {
             العد التنازلي لموعد الاختبارات النهائية للفصل الدراسي الأول
           </p>
           <p className="mt-1 text-sm font-bold text-ink">
-            الأحد الموافق <bdi dir="ltr">{HIJRI_LABEL}</bdi>
+            الأحد الموافق{" "}
+            <BidiDate value={fmtHijri(EXAM_DATE, false)} suffix="هـ" />
           </p>
           <p className="text-sm font-bold text-ink">
-            <bdi dir="ltr">{GREG_LABEL}</bdi>
+            <BidiDate value={fmtGreg(EXAM_DATE)} suffix="م" />
           </p>
         </div>
 
