@@ -9,11 +9,8 @@ const EXAM_DATE = new Date("2027-01-03T00:00:00+03:00");
 function diffParts(target) {
   const ms = target.getTime() - Date.now();
   if (ms <= 0) return null;
-  const totalMinutes = Math.floor(ms / 60000);
-  const days = Math.floor(totalMinutes / (60 * 24));
-  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
-  const minutes = totalMinutes % 60;
-  return { days, hours, minutes };
+  const days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+  return { days };
 }
 
 function Unit({ value, label }) {
@@ -31,7 +28,8 @@ export default function ExamCountdown() {
   useEffect(() => {
     const tick = () => setParts(diffParts(EXAM_DATE));
     tick();
-    const timer = setInterval(tick, 60000);
+    // تُحسب بالأيام فقط، فلا داعي لتحديث كل دقيقة — كل ساعة كافٍ
+    const timer = setInterval(tick, 60 * 60000);
     return () => clearInterval(timer);
   }, []);
 
@@ -53,9 +51,7 @@ export default function ExamCountdown() {
 
         {parts ? (
           <div className="flex items-center gap-2">
-            <Unit value={parts.days} label="يوم" />
-            <Unit value={parts.hours} label="ساعة" />
-            <Unit value={parts.minutes} label="دقيقة" />
+            <Unit value={parts.days} label="يوم متبقٍ" />
           </div>
         ) : (
           <p className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-mint-deep shadow-sm">
