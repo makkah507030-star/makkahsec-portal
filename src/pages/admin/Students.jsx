@@ -19,6 +19,9 @@ export default function Students() {
   const [cls, setCls] = useState(0);
   const [track, setTrack] = useState("");
   const [onlyNoGuardian, setOnlyNoGuardian] = useState(false);
+  // بيانات ولي الأمر لا تظهر في التقارير (تصدير/طباعة) افتراضيًا، إلا إذا
+  // فعّل المستخدم هذا الخيار صراحةً
+  const [includeGuardianInReport, setIncludeGuardianInReport] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -72,6 +75,13 @@ export default function Students() {
     [scoped, guardians]
   );
 
+  // عدد الطلاب بلا ولي أمر في كل المدرسة (ضمن المسار المختار إن وجد) — يُستخدم
+  // لزر يظهر أثناء التصفح (قبل اختيار صف/فصل) لعرض القائمة كاملة دفعة واحدة
+  const schoolNoGuardianCount = useMemo(() => {
+    const src = track ? (rows ?? []).filter((r) => r.track === track) : (rows ?? []);
+    return src.filter((r) => !guardians.get(r.student_id)).length;
+  }, [rows, track, guardians]);
+
   const filtered = useMemo(
     () => scoped.filter((r) => !onlyNoGuardian || !guardians.get(r.student_id)),
     [scoped, onlyNoGuardian, guardians]
@@ -113,21 +123,22 @@ export default function Students() {
   const browsingGrades = !searching && !grade;
   const browsingClasses = !searching && grade > 0 && !cls;
 
-  const excelHeaders = ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "المسار", "ولي الأمر", "جوال ولي الأمر"];
+  const excelHeaders = includeGuardianInReport
+    ? ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "المسار", "ولي الأمر", "جوال ولي الأمر"]
+    : ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "المسار"];
 
   const excelRows = () =>
     filtered.map((r, i) => {
       const g = guardians.get(r.student_id);
-      return [
+      const base = [
         i + 1,
         r.national_id ?? "",
         r.full_name ?? "",
         GRADE_NAMES[r.grade] ?? r.grade,
         r.class_no ?? "",
         trackName(r.track),
-        g?.full_name ?? "",
-        g?.mobile ?? "",
       ];
+      return includeGuardianInReport ? [...base, g?.full_name ?? "", g?.mobile ?? ""] : base;
     });
 
   const handleExcel = () =>
@@ -151,18 +162,19 @@ export default function Students() {
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       secondSignature: { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
-      headers: ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "ولي الأمر", "الجوال"],
+      headers: includeGuardianInReport
+        ? ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل", "ولي الأمر", "الجوال"]
+        : ["م", "رقم الهوية", "اسم الطالب", "الصف", "الفصل"],
       rows: filtered.map((r, i) => {
         const g = guardians.get(r.student_id);
-        return [
+        const base = [
           i + 1,
           r.national_id ?? "",
           r.full_name ?? "",
           GRADE_NAMES[r.grade] ?? r.grade,
           r.class_no ?? "",
-          g?.full_name ?? "",
-          g?.mobile ?? "",
         ];
+        return includeGuardianInReport ? [...base, g?.full_name ?? "", g?.mobile ?? ""] : base;
       }),
     });
   };
@@ -184,13 +196,29 @@ export default function Students() {
       <input className="field" placeholder="بحث بالاسم أو رقم الهوية"
              value={q} onChange={(e) => setQ(e.target.value)} />
 
-      {trackList.length > 1 && (browsingGrades || browsingClasses) && (
+      {trackList.length > 1 && (browsingGrades || browsingClasses) && !onlyNoGuardian && (
         <div className="flex flex-wrap gap-1.5">
           <Pill on={!track} onClick={() => { setTrack(""); setGrade(0); setCls(0); }}>كل المسارات</Pill>
           {trackList.map((t) => (
             <Pill key={t} on={track === t} onClick={() => { setTrack(t); setGrade(0); setCls(0); }}>{trackName(t)}</Pill>
           ))}
         </div>
+      )}
+
+      {/* مدخل سريع لعرض الطلاب بلا ولي أمر على مستوى المدرسة كاملة، دون
+          الحاجة لاختيار صف أو فصل أولًا */}
+      {!searching && !cls && !onlyNoGuardian && schoolNoGuardianCount > 0 && (
+        <button
+          onClick={() => { setGrade(0); setCls(0); setOnlyNoGuardian(true); }}
+          className="flex w-full items-center justify-between rounded-card border border-late/30 bg-late/5 px-4 py-3 text-right hover:bg-late/10"
+        >
+          <span className="text-sm font-medium text-late">
+            عرض كل الطلاب بلا ولي أمر مسجّل (في المدرسة كاملة)
+          </span>
+          <span className="num shrink-0 rounded-pill bg-late/15 px-2.5 py-1 text-xs font-bold text-late">
+            {schoolNoGuardianCount}
+          </span>
+        </button>
       )}
 
       {/* مسار التصفح: كل الطلاب ‹ الصف ‹ الفصل */}
@@ -219,7 +247,7 @@ export default function Students() {
       )}
 
       {/* الخطوة 1: اختيار الصف */}
-      {browsingGrades && (
+      {browsingGrades && !onlyNoGuardian && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {gradeList.map((g) => (
             <button key={g} onClick={() => { setGrade(g); setCls(0); }}
@@ -234,7 +262,7 @@ export default function Students() {
       )}
 
       {/* الخطوة 2: اختيار الفصل */}
-      {browsingClasses && (
+      {browsingClasses && !onlyNoGuardian && (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
           {classList.filter((c) => Math.floor(c / 100) === grade).map((c) => (
             <button key={c} onClick={() => setCls(c)}
@@ -246,8 +274,8 @@ export default function Students() {
         </div>
       )}
 
-      {/* الخطوة 3: قائمة الطلاب — بعد اختيار فصل، أو أثناء البحث */}
-      {(cls > 0 || searching) && (
+      {/* الخطوة 3: قائمة الطلاب — بعد اختيار فصل، أو أثناء البحث، أو عند تفعيل فلتر بلا ولي أمر على مستوى المدرسة */}
+      {(cls > 0 || searching || onlyNoGuardian) && (
         <>
           {/* فلاتر إضافية */}
           <div className="flex flex-wrap items-center gap-1.5">
@@ -265,7 +293,7 @@ export default function Students() {
           </div>
 
           {/* أزرار التصدير */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button onClick={handleExcel} disabled={!filtered.length}
               className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-40">
               تصدير Excel
@@ -274,6 +302,11 @@ export default function Students() {
               className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-40">
               طباعة / PDF
             </button>
+            <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
+              <input type="checkbox" checked={includeGuardianInReport}
+                     onChange={(e) => setIncludeGuardianInReport(e.target.checked)} />
+              تضمين بيانات ولي الأمر في التقرير
+            </label>
           </div>
 
           {filtered.length === 0 ? (
