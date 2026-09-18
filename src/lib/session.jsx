@@ -163,6 +163,30 @@ export const ASSIGNABLE_ROLES = [
   "makkah_sport",
 ];
 
+// تدرّج لوني مميّز لكل حساب إداري — يُستخدم في بطاقة غلاف الأخبار
+// بدلًا من رفع صورة يدويًا (كل حساب له لون ثابت وتلقائي خاص به)
+export const ROLE_COVER_HUE = {
+  principal:       152,
+  deputy_academic: 176,
+  deputy_school:   200,
+  deputy_students: 224,
+  counselor_1:     248,
+  counselor_2:     272,
+  counselor_3:     296,
+  clerk:           320,
+  activity_leader: 344,
+  tech_support:      8,
+  media_portal:     32,
+  gifted_program:   56,
+  globe_program:    80,
+  student_voice:   104,
+  makkah_sport:    128,
+};
+
+// يبني تدرّجًا لونيًا CSS من قيمة hue الخاصة بالحساب
+export const coverGradient = (hue) =>
+  `linear-gradient(135deg, hsl(${hue} 58% 32%), hsl(${hue} 64% 50%))`;
+
 // مفاتيح الصلاحيات وأسماؤها
 export const PERMISSIONS = [
   { key: "students",       label: "الطلاب",             desc: "البحث والفلترة والتقارير" },

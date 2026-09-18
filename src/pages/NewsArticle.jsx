@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtBoth } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
+import NewsCoverCard from "../components/NewsCoverCard.jsx";
 
 
 
@@ -25,7 +26,7 @@ export default function NewsArticle() {
       const isUuid = /^[0-9a-f-]{36}$/i.test(slug);
       const { data } = await supabase
         .from("news")
-        .select("title, excerpt, body, cover_url, video_url, published_at")
+        .select("title, excerpt, body, cover_url, cover_theme, video_url, published_at")
         .eq("is_published", true)
         .eq(isUuid ? "id" : "slug", slug)
         .maybeSingle();
@@ -86,7 +87,12 @@ export default function NewsArticle() {
               </p>
             )}
 
-            {item.cover_url && (
+            {item.cover_theme ? (
+              <NewsCoverCard
+                role={item.cover_theme}
+                className="mt-7 aspect-[16/9] w-full rounded-card border border-line"
+              />
+            ) : item.cover_url && (
               <img
                 src={item.cover_url}
                 alt=""

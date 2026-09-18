@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtBoth } from "../lib/dates";
+import NewsCoverCard from "./NewsCoverCard.jsx";
 
 
 
@@ -14,7 +15,7 @@ export default function NewsSlider() {
     (async () => {
       const { data } = await supabase
         .from("news")
-        .select("id, title, slug, excerpt, cover_url, published_at")
+        .select("id, title, slug, excerpt, cover_url, cover_theme, published_at")
         .eq("is_published", true)
         .eq("is_featured", true)
         .order("published_at", { ascending: false })
@@ -59,7 +60,9 @@ export default function NewsSlider() {
         >
           <div className="grid md:grid-cols-[1.3fr_1fr]">
             <div className="relative aspect-[16/9] bg-mint-tint md:aspect-auto md:min-h-[19rem]">
-              {current.cover_url ? (
+              {current.cover_theme ? (
+                <NewsCoverCard role={current.cover_theme} className="absolute inset-0 h-full w-full" />
+              ) : current.cover_url ? (
                 <img
                   src={current.cover_url}
                   alt=""
