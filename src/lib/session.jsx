@@ -139,6 +139,7 @@ export const ADMIN_ROLE_LABEL = {
   globe_program:   "برنامج جلوب البيئي العالمي",
   student_voice:   "برنامج صوت الطالب",
   makkah_sport:    "مكة سبورت",
+  safety_security: "مسؤول الأمن والسلامة",
   // أدوار قديمة (للتوافق مع بيانات سابقة)
   deputy:          "الوكيل",
   counselor:       "الموجه الطلابي",
@@ -161,6 +162,7 @@ export const ASSIGNABLE_ROLES = [
   "globe_program",
   "student_voice",
   "makkah_sport",
+  "safety_security",
 ];
 
 // تدرّج لوني مميّز لكل حساب إداري — يُستخدم في بطاقة غلاف الأخبار
@@ -181,11 +183,28 @@ export const ROLE_COVER_HUE = {
   globe_program:    80,
   student_voice:   104,
   makkah_sport:    128,
+  safety_security: 356,
 };
 
 // يبني تدرّجًا لونيًا CSS من قيمة hue الخاصة بالحساب
 export const coverGradient = (hue) =>
   `linear-gradient(135deg, hsl(${hue} 58% 32%), hsl(${hue} 64% 50%))`;
+
+// اسم شاغل الحساب — يظهر تحت مسمّى الحساب في بطاقة غلاف الخبر (اختياري)
+export const ROLE_PERSON_NAME = {
+  principal:       "الأستاذ: عبدالله بن حسن الفيفي",
+  deputy_academic: "الأستاذ: فهد بن سعود حضراوي",
+  deputy_students: "الأستاذ: فهد بن نايف المعبدي",
+  activity_leader: "الأستاذ: عمر بن سلمان الصاعدي",
+  counselor_1:     "الأستاذ: منصور بن ناصر العوفي",
+  counselor_2:     "الأستاذ: نواف بن نايف القرشي",
+  counselor_3:     "الأستاذ: هاني بن خليفة الخضيري",
+  gifted_program:  "الأستاذ: فواز بن حامد الحارثي",
+  globe_program:   "الأستاذ: عبدالله بن محمد بادابود",
+  tech_support:    "الأستاذ: محمد بن حسن الحازمي",
+  deputy_school:   "الأستاذ: غالي بن ستر السلمي",
+  safety_security: "الأستاذ: بندر بن معيض الحارثي",
+};
 
 // مفاتيح الصلاحيات وأسماؤها
 export const PERMISSIONS = [
