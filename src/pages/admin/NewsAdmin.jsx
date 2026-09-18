@@ -31,6 +31,9 @@ export default function NewsAdmin() {
   // الأدوار الإدارية التي يملكها هذا الحساب فعليًا — منها يختار بطاقة الغلاف
   const myRoles = adminRoles.filter((r) => ADMIN_ROLE_LABEL[r]);
 
+  // الدعم الفني فقط يملك صلاحية رفع صورة غلاف مخصّصة بدلًا من البطاقة
+  const isTechSupport = adminRoles.includes("tech_support");
+
   const [list, setList] = useState(null);
   const [form, setForm] = useState(empty);
   const [uploading, setUploading] = useState(false);
@@ -75,7 +78,8 @@ export default function NewsAdmin() {
       });
       if (error) throw error;
       const { data } = supabase.storage.from("news").getPublicUrl(path);
-      set("cover_url", data.publicUrl);
+      // رفع صورة مخصّصة (دعم فني) يلغي اختيار البطاقة اللونية تلقائيًا
+      setForm((f) => ({ ...f, cover_url: data.publicUrl, cover_theme: isTeacher ? f.cover_theme : "" }));
     } catch (e) {
       setMsg({ ok: false, text: "تعذّر رفع الصورة: " + (e.message ?? e) });
     } finally {
@@ -99,7 +103,9 @@ export default function NewsAdmin() {
       slug: (form.slug.trim() || makeSlug(form.title)) || null,
       excerpt: form.excerpt.trim() || null,
       body: form.body.trim() || null,
-      cover_url: isTeacher ? (form.cover_url || null) : null,
+      // الدعم الفني قد يرفع صورة مخصّصة بدلًا من البطاقة — بقية الحسابات
+      // الإدارية تُخزَّن لها البطاقة فقط، والمعلم يبقى برفع الصورة كالسابق
+      cover_url: form.cover_url || null,
       cover_theme: isTeacher ? null : (form.cover_theme || null),
       video_url: form.video_url.trim() || null,
       is_published: isPublished,
@@ -223,12 +229,37 @@ export default function NewsAdmin() {
             ) : (
               <div className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {myRoles.map((r) => (
-                  <button key={r} type="button" onClick={() => set("cover_theme", r)}
+                  <button key={r} type="button"
+                          onClick={() => setForm((f) => ({ ...f, cover_theme: r, cover_url: "" }))}
                           className={`overflow-hidden rounded-sm2 ring-2 transition-shadow ${
-                            form.cover_theme === r ? "ring-mint-deep" : "ring-transparent hover:ring-line"}`}>
+                            form.cover_theme === r && !form.cover_url ? "ring-mint-deep" : "ring-transparent hover:ring-line"}`}>
                     <NewsCoverCard role={r} className="aspect-[16/9] w-full" />
                   </button>
                 ))}
+              </div>
+            )}
+
+            {isTechSupport && (
+              <div className="mt-4 border-t border-line pt-4">
+                <label className="text-xs text-muted">
+                  أو ارفع صورة غلاف مخصّصة (خاص بحساب الدعم الفني فقط — تظهر بدلًا من البطاقة)
+                </label>
+                <p className="mt-1 text-xs leading-relaxed text-faint">
+                  المقاس الموصى به: <span dir="ltr">1200×675</span> بكسل (نسبة 16:9)، صيغة JPG أو PNG،
+                  وبحجم لا يتجاوز 500 كيلوبايت تقريبًا لسرعة تحميل الصفحة.
+                </p>
+                <input type="file" accept="image/*" className="mt-2 block w-full text-sm"
+                       onChange={(e) => handleUpload(e.target.files?.[0])} />
+                {uploading && <p className="mt-1 text-xs text-muted">جارٍ الرفع…</p>}
+                {form.cover_url && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <img src={form.cover_url} alt="" className="h-20 w-32 rounded-sm2 border border-line object-cover" />
+                    <button onClick={() => set("cover_url", "")}
+                            className="text-xs font-medium text-absent hover:underline">
+                      إزالة الصورة المخصّصة والعودة للبطاقة
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
