@@ -402,7 +402,11 @@ export function printReport(opts) {
       ${sec.subtitle ? `<span class="m-sub">${sec.subtitle}</span>` : ""}
     </div>
 
-    <table class="${sec.tableClass ?? tableClass ?? ""}">
+    ${sec.html ?? ""}
+
+    ${
+      sec.headers || sec.rows
+        ? `<table class="${sec.tableClass ?? tableClass ?? ""}">
       ${
         sec.colWidths?.length
           ? `<colgroup>${sec.colWidths.map((w) => `<col style="width:${w}" />`).join("")}</colgroup>`
@@ -410,7 +414,9 @@ export function printReport(opts) {
       }
       <thead>${buildHead(sec.headerRows, sec.headers)}</thead>
       <tbody>${buildBody(sec.rows)}</tbody>
-    </table>
+    </table>`
+        : ""
+    }
 
     ${sec.note ?? note ? `<p class="note">${sec.note ?? note}</p>` : ""}
     ${signBlock}
@@ -518,6 +524,30 @@ export function printReport(opts) {
   /* جدول إيجابي — لقوائم الحضور/الإنجاز */
   table.success thead th {
     background: #DFF3E6; color: #3E6350; border-color: #B9E6C9;
+  }
+
+  /* بطاقات إحصائية داخل التقرير المطبوع */
+  .stat-tiles { display: flex; gap: 8px; margin-bottom: 14px; }
+  .stat-tile {
+    flex: 1; border: 1px solid ${MINT}; border-radius: 8px; padding: 10px 6px;
+    text-align: center; background: ${TINT};
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .stat-tile .v { font-size: 20px; font-weight: 700; color: ${DEEP}; }
+  .stat-tile .l { margin-top: 2px; font-size: 9.5px; color: ${GRAY}; }
+
+  /* رسم بياني شريطي بسيط داخل التقرير المطبوع */
+  .bar-chart { margin-bottom: 16px; }
+  .bar-row { margin-bottom: 8px; page-break-inside: avoid; }
+  .bar-row .bl {
+    display: flex; justify-content: space-between; font-size: 10.5px;
+    color: ${INK}; margin-bottom: 3px;
+  }
+  .bar-row .bl .n { color: ${GRAY}; }
+  .bar-track { height: 9px; background: #EFEFEF; border-radius: 5px; overflow: hidden; }
+  .bar-fill {
+    height: 100%; border-radius: 5px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
 
   /* الملاحظة والتوقيعات */

@@ -16,6 +16,32 @@ const STATUS_BAR   = { new: "bg-warning", in_progress: "bg-late", done: "bg-pres
 const ROLE_ORDER = ["معلم", "طالب", "ولي أمر", "إداري", "أخرى"];
 const ROLE_BAR    = "bg-mint-deep";
 
+// ألوان مطابقة لهوية الموقع — تُستخدم داخل الرسوم البيانية في نسخة الطباعة PDF
+const CAT_HEX    = { bug: "#A23B3B", suggestion: "#3E6350", data: "#9A7B22", other: "#6B6B6B" };
+const STATUS_HEX = { new: "#9A7B22", in_progress: "#3F6B99", done: "#4E7D66" };
+const ROLE_HEX   = "#3E6350";
+
+const barChartHtml = (items) => {
+  const total = items.reduce((s, it) => s + it.count, 0) || 1;
+  return `<div class="bar-chart">${items
+    .map((it) => {
+      const pct = Math.round((it.count / total) * 100);
+      return `<div class="bar-row">
+        <div class="bl"><span>${it.label}</span><span class="n">${it.count} (${pct}٪)</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${it.color}"></div></div>
+      </div>`;
+    })
+    .join("")}</div>`;
+};
+
+const statTilesHtml = (tiles) =>
+  `<div class="stat-tiles">${tiles
+    .map((t) => `<div class="stat-tile"><p class="v">${t.value}</p><p class="l">${t.label}</p></div>`)
+    .join("")}</div>`;
+
+const chartHeadingHtml = (text) =>
+  `<p style="margin:12px 0 6px;font-size:11.5px;font-weight:700;color:#3E6350;">${text}</p>`;
+
 function Bar({ label, count, total, colorClass }) {
   const pct = total ? Math.round((count / total) * 100) : 0;
   return (
@@ -64,9 +90,6 @@ export default function SupportReport() {
   }, [rows]);
 
   const handlePrint = () => {
-    const catRows = CAT_ORDER.filter((k) => stats.byCat[k]).map((k, i) => [i + 1, CAT_LABEL[k], stats.byCat[k]]);
-    const statusRows = STATUS_ORDER.filter((k) => stats.byStatus[k]).map((k, i) => [i + 1, STATUS_LABEL[k], stats.byStatus[k]]);
-    const roleRows = Object.entries(stats.byRole).map(([k, v], i) => [i + 1, k, v]);
     const ticketRows = (rows ?? []).map((r, i) => [
       i + 1,
       fmtDateTime(r.created_at),
@@ -78,15 +101,39 @@ export default function SupportReport() {
       (r.message || "").slice(0, 70),
     ]);
 
+    const overviewHtml =
+      statTilesHtml([
+        { value: stats.total, label: "إجمالي التذاكر" },
+        { value: stats.byStatus.new ?? 0, label: "جديدة" },
+        { value: stats.byStatus.in_progress ?? 0, label: "قيد المعالجة" },
+        { value: stats.byStatus.done ?? 0, label: "مغلقة" },
+      ]) +
+      chartHeadingHtml("التوزيع حسب نوع المشكلة") +
+      barChartHtml(
+        CAT_ORDER.filter((k) => stats.byCat[k]).map((k) => ({
+          label: CAT_LABEL[k], count: stats.byCat[k], color: CAT_HEX[k],
+        }))
+      ) +
+      chartHeadingHtml("التوزيع حسب الحالة") +
+      barChartHtml(
+        STATUS_ORDER.filter((k) => stats.byStatus[k]).map((k) => ({
+          label: STATUS_LABEL[k], count: stats.byStatus[k], color: STATUS_HEX[k],
+        }))
+      ) +
+      chartHeadingHtml("التوزيع حسب صفة مقدّم الطلب") +
+      barChartHtml(
+        ROLE_ORDER.filter((r) => stats.byRole[r]).map((r) => ({
+          label: r, count: stats.byRole[r], color: ROLE_HEX,
+        }))
+      );
+
     printReport({
       title: "تقرير متابعة الدعم الفني — مركز الدعم والمساندة",
       subtitle: `إجمالي التذاكر: ${stats.total}`,
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       sections: [
-        { title: "التوزيع حسب نوع المشكلة", subtitle: `${stats.total} تذكرة`, headers: ["م", "النوع", "العدد"], rows: catRows },
-        { title: "التوزيع حسب الحالة", headers: ["م", "الحالة", "العدد"], rows: statusRows },
-        { title: "التوزيع حسب الصفة", headers: ["م", "الصفة", "العدد"], rows: roleRows },
+        { title: "نظرة عامة وإحصائيات", subtitle: `حتى ${fmtDateTime(new Date())}`, html: overviewHtml },
         {
           title: "سجل التذاكر",
           subtitle: `${rows?.length ?? 0} تذكرة`,

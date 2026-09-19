@@ -112,14 +112,6 @@ export default function FeedbackAdmin() {
         ))}
       </div>
 
-      <ColorLegend
-        items={[
-          { chip: "bg-warning-light text-warning", sample: "جديدة", label: "لم تُراجع" },
-          { chip: "bg-late/10 text-late", sample: "قيد المعالجة", label: "تحت العمل" },
-          { chip: "bg-present/10 text-present", sample: "تمت", label: "مغلقة" },
-        ]}
-      />
-
       {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
 
       {rows && filtered.length === 0 && (
@@ -173,6 +165,14 @@ export default function FeedbackAdmin() {
           );
         })}
       </div>
+
+      <ColorLegend
+        items={[
+          { chip: "bg-warning-light text-warning", sample: "جديدة", label: "لم تُراجع" },
+          { chip: "bg-late/10 text-late", sample: "قيد المعالجة", label: "تحت العمل" },
+          { chip: "bg-present/10 text-present", sample: "تمت", label: "مغلقة" },
+        ]}
+      />
     </div>
   );
 }
