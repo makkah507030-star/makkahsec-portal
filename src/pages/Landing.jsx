@@ -27,10 +27,13 @@ const SECTIONS = [
     title: "أدلة الاستخدام",
     body: "أدلة إرشادية بصيغة PDF لكل فئة، تشرح الخدمات وطريقة الاستفادة منها.",
     to: "/guides",
+    cta: "تصفّح الأدلة ←",
   },
   {
-    title: "الدعم الفني",
-    body: "تذاكر الدعم لحل المشكلات التقنية بسرعة ووضوح.",
+    title: "مركز الدعم والمساندة",
+    body: "واجهتك مشكلة تقنية أو لديك استفسار؟ تواصل مع الدعم الفني مباشرة.",
+    to: "/contact",
+    cta: "تواصل الآن ←",
   },
 ];
 
@@ -139,7 +142,7 @@ export default function Landing() {
                 <h3 className="text-sm font-bold text-mint-deep">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
                 <span className="mt-3 inline-block text-xs font-semibold text-[#6AA786]">
-                  تصفّح الأدلة ←
+                  {s.cta ?? "اطّلع أكثر ←"}
                 </span>
               </Link>
             ) : (

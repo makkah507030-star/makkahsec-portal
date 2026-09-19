@@ -57,9 +57,9 @@ export default function FeedbackAdmin() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-bold text-ink">ملاحظات المستخدمين</h1>
+        <h1 className="text-lg font-bold text-ink">الدعم الفني</h1>
         <p className="mt-1 text-sm text-muted">
-          الملاحظات الواردة عبر صفحة الملاحظات في النسخة التجريبية.
+          طلبات الدعم والملاحظات الواردة عبر "مركز الدعم والمساندة".
         </p>
       </div>
 

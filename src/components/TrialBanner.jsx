@@ -10,10 +10,10 @@ export default function TrialBanner() {
           البوابة قيد التجربة وسيبدأ العمل بها رسميًا قريبًا، وقد تتغيّر البيانات أو الخصائص خلال هذه المرحلة.
         </span>
         <Link
-          to="/feedback"
+          to="/contact"
           className="font-semibold underline underline-offset-2 hover:opacity-80"
         >
-          أرسل ملاحظاتك للدعم الفني
+          مركز الدعم والمساندة
         </Link>
       </div>
     </div>
