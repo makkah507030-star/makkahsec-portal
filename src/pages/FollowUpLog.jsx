@@ -165,6 +165,22 @@ export default function FollowUpLog() {
   const markValue = (studentId, ik, sn) =>
     group ? marks[markKey(group.class_id, group.subject, period, studentId, ik, sn)] ?? "" : "";
 
+  /* نسبة اكتمال بنود القسم الحالي (كل بنود itemKey) لهذا الطالب */
+  const itemCompletion = (studentId, ik) => {
+    const it = ITEM_BY_KEY[ik];
+    if (!it) return 0;
+    const done = Array.from({ length: it.slots }, (_, i) => i + 1).filter(
+      (sn) => markValue(studentId, ik, sn) !== ""
+    ).length;
+    return done / it.slots;
+  };
+
+  const completionCls = (ratio) => {
+    if (ratio >= 1) return "text-mint-deep";
+    if (ratio > 0) return "text-warning";
+    return "text-danger";
+  };
+
   /* ---------- الانتقال التلقائي لمتابعة البند التالي غير المكتملة ----------
      عند فتح بند متعدد المتابعات (كالمشاركة)، بدل البدء دائمًا من متابعة 1،
      يقترح النظام أول متابعة لم تكتمل بعد لكل طلاب الفصل، حتى لا يبحث المعلم
@@ -544,6 +560,19 @@ export default function FollowUpLog() {
               </div>
             </div>
 
+            {/* دلالات الألوان: اكتمال بنود القسم الحالي لكل طالب */}
+            <div className="flex flex-wrap items-center gap-4 border-b border-line bg-canvas/60 px-4 py-2 text-[11px]">
+              <span className="flex items-center gap-1.5 text-mint-deep">
+                <span className="h-2.5 w-2.5 rounded-full bg-mint-deep" /> أكمل كل متابعات البند
+              </span>
+              <span className="flex items-center gap-1.5 text-warning">
+                <span className="h-2.5 w-2.5 rounded-full bg-warning" /> أكمل بعض المتابعات
+              </span>
+              <span className="flex items-center gap-1.5 text-danger">
+                <span className="h-2.5 w-2.5 rounded-full bg-danger" /> لم يُرصد له أي متابعة بعد
+              </span>
+            </div>
+
             {marksLoading ? (
               <p className="px-4 py-8 text-center text-sm text-muted">جارٍ التحميل…</p>
             ) : (
@@ -551,11 +580,12 @@ export default function FollowUpLog() {
                 {group.students.map((s, idx) => {
                   const st = saveState[s.id];
                   const checked = markValue(s.id, itemKey, slotNo) !== "";
+                  const ratio = itemCompletion(s.id, itemKey);
                   return (
                     <div key={s.id} className="px-4 py-2.5 hover:bg-canvas">
                       <label className="flex cursor-pointer items-center gap-3">
                         <span className="num w-6 shrink-0 text-xs text-muted">{idx + 1}</span>
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
+                        <span className={"min-w-0 flex-1 truncate text-sm font-semibold " + completionCls(ratio)}>
                           {s.full_name}
                         </span>
                         <span className="w-16 shrink-0 text-[11px]">
