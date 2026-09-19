@@ -654,7 +654,26 @@ ${sectionsHtml}
     setTimeout(() => frame.remove(), 1500);
   };
 
-  // انتظار تحميل الخطوط والصور
-  if (doc.readyState === "complete") setTimeout(run, 500);
-  else frame.onload = () => setTimeout(run, 500);
+  /* انتظار تحميل كل الصور فعليًا (شعارات الترويسة وغيرها) قبل الطباعة —
+     الاعتماد على مهلة زمنية ثابتة فقط قد لا يكفي لتحميل الصور الكبيرة
+     أو عند بطء الاتصال، فتظهر الترويسة بلا شعارات. */
+  const waitForImages = () =>
+    new Promise((resolve) => {
+      const imgs = Array.from(doc.images || []);
+      if (!imgs.length) return resolve();
+      let remaining = imgs.length;
+      const done = () => { if (--remaining <= 0) resolve(); };
+      imgs.forEach((img) => {
+        if (img.complete) return done();
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+      });
+      // سقف أعلى احتياطي حتى لا تتعطل الطباعة إن تعذّر تحميل صورة ما
+      setTimeout(resolve, 3000);
+    });
+
+  const ready = () => waitForImages().then(() => setTimeout(run, 200));
+
+  if (doc.readyState === "complete") ready();
+  else frame.onload = ready;
 }
