@@ -12,7 +12,7 @@ const CATEGORIES = [
   { key: "other",      label: "أخرى" },
 ];
 
-const ROLES = ["معلم", "طالب", "ولي أمر", "إداري", "أخرى"];
+const ROLE_MAP = { student: "طالب", teacher: "معلم", guardian: "ولي أمر", admin: "إداري" };
 
 const STATUS_META = {
   new:         { label: "جديدة",       cls: "bg-warning-light text-warning" },
@@ -23,9 +23,11 @@ const STATUS_META = {
 export default function Feedback() {
   const { profile, session } = useSession();
   const standalone = !session; // الزائر غير المسجّل يرى ترويسة وخلفية خاصة
+  const roleLabel = ROLE_MAP[profile?.role] ?? "أخرى"; // صفة مقدّم الطلب — معروفة من الحساب
+  // معرّف الحساب: رقم الهوية لمعظم الأدوار، ورقم الجوال لولي الأمر (هو
+  // المعرّف المعتمد له عند عدم توفر رقم هوية) — كلاهما اسم المستخدم نفسه
+  const nationalId = profile?.username ?? "";
 
-  const [nationalId, setNationalId] = useState("");
-  const [roleLabel, setRoleLabel] = useState("");
   const [category, setCategory] = useState("bug");
   const [message, setMessage] = useState("");
 
@@ -56,16 +58,6 @@ export default function Feedback() {
       return;
     }
 
-    if (!/^\d{1,19}$/.test(nationalId.trim())) {
-      setError("أدخل رقم الهوية (أرقام فقط، أقل من ٢٠ رقمًا).");
-      return;
-    }
-
-    if (!roleLabel) {
-      setError("اختر صفتك — هذا الحقل إجباري لتصنيف الطلب في الإحصائيات.");
-      return;
-    }
-
     if (message.trim().length < 10) {
       setError("اكتب وصفًا أوضح للطلب (١٠ أحرف على الأقل).");
       return;
@@ -77,7 +69,7 @@ export default function Feedback() {
       .from("feedback")
       .insert({
         name: profile.full_name?.trim() || null,
-        national_id: nationalId.trim(),
+        national_id: nationalId.trim() || null,
         role_label: roleLabel,
         category,
         message: message.trim(),
@@ -256,40 +248,6 @@ export default function Feedback() {
                 />
               </div>
 
-              <div>
-                <label className="label" htmlFor="nid">رقم الهوية / الإقامة / الحدود</label>
-                <input
-                  id="nid"
-                  className="field mt-1"
-                  value={nationalId}
-                  onChange={(e) => setNationalId(e.target.value.replace(/[^\d]/g, "").slice(0, 19))}
-                  dir="ltr"
-                  inputMode="numeric"
-                  maxLength={19}
-                  placeholder="رقم الهوية أو الإقامة أو الحدود"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="label">صفتك</label>
-                <div className="mt-1.5 flex flex-wrap gap-2">
-                  {ROLES.map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setRoleLabel(roleLabel === r ? "" : r)}
-                      className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
-                        roleLabel === r
-                          ? "bg-[#6AA786] text-white"
-                          : "border border-line bg-white text-muted hover:bg-canvas"
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               <p className="flex items-start gap-2 rounded-sm2 bg-mint-tint/60 px-3 py-2.5 text-xs leading-relaxed text-mint-deep">
                 <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none"
