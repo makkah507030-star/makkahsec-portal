@@ -1,6 +1,23 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
+// يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
+// (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
+async function describeEdgeError(e) {
+  if (e?.context && typeof e.context.clone === "function") {
+    try {
+      const body = await e.context.clone().json();
+      if (body?.error || body?.message) return body.error ?? body.message;
+    } catch {
+      try {
+        const text = await e.context.clone().text();
+        if (text) return text;
+      } catch { /* تجاهل */ }
+    }
+  }
+  return e?.message ?? String(e);
+}
+
 const TARGETS = [
   { key: "teachers",  label: "المعلمون",       login: "رقم الهوية" },
   { key: "students",  label: "الطلاب",         login: "رقم الهوية" },
@@ -15,17 +32,22 @@ export default function Accounts() {
   const [confirming, setConfirming] = useState(null);
 
   const load = async () => {
-    const [t, s, g] = await Promise.all([
-      supabase.from("teachers").select("user_id", { count: "exact" }).eq("is_active", true),
-      supabase.from("students").select("user_id", { count: "exact" }).eq("is_active", true),
-      supabase.from("guardians").select("user_id", { count: "exact" }).eq("is_active", true),
-    ]);
-    const calc = (r) => {
-      const rows = r.data ?? [];
-      const withAcc = rows.filter((x) => x.user_id).length;
-      return { total: rows.length, withAcc, missing: rows.length - withAcc };
+    // نستخدم عدّ "exact" مع head بدل جلب الصفوف — الطريقة السابقة كانت
+    // محدودة بسقف Supabase الافتراضي (1000 صف)، فتُظهر أعدادًا خاطئة
+    // "بلا حساب" متى تجاوز الإجمالي 1000.
+    const one = async (table) => {
+      const [tot, acc] = await Promise.all([
+        supabase.from(table).select("id", { count: "exact", head: true }).eq("is_active", true),
+        supabase.from(table).select("id", { count: "exact", head: true }).eq("is_active", true).not("user_id", "is", null),
+      ]);
+      const total = tot.count ?? 0;
+      const withAcc = acc.count ?? 0;
+      return { total, withAcc, missing: Math.max(0, total - withAcc) };
     };
-    setStats({ teachers: calc(t), students: calc(s), guardians: calc(g) });
+    const [teachers, students, guardians] = await Promise.all([
+      one("teachers"), one("students"), one("guardians"),
+    ]);
+    setStats({ teachers, students, guardians });
   };
 
   useEffect(() => { load(); }, []);
@@ -46,7 +68,7 @@ export default function Accounts() {
       setResult({ target, ...data });
       await load();
     } catch (e) {
-      setError(e.message ?? String(e));
+      setError(await describeEdgeError(e));
     } finally {
       setBusy(null);
     }
