@@ -82,6 +82,15 @@ export function SessionProvider({ children }) {
   }, [loadProfile]);
 
   const signOut = async () => {
+    // تسجيل عملية الخروج في سجل الدخول والخروج — بلا انتظار ولا تعطيل لو فشل
+    const nid = profile?.username;
+    if (nid) {
+      supabase
+        .from("login_log")
+        .insert({ national_id: nid, event_type: "logout", success: true })
+        .then(() => {}, () => {});
+    }
+
     await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
@@ -231,4 +240,5 @@ export const PERMISSIONS = [
   { key: "notifications",  label: "الإشعارات",          desc: "إرسال التعاميم والتنبيهات" },
   { key: "feedback",       label: "الملاحظات",          desc: "ملاحظات المستخدمين" },
   { key: "password_reset", label: "استعادة كلمة المرور", desc: "إعادة تعيين لأي مستخدم" },
+  { key: "login_log",      label: "سجل الدخول والخروج",  desc: "متابعة عمليات تسجيل الدخول والخروج بالوقت والحالة" },
 ];

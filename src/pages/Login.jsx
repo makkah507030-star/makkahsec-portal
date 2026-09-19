@@ -9,6 +9,17 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // تسجيل محاولة الدخول (ناجحة أو فاشلة) في سجل الدخول والخروج — بلا
+  // انتظار ولا تعطيل لتجربة الدخول لو فشل التسجيل نفسه لأي سبب
+  const logAttempt = (success, reason) => {
+    const nid = nationalId.trim();
+    if (!nid) return;
+    supabase
+      .from("login_log")
+      .insert({ national_id: nid, event_type: "login", success, reason: reason ?? null })
+      .then(() => {}, () => {});
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError("");
@@ -21,7 +32,10 @@ export default function Login() {
 
     if (error) {
       setError("رقم الهوية أو كلمة المرور غير صحيحة.");
+      logAttempt(false, "بيانات دخول غير صحيحة");
       setBusy(false);
+    } else {
+      logAttempt(true, null);
     }
     // النجاح: onAuthStateChange يتكفّل بالتوجيه
   };

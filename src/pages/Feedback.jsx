@@ -24,7 +24,6 @@ export default function Feedback() {
   const { profile, session } = useSession();
   const standalone = !session; // الزائر غير المسجّل يرى ترويسة وخلفية خاصة
 
-  const [name, setName] = useState("");
   const [nationalId, setNationalId] = useState("");
   const [roleLabel, setRoleLabel] = useState("");
   const [category, setCategory] = useState("bug");
@@ -57,11 +56,6 @@ export default function Feedback() {
       return;
     }
 
-    if (!name.trim()) {
-      setError("أدخل الاسم — هذا الحقل إجباري للتأكد من هوية مقدّم الطلب.");
-      return;
-    }
-
     if (!/^\d{1,19}$/.test(nationalId.trim())) {
       setError("أدخل رقم الهوية (أرقام فقط، أقل من ٢٠ رقمًا).");
       return;
@@ -82,7 +76,7 @@ export default function Feedback() {
     const { data: inserted, error: err } = await supabase
       .from("feedback")
       .insert({
-        name: name.trim(),
+        name: profile.full_name?.trim() || null,
         national_id: nationalId.trim(),
         role_label: roleLabel,
         category,
@@ -262,31 +256,19 @@ export default function Feedback() {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="label" htmlFor="nm">الاسم</label>
-                  <input
-                    id="nm"
-                    className="field mt-1"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="label" htmlFor="nid">رقم الهوية / الإقامة / الحدود</label>
-                  <input
-                    id="nid"
-                    className="field mt-1"
-                    value={nationalId}
-                    onChange={(e) => setNationalId(e.target.value.replace(/[^\d]/g, "").slice(0, 19))}
-                    dir="ltr"
-                    inputMode="numeric"
-                    maxLength={19}
-                    placeholder="رقم الهوية أو الإقامة أو الحدود"
-                    required
-                  />
-                </div>
+              <div>
+                <label className="label" htmlFor="nid">رقم الهوية / الإقامة / الحدود</label>
+                <input
+                  id="nid"
+                  className="field mt-1"
+                  value={nationalId}
+                  onChange={(e) => setNationalId(e.target.value.replace(/[^\d]/g, "").slice(0, 19))}
+                  dir="ltr"
+                  inputMode="numeric"
+                  maxLength={19}
+                  placeholder="رقم الهوية أو الإقامة أو الحدود"
+                  required
+                />
               </div>
 
               <div>

@@ -65,6 +65,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/feedback-admin", label: "مركز الدعم والمساندة", perm: "feedback", icon: "chat" },
       { to: "/support-report", label: "تقرير ومتابعة الدعم", perm: "feedback", icon: "chart" },
+      { to: "/login-log", label: "سجل الدخول والخروج", perm: "login_log", icon: "key" },
       { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
     ],
   },
