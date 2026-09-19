@@ -26,6 +26,7 @@ export default function Feedback() {
 
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  const [nationalId, setNationalId] = useState("");
   const [roleLabel, setRoleLabel] = useState("");
   const [category, setCategory] = useState("bug");
   const [message, setMessage] = useState("");
@@ -57,6 +58,16 @@ export default function Feedback() {
       return;
     }
 
+    if (!/^\d{1,19}$/.test(nationalId.trim())) {
+      setError("أدخل رقم الهوية (أرقام فقط، أقل من ٢٠ رقمًا).");
+      return;
+    }
+
+    if (!roleLabel) {
+      setError("اختر صفتك — هذا الحقل إجباري لتصنيف الطلب في الإحصائيات.");
+      return;
+    }
+
     if (message.trim().length < 10) {
       setError("اكتب وصفًا أوضح للطلب (١٠ أحرف على الأقل).");
       return;
@@ -69,7 +80,8 @@ export default function Feedback() {
       .insert({
         name: name.trim() || null,
         contact: contact.trim() || null,
-        role_label: roleLabel || null,
+        national_id: nationalId.trim(),
+        role_label: roleLabel,
         category,
         message: message.trim(),
         page_url: window.location.origin,
@@ -258,21 +270,36 @@ export default function Feedback() {
                   />
                 </div>
                 <div>
-                  <label className="label" htmlFor="ct">
-                    جوال أو بريد للتواصل (اختياري)
-                  </label>
+                  <label className="label" htmlFor="nid">رقم الهوية</label>
                   <input
-                    id="ct"
+                    id="nid"
                     className="field mt-1"
-                    value={contact}
-                    onChange={(e) => setContact(e.target.value)}
+                    value={nationalId}
+                    onChange={(e) => setNationalId(e.target.value.replace(/[^\d]/g, "").slice(0, 19))}
                     dir="ltr"
+                    inputMode="numeric"
+                    maxLength={19}
+                    placeholder="رقم الهوية أو رقم الحدود"
+                    required
                   />
                 </div>
               </div>
 
               <div>
-                <label className="label">صفتك (اختياري)</label>
+                <label className="label" htmlFor="ct">
+                  جوال أو بريد للتواصل (اختياري)
+                </label>
+                <input
+                  id="ct"
+                  className="field mt-1"
+                  value={contact}
+                  onChange={(e) => setContact(e.target.value)}
+                  dir="ltr"
+                />
+              </div>
+
+              <div>
+                <label className="label">صفتك</label>
                 <div className="mt-1.5 flex flex-wrap gap-2">
                   {ROLES.map((r) => (
                     <button
@@ -290,6 +317,14 @@ export default function Feedback() {
                   ))}
                 </div>
               </div>
+
+              <p className="flex items-start gap-2 rounded-sm2 bg-mint-tint/60 px-3 py-2.5 text-xs leading-relaxed text-mint-deep">
+                <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0" fill="none"
+                     stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" />
+                </svg>
+                سيصلك ردّ فريق الدعم داخل حسابك عبر الإشعارات في الموقع — لا حاجة لمتابعة الجوال أو البريد.
+              </p>
 
               {error && (
                 <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">

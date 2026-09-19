@@ -43,6 +43,7 @@ import Reports from "./pages/Reports.jsx";
 import Feedback from "./pages/Feedback.jsx";
 import TicketDetail from "./pages/TicketDetail.jsx";
 import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
+import SupportReport from "./pages/admin/SupportReport.jsx";
 import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
@@ -196,6 +197,7 @@ export default function App() {
             {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
             {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
             {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
+            {can("feedback") && <Route path="/support-report" element={<SupportReport />} />}
           </>
         )}
         {profile.role === "teacher" && (
