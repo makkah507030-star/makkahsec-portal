@@ -15,6 +15,7 @@ import Accounts from "./pages/admin/Accounts.jsx";
 import Attendance from "./pages/teacher/Attendance.jsx";
 import SubstitutePeriod from "./pages/teacher/SubstitutePeriod.jsx";
 import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
+import FollowUpLog from "./pages/teacher/FollowUpLog.jsx";
 import TeacherPermissions from "./pages/admin/TeacherPermissions.jsx";
 import TeacherNotify from "./pages/teacher/TeacherNotify.jsx";
 import MySchedule from "./pages/teacher/MySchedule.jsx";
@@ -211,6 +212,7 @@ export default function App() {
             {!hiddenTabs.has("records") && (
               <Route path="/records" element={<TeacherRecords />} />
             )}
+            <Route path="/follow-up" element={<FollowUpLog />} />
             {!hiddenTabs.has("notify") && (
               <Route path="/notify" element={<TeacherNotify />} />
             )}

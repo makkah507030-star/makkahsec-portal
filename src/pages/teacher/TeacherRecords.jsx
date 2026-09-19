@@ -17,25 +17,19 @@ const FOLLOW_SECTIONS = [
   {
     label: "المهام الأدائية والمشاركة والتفاعل",
     items: [
-      { key: "homework",      label: "الواجبات",        slots: FOLLOW_SLOTS },
-      { key: "participation", label: "المشاركة",        slots: FOLLOW_SLOTS },
-      { key: "classwork",     label: "التطبيقات الصفية", slots: FOLLOW_SLOTS },
+      { label: "الواجبات", slots: FOLLOW_SLOTS },
+      { label: "المشاركة", slots: FOLLOW_SLOTS },
+      { label: "التطبيقات الصفية", slots: FOLLOW_SLOTS },
     ],
   },
   {
     label: "تقويم تحريري وتطبيقات عملية",
     items: [
-      { key: "written",   label: "نظري", slots: 1 },
-      { key: "practical", label: "عملي", slots: 1 },
+      { label: "نظري", slots: 1 },
+      { label: "عملي", slots: 1 },
     ],
   },
 ];
-
-const PERIODS = ["الفترة الأولى", "الفترة الثانية"];
-
-// مفتاح موحّد لتخزين/استرجاع علامة واحدة من سجل المتابعة الإلكتروني
-const markKey = (classId, subject, period, studentId, itemKey, slotNo) =>
-  `${classId}::${subject}::${period}::${studentId}::${itemKey}::${slotNo}`;
 
 const clean = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 
@@ -49,13 +43,6 @@ export default function TeacherRecords() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState(new Set());
-
-  /* ---------- سجل المتابعة الإلكتروني ---------- */
-  const [editorGroupKey, setEditorGroupKey] = useState("");
-  const [editorPeriod, setEditorPeriod] = useState(PERIODS[0]);
-  const [marks, setMarks] = useState({}); // markKey(...) -> نص القيمة
-  const [marksLoading, setMarksLoading] = useState(false);
-  const [saveState, setSaveState] = useState(""); // "" | "جارٍ الحفظ…" | "تم الحفظ"
 
   /* ---------- تحميل الإسنادات وطلابها ---------- */
   useEffect(() => {
@@ -131,8 +118,6 @@ export default function TeacherRecords() {
 
       setGroups(list);
       setSelected(new Set(list.map((g) => g.key)));
-      const first = list.find((g) => g.students.length);
-      if (first) setEditorGroupKey(first.key);
       setLoading(false);
     })();
   }, [session]);
@@ -148,89 +133,6 @@ export default function TeacherRecords() {
       n.has(key) ? n.delete(key) : n.add(key);
       return n;
     });
-
-  const editorGroup = useMemo(
-    () => (groups ?? []).find((g) => g.key === editorGroupKey) ?? null,
-    [groups, editorGroupKey]
-  );
-
-  /* ---------- تحميل علامات سجل المتابعة الإلكتروني للفصل/المادة/الفترة المختارة ---------- */
-  useEffect(() => {
-    (async () => {
-      if (!me || !editorGroup || !year) { setMarks({}); return; }
-      setMarksLoading(true);
-      const { data } = await supabase
-        .from("teacher_follow_up")
-        .select("student_id, item_key, slot_no, mark")
-        .eq("teacher_id", me.id)
-        .eq("class_id", editorGroup.class_id)
-        .eq("subject", editorGroup.subject)
-        .eq("academic_year", year)
-        .eq("term", term)
-        .eq("period", editorPeriod);
-
-      const m = {};
-      (data ?? []).forEach((r) => {
-        m[markKey(editorGroup.class_id, editorGroup.subject, editorPeriod, r.student_id, r.item_key, r.slot_no)] =
-          r.mark ?? "";
-      });
-      setMarks(m);
-      setMarksLoading(false);
-    })();
-  }, [me, editorGroup, editorPeriod, year, term]);
-
-  // حفظ فوري لخانة واحدة عند مغادرتها (onBlur) — يحدّث الصف أو يحذفه إن أُفرغ
-  const saveMark = async (studentId, itemKey, slotNo, rawValue) => {
-    if (!me || !editorGroup) return;
-    const value = String(rawValue ?? "").trim();
-    const mark = value === "" ? null : Number(value);
-    if (value !== "" && Number.isNaN(mark)) return;
-
-    setSaveState("جارٍ الحفظ…");
-    if (mark === null) {
-      await supabase
-        .from("teacher_follow_up")
-        .delete()
-        .eq("teacher_id", me.id)
-        .eq("class_id", editorGroup.class_id)
-        .eq("subject", editorGroup.subject)
-        .eq("academic_year", year)
-        .eq("term", term)
-        .eq("period", editorPeriod)
-        .eq("student_id", studentId)
-        .eq("item_key", itemKey)
-        .eq("slot_no", slotNo);
-    } else {
-      await supabase.from("teacher_follow_up").upsert(
-        {
-          teacher_id: me.id,
-          class_id: editorGroup.class_id,
-          subject: editorGroup.subject,
-          academic_year: year,
-          term,
-          period: editorPeriod,
-          student_id: studentId,
-          item_key: itemKey,
-          slot_no: slotNo,
-          mark,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "teacher_id,class_id,subject,academic_year,term,period,student_id,item_key,slot_no" }
-      );
-    }
-    setSaveState("تم الحفظ");
-  };
-
-  const markValue = (studentId, itemKey, slotNo) =>
-    editorGroup
-      ? marks[markKey(editorGroup.class_id, editorGroup.subject, editorPeriod, studentId, itemKey, slotNo)] ?? ""
-      : "";
-
-  const setMarkLocal = (studentId, itemKey, slotNo, value) => {
-    if (!editorGroup) return;
-    const k = markKey(editorGroup.class_id, editorGroup.subject, editorPeriod, studentId, itemKey, slotNo);
-    setMarks((prev) => ({ ...prev, [k]: value }));
-  };
 
   const logos = () => ({
     logoUrl: new URL(logoIcon, window.location.origin).href,
@@ -412,84 +314,6 @@ export default function TeacherRecords() {
     setBusy(false);
   };
 
-  /* ---------- طباعة سجل المتابعة للفصل/الفترة قيد التعبئة حاليًا فقط ---------- */
-  const printEditorFollowUp = () => {
-    if (!editorGroup) return;
-    const g = editorGroup;
-
-    const secWidth = (sec) => sec.items.reduce((n, it) => n + it.slots, 0);
-    const row1 = [
-      { text: "م", rowspan: 5 },
-      { text: "اسم الطالب", rowspan: 5 },
-      ...FOLLOW_SECTIONS.map((sec) => ({ text: sec.label, colspan: secWidth(sec) })),
-      { text: "المجموع النهائي", rowspan: 5, cls: "total-h" },
-    ];
-    const row2 = FOLLOW_SECTIONS.map((sec) => ({ text: "الدرجة", colspan: secWidth(sec), cls: "score" }));
-    const row3 = FOLLOW_SECTIONS.flatMap((sec) => sec.items.map((it) => ({ text: it.label, colspan: it.slots })));
-    const row4 = FOLLOW_SECTIONS.flatMap((sec) =>
-      sec.items.map((it) => ({ text: "الدرجة", colspan: it.slots, cls: "score" }))
-    );
-    const row5 = FOLLOW_SECTIONS.flatMap((sec) =>
-      sec.items.flatMap((it) =>
-        it.slots > 1
-          ? Array.from({ length: it.slots }, (_, i) => ({ text: String(i + 1), cls: "slot" }))
-          : [{ text: "—", cls: "slot" }]
-      )
-    );
-
-    const slotCount = FOLLOW_SECTIONS.flatMap((sec) => sec.items.filter((it) => it.slots > 1).map((it) => it.slots)).reduce((a, b) => a + b, 0);
-    const singleCount = FOLLOW_SECTIONS.flatMap((sec) => sec.items.filter((it) => it.slots === 1)).length;
-    const colWidths = [
-      "3%", "20%",
-      ...FOLLOW_SECTIONS.flatMap((sec) =>
-        sec.items.flatMap((it) =>
-          Array.from({ length: it.slots }, () =>
-            it.slots > 1 ? `${(53 / slotCount).toFixed(2)}%` : `${(18 / singleCount).toFixed(2)}%`
-          )
-        )
-      ),
-      "6%",
-    ];
-
-    printReport({
-      title: "سجل المتابعة",
-      landscape: true,
-      logoUrl: logos().logoUrl,
-      moeLogoUrl: logos().moeLogoUrl,
-      sections: [
-        {
-          title: `سجل متابعة مادة ${g.subject} — ${editorPeriod}`,
-          subtitle: `${GRADE_NAMES[g.grade] ?? ""} · فصل ${g.class_no} · ${g.students.length} طالبًا`,
-          headerRows: [row1, row2, row3, row4, row5],
-          tableClass: "follow",
-          colWidths,
-          rows: g.students.map((s, i) => [
-            i + 1,
-            { text: s.full_name ?? "", cls: "name" },
-            ...FOLLOW_SECTIONS.flatMap((sec) =>
-              sec.items.flatMap((it) =>
-                Array.from({ length: it.slots }, (_, slotIdx) => {
-                  const val = markValue(s.id, it.key, slotIdx + 1);
-                  return { text: val, cls: `${val ? "" : "blank"} ${it.slots > 1 ? "slot" : ""}`.trim() };
-                })
-              )
-            ),
-            (() => {
-              const val = markValue(s.id, "total", 1);
-              return { text: val, cls: `${val ? "" : "blank"} total`.trim() };
-            })(),
-          ]),
-        },
-      ],
-      note: "سجل متابعة إلكتروني — يعكس آخر ما تم إدخاله وحفظه في الموقع.",
-      signatures: [
-        { title: "معلم المادة", name: me?.full_name ?? "" },
-        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
-      ],
-      hideSignatureLine: true,
-    });
-  };
-
   /* ---------- العرض ---------- */
 
   if (loading) {
@@ -584,127 +408,6 @@ export default function TeacherRecords() {
           {unknown.map((g) => g.subject).join("، ")}. راجع الدعم الفني لإضافتها.
         </p>
       )}
-
-      {/* سجل المتابعة الإلكتروني */}
-      <section className="card space-y-3 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-semibold text-ink">سجل المتابعة الإلكتروني</h2>
-            <p className="mt-0.5 text-xs text-muted">
-              نفس نموذج السجل الورقي، لكن تُدخل الدرجات هنا وتُحفظ تلقائيًا — ويمكنك
-              تصديرها وطباعتها في أي وقت.
-            </p>
-          </div>
-          {saveState && <span className="shrink-0 text-xs text-mint-deep">{saveState}</span>}
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          <select
-            className="field w-auto flex-1 min-w-[220px]"
-            value={editorGroupKey}
-            onChange={(e) => setEditorGroupKey(e.target.value)}
-          >
-            {(groups ?? []).filter((g) => g.students.length).map((g) => (
-              <option key={g.key} value={g.key}>
-                {g.subject} — {GRADE_NAMES[g.grade] ?? ""} فصل {g.class_no}
-              </option>
-            ))}
-          </select>
-
-          <div className="flex overflow-hidden rounded-pill border border-line">
-            {PERIODS.map((p) => (
-              <button
-                key={p}
-                onClick={() => setEditorPeriod(p)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  editorPeriod === p ? "bg-mint-deep text-white" : "bg-white text-muted hover:bg-canvas"
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={printEditorFollowUp}
-            disabled={!editorGroup}
-            className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-40"
-          >
-            تصدير وطباعة هذا السجل
-          </button>
-        </div>
-
-        {marksLoading && <p className="text-xs text-muted">جارٍ تحميل السجل…</p>}
-
-        {!marksLoading && editorGroup && (
-          <div className="overflow-x-auto rounded-sm2 border border-line">
-            <table className="w-full min-w-[900px] border-collapse text-xs">
-              <thead>
-                <tr className="bg-mint-tint text-mint-deep">
-                  <th rowSpan={2} className="border border-line px-2 py-1.5 w-8">م</th>
-                  <th rowSpan={2} className="border border-line px-2 py-1.5 text-right min-w-[140px]">اسم الطالب</th>
-                  {FOLLOW_SECTIONS.map((sec) => (
-                    <th key={sec.label} colSpan={sec.items.reduce((n, it) => n + it.slots, 0)}
-                        className="border border-line px-2 py-1.5">
-                      {sec.label}
-                    </th>
-                  ))}
-                  <th rowSpan={2} className="border border-line px-2 py-1.5 w-16">المجموع النهائي</th>
-                </tr>
-                <tr className="bg-mint-tint/60 text-mint-deep">
-                  {FOLLOW_SECTIONS.flatMap((sec) =>
-                    sec.items.flatMap((it) =>
-                      Array.from({ length: it.slots }, (_, i) => (
-                        <th key={`${it.key}-${i}`} className="border border-line px-1 py-1 font-normal">
-                          {it.label}{it.slots > 1 ? ` ${i + 1}` : ""}
-                        </th>
-                      ))
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {editorGroup.students.map((s, i) => (
-                  <tr key={s.id} className={i % 2 ? "bg-gray-tint/40" : ""}>
-                    <td className="num border border-line px-2 py-1 text-center">{i + 1}</td>
-                    <td className="border border-line px-2 py-1 text-right">{s.full_name}</td>
-                    {FOLLOW_SECTIONS.flatMap((sec) =>
-                      sec.items.flatMap((it) =>
-                        Array.from({ length: it.slots }, (_, slotIdx) => {
-                          const slotNo = slotIdx + 1;
-                          const k = `${s.id}-${it.key}-${slotNo}`;
-                          return (
-                            <td key={k} className="border border-line p-0">
-                              <input
-                                type="number"
-                                inputMode="decimal"
-                                className="num w-full border-0 bg-transparent px-1 py-1 text-center outline-none focus:bg-mint-tint/50"
-                                value={markValue(s.id, it.key, slotNo)}
-                                onChange={(e) => setMarkLocal(s.id, it.key, slotNo, e.target.value)}
-                                onBlur={(e) => saveMark(s.id, it.key, slotNo, e.target.value)}
-                              />
-                            </td>
-                          );
-                        })
-                      )
-                    )}
-                    <td className="border border-line p-0">
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        className="num w-full border-0 bg-mint-tint/30 px-1 py-1 text-center font-bold outline-none focus:bg-mint-tint/60"
-                        value={markValue(s.id, "total", 1)}
-                        onChange={(e) => setMarkLocal(s.id, "total", 1, e.target.value)}
-                        onBlur={(e) => saveMark(s.id, "total", 1, e.target.value)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
 
       {/* الطباعة */}
       <section className="card space-y-3 p-4">
