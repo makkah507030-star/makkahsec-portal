@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
@@ -53,6 +53,7 @@ export default function FollowUpLog() {
   const [marks, setMarks] = useState({}); // markKey -> value string
   const [marksLoading, setMarksLoading] = useState(false);
   const [saveState, setSaveState] = useState({}); // studentId -> "saving" | "saved" | "error"
+  const [errorMsg, setErrorMsg] = useState({}); // studentId -> last error message
 
   /* ---------- تحميل الإسنادات وطلابها ---------- */
   useEffect(() => {
@@ -164,6 +165,32 @@ export default function FollowUpLog() {
   const markValue = (studentId, ik, sn) =>
     group ? marks[markKey(group.class_id, group.subject, period, studentId, ik, sn)] ?? "" : "";
 
+  /* ---------- الانتقال التلقائي لمتابعة البند التالي غير المكتملة ----------
+     عند فتح بند متعدد المتابعات (كالمشاركة)، بدل البدء دائمًا من متابعة 1،
+     يقترح النظام أول متابعة لم تكتمل بعد لكل طلاب الفصل، حتى لا يبحث المعلم
+     يدويًا عن آخر درجة رصدها في حصة سابقة. */
+  const autoSlotKeyRef = useRef("");
+  useEffect(() => {
+    if (!group || marksLoading) return;
+    const it = ITEM_BY_KEY[itemKey];
+    if (!it) return;
+
+    const navKey = `${group.key}::${period}::${itemKey}`;
+    if (autoSlotKeyRef.current === navKey) return;
+    autoSlotKeyRef.current = navKey;
+
+    if (it.slots <= 1) { setSlotNo(1); return; }
+
+    let suggested = 1;
+    for (let sn = 1; sn <= it.slots; sn++) {
+      const complete = group.students.every((s) => markValue(s.id, itemKey, sn) !== "");
+      if (!complete) { suggested = sn; break; }
+      suggested = it.slots; // كل المتابعات مكتملة — يبقى عند الأخيرة
+    }
+    setSlotNo(suggested);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group, period, itemKey, marksLoading, marks]);
+
   const setMarkLocal = (studentId, ik, sn, value) => {
     if (!group) return;
     setMarks((prev) => ({
@@ -215,17 +242,19 @@ export default function FollowUpLog() {
       setTimeout(() => {
         setSaveState((prev) => (prev[studentId] === "saved" ? { ...prev, [studentId]: null } : prev));
       }, 1500);
-    } catch {
+    } catch (e) {
+      console.error("saveMark failed:", e);
+      setErrorMsg((prev) => ({ ...prev, [studentId]: e?.message || String(e) }));
       setSaveState((prev) => ({ ...prev, [studentId]: "error" }));
     }
   };
 
   const activeItem = ITEM_BY_KEY[itemKey];
 
-  /* الانتقال بمفتاح Enter للحقل التالي */
-  const focusNext = (idx) => {
-    const el = document.querySelector(`[data-row-idx="${idx + 1}"]`);
-    if (el) el.focus();
+  const toggleMark = (studentId, ik, sn, checked) => {
+    const value = checked ? "1" : "";
+    setMarkLocal(studentId, ik, sn, value);
+    saveMark(studentId, ik, sn, value);
   };
 
   const logos = () => ({
@@ -304,10 +333,11 @@ export default function FollowUpLog() {
         sec.items.flatMap((it) =>
           Array.from({ length: it.slots }, (_, si) => {
             const v = saved[`${s.id}::${it.key}::${si + 1}`];
-            if (v !== undefined && v !== null) { total += Number(v); any = true; }
+            const done = v !== undefined && v !== null && Number(v) > 0;
+            if (done) { total += 1; any = true; }
             return {
-              text: v !== undefined && v !== null ? String(v) : "",
-              cls: v !== undefined && v !== null ? (it.slots > 1 ? "slot" : "") : (it.slots > 1 ? "blank slot" : "blank"),
+              text: done ? "✓" : "",
+              cls: done ? (it.slots > 1 ? "slot" : "") : (it.slots > 1 ? "blank slot" : "blank"),
             };
           })
         )
@@ -383,8 +413,20 @@ export default function FollowUpLog() {
       <div>
         <h1 className="text-lg font-bold text-ink">سجل المتابعة الإلكتروني</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          سجّل درجة البند الذي تعمل عليه الآن فقط — مثل المشاركة أثناء الحصة —
-          وارجع لبقية البنود لاحقًا. يُحفظ كل شيء تلقائيًا.
+          حدّد البند الذي تعمل عليه الآن فقط — مثل المشاركة أثناء الحصة —
+          بتأشير الطلاب من القائمة، وارجع لبقية البنود لاحقًا. يُحفظ كل شيء تلقائيًا.
+        </p>
+      </div>
+
+      <div className="flex gap-2.5 rounded-card border border-line bg-mint-tint/50 px-3.5 py-3">
+        <svg viewBox="0 0 24 24" fill="none" className="mt-0.5 h-4 w-4 shrink-0 text-mint-deep"
+             stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 9v4M12 16.5h.01" />
+          <circle cx="12" cy="12" r="9" />
+        </svg>
+        <p className="text-xs leading-relaxed text-mint-deep">
+          هذا السجل الإلكتروني مستقل تمامًا عن سجل المتابعة الورقي الموجود في قسم
+          «السجلات» — تعبئة أحدهما لا تؤثر على الآخر، ويمكنك استخدام أيهما تفضّل.
         </p>
       </div>
 
@@ -436,7 +478,7 @@ export default function FollowUpLog() {
               {ALL_ITEMS.map((it) => (
                 <button
                   key={it.key}
-                  onClick={() => { setItemKey(it.key); setSlotNo(1); }}
+                  onClick={() => setItemKey(it.key)}
                   className={
                     "rounded-full border px-4 py-2 text-sm font-medium transition " +
                     (itemKey === it.key
@@ -451,7 +493,10 @@ export default function FollowUpLog() {
 
             {activeItem?.slots > 1 && (
               <div>
-                <p className="mb-1.5 text-xs text-muted">رقم المتابعة تحت هذا البند</p>
+                <p className="mb-1.5 text-xs text-muted">
+                  رقم المتابعة تحت هذا البند
+                  <span className="mr-1.5 text-mint-deep">— اقتُرحت المتابعة {slotNo} تلقائيًا كمتابعة تالية غير مكتملة</span>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {Array.from({ length: activeItem.slots }, (_, i) => i + 1).map((n) => (
                     <button
@@ -472,16 +517,31 @@ export default function FollowUpLog() {
             )}
           </section>
 
-          {/* الإدخال المركّز */}
+          {/* الإدخال المركّز — قائمة تأشير (شيك ليست) */}
           <section className="card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
               <h2 className="text-sm font-semibold text-ink">
                 {activeItem?.label}
                 {activeItem?.slots > 1 ? ` — متابعة ${slotNo}` : ""}
               </h2>
-              <span className="text-xs text-muted">
-                {group.subject} · {GRADE_NAMES[group.grade] ?? ""} فصل {group.class_no}
-              </span>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted">
+                  {group.subject} · {GRADE_NAMES[group.grade] ?? ""} فصل {group.class_no}
+                </span>
+                <button
+                  onClick={() => {
+                    const allChecked = group.students.every(
+                      (s) => markValue(s.id, itemKey, slotNo) !== ""
+                    );
+                    group.students.forEach((s) =>
+                      toggleMark(s.id, itemKey, slotNo, !allChecked)
+                    );
+                  }}
+                  className="text-xs font-medium text-mint-deep hover:underline"
+                >
+                  تأشير/إلغاء الكل
+                </button>
+              </div>
             </div>
 
             {marksLoading ? (
@@ -490,29 +550,31 @@ export default function FollowUpLog() {
               <div className="divide-y divide-line">
                 {group.students.map((s, idx) => {
                   const st = saveState[s.id];
+                  const checked = markValue(s.id, itemKey, slotNo) !== "";
                   return (
-                    <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
-                      <span className="num w-6 shrink-0 text-xs text-muted">{idx + 1}</span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-                        {s.full_name}
-                      </span>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        data-row-idx={idx}
-                        value={markValue(s.id, itemKey, slotNo)}
-                        onChange={(e) => setMarkLocal(s.id, itemKey, slotNo, e.target.value)}
-                        onBlur={(e) => saveMark(s.id, itemKey, slotNo, e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") { e.currentTarget.blur(); focusNext(idx); }
-                        }}
-                        className="num w-20 shrink-0 rounded-sm2 border border-line bg-paper px-2 py-1.5 text-center text-sm font-semibold text-ink focus:border-mint-deep focus:outline-none"
-                      />
-                      <span className="w-14 shrink-0 text-[11px]">
-                        {st === "saving" && <span className="text-muted">جارٍ الحفظ…</span>}
-                        {st === "saved" && <span className="text-mint-deep">✓ تم الحفظ</span>}
-                        {st === "error" && <span className="text-danger">تعذّر الحفظ</span>}
-                      </span>
+                    <div key={s.id} className="px-4 py-2.5 hover:bg-canvas">
+                      <label className="flex cursor-pointer items-center gap-3">
+                        <span className="num w-6 shrink-0 text-xs text-muted">{idx + 1}</span>
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
+                          {s.full_name}
+                        </span>
+                        <span className="w-16 shrink-0 text-[11px]">
+                          {st === "saving" && <span className="text-muted">جارٍ الحفظ…</span>}
+                          {st === "saved" && <span className="text-mint-deep">تم الحفظ</span>}
+                          {st === "error" && <span className="text-danger">تعذّر الحفظ</span>}
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => toggleMark(s.id, itemKey, slotNo, e.target.checked)}
+                          className="h-6 w-6 shrink-0 accent-mint-deep"
+                        />
+                      </label>
+                      {st === "error" && errorMsg[s.id] && (
+                        <p className="mt-1 mr-9 text-[11px] leading-relaxed text-danger">
+                          {errorMsg[s.id]}
+                        </p>
+                      )}
                     </div>
                   );
                 })}
@@ -553,8 +615,8 @@ export default function FollowUpLog() {
                         <td className="px-2 py-1.5 text-right font-medium text-ink">{s.full_name}</td>
                         {ALL_ITEMS.flatMap((it) =>
                           Array.from({ length: it.slots }, (_, i) => (
-                            <td key={`${it.key}-${i + 1}`} className="num px-2 py-1.5 text-muted">
-                              {markValue(s.id, it.key, i + 1) || "—"}
+                            <td key={`${it.key}-${i + 1}`} className="px-2 py-1.5 text-muted">
+                              {markValue(s.id, it.key, i + 1) ? "✓" : "—"}
                             </td>
                           ))
                         )}
