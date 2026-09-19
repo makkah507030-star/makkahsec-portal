@@ -44,7 +44,7 @@ const ADMIN_GROUPS = [
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
-      { to: "/feedback-admin", label: "الملاحظات", perm: "feedback", icon: "chat" },
+      { to: "/feedback-admin", label: "الدعم الفني", perm: "feedback", icon: "chat" },
     ],
   },
   {
