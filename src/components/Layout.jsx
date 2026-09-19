@@ -80,7 +80,7 @@ const OTHER_NAV = {
     { to: "/notify",   label: "الإشعارات", tabKey: "notify" },
     { to: "/permissions", label: "الاستئذان", extraTabKey: "permissions" },
     { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
-    { to: "/follow-up", label: "سجل المتابعة" },
+    { to: "/follow-up", label: "سجل المتابعة الإلكتروني" },
     { to: "/contact",  label: "الدعم الفني" },
   ],
   student:  [
