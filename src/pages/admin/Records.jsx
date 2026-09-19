@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { cleanIdentity, cleanMobile, cleanText, guessIdentityType } from "../../lib/importer";
+import { ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 
 const TRACK_LABEL = { common_year: "السنة المشتركة", general_track: "المسار العام" };
 const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
@@ -10,6 +11,7 @@ const TABS = [
   { key: "students", label: "الطلاب" },
   { key: "teachers", label: "المعلمون" },
   { key: "guardians", label: "أولياء الأمور" },
+  { key: "admins", label: "حسابات الإدارة" },
 ];
 
 export default function Records() {
@@ -58,6 +60,7 @@ export default function Records() {
       {tab === "students" && <StudentsTab year={year} yearLabel={yearLabel} />}
       {tab === "teachers" && <TeachersTab />}
       {tab === "guardians" && <GuardiansTab />}
+      {tab === "admins" && <AdminAccountsTab />}
     </div>
   );
 }
@@ -995,5 +998,157 @@ function GuardianForm({ existing, busy, onSave, onCancel }) {
         </button>
       </div>
     </form>
+  );
+}
+
+/* ============================================================= */
+/* تبويب حسابات الإدارة                                           */
+/* تعديل الاسم فقط هنا — إضافة الحساب وتحديد الأدوار من صفحة        */
+/* «الإدارة» (staff) كما هو معتاد، لضبط الصلاحيات في مكان واحد.     */
+/* ============================================================= */
+
+function AdminAccountsTab() {
+  const [rows, setRows] = useState(null);
+  const [q, setQ] = useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [name, setName] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const load = async () => {
+    const { data: admins } = await supabase
+      .from("users")
+      .select("id, username, full_name, is_active")
+      .eq("role", "admin")
+      .order("full_name");
+
+    const ids = (admins ?? []).map((a) => a.id);
+    const roleMap = {};
+    if (ids.length) {
+      const { data: rs } = await supabase
+        .from("admin_roles")
+        .select("user_id, role_type")
+        .in("user_id", ids);
+      (rs ?? []).forEach((r) => { (roleMap[r.user_id] ??= []).push(r.role_type); });
+    }
+    setRows((admins ?? []).map((a) => ({ ...a, roles: roleMap[a.id] ?? [] })));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const searching = q.trim().length > 0;
+  const filtered = useMemo(() => {
+    const term = q.trim();
+    if (!term) return [];
+    return (rows ?? []).filter(
+      (r) => r.full_name?.includes(term) || r.username?.includes(term)
+    );
+  }, [rows, q]);
+
+  const save = async (row) => {
+    setBusy(true);
+    setErr("");
+    setMsg("");
+    try {
+      const full_name = cleanText(name);
+      if (!full_name) throw new Error("الاسم مطلوب");
+
+      const { error } = await supabase.from("users").update({ full_name }).eq("id", row.id);
+      if (error) throw error;
+
+      setMsg("تم حفظ تعديل الاسم.");
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      setErr(e.message ?? String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs leading-relaxed text-muted">
+        هنا يمكن تصحيح اسم أي حساب إداري فقط. لإضافة حساب جديد أو تعديل أدواره
+        وصلاحياته، استخدم صفحة «الإدارة».
+      </p>
+
+      <input
+        className="field"
+        placeholder="بحث بالاسم أو اسم المستخدم"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+      />
+
+      <Banner err={err} msg={msg} />
+
+      {!searching ? (
+        <p className="card px-4 py-8 text-center text-sm text-muted">
+          اكتب اسمًا أو اسم مستخدم في مربع البحث لعرض حسابات الإدارة.
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-muted">
+            <span className="num font-semibold text-ink">{filtered.length}</span> نتيجة
+          </p>
+
+          <div className="card divide-y divide-line overflow-hidden">
+            {filtered.map((r) => {
+              const editing = editingId === r.id;
+              return (
+                <div key={r.id} className="px-4 py-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{r.full_name ?? r.username}</p>
+                      <p className="num mt-0.5 text-right text-xs text-faint">{r.username}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {r.roles.map((role) => (
+                          <span key={role} className="chip bg-mint-tint text-mint-deep">
+                            {ADMIN_ROLE_LABEL[role] ?? role}
+                          </span>
+                        ))}
+                        {!r.is_active && (
+                          <span className="chip bg-absent/10 text-absent">معطّل</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEditingId(editing ? null : r.id);
+                        setName(r.full_name ?? "");
+                        setErr("");
+                        setMsg("");
+                      }}
+                      className="shrink-0 text-xs font-medium text-mint-deep hover:underline"
+                    >
+                      {editing ? "إغلاق" : "تعديل الاسم"}
+                    </button>
+                  </div>
+
+                  {editing && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <input
+                        className="field flex-1"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                      <button className="btn-primary shrink-0" disabled={busy} onClick={() => save(r)}>
+                        {busy ? "جارٍ الحفظ…" : "حفظ"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {filtered.length === 0 && (
+              <p className="px-4 py-8 text-center text-sm text-muted">لا نتائج.</p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }
