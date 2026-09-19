@@ -574,7 +574,7 @@ export function printReport(opts) {
   .cover-body { flex: 1; text-align: center; padding-top: 6mm; }
   .cover-logo { height: 84px; margin: 0 auto 14px; display: block; }
   .cover h1 {
-    margin: 0 0 6px; font-size: 26px; font-weight: 700; color: ${DEEP};
+    margin: 0 0 6px; font-size: 26px; line-height: 1.35; font-weight: 700; color: ${DEEP};
     letter-spacing: -0.2px;
   }
   .cover-sub { margin: 0 0 18px; font-size: 14px; color: ${GRAY}; }

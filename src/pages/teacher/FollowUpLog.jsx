@@ -392,14 +392,12 @@ export default function FollowUpLog() {
       ],
       cover: {
         title: "سجل المتابعة الإلكتروني",
-        groupsTitle: "الفصل والمادة",
         rows: [
           ["المعلم", me?.full_name ?? ""],
           ["المادة", group.subject],
           ["الفصل", `${GRADE_NAMES[group.grade] ?? ""} · فصل ${group.class_no}`],
           ["الفترة", period],
         ],
-        groups: [{ subject: group.subject, grade: GRADE_NAMES[group.grade] ?? group.grade, class_no: group.class_no }],
         year: `العام الدراسي ${yearLabel} — الفصل الدراسي ${TERM_LABEL[term] ?? term}`,
       },
       signatures: [
