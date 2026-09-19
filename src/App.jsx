@@ -72,6 +72,7 @@ export default function App() {
         <Route path="/guides" element={<Guides />} />
         <Route path="/news/:slug" element={<NewsArticle />} />
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/contact" element={<Feedback />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -229,6 +230,7 @@ export default function App() {
           <Route path="/news-admin" element={<NewsAdmin />} />
         ) : null}
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/contact" element={<Feedback />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
