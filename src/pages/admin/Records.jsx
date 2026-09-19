@@ -1046,6 +1046,9 @@ function AdminAccountsTab() {
     );
   }, [rows, q]);
 
+  // تعديل حساب إداري (حتى الاسم فقط) يمرّ عبر نفس دالة Supabase Edge المستخدمة
+  // في صفحة «الإدارة» — تحديث جدول users مباشرة لصف role=admin محجوب بصلاحية
+  // RLS أضيق مخصّصة لصلاحية staff فقط، فلا يُطبَّق من هنا مباشرة.
   const save = async (row) => {
     setBusy(true);
     setErr("");
@@ -1054,8 +1057,17 @@ function AdminAccountsTab() {
       const full_name = cleanText(name);
       if (!full_name) throw new Error("الاسم مطلوب");
 
-      const { error } = await supabase.from("users").update({ full_name }).eq("id", row.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("create-admin-account", {
+        body: {
+          full_name,
+          national_id: row.username,
+          admin_roles: row.roles,
+        },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       setMsg("تم حفظ تعديل الاسم.");
       setEditingId(null);
