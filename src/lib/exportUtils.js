@@ -311,7 +311,6 @@ export function printReport(opts) {
     ${headBlock}
 
     <div class="cover-body">
-      ${logoUrl ? `<img class="cover-logo" src="${logoUrl}" alt="" />` : ""}
       <h1>${cover.title ?? title}</h1>
       ${cover.subtitle ? `<p class="cover-sub">${cover.subtitle}</p>` : ""}
 
@@ -319,7 +318,7 @@ export function printReport(opts) {
         ${(cover.rows ?? [])
           .map(
             (r) => `
-        <div class="crow"><span class="k">${r[0]}</span><span class="v">${r[1] ?? ""}</span></div>`
+        <div class="crow"><span class="k">${r[0]}:</span><span class="v">${r[1] ?? ""}</span></div>`
           )
           .join("")}
       </div>
@@ -572,7 +571,6 @@ export function printReport(opts) {
   /* الغلاف */
   .cover { display: flex; flex-direction: column; min-height: 96vh; }
   .cover-body { flex: 1; text-align: center; padding-top: 6mm; }
-  .cover-logo { height: 84px; margin: 0 auto 14px; display: block; }
   .cover h1 {
     margin: 0 0 6px; font-size: 26px; line-height: 1.35; font-weight: 700; color: ${DEEP};
     letter-spacing: -0.2px;
@@ -583,7 +581,7 @@ export function printReport(opts) {
     border: 1px solid ${LIGHT}; border-radius: 10px; overflow: hidden;
   }
   .cover-card .crow {
-    display: flex; justify-content: space-between; gap: 12px;
+    display: flex; justify-content: center; gap: 8px;
     padding: 9px 16px; font-size: 12px; border-bottom: 1px solid #EEF6F1;
   }
   .cover-card .crow:nth-child(odd) { background: ${TINT}; }
