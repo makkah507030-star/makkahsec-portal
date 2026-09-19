@@ -22,7 +22,6 @@ const ADMIN_GROUPS = [
     title: "شؤون الطلاب",
     items: [
       { to: "/students",    label: "الطلاب",    perm: "students",    icon: "users" },
-      { to: "/records-manual", label: "تعديل السجلات", perm: "records", icon: "edit" },
       { to: "/results-admin", label: "نتائج الطلاب", perm: "results", icon: "award" },
       { to: "/attendance-overview", label: "الحضور والغياب", perm: "reports", icon: "check" },
       { to: "/period-attendance", label: "تحضير الحصص اليومية", perm: "reports", icon: "clock" },
@@ -53,6 +52,7 @@ const ADMIN_GROUPS = [
   {
     title: "الإعدادات",
     items: [
+      { to: "/records-manual", label: "تعديل السجلات", perm: "records", icon: "edit" },
       { to: "/import",         label: "الاستيراد",           perm: "import",         icon: "upload" },
       { to: "/season",         label: "التوقيت الزمني",       perm: "import",         icon: "clock" },
       { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
