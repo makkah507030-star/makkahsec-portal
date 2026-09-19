@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
@@ -23,8 +23,8 @@ const FOLLOW_SECTIONS = [
   {
     label: "تقويم تحريري وتطبيقات عملية",
     items: [
-      { key: "written", label: "نظري", slots: 1 },
-      { key: "practical", label: "عملي", slots: 1 },
+      { key: "written", label: "نظري", slots: 1, type: "score" },
+      { key: "practical", label: "عملي", slots: 1, type: "score" },
     ],
   },
 ];
@@ -48,11 +48,11 @@ export default function FollowUpLog() {
   const [period, setPeriod] = useState(PERIODS[0]);
   const [itemKey, setItemKey] = useState("participation");
   const [slotNo, setSlotNo] = useState(1);
-  const [showFull, setShowFull] = useState(false);
 
   const [marks, setMarks] = useState({}); // markKey -> value string
   const [marksLoading, setMarksLoading] = useState(false);
   const [saveState, setSaveState] = useState({}); // studentId -> "saving" | "saved" | "error"
+  const [errorMsg, setErrorMsg] = useState({}); // studentId -> last error message
 
   /* ---------- تحميل الإسنادات وطلابها ---------- */
   useEffect(() => {
@@ -60,8 +60,16 @@ export default function FollowUpLog() {
       const uid = session?.user?.id;
       if (!uid) return;
 
-      const { data: st } = await supabase
-        .from("settings").select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
+      // إعدادات العام/الفصل وسجل المعلم — طلبان مستقلان، يُنفَّذان معًا
+      const [{ data: st }, { data: t0 }] = await Promise.all([
+        supabase
+          .from("settings").select("key, value")
+          .in("key", ["active_year", "active_term", "active_year_label"]),
+        supabase
+          .from("teachers").select("id, full_name, specialization")
+          .eq("user_id", uid).maybeSingle(),
+      ]);
+
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const y = m.active_year ?? "";
       setYearLabel(m.active_year_label ?? y);
@@ -69,9 +77,6 @@ export default function FollowUpLog() {
       setYear(y);
       setTerm(t);
 
-      const { data: t0 } = await supabase
-        .from("teachers").select("id, full_name, specialization")
-        .eq("user_id", uid).maybeSingle();
       setMe(t0 ?? null);
       if (!t0) { setGroups([]); setLoading(false); return; }
 
@@ -164,6 +169,48 @@ export default function FollowUpLog() {
   const markValue = (studentId, ik, sn) =>
     group ? marks[markKey(group.class_id, group.subject, period, studentId, ik, sn)] ?? "" : "";
 
+  /* نسبة اكتمال بنود القسم الحالي (كل بنود itemKey) لهذا الطالب */
+  const itemCompletion = (studentId, ik) => {
+    const it = ITEM_BY_KEY[ik];
+    if (!it) return 0;
+    const done = Array.from({ length: it.slots }, (_, i) => i + 1).filter(
+      (sn) => markValue(studentId, ik, sn) !== ""
+    ).length;
+    return done / it.slots;
+  };
+
+  const completionCls = (ratio) => {
+    if (ratio >= 1) return "text-mint-deep";
+    if (ratio > 0) return "text-warning";
+    return "text-danger";
+  };
+
+  /* ---------- الانتقال التلقائي لمتابعة البند التالي غير المكتملة ----------
+     عند فتح بند متعدد المتابعات (كالمشاركة)، بدل البدء دائمًا من متابعة 1،
+     يقترح النظام أول متابعة لم تكتمل بعد لكل طلاب الفصل، حتى لا يبحث المعلم
+     يدويًا عن آخر درجة رصدها في حصة سابقة. */
+  const autoSlotKeyRef = useRef("");
+  useEffect(() => {
+    if (!group || marksLoading) return;
+    const it = ITEM_BY_KEY[itemKey];
+    if (!it) return;
+
+    const navKey = `${group.key}::${period}::${itemKey}`;
+    if (autoSlotKeyRef.current === navKey) return;
+    autoSlotKeyRef.current = navKey;
+
+    if (it.slots <= 1) { setSlotNo(1); return; }
+
+    let suggested = 1;
+    for (let sn = 1; sn <= it.slots; sn++) {
+      const complete = group.students.every((s) => markValue(s.id, itemKey, sn) !== "");
+      if (!complete) { suggested = sn; break; }
+      suggested = it.slots; // كل المتابعات مكتملة — يبقى عند الأخيرة
+    }
+    setSlotNo(suggested);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [group, period, itemKey, marksLoading, marks]);
+
   const setMarkLocal = (studentId, ik, sn, value) => {
     if (!group) return;
     setMarks((prev) => ({
@@ -215,7 +262,9 @@ export default function FollowUpLog() {
       setTimeout(() => {
         setSaveState((prev) => (prev[studentId] === "saved" ? { ...prev, [studentId]: null } : prev));
       }, 1500);
-    } catch {
+    } catch (e) {
+      console.error("saveMark failed:", e);
+      setErrorMsg((prev) => ({ ...prev, [studentId]: e?.message || String(e) }));
       setSaveState((prev) => ({ ...prev, [studentId]: "error" }));
     }
   };
@@ -304,7 +353,14 @@ export default function FollowUpLog() {
         sec.items.flatMap((it) =>
           Array.from({ length: it.slots }, (_, si) => {
             const v = saved[`${s.id}::${it.key}::${si + 1}`];
-            const done = v !== undefined && v !== null && Number(v) > 0;
+            const has = v !== undefined && v !== null && String(v) !== "";
+            if (it.type === "score") {
+              return {
+                text: has ? String(v) : "",
+                cls: has ? "" : "blank",
+              };
+            }
+            const done = has && Number(v) > 0;
             if (done) { total += 1; any = true; }
             return {
               text: done ? "✓" : "",
@@ -358,7 +414,37 @@ export default function FollowUpLog() {
   };
 
   if (loading) {
-    return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+    return (
+      <div className="animate-pulse space-y-5">
+        <div className="space-y-2">
+          <div className="h-5 w-56 rounded bg-line" />
+          <div className="h-3.5 w-80 max-w-full rounded bg-line" />
+        </div>
+        <div className="h-16 rounded-card border border-line bg-white/60" />
+        <div className="card space-y-3 p-4">
+          <div className="h-4 w-40 rounded bg-line" />
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-9 w-24 rounded-full bg-line" />
+            ))}
+          </div>
+        </div>
+        <div className="card overflow-hidden">
+          <div className="border-b border-line px-4 py-3">
+            <div className="h-4 w-28 rounded bg-line" />
+          </div>
+          <div className="divide-y divide-line">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                <div className="h-3 w-4 rounded bg-line" />
+                <div className="h-3.5 flex-1 rounded bg-line" />
+                <div className="h-6 w-6 shrink-0 rounded bg-line" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!me) {
@@ -449,7 +535,7 @@ export default function FollowUpLog() {
               {ALL_ITEMS.map((it) => (
                 <button
                   key={it.key}
-                  onClick={() => { setItemKey(it.key); setSlotNo(1); }}
+                  onClick={() => setItemKey(it.key)}
                   className={
                     "rounded-full border px-4 py-2 text-sm font-medium transition " +
                     (itemKey === it.key
@@ -464,7 +550,10 @@ export default function FollowUpLog() {
 
             {activeItem?.slots > 1 && (
               <div>
-                <p className="mb-1.5 text-xs text-muted">رقم المتابعة تحت هذا البند</p>
+                <p className="mb-1.5 text-xs text-muted">
+                  رقم المتابعة تحت هذا البند
+                  <span className="mr-1.5 text-mint-deep">— اقتُرحت المتابعة {slotNo} تلقائيًا كمتابعة تالية غير مكتملة</span>
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {Array.from({ length: activeItem.slots }, (_, i) => i + 1).map((n) => (
                     <button
@@ -485,7 +574,7 @@ export default function FollowUpLog() {
             )}
           </section>
 
-          {/* الإدخال المركّز — قائمة تأشير (شيك ليست) */}
+          {/* الإدخال المركّز — قائمة تأشير للبنود متعددة المتابعات، ودرجة رقمية لبندي نظري/عملي */}
           <section className="card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
               <h2 className="text-sm font-semibold text-ink">
@@ -496,101 +585,108 @@ export default function FollowUpLog() {
                 <span className="text-xs text-muted">
                   {group.subject} · {GRADE_NAMES[group.grade] ?? ""} فصل {group.class_no}
                 </span>
-                <button
-                  onClick={() => {
-                    const allChecked = group.students.every(
-                      (s) => markValue(s.id, itemKey, slotNo) !== ""
-                    );
-                    group.students.forEach((s) =>
-                      toggleMark(s.id, itemKey, slotNo, !allChecked)
-                    );
-                  }}
-                  className="text-xs font-medium text-mint-deep hover:underline"
-                >
-                  تأشير/إلغاء الكل
-                </button>
+                {activeItem?.type !== "score" && (
+                  <button
+                    onClick={() => {
+                      const allChecked = group.students.every(
+                        (s) => markValue(s.id, itemKey, slotNo) !== ""
+                      );
+                      group.students.forEach((s) =>
+                        toggleMark(s.id, itemKey, slotNo, !allChecked)
+                      );
+                    }}
+                    className="text-xs font-medium text-mint-deep hover:underline"
+                  >
+                    تأشير/إلغاء الكل
+                  </button>
+                )}
               </div>
             </div>
 
+            {/* دلالات الألوان: اكتمال بنود المتابعة (لا تظهر لبندي نظري/عملي — درجة رقمية مباشرة) */}
+            {activeItem?.type !== "score" && (
+              <div className="flex flex-wrap items-center gap-4 border-b border-line bg-canvas/60 px-4 py-2 text-[11px]">
+                <span className="flex items-center gap-1.5 text-mint-deep">
+                  <span className="h-2.5 w-2.5 rounded-full bg-mint-deep" /> أكمل كل متابعات البند
+                </span>
+                <span className="flex items-center gap-1.5 text-warning">
+                  <span className="h-2.5 w-2.5 rounded-full bg-warning" /> أكمل بعض المتابعات
+                </span>
+                <span className="flex items-center gap-1.5 text-danger">
+                  <span className="h-2.5 w-2.5 rounded-full bg-danger" /> لم يُرصد له أي متابعة بعد
+                </span>
+              </div>
+            )}
+
             {marksLoading ? (
-              <p className="px-4 py-8 text-center text-sm text-muted">جارٍ التحميل…</p>
+              <div className="animate-pulse divide-y divide-line">
+                {group.students.map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="h-3 w-4 rounded bg-line" />
+                    <div className="h-3.5 flex-1 rounded bg-line" />
+                    <div className="h-6 w-6 shrink-0 rounded bg-line" />
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="divide-y divide-line">
                 {group.students.map((s, idx) => {
                   const st = saveState[s.id];
+                  const isScore = activeItem?.type === "score";
                   const checked = markValue(s.id, itemKey, slotNo) !== "";
+                  const ratio = itemCompletion(s.id, itemKey);
                   return (
-                    <label
-                      key={s.id}
-                      className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-canvas"
-                    >
-                      <span className="num w-6 shrink-0 text-xs text-muted">{idx + 1}</span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-                        {s.full_name}
-                      </span>
-                      <span className="w-14 shrink-0 text-[11px]">
-                        {st === "saving" && <span className="text-muted">جارٍ الحفظ…</span>}
-                        {st === "saved" && <span className="text-mint-deep">تم الحفظ</span>}
-                        {st === "error" && <span className="text-danger">تعذّر الحفظ</span>}
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => toggleMark(s.id, itemKey, slotNo, e.target.checked)}
-                        className="h-6 w-6 shrink-0 accent-mint-deep"
-                      />
-                    </label>
+                    <div key={s.id} className="px-4 py-2.5 hover:bg-canvas">
+                      <div className="flex items-center gap-3">
+                        <span className="num w-6 shrink-0 text-xs text-muted">{idx + 1}</span>
+                        <span
+                          className={
+                            "min-w-0 flex-1 truncate text-sm font-semibold " +
+                            (isScore ? "text-ink" : completionCls(ratio))
+                          }
+                        >
+                          {s.full_name}
+                        </span>
+                        <span className="w-16 shrink-0 text-[11px]">
+                          {st === "saving" && <span className="text-muted">جارٍ الحفظ…</span>}
+                          {st === "saved" && <span className="text-mint-deep">تم الحفظ</span>}
+                          {st === "error" && <span className="text-danger">تعذّر الحفظ</span>}
+                        </span>
+                        {isScore ? (
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={markValue(s.id, itemKey, slotNo)}
+                            onChange={(e) => setMarkLocal(s.id, itemKey, slotNo, e.target.value)}
+                            onBlur={(e) => saveMark(s.id, itemKey, slotNo, e.target.value)}
+                            className="num w-20 shrink-0 rounded-sm2 border border-line bg-paper px-2 py-1.5 text-center text-sm font-semibold text-ink focus:border-mint-deep focus:outline-none"
+                          />
+                        ) : (
+                          <label className="flex cursor-pointer items-center">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => toggleMark(s.id, itemKey, slotNo, e.target.checked)}
+                              className="h-6 w-6 shrink-0 accent-mint-deep"
+                            />
+                          </label>
+                        )}
+                      </div>
+                      {st === "error" && errorMsg[s.id] && (
+                        <p className="mt-1 mr-9 text-[11px] leading-relaxed text-danger">
+                          {errorMsg[s.id]}
+                        </p>
+                      )}
+                    </div>
                   );
                 })}
               </div>
             )}
           </section>
 
-          {/* الجدول الكامل + التصدير */}
+          {/* التصدير */}
           <section className="card space-y-3 p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-ink">مراجعة وتصدير</h2>
-              <button
-                onClick={() => setShowFull((v) => !v)}
-                className="text-xs font-medium text-mint-deep hover:underline"
-              >
-                {showFull ? "إخفاء الجدول الكامل" : "عرض الجدول الكامل"}
-              </button>
-            </div>
-
-            {showFull && !marksLoading && (
-              <div className="overflow-x-auto rounded-sm2 border border-line">
-                <table className="w-full min-w-[720px] text-center text-xs">
-                  <thead>
-                    <tr className="bg-canvas text-muted">
-                      <th className="border-b border-line px-2 py-2">الطالب</th>
-                      {ALL_ITEMS.flatMap((it) =>
-                        Array.from({ length: it.slots }, (_, i) => (
-                          <th key={`${it.key}-${i + 1}`} className="border-b border-line px-2 py-2 whitespace-nowrap">
-                            {it.label}{it.slots > 1 ? ` ${i + 1}` : ""}
-                          </th>
-                        ))
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.students.map((s) => (
-                      <tr key={s.id} className="border-b border-line last:border-0">
-                        <td className="px-2 py-1.5 text-right font-medium text-ink">{s.full_name}</td>
-                        {ALL_ITEMS.flatMap((it) =>
-                          Array.from({ length: it.slots }, (_, i) => (
-                            <td key={`${it.key}-${i + 1}`} className="px-2 py-1.5 text-muted">
-                              {markValue(s.id, it.key, i + 1) ? "✓" : "—"}
-                            </td>
-                          ))
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
+            <h2 className="text-sm font-semibold text-ink">تصدير</h2>
             <button
               onClick={printGroupFollowUp}
               disabled={busy}
