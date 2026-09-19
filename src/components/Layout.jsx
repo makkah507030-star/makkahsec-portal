@@ -14,7 +14,8 @@ const ADMIN_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", perm: null, icon: "home" },
-      { to: "/contact", label: "الدعم الفني", perm: null, icon: "chat" },
+      // لا يظهر لمشرف الدعم الفني ولا لمدير المدرسة — هما لا يرفعان طلب دعم لأنفسهما
+      { to: "/contact", label: "الدعم الفني", perm: null, icon: "chat", hideForRoles: ["tech_support", "principal"] },
     ],
   },
   {
@@ -135,9 +136,10 @@ export default function Layout({ children }) {
   const groups = ADMIN_GROUPS
     .map((g) => ({
       ...g,
-      items: g.items.filter((i) =>
-        i.techOnly ? adminRoles.includes("tech_support") : !i.perm || can(i.perm)
-      ),
+      items: g.items.filter((i) => {
+        if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
+        return i.techOnly ? adminRoles.includes("tech_support") : !i.perm || can(i.perm);
+      }),
     }))
     .filter((g) => g.items.length);
 
@@ -280,10 +282,10 @@ export default function Layout({ children }) {
                       <button
                         type="button"
                         onClick={() => toggleGroup(g.title)}
-                        className="mb-1 flex w-full items-center justify-between px-3 py-1 text-[11px] font-semibold text-faint hover:text-muted"
+                        className="mb-1.5 flex w-full items-center justify-between rounded-sm2 px-3 py-2 text-[13px] font-bold text-muted hover:bg-canvas hover:text-ink"
                       >
                         <span>{g.title}</span>
-                        <svg viewBox="0 0 24 24" className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                        <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
                              fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="m6 9 6 6 6-6" />
                         </svg>
@@ -334,10 +336,10 @@ export default function Layout({ children }) {
                           <button
                             type="button"
                             onClick={() => toggleGroup(g.title)}
-                            className="mb-1 flex w-full items-center justify-between px-3 py-1 text-[11px] font-semibold text-faint hover:text-muted"
+                            className="mb-1.5 flex w-full items-center justify-between rounded-sm2 px-3 py-2 text-[13px] font-bold text-muted hover:bg-canvas hover:text-ink"
                           >
                             <span>{g.title}</span>
-                            <svg viewBox="0 0 24 24" className={`h-3 w-3 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                            <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
                                  fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="m6 9 6 6 6-6" />
                             </svg>
