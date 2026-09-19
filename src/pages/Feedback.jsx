@@ -57,6 +57,11 @@ export default function Feedback() {
       return;
     }
 
+    if (!name.trim()) {
+      setError("أدخل الاسم — هذا الحقل إجباري للتأكد من هوية مقدّم الطلب.");
+      return;
+    }
+
     if (!/^\d{1,19}$/.test(nationalId.trim())) {
       setError("أدخل رقم الهوية (أرقام فقط، أقل من ٢٠ رقمًا).");
       return;
@@ -77,7 +82,7 @@ export default function Feedback() {
     const { data: inserted, error: err } = await supabase
       .from("feedback")
       .insert({
-        name: name.trim() || null,
+        name: name.trim(),
         national_id: nationalId.trim(),
         role_label: roleLabel,
         category,
@@ -259,12 +264,13 @@ export default function Feedback() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="label" htmlFor="nm">الاسم (اختياري)</label>
+                  <label className="label" htmlFor="nm">الاسم</label>
                   <input
                     id="nm"
                     className="field mt-1"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    required
                   />
                 </div>
                 <div>

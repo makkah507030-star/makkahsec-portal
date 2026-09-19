@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { fmtDateTime } from "../../lib/dates";
-import { printReport, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { printReport, PRINCIPAL_NAME, TECH_SUPPORT_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -141,7 +141,10 @@ export default function SupportReport() {
           rows: ticketRows,
         },
       ],
-      signatures: [{ title: "مدير المدرسة", name: PRINCIPAL_NAME }],
+      signatures: [
+        { title: "الدعم الفني للبوابة", name: TECH_SUPPORT_NAME },
+        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+      ],
     });
   };
 

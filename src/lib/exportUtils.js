@@ -12,6 +12,9 @@ export const STUDENT_DEPUTY_NAME = "فهد بن نايف ماطر المعبدي
 // وكيل الشؤون التعليمية
 export const ACADEMIC_DEPUTY_NAME = "فهد بن سعود حضرواي";
 
+// مسؤول الدعم الفني للبوابة — يظهر في تقارير مركز الدعم والمساندة
+export const TECH_SUPPORT_NAME = "محمد بن حسن الحازمي";
+
 /* ألوان الهوية المستخدمة في التقارير المطبوعة */
 const DEEP  = "#3E6350";
 const MINT  = "#89D7AD";
