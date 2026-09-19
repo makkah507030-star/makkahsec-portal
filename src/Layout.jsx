@@ -19,6 +19,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/students",    label: "الطلاب",    perm: "students",    icon: "users" },
       { to: "/records-manual", label: "تعديل السجلات", perm: "records", icon: "edit" },
+      { to: "/results-admin", label: "نتائج الطلاب", perm: "results", icon: "award" },
       { to: "/attendance-overview", label: "الحضور والغياب", perm: "reports", icon: "check" },
       { to: "/period-attendance", label: "تحضير الحصص اليومية", perm: "reports", icon: "clock" },
       { to: "/reports",     label: "التقارير",  perm: "reports",     icon: "chart" },
@@ -33,16 +34,17 @@ const ADMIN_GROUPS = [
       { to: "/student-schedules", label: "جداول الطلاب",          perm: "import", icon: "users" },
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
+      { to: "/substitute-report", label: "تقرير حصص الانتظار", perm: "reports", icon: "chart" },
     ],
   },
   {
     title: "المحتوى",
     items: [
-      { to: "/news-admin",     label: "الأخبار",   perm: "news",     icon: "news" },
+      { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
-      { to: "/feedback-admin", label: "الملاحظات", perm: "feedback", icon: "chat" },
+      { to: "/feedback-admin", label: "الدعم الفني", perm: "feedback", icon: "chat" },
     ],
   },
   {
@@ -55,17 +57,24 @@ const ADMIN_GROUPS = [
       { to: "/password-reset", label: "استعادة كلمة المرور", perm: "password_reset", icon: "lock" },
     ],
   },
+  {
+    title: "الدعم الفني",
+    items: [
+      { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
+    ],
+  },
 ];
 
 const OTHER_NAV = {
   teacher: [
     { to: "/",         label: "التحضير",  tabKey: "attendance" },
+    { to: "/substitute", label: "الانتظار", tabKey: "substitute" },
     { to: "/schedule", label: "جدولي",    tabKey: "schedule" },
     { to: "/records",  label: "السجلات",  tabKey: "records" },
     { to: "/reports",  label: "التقارير", tabKey: "reports" },
     { to: "/notify",   label: "الإشعارات", tabKey: "notify" },
     { to: "/permissions", label: "الاستئذان", extraTabKey: "permissions" },
-    { to: "/news-admin",  label: "الأخبار",   extraTabKey: "news" },
+    { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
   ],
   student:  [{ to: "/", label: "الرئيسية" }],
   guardian: [{ to: "/", label: "الرئيسية" }],
@@ -91,7 +100,9 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
     check:  "M20 6 9 17l-5-5",
     megaphone: "M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H10l9 4V5l-9 4H5a2 2 0 0 0-2 2Zm7-2v6",
+    wrench: "M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2Z",
     edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
+    award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM8.2 13.5 6 21l6-3 6 3-2.2-7.5",
   }[name];
 
   return (
@@ -110,7 +121,12 @@ export default function Layout({ children }) {
   const isAdmin = profile?.role === "admin";
 
   const groups = ADMIN_GROUPS
-    .map((g) => ({ ...g, items: g.items.filter((i) => !i.perm || can(i.perm)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) =>
+        i.techOnly ? adminRoles.includes("tech_support") : !i.perm || can(i.perm)
+      ),
+    }))
     .filter((g) => g.items.length);
 
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
@@ -141,9 +157,33 @@ export default function Layout({ children }) {
 
   const Actions = () => (
     <div className="flex shrink-0 items-center gap-2">
+      <PreviewSite />
       <NotificationBell />
       <SignOut />
     </div>
+  );
+
+  // معاينة سريعة للصفحة الرئيسية العامة (الموقع المنشور) في تبويب جديد — للوصول السريع بعد أي تعديل
+  // يستخدم مسار /home المخصص كي يعرض الصفحة العامة فعليًا حتى وأنت مسجّل الدخول،
+  // بدل "/" التي تُحوّلك تلقائيًا للوحة التحكم
+  const PreviewSite = () => (
+    <a
+      href="/home"
+      target="_blank"
+      rel="noopener noreferrer"
+      title="الصفحة الرئيسية للبوابة"
+      className="flex shrink-0 items-center gap-1.5 rounded-pill border border-line px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint hover:text-mint-deep sm:px-3.5"
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none"
+           stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5" />
+      </svg>
+      <span className="hidden sm:inline">الصفحة الرئيسية للبوابة</span>
+      <svg viewBox="0 0 24 24" className="hidden h-3 w-3 shrink-0 sm:block" fill="none"
+           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 17 17 7M9 7h8v8" />
+      </svg>
+    </a>
   );
 
   // الاسم والدور — نسخة مدمجة للشريط العلوي

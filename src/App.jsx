@@ -41,6 +41,7 @@ import PasswordReset from "./pages/admin/PasswordReset.jsx";
 import SeasonSwitch from "./pages/admin/SeasonSwitch.jsx";
 import Reports from "./pages/Reports.jsx";
 import Feedback from "./pages/Feedback.jsx";
+import TicketDetail from "./pages/TicketDetail.jsx";
 import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
 import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
@@ -231,6 +232,7 @@ export default function App() {
         ) : null}
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/contact" element={<Feedback />} />
+        <Route path="/ticket/:id" element={<TicketDetail />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
