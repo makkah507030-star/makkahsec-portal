@@ -25,7 +25,6 @@ export default function Feedback() {
   const standalone = !session; // الزائر غير المسجّل يرى ترويسة وخلفية خاصة
 
   const [name, setName] = useState("");
-  const [contact, setContact] = useState("");
   const [nationalId, setNationalId] = useState("");
   const [roleLabel, setRoleLabel] = useState("");
   const [category, setCategory] = useState("bug");
@@ -79,7 +78,6 @@ export default function Feedback() {
       .from("feedback")
       .insert({
         name: name.trim() || null,
-        contact: contact.trim() || null,
         national_id: nationalId.trim(),
         role_label: roleLabel,
         category,
@@ -270,7 +268,7 @@ export default function Feedback() {
                   />
                 </div>
                 <div>
-                  <label className="label" htmlFor="nid">رقم الهوية</label>
+                  <label className="label" htmlFor="nid">رقم الهوية / الإقامة / الحدود</label>
                   <input
                     id="nid"
                     className="field mt-1"
@@ -279,23 +277,10 @@ export default function Feedback() {
                     dir="ltr"
                     inputMode="numeric"
                     maxLength={19}
-                    placeholder="رقم الهوية أو رقم الحدود"
+                    placeholder="رقم الهوية أو الإقامة أو الحدود"
                     required
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="label" htmlFor="ct">
-                  جوال أو بريد للتواصل (اختياري)
-                </label>
-                <input
-                  id="ct"
-                  className="field mt-1"
-                  value={contact}
-                  onChange={(e) => setContact(e.target.value)}
-                  dir="ltr"
-                />
               </div>
 
               <div>

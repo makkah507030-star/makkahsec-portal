@@ -12,7 +12,10 @@ import AnnouncementModal from "./AnnouncementModal.jsx";
 const ADMIN_GROUPS = [
   {
     title: null,
-    items: [{ to: "/", label: "الرئيسية", perm: null, icon: "home" }],
+    items: [
+      { to: "/", label: "الرئيسية", perm: null, icon: "home" },
+      { to: "/contact", label: "الدعم الفني", perm: null, icon: "chat" },
+    ],
   },
   {
     title: "شؤون الطلاب",
@@ -44,7 +47,6 @@ const ADMIN_GROUPS = [
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
-      { to: "/feedback-admin", label: "الدعم الفني", perm: "feedback", icon: "chat" },
     ],
   },
   {
@@ -60,6 +62,8 @@ const ADMIN_GROUPS = [
   {
     title: "الدعم الفني",
     items: [
+      { to: "/feedback-admin", label: "مركز الدعم والمساندة", perm: "feedback", icon: "chat" },
+      { to: "/support-report", label: "تقرير ومتابعة الدعم", perm: "feedback", icon: "chart" },
       { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
     ],
   },
@@ -75,9 +79,16 @@ const OTHER_NAV = {
     { to: "/notify",   label: "الإشعارات", tabKey: "notify" },
     { to: "/permissions", label: "الاستئذان", extraTabKey: "permissions" },
     { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
+    { to: "/contact",  label: "الدعم الفني" },
   ],
-  student:  [{ to: "/", label: "الرئيسية" }],
-  guardian: [{ to: "/", label: "الرئيسية" }],
+  student:  [
+    { to: "/", label: "الرئيسية" },
+    { to: "/contact", label: "الدعم الفني" },
+  ],
+  guardian: [
+    { to: "/", label: "الرئيسية" },
+    { to: "/contact", label: "الدعم الفني" },
+  ],
 };
 
 /* أيقونات خطّية بسيطة */
