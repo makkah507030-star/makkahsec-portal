@@ -255,6 +255,7 @@ export function exportStyledExcel({
  * @param {Object}  [opts.cover]      - { title, subtitle, rows: [[k,v]], groups, year }
  * @param {Array}   [opts.signatures] - [{ title, name }]
  * @param {boolean} [opts.hideSignatureLine]
+ * @param {boolean} [opts.signOnLastPageOnly] - عند تعدد الأقسام/الصفحات، لا تُكرَّر التوقيعات إلا في آخر صفحة
  * @param {string}  [opts.note]
  * @param {string}  [opts.tableClass]
  * @param {boolean} [opts.landscape]
@@ -264,6 +265,7 @@ export function printReport(opts) {
     title, subtitle, headers, headerRows, rows,
     sections, logoUrl, moeLogoUrl, cover,
     signatures, secondSignature, hideSignatureLine = false, hideSignatures = false,
+    signOnLastPageOnly = false,
     note, tableClass, landscape = false,
   } = opts;
 
@@ -421,7 +423,7 @@ export function printReport(opts) {
     }
 
     ${sec.note ?? note ? `<p class="note">${sec.note ?? note}</p>` : ""}
-    ${signBlock}
+    ${!signOnLastPageOnly || i === list.length - 1 ? signBlock : ""}
   </section>`
     )
     .join("");

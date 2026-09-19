@@ -165,6 +165,7 @@ export default function LoginLogAdmin() {
         { title: "الدعم الفني للبوابة", name: TECH_SUPPORT_NAME },
         { title: "مدير المدرسة", name: PRINCIPAL_NAME },
       ],
+      signOnLastPageOnly: true,
     });
   };
 
