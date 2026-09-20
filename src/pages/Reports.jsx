@@ -1107,6 +1107,13 @@ function TeacherSheetsReport() {
 
   const allSheets = teachers.flatMap((t) => t.sheets);
 
+  // ملخّص ما جلبه التطبيق فعلًا من القاعدة اليوم — لتشخيص أي فرق بين
+  // البيانات المخزّنة وما يظهر (يعكس صفوف class_attendance كما وصلت تمامًا)
+  const fetchedTotals = (rows?.att ?? []).reduce(
+    (c, r) => { c[r.status] = (c[r.status] ?? 0) + 1; c.total += 1; return c; },
+    { present: 0, absent: 0, late: 0, excused: 0, total: 0 }
+  );
+
   return (
     <div className="space-y-4">
       <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
@@ -1131,6 +1138,17 @@ function TeacherSheetsReport() {
         <p className="rounded-card bg-absent/10 px-4 py-2.5 text-sm font-medium text-absent">
           تعذّر جلب البيانات: {err}
         </p>
+      )}
+
+      {rows && fetchedTotals.total > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-white px-4 py-3 text-xs">
+          <span className="font-semibold text-muted">إجمالي المرصود اليوم:</span>
+          <span className="num chip bg-gray-tint text-ink">{fetchedTotals.total} سجل</span>
+          <span className="num chip bg-present/10 text-present">حاضر {fetchedTotals.present}</span>
+          <span className="num chip bg-absent/10 text-absent">غائب {fetchedTotals.absent}</span>
+          <span className="num chip bg-late/10 text-late">متأخر {fetchedTotals.late}</span>
+          <span className="num chip bg-excused/10 text-excused">مستأذن {fetchedTotals.excused}</span>
+        </div>
       )}
 
       {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
