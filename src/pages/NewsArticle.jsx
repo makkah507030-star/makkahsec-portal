@@ -118,8 +118,8 @@ export default function NewsArticle() {
   .cover-label{font-weight:700;font-size:15px}
   .cover-person{font-size:12px;opacity:.9;margin-top:2px}
   .excerpt{font-size:15px;font-weight:600;color:#33463E;background:#E9F7F0;border:1px solid #CCF2DB;border-radius:10px;padding:10px 14px;margin-bottom:14px}
-  .imgs{margin:14px 0;display:flex;flex-direction:column;gap:12px;align-items:center}
-  .imgs img{max-width:460px;max-height:290px;width:auto;height:auto;object-fit:contain;border:1px solid #DDE6E1;border-radius:10px;background:#fff;page-break-inside:avoid;display:block;margin:0 auto}
+  .imgs{margin:10px 0 16px;display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;justify-content:center;align-items:stretch}
+  .imgs img{flex:1 1 0;min-width:0;max-width:230px;aspect-ratio:16/9;object-fit:cover;border:1px solid #DDE6E1;border-radius:8px;background:#fff;page-break-inside:avoid}
   .body p{font-size:14.5px;margin-bottom:10px;text-align:justify}
   .video{margin-top:14px;border:1px dashed #0F7B55;background:#F4FBF8;border-radius:10px;padding:10px 14px;font-size:13px;word-break:break-all}
   .video .lbl{font-weight:700;color:#0F7B55;display:block;margin-bottom:4px}
@@ -139,8 +139,8 @@ export default function NewsArticle() {
   ${item.published_at ? `<p class="date">${escHtml(fmtBoth(item.published_at))}</p>` : ""}
   <h1>${escHtml(item.title)}</h1>
   ${coverBar}
-  ${item.excerpt ? `<p class="excerpt">${escHtml(item.excerpt)}</p>` : ""}
   ${imagesHtml}
+  ${item.excerpt ? `<p class="excerpt">${escHtml(item.excerpt)}</p>` : ""}
   ${bodyHtml ? `<div class="body">${bodyHtml}</div>` : ""}
   ${item.video_url ? `<div class="video"><span class="lbl">رابط الفيديو:</span><a href="${escHtml(item.video_url)}">${escHtml(item.video_url)}</a></div>` : ""}
   <div class="foot">
