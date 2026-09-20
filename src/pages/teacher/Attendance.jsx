@@ -367,13 +367,13 @@ export default function Attendance() {
                    style={(permit || cur !== "present")
                      ? { boxShadow: "inset 3px 0 0 currentColor" }
                      : undefined}>
-                <div className="mb-1.5 flex items-baseline gap-2">
-                  <span className="num w-6 shrink-0 text-xs text-faint">{i + 1}</span>
+                <div className="mb-1.5 flex items-start gap-2">
+                  <span className="num w-6 shrink-0 pt-0.5 text-xs text-faint">{i + 1}</span>
                   <AbsenceBox stat={absStats[s.id]} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium leading-tight text-ink">{s.full_name}</p>
                     {s.national_id && (
-                      <p className="num mt-0.5 text-[11px] leading-none text-faint">{s.national_id}</p>
+                      <p className="num mt-0.5 text-xs leading-none text-faint">{s.national_id}</p>
                     )}
                   </div>
                   {!punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
