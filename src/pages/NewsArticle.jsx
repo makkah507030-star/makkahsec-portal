@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtBoth } from "../lib/dates";
@@ -45,6 +45,28 @@ export default function NewsArticle() {
   }, [slug]);
 
   const flash = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+
+  // شريط تقدّم القراءة أعلى الصفحة
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const onScroll = () => {
+      const el = document.documentElement;
+      const max = el.scrollHeight - el.clientHeight;
+      setProgress(max > 0 ? Math.min(100, (el.scrollTop / max) * 100) : 0);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [item]);
+
+  // زمن القراءة التقديري (≈180 كلمة/دقيقة)
+  const readMins = useMemo(() => {
+    const words = String(item?.body || "").trim().split(/\s+/).filter(Boolean).length;
+    return words ? Math.max(1, Math.round(words / 180)) : 0;
+  }, [item]);
+
+  const publisherLabel = item?.cover_theme ? (ADMIN_ROLE_LABEL[item.cover_theme] ?? null) : null;
+  const publisherPerson = item?.cover_theme ? (ROLE_PERSON_NAME[item.cover_theme] ?? null) : null;
 
   // مشاركة احترافية: اسم البوابة + عنوان الخبر + مقتطفه + رابط الفيديو إن
   // وُجد + رابط الخبر. تستخدم مشاركة النظام إن توفّرت، وإلا تنسخ للحافظة.
@@ -158,6 +180,12 @@ export default function NewsArticle() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* شريط تقدّم القراءة */}
+      <div className="fixed inset-x-0 top-0 z-40 h-1 bg-transparent">
+        <div className="h-full bg-mint-deep transition-[width] duration-150 ease-out"
+             style={{ width: `${progress}%` }} />
+      </div>
+
       <header className="sticky top-0 z-10 border-b border-line bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-5 py-3.5">
           <Link to="/" className="flex items-center gap-2.5">
@@ -233,32 +261,48 @@ export default function NewsArticle() {
 
         {item && (
           <article>
-            {item.published_at && (
-              <p className="text-xs text-muted">
-                {fmtBoth(item.published_at)}
-              </p>
-            )}
-            <h1 className="mt-2 text-2xl font-bold leading-snug text-ink md:text-3xl">
+            {/* سطر معلومات: التاريخ · الناشر · زمن القراءة */}
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
+              {item.published_at && <span className="num">{fmtBoth(item.published_at)}</span>}
+              {publisherLabel && (
+                <>
+                  <span className="text-faint">•</span>
+                  <span className="font-semibold text-mint-deep">{publisherLabel}</span>
+                </>
+              )}
+              {readMins > 0 && (
+                <>
+                  <span className="text-faint">•</span>
+                  <span>قراءة <span className="num">{readMins}</span> دقائق</span>
+                </>
+              )}
+            </div>
+
+            <h1 className="mt-3 text-[26px] font-extrabold leading-[1.4] text-ink md:text-[34px]">
               {item.title}
             </h1>
+
+            {/* خط لوني مميّز تحت العنوان */}
+            <div className="mt-4 h-1 w-16 rounded-full bg-mint-deep" />
 
             {/* شريط الحساب الناشر — عرضي رفيع أسفل العنوان، بدل صورة غلاف كبيرة */}
             {item.cover_theme ? (
               <NewsCoverCard
                 role={item.cover_theme}
                 compact
-                className="mt-4 h-16 w-full rounded-card border border-line sm:h-20"
+                className="mt-6 h-20 w-full rounded-card border border-line shadow-sm sm:h-24"
               />
             ) : item.cover_url && (
               <img
                 src={item.cover_url}
                 alt=""
-                className="mt-4 h-24 w-full rounded-card border border-line object-cover sm:h-28"
+                className="mt-6 h-28 w-full rounded-card border border-line object-cover shadow-sm sm:h-36"
               />
             )}
 
+            {/* المقدّمة كنبذة بارزة */}
             {item.excerpt && (
-              <p className="mt-4 text-base leading-relaxed text-muted">
+              <p className="mt-6 border-r-[3px] border-mint-deep/50 bg-[#F7FBF9] pr-4 pl-3 py-3 rounded-l-card text-[17px] font-medium leading-loose text-ink/85">
                 {item.excerpt}
               </p>
             )}
@@ -266,7 +310,7 @@ export default function NewsArticle() {
             <ArticleImageSlider images={item.body_images} />
 
             {youtubeId(item.video_url) && (
-              <div className="mt-7 aspect-video overflow-hidden rounded-card border border-line">
+              <div className="mt-7 aspect-video overflow-hidden rounded-card border border-line shadow-sm">
                 <iframe
                   src={`https://www.youtube.com/embed/${youtubeId(item.video_url)}`}
                   title={item.title}
@@ -278,19 +322,66 @@ export default function NewsArticle() {
             )}
 
             {item.body && (
-              <div className="mt-7 space-y-4 text-[15px] leading-[1.9] text-ink">
-                {item.body.split(/\n{2,}/).map((p, i) => (
-                  <p key={i}>{p}</p>
+              <div className="mt-8 space-y-5 text-[16.5px] leading-[2.05] text-ink/90">
+                {item.body.split(/\n{2,}/).filter(Boolean).map((p, i) => (
+                  <p key={i} className={i === 0 ? "text-[18px] font-medium text-ink" : ""}>
+                    {p}
+                  </p>
                 ))}
               </div>
             )}
+
+            {/* تذييل المقال: مشاركة وطباعة + العودة */}
+            <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-card border border-[#CCF2DB] bg-[#F4FBF8] px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-ink">هل أعجبك الخبر؟</p>
+                <p className="mt-0.5 text-xs text-muted">
+                  شاركه أو اطبعه للاستفادة منه{publisherPerson ? ` — بإشراف ${publisherPerson}` : ""}.
+                </p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button onClick={shareArticle}
+                  className="inline-flex items-center gap-1.5 rounded-pill bg-mint-deep px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4"
+                       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                    <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
+                  </svg>
+                  مشاركة
+                </button>
+                <button onClick={printArticle}
+                  className="inline-flex items-center gap-1.5 rounded-pill border border-line bg-white px-4 py-2 text-sm font-semibold text-ink transition-colors hover:border-mint-deep hover:text-mint-deep">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4"
+                       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                    <rect x="6" y="14" width="12" height="8" rx="1" />
+                  </svg>
+                  طباعة
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <Link to="/news"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-mint-deep hover:underline">
+                <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4"
+                     stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6" />
+                </svg>
+                تصفّح بقية الأخبار والمقالات
+              </Link>
+            </div>
           </article>
         )}
       </main>
 
       <footer className="border-t border-line">
-        <div className="mx-auto max-w-3xl px-5 py-6 text-xs text-muted">
-          مدرسة مكة الثانوية — بوابة إلكترونية داخلية.
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-2 px-5 py-6 text-xs text-muted">
+          <span className="flex items-center gap-2">
+            <img src={logoIcon} alt="" className="h-5 w-5 object-contain" />
+            مدرسة مكة الثانوية — بوابة إلكترونية داخلية.
+          </span>
+          <span className="num text-faint">© {new Date().getFullYear()}</span>
         </div>
       </footer>
     </div>
