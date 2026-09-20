@@ -94,7 +94,6 @@ export default function NewsArticle() {
   // وشعارها، ثم الخبر، وصندوق لرابط الفيديو إن وُجد، وتذييل بالرابط.
   const printArticle = () => {
     if (!item) return;
-    const url = window.location.href;
     const logo = new URL(logoIcon, window.location.origin).href;
     const moe = new URL(moeLogo, window.location.origin).href;
     const bodyHtml = (item.body || "")
@@ -167,7 +166,7 @@ export default function NewsArticle() {
   ${item.video_url ? `<div class="video"><span class="lbl">رابط الفيديو:</span><a href="${escHtml(item.video_url)}">${escHtml(item.video_url)}</a></div>` : ""}
   <div class="foot">
     <span>المصدر: ${escHtml(PORTAL_NAME)}</span>
-    <span>${escHtml(url)}</span>
+    <span>makkahsec.com</span>
   </div>
   <script>
     // نطبع بعد اكتمال تحميل كل الصور (حدث load يشمل الصور) حتى لا تُطبع فارغة
