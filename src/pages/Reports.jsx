@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { GRADE_NAMES, STATUS } from "../lib/schoolTime";
 import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
+import { fetchAllPaged } from "../lib/attendanceHelpers";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { fmtGreg, fmtTime12 } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
@@ -158,14 +159,18 @@ function DailyReport({ scopeIds }) {
   useEffect(() => {
     (async () => {
       setRows(null);
-      let q = supabase
-        .from("class_attendance")
-        .select("student_id, status, students(full_name, national_id), schedule(period_no, classes(class_no, grade), subjects(name))")
-        .eq("attend_date", date)
-        .in("status", NON_PRESENT);
-      q = applyScope(q, scopeIds);
-      const { data } = await q;
-      setRows(data ?? []);
+      try {
+        const data = await fetchAllPaged(() => {
+          let q = supabase
+            .from("class_attendance")
+            .select("student_id, status, students(full_name, national_id), schedule(period_no, classes(class_no, grade), subjects(name))")
+            .eq("attend_date", date)
+            .in("status", NON_PRESENT)
+            .order("id", { ascending: true });
+          return applyScope(q, scopeIds);
+        });
+        setRows(data);
+      } catch (e) { console.error("DailyReport:", e); setRows([]); }
     })();
   }, [date, scopeIds]);
 
@@ -433,16 +438,19 @@ function PeriodReport({ scopeIds }) {
   useEffect(() => {
     (async () => {
       setRows(null);
-      let q = supabase
-        .from("class_attendance")
-        .select("student_id, status, students(full_name, national_id), schedule(classes(class_no, grade))")
-        .gte("attend_date", from)
-        .lte("attend_date", to)
-        .in("status", NON_PRESENT)
-        .limit(5000);
-      q = applyScope(q, scopeIds);
-      const { data } = await q;
-      setRows(data ?? []);
+      try {
+        const data = await fetchAllPaged(() => {
+          let q = supabase
+            .from("class_attendance")
+            .select("student_id, status, students(full_name, national_id), schedule(classes(class_no, grade))")
+            .gte("attend_date", from)
+            .lte("attend_date", to)
+            .in("status", NON_PRESENT)
+            .order("id", { ascending: true });
+          return applyScope(q, scopeIds);
+        });
+        setRows(data);
+      } catch (e) { console.error("PeriodReport:", e); setRows([]); }
     })();
   }, [from, to, scopeIds]);
 
@@ -760,16 +768,19 @@ function AbsenceDaysReport({ scopeIds }) {
     (async () => {
       setRows(null);
 
-      // كل سجلات الحضور في الفترة
-      let q = supabase
-        .from("class_attendance")
-        .select("student_id, attend_date, status, students(full_name, national_id), schedule(classes(class_no, grade))")
-        .gte("attend_date", from)
-        .lte("attend_date", to)
-        .limit(20000);
-      q = applyScope(q, scopeIds);
-
-      const { data } = await q;
+      // كل سجلات الحضور في الفترة — على دفعات لتجاوز حدّ 1000
+      let data = [];
+      try {
+        data = await fetchAllPaged(() => {
+          let q = supabase
+            .from("class_attendance")
+            .select("student_id, attend_date, status, students(full_name, national_id), schedule(classes(class_no, grade))")
+            .gte("attend_date", from)
+            .lte("attend_date", to)
+            .order("id", { ascending: true });
+          return applyScope(q, scopeIds);
+        });
+      } catch (e) { console.error("AbsenceDaysReport:", e); data = []; }
 
       // تجميع: لكل طالب ولكل يوم — هل غاب كل حصصه؟
       const byStudent = new Map();

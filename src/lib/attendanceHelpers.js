@@ -33,3 +33,28 @@ export async function markedScheduleIds(date) {
   }
   return set;
 }
+
+/**
+ * جلب كل صفوف استعلام مهما كثرت — لتجاوز حدّ Supabase الافتراضي (1000 صف
+ * لكل طلب) الذي يقصّ النتائج بصمت حتى مع .limit أكبر، فتظهر أرقام ناقصة.
+ *
+ * `makeQuery`: دالة تُعيد استعلامًا جديدًا في كل استدعاء (بلا range) مع
+ * ترتيب ثابت على عمود فريد (id مثلًا) لضمان عدم تكرار/تخطّي صفوف بين
+ * الدفعات. نطبّق نحن range الترقيم.
+ *
+ * مثال:
+ *   const rows = await fetchAllPaged(() =>
+ *     supabase.from("class_attendance").select("...").eq("attend_date", d)
+ *       .order("id", { ascending: true }));
+ */
+export async function fetchAllPaged(makeQuery, pageSize = 1000, maxRows = 60000) {
+  let all = [];
+  for (let from = 0; from < maxRows; from += pageSize) {
+    const { data, error } = await makeQuery().range(from, from + pageSize - 1);
+    if (error) throw error;
+    const chunk = data ?? [];
+    all = all.concat(chunk);
+    if (chunk.length < pageSize) break;
+  }
+  return all;
+}
