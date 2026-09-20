@@ -12,12 +12,17 @@ export function SessionProvider({ children }) {
   const [adminRoles, setAdminRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  // دعم الدور المزدوج (معلم + إداري): هل للمستخدم سجل معلّم أيضًا؟ وأي واجهة نشطة الآن؟
+  const [isTeacher, setIsTeacher] = useState(false);
+  const [view, setViewState] = useState(null);
 
   const loadProfile = useCallback(async (userId) => {
     if (!userId) {
       setProfile(null);
       setAdminRoles([]);
       setPermissions([]);
+      setIsTeacher(false);
+      setViewState(null);
       return;
     }
     const { data: u } = await supabase
@@ -27,6 +32,24 @@ export function SessionProvider({ children }) {
       .maybeSingle();
 
     setProfile(u ?? null);
+
+    // هل هذا المستخدم معلّم أيضًا؟ (سجل في جدول المعلمين مرتبط به) — لدعم
+    // الشخص الذي يجمع بين مهمة إدارية ومهمة تدريس، فينتقل بين الواجهتين.
+    const { data: tRow } = await supabase
+      .from("teachers").select("id").eq("user_id", userId).maybeSingle();
+    const teacherRec = !!tRow;
+    setIsTeacher(teacherRec);
+
+    // المستخدم المزدوج (دوره الأساسي إداري وله سجل معلّم): نهيّئ الواجهة
+    // النشطة من آخر اختيار محفوظ، وإلا نبدأ بواجهة الإدارة (دوره المسجّل)،
+    // مع إتاحة زر التبديل لواجهة المعلم.
+    if (u?.role === "admin" && teacherRec) {
+      let saved = null;
+      try { saved = localStorage.getItem("mk_view_" + userId); } catch { /* تجاهل */ }
+      setViewState(saved === "admin" || saved === "teacher" ? saved : "admin");
+    } else {
+      setViewState(null);
+    }
 
     if (u?.role === "admin") {
       const { data: roles } = await supabase
@@ -96,6 +119,18 @@ export function SessionProvider({ children }) {
     setProfile(null);
     setAdminRoles([]);
     setPermissions([]);
+    setIsTeacher(false);
+    setViewState(null);
+  };
+
+  // الدور المزدوج: إداري + معلّم في حساب واحد
+  const dualRole = profile?.role === "admin" && isTeacher;
+  // الواجهة الفعّالة للعرض: للمزدوج تتبع اختياره، ولغيره دوره الأساسي
+  const effectiveRole = dualRole ? (view ?? "teacher") : profile?.role;
+  const switchView = (v) => {
+    if (!dualRole || (v !== "admin" && v !== "teacher")) return;
+    setViewState(v);
+    try { localStorage.setItem("mk_view_" + (session?.user?.id ?? ""), v); } catch { /* تجاهل */ }
   };
 
   const hasAdminRole = (...roles) => roles.some((r) => adminRoles.includes(r));
@@ -111,6 +146,7 @@ export function SessionProvider({ children }) {
       value={{
         session, profile, adminRoles, permissions, loading,
         signOut, hasAdminRole, can, isSuper,
+        isTeacher, dualRole, effectiveRole, view, switchView,
         reload: () => loadProfile(session?.user?.id),
       }}
     >

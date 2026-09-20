@@ -157,15 +157,29 @@ exports.handler = async (event) => {
 
         const { attendDate, punchTime } = riyadhNow();
 
-        // مطابقة الطالب برقمه في الجهاز
+        // مطابقة الطالب برقمه على الجهاز.
+        // القاعدة المعتمدة: device_uid = آخر ٩ خانات من رقم الهوية (والجهاز
+        // لا يقبل أكثر من ٩ خانات، فهذا يناسبه). نطابق الرقم بعدة صور آمنة
+        // (مطابقة تامة على أعمدة مفهرسة) لتفادي مشكلتين شائعتين:
+        //   • الأصفار البادئة: بعض الأجهزة تحذفها (000064300 → 64300)،
+        //     فنجرّب الرقم كما جاء، وبلا أصفار بادئة، ومكمّلًا لـ٩ بأصفار.
+        //   • إدخال رقم الهوية كاملًا بدل آخر ٩ خانات (على جهاز يسمح بذلك).
+        const variants = new Set([uid]);
+        const bare = uid.replace(/^0+/, "");
+        if (bare) { variants.add(bare); variants.add(bare.padStart(9, "0")); }
+        const orExpr = [...variants]
+          .flatMap((v) => [`device_uid.eq.${v}`, `national_id.eq.${v}`])
+          .join(",");
+
         const stuRes = await admin
           .from("students")
           .select("id")
-          .eq("device_uid", uid)
           .eq("is_active", true)
-          .maybeSingle();
+          .or(orExpr)
+          .limit(1);
 
-        if (!stuRes.data) {
+        const student = stuRes.data && stuRes.data[0];
+        if (!student) {
           await admin.from("unmatched_logs").insert({
             device_uid: uid,
             punch_time: punchTime.toISOString(),
@@ -180,7 +194,7 @@ exports.handler = async (event) => {
         const existRes = await admin
           .from("daily_attendance")
           .select("id, punch_time")
-          .eq("student_id", stuRes.data.id)
+          .eq("student_id", student.id)
           .eq("attend_date", attendDate)
           .maybeSingle();
 
@@ -193,7 +207,7 @@ exports.handler = async (event) => {
           }
         } else {
           await admin.from("daily_attendance").insert({
-            student_id: stuRes.data.id,
+            student_id: student.id,
             attend_date: attendDate,
             punch_time: punchTime.toISOString(),
             source: "device",
