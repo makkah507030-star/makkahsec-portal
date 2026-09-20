@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
 import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -20,27 +21,18 @@ export default function PeriodAttendance() {
       const year = m.active_year ?? "";
       const term = Number(m.active_term ?? 1);
 
-      const { data: schedData } = dow
-        ? await supabase.from("schedule")
-            .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
-            .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
-        : { data: [] };
+      // معرّفات الحصص المُحضَّرة اليوم (دالة سريعة في القاعدة، واحتياطيًا
+      // جلب على دفعات) — بالتوازي مع جلب جدول اليوم.
+      const [schedRes, doneSet] = await Promise.all([
+        dow
+          ? supabase.from("schedule")
+              .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
+              .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
+          : Promise.resolve({ data: [] }),
+        markedScheduleIds(date),
+      ]);
 
-      // معرّفات الحصص المُحضَّرة اليوم — على دفعات لتجاوز حدّ Supabase (1000
-      // صف افتراضيًا)، وإلا ظهرت أغلب الحصص "لم تُحضَّر" رغم رصدها.
-      const doneSet = new Set();
-      for (let from = 0; from < 50000; from += 1000) {
-        const { data: page } = await supabase
-          .from("class_attendance")
-          .select("schedule_id")
-          .eq("attend_date", date)
-          .order("schedule_id", { ascending: true })
-          .range(from, from + 999);
-        (page ?? []).forEach((r) => doneSet.add(r.schedule_id));
-        if (!page || page.length < 1000) break;
-      }
-
-      const sched = (schedData ?? []).sort((a, b) => a.period_no - b.period_no);
+      const sched = (schedRes.data ?? []).sort((a, b) => a.period_no - b.period_no);
       const done = sched.filter((s) => doneSet.has(s.id));
       const left = sched.filter((s) => !doneSet.has(s.id));
 
