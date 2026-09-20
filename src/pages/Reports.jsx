@@ -1004,47 +1004,56 @@ function TeacherSheetsReport() {
       // سجلات التحضير الفعلية لهذا اليوم — نعرض تمامًا ما أدخله المعلم في
       // السجل بحالاته (حاضر/غائب/متأخر/مستأذن) بلا أي افتراض أو "لم يُرصد".
       //
-      // مهم: Supabase يحدّ الاستعلام بـ1000 صف افتراضيًا (db-max-rows) حتى مع
-      // .limit أكبر، وسجلات اليوم تتجاوز ذلك بكثير — فكانت أول 1000 صف كلها
-      // "حاضر" ويسقط الغياب. لذا نجلب كل الصفوف على دفعات عبر range.
+      // مهم: Supabase يحدّ الاستعلام بـ1000 صف افتراضيًا (db-max-rows)، وسجلات
+      // اليوم تتجاوز ذلك بكثير. لتفادي البطء نجلب العدد أولًا ثم كل الدفعات
+      // بالتوازي (بدل طلبات متتابعة) عبر range.
       const PAGE = 1000;
+      const { count, error: cErr } = await supabase
+        .from("class_attendance")
+        .select("id", { count: "exact", head: true })
+        .eq("attend_date", date);
+      if (cErr) { console.error("teacher_sheets/count:", cErr); setErr(cErr.message); setRows({ att: [], meta: {}, recorders: {} }); return; }
+      const total = count ?? 0;
+      if (!total) { setRows({ att: [], meta: {}, recorders: {} }); return; }
+
+      const pageCount = Math.min(Math.ceil(total / PAGE), 50);
+      const pageReqs = [];
+      for (let i = 0; i < pageCount; i++) {
+        pageReqs.push(
+          supabase
+            .from("class_attendance")
+            .select("schedule_id, student_id, status, recorded_by, students(full_name, national_id)")
+            .eq("attend_date", date)
+            .order("schedule_id", { ascending: true })
+            .range(i * PAGE, i * PAGE + PAGE - 1)
+        );
+      }
+      const pages = await Promise.all(pageReqs);
       let list = [];
       let fetchErr = null;
-      for (let from = 0; from < 50000; from += PAGE) {
-        const { data: page, error } = await supabase
-          .from("class_attendance")
-          .select("schedule_id, student_id, status, recorded_by, students(full_name, national_id)")
-          .eq("attend_date", date)
-          .order("schedule_id", { ascending: true })
-          .range(from, from + PAGE - 1);
-        if (error) { fetchErr = error; break; }
-        list = list.concat(page ?? []);
-        if (!page || page.length < PAGE) break;
+      for (const p of pages) {
+        if (p.error) { fetchErr = p.error; break; }
+        list = list.concat(p.data ?? []);
       }
       if (fetchErr) { console.error("teacher_sheets:", fetchErr); setErr(fetchErr.message); setRows({ att: [], meta: {}, recorders: {} }); return; }
       if (!list.length) { setRows({ att: [], meta: {}, recorders: {} }); return; }
 
-      // بيانات كل حصة: الفصل والمادة ومعلم الجدول الأصلي
+      // استعلاما بيانات الحصص وأسماء من رصد فعليًا — بالتوازي
       const schedIds = [...new Set(list.map((r) => r.schedule_id).filter(Boolean))];
-      let meta = {};
-      if (schedIds.length) {
-        const { data: sch, error: e2 } = await supabase
-          .from("schedule")
-          .select("id, teacher_id, period_no, teachers(full_name), classes(class_no, grade), subjects(name)")
-          .in("id", schedIds);
-        if (e2) { console.error("teacher_sheets/sched:", e2); setErr(e2.message); }
-        meta = Object.fromEntries((sch ?? []).map((s) => [s.id, s]));
-      }
-
-      // أسماء من قام بالتحضير فعليًا (قد يكون معلم انتظار غير معلم الجدول،
-      // أو معلمًا رصد متأخرًا) — حتى يظهر الكشف تحت اسم من رصده حقًّا.
       const recIds = [...new Set(list.map((r) => r.recorded_by).filter(Boolean))];
-      let recorders = {};
-      if (recIds.length) {
-        const { data: us } = await supabase
-          .from("users").select("id, full_name").in("id", recIds);
-        recorders = Object.fromEntries((us ?? []).map((u) => [u.id, u.full_name]));
-      }
+      const [schRes, usRes] = await Promise.all([
+        schedIds.length
+          ? supabase.from("schedule")
+              .select("id, teacher_id, period_no, teachers(full_name), classes(class_no, grade), subjects(name)")
+              .in("id", schedIds)
+          : Promise.resolve({ data: [] }),
+        recIds.length
+          ? supabase.from("users").select("id, full_name").in("id", recIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+      if (schRes.error) { console.error("teacher_sheets/sched:", schRes.error); setErr(schRes.error.message); }
+      const meta = Object.fromEntries((schRes.data ?? []).map((s) => [s.id, s]));
+      const recorders = Object.fromEntries((usRes.data ?? []).map((u) => [u.id, u.full_name]));
 
       setRows({ att: list, meta, recorders });
     })();

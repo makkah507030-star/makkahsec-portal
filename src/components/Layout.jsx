@@ -21,7 +21,7 @@ const ADMIN_GROUPS = [
   {
     title: "شؤون الطلاب",
     items: [
-      { to: "/students",    label: "الطلاب",    perm: "students",    icon: "users" },
+      { to: "/students",    label: "كشوف الطلاب",    perm: "students",    icon: "users" },
       { to: "/results-admin", label: "نتائج الطلاب", perm: "results", icon: "award" },
       { to: "/attendance-overview", label: "الحضور والغياب", perm: "reports", icon: "check" },
       { to: "/period-attendance", label: "تحضير الحصص اليومية", perm: "reports", icon: "clock" },
