@@ -995,6 +995,8 @@ function TeacherSheetsReport() {
   const [rows, setRows] = useState(null);
 
   const [err, setErr] = useState(null);
+  const [openT, setOpenT] = useState(null); // اسم المعلم المفتوح كشفه
+  const [q, setQ] = useState("");            // بحث باسم المعلم
 
   useEffect(() => {
     (async () => {
@@ -1168,52 +1170,93 @@ function TeacherSheetsReport() {
       {rows && teachers.length === 0 ? (
         <Empty title="لا كشوف" body="لم يرصد أي معلم تحضيرًا في هذا اليوم." />
       ) : (
-        <div className="space-y-3">
-          {teachers.map((t) => (
-            <div key={t.teacher} className="card overflow-hidden">
-              <div className="flex items-center justify-between gap-3 border-b border-line bg-gray-tint px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-ink">{t.teacher}</p>
-                  <p className="mt-0.5 text-xs text-muted">
-                    <span className="num">{t.sheets.length}</span> كشف
-                  </p>
-                </div>
-                <button onClick={() => printSheets(t.sheets, `كشوف تحضير المعلم — ${t.teacher}`)}
-                  className="shrink-0 rounded-sm2 bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
-                  طباعة كشوف المعلم
-                </button>
-              </div>
-              <div className="divide-y divide-line">
-                {t.sheets.map((sh) => (
-                  <div key={sh.schedule_id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink">
-                        فصل <span className="num">{sh.class_no}</span> · الحصة{" "}
-                        <span className="num">{sh.period}</span> · {sh.subject}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted">
-                        <span className="num">{sh.students.length}</span> طالبًا
-                        {sh.orig_teacher && sh.orig_teacher !== t.teacher && (
-                          <span className="text-excused"> · انتظار بدل {sh.orig_teacher}</span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <span className="num chip bg-present/10 text-present">{sh.counts.present}</span>
-                      <span className="num chip bg-absent/10 text-absent">{sh.counts.absent}</span>
-                      {sh.counts.late > 0 && (
-                        <span className="num chip bg-late/10 text-late">{sh.counts.late}</span>
-                      )}
-                      {sh.counts.excused > 0 && (
-                        <span className="num chip bg-excused/10 text-excused">{sh.counts.excused}</span>
-                      )}
-                    </div>
+        <>
+          {/* بحث باسم المعلم لتقصير القائمة */}
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={`ابحث عن معلم… (${teachers.length} معلمًا)`}
+            className="w-full rounded-sm2 border border-line px-3 py-2 text-sm"
+          />
+
+          {/* قائمة مطويّة: كل معلم سطر واحد، يُفتح كشفه عند الضغط */}
+          <div className="space-y-2">
+            {teachers
+              .filter((t) => !q.trim() || t.teacher.includes(q.trim()))
+              .map((t) => {
+                const isOpen = openT === t.teacher;
+                const agg = t.sheets.reduce(
+                  (c, sh) => {
+                    c.present += sh.counts.present; c.absent += sh.counts.absent;
+                    c.late += sh.counts.late; c.excused += sh.counts.excused;
+                    return c;
+                  },
+                  { present: 0, absent: 0, late: 0, excused: 0 }
+                );
+                return (
+                  <div key={t.teacher} className="card overflow-hidden">
+                    <button
+                      onClick={() => setOpenT(isOpen ? null : t.teacher)}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right hover:bg-canvas">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-ink">{t.teacher}</p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          <span className="num">{t.sheets.length}</span> كشف ·{" "}
+                          <span className="num text-present">{agg.present}</span> حاضر ·{" "}
+                          <span className="num text-absent">{agg.absent}</span> غائب
+                          {agg.late > 0 && <> · <span className="num text-late">{agg.late}</span> متأخر</>}
+                        </p>
+                      </div>
+                      <svg viewBox="0 0 24 24" fill="none"
+                        className={`h-4 w-4 shrink-0 text-faint transition-transform ${isOpen ? "rotate-180" : ""}`}
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </button>
+
+                    {isOpen && (
+                      <div className="border-t border-line">
+                        <div className="flex justify-end px-4 py-2">
+                          <button onClick={() => printSheets(t.sheets, `كشوف تحضير المعلم — ${t.teacher}`)}
+                            className="rounded-sm2 bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
+                            طباعة كشوف المعلم — PDF
+                          </button>
+                        </div>
+                        <div className="divide-y divide-line border-t border-line">
+                          {t.sheets.map((sh) => (
+                            <div key={sh.schedule_id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-ink">
+                                  فصل <span className="num">{sh.class_no}</span> · الحصة{" "}
+                                  <span className="num">{sh.period}</span> · {sh.subject}
+                                </p>
+                                <p className="mt-0.5 text-xs text-muted">
+                                  <span className="num">{sh.students.length}</span> طالبًا
+                                  {sh.orig_teacher && sh.orig_teacher !== t.teacher && (
+                                    <span className="text-excused"> · انتظار بدل {sh.orig_teacher}</span>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <span className="num chip bg-present/10 text-present">{sh.counts.present}</span>
+                                <span className="num chip bg-absent/10 text-absent">{sh.counts.absent}</span>
+                                {sh.counts.late > 0 && (
+                                  <span className="num chip bg-late/10 text-late">{sh.counts.late}</span>
+                                )}
+                                {sh.counts.excused > 0 && (
+                                  <span className="num chip bg-excused/10 text-excused">{sh.counts.excused}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+                );
+              })}
+          </div>
+        </>
       )}
     </div>
   );
