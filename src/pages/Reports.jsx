@@ -999,89 +999,88 @@ function TeacherSheetsReport() {
   useEffect(() => {
     (async () => {
       setRows(null); setErr(null);
-      // 1) سجلات التحضير الفعلية لهذا اليوم (الحالة لكل طالب كما رصدها المعلم)
+      // سجلات التحضير الفعلية لهذا اليوم — نعرض تمامًا ما أدخله المعلم في
+      // السجل بحالاته (حاضر/غائب/متأخر/مستأذن) بلا أي افتراض أو "لم يُرصد".
       const { data: att, error } = await supabase
         .from("class_attendance")
-        .select("schedule_id, student_id, status")
+        .select("schedule_id, student_id, status, recorded_by, students(full_name, national_id)")
         .eq("attend_date", date)
         .limit(20000);
-      if (error) { console.error("teacher_sheets:", error); setErr(error.message); setRows({ att: [], meta: {}, roster: {} }); return; }
+      if (error) { console.error("teacher_sheets:", error); setErr(error.message); setRows({ att: [], meta: {}, recorders: {} }); return; }
       const list = att ?? [];
+      if (!list.length) { setRows({ att: [], meta: {}, recorders: {} }); return; }
+
+      // بيانات كل حصة: الفصل والمادة ومعلم الجدول الأصلي
       const schedIds = [...new Set(list.map((r) => r.schedule_id).filter(Boolean))];
-      if (!schedIds.length) { setRows({ att: [], meta: {}, roster: {} }); return; }
-
-      // 2) بيانات كل حصة سُجّل فيها تحضير: المعلم والفصل والمادة
-      const { data: sch, error: e2 } = await supabase
-        .from("schedule")
-        .select("id, teacher_id, class_id, period_no, teachers(full_name), classes(class_no, grade), subjects(name)")
-        .in("id", schedIds);
-      if (e2) { console.error("teacher_sheets/sched:", e2); setErr(e2.message); }
-      const meta = Object.fromEntries((sch ?? []).map((s) => [s.id, s]));
-
-      // 3) قائمة طلاب كل فصل كاملة — لعرض الحاضر والغائب معًا لا الحاضر فقط
-      const classIds = [...new Set((sch ?? []).map((s) => s.class_id).filter(Boolean))];
-      const roster = {};
-      if (classIds.length) {
-        const { data: enr } = await supabase
-          .from("student_enrollment")
-          .select("class_id, students(id, full_name, national_id)")
-          .in("class_id", classIds)
-          .eq("status", "active");
-        (enr ?? []).forEach((e) => {
-          if (e.students) (roster[e.class_id] ??= []).push(e.students);
-        });
+      let meta = {};
+      if (schedIds.length) {
+        const { data: sch, error: e2 } = await supabase
+          .from("schedule")
+          .select("id, teacher_id, period_no, teachers(full_name), classes(class_no, grade), subjects(name)")
+          .in("id", schedIds);
+        if (e2) { console.error("teacher_sheets/sched:", e2); setErr(e2.message); }
+        meta = Object.fromEntries((sch ?? []).map((s) => [s.id, s]));
       }
 
-      setRows({ att: list, meta, roster });
+      // أسماء من قام بالتحضير فعليًا (قد يكون معلم انتظار غير معلم الجدول،
+      // أو معلمًا رصد متأخرًا) — حتى يظهر الكشف تحت اسم من رصده حقًّا.
+      const recIds = [...new Set(list.map((r) => r.recorded_by).filter(Boolean))];
+      let recorders = {};
+      if (recIds.length) {
+        const { data: us } = await supabase
+          .from("users").select("id, full_name").in("id", recIds);
+        recorders = Object.fromEntries((us ?? []).map((u) => [u.id, u.full_name]));
+      }
+
+      setRows({ att: list, meta, recorders });
     })();
   }, [date]);
 
-  // بناء كشوف: كل (حصة) كشف مستقل يعرض الفصل كاملًا مع حالة كل طالب
+  // بناء كشوف: كل حصة سُجّل فيها تحضير كشف مستقل — بما أدخله المعلم فقط،
+  // مجمّعة تحت من قام بالتحضير فعليًا (recorded_by) لا معلم الجدول.
   const teachers = useMemo(() => {
     if (!rows) return [];
-    const { att, meta, roster } = rows;
+    const { att, meta, recorders } = rows;
 
-    // خريطة الحالة: schedule_id -> student_id -> status
-    const statusBy = {};
-    att.forEach((r) => { (statusBy[r.schedule_id] ??= {})[r.student_id] = r.status; });
-
-    const sheets = Object.keys(statusBy).map((sid) => {
-      const m = meta[sid] ?? {};
-      const full = roster[m.class_id] ?? [];
-      const smap = statusBy[sid];
-      // الأساس: طلاب الفصل الكامل؛ فإن غابت قائمة الفصل نكتفي بمن رُصدت حالته
-      const base = full.length
-        ? full
-        : Object.keys(smap).map((id) => ({ id, full_name: "", national_id: "" }));
-      const students = base
-        .map((st) => ({
-          name: st.full_name ?? "",
-          national_id: st.national_id ?? "",
-          status: smap[st.id] ?? "unmarked",
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name, "ar"));
-      const counts = { present: 0, absent: 0, late: 0, excused: 0, unmarked: 0 };
-      students.forEach((s) => { counts[s.status] = (counts[s.status] ?? 0) + 1; });
-      return {
-        schedule_id: sid,
-        teacher_id: m.teacher_id ?? null,
-        teacher: m.teachers?.full_name ?? "غير معروف",
-        class_no: m.classes?.class_no ?? 0,
-        grade: m.classes?.grade ?? 0,
-        period: m.period_no ?? 0,
-        subject: m.subjects?.name ?? "—",
-        students, counts,
-      };
+    const sheets = new Map(); // schedule_id -> كشف
+    att.forEach((r) => {
+      const sid = r.schedule_id;
+      if (!sid) return;
+      if (!sheets.has(sid)) {
+        const m = meta[sid] ?? {};
+        sheets.set(sid, {
+          schedule_id: sid,
+          recorder_id: r.recorded_by ?? m.teacher_id ?? null,
+          recorder: recorders[r.recorded_by] ?? m.teachers?.full_name ?? "غير معروف",
+          orig_teacher: m.teachers?.full_name ?? null,
+          class_no: m.classes?.class_no ?? 0,
+          grade: m.classes?.grade ?? 0,
+          period: m.period_no ?? 0,
+          subject: m.subjects?.name ?? "—",
+          students: [],
+          counts: { present: 0, absent: 0, late: 0, excused: 0 },
+        });
+      }
+      const sh = sheets.get(sid);
+      sh.students.push({
+        name: r.students?.full_name ?? "",
+        national_id: r.students?.national_id ?? "",
+        status: r.status,
+      });
+      sh.counts[r.status] = (sh.counts[r.status] ?? 0) + 1;
     });
 
-    // تجميع الكشوف تحت كل معلم
-    const byTeacher = new Map();
-    sheets.forEach((sh) => {
-      const key = sh.teacher_id ?? sh.teacher;
-      if (!byTeacher.has(key)) byTeacher.set(key, { teacher: sh.teacher, sheets: [] });
-      byTeacher.get(key).sheets.push(sh);
+    sheets.forEach((sh) =>
+      sh.students.sort((a, b) => a.name.localeCompare(b.name, "ar")));
+
+    // تجميع الكشوف تحت من قام بالتحضير فعليًا
+    const byRec = new Map();
+    [...sheets.values()].forEach((sh) => {
+      const key = sh.recorder_id ?? sh.recorder;
+      if (!byRec.has(key)) byRec.set(key, { teacher: sh.recorder, sheets: [] });
+      byRec.get(key).sheets.push(sh);
     });
-    const out = [...byTeacher.values()].sort((a, b) =>
+    const out = [...byRec.values()].sort((a, b) =>
       a.teacher.localeCompare(b.teacher, "ar"));
     out.forEach((t) =>
       t.sheets.sort((a, b) => a.period - b.period || a.class_no - b.class_no));
@@ -1089,14 +1088,16 @@ function TeacherSheetsReport() {
   }, [rows]);
 
   const dateLabel = fmtGreg(date + "T00:00:00");
-  const statusLabel = (s) => (s === "unmarked" ? "لم يُرصد" : label(s));
+  // ملاحظة الانتظار: إن اختلف من رصد عن معلم الجدول
+  const coverNote = (sh) =>
+    sh.orig_teacher && sh.orig_teacher !== sh.recorder ? ` · (انتظار بدل ${sh.orig_teacher})` : "";
 
   // كل كشف يصبح صفحة مستقلة في PDF (printReport يبدأ صفحة جديدة لكل قسم)
   const sheetSection = (sh) => ({
-    title: `${sh.teacher} — فصل ${sh.class_no}`,
-    subtitle: `الحصة ${sh.period} · ${sh.subject} · ${dateLabel} — حاضر ${sh.counts.present} · غائب ${sh.counts.absent} · متأخر ${sh.counts.late} · مستأذن ${sh.counts.excused}${sh.counts.unmarked ? ` · لم يُرصد ${sh.counts.unmarked}` : ""}`,
+    title: `${sh.recorder} — فصل ${sh.class_no}`,
+    subtitle: `الحصة ${sh.period} · ${sh.subject} · ${dateLabel} — حاضر ${sh.counts.present} · غائب ${sh.counts.absent} · متأخر ${sh.counts.late} · مستأذن ${sh.counts.excused}${coverNote(sh)}`,
     headers: ["م", "رقم الهوية", "اسم الطالب", "الحالة"],
-    rows: sh.students.map((st, i) => [i + 1, st.national_id, st.name, statusLabel(st.status)]),
+    rows: sh.students.map((st, i) => [i + 1, st.national_id, st.name, label(st.status)]),
   });
 
   const printSheets = (list, title) => {
@@ -1109,9 +1110,10 @@ function TeacherSheetsReport() {
   return (
     <div className="space-y-4">
       <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
-        كشوف التحضير التي رصدها المعلمون في اليوم المحدَّد — كل كشف (معلم × فصل × حصة)
-        في ورقة مستقلة عند الطباعة، تعرض <b>الفصل كاملًا</b> بأسماء الطلاب وأرقام هوياتهم
-        وحالة كل طالب (حاضر · غائب · متأخر · مستأذن)، ومن لم يُرصد يظهر «لم يُرصد».
+        كشوف التحضير كما أدخلها المعلمون فعليًا في اليوم المحدَّد — تُعرض تحت اسم من
+        قام بالتحضير (بما في ذلك معلم الانتظار ومن رصد متأخرًا)، كل كشف (معلم × فصل × حصة)
+        في ورقة مستقلة عند الطباعة، بأسماء الطلاب وأرقام هوياتهم وحالة كل طالب
+        (حاضر · غائب · متأخر · مستأذن).
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -1161,6 +1163,9 @@ function TeacherSheetsReport() {
                       </p>
                       <p className="mt-0.5 text-xs text-muted">
                         <span className="num">{sh.students.length}</span> طالبًا
+                        {sh.orig_teacher && sh.orig_teacher !== t.teacher && (
+                          <span className="text-excused"> · انتظار بدل {sh.orig_teacher}</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -1171,11 +1176,6 @@ function TeacherSheetsReport() {
                       )}
                       {sh.counts.excused > 0 && (
                         <span className="num chip bg-excused/10 text-excused">{sh.counts.excused}</span>
-                      )}
-                      {sh.counts.unmarked > 0 && (
-                        <span className="num chip bg-gray-tint text-muted" title="لم يُرصد">
-                          {sh.counts.unmarked}
-                        </span>
                       )}
                     </div>
                   </div>
