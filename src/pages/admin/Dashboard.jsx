@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { useSession } from "../../lib/session.jsx";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
@@ -10,6 +11,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fmtDateTime } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
+import ExamCountdown from "../../components/ExamCountdown.jsx";
 
 
 export default function Dashboard() {
@@ -26,15 +28,13 @@ export default function Dashboard() {
       const yearLabel = m.active_year_label ?? year;
       const term = Number(m.active_term ?? 1);
 
-      const [students, classes, teachers, guardians, devices, unmatched,
-             noDevice, lastImport, todaySched, todayMarked] = await Promise.all([
+      const [students, classes, teachers, guardians, unmatched,
+             lastImport, todaySched, todayMarked] = await Promise.all([
         supabase.from("students").select("id", { count: "exact", head: true }).eq("is_active", true),
         supabase.from("classes").select("id", { count: "exact", head: true }).eq("academic_year", year),
         supabase.from("teachers").select("id", { count: "exact", head: true }).eq("is_active", true),
         supabase.from("guardians").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("devices").select("serial_no, label, last_seen"),
         supabase.from("unmatched_logs").select("id", { count: "exact", head: true }).eq("resolved", false),
-        supabase.from("v_students_without_device").select("id", { count: "exact", head: true }),
         supabase.from("import_logs").select("import_type, status, started_at")
           .order("started_at", { ascending: false }).limit(1),
         dow
@@ -80,9 +80,7 @@ export default function Dashboard() {
         classes: classes.count ?? 0,
         teachers: teachers.count ?? 0,
         guardians: guardians.count ?? 0,
-        devices: devices.data ?? [],
         unmatched: unmatched.count ?? 0,
-        noDevice: noDevice.count ?? 0,
         lastImport: lastImport.data?.[0] ?? null,
         schedCount: sched.length,
         unmarked,
@@ -102,9 +100,11 @@ export default function Dashboard() {
       <header>
         <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
         <p className="mt-0.5 text-sm text-muted">
-          العام <span className="num">{d.yearLabel}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
+          العام <span className="num">{d.yearLabel}</span>هـ · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
         </p>
       </header>
+
+      <ExamCountdown />
 
       {/* أرقام المدرسة */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -164,34 +164,6 @@ export default function Dashboard() {
 
 
 
-      {/* البصمة */}
-      <section className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold text-ink">أجهزة البصمة</h2>
-          {d.noDevice > 0 && (
-            <span className="chip bg-late/10 text-late">
-              <span className="num">{d.noDevice}</span>&nbsp;طالبًا بلا ربط
-            </span>
-          )}
-        </div>
-        {d.devices.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-muted">لم تُسجَّل أجهزة بعد.</p>
-        ) : (
-          d.devices.map((v) => (
-            <div key={v.serial_no}
-                 className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-0">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{v.label ?? v.serial_no}</p>
-                <p className="num truncate text-xs text-faint">{v.serial_no}</p>
-              </div>
-              <span className={`chip shrink-0 ${v.last_seen ? "bg-present/10 text-present" : "bg-warning-light text-warning"}`}>
-                {v.last_seen ? fmtDateTime(v.last_seen) : "لم يتصل بعد"}
-              </span>
-            </div>
-          ))
-        )}
-      </section>
-
       <ColorLegend
         groups={[
           {
@@ -208,13 +180,6 @@ export default function Dashboard() {
                 label: "طلاب دخلوا المدرسة وغابوا عن حصصهم" },
               { chip: "bg-late/10 text-late", sample: "بلا ربط",
                 label: "طلاب بلا رقم في جهاز البصمة" },
-            ],
-          },
-          {
-            title: "أجهزة البصمة",
-            items: [
-              { chip: "bg-present/10 text-present", sample: "متصل", label: "الجهاز يعمل ويرسل البيانات" },
-              { chip: "bg-warning-light text-warning", sample: "لم يتصل", label: "لم يصل منه أي اتصال بعد" },
             ],
           },
         ]}
@@ -331,17 +296,59 @@ function OfficialStatusBox({ date }) {
 /* ==================== صندوق الطلاب المفقودين ==================== */
 /* حالة طارئة تظهر فورًا — لا تنتظر اكتمال الحصتين الأولى والثانية معًا */
 
+const MISSING_ACTIONS = [
+  { key: "escaped", label: "هروب من المدرسة", tone: "bg-absent text-white" },
+  { key: "parent_permission", label: "استئذان ولي الأمر", tone: "bg-excused text-white" },
+  { key: "no_entry", label: "عدم الدخول للحصة", tone: "bg-late text-white" },
+];
+const ACTION_LABEL = Object.fromEntries(MISSING_ACTIONS.map((a) => [a.key, a.label]));
+
 function MissingStudentsBox({ date }) {
+  const { profile } = useSession();
   const [rows, setRows] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const [openId, setOpenId] = useState(null);
   const [timeline, setTimeline] = useState(null);
+  const [busyId, setBusyId] = useState(null);
+  const [done, setDone] = useState({}); // student_id -> action key
+  const [resolved, setResolved] = useState({}); // student_id -> from_period (عاد للفصل)
+  const [periodPick, setPeriodPick] = useState(null); // student_id قيد اختيار حصة العودة
+  const [ptimes, setPtimes] = useState(null);
+
+  useEffect(() => {
+    loadPeriodTimes().then(({ rows }) => setPtimes(rows));
+  }, []);
+
+  const reloadNotes = async (ids) => {
+    if (!ids.length) return;
+    const [{ data: notes }, { data: rets }] = await Promise.all([
+      supabase
+        .from("admin_missing_notes")
+        .select("student_id, action, created_at")
+        .eq("note_date", date)
+        .in("student_id", ids)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("permission_returns")
+        .select("student_id, from_period")
+        .eq("return_date", date)
+        .in("student_id", ids),
+    ]);
+    const map = {};
+    (notes ?? []).forEach((n) => { if (!map[n.student_id]) map[n.student_id] = n.action; });
+    setDone(map);
+    setResolved(Object.fromEntries((rets ?? []).map((r) => [r.student_id, r.from_period])));
+  };
 
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.rpc("missing_students", { p_date: date });
       if (error) { console.error(error); setRows([]); return; }
       setRows(data ?? []);
+
+      // حمّل الإجراءات المسجّلة مسبقًا اليوم لهؤلاء الطلاب
+      const ids = (data ?? []).map((r) => r.student_id);
+      await reloadNotes(ids);
     })();
   }, [date]);
 
@@ -356,7 +363,74 @@ function MissingStudentsBox({ date }) {
     setTimeline(data ?? []);
   };
 
+  const recordAction = async (studentId, action) => {
+    if (!profile?.id) return;
+    setBusyId(studentId);
+
+    // سجل الإجراء دائمًا (للأرشيف والعرض عند المعلم)
+    const { error: noteErr } = await supabase.from("admin_missing_notes").insert({
+      student_id: studentId, note_date: date, action, created_by: profile.id,
+    });
+
+    // "هروب" و"استئذان ولي الأمر" يعتبران استئذانًا داخليًا رسميًا —
+    // يحوّلان تلقائيًا حالة الطالب لـ"مستأذن" في كل حصصه المتبقية اليوم
+    if (!noteErr && (action === "escaped" || action === "parent_permission")) {
+      const { data: req, error: reqErr } = await supabase
+        .from("permission_requests")
+        .insert({
+          request_date: date,
+          scope: "day",
+          note: action === "escaped"
+            ? "⚠️ رصدت الإدارة هروبًا من المدرسة"
+            : "استئذان ولي الأمر (بقرار إداري)",
+          created_by: profile.id,
+        })
+        .select("id")
+        .single();
+      if (!reqErr && req) {
+        await supabase.from("permission_request_students")
+          .insert({ request_id: req.id, student_id: studentId });
+      }
+    }
+
+    setBusyId(null);
+    if (!noteErr) setDone((m) => ({ ...m, [studentId]: action }));
+  };
+
+  // معالجة عودة الطالب: عاد للفصل / وُجد بالمدرسة / انتهى استئذانه —
+  // ينهي قفل المعلم من الحصة المحددة فما بعدها ويعيد الطالب للتعامل الطبيعي
+  const markReturned = async (studentId, fromPeriod) => {
+    setBusyId(studentId);
+    const { error } = await supabase.from("permission_returns").upsert(
+      {
+        student_id: studentId,
+        return_date: date,
+        from_period: fromPeriod,
+        returned_by: profile?.id ?? null,
+      },
+      { onConflict: "student_id,return_date" }
+    );
+    setBusyId(null);
+    setPeriodPick(null);
+    if (error) { alert("تعذّر تسجيل عودة الطالب: " + error.message); return; }
+    setResolved((m) => ({ ...m, [studentId]: fromPeriod }));
+  };
+
+  const undoReturned = async (studentId) => {
+    setBusyId(studentId);
+    const { error } = await supabase
+      .from("permission_returns")
+      .delete()
+      .eq("student_id", studentId)
+      .eq("return_date", date);
+    setBusyId(null);
+    if (error) { alert("تعذّر التراجع: " + error.message); return; }
+    setResolved((m) => { const n = { ...m }; delete n[studentId]; return n; });
+  };
+
   if (!rows || rows.length === 0) return null;
+
+  const currentPeriod = ptimes ? currentPeriodNo(ptimes) : null;
 
   return (
     <section className="overflow-hidden rounded-card border border-absent/30 bg-absent/5">
@@ -400,12 +474,83 @@ function MissingStudentsBox({ date }) {
                 </button>
 
                 {open && (
-                  <div className="bg-white px-5 py-3">
+                  <div className="space-y-3 bg-white px-5 py-3">
                     {!timeline ? (
                       <p className="text-xs text-muted">جارٍ التحميل…</p>
                     ) : (
                       <StudentTimeline rows={timeline} missingPeriod={r.missing_period} />
                     )}
+
+                    <div className="border-t border-line pt-3">
+                      {done[r.student_id] ? (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold text-mint-deep">
+                            ✓ تم تسجيل: {ACTION_LABEL[done[r.student_id]]}
+                          </p>
+
+                          {(done[r.student_id] === "escaped" || done[r.student_id] === "parent_permission") && (
+                            resolved[r.student_id] != null ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="num chip bg-present/15 text-present">
+                                  عاد للفصل من الحصة {resolved[r.student_id]}
+                                </span>
+                                <button
+                                  onClick={() => undoReturned(r.student_id)}
+                                  disabled={busyId === r.student_id}
+                                  className="shrink-0 text-[11px] font-medium text-absent hover:underline disabled:opacity-50">
+                                  تراجع
+                                </button>
+                              </div>
+                            ) : periodPick === r.student_id ? (
+                              <div className="border-t border-line pt-2">
+                                <p className="text-[11px] text-muted">
+                                  من أي حصة يُتابع الطالب حضوره بشكل طبيعي؟
+                                </p>
+                                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                  {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
+                                    <button key={n}
+                                      onClick={() => markReturned(r.student_id, n)}
+                                      disabled={busyId === r.student_id}
+                                      className={`num rounded-sm2 border px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
+                                        n === currentPeriod
+                                          ? "border-present bg-present/10 text-present"
+                                          : "border-line text-ink hover:border-present hover:bg-present/10"}`}>
+                                      {n}
+                                    </button>
+                                  ))}
+                                </div>
+                                <button
+                                  onClick={() => setPeriodPick(null)}
+                                  className="mt-1.5 text-[11px] font-medium text-muted hover:underline">
+                                  إلغاء
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setPeriodPick(r.student_id)}
+                                disabled={busyId === r.student_id}
+                                className="rounded-pill border border-present/40 bg-present/10 px-3 py-1 text-[11px] font-semibold text-present hover:bg-present/20 disabled:opacity-50">
+                                عاد الطالب / تمت معالجته
+                              </button>
+                            )
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <p className="mb-1.5 text-xs font-medium text-muted">إجراء الإدارة:</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {MISSING_ACTIONS.map((a) => (
+                              <button key={a.key}
+                                disabled={busyId === r.student_id}
+                                onClick={() => recordAction(r.student_id, a.key)}
+                                className={`rounded-sm2 px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${a.tone}`}>
+                                {a.label}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

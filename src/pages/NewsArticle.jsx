@@ -3,6 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtBoth } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
+import NewsCoverCard from "../components/NewsCoverCard.jsx";
+import ArticleImageSlider from "../components/ArticleImageSlider.jsx";
 
 
 
@@ -25,7 +27,7 @@ export default function NewsArticle() {
       const isUuid = /^[0-9a-f-]{36}$/i.test(slug);
       const { data } = await supabase
         .from("news")
-        .select("title, excerpt, body, cover_url, video_url, published_at")
+        .select("title, excerpt, body, cover_url, cover_theme, body_images, video_url, published_at")
         .eq("is_published", true)
         .eq(isUuid ? "id" : "slug", slug)
         .maybeSingle();
@@ -45,7 +47,7 @@ export default function NewsArticle() {
             to="/news"
             className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep"
           >
-            كل الأخبار
+            كل الأخبار والمقالات
           </Link>
         </div>
       </header>
@@ -80,19 +82,29 @@ export default function NewsArticle() {
             <h1 className="mt-2 text-2xl font-bold leading-snug text-ink md:text-3xl">
               {item.title}
             </h1>
+
+            {/* شريط الحساب الناشر — عرضي رفيع أسفل العنوان، بدل صورة غلاف كبيرة */}
+            {item.cover_theme ? (
+              <NewsCoverCard
+                role={item.cover_theme}
+                compact
+                className="mt-4 h-16 w-full rounded-card border border-line sm:h-20"
+              />
+            ) : item.cover_url && (
+              <img
+                src={item.cover_url}
+                alt=""
+                className="mt-4 h-24 w-full rounded-card border border-line object-cover sm:h-28"
+              />
+            )}
+
             {item.excerpt && (
               <p className="mt-4 text-base leading-relaxed text-muted">
                 {item.excerpt}
               </p>
             )}
 
-            {item.cover_url && (
-              <img
-                src={item.cover_url}
-                alt=""
-                className="mt-7 w-full rounded-card border border-line object-cover"
-              />
-            )}
+            <ArticleImageSlider images={item.body_images} />
 
             {youtubeId(item.video_url) && (
               <div className="mt-7 aspect-video overflow-hidden rounded-card border border-line">

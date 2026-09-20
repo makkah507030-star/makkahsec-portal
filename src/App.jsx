@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
 import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
@@ -9,10 +9,13 @@ import ChangePassword from "./pages/ChangePassword.jsx";
 import Dashboard from "./pages/admin/Dashboard.jsx";
 // شاشة الاستيراد تُحمّل عند فتحها فقط (مكتبة Excel ثقيلة)
 const Import = lazy(() => import("./pages/admin/Import.jsx"));
+const Records = lazy(() => import("./pages/admin/Records.jsx"));
 import Students from "./pages/admin/Students.jsx";
 import Accounts from "./pages/admin/Accounts.jsx";
 import Attendance from "./pages/teacher/Attendance.jsx";
+import SubstitutePeriod from "./pages/teacher/SubstitutePeriod.jsx";
 import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
+import FollowUpLog from "./pages/teacher/FollowUpLog.jsx";
 import TeacherPermissions from "./pages/admin/TeacherPermissions.jsx";
 import TeacherNotify from "./pages/teacher/TeacherNotify.jsx";
 import MySchedule from "./pages/teacher/MySchedule.jsx";
@@ -29,6 +32,8 @@ import NewsAdmin from "./pages/admin/NewsAdmin.jsx";
 import NotificationsAdmin from "./pages/admin/NotificationsAdmin.jsx";
 import AttendanceOverview from "./pages/admin/AttendanceOverview.jsx";
 import PeriodAttendance from "./pages/admin/PeriodAttendance.jsx";
+import SubstituteReport from "./pages/admin/SubstituteReport.jsx";
+const ResultsAdmin = lazy(() => import("./pages/admin/ResultsAdmin.jsx"));
 import GeneralScheduleMaster from "./pages/admin/GeneralScheduleMaster.jsx";
 import TeacherSchedules from "./pages/admin/TeacherSchedules.jsx";
 import StudentSchedules from "./pages/admin/StudentSchedules.jsx";
@@ -37,12 +42,22 @@ import PasswordReset from "./pages/admin/PasswordReset.jsx";
 import SeasonSwitch from "./pages/admin/SeasonSwitch.jsx";
 import Reports from "./pages/Reports.jsx";
 import Feedback from "./pages/Feedback.jsx";
+import TicketDetail from "./pages/TicketDetail.jsx";
 import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
+import SupportReport from "./pages/admin/SupportReport.jsx";
+import LoginLogAdmin from "./pages/admin/LoginLogAdmin.jsx";
+import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin.jsx";
+import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
+import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
+import { useMaintenance } from "./lib/useMaintenance.js";
+import ExamCountdown from "./components/ExamCountdown.jsx";
 
 export default function App() {
-  const { session, profile, loading, can } = useSession();
+  const { session, profile, loading, can, adminRoles } = useSession();
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
+  const maintenance = useMaintenance(session);
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -56,10 +71,12 @@ export default function App() {
     return (
       <Routes>
         <Route path="/" element={<Landing />} />
+        <Route path="/home" element={<Landing />} />
         <Route path="/news" element={<NewsList />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="/news/:slug" element={<NewsArticle />} />
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/contact" element={<Feedback />} />
         <Route path="/login" element={<Login />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -80,9 +97,28 @@ export default function App() {
     );
   }
 
+  // وضع الصيانة: يحجب البوابة عن الجميع ما عدا الدعم الفني
+  if (maintenance.loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-muted">جارٍ التحميل…</p>
+      </div>
+    );
+  }
+  const isTechSupport = adminRoles.includes("tech_support");
+  if (maintenance.enabled && !isTechSupport) {
+    return <MaintenanceScreen message={maintenance.message} />;
+  }
+
   // إجبار تغيير كلمة المرور قبل أي استخدام
   if (profile.must_change_pw) {
     return <ChangePassword />;
+  }
+
+  // معاينة الصفحة الرئيسية العامة للبوابة حتى للمستخدم المسجّل دخوله —
+  // بدون هذا الاستثناء يُعاد توجيه "/" تلقائيًا للوحة تحكمه بدل الصفحة العامة
+  if (location.pathname === "/home") {
+    return <Landing />;
   }
 
   const teacherHome = hiddenTabs.has("attendance") ? (
@@ -91,7 +127,10 @@ export default function App() {
       <p className="mt-1.5 text-sm text-muted">اختر تبويبًا آخر من القائمة الجانبية.</p>
     </div>
   ) : (
-    <Attendance />
+    <div className="space-y-5">
+      <ExamCountdown />
+      <Attendance />
+    </div>
   );
 
   const home = {
@@ -119,13 +158,36 @@ export default function App() {
               />
             )}
             {can("students") && <Route path="/students" element={<Students />} />}
+            {can("records") && (
+              <Route
+                path="/records-manual"
+                element={
+                  <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                    <Records />
+                  </Suspense>
+                }
+              />
+            )}
             {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
             {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
             {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
             {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
+            {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
+            {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
             {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
+            {can("reports") && <Route path="/substitute-report" element={<SubstituteReport />} />}
+            {can("results") && (
+              <Route
+                path="/results-admin"
+                element={
+                  <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                    <ResultsAdmin />
+                  </Suspense>
+                }
+              />
+            )}
             {can("import") && (
               <>
                 <Route path="/general-schedule" element={<GeneralScheduleMaster />} />
@@ -137,6 +199,8 @@ export default function App() {
             {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
             {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
             {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
+            {can("feedback") && <Route path="/support-report" element={<SupportReport />} />}
+            {can("login_log") && <Route path="/login-log" element={<LoginLogAdmin />} />}
           </>
         )}
         {profile.role === "teacher" && (
@@ -144,9 +208,13 @@ export default function App() {
             {!hiddenTabs.has("attendance") && (
               <Route path="/attendance" element={<Attendance />} />
             )}
+            {!hiddenTabs.has("substitute") && (
+              <Route path="/substitute" element={<SubstitutePeriod />} />
+            )}
             {!hiddenTabs.has("records") && (
               <Route path="/records" element={<TeacherRecords />} />
             )}
+            <Route path="/follow-up" element={<FollowUpLog />} />
             {!hiddenTabs.has("notify") && (
               <Route path="/notify" element={<TeacherNotify />} />
             )}
@@ -169,6 +237,8 @@ export default function App() {
           <Route path="/news-admin" element={<NewsAdmin />} />
         ) : null}
         <Route path="/feedback" element={<Feedback />} />
+        <Route path="/contact" element={<Feedback />} />
+        <Route path="/ticket/:id" element={<TicketDetail />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

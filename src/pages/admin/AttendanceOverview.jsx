@@ -2,8 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import { loadPeriodTimes, lateInfo } from "../../lib/periodTimes";
-import { fmtGreg, fmtTime12 } from "../../lib/dates";
+import { fmtGreg, fmtTime12, fmtDateTime } from "../../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import ColorLegend from "../../components/ColorLegend.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -11,6 +12,7 @@ const TABS = [
   { key: "official", label: "الحضور والغياب الرسمي" },
   { key: "missing",  label: "الطلاب المفقودون" },
   { key: "late",     label: "التأخر الصباحي" },
+  { key: "devices",  label: "أجهزة البصمة" },
 ];
 
 export default function AttendanceOverview() {
@@ -38,6 +40,7 @@ export default function AttendanceOverview() {
       {tab === "official" && <OfficialTab />}
       {tab === "missing" && <MissingTab />}
       {tab === "late" && <LateTab />}
+      {tab === "devices" && <DevicesTab />}
     </div>
   );
 }
@@ -503,6 +506,70 @@ function LateTab() {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ==================== أجهزة البصمة ==================== */
+
+function DevicesTab() {
+  const [devices, setDevices] = useState(null);
+  const [noDevice, setNoDevice] = useState(0);
+
+  useEffect(() => {
+    (async () => {
+      const [dv, nd] = await Promise.all([
+        supabase.from("devices").select("serial_no, label, last_seen"),
+        supabase.from("v_students_without_device").select("id", { count: "exact", head: true }),
+      ]);
+      setDevices(dv.data ?? []);
+      setNoDevice(nd.count ?? 0);
+    })();
+  }, []);
+
+  if (!devices) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+
+  return (
+    <div className="space-y-4">
+      <section className="card overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold text-ink">أجهزة البصمة</h2>
+          {noDevice > 0 && (
+            <span className="chip bg-late/10 text-late">
+              <span className="num">{noDevice}</span>&nbsp;طالبًا بلا ربط
+            </span>
+          )}
+        </div>
+        {devices.length === 0 ? (
+          <p className="px-4 py-4 text-sm text-muted">لم تُسجَّل أجهزة بعد.</p>
+        ) : (
+          devices.map((v) => (
+            <div key={v.serial_no}
+                 className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-0">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{v.label ?? v.serial_no}</p>
+                <p className="num truncate text-right text-xs text-faint">{v.serial_no}</p>
+              </div>
+              <span className={`chip shrink-0 ${v.last_seen ? "bg-present/10 text-present" : "bg-warning-light text-warning"}`}>
+                {v.last_seen ? fmtDateTime(v.last_seen) : "لم يتصل بعد"}
+              </span>
+            </div>
+          ))
+        )}
+      </section>
+
+      <ColorLegend
+        groups={[
+          {
+            title: "أجهزة البصمة",
+            items: [
+              { chip: "bg-present/10 text-present", sample: "متصل", label: "الجهاز يعمل ويرسل البيانات" },
+              { chip: "bg-warning-light text-warning", sample: "لم يتصل", label: "لم يصل منه أي اتصال بعد" },
+              { chip: "bg-late/10 text-late", sample: "بلا ربط", label: "طلاب بلا رقم في جهاز البصمة" },
+            ],
+          },
+        ]}
+      />
     </div>
   );
 }

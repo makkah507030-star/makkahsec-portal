@@ -4,6 +4,23 @@ import {
   useSession, ADMIN_ROLE_LABEL, ASSIGNABLE_ROLES, PERMISSIONS,
 } from "../../lib/session.jsx";
 
+// يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
+// (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
+async function describeEdgeError(e) {
+  if (e?.context && typeof e.context.clone === "function") {
+    try {
+      const body = await e.context.clone().json();
+      if (body?.error || body?.message) return body.error ?? body.message;
+    } catch {
+      try {
+        const text = await e.context.clone().text();
+        if (text) return text;
+      } catch { /* تجاهل */ }
+    }
+  }
+  return e?.message ?? String(e);
+}
+
 export default function AdminStaff() {
   const { isSuper } = useSession();
   const [tab, setTab] = useState("members");
@@ -93,7 +110,7 @@ function Members() {
       setFullName(""); setNationalId(""); setRoles(new Set());
       await load();
     } catch (e) {
-      setMsg({ ok: false, text: e.message ?? String(e) });
+      setMsg({ ok: false, text: await describeEdgeError(e) });
     } finally {
       setSaving(false);
     }
@@ -111,7 +128,7 @@ function Members() {
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
     if (error || data?.error) {
-      alert("تعذّر التعديل: " + (data?.error ?? error.message));
+      alert("تعذّر التعديل: " + (data?.error ?? await describeEdgeError(error)));
       return;
     }
     await load();
@@ -211,7 +228,7 @@ function MemberRow({ member, onSave }) {
           <p className="truncate text-sm font-medium text-ink">
             {member.full_name ?? member.username}
           </p>
-          <p className="num text-xs text-muted">{member.username}</p>
+          <p className="num text-right text-xs text-muted">{member.username}</p>
         </div>
 
         {!editing && (

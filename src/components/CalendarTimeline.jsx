@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtGreg, fmtHijri } from "../lib/dates";
+import BidiDate from "./BidiDate.jsx";
 
 const KIND_LABEL = {
   holiday:    "إجازة",
@@ -96,8 +97,11 @@ export default function CalendarTimeline() {
                         ` — ${fmtGreg(e.end_date + "T00:00:00")}`}
                     </p>
                     {e.hijri_label && (
-                      <p className="num mt-0.5 text-xs text-faint">
-                        {fmtHijri(e.start_date + "T00:00:00")}
+                      <p className="mt-0.5 text-xs text-faint">
+                        <BidiDate
+                          value={fmtHijri(e.start_date + "T00:00:00", false)}
+                          suffix="هـ"
+                        />
                       </p>
                     )}
                     <span className="chip mt-3 inline-block bg-mint-tint text-mint-deep">

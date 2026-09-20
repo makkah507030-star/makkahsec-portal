@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtBoth } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
+import NewsCoverCard from "../components/NewsCoverCard.jsx";
 
 
 
@@ -13,7 +14,7 @@ export default function NewsList() {
     (async () => {
       const { data } = await supabase
         .from("news")
-        .select("id, title, slug, excerpt, cover_url, published_at")
+        .select("id, title, slug, excerpt, cover_url, cover_theme, published_at")
         .eq("is_published", true)
         .order("published_at", { ascending: false });
       setItems(data ?? []);
@@ -38,7 +39,7 @@ export default function NewsList() {
       </header>
 
       <main className="mx-auto max-w-5xl px-5 py-10">
-        <h1 className="text-2xl font-bold text-ink">أخبار المدرسة</h1>
+        <h1 className="text-2xl font-bold text-ink">الأخبار والمقالات</h1>
 
         {!items && <p className="py-16 text-center text-sm text-muted">جارٍ التحميل…</p>}
 
@@ -56,9 +57,11 @@ export default function NewsList() {
               className="group overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-[#CCF2DB]"
             >
               <div className="aspect-[16/9] bg-mint-tint">
-                {n.cover_url && (
+                {n.cover_theme ? (
+                  <NewsCoverCard role={n.cover_theme} className="h-full w-full" />
+                ) : n.cover_url ? (
                   <img src={n.cover_url} alt="" className="h-full w-full object-cover" />
-                )}
+                ) : null}
               </div>
               <div className="p-4">
                 {n.published_at && (

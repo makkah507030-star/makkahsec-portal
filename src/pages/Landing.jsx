@@ -4,6 +4,7 @@ import logoIcon from "../assets/icon-mint.png";
 import CalendarTimeline from "../components/CalendarTimeline.jsx";
 import NewsSlider from "../components/NewsSlider.jsx";
 import TrialBanner from "../components/TrialBanner.jsx";
+import ExamCountdown from "../components/ExamCountdown.jsx";
 
 const SECTIONS = [
   {
@@ -26,10 +27,13 @@ const SECTIONS = [
     title: "أدلة الاستخدام",
     body: "أدلة إرشادية بصيغة PDF لكل فئة، تشرح الخدمات وطريقة الاستفادة منها.",
     to: "/guides",
+    cta: "تصفّح الأدلة ←",
   },
   {
-    title: "الدعم الفني",
-    body: "تذاكر الدعم لحل المشكلات التقنية بسرعة ووضوح.",
+    title: "مركز الدعم والمساندة",
+    body: "واجهتك مشكلة تقنية أو لديك استفسار؟ تواصل مع الدعم الفني مباشرة.",
+    to: "/contact",
+    cta: "تواصل الآن ←",
   },
 ];
 
@@ -80,7 +84,7 @@ export default function Landing() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 py-16 md:grid-cols-[1.1fr_.9fr] md:py-20">
           <div>
             <p className="text-sm font-semibold text-[#6AA786]">
-              العام الدراسي <span className="num">1447–1448</span>هـ
+              العام الدراسي <span className="num">1448–1449</span>هـ
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.35] text-ink md:text-[2.6rem]">
               كل ما تحتاجه المدرسة
@@ -109,6 +113,11 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* العد التنازلي للاختبارات النهائية */}
+      <div className="mx-auto max-w-6xl px-5 pt-10">
+        <ExamCountdown />
+      </div>
+
       {/* أخبار المدرسة */}
       <NewsSlider />
 
@@ -133,7 +142,7 @@ export default function Landing() {
                 <h3 className="text-sm font-bold text-mint-deep">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
                 <span className="mt-3 inline-block text-xs font-semibold text-[#6AA786]">
-                  تصفّح الأدلة ←
+                  {s.cta ?? "اطّلع أكثر ←"}
                 </span>
               </Link>
             ) : (
@@ -189,6 +198,14 @@ export default function Landing() {
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-6 text-xs text-muted">
           <p>مدرسة مكة الثانوية — بوابة إلكترونية داخلية.</p>
           <p>مكة المكرمة — المملكة العربية السعودية</p>
+        </div>
+        <div className="border-t border-line px-5 py-3 text-center text-[11px] text-faint">
+          جميع الحقوق محفوظة{" "}
+          <bdi dir="ltr" className="num">
+            © 2026
+          </bdi>{" "}
+          لمدرسة مكة الثانوية | تم التصميم والتطوير بواسطة محمد بن حسن
+          الحازمي / محضر معمل حاسب آلي
         </div>
       </footer>
     </div>

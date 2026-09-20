@@ -1,22 +1,28 @@
 import { useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { useTeacherHiddenTabs } from "../lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
 import NotificationBell from "./NotificationBell.jsx";
+import AnnouncementModal from "./AnnouncementModal.jsx";
 
 /* أقسام قائمة الإدارة — مجمّعة منطقيًا */
 const ADMIN_GROUPS = [
   {
     title: null,
-    items: [{ to: "/", label: "الرئيسية", perm: null, icon: "home" }],
+    items: [
+      { to: "/", label: "الرئيسية", perm: null, icon: "home" },
+      // لا يظهر لمشرف الدعم الفني ولا لمدير المدرسة — هما لا يرفعان طلب دعم لأنفسهما
+      { to: "/contact", label: "الدعم الفني", perm: null, icon: "chat", hideForRoles: ["tech_support", "principal"] },
+    ],
   },
   {
     title: "شؤون الطلاب",
     items: [
       { to: "/students",    label: "الطلاب",    perm: "students",    icon: "users" },
+      { to: "/results-admin", label: "نتائج الطلاب", perm: "results", icon: "award" },
       { to: "/attendance-overview", label: "الحضور والغياب", perm: "reports", icon: "check" },
       { to: "/period-attendance", label: "تحضير الحصص اليومية", perm: "reports", icon: "clock" },
       { to: "/reports",     label: "التقارير",  perm: "reports",     icon: "chart" },
@@ -31,20 +37,22 @@ const ADMIN_GROUPS = [
       { to: "/student-schedules", label: "جداول الطلاب",          perm: "import", icon: "users" },
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
+      { to: "/substitute-report", label: "تقرير حصص الانتظار", perm: "reports", icon: "chart" },
     ],
   },
   {
     title: "المحتوى",
     items: [
-      { to: "/news-admin",     label: "الأخبار",   perm: "news",     icon: "news" },
+      { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
+      { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
-      { to: "/feedback-admin", label: "الملاحظات", perm: "feedback", icon: "chat" },
     ],
   },
   {
     title: "الإعدادات",
     items: [
+      { to: "/records-manual", label: "تعديل السجلات", perm: "records", icon: "edit" },
       { to: "/import",         label: "الاستيراد",           perm: "import",         icon: "upload" },
       { to: "/season",         label: "التوقيت الزمني",       perm: "import",         icon: "clock" },
       { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
@@ -52,20 +60,38 @@ const ADMIN_GROUPS = [
       { to: "/password-reset", label: "استعادة كلمة المرور", perm: "password_reset", icon: "lock" },
     ],
   },
+  {
+    title: "الدعم الفني",
+    items: [
+      { to: "/feedback-admin", label: "مركز الدعم والمساندة", perm: "feedback", icon: "chat" },
+      { to: "/support-report", label: "تقرير ومتابعة الدعم", perm: "feedback", icon: "chart" },
+      { to: "/login-log", label: "سجل الدخول والخروج", perm: "login_log", icon: "key" },
+      { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
+    ],
+  },
 ];
 
 const OTHER_NAV = {
   teacher: [
     { to: "/",         label: "التحضير",  tabKey: "attendance" },
+    { to: "/substitute", label: "الانتظار", tabKey: "substitute" },
     { to: "/schedule", label: "جدولي",    tabKey: "schedule" },
     { to: "/records",  label: "السجلات",  tabKey: "records" },
     { to: "/reports",  label: "التقارير", tabKey: "reports" },
     { to: "/notify",   label: "الإشعارات", tabKey: "notify" },
     { to: "/permissions", label: "الاستئذان", extraTabKey: "permissions" },
-    { to: "/news-admin",  label: "الأخبار",   extraTabKey: "news" },
+    { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
+    { to: "/follow-up", label: "سجل المتابعة الإلكتروني" },
+    { to: "/contact",  label: "الدعم الفني" },
   ],
-  student:  [{ to: "/", label: "الرئيسية" }],
-  guardian: [{ to: "/", label: "الرئيسية" }],
+  student:  [
+    { to: "/", label: "الرئيسية" },
+    { to: "/contact", label: "الدعم الفني" },
+  ],
+  guardian: [
+    { to: "/", label: "الرئيسية" },
+    { to: "/contact", label: "الدعم الفني" },
+  ],
 };
 
 /* أيقونات خطّية بسيطة */
@@ -87,6 +113,10 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     book:   "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z",
     bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
     check:  "M20 6 9 17l-5-5",
+    megaphone: "M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H10l9 4V5l-9 4H5a2 2 0 0 0-2 2Zm7-2v6",
+    wrench: "M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2Z",
+    edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
+    award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM8.2 13.5 6 21l6-3 6 3-2.2-7.5",
   }[name];
 
   return (
@@ -100,13 +130,31 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
 export default function Layout({ children }) {
   const { profile, adminRoles, signOut, can } = useSession();
   const navigate = useNavigate();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
 
   const isAdmin = profile?.role === "admin";
 
   const groups = ADMIN_GROUPS
-    .map((g) => ({ ...g, items: g.items.filter((i) => !i.perm || can(i.perm)) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => {
+        if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
+        return i.techOnly ? adminRoles.includes("tech_support") : !i.perm || can(i.perm);
+      }),
+    }))
     .filter((g) => g.items.length);
+
+  // طيّ أقسام القائمة الجانبية — يبقى مفتوحًا تلقائيًا القسم الذي يحوي الصفحة الحالية فقط
+  const [openTitle, setOpenTitle] = useState(null); // null = استخدم القسم النشط تلقائيًا
+  const activeGroupTitle =
+    groups.find(
+      (g) =>
+        g.title &&
+        g.items.some((i) => (i.to === "/" ? location.pathname === "/" : location.pathname.startsWith(i.to)))
+    )?.title ?? null;
+  const effectiveOpenTitle = openTitle !== null ? openTitle : activeGroupTitle;
+  const toggleGroup = (title) => setOpenTitle(effectiveOpenTitle === title ? "" : title);
 
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
@@ -136,9 +184,33 @@ export default function Layout({ children }) {
 
   const Actions = () => (
     <div className="flex shrink-0 items-center gap-2">
+      <PreviewSite />
       <NotificationBell />
       <SignOut />
     </div>
+  );
+
+  // معاينة سريعة للصفحة الرئيسية العامة (الموقع المنشور) في تبويب جديد — للوصول السريع بعد أي تعديل
+  // يستخدم مسار /home المخصص كي يعرض الصفحة العامة فعليًا حتى وأنت مسجّل الدخول،
+  // بدل "/" التي تُحوّلك تلقائيًا للوحة التحكم
+  const PreviewSite = () => (
+    <a
+      href="/home"
+      target="_blank"
+      rel="noopener noreferrer"
+      title="الصفحة الرئيسية للبوابة"
+      className="flex shrink-0 items-center gap-1.5 rounded-pill border border-line px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint hover:text-mint-deep sm:px-3.5"
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none"
+           stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5" />
+      </svg>
+      <span className="hidden sm:inline">الصفحة الرئيسية للبوابة</span>
+      <svg viewBox="0 0 24 24" className="hidden h-3 w-3 shrink-0 sm:block" fill="none"
+           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M7 17 17 7M9 7h8v8" />
+      </svg>
+    </a>
   );
 
   // الاسم والدور — نسخة مدمجة للشريط العلوي
@@ -180,6 +252,7 @@ export default function Layout({ children }) {
   if (isAdmin) {
     return (
       <div className="min-h-screen bg-gray-tint">
+        <AnnouncementModal />
         <TrialBanner />
 
         {/* شريط علوي للجوال */}
@@ -202,24 +275,37 @@ export default function Layout({ children }) {
               <Brand />
             </div>
 
-            <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-              {groups.map((g, gi) => (
-                <div key={gi}>
-                  {g.title && (
-                    <p className="mb-1.5 px-3 text-[11px] font-semibold text-faint">
-                      {g.title}
-                    </p>
-                  )}
-                  <div className="space-y-0.5">
-                    {g.items.map((i) => (
-                      <NavLink key={i.to} to={i.to} end={i.to === "/"} className={linkClass}>
-                        <Icon name={i.icon} />
-                        <span className="truncate">{i.label}</span>
-                      </NavLink>
-                    ))}
+            <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
+              {groups.map((g, gi) => {
+                const isOpen = !g.title || effectiveOpenTitle === g.title;
+                return (
+                  <div key={gi}>
+                    {g.title && (
+                      <button
+                        type="button"
+                        onClick={() => toggleGroup(g.title)}
+                        className="mb-1.5 flex w-full items-center justify-between rounded-sm2 px-3 py-2 text-[13px] font-bold text-muted hover:bg-canvas hover:text-ink"
+                      >
+                        <span>{g.title}</span>
+                        <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                             fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </button>
+                    )}
+                    {isOpen && (
+                      <div className="space-y-0.5">
+                        {g.items.map((i) => (
+                          <NavLink key={i.to} to={i.to} end={i.to === "/"} className={linkClass}>
+                            <Icon name={i.icon} />
+                            <span className="truncate">{i.label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </nav>
 
           </aside>
@@ -243,25 +329,38 @@ export default function Layout({ children }) {
                   </div>
                 </div>
 
-                <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-                  {groups.map((g, gi) => (
-                    <div key={gi}>
-                      {g.title && (
-                        <p className="mb-1.5 px-3 text-[11px] font-semibold text-faint">
-                          {g.title}
-                        </p>
-                      )}
-                      <div className="space-y-0.5">
-                        {g.items.map((i) => (
-                          <NavLink key={i.to} to={i.to} end={i.to === "/"}
-                                   onClick={() => setOpen(false)} className={linkClass}>
-                            <Icon name={i.icon} />
-                            <span className="truncate">{i.label}</span>
-                          </NavLink>
-                        ))}
+                <nav className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
+                  {groups.map((g, gi) => {
+                    const isOpen = !g.title || effectiveOpenTitle === g.title;
+                    return (
+                      <div key={gi}>
+                        {g.title && (
+                          <button
+                            type="button"
+                            onClick={() => toggleGroup(g.title)}
+                            className="mb-1.5 flex w-full items-center justify-between rounded-sm2 px-3 py-2 text-[13px] font-bold text-muted hover:bg-canvas hover:text-ink"
+                          >
+                            <span>{g.title}</span>
+                            <svg viewBox="0 0 24 24" className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                                 fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="m6 9 6 6 6-6" />
+                            </svg>
+                          </button>
+                        )}
+                        {isOpen && (
+                          <div className="space-y-0.5">
+                            {g.items.map((i) => (
+                              <NavLink key={i.to} to={i.to} end={i.to === "/"}
+                                       onClick={() => setOpen(false)} className={linkClass}>
+                                <Icon name={i.icon} />
+                                <span className="truncate">{i.label}</span>
+                              </NavLink>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </nav>
               </aside>
             </>
@@ -288,6 +387,7 @@ export default function Layout({ children }) {
   /* ============ باقي الفئات: شريط علوي + قائمة منسدلة من ☰ في الجوال ============ */
   return (
     <div className="flex min-h-screen flex-col bg-gray-tint">
+      <AnnouncementModal />
       <TrialBanner />
 
       <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtBoth } from "../lib/dates";
+import NewsCoverCard from "./NewsCoverCard.jsx";
 
 
 
@@ -14,7 +15,7 @@ export default function NewsSlider() {
     (async () => {
       const { data } = await supabase
         .from("news")
-        .select("id, title, slug, excerpt, cover_url, published_at")
+        .select("id, title, slug, excerpt, cover_url, cover_theme, published_at")
         .eq("is_published", true)
         .eq("is_featured", true)
         .order("published_at", { ascending: false })
@@ -47,9 +48,9 @@ export default function NewsSlider() {
     <section className="border-b border-line bg-white">
       <div className="mx-auto max-w-6xl px-5 py-14">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="text-xl font-bold text-ink">أخبار المدرسة</h2>
+          <h2 className="text-xl font-bold text-ink">الأخبار والمقالات</h2>
           <Link to="/news" className="text-sm font-medium text-[#6AA786] hover:text-mint-deep">
-            كل الأخبار
+            كل الأخبار والمقالات
           </Link>
         </div>
 
@@ -59,7 +60,9 @@ export default function NewsSlider() {
         >
           <div className="grid md:grid-cols-[1.3fr_1fr]">
             <div className="relative aspect-[16/9] bg-mint-tint md:aspect-auto md:min-h-[19rem]">
-              {current.cover_url ? (
+              {current.cover_theme ? (
+                <NewsCoverCard role={current.cover_theme} className="absolute inset-0 h-full w-full" />
+              ) : current.cover_url ? (
                 <img
                   src={current.cover_url}
                   alt=""

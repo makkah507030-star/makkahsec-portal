@@ -82,6 +82,15 @@ export function SessionProvider({ children }) {
   }, [loadProfile]);
 
   const signOut = async () => {
+    // تسجيل عملية الخروج في سجل الدخول والخروج — بلا انتظار ولا تعطيل لو فشل
+    const nid = profile?.username;
+    if (nid) {
+      supabase
+        .from("login_log")
+        .insert({ national_id: nid, event_type: "logout", success: true })
+        .then(() => {}, () => {});
+    }
+
     await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
@@ -134,6 +143,15 @@ export const ADMIN_ROLE_LABEL = {
   clerk:           "المساعد الإداري",
   activity_leader: "رائد النشاط",
   tech_support:    "الدعم الفني",
+  media_portal:    "البوابة الإعلامية",
+  gifted_program:  "برنامج الموهوبين",
+  globe_program:   "برنامج جلوب البيئي العالمي",
+  student_voice:   "برنامج صوت الطالب",
+  makkah_sport:    "مكة سبورت",
+  safety_security: "مسؤول الأمن والسلامة",
+  health_counselor: "الموجه الصحي",
+  science_labs:     "مختبرات العلوم",
+  computer_lab:     "معمل الحاسب الآلي",
   // أدوار قديمة (للتوافق مع بيانات سابقة)
   deputy:          "الوكيل",
   counselor:       "الموجه الطلابي",
@@ -151,19 +169,76 @@ export const ASSIGNABLE_ROLES = [
   "clerk",
   "activity_leader",
   "tech_support",
+  "media_portal",
+  "gifted_program",
+  "globe_program",
+  "student_voice",
+  "makkah_sport",
+  "safety_security",
+  "health_counselor",
+  "science_labs",
+  "computer_lab",
 ];
+
+// تدرّج لوني مميّز لكل حساب إداري — يُستخدم في بطاقة غلاف الأخبار
+// بدلًا من رفع صورة يدويًا (كل حساب له لون ثابت وتلقائي خاص به)
+export const ROLE_COVER_HUE = {
+  principal:       152,
+  deputy_academic: 176,
+  deputy_school:   200,
+  deputy_students: 224,
+  counselor_1:     248,
+  counselor_2:     272,
+  counselor_3:     296,
+  clerk:           320,
+  activity_leader: 344,
+  tech_support:      8,
+  media_portal:     32,
+  gifted_program:   56,
+  globe_program:    80,
+  student_voice:   104,
+  makkah_sport:    128,
+  safety_security: 356,
+  health_counselor: 188,
+  science_labs:     68,
+  computer_lab:    236,
+};
+
+// يبني تدرّجًا لونيًا CSS من قيمة hue الخاصة بالحساب
+export const coverGradient = (hue) =>
+  `linear-gradient(135deg, hsl(${hue} 58% 32%), hsl(${hue} 64% 50%))`;
+
+// اسم شاغل الحساب — يظهر تحت مسمّى الحساب في بطاقة غلاف الخبر (اختياري)
+export const ROLE_PERSON_NAME = {
+  principal:       "الأستاذ: عبدالله بن حسن الفيفي",
+  deputy_academic: "الأستاذ: فهد بن سعود حضراوي",
+  deputy_students: "الأستاذ: فهد بن نايف المعبدي",
+  activity_leader: "الأستاذ: عمر بن سلمان الصاعدي",
+  counselor_1:     "الأستاذ: منصور بن ناصر العوفي",
+  counselor_2:     "الأستاذ: نواف بن نايف القرشي",
+  counselor_3:     "الأستاذ: هاني بن خليفة الخضيري",
+  gifted_program:  "الأستاذ: فواز بن حامد الحارثي",
+  globe_program:   "الأستاذ: عبدالله بن محمد بادابود",
+  tech_support:    "الأستاذ: محمد بن حسن الحازمي",
+  deputy_school:   "الأستاذ: غالي بن ستر السلمي",
+  safety_security: "الأستاذ: بندر بن معيض الحارثي",
+  health_counselor: "الأستاذ: أيمن بن جميل المحمادي",
+};
 
 // مفاتيح الصلاحيات وأسماؤها
 export const PERMISSIONS = [
   { key: "students",       label: "الطلاب",             desc: "البحث والفلترة والتقارير" },
+  { key: "records",        label: "تعديل السجلات",       desc: "إضافة وتعديل الطلاب والمعلمين وأولياء الأمور يدويًا" },
+  { key: "results",        label: "نتائج الطلاب",        desc: "رفع نتائج نور PDF ونشرها للطلاب وأولياء الأمور" },
   { key: "reports",        label: "التقارير",           desc: "تقارير الحضور والغياب" },
   { key: "permissions",    label: "الاستئذان",          desc: "رفع الاستئذان والسجل" },
   { key: "accounts",       label: "الحسابات",           desc: "إنشاء حسابات الدخول" },
   { key: "staff",          label: "الإدارة",            desc: "أعضاء الإدارة وأدوارهم" },
   { key: "import",         label: "الاستيراد",          desc: "بيانات نور والجدول" },
-  { key: "news",           label: "الأخبار",            desc: "نشر أخبار المدرسة" },
+  { key: "news",           label: "الأخبار والمقالات",   desc: "نشر أخبار المدرسة ومقالاتها" },
   { key: "guides",         label: "الأدلة",             desc: "رفع أدلة الاستخدام" },
   { key: "notifications",  label: "الإشعارات",          desc: "إرسال التعاميم والتنبيهات" },
   { key: "feedback",       label: "الملاحظات",          desc: "ملاحظات المستخدمين" },
   { key: "password_reset", label: "استعادة كلمة المرور", desc: "إعادة تعيين لأي مستخدم" },
+  { key: "login_log",      label: "سجل الدخول والخروج",  desc: "متابعة عمليات تسجيل الدخول والخروج بالوقت والحالة" },
 ];

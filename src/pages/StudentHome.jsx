@@ -6,13 +6,11 @@ import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime, lateInfo } from "../lib/periodTimes";
+import ExamCountdown from "../components/ExamCountdown.jsx";
+import ResultsCard from "../components/ResultsCard.jsx";
+import AbsenceHistory from "../components/AbsenceHistory.jsx";
 
 const LABEL = { absent: "غائب", late: "متأخر", excused: "مستأذن" };
-const TONE = {
-  absent: "bg-absent/10 text-absent",
-  late: "bg-late/10 text-late",
-  excused: "bg-excused/10 text-excused",
-};
 
 export default function StudentHome() {
   const { session, profile } = useSession();
@@ -21,7 +19,6 @@ export default function StudentHome() {
   const [weekSchedule, setWeekSchedule] = useState(null);
   const [showWeek, setShowWeek] = useState(false);
   const [records, setRecords] = useState([]);
-  const [grades, setGrades] = useState([]);
   const [punches, setPunches] = useState([]);
   const [ptimes, setPtimes] = useState([]);
   const [nowPeriod, setNowPeriod] = useState(null);
@@ -100,16 +97,13 @@ export default function StudentHome() {
         setWeekSchedule(week ?? []);
       }
 
-      const [{ data: rec }, { data: g }, { data: d }] = await Promise.all([
+      const [{ data: rec }, { data: d }] = await Promise.all([
         supabase.from("class_attendance")
           .select("attend_date, status, schedule(period_no, subjects(name))")
           .eq("student_id", st.id)
           .neq("status", "present")
           .order("attend_date", { ascending: false })
           .limit(40),
-        supabase.from("grades_records")
-          .select("term, score, max_score, subjects(name)")
-          .order("term"),
         supabase.from("daily_attendance")
           .select("attend_date, punch_time")
           .order("attend_date", { ascending: false })
@@ -117,16 +111,20 @@ export default function StudentHome() {
       ]);
 
       setRecords(rec ?? []);
-      setGrades(g ?? []);
       setPunches(d ?? []);
       setLoading(false);
     })();
   }, [session, dow]);
 
+  // عدد الأيام (وليس الحصص) التي فيها حالة غياب/تأخر/استئذان على الأقل
   const totals = useMemo(() => {
-    const c = { absent: 0, late: 0, excused: 0 };
-    records.forEach((r) => { c[r.status] = (c[r.status] ?? 0) + 1; });
-    return c;
+    const days = { absent: new Set(), late: new Set(), excused: new Set() };
+    records.forEach((r) => { days[r.status]?.add(r.attend_date); });
+    return {
+      absent: days.absent.size,
+      late: days.late.size,
+      excused: days.excused.size,
+    };
   }, [records]);
 
   const ptMap = byPeriodNo(ptimes);
@@ -151,6 +149,10 @@ export default function StudentHome() {
         </p>
       </header>
 
+      <ExamCountdown />
+
+      <ResultsCard studentId={me.id} />
+
       {/* ملخص */}
       <section className="grid grid-cols-3 gap-3">
         {["absent", "late", "excused"].map((k) => (
@@ -161,43 +163,39 @@ export default function StudentHome() {
         ))}
       </section>
 
-      <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
-
-      {/* جدول اليوم */}
-      <section className="card overflow-hidden">
-        <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-          جدول {todayLabel()}
-        </h2>
-        {!dow ? (
-          <p className="px-4 py-5 text-sm text-muted">
-            اليوم عطلة — الأسبوع الدراسي من الأحد إلى الخميس.
-          </p>
-        ) : schedule.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-muted">لا توجد حصص مسجّلة لهذا اليوم.</p>
-        ) : (
-          schedule.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
-              <span className="num w-8 shrink-0 rounded-md bg-mint-tint py-1 text-center text-xs font-bold text-mint-deep">
-                {s.period_no}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">
-                  {s.subjects?.name ?? "—"}
-                </p>
-                <p className="truncate text-xs text-muted">
-                  {s.teachers?.full_name ?? "—"}
-                  {ptMap[s.period_no] && (
-                    <span className="num"> · {fmtRange(ptMap[s.period_no])}</span>
-                  )}
-                </p>
+      {/* جدول اليوم — لا يظهر إطلاقًا في أيام العطلة الأسبوعية */}
+      {Boolean(dow) && (
+        <section className="card overflow-hidden">
+          <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
+            جدول {todayLabel()}
+          </h2>
+          {schedule.length === 0 ? (
+            <p className="px-4 py-5 text-sm text-muted">لا توجد حصص مسجّلة لهذا اليوم.</p>
+          ) : (
+            schedule.map((s) => (
+              <div key={s.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">
+                <span className="num w-8 shrink-0 rounded-md bg-mint-tint py-1 text-center text-xs font-bold text-mint-deep">
+                  {s.period_no}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">
+                    {s.subjects?.name ?? "—"}
+                  </p>
+                  <p className="truncate text-xs text-muted">
+                    {s.teachers?.full_name ?? "—"}
+                    {ptMap[s.period_no] && (
+                      <span className="num"> · {fmtRange(ptMap[s.period_no])}</span>
+                    )}
+                  </p>
+                </div>
+                {nowPeriod === s.period_no && (
+                  <span className="chip shrink-0 bg-mint-deep text-white">الآن</span>
+                )}
               </div>
-              {nowPeriod === s.period_no && (
-                <span className="chip shrink-0 bg-mint-deep text-white">الآن</span>
-              )}
-            </div>
-          ))
-        )}
-      </section>
+            ))
+          )}
+        </section>
+      )}
 
       {/* الجدول الأسبوعي الكامل */}
       <section className="card overflow-hidden">
@@ -229,48 +227,7 @@ export default function StudentHome() {
         )}
       </section>
 
-      {/* سجل الغياب */}
-      <section className="card overflow-hidden">
-        <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-          سجل الغياب والتأخر
-        </h2>
-        {records.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-muted">سجلك نظيف — لا غياب ولا تأخر.</p>
-        ) : (
-          records.map((r, i) => (
-            <div key={i} className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 last:border-0">
-              <div className="min-w-0">
-                <p className="num text-sm text-ink">{fmtGreg(r.attend_date + "T00:00:00")}</p>
-                <p className="truncate text-xs text-muted">
-                  الحصة <span className="num">{r.schedule?.period_no ?? "—"}</span> ·{" "}
-                  {r.schedule?.subjects?.name ?? "—"}
-                </p>
-              </div>
-              <span className={`chip shrink-0 ${TONE[r.status]}`}>{LABEL[r.status]}</span>
-            </div>
-          ))
-        )}
-      </section>
-
-      {/* الدرجات */}
-      <section className="card overflow-hidden">
-        <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">درجاتي</h2>
-        {grades.length === 0 ? (
-          <p className="px-4 py-5 text-sm text-muted">لم تُنشر درجات بعد.</p>
-        ) : (
-          grades.map((g, i) => (
-            <div key={i} className="flex items-center justify-between border-b border-line px-4 py-3 last:border-0">
-              <div>
-                <p className="text-sm font-medium text-ink">{g.subjects?.name ?? "—"}</p>
-                <p className="text-xs text-muted">{g.term}</p>
-              </div>
-              <p className="num text-sm font-semibold text-mint-deep">
-                {g.score} / {g.max_score}
-              </p>
-            </div>
-          ))
-        )}
-      </section>
+      <AbsenceHistory records={records} />
 
       {/* البصمة الصباحية */}
       <section className="card overflow-hidden">
@@ -300,6 +257,8 @@ export default function StudentHome() {
           ))
         )}
       </section>
+
+      <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
     </div>
   );
 }

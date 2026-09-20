@@ -12,6 +12,9 @@ export const STUDENT_DEPUTY_NAME = "فهد بن نايف ماطر المعبدي
 // وكيل الشؤون التعليمية
 export const ACADEMIC_DEPUTY_NAME = "فهد بن سعود حضرواي";
 
+// مسؤول الدعم الفني للبوابة — يظهر في تقارير مركز الدعم والمساندة
+export const TECH_SUPPORT_NAME = "محمد بن حسن الحازمي";
+
 /* ألوان الهوية المستخدمة في التقارير المطبوعة */
 const DEEP  = "#3E6350";
 const MINT  = "#89D7AD";
@@ -252,6 +255,7 @@ export function exportStyledExcel({
  * @param {Object}  [opts.cover]      - { title, subtitle, rows: [[k,v]], groups, year }
  * @param {Array}   [opts.signatures] - [{ title, name }]
  * @param {boolean} [opts.hideSignatureLine]
+ * @param {boolean} [opts.signOnLastPageOnly] - عند تعدد الأقسام/الصفحات، لا تُكرَّر التوقيعات إلا في آخر صفحة
  * @param {string}  [opts.note]
  * @param {string}  [opts.tableClass]
  * @param {boolean} [opts.landscape]
@@ -261,6 +265,7 @@ export function printReport(opts) {
     title, subtitle, headers, headerRows, rows,
     sections, logoUrl, moeLogoUrl, cover,
     signatures, secondSignature, hideSignatureLine = false, hideSignatures = false,
+    signOnLastPageOnly = false,
     note, tableClass, landscape = false,
   } = opts;
 
@@ -308,7 +313,6 @@ export function printReport(opts) {
     ${headBlock}
 
     <div class="cover-body">
-      ${logoUrl ? `<img class="cover-logo" src="${logoUrl}" alt="" />` : ""}
       <h1>${cover.title ?? title}</h1>
       ${cover.subtitle ? `<p class="cover-sub">${cover.subtitle}</p>` : ""}
 
@@ -316,7 +320,7 @@ export function printReport(opts) {
         ${(cover.rows ?? [])
           .map(
             (r) => `
-        <div class="crow"><span class="k">${r[0]}</span><span class="v">${r[1] ?? ""}</span></div>`
+        <div class="crow"><span class="k">${r[0]}:</span><span class="v">${r[1] ?? ""}</span></div>`
           )
           .join("")}
       </div>
@@ -402,7 +406,11 @@ export function printReport(opts) {
       ${sec.subtitle ? `<span class="m-sub">${sec.subtitle}</span>` : ""}
     </div>
 
-    <table class="${sec.tableClass ?? tableClass ?? ""}">
+    ${sec.html ?? ""}
+
+    ${
+      sec.headers || sec.rows
+        ? `<table class="${sec.tableClass ?? tableClass ?? ""}">
       ${
         sec.colWidths?.length
           ? `<colgroup>${sec.colWidths.map((w) => `<col style="width:${w}" />`).join("")}</colgroup>`
@@ -410,10 +418,12 @@ export function printReport(opts) {
       }
       <thead>${buildHead(sec.headerRows, sec.headers)}</thead>
       <tbody>${buildBody(sec.rows)}</tbody>
-    </table>
+    </table>`
+        : ""
+    }
 
     ${sec.note ?? note ? `<p class="note">${sec.note ?? note}</p>` : ""}
-    ${signBlock}
+    ${!signOnLastPageOnly || i === list.length - 1 ? signBlock : ""}
   </section>`
     )
     .join("");
@@ -520,6 +530,30 @@ export function printReport(opts) {
     background: #DFF3E6; color: #3E6350; border-color: #B9E6C9;
   }
 
+  /* بطاقات إحصائية داخل التقرير المطبوع */
+  .stat-tiles { display: flex; gap: 8px; margin-bottom: 14px; }
+  .stat-tile {
+    flex: 1; border: 1px solid ${MINT}; border-radius: 8px; padding: 10px 6px;
+    text-align: center; background: ${TINT};
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .stat-tile .v { font-size: 20px; font-weight: 700; color: ${DEEP}; }
+  .stat-tile .l { margin-top: 2px; font-size: 9.5px; color: ${GRAY}; }
+
+  /* رسم بياني شريطي بسيط داخل التقرير المطبوع */
+  .bar-chart { margin-bottom: 16px; }
+  .bar-row { margin-bottom: 8px; page-break-inside: avoid; }
+  .bar-row .bl {
+    display: flex; justify-content: space-between; font-size: 10.5px;
+    color: ${INK}; margin-bottom: 3px;
+  }
+  .bar-row .bl .n { color: ${GRAY}; }
+  .bar-track { height: 9px; background: #EFEFEF; border-radius: 5px; overflow: hidden; }
+  .bar-fill {
+    height: 100%; border-radius: 5px;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
   /* الملاحظة والتوقيعات */
   .note {
     margin-top: 10px; font-size: 9.5px; color: ${GRAY}; line-height: 1.6;
@@ -539,9 +573,8 @@ export function printReport(opts) {
   /* الغلاف */
   .cover { display: flex; flex-direction: column; min-height: 96vh; }
   .cover-body { flex: 1; text-align: center; padding-top: 6mm; }
-  .cover-logo { height: 84px; margin: 0 auto 14px; display: block; }
   .cover h1 {
-    margin: 0 0 6px; font-size: 26px; font-weight: 700; color: ${DEEP};
+    margin: 0 0 6px; font-size: 26px; line-height: 1.35; font-weight: 700; color: ${DEEP};
     letter-spacing: -0.2px;
   }
   .cover-sub { margin: 0 0 18px; font-size: 14px; color: ${GRAY}; }
@@ -550,7 +583,7 @@ export function printReport(opts) {
     border: 1px solid ${LIGHT}; border-radius: 10px; overflow: hidden;
   }
   .cover-card .crow {
-    display: flex; justify-content: space-between; gap: 12px;
+    display: flex; justify-content: center; gap: 8px;
     padding: 9px 16px; font-size: 12px; border-bottom: 1px solid #EEF6F1;
   }
   .cover-card .crow:nth-child(odd) { background: ${TINT}; }
@@ -623,7 +656,26 @@ ${sectionsHtml}
     setTimeout(() => frame.remove(), 1500);
   };
 
-  // انتظار تحميل الخطوط والصور
-  if (doc.readyState === "complete") setTimeout(run, 500);
-  else frame.onload = () => setTimeout(run, 500);
+  /* انتظار تحميل كل الصور فعليًا (شعارات الترويسة وغيرها) قبل الطباعة —
+     الاعتماد على مهلة زمنية ثابتة فقط قد لا يكفي لتحميل الصور الكبيرة
+     أو عند بطء الاتصال، فتظهر الترويسة بلا شعارات. */
+  const waitForImages = () =>
+    new Promise((resolve) => {
+      const imgs = Array.from(doc.images || []);
+      if (!imgs.length) return resolve();
+      let remaining = imgs.length;
+      const done = () => { if (--remaining <= 0) resolve(); };
+      imgs.forEach((img) => {
+        if (img.complete) return done();
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+      });
+      // سقف أعلى احتياطي حتى لا تتعطل الطباعة إن تعذّر تحميل صورة ما
+      setTimeout(resolve, 3000);
+    });
+
+  const ready = () => waitForImages().then(() => setTimeout(run, 200));
+
+  if (doc.readyState === "complete") ready();
+  else frame.onload = ready;
 }

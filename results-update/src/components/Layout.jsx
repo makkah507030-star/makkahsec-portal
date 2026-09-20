@@ -1,0 +1,393 @@
+import { useState } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
+import { useTeacherHiddenTabs } from "../lib/useTeacherHiddenTabs.js";
+import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
+import logoIcon from "../assets/icon-mint.png";
+import TrialBanner from "./TrialBanner.jsx";
+import NotificationBell from "./NotificationBell.jsx";
+import AnnouncementModal from "./AnnouncementModal.jsx";
+
+/* أقسام قائمة الإدارة — مجمّعة منطقيًا */
+const ADMIN_GROUPS = [
+  {
+    title: null,
+    items: [{ to: "/", label: "الرئيسية", perm: null, icon: "home" }],
+  },
+  {
+    title: "شؤون الطلاب",
+    items: [
+      { to: "/students",    label: "الطلاب",    perm: "students",    icon: "users" },
+      { to: "/records-manual", label: "تعديل السجلات", perm: "records", icon: "edit" },
+      { to: "/results-admin", label: "نتائج الطلاب", perm: "results", icon: "award" },
+      { to: "/attendance-overview", label: "الحضور والغياب", perm: "reports", icon: "check" },
+      { to: "/period-attendance", label: "تحضير الحصص اليومية", perm: "reports", icon: "clock" },
+      { to: "/reports",     label: "التقارير",  perm: "reports",     icon: "chart" },
+      { to: "/permissions", label: "الاستئذان", perm: "permissions", icon: "ticket" },
+    ],
+  },
+  {
+    title: "الشؤون التعليمية",
+    items: [
+      { to: "/general-schedule",  label: "الجدول العام",          perm: "import", icon: "grid" }, // جدول شامل بالفصول والمعلمين معًا
+      { to: "/teacher-schedules", label: "جداول المعلمين",        perm: "import", icon: "chalk" },
+      { to: "/student-schedules", label: "جداول الطلاب",          perm: "import", icon: "users" },
+      { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
+      { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
+      { to: "/substitute-report", label: "تقرير حصص الانتظار", perm: "reports", icon: "chart" },
+    ],
+  },
+  {
+    title: "المحتوى",
+    items: [
+      { to: "/news-admin",     label: "الأخبار",   perm: "news",     icon: "news" },
+      { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
+      { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
+      { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
+      { to: "/feedback-admin", label: "الملاحظات", perm: "feedback", icon: "chat" },
+    ],
+  },
+  {
+    title: "الإعدادات",
+    items: [
+      { to: "/import",         label: "الاستيراد",           perm: "import",         icon: "upload" },
+      { to: "/season",         label: "التوقيت الزمني",       perm: "import",         icon: "clock" },
+      { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
+      { to: "/staff",          label: "الإدارة",             perm: "staff",          icon: "shield" },
+      { to: "/password-reset", label: "استعادة كلمة المرور", perm: "password_reset", icon: "lock" },
+    ],
+  },
+  {
+    title: "الدعم الفني",
+    items: [
+      { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
+    ],
+  },
+];
+
+const OTHER_NAV = {
+  teacher: [
+    { to: "/",         label: "التحضير",  tabKey: "attendance" },
+    { to: "/substitute", label: "الانتظار", tabKey: "substitute" },
+    { to: "/schedule", label: "جدولي",    tabKey: "schedule" },
+    { to: "/records",  label: "السجلات",  tabKey: "records" },
+    { to: "/reports",  label: "التقارير", tabKey: "reports" },
+    { to: "/notify",   label: "الإشعارات", tabKey: "notify" },
+    { to: "/permissions", label: "الاستئذان", extraTabKey: "permissions" },
+    { to: "/news-admin",  label: "الأخبار",   extraTabKey: "news" },
+  ],
+  student:  [{ to: "/", label: "الرئيسية" }],
+  guardian: [{ to: "/", label: "الرئيسية" }],
+};
+
+/* أيقونات خطّية بسيطة */
+function Icon({ name, className = "h-[18px] w-[18px]" }) {
+  const p = {
+    home:   "M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5",
+    users:  "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9",
+    chart:  "M3 3v18h18M7 15V9m5 6V5m5 10v-4",
+    ticket: "M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z",
+    news:   "M4 5h12v14H4zM16 8h4v9a2 2 0 0 1-4 0zM7 9h6M7 12h6M7 15h4",
+    chat:   "M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4Z",
+    upload: "M12 16V4m-5 5 5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
+    grid:   "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+    chalk:  "M4 19v-3l11-11 3 3-11 11H4ZM14 6l3 3",
+    clock:  "M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
+    key:    "M14 7a4 4 0 1 1-5.6 5.6L3 18v3h3l5.4-5.4A4 4 0 0 1 14 7Z",
+    shield: "M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z",
+    lock:   "M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3",
+    book:   "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z",
+    bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+    check:  "M20 6 9 17l-5-5",
+    megaphone: "M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H10l9 4V5l-9 4H5a2 2 0 0 0-2 2Zm7-2v6",
+    wrench: "M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2Z",
+    edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
+    award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM8.2 13.5 6 21l6-3 6 3-2.2-7.5",
+  }[name];
+
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={`${className} shrink-0`}
+         stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d={p} />
+    </svg>
+  );
+}
+
+export default function Layout({ children }) {
+  const { profile, adminRoles, signOut, can } = useSession();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+
+  const isAdmin = profile?.role === "admin";
+
+  const groups = ADMIN_GROUPS
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) =>
+        i.techOnly ? adminRoles.includes("tech_support") : !i.perm || can(i.perm)
+      ),
+    }))
+    .filter((g) => g.items.length);
+
+  const { hidden: hiddenTabs } = useTeacherHiddenTabs();
+  const { granted: grantedTabs } = useTeacherGrantedTabs();
+  const items = isAdmin
+    ? []
+    : (OTHER_NAV[profile?.role] ?? []).filter((i) => {
+        if (i.extraTabKey) return grantedTabs.has(i.extraTabKey);
+        return !i.tabKey || !hiddenTabs.has(i.tabKey);
+      });
+
+  const subtitle =
+    isAdmin && adminRoles.length
+      ? adminRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" · ")
+      : ROLE_LABEL[profile?.role] ?? "";
+
+  const Brand = ({ compact }) => (
+    <NavLink to="/" end className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80">
+      <img src={logoIcon} alt="" className="h-9 w-9 shrink-0 object-contain" />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold leading-tight text-ink">
+          بوابة مكة الثانوية
+        </p>
+        {!compact && <p className="truncate text-xs text-muted">مدرسة مكة الثانوية</p>}
+      </div>
+    </NavLink>
+  );
+
+  const Actions = () => (
+    <div className="flex shrink-0 items-center gap-2">
+      <NotificationBell />
+      <SignOut />
+    </div>
+  );
+
+  // الاسم والدور — نسخة مدمجة للشريط العلوي
+  const UserInline = () => (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-mint-tint">
+        <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-mint-deep"
+             stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      </span>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold leading-tight text-ink">
+          {profile?.full_name ?? profile?.username ?? "—"}
+        </p>
+        <p className="truncate text-[11px] leading-tight text-muted">{subtitle}</p>
+      </div>
+    </div>
+  );
+
+  const SignOut = () => (
+    <button
+      onClick={async () => { await signOut(); navigate("/login"); }}
+      className="shrink-0 rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint hover:text-mint-deep"
+    >
+      خروج
+    </button>
+  );
+
+  const linkClass = ({ isActive }) =>
+    `flex items-center gap-2.5 rounded-sm2 px-3 py-2 text-sm font-medium transition-colors ${
+      isActive
+        ? "bg-mint-tint text-mint-deep"
+        : "text-muted hover:bg-canvas hover:text-ink"
+    }`;
+
+  /* ================= واجهة الإدارة: قائمة جانبية ================= */
+  if (isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-tint">
+        <AnnouncementModal />
+        <TrialBanner />
+
+        {/* شريط علوي للجوال */}
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+          <button onClick={() => setOpen(true)} aria-label="القائمة"
+                  className="rounded-sm2 border border-line p-2 text-muted hover:bg-canvas">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <UserInline />
+          <Actions />
+        </header>
+
+        <div className="mx-auto flex max-w-[1400px]">
+          {/* القائمة الجانبية — سطح المكتب */}
+          <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-l border-line bg-white lg:flex">
+            <div className="flex h-[4.5rem] items-center border-b border-line px-4">
+              <Brand />
+            </div>
+
+            <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+              {groups.map((g, gi) => (
+                <div key={gi}>
+                  {g.title && (
+                    <p className="mb-1.5 px-3 text-[11px] font-semibold text-faint">
+                      {g.title}
+                    </p>
+                  )}
+                  <div className="space-y-0.5">
+                    {g.items.map((i) => (
+                      <NavLink key={i.to} to={i.to} end={i.to === "/"} className={linkClass}>
+                        <Icon name={i.icon} />
+                        <span className="truncate">{i.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </nav>
+
+          </aside>
+
+          {/* القائمة المنسدلة — الجوال */}
+          {open && (
+            <>
+              <div className="fixed inset-0 z-40 bg-ink/30 lg:hidden"
+                   onClick={() => setOpen(false)} />
+              <aside className="fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-white shadow-xl lg:hidden">
+                <div className="border-b border-line px-4 py-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <Brand compact />
+                    <button onClick={() => setOpen(false)} aria-label="إغلاق"
+                          className="rounded-sm2 p-1.5 text-muted hover:bg-canvas">
+                      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                           stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                        <path d="M6 6l12 12M18 6 6 18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+                  {groups.map((g, gi) => (
+                    <div key={gi}>
+                      {g.title && (
+                        <p className="mb-1.5 px-3 text-[11px] font-semibold text-faint">
+                          {g.title}
+                        </p>
+                      )}
+                      <div className="space-y-0.5">
+                        {g.items.map((i) => (
+                          <NavLink key={i.to} to={i.to} end={i.to === "/"}
+                                   onClick={() => setOpen(false)} className={linkClass}>
+                            <Icon name={i.icon} />
+                            <span className="truncate">{i.label}</span>
+                          </NavLink>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </nav>
+              </aside>
+            </>
+          )}
+
+          <div className="flex min-w-0 flex-1 flex-col">
+            {/* شريط علوي — سطح المكتب */}
+            <header className="sticky top-0 z-20 hidden h-[4.5rem] border-b border-line bg-white/95 backdrop-blur lg:block">
+              <div className="mx-auto flex h-full max-w-5xl items-center justify-between gap-3 px-6">
+                <UserInline />
+                <Actions />
+              </div>
+            </header>
+
+            <main className="min-w-0 flex-1 px-4 py-5 sm:px-6">
+              <div className="mx-auto max-w-5xl">{children}</div>
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ============ باقي الفئات: شريط علوي + قائمة منسدلة من ☰ في الجوال ============ */
+  return (
+    <div className="flex min-h-screen flex-col bg-gray-tint">
+      <AnnouncementModal />
+      <TrialBanner />
+
+      <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
+        {/* سطح المكتب: شريط واحد بالاسم والروابط الأفقية */}
+        <div className="mx-auto hidden h-[4.5rem] max-w-5xl items-center justify-between gap-3 px-4 sm:flex">
+          <div className="flex min-w-0 items-center gap-4">
+            <Brand compact />
+            <span className="h-8 w-px bg-line" />
+            <UserInline />
+          </div>
+          <Actions />
+        </div>
+
+        {items.length > 1 && (
+          <nav className="hidden border-t border-line sm:block">
+            <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-2">
+              {items.map((i) => (
+                <NavLink key={i.to} to={i.to} end={i.to === "/"}
+                  className={({ isActive }) =>
+                    `shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                      isActive ? "border-mint-deep text-mint-deep"
+                               : "border-transparent text-muted hover:text-ink"}`}>
+                  {i.label}
+                </NavLink>
+              ))}
+            </div>
+          </nav>
+        )}
+
+        {/* الجوال: زر ☰ يفتح قائمة منسدلة، بدل شريط أسفل الشاشة */}
+        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:hidden">
+          <button onClick={() => setOpen(true)} aria-label="القائمة"
+                  className="rounded-sm2 border border-line p-2 text-muted hover:bg-canvas">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <UserInline />
+          <Actions />
+        </div>
+      </header>
+
+      {/* القائمة المنسدلة — الجوال */}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40 bg-ink/30 sm:hidden"
+               onClick={() => setOpen(false)} />
+          <aside className="fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-white shadow-xl sm:hidden">
+            <div className="border-b border-line px-4 py-4">
+              <div className="flex items-center justify-between gap-2">
+                <Brand compact />
+                <button onClick={() => setOpen(false)} aria-label="إغلاق"
+                        className="rounded-sm2 p-1.5 text-muted hover:bg-canvas">
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                       stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+              {items.map((i) => (
+                <NavLink key={i.to} to={i.to} end={i.to === "/"}
+                         onClick={() => setOpen(false)} className={linkClass}>
+                  <span className="truncate">{i.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+          </aside>
+        </>
+      )}
+
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-5">
+        {children}
+      </main>
+    </div>
+  );
+}

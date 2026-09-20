@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { useSession } from "../../lib/session.jsx";
+import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import ColorLegend from "../../components/ColorLegend.jsx";
+import NewsCoverCard from "../../components/NewsCoverCard.jsx";
 
 const empty = {
   id: null,
@@ -10,10 +11,15 @@ const empty = {
   excerpt: "",
   body: "",
   cover_url: "",
+  cover_theme: "",
+  body_images: ["", "", "", ""],
   video_url: "",
   is_published: false,
   is_featured: true,
 };
+
+// الحد الأقصى لحجم كل صورة داخل المقال — 2 ميجابايت
+const MAX_BODY_IMAGE_BYTES = 2 * 1024 * 1024;
 
 // توليد slug عربي-صديق
 const makeSlug = (t) =>
@@ -23,8 +29,14 @@ const makeSlug = (t) =>
     .slice(0, 80);
 
 export default function NewsAdmin() {
-  const { profile } = useSession();
+  const { profile, adminRoles } = useSession();
   const isTeacher = profile?.role === "teacher"; // مسودات فقط — لا نشر مباشر
+
+  // الأدوار الإدارية التي يملكها هذا الحساب فعليًا — منها يختار بطاقة الغلاف
+  const myRoles = adminRoles.filter((r) => ADMIN_ROLE_LABEL[r]);
+
+  // الدعم الفني فقط يملك صلاحية رفع صورة غلاف مخصّصة بدلًا من البطاقة
+  const isTechSupport = adminRoles.includes("tech_support");
 
   const [list, setList] = useState(null);
   const [form, setForm] = useState(empty);
@@ -32,10 +44,18 @@ export default function NewsAdmin() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
 
+  // اختيار بطاقة غلاف افتراضية أول مرة يفتح فيها نموذج جديد
+  useEffect(() => {
+    if (!isTeacher && !form.id && !form.cover_theme && myRoles.length) {
+      setForm((f) => ({ ...f, cover_theme: myRoles[0] }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myRoles.length]);
+
   const load = async () => {
     let query = supabase
       .from("news")
-      .select("id, title, slug, cover_url, is_published, is_featured, published_at, created_at, created_by")
+      .select("id, title, slug, cover_url, cover_theme, is_published, is_featured, published_at, created_at, created_by")
       .order("created_at", { ascending: false });
 
     // المعلم يرى مسوداته الخاصة فقط، لا أخبار المدرسة كاملة
@@ -62,12 +82,51 @@ export default function NewsAdmin() {
       });
       if (error) throw error;
       const { data } = supabase.storage.from("news").getPublicUrl(path);
-      set("cover_url", data.publicUrl);
+      // رفع صورة مخصّصة (دعم فني) يلغي اختيار البطاقة اللونية تلقائيًا
+      setForm((f) => ({ ...f, cover_url: data.publicUrl, cover_theme: isTeacher ? f.cover_theme : "" }));
     } catch (e) {
       setMsg({ ok: false, text: "تعذّر رفع الصورة: " + (e.message ?? e) });
     } finally {
       setUploading(false);
     }
+  };
+
+  // رفع صورة في أحد حقول صور المقال (حتى 4 صور)، برفض أي ملف يتجاوز الحجم المسموح
+  const handleBodyImageUpload = async (idx, file) => {
+    if (!file) return;
+    if (file.size > MAX_BODY_IMAGE_BYTES) {
+      setMsg({ ok: false, text: `حجم الصورة كبير جدًا — الحد الأقصى ${MAX_BODY_IMAGE_BYTES / 1024 / 1024} ميجابايت.` });
+      return;
+    }
+    setUploading(true);
+    setMsg(null);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("news").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("news").getPublicUrl(path);
+      setForm((f) => {
+        const arr = [...f.body_images];
+        arr[idx] = data.publicUrl;
+        return { ...f, body_images: arr };
+      });
+    } catch (e) {
+      setMsg({ ok: false, text: "تعذّر رفع الصورة: " + (e.message ?? e) });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeBodyImage = (idx) => {
+    setForm((f) => {
+      const arr = [...f.body_images];
+      arr[idx] = "";
+      return { ...f, body_images: arr };
+    });
   };
 
   const save = async () => {
@@ -86,7 +145,11 @@ export default function NewsAdmin() {
       slug: (form.slug.trim() || makeSlug(form.title)) || null,
       excerpt: form.excerpt.trim() || null,
       body: form.body.trim() || null,
+      // الدعم الفني قد يرفع صورة مخصّصة بدلًا من البطاقة — بقية الحسابات
+      // الإدارية تُخزَّن لها البطاقة فقط، والمعلم يبقى برفع الصورة كالسابق
       cover_url: form.cover_url || null,
+      cover_theme: isTeacher ? null : (form.cover_theme || null),
+      body_images: form.body_images.filter(Boolean),
       video_url: form.video_url.trim() || null,
       is_published: isPublished,
       is_featured: form.is_featured,
@@ -116,8 +179,11 @@ export default function NewsAdmin() {
   const edit = async (id) => {
     const { data } = await supabase.from("news").select("*").eq("id", id).maybeSingle();
     if (data) {
+      const imgs = Array.isArray(data.body_images) ? data.body_images : [];
       setForm({ ...empty, ...data, slug: data.slug ?? "", excerpt: data.excerpt ?? "",
                 body: data.body ?? "", cover_url: data.cover_url ?? "",
+                cover_theme: data.cover_theme ?? "",
+                body_images: [imgs[0] ?? "", imgs[1] ?? "", imgs[2] ?? "", imgs[3] ?? ""],
                 video_url: data.video_url ?? "" });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -144,12 +210,12 @@ export default function NewsAdmin() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">
-          {isTeacher ? "أخبار الأنشطة — مسوداتي" : "أخبار المدرسة"}
+          {isTeacher ? "الأخبار والمقالات — مسوداتي" : "الأخبار والمقالات"}
         </h1>
         <p className="mt-1 text-sm text-muted">
           {isTeacher
             ? "تُحفظ مساهماتك كمسودة، ولا تظهر للزوار إلا بعد مراجعة الإدارة ونشرها."
-            : "الأخبار المنشورة والمميّزة تظهر في سلايدر الصفحة الرئيسية."}
+            : "الأخبار والمقالات المنشورة والمميّزة تظهر في سلايدر الصفحة الرئيسية."}
         </p>
       </div>
 
@@ -180,20 +246,97 @@ export default function NewsAdmin() {
         </div>
 
         <div>
-          <label className="text-xs text-muted">صورة الغلاف</label>
-          <input type="file" accept="image/*" className="mt-1 block w-full text-sm"
-                 onChange={(e) => handleUpload(e.target.files?.[0])} />
+          <label className="text-xs text-muted">صور المقال (حتى 4 صور)</label>
+          <p className="mt-1 text-xs text-faint">
+            الحد الأقصى لحجم كل صورة: {MAX_BODY_IMAGE_BYTES / 1024 / 1024} ميجابايت — أي ملف أكبر من ذلك
+            يُرفض تلقائيًا ولا يُرفع.
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {form.body_images.map((url, i) => (
+              <div key={i} className="rounded-sm2 border border-line p-2">
+                <p className="text-[11px] text-muted">صورة {i + 1}</p>
+                {url ? (
+                  <div className="mt-1.5 space-y-1.5">
+                    <img src={url} alt="" className="h-20 w-full rounded-sm2 border border-line object-cover" />
+                    <button onClick={() => removeBodyImage(i)}
+                            className="text-[11px] font-medium text-absent hover:underline">
+                      إزالة
+                    </button>
+                  </div>
+                ) : (
+                  <input type="file" accept="image/*" className="mt-1.5 block w-full text-[11px]"
+                         onChange={(e) => handleBodyImageUpload(i, e.target.files?.[0])} />
+                )}
+              </div>
+            ))}
+          </div>
           {uploading && <p className="mt-1 text-xs text-muted">جارٍ الرفع…</p>}
-          {form.cover_url && (
-            <div className="mt-3 flex items-center gap-3">
-              <img src={form.cover_url} alt="" className="h-20 w-32 rounded-sm2 border border-line object-cover" />
-              <button onClick={() => set("cover_url", "")}
-                      className="text-xs font-medium text-absent hover:underline">
-                إزالة الصورة
-              </button>
-            </div>
-          )}
         </div>
+
+        {isTeacher ? (
+          <div>
+            <label className="text-xs text-muted">صورة الغلاف</label>
+            <input type="file" accept="image/*" className="mt-1 block w-full text-sm"
+                   onChange={(e) => handleUpload(e.target.files?.[0])} />
+            {uploading && <p className="mt-1 text-xs text-muted">جارٍ الرفع…</p>}
+            {form.cover_url && (
+              <div className="mt-3 flex items-center gap-3">
+                <img src={form.cover_url} alt="" className="h-20 w-32 rounded-sm2 border border-line object-cover" />
+                <button onClick={() => set("cover_url", "")}
+                        className="text-xs font-medium text-absent hover:underline">
+                  إزالة الصورة
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            <label className="text-xs text-muted">بطاقة الغلاف</label>
+            <p className="mt-1 text-xs text-faint">
+              بطاقة تلقائية بتدرّج لوني خاص باسم حسابك — تظهر بدلًا من صورة الغلاف.
+            </p>
+            {myRoles.length === 0 ? (
+              <p className="mt-2 rounded-sm2 bg-warning-light px-3 py-2 text-xs text-warning">
+                لا يوجد حساب إداري مرتبط بك بعد لاختيار بطاقة غلاف.
+              </p>
+            ) : (
+              <div className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                {myRoles.map((r) => (
+                  <button key={r} type="button"
+                          onClick={() => setForm((f) => ({ ...f, cover_theme: r, cover_url: "" }))}
+                          className={`overflow-hidden rounded-sm2 ring-2 transition-shadow ${
+                            form.cover_theme === r && !form.cover_url ? "ring-mint-deep" : "ring-transparent hover:ring-line"}`}>
+                    <NewsCoverCard role={r} className="aspect-[16/9] w-full" />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {isTechSupport && (
+              <div className="mt-4 border-t border-line pt-4">
+                <label className="text-xs text-muted">
+                  أو ارفع صورة غلاف مخصّصة (خاص بحساب الدعم الفني فقط — تظهر بدلًا من البطاقة)
+                </label>
+                <p className="mt-1 text-xs leading-relaxed text-faint">
+                  المقاس الموصى به: <span dir="ltr">1200×675</span> بكسل (نسبة 16:9)، صيغة JPG أو PNG،
+                  وبحجم لا يتجاوز 500 كيلوبايت تقريبًا لسرعة تحميل الصفحة.
+                </p>
+                <input type="file" accept="image/*" className="mt-2 block w-full text-sm"
+                       onChange={(e) => handleUpload(e.target.files?.[0])} />
+                {uploading && <p className="mt-1 text-xs text-muted">جارٍ الرفع…</p>}
+                {form.cover_url && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <img src={form.cover_url} alt="" className="h-20 w-32 rounded-sm2 border border-line object-cover" />
+                    <button onClick={() => set("cover_url", "")}
+                            className="text-xs font-medium text-absent hover:underline">
+                      إزالة الصورة المخصّصة والعودة للبطاقة
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div>
           <label className="text-xs text-muted">رابط فيديو يوتيوب (اختياري)</label>
@@ -253,7 +396,7 @@ export default function NewsAdmin() {
       {/* القائمة */}
       <section className="card overflow-hidden">
         <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-          {isTeacher ? "مسوداتي" : "كل الأخبار"} {list && <span className="num text-muted">({list.length})</span>}
+          {isTeacher ? "مسوداتي" : "كل الأخبار والمقالات"} {list && <span className="num text-muted">({list.length})</span>}
         </h2>
 
         {!list && <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>}
@@ -267,9 +410,11 @@ export default function NewsAdmin() {
           {list?.map((n) => (
             <div key={n.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               <div className="h-12 w-20 shrink-0 overflow-hidden rounded-sm2 bg-mint-tint">
-                {n.cover_url && (
+                {n.cover_theme ? (
+                  <NewsCoverCard role={n.cover_theme} className="h-full w-full text-[10px]" />
+                ) : n.cover_url ? (
                   <img src={n.cover_url} alt="" className="h-full w-full object-cover" />
-                )}
+                ) : null}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{n.title}</p>
