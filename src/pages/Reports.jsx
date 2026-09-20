@@ -1001,13 +1001,25 @@ function TeacherSheetsReport() {
       setRows(null); setErr(null);
       // سجلات التحضير الفعلية لهذا اليوم — نعرض تمامًا ما أدخله المعلم في
       // السجل بحالاته (حاضر/غائب/متأخر/مستأذن) بلا أي افتراض أو "لم يُرصد".
-      const { data: att, error } = await supabase
-        .from("class_attendance")
-        .select("schedule_id, student_id, status, recorded_by, students(full_name, national_id)")
-        .eq("attend_date", date)
-        .limit(20000);
-      if (error) { console.error("teacher_sheets:", error); setErr(error.message); setRows({ att: [], meta: {}, recorders: {} }); return; }
-      const list = att ?? [];
+      //
+      // مهم: Supabase يحدّ الاستعلام بـ1000 صف افتراضيًا (db-max-rows) حتى مع
+      // .limit أكبر، وسجلات اليوم تتجاوز ذلك بكثير — فكانت أول 1000 صف كلها
+      // "حاضر" ويسقط الغياب. لذا نجلب كل الصفوف على دفعات عبر range.
+      const PAGE = 1000;
+      let list = [];
+      let fetchErr = null;
+      for (let from = 0; from < 50000; from += PAGE) {
+        const { data: page, error } = await supabase
+          .from("class_attendance")
+          .select("schedule_id, student_id, status, recorded_by, students(full_name, national_id)")
+          .eq("attend_date", date)
+          .order("schedule_id", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) { fetchErr = error; break; }
+        list = list.concat(page ?? []);
+        if (!page || page.length < PAGE) break;
+      }
+      if (fetchErr) { console.error("teacher_sheets:", fetchErr); setErr(fetchErr.message); setRows({ att: [], meta: {}, recorders: {} }); return; }
       if (!list.length) { setRows({ att: [], meta: {}, recorders: {} }); return; }
 
       // بيانات كل حصة: الفصل والمادة ومعلم الجدول الأصلي
