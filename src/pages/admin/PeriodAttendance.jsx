@@ -95,7 +95,7 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
       subtitle: todayLabel(),
       sections: [
         {
-          title: `الحصة ${n}`,
+          title: `المعلمون الذين ${kindLabel} — الحصة ${n}`,
           subtitle: `${list.length} معلم`,
           headers: ["م", "الفصل", "المادة", "المعلم"],
           rows: rowsOf,
