@@ -20,17 +20,27 @@ export default function PeriodAttendance() {
       const year = m.active_year ?? "";
       const term = Number(m.active_term ?? 1);
 
-      const [todaySched, todayMarked] = await Promise.all([
-        dow
-          ? supabase.from("schedule")
-              .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
-              .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
-          : Promise.resolve({ data: [] }),
-        supabase.from("class_attendance").select("schedule_id").eq("attend_date", date),
-      ]);
+      const { data: schedData } = dow
+        ? await supabase.from("schedule")
+            .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
+            .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
+        : { data: [] };
 
-      const doneSet = new Set((todayMarked.data ?? []).map((r) => r.schedule_id));
-      const sched = (todaySched.data ?? []).sort((a, b) => a.period_no - b.period_no);
+      // معرّفات الحصص المُحضَّرة اليوم — على دفعات لتجاوز حدّ Supabase (1000
+      // صف افتراضيًا)، وإلا ظهرت أغلب الحصص "لم تُحضَّر" رغم رصدها.
+      const doneSet = new Set();
+      for (let from = 0; from < 50000; from += 1000) {
+        const { data: page } = await supabase
+          .from("class_attendance")
+          .select("schedule_id")
+          .eq("attend_date", date)
+          .order("schedule_id", { ascending: true })
+          .range(from, from + 999);
+        (page ?? []).forEach((r) => doneSet.add(r.schedule_id));
+        if (!page || page.length < 1000) break;
+      }
+
+      const sched = (schedData ?? []).sort((a, b) => a.period_no - b.period_no);
       const done = sched.filter((s) => doneSet.has(s.id));
       const left = sched.filter((s) => !doneSet.has(s.id));
 

@@ -87,15 +87,27 @@ export default function Dashboard() {
 
       // بيانات الحضور والحصص — لمن يملك صلاحية التقارير فقط
       if (canReports) {
-        const [unmatched, todaySched, todayMarked] = await Promise.all([
+        const [unmatched, todaySched] = await Promise.all([
           supabase.from("unmatched_logs").select("id", { count: "exact", head: true }).eq("resolved", false),
           dow
             ? supabase.from("schedule")
                 .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
                 .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
             : Promise.resolve({ data: [] }),
-          supabase.from("class_attendance").select("schedule_id").eq("attend_date", date),
         ]);
+
+        // معرّفات الحصص المُحضَّرة اليوم — على دفعات لتجاوز حدّ Supabase (1000)
+        const markedSet = new Set();
+        for (let from = 0; from < 50000; from += 1000) {
+          const { data: page } = await supabase
+            .from("class_attendance")
+            .select("schedule_id")
+            .eq("attend_date", date)
+            .order("schedule_id", { ascending: true })
+            .range(from, from + 999);
+          (page ?? []).forEach((r) => markedSet.add(r.schedule_id));
+          if (!page || page.length < 1000) break;
+        }
 
         // حالات "بصم ولم يحضر" اليوم
         let escapeCount = 0;
@@ -114,7 +126,7 @@ export default function Dashboard() {
           }
         } catch (_) { /* تجاهل */ }
 
-        const doneSet = new Set((todayMarked.data ?? []).map((r) => r.schedule_id));
+        const doneSet = markedSet;
         const sched = todaySched.data ?? [];
         const unmarked = sched.filter((s) => !doneSet.has(s.id))
           .sort((a, b) => a.period_no - b.period_no);
