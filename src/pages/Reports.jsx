@@ -24,6 +24,12 @@ const TAB_GROUPS = [
       { key: "period",  label: "تقرير فترة" },
     ],
   },
+  {
+    title: "تقارير المعلمين",
+    tabs: [
+      { key: "teacher_sheets", label: "كشوف تحضير المعلمين", teacherHidden: true },
+    ],
+  },
 ];
 
 const TABS = TAB_GROUPS.flatMap((g) => g.tabs);
@@ -103,6 +109,7 @@ export default function Reports() {
       {tab === "period"  && <PeriodReport scopeIds={scopeIds} />}
       {tab === "daily_rate" && !isTeacher && <DailyRateReport />}
       {tab === "days"    && <AbsenceDaysReport scopeIds={scopeIds} />}
+      {tab === "teacher_sheets" && !isTeacher && <TeacherSheetsReport />}
     </div>
   );
 }
@@ -975,6 +982,160 @@ function AbsenceDaysReport({ scopeIds }) {
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ==================== كشوف تحضير المعلمين اليومية ==================== */
+
+function TeacherSheetsReport() {
+  const [date, setDate] = useState(todayStr());
+  const [rows, setRows] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      setRows(null);
+      const { data } = await supabase
+        .from("class_attendance")
+        .select("schedule_id, student_id, status, students(full_name, national_id), schedule(period_no, teacher_id, classes(class_no, grade), subjects(name), teachers(full_name))")
+        .eq("attend_date", date)
+        .limit(20000);
+      setRows(data ?? []);
+    })();
+  }, [date]);
+
+  // تجميع سجلات اليوم في كشوف: كل (معلم × فصل × حصة) كشف مستقل
+  const teachers = useMemo(() => {
+    const sheets = new Map(); // schedule_id -> كشف
+    (rows ?? []).forEach((r) => {
+      const sc = r.schedule;
+      if (!sc) return;
+      const sid = r.schedule_id;
+      if (!sheets.has(sid)) {
+        sheets.set(sid, {
+          schedule_id: sid,
+          teacher_id: sc.teacher_id,
+          teacher: sc.teachers?.full_name ?? "غير معروف",
+          class_no: sc.classes?.class_no ?? 0,
+          grade: sc.classes?.grade ?? 0,
+          period: sc.period_no ?? 0,
+          subject: sc.subjects?.name ?? "—",
+          students: [],
+          counts: { present: 0, absent: 0, late: 0, excused: 0 },
+        });
+      }
+      const sh = sheets.get(sid);
+      sh.students.push({
+        name: r.students?.full_name ?? "",
+        national_id: r.students?.national_id ?? "",
+        status: r.status,
+      });
+      sh.counts[r.status] = (sh.counts[r.status] ?? 0) + 1;
+    });
+
+    // ترتيب طلاب كل كشف أبجديًا
+    sheets.forEach((sh) =>
+      sh.students.sort((a, b) => a.name.localeCompare(b.name, "ar")));
+
+    // تجميع الكشوف تحت كل معلم
+    const byTeacher = new Map();
+    [...sheets.values()].forEach((sh) => {
+      const key = sh.teacher_id ?? sh.teacher;
+      if (!byTeacher.has(key)) byTeacher.set(key, { teacher: sh.teacher, sheets: [] });
+      byTeacher.get(key).sheets.push(sh);
+    });
+
+    const out = [...byTeacher.values()].sort((a, b) =>
+      a.teacher.localeCompare(b.teacher, "ar"));
+    out.forEach((t) =>
+      t.sheets.sort((a, b) => a.period - b.period || a.class_no - b.class_no));
+    return out;
+  }, [rows]);
+
+  const dateLabel = fmtGreg(date + "T00:00:00");
+
+  // كل كشف يصبح صفحة مستقلة في PDF (printReport يبدأ صفحة جديدة لكل قسم)
+  const sheetSection = (sh) => ({
+    title: `${sh.teacher} — فصل ${sh.class_no}`,
+    subtitle: `الحصة ${sh.period} · ${sh.subject} · ${dateLabel} — حاضر ${sh.counts.present} · غائب ${sh.counts.absent} · متأخر ${sh.counts.late} · مستأذن ${sh.counts.excused}`,
+    headers: ["م", "رقم الهوية", "اسم الطالب", "الحالة"],
+    rows: sh.students.map((st, i) => [i + 1, st.national_id, st.name, label(st.status)]),
+  });
+
+  const printSheets = (list, title) => {
+    if (!list.length) return;
+    printReport({ title, subtitle: dateLabel, sections: list.map(sheetSection), ...logos() });
+  };
+
+  const allSheets = teachers.flatMap((t) => t.sheets);
+
+  return (
+    <div className="space-y-4">
+      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+        كشوف التحضير التي رصدها المعلمون في اليوم المحدَّد — كل كشف (معلم × فصل × حصة)
+        في ورقة مستقلة عند الطباعة، تحوي أسماء الطلاب وأرقام هوياتهم وحالاتهم.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm font-medium text-ink">التاريخ:</label>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+               className="rounded-sm2 border border-line px-3 py-2 text-sm" />
+        <button onClick={() => printSheets(allSheets, "كشوف تحضير المعلمين اليومية")}
+          disabled={!allSheets.length}
+          className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-40">
+          طباعة كل الكشوف — PDF
+        </button>
+      </div>
+
+      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+
+      {rows && teachers.length === 0 ? (
+        <Empty title="لا كشوف" body="لم يرصد أي معلم تحضيرًا في هذا اليوم." />
+      ) : (
+        <div className="space-y-3">
+          {teachers.map((t) => (
+            <div key={t.teacher} className="card overflow-hidden">
+              <div className="flex items-center justify-between gap-3 border-b border-line bg-gray-tint px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-ink">{t.teacher}</p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    <span className="num">{t.sheets.length}</span> كشف
+                  </p>
+                </div>
+                <button onClick={() => printSheets(t.sheets, `كشوف تحضير المعلم — ${t.teacher}`)}
+                  className="shrink-0 rounded-sm2 bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
+                  طباعة كشوف المعلم
+                </button>
+              </div>
+              <div className="divide-y divide-line">
+                {t.sheets.map((sh) => (
+                  <div key={sh.schedule_id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-ink">
+                        فصل <span className="num">{sh.class_no}</span> · الحصة{" "}
+                        <span className="num">{sh.period}</span> · {sh.subject}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        <span className="num">{sh.students.length}</span> طالبًا
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className="num chip bg-present/10 text-present">{sh.counts.present}</span>
+                      <span className="num chip bg-absent/10 text-absent">{sh.counts.absent}</span>
+                      {sh.counts.late > 0 && (
+                        <span className="num chip bg-late/10 text-late">{sh.counts.late}</span>
+                      )}
+                      {sh.counts.excused > 0 && (
+                        <span className="num chip bg-excused/10 text-excused">{sh.counts.excused}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

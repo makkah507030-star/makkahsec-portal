@@ -73,7 +73,7 @@ const ADMIN_GROUPS = [
 
 const OTHER_NAV = {
   teacher: [
-    { to: "/",         label: "التحضير",  tabKey: "attendance" },
+    { to: "/",         label: "الحضور والغياب اليومي",  tabKey: "attendance" },
     { to: "/substitute", label: "الانتظار", tabKey: "substitute" },
     { to: "/schedule", label: "جدولي",    tabKey: "schedule" },
     { to: "/records",  label: "السجلات",  tabKey: "records" },

@@ -123,7 +123,7 @@ export default function App() {
 
   const teacherHome = hiddenTabs.has("attendance") ? (
     <div className="card px-6 py-12 text-center">
-      <p className="font-semibold text-ink">تبويب التحضير غير متاح لحسابك</p>
+      <p className="font-semibold text-ink">تبويب الحضور والغياب اليومي غير متاح لحسابك</p>
       <p className="mt-1.5 text-sm text-muted">اختر تبويبًا آخر من القائمة الجانبية.</p>
     </div>
   ) : (

@@ -119,7 +119,7 @@ export default function Attendance() {
     (async () => {
       setMsg(null);
       const { data: enr } = await supabase.from("student_enrollment")
-        .select("student_id, students(id, full_name)")
+        .select("student_id, students(id, full_name, national_id)")
         .eq("class_id", active.class_id).eq("status", "active");
       const list = (enr ?? []).map((e) => e.students).filter(Boolean)
         .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"));
@@ -370,7 +370,12 @@ export default function Attendance() {
                 <div className="mb-1.5 flex items-baseline gap-2">
                   <span className="num w-6 shrink-0 text-xs text-faint">{i + 1}</span>
                   <AbsenceBox stat={absStats[s.id]} />
-                  <p className="flex-1 truncate text-sm font-medium text-ink">{s.full_name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium leading-tight text-ink">{s.full_name}</p>
+                    {s.national_id && (
+                      <p className="num mt-0.5 text-[11px] leading-none text-faint">{s.national_id}</p>
+                    )}
+                  </div>
                   {!punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
                   {punched.has(s.id) && cur === "absent" && (
                     <span className="chip shrink-0 bg-absent/10 font-semibold text-absent">
