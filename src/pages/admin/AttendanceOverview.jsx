@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import { loadPeriodTimes, lateInfo } from "../../lib/periodTimes";
+import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { fmtGreg, fmtTime12, fmtDateTime } from "../../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import ColorLegend from "../../components/ColorLegend.jsx";
@@ -364,21 +365,27 @@ function LateTab() {
     (async () => {
       setRows(null);
 
-      const [{ rows: ptimes }, students, punches, official] = await Promise.all([
+      // كل بيانات التأخر الصباحي من البصمة — نجلب الطلاب والبصمات على دفعات
+      // (تجاوز حدّ 1000). لا نعتمد على الحالة الرسمية هنا؛ فالتقرير صباحي
+      // بصمي بحت: من بصم = حضر، ومن لم يبصم = غائب.
+      const [{ rows: ptimes }, students, punches] = await Promise.all([
         loadPeriodTimes(),
-        supabase.from("v_active_students").select("student_id, full_name, class_no, grade"),
-        supabase.from("daily_attendance").select("student_id, punch_time").eq("attend_date", date),
-        supabase.rpc("official_daily_status", { p_date: date }),
+        fetchAllPaged(() =>
+          supabase.from("v_active_students")
+            .select("student_id, full_name, class_no, grade")
+            .order("student_id", { ascending: true })),
+        fetchAllPaged(() =>
+          supabase.from("daily_attendance")
+            .select("student_id, punch_time")
+            .eq("attend_date", date)
+            .order("student_id", { ascending: true })),
       ]);
 
-      const officialMap = Object.fromEntries(
-        (official.data ?? []).map((r) => [r.student_id, r.official])
-      );
       const punchMap = Object.fromEntries(
-        (punches.data ?? []).map((p) => [p.student_id, p.punch_time])
+        (punches ?? []).map((p) => [p.student_id, p.punch_time])
       );
 
-      const list = (students.data ?? []).map((s) => {
+      const list = (students ?? []).map((s) => {
         const punch = punchMap[s.student_id];
         const li = punch ? lateInfo(ptimes, punch) : null;
         return {
@@ -386,7 +393,6 @@ function LateTab() {
           punch,
           isLate: li?.isLate ?? false,
           lateMinutes: li?.minutes ?? 0,
-          official: officialMap[s.student_id] ?? "pending",
         };
       });
 
@@ -402,11 +408,9 @@ function LateTab() {
 
   const stats = useMemo(() => {
     const total = filtered.length;
-    const punched = filtered.filter((r) => r.punch).length;
+    const punched = filtered.filter((r) => r.punch).length; // بصموا = حضروا
     const late = filtered.filter((r) => r.isLate).length;
-    const absent = filtered.filter((r) => r.official === "absent").length;
-    const present = filtered.filter((r) => r.official === "present").length;
-    return { total, punched, late, absent, present };
+    return { total, punched, late, absent: total - punched };
   }, [filtered]);
 
   const lateList = useMemo(
@@ -453,12 +457,12 @@ function LateTab() {
 
       {rows && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Fig value={`${stats.total ? Math.round((stats.present / stats.total) * 100) : 0}%`}
-               label="نسبة الحضور" tone="text-present" />
+          <Fig value={`${stats.total ? Math.round((stats.punched / stats.total) * 100) : 0}%`}
+               label="نسبة الحضور (بصموا)" tone="text-present" />
           <Fig value={`${stats.total ? Math.round((stats.absent / stats.total) * 100) : 0}%`}
-               label="نسبة الغياب" tone="text-absent" />
+               label="نسبة الغياب (لم يبصموا)" tone="text-absent" />
           <Fig value={`${stats.punched ? Math.round((stats.late / stats.punched) * 100) : 0}%`}
-               label="نسبة التأخر" tone="text-late" />
+               label="نسبة التأخر (من الحاضرين)" tone="text-late" />
           <Fig value={stats.late} label="عدد المتأخرين" tone="text-late" />
         </div>
       )}
