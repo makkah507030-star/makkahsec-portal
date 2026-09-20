@@ -336,7 +336,7 @@ export default function NewsArticle() {
               <div className="min-w-0">
                 <p className="text-sm font-bold text-ink">هل أعجبك الخبر؟</p>
                 <p className="mt-0.5 text-xs text-muted">
-                  شاركه أو اطبعه للاستفادة منه{publisherPerson ? ` — بإشراف ${publisherPerson}` : ""}.
+                  شاركه أو اطبعه للاستفادة منه{publisherPerson ? ` — بواسطة ${publisherPerson}` : ""}.
                 </p>
               </div>
               <div className="flex shrink-0 gap-2">
