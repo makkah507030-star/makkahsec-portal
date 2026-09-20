@@ -6,6 +6,7 @@ import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import NewsCoverCard from "../components/NewsCoverCard.jsx";
 import ArticleImageSlider from "../components/ArticleImageSlider.jsx";
+import { ROLE_COVER_HUE, ADMIN_ROLE_LABEL, ROLE_PERSON_NAME, coverGradient } from "../lib/session.jsx";
 
 const escHtml = (s) =>
   String(s ?? "").replace(/[&<>"]/g, (c) =>
@@ -77,6 +78,23 @@ export default function NewsArticle() {
     const bodyHtml = (item.body || "")
       .split(/\n{2,}/).filter(Boolean)
       .map((p) => `<p>${escHtml(p)}</p>`).join("");
+    const imgs = Array.isArray(item.body_images) ? item.body_images.filter(Boolean) : [];
+    const imagesHtml = imgs.length
+      ? `<div class="imgs">${imgs.map((u) => `<img src="${escHtml(u)}" alt="">`).join("")}</div>`
+      : "";
+
+    // شريط الحساب الناشر (بنفس تدرّجه اللوني واسم الحساب وشاغله)
+    let coverBar = "";
+    if (item.cover_theme) {
+      const hue = ROLE_COVER_HUE[item.cover_theme] ?? 152;
+      const label = ADMIN_ROLE_LABEL[item.cover_theme] ?? "بوابة مكة الثانوية";
+      const person = ROLE_PERSON_NAME[item.cover_theme] || "";
+      coverBar =
+        `<div class="cover" style="background:${coverGradient(hue)}">` +
+        `<span class="cover-label">${escHtml(label)}</span>` +
+        (person ? `<span class="cover-person">${escHtml(person)}</span>` : "") +
+        `</div>`;
+    }
 
     const w = window.open("", "_blank", "width=920,height=1040");
     if (!w) { flash("فعّل النوافذ المنبثقة للطباعة"); return; }
@@ -95,7 +113,12 @@ export default function NewsArticle() {
   .head .l3{font-size:11px;color:#5B6B63;margin-top:2px}
   .date{font-size:12px;color:#5B6B63;margin-bottom:4px}
   h1{font-size:22px;line-height:1.5;color:#12352A;margin-bottom:10px}
+  .cover{border-radius:10px;padding:12px 16px;margin:8px 0 14px;min-height:52px;display:flex;flex-direction:column;justify-content:center;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .cover-label{font-weight:700;font-size:15px}
+  .cover-person{font-size:12px;opacity:.9;margin-top:2px}
   .excerpt{font-size:15px;font-weight:600;color:#33463E;background:#E9F7F0;border:1px solid #CCF2DB;border-radius:10px;padding:10px 14px;margin-bottom:14px}
+  .imgs{margin:14px 0;display:flex;flex-direction:column;gap:10px}
+  .imgs img{width:100%;max-height:360px;object-fit:contain;border:1px solid #DDE6E1;border-radius:10px;background:#F4FBF8;page-break-inside:avoid}
   .body p{font-size:14.5px;margin-bottom:10px;text-align:justify}
   .video{margin-top:14px;border:1px dashed #0F7B55;background:#F4FBF8;border-radius:10px;padding:10px 14px;font-size:13px;word-break:break-all}
   .video .lbl{font-weight:700;color:#0F7B55;display:block;margin-bottom:4px}
@@ -114,18 +137,22 @@ export default function NewsArticle() {
   </div>
   ${item.published_at ? `<p class="date">${escHtml(fmtBoth(item.published_at))}</p>` : ""}
   <h1>${escHtml(item.title)}</h1>
+  ${coverBar}
   ${item.excerpt ? `<p class="excerpt">${escHtml(item.excerpt)}</p>` : ""}
+  ${imagesHtml}
   ${bodyHtml ? `<div class="body">${bodyHtml}</div>` : ""}
   ${item.video_url ? `<div class="video"><span class="lbl">رابط الفيديو:</span><a href="${escHtml(item.video_url)}">${escHtml(item.video_url)}</a></div>` : ""}
   <div class="foot">
     <span>المصدر: ${escHtml(PORTAL_NAME)}</span>
     <span>${escHtml(url)}</span>
   </div>
+  <script>
+    // نطبع بعد اكتمال تحميل كل الصور (حدث load يشمل الصور) حتى لا تُطبع فارغة
+    window.addEventListener("load", function(){ setTimeout(function(){ window.print(); }, 250); });
+  </script>
 </body></html>`);
     w.document.close();
     w.focus();
-    // مهلة قصيرة لتحميل الشعارات قبل فتح مربّع الطباعة
-    setTimeout(() => { try { w.print(); } catch { /* تجاهل */ } }, 500);
   };
 
   return (
