@@ -128,12 +128,12 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
 }
 
 export default function Layout({ children }) {
-  const { profile, adminRoles, signOut, can } = useSession();
+  const { profile, adminRoles, signOut, can, effectiveRole, dualRole, switchView } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = effectiveRole === "admin";
 
   const groups = ADMIN_GROUPS
     .map((g) => ({
@@ -160,7 +160,7 @@ export default function Layout({ children }) {
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const items = isAdmin
     ? []
-    : (OTHER_NAV[profile?.role] ?? []).filter((i) => {
+    : (OTHER_NAV[effectiveRole] ?? []).filter((i) => {
         if (i.extraTabKey) return grantedTabs.has(i.extraTabKey);
         return !i.tabKey || !hiddenTabs.has(i.tabKey);
       });
@@ -168,7 +168,26 @@ export default function Layout({ children }) {
   const subtitle =
     isAdmin && adminRoles.length
       ? adminRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" · ")
-      : ROLE_LABEL[profile?.role] ?? "";
+      : ROLE_LABEL[effectiveRole] ?? "";
+
+  // زر التبديل بين واجهة الإدارة وواجهة المعلم — يظهر فقط لمن يجمع الدورين
+  const ViewSwitch = () => {
+    if (!dualRole) return null;
+    const toTeacher = isAdmin; // في واجهة الإدارة → ننتقل لواجهة المعلم
+    return (
+      <button
+        onClick={() => { switchView(toTeacher ? "teacher" : "admin"); navigate("/"); }}
+        title="التبديل بين واجهة الإدارة وواجهة المعلم"
+        className="flex shrink-0 items-center gap-1.5 rounded-pill border border-mint-deep bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep transition-colors hover:bg-mint-light sm:px-3.5"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none"
+             stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M8 3 4 7l4 4M4 7h13M16 21l4-4-4-4M20 17H7" />
+        </svg>
+        <span className="hidden sm:inline">{toTeacher ? "واجهة المعلم" : "واجهة الإدارة"}</span>
+      </button>
+    );
+  };
 
   const Brand = ({ compact }) => (
     <NavLink to="/" end className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80">
@@ -184,6 +203,7 @@ export default function Layout({ children }) {
 
   const Actions = () => (
     <div className="flex shrink-0 items-center gap-2">
+      <ViewSwitch />
       <PreviewSite />
       <NotificationBell />
       <SignOut />

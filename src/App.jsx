@@ -53,7 +53,7 @@ import { useMaintenance } from "./lib/useMaintenance.js";
 import ExamCountdown from "./components/ExamCountdown.jsx";
 
 export default function App() {
-  const { session, profile, loading, can, adminRoles } = useSession();
+  const { session, profile, loading, can, adminRoles, effectiveRole } = useSession();
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const maintenance = useMaintenance(session);
@@ -138,13 +138,13 @@ export default function App() {
     teacher: teacherHome,
     student: <StudentHome />,
     guardian: <GuardianHome />,
-  }[profile.role] ?? <p>دور غير معروف</p>;
+  }[effectiveRole] ?? <p>دور غير معروف</p>;
 
   return (
     <Layout>
       <Routes>
         <Route path="/" element={home} />
-        {profile.role === "admin" && (
+        {effectiveRole === "admin" && (
           <>
             {can("import") && <Route path="/season" element={<SeasonSwitch />} />}
             {can("import") && (
@@ -203,7 +203,7 @@ export default function App() {
             {can("login_log") && <Route path="/login-log" element={<LoginLogAdmin />} />}
           </>
         )}
-        {profile.role === "teacher" && (
+        {effectiveRole === "teacher" && (
           <>
             {!hiddenTabs.has("attendance") && (
               <Route path="/attendance" element={<Attendance />} />
@@ -223,17 +223,17 @@ export default function App() {
             )}
           </>
         )}
-        {((profile.role === "teacher" && !hiddenTabs.has("reports")) ||
-          (profile.role === "admin" && can("reports"))) && (
+        {((effectiveRole === "teacher" && !hiddenTabs.has("reports")) ||
+          (effectiveRole === "admin" && can("reports"))) && (
           <Route path="/reports" element={<Reports />} />
         )}
         {/* الاستئذان: متاح للإدارة وللمعلمين المخوّلين — الصفحة نفسها تتحقق من الصلاحية */}
-        {(profile.role === "admin" && can("permissions")) ||
-         (profile.role === "teacher" && grantedTabs.has("permissions")) ? (
+        {(effectiveRole === "admin" && can("permissions")) ||
+         (effectiveRole === "teacher" && grantedTabs.has("permissions")) ? (
           <Route path="/permissions" element={<PermissionRequestPage />} />
         ) : null}
         {/* الأخبار للمعلمين المخوّلين — مسودات فقط، الصفحة نفسها تفرض هذا القيد */}
-        {profile.role === "teacher" && grantedTabs.has("news") ? (
+        {effectiveRole === "teacher" && grantedTabs.has("news") ? (
           <Route path="/news-admin" element={<NewsAdmin />} />
         ) : null}
         <Route path="/feedback" element={<Feedback />} />
