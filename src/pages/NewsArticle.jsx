@@ -192,42 +192,12 @@ export default function NewsArticle() {
             <img src={logoIcon} alt="" className="h-8 w-8 object-contain" />
             <span className="text-sm font-bold text-ink">بوابة مكة الثانوية</span>
           </Link>
-          <div className="flex items-center gap-2">
-            {item && (
-              <>
-                <button
-                  onClick={shareArticle}
-                  title="مشاركة الخبر"
-                  aria-label="مشاركة الخبر"
-                  className="grid h-9 w-9 place-items-center rounded-full border border-line text-muted transition-colors hover:border-[#CCF2DB] hover:text-mint-deep"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]"
-                       stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-                    <path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4" />
-                  </svg>
-                </button>
-                <button
-                  onClick={printArticle}
-                  title="طباعة الخبر"
-                  aria-label="طباعة الخبر"
-                  className="grid h-9 w-9 place-items-center rounded-full border border-line text-muted transition-colors hover:border-[#CCF2DB] hover:text-mint-deep"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]"
-                       stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                    <rect x="6" y="14" width="12" height="8" rx="1" />
-                  </svg>
-                </button>
-              </>
-            )}
-            <Link
-              to="/news"
-              className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep"
-            >
-              كل الأخبار والمقالات
-            </Link>
-          </div>
+          <Link
+            to="/news"
+            className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep"
+          >
+            كل الأخبار والمقالات
+          </Link>
         </div>
       </header>
 
@@ -336,7 +306,7 @@ export default function NewsArticle() {
               <div className="min-w-0">
                 <p className="text-sm font-bold text-ink">هل أعجبك الخبر؟</p>
                 <p className="mt-0.5 text-xs text-muted">
-                  شاركه أو اطبعه للاستفادة منه{publisherPerson ? ` — بواسطة ${publisherPerson}` : ""}.
+                  شاركه أو اطبعه للاستفادة منه{publisherLabel ? ` — بواسطة ${publisherLabel}` : ""}.
                 </p>
               </div>
               <div className="flex shrink-0 gap-2">
