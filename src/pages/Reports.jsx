@@ -1131,7 +1131,11 @@ function TeacherSheetsReport() {
     title: `${sh.recorder} — فصل ${sh.class_no}`,
     subtitle: `الحصة ${sh.period} · ${sh.subject} · ${dateLabel} — حاضر ${sh.counts.present} · غائب ${sh.counts.absent} · متأخر ${sh.counts.late} · مستأذن ${sh.counts.excused}${coverNote(sh)}`,
     headers: ["م", "رقم الهوية", "اسم الطالب", "الحالة"],
-    rows: sh.students.map((st, i) => [i + 1, st.national_id, st.name, label(st.status)]),
+    // خلية الحالة ملوّنة لتسهيل قراءة الغياب والاستئذان في التقرير المطبوع
+    rows: sh.students.map((st, i) => [
+      i + 1, st.national_id, st.name,
+      { text: label(st.status), cls: "st-" + st.status },
+    ]),
   });
 
   const printSheets = (list, title) => {

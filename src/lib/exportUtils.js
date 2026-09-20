@@ -484,6 +484,12 @@ export function printReport(opts) {
     border-top: 2px solid ${MINT};
   }
 
+  /* تلوين خلايا الحالة — لتسهيل قراءة الغياب والاستئذان في التقرير */
+  tbody td.st-present { background: #EAF6EF; color: #3E6350; font-weight: 700; }
+  tbody td.st-absent  { background: #FBE2E2; color: #B02A2A; font-weight: 800; }
+  tbody td.st-late    { background: #FDF0D9; color: #9A6B12; font-weight: 700; }
+  tbody td.st-excused { background: #E9E7FB; color: #544CC0; font-weight: 700; }
+
   /* توسيط صارم لكل الخلايا ما عدا الاسم */
   table th, table td { text-align: center; vertical-align: middle; }
   table .name { text-align: right !important; }
