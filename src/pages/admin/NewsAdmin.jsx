@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import ColorLegend from "../../components/ColorLegend.jsx";
 import NewsCoverCard from "../../components/NewsCoverCard.jsx";
+import { normalizeImage } from "../../lib/imageResize.js";
 
 const empty = {
   id: null,
@@ -74,11 +75,13 @@ export default function NewsAdmin() {
     setUploading(true);
     setMsg(null);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from("news").upload(path, file, {
+      // إعادة ضبط الأبعاد لإطار موحّد قبل الرفع
+      const processed = await normalizeImage(file);
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const { error } = await supabase.storage.from("news").upload(path, processed, {
         cacheControl: "3600",
         upsert: false,
+        contentType: "image/jpeg",
       });
       if (error) throw error;
       const { data } = supabase.storage.from("news").getPublicUrl(path);
@@ -101,11 +104,14 @@ export default function NewsAdmin() {
     setUploading(true);
     setMsg(null);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from("news").upload(path, file, {
+      // إعادة ضبط الأبعاد لإطار 16:9 موحّد قبل الرفع — لتظهر بمقاس متناسق
+      // في الشريط والطباعة مهما كان مقاس الأصل
+      const processed = await normalizeImage(file);
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const { error } = await supabase.storage.from("news").upload(path, processed, {
         cacheControl: "3600",
         upsert: false,
+        contentType: "image/jpeg",
       });
       if (error) throw error;
       const { data } = supabase.storage.from("news").getPublicUrl(path);
