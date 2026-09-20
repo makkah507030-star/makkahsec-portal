@@ -994,59 +994,93 @@ function TeacherSheetsReport() {
   const [date, setDate] = useState(todayStr());
   const [rows, setRows] = useState(null);
 
+  const [err, setErr] = useState(null);
+
   useEffect(() => {
     (async () => {
-      setRows(null);
-      const { data } = await supabase
+      setRows(null); setErr(null);
+      // 1) سجلات التحضير الفعلية لهذا اليوم (الحالة لكل طالب كما رصدها المعلم)
+      const { data: att, error } = await supabase
         .from("class_attendance")
-        .select("schedule_id, student_id, status, students(full_name, national_id), schedule(period_no, teacher_id, classes(class_no, grade), subjects(name), teachers(full_name))")
+        .select("schedule_id, student_id, status")
         .eq("attend_date", date)
         .limit(20000);
-      setRows(data ?? []);
+      if (error) { console.error("teacher_sheets:", error); setErr(error.message); setRows({ att: [], meta: {}, roster: {} }); return; }
+      const list = att ?? [];
+      const schedIds = [...new Set(list.map((r) => r.schedule_id).filter(Boolean))];
+      if (!schedIds.length) { setRows({ att: [], meta: {}, roster: {} }); return; }
+
+      // 2) بيانات كل حصة سُجّل فيها تحضير: المعلم والفصل والمادة
+      const { data: sch, error: e2 } = await supabase
+        .from("schedule")
+        .select("id, teacher_id, class_id, period_no, teachers(full_name), classes(class_no, grade), subjects(name)")
+        .in("id", schedIds);
+      if (e2) { console.error("teacher_sheets/sched:", e2); setErr(e2.message); }
+      const meta = Object.fromEntries((sch ?? []).map((s) => [s.id, s]));
+
+      // 3) قائمة طلاب كل فصل كاملة — لعرض الحاضر والغائب معًا لا الحاضر فقط
+      const classIds = [...new Set((sch ?? []).map((s) => s.class_id).filter(Boolean))];
+      const roster = {};
+      if (classIds.length) {
+        const { data: enr } = await supabase
+          .from("student_enrollment")
+          .select("class_id, students(id, full_name, national_id)")
+          .in("class_id", classIds)
+          .eq("status", "active");
+        (enr ?? []).forEach((e) => {
+          if (e.students) (roster[e.class_id] ??= []).push(e.students);
+        });
+      }
+
+      setRows({ att: list, meta, roster });
     })();
   }, [date]);
 
-  // تجميع سجلات اليوم في كشوف: كل (معلم × فصل × حصة) كشف مستقل
+  // بناء كشوف: كل (حصة) كشف مستقل يعرض الفصل كاملًا مع حالة كل طالب
   const teachers = useMemo(() => {
-    const sheets = new Map(); // schedule_id -> كشف
-    (rows ?? []).forEach((r) => {
-      const sc = r.schedule;
-      if (!sc) return;
-      const sid = r.schedule_id;
-      if (!sheets.has(sid)) {
-        sheets.set(sid, {
-          schedule_id: sid,
-          teacher_id: sc.teacher_id,
-          teacher: sc.teachers?.full_name ?? "غير معروف",
-          class_no: sc.classes?.class_no ?? 0,
-          grade: sc.classes?.grade ?? 0,
-          period: sc.period_no ?? 0,
-          subject: sc.subjects?.name ?? "—",
-          students: [],
-          counts: { present: 0, absent: 0, late: 0, excused: 0 },
-        });
-      }
-      const sh = sheets.get(sid);
-      sh.students.push({
-        name: r.students?.full_name ?? "",
-        national_id: r.students?.national_id ?? "",
-        status: r.status,
-      });
-      sh.counts[r.status] = (sh.counts[r.status] ?? 0) + 1;
-    });
+    if (!rows) return [];
+    const { att, meta, roster } = rows;
 
-    // ترتيب طلاب كل كشف أبجديًا
-    sheets.forEach((sh) =>
-      sh.students.sort((a, b) => a.name.localeCompare(b.name, "ar")));
+    // خريطة الحالة: schedule_id -> student_id -> status
+    const statusBy = {};
+    att.forEach((r) => { (statusBy[r.schedule_id] ??= {})[r.student_id] = r.status; });
+
+    const sheets = Object.keys(statusBy).map((sid) => {
+      const m = meta[sid] ?? {};
+      const full = roster[m.class_id] ?? [];
+      const smap = statusBy[sid];
+      // الأساس: طلاب الفصل الكامل؛ فإن غابت قائمة الفصل نكتفي بمن رُصدت حالته
+      const base = full.length
+        ? full
+        : Object.keys(smap).map((id) => ({ id, full_name: "", national_id: "" }));
+      const students = base
+        .map((st) => ({
+          name: st.full_name ?? "",
+          national_id: st.national_id ?? "",
+          status: smap[st.id] ?? "unmarked",
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, "ar"));
+      const counts = { present: 0, absent: 0, late: 0, excused: 0, unmarked: 0 };
+      students.forEach((s) => { counts[s.status] = (counts[s.status] ?? 0) + 1; });
+      return {
+        schedule_id: sid,
+        teacher_id: m.teacher_id ?? null,
+        teacher: m.teachers?.full_name ?? "غير معروف",
+        class_no: m.classes?.class_no ?? 0,
+        grade: m.classes?.grade ?? 0,
+        period: m.period_no ?? 0,
+        subject: m.subjects?.name ?? "—",
+        students, counts,
+      };
+    });
 
     // تجميع الكشوف تحت كل معلم
     const byTeacher = new Map();
-    [...sheets.values()].forEach((sh) => {
+    sheets.forEach((sh) => {
       const key = sh.teacher_id ?? sh.teacher;
       if (!byTeacher.has(key)) byTeacher.set(key, { teacher: sh.teacher, sheets: [] });
       byTeacher.get(key).sheets.push(sh);
     });
-
     const out = [...byTeacher.values()].sort((a, b) =>
       a.teacher.localeCompare(b.teacher, "ar"));
     out.forEach((t) =>
@@ -1055,13 +1089,14 @@ function TeacherSheetsReport() {
   }, [rows]);
 
   const dateLabel = fmtGreg(date + "T00:00:00");
+  const statusLabel = (s) => (s === "unmarked" ? "لم يُرصد" : label(s));
 
   // كل كشف يصبح صفحة مستقلة في PDF (printReport يبدأ صفحة جديدة لكل قسم)
   const sheetSection = (sh) => ({
     title: `${sh.teacher} — فصل ${sh.class_no}`,
-    subtitle: `الحصة ${sh.period} · ${sh.subject} · ${dateLabel} — حاضر ${sh.counts.present} · غائب ${sh.counts.absent} · متأخر ${sh.counts.late} · مستأذن ${sh.counts.excused}`,
+    subtitle: `الحصة ${sh.period} · ${sh.subject} · ${dateLabel} — حاضر ${sh.counts.present} · غائب ${sh.counts.absent} · متأخر ${sh.counts.late} · مستأذن ${sh.counts.excused}${sh.counts.unmarked ? ` · لم يُرصد ${sh.counts.unmarked}` : ""}`,
     headers: ["م", "رقم الهوية", "اسم الطالب", "الحالة"],
-    rows: sh.students.map((st, i) => [i + 1, st.national_id, st.name, label(st.status)]),
+    rows: sh.students.map((st, i) => [i + 1, st.national_id, st.name, statusLabel(st.status)]),
   });
 
   const printSheets = (list, title) => {
@@ -1075,7 +1110,8 @@ function TeacherSheetsReport() {
     <div className="space-y-4">
       <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
         كشوف التحضير التي رصدها المعلمون في اليوم المحدَّد — كل كشف (معلم × فصل × حصة)
-        في ورقة مستقلة عند الطباعة، تحوي أسماء الطلاب وأرقام هوياتهم وحالاتهم.
+        في ورقة مستقلة عند الطباعة، تعرض <b>الفصل كاملًا</b> بأسماء الطلاب وأرقام هوياتهم
+        وحالة كل طالب (حاضر · غائب · متأخر · مستأذن)، ومن لم يُرصد يظهر «لم يُرصد».
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -1088,6 +1124,12 @@ function TeacherSheetsReport() {
           طباعة كل الكشوف — PDF
         </button>
       </div>
+
+      {err && (
+        <p className="rounded-card bg-absent/10 px-4 py-2.5 text-sm font-medium text-absent">
+          تعذّر جلب البيانات: {err}
+        </p>
+      )}
 
       {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
 
@@ -1129,6 +1171,11 @@ function TeacherSheetsReport() {
                       )}
                       {sh.counts.excused > 0 && (
                         <span className="num chip bg-excused/10 text-excused">{sh.counts.excused}</span>
+                      )}
+                      {sh.counts.unmarked > 0 && (
+                        <span className="num chip bg-gray-tint text-muted" title="لم يُرصد">
+                          {sh.counts.unmarked}
+                        </span>
                       )}
                     </div>
                   </div>
