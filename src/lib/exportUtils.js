@@ -485,7 +485,8 @@ export function printReport(opts) {
   }
 
   /* تلوين خلايا الحالة — لتسهيل قراءة الغياب والاستئذان في التقرير */
-  tbody td.st-present { background: #EAF6EF; color: #3E6350; font-weight: 700; }
+  /* الحاضر بلا خلفية (الأكثر تكرارًا) — لون خط فقط لتوفير الحبر */
+  tbody td.st-present { color: #3E6350; font-weight: 700; }
   tbody td.st-absent  { background: #FBE2E2; color: #B02A2A; font-weight: 800; }
   tbody td.st-late    { background: #FDF0D9; color: #9A6B12; font-weight: 700; }
   tbody td.st-excused { background: #E9E7FB; color: #544CC0; font-weight: 700; }

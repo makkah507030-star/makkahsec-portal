@@ -1126,17 +1126,27 @@ function TeacherSheetsReport() {
   const coverNote = (sh) =>
     sh.orig_teacher && sh.orig_teacher !== sh.recorder ? ` · (انتظار بدل ${sh.orig_teacher})` : "";
 
+  // ترتيب عرض الحالات في الكشف: الحاضرون ثم المتأخرون ثم المستأذنون ثم الغائبون
+  const STATUS_ORDER = { present: 0, late: 1, excused: 2, absent: 3 };
+
   // كل كشف يصبح صفحة مستقلة في PDF (printReport يبدأ صفحة جديدة لكل قسم)
-  const sheetSection = (sh) => ({
-    title: `${sh.recorder} — فصل ${sh.class_no}`,
-    subtitle: `الحصة ${sh.period} · ${sh.subject} · ${dateLabel} — حاضر ${sh.counts.present} · غائب ${sh.counts.absent} · متأخر ${sh.counts.late} · مستأذن ${sh.counts.excused}${coverNote(sh)}`,
-    headers: ["م", "رقم الهوية", "اسم الطالب", "الحالة"],
-    // خلية الحالة ملوّنة لتسهيل قراءة الغياب والاستئذان في التقرير المطبوع
-    rows: sh.students.map((st, i) => [
-      i + 1, st.national_id, st.name,
-      { text: label(st.status), cls: "st-" + st.status },
-    ]),
-  });
+  const sheetSection = (sh) => {
+    const ordered = sh.students
+      .slice()
+      .sort((a, b) =>
+        (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9) ||
+        a.name.localeCompare(b.name, "ar"));
+    return {
+      title: `${sh.recorder} — فصل ${sh.class_no}`,
+      subtitle: `الحصة ${sh.period} · ${sh.subject} · ${dateLabel} — حاضر ${sh.counts.present} · غائب ${sh.counts.absent} · متأخر ${sh.counts.late} · مستأذن ${sh.counts.excused}${coverNote(sh)}`,
+      headers: ["م", "رقم الهوية", "اسم الطالب", "الحالة"],
+      // خلية الحالة ملوّنة لتسهيل قراءة الغياب والاستئذان في التقرير المطبوع
+      rows: ordered.map((st, i) => [
+        i + 1, st.national_id, st.name,
+        { text: label(st.status), cls: "st-" + st.status },
+      ]),
+    };
+  };
 
   const printSheets = (list, title) => {
     if (!list.length) return;
