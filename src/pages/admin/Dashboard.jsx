@@ -1,10 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import { useSession } from "../../lib/session.jsx";
+import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
+
+// الحسابات المساندة: لا يظهر لها في لوحة التحكم الرئيسية أي بيانات إطلاقًا
+// (لا أرقام مدرسة ولا حضور ولا حصص) — فقط بطاقة ترحيب، وتعمل من القائمة
+// الجانبية بحسب الصلاحية الممنوحة لها. المساعد الإداري (clerk) مستثنى.
+const SUPPORT_ROLES = [
+  "activity_leader",
+  "media_portal",
+  "gifted_program",
+  "globe_program",
+  "student_voice",
+  "makkah_sport",
+  "safety_security",
+  "health_counselor",
+  "science_labs",
+  "computer_lab",
+];
 import ColorLegend from "../../components/ColorLegend.jsx";
 import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
@@ -15,11 +31,26 @@ import ExamCountdown from "../../components/ExamCountdown.jsx";
 
 
 export default function Dashboard() {
+  const { can, profile, adminRoles } = useSession();
+  // الحساب المساند: كل أدواره ضمن قائمة الحسابات المساندة — يُحجب عنه كل
+  // شيء في اللوحة الرئيسية ويرى بطاقة ترحيب فقط. أما من له دور أساسي
+  // (مدير/وكيل/موجّه/مساعد إداري) فتُطبَّق عليه القاعدة بحسب صلاحياته.
+  const isSupportOnly =
+    (adminRoles?.length ?? 0) > 0 && adminRoles.every((r) => SUPPORT_ROLES.includes(r));
+
+  // لوحة التحكم الرئيسية تعرض بيانات حسّاسة (حضور، حصص، طلاب مفقودون).
+  // نُظهر كل قسم بحسب صلاحية الحساب فقط.
+  const canReports = !isSupportOnly && can("reports");
+  const canStudents = !isSupportOnly && can("students");
+  const canImport = !isSupportOnly && can("import");
+  const canFigures = canReports || canStudents;
+
   const [d, setD] = useState(null);
   const date = todayISO();
   const dow = todayDow();
 
   useEffect(() => {
+    if (isSupportOnly) { setD({ supportOnly: true }); return; }
     (async () => {
       const { data: st } = await supabase.from("settings")
         .select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
@@ -28,72 +59,116 @@ export default function Dashboard() {
       const yearLabel = m.active_year_label ?? year;
       const term = Number(m.active_term ?? 1);
 
-      const [students, classes, teachers, guardians, unmatched,
-             lastImport, todaySched, todayMarked] = await Promise.all([
-        supabase.from("students").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("classes").select("id", { count: "exact", head: true }).eq("academic_year", year),
-        supabase.from("teachers").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("guardians").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("unmatched_logs").select("id", { count: "exact", head: true }).eq("resolved", false),
-        supabase.from("import_logs").select("import_type, status, started_at")
-          .order("started_at", { ascending: false }).limit(1),
-        dow
-          ? supabase.from("schedule")
-              .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
-              .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
-          : Promise.resolve({ data: [] }),
-        supabase.from("class_attendance").select("schedule_id").eq("attend_date", date),
-      ]);
+      const base = { year, term, yearLabel };
 
-      // حالات "بصم ولم يحضر" اليوم
-      let escapeCount = 0;
-      try {
-        const { data: punches } = await supabase
-          .from("daily_attendance").select("student_id").eq("attend_date", date);
-        const ids = (punches ?? []).map((p) => p.student_id);
-        if (ids.length) {
-          const { data: abs } = await supabase
-            .from("class_attendance")
-            .select("student_id")
-            .eq("attend_date", date)
-            .eq("status", "absent")
-            .in("student_id", ids);
-          escapeCount = new Set((abs ?? []).map((r) => r.student_id)).size;
-        }
-      } catch (_) { /* تجاهل */ }
+      // أرقام المدرسة — لمن يملك صلاحية الطلاب أو التقارير
+      if (canFigures) {
+        const [students, classes, teachers, guardians] = await Promise.all([
+          supabase.from("students").select("id", { count: "exact", head: true }).eq("is_active", true),
+          supabase.from("classes").select("id", { count: "exact", head: true }).eq("academic_year", year),
+          supabase.from("teachers").select("id", { count: "exact", head: true }).eq("is_active", true),
+          supabase.from("guardians").select("id", { count: "exact", head: true }).eq("is_active", true),
+        ]);
+        Object.assign(base, {
+          students: students.count ?? 0,
+          classes: classes.count ?? 0,
+          teachers: teachers.count ?? 0,
+          guardians: guardians.count ?? 0,
+        });
+      }
 
-      const doneSet = new Set((todayMarked.data ?? []).map((r) => r.schedule_id));
-      const sched = todaySched.data ?? [];
-      const unmarked = sched.filter((s) => !doneSet.has(s.id))
-        .sort((a, b) => a.period_no - b.period_no);
+      // آخر استيراد — لمن يملك صلاحية الاستيراد
+      if (canImport) {
+        const { data: li } = await supabase.from("import_logs")
+          .select("import_type, status, started_at")
+          .order("started_at", { ascending: false }).limit(1);
+        base.lastImport = li?.[0] ?? null;
+      }
 
-      // إجمالي الحصص المجدولة لكل رقم حصة
-      const totals = {};
-      sched.forEach((s) => { totals[s.period_no] = (totals[s.period_no] ?? 0) + 1; });
-      const periodTotals = Object.entries(totals)
-        .map(([period_no, total]) => ({ period_no: Number(period_no), total }))
-        .sort((a, b) => a.period_no - b.period_no);
+      // بيانات الحضور والحصص — لمن يملك صلاحية التقارير فقط
+      if (canReports) {
+        const [unmatched, todaySched, todayMarked] = await Promise.all([
+          supabase.from("unmatched_logs").select("id", { count: "exact", head: true }).eq("resolved", false),
+          dow
+            ? supabase.from("schedule")
+                .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
+                .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
+            : Promise.resolve({ data: [] }),
+          supabase.from("class_attendance").select("schedule_id").eq("attend_date", date),
+        ]);
 
-      setD({
-        year, term, yearLabel,
-        students: students.count ?? 0,
-        classes: classes.count ?? 0,
-        teachers: teachers.count ?? 0,
-        guardians: guardians.count ?? 0,
-        unmatched: unmatched.count ?? 0,
-        lastImport: lastImport.data?.[0] ?? null,
-        schedCount: sched.length,
-        unmarked,
-        periodTotals,
-        escapeCount,
-      });
+        // حالات "بصم ولم يحضر" اليوم
+        let escapeCount = 0;
+        try {
+          const { data: punches } = await supabase
+            .from("daily_attendance").select("student_id").eq("attend_date", date);
+          const ids = (punches ?? []).map((p) => p.student_id);
+          if (ids.length) {
+            const { data: abs } = await supabase
+              .from("class_attendance")
+              .select("student_id")
+              .eq("attend_date", date)
+              .eq("status", "absent")
+              .in("student_id", ids);
+            escapeCount = new Set((abs ?? []).map((r) => r.student_id)).size;
+          }
+        } catch (_) { /* تجاهل */ }
+
+        const doneSet = new Set((todayMarked.data ?? []).map((r) => r.schedule_id));
+        const sched = todaySched.data ?? [];
+        const unmarked = sched.filter((s) => !doneSet.has(s.id))
+          .sort((a, b) => a.period_no - b.period_no);
+
+        const totals = {};
+        sched.forEach((s) => { totals[s.period_no] = (totals[s.period_no] ?? 0) + 1; });
+        const periodTotals = Object.entries(totals)
+          .map(([period_no, total]) => ({ period_no: Number(period_no), total }))
+          .sort((a, b) => a.period_no - b.period_no);
+
+        Object.assign(base, {
+          unmatched: unmatched.count ?? 0,
+          schedCount: sched.length,
+          unmarked,
+          periodTotals,
+          escapeCount,
+        });
+      }
+
+      setD(base);
     })();
-  }, [date, dow]);
+  }, [date, dow, canFigures, canReports, canImport, isSupportOnly]);
 
   if (!d) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
 
-  const marked = d.schedCount - d.unmarked.length;
-  const pct = d.schedCount ? Math.round((marked / d.schedCount) * 100) : 0;
+  // الحساب المساند: بطاقة ترحيب فقط، بلا أي بيانات
+  if (d.supportOnly) {
+    const roleNames = (adminRoles ?? [])
+      .map((r) => ADMIN_ROLE_LABEL[r] ?? r)
+      .join(" · ");
+    return (
+      <div className="space-y-5">
+        <header>
+          <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
+        </header>
+        <section className="card px-6 py-12 text-center">
+          <p className="text-lg font-bold text-ink">
+            مرحبًا{profile?.full_name ? `، ${profile.full_name}` : ""}
+          </p>
+          {roleNames && (
+            <p className="mt-1.5 text-sm font-medium text-mint-deep">{roleNames}</p>
+          )}
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted">
+            اختر مهمتك من القائمة الجانبية. تظهر لك التبويبات المتاحة لحسابك فقط.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  const marked = canReports ? d.schedCount - d.unmarked.length : 0;
+  const pct = canReports && d.schedCount ? Math.round((marked / d.schedCount) * 100) : 0;
+  // حساب محدود الصلاحيات لا يملك أيًّا من أقسام اللوحة
+  const barren = !canFigures && !canReports && !canImport;
 
   return (
     <div className="space-y-5">
@@ -106,19 +181,33 @@ export default function Dashboard() {
 
       <ExamCountdown />
 
-      {/* أرقام المدرسة */}
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Fig label="طالب"    value={d.students}  to="/students" />
-        <Fig label="ولي أمر" value={d.guardians} />
-        <Fig label="معلم"    value={d.teachers} />
-        <Fig label="فصل"     value={d.classes} />
-      </section>
+      {/* حساب إداري محدود الصلاحيات: ترحيب وتوجيه للقائمة الجانبية */}
+      {barren && (
+        <section className="card px-6 py-10 text-center">
+          <p className="font-semibold text-ink">
+            مرحبًا{profile?.full_name ? `، ${profile.full_name}` : ""}
+          </p>
+          <p className="mx-auto mt-1.5 max-w-md text-sm leading-relaxed text-muted">
+            اختر مهمتك من القائمة الجانبية. تظهر لك التبويبات المتاحة لحسابك فقط.
+          </p>
+        </section>
+      )}
 
-      {dow > 0 && <MissingStudentsBox date={date} />}
-      {dow > 0 && <OfficialStatusBox date={date} />}
+      {/* أرقام المدرسة */}
+      {canFigures && (
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Fig label="طالب"    value={d.students}  to={canStudents ? "/students" : undefined} />
+          <Fig label="ولي أمر" value={d.guardians} />
+          <Fig label="معلم"    value={d.teachers} />
+          <Fig label="فصل"     value={d.classes} />
+        </section>
+      )}
+
+      {canReports && dow > 0 && <MissingStudentsBox date={date} />}
+      {canReports && dow > 0 && <OfficialStatusBox date={date} />}
 
       {/* تحضير اليوم */}
-      {dow ? (
+      {canReports && (dow ? (
         <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-5">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -147,9 +236,9 @@ export default function Dashboard() {
         <section className="rounded-card border border-line bg-white px-5 py-4">
           <p className="text-sm text-muted">لا حصص اليوم — الأسبوع الدراسي من الأحد إلى الخميس.</p>
         </section>
-      )}
+      ))}
 
-      {d.escapeCount > 0 && (
+      {canReports && d.escapeCount > 0 && (
         <Link to="/reports"
           className="flex items-center justify-between gap-3 rounded-card border border-absent/30 bg-absent/5 px-5 py-4 transition-colors hover:bg-absent/10">
           <div>
@@ -162,37 +251,39 @@ export default function Dashboard() {
         </Link>
       )}
 
+      {canReports && (
+        <ColorLegend
+          groups={[
+            {
+              title: "حصص اليوم",
+              items: [
+                { color: "bg-late", label: "عدّاد أحمر", note: "عدد الفصول التي لم تُحضَّر في تلك الحصة" },
+                { chip: "bg-present/10 text-present", sample: "أخضر", label: "اكتمل تحضير الحصة" },
+              ],
+            },
+            {
+              title: "تنبيهات ومتابعة",
+              items: [
+                { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر",
+                  label: "طلاب دخلوا المدرسة وغابوا عن حصصهم" },
+                { chip: "bg-late/10 text-late", sample: "بلا ربط",
+                  label: "طلاب بلا رقم في جهاز البصمة" },
+              ],
+            },
+          ]}
+        />
+      )}
 
-
-      <ColorLegend
-        groups={[
-          {
-            title: "حصص اليوم",
-            items: [
-              { color: "bg-late", label: "عدّاد أحمر", note: "عدد الفصول التي لم تُحضَّر في تلك الحصة" },
-              { chip: "bg-present/10 text-present", sample: "أخضر", label: "اكتمل تحضير الحصة" },
-            ],
-          },
-          {
-            title: "تنبيهات ومتابعة",
-            items: [
-              { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر",
-                label: "طلاب دخلوا المدرسة وغابوا عن حصصهم" },
-              { chip: "bg-late/10 text-late", sample: "بلا ربط",
-                label: "طلاب بلا رقم في جهاز البصمة" },
-            ],
-          },
-        ]}
-      />
-
-      <section className="card px-4 py-3">
-        <h2 className="text-sm font-semibold text-ink">آخر استيراد</h2>
-        <p className="mt-1 text-sm text-muted">
-          {d.lastImport
-            ? `${d.lastImport.import_type} — ${fmtDateTime(d.lastImport.started_at)}`
-            : "لم يُنفَّذ استيراد بعد."}
-        </p>
-      </section>
+      {canImport && (
+        <section className="card px-4 py-3">
+          <h2 className="text-sm font-semibold text-ink">آخر استيراد</h2>
+          <p className="mt-1 text-sm text-muted">
+            {d.lastImport
+              ? `${d.lastImport.import_type} — ${fmtDateTime(d.lastImport.started_at)}`
+              : "لم يُنفَّذ استيراد بعد."}
+          </p>
+        </section>
+      )}
     </div>
   );
 }
