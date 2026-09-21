@@ -20,7 +20,7 @@ export default function NotificationView() {
 
       const { data } = await supabase
         .from("notification_recipients")
-        .select("read_at, notifications(id, title, body, kind, link, created_at, sender_name, image_url, attachment_url, attachment_name)")
+        .select("read_at, notifications(id, title, body, kind, link, created_at, sender_name, image_url, attachment_url, attachment_name, youtube_url)")
         .eq("user_id", uid)
         .eq("notification_id", id)
         .maybeSingle();
@@ -117,10 +117,24 @@ export default function NotificationView() {
             </a>
           )}
 
+          {n.youtube_url && (
+            <a href={n.youtube_url} target="_blank" rel="noreferrer"
+               className="mt-5 flex items-center gap-3 rounded-card border border-[#F3C7C7] bg-[#FDECEC] px-4 py-3 transition-colors hover:bg-[#FBE0E0]">
+              <svg viewBox="0 0 24 24" fill="#C4302B" className="h-7 w-7 shrink-0">
+                <path d="M23 12s0-3.9-.5-5.7a3 3 0 0 0-2.1-2.1C18.6 3.7 12 3.7 12 3.7s-6.6 0-8.4.5A3 3 0 0 0 1.5 6.3C1 8.1 1 12 1 12s0 3.9.5 5.7a3 3 0 0 0 2.1 2.1c1.8.5 8.4.5 8.4.5s6.6 0 8.4-.5a3 3 0 0 0 2.1-2.1C23 15.9 23 12 23 12ZM10 15.5v-7l6 3.5-6 3.5Z"/>
+              </svg>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-ink">مشاهدة الفيديو</p>
+                <p className="text-xs text-muted">فتح على يوتيوب</p>
+              </div>
+              <span className="shrink-0 text-[#C4302B]">←</span>
+            </a>
+          )}
+
           {n.link && (
             <a href={n.link} target={/^https?:/.test(n.link) ? "_blank" : undefined}
                rel="noreferrer"
-               className="mt-6 inline-flex items-center gap-2 rounded-pill bg-mint-deep px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6AA786]">
+               className="mt-5 inline-flex items-center gap-2 rounded-pill bg-mint-deep px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6AA786]">
               فتح الرابط
               <span>←</span>
             </a>
