@@ -33,12 +33,12 @@ const ADMIN_GROUPS = [
   {
     title: "الشؤون التعليمية",
     items: [
-      { to: "/general-schedule",  label: "الجدول العام",          perm: "import", icon: "grid" }, // جدول شامل بالفصول والمعلمين معًا
-      { to: "/teacher-schedules", label: "جداول المعلمين",        perm: "import", icon: "chalk" },
-      { to: "/student-schedules", label: "جداول الطلاب",          perm: "import", icon: "users" },
+      { to: "/general-schedule",  label: "الجدول العام",          anyPerm: ["import", "schedules"], icon: "grid" }, // جدول شامل بالفصول والمعلمين معًا
+      { to: "/teacher-schedules", label: "جداول المعلمين",        anyPerm: ["import", "schedules"], icon: "chalk" },
+      { to: "/student-schedules", label: "جداول الطلاب",          anyPerm: ["import", "schedules"], icon: "users" },
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
-      { to: "/substitute-report", label: "تقرير حصص الانتظار", perm: "reports", icon: "chart" },
+      { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "chart" },
     ],
   },
   {
@@ -160,7 +160,11 @@ export default function Layout({ children }) {
       ...g,
       items: g.items.filter((i) => {
         if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
-        return i.techOnly ? adminRoles.includes("tech_support") : !i.perm || can(i.perm);
+        // anyPerm: يظهر العنصر لمن يملك أيًّا من الصلاحيات المذكورة
+        const permOk = i.anyPerm
+          ? i.anyPerm.some((p) => can(p))
+          : !i.perm || can(i.perm);
+        return i.techOnly ? adminRoles.includes("tech_support") : permOk;
       }),
     }))
     .filter((g) => g.items.length);
