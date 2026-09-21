@@ -24,7 +24,8 @@ export default function NotificationBell() {
   const openItem = async (n) => {
     if (!n.read_at) await markRead(n.id);
     setOpen(false);
-    if (n.link) navigate(n.link);
+    // فتح صفحة عرض الإشعار الاحترافية (نفس وجهة إشعار الجوال)
+    navigate(`/notify/${n.id}`);
   };
 
   return (

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { useSession } from "../../lib/session.jsx";
 import { KIND_META } from "../../lib/useNotifications";
 import { fmtDateTime } from "../../lib/dates";
 import { GRADE_NAMES } from "../../lib/schoolTime";
+import { normalizeImage } from "../../lib/imageResize";
 
 const ROLES = [
   { key: "teacher",  label: "المعلمون" },
@@ -41,9 +43,12 @@ export default function NotificationsAdmin() {
 /* ===================== الإرسال ===================== */
 
 function SendForm() {
+  const { profile } = useSession();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [kind, setKind] = useState("general");
+  const [imageFile, setImageFile] = useState(null);
+  const [attachFile, setAttachFile] = useState(null);
   const [mode, setMode] = useState("roles"); // roles | class | people
 
   const [roles, setRoles] = useState(new Set(["teacher"]));
@@ -127,10 +132,53 @@ function SendForm() {
     }
 
     const { data, error } = await supabase.rpc("send_notification", args);
-    setSending(false);
 
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
-    if (!data)  { setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
+    if (error) { setSending(false); setMsg({ ok: false, text: error.message }); return; }
+    if (!data)  { setSending(false); setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
+
+    // اسم المُرسِل + رفع الصورة (إن وُجدت) وربطهما بالإشعار قبل الدفع
+    const senderName = profile?.full_name || "إدارة مدرسة مكة الثانوية";
+    let imageUrl = null;
+    if (imageFile) {
+      try {
+        const blob = await normalizeImage(imageFile, 1280, 720, 0.85);
+        const path = `notifications/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+        const { error: upErr } = await supabase.storage
+          .from("notification-images")
+          .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+        if (!upErr) {
+          imageUrl = supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
+        }
+      } catch { /* تجاهل فشل الصورة — يُرسَل الإشعار بدونها */ }
+    }
+
+    // مرفق قابل للتحميل (PDF أو صورة) — يرفعه المُرسِل ليحمّله المستفيد
+    let attachUrl = null, attachName = null;
+    if (attachFile) {
+      try {
+        const safe = (attachFile.name || "ملف").replace(/[^\w.\-؀-ۿ]+/g, "_").slice(-80);
+        const path = `notifications/attach/${Date.now()}-${Math.random().toString(36).slice(2)}-${safe}`;
+        const { error: upErr } = await supabase.storage
+          .from("notification-images")
+          .upload(path, attachFile, { contentType: attachFile.type || "application/octet-stream", upsert: false });
+        if (!upErr) {
+          attachUrl = supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
+          attachName = attachFile.name || "مرفق";
+        }
+      } catch { /* تجاهل فشل المرفق — يُرسَل الإشعار بدونه */ }
+    }
+
+    try {
+      await supabase.rpc("set_notification_meta", {
+        p_id: data,
+        p_sender_name: senderName,
+        p_image_url: imageUrl,
+        p_attachment_url: attachUrl,
+        p_attachment_name: attachName,
+      });
+    } catch { /* تجاهل */ }
+
+    setSending(false);
 
     // دفع الإشعار لجوالات المستلمين (Web Push) — لا يُعطّل الإرسال إن فشل
     try {
@@ -142,7 +190,7 @@ function SendForm() {
     } catch { /* تجاهل — الإشعار داخل البوابة محفوظ على أي حال */ }
 
     setMsg({ ok: true, text: "أُرسل الإشعار." });
-    setTitle(""); setBody(""); setPicked([]);
+    setTitle(""); setBody(""); setPicked([]); setImageFile(null); setAttachFile(null);
   };
 
   return (
@@ -169,6 +217,45 @@ function SendForm() {
                 className={pill(kind === k.key)}>{k.label}</button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-muted">صورة (اختياري)</label>
+          {imageFile ? (
+            <div className="mt-1.5 flex items-center gap-3">
+              <img src={URL.createObjectURL(imageFile)} alt=""
+                   className="h-16 w-28 rounded-sm2 border border-line object-cover" />
+              <button type="button" onClick={() => setImageFile(null)}
+                className="text-xs font-medium text-absent hover:underline">إزالة الصورة</button>
+            </div>
+          ) : (
+            <label className="mt-1.5 flex cursor-pointer items-center justify-center rounded-sm2 border border-dashed border-line bg-paper px-4 py-3 text-xs text-muted hover:bg-canvas">
+              اختر صورة لإرفاقها بالإشعار
+              <input type="file" accept="image/*" className="hidden"
+                     onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+            </label>
+          )}
+        </div>
+
+        <div>
+          <label className="text-xs text-muted">مرفق للتحميل (PDF أو صورة — اختياري)</label>
+          {attachFile ? (
+            <div className="mt-1.5 flex items-center gap-3 rounded-sm2 border border-line bg-paper px-3 py-2.5">
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0 text-mint-deep"
+                   stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" />
+              </svg>
+              <span className="min-w-0 flex-1 truncate text-sm text-ink">{attachFile.name}</span>
+              <button type="button" onClick={() => setAttachFile(null)}
+                className="shrink-0 text-xs font-medium text-absent hover:underline">إزالة</button>
+            </div>
+          ) : (
+            <label className="mt-1.5 flex cursor-pointer items-center justify-center rounded-sm2 border border-dashed border-line bg-paper px-4 py-3 text-xs text-muted hover:bg-canvas">
+              اختر ملفًا (PDF أو صورة) ليحمّله المستفيد
+              <input type="file" accept="application/pdf,image/*" className="hidden"
+                     onChange={(e) => setAttachFile(e.target.files?.[0] ?? null)} />
+            </label>
+          )}
         </div>
       </section>
 

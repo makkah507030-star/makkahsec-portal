@@ -19,6 +19,7 @@ self.addEventListener("push", (event) => {
     body: data.body || "",
     icon: "/android-chrome-192x192.png",
     badge: "/favicon-32x32.png",
+    image: data.image || undefined, // صورة كبيرة داخل الإشعار (أندرويد)
     lang: "ar",
     dir: "rtl",
     tag: data.tag || undefined,

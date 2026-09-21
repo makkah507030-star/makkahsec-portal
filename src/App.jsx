@@ -24,6 +24,8 @@ import GuardianHome from "./pages/GuardianHome.jsx";
 import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
 import AdminStaff from "./pages/admin/AdminStaff.jsx";
 import EnableNotifications from "./components/EnableNotifications.jsx";
+import NotificationView from "./pages/NotificationView.jsx";
+import NotificationsList from "./pages/NotificationsList.jsx";
 import Landing from "./pages/Landing.jsx";
 import NewsList from "./pages/NewsList.jsx";
 import Guides from "./pages/Guides.jsx";
@@ -259,6 +261,8 @@ export default function App() {
         ) : null}
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/contact" element={<Feedback />} />
+        <Route path="/notifications-me" element={<NotificationsList />} />
+        <Route path="/notify/:id" element={<NotificationView />} />
         <Route path="/ticket/:id" element={<TicketDetail />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -69,7 +69,7 @@ exports.handler = async (event) => {
 
     const { data: notif } = await admin
       .from("notifications")
-      .select("id, title, body")
+      .select("id, title, body, image_url")
       .eq("id", notifId)
       .maybeSingle();
     if (!notif) return json({ sent: 0, reason: "notification not found" });
@@ -109,7 +109,8 @@ exports.handler = async (event) => {
     const message = JSON.stringify({
       title: notif.title || "بوابة مكة الثانوية الرقمية",
       body: notif.body || "",
-      url: "/",
+      image: notif.image_url || undefined,
+      url: "/notify/" + notif.id, // فتح صفحة عرض الإشعار عند الضغط
       tag: "notif-" + notif.id,
     });
 
