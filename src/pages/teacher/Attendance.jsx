@@ -272,6 +272,8 @@ export default function Attendance() {
     <div className="space-y-4">
       <TeacherCard me={me} />
 
+      <MyDayBox periods={periods} marked={marked} />
+
       <section className="overflow-hidden rounded-card border border-[#CCF2DB] bg-mint-tint">
         <div className="px-5 pt-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -498,6 +500,71 @@ function AbsenceBox({ stat }) {
       <span className="num text-sm font-bold">{stat.absent}</span>
       <span className="num text-[9px] opacity-80">{pct}%</span>
     </span>
+  );
+}
+
+// صندوق حصص المعلم اليوم — يعرض ما حضّره وما لم يحضّره (حصصه فقط)،
+// بنفس أسلوب صندوق «تحضير اليوم» في لوحة الإدارة، ويتحدّث فور الحفظ.
+function MyDayBox({ periods, marked }) {
+  if (!periods?.length) return null;
+  const done = periods.filter((p) => marked.has(p.id));
+  const pending = periods.filter((p) => !marked.has(p.id));
+  const total = periods.length;
+  const pct = total ? Math.round((done.length / total) * 100) : 0;
+
+  const Chip = ({ p, ok }) => (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-pill px-3 py-1 text-xs font-medium ${
+        ok ? "bg-present/10 text-present" : "bg-late/10 text-late"
+      }`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-present" : "bg-late"}`} />
+      <span className="num">ح{p.period_no}</span>
+      <span>· {p.subjects?.name ?? "—"}</span>
+      <span className="num">· فصل {p.classes?.class_no}</span>
+    </span>
+  );
+
+  return (
+    <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-medium text-[#6AA786]">تحضير حصصك اليوم</p>
+          <p className="mt-1.5 text-3xl font-bold leading-none text-mint-deep">
+            <span className="num">{done.length}</span>
+            <span className="text-lg font-medium text-muted"> / {total}</span>
+          </p>
+          <p className="mt-2 text-xs text-muted">
+            {pending.length === 0
+              ? "أحسنت — حضّرت كل حصصك اليوم."
+              : `بقيت ${pending.length} حصة بلا تحضير.`}
+          </p>
+        </div>
+        <p className="num text-4xl font-bold leading-none text-mint-deep">{pct}%</p>
+      </div>
+
+      <div className="mt-4 h-2 overflow-hidden rounded-pill bg-white">
+        <div className="h-full rounded-pill bg-[#6AA786] transition-all" style={{ width: `${pct}%` }} />
+      </div>
+
+      {pending.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-1.5 text-xs font-semibold text-late">لم تحضّرها</p>
+          <div className="flex flex-wrap gap-1.5">
+            {pending.map((p) => <Chip key={p.id} p={p} ok={false} />)}
+          </div>
+        </div>
+      )}
+
+      {done.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1.5 text-xs font-semibold text-present">حضّرتها</p>
+          <div className="flex flex-wrap gap-1.5">
+            {done.map((p) => <Chip key={p.id} p={p} ok />)}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 

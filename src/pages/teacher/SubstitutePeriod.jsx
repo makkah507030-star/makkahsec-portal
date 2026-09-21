@@ -92,19 +92,24 @@ export default function SubstitutePeriod() {
       return;
     }
 
-    const { data: enr } = await supabase.from("student_enrollment")
-      .select("student_id, students(id, full_name)")
-      .eq("class_id", sched.class_id).eq("status", "active");
-    const list = (enr ?? []).map((e) => e.students).filter(Boolean)
+    // ملاحظة: الفصل هنا يخصّ معلمًا آخر (المعلم الغائب)، وسياسات RLS تقصر
+    // قراءة الطلاب على فصول المعلم نفسه — لذلك لا تُرجع قائمة عادية أي طلاب
+    // (كانت تظهر «لا طلاب في هذا الفصل»). نستخدم دالة آمنة تُرجع كشف الفصل
+    // وتتجاوز RLS، مع بيان حالة الاستئذان لكل طالب لهذا اليوم.
+    const { data: roster, error: rErr } = await supabase.rpc("substitute_roster", {
+      p_schedule_id: sched.id,
+      p_date: date,
+    });
+    if (rErr) {
+      setMsg({ ok: false, text: "تعذّر تحميل كشف الفصل: " + rErr.message });
+      return;
+    }
+    const list = (roster ?? [])
+      .slice()
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"));
     setStudents(list);
 
-    const ids = list.map((s) => s.id);
-    const { data: exc } = ids.length
-      ? await supabase.from("excused_absences").select("student_id")
-          .lte("date_from", date).gte("date_to", date).in("student_id", ids)
-      : { data: [] };
-    const excSet = new Set((exc ?? []).map((r) => r.student_id));
+    const excSet = new Set(list.filter((s) => s.is_excused).map((s) => s.id));
     setExcused(excSet);
 
     const init = {};

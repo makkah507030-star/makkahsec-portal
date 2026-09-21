@@ -68,7 +68,7 @@ export default function LoginLogAdmin() {
         .from("login_log")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(1000);
+        .limit(100);
 
       setRows(log ?? []);
 
@@ -177,7 +177,7 @@ export default function LoginLogAdmin() {
         <div>
           <h1 className="text-lg font-bold text-ink">سجل الدخول والخروج</h1>
           <p className="mt-1 text-sm text-muted">
-            متابعة عمليات تسجيل الدخول والخروج بالوقت والتاريخ وحالة المحاولة — آخر 1000 عملية.
+            متابعة عمليات تسجيل الدخول والخروج بالوقت والتاريخ وحالة المحاولة — آخر 100 عملية.
           </p>
         </div>
         <button onClick={handlePrint} className="btn-primary shrink-0">
@@ -234,7 +234,7 @@ export default function LoginLogAdmin() {
           <h2 className="text-sm font-semibold text-ink">{filtered.length} عملية</h2>
         </div>
         <div className="divide-y divide-line">
-          {filtered.slice(0, 300).map((r) => (
+          {filtered.slice(0, 100).map((r) => (
             <div key={r.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
               <span className="w-36 shrink-0 text-xs text-muted">{fmtDateTime(r.created_at)}</span>
               <span className="min-w-0 flex-1">
