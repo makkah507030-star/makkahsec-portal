@@ -289,7 +289,10 @@ function SendForm() {
         </div>
 
         <div>
-          <label className="text-xs text-muted">مرفق للتحميل (PDF أو صورة — اختياري)</label>
+          <label className="text-xs text-muted">
+            مرفق للتحميل (PDF أو صورة — اختياري)
+            <span className="ms-1 text-[10px] text-mint-deep">v2</span>
+          </label>
           {attachFile ? (
             <div className="mt-1.5 flex items-center gap-3 rounded-sm2 border border-line bg-paper px-3 py-2.5">
               <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0 text-mint-deep"
