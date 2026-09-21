@@ -132,6 +132,15 @@ function SendForm() {
     if (error) { setMsg({ ok: false, text: error.message }); return; }
     if (!data)  { setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
 
+    // دفع الإشعار لجوالات المستلمين (Web Push) — لا يُعطّل الإرسال إن فشل
+    try {
+      await fetch("/.netlify/functions/push-send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notification_id: data }),
+      });
+    } catch { /* تجاهل — الإشعار داخل البوابة محفوظ على أي حال */ }
+
     setMsg({ ok: true, text: "أُرسل الإشعار." });
     setTitle(""); setBody(""); setPicked([]);
   };
