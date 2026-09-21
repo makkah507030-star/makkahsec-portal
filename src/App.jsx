@@ -121,9 +121,21 @@ export default function App() {
     return <Landing />;
   }
 
+  // صفحات الأخبار والمقالات كصفحات مستقلة (بلا غلاف لوحة التحكم) حتى
+  // للمستخدم المسجّل — وإلا كان الضغط على خبر من الرئيسية يعيد التوجيه
+  // للوحة التحكم لأن المسار غير مسجّل ضمن مسارات اللوحة.
+  if (location.pathname === "/news" || location.pathname.startsWith("/news/")) {
+    return (
+      <Routes>
+        <Route path="/news" element={<NewsList />} />
+        <Route path="/news/:slug" element={<NewsArticle />} />
+      </Routes>
+    );
+  }
+
   const teacherHome = hiddenTabs.has("attendance") ? (
     <div className="card px-6 py-12 text-center">
-      <p className="font-semibold text-ink">تبويب التحضير غير متاح لحسابك</p>
+      <p className="font-semibold text-ink">تبويب الحضور والغياب اليومي غير متاح لحسابك</p>
       <p className="mt-1.5 text-sm text-muted">اختر تبويبًا آخر من القائمة الجانبية.</p>
     </div>
   ) : (

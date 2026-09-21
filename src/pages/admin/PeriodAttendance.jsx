@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
 import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -20,17 +21,18 @@ export default function PeriodAttendance() {
       const year = m.active_year ?? "";
       const term = Number(m.active_term ?? 1);
 
-      const [todaySched, todayMarked] = await Promise.all([
+      // معرّفات الحصص المُحضَّرة اليوم (دالة سريعة في القاعدة، واحتياطيًا
+      // جلب على دفعات) — بالتوازي مع جلب جدول اليوم.
+      const [schedRes, doneSet] = await Promise.all([
         dow
           ? supabase.from("schedule")
               .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
               .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
           : Promise.resolve({ data: [] }),
-        supabase.from("class_attendance").select("schedule_id").eq("attend_date", date),
+        markedScheduleIds(date),
       ]);
 
-      const doneSet = new Set((todayMarked.data ?? []).map((r) => r.schedule_id));
-      const sched = (todaySched.data ?? []).sort((a, b) => a.period_no - b.period_no);
+      const sched = (schedRes.data ?? []).sort((a, b) => a.period_no - b.period_no);
       const done = sched.filter((s) => doneSet.has(s.id));
       const left = sched.filter((s) => !doneSet.has(s.id));
 
@@ -58,8 +60,8 @@ export default function PeriodAttendance() {
       ) : (
         <>
           <ReportButtons d={d} />
-          <PeriodGroup title="حُضِّرت" tone="present" rows={d.done} open={openDone} setOpen={setOpenDone} />
-          <PeriodGroup title="لم تُحضَّر" tone="warning" rows={d.left} open={openLeft} setOpen={setOpenLeft} />
+          <PeriodGroup title="حُضِّرت" tone="present" kindLabel="حضّروا" rows={d.done} open={openDone} setOpen={setOpenDone} />
+          <PeriodGroup title="لم تُحضَّر" tone="warning" kindLabel="لم يحضّروا" rows={d.left} open={openLeft} setOpen={setOpenLeft} />
         </>
       )}
     </div>
@@ -68,7 +70,7 @@ export default function PeriodAttendance() {
 
 /* ==================== مجموعة حصص (حُضِّرت / لم تُحضَّر) ==================== */
 
-function PeriodGroup({ title, tone, rows, open, setOpen }) {
+function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
   const byPeriod = useMemo(() => {
     const m = {};
     rows.forEach((s) => { (m[s.period_no] ??= []).push(s); });
@@ -76,6 +78,41 @@ function PeriodGroup({ title, tone, rows, open, setOpen }) {
   }, [rows]);
 
   const periods = Object.keys(byPeriod).map(Number).sort((a, b) => a - b);
+
+  // طباعة معلمي حصة واحدة فقط — لسرعة المتابعة (من حضّر / من لم يحضّر
+  // في هذه الحصة بالذات)، بدل التقرير الكامل لكل اليوم.
+  const printPeriod = (n, list) => {
+    const rowsOf = list
+      .slice()
+      .sort((a, b) => (a.classes?.class_no ?? 0) - (b.classes?.class_no ?? 0))
+      .map((s, i) => [
+        i + 1,
+        s.classes?.class_no ?? "",
+        s.subjects?.name ?? "",
+        s.teachers?.full_name ?? "—",
+      ]);
+
+    printReport({
+      title: `المعلمون الذين ${kindLabel} — الحصة ${n}`,
+      subtitle: todayLabel(),
+      sections: [
+        {
+          title: `المعلمون الذين ${kindLabel} — الحصة ${n}`,
+          subtitle: `${list.length} معلم`,
+          headers: ["م", "الفصل", "المادة", "المعلم"],
+          rows: rowsOf,
+          tableClass: tone === "warning" ? "danger" : "success",
+        },
+      ],
+      logoUrl: new URL(logoIcon, window.location.origin).href,
+      moeLogoUrl: new URL(moeLogo, window.location.origin).href,
+      signatures: [
+        { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME },
+        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+      ],
+      hideSignatureLine: true,
+    });
+  };
 
   const toneClasses = {
     present: { badge: "bg-present", box: "border-present/30 bg-present/10 text-present" },
@@ -119,10 +156,18 @@ function PeriodGroup({ title, tone, rows, open, setOpen }) {
 
           {open != null && byPeriod[open] && (
             <div className="border-t border-line">
-              <p className="bg-gray-tint px-4 py-2 text-xs font-medium text-muted">
-                الحصة <span className="num">{open}</span> ·{" "}
-                <span className="num">{byPeriod[open].length}</span> فصل
-              </p>
+              <div className="flex items-center justify-between gap-3 bg-gray-tint px-4 py-2">
+                <p className="text-xs font-medium text-muted">
+                  الحصة <span className="num">{open}</span> ·{" "}
+                  <span className="num">{byPeriod[open].length}</span> فصل
+                </p>
+                <button
+                  onClick={() => printPeriod(open, byPeriod[open])}
+                  className={`shrink-0 rounded-sm2 px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 ${
+                    tone === "warning" ? "bg-absent" : "bg-present"}`}>
+                  طباعة PDF
+                </button>
+              </div>
               <div className="max-h-64 overflow-auto">
                 {byPeriod[open].map((s) => (
                   <div key={s.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-0">

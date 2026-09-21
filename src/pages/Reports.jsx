@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { GRADE_NAMES, STATUS } from "../lib/schoolTime";
 import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
+import { fetchAllPaged } from "../lib/attendanceHelpers";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { fmtGreg, fmtTime12 } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
@@ -22,6 +23,12 @@ const TAB_GROUPS = [
       { key: "daily",   label: "تقرير يومي" },
       { key: "student", label: "تقرير طالب" },
       { key: "period",  label: "تقرير فترة" },
+    ],
+  },
+  {
+    title: "تقارير المعلمين",
+    tabs: [
+      { key: "teacher_sheets", label: "كشوف تحضير المعلمين", teacherHidden: true },
     ],
   },
 ];
@@ -103,6 +110,7 @@ export default function Reports() {
       {tab === "period"  && <PeriodReport scopeIds={scopeIds} />}
       {tab === "daily_rate" && !isTeacher && <DailyRateReport />}
       {tab === "days"    && <AbsenceDaysReport scopeIds={scopeIds} />}
+      {tab === "teacher_sheets" && !isTeacher && <TeacherSheetsReport />}
     </div>
   );
 }
@@ -151,14 +159,18 @@ function DailyReport({ scopeIds }) {
   useEffect(() => {
     (async () => {
       setRows(null);
-      let q = supabase
-        .from("class_attendance")
-        .select("student_id, status, students(full_name, national_id), schedule(period_no, classes(class_no, grade), subjects(name))")
-        .eq("attend_date", date)
-        .in("status", NON_PRESENT);
-      q = applyScope(q, scopeIds);
-      const { data } = await q;
-      setRows(data ?? []);
+      try {
+        const data = await fetchAllPaged(() => {
+          let q = supabase
+            .from("class_attendance")
+            .select("student_id, status, students(full_name, national_id), schedule(period_no, classes(class_no, grade), subjects(name))")
+            .eq("attend_date", date)
+            .in("status", NON_PRESENT)
+            .order("id", { ascending: true });
+          return applyScope(q, scopeIds);
+        });
+        setRows(data);
+      } catch (e) { console.error("DailyReport:", e); setRows([]); }
     })();
   }, [date, scopeIds]);
 
@@ -426,16 +438,19 @@ function PeriodReport({ scopeIds }) {
   useEffect(() => {
     (async () => {
       setRows(null);
-      let q = supabase
-        .from("class_attendance")
-        .select("student_id, status, students(full_name, national_id), schedule(classes(class_no, grade))")
-        .gte("attend_date", from)
-        .lte("attend_date", to)
-        .in("status", NON_PRESENT)
-        .limit(5000);
-      q = applyScope(q, scopeIds);
-      const { data } = await q;
-      setRows(data ?? []);
+      try {
+        const data = await fetchAllPaged(() => {
+          let q = supabase
+            .from("class_attendance")
+            .select("student_id, status, students(full_name, national_id), schedule(classes(class_no, grade))")
+            .gte("attend_date", from)
+            .lte("attend_date", to)
+            .in("status", NON_PRESENT)
+            .order("id", { ascending: true });
+          return applyScope(q, scopeIds);
+        });
+        setRows(data);
+      } catch (e) { console.error("PeriodReport:", e); setRows([]); }
     })();
   }, [from, to, scopeIds]);
 
@@ -753,16 +768,19 @@ function AbsenceDaysReport({ scopeIds }) {
     (async () => {
       setRows(null);
 
-      // كل سجلات الحضور في الفترة
-      let q = supabase
-        .from("class_attendance")
-        .select("student_id, attend_date, status, students(full_name, national_id), schedule(classes(class_no, grade))")
-        .gte("attend_date", from)
-        .lte("attend_date", to)
-        .limit(20000);
-      q = applyScope(q, scopeIds);
-
-      const { data } = await q;
+      // كل سجلات الحضور في الفترة — على دفعات لتجاوز حدّ 1000
+      let data = [];
+      try {
+        data = await fetchAllPaged(() => {
+          let q = supabase
+            .from("class_attendance")
+            .select("student_id, attend_date, status, students(full_name, national_id), schedule(classes(class_no, grade))")
+            .gte("attend_date", from)
+            .lte("attend_date", to)
+            .order("id", { ascending: true });
+          return applyScope(q, scopeIds);
+        });
+      } catch (e) { console.error("AbsenceDaysReport:", e); data = []; }
 
       // تجميع: لكل طالب ولكل يوم — هل غاب كل حصصه؟
       const byStudent = new Map();
@@ -976,6 +994,303 @@ function AbsenceDaysReport({ scopeIds }) {
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+/* ==================== كشوف تحضير المعلمين اليومية ==================== */
+
+function TeacherSheetsReport() {
+  const [date, setDate] = useState(todayStr());
+  const [rows, setRows] = useState(null);
+
+  const [err, setErr] = useState(null);
+  const [openT, setOpenT] = useState(null); // اسم المعلم المفتوح كشفه
+  const [q, setQ] = useState("");            // بحث باسم المعلم
+
+  useEffect(() => {
+    (async () => {
+      setRows(null); setErr(null);
+      // سجلات التحضير الفعلية لهذا اليوم — نعرض تمامًا ما أدخله المعلم في
+      // السجل بحالاته (حاضر/غائب/متأخر/مستأذن) بلا أي افتراض أو "لم يُرصد".
+      //
+      // مهم: Supabase يحدّ الاستعلام بـ1000 صف افتراضيًا (db-max-rows)، وسجلات
+      // اليوم تتجاوز ذلك بكثير. لتفادي البطء نجلب العدد أولًا ثم كل الدفعات
+      // بالتوازي (بدل طلبات متتابعة) عبر range.
+      const PAGE = 1000;
+      const { count, error: cErr } = await supabase
+        .from("class_attendance")
+        .select("id", { count: "exact", head: true })
+        .eq("attend_date", date);
+      if (cErr) { console.error("teacher_sheets/count:", cErr); setErr(cErr.message); setRows({ att: [], meta: {}, recorders: {} }); return; }
+      const total = count ?? 0;
+      if (!total) { setRows({ att: [], meta: {}, recorders: {} }); return; }
+
+      const pageCount = Math.min(Math.ceil(total / PAGE), 50);
+      const pageReqs = [];
+      for (let i = 0; i < pageCount; i++) {
+        pageReqs.push(
+          supabase
+            .from("class_attendance")
+            .select("schedule_id, student_id, status, recorded_by, students(full_name, national_id)")
+            .eq("attend_date", date)
+            .order("schedule_id", { ascending: true })
+            .range(i * PAGE, i * PAGE + PAGE - 1)
+        );
+      }
+      const pages = await Promise.all(pageReqs);
+      let list = [];
+      let fetchErr = null;
+      for (const p of pages) {
+        if (p.error) { fetchErr = p.error; break; }
+        list = list.concat(p.data ?? []);
+      }
+      if (fetchErr) { console.error("teacher_sheets:", fetchErr); setErr(fetchErr.message); setRows({ att: [], meta: {}, recorders: {} }); return; }
+      if (!list.length) { setRows({ att: [], meta: {}, recorders: {} }); return; }
+
+      // استعلاما بيانات الحصص وأسماء من رصد فعليًا — بالتوازي
+      const schedIds = [...new Set(list.map((r) => r.schedule_id).filter(Boolean))];
+      const recIds = [...new Set(list.map((r) => r.recorded_by).filter(Boolean))];
+      const [schRes, usRes] = await Promise.all([
+        schedIds.length
+          ? supabase.from("schedule")
+              .select("id, teacher_id, period_no, teachers(full_name), classes(class_no, grade), subjects(name)")
+              .in("id", schedIds)
+          : Promise.resolve({ data: [] }),
+        recIds.length
+          ? supabase.from("users").select("id, full_name").in("id", recIds)
+          : Promise.resolve({ data: [] }),
+      ]);
+      if (schRes.error) { console.error("teacher_sheets/sched:", schRes.error); setErr(schRes.error.message); }
+      const meta = Object.fromEntries((schRes.data ?? []).map((s) => [s.id, s]));
+      const recorders = Object.fromEntries((usRes.data ?? []).map((u) => [u.id, u.full_name]));
+
+      setRows({ att: list, meta, recorders });
+    })();
+  }, [date]);
+
+  // بناء كشوف: كل حصة سُجّل فيها تحضير كشف مستقل — بما أدخله المعلم فقط،
+  // مجمّعة تحت من قام بالتحضير فعليًا (recorded_by) لا معلم الجدول.
+  const teachers = useMemo(() => {
+    if (!rows) return [];
+    const { att, meta, recorders } = rows;
+
+    const sheets = new Map(); // schedule_id -> كشف
+    att.forEach((r) => {
+      const sid = r.schedule_id;
+      if (!sid) return;
+      if (!sheets.has(sid)) {
+        const m = meta[sid] ?? {};
+        sheets.set(sid, {
+          schedule_id: sid,
+          recorder_id: r.recorded_by ?? m.teacher_id ?? null,
+          recorder: recorders[r.recorded_by] ?? m.teachers?.full_name ?? "غير معروف",
+          orig_teacher: m.teachers?.full_name ?? null,
+          class_no: m.classes?.class_no ?? 0,
+          grade: m.classes?.grade ?? 0,
+          period: m.period_no ?? 0,
+          subject: m.subjects?.name ?? "—",
+          students: [],
+          counts: { present: 0, absent: 0, late: 0, excused: 0 },
+        });
+      }
+      const sh = sheets.get(sid);
+      sh.students.push({
+        name: r.students?.full_name ?? "",
+        national_id: r.students?.national_id ?? "",
+        status: r.status,
+      });
+      sh.counts[r.status] = (sh.counts[r.status] ?? 0) + 1;
+    });
+
+    sheets.forEach((sh) =>
+      sh.students.sort((a, b) => a.name.localeCompare(b.name, "ar")));
+
+    // تجميع الكشوف تحت من قام بالتحضير فعليًا
+    const byRec = new Map();
+    [...sheets.values()].forEach((sh) => {
+      const key = sh.recorder_id ?? sh.recorder;
+      if (!byRec.has(key)) byRec.set(key, { teacher: sh.recorder, sheets: [] });
+      byRec.get(key).sheets.push(sh);
+    });
+    const out = [...byRec.values()].sort((a, b) =>
+      a.teacher.localeCompare(b.teacher, "ar"));
+    out.forEach((t) =>
+      t.sheets.sort((a, b) => a.period - b.period || a.class_no - b.class_no));
+    return out;
+  }, [rows]);
+
+  const dateLabel = fmtGreg(date + "T00:00:00");
+  // ملاحظة الانتظار: إن اختلف من رصد عن معلم الجدول
+  const coverNote = (sh) =>
+    sh.orig_teacher && sh.orig_teacher !== sh.recorder ? ` · (انتظار بدل ${sh.orig_teacher})` : "";
+
+  // ترتيب عرض الحالات في الكشف: الحاضرون ثم المتأخرون ثم المستأذنون ثم الغائبون
+  const STATUS_ORDER = { present: 0, late: 1, excused: 2, absent: 3 };
+
+  // كل كشف يصبح صفحة مستقلة في PDF (printReport يبدأ صفحة جديدة لكل قسم)
+  const sheetSection = (sh) => {
+    const ordered = sh.students
+      .slice()
+      .sort((a, b) =>
+        (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9) ||
+        a.name.localeCompare(b.name, "ar"));
+    return {
+      title: `${sh.recorder} — فصل ${sh.class_no}`,
+      subtitle: `الحصة ${sh.period} · ${sh.subject} · ${dateLabel} — حاضر ${sh.counts.present} · غائب ${sh.counts.absent} · متأخر ${sh.counts.late} · مستأذن ${sh.counts.excused}${coverNote(sh)}`,
+      headers: ["م", "رقم الهوية", "اسم الطالب", "الحالة"],
+      // خلية الحالة ملوّنة لتسهيل قراءة الغياب والاستئذان في التقرير المطبوع
+      rows: ordered.map((st, i) => [
+        i + 1, st.national_id, st.name,
+        { text: label(st.status), cls: "st-" + st.status },
+      ]),
+    };
+  };
+
+  const printSheets = (list, title) => {
+    if (!list.length) return;
+    printReport({ title, subtitle: dateLabel, sections: list.map(sheetSection), ...logos() });
+  };
+
+  const allSheets = teachers.flatMap((t) => t.sheets);
+
+  // ملخّص ما جلبه التطبيق فعلًا من القاعدة اليوم — لتشخيص أي فرق بين
+  // البيانات المخزّنة وما يظهر (يعكس صفوف class_attendance كما وصلت تمامًا)
+  const fetchedTotals = (rows?.att ?? []).reduce(
+    (c, r) => { c[r.status] = (c[r.status] ?? 0) + 1; c.total += 1; return c; },
+    { present: 0, absent: 0, late: 0, excused: 0, total: 0 }
+  );
+
+  return (
+    <div className="space-y-4">
+      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+        كشوف التحضير كما أدخلها المعلمون فعليًا في اليوم المحدَّد — تُعرض تحت اسم من
+        قام بالتحضير (بما في ذلك معلم الانتظار ومن رصد متأخرًا)، كل كشف (معلم × فصل × حصة)
+        في ورقة مستقلة عند الطباعة، بأسماء الطلاب وأرقام هوياتهم وحالة كل طالب
+        (حاضر · غائب · متأخر · مستأذن).
+      </p>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="text-sm font-medium text-ink">التاريخ:</label>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+               className="rounded-sm2 border border-line px-3 py-2 text-sm" />
+        <button onClick={() => printSheets(allSheets, "كشوف تحضير المعلمين اليومية")}
+          disabled={!allSheets.length}
+          className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas disabled:opacity-40">
+          طباعة كل الكشوف — PDF
+        </button>
+      </div>
+
+      {err && (
+        <p className="rounded-card bg-absent/10 px-4 py-2.5 text-sm font-medium text-absent">
+          تعذّر جلب البيانات: {err}
+        </p>
+      )}
+
+      {rows && fetchedTotals.total > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-white px-4 py-3 text-xs">
+          <span className="font-semibold text-muted">إجمالي المرصود اليوم:</span>
+          <span className="num chip bg-gray-tint text-ink">{fetchedTotals.total} سجل</span>
+          <span className="num chip bg-present/10 text-present">حاضر {fetchedTotals.present}</span>
+          <span className="num chip bg-absent/10 text-absent">غائب {fetchedTotals.absent}</span>
+          <span className="num chip bg-late/10 text-late">متأخر {fetchedTotals.late}</span>
+          <span className="num chip bg-excused/10 text-excused">مستأذن {fetchedTotals.excused}</span>
+        </div>
+      )}
+
+      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+
+      {rows && teachers.length === 0 ? (
+        <Empty title="لا كشوف" body="لم يرصد أي معلم تحضيرًا في هذا اليوم." />
+      ) : (
+        <>
+          {/* بحث باسم المعلم لتقصير القائمة */}
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={`ابحث عن معلم… (${teachers.length} معلمًا)`}
+            className="w-full rounded-sm2 border border-line px-3 py-2 text-sm"
+          />
+
+          {/* قائمة مطويّة: كل معلم سطر واحد، يُفتح كشفه عند الضغط */}
+          <div className="space-y-2">
+            {teachers
+              .filter((t) => !q.trim() || t.teacher.includes(q.trim()))
+              .map((t) => {
+                const isOpen = openT === t.teacher;
+                const agg = t.sheets.reduce(
+                  (c, sh) => {
+                    c.present += sh.counts.present; c.absent += sh.counts.absent;
+                    c.late += sh.counts.late; c.excused += sh.counts.excused;
+                    return c;
+                  },
+                  { present: 0, absent: 0, late: 0, excused: 0 }
+                );
+                return (
+                  <div key={t.teacher} className="card overflow-hidden">
+                    <button
+                      onClick={() => setOpenT(isOpen ? null : t.teacher)}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right hover:bg-canvas">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-ink">{t.teacher}</p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          <span className="num">{t.sheets.length}</span> كشف ·{" "}
+                          <span className="num text-present">{agg.present}</span> حاضر ·{" "}
+                          <span className="num text-absent">{agg.absent}</span> غائب
+                          {agg.late > 0 && <> · <span className="num text-late">{agg.late}</span> متأخر</>}
+                        </p>
+                      </div>
+                      <svg viewBox="0 0 24 24" fill="none"
+                        className={`h-4 w-4 shrink-0 text-faint transition-transform ${isOpen ? "rotate-180" : ""}`}
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </button>
+
+                    {isOpen && (
+                      <div className="border-t border-line">
+                        <div className="flex justify-end px-4 py-2">
+                          <button onClick={() => printSheets(t.sheets, `كشوف تحضير المعلم — ${t.teacher}`)}
+                            className="rounded-sm2 bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
+                            طباعة كشوف المعلم — PDF
+                          </button>
+                        </div>
+                        <div className="divide-y divide-line border-t border-line">
+                          {t.sheets.map((sh) => (
+                            <div key={sh.schedule_id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-ink">
+                                  فصل <span className="num">{sh.class_no}</span> · الحصة{" "}
+                                  <span className="num">{sh.period}</span> · {sh.subject}
+                                </p>
+                                <p className="mt-0.5 text-xs text-muted">
+                                  <span className="num">{sh.students.length}</span> طالبًا
+                                  {sh.orig_teacher && sh.orig_teacher !== t.teacher && (
+                                    <span className="text-excused"> · انتظار بدل {sh.orig_teacher}</span>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <span className="num chip bg-present/10 text-present">{sh.counts.present}</span>
+                                <span className="num chip bg-absent/10 text-absent">{sh.counts.absent}</span>
+                                {sh.counts.late > 0 && (
+                                  <span className="num chip bg-late/10 text-late">{sh.counts.late}</span>
+                                )}
+                                {sh.counts.excused > 0 && (
+                                  <span className="num chip bg-excused/10 text-excused">{sh.counts.excused}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        </>
       )}
     </div>
   );

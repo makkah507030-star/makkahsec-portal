@@ -197,6 +197,14 @@ export default function Landing() {
       <footer className="border-t border-line bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-5 py-6 text-xs text-muted">
           <p>مدرسة مكة الثانوية — بوابة إلكترونية داخلية.</p>
+          <a href="mailto:info@makkahsec.com"
+             className="num inline-flex items-center gap-1.5 font-medium text-mint-deep hover:underline" dir="ltr">
+            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4"
+                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" />
+            </svg>
+            info@makkahsec.com
+          </a>
           <p>مكة المكرمة — المملكة العربية السعودية</p>
         </div>
         <div className="border-t border-line px-5 py-3 text-center text-[11px] text-faint">

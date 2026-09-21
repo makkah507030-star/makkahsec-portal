@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 
 const CORE_TABS = [
-  { key: "attendance", label: "التحضير" },
+  { key: "attendance", label: "الحضور والغياب اليومي" },
   { key: "substitute", label: "الانتظار" },
   { key: "schedule",   label: "جدولي" },
   { key: "records",    label: "السجلات" },
