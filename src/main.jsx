@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { SessionProvider } from "./lib/session.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import "./index.css";
 
 // شبكة أمان بعد النشر: إن فشل تحميل حزمة مُحمّلة عند الطلب (ملف JS بمُعرّف
@@ -23,10 +24,12 @@ window.addEventListener("vite:preloadError", (e) => {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <SessionProvider>
-        <App />
-      </SessionProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <SessionProvider>
+          <App />
+        </SessionProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 );
