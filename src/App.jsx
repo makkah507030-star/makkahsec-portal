@@ -1,5 +1,5 @@
-import { Suspense, lazy } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
 import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
@@ -63,6 +63,19 @@ export default function App() {
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const maintenance = useMaintenance(session);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // عند الضغط على إشعار الجوال، يطلب Service Worker فتح صفحة الإشعار عبر رسالة —
+  // ننتقل داخليًا (بلا إعادة تحميل) فتبقى الجلسة محفوظة ولا يعود للرئيسية.
+  useEffect(() => {
+    const sw = typeof navigator !== "undefined" ? navigator.serviceWorker : null;
+    if (!sw) return;
+    const onMsg = (e) => {
+      if (e.data && e.data.type === "OPEN_URL" && e.data.url) navigate(e.data.url);
+    };
+    sw.addEventListener("message", onMsg);
+    return () => sw.removeEventListener("message", onMsg);
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -83,6 +96,11 @@ export default function App() {
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/contact" element={<Feedback />} />
         <Route path="/login" element={<Login />} />
+        {/* دليل تفعيل الإشعارات صفحة عامة لا تحتاج تسجيل دخول */}
+        <Route path="/notify-guide" element={<NotifyGuide />} />
+        {/* فتح إشعار قبل استعادة الجلسة → لصفحة الدخول بدل الرئيسية بصمت */}
+        <Route path="/notify/:id" element={<Navigate to="/login" replace />} />
+        <Route path="/notifications-me" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );

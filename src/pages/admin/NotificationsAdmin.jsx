@@ -171,12 +171,19 @@ function SendForm() {
       if (error) { setSending(false); setMsg({ ok: false, text: error.message }); return; }
       if (!data)  { setSending(false); setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
 
-      try {
-        await supabase.rpc("set_notification_meta", {
+      // حفظ المُرسِل/الصورة/المرفق/يوتيوب — نفحص الخطأ ونُظهره بدل ابتلاعه
+      const hasMeta = imageUrl || attachUrl || youtubeUrl || senderName;
+      if (hasMeta) {
+        const { error: metaErr } = await supabase.rpc("set_notification_meta", {
           p_id: data, p_sender_name: senderName, p_image_url: imageUrl,
           p_attachment_url: attachUrl, p_attachment_name: attachName, p_youtube_url: youtubeUrl,
         });
-      } catch { /* تجاهل */ }
+        if (metaErr) {
+          setSending(false);
+          setMsg({ ok: false, text: "أُرسل الإشعار، لكن تعذّر حفظ المرفقات/الرابط: " + metaErr.message });
+          return;
+        }
+      }
 
       setSending(false);
       try {

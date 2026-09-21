@@ -42,23 +42,14 @@ self.addEventListener("notificationclick", (event) => {
         includeUncontrolled: true,
       });
 
-      // نافذة مفتوحة بالفعل على نفس صفحة الإشعار → نُركّز عليها فقط
-      for (const client of list) {
-        if (client.url === target && "focus" in client) {
-          return client.focus();
-        }
-      }
-
-      // نافذة مفتوحة على صفحة أخرى → نُوجّهها لصفحة الإشعار ثم نُركّز
-      // (بعض المتصفحات تمنع navigate على نافذة غير خاضعة للتحكم، فنفتح نافذة جديدة عندها)
+      // نافذة مفتوحة بالفعل (حتى لو في الخلفية) → نُركّز عليها ونطلب من التطبيق
+      // التنقّل داخليًا عبر رسالة — أضمن من client.navigate الذي تمنعه بعض
+      // المتصفحات، وبلا إعادة تحميل فتبقى الجلسة محفوظة.
       for (const client of list) {
         if ("focus" in client) {
-          try {
-            await client.navigate(target);
-            return await client.focus();
-          } catch (e) {
-            /* navigate ممنوع هنا — نُكمل لفتح نافذة جديدة */
-          }
+          try { await client.focus(); } catch (e) { /* تجاهل */ }
+          client.postMessage({ type: "OPEN_URL", url });
+          return;
         }
       }
 
