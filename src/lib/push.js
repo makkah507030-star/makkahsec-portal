@@ -38,8 +38,22 @@ function urlBase64ToUint8Array(base64String) {
 
 async function getRegistration() {
   const existing = await navigator.serviceWorker.getRegistration("/");
-  if (existing) return existing;
-  return navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  if (existing) {
+    existing.update().catch(() => {}); // افحص وجود إصدار SW أحدث
+    return existing;
+  }
+  return navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
+}
+
+// تسجيل/تحديث الـ Service Worker عند فتح التطبيق — يضمن وصول أحدث نسخة من
+// sw.js للجهاز (وإلا بقي الجهاز على SW قديم لأن المتصفح لا يُحدّثه تلقائيًا).
+export async function ensureServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.getRegistration("/");
+    if (reg) reg.update().catch(() => {});
+    else await navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" });
+  } catch { /* تجاهل */ }
 }
 
 // الحالة الحالية: granted | denied | default | unsupported، مع وجود اشتراك فعّال

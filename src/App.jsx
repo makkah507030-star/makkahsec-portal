@@ -25,6 +25,7 @@ import GuardianHome from "./pages/GuardianHome.jsx";
 import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
 import AdminStaff from "./pages/admin/AdminStaff.jsx";
 import EnableNotifications from "./components/EnableNotifications.jsx";
+import { ensureServiceWorker } from "./lib/push.js";
 import NotificationView from "./pages/NotificationView.jsx";
 import NotificationsList from "./pages/NotificationsList.jsx";
 import NotifyGuide from "./pages/NotifyGuide.jsx";
@@ -64,6 +65,9 @@ export default function App() {
   const maintenance = useMaintenance(session);
   const location = useLocation();
   const navigate = useNavigate();
+
+  // تحديث الـ Service Worker عند فتح التطبيق ليصل أحدث إصدار للجهاز
+  useEffect(() => { ensureServiceWorker(); }, []);
 
   // عند الضغط على إشعار الجوال، يطلب Service Worker فتح صفحة الإشعار عبر رسالة —
   // ننتقل داخليًا (بلا إعادة تحميل) فتبقى الجلسة محفوظة ولا يعود للرئيسية.

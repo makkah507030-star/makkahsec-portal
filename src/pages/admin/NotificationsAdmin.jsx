@@ -151,17 +151,21 @@ function SendForm() {
     }
     let attachUrl = null, attachName = null;
     if (attachFile) {
-      try {
-        const safe = (attachFile.name || "ملف").replace(/[^\w.\-؀-ۿ]+/g, "_").slice(-80);
-        const path = `notifications/attach/${Date.now()}-${Math.random().toString(36).slice(2)}-${safe}`;
-        const { error: upErr } = await supabase.storage
-          .from("notification-images")
-          .upload(path, attachFile, { contentType: attachFile.type || "application/octet-stream", upsert: false });
-        if (!upErr) {
-          attachUrl = supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
-          attachName = attachFile.name || "مرفق";
-        }
-      } catch { /* تجاهل فشل المرفق */ }
+      // مفتاح التخزين بأحرف لاتينية فقط (تفاديًا لأي مشاكل مفاتيح Unicode)،
+      // مع الاحتفاظ بالاسم الأصلي للعرض والتحميل.
+      const ext = (attachFile.name.split(".").pop() || "bin")
+        .toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "bin";
+      const path = `notifications/attach/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("notification-images")
+        .upload(path, attachFile, { contentType: attachFile.type || "application/octet-stream", upsert: false });
+      if (upErr) {
+        setSending(false);
+        setMsg({ ok: false, text: "تعذّر رفع المرفق: " + upErr.message });
+        return;
+      }
+      attachUrl = supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
+      attachName = attachFile.name || "مرفق";
     }
     const youtubeUrl = youtube.trim() || null;
 
