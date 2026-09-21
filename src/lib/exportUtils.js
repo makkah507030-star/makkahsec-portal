@@ -484,6 +484,13 @@ export function printReport(opts) {
     border-top: 2px solid ${MINT};
   }
 
+  /* تلوين خلايا الحالة — لتسهيل قراءة الغياب والاستئذان في التقرير */
+  /* الحاضر بلا خلفية (الأكثر تكرارًا) — لون خط فقط لتوفير الحبر */
+  tbody td.st-present { color: #3E6350; font-weight: 700; }
+  tbody td.st-absent  { background: #FBE2E2; color: #B02A2A; font-weight: 800; }
+  tbody td.st-late    { background: #FDF0D9; color: #9A6B12; font-weight: 700; }
+  tbody td.st-excused { background: #E9E7FB; color: #544CC0; font-weight: 700; }
+
   /* توسيط صارم لكل الخلايا ما عدا الاسم */
   table th, table td { text-align: center; vertical-align: middle; }
   table .name { text-align: right !important; }
@@ -608,10 +615,127 @@ export function printReport(opts) {
     font-size: 9.5px; color: ${GRAY};
   }
 
+  /* ---------- ترقيم الصفحات وتقسيمها منطقيًا ---------- */
+  /* المصدر يُبنى مخفيًّا خارج الشاشة ثم يُعاد تدفّقه إلى صفحات A4 مرقّمة */
+  #src { position: absolute; left: -10000px; top: 0; }
+  #out .pg {
+    position: relative; overflow: hidden; margin: 0 auto;
+    page-break-after: always; break-after: page;
+  }
+  #out .pg:last-child { page-break-after: auto; break-after: auto; }
+  #out .pgbody { overflow: hidden; padding: 0 2mm; }
+  #out .pg .head { margin-bottom: 8px; }
+  #out .pg .meta { margin-bottom: 8px; }
+  #out .pgfoot {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 4mm; font-size: 8.5px; color: ${GRAY};
+    border-top: 1px solid ${LIGHT};
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  #out .pgfoot .pn { font-weight: 700; color: ${DEEP}; }
+
   @media print {
     section { padding: 0; }
+    #out .pg { page-break-inside: avoid; break-inside: avoid; }
     @page { margin: 10mm; ${landscape ? "size: A4 landscape;" : "size: A4 portrait;"} }
   }`;
+
+  /* ---------- محرّك التقسيم والترقيم (يعمل داخل الإطار) ---------- */
+  const paginatorJs = `
+  window.__paginate = function(){
+    var src = document.getElementById('src');
+    var out = document.getElementById('out');
+    if(!src || !out) return;
+    try{
+      var MM = 96/25.4;
+      var LAND = ${landscape ? "true" : "false"};
+      var CW = (LAND?277:190)*MM;   /* عرض منطقة المحتوى */
+      var CH = (LAND?190:277)*MM;   /* ارتفاع منطقة المحتوى */
+      var SAFE = 6, FOOT = 20;
+      var PGH = CH - SAFE;
+      var BODYH = PGH - FOOT;
+      src.style.width = CW + 'px';
+      var pages = [];
+      function newPage(){
+        var pg = document.createElement('div'); pg.className = 'pg';
+        pg.style.width = CW+'px'; pg.style.height = PGH+'px';
+        var b = document.createElement('div'); b.className = 'pgbody'; b.style.height = BODYH+'px';
+        pg.appendChild(b); out.appendChild(pg); pages.push(pg); pg._b = b; return pg;
+      }
+      function fits(b){ return b.scrollHeight <= b.clientHeight + 1; }
+      function tryPlace(b,node){ b.appendChild(node); if(!fits(b)){ b.removeChild(node); return false; } return true; }
+      var secs = [].slice.call(src.children);
+      secs.forEach(function(sec){
+        if(sec.classList.contains('cover')){
+          var pg = newPage();
+          [].slice.call(sec.children).forEach(function(ch){ pg._b.appendChild(ch); });
+          return;
+        }
+        var kids = [].slice.call(sec.children);
+        var header = [], flow = [], seenMeta = false;
+        kids.forEach(function(ch){
+          if(!seenMeta && (ch.classList.contains('head') || ch.classList.contains('meta'))){
+            header.push(ch); if(ch.classList.contains('meta')) seenMeta = true;
+          } else flow.push(ch);
+        });
+        function startPage(cont){
+          var pg = newPage();
+          header.forEach(function(h){
+            var c = h.cloneNode(true);
+            if(cont && c.classList.contains('meta')){
+              var t = c.querySelector('.m-title');
+              if(t){ var s = document.createElement('span'); s.style.cssText='color:#6B6B6B;font-weight:400'; s.textContent=' — تابع'; t.appendChild(s); }
+            }
+            pg._b.appendChild(c);
+          });
+          return pg;
+        }
+        var pg = startPage(false);
+        flow.forEach(function(item){
+          var isTable = item.tagName === 'TABLE' && item.tBodies && item.tBodies[0] && item.tBodies[0].rows.length;
+          if(isTable){
+            var rows = [].slice.call(item.tBodies[0].rows);
+            var ri = 0;
+            function skel(){
+              var t = item.cloneNode(false);
+              [].slice.call(item.children).forEach(function(c){
+                if(c.tagName==='COLGROUP' || c.tagName==='THEAD') t.appendChild(c.cloneNode(true));
+              });
+              var tb = document.createElement('tbody'); t.appendChild(tb); return {t:t, tb:tb};
+            }
+            while(ri < rows.length){
+              var s = skel();
+              if(!tryPlace(pg._b, s.t)){ pg = startPage(true); pg._b.appendChild(s.t); }
+              while(ri < rows.length){
+                var r = rows[ri].cloneNode(true);
+                s.tb.appendChild(r);
+                if(!fits(pg._b)){ s.tb.removeChild(r); break; }
+                ri++;
+              }
+              if(ri < rows.length) pg = startPage(true);
+            }
+          } else {
+            if(!tryPlace(pg._b, item)){ pg = startPage(true); pg._b.appendChild(item); }
+          }
+        });
+      });
+      var N = pages.length;
+      var ttl = (document.title || '');
+      pages.forEach(function(pg,i){
+        var f = document.createElement('div'); f.className = 'pgfoot';
+        var s1 = document.createElement('span'); s1.textContent = 'مدرسة مكة الثانوية — ' + ttl;
+        var s2 = document.createElement('span'); s2.className='pn'; s2.textContent = 'صفحة ' + (i+1) + ' من ' + N;
+        f.appendChild(s1); f.appendChild(s2); pg.appendChild(f);
+      });
+      src.remove();
+    } catch(e){
+      /* عند أي خطأ: اطبع المصدر كما هو دون تقسيم بدل تعطّل الطباعة */
+      if(src){ src.style.position='static'; src.style.left='auto'; src.style.width='auto'; }
+      var o = document.getElementById('out'); if(o) o.remove();
+      if(window.console) console.error('paginate failed:', e);
+    }
+  };`;
 
   const html = `<!doctype html>
 <html lang="ar" dir="rtl">
@@ -624,8 +748,12 @@ export function printReport(opts) {
 <style>${css}</style>
 </head>
 <body>
+<div id="src">
 ${coverBlock}
 ${sectionsHtml}
+</div>
+<div id="out"></div>
+<script>${paginatorJs}</script>
 </body>
 </html>`;
 
@@ -674,7 +802,23 @@ ${sectionsHtml}
       setTimeout(resolve, 3000);
     });
 
-  const ready = () => waitForImages().then(() => setTimeout(run, 200));
+  /* تقسيم المحتوى إلى صفحات مرقّمة بعد تحميل الصور والخطوط —
+     قياس ارتفاع الصفوف يعتمد على الخط النهائي، فننتظر جاهزيته. */
+  const fontsReady = () =>
+    doc.fonts && doc.fonts.ready ? doc.fonts.ready.catch(() => {}) : Promise.resolve();
+
+  const paginate = () => {
+    try {
+      frame.contentWindow.__paginate && frame.contentWindow.__paginate();
+    } catch (e) {
+      console.error("paginate call failed:", e);
+    }
+  };
+
+  const ready = () =>
+    waitForImages()
+      .then(fontsReady)
+      .then(() => { paginate(); setTimeout(run, 150); });
 
   if (doc.readyState === "complete") ready();
   else frame.onload = ready;

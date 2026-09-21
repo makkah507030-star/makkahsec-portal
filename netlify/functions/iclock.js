@@ -131,95 +131,132 @@ exports.handler = async (event) => {
         return text("OK");
       }
 
-      const raw = event.body || "";
+      // Netlify قد يمرّر الجسم مُرمّزًا base64 — نفكّه عند اللزوم
+      const raw = event.isBase64Encoded
+        ? Buffer.from(event.body || "", "base64").toString("utf-8")
+        : (event.body || "");
       const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
 
-      // إعدادات العام الدراسي
-      const setRes = await admin
-        .from("settings").select("key, value").eq("key", "active_year").maybeSingle();
-      const academicYear = setRes.data ? setRes.data.value : null;
+      // ==========================================================
+      //  معالجة دُفعية (Bulk) — حاسمة للأداء:
+      //  الجهاز يرسل الدفعة كاملة (قد تصل لمئات البصمات) ويتوقّع ردّ
+      //  OK خلال ثوانٍ قليلة؛ وإلا اعتبرها فشلت وأعاد إرسال نفس الدفعة
+      //  بلا نهاية (حلقة 504). لذلك نستبدل الاستعلامات المتسلسلة لكل
+      //  سطر (٣ لكل بصمة = مئات الجولات) بعددٍ ثابت من الاستعلامات
+      //  الدُفعية (٣–٤ فقط) مهما كان حجم الدفعة.
+      // ==========================================================
 
-      let saved = 0;
-      let unmatched = 0;
-
+      // صيغة السطر: PIN <tab> DateTime <tab> Status <tab> Verify ...
+      // نقرأ العمود الأول (رقم المستخدم) فقط؛ طابع الجهاز الزمني يُتجاهل
+      // (ساعته غير موثوقة) ونعتمد وقت استلام الخادم.
+      const rawUids = [];
       for (const line of lines) {
-        // الصيغة: PIN <tab> DateTime <tab> Status <tab> Verify ...
-        // ملاحظة: عمود DateTime (parts[1]) يُقرأ من سجل الوصول فقط
-        // (لمعرفة أن السطر بصمة فعلية لا سطرًا فارغًا) — لا نستخدم
-        // قيمته الزمنية إطلاقًا لأن ساعة الجهاز غير موثوقة، ونعتمد
-        // بدلًا منها وقت استلام الخادم (riyadhNow) دائمًا.
         const parts = line.split("\t");
         if (parts.length < 2) continue;
-
         const uid = String(parts[0]).trim();
-        const stampRaw = String(parts[1]).trim();
-        if (!uid || !stampRaw) continue;
-
-        const { attendDate, punchTime } = riyadhNow();
-
-        // مطابقة الطالب برقمه على الجهاز.
-        // القاعدة المعتمدة: device_uid = آخر ٩ خانات من رقم الهوية (والجهاز
-        // لا يقبل أكثر من ٩ خانات، فهذا يناسبه). نطابق الرقم بعدة صور آمنة
-        // (مطابقة تامة على أعمدة مفهرسة) لتفادي مشكلتين شائعتين:
-        //   • الأصفار البادئة: بعض الأجهزة تحذفها (000064300 → 64300)،
-        //     فنجرّب الرقم كما جاء، وبلا أصفار بادئة، ومكمّلًا لـ٩ بأصفار.
-        //   • إدخال رقم الهوية كاملًا بدل آخر ٩ خانات (على جهاز يسمح بذلك).
-        const variants = new Set([uid]);
-        const bare = uid.replace(/^0+/, "");
-        if (bare) { variants.add(bare); variants.add(bare.padStart(9, "0")); }
-        const orExpr = [...variants]
-          .flatMap((v) => [`device_uid.eq.${v}`, `national_id.eq.${v}`])
-          .join(",");
-
-        const stuRes = await admin
-          .from("students")
-          .select("id")
-          .eq("is_active", true)
-          .or(orExpr)
-          .limit(1);
-
-        const student = stuRes.data && stuRes.data[0];
-        if (!student) {
-          await admin.from("unmatched_logs").insert({
-            device_uid: uid,
-            punch_time: punchTime.toISOString(),
-            device_serial: sn,
-            resolved: false,
-          });
-          unmatched++;
-          continue;
-        }
-
-        // أول بصمة في اليوم هي المعتمدة
-        const existRes = await admin
-          .from("daily_attendance")
-          .select("id, punch_time")
-          .eq("student_id", student.id)
-          .eq("attend_date", attendDate)
-          .maybeSingle();
-
-        if (existRes.data) {
-          // نحتفظ بالأبكر
-          if (new Date(existRes.data.punch_time) > punchTime) {
-            await admin.from("daily_attendance")
-              .update({ punch_time: punchTime.toISOString(), device_serial: sn })
-              .eq("id", existRes.data.id);
-          }
-        } else {
-          await admin.from("daily_attendance").insert({
-            student_id: student.id,
-            attend_date: attendDate,
-            punch_time: punchTime.toISOString(),
-            source: "device",
-            device_serial: sn,
-            academic_year: academicYear,
-          });
-        }
-        saved++;
+        if (uid) rawUids.push(uid);
       }
 
-      // الجهاز يتوقع OK متبوعًا بعدد السجلات المستلمة
-      return text(`OK: ${saved + unmatched}`);
+      // لا بصمات صالحة — نؤكّد الاستلام فورًا كي لا يعيد الجهاز الإرسال
+      if (!rawUids.length) return text("OK: 0");
+
+      const { attendDate, punchTime } = riyadhNow();
+      const punchIso = punchTime.toISOString();
+
+      // صور الرقم الآمنة (الأصفار البادئة / الهوية الكاملة)
+      const variantsOf = (uid) => {
+        const s = new Set([uid]);
+        const bare = uid.replace(/^0+/, "");
+        if (bare) { s.add(bare); s.add(bare.padStart(9, "0")); }
+        return [...s];
+      };
+
+      const uniqUids = [...new Set(rawUids)];
+      const allVariants = [...new Set(uniqUids.flatMap(variantsOf))];
+
+      const chunk = (arr, n) => {
+        const out = [];
+        for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
+        return out;
+      };
+
+      // إعدادات العام الدراسي (استعلام واحد)
+      const setRes = await admin
+        .from("settings").select("value").eq("key", "active_year").maybeSingle();
+      const academicYear = setRes.data ? setRes.data.value : null;
+
+      // (1) جلب كل الطلاب المطابقين دفعةً واحدة — مقسّم لدُفَع آمنة الطول
+      const byKey = new Map(); // كل صورة رقم → معرّف الطالب
+      for (const part of chunk(allVariants, 150)) {
+        const list = part.join(",");
+        const { data: studs, error: stuErr } = await admin
+          .from("students")
+          .select("id, device_uid, national_id")
+          .eq("is_active", true)
+          .or(`device_uid.in.(${list}),national_id.in.(${list})`);
+        if (stuErr) {
+          console.error("iclock: students bulk lookup failed:", stuErr);
+          return text("ERROR: student lookup failed — " + stuErr.message, 500);
+        }
+        (studs || []).forEach((s) => {
+          if (s.device_uid != null) byKey.set(String(s.device_uid), s.id);
+          if (s.national_id != null) byKey.set(String(s.national_id), s.id);
+        });
+      }
+
+      const resolve = (uid) => {
+        for (const v of variantsOf(uid)) if (byKey.has(v)) return byKey.get(v);
+        return null;
+      };
+
+      const studentIds = new Set();
+      const unmatchedUids = [];
+      for (const uid of uniqUids) {
+        const sid = resolve(uid);
+        if (sid) studentIds.add(sid);
+        else unmatchedUids.push(uid);
+      }
+
+      // (2) البصمات الموجودة اليوم لهؤلاء الطلاب (أول بصمة هي المعتمدة)
+      const existing = new Set();
+      for (const part of chunk([...studentIds], 200)) {
+        const { data: ex } = await admin
+          .from("daily_attendance")
+          .select("student_id")
+          .eq("attend_date", attendDate)
+          .in("student_id", part);
+        (ex || []).forEach((r) => existing.add(r.student_id));
+      }
+
+      // (3) إدراج البصمات الجديدة دفعةً واحدة
+      const toInsert = [...studentIds]
+        .filter((id) => !existing.has(id))
+        .map((id) => ({
+          student_id: id,
+          attend_date: attendDate,
+          punch_time: punchIso,
+          source: "device",
+          device_serial: sn,
+          academic_year: academicYear,
+        }));
+      if (toInsert.length) {
+        const { error: insErr } = await admin.from("daily_attendance").insert(toInsert);
+        if (insErr) console.error("iclock: attendance bulk insert failed:", insErr);
+      }
+
+      // (4) الأرقام غير المطابقة — للمراجعة (دفعة واحدة، بلا تكرار)
+      if (unmatchedUids.length) {
+        const rows = [...new Set(unmatchedUids)].map((u) => ({
+          device_uid: u,
+          punch_time: punchIso,
+          device_serial: sn,
+          resolved: false,
+        }));
+        await admin.from("unmatched_logs").insert(rows);
+      }
+
+      // الجهاز يتوقع OK متبوعًا بعدد السجلات المستلمة — نردّه فورًا
+      return text(`OK: ${rawUids.length}`);
     }
 
     // ---------- 3) استعلام الجهاز عن الأوامر ----------
