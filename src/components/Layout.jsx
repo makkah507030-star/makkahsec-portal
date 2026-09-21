@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { useTeacherHiddenTabs } from "../lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
@@ -45,6 +46,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
+      { to: "/notifications-review", label: "اعتماد الإشعارات", techOnly: true, icon: "check" },
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
     ],
@@ -132,6 +134,24 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+
+  // عدّاد الإشعارات المعلّقة بانتظار الاعتماد — للدعم الفني فقط
+  const [pendingReview, setPendingReview] = useState(0);
+  const isTech = (adminRoles ?? []).includes("tech_support");
+  useEffect(() => {
+    if (!isTech) return;
+    let alive = true;
+    const load = async () => {
+      const { count } = await supabase
+        .from("notification_drafts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      if (alive) setPendingReview(count ?? 0);
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [isTech, location.pathname]);
 
   const isAdmin = effectiveRole === "admin";
 
@@ -319,6 +339,11 @@ export default function Layout({ children }) {
                           <NavLink key={i.to} to={i.to} end={i.to === "/"} className={linkClass}>
                             <Icon name={i.icon} />
                             <span className="truncate">{i.label}</span>
+                            {i.to === "/notifications-review" && pendingReview > 0 && (
+                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {pendingReview}
+                              </span>
+                            )}
                           </NavLink>
                         ))}
                       </div>
@@ -374,6 +399,11 @@ export default function Layout({ children }) {
                                        onClick={() => setOpen(false)} className={linkClass}>
                                 <Icon name={i.icon} />
                                 <span className="truncate">{i.label}</span>
+                            {i.to === "/notifications-review" && pendingReview > 0 && (
+                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {pendingReview}
+                              </span>
+                            )}
                               </NavLink>
                             ))}
                           </div>
@@ -475,6 +505,11 @@ export default function Layout({ children }) {
                 <NavLink key={i.to} to={i.to} end={i.to === "/"}
                          onClick={() => setOpen(false)} className={linkClass}>
                   <span className="truncate">{i.label}</span>
+                            {i.to === "/notifications-review" && pendingReview > 0 && (
+                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {pendingReview}
+                              </span>
+                            )}
                 </NavLink>
               ))}
             </nav>

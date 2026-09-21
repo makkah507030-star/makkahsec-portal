@@ -17,6 +17,7 @@ import SubstitutePeriod from "./pages/teacher/SubstitutePeriod.jsx";
 import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
 import FollowUpLog from "./pages/teacher/FollowUpLog.jsx";
 import TeacherPermissions from "./pages/admin/TeacherPermissions.jsx";
+import NotificationsReview from "./pages/admin/NotificationsReview.jsx";
 import TeacherNotify from "./pages/teacher/TeacherNotify.jsx";
 import MySchedule from "./pages/teacher/MySchedule.jsx";
 import StudentHome from "./pages/StudentHome.jsx";
@@ -26,6 +27,7 @@ import AdminStaff from "./pages/admin/AdminStaff.jsx";
 import EnableNotifications from "./components/EnableNotifications.jsx";
 import NotificationView from "./pages/NotificationView.jsx";
 import NotificationsList from "./pages/NotificationsList.jsx";
+import NotifyGuide from "./pages/NotifyGuide.jsx";
 import Landing from "./pages/Landing.jsx";
 import NewsList from "./pages/NewsList.jsx";
 import Guides from "./pages/Guides.jsx";
@@ -196,6 +198,7 @@ export default function App() {
             {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
             {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
+            {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
             {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
             {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
@@ -263,6 +266,7 @@ export default function App() {
         <Route path="/contact" element={<Feedback />} />
         <Route path="/notifications-me" element={<NotificationsList />} />
         <Route path="/notify/:id" element={<NotificationView />} />
+        <Route path="/notify-guide" element={<NotifyGuide />} />
         <Route path="/ticket/:id" element={<TicketDetail />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="*" element={<Navigate to="/" replace />} />

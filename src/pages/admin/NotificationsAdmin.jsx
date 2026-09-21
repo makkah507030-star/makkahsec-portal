@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { KIND_META } from "../../lib/useNotifications";
@@ -43,12 +44,14 @@ export default function NotificationsAdmin() {
 /* ===================== الإرسال ===================== */
 
 function SendForm() {
-  const { profile } = useSession();
+  const { profile, session, adminRoles } = useSession();
+  const isTechSupport = (adminRoles ?? []).includes("tech_support");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [kind, setKind] = useState("general");
   const [imageFile, setImageFile] = useState(null);
   const [attachFile, setAttachFile] = useState(null);
+  const [youtube, setYoutube] = useState("");
   const [mode, setMode] = useState("roles"); // roles | class | people
 
   const [roles, setRoles] = useState(new Set(["teacher"]));
@@ -121,23 +124,20 @@ function SendForm() {
       p_is_auto: false,
     };
 
+    let targetRoles = null, targetUserIds = null;
     if (mode === "roles") {
-      args.p_roles = Array.from(roles);
+      args.p_roles = Array.from(roles); targetRoles = Array.from(roles);
     } else if (mode === "class") {
-      args.p_roles = Array.from(classRoles);
+      args.p_roles = Array.from(classRoles); targetRoles = Array.from(classRoles);
       if (grade) args.p_grade = grade;
       if (classNo) args.p_class_no = classNo;
     } else {
-      args.p_user_ids = picked.map((p) => p.id);
+      args.p_user_ids = picked.map((p) => p.id); targetUserIds = picked.map((p) => p.id);
     }
 
-    const { data, error } = await supabase.rpc("send_notification", args);
-
-    if (error) { setSending(false); setMsg({ ok: false, text: error.message }); return; }
-    if (!data)  { setSending(false); setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
-
-    // اسم المُرسِل + رفع الصورة (إن وُجدت) وربطهما بالإشعار قبل الدفع
     const senderName = profile?.full_name || "إدارة مدرسة مكة الثانوية";
+
+    // رفع الصورة والمرفق أولًا (يلزمان في مساري الإرسال والاعتماد)
     let imageUrl = null;
     if (imageFile) {
       try {
@@ -146,13 +146,9 @@ function SendForm() {
         const { error: upErr } = await supabase.storage
           .from("notification-images")
           .upload(path, blob, { contentType: "image/jpeg", upsert: false });
-        if (!upErr) {
-          imageUrl = supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
-        }
-      } catch { /* تجاهل فشل الصورة — يُرسَل الإشعار بدونها */ }
+        if (!upErr) imageUrl = supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
+      } catch { /* تجاهل فشل الصورة */ }
     }
-
-    // مرفق قابل للتحميل (PDF أو صورة) — يرفعه المُرسِل ليحمّله المستفيد
     let attachUrl = null, attachName = null;
     if (attachFile) {
       try {
@@ -165,36 +161,80 @@ function SendForm() {
           attachUrl = supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
           attachName = attachFile.name || "مرفق";
         }
-      } catch { /* تجاهل فشل المرفق — يُرسَل الإشعار بدونه */ }
+      } catch { /* تجاهل فشل المرفق */ }
+    }
+    const youtubeUrl = youtube.trim() || null;
+
+    // ============ مسار الإرسال المباشر (الدعم الفني فقط) ============
+    if (isTechSupport) {
+      const { data, error } = await supabase.rpc("send_notification", args);
+      if (error) { setSending(false); setMsg({ ok: false, text: error.message }); return; }
+      if (!data)  { setSending(false); setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
+
+      try {
+        await supabase.rpc("set_notification_meta", {
+          p_id: data, p_sender_name: senderName, p_image_url: imageUrl,
+          p_attachment_url: attachUrl, p_attachment_name: attachName, p_youtube_url: youtubeUrl,
+        });
+      } catch { /* تجاهل */ }
+
+      setSending(false);
+      try {
+        await fetch("/.netlify/functions/push-send", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notification_id: data }),
+        });
+      } catch { /* تجاهل */ }
+
+      setMsg({ ok: true, text: "أُرسل الإشعار." });
+      setTitle(""); setBody(""); setPicked([]); setImageFile(null); setAttachFile(null); setYoutube("");
+      return;
     }
 
-    try {
-      await supabase.rpc("set_notification_meta", {
-        p_id: data,
-        p_sender_name: senderName,
-        p_image_url: imageUrl,
-        p_attachment_url: attachUrl,
-        p_attachment_name: attachName,
-      });
-    } catch { /* تجاهل */ }
+    // ============ مسار الاعتماد (باقي حسابات الإدارة) ============
+    // يُحفظ كمسودّة بانتظار اعتماد الدعم الفني قبل الإرسال الفعلي.
+    const { error: draftErr } = await supabase.from("notification_drafts").insert({
+      title: args.p_title,
+      body: args.p_body,
+      kind,
+      image_url: imageUrl,
+      attachment_url: attachUrl,
+      attachment_name: attachName,
+      youtube_url: youtubeUrl,
+      target_mode: mode,
+      target_roles: targetRoles,
+      target_grade: args.p_grade,
+      target_class_no: args.p_class_no,
+      target_user_ids: targetUserIds,
+      sender_id: session?.user?.id,
+      sender_name: senderName,
+      status: "pending",
+    });
 
     setSending(false);
+    if (draftErr) { setMsg({ ok: false, text: "تعذّر الإرسال للاعتماد: " + draftErr.message }); return; }
 
-    // دفع الإشعار لجوالات المستلمين (Web Push) — لا يُعطّل الإرسال إن فشل
-    try {
-      await fetch("/.netlify/functions/push-send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notification_id: data }),
-      });
-    } catch { /* تجاهل — الإشعار داخل البوابة محفوظ على أي حال */ }
-
-    setMsg({ ok: true, text: "أُرسل الإشعار." });
-    setTitle(""); setBody(""); setPicked([]); setImageFile(null); setAttachFile(null);
+    setMsg({ ok: true, text: "أُرسل الإشعار للاعتماد لدى الدعم الفني، وستصلك نتيجة الاعتماد." });
+    setTitle(""); setBody(""); setPicked([]); setImageFile(null); setAttachFile(null); setYoutube("");
   };
 
   return (
     <div className="space-y-5">
+      <section className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+        <p className="text-sm leading-relaxed text-mint-deep">
+          الإشعارات تصل الآن إلى <b>جوال المستخدم مباشرة</b> بعد تفعيل الخدمة من حسابه
+          (إضافةً إلى ظهورها داخل البوابة).{" "}
+          <Link to="/notify-guide" className="font-semibold underline">
+            طريقة تفعيل الإشعارات ←
+          </Link>
+        </p>
+        {!isTechSupport && (
+          <p className="mt-2 border-t border-[#CCF2DB] pt-2 text-xs text-[#6AA786]">
+            ملاحظة: إشعاراتك تُرسَل بعد <b>اعتماد الدعم الفني</b>، وستصلك نتيجة الاعتماد.
+          </p>
+        )}
+      </section>
+
       <section className="card space-y-4 p-4">
         <div>
           <label className="text-xs text-muted">عنوان الإشعار</label>
@@ -256,6 +296,13 @@ function SendForm() {
                      onChange={(e) => setAttachFile(e.target.files?.[0] ?? null)} />
             </label>
           )}
+        </div>
+
+        <div>
+          <label className="text-xs text-muted">رابط يوتيوب (اختياري)</label>
+          <input className="field mt-1 num" dir="ltr" value={youtube}
+                 onChange={(e) => setYoutube(e.target.value)}
+                 placeholder="https://youtu.be/..." />
         </div>
       </section>
 
@@ -365,7 +412,9 @@ function SendForm() {
       )}
 
       <button className="btn-primary" onClick={send} disabled={!canSend || sending}>
-        {sending ? "جارٍ الإرسال…" : "إرسال الإشعار"}
+        {sending
+          ? "جارٍ الإرسال…"
+          : isTechSupport ? "إرسال الإشعار" : "إرسال للاعتماد"}
       </button>
     </div>
   );
