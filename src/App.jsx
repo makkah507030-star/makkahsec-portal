@@ -225,7 +225,7 @@ export default function App() {
             {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
             {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
-            {can("reports") && <Route path="/substitute-report" element={<SubstituteReport />} />}
+            {(can("import") || can("reports")) && <Route path="/substitute-report" element={<SubstituteReport />} />}
             {can("results") && (
               <Route
                 path="/results-admin"
@@ -236,14 +236,15 @@ export default function App() {
                 }
               />
             )}
-            {can("import") && (
+            {(can("import") || can("schedules")) && (
               <>
                 <Route path="/general-schedule" element={<GeneralScheduleMaster />} />
                 <Route path="/teacher-schedules" element={<TeacherSchedules />} />
                 <Route path="/student-schedules" element={<StudentSchedules />} />
-                <Route path="/schedule-import" element={<ScheduleImport />} />
               </>
             )}
+            {/* استيراد الجدول الذكي حسّاس — للاستيراد فقط، لا لصلاحية الجداول */}
+            {can("import") && <Route path="/schedule-import" element={<ScheduleImport />} />}
             {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
             {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
             {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
