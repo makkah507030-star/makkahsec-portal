@@ -8,6 +8,10 @@
 //    NETLIFY_API_TOKEN, NETLIFY_SITE_ID
 //    SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF
 //  ما لم يُضبط مفتاحه يعود كـ configured=false بدل أن يفشل.
+//
+//  GET  → مؤشرات المنصّات الحيّة.
+//  POST {action:"snapshot"} → حفظ لقطة اليوم يدويًا في site_status_snapshots.
+//  وتستورد الدالة المجدولة site-status-snapshot.mjs الدالة buildSnapshot من هنا.
 // =====================================================================
 
 const { createClient } = require("@supabase/supabase-js");
@@ -15,7 +19,7 @@ const { createClient } = require("@supabase/supabase-js");
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, content-type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 const json = (body, status = 200) => ({
   statusCode: status,
@@ -117,20 +121,143 @@ async function supabaseMetrics() {
   };
 }
 
+// =====================================================================
+//  اللقطة اليومية لملخّص الحالة
+// =====================================================================
+
+const adminClient = () =>
+  createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+// اليوم بتوقيت السعودية (UTC+3 بلا توقيت صيفي) وبداية اليوم بصيغة ISO
+const KSA_OFFSET_MS = 3 * 60 * 60 * 1000;
+function ksaDay(now = new Date()) {
+  const day = new Date(now.getTime() + KSA_OFFSET_MS).toISOString().slice(0, 10);
+  const startISO = new Date(Date.parse(`${day}T00:00:00Z`) - KSA_OFFSET_MS).toISOString();
+  return { day, startISO };
+}
+
+// نفس قواعد computeHealth في SiteMetrics.jsx — عدّلهما معًا عند تغيير أي حدّ
+const SEV_RANK = { ok: 0, info: 1, warn: 2, crit: 3 };
+const worst = (a, b) => (SEV_RANK[a] >= SEV_RANK[b] ? a : b);
+
+function computeHealth(app, plat) {
+  const checks = [];
+
+  const indMap = { none: "ok", minor: "warn", major: "crit", critical: "crit", maintenance: "info" };
+  const nfInd = plat?.status?.netlify?.indicator, sbInd = plat?.status?.supabase?.indicator;
+  if (nfInd || sbInd) {
+    checks.push({ area: "تقني", label: "حالة الخدمات الداعمة",
+      sev: worst(indMap[nfInd] ?? "info", indMap[sbInd] ?? "info"),
+      detail: `Netlify: ${plat?.status?.netlify?.description ?? "—"} · Supabase: ${plat?.status?.supabase?.description ?? "—"}` });
+  }
+
+  if (plat?.netlify?.configured && plat.netlify.published_deploy) {
+    const ready = plat.netlify.published_deploy.state === "ready";
+    checks.push({ area: "تقني", label: "آخر عملية نشر",
+      sev: ready ? "ok" : "warn",
+      detail: ready ? "اكتمل النشر بنجاح" : `الحالة: ${plat.netlify.published_deploy.state}` });
+  }
+
+  if (plat?.netlify?.bandwidth?.included) {
+    const { used, included } = plat.netlify.bandwidth;
+    const pct = Math.round((used / included) * 100);
+    checks.push({ area: "سعة", label: "استهلاك النطاق الترددي",
+      sev: pct >= 90 ? "crit" : pct >= 75 ? "warn" : "ok",
+      detail: `${pct}% من الحصة الشهرية` });
+  }
+
+  if (app?.pendingPw != null) {
+    const ratio = app.usersTotal ? app.pendingPw / app.usersTotal : 0;
+    checks.push({ area: "أمني", label: "حسابات بكلمة المرور الافتراضية",
+      sev: app.pendingPw === 0 ? "ok" : ratio > 0.2 ? "warn" : "info",
+      detail: `${app.pendingPw} حساب لم يغيّر كلمة المرور بعد` });
+  }
+
+  if (app?.failedToday != null) {
+    checks.push({ area: "أمني", label: "محاولات دخول فاشلة اليوم",
+      sev: app.failedToday >= 30 ? "crit" : app.failedToday >= 10 ? "warn" : "ok",
+      detail: `${app.failedToday} محاولة فاشلة` });
+  }
+
+  if (app?.drafts != null && app.drafts > 0) {
+    checks.push({ area: "تقني", label: "إشعارات بانتظار الاعتماد",
+      sev: "info", detail: `${app.drafts} بانتظار المراجعة` });
+  }
+
+  return { verdict: checks.reduce((v, c) => worst(v, c.sev), "ok"), checks };
+}
+
+async function collectAppStats(admin, startISO) {
+  const head = { count: "exact", head: true };
+  const C = async (q) => {
+    try { const r = await q; return r.error ? null : (r.count ?? null); } catch { return null; }
+  };
+  const [usersTotal, pendingPw, loginsToday, failedToday, drafts, tickets] = await Promise.all([
+    C(admin.from("users").select("id", head)),
+    C(admin.from("users").select("id", head).eq("must_change_pw", true)),
+    C(admin.from("login_log").select("id", head).eq("event_type", "login").eq("success", true).gte("created_at", startISO)),
+    C(admin.from("login_log").select("id", head).eq("event_type", "login").eq("success", false).gte("created_at", startISO)),
+    C(admin.from("notification_drafts").select("id", head).eq("status", "pending")),
+    C(admin.from("support_tickets").select("id", head).neq("status", "closed")),
+  ]);
+  return { usersTotal, pendingPw, loginsToday, failedToday, drafts, tickets };
+}
+
+const RETENTION_DAYS = 365;
+
+async function buildSnapshot(admin, source = "scheduled") {
+  const { day, startISO } = ksaDay();
+  const [status, netlify, supabase, app, dbr] = await Promise.all([
+    serviceStatus(),
+    netlifyMetrics(),
+    supabaseMetrics(),
+    collectAppStats(admin, startISO),
+    admin.rpc("admin_db_stats").then((r) => r, () => ({ error: true })),
+  ]);
+
+  const { verdict, checks } = computeHealth(app, { status, netlify, supabase });
+  const db = dbr?.error ? null : (dbr?.data ?? null);
+  const bw = netlify?.bandwidth;
+
+  const row = {
+    day,
+    verdict,
+    checks,
+    metrics: {
+      ...app,
+      db_bytes: db?.db_bytes ?? null,
+      storage_bytes: db?.storage_bytes ?? null,
+      bandwidth_pct: bw?.included ? Math.round((bw.used / bw.included) * 100) : null,
+    },
+    source,
+    created_at: new Date().toISOString(),
+  };
+
+  const { error } = await admin.from("site_status_snapshots").upsert(row, { onConflict: "day" });
+  if (error) throw new Error(`تعذّر حفظ اللقطة: ${error.message}`);
+
+  // الاحتفاظ بسنة واحدة فقط
+  const cutoff = new Date(Date.parse(`${day}T00:00:00Z`) - RETENTION_DAYS * 86400000)
+    .toISOString().slice(0, 10);
+  await admin.from("site_status_snapshots").delete().lt("day", cutoff);
+
+  return row;
+}
+
+// =====================================================================
+
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors, body: "" };
 
   // التحقق من هوية المستدعي: دعم فني أو مدير فقط
   try {
-    const url = process.env.SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const auth = event.headers.authorization || event.headers.Authorization || "";
     const token = auth.replace(/^Bearer\s+/i, "");
     if (!token) return json({ error: "غير مصرّح" }, 401);
 
-    const admin = createClient(url, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const admin = adminClient();
     const { data: u } = await admin.auth.getUser(token);
     const uid = u?.user?.id;
     if (!uid) return json({ error: "جلسة غير صالحة" }, 401);
@@ -141,6 +268,15 @@ exports.handler = async (event) => {
       (r) => r.role_type === "tech_support" || r.role_type === "principal",
     );
     if (!allowed) return json({ error: "هذه الصفحة للدعم الفني فقط" }, 403);
+
+    // حفظ لقطة اليوم يدويًا
+    if (event.httpMethod === "POST") {
+      let body = {};
+      try { body = JSON.parse(event.body || "{}"); } catch { body = {}; }
+      if (body.action !== "snapshot") return json({ error: "إجراء غير معروف" }, 400);
+      const snapshot = await buildSnapshot(admin, "manual");
+      return json({ ok: true, snapshot });
+    }
 
     const [status, netlify, supabase] = await Promise.all([
       serviceStatus(),
@@ -153,3 +289,7 @@ exports.handler = async (event) => {
     return json({ error: String(e?.message || e) }, 500);
   }
 };
+
+// للاستخدام من الدالة المجدولة
+exports.adminClient = adminClient;
+exports.buildSnapshot = buildSnapshot;
