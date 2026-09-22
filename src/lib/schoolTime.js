@@ -10,15 +10,6 @@ export const GRADE_NAMES = {
   1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي",
 };
 
-/** إجازات رسمية بتواريخ محددة (خارج نهاية الأسبوع). تُعامَل كيوم عطلة كامل:
- *  تختفي جداول اليوم والتحضير وإحصائيات اليوم في كل الشاشات تلقائيًا،
- *  ويظهر اسم الإجازة بدل «عطلة نهاية الأسبوع».
- *  المفتاح تاريخ ميلادي YYYY-MM-DD (بالتوقيت المحلي)، والقيمة اسم الإجازة. */
-export const HOLIDAYS = {
-  "2026-09-23": "إجازة اليوم الوطني",   // الأربعاء ١٢/٤/١٤٤٨هـ
-  "2026-09-24": "إجازة اليوم الوطني",   // الخميس ١٣/٤/١٤٤٨هـ
-};
-
 /** تاريخ اليوم بصيغة YYYY-MM-DD بالتوقيت المحلي */
 export function todayISO() {
   const d = new Date();
@@ -26,22 +17,38 @@ export function todayISO() {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-/** اسم الإجازة الرسمية لليوم إن وُجد، وإلا null */
+/** إجازات رسمية تُدار من صفحة «التقويم والإجازات» وتُحمّل من قاعدة البيانات
+ *  مرة واحدة عند إقلاع البوابة. أي يوم يقع داخل مدى إجازة مفعّلة يُعامَل
+ *  كيوم عطلة كامل في كل الشاشات (تختفي الجداول والتحضير وإحصائيات اليوم).
+ *  تبقى فارغة حتى يُستدعى setHolidayRanges بعد التحميل. */
+let HOLIDAY_RANGES = [];
+
+/** يُستدعى مرة عند إقلاع البوابة بعد جلب الإجازات المفعّلة.
+ *  rows: [{ name, start, end }] بتواريخ ميلادية YYYY-MM-DD. */
+export function setHolidayRanges(rows) {
+  HOLIDAY_RANGES = Array.isArray(rows) ? rows : [];
+}
+
+/** كائن الإجازة الرسمية لليوم { name } إن وقع اليوم داخل مداها، وإلا null */
 export function holidayToday() {
-  return HOLIDAYS[todayISO()] ?? null;
+  const t = todayISO();
+  const h = HOLIDAY_RANGES.find(
+    (r) => r.start && t >= r.start && t <= (r.end || r.start),
+  );
+  return h ? { name: h.name } : null;
 }
 
 /** يوم اليوم بترقيم النظام، و0 يعني يوم عطلة (نهاية أسبوع أو إجازة رسمية) */
 export function todayDow() {
-  if (HOLIDAYS[todayISO()]) return 0;  // إجازة رسمية → يوم عطلة كامل
+  if (holidayToday()) return 0;        // إجازة رسمية → يوم عطلة كامل
   const js = new Date().getDay();      // الأحد = 0
   const d = js + 1;
   return d >= 1 && d <= 5 ? d : 0;
 }
 
 export function todayLabel() {
-  const h = HOLIDAYS[todayISO()];
-  if (h) return h;                      // اسم الإجازة الرسمية
+  const h = holidayToday();
+  if (h) return h.name;                 // اسم الإجازة الرسمية
   const d = todayDow();
   return d ? DAY_NAMES[d] : "عطلة نهاية الأسبوع";
 }

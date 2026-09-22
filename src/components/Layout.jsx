@@ -59,6 +59,7 @@ const ADMIN_GROUPS = [
       { to: "/season",         label: "التوقيت الزمني",       perm: "import",         icon: "clock" },
       { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
       { to: "/staff",          label: "الإدارة",             perm: "staff",          icon: "shield" },
+      { to: "/calendar-admin", label: "التقويم والإجازات",   perm: "calendar",       icon: "calendar" },
       { to: "/password-reset", label: "استعادة كلمة المرور", perm: "password_reset", icon: "lock" },
     ],
   },
@@ -119,6 +120,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     wrench: "M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2Z",
     edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
     award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM8.2 13.5 6 21l6-3 6 3-2.2-7.5",
+    calendar: "M3 5h18v16H3zM3 10h18M8 3v4M16 3v4",
   }[name];
 
   return (

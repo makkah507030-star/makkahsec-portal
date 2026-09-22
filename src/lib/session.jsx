@@ -1,10 +1,35 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase, isConfigured } from "./supabase";
+import { setHolidayRanges, todayISO } from "./schoolTime";
 
 const SessionContext = createContext(null);
 
 // الأدوار التي تملك صلاحية كاملة دائمًا
 const SUPER_ROLES = ["principal", "tech_support"];
+
+// يُحمّل الإجازات الرسمية المفعّلة مرة واحدة عند إقلاع البوابة، ويخزّنها في
+// schoolTime حتى تعمل دوال اليوم/العطلة المتزامنة في كل الشاشات. لا يُعطّل
+// الدخول أبدًا لو فشل (يبقى بلا إجازات = أيام دراسية عادية).
+async function loadHolidays() {
+  try {
+    const iso = todayISO();
+    const { data } = await supabase
+      .from("academic_calendar")
+      .select("title, start_date, end_date")
+      .eq("kind", "holiday")
+      .eq("is_active", true)
+      .or(`end_date.gte.${iso},and(end_date.is.null,start_date.gte.${iso})`);
+    setHolidayRanges(
+      (data ?? []).map((r) => ({
+        name: r.title,
+        start: r.start_date,
+        end: r.end_date || r.start_date,
+      })),
+    );
+  } catch {
+    setHolidayRanges([]);
+  }
+}
 
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(null);
@@ -89,6 +114,7 @@ export function SessionProvider({ children }) {
       if (!alive) return;
       setSession(data.session ?? null);
       await loadProfile(data.session?.user?.id);
+      await loadHolidays();            // قبل عرض الصفحات حتى تكون حالة العطلة صحيحة من أول عرض
       if (alive) setLoading(false);
     });
 
@@ -276,6 +302,7 @@ export const PERMISSIONS = [
   { key: "staff",          label: "الإدارة",            desc: "أعضاء الإدارة وأدوارهم" },
   { key: "import",         label: "الاستيراد",          desc: "استيراد بيانات نور والتوقيت الزمني" },
   { key: "schedules",      label: "الجداول",            desc: "عرض الجدول العام وجداول المعلمين والطلاب (بلا الاستيراد الذكي)" },
+  { key: "calendar",       label: "التقويم والإجازات",   desc: "إضافة وتعديل إجازات المدرسة ومحطات التقويم الدراسي" },
   { key: "news",           label: "الأخبار والمقالات",   desc: "نشر أخبار المدرسة ومقالاتها" },
   { key: "guides",         label: "الأدلة",             desc: "رفع أدلة الاستخدام" },
   { key: "notifications",  label: "الإشعارات",          desc: "تعاميم وتنبيهات تصل على جوال المستخدم بعد تفعيل الخدمة" },
