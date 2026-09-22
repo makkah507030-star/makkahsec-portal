@@ -1,3 +1,4 @@
+// src/pages/MySignature.jsx
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";

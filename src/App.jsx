@@ -1,3 +1,4 @@
+// src/App.jsx
 import { Suspense, lazy, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
