@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
-import FormSheet, { PrintArea, SHEET_PX } from "../../components/FormSheet.jsx";
+import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -51,10 +51,12 @@ function SheetPreview({ landscape, children }) {
 
   const h = (landscape ? SHEET_PX.portrait : 1123) * scale + 16;
   return (
-    <div ref={box} className="w-full overflow-hidden">
-      <div style={{ height: h }}>
-        <div style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>
-          {children}
+    <div ref={box} className="w-full min-w-0 max-w-full overflow-hidden">
+      <div className="min-w-0" style={{ height: h }}>
+        <div className="w-0 min-w-0" style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>
+          <div style={{ width: landscape ? SHEET_PX.landscape : SHEET_PX.portrait }}>
+            {children}
+          </div>
         </div>
       </div>
     </div>
@@ -196,7 +198,10 @@ export default function Forms() {
     setEditing(null);
     setIssued(null); setMsg(null); setClassId(""); setChosen([]); setBatch([]);
     const init = {};
-    (t.fields ?? []).forEach((f) => { if (f.type === "date") init[f.name] = hijriToday(); });
+    (t.fields ?? []).forEach((f) => {
+      if (f.type === "date") init[f.name] = hijriToday();
+      else if (f.default) init[f.name] = f.default;
+    });
     setValues(init);
   };
 
@@ -257,6 +262,12 @@ export default function Forms() {
     if (se) { setSaving(false); setMsg({ ok: false, text: `تعذّر إصدار الرقم: ${se.message}` }); return; }
 
     const usesIssuer = picked.signature_source === "issuer" || picked.signature_source === "both";
+    // صفة المُصدِر كما تُطبع تحت توقيعه
+    const issuerRole =
+      (adminRoles ?? []).includes("principal") ? "مدير المدرسة"
+      : (adminRoles ?? []).includes("tech_support") ? "الدعم الفني"
+      : (adminRoles ?? []).length ? "الإدارة"
+      : "المعلم";
     const row = {
       template_id: picked.id,
       serial,
@@ -269,7 +280,7 @@ export default function Forms() {
       created_by: session.user.id,
       signature_path: usesIssuer ? mySig : null,
       signature_name: usesIssuer ? (profile?.full_name ?? profile?.username ?? "") : null,
-      signature_role: usesIssuer ? (adminRoles?.length ? "الإدارة" : "المعلم") : null,
+      signature_role: usesIssuer ? issuerRole : null,
       stamp_path: picked.show_stamp ? (assets.stamp ?? null) : null,
     };
 
@@ -420,8 +431,8 @@ export default function Forms() {
           </div>
         )}
 
-        <div className="no-print grid gap-4 lg:grid-cols-[320px,1fr]">
-          <section className="card space-y-3 p-4">
+        <div className="no-print grid min-w-0 gap-4 lg:grid-cols-[320px,minmax(0,1fr)]">
+          <section className="card min-w-0 space-y-3 p-4">
             {(picked.presets ?? []).length > 0 && (
               <div>
                 <p className="text-xs text-muted">صيغ جاهزة — اضغط إحداها لتعبئة السبب</p>
@@ -449,7 +460,31 @@ export default function Forms() {
                   {f.label}{f.required && <span className="text-absent"> *</span>}
                 </label>
 
-                {f.type === "student" ? (
+                {f.type === "theme" ? (
+                  <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                    {CERT_THEMES.map((t) => {
+                      const on = (values.theme || "classic") === t.key;
+                      return (
+                        <button key={t.key} type="button"
+                          onClick={() => setValues((v) => ({ ...v, theme: t.key }))}
+                          className={`rounded-sm2 border p-2 text-right transition-colors ${
+                            on ? "border-mint-deep bg-mint-tint" : "border-line hover:bg-canvas"}`}>
+                          <span className="flex items-center gap-2">
+                            <span className="h-6 w-8 shrink-0 rounded-[3px] border-[1.5px]"
+                                  style={{ borderColor: t.accent }}>
+                              <span className="mx-auto mt-[7px] block h-[3px] w-4 rounded"
+                                    style={{ background: t.accent, opacity: .5 }} />
+                            </span>
+                            <span className={`text-xs font-semibold ${on ? "text-mint-deep" : "text-ink"}`}>
+                              {t.label}
+                            </span>
+                          </span>
+                          <span className="mt-1 block text-[10.5px] leading-tight text-faint">{t.hint}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : f.type === "student" ? (
                   <div className="mt-1 space-y-2">
                     <select className="field w-full" value={classId} onChange={(e) => setClassId(e.target.value)}>
                       <option value="">اختر الفصل…</option>
@@ -511,6 +546,13 @@ export default function Forms() {
                 : picked.requires_approval ? "إرسال للاعتماد" : "إصدار وحفظ"}
             </button>
 
+            {issued && issued.status === "issued" && picked.orientation === "landscape" && (
+              <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs leading-relaxed text-mint-deep">
+                في نافذة الطباعة: اجعل الاتجاه <b>أفقيًا</b> والهوامش <b>بلا هوامش</b>،
+                وفعّل <b>طباعة الخلفيات</b> ليظهر الشعاران بلونيهما.
+              </p>
+            )}
+
             {issued && issued.status === "issued" && (
               <button className="w-full rounded-sm2 border border-line py-2 text-sm text-mint-deep hover:bg-canvas"
                       onClick={printNow}>
@@ -532,7 +574,7 @@ export default function Forms() {
             )}
           </section>
 
-          <section>
+          <section className="min-w-0 overflow-hidden">
             <p className="mb-1.5 text-xs text-muted">
               معاينة {batch.length > 1 ? `الشهادة الأولى من ${batch.length}` : "مصغّرة"} — الطباعة بالمقاس الأصلي
             </p>
