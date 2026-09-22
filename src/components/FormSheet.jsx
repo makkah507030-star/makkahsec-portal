@@ -238,11 +238,13 @@ function Certificate(p) {
         />
 
         {theme === "modern" && (
-          <div className="-mx-[22mm] mt-4 h-[5mm]"
+          <div className="-mx-[22mm] mt-7 h-[5mm]"
                style={{ background: "linear-gradient(90deg,#3E6350 0%,#6AA786 50%,#89D7AD 100%)", ...INK }} />
         )}
 
-        <div className="mt-3"><Foot serial={doc?.serial} hairline={false} /></div>
+        <div className={theme === "modern" ? "mt-4" : "mt-8"}>
+          <Foot serial={doc?.serial} hairline={false} />
+        </div>
       </div>
     </div>
   );
@@ -303,7 +305,7 @@ function Official(p) {
           stampUrl={p.stampUrl}
         />
       </div>
-      <div className="mt-4"><Foot serial={doc?.serial} /></div>
+      <div className="mt-7"><Foot serial={doc?.serial} /></div>
     </div>
   );
 }
@@ -334,7 +336,7 @@ function Administrative(p) {
           stampUrl={p.stampUrl}
         />
       </div>
-      <div className="mt-4"><Foot serial={doc?.serial} /></div>
+      <div className="mt-7"><Foot serial={doc?.serial} /></div>
     </div>
   );
 }
