@@ -18,6 +18,8 @@ const GOV_LINES = [
 
 export const SHEET_PX = { portrait: 794, landscape: 1123 };
 
+const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
+
 export function PrintArea({ landscape, children }) {
   return (
     <>
@@ -54,13 +56,27 @@ function Head({ small }) {
   );
 }
 
-function Foot({ serial, hairline = true }) {
+/* فاصل متدرّج: لونه في الوسط ويخفت عند الجانبين */
+function Rule({ color = "#3E6350", thick = false, className = "" }) {
   return (
-    <div className={`flex items-center justify-between gap-3 ${hairline ? "border-t border-line pt-2.5" : ""} text-[10.5px] text-faint`}>
+    <div className={`w-full ${thick ? "h-[2px]" : "h-px"} ${className}`}
+         style={{
+           background: `linear-gradient(90deg, transparent 0%, ${color}22 12%, ${color} 50%, ${color}22 88%, transparent 100%)`,
+           ...INK,
+         }} />
+  );
+}
+
+function Foot({ serial, hairline = true, color = "#3E6350" }) {
+  return (
+    <>
+      {hairline && <div className="mb-2.5"><Rule color={color} /></div>}
+      <div className="flex items-center justify-between gap-3 text-[10.5px] text-faint">
       <span>بوابة مكة الثانوية الرقمية</span>
       {serial && <span className="num">رقم المستند: {serial}</span>}
-      <span className="font-semibold text-mint-deep" dir="ltr">makkahsec.com</span>
-    </div>
+        <span className="font-semibold text-mint-deep" dir="ltr">makkahsec.com</span>
+      </div>
+    </>
   );
 }
 
@@ -104,58 +120,22 @@ function Signatures({ source, issuerUrl, issuerName, issuerRole, principalUrl, p
    الذهبي #B8912F مع أخضر الهوية، وكلها خطوط رفيعة توفّر الحبر. */
 export const CERT_THEMES = [
   { key: "classic", label: "الكلاسيكي",  accent: "#3E6350", hint: "إطار مزدوج بأخضر الهوية" },
-  { key: "gold",    label: "الذهبي",     accent: "#B8912F", hint: "خط ذهبي وزخرفة ركنية" },
-  { key: "medal",   label: "الوسام",     accent: "#B8912F", hint: "وسام ذهبي أعلى الشهادة" },
-  { key: "modern",  label: "الحديث",     accent: "#3E6350", hint: "شريط جانبي وخطوط نظيفة" },
-  { key: "ornate",  label: "المزخرف",    accent: "#6AA786", hint: "حافة بمعيّنات متتابعة" },
+  { key: "gold",    label: "الذهبي",     accent: "#B8912F", hint: "ثلاثة خطوط ذهبية وخضراء" },
+  { key: "medal",   label: "الوسام",     accent: "#B8912F", hint: "شعار المدرسة داخل وسام ذهبي" },
+  { key: "modern",  label: "الحديث",     accent: "#3E6350", hint: "بلا إطار — مساحة مفتوحة وشريط سفلي" },
+  { key: "ornate",  label: "المزخرف",    accent: "#B8912F", hint: "ثلاثة إطارات متداخلة" },
 ];
 
-const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
-
-/* زخرفة الركن: ثلاثة أقواس مستوحاة من طبقات شعار المدرسة */
-function Corner({ pos, c1, c2, c3, dot }) {
-  const m = {
-    tr: "top-[6mm] right-[6mm]",
-    tl: "top-[6mm] left-[6mm] -scale-x-100",
-    br: "bottom-[6mm] right-[6mm] -scale-y-100",
-    bl: "bottom-[6mm] left-[6mm] -scale-100",
-  }[pos];
-  return (
-    <svg viewBox="0 0 90 90" className={`pointer-events-none absolute ${m} h-[22mm] w-[22mm]`}
-         fill="none" strokeLinecap="round" strokeLinejoin="round" style={INK}>
-      <path d="M6 40 V14 a8 8 0 0 1 8-8 h26" stroke={c1} strokeWidth="1.6" />
-      <path d="M13 44 V19 a6 6 0 0 1 6-6 h25" stroke={c2} strokeWidth="1.1" />
-      <path d="M20 48 V24 a4 4 0 0 1 4-4 h24" stroke={c3} strokeWidth="0.9" />
-      <path d="M9 9 l4 4 -4 4 -4 -4 z" fill={dot} />
-    </svg>
-  );
-}
-
-/* حافة بمعيّنات متتابعة — للقالب المزخرف */
-function DiamondEdge({ vertical, color }) {
-  const n = vertical ? 13 : 19;
-  return (
-    <div className={`pointer-events-none absolute flex ${vertical ? "flex-col" : ""} items-center justify-between`}
-         style={vertical
-           ? { top: "14mm", bottom: "14mm", [`${"left"}`]: undefined }
-           : { left: "14mm", right: "14mm" }}>
-      {Array.from({ length: n }).map((_, i) => (
-        <span key={i} className="h-[3px] w-[3px] rotate-45" style={{ background: color, ...INK }} />
-      ))}
-    </div>
-  );
-}
-
-/* وسام دائري بطبقات الشعار — للقالب "الوسام" */
+/* وسام دائري يحمل شعار المدرسة الرسمي — للقالب "الوسام" */
 function Medal({ color }) {
   return (
-    <svg viewBox="0 0 64 64" className="h-[18mm] w-[18mm]" fill="none" style={INK}>
-      <circle cx="32" cy="32" r="29" stroke={color} strokeWidth="1.3" />
-      <circle cx="32" cy="32" r="24" stroke="#CCF2DB" strokeWidth="1" />
-      <path d="M32 16 L45 22 L32 28 L19 22 Z" fill="#3E6350" />
-      <path d="M32 26 L45 32 L32 38 L19 32 Z" fill="#6AA786" />
-      <path d="M32 36 L45 42 L32 48 L19 42 Z" fill="#89D7AD" />
-    </svg>
+    <span className="relative grid h-[20mm] w-[20mm] place-items-center">
+      <span className="absolute inset-0 rounded-full border-[1.5px]"
+            style={{ borderColor: color, ...INK }} />
+      <span className="absolute inset-[2.2mm] rounded-full border"
+            style={{ borderColor: "#CCF2DB", ...INK }} />
+      <img src={logoIcon} alt="" className="h-[11mm] w-auto object-contain" />
+    </span>
   );
 }
 
@@ -166,10 +146,6 @@ function Frame({ theme }) {
         <div className="absolute inset-[7mm] border-[1.5px]" style={{ borderColor: "#B8912F", ...INK }} />
         <div className="absolute inset-[9.5mm] border" style={{ borderColor: "#3E6350", ...INK }} />
         <div className="absolute inset-[11mm] border" style={{ borderColor: "#EADFBF", ...INK }} />
-        <Corner pos="tr" c1="#B8912F" c2="#D8BC72" c3="#3E6350" dot="#B8912F" />
-        <Corner pos="tl" c1="#B8912F" c2="#D8BC72" c3="#3E6350" dot="#B8912F" />
-        <Corner pos="br" c1="#B8912F" c2="#D8BC72" c3="#3E6350" dot="#B8912F" />
-        <Corner pos="bl" c1="#B8912F" c2="#D8BC72" c3="#3E6350" dot="#B8912F" />
       </>
     );
   }
@@ -184,30 +160,18 @@ function Frame({ theme }) {
     );
   }
   if (theme === "modern") {
+    // بلا إطار محيط: مساحة بيضاء مفتوحة وخط سفلي عريض يحمل تدرّج الهوية
     return (
-      <>
-        {/* شريط جانبي متدرّج على حافة اليمين */}
-        <div className="absolute inset-y-0 right-0 w-[14mm]"
-             style={{ background: "linear-gradient(180deg,#3E6350 0%,#6AA786 55%,#89D7AD 100%)", ...INK }} />
-        <div className="absolute inset-y-[10mm] right-[17mm] w-px" style={{ background: "#CCF2DB", ...INK }} />
-        <div className="absolute bottom-[10mm] left-[10mm] right-[17mm] h-px"
-             style={{ background: "#CCF2DB", ...INK }} />
-        <div className="absolute top-[10mm] left-[10mm] right-[17mm] h-px"
-             style={{ background: "#CCF2DB", ...INK }} />
-      </>
+      <div className="absolute inset-x-0 bottom-0 h-[6mm]"
+           style={{ background: "linear-gradient(90deg,#3E6350 0%,#6AA786 50%,#89D7AD 100%)", ...INK }} />
     );
   }
   if (theme === "ornate") {
     return (
       <>
         <div className="absolute inset-[7mm] border" style={{ borderColor: "#3E6350", ...INK }} />
-        <div className="absolute inset-[12mm] border" style={{ borderColor: "#CCF2DB", ...INK }} />
-        <div className="absolute inset-x-[7mm] top-[9.5mm]"><DiamondEdge color="#B8912F" /></div>
-        <div className="absolute inset-x-[7mm] bottom-[9.5mm]"><DiamondEdge color="#B8912F" /></div>
-        <Corner pos="tr" c1="#3E6350" c2="#6AA786" c3="#B8912F" dot="#3E6350" />
-        <Corner pos="tl" c1="#3E6350" c2="#6AA786" c3="#B8912F" dot="#3E6350" />
-        <Corner pos="br" c1="#3E6350" c2="#6AA786" c3="#B8912F" dot="#3E6350" />
-        <Corner pos="bl" c1="#3E6350" c2="#6AA786" c3="#B8912F" dot="#3E6350" />
+        <div className="absolute inset-[11mm] border" style={{ borderColor: "#B8912F", ...INK }} />
+        <div className="absolute inset-[13mm] border" style={{ borderColor: "#CCF2DB", ...INK }} />
       </>
     );
   }
@@ -216,10 +180,6 @@ function Frame({ theme }) {
     <>
       <div className="absolute inset-[7mm] border-[1.5px] border-mint-deep" style={INK} />
       <div className="absolute inset-[9.5mm] border border-[#CCF2DB]" style={INK} />
-      <Corner pos="tr" c1="#3E6350" c2="#6AA786" c3="#89D7AD" dot="#3E6350" />
-      <Corner pos="tl" c1="#3E6350" c2="#6AA786" c3="#89D7AD" dot="#3E6350" />
-      <Corner pos="br" c1="#3E6350" c2="#6AA786" c3="#89D7AD" dot="#3E6350" />
-      <Corner pos="bl" c1="#3E6350" c2="#6AA786" c3="#89D7AD" dot="#3E6350" />
     </>
   );
 }
@@ -231,39 +191,33 @@ function Certificate(p) {
   const accent = t.accent;
   const gradient = theme === "gold" || theme === "medal"
     ? "linear-gradient(180deg,#FAF5E8 0%,#FCFAF4 55%,#FFFFFF 100%)"
-    : theme === "modern" ? "none"
     : "linear-gradient(180deg,#EDFAF2 0%,#F7FCF9 55%,#FFFFFF 100%)";
 
   return (
     <div className="relative h-full overflow-hidden">
-      {gradient !== "none" && (
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[62mm]"
-             style={{ background: gradient, ...INK }} />
-      )}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[55mm]"
+           style={{ background: gradient, ...INK }} />
 
       <Frame theme={theme} />
 
-      <div className={`relative flex h-full flex-col pb-[13mm] pt-[13mm] ${
-        theme === "modern" ? "pl-[20mm] pr-[26mm]" : "px-[22mm]"}`}>
+      <div className={`relative flex h-full flex-col px-[22mm] pt-[13mm] ${
+        theme === "modern" ? "pb-[16mm]" : "pb-[13mm]"}`}>
         <Head small />
-
-        <div className="mt-3 text-center">
-          {theme === "medal" && (
-            <div className="mb-2 flex justify-center"><Medal color={accent} /></div>
-          )}
-          <h1 className="text-[38px] font-bold leading-none"
-              style={{ color: theme === "gold" ? "#3E6350" : "#3E6350" }}>
-            شهادة شكر وتقدير
-          </h1>
-          <div className="mt-2.5 flex items-center justify-center gap-2">
-            <span className="h-px w-20" style={{ background: accent, opacity: .45, ...INK }} />
-            <span className="h-1.5 w-1.5 rotate-45" style={{ background: accent, ...INK }} />
-            <span className="h-px w-20" style={{ background: accent, opacity: .45, ...INK }} />
-          </div>
-        </div>
+        <div className="mt-3"><Rule color={accent} /></div>
 
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <p className="text-[15px] text-muted">تتقدّم مدرسة مكة الثانوية بالشكر والتقدير إلى</p>
+          {theme === "medal" && (
+            <div className="mb-3 flex justify-center"><Medal color={accent} /></div>
+          )}
+
+          <h1 className="text-[38px] font-bold leading-none text-mint-deep">شهادة شكر وتقدير</h1>
+          <div className="mt-2.5 flex items-center gap-2">
+            <span className="h-px w-16" style={{ background: accent, opacity: .45, ...INK }} />
+            <span className="h-1.5 w-1.5 rotate-45" style={{ background: accent, ...INK }} />
+            <span className="h-px w-16" style={{ background: accent, opacity: .45, ...INK }} />
+          </div>
+
+          <p className="mt-7 text-[15px] text-muted">تتقدّم مدرسة مكة الثانوية بالشكر والتقدير إلى</p>
           <p className="mt-2 text-[32px] font-bold leading-tight text-ink">{v.recipient || "…"}</p>
           {(v.class_label || v.job) && (
             <p className="mt-1 text-[14px] text-mint-hover">{v.class_label || v.job}</p>
@@ -279,6 +233,8 @@ function Certificate(p) {
 
           <p className="num mt-3 text-[13px] text-muted">{v.date || ""}</p>
         </div>
+
+        <div className="mb-4"><Rule color={accent} /></div>
 
         <Signatures
           source={template.signature_source}
@@ -299,7 +255,8 @@ function Official(p) {
   const isLetter = template.key === "official_letter";
   return (
     <div className="flex h-full flex-col p-[16mm]">
-      <div className="border-b-2 border-mint-deep pb-3"><Head /></div>
+      <Head />
+      <div className="mt-3"><Rule color="#3E6350" thick /></div>
 
       <div className="flex flex-wrap gap-6 pt-3 text-[12.5px] text-muted">
         {v.number && <span>الرقم: <b className="num text-ink">{v.number}</b></span>}
@@ -357,7 +314,8 @@ function Administrative(p) {
   const { v, doc, template } = p;
   return (
     <div className="flex h-full flex-col p-[16mm]">
-      <div className="border-b-2 border-mint-deep pb-3"><Head /></div>
+      <Head />
+      <div className="mt-3"><Rule color="#3E6350" thick /></div>
       <h1 className="mt-5 text-center text-[21px] font-bold text-ink">{template.title}</h1>
 
       <div className="mt-5 flex-1 space-y-2">
