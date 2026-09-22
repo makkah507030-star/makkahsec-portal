@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+// src/pages/admin/Forms.jsx
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
-import FormSheet from "../../components/FormSheet.jsx";
+import FormSheet, { PrintArea, SHEET_PX } from "../../components/FormSheet.jsx";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -23,12 +24,42 @@ const hijriYear = () => {
   } catch { return new Date().getFullYear() - 579; }
 };
 
+// التاريخ الهجري بصيغة رقمية: يوم/شهر/سنة — بلا أسماء شهور ولا حرف الهاء
 const hijriToday = () => {
   try {
-    return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura",
-      { day: "numeric", month: "long", year: "numeric" }).format(new Date()) + "هـ";
+    const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura",
+      { day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(new Date());
+    const g = (t) => parts.find((x) => x.type === t)?.value ?? "";
+    return `${g("day")}/${g("month")}/${String(g("year")).replace(/\D/g, "")}`;
   } catch { return ""; }
 };
+
+/* معاينة مصغّرة: تُقاس عرض الحاوية فتُصغَّر الورقة لتناسبها */
+function SheetPreview({ landscape, children }) {
+  const box = useRef(null);
+  const [scale, setScale] = useState(0.5);
+  useLayoutEffect(() => {
+    const fit = () => {
+      const w = box.current?.clientWidth ?? 0;
+      const sheet = landscape ? SHEET_PX.landscape : SHEET_PX.portrait;
+      if (w) setScale(Math.min(1, Math.max(0.25, (w - 8) / sheet)));
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [landscape]);
+
+  const h = (landscape ? SHEET_PX.portrait : 1123) * scale + 16;
+  return (
+    <div ref={box} className="w-full overflow-hidden">
+      <div style={{ height: h }}>
+        <div style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const signedUrl = async (path) => {
   if (!path) return null;
@@ -67,6 +98,8 @@ export default function Forms() {
   const [classes, setClasses] = useState([]);
   const [classId, setClassId] = useState("");
   const [students, setStudents] = useState([]);
+  const [chosen, setChosen] = useState([]);      // طلاب متعددون لشهادة واحدة لكل طالب
+  const [batch, setBatch] = useState([]);        // مستندات صدرت دفعة واحدة للطباعة
 
   useEffect(() => {
     (async () => {
@@ -74,11 +107,12 @@ export default function Forms() {
         supabase.from("form_templates")
           .select("*").eq("is_active", true).order("sort_order"),
         supabase.from("user_signatures").select("path").eq("user_id", session.user.id).maybeSingle(),
-        supabase.from("school_assets").select("key, path"),
+        supabase.from("school_assets").select("key, path, label"),
       ]);
       setTemplates(t ?? []);
       setMySig(sig?.path ?? null);
       const am = Object.fromEntries((a ?? []).map((r) => [r.key, r.path]));
+      am.principal_name = (a ?? []).find((r) => r.key === "principal_signature")?.label ?? "";
       setAssets(am);
       setUrls({
         sig: await signedUrl(sig?.path),
@@ -151,6 +185,7 @@ export default function Forms() {
     const t = templates.find((x) => x.id === d.template_id) ?? d.form_templates;
     if (!t) { setMsg({ ok: false, text: "النموذج لم يعد متاحًا." }); return; }
     setEditing(d);
+    setChosen([]); setBatch([]);
     setPicked({ ...t, id: d.template_id });
     setValues(d.data ?? {});
     setIssued(null); setMsg(null); setClassId("");
@@ -159,16 +194,33 @@ export default function Forms() {
   const start = (t) => {
     setPicked(t);
     setEditing(null);
-    setIssued(null); setMsg(null); setClassId("");
+    setIssued(null); setMsg(null); setClassId(""); setChosen([]); setBatch([]);
     const init = {};
     (t.fields ?? []).forEach((f) => { if (f.type === "date") init[f.name] = hijriToday(); });
     setValues(init);
   };
 
+  const multi = chosen.length > 1;
+
   const missing = useMemo(() => {
     if (!picked) return [];
-    return (picked.fields ?? []).filter((f) => f.required && !String(values[f.name] ?? "").trim());
-  }, [picked, values]);
+    return (picked.fields ?? []).filter((f) => {
+      if (f.type === "student") return f.required && chosen.length === 0;
+      return f.required && !String(values[f.name] ?? "").trim();
+    });
+  }, [picked, values, chosen]);
+
+  const toggleStudent = (st) => {
+    setChosen((c) => {
+      const next = c.some((x) => x.id === st.id) ? c.filter((x) => x.id !== st.id) : [...c, st];
+      setValues((v) => ({
+        ...v,
+        student_id: next[0]?.id ?? null,
+        recipient: next[0]?.full_name ?? "",
+      }));
+      return next;
+    });
+  };
 
   const issue = async () => {
     if (!picked || missing.length) {
@@ -221,16 +273,40 @@ export default function Forms() {
       stamp_path: picked.show_stamp ? (assets.stamp ?? null) : null,
     };
 
-    const { data, error } = await supabase.from("form_documents").insert(row).select().single();
+    // شهادة لكل طالب مختار، لكل واحدة رقمها التسلسلي
+    const targets = chosen.length ? chosen : [null];
+    const rows = [];
+    for (let i = 0; i < targets.length; i++) {
+      const st = targets[i];
+      let sr = serial;
+      if (i > 0) {
+        const { data: more, error: me } = await supabase
+          .rpc("next_form_serial", { p_category: picked.category, p_hijri_year: year });
+        if (me) { setSaving(false); setMsg({ ok: false, text: me.message }); return; }
+        sr = more;
+      }
+      rows.push({
+        ...row,
+        serial: sr,
+        recipient: st ? st.full_name : row.recipient,
+        student_id: st ? st.id : row.student_id,
+        data: st ? { ...values, recipient: st.full_name, student_id: st.id } : values,
+      });
+    }
+
+    const { data, error } = await supabase.from("form_documents").insert(rows).select();
     setSaving(false);
     if (error) { setMsg({ ok: false, text: `تعذّر الحفظ: ${error.message}` }); return; }
 
-    setIssued(data);
+    setIssued(data[0]);
+    setBatch(data);
     setMsg({
       ok: true,
       text: picked.requires_approval
-        ? `حُفظ برقم ${serial} — بانتظار اعتماد المدير قبل الطباعة.`
-        : `صدر برقم ${serial}.`,
+        ? `حُفظ ${data.length > 1 ? `${data.length} مستندات` : `برقم ${data[0].serial}`} — بانتظار اعتماد المدير قبل الطباعة.`
+        : data.length > 1
+          ? `صدرت ${data.length} شهادات — اضغط طباعة لإخراجها دفعة واحدة.`
+          : `صدر برقم ${data[0].serial}.`,
     });
   };
 
@@ -279,12 +355,26 @@ export default function Forms() {
               : <span className="text-xs text-muted">لا يُطبع قبل الاعتماد</span>}
           </div>
         </div>
-        <div className="no-print overflow-x-auto">
-          <FormSheet template={viewing.template} values={d.data} doc={d}
-                     sigUrl={printable ? viewing.sig : null}
-                     stampUrl={printable ? viewing.stamp : null}
-                     principalSigUrl={printable ? viewing.principal : null} />
+        <div className="no-print">
+          <SheetPreview landscape={viewing.template.orientation === "landscape"}>
+            <FormSheet template={viewing.template} values={d.data} doc={d}
+                       sigUrl={printable ? viewing.sig : null}
+                       stampUrl={printable ? viewing.stamp : null}
+                       principalSigUrl={printable ? viewing.principal : null}
+                       principalName={assets.principal_name} />
+          </SheetPreview>
         </div>
+
+        {printable && (
+          <div className="hidden print:block">
+            <PrintArea landscape={viewing.template.orientation === "landscape"}>
+              <FormSheet template={viewing.template} values={d.data} doc={d}
+                         sigUrl={viewing.sig} stampUrl={viewing.stamp}
+                         principalSigUrl={viewing.principal}
+                         principalName={assets.principal_name} />
+            </PrintArea>
+          </div>
+        )}
       </div>
     );
   }
@@ -305,6 +395,21 @@ export default function Forms() {
           </button>
         </div>
 
+        {/* منطقة الطباعة: مخفية على الشاشة، تظهر عند الطباعة فقط */}
+        {batch.length > 0 && batch[0].status !== "pending" && (
+          <div className="hidden print:block">
+            <PrintArea landscape={picked.orientation === "landscape"}>
+              {batch.map((b) => (
+                <FormSheet key={b.id} template={picked} values={b.data} doc={b}
+                           sigUrl={urls.sig}
+                           stampUrl={picked.show_stamp ? urls.stamp : null}
+                           principalSigUrl={urls.principal}
+                           principalName={assets.principal_name} />
+              ))}
+            </PrintArea>
+          </div>
+        )}
+
         {editing?.decision_note && (
           <div className="no-print rounded-card border border-absent/30 bg-absent/5 px-4 py-3">
             <p className="text-sm font-semibold text-absent">أعاد المدير هذا النموذج للتعديل</p>
@@ -317,6 +422,27 @@ export default function Forms() {
 
         <div className="no-print grid gap-4 lg:grid-cols-[320px,1fr]">
           <section className="card space-y-3 p-4">
+            {(picked.presets ?? []).length > 0 && (
+              <div>
+                <p className="text-xs text-muted">صيغ جاهزة — اضغط إحداها لتعبئة السبب</p>
+                <div className="mt-1.5 space-y-1.5">
+                  {picked.presets.map((t, i) => {
+                    const field = picked.preset_field || "reason";
+                    const on = values[field] === t;
+                    return (
+                      <button key={i} type="button"
+                        onClick={() => setValues((v) => ({ ...v, [field]: t }))}
+                        className={`w-full rounded-sm2 border px-3 py-2 text-right text-xs leading-relaxed transition-colors ${
+                          on ? "border-mint-deep bg-mint-tint text-mint-deep"
+                             : "border-line text-muted hover:bg-canvas"}`}>
+                        {t}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {(picked.fields ?? []).map((f) => (
               <div key={f.name}>
                 <label className="text-xs text-muted">
@@ -331,15 +457,35 @@ export default function Forms() {
                         <option key={c.id} value={c.id}>فصل {c.class_no}</option>
                       ))}
                     </select>
-                    <select className="field w-full" value={values.student_id ?? ""}
-                            onChange={(e) => {
-                              const s = students.find((x) => x.id === e.target.value);
-                              setValues((v) => ({ ...v, student_id: e.target.value, recipient: s?.full_name ?? "" }));
-                            }}
-                            disabled={!classId}>
-                      <option value="">اختر الطالب…</option>
-                      {students.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-                    </select>
+
+                    {classId && (
+                      <div className="max-h-56 overflow-y-auto rounded-sm2 border border-line">
+                        {students.map((st) => {
+                          const on = chosen.some((x) => x.id === st.id);
+                          return (
+                            <button key={st.id} type="button" onClick={() => toggleStudent(st)}
+                              className={`flex w-full items-center gap-2 border-b border-line px-3 py-2 text-right text-sm last:border-b-0 ${
+                                on ? "bg-mint-tint text-mint-deep" : "text-ink hover:bg-canvas"}`}>
+                              <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border text-[10px] ${
+                                on ? "border-mint-deep bg-mint-deep text-white" : "border-line"}`}>
+                                {on ? "✓" : ""}
+                              </span>
+                              <span className="truncate">{st.full_name}</span>
+                            </button>
+                          );
+                        })}
+                        {students.length === 0 && (
+                          <p className="px-3 py-3 text-xs text-muted">لا طلاب في هذا الفصل.</p>
+                        )}
+                      </div>
+                    )}
+
+                    {chosen.length > 0 && (
+                      <p className="text-xs text-mint-deep">
+                        اخترت <span className="num">{chosen.length}</span> طالبًا — ستصدر شهادة لكل واحد،
+                        وتُطبع كلها دفعة واحدة.
+                      </p>
+                    )}
                   </div>
                 ) : f.type === "textarea" ? (
                   <textarea rows={4} className="field mt-1 w-full" value={values[f.name] ?? ""}
@@ -365,10 +511,17 @@ export default function Forms() {
                 : picked.requires_approval ? "إرسال للاعتماد" : "إصدار وحفظ"}
             </button>
 
-            {issued && (issued.status === "issued") && (
+            {issued && issued.status === "issued" && (
               <button className="w-full rounded-sm2 border border-line py-2 text-sm text-mint-deep hover:bg-canvas"
                       onClick={printNow}>
-                طباعة
+                {batch.length > 1 ? `طباعة ${batch.length} شهادات` : "طباعة"}
+              </button>
+            )}
+
+            {issued && (
+              <button className="w-full rounded-sm2 border border-line py-2 text-sm text-muted hover:bg-canvas"
+                      onClick={() => start(picked)}>
+                إصدار نموذج جديد
               </button>
             )}
 
@@ -379,13 +532,19 @@ export default function Forms() {
             )}
           </section>
 
-          <section className="overflow-x-auto">
-            <FormSheet
-              template={picked} values={values} doc={d}
-              sigUrl={showSign ? urls.sig : null}
-              stampUrl={showSign && picked.show_stamp ? urls.stamp : null}
-              principalSigUrl={showSign ? urls.principal : null}
-            />
+          <section>
+            <p className="mb-1.5 text-xs text-muted">
+              معاينة {batch.length > 1 ? `الشهادة الأولى من ${batch.length}` : "مصغّرة"} — الطباعة بالمقاس الأصلي
+            </p>
+            <SheetPreview landscape={picked.orientation === "landscape"}>
+              <FormSheet
+                template={picked} values={values} doc={d}
+                sigUrl={showSign ? urls.sig : null}
+                stampUrl={showSign && picked.show_stamp ? urls.stamp : null}
+                principalSigUrl={showSign ? urls.principal : null}
+                principalName={assets.principal_name}
+              />
+            </SheetPreview>
           </section>
         </div>
       </div>

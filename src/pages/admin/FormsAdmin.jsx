@@ -1,3 +1,4 @@
+// src/pages/admin/FormsAdmin.jsx
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
@@ -29,6 +30,7 @@ export default function FormsAdmin() {
   const [assets, setAssets] = useState({});
   const [urls, setUrls] = useState({});
   const [msg, setMsg] = useState(null);
+  const [principalName, setPrincipalName] = useState("");
   const [loading, setLoading] = useState(true);
   const stampRef = useRef(null);
   const signRef = useRef(null);
@@ -36,8 +38,9 @@ export default function FormsAdmin() {
   const load = async () => {
     const [{ data: t }, { data: a }] = await Promise.all([
       supabase.from("form_templates").select("*").order("sort_order"),
-      supabase.from("school_assets").select("key, path"),
+      supabase.from("school_assets").select("key, path, label"),
     ]);
+    setPrincipalName((a ?? []).find((r) => r.key === "principal_signature")?.label ?? "");
     setRows(t ?? []);
     const m = Object.fromEntries((a ?? []).map((r) => [r.key, r.path]));
     setAssets(m);
@@ -62,6 +65,18 @@ export default function FormsAdmin() {
   const toggleRole = (row, role) => {
     const cur = row.allowed_roles ?? [];
     patch(row, { allowed_roles: cur.includes(role) ? cur.filter((r) => r !== role) : [...cur, role] });
+  };
+
+  const savePrincipalName = async () => {
+    const { error } = await supabase.from("school_assets")
+      .update({ label: principalName, updated_at: new Date().toISOString() })
+      .eq("key", "principal_signature");
+    setMsg(error ? { ok: false, text: error.message } : { ok: true, text: "حُفظ اسم المدير." });
+  };
+
+  const savePresets = async (row, text) => {
+    const arr = text.split("\n").map((x) => x.trim()).filter(Boolean);
+    patch(row, { presets: arr });
   };
 
   const uploadAsset = async (key, file) => {
@@ -118,6 +133,15 @@ export default function FormsAdmin() {
             ),
           )}
         </div>
+
+        <div className="mt-3">
+          <label className="text-xs text-muted">اسم المدير كما يُطبع تحت توقيعه</label>
+          <div className="mt-1.5 flex flex-wrap gap-2">
+            <input className="field min-w-[240px] flex-1" value={principalName}
+                   onChange={(e) => setPrincipalName(e.target.value)} />
+            <button className="btn-primary" onClick={savePrincipalName}>حفظ</button>
+          </div>
+        </div>
       </section>
 
       {msg && (
@@ -158,6 +182,19 @@ export default function FormsAdmin() {
                   );
                 })}
               </div>
+            </div>
+
+            <div>
+              <p className="text-xs text-muted">
+                صيغ جاهزة تظهر للمُصدِر كبطاقات — صيغة في كل سطر
+              </p>
+              <textarea rows={4} className="field mt-1.5 w-full text-sm"
+                        defaultValue={(r.presets ?? []).join("\n")}
+                        placeholder="تقديرًا لتفوّقه الدراسي…"
+                        onBlur={(e) => savePresets(r, e.target.value)} />
+              <p className="mt-1 text-[11px] text-faint">
+                تُحفظ تلقائيًا عند الخروج من الخانة، وتملأ حقل «{r.preset_field || "reason"}».
+              </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-4">
