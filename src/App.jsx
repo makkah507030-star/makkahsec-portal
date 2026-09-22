@@ -55,6 +55,9 @@ import LoginLogAdmin from "./pages/admin/LoginLogAdmin.jsx";
 import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin.jsx";
 import CalendarAdmin from "./pages/admin/CalendarAdmin.jsx";
 import SiteMetrics from "./pages/admin/SiteMetrics.jsx";
+import Forms from "./pages/admin/Forms.jsx";
+import FormsAdmin from "./pages/admin/FormsAdmin.jsx";
+import MySignature from "./pages/MySignature.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
@@ -226,6 +229,12 @@ export default function App() {
             {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
             {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
             {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
+            {/* النماذج والشهادات — ما يظهر لكل مستخدم تحدّده سياسات قاعدة البيانات */}
+            <Route path="/forms" element={<Forms />} />
+            <Route path="/my-signature" element={<MySignature />} />
+            {(isTechSupport || adminRoles.includes("principal")) && (
+              <Route path="/forms-admin" element={<FormsAdmin />} />
+            )}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
             {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
             {(can("import") || can("reports")) && <Route path="/substitute-report" element={<SubstituteReport />} />}
@@ -274,6 +283,9 @@ export default function App() {
             {!hiddenTabs.has("schedule") && (
               <Route path="/schedule" element={<MySchedule />} />
             )}
+            {/* النماذج والشهادات — النماذج المتاحة للمعلم تحدّدها سياسات القاعدة */}
+            <Route path="/forms" element={<Forms />} />
+            <Route path="/my-signature" element={<MySignature />} />
           </>
         )}
         {((effectiveRole === "teacher" && !hiddenTabs.has("reports")) ||

@@ -52,6 +52,14 @@ const ADMIN_GROUPS = [
     ],
   },
   {
+    title: "النماذج والشهادات",
+    items: [
+      { to: "/forms",        label: "إصدار النماذج", perm: null, icon: "certificate" },
+      { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "shield" },
+      { to: "/my-signature", label: "توقيعي",        perm: null, icon: "edit" },
+    ],
+  },
+  {
     title: "الإعدادات",
     items: [
       { to: "/records-manual", label: "تعديل السجلات", perm: "records", icon: "edit" },
@@ -86,6 +94,8 @@ const OTHER_NAV = {
     { to: "/permissions", label: "الاستئذان", extraTabKey: "permissions" },
     { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
     { to: "/follow-up", label: "سجل المتابعة الإلكتروني" },
+    { to: "/forms",        label: "النماذج والشهادات" },
+    { to: "/my-signature", label: "توقيعي" },
     { to: "/contact",  label: "الدعم الفني" },
   ],
   student:  [
@@ -122,6 +132,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z",
     award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM8.2 13.5 6 21l6-3 6 3-2.2-7.5",
     calendar: "M3 5h18v16H3zM3 10h18M8 3v4M16 3v4",
+    certificate: "M6 3h12v13l-6 5-6-5zM9 8h6M9 11h6",
   }[name];
 
   return (
@@ -156,6 +167,25 @@ export default function Layout({ children }) {
     return () => { alive = false; clearInterval(t); };
   }, [isTech, location.pathname]);
 
+  // النماذج التي أعادها المدير لهذا المستخدم للتعديل
+  const [returnedForms, setReturnedForms] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { count } = await supabase
+        .from("form_documents")
+        .select("id", { count: "exact", head: true })
+        .eq("created_by", user.id)
+        .eq("status", "rejected");
+      if (alive) setReturnedForms(count ?? 0);
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [location.pathname]);
+
   const isAdmin = effectiveRole === "admin";
 
   const groups = ADMIN_GROUPS
@@ -167,6 +197,8 @@ export default function Layout({ children }) {
         const permOk = i.anyPerm
           ? i.anyPerm.some((p) => can(p))
           : !i.perm || can(i.perm);
+        if (i.manageForms)
+          return adminRoles.includes("tech_support") || adminRoles.includes("principal");
         return i.techOnly ? adminRoles.includes("tech_support") : permOk;
       }),
     }))
@@ -346,6 +378,11 @@ export default function Layout({ children }) {
                           <NavLink key={i.to} to={i.to} end={i.to === "/"} className={linkClass}>
                             <Icon name={i.icon} />
                             <span className="truncate">{i.label}</span>
+                            {i.to === "/forms" && returnedForms > 0 && (
+                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {returnedForms}
+                              </span>
+                            )}
                             {i.to === "/notifications-review" && pendingReview > 0 && (
                               <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
                                 {pendingReview}
@@ -406,6 +443,11 @@ export default function Layout({ children }) {
                                        onClick={() => setOpen(false)} className={linkClass}>
                                 <Icon name={i.icon} />
                                 <span className="truncate">{i.label}</span>
+                            {i.to === "/forms" && returnedForms > 0 && (
+                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {returnedForms}
+                              </span>
+                            )}
                             {i.to === "/notifications-review" && pendingReview > 0 && (
                               <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
                                 {pendingReview}
@@ -512,6 +554,11 @@ export default function Layout({ children }) {
                 <NavLink key={i.to} to={i.to} end={i.to === "/"}
                          onClick={() => setOpen(false)} className={linkClass}>
                   <span className="truncate">{i.label}</span>
+                            {i.to === "/forms" && returnedForms > 0 && (
+                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {returnedForms}
+                              </span>
+                            )}
                             {i.to === "/notifications-review" && pendingReview > 0 && (
                               <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
                                 {pendingReview}
