@@ -5,12 +5,14 @@ import { clearPeriodTimesCache, fmtRange } from "../../lib/periodTimes";
 const SEASONS = [
   { key: "summer", label: "التوقيت الصيفي" },
   { key: "winter", label: "التوقيت الشتوي" },
+  { key: "ramadan", label: "توقيت رمضان" },
 ];
 
 export default function SeasonSwitch() {
   const [season, setSeason] = useState(null);
   const [grace, setGrace] = useState("0");
   const [rows, setRows] = useState([]);
+  const [counts, setCounts] = useState({});
   const [view, setView] = useState("summer");
   const [msg, setMsg] = useState(null);
 
@@ -23,6 +25,15 @@ export default function SeasonSwitch() {
     setSeason(s);
     setView(s);
     setGrace(m.late_grace_minutes ?? "0");
+    loadCounts();
+  };
+
+  // كم صفًّا أُدخل لكل توقيت — لمنع تفعيل توقيت فارغ
+  const loadCounts = async () => {
+    const { data } = await supabase.from("period_times").select("season");
+    const c = {};
+    (data ?? []).forEach((r) => { c[r.season] = (c[r.season] || 0) + 1; });
+    setCounts(c);
   };
 
   useEffect(() => { load(); }, []);
@@ -39,6 +50,14 @@ export default function SeasonSwitch() {
   }, [view]);
 
   const setActive = async (s) => {
+    if (!counts[s]) {
+      setView(s);
+      setMsg({
+        ok: false,
+        text: `لا يمكن تفعيل «${SEASONS.find((x) => x.key === s)?.label}» قبل إدخال جدول أوقاته.`,
+      });
+      return;
+    }
     const { error } = await supabase
       .from("settings").upsert({ key: "active_season", value: s }, { onConflict: "key" });
     if (error) { setMsg({ ok: false, text: error.message }); return; }
@@ -71,14 +90,21 @@ export default function SeasonSwitch() {
         <div>
           <p className="text-xs text-muted">التوقيت الفعّال</p>
           <div className="mt-1.5 flex flex-wrap gap-2">
-            {SEASONS.map((s) => (
-              <button key={s.key} onClick={() => setActive(s.key)}
-                className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
-                  season === s.key ? "bg-mint-deep text-white"
-                                   : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-                {s.label}
-              </button>
-            ))}
+            {SEASONS.map((s) => {
+              const empty = !counts[s.key];
+              return (
+                <button key={s.key} onClick={() => setActive(s.key)}
+                  className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
+                    season === s.key ? "bg-mint-deep text-white"
+                                     : `border border-line bg-white hover:bg-canvas ${
+                                         empty ? "text-faint" : "text-muted"}`}`}>
+                  {s.label}
+                  {empty && season !== s.key && (
+                    <span className="mr-1.5 text-xs">(بلا جدول)</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -105,7 +131,7 @@ export default function SeasonSwitch() {
       <section className="card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold text-ink">جدول الأوقات</h2>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {SEASONS.map((s) => (
               <button key={s.key} onClick={() => setView(s.key)}
                 className={`rounded-pill px-3 py-1 text-xs font-medium transition-colors ${
