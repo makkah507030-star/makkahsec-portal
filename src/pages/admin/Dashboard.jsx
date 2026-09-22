@@ -44,7 +44,8 @@ export default function Dashboard() {
   const canReports = !isSupportOnly && can("reports");
   const canStudents = !isSupportOnly && can("students");
   const canImport = !isSupportOnly && can("import");
-  const canFigures = canReports || canStudents;
+  // إحصائيات الرئيسية (أرقام المدرسة) صارت صلاحية مستقلة يُتحكَّم بها لكل دور
+  const canFigures = !isSupportOnly && can("home_stats");
 
   const [d, setD] = useState(null);
   const date = todayISO();
