@@ -1,5 +1,5 @@
-import { Suspense, lazy } from "react";
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
 import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
@@ -17,12 +17,18 @@ import SubstitutePeriod from "./pages/teacher/SubstitutePeriod.jsx";
 import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
 import FollowUpLog from "./pages/teacher/FollowUpLog.jsx";
 import TeacherPermissions from "./pages/admin/TeacherPermissions.jsx";
+import NotificationsReview from "./pages/admin/NotificationsReview.jsx";
 import TeacherNotify from "./pages/teacher/TeacherNotify.jsx";
 import MySchedule from "./pages/teacher/MySchedule.jsx";
 import StudentHome from "./pages/StudentHome.jsx";
 import GuardianHome from "./pages/GuardianHome.jsx";
 import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
 import AdminStaff from "./pages/admin/AdminStaff.jsx";
+import EnableNotifications from "./components/EnableNotifications.jsx";
+import { ensureServiceWorker } from "./lib/push.js";
+import NotificationView from "./pages/NotificationView.jsx";
+import NotificationsList from "./pages/NotificationsList.jsx";
+import NotifyGuide from "./pages/NotifyGuide.jsx";
 import Landing from "./pages/Landing.jsx";
 import NewsList from "./pages/NewsList.jsx";
 import Guides from "./pages/Guides.jsx";
@@ -58,6 +64,22 @@ export default function App() {
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const maintenance = useMaintenance(session);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // تحديث الـ Service Worker عند فتح التطبيق ليصل أحدث إصدار للجهاز
+  useEffect(() => { ensureServiceWorker(); }, []);
+
+  // عند الضغط على إشعار الجوال، يطلب Service Worker فتح صفحة الإشعار عبر رسالة —
+  // ننتقل داخليًا (بلا إعادة تحميل) فتبقى الجلسة محفوظة ولا يعود للرئيسية.
+  useEffect(() => {
+    const sw = typeof navigator !== "undefined" ? navigator.serviceWorker : null;
+    if (!sw) return;
+    const onMsg = (e) => {
+      if (e.data && e.data.type === "OPEN_URL" && e.data.url) navigate(e.data.url);
+    };
+    sw.addEventListener("message", onMsg);
+    return () => sw.removeEventListener("message", onMsg);
+  }, [navigate]);
 
   if (loading) {
     return (
@@ -78,6 +100,11 @@ export default function App() {
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/contact" element={<Feedback />} />
         <Route path="/login" element={<Login />} />
+        {/* دليل تفعيل الإشعارات صفحة عامة لا تحتاج تسجيل دخول */}
+        <Route path="/notify-guide" element={<NotifyGuide />} />
+        {/* فتح إشعار قبل استعادة الجلسة → لصفحة الدخول بدل الرئيسية بصمت */}
+        <Route path="/notify/:id" element={<Navigate to="/login" replace />} />
+        <Route path="/notifications-me" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
@@ -155,7 +182,15 @@ export default function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={home} />
+        <Route
+          path="/"
+          element={
+            <div className="space-y-4">
+              <EnableNotifications />
+              {home}
+            </div>
+          }
+        />
         {effectiveRole === "admin" && (
           <>
             {can("import") && <Route path="/season" element={<SeasonSwitch />} />}
@@ -185,11 +220,12 @@ export default function App() {
             {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
             {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
+            {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
             {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
             {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
             {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
-            {can("reports") && <Route path="/substitute-report" element={<SubstituteReport />} />}
+            {(can("import") || can("reports")) && <Route path="/substitute-report" element={<SubstituteReport />} />}
             {can("results") && (
               <Route
                 path="/results-admin"
@@ -200,14 +236,15 @@ export default function App() {
                 }
               />
             )}
-            {can("import") && (
+            {(can("import") || can("schedules")) && (
               <>
                 <Route path="/general-schedule" element={<GeneralScheduleMaster />} />
                 <Route path="/teacher-schedules" element={<TeacherSchedules />} />
                 <Route path="/student-schedules" element={<StudentSchedules />} />
-                <Route path="/schedule-import" element={<ScheduleImport />} />
               </>
             )}
+            {/* استيراد الجدول الذكي حسّاس — للاستيراد فقط، لا لصلاحية الجداول */}
+            {can("import") && <Route path="/schedule-import" element={<ScheduleImport />} />}
             {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
             {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
             {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
@@ -250,6 +287,9 @@ export default function App() {
         ) : null}
         <Route path="/feedback" element={<Feedback />} />
         <Route path="/contact" element={<Feedback />} />
+        <Route path="/notifications-me" element={<NotificationsList />} />
+        <Route path="/notify/:id" element={<NotificationView />} />
+        <Route path="/notify-guide" element={<NotifyGuide />} />
         <Route path="/ticket/:id" element={<TicketDetail />} />
         <Route path="/guides" element={<Guides />} />
         <Route path="*" element={<Navigate to="/" replace />} />

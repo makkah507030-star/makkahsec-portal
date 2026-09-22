@@ -22,3 +22,21 @@
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+
+# index.html يجب أن يُجلب طازجًا دائمًا — وإلا أشار لملفات JS بمُعرّفات
+# قديمة اختفت بعد النشر الجديد فتظهر شاشة بيضاء حتى التحديث اليدوي.
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# ملفات الأصول تحمل مُعرّف hash فريدًا لكل بناء، فيمكن تخزينها للأبد بأمان
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { useSession } from "../../lib/session.jsx";
 import { KIND_META } from "../../lib/useNotifications";
 import { fmtDateTime } from "../../lib/dates";
 import { GRADE_NAMES } from "../../lib/schoolTime";
+import { normalizeImage } from "../../lib/imageResize";
 
 const ROLES = [
   { key: "teacher",  label: "المعلمون" },
@@ -41,9 +44,14 @@ export default function NotificationsAdmin() {
 /* ===================== الإرسال ===================== */
 
 function SendForm() {
+  const { profile, session, adminRoles } = useSession();
+  const isTechSupport = (adminRoles ?? []).includes("tech_support");
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [kind, setKind] = useState("general");
+  const [imageFile, setImageFile] = useState(null);
+  const [attachFile, setAttachFile] = useState(null);
+  const [youtube, setYoutube] = useState("");
   const [mode, setMode] = useState("roles"); // roles | class | people
 
   const [roles, setRoles] = useState(new Set(["teacher"]));
@@ -116,28 +124,128 @@ function SendForm() {
       p_is_auto: false,
     };
 
+    let targetRoles = null, targetUserIds = null;
     if (mode === "roles") {
-      args.p_roles = Array.from(roles);
+      args.p_roles = Array.from(roles); targetRoles = Array.from(roles);
     } else if (mode === "class") {
-      args.p_roles = Array.from(classRoles);
+      args.p_roles = Array.from(classRoles); targetRoles = Array.from(classRoles);
       if (grade) args.p_grade = grade;
       if (classNo) args.p_class_no = classNo;
     } else {
-      args.p_user_ids = picked.map((p) => p.id);
+      args.p_user_ids = picked.map((p) => p.id); targetUserIds = picked.map((p) => p.id);
     }
 
-    const { data, error } = await supabase.rpc("send_notification", args);
+    const senderName = profile?.full_name || "إدارة مدرسة مكة الثانوية";
+
+    // رفع الصورة والمرفق أولًا (يلزمان في مساري الإرسال والاعتماد)
+    let imageUrl = null;
+    if (imageFile) {
+      try {
+        const blob = await normalizeImage(imageFile, 1280, 720, 0.85);
+        const path = `notifications/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+        const { error: upErr } = await supabase.storage
+          .from("notification-images")
+          .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+        if (!upErr) imageUrl = supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
+      } catch { /* تجاهل فشل الصورة */ }
+    }
+    let attachUrl = null, attachName = null;
+    if (attachFile) {
+      // مفتاح التخزين بأحرف لاتينية فقط (تفاديًا لأي مشاكل مفاتيح Unicode)،
+      // مع الاحتفاظ بالاسم الأصلي للعرض والتحميل.
+      const ext = (attachFile.name.split(".").pop() || "bin")
+        .toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) || "bin";
+      const path = `notifications/attach/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("notification-images")
+        .upload(path, attachFile, { contentType: attachFile.type || "application/octet-stream", upsert: false });
+      if (upErr) {
+        setSending(false);
+        setMsg({ ok: false, text: "تعذّر رفع المرفق: " + upErr.message });
+        return;
+      }
+      attachUrl = supabase.storage.from("notification-images").getPublicUrl(path).data.publicUrl;
+      attachName = attachFile.name || "مرفق";
+    }
+    const youtubeUrl = youtube.trim() || null;
+
+    // ============ مسار الإرسال المباشر (الدعم الفني فقط) ============
+    if (isTechSupport) {
+      const { data, error } = await supabase.rpc("send_notification", args);
+      if (error) { setSending(false); setMsg({ ok: false, text: error.message }); return; }
+      if (!data)  { setSending(false); setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
+
+      // حفظ المُرسِل/الصورة/المرفق/يوتيوب — نفحص الخطأ ونُظهره بدل ابتلاعه
+      const hasMeta = imageUrl || attachUrl || youtubeUrl || senderName;
+      if (hasMeta) {
+        const { error: metaErr } = await supabase.rpc("set_notification_meta", {
+          p_id: data, p_sender_name: senderName, p_image_url: imageUrl,
+          p_attachment_url: attachUrl, p_attachment_name: attachName, p_youtube_url: youtubeUrl,
+        });
+        if (metaErr) {
+          setSending(false);
+          setMsg({ ok: false, text: "أُرسل الإشعار، لكن تعذّر حفظ المرفقات/الرابط: " + metaErr.message });
+          return;
+        }
+      }
+
+      setSending(false);
+      try {
+        await fetch("/.netlify/functions/push-send", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notification_id: data }),
+        });
+      } catch { /* تجاهل */ }
+
+      setMsg({ ok: true, text: "أُرسل الإشعار." });
+      setTitle(""); setBody(""); setPicked([]); setImageFile(null); setAttachFile(null); setYoutube("");
+      return;
+    }
+
+    // ============ مسار الاعتماد (باقي حسابات الإدارة) ============
+    // يُحفظ كمسودّة بانتظار اعتماد الدعم الفني قبل الإرسال الفعلي.
+    const { error: draftErr } = await supabase.from("notification_drafts").insert({
+      title: args.p_title,
+      body: args.p_body,
+      kind,
+      image_url: imageUrl,
+      attachment_url: attachUrl,
+      attachment_name: attachName,
+      youtube_url: youtubeUrl,
+      target_mode: mode,
+      target_roles: targetRoles,
+      target_grade: args.p_grade,
+      target_class_no: args.p_class_no,
+      target_user_ids: targetUserIds,
+      sender_id: session?.user?.id,
+      sender_name: senderName,
+      status: "pending",
+    });
+
     setSending(false);
+    if (draftErr) { setMsg({ ok: false, text: "تعذّر الإرسال للاعتماد: " + draftErr.message }); return; }
 
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
-    if (!data)  { setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
-
-    setMsg({ ok: true, text: "أُرسل الإشعار." });
-    setTitle(""); setBody(""); setPicked([]);
+    setMsg({ ok: true, text: "أُرسل الإشعار للاعتماد لدى الدعم الفني، وستصلك نتيجة الاعتماد." });
+    setTitle(""); setBody(""); setPicked([]); setImageFile(null); setAttachFile(null); setYoutube("");
   };
 
   return (
     <div className="space-y-5">
+      <section className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+        <p className="text-sm leading-relaxed text-mint-deep">
+          الإشعارات تصل الآن إلى <b>جوال المستخدم مباشرة</b> بعد تفعيل الخدمة من حسابه
+          (إضافةً إلى ظهورها داخل البوابة).{" "}
+          <Link to="/notify-guide" className="font-semibold underline">
+            طريقة تفعيل الإشعارات ←
+          </Link>
+        </p>
+        {!isTechSupport && (
+          <p className="mt-2 border-t border-[#CCF2DB] pt-2 text-xs text-[#6AA786]">
+            ملاحظة: إشعاراتك تُرسَل بعد <b>اعتماد الدعم الفني</b>، وستصلك نتيجة الاعتماد.
+          </p>
+        )}
+      </section>
+
       <section className="card space-y-4 p-4">
         <div>
           <label className="text-xs text-muted">عنوان الإشعار</label>
@@ -160,6 +268,52 @@ function SendForm() {
                 className={pill(kind === k.key)}>{k.label}</button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-muted">صورة (اختياري)</label>
+          {imageFile ? (
+            <div className="mt-1.5 flex items-center gap-3">
+              <img src={URL.createObjectURL(imageFile)} alt=""
+                   className="h-16 w-28 rounded-sm2 border border-line object-cover" />
+              <button type="button" onClick={() => setImageFile(null)}
+                className="text-xs font-medium text-absent hover:underline">إزالة الصورة</button>
+            </div>
+          ) : (
+            <label className="mt-1.5 flex cursor-pointer items-center justify-center rounded-sm2 border border-dashed border-line bg-paper px-4 py-3 text-xs text-muted hover:bg-canvas">
+              اختر صورة لإرفاقها بالإشعار
+              <input type="file" accept="image/*" className="hidden"
+                     onChange={(e) => setImageFile(e.target.files?.[0] ?? null)} />
+            </label>
+          )}
+        </div>
+
+        <div>
+          <label className="text-xs text-muted">مرفق للتحميل (PDF أو صورة — اختياري)</label>
+          {attachFile ? (
+            <div className="mt-1.5 flex items-center gap-3 rounded-sm2 border border-line bg-paper px-3 py-2.5">
+              <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0 text-mint-deep"
+                   stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" />
+              </svg>
+              <span className="min-w-0 flex-1 truncate text-sm text-ink">{attachFile.name}</span>
+              <button type="button" onClick={() => setAttachFile(null)}
+                className="shrink-0 text-xs font-medium text-absent hover:underline">إزالة</button>
+            </div>
+          ) : (
+            <label className="mt-1.5 flex cursor-pointer items-center justify-center rounded-sm2 border border-dashed border-line bg-paper px-4 py-3 text-xs text-muted hover:bg-canvas">
+              اختر ملفًا (PDF أو صورة) ليحمّله المستفيد
+              <input type="file" accept="application/pdf,image/*" className="hidden"
+                     onChange={(e) => setAttachFile(e.target.files?.[0] ?? null)} />
+            </label>
+          )}
+        </div>
+
+        <div>
+          <label className="text-xs text-muted">رابط يوتيوب (اختياري)</label>
+          <input className="field mt-1 num" dir="ltr" value={youtube}
+                 onChange={(e) => setYoutube(e.target.value)}
+                 placeholder="https://youtu.be/..." />
         </div>
       </section>
 
@@ -269,7 +423,9 @@ function SendForm() {
       )}
 
       <button className="btn-primary" onClick={send} disabled={!canSend || sending}>
-        {sending ? "جارٍ الإرسال…" : "إرسال الإشعار"}
+        {sending
+          ? "جارٍ الإرسال…"
+          : isTechSupport ? "إرسال الإشعار" : "إرسال للاعتماد"}
       </button>
     </div>
   );

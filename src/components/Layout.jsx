@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { useTeacherHiddenTabs } from "../lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
@@ -32,12 +33,12 @@ const ADMIN_GROUPS = [
   {
     title: "الشؤون التعليمية",
     items: [
-      { to: "/general-schedule",  label: "الجدول العام",          perm: "import", icon: "grid" }, // جدول شامل بالفصول والمعلمين معًا
-      { to: "/teacher-schedules", label: "جداول المعلمين",        perm: "import", icon: "chalk" },
-      { to: "/student-schedules", label: "جداول الطلاب",          perm: "import", icon: "users" },
+      { to: "/general-schedule",  label: "الجدول العام",          anyPerm: ["import", "schedules"], icon: "grid" }, // جدول شامل بالفصول والمعلمين معًا
+      { to: "/teacher-schedules", label: "جداول المعلمين",        anyPerm: ["import", "schedules"], icon: "chalk" },
+      { to: "/student-schedules", label: "جداول الطلاب",          anyPerm: ["import", "schedules"], icon: "users" },
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
-      { to: "/substitute-report", label: "تقرير حصص الانتظار", perm: "reports", icon: "chart" },
+      { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "chart" },
     ],
   },
   {
@@ -45,6 +46,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell" },
+      { to: "/notifications-review", label: "اعتماد الإشعارات", techOnly: true, icon: "check" },
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
     ],
@@ -133,6 +135,24 @@ export default function Layout({ children }) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
+  // عدّاد الإشعارات المعلّقة بانتظار الاعتماد — للدعم الفني فقط
+  const [pendingReview, setPendingReview] = useState(0);
+  const isTech = (adminRoles ?? []).includes("tech_support");
+  useEffect(() => {
+    if (!isTech) return;
+    let alive = true;
+    const load = async () => {
+      const { count } = await supabase
+        .from("notification_drafts")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      if (alive) setPendingReview(count ?? 0);
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [isTech, location.pathname]);
+
   const isAdmin = effectiveRole === "admin";
 
   const groups = ADMIN_GROUPS
@@ -140,7 +160,11 @@ export default function Layout({ children }) {
       ...g,
       items: g.items.filter((i) => {
         if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
-        return i.techOnly ? adminRoles.includes("tech_support") : !i.perm || can(i.perm);
+        // anyPerm: يظهر العنصر لمن يملك أيًّا من الصلاحيات المذكورة
+        const permOk = i.anyPerm
+          ? i.anyPerm.some((p) => can(p))
+          : !i.perm || can(i.perm);
+        return i.techOnly ? adminRoles.includes("tech_support") : permOk;
       }),
     }))
     .filter((g) => g.items.length);
@@ -319,6 +343,11 @@ export default function Layout({ children }) {
                           <NavLink key={i.to} to={i.to} end={i.to === "/"} className={linkClass}>
                             <Icon name={i.icon} />
                             <span className="truncate">{i.label}</span>
+                            {i.to === "/notifications-review" && pendingReview > 0 && (
+                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {pendingReview}
+                              </span>
+                            )}
                           </NavLink>
                         ))}
                       </div>
@@ -374,6 +403,11 @@ export default function Layout({ children }) {
                                        onClick={() => setOpen(false)} className={linkClass}>
                                 <Icon name={i.icon} />
                                 <span className="truncate">{i.label}</span>
+                            {i.to === "/notifications-review" && pendingReview > 0 && (
+                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {pendingReview}
+                              </span>
+                            )}
                               </NavLink>
                             ))}
                           </div>
@@ -475,6 +509,11 @@ export default function Layout({ children }) {
                 <NavLink key={i.to} to={i.to} end={i.to === "/"}
                          onClick={() => setOpen(false)} className={linkClass}>
                   <span className="truncate">{i.label}</span>
+                            {i.to === "/notifications-review" && pendingReview > 0 && (
+                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                {pendingReview}
+                              </span>
+                            )}
                 </NavLink>
               ))}
             </nav>
