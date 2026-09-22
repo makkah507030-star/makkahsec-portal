@@ -6,6 +6,7 @@ import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime, lateInfo } from "../lib/periodTimes";
 import ExamCountdown from "../components/ExamCountdown.jsx";
+import HolidayBanner from "../components/HolidayBanner.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AbsenceHistory from "../components/AbsenceHistory.jsx";
 import { useSession } from "../lib/session.jsx";
@@ -186,6 +187,8 @@ export default function GuardianHome() {
           </p>
         )}
       </header>
+
+      <HolidayBanner />
 
       <ExamCountdown />
 

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
+import HolidayBanner from "../../components/HolidayBanner.jsx";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
 
@@ -154,6 +155,7 @@ export default function Dashboard() {
         <header>
           <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
         </header>
+        <HolidayBanner />
         <section className="card px-6 py-12 text-center">
           <p className="text-lg font-bold text-ink">
             مرحبًا{profile?.full_name ? `، ${profile.full_name}` : ""}
@@ -184,6 +186,8 @@ export default function Dashboard() {
           العام <span className="num">{d.yearLabel}</span>هـ · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
         </p>
       </header>
+
+      <HolidayBanner />
 
       <ExamCountdown />
 

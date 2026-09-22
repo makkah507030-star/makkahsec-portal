@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { fmtGreg, fmtTime12 } from "../lib/dates";
 import { useSession } from "../lib/session.jsx";
 import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
+import HolidayBanner from "../components/HolidayBanner.jsx";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime, lateInfo } from "../lib/periodTimes";
@@ -148,6 +149,8 @@ export default function StudentHome() {
           {GRADE_NAMES[me.grade] ?? ""} · فصل <span className="num">{me.class_no}</span>
         </p>
       </header>
+
+      <HolidayBanner />
 
       <ExamCountdown />
 
