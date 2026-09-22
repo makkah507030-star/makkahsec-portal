@@ -44,7 +44,8 @@ export default function Dashboard() {
   const canReports = !isSupportOnly && can("reports");
   const canStudents = !isSupportOnly && can("students");
   const canImport = !isSupportOnly && can("import");
-  const canFigures = canReports || canStudents;
+  // إحصائيات الرئيسية (أرقام المدرسة) صارت صلاحية مستقلة يُتحكَّم بها لكل دور
+  const canFigures = !isSupportOnly && can("home_stats");
 
   const [d, setD] = useState(null);
   const date = todayISO();
@@ -168,7 +169,9 @@ export default function Dashboard() {
     );
   }
 
-  const marked = canReports ? d.schedCount - d.unmarked.length : 0;
+  // نتحقق من وجود البيانات فعلًا (d.unmarked) لا من الصلاحية فقط — لأن
+  // canReports قد يتحوّل true قبل أن يُعيد الـ effect بناء d (سباق زمني).
+  const marked = canReports && d.unmarked ? d.schedCount - d.unmarked.length : 0;
   const pct = canReports && d.schedCount ? Math.round((marked / d.schedCount) * 100) : 0;
   // حساب محدود الصلاحيات لا يملك أيًّا من أقسام اللوحة
   const barren = !canFigures && !canReports && !canImport;
@@ -209,8 +212,8 @@ export default function Dashboard() {
       {canReports && dow > 0 && <MissingStudentsBox date={date} />}
       {canReports && dow > 0 && <OfficialStatusBox date={date} />}
 
-      {/* تحضير اليوم */}
-      {canReports && (dow ? (
+      {/* تحضير اليوم — لا يُعرض إلا بعد اكتمال تحميل البيانات (d.unmarked) */}
+      {canReports && d.unmarked && (dow ? (
         <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-5">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
