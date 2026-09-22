@@ -100,7 +100,9 @@ export default function Forms() {
   const [classes, setClasses] = useState([]);
   const [classId, setClassId] = useState("");
   const [students, setStudents] = useState([]);
-  const [chosen, setChosen] = useState([]);      // طلاب متعددون لشهادة واحدة لكل طالب
+  const [chosen, setChosen] = useState([]);      // مستفيدون متعددون: شهادة لكل واحد
+  const [staff, setStaff] = useState([]);        // منسوبو المدرسة: معلمون وإداريون
+  const [staffQ, setStaffQ] = useState("");
   const [batch, setBatch] = useState([]);        // مستندات صدرت دفعة واحدة للطباعة
 
   useEffect(() => {
@@ -134,6 +136,49 @@ export default function Forms() {
       .order("created_at", { ascending: false });
     setReturned(data ?? []);
   };
+
+  // منسوبو المدرسة لشهادات المعلمين والإداريين — الاسم والمسمّى الوظيفي
+  useEffect(() => {
+    (async () => {
+      const needsStaff = (picked?.fields ?? []).some((f) => f.type === "staff");
+      if (!needsStaff || staff.length) return;
+
+      const [{ data: tch }, { data: usr }, { data: roles }] = await Promise.all([
+        supabase.from("teachers").select("id, user_id, full_name, specialization").order("full_name"),
+        supabase.from("users").select("id, full_name, username, role").eq("role", "admin"),
+        supabase.from("admin_roles").select("user_id, role_type"),
+      ]);
+
+      const ROLE_JOB = {
+        principal: "مدير المدرسة",
+        tech_support: "مشرف الدعم الفني",
+        vice_principal: "وكيل المدرسة",
+        counselor: "الموجّه الطلابي",
+      };
+      const jobBy = {};
+      (roles ?? []).forEach((r) => { jobBy[r.user_id] ??= ROLE_JOB[r.role_type] ?? "إداري"; });
+
+      const list = [
+        ...(tch ?? []).map((t) => ({
+          id: `t-${t.id}`,
+          full_name: t.full_name,
+          job: t.specialization ? `معلم ${t.specialization}` : "معلم",
+        })),
+        ...(usr ?? []).map((u) => ({
+          id: `u-${u.id}`,
+          full_name: u.full_name ?? u.username,
+          job: jobBy[u.id] ?? "إداري",
+        })),
+      ];
+
+      const seen = new Set();
+      setStaff(list.filter((x) => {
+        const k = (x.full_name ?? "").trim();
+        if (!k || seen.has(k)) return false;
+        seen.add(k); return true;
+      }));
+    })();
+  }, [picked, staff.length]);
 
   // فصول المستخدم: المعلم يرى فصوله المسندة فقط، والإدارة ترى كل الفصول
   useEffect(() => {
@@ -210,10 +255,18 @@ export default function Forms() {
   const missing = useMemo(() => {
     if (!picked) return [];
     return (picked.fields ?? []).filter((f) => {
-      if (f.type === "student") return f.required && chosen.length === 0;
+      if (f.type === "student" || f.type === "staff") return f.required && chosen.length === 0;
       return f.required && !String(values[f.name] ?? "").trim();
     });
   }, [picked, values, chosen]);
+
+  const toggleStaff = (m) => {
+    setChosen((c) => {
+      const next = c.some((x) => x.id === m.id) ? c.filter((x) => x.id !== m.id) : [...c, m];
+      setValues((v) => ({ ...v, recipient: next[0]?.full_name ?? "", job: next[0]?.job ?? "" }));
+      return next;
+    });
+  };
 
   const toggleStudent = (st) => {
     setChosen((c) => {
@@ -300,8 +353,13 @@ export default function Forms() {
         ...row,
         serial: sr,
         recipient: st ? st.full_name : row.recipient,
-        student_id: st ? st.id : row.student_id,
-        data: st ? { ...values, recipient: st.full_name, student_id: st.id } : values,
+        student_id: st && !/^[tu]-/.test(String(st.id)) ? st.id : row.student_id,
+        data: st
+          ? { ...values,
+              recipient: st.full_name,
+              ...(st.job ? { job: st.job } : {}),
+              ...(/^[tu]-/.test(String(st.id)) ? {} : { student_id: st.id }) }
+          : values,
       });
     }
 
@@ -483,6 +541,39 @@ export default function Forms() {
                         </button>
                       );
                     })}
+                  </div>
+                ) : f.type === "staff" ? (
+                  <div className="mt-1 space-y-2">
+                    <input className="field w-full" value={staffQ} placeholder="ابحث بالاسم…"
+                           onChange={(e) => setStaffQ(e.target.value)} />
+                    <div className="max-h-56 overflow-y-auto rounded-sm2 border border-line">
+                      {staff
+                        .filter((m) => !staffQ.trim() || m.full_name.includes(staffQ.trim()))
+                        .map((m) => {
+                          const on = chosen.some((x) => x.id === m.id);
+                          return (
+                            <button key={m.id} type="button" onClick={() => toggleStaff(m)}
+                              className={`flex w-full items-center gap-2 border-b border-line px-3 py-2 text-right text-sm last:border-b-0 ${
+                                on ? "bg-mint-tint text-mint-deep" : "text-ink hover:bg-canvas"}`}>
+                              <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border text-[10px] ${
+                                on ? "border-mint-deep bg-mint-deep text-white" : "border-line"}`}>
+                                {on ? "✓" : ""}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate">{m.full_name}</span>
+                              <span className="shrink-0 text-[11px] text-faint">{m.job}</span>
+                            </button>
+                          );
+                        })}
+                      {staff.length === 0 && (
+                        <p className="px-3 py-3 text-xs text-muted">جارٍ تحميل المنسوبين…</p>
+                      )}
+                    </div>
+                    {chosen.length > 1 && (
+                      <p className="text-xs text-mint-deep">
+                        اخترت <span className="num">{chosen.length}</span> — ستصدر شهادة لكل واحد
+                        بمسمّاه الوظيفي، وتُطبع دفعة واحدة.
+                      </p>
+                    )}
                   </div>
                 ) : f.type === "student" ? (
                   <div className="mt-1 space-y-2">
