@@ -230,8 +230,6 @@ function Certificate(p) {
           <p className="num mt-3 text-[13px] text-muted">{v.date || ""}</p>
         </div>
 
-        <div className="mb-3 mt-1"><Rule color={accent} /></div>
-
         <Signatures
           source={template.signature_source}
           issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}
