@@ -160,11 +160,8 @@ function Frame({ theme }) {
     );
   }
   if (theme === "modern") {
-    // بلا إطار محيط: مساحة بيضاء مفتوحة وخط سفلي عريض يحمل تدرّج الهوية
-    return (
-      <div className="absolute inset-x-0 bottom-0 h-[6mm]"
-           style={{ background: "linear-gradient(90deg,#3E6350 0%,#6AA786 50%,#89D7AD 100%)", ...INK }} />
-    );
+    // بلا إطار محيط: مساحة بيضاء مفتوحة، والشريط يوضع تحت التواقيع داخل المحتوى
+    return null;
   }
   if (theme === "ornate") {
     return (
@@ -200,8 +197,7 @@ function Certificate(p) {
 
       <Frame theme={theme} />
 
-      <div className={`relative flex h-full flex-col px-[22mm] pt-[13mm] ${
-        theme === "modern" ? "pb-[16mm]" : "pb-[13mm]"}`}>
+      <div className="relative flex h-full flex-col px-[22mm] pb-[11mm] pt-[13mm]">
         <Head small />
         <div className="mt-3"><Rule color={accent} /></div>
 
@@ -234,7 +230,7 @@ function Certificate(p) {
           <p className="num mt-3 text-[13px] text-muted">{v.date || ""}</p>
         </div>
 
-        <div className="mb-4"><Rule color={accent} /></div>
+        <div className="mb-3 mt-1"><Rule color={accent} /></div>
 
         <Signatures
           source={template.signature_source}
@@ -242,6 +238,11 @@ function Certificate(p) {
           principalUrl={p.principalSigUrl} principalName={p.principalName}
           stampUrl={p.stampUrl}
         />
+
+        {theme === "modern" && (
+          <div className="-mx-[22mm] mt-4 h-[5mm]"
+               style={{ background: "linear-gradient(90deg,#3E6350 0%,#6AA786 50%,#89D7AD 100%)", ...INK }} />
+        )}
 
         <div className="mt-3"><Foot serial={doc?.serial} hairline={false} /></div>
       </div>
