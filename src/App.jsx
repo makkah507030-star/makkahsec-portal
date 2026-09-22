@@ -54,6 +54,7 @@ import SupportReport from "./pages/admin/SupportReport.jsx";
 import LoginLogAdmin from "./pages/admin/LoginLogAdmin.jsx";
 import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin.jsx";
 import CalendarAdmin from "./pages/admin/CalendarAdmin.jsx";
+import SiteMetrics from "./pages/admin/SiteMetrics.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
@@ -224,6 +225,7 @@ export default function App() {
             {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
             {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
             {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
+            {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
             {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
             {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
             {(can("import") || can("reports")) && <Route path="/substitute-report" element={<SubstituteReport />} />}
