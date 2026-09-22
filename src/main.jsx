@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { SessionProvider } from "./lib/session.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import "./fonts.css";
 import "./index.css";
 
 // شبكة أمان بعد النشر: إن فشل تحميل حزمة مُحمّلة عند الطلب (ملف JS بمُعرّف

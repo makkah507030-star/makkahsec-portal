@@ -2,6 +2,7 @@
 // (مكتبة xlsx الأساسية تتجاهل الألوان والخطوط بصمت)
 import XLSX from "xlsx-js-style";
 import { fmtBoth, fmtTime12 } from "./dates";
+import { EXPORT_FONT_CSS } from "./exportFonts";
 
 // اسم مدير المدرسة — يظهر في ترويسة وتذييل التقارير المطبوعة
 export const PRINCIPAL_NAME = "عبدالله بن حسن سلمان الفيفي";
@@ -742,9 +743,7 @@ export function printReport(opts) {
 <head>
 <meta charset="utf-8" />
 <title>${title}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>${EXPORT_FONT_CSS}</style>
 <style>${css}</style>
 </head>
 <body>
