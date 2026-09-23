@@ -727,7 +727,7 @@ export default function Forms() {
               </div>
             )}
 
-            {(picked.fields ?? []).filter((f) => !f.by_recipient && !f.after_reply).map((f) => (
+            {(picked.fields ?? []).filter((f) => !f.by_recipient && !f.after_reply && !f.auto).map((f) => (
               <div key={f.name}>
                 <label className="text-xs text-muted">
                   {f.label}{f.required && <span className="text-absent"> *</span>}
@@ -866,12 +866,6 @@ export default function Forms() {
                 ) : f.type === "textarea" ? (
                   <textarea rows={4} className="field mt-1 w-full" value={values[f.name] ?? ""}
                             onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
-                ) : f.auto ? (
-                  <>
-                    <input className="field mt-1 w-full bg-canvas text-muted" readOnly
-                           value={values[f.name] ?? ""} placeholder="يُحسب تلقائيًا" />
-                    <p className="mt-1 text-[11px] text-faint">يُحسب تلقائيًا من المدة أعلاه.</p>
-                  </>
                 ) : (
                   <input className="field mt-1 w-full" value={values[f.name] ?? ""}
                          onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
