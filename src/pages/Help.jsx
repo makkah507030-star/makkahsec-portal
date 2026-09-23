@@ -1,6 +1,8 @@
 // src/pages/Help.jsx
 import { useMemo, useState } from "react";
 import { useSession } from "../lib/session.jsx";
+import logoIcon from "../assets/icon-mint.png";
+import moeLogo from "../assets/moe-logo.png";
 
 /* =====================================================================
    دليل الاستخدام — إجراءات البوابة بخطواتها.
@@ -78,6 +80,125 @@ function myRoles(effectiveRole, adminRoles = []) {
   return out;
 }
 
+const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
+
+const GOV_LINES = [
+  "المملكة العربية السعودية",
+  "وزارة التعليم",
+  "الإدارة العامة للتعليم بمنطقة مكة المكرمة",
+];
+
+const hijriToday = () => {
+  try {
+    const p = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura",
+      { day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(new Date());
+    const g = (t) => p.find((x) => x.type === t)?.value ?? "";
+    return `${g("day")}/${g("month")}/${String(g("year")).replace(/\D/g, "")}هـ`;
+  } catch { return ""; }
+};
+
+/* نسخة الطباعة: غلاف رسمي ثم الإجراءات كاملة بخطواتها */
+function PrintableGuide({ procs, scopeLabel, issuedBy }) {
+  const cats = [];
+  procs.forEach((p) => { if (!cats.includes(p.cat)) cats.push(p.cat); });
+
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body * { visibility: hidden !important; }
+          #guide-print, #guide-print * { visibility: visible !important; }
+          #guide-print { position: absolute; inset: 0; background: #fff; }
+          #guide-print .cover { break-after: page; }
+          #guide-print .proc-card { break-inside: avoid; }
+          .no-print { display: none !important; }
+        }
+        @page { size: 210mm 297mm; margin: 14mm 12mm; }
+      ` }} />
+
+      <div id="guide-print" className="text-ink"
+           style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
+
+        {/* الغلاف */}
+        <div className="cover flex h-[250mm] flex-col">
+          <div className="flex items-start justify-between gap-4">
+            <div className="text-[11px] font-medium leading-[1.9]">
+              {GOV_LINES.map((l) => <div key={l}>{l}</div>)}
+              <div className="font-bold text-mint-deep">مدرسة مكة الثانوية</div>
+            </div>
+            <div className="flex items-center gap-4">
+              <img src={moeLogo} alt="" className="h-10 w-auto" />
+              <img src={logoIcon} alt="" className="h-10 w-auto" />
+            </div>
+          </div>
+          <div className="mt-3 h-px w-full"
+               style={{ background: "linear-gradient(90deg,transparent,#3E6350,transparent)", ...INK }} />
+
+          <div className="flex flex-1 flex-col items-center justify-center text-center">
+            <span className="rounded-pill px-5 py-1.5 text-[12px] font-semibold"
+                  style={{ background: "#EDFAF2", color: "#3E6350", ...INK }}>
+              دليل الاستخدام
+            </span>
+            <h1 className="mt-5 text-[32px] font-bold leading-tight text-mint-deep">
+              بوابة مكة الثانوية الرقمية
+            </h1>
+            <p className="mt-2 text-[16px] text-muted">{scopeLabel}</p>
+
+            <div className="mt-8 grid w-full max-w-[110mm] grid-cols-2 gap-3">
+              <div className="rounded-card border border-line px-4 py-4">
+                <p className="num text-[30px] font-bold leading-none text-mint-deep">{procs.length}</p>
+                <p className="mt-1.5 text-[12px] text-muted">إجراء</p>
+              </div>
+              <div className="rounded-card border border-line px-4 py-4">
+                <p className="num text-[30px] font-bold leading-none text-mint-deep">{cats.length}</p>
+                <p className="mt-1.5 text-[12px] text-muted">قسمًا</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-[10.5px] text-faint">
+            <span>إعداد: {issuedBy || "الدعم الفني للبوابة"}</span>
+            <span className="num">{hijriToday()}</span>
+            <span className="font-semibold text-mint-deep" dir="ltr">makkahsec.com</span>
+          </div>
+        </div>
+
+        {/* الإجراءات */}
+        {cats.map((c) => (
+          <div key={c} className="mt-5">
+            <p className="mb-2 border-b-2 border-mint-deep pb-1 text-[15px] font-bold text-mint-deep">{c}</p>
+            {procs.filter((p) => p.cat === c).map((p, i) => (
+              <div key={p.title} className="proc-card mb-3 rounded-card border border-line p-3">
+                <p className="text-[14px] font-semibold">
+                  <span className="num text-muted">{i + 1}. </span>{p.title}
+                </p>
+                <p className="mt-0.5 text-[11px] text-faint">{p.path}</p>
+                <ol className="mr-5 mt-1.5 list-decimal">
+                  {p.steps.map((s, k) => (
+                    <li key={k} className="text-[12.5px] leading-[1.9]">{s}</li>
+                  ))}
+                </ol>
+                {p.note && (
+                  <p className="mt-1.5 rounded-sm2 px-2.5 py-1.5 text-[11.5px] leading-[1.8]"
+                     style={{ background: "#EDFAF2", color: "#2F5544", ...INK }}>
+                    <b>ملاحظة: </b>{p.note}
+                  </p>
+                )}
+                {p.warn && (
+                  <p className="mt-1.5 rounded-sm2 px-2.5 py-1.5 text-[11.5px] leading-[1.8]"
+                     style={{ background: "#FCF5E6", color: "#7E6318", ...INK }}>
+                    <b>انتبه: </b>{p.warn}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export default function Help() {
   const { effectiveRole, adminRoles, profile } = useSession();
   const mine = useMemo(() => myRoles(effectiveRole, adminRoles ?? []), [effectiveRole, adminRoles]);
@@ -123,15 +244,30 @@ export default function Help() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-bold text-ink">دليل الاستخدام</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
-          خطوات كل إجراء في البوابة. يعرض لك ما يخصّ حسابك، ويمكنك عرض الدليل كاملًا.
-        </p>
+      <div className="no-print flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-bold text-ink">دليل الاستخدام</h1>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            خطوات كل إجراء في البوابة. يعرض لك ما يخصّ حسابك، ويمكنك عرض الدليل كاملًا.
+          </p>
+        </div>
+        <button className="btn-primary shrink-0" onClick={() => window.print()}>
+          طباعة / حفظ PDF
+        </button>
+      </div>
+
+      <div className="hidden print:block">
+        <PrintableGuide
+          procs={visible}
+          scopeLabel={scope === "mine"
+            ? `الإجراءات التي تخصّ: ${[...mine].join(" · ") || "حسابك"}`
+            : "الدليل كاملًا لجميع المستفيدين"}
+          issuedBy={profile?.full_name ?? profile?.username ?? ""}
+        />
       </div>
 
       {/* نطاق العرض */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="no-print flex flex-wrap gap-1.5">
         <button className={pill(scope === "mine")} onClick={() => { setScope("mine"); setCat(""); }}>
           ما يخصّني{profile?.full_name ? "" : ""}
         </button>
@@ -141,7 +277,7 @@ export default function Help() {
       </div>
 
       <input
-        className="field w-full"
+        className="no-print field w-full"
         type="search"
         value={q}
         onChange={(e) => setQ(e.target.value)}
@@ -149,14 +285,14 @@ export default function Help() {
       />
 
       {/* الأقسام */}
-      <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+      <div className="no-print -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
         <button className={pill(!cat)} onClick={() => setCat("")}>كل الأقسام</button>
         {catsAll.map((c) => (
           <button key={c} className={pill(cat === c)} onClick={() => setCat(c)}>{c}</button>
         ))}
       </div>
 
-      <p className="text-xs text-faint">
+      <p className="no-print text-xs text-faint">
         <span className="num">{visible.length}</span> إجراء
       </p>
 
@@ -166,7 +302,7 @@ export default function Help() {
           <p className="mt-1.5 text-sm text-muted">جرّب كلمة أخرى، أو اعرض كل الإجراءات.</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="no-print space-y-2">
           {cats.map((c) => (
             <div key={c} className="space-y-2">
               <p className="pt-2 text-[13px] font-bold text-muted">{c}</p>
