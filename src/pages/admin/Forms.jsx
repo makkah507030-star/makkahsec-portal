@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays } from "../../components/DateField.jsx";
+import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 
 /* =====================================================================
@@ -308,7 +309,7 @@ export default function Forms() {
   const missing = useMemo(() => {
     if (!picked) return [];
     return (picked.fields ?? []).filter((f) => {
-      if (f.by_recipient) return false;
+      if (f.by_recipient || f.after_reply) return false;
       if (f.type === "table") return false;
       if (f.type === "student" || f.type === "staff") return f.required && chosen.length === 0;
       return f.required && !String(values[f.name] ?? "").trim();
@@ -469,16 +470,27 @@ export default function Forms() {
     });
   };
 
+  const [decision, setDecision] = useState({});   // قرار الإدارة قبل الإغلاق
+  const [report, setReport] = useState(null);    // تقرير نموذج مفتوح للطباعة
+  const [rTpl, setRTpl] = useState("");
+  const [rFrom, setRFrom] = useState("");
+  const [rTo, setRTo] = useState("");
+
   // اعتماد الرد أو إعادته للمستفيد بملاحظة
   const handleReply = async (d, action, note = null) => {
     const patch =
       action === "approve"
-        ? { status: "issued", decision_note: null }
+        ? { status: "issued", decision_note: null, data: { ...d.data, ...(decision[d.id] ?? {}) } }
         : { status: "awaiting_reply", decision_note: note };
     const { error } = await supabase.from("form_documents").update(patch).eq("id", d.id);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
     setRejectFor(null); setRejectNote("");
-    setMsg({ ok: true, text: action === "approve" ? `اعتُمد المستند ${d.serial}.` : "أُعيد للمستفيد مع الملاحظة." });
+    setMsg({
+      ok: true,
+      text: action === "approve"
+        ? `اعتُمد المستند ${d.serial} وأُغلق. يمكنك طباعته من الأرشيف.`
+        : "أُعيد للمستفيد مع الملاحظة.",
+    });
     loadDocs();
     if (action === "return") sendToRecipient({ ...d, status: "awaiting_reply" });
   };
@@ -558,6 +570,37 @@ export default function Forms() {
 
     setMsg({ ok: true, text: `أُرسل إشعار المستند ${d.serial} للمستفيد.` });
     loadDocs();
+  };
+
+  // تقرير نموذج: مستنداته في المدى المحدّد مع أسماء مُصدِريها
+  const buildReport = async () => {
+    const tpl = templates.find((t) => t.id === rTpl);
+    if (!tpl) { setMsg({ ok: false, text: "اختر النموذج أولًا." }); return; }
+
+    let q = supabase.from("form_documents")
+      .select("id, serial, recipient, status, created_at, created_by")
+      .eq("template_id", tpl.id)
+      .order("created_at", { ascending: true });
+    if (rFrom) q = q.gte("created_at", `${rFrom}T00:00:00`);
+    if (rTo)   q = q.lte("created_at", `${rTo}T23:59:59`);
+
+    const { data, error } = await q;
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (!data?.length) { setMsg({ ok: false, text: "لا مستندات في هذا النطاق." }); return; }
+
+    const ids = [...new Set(data.map((d) => d.created_by).filter(Boolean))];
+    const { data: us } = await supabase.from("users")
+      .select("id, full_name, username").in("id", ids);
+    const nameBy = Object.fromEntries((us ?? []).map((u) => [u.id, u.full_name ?? u.username]));
+
+    setReport({
+      title: tpl.title,
+      dept: DEPT_LABEL[tpl.department ?? "school_admin"],
+      rows: data.map((d) => ({ ...d, issuer_name: nameBy[d.created_by] ?? "—" })),
+      from: rFrom ? `${rFrom}T00:00:00` : null,
+      to: rTo ? `${rTo}T00:00:00` : null,
+    });
+    setMsg(null);
   };
 
   const openDoc = async (d) => {
@@ -684,7 +727,7 @@ export default function Forms() {
               </div>
             )}
 
-            {(picked.fields ?? []).filter((f) => !f.by_recipient).map((f) => (
+            {(picked.fields ?? []).filter((f) => !f.by_recipient && !f.after_reply).map((f) => (
               <div key={f.name}>
                 <label className="text-xs text-muted">
                   {f.label}{f.required && <span className="text-absent"> *</span>}
@@ -823,6 +866,12 @@ export default function Forms() {
                 ) : f.type === "textarea" ? (
                   <textarea rows={4} className="field mt-1 w-full" value={values[f.name] ?? ""}
                             onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
+                ) : f.auto ? (
+                  <>
+                    <input className="field mt-1 w-full bg-canvas text-muted" readOnly
+                           value={values[f.name] ?? ""} placeholder="يُحسب تلقائيًا" />
+                    <p className="mt-1 text-[11px] text-faint">يُحسب تلقائيًا من المدة أعلاه.</p>
+                  </>
                 ) : (
                   <input className="field mt-1 w-full" value={values[f.name] ?? ""}
                          onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
@@ -948,6 +997,7 @@ export default function Forms() {
           ...(returned.length ? [["returned", `المُعادة إليّ (${returned.length})`]] : []),
           ...(replies.length ? [["replies", `ردود المستفيدين (${replies.filter((d) => d.status === "replied").length})`]] : []),
           ["archive", "الأرشيف"],
+          ["report", "التقارير"],
           ...(isApprover ? [["approve", `الاعتماد${pending.length ? ` (${pending.length})` : ""}`]] : [])]
           .map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)}
@@ -1087,6 +1137,31 @@ export default function Forms() {
                   </div>
                 </div>
               ) : (
+                <div className="space-y-2">
+                {/* قرار الإدارة وإغلاق المساءلة — يظهر بعد وصول الرد */}
+                {d.status === "replied" &&
+                 (d.form_templates?.fields ?? []).filter((f) => f.after_reply).length > 0 && (
+                  <div className="space-y-2 rounded-sm2 border border-[#CCF2DB] bg-mint-tint/40 p-3">
+                    <p className="text-xs font-semibold text-mint-deep">قرار الإدارة</p>
+                    {(d.form_templates?.fields ?? []).filter((f) => f.after_reply).map((f) => (
+                      <div key={f.name}>
+                        <label className="text-[11px] text-muted">{f.label}</label>
+                        {f.type === "textarea" ? (
+                          <textarea rows={3} className="field mt-1 w-full"
+                                    value={decision[d.id]?.[f.name] ?? d.data?.[f.name] ?? ""}
+                                    onChange={(e) => setDecision((x) => ({
+                                      ...x, [d.id]: { ...(x[d.id] ?? {}), [f.name]: e.target.value } }))} />
+                        ) : (
+                          <input className="field mt-1 w-full"
+                                 value={decision[d.id]?.[f.name] ?? d.data?.[f.name] ?? ""}
+                                 onChange={(e) => setDecision((x) => ({
+                                   ...x, [d.id]: { ...(x[d.id] ?? {}), [f.name]: e.target.value } }))} />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2">
                   <button onClick={() => openDoc(d)}
                           className="rounded-pill border border-line px-3 py-1.5 text-xs text-muted hover:bg-canvas">
@@ -1102,7 +1177,7 @@ export default function Forms() {
                   </button>
                   {d.status === "replied" && (
                     <button onClick={() => handleReply(d, "approve")} className="btn-primary px-4 py-1.5 text-xs">
-                      اعتماد الرد
+                      اعتماد وإغلاق المساءلة
                     </button>
                   )}
                   {d.status === "awaiting_reply" && (
@@ -1112,9 +1187,82 @@ export default function Forms() {
                     </button>
                   )}
                 </div>
+                </div>
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {tab === "report" && (
+        <div className="space-y-3">
+          <section className="card space-y-3 p-4">
+            <div>
+              <p className="text-sm font-semibold text-ink">تقرير نموذج</p>
+              <p className="mt-0.5 text-xs text-muted">
+                اختر النموذج والمدى الزمني، فيُبنى تقرير بغلاف رسمي وجدول جاهز للطباعة أو الحفظ PDF.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs text-muted">النموذج</label>
+              <select className="field mt-1 w-full" value={rTpl} onChange={(e) => setRTpl(e.target.value)}>
+                <option value="">اختر النموذج…</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs text-muted">من تاريخ (اختياري)</label>
+                <input type="date" className="field num mt-1 w-full" value={rFrom}
+                       onChange={(e) => setRFrom(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs text-muted">إلى تاريخ (اختياري)</label>
+                <input type="date" className="field num mt-1 w-full" value={rTo}
+                       onChange={(e) => setRTo(e.target.value)} />
+              </div>
+            </div>
+
+            <button className="btn-primary w-full" onClick={buildReport}>بناء التقرير</button>
+
+            {msg && (
+              <p className={`rounded-sm2 px-3 py-2 text-sm ${
+                msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
+                {msg.text}
+              </p>
+            )}
+          </section>
+
+          {report && (
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-muted">
+                  <span className="num font-semibold text-ink">{report.rows.length}</span> مستندًا
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => setReport(null)}
+                          className="rounded-pill border border-line px-4 py-1.5 text-sm text-muted hover:bg-canvas">
+                    إغلاق
+                  </button>
+                  <button className="btn-primary" onClick={printNow}>طباعة / حفظ PDF</button>
+                </div>
+              </div>
+
+              <SheetPreview landscape={false}>
+                <FormReport {...report} issuedBy={profile?.full_name ?? profile?.username ?? ""} />
+              </SheetPreview>
+
+              <div className="hidden print:block">
+                <ReportPrintArea>
+                  <FormReport {...report} issuedBy={profile?.full_name ?? profile?.username ?? ""} />
+                </ReportPrintArea>
+              </div>
+            </>
+          )}
         </div>
       )}
 
