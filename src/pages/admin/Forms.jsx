@@ -271,6 +271,7 @@ export default function Forms() {
   const missing = useMemo(() => {
     if (!picked) return [];
     return (picked.fields ?? []).filter((f) => {
+      if (f.type === "table") return false;
       if (f.type === "student" || f.type === "staff") return f.required && chosen.length === 0;
       return f.required && !String(values[f.name] ?? "").trim();
     });
@@ -565,6 +566,17 @@ export default function Forms() {
                         </button>
                       );
                     })}
+                  </div>
+                ) : f.type === "table" ? (
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-muted">عدد الصفوف الفارغة</span>
+                    <input className="field num w-20" inputMode="numeric"
+                           value={values[f.name]?.rows ?? f.rows ?? 10}
+                           onChange={(e) => {
+                             const n = Math.min(40, Math.max(1, Number(e.target.value.replace(/\D/g, "")) || 1));
+                             setValues((v) => ({ ...v, [f.name]: { ...(v[f.name] ?? {}), rows: n } }));
+                           }} />
+                    <span className="text-[11px] text-faint">تُطبع فارغة لتُملأ بخط اليد</span>
                   </div>
                 ) : f.type === "staff" ? (
                   <div className="mt-1 space-y-2">

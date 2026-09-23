@@ -42,6 +42,7 @@ const FIELD_TYPES = [
   { key: "textarea", label: "فقرة" },
   { key: "date",     label: "تاريخ" },
   { key: "number",   label: "رقم" },
+  { key: "table",    label: "جدول حصر (صفوف فارغة)" },
 ];
 
 // يبني حقول النموذج تلقائيًا بحسب تصنيفه
@@ -82,12 +83,18 @@ function buildFields(category, recipient, custom) {
   // إداري: الحقول التي يكتبها المستخدم
   return (custom ?? [])
     .filter((f) => f.label.trim())
-    .map((f, i) => ({
-      name: `f${i + 1}`,
-      label: f.label.trim(),
-      type: f.type,
-      required: !!f.required,
-    }));
+    .map((f, i) => {
+      const base = { name: `f${i + 1}`, label: f.label.trim(), type: f.type, required: !!f.required };
+      if (f.type === "table") {
+        return {
+          ...base,
+          required: false,
+          columns: (f.columns ?? "").split(",").map((c) => c.trim()).filter(Boolean),
+          rows: Math.min(40, Math.max(1, Number(f.rows) || 10)),
+        };
+      }
+      return base;
+    });
 }
 
 const slugKey = (title) =>
@@ -317,7 +324,26 @@ export default function FormsAdmin() {
                             })}>
                       {FIELD_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
                     </select>
-                    <label className="flex items-center gap-1.5 text-xs text-muted">
+                    {c.type === "table" && (
+                      <>
+                        <input className="field min-w-[220px] flex-1" value={c.columns ?? ""}
+                               placeholder="أعمدة الجدول مفصولة بفاصلة: م, اسم الطالب, الصف"
+                               onChange={(e) => setNf((f) => {
+                                 const custom = [...f.custom];
+                                 custom[i] = { ...custom[i], columns: e.target.value };
+                                 return { ...f, custom };
+                               })} />
+                        <input className="field num w-20" inputMode="numeric" value={c.rows ?? 10}
+                               title="عدد الصفوف الفارغة"
+                               onChange={(e) => setNf((f) => {
+                                 const custom = [...f.custom];
+                                 custom[i] = { ...custom[i], rows: e.target.value.replace(/\D/g, "") };
+                                 return { ...f, custom };
+                               })} />
+                      </>
+                    )}
+                    <label className={`flex items-center gap-1.5 text-xs text-muted ${
+                      c.type === "table" ? "hidden" : ""}`}>
                       <input type="checkbox" checked={c.required}
                              onChange={(e) => setNf((f) => {
                                const custom = [...f.custom];

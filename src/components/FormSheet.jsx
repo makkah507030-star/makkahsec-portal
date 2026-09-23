@@ -328,6 +328,42 @@ function Official(p) {
   );
 }
 
+/* جدول حصر: أعمدة معرَّفة وصفوف فارغة تُملأ بخط اليد بعد الطباعة */
+function BlankTable({ field, value }) {
+  const cols = field.columns ?? [];
+  const rows = Math.max(1, Number(value?.rows ?? field.rows ?? 10));
+  const data = Array.isArray(value?.cells) ? value.cells : [];
+  return (
+    <div className="mt-3">
+      <p className="mb-1.5 text-[13px] font-semibold text-mint-deep">{field.label}</p>
+      <table className="w-full border-collapse text-[12px]">
+        <thead>
+          <tr>
+            {cols.map((c, i) => (
+              <th key={i}
+                  className="border border-line bg-[#EDFAF2] px-2 py-1.5 text-center font-semibold text-mint-deep"
+                  style={INK}>
+                {c}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }).map((_, r) => (
+            <tr key={r}>
+              {cols.map((_, c) => (
+                <td key={c} className="h-7 border border-line px-2 align-middle text-ink">
+                  {c === 0 && !data[r]?.[c] ? <span className="num text-faint">{r + 1}</span> : (data[r]?.[c] ?? "")}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /* --------------------------- نموذج إداري --------------------------- */
 function Administrative(p) {
   const { v, doc, template } = p;
@@ -338,12 +374,16 @@ function Administrative(p) {
       <h1 className="mt-5 text-center text-[21px] font-bold text-ink">{template.title}</h1>
 
       <div className="mt-5 flex-1 space-y-2">
-        {(template.fields ?? []).map((f) => (
-          <div key={f.name} className="flex gap-3 border-b border-line py-2">
-            <span className="w-44 shrink-0 text-[13px] text-muted">{f.label}</span>
-            <span className="whitespace-pre-line text-[14px] text-ink">{v[f.name] || "—"}</span>
-          </div>
-        ))}
+        {(template.fields ?? []).map((f) =>
+          f.type === "table" ? (
+            <BlankTable key={f.name} field={f} value={v[f.name]} />
+          ) : (
+            <div key={f.name} className="flex gap-3 border-b border-line py-2">
+              <span className="w-44 shrink-0 text-[13px] text-muted">{f.label}</span>
+              <span className="whitespace-pre-line text-[14px] text-ink">{v[f.name] || "—"}</span>
+            </div>
+          ),
+        )}
       </div>
 
       <div className="mt-4">
