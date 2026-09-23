@@ -214,8 +214,10 @@ export const ADMIN_ROLE_LABEL = {
   makkah_sport:    "مكة سبورت",
   safety_security: "مسؤول الأمن والسلامة",
   health_counselor: "الموجه الصحي",
-  science_labs:     "مختبرات العلوم",
-  computer_lab:     "معمل الحاسب الآلي",
+  science_labs:     "محضر مختبر العلوم 1",
+  science_labs_2:   "محضر مختبر العلوم 2",
+  science_labs_3:   "محضر مختبر العلوم 3",
+  computer_lab:     "محضر معمل الحاسب الآلي",
   // أدوار قديمة (للتوافق مع بيانات سابقة)
   deputy:          "الوكيل",
   counselor:       "الموجه الطلابي",
@@ -243,6 +245,8 @@ export const ASSIGNABLE_ROLES = [
   "safety_security",
   "health_counselor",
   "science_labs",
+  "science_labs_2",
+  "science_labs_3",
   "computer_lab",
 ];
 
@@ -269,6 +273,8 @@ export const ROLE_COVER_HUE = {
   safety_security: 356,
   health_counselor: 188,
   science_labs:     68,
+  science_labs_2:   84,
+  science_labs_3:   44,
   computer_lab:    236,
 };
 
