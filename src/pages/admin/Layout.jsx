@@ -17,6 +17,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/", label: "الرئيسية", perm: null, icon: "home" },
       // لا يظهر لمشرف الدعم الفني ولا لمدير المدرسة — هما لا يرفعان طلب دعم لأنفسهما
+      { to: "/help", label: "دليل الاستخدام", perm: null, icon: "book" },
       { to: "/contact", label: "الدعم الفني", perm: null, icon: "chat", hideForRoles: ["tech_support", "principal"] },
     ],
   },
@@ -57,6 +58,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/forms",        label: "إصدار النماذج", perm: null, icon: "certificate" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "shield" },
+      { to: "/my-documents", label: "نماذجي",        perm: null, icon: "certificate" },
       { to: "/my-signature", label: "توقيعي",        perm: null, icon: "edit" },
     ],
   },
@@ -96,15 +98,21 @@ const OTHER_NAV = {
     { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
     { to: "/follow-up", label: "سجل المتابعة الإلكتروني" },
     { to: "/forms",        label: "النماذج والشهادات" },
+    { to: "/my-documents", label: "نماذجي" },
     { to: "/my-signature", label: "توقيعي" },
+    { to: "/help",         label: "دليل الاستخدام" },
     { to: "/contact",  label: "الدعم الفني" },
   ],
   student:  [
     { to: "/", label: "الرئيسية" },
+    { to: "/my-documents", label: "نماذجي" },
+    { to: "/help", label: "دليل الاستخدام" },
     { to: "/contact", label: "الدعم الفني" },
   ],
   guardian: [
     { to: "/", label: "الرئيسية" },
+    { to: "/my-documents", label: "نماذجي" },
+    { to: "/help", label: "دليل الاستخدام" },
     { to: "/contact", label: "الدعم الفني" },
   ],
 };
@@ -484,97 +492,83 @@ export default function Layout({ children }) {
     );
   }
 
-  /* ============ باقي الفئات: شريط علوي + قائمة منسدلة من ☰ في الجوال ============ */
+  /* ====== باقي الفئات: قائمة جانبية على المتصفح، ومنسدلة في الجوال ====== */
   return (
-    <div className="flex min-h-screen flex-col bg-gray-tint">
+    <div className="min-h-screen bg-gray-tint">
       <AnnouncementModal />
       <TrialBanner />
 
-      <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur">
-        {/* سطح المكتب: شريط واحد بالاسم والروابط الأفقية */}
-        <div className="mx-auto hidden h-[4.5rem] max-w-5xl items-center justify-between gap-3 px-4 sm:flex">
-          <div className="flex min-w-0 items-center gap-4">
-            <Brand compact />
-            <span className="h-8 w-px bg-line" />
-            <UserInline />
-          </div>
-          <Actions />
-        </div>
-
-        {items.length > 1 && (
-          <nav className="hidden border-t border-line sm:block">
-            <div className="mx-auto flex max-w-5xl gap-1 overflow-x-auto px-2">
-              {items.map((i) => (
-                <NavLink key={i.to} to={i.to} end={i.to === "/"}
-                  className={({ isActive }) =>
-                    `shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                      isActive ? "border-mint-deep text-mint-deep"
-                               : "border-transparent text-muted hover:text-ink"}`}>
-                  {i.label}
-                </NavLink>
-              ))}
-            </div>
-          </nav>
-        )}
-
-        {/* الجوال: زر ☰ يفتح قائمة منسدلة، بدل شريط أسفل الشاشة */}
-        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:hidden">
-          <button onClick={() => setOpen(true)} aria-label="القائمة"
-                  className="rounded-sm2 border border-line p-2 text-muted hover:bg-canvas">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
-                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-              <path d="M4 7h16M4 12h16M4 17h16" />
-            </svg>
-          </button>
-          <UserInline />
-          <Actions />
-        </div>
+      {/* شريط علوي للجوال */}
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
+        <button onClick={() => setOpen(true)} aria-label="القائمة"
+                className="rounded-sm2 border border-line p-2 text-muted hover:bg-canvas">
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </button>
+        <UserInline />
+        <Actions />
       </header>
 
-      {/* القائمة المنسدلة — الجوال */}
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40 bg-ink/30 sm:hidden"
-               onClick={() => setOpen(false)} />
-          <aside className="fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-white shadow-xl sm:hidden">
-            <div className="border-b border-line px-4 py-4">
-              <div className="flex items-center justify-between gap-2">
-                <Brand compact />
-                <button onClick={() => setOpen(false)} aria-label="إغلاق"
-                        className="rounded-sm2 p-1.5 text-muted hover:bg-canvas">
-                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
-                       stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                    <path d="M6 6l12 12M18 6 6 18" />
-                  </svg>
-                </button>
+      <div className="mx-auto flex max-w-[1400px]">
+        {/* القائمة الجانبية — المتصفح */}
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-l border-line bg-white lg:flex">
+          <div className="flex h-[4.5rem] items-center border-b border-line px-4">
+            <Brand />
+          </div>
+          <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+            {items.map((i) => (
+              <NavLink key={i.to} to={i.to} end={i.to === "/"} className={linkClass}>
+                <span className="truncate">{i.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+        </aside>
+
+        {/* القائمة المنسدلة — الجوال */}
+        {open && (
+          <>
+            <div className="fixed inset-0 z-40 bg-ink/30 lg:hidden" onClick={() => setOpen(false)} />
+            <aside className="fixed inset-y-0 right-0 z-50 flex w-72 flex-col bg-white shadow-xl lg:hidden">
+              <div className="border-b border-line px-4 py-4">
+                <div className="flex items-center justify-between gap-2">
+                  <Brand compact />
+                  <button onClick={() => setOpen(false)} aria-label="إغلاق"
+                          className="rounded-sm2 p-1.5 text-muted hover:bg-canvas">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                         stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                      <path d="M6 6l12 12M18 6 6 18" />
+                    </svg>
+                  </button>
+                </div>
               </div>
+              <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
+                {items.map((i) => (
+                  <NavLink key={i.to} to={i.to} end={i.to === "/"}
+                           onClick={() => setOpen(false)} className={linkClass}>
+                    <span className="truncate">{i.label}</span>
+                  </NavLink>
+                ))}
+              </nav>
+            </aside>
+          </>
+        )}
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* شريط علوي — المتصفح */}
+          <header className="sticky top-0 z-20 hidden h-[4.5rem] border-b border-line bg-white/95 backdrop-blur lg:block">
+            <div className="mx-auto flex h-full max-w-5xl items-center justify-between gap-3 px-6">
+              <UserInline />
+              <Actions />
             </div>
+          </header>
 
-            <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-              {items.map((i) => (
-                <NavLink key={i.to} to={i.to} end={i.to === "/"}
-                         onClick={() => setOpen(false)} className={linkClass}>
-                  <span className="truncate">{i.label}</span>
-                            {i.to === "/forms" && returnedForms > 0 && (
-                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
-                                {returnedForms}
-                              </span>
-                            )}
-                            {i.to === "/notifications-review" && pendingReview > 0 && (
-                              <span className="num ml-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold text-white">
-                                {pendingReview}
-                              </span>
-                            )}
-                </NavLink>
-              ))}
-            </nav>
-          </aside>
-        </>
-      )}
-
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-5">
-        {children}
-      </main>
+          <main className="min-w-0 flex-1 px-4 py-5 sm:px-6">
+            <div className="mx-auto max-w-5xl">{children}</div>
+          </main>
+        </div>
+      </div>
     </div>
   );
 }

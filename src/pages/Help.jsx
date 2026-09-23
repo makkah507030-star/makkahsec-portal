@@ -203,7 +203,6 @@ export default function Help() {
   const { effectiveRole, adminRoles, profile } = useSession();
   const mine = useMemo(() => myRoles(effectiveRole, adminRoles ?? []), [effectiveRole, adminRoles]);
 
-  const [scope, setScope] = useState("mine");   // mine | all
   const [cat, setCat] = useState("");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(null);
@@ -211,17 +210,14 @@ export default function Help() {
   const visible = useMemo(() => {
     const term = q.trim();
     return PROCS.filter((p) => {
-      const okScope =
-        scope === "all" ||
-        p.who.includes("الجميع") ||
-        p.who.some((w) => mine.has(w));
+      const okScope = p.who.includes("الجميع") || p.who.some((w) => mine.has(w));
       const okCat = !cat || p.cat === cat;
       const okTerm =
         !term ||
         (p.title + " " + p.path + " " + p.steps.join(" ")).includes(term);
       return okScope && okCat && okTerm;
     });
-  }, [scope, cat, q, mine]);
+  }, [cat, q, mine]);
 
   const cats = useMemo(() => {
     const seen = [];
@@ -231,12 +227,12 @@ export default function Help() {
 
   const catsAll = useMemo(() => {
     const base = PROCS.filter(
-      (p) => scope === "all" || p.who.includes("الجميع") || p.who.some((w) => mine.has(w)),
+      (p) => p.who.includes("الجميع") || p.who.some((w) => mine.has(w)),
     );
     const seen = [];
     base.forEach((p) => { if (!seen.includes(p.cat)) seen.push(p.cat); });
     return seen;
-  }, [scope, mine]);
+  }, [mine]);
 
   const pill = (on) =>
     `shrink-0 rounded-pill px-3.5 py-1.5 text-xs font-medium transition-colors ${
@@ -248,7 +244,7 @@ export default function Help() {
         <div>
           <h1 className="text-lg font-bold text-ink">دليل الاستخدام</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            خطوات كل إجراء في البوابة. يعرض لك ما يخصّ حسابك، ويمكنك عرض الدليل كاملًا.
+العمليات الخاصة بك في البوابة، بخطواتها. ابحث أو صفِّ بالقسم.
           </p>
         </div>
         <button className="btn-primary shrink-0" onClick={() => window.print()}>
@@ -259,21 +255,9 @@ export default function Help() {
       <div className="hidden print:block">
         <PrintableGuide
           procs={visible}
-          scopeLabel={scope === "mine"
-            ? `الإجراءات التي تخصّ: ${[...mine].join(" · ") || "حسابك"}`
-            : "الدليل كاملًا لجميع المستفيدين"}
+          scopeLabel={`العمليات الخاصة بـ: ${[...mine].join(" · ") || "حسابك"}`}
           issuedBy={profile?.full_name ?? profile?.username ?? ""}
         />
-      </div>
-
-      {/* نطاق العرض */}
-      <div className="no-print flex flex-wrap gap-1.5">
-        <button className={pill(scope === "mine")} onClick={() => { setScope("mine"); setCat(""); }}>
-          ما يخصّني{profile?.full_name ? "" : ""}
-        </button>
-        <button className={pill(scope === "all")} onClick={() => { setScope("all"); setCat(""); }}>
-          كل الإجراءات
-        </button>
       </div>
 
       <input
@@ -318,9 +302,6 @@ export default function Help() {
                         <span className="mt-0.5 block text-xs text-faint">{p.path}</span>
                       </span>
                       <span className="flex shrink-0 items-center gap-1.5">
-                        {scope === "all" && p.who.slice(0, 2).map((w) => (
-                          <span key={w} className="chip bg-mint-tint text-mint-deep">{w}</span>
-                        ))}
                         <svg viewBox="0 0 24 24" fill="none"
                              className={`h-4 w-4 text-faint transition-transform ${isOpen ? "rotate-180" : ""}`}
                              stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
