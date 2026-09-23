@@ -49,13 +49,14 @@ function parseStored(value) {
 }
 
 const selCls =
-  "h-9 rounded-sm2 border border-line bg-white px-2 text-[13px] text-ink focus:border-mint-deep focus:outline-none";
+  "h-9 min-w-0 rounded-sm2 border border-line bg-white px-1.5 text-[13px] text-ink focus:border-mint-deep focus:outline-none";
 
 function OneDate({ value, onChange, label }) {
   const current = useMemo(() => parseStored(value), [value]);
   const today = toHijri(new Date());
   const h = current ? toHijri(current) : { d: "", m: "", y: today.y };
   const [year, setYear] = useState(h.y || today.y);
+  const [greg, setGreg] = useState(false);
 
   const applyHijri = (d, m, y) => {
     if (!d || !m || !y) return;
@@ -68,38 +69,52 @@ function OneDate({ value, onChange, label }) {
     : "";
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {label && <span className="w-14 shrink-0 text-[11px] text-muted">{label}</span>}
+    <div className="flex items-start gap-2">
+      {label && (
+        <span className="mt-2 w-8 shrink-0 text-[12px] font-medium text-muted">{label}</span>
+      )}
 
-      <select className={`${selCls} num w-[62px]`} value={h.d || ""}
-              onChange={(e) => applyHijri(e.target.value, h.m || 1, h.y || year)}>
-        <option value="">يوم</option>
-        {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}</option>)}
-      </select>
+      <div className="min-w-0 flex-1">
+        {/* صف واحد: يوم · شهر · سنة — بعرض متناسب لا يلتف */}
+        <div className="grid grid-cols-[1fr_1.6fr_1.1fr] gap-1">
+          <select className={`${selCls} num`} value={h.d || ""}
+                  onChange={(e) => applyHijri(e.target.value, h.m || 1, h.y || year)}>
+            <option value="">يوم</option>
+            {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
 
-      <select className={`${selCls} w-[118px]`} value={h.m || ""}
-              onChange={(e) => applyHijri(h.d || 1, e.target.value, h.y || year)}>
-        <option value="">الشهر</option>
-        {HIJRI_MONTHS.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
-      </select>
+          <select className={selCls} value={h.m || ""}
+                  onChange={(e) => applyHijri(h.d || 1, e.target.value, h.y || year)}>
+            <option value="">الشهر</option>
+            {HIJRI_MONTHS.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
+          </select>
 
-      <select className={`${selCls} num w-[80px]`} value={h.y || year}
-              onChange={(e) => {
-                setYear(Number(e.target.value));
-                if (h.d && h.m) applyHijri(h.d, h.m, e.target.value);
-              }}>
-        {Array.from({ length: 12 }, (_, i) => today.y - 5 + i).map((y) => (
-          <option key={y} value={y}>{y}هـ</option>
-        ))}
-      </select>
+          <select className={`${selCls} num`} value={h.y || year}
+                  onChange={(e) => {
+                    setYear(Number(e.target.value));
+                    if (h.d && h.m) applyHijri(h.d, h.m, e.target.value);
+                  }}>
+            {Array.from({ length: 12 }, (_, i) => today.y - 5 + i).map((y) => (
+              <option key={y} value={y}>{y}هـ</option>
+            ))}
+          </select>
+        </div>
 
-      <span className="text-[11px] text-faint">أو ميلادي</span>
-      <input type="date" className={`${selCls} num w-[150px]`} value={iso}
-             onChange={(e) => {
-               if (!e.target.value) { onChange(""); return; }
-               const [y, m, d] = e.target.value.split("-").map(Number);
-               onChange(formatBoth(new Date(Date.UTC(y, m - 1, d))));
-             }} />
+        {/* الميلادي اختياري — يظهر بضغطة فلا يزحم الصندوق */}
+        {greg || iso ? (
+          <input type="date" className={`${selCls} num mt-1 w-full`} value={iso}
+                 onChange={(e) => {
+                   if (!e.target.value) { onChange(""); return; }
+                   const [y, m, d] = e.target.value.split("-").map(Number);
+                   onChange(formatBoth(new Date(Date.UTC(y, m - 1, d))));
+                 }} />
+        ) : (
+          <button type="button" onClick={() => setGreg(true)}
+                  className="mt-1 text-[11px] font-medium text-mint-deep hover:underline">
+            أو اختر بالميلادي
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -109,7 +124,7 @@ export default function DateField({ value, onChange, range = false }) {
     return (
       <div className="rounded-sm2 border border-line bg-canvas/40 p-2">
         <OneDate value={value} onChange={onChange} />
-        {value && <p className="num mt-1.5 text-[11px] text-mint-deep">{value}</p>}
+        {value && <p className="num mt-1.5 text-[11px] leading-relaxed text-mint-deep">{value}</p>}
       </div>
     );
   }
@@ -120,10 +135,11 @@ export default function DateField({ value, onChange, range = false }) {
   const build = (f, t) => (f || t ? `من ${f || "…"} إلى ${t || "…"}` : "");
 
   return (
-    <div className="space-y-1.5 rounded-sm2 border border-line bg-canvas/40 p-2">
+    <div className="space-y-2 rounded-sm2 border border-line bg-canvas/40 p-2">
       <OneDate label="من" value={fromVal} onChange={(v) => onChange(build(v, toVal))} />
+      <div className="h-px bg-line" />
       <OneDate label="إلى" value={toVal} onChange={(v) => onChange(build(fromVal, v))} />
-      {value && <p className="num text-[11px] text-mint-deep">{value}</p>}
+      {value && <p className="num text-[11px] leading-relaxed text-mint-deep">{value}</p>}
     </div>
   );
 }
@@ -148,11 +164,11 @@ const parseTime = (label) => {
 
 function OneTime({ value, onChange, label }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      {label && <span className="w-14 shrink-0 text-[11px] text-muted">{label}</span>}
-      <input type="time" className={`${selCls} num w-[130px]`} value={parseTime(value)}
+    <div className="flex items-center gap-2">
+      {label && <span className="w-8 shrink-0 text-[12px] font-medium text-muted">{label}</span>}
+      <input type="time" className={`${selCls} num flex-1`} value={parseTime(value)}
              onChange={(e) => onChange(to12(e.target.value))} />
-      {value && <span className="num text-[12px] text-mint-deep">{value}</span>}
+      {value && <span className="num shrink-0 text-[12px] text-mint-deep">{value}</span>}
     </div>
   );
 }
