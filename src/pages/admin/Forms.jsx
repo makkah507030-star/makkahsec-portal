@@ -408,6 +408,15 @@ export default function Forms() {
     loadDocs();
   };
 
+  // حذف مستند من الأرشيف — للدعم الفني ومدير المدرسة فقط
+  const removeDoc = async (d) => {
+    if (!window.confirm(`حذف المستند ${d.serial} نهائيًا من الأرشيف؟`)) return;
+    const { error } = await supabase.from("form_documents").delete().eq("id", d.id);
+    if (error) { setMsg({ ok: false, text: `تعذّر الحذف: ${error.message}` }); return; }
+    setMsg({ ok: true, text: `حُذف المستند ${d.serial}.` });
+    loadDocs(); loadReturned();
+  };
+
   const openDoc = async (d) => {
     setViewing({
       doc: { ...d, signature_source: d.form_templates?.signature_source },
@@ -820,21 +829,37 @@ export default function Forms() {
       )}
 
       {tab === "archive" && (
-        <div className="card divide-y divide-line overflow-hidden">
-          {docs.length === 0 && <p className="px-4 py-6 text-sm text-muted">لا مستندات بعد.</p>}
-          {docs.map((d) => (
-            <button key={d.id} onClick={() => openDoc(d)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right hover:bg-canvas">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-ink">{d.title}</p>
-                <p className="num mt-0.5 text-xs text-faint">
-                  {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
-                </p>
+        <>
+          {msg && (
+            <p className={`mb-3 rounded-sm2 px-3 py-2 text-sm ${
+              msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
+              {msg.text}
+            </p>
+          )}
+          <div className="card divide-y divide-line overflow-hidden">
+            {docs.length === 0 && <p className="px-4 py-6 text-sm text-muted">لا مستندات بعد.</p>}
+            {docs.map((d) => (
+              <div key={d.id} className="flex items-center gap-2 px-2 py-1 hover:bg-canvas">
+                <button onClick={() => openDoc(d)}
+                        className="flex min-w-0 flex-1 items-center justify-between gap-3 px-2 py-2 text-right">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink">{d.title}</p>
+                    <p className="num mt-0.5 text-xs text-faint">
+                      {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
+                    </p>
+                  </div>
+                  <span className={`chip shrink-0 ${STATUS_CHIP[d.status].c}`}>{STATUS_CHIP[d.status].t}</span>
+                </button>
+                {isManager && (
+                  <button onClick={() => removeDoc(d)} title="حذف من الأرشيف"
+                          className="shrink-0 rounded-pill border border-absent/40 px-2.5 py-1 text-xs text-absent hover:bg-absent/5">
+                    حذف
+                  </button>
+                )}
               </div>
-              <span className={`chip shrink-0 ${STATUS_CHIP[d.status].c}`}>{STATUS_CHIP[d.status].t}</span>
-            </button>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
 
       {tab === "approve" && (
