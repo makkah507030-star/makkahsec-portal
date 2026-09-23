@@ -119,6 +119,17 @@ function OneDate({ value, onChange, label }) {
   );
 }
 
+/* عدد الأيام بين طرفي المدى، شاملًا اليومين */
+export function rangeDays(value) {
+  const parts = String(value ?? "").split(" إلى ");
+  if (parts.length < 2) return null;
+  const a = parseStored(parts[0]);
+  const b = parseStored(parts[1]);
+  if (!a || !b) return null;
+  const n = Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
+  return n > 0 ? n : null;
+}
+
 export default function DateField({ value, onChange, range = false }) {
   if (!range) {
     return (
@@ -140,6 +151,11 @@ export default function DateField({ value, onChange, range = false }) {
       <div className="h-px bg-line" />
       <OneDate label="إلى" value={toVal} onChange={(v) => onChange(build(fromVal, v))} />
       {value && <p className="num text-[11px] leading-relaxed text-mint-deep">{value}</p>}
+      {rangeDays(value) && (
+        <p className="rounded-sm2 bg-mint-tint px-2.5 py-1.5 text-[12px] font-semibold text-mint-deep">
+          المدة: <span className="num">{rangeDays(value)}</span> يومًا
+        </p>
+      )}
     </div>
   );
 }

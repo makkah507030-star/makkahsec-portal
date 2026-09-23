@@ -44,7 +44,7 @@ exports.handler = async (event) => {
 
     const { data: doc } = await admin
       .from("form_documents")
-      .select("id, status, created_by, recipient_user_id, student_id, signature_path, stamp_path")
+      .select("id, status, created_by, recipient_user_id, student_id, signature_path, stamp_path, reply_signature_path, reply_signature_name")
       .eq("id", document_id)
       .maybeSingle();
     if (!doc) return json({ error: "المستند غير موجود" }, 404);
@@ -94,6 +94,8 @@ exports.handler = async (event) => {
     return json({
       ok: true,
       signature: await sign(doc.signature_path),
+      reply_signature: await sign(doc.reply_signature_path),
+      reply_signature_name: doc.reply_signature_name ?? "",
       stamp: await sign(doc.stamp_path),
       principal: await sign(principalPath),
       principal_name: principalName,

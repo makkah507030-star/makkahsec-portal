@@ -94,7 +94,8 @@ function Sign({ url, name, role }) {
   );
 }
 
-function Signatures({ source, issuerUrl, issuerName, issuerRole, principalUrl, principalName, stampUrl, center }) {
+function Signatures({ source, issuerUrl, issuerName, issuerRole, principalUrl, principalName,
+                     stampUrl, center, replyUrl, replyName }) {
   if (source === "none" && !stampUrl) return null;
   const showIssuer = source === "issuer" || source === "both";
   const showPrincipal = source === "principal" || source === "both";
@@ -111,6 +112,26 @@ function Signatures({ source, issuerUrl, issuerName, issuerRole, principalUrl, p
         </div>
         <div className="justify-self-center">{one}</div>
         <div />
+      </div>
+    );
+  }
+
+  // توقيع المستفيد على ردّه — يظهر مع توقيع المُصدِر
+  if (replyUrl || replyName) {
+    return (
+      <div className="grid grid-cols-3 items-end gap-4">
+        <div className="justify-self-start">
+          {showIssuer && <Sign url={issuerUrl} name={issuerName} role={issuerRole || "المُصدِر"} />}
+          {!showIssuer && showPrincipal && (
+            <Sign url={principalUrl} name={principalName} role="مدير المدرسة" />
+          )}
+        </div>
+        <div className="justify-self-center">
+          {stampUrl && <img src={stampUrl} alt="" className="h-20 w-auto object-contain opacity-90" />}
+        </div>
+        <div className="justify-self-end">
+          <Sign url={replyUrl} name={replyName} role="توقيع المستفيد" />
+        </div>
       </div>
     );
   }
@@ -253,6 +274,7 @@ function Certificate(p) {
           issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}
           principalUrl={p.principalSigUrl} principalName={p.principalName}
           stampUrl={p.stampUrl}
+          replyUrl={p.replySigUrl} replyName={p.replySigName}
         />
 
         {theme === "modern" && (
@@ -321,6 +343,7 @@ function Official(p) {
           issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}
           principalUrl={p.principalSigUrl} principalName={p.principalName}
           stampUrl={p.stampUrl}
+          replyUrl={p.replySigUrl} replyName={p.replySigName}
         />
       </div>
       <div className="mt-7"><Foot serial={doc?.serial} /></div>
@@ -392,6 +415,7 @@ function Administrative(p) {
           issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}
           principalUrl={p.principalSigUrl} principalName={p.principalName}
           stampUrl={p.stampUrl}
+          replyUrl={p.replySigUrl} replyName={p.replySigName}
         />
       </div>
       <div className="mt-7"><Foot serial={doc?.serial} /></div>
@@ -400,7 +424,8 @@ function Administrative(p) {
 }
 
 export default function FormSheet({
-  template, values, doc, sigUrl, stampUrl, principalSigUrl, principalName, scale = 1,
+  template, values, doc, sigUrl, stampUrl, principalSigUrl, principalName,
+  replySigUrl, replySigName, scale = 1,
 }) {
   if (!template) return null;
   const landscape = template.orientation === "landscape";
@@ -422,7 +447,8 @@ export default function FormSheet({
     >
       <Body template={template} v={values ?? {}} doc={doc}
             sigUrl={sigUrl} stampUrl={stampUrl}
-            principalSigUrl={principalSigUrl} principalName={principalName} />
+            principalSigUrl={principalSigUrl} principalName={principalName}
+            replySigUrl={replySigUrl} replySigName={replySigName} />
     </div>
   );
 }

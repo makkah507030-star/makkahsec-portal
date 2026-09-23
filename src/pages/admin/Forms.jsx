@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
-import DateField, { TimeField } from "../../components/DateField.jsx";
+import DateField, { TimeField, rangeDays } from "../../components/DateField.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 
 /* =====================================================================
@@ -564,6 +564,7 @@ export default function Forms() {
       doc: { ...d, signature_source: d.form_templates?.signature_source },
       template: { ...d.form_templates, fields: d.form_templates?.fields ?? [] },
       sig: await signedUrl(d.signature_path),
+      replySig: await signedUrl(d.reply_signature_path),
       stamp: await signedUrl(d.stamp_path),
       principal: await signedUrl(assets.principal_signature),
     });
@@ -596,7 +597,9 @@ export default function Forms() {
                        sigUrl={printable ? viewing.sig : null}
                        stampUrl={printable ? viewing.stamp : null}
                        principalSigUrl={printable ? viewing.principal : null}
-                       principalName={assets.principal_name} />
+                       principalName={assets.principal_name}
+                       replySigUrl={printable ? viewing.replySig : null}
+                       replySigName={d.reply_signature_name} />
           </SheetPreview>
         </div>
 
@@ -606,7 +609,9 @@ export default function Forms() {
               <FormSheet template={viewing.template} values={d.data} doc={d}
                          sigUrl={viewing.sig} stampUrl={viewing.stamp}
                          principalSigUrl={viewing.principal}
-                         principalName={assets.principal_name} />
+                         principalName={assets.principal_name}
+                         replySigUrl={viewing.replySig}
+                         replySigName={d.reply_signature_name} />
             </PrintArea>
           </div>
         )}
@@ -794,7 +799,19 @@ export default function Forms() {
                   <div className="mt-1">
                     <DateField range={f.type === "daterange"}
                                value={values[f.name] ?? ""}
-                               onChange={(val) => setValues((v) => ({ ...v, [f.name]: val }))} />
+                               onChange={(val) => setValues((v) => {
+                                 const next = { ...v, [f.name]: val };
+                                 // أي حقل يطلب عدد الأيام يُحسب من المدى تلقائيًا
+                                 if (f.type === "daterange") {
+                                   const n = rangeDays(val);
+                                   (picked.fields ?? []).forEach((g) => {
+                                     if (/عدد (الأيام|أيام)|المدة المحسومة/.test(g.label ?? "")) {
+                                       next[g.name] = n ? String(n) : "";
+                                     }
+                                   });
+                                 }
+                                 return next;
+                               })} />
                   </div>
                 ) : f.type === "time" || f.type === "timerange" ? (
                   <div className="mt-1">

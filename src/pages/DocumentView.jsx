@@ -48,6 +48,9 @@ export default function DocumentView() {
   const [reply, setReply] = useState({});
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [mySig, setMySig] = useState(null);      // مسار توقيعي المحفوظ
+  const [mySigUrl, setMySigUrl] = useState(null);
+  const [signIt, setSignIt] = useState(true);    // إرفاق التوقيع مع الرد
   const [doc, setDoc] = useState(null);
   const [assets, setAssets] = useState({});
   const [error, setError] = useState("");
@@ -68,6 +71,19 @@ export default function DocumentView() {
       }
       setDoc(data);
       setReply(data.data ?? {});
+
+      // توقيع المستخدم الحالي — ليُرفق بردّه إن رغب
+      const uid = (await supabase.auth.getUser()).data?.user?.id;
+      if (uid) {
+        const { data: sig } = await supabase
+          .from("user_signatures").select("path").eq("user_id", uid).maybeSingle();
+        if (sig?.path) {
+          setMySig(sig.path);
+          const { data: su } = await supabase.storage
+            .from("form-assets").createSignedUrl(sig.path, 600);
+          setMySigUrl(su?.signedUrl ?? null);
+        }
+      }
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -114,10 +130,17 @@ export default function DocumentView() {
       return;
     }
     setSending(true);
-    const { error } = await supabase
-      .from("form_documents")
-      .update({ data: { ...doc.data, ...reply }, status: "replied", reply_at: new Date().toISOString() })
-      .eq("id", doc.id);
+    const patch = {
+      data: { ...doc.data, ...reply },
+      status: "replied",
+      reply_at: new Date().toISOString(),
+    };
+    if (signIt && mySig) {
+      patch.reply_signature_path = mySig;
+      patch.reply_signature_name = doc.recipient ?? "";
+    }
+
+    const { error } = await supabase.from("form_documents").update(patch).eq("id", doc.id);
     setSending(false);
     if (error) { setMsg({ ok: false, text: `تعذّر الإرسال: ${error.message}` }); return; }
     setDoc((d) => ({ ...d, status: "replied", data: { ...d.data, ...reply } }));
@@ -184,6 +207,28 @@ export default function DocumentView() {
             </div>
           ))}
 
+          {/* التوقيع الإلكتروني على الرد */}
+          <div className="rounded-sm2 border border-line p-3">
+            <p className="text-xs font-semibold text-ink">التوقيع على الرد</p>
+            {mySigUrl ? (
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-1.5 text-sm text-muted">
+                  <input type="checkbox" checked={signIt}
+                         onChange={(e) => setSignIt(e.target.checked)} />
+                  أرفق توقيعي
+                </label>
+                {signIt && (
+                  <img src={mySigUrl} alt="توقيعي"
+                       className="h-12 w-auto rounded-sm2 border border-line bg-white object-contain px-2" />
+                )}
+              </div>
+            ) : (
+              <p className="mt-1.5 text-xs leading-relaxed text-warning">
+                لم ترفع توقيعك بعد. يمكنك إرسال الرد بلا توقيع، أو رفع توقيعك من صفحة «توقيعي» ثم العودة.
+              </p>
+            )}
+          </div>
+
           <button className="btn-primary w-full" onClick={sendReply} disabled={sending}>
             {sending ? "جارٍ الإرسال…" : "إرسال الرد"}
           </button>
@@ -209,6 +254,7 @@ export default function DocumentView() {
             template={template} values={doc.data} doc={doc}
             sigUrl={assets.signature} stampUrl={assets.stamp}
             principalSigUrl={assets.principal} principalName={assets.principal_name}
+            replySigUrl={assets.reply_signature} replySigName={assets.reply_signature_name}
           />
         </SheetPreview>
       </div>
@@ -220,6 +266,7 @@ export default function DocumentView() {
               template={template} values={doc.data} doc={doc}
               sigUrl={assets.signature} stampUrl={assets.stamp}
               principalSigUrl={assets.principal} principalName={assets.principal_name}
+              replySigUrl={assets.reply_signature} replySigName={assets.reply_signature_name}
             />
           </PrintArea>
         </div>
