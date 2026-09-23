@@ -62,13 +62,17 @@ import MySignature from "./pages/MySignature.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
+import { useHolidays } from "./lib/useHolidays.js";
 import ExamCountdown from "./components/ExamCountdown.jsx";
+import HolidayBanner from "./components/HolidayBanner.jsx";
 
 export default function App() {
   const { session, profile, loading, can, adminRoles, effectiveRole } = useSession();
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const maintenance = useMaintenance(session);
+  // الإجازات الرسمية تُحمَّل مرة واحدة لكل الحسابات قبل رسم الشاشات
+  const holidaysReady = useHolidays();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -87,7 +91,7 @@ export default function App() {
     return () => sw.removeEventListener("message", onMsg);
   }, [navigate]);
 
-  if (loading) {
+  if (loading || !holidaysReady) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-muted">جارٍ التحميل…</p>
@@ -193,6 +197,8 @@ export default function App() {
           element={
             <div className="space-y-4">
               <EnableNotifications />
+              {/* واجهة المعلم فقط — لوحة الإدارة وصفحتا الطالب وولي الأمر تعرضها بنفسها */}
+              {effectiveRole === "teacher" && <HolidayBanner />}
               {home}
             </div>
           }

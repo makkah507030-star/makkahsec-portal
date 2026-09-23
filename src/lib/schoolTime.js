@@ -1,3 +1,4 @@
+// src/lib/schoolTime.js
 /** الأحد = 1 … الخميس = 5 (ترقيم النظام) */
 export const DAY_NAMES = {
   1: "الأحد", 2: "الاثنين", 3: "الثلاثاء", 4: "الأربعاء", 5: "الخميس",
@@ -51,6 +52,27 @@ export function todayLabel() {
   if (h) return h.name;                 // اسم الإجازة الرسمية
   const d = todayDow();
   return d ? DAY_NAMES[d] : "عطلة نهاية الأسبوع";
+}
+
+/** سبب توقّف الدراسة اليوم — تستعمله الشاشات بدل افتراض نهاية الأسبوع دائمًا.
+ *  يعيد { title, body } جاهزين للعرض، أو null إن كان اليوم يوم دراسة. */
+export function todayOff() {
+  const h = holidayToday();
+  if (h) {
+    return {
+      holiday: true,
+      title: h.name,
+      body: "إجازة رسمية — لا دراسة اليوم. تعود الدراسة بعد انتهاء الإجازة.",
+    };
+  }
+  if (todayDow() === 0) {
+    return {
+      holiday: false,
+      title: "عطلة نهاية الأسبوع",
+      body: "الأسبوع الدراسي من الأحد إلى الخميس.",
+    };
+  }
+  return null;
 }
 
 export const STATUS = {

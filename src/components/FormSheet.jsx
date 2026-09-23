@@ -94,10 +94,27 @@ function Sign({ url, name, role }) {
   );
 }
 
-function Signatures({ source, issuerUrl, issuerName, issuerRole, principalUrl, principalName, stampUrl }) {
+function Signatures({ source, issuerUrl, issuerName, issuerRole, principalUrl, principalName, stampUrl, center }) {
   if (source === "none" && !stampUrl) return null;
   const showIssuer = source === "issuer" || source === "both";
   const showPrincipal = source === "principal" || source === "both";
+
+  // التوسيط في الشهادات فقط — الرسميات تبقى على اليسار كما هو معتاد
+  if (center && showIssuer !== showPrincipal) {
+    const one = showIssuer
+      ? <Sign url={issuerUrl} name={issuerName} role={issuerRole || "المعلم"} />
+      : <Sign url={principalUrl} name={principalName} role="مدير المدرسة" />;
+    return (
+      <div className="grid grid-cols-3 items-end gap-4">
+        <div className="justify-self-start">
+          {stampUrl && <img src={stampUrl} alt="" className="h-20 w-auto object-contain opacity-90" />}
+        </div>
+        <div className="justify-self-center">{one}</div>
+        <div />
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-3 items-end gap-4">
       {/* في التخطيط من اليمين لليسار: المُصدِر يمينًا، والختم وسطًا، والمدير يسارًا */}
@@ -231,6 +248,7 @@ function Certificate(p) {
         </div>
 
         <Signatures
+          center
           source={template.signature_source}
           issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}
           principalUrl={p.principalSigUrl} principalName={p.principalName}
