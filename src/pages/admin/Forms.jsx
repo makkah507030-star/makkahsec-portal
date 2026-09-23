@@ -82,7 +82,7 @@ function SheetPreview({ landscape, children }) {
 /* التعبئة التلقائية: يطابق حقول النموذج بما هو معروف في قاعدة البيانات
    اعتمادًا على تسمية الحقل، فيقلّ الإدخال اليدوي قدر الإمكان. */
 const AUTO_MAP = [
-  { keys: ["اسم الطالب", "اسم المنسوب", "الاسم رباعي", "اسم المعلم", "الاسم"], from: "name" },
+  { keys: ["اسم الطالب", "اسم الموظف", "اسم المنسوب", "الاسم رباعي", "اسم المعلم", "الاسم"], from: "name" },
   { keys: ["السجل المدني", "رقم الهوية", "الإقامة", "رقم السجل"], from: "national_id" },
   { keys: ["الصف", "الفصل", "المرحلة"], from: "class_label" },
   { keys: ["جوال ولي الأمر", "هاتف ولي الأمر", "جوال"], from: "guardian_mobile" },
@@ -143,7 +143,7 @@ export default function Forms() {
   const [classId, setClassId] = useState("");
   const [students, setStudents] = useState([]);
   const [chosen, setChosen] = useState([]);      // مستفيدون متعددون: شهادة لكل واحد
-  const [staff, setStaff] = useState([]);        // منسوبو المدرسة: معلمون وإداريون
+  const [staff, setStaff] = useState([]);        // موظفو المدرسة: معلمون وإداريون
   const [staffQ, setStaffQ] = useState("");
   const [batch, setBatch] = useState([]);        // مستندات صدرت دفعة واحدة للطباعة
 
@@ -179,7 +179,7 @@ export default function Forms() {
     setReturned(data ?? []);
   };
 
-  // منسوبو المدرسة لشهادات المعلمين والإداريين — الاسم والمسمّى الوظيفي
+  // موظفو المدرسة لشهادات المعلمين والإداريين — الاسم والمسمّى الوظيفي
   useEffect(() => {
     (async () => {
       const needsStaff = (picked?.fields ?? []).some((f) => f.type === "staff");
@@ -716,7 +716,7 @@ export default function Forms() {
                           );
                         })}
                       {staff.length === 0 && (
-                        <p className="px-3 py-3 text-xs text-muted">جارٍ تحميل المنسوبين…</p>
+                        <p className="px-3 py-3 text-xs text-muted">جارٍ تحميل الموظفين…</p>
                       )}
                     </div>
                     {chosen.length > 1 && (

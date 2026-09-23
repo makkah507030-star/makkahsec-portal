@@ -33,7 +33,7 @@ const CATEGORIES = [
 // المستفيد من الشهادة — يحدّد شكل حقل الاسم
 const RECIPIENTS = [
   { key: "student", label: "طالب (يُختار من الفصول)" },
-  { key: "staff",   label: "منسوب (يُختار من قائمة المدرسة)" },
+  { key: "staff",   label: "موظف (يُختار من قائمة المدرسة)" },
   { key: "text",    label: "اسم يُكتب يدويًا" },
 ];
 
@@ -50,7 +50,7 @@ function buildFields(category, recipient, custom) {
   if (category === "certificate") {
     const who =
       recipient === "student" ? { name: "recipient", label: "الطالب", type: "student", required: true }
-      : recipient === "staff" ? { name: "recipient", label: "المنسوب", type: "staff", required: true }
+      : recipient === "staff" ? { name: "recipient", label: "اسم الموظف", type: "staff", required: true }
       : { name: "recipient", label: "الاسم", type: "text", required: true };
     const out = [
       { name: "theme", label: "قالب الشهادة", type: "theme", required: false, default: "classic" },
