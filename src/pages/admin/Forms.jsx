@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
+import DateField from "../../components/DateField.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 
 /* =====================================================================
@@ -31,6 +32,8 @@ const STATUS_CHIP = {
   pending:  { t: "بانتظار الاعتماد", c: "bg-warning/10 text-warning" },
   approved: { t: "معتمد",           c: "bg-present/10 text-present" },
   rejected: { t: "مُعاد للتعديل",    c: "bg-absent/10 text-absent" },
+  awaiting_reply: { t: "بانتظار رد المستفيد", c: "bg-warning/10 text-warning" },
+  replied:  { t: "وصل الرد",         c: "bg-mint-tint text-mint-deep" },
 };
 
 const hijriYear = () => {
@@ -298,9 +301,13 @@ export default function Forms() {
 
   const multi = chosen.length > 1;
 
+  // حقول يملؤها المستفيد بنفسه — يُحجب عن المُصدِر
+  const needsReply = (picked?.fields ?? []).some((f) => f.by_recipient);
+
   const missing = useMemo(() => {
     if (!picked) return [];
     return (picked.fields ?? []).filter((f) => {
+      if (f.by_recipient) return false;
       if (f.type === "table") return false;
       if (f.type === "student" || f.type === "staff") return f.required && chosen.length === 0;
       return f.required && !String(values[f.name] ?? "").trim();
@@ -406,7 +413,8 @@ export default function Forms() {
       recipient: values.recipient ?? null,
       student_id: values.student_id ?? null,
       data: values,
-      status: picked.requires_approval ? "pending" : "issued",
+      status: needsReply ? "awaiting_reply"
+            : picked.requires_approval ? "pending" : "issued",
       hijri_year: year,
       created_by: session.user.id,
       signature_path: usesIssuer ? mySig : null,
@@ -450,12 +458,28 @@ export default function Forms() {
     setBatch(data);
     setMsg({
       ok: true,
-      text: picked.requires_approval
+      text: needsReply
+        ? `أُرسل ${data[0].serial} للمستفيد — سيصلك إشعار عند وصول ردّه.`
+        : picked.requires_approval
         ? `حُفظ ${data.length > 1 ? `${data.length} مستندات` : `برقم ${data[0].serial}`} — بانتظار اعتماد المدير قبل الطباعة.`
         : data.length > 1
           ? `صدرت ${data.length} شهادات — اضغط طباعة لإخراجها دفعة واحدة.`
           : `صدر برقم ${data[0].serial}.`,
     });
+  };
+
+  // اعتماد الرد أو إعادته للمستفيد بملاحظة
+  const handleReply = async (d, action, note = null) => {
+    const patch =
+      action === "approve"
+        ? { status: "issued", decision_note: null }
+        : { status: "awaiting_reply", decision_note: note };
+    const { error } = await supabase.from("form_documents").update(patch).eq("id", d.id);
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    setRejectFor(null); setRejectNote("");
+    setMsg({ ok: true, text: action === "approve" ? `اعتُمد المستند ${d.serial}.` : "أُعيد للمستفيد مع الملاحظة." });
+    loadDocs();
+    if (action === "return") sendToRecipient({ ...d, status: "awaiting_reply" });
   };
 
   const decide = async (doc, status, note = null) => {
@@ -487,7 +511,7 @@ export default function Forms() {
       setMsg({ ok: false, text: "هذا المستند غير مرتبط بحساب مستفيد." });
       return;
     }
-    if (!(d.status === "issued" || d.status === "approved")) {
+    if (!["issued", "approved", "awaiting_reply"].includes(d.status)) {
       setMsg({ ok: false, text: "لا يُرسل المستند قبل اعتماده." });
       return;
     }
@@ -504,7 +528,9 @@ export default function Forms() {
 
     const { data: nid, error } = await supabase.rpc("send_notification", {
       p_title: d.title,
-      p_body: `صدر لك ${d.title}${d.recipient ? ` باسم ${d.recipient}` : ""} برقم ${d.serial}. يمكنك عرضه وطباعته من البوابة.`,
+      p_body: d.status === "awaiting_reply"
+        ? `وصلك ${d.title} برقم ${d.serial} ويحتاج ردّك. افتحه من البوابة واكتب إفادتك ثم أرسلها.`
+        : `صدر لك ${d.title}${d.recipient ? ` باسم ${d.recipient}` : ""} برقم ${d.serial}. يمكنك عرضه وطباعته من البوابة.`,
       p_kind: "general",
       p_link: `/doc/${d.id}`,
       p_roles: null,
@@ -652,7 +678,7 @@ export default function Forms() {
               </div>
             )}
 
-            {(picked.fields ?? []).map((f) => (
+            {(picked.fields ?? []).filter((f) => !f.by_recipient).map((f) => (
               <div key={f.name}>
                 <label className="text-xs text-muted">
                   {f.label}{f.required && <span className="text-absent"> *</span>}
@@ -764,6 +790,12 @@ export default function Forms() {
                       </p>
                     )}
                   </div>
+                ) : f.type === "date" || f.type === "daterange" ? (
+                  <div className="mt-1">
+                    <DateField range={f.type === "daterange"}
+                               value={values[f.name] ?? ""}
+                               onChange={(val) => setValues((v) => ({ ...v, [f.name]: val }))} />
+                  </div>
                 ) : f.type === "textarea" ? (
                   <textarea rows={4} className="field mt-1 w-full" value={values[f.name] ?? ""}
                             onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
@@ -773,6 +805,13 @@ export default function Forms() {
                 )}
               </div>
             ))}
+
+            {needsReply && (
+              <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs leading-relaxed text-mint-deep">
+                هذا النموذج فيه حقول يملؤها المستفيد بنفسه. بعد الإصدار أرسله له من الأرشيف،
+                ثم يعود إليك لاعتماده بعد ردّه.
+              </p>
+            )}
 
             {picked.signature_source !== "none" && !mySig &&
              (picked.signature_source === "issuer" || picked.signature_source === "both") && (
@@ -837,6 +876,9 @@ export default function Forms() {
 
   /* ---------------- القوائم ---------------- */
   const pending = docs.filter((d) => d.status === "pending");
+  const replies = docs.filter(
+    (d) => (d.status === "replied" || d.status === "awaiting_reply") && d.created_by === session.user.id,
+  );
 
   return (
     <div className="space-y-5">
@@ -865,6 +907,7 @@ export default function Forms() {
       <div className="flex flex-wrap gap-1.5">
         {[["issue", "إصدار نموذج"],
           ...(returned.length ? [["returned", `المُعادة إليّ (${returned.length})`]] : []),
+          ...(replies.length ? [["replies", `ردود المستفيدين (${replies.filter((d) => d.status === "replied").length})`]] : []),
           ["archive", "الأرشيف"],
           ...(isApprover ? [["approve", `الاعتماد${pending.length ? ` (${pending.length})` : ""}`]] : [])]
           .map(([k, label]) => (
@@ -955,6 +998,87 @@ export default function Forms() {
         </div>
       )}
 
+      {tab === "replies" && (
+        <div className="space-y-3">
+          {msg && (
+            <p className={`rounded-sm2 px-3 py-2 text-sm ${
+              msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
+              {msg.text}
+            </p>
+          )}
+          {replies.length === 0 && (
+            <p className="card px-4 py-6 text-sm text-muted">لا نماذج بانتظار رد.</p>
+          )}
+          {replies.map((d) => (
+            <div key={d.id} className="card space-y-2 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-semibold text-ink">{d.title}</p>
+                  <p className="num mt-0.5 text-xs text-faint">
+                    {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
+                  </p>
+                </div>
+                <span className={`chip shrink-0 ${STATUS_CHIP[d.status].c}`}>{STATUS_CHIP[d.status].t}</span>
+              </div>
+
+              {/* ما كتبه المستفيد */}
+              {(d.form_templates?.fields ?? []).filter((f) => f.by_recipient).map((f) => (
+                <div key={f.name} className="rounded-sm2 bg-canvas px-3 py-2">
+                  <p className="text-[11px] text-faint">{f.label}</p>
+                  <p className="whitespace-pre-line text-sm text-ink">
+                    {d.data?.[f.name] || "— لم يردّ بعد —"}
+                  </p>
+                </div>
+              ))}
+
+              {rejectFor?.id === d.id ? (
+                <div className="space-y-2 rounded-sm2 border border-absent/30 p-3">
+                  <textarea rows={2} className="field w-full" value={rejectNote}
+                            placeholder="اكتب ملاحظتك للمستفيد — سيقرأها كما هي."
+                            onChange={(e) => setRejectNote(e.target.value)} />
+                  <div className="flex gap-2">
+                    <button className="btn-primary px-4 py-1.5 text-xs" disabled={!rejectNote.trim()}
+                            onClick={() => handleReply(d, "return", rejectNote.trim())}>
+                      إعادة للمستفيد
+                    </button>
+                    <button onClick={() => setRejectFor(null)}
+                            className="rounded-pill border border-line px-4 py-1.5 text-xs text-muted hover:bg-canvas">
+                      إلغاء
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => openDoc(d)}
+                          className="rounded-pill border border-line px-3 py-1.5 text-xs text-muted hover:bg-canvas">
+                    معاينة
+                  </button>
+                  <button onClick={() => { setRejectFor(d); setRejectNote(""); }}
+                          className="rounded-pill border border-warning/40 px-3 py-1.5 text-xs text-warning hover:bg-warning/5">
+                    ملاحظة وإعادة
+                  </button>
+                  <button onClick={() => removeDoc(d)}
+                          className="rounded-pill border border-absent/40 px-3 py-1.5 text-xs text-absent hover:bg-absent/5">
+                    حذف
+                  </button>
+                  {d.status === "replied" && (
+                    <button onClick={() => handleReply(d, "approve")} className="btn-primary px-4 py-1.5 text-xs">
+                      اعتماد الرد
+                    </button>
+                  )}
+                  {d.status === "awaiting_reply" && (
+                    <button onClick={() => sendToRecipient(d)}
+                            className="rounded-pill border border-mint-deep px-3 py-1.5 text-xs text-mint-deep hover:bg-mint-tint">
+                      تذكير المستفيد
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {tab === "archive" && (
         <>
           {msg && (
@@ -977,7 +1101,7 @@ export default function Forms() {
                   </div>
                   <span className={`chip shrink-0 ${STATUS_CHIP[d.status].c}`}>{STATUS_CHIP[d.status].t}</span>
                 </button>
-                {d.recipient_user_id && (d.status === "issued" || d.status === "approved") && (
+                {d.recipient_user_id && ["issued", "approved", "awaiting_reply"].includes(d.status) && (
                   <button onClick={() => sendToRecipient(d)}
                           title={d.sent_at ? "أُرسل سابقًا — يمكن إعادة الإرسال" : "إرسال إشعار للمستفيد"}
                           className={`shrink-0 rounded-pill border px-2.5 py-1 text-xs ${

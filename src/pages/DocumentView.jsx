@@ -3,6 +3,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import FormSheet, { PrintArea, SHEET_PX } from "../components/FormSheet.jsx";
+import DateField from "../components/DateField.jsx";
+import { useSession } from "../lib/session.jsx";
 
 /* =====================================================================
    عرض مستند صادر لصاحبه: الطالب أو المنسوب أو ولي أمر الطالب،
@@ -42,6 +44,10 @@ function SheetPreview({ landscape, children }) {
 export default function DocumentView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { session } = useSession();
+  const [reply, setReply] = useState({});
+  const [sending, setSending] = useState(false);
+  const [msg, setMsg] = useState(null);
   const [doc, setDoc] = useState(null);
   const [assets, setAssets] = useState({});
   const [error, setError] = useState("");
@@ -61,6 +67,7 @@ export default function DocumentView() {
         return;
       }
       setDoc(data);
+      setReply(data.data ?? {});
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -96,6 +103,26 @@ export default function DocumentView() {
   }
 
   const template = { ...doc.form_templates, fields: doc.form_templates?.fields ?? [] };
+  const myTurn =
+    doc.status === "awaiting_reply" && doc.recipient_user_id === session?.user?.id;
+  const replyFields = template.fields.filter((f) => f.by_recipient);
+
+  const sendReply = async () => {
+    const miss = replyFields.filter((f) => f.required && !String(reply[f.name] ?? "").trim());
+    if (miss.length) {
+      setMsg({ ok: false, text: `أكمل: ${miss.map((f) => f.label).join("، ")}` });
+      return;
+    }
+    setSending(true);
+    const { error } = await supabase
+      .from("form_documents")
+      .update({ data: { ...doc.data, ...reply }, status: "replied", reply_at: new Date().toISOString() })
+      .eq("id", doc.id);
+    setSending(false);
+    if (error) { setMsg({ ok: false, text: `تعذّر الإرسال: ${error.message}` }); return; }
+    setDoc((d) => ({ ...d, status: "replied", data: { ...d.data, ...reply } }));
+    setMsg({ ok: true, text: "أُرسل ردّك. ستصلك النتيجة بعد مراجعته." });
+  };
   const printable = doc.status === "issued" || doc.status === "approved";
   const landscape = template.orientation === "landscape";
 
@@ -115,6 +142,61 @@ export default function DocumentView() {
           <span className="chip bg-warning/10 text-warning">بانتظار الاعتماد</span>
         )}
       </div>
+
+      {doc.decision_note && myTurn && (
+        <div className="no-print rounded-card border border-warning/40 bg-warning/5 px-4 py-3">
+          <p className="text-sm font-semibold text-warning">ملاحظة على ردّك السابق</p>
+          <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-ink">{doc.decision_note}</p>
+        </div>
+      )}
+
+      {myTurn && (
+        <section className="no-print card space-y-3 p-4">
+          <div>
+            <p className="text-sm font-semibold text-ink">مطلوب ردّك</p>
+            <p className="mt-0.5 text-xs text-muted">
+              اكتب إفادتك ثم أرسلها، وستصل مُصدِر النموذج لمراجعتها.
+            </p>
+          </div>
+
+          {replyFields.map((f) => (
+            <div key={f.name}>
+              <label className="text-xs text-muted">
+                {f.label}{f.required && <span className="text-absent"> *</span>}
+              </label>
+              {f.type === "date" || f.type === "daterange" ? (
+                <div className="mt-1">
+                  <DateField range={f.type === "daterange"} value={reply[f.name] ?? ""}
+                             onChange={(v) => setReply((r) => ({ ...r, [f.name]: v }))} />
+                </div>
+              ) : f.type === "textarea" ? (
+                <textarea rows={4} className="field mt-1 w-full" value={reply[f.name] ?? ""}
+                          onChange={(e) => setReply((r) => ({ ...r, [f.name]: e.target.value }))} />
+              ) : (
+                <input className="field mt-1 w-full" value={reply[f.name] ?? ""}
+                       onChange={(e) => setReply((r) => ({ ...r, [f.name]: e.target.value }))} />
+              )}
+            </div>
+          ))}
+
+          <button className="btn-primary w-full" onClick={sendReply} disabled={sending}>
+            {sending ? "جارٍ الإرسال…" : "إرسال الرد"}
+          </button>
+
+          {msg && (
+            <p className={`rounded-sm2 px-3 py-2 text-sm ${
+              msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
+              {msg.text}
+            </p>
+          )}
+        </section>
+      )}
+
+      {doc.status === "replied" && (
+        <p className="no-print rounded-card bg-mint-tint px-4 py-3 text-sm text-mint-deep">
+          وصل ردّك وهو قيد المراجعة.
+        </p>
+      )}
 
       <div className="no-print">
         <SheetPreview landscape={landscape}>
