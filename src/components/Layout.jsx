@@ -17,6 +17,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/", label: "الرئيسية", perm: null, icon: "home" },
       // لا يظهر لمشرف الدعم الفني ولا لمدير المدرسة — هما لا يرفعان طلب دعم لأنفسهما
+      { to: "/help", label: "دليل الاستخدام", perm: null, icon: "book" },
       { to: "/contact", label: "الدعم الفني", perm: null, icon: "chat", hideForRoles: ["tech_support", "principal"] },
     ],
   },
@@ -99,16 +100,19 @@ const OTHER_NAV = {
     { to: "/forms",        label: "النماذج والشهادات" },
     { to: "/my-documents", label: "نماذجي" },
     { to: "/my-signature", label: "توقيعي" },
+    { to: "/help",         label: "دليل الاستخدام" },
     { to: "/contact",  label: "الدعم الفني" },
   ],
   student:  [
     { to: "/", label: "الرئيسية" },
     { to: "/my-documents", label: "نماذجي" },
+    { to: "/help", label: "دليل الاستخدام" },
     { to: "/contact", label: "الدعم الفني" },
   ],
   guardian: [
     { to: "/", label: "الرئيسية" },
     { to: "/my-documents", label: "نماذجي" },
+    { to: "/help", label: "دليل الاستخدام" },
     { to: "/contact", label: "الدعم الفني" },
   ],
 };

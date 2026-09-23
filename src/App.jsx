@@ -61,6 +61,7 @@ import FormsAdmin from "./pages/admin/FormsAdmin.jsx";
 import MySignature from "./pages/MySignature.jsx";
 import DocumentView from "./pages/DocumentView.jsx";
 import MyDocuments from "./pages/MyDocuments.jsx";
+import Help from "./pages/Help.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
@@ -318,6 +319,8 @@ export default function App() {
         <Route path="/doc/:id" element={<DocumentView />} />
         {/* نماذجي — ما صدر باسم المستخدم، ولولي الأمر مستندات أبنائه */}
         <Route path="/my-documents" element={<MyDocuments />} />
+        {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
+        <Route path="/help" element={<Help />} />
         <Route path="/notify-guide" element={<NotifyGuide />} />
         <Route path="/ticket/:id" element={<TicketDetail />} />
         <Route path="/guides" element={<Guides />} />
