@@ -24,6 +24,77 @@ const SIGN_SOURCE = [
 
 const CAT = { certificate: "شهادة", official: "رسمي", administrative: "إداري" };
 
+const CATEGORIES = [
+  { key: "certificate",    label: "شهادة",     orientation: "landscape" },
+  { key: "official",       label: "خطاب رسمي", orientation: "portrait" },
+  { key: "administrative", label: "نموذج إداري", orientation: "portrait" },
+];
+
+// المستفيد من الشهادة — يحدّد شكل حقل الاسم
+const RECIPIENTS = [
+  { key: "student", label: "طالب (يُختار من الفصول)" },
+  { key: "staff",   label: "منسوب (يُختار من قائمة المدرسة)" },
+  { key: "text",    label: "اسم يُكتب يدويًا" },
+];
+
+const FIELD_TYPES = [
+  { key: "text",     label: "سطر نص" },
+  { key: "textarea", label: "فقرة" },
+  { key: "date",     label: "تاريخ" },
+  { key: "number",   label: "رقم" },
+];
+
+// يبني حقول النموذج تلقائيًا بحسب تصنيفه
+function buildFields(category, recipient, custom) {
+  if (category === "certificate") {
+    const who =
+      recipient === "student" ? { name: "recipient", label: "الطالب", type: "student", required: true }
+      : recipient === "staff" ? { name: "recipient", label: "المنسوب", type: "staff", required: true }
+      : { name: "recipient", label: "الاسم", type: "text", required: true };
+    const out = [
+      { name: "theme", label: "قالب الشهادة", type: "theme", required: false, default: "classic" },
+      who,
+    ];
+    if (recipient === "staff") {
+      out.push({ name: "job", label: "المسمّى الوظيفي", type: "text", required: false });
+    }
+    out.push(
+      { name: "reason", label: "سبب التكريم", type: "textarea", required: true },
+      { name: "closing", label: "خاتمة الشهادة", type: "text", required: false,
+        default: "مع تمنياتنا له بالتوفيق والسداد" },
+      { name: "date", label: "التاريخ", type: "date", required: true },
+    );
+    return out;
+  }
+
+  if (category === "official") {
+    return [
+      { name: "number", label: "الرقم", type: "text", required: false },
+      { name: "date", label: "التاريخ", type: "date", required: true },
+      { name: "audience", label: "الموجَّه إليهم", type: "text", required: true },
+      { name: "title", label: "الموضوع", type: "text", required: true },
+      { name: "body", label: "النص", type: "textarea", required: true },
+      { name: "alert", label: "تنبيه مهم", type: "textarea", required: false },
+      { name: "action", label: "المطلوب", type: "textarea", required: false },
+    ];
+  }
+
+  // إداري: الحقول التي يكتبها المستخدم
+  return (custom ?? [])
+    .filter((f) => f.label.trim())
+    .map((f, i) => ({
+      name: `f${i + 1}`,
+      label: f.label.trim(),
+      type: f.type,
+      required: !!f.required,
+    }));
+}
+
+const slugKey = (title) =>
+  "tpl_" +
+  (title.trim().replace(/\s+/g, "_").replace(/[^\u0600-\u06FF\w_]/g, "").slice(0, 24) || "form") +
+  "_" + Math.random().toString(36).slice(2, 6);
+
 const DEPARTMENTS = [
   { key: "school_admin",    label: "الإدارة المدرسية" },
   { key: "academic",        label: "الشؤون التعليمية" },
@@ -44,6 +115,8 @@ export default function FormsAdmin() {
   const [urls, setUrls] = useState({});
   const [msg, setMsg] = useState(null);
   const [principalName, setPrincipalName] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [nf, setNf] = useState(null);   // بيانات النموذج الجديد
   const [loading, setLoading] = useState(true);
   const stampRef = useRef(null);
   const signRef = useRef(null);
@@ -92,6 +165,56 @@ export default function FormsAdmin() {
     patch(row, { presets: arr });
   };
 
+  const NEW = {
+    title: "", description: "", department: "school_admin", category: "certificate",
+    recipient: "student", allowed_roles: ["principal", "tech_support"],
+    requires_approval: false, show_stamp: false, signature_source: "issuer",
+    presets: "", custom: [{ label: "", type: "text", required: false }],
+  };
+
+  const startAdd = () => { setNf({ ...NEW }); setAdding(true); setMsg(null); };
+
+  const createTemplate = async () => {
+    if (nf.title.trim().length < 2) {
+      setMsg({ ok: false, text: "اكتب عنوان النموذج." }); return;
+    }
+    const fields = buildFields(nf.category, nf.recipient, nf.custom);
+    if (nf.category === "administrative" && fields.length === 0) {
+      setMsg({ ok: false, text: "أضف حقلًا واحدًا على الأقل." }); return;
+    }
+    const orientation = CATEGORIES.find((c) => c.key === nf.category)?.orientation ?? "portrait";
+    const { error } = await supabase.from("form_templates").insert({
+      key: slugKey(nf.title),
+      title: nf.title.trim(),
+      description: nf.description.trim() || null,
+      department: nf.department,
+      category: nf.category,
+      orientation,
+      fields,
+      presets: nf.presets.split("\n").map((x) => x.trim()).filter(Boolean),
+      preset_field: "reason",
+      allowed_roles: nf.allowed_roles,
+      requires_approval: nf.requires_approval,
+      show_stamp: nf.show_stamp,
+      signature_source: nf.signature_source,
+      is_active: true,
+      sort_order: 100,
+    });
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    setAdding(false); setNf(null);
+    setMsg({ ok: true, text: "أُضيف النموذج." });
+    load();
+  };
+
+  const removeTemplate = async (row) => {
+    if (!window.confirm(`حذف «${row.title}» نهائيًا؟ لن يؤثر على المستندات الصادرة.`)) return;
+    const { error } = await supabase.from("form_templates").delete().eq("id", row.id);
+    setMsg(error
+      ? { ok: false, text: `تعذّر الحذف: ${error.message} — يمكنك تعطيله بدل حذفه.` }
+      : { ok: true, text: "حُذف النموذج." });
+    load();
+  };
+
   const uploadAsset = async (key, file) => {
     if (!file) return;
     if (file.size > 600 * 1024) { setMsg({ ok: false, text: "الحجم يتجاوز ٦٠٠ كيلوبايت." }); return; }
@@ -118,6 +241,160 @@ export default function FormsAdmin() {
           حدّد لكل نموذج من يُصدره، وهل يحتاج اعتمادًا، وأي توقيع وختم يُطبع عليه.
         </p>
       </div>
+
+      {!adding ? (
+        <button className="btn-primary" onClick={startAdd}>إضافة نموذج جديد</button>
+      ) : (
+        <section className="card space-y-3 p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-ink">نموذج جديد</h2>
+            <button onClick={() => { setAdding(false); setNf(null); }}
+                    className="rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
+              إلغاء
+            </button>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs text-muted">العنوان</label>
+              <input className="field mt-1 w-full" value={nf.title}
+                     placeholder="مثال: شهادة تميّز في النشاط"
+                     onChange={(e) => setNf((f) => ({ ...f, title: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-xs text-muted">القسم</label>
+              <select className="field mt-1 w-full" value={nf.department}
+                      onChange={(e) => setNf((f) => ({ ...f, department: e.target.value }))}>
+                {DEPARTMENTS.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted">وصف مختصر</label>
+            <input className="field mt-1 w-full" value={nf.description}
+                   placeholder="سطر يوضّح متى يُستعمل هذا النموذج"
+                   onChange={(e) => setNf((f) => ({ ...f, description: e.target.value }))} />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs text-muted">التصنيف</label>
+              <select className="field mt-1 w-full" value={nf.category}
+                      onChange={(e) => setNf((f) => ({ ...f, category: e.target.value }))}>
+                {CATEGORIES.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+            </div>
+            {nf.category === "certificate" && (
+              <div>
+                <label className="text-xs text-muted">المستفيد</label>
+                <select className="field mt-1 w-full" value={nf.recipient}
+                        onChange={(e) => setNf((f) => ({ ...f, recipient: e.target.value }))}>
+                  {RECIPIENTS.map((r) => <option key={r.key} value={r.key}>{r.label}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {nf.category === "administrative" && (
+            <div>
+              <p className="text-xs text-muted">حقول النموذج</p>
+              <div className="mt-1.5 space-y-2">
+                {nf.custom.map((c, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2">
+                    <input className="field min-w-[180px] flex-1" value={c.label}
+                           placeholder="اسم الحقل"
+                           onChange={(e) => setNf((f) => {
+                             const custom = [...f.custom];
+                             custom[i] = { ...custom[i], label: e.target.value };
+                             return { ...f, custom };
+                           })} />
+                    <select className="field" value={c.type}
+                            onChange={(e) => setNf((f) => {
+                              const custom = [...f.custom];
+                              custom[i] = { ...custom[i], type: e.target.value };
+                              return { ...f, custom };
+                            })}>
+                      {FIELD_TYPES.map((t) => <option key={t.key} value={t.key}>{t.label}</option>)}
+                    </select>
+                    <label className="flex items-center gap-1.5 text-xs text-muted">
+                      <input type="checkbox" checked={c.required}
+                             onChange={(e) => setNf((f) => {
+                               const custom = [...f.custom];
+                               custom[i] = { ...custom[i], required: e.target.checked };
+                               return { ...f, custom };
+                             })} />
+                      إلزامي
+                    </label>
+                    <button onClick={() => setNf((f) => ({
+                              ...f, custom: f.custom.filter((_, x) => x !== i) }))}
+                            className="rounded-pill border border-absent/40 px-2.5 py-1 text-xs text-absent">
+                      حذف
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setNf((f) => ({
+                        ...f, custom: [...f.custom, { label: "", type: "text", required: false }] }))}
+                      className="mt-2 rounded-pill border border-line px-3 py-1 text-xs text-mint-deep hover:bg-canvas">
+                إضافة حقل
+              </button>
+            </div>
+          )}
+
+          {nf.category === "certificate" && (
+            <div>
+              <label className="text-xs text-muted">صيغ جاهزة لسبب التكريم — صيغة في كل سطر</label>
+              <textarea rows={3} className="field mt-1 w-full text-sm" value={nf.presets}
+                        onChange={(e) => setNf((f) => ({ ...f, presets: e.target.value }))} />
+            </div>
+          )}
+
+          <div>
+            <p className="text-xs text-muted">من يُصدره</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {ROLES.map((role) => {
+                const on = nf.allowed_roles.includes(role.key);
+                return (
+                  <button key={role.key} type="button"
+                    onClick={() => setNf((f) => ({
+                      ...f,
+                      allowed_roles: on
+                        ? f.allowed_roles.filter((r) => r !== role.key)
+                        : [...f.allowed_roles, role.key],
+                    }))}
+                    className={`rounded-pill px-3 py-1 text-xs font-medium transition-colors ${
+                      on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                    {role.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <label className="flex items-center gap-1.5 text-sm text-muted">
+              <input type="checkbox" checked={nf.requires_approval}
+                     onChange={(e) => setNf((f) => ({ ...f, requires_approval: e.target.checked }))} />
+              يحتاج اعتماد المدير
+            </label>
+            <label className="flex items-center gap-1.5 text-sm text-muted">
+              <input type="checkbox" checked={nf.show_stamp}
+                     onChange={(e) => setNf((f) => ({ ...f, show_stamp: e.target.checked }))} />
+              يحمل ختم المدرسة
+            </label>
+            <label className="flex items-center gap-2 text-sm text-muted">
+              التوقيع:
+              <select className="field" value={nf.signature_source}
+                      onChange={(e) => setNf((f) => ({ ...f, signature_source: e.target.value }))}>
+                {SIGN_SOURCE.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <button className="btn-primary" onClick={createTemplate}>حفظ النموذج</button>
+        </section>
+      )}
 
       <section className="card p-4">
         <h2 className="text-sm font-semibold text-ink">ختم المدرسة وتوقيع المدير</h2>
@@ -178,6 +455,10 @@ export default function FormsAdmin() {
                          onChange={(e) => patch(r, { is_active: e.target.checked })} />
                   مفعّل
                 </label>
+                <button onClick={() => removeTemplate(r)}
+                        className="rounded-pill border border-absent/40 px-2.5 py-1 text-xs text-absent hover:bg-absent/5">
+                  حذف
+                </button>
               </div>
             </div>
 
