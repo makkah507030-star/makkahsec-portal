@@ -274,7 +274,8 @@ export default function Forms() {
       .order("created_at", { ascending: false }).limit(200);
     setDocs(data ?? []);
   };
-  useEffect(() => { if (tab !== "issue") loadDocs(); }, [tab]);
+  // يُحمَّل عند فتح الصفحة ليُحتسب عدّاد الردود والاعتماد فورًا
+  useEffect(() => { loadDocs(); }, [tab]);
 
   // فتح مستند مُعاد لتصحيحه بنفس رقمه التسلسلي
   const startEdit = (d) => {
@@ -911,6 +912,21 @@ export default function Forms() {
           اختر نموذجًا لتعبئته وطباعته. كل ما يصدر يُحفظ في الأرشيف برقم تسلسلي.
         </p>
       </div>
+
+      {replies.filter((d) => d.status === "replied").length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+          <p className="text-sm text-mint-deep">
+            <span className="font-semibold">
+              وصلك <span className="num">{replies.filter((d) => d.status === "replied").length}</span> ردًّا
+            </span>
+            {" "}— راجعه لاعتماده أو إعادته بملاحظة.
+          </p>
+          <button onClick={() => setTab("replies")}
+                  className="shrink-0 rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white">
+            عرضها
+          </button>
+        </div>
+      )}
 
       {returned.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-absent/30 bg-absent/5 px-4 py-3">
