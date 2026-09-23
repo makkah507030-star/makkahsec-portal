@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
-import DateField from "../../components/DateField.jsx";
+import DateField, { TimeField } from "../../components/DateField.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 
 /* =====================================================================
@@ -793,6 +793,12 @@ export default function Forms() {
                 ) : f.type === "date" || f.type === "daterange" ? (
                   <div className="mt-1">
                     <DateField range={f.type === "daterange"}
+                               value={values[f.name] ?? ""}
+                               onChange={(val) => setValues((v) => ({ ...v, [f.name]: val }))} />
+                  </div>
+                ) : f.type === "time" || f.type === "timerange" ? (
+                  <div className="mt-1">
+                    <TimeField range={f.type === "timerange"}
                                value={values[f.name] ?? ""}
                                onChange={(val) => setValues((v) => ({ ...v, [f.name]: val }))} />
                   </div>

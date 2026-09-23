@@ -2,12 +2,12 @@
 import { useMemo, useState } from "react";
 
 /* =====================================================================
-   حقل تاريخ مدمج: هجري وميلادي معًا.
-   يختار المستخدم من أيّهما شاء فيتحدّث الآخر فورًا، وتُحفظ القيمة نصًّا
-   مثل: 12/03/1449هـ الموافق 23/09/2026م
+   حقول التاريخ والوقت — تصميم مضغوط في صف واحد.
 
-   <DateField value={...} onChange={...} />            تاريخ واحد
-   <DateField range value={...} onChange={...} />      من تاريخ إلى تاريخ
+   <DateField value onChange />              تاريخ واحد: هجري + ميلادي
+   <DateField range value onChange />        من تاريخ إلى تاريخ
+   <TimeField value onChange />              وقت واحد
+   <TimeField range value onChange />        من الساعة إلى الساعة
    ===================================================================== */
 
 const HIJRI_MONTHS = [
@@ -17,7 +17,6 @@ const HIJRI_MONTHS = [
 
 const pad = (n) => String(n).padStart(2, "0");
 
-/* ميلادي → هجري (أم القرى) */
 export function toHijri(date) {
   const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", {
     day: "numeric", month: "numeric", year: "numeric",
@@ -26,12 +25,11 @@ export function toHijri(date) {
   return { d: g("day"), m: g("month"), y: g("year") };
 }
 
-/* هجري → ميلادي: تقدير أولي ثم مسح الأيام المجاورة حتى المطابقة */
 export function fromHijri(hy, hm, hd) {
   const approxYear = Math.floor(hy * 0.970224 + 621.5);
-  let best = new Date(Date.UTC(approxYear, 0, 1));
+  const base = new Date(Date.UTC(approxYear, 0, 1));
   for (let i = -420; i <= 420; i++) {
-    const c = new Date(best.getTime() + i * 86400000);
+    const c = new Date(base.getTime() + i * 86400000);
     const h = toHijri(c);
     if (h.y === hy && h.m === hm && h.d === hd) return c;
   }
@@ -41,91 +39,142 @@ export function fromHijri(hy, hm, hd) {
 export function formatBoth(date) {
   if (!date) return "";
   const h = toHijri(date);
-  return `${pad(h.d)}/${pad(h.m)}/${h.y}هـ الموافق ` +
-         `${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}م`;
+  return `${pad(h.d)}/${pad(h.m)}/${h.y}هـ (${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}م)`;
 }
 
-/* يستخرج التاريخ الميلادي من نص محفوظ سابقًا */
 function parseStored(value) {
   const m = String(value ?? "").match(/(\d{2})\/(\d{2})\/(\d{4})م/);
   if (!m) return null;
   return new Date(Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1])));
 }
 
+const selCls =
+  "h-9 rounded-sm2 border border-line bg-white px-2 text-[13px] text-ink focus:border-mint-deep focus:outline-none";
+
 function OneDate({ value, onChange, label }) {
   const current = useMemo(() => parseStored(value), [value]);
-  const h = current ? toHijri(current) : toHijri(new Date());
-  const [hy, setHy] = useState(h.y);
+  const today = toHijri(new Date());
+  const h = current ? toHijri(current) : { d: "", m: "", y: today.y };
+  const [year, setYear] = useState(h.y || today.y);
 
-  const setGregorian = (iso) => {
-    if (!iso) { onChange(""); return; }
-    const [y, m, d] = iso.split("-").map(Number);
-    onChange(formatBoth(new Date(Date.UTC(y, m - 1, d))));
-  };
-
-  const setHijri = (d, m, y) => {
-    const g = fromHijri(y, m, d);
+  const applyHijri = (d, m, y) => {
+    if (!d || !m || !y) return;
+    const g = fromHijri(Number(y), Number(m), Number(d));
     if (g) onChange(formatBoth(g));
   };
 
-  const isoValue = current
+  const iso = current
     ? `${current.getUTCFullYear()}-${pad(current.getUTCMonth() + 1)}-${pad(current.getUTCDate())}`
     : "";
 
   return (
-    <div className="rounded-sm2 border border-line p-2">
-      {label && <p className="mb-1.5 text-[11px] text-faint">{label}</p>}
+    <div className="flex flex-wrap items-center gap-1.5">
+      {label && <span className="w-14 shrink-0 text-[11px] text-muted">{label}</span>}
 
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] text-muted">هجري</span>
-        <select className="field num w-16" value={current ? h.d : ""}
-                onChange={(e) => setHijri(Number(e.target.value), current ? h.m : 1, current ? h.y : hy)}>
-          <option value="">يوم</option>
-          {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => (
-            <option key={d} value={d}>{d}</option>
-          ))}
-        </select>
-        <select className="field w-28" value={current ? h.m : ""}
-                onChange={(e) => setHijri(current ? h.d : 1, Number(e.target.value), current ? h.y : hy)}>
-          <option value="">الشهر</option>
-          {HIJRI_MONTHS.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
-        </select>
-        <select className="field num w-20" value={current ? h.y : hy}
-                onChange={(e) => {
-                  const y = Number(e.target.value);
-                  setHy(y);
-                  if (current) setHijri(h.d, h.m, y);
-                }}>
-          {Array.from({ length: 12 }, (_, i) => h.y - 5 + i).map((y) => (
-            <option key={y} value={y}>{y}</option>
-          ))}
-        </select>
-      </div>
+      <select className={`${selCls} num w-[62px]`} value={h.d || ""}
+              onChange={(e) => applyHijri(e.target.value, h.m || 1, h.y || year)}>
+        <option value="">يوم</option>
+        {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}</option>)}
+      </select>
 
-      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        <span className="text-[11px] text-muted">ميلادي</span>
-        <input type="date" className="field num" value={isoValue}
-               onChange={(e) => setGregorian(e.target.value)} />
-      </div>
+      <select className={`${selCls} w-[118px]`} value={h.m || ""}
+              onChange={(e) => applyHijri(h.d || 1, e.target.value, h.y || year)}>
+        <option value="">الشهر</option>
+        {HIJRI_MONTHS.map((n, i) => <option key={n} value={i + 1}>{n}</option>)}
+      </select>
 
-      {value && <p className="num mt-1.5 text-[11px] text-mint-deep">{value}</p>}
+      <select className={`${selCls} num w-[80px]`} value={h.y || year}
+              onChange={(e) => {
+                setYear(Number(e.target.value));
+                if (h.d && h.m) applyHijri(h.d, h.m, e.target.value);
+              }}>
+        {Array.from({ length: 12 }, (_, i) => today.y - 5 + i).map((y) => (
+          <option key={y} value={y}>{y}هـ</option>
+        ))}
+      </select>
+
+      <span className="text-[11px] text-faint">أو ميلادي</span>
+      <input type="date" className={`${selCls} num w-[150px]`} value={iso}
+             onChange={(e) => {
+               if (!e.target.value) { onChange(""); return; }
+               const [y, m, d] = e.target.value.split("-").map(Number);
+               onChange(formatBoth(new Date(Date.UTC(y, m - 1, d))));
+             }} />
     </div>
   );
 }
 
 export default function DateField({ value, onChange, range = false }) {
-  if (!range) return <OneDate value={value} onChange={onChange} />;
+  if (!range) {
+    return (
+      <div className="rounded-sm2 border border-line bg-canvas/40 p-2">
+        <OneDate value={value} onChange={onChange} />
+        {value && <p className="num mt-1.5 text-[11px] text-mint-deep">{value}</p>}
+      </div>
+    );
+  }
 
-  // نص المدى: «من … إلى …» — نفصله ونعيد تركيبه
   const [from, to] = String(value ?? "").split(" إلى ");
   const fromVal = (from ?? "").replace(/^من\s*/, "");
-  const build = (f, t) =>
-    f || t ? `من ${f || "…"} إلى ${t || "…"}` : "";
+  const toVal = to ?? "";
+  const build = (f, t) => (f || t ? `من ${f || "…"} إلى ${t || "…"}` : "");
 
   return (
-    <div className="space-y-1.5">
-      <OneDate label="من تاريخ" value={fromVal} onChange={(v) => onChange(build(v, to ?? ""))} />
-      <OneDate label="إلى تاريخ" value={to ?? ""} onChange={(v) => onChange(build(fromVal, v))} />
+    <div className="space-y-1.5 rounded-sm2 border border-line bg-canvas/40 p-2">
+      <OneDate label="من" value={fromVal} onChange={(v) => onChange(build(v, toVal))} />
+      <OneDate label="إلى" value={toVal} onChange={(v) => onChange(build(fromVal, v))} />
+      {value && <p className="num text-[11px] text-mint-deep">{value}</p>}
+    </div>
+  );
+}
+
+/* ----------------------------- الوقت ----------------------------- */
+
+const to12 = (hhmm) => {
+  if (!hhmm) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  const period = h < 12 ? "صباحًا" : "مساءً";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return `${hour}:${pad(m)} ${period}`;
+};
+
+const parseTime = (label) => {
+  const m = String(label ?? "").match(/(\d{1,2}):(\d{2})\s*(صباحًا|مساءً)/);
+  if (!m) return "";
+  let h = Number(m[1]) % 12;
+  if (m[3] === "مساءً") h += 12;
+  return `${pad(h)}:${m[2]}`;
+};
+
+function OneTime({ value, onChange, label }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {label && <span className="w-14 shrink-0 text-[11px] text-muted">{label}</span>}
+      <input type="time" className={`${selCls} num w-[130px]`} value={parseTime(value)}
+             onChange={(e) => onChange(to12(e.target.value))} />
+      {value && <span className="num text-[12px] text-mint-deep">{value}</span>}
+    </div>
+  );
+}
+
+export function TimeField({ value, onChange, range = false }) {
+  if (!range) {
+    return (
+      <div className="rounded-sm2 border border-line bg-canvas/40 p-2">
+        <OneTime value={value} onChange={onChange} />
+      </div>
+    );
+  }
+
+  const [from, to] = String(value ?? "").split(" إلى ");
+  const fromVal = (from ?? "").replace(/^من\s*/, "");
+  const toVal = to ?? "";
+  const build = (f, t) => (f || t ? `من ${f || "…"} إلى ${t || "…"}` : "");
+
+  return (
+    <div className="space-y-1.5 rounded-sm2 border border-line bg-canvas/40 p-2">
+      <OneTime label="من" value={fromVal} onChange={(v) => onChange(build(v, toVal))} />
+      <OneTime label="إلى" value={toVal} onChange={(v) => onChange(build(fromVal, v))} />
     </div>
   );
 }

@@ -40,7 +40,10 @@ const RECIPIENTS = [
 const FIELD_TYPES = [
   { key: "text",     label: "سطر نص" },
   { key: "textarea", label: "فقرة" },
-  { key: "date",     label: "تاريخ" },
+  { key: "date",     label: "تاريخ (هجري وميلادي)" },
+  { key: "daterange",label: "مدة: من تاريخ إلى تاريخ" },
+  { key: "time",     label: "وقت" },
+  { key: "timerange",label: "مدة: من الساعة إلى الساعة" },
   { key: "number",   label: "رقم" },
   { key: "table",    label: "جدول حصر (صفوف فارغة)" },
 ];

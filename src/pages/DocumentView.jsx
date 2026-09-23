@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import FormSheet, { PrintArea, SHEET_PX } from "../components/FormSheet.jsx";
-import DateField from "../components/DateField.jsx";
+import DateField, { TimeField } from "../components/DateField.jsx";
 import { useSession } from "../lib/session.jsx";
 
 /* =====================================================================
@@ -167,6 +167,11 @@ export default function DocumentView() {
               {f.type === "date" || f.type === "daterange" ? (
                 <div className="mt-1">
                   <DateField range={f.type === "daterange"} value={reply[f.name] ?? ""}
+                             onChange={(v) => setReply((r) => ({ ...r, [f.name]: v }))} />
+                </div>
+              ) : f.type === "time" || f.type === "timerange" ? (
+                <div className="mt-1">
+                  <TimeField range={f.type === "timerange"} value={reply[f.name] ?? ""}
                              onChange={(v) => setReply((r) => ({ ...r, [f.name]: v }))} />
                 </div>
               ) : f.type === "textarea" ? (
