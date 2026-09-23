@@ -2,6 +2,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
+import { GRADE_NAMES } from "../../lib/schoolTime";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 
 /* =====================================================================
@@ -76,6 +77,31 @@ function SheetPreview({ landscape, children }) {
       </div>
     </div>
   );
+}
+
+/* التعبئة التلقائية: يطابق حقول النموذج بما هو معروف في قاعدة البيانات
+   اعتمادًا على تسمية الحقل، فيقلّ الإدخال اليدوي قدر الإمكان. */
+const AUTO_MAP = [
+  { keys: ["اسم الطالب", "اسم المنسوب", "الاسم رباعي", "اسم المعلم", "الاسم"], from: "name" },
+  { keys: ["السجل المدني", "رقم الهوية", "الإقامة", "رقم السجل"], from: "national_id" },
+  { keys: ["الصف", "الفصل", "المرحلة"], from: "class_label" },
+  { keys: ["جوال ولي الأمر", "هاتف ولي الأمر", "جوال"], from: "guardian_mobile" },
+  { keys: ["ولي الأمر", "ولي أمر"], from: "guardian_name" },
+  { keys: ["التخصص"], from: "specialization" },
+  { keys: ["المسمّى", "المسمى", "العمل الحالي", "الوظيفة"], from: "job" },
+];
+
+function autoFill(fields, info, current) {
+  const out = { ...current };
+  (fields ?? []).forEach((f) => {
+    if (["student", "staff", "theme", "table"].includes(f.type)) return;
+    if (String(out[f.name] ?? "").trim()) return;           // لا نطمس ما كتبه المستخدم
+    const label = f.label ?? "";
+    const hit = AUTO_MAP.find((m) => m.keys.some((k) => label.includes(k)));
+    const val = hit ? info[hit.from] : null;
+    if (val) out[f.name] = val;
+  });
+  return out;
 }
 
 const signedUrl = async (path) => {
@@ -160,7 +186,7 @@ export default function Forms() {
       if (!needsStaff || staff.length) return;
 
       const [{ data: tch }, { data: usr }, { data: roles }] = await Promise.all([
-        supabase.from("teachers").select("id, user_id, full_name, specialization").order("full_name"),
+        supabase.from("teachers").select("id, user_id, full_name, specialization, national_id").order("full_name"),
         supabase.from("users").select("id, full_name, username, role").eq("role", "admin"),
         supabase.from("admin_roles").select("user_id, role_type"),
       ]);
@@ -177,11 +203,15 @@ export default function Forms() {
       const list = [
         ...(tch ?? []).map((t) => ({
           id: `t-${t.id}`,
+          uid: t.user_id ?? null,
           full_name: t.full_name,
+          specialization: t.specialization ?? "",
+          national_id: t.national_id ?? "",
           job: t.specialization ? `معلم ${t.specialization}` : "معلم",
         })),
         ...(usr ?? []).map((u) => ({
           id: `u-${u.id}`,
+          uid: u.id,
           full_name: u.full_name ?? u.username,
           job: jobBy[u.id] ?? "إداري بالمدرسة",
         })),
@@ -229,7 +259,7 @@ export default function Forms() {
     (async () => {
       if (!classId) { setStudents([]); return; }
       const { data } = await supabase.from("student_enrollment")
-        .select("students(id, full_name)").eq("class_id", classId).eq("status", "active");
+        .select("students(id, full_name, user_id, national_id)").eq("class_id", classId).eq("status", "active");
       setStudents((data ?? []).map((r) => r.students).filter(Boolean)
         .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar")));
     })();
@@ -278,23 +308,55 @@ export default function Forms() {
   }, [picked, values, chosen]);
 
   const toggleStaff = (m) => {
-    setChosen((c) => {
-      const next = c.some((x) => x.id === m.id) ? c.filter((x) => x.id !== m.id) : [...c, m];
-      setValues((v) => ({ ...v, recipient: next[0]?.full_name ?? "", job: next[0]?.job ?? "" }));
-      return next;
-    });
+    const already = chosen.some((x) => x.id === m.id);
+    const next = already ? chosen.filter((x) => x.id !== m.id) : [...chosen, m];
+    setChosen(next);
+
+    const head = next[0];
+    if (!head) { setValues((v) => ({ ...v, recipient: "", job: "" })); return; }
+
+    const info = {
+      name: head.full_name,
+      job: head.job ?? "",
+      specialization: head.specialization ?? "",
+      national_id: head.national_id ?? "",
+    };
+    setValues((v) =>
+      autoFill(picked?.fields, info, { ...v, recipient: head.full_name, job: head.job ?? "" }));
   };
 
-  const toggleStudent = (st) => {
-    setChosen((c) => {
-      const next = c.some((x) => x.id === st.id) ? c.filter((x) => x.id !== st.id) : [...c, st];
-      setValues((v) => ({
-        ...v,
-        student_id: next[0]?.id ?? null,
-        recipient: next[0]?.full_name ?? "",
-      }));
-      return next;
-    });
+  // بيانات الطالب المعروفة في القاعدة — لتعبئة الحقول تلقائيًا
+  const studentInfo = async (st) => {
+    const info = { name: st.full_name, national_id: st.national_id ?? null };
+    const [{ data: v }, { data: gs }] = await Promise.all([
+      supabase.from("v_active_students").select("class_no, grade").eq("student_id", st.id).maybeSingle(),
+      supabase.from("guardian_student").select("guardians(full_name, mobile)").eq("student_id", st.id),
+    ]);
+    if (v) {
+      info.class_label = `${GRADE_NAMES[v.grade] ?? ""} — فصل ${v.class_no}`.trim();
+    }
+    const g = (gs ?? [])[0]?.guardians;
+    if (g) { info.guardian_name = g.full_name; info.guardian_mobile = g.mobile; }
+    return info;
+  };
+
+  const toggleStudent = async (st) => {
+    const already = chosen.some((x) => x.id === st.id);
+    const next = already ? chosen.filter((x) => x.id !== st.id) : [...chosen, st];
+    setChosen(next);
+
+    const head = next[0];
+    if (!head) {
+      setValues((v) => ({ ...v, student_id: null, recipient: "" }));
+      return;
+    }
+    setValues((v) => ({ ...v, student_id: head.id, recipient: head.full_name }));
+
+    // التعبئة التلقائية من بيانات أول طالب مختار
+    try {
+      const info = await studentInfo(head);
+      setValues((v) => autoFill(picked?.fields, info, { ...v, student_id: head.id, recipient: head.full_name }));
+    } catch { /* تبقى الحقول للإدخال اليدوي */ }
   };
 
   const issue = async () => {
@@ -367,6 +429,7 @@ export default function Forms() {
       }
       rows.push({
         ...row,
+        recipient_user_id: st ? (st.uid ?? st.user_id ?? null) : null,
         serial: sr,
         recipient: st ? st.full_name : row.recipient,
         student_id: st && !/^[tu]-/.test(String(st.id)) ? st.id : row.student_id,
@@ -416,6 +479,58 @@ export default function Forms() {
     if (error) { setMsg({ ok: false, text: `تعذّر الحذف: ${error.message}` }); return; }
     setMsg({ ok: true, text: `حُذف المستند ${d.serial}.` });
     loadDocs(); loadReturned();
+  };
+
+  // إرسال المستند للمستفيد: إشعار داخل البوابة (جرس) وإشعار على الجوال
+  const sendToRecipient = async (d) => {
+    if (!d.recipient_user_id) {
+      setMsg({ ok: false, text: "هذا المستند غير مرتبط بحساب مستفيد." });
+      return;
+    }
+    if (!(d.status === "issued" || d.status === "approved")) {
+      setMsg({ ok: false, text: "لا يُرسل المستند قبل اعتماده." });
+      return;
+    }
+
+    // المستفيد، ومعه أولياء أمره إن كان طالبًا
+    const ids = new Set([d.recipient_user_id]);
+    if (d.student_id) {
+      const { data: gs } = await supabase
+        .from("guardian_student")
+        .select("guardians(user_id)")
+        .eq("student_id", d.student_id);
+      (gs ?? []).forEach((g) => { if (g.guardians?.user_id) ids.add(g.guardians.user_id); });
+    }
+
+    const { data: nid, error } = await supabase.rpc("send_notification", {
+      p_title: d.title,
+      p_body: `صدر لك ${d.title}${d.recipient ? ` باسم ${d.recipient}` : ""} برقم ${d.serial}. يمكنك عرضه وطباعته من البوابة.`,
+      p_kind: "general",
+      p_link: `/doc/${d.id}`,
+      p_roles: null,
+      p_user_ids: Array.from(ids),
+      p_grade: null,
+      p_class_no: null,
+      p_is_auto: false,
+    });
+
+    if (error) { setMsg({ ok: false, text: `تعذّر الإرسال: ${error.message}` }); return; }
+    if (!nid)  { setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
+
+    // إشعار الجوال
+    try {
+      await fetch("/.netlify/functions/push-send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notification_id: nid }),
+      });
+    } catch { /* الإشعار داخل البوابة وصل على كل حال */ }
+
+    await supabase.from("form_documents")
+      .update({ sent_at: new Date().toISOString() }).eq("id", d.id);
+
+    setMsg({ ok: true, text: `أُرسل إشعار المستند ${d.serial} للمستفيد.` });
+    loadDocs();
   };
 
   const openDoc = async (d) => {
@@ -862,6 +977,16 @@ export default function Forms() {
                   </div>
                   <span className={`chip shrink-0 ${STATUS_CHIP[d.status].c}`}>{STATUS_CHIP[d.status].t}</span>
                 </button>
+                {d.recipient_user_id && (d.status === "issued" || d.status === "approved") && (
+                  <button onClick={() => sendToRecipient(d)}
+                          title={d.sent_at ? "أُرسل سابقًا — يمكن إعادة الإرسال" : "إرسال إشعار للمستفيد"}
+                          className={`shrink-0 rounded-pill border px-2.5 py-1 text-xs ${
+                            d.sent_at
+                              ? "border-line text-muted hover:bg-canvas"
+                              : "border-mint-deep text-mint-deep hover:bg-mint-tint"}`}>
+                    {d.sent_at ? "أُرسل" : "إرسال للمستفيد"}
+                  </button>
+                )}
                 {isManager && (
                   <button onClick={() => removeDoc(d)} title="حذف من الأرشيف"
                           className="shrink-0 rounded-pill border border-absent/40 px-2.5 py-1 text-xs text-absent hover:bg-absent/5">

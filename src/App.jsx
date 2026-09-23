@@ -59,6 +59,8 @@ import SiteMetrics from "./pages/admin/SiteMetrics.jsx";
 import Forms from "./pages/admin/Forms.jsx";
 import FormsAdmin from "./pages/admin/FormsAdmin.jsx";
 import MySignature from "./pages/MySignature.jsx";
+import DocumentView from "./pages/DocumentView.jsx";
+import MyDocuments from "./pages/MyDocuments.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
@@ -312,6 +314,10 @@ export default function App() {
         <Route path="/contact" element={<Feedback />} />
         <Route path="/notifications-me" element={<NotificationsList />} />
         <Route path="/notify/:id" element={<NotificationView />} />
+        {/* عرض مستند صادر — لصاحبه ولولي أمره ولمُصدِره وللإدارة */}
+        <Route path="/doc/:id" element={<DocumentView />} />
+        {/* نماذجي — ما صدر باسم المستخدم، ولولي الأمر مستندات أبنائه */}
+        <Route path="/my-documents" element={<MyDocuments />} />
         <Route path="/notify-guide" element={<NotifyGuide />} />
         <Route path="/ticket/:id" element={<TicketDetail />} />
         <Route path="/guides" element={<Guides />} />

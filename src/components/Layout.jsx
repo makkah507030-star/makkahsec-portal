@@ -57,6 +57,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/forms",        label: "إصدار النماذج", perm: null, icon: "certificate" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "shield" },
+      { to: "/my-documents", label: "نماذجي",        perm: null, icon: "certificate" },
       { to: "/my-signature", label: "توقيعي",        perm: null, icon: "edit" },
     ],
   },
@@ -96,15 +97,18 @@ const OTHER_NAV = {
     { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
     { to: "/follow-up", label: "سجل المتابعة الإلكتروني" },
     { to: "/forms",        label: "النماذج والشهادات" },
+    { to: "/my-documents", label: "نماذجي" },
     { to: "/my-signature", label: "توقيعي" },
     { to: "/contact",  label: "الدعم الفني" },
   ],
   student:  [
     { to: "/", label: "الرئيسية" },
+    { to: "/my-documents", label: "نماذجي" },
     { to: "/contact", label: "الدعم الفني" },
   ],
   guardian: [
     { to: "/", label: "الرئيسية" },
+    { to: "/my-documents", label: "نماذجي" },
     { to: "/contact", label: "الدعم الفني" },
   ],
 };
