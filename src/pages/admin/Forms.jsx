@@ -204,22 +204,36 @@ export default function Forms() {
           : label;
       });
 
+      // الإداريون أولًا: من يجمع بين التدريس ودور إداري يظهر بمسمّاه الإداري
       const list = [
-        ...(tch ?? []).map((t) => ({
-          id: `t-${t.id}`,
-          uid: t.user_id ?? null,
-          full_name: t.full_name,
-          specialization: t.specialization ?? "",
-          national_id: t.national_id ?? "",
-          job: t.specialization ? `معلم ${t.specialization}` : "معلم",
-        })),
         ...(usr ?? []).map((u) => ({
           id: `u-${u.id}`,
           uid: u.id,
           full_name: u.full_name ?? u.username,
           job: jobBy[u.id] ?? "إداري بالمدرسة",
         })),
+        ...(tch ?? []).map((t) => ({
+          id: `t-${t.id}`,
+          uid: t.user_id ?? null,
+          full_name: t.full_name,
+          specialization: t.specialization ?? "",
+          national_id: t.national_id ?? "",
+          job: "معلم",
+        })),
       ];
+
+      // التخصص يُنقل للإداري الذي له سجل معلّم، ليُملأ حقل «التخصص» تلقائيًا
+      const specByName = {};
+      (tch ?? []).forEach((t) => {
+        if (t.full_name) specByName[t.full_name.trim()] = {
+          specialization: t.specialization ?? "",
+          national_id: t.national_id ?? "",
+        };
+      });
+      list.forEach((m) => {
+        const extra = specByName[(m.full_name ?? "").trim()];
+        if (extra && !m.specialization) Object.assign(m, extra);
+      });
 
       const seen = new Set();
       setStaff(list.filter((x) => {
@@ -404,7 +418,7 @@ export default function Forms() {
 
     const usesIssuer = picked.signature_source === "issuer" || picked.signature_source === "both";
     // صفة المُصدِر كما تُطبع تحت توقيعه — مسمّاه الوظيفي الفعلي
-    const roles = adminRoles ?? [];
+    const roles = (adminRoles ?? []).filter((r) => r !== "admin");
     const issuerRole = roles.length
       ? roles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و")
       : "المعلم";
