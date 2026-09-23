@@ -24,6 +24,19 @@ const SIGN_SOURCE = [
 
 const CAT = { certificate: "شهادة", official: "رسمي", administrative: "إداري" };
 
+const DEPARTMENTS = [
+  { key: "school_admin",    label: "الإدارة المدرسية" },
+  { key: "academic",        label: "الشؤون التعليمية" },
+  { key: "school_affairs",  label: "الشؤون المدرسية" },
+  { key: "student_affairs", label: "شؤون الطلاب" },
+  { key: "guidance",        label: "التوجيه الطلابي" },
+  { key: "activity",        label: "النشاط الطلابي" },
+  { key: "health",          label: "الموجه الصحي" },
+  { key: "gifted",          label: "الموهوبين" },
+  { key: "globe",           label: "برنامج جلوب البيئي العالمي" },
+  { key: "sport",           label: "مكة سبورت" },
+];
+
 export default function FormsAdmin() {
   const { session } = useSession();
   const [rows, setRows] = useState([]);
@@ -207,6 +220,13 @@ export default function FormsAdmin() {
                 <input type="checkbox" checked={r.show_stamp}
                        onChange={(e) => patch(r, { show_stamp: e.target.checked })} />
                 يحمل ختم المدرسة
+              </label>
+              <label className="flex items-center gap-2 text-sm text-muted">
+                القسم:
+                <select className="field" value={r.department ?? "school_admin"}
+                        onChange={(e) => patch(r, { department: e.target.value })}>
+                  {DEPARTMENTS.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
+                </select>
               </label>
               <label className="flex items-center gap-2 text-sm text-muted">
                 التوقيع:

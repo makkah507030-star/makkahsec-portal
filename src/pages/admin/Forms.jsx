@@ -1,7 +1,7 @@
 // src/pages/admin/Forms.jsx
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { useSession } from "../../lib/session.jsx";
+import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 
 /* =====================================================================
@@ -10,6 +10,21 @@ import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/Fo
    ===================================================================== */
 
 const CAT_LABEL = { certificate: "شهادات", official: "رسمية", administrative: "إدارية" };
+
+/* أقسام المدرسة — يُصنَّف كل نموذج تحت قسمه المُصدِر */
+export const DEPARTMENTS = [
+  { key: "school_admin",    label: "الإدارة المدرسية" },
+  { key: "academic",        label: "الشؤون التعليمية" },
+  { key: "school_affairs",  label: "الشؤون المدرسية" },
+  { key: "student_affairs", label: "شؤون الطلاب" },
+  { key: "guidance",        label: "التوجيه الطلابي" },
+  { key: "activity",        label: "النشاط الطلابي" },
+  { key: "health",          label: "الموجه الصحي" },
+  { key: "gifted",          label: "الموهوبين" },
+  { key: "globe",           label: "برنامج جلوب البيئي العالمي" },
+  { key: "sport",           label: "مكة سبورت" },
+];
+const DEPT_LABEL = Object.fromEntries(DEPARTMENTS.map((d) => [d.key, d.label]));
 const STATUS_CHIP = {
   issued:   { t: "صادر",            c: "bg-present/10 text-present" },
   pending:  { t: "بانتظار الاعتماد", c: "bg-warning/10 text-warning" },
@@ -75,6 +90,7 @@ export default function Forms() {
   const isApprover = (adminRoles ?? []).includes("principal");
 
   const [tab, setTab] = useState("issue");
+  const [dept, setDept] = useState("all");
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -149,14 +165,14 @@ export default function Forms() {
         supabase.from("admin_roles").select("user_id, role_type"),
       ]);
 
-      const ROLE_JOB = {
-        principal: "مدير المدرسة",
-        tech_support: "مشرف الدعم الفني",
-        vice_principal: "وكيل المدرسة",
-        counselor: "الموجّه الطلابي",
-      };
+      // المسمّى الوظيفي من مسمّيات الأدوار المعتمدة في البوابة
       const jobBy = {};
-      (roles ?? []).forEach((r) => { jobBy[r.user_id] ??= ROLE_JOB[r.role_type] ?? "إداري"; });
+      (roles ?? []).forEach((r) => {
+        const label = ADMIN_ROLE_LABEL[r.role_type] ?? r.role_type;
+        jobBy[r.user_id] = jobBy[r.user_id]
+          ? `${jobBy[r.user_id]} و${label}`
+          : label;
+      });
 
       const list = [
         ...(tch ?? []).map((t) => ({
@@ -167,7 +183,7 @@ export default function Forms() {
         ...(usr ?? []).map((u) => ({
           id: `u-${u.id}`,
           full_name: u.full_name ?? u.username,
-          job: jobBy[u.id] ?? "إداري",
+          job: jobBy[u.id] ?? "إداري بالمدرسة",
         })),
       ];
 
@@ -315,11 +331,10 @@ export default function Forms() {
     if (se) { setSaving(false); setMsg({ ok: false, text: `تعذّر إصدار الرقم: ${se.message}` }); return; }
 
     const usesIssuer = picked.signature_source === "issuer" || picked.signature_source === "both";
-    // صفة المُصدِر كما تُطبع تحت توقيعه
-    const issuerRole =
-      (adminRoles ?? []).includes("principal") ? "مدير المدرسة"
-      : (adminRoles ?? []).includes("tech_support") ? "الدعم الفني"
-      : (adminRoles ?? []).length ? "الإدارة"
+    // صفة المُصدِر كما تُطبع تحت توقيعه — مسمّاه الوظيفي الفعلي
+    const roles = adminRoles ?? [];
+    const issuerRole = roles.length
+      ? roles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و")
       : "المعلم";
     const row = {
       template_id: picked.id,
@@ -732,14 +747,39 @@ export default function Forms() {
             <p className="mt-1.5 text-sm text-muted">راجع الدعم الفني لإتاحة النماذج المناسبة لدورك.</p>
           </div>
         ) : (
+          <>
+          {/* أقسام المدرسة — تظهر الأقسام التي لها نماذج متاحة لهذا الحساب */}
+          {(() => {
+            const used = DEPARTMENTS.filter((dp) =>
+              templates.some((t) => (t.department ?? "school_admin") === dp.key));
+            if (used.length < 2) return null;
+            return (
+              <div className="mb-3 flex flex-wrap gap-1.5">
+                {[{ key: "all", label: "الكل" }, ...used].map((dp) => (
+                  <button key={dp.key} onClick={() => setDept(dp.key)}
+                    className={`rounded-pill px-3.5 py-1.5 text-xs font-medium transition-colors ${
+                      dept === dp.key ? "bg-mint-tint text-mint-deep"
+                                      : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                    {dp.label}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+
           <div className="grid gap-3 sm:grid-cols-2">
-            {templates.map((t) => (
+            {templates
+              .filter((t) => dept === "all" || (t.department ?? "school_admin") === dept)
+              .map((t) => (
               <button key={t.id} onClick={() => start(t)}
                       className="card p-4 text-right transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-semibold text-ink">{t.title}</p>
                   <span className="chip bg-mint-tint text-mint-deep">{CAT_LABEL[t.category]}</span>
                 </div>
+                <p className="mt-0.5 text-[11px] text-faint">
+                  {DEPT_LABEL[t.department ?? "school_admin"]}
+                </p>
                 <p className="mt-1 text-sm text-muted">{t.description}</p>
                 {t.requires_approval && (
                   <p className="mt-2 text-xs text-warning">يحتاج اعتماد المدير قبل الطباعة</p>
@@ -747,6 +787,7 @@ export default function Forms() {
               </button>
             ))}
           </div>
+          </>
         )
       )}
 
