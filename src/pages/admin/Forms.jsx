@@ -338,14 +338,20 @@ export default function Forms() {
     const head = next[0];
     if (!head) { setValues((v) => ({ ...v, recipient: "", job: "" })); return; }
 
+    // المسمّى في النموذج: التخصص للمعلم، والمسمّى الإداري لمن له دور إداري.
+    // أما قائمة الاختيار فتظل تعرض «معلم» للتمييز السريع.
+    const jobValue = head.job === "معلم"
+      ? (head.specialization || "معلم")
+      : (head.job ?? "");
+
     const info = {
       name: head.full_name,
-      job: head.job ?? "",
+      job: jobValue,
       specialization: head.specialization ?? "",
       national_id: head.national_id ?? "",
     };
     setValues((v) =>
-      autoFill(picked?.fields, info, { ...v, recipient: head.full_name, job: head.job ?? "" }));
+      autoFill(picked?.fields, info, { ...v, recipient: head.full_name, job: jobValue }));
   };
 
   // بيانات الطالب المعروفة في القاعدة — لتعبئة الحقول تلقائيًا
@@ -460,7 +466,9 @@ export default function Forms() {
         data: st
           ? { ...values,
               recipient: st.full_name,
-              ...(st.job ? { job: st.job } : {}),
+              ...(st.job
+                ? { job: st.job === "معلم" ? (st.specialization || "معلم") : st.job }
+                : {}),
               ...(/^[tu]-/.test(String(st.id)) ? {} : { student_id: st.id }) }
           : values,
       });
