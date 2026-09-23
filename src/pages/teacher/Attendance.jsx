@@ -1,7 +1,8 @@
+// src/pages/teacher/Attendance.jsx
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
-import { todayDow, todayISO, todayLabel, GRADE_NAMES, STATUS } from "../../lib/schoolTime";
+import { todayDow, todayISO, todayLabel, todayOff, GRADE_NAMES, STATUS } from "../../lib/schoolTime";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../../components/ColorLegend.jsx";
 import {
   loadPeriodTimes, byPeriodNo, currentPeriodNo, nearestPeriodNo, fmtRange,
@@ -247,13 +248,17 @@ export default function Attendance() {
   };
 
   if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
-  if (!dow)
+  if (!dow) {
+    // إجازة رسمية باسمها، أو عطلة نهاية أسبوع
+    const off = todayOff();
     return (
       <div className="space-y-4">
         <TeacherCard me={me} />
-        <Empty title="اليوم عطلة" body="الأسبوع الدراسي من الأحد إلى الخميس." />
+        <Empty title={off?.title ?? "اليوم عطلة"}
+               body={off?.body ?? "الأسبوع الدراسي من الأحد إلى الخميس."} />
       </div>
     );
+  }
   if (!periods.length)
     return (
       <div className="space-y-4">
