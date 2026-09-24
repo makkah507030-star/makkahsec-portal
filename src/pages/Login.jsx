@@ -9,6 +9,12 @@ import logoIcon from "../assets/icon-mint.png";
    النقش مبنيّ بـ CSS خالص (بلا صور)، فلا يزيد حجم الصفحة ولا يبطئها.
    ===================================================================== */
 
+/* حقول بلون الهوية النعناعي بدل الأزرق الافتراضي للمتصفح */
+const FIELD =
+  "h-11 rounded-sm2 border border-[#CCF2DB] bg-mint-tint px-3 text-[15px] text-ink " +
+  "placeholder:text-faint focus:border-mint-deep focus:bg-white focus:outline-none " +
+  "focus:ring-2 focus:ring-[#89D7AD]/45 transition-colors";
+
 export default function Login() {
   const [nationalId, setNationalId] = useState("");
   const [password, setPassword] = useState("");
@@ -65,33 +71,34 @@ export default function Login() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-mint-deep">
-      {/* ——— الخلفية: تدرّج الهوية + نقش شبكي + هالتان ——— */}
+    <div className="relative min-h-screen overflow-hidden bg-white">
+      {/* ——— الخلفية: بيضاء بنقش الهوية الخفيف ——— */}
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: "linear-gradient(150deg,#2F4E3F 0%,#3E6350 45%,#4E7A62 100%)" }}
+        style={{ background: "linear-gradient(180deg,#F4FBF7 0%,#FFFFFF 55%,#F7FCF9 100%)" }}
       />
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.16]"
+        className="pointer-events-none absolute inset-0 opacity-[0.5]"
         style={{
           backgroundImage:
             "linear-gradient(#CCF2DB 1px, transparent 1px), linear-gradient(90deg,#CCF2DB 1px, transparent 1px)",
           backgroundSize: "46px 46px",
-          maskImage: "radial-gradient(120% 90% at 50% 0%, #000 35%, transparent 75%)",
-          WebkitMaskImage: "radial-gradient(120% 90% at 50% 0%, #000 35%, transparent 75%)",
+          maskImage: "radial-gradient(130% 85% at 50% 0%, #000 25%, transparent 72%)",
+          WebkitMaskImage: "radial-gradient(130% 85% at 50% 0%, #000 25%, transparent 72%)",
         }}
       />
-      {/* نقش معيّنات خفيف بألوان الهوية */}
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.12]"
+        className="pointer-events-none absolute inset-0 opacity-[0.28]"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(45deg,#89D7AD 0 2px, transparent 2px 22px)," +
-            "repeating-linear-gradient(-45deg,#89D7AD 0 2px, transparent 2px 22px)",
+            "repeating-linear-gradient(45deg,#89D7AD 0 1.5px, transparent 1.5px 24px)," +
+            "repeating-linear-gradient(-45deg,#89D7AD 0 1.5px, transparent 1.5px 24px)",
+          maskImage: "radial-gradient(120% 70% at 50% 100%, #000 10%, transparent 65%)",
+          WebkitMaskImage: "radial-gradient(120% 70% at 50% 100%, #000 10%, transparent 65%)",
         }}
       />
-      <div className="pointer-events-none absolute -top-40 -right-32 h-[26rem] w-[26rem] rounded-full bg-[#89D7AD]/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-48 -left-24 h-[24rem] w-[24rem] rounded-full bg-[#CCF2DB]/15 blur-3xl" />
+      <div className="pointer-events-none absolute -top-40 -right-32 h-[26rem] w-[26rem] rounded-full bg-[#89D7AD]/25 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-44 -left-28 h-[24rem] w-[24rem] rounded-full bg-[#CCF2DB]/40 blur-3xl" />
 
       {/* ——— المحتوى ——— */}
       <div className="relative flex min-h-screen flex-col items-center justify-center px-5 py-10">
@@ -99,27 +106,26 @@ export default function Login() {
 
           {/* الترويسة */}
           <div className="mb-6 text-center">
-            <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-white/12 backdrop-blur-sm ring-1 ring-white/20">
+            <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-mint-tint ring-1 ring-[#CCF2DB]">
               <img src={logoIcon} alt="" className="h-10 w-10 object-contain" />
             </span>
-            <h1 className="text-[22px] font-bold leading-snug text-white">
+            <h1 className="text-[22px] font-bold leading-snug text-ink">
               بوابة مكة الثانوية الرقمية
             </h1>
-            <p className="mt-1.5 text-sm text-[#CCF2DB]">مدرسة مكة الثانوية</p>
+            <p className="mt-1.5 text-sm text-muted">مدرسة مكة الثانوية</p>
           </div>
 
-          {/* البطاقة الزجاجية */}
+          {/* البطاقة */}
           <form onSubmit={submit}
-                className="rounded-[20px] border border-white/25 bg-white/95 p-6 shadow-[0_24px_60px_-28px_rgba(0,0,0,.55)] backdrop-blur-xl">
+                className="rounded-[20px] border border-[#DCEFE5] bg-white/85 p-6 shadow-[0_24px_60px_-34px_rgba(62,99,80,.55)] backdrop-blur-xl">
 
             <div className="mb-4">
               <label className="label" htmlFor="nid">رقم الهوية</label>
               <input
                 id="nid"
-                className="field num mt-1 w-full"
+                className={`${FIELD} num mt-1 w-full`}
                 inputMode="numeric"
                 autoComplete="username"
-                placeholder="١٠xxxxxxxx"
                 value={nationalId}
                 onChange={(e) => setNationalId(e.target.value)}
                 required
@@ -135,7 +141,7 @@ export default function Login() {
                 <input
                   id="pw"
                   type={showPw ? "text" : "password"}
-                  className="field w-full pl-11"
+                  className={`${FIELD} w-full pl-11`}
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -143,7 +149,7 @@ export default function Login() {
                 />
                 <button type="button" onClick={() => setShowPw((v) => !v)}
                         aria-label={showPw ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
-                        className="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-sm2 text-muted hover:bg-canvas hover:text-mint-deep">
+                        className="absolute left-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-sm2 text-muted hover:bg-mint-tint hover:text-mint-deep">
                   {showPw ? (
                     <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor"
                          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -190,28 +196,22 @@ export default function Login() {
           </form>
 
           {/* نبذة وروابط سريعة */}
-          <div className="mt-6 rounded-[18px] border border-white/15 bg-white/10 px-5 py-4 backdrop-blur-md">
-            <p className="text-center text-[12.5px] leading-relaxed text-[#E4F6EC]">
+          <div className="mt-6 rounded-[18px] border border-[#E7EEEA] bg-white/70 px-5 py-4 backdrop-blur-md">
+            <p className="text-center text-[12.5px] leading-relaxed text-muted">
               بوابة تجمع الحضور والجداول والنتائج والإشعارات والنماذج في مكان واحد،
               للطالب وولي الأمر والمعلم والإدارة.
             </p>
             <div className="mt-3 flex items-center justify-center gap-2">
-              <Link to="/news"
-                className="rounded-pill bg-white/15 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/25">
-                الأخبار
-              </Link>
-              <Link to="/contact"
-                className="rounded-pill bg-white/15 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/25">
-                الدعم الفني
-              </Link>
-              <Link to="/"
-                className="rounded-pill bg-white/15 px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/25">
-                الرئيسية
-              </Link>
+              {[["/news", "الأخبار"], ["/contact", "الدعم الفني"], ["/", "الرئيسية"]].map(([to, label]) => (
+                <Link key={to} to={to}
+                  className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-4 py-1.5 text-xs font-semibold text-mint-deep transition-colors hover:bg-[#CCF2DB]">
+                  {label}
+                </Link>
+              ))}
             </div>
           </div>
 
-          <p className="mt-5 text-center text-[11px] text-[#CCF2DB]/70" dir="ltr">
+          <p className="mt-5 text-center text-[11px] text-faint" dir="ltr">
             makkahsec.com
           </p>
         </div>
