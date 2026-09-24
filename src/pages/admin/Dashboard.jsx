@@ -30,6 +30,7 @@ import { fmtDateTime } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import ExamCountdown from "../../components/ExamCountdown.jsx";
+import DutyCard from "../../components/DutyCard.jsx";
 
 
 export default function Dashboard() {
@@ -156,6 +157,7 @@ export default function Dashboard() {
           <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
         </header>
         <HolidayBanner />
+        <DutyCard />
         <section className="card px-6 py-12 text-center">
           <p className="text-lg font-bold text-ink">
             مرحبًا{profile?.full_name ? `، ${profile.full_name}` : ""}
@@ -188,6 +190,8 @@ export default function Dashboard() {
       </header>
 
       <HolidayBanner />
+
+      <DutyCard />
 
       <ExamCountdown />
 
