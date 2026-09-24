@@ -157,7 +157,7 @@ export default function GuidesAdmin() {
             <div className="mt-2 flex flex-wrap items-center gap-2 rounded-sm2 bg-mint-tint px-3 py-2">
               {isImage(form.file_url) && (
                 <img src={form.file_url} alt=""
-                     className="h-14 w-14 shrink-0 rounded-sm2 border border-[#CCF2DB] bg-white object-cover" />
+                     className="h-14 w-14 shrink-0 rounded-sm2 border border-line bg-white object-contain" />
               )}
               <span className="text-xs font-medium text-mint-deep">
                 {form.file_name || "ملف مرفوع"}
@@ -263,7 +263,7 @@ export default function GuidesAdmin() {
             <div key={g.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               {isImage(g.file_url) && (
                 <img src={g.file_url} alt=""
-                     className="h-12 w-12 shrink-0 rounded-sm2 border border-line object-cover" />
+                     className="h-12 w-12 shrink-0 rounded-sm2 border border-line bg-white object-contain" />
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{g.title}</p>

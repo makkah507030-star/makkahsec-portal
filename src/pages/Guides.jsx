@@ -131,9 +131,10 @@ function Card({ g }) {
     <article className="overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-[#CCF2DB]">
       {/* المنشور المصوّر يُعرض كاملًا، فهو المحتوى نفسه لا مجرد مرفق */}
       {image && (
-        <a href={g.file_url} target="_blank" rel="noreferrer" className="block bg-mint-tint">
+        <a href={g.file_url} target="_blank" rel="noreferrer"
+           className="block border-b border-line bg-white">
           <img src={g.file_url} alt={g.title}
-               className="max-h-72 w-full object-contain" loading="lazy" />
+               className="max-h-80 w-full object-contain" loading="lazy" />
         </a>
       )}
 
