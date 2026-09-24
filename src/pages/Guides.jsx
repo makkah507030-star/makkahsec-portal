@@ -162,14 +162,24 @@ function Card({ g }) {
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          <a href={g.file_url} target="_blank" rel="noreferrer"
-             className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#6AA786]">
-            {image ? "عرض بالحجم الكامل" : "عرض الدليل"}
-          </a>
-          <a href={g.file_url} download={g.file_name ?? true}
-             className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep">
-            تحميل
-          </a>
+          {/* الصورة معروضة أعلاه، فيكفيها زر التحميل. وملف PDF يحتاج فتحًا وتحميلًا */}
+          {image ? (
+            <a href={g.file_url} download={g.file_name ?? true}
+               className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#6AA786]">
+              تحميل الصورة
+            </a>
+          ) : (
+            <>
+              <a href={g.file_url} target="_blank" rel="noreferrer"
+                 className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#6AA786]">
+                عرض الدليل
+              </a>
+              <a href={g.file_url} download={g.file_name ?? true}
+                 className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep">
+                تحميل
+              </a>
+            </>
+          )}
         </div>
       </div>
       </div>
