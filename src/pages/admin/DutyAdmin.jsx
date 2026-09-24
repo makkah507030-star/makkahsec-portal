@@ -2,14 +2,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { DAY_NAMES } from "../../lib/schoolTime";
-import DateField from "../../components/DateField.jsx";
+import DutyReport, { DutyPrintArea } from "../../components/DutyReport.jsx";
+import { useSession } from "../../lib/session.jsx";
 
 /* =====================================================================
    إدارة المناوبة والإشراف.
    تُدخل منها جداول الفصل الجديد وتُعدّل بلا تدخل برمجي:
    • المناوبة: يوم بتاريخه ومناوبَيه.
    • الإشراف: أسبوعي ثابت، معلمون ومشرف متابع لكل يوم.
-   • الأسماء تُختار من قائمة المنسوبين، فلا تقع أخطاء إملائية ولا ربط فاشل.
+   • الأسماء تُختار من قائمة الموظفين، فلا تقع أخطاء إملائية ولا ربط فاشل.
    ===================================================================== */
 
 const iso = (d) => d.toISOString().slice(0, 10);
@@ -39,8 +40,10 @@ const dowOf = (s) => {
 };
 
 export default function DutyAdmin() {
+  const { profile } = useSession();
   const [tab, setTab] = useState("duty");
   const [staff, setStaff] = useState([]);
+  const [report, setReport] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -54,6 +57,25 @@ export default function DutyAdmin() {
     })();
   }, []);
 
+  // تقرير الجدولين للطباعة
+  const buildReport = async () => {
+    const [{ data: duty }, { data: sup }] = await Promise.all([
+      supabase.from("duty_roster")
+        .select("id, duty_date, hijri_label, week_label, day_label, name_a, name_b")
+        .order("duty_date"),
+      supabase.from("supervision_duty")
+        .select("day_of_week, person_name, kind").order("day_of_week"),
+    ]);
+    setReport({
+      duty: duty ?? [],
+      supervision: sup ?? [],
+      term: duty?.length
+        ? `من ${new Date(duty[0].duty_date + "T00:00:00").toLocaleDateString("ar-SA-u-ca-gregory")}` +
+          ` إلى ${new Date(duty[duty.length - 1].duty_date + "T00:00:00").toLocaleDateString("ar-SA-u-ca-gregory")}`
+        : "",
+    });
+  };
+
   const pill = (on) =>
     `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
       on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
@@ -63,23 +85,50 @@ export default function DutyAdmin() {
       <div>
         <h1 className="text-lg font-bold text-ink">المناوبة والإشراف</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          جدول المناوبة اليومية وجدول الإشراف الأسبوعي. تظهر لكل منسوب مناوبته
+          جدول المناوبة اليومية وجدول الإشراف الأسبوعي. تظهر لكل موظف مناوبته
           وإشرافه في صفحته الرئيسية، ويصله تنبيه بارز في يومه.
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
+      <div className="no-print flex flex-wrap items-center gap-1.5">
         <button className={pill(tab === "duty")} onClick={() => setTab("duty")}>المناوبة</button>
         <button className={pill(tab === "sup")} onClick={() => setTab("sup")}>الإشراف الأسبوعي</button>
+        <button className="btn-primary mr-auto" onClick={buildReport}>تقرير الجدولين</button>
       </div>
 
-      {tab === "duty" && <DutyTab staff={staff} />}
-      {tab === "sup" && <SupTab staff={staff} />}
+      {report && (
+        <>
+          <div className="no-print flex flex-wrap items-center justify-between gap-2 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+            <p className="text-sm text-mint-deep">
+              التقرير جاهز — <span className="num">{report.duty.length}</span> يوم مناوبة
+              و<span className="num">{report.supervision.length}</span> اسم إشراف.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setReport(null)}
+                      className="rounded-pill border border-line bg-white px-4 py-1.5 text-sm text-muted">
+                إغلاق
+              </button>
+              <button className="btn-primary" onClick={() => window.print()}>طباعة / حفظ PDF</button>
+            </div>
+          </div>
+
+          <div className="hidden print:block">
+            <DutyPrintArea>
+              <DutyReport {...report} issuedBy={profile?.full_name ?? ""} />
+            </DutyPrintArea>
+          </div>
+        </>
+      )}
+
+      <div className="no-print">
+        {tab === "duty" && <DutyTab staff={staff} />}
+        {tab === "sup" && <SupTab staff={staff} />}
+      </div>
     </div>
   );
 }
 
-/* ------------------------- اختيار منسوب ------------------------- */
+/* ------------------------- اختيار موظف ------------------------- */
 function StaffPick({ staff, value, onChange, placeholder = "اختر…" }) {
   return (
     <select className="field w-full" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)}>
@@ -97,6 +146,7 @@ function DutyTab({ staff }) {
   const [msg, setMsg] = useState(null);
   const [from, setFrom] = useState("");
   const [adding, setAdding] = useState(false);
+  const [openWeeks, setOpenWeeks] = useState(null);   // أسماء الأسابيع المفتوحة
   const [nf, setNf] = useState({ date: "", a: null, b: null, note: "", week: "" });
 
   const nameById = useMemo(
@@ -113,6 +163,35 @@ function DutyTab({ staff }) {
   };
 
   useEffect(() => { load(); }, [from]);
+
+  // تجميع الأيام بالأسابيع: يُعتمد اسم الأسبوع، وإلا يُحسب من تاريخ الأحد
+  const weeks = useMemo(() => {
+    const today = todayISO();
+    const map = new Map();
+    (rows ?? []).forEach((r) => {
+      let key = r.week_label;
+      if (!key) {
+        const d = new Date(r.duty_date + "T00:00:00");
+        d.setDate(d.getDate() - ((d.getDay() + 7) % 7));   // أحد ذلك الأسبوع
+        key = fmtG(iso(d));
+      }
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    });
+    return [...map.entries()].map(([key, items]) => ({
+      key,
+      items,
+      current: items.some((x) => x.duty_date === today) ||
+               (items[0].duty_date <= today && items[items.length - 1].duty_date >= today),
+    }));
+  }, [rows]);
+
+  const defaultOpen = useMemo(() => {
+    const cur = weeks.filter((w) => w.current).map((w) => w.key);
+    if (cur.length) return cur;
+    const next = weeks.find((w) => w.items[0].duty_date >= todayISO());
+    return next ? [next.key] : weeks.slice(-1).map((w) => w.key);
+  }, [weeks]);
 
   const patch = async (row, fields) => {
     const { error } = await supabase.from("duty_roster").update(fields).eq("id", row.id);
@@ -227,8 +306,38 @@ function DutyTab({ staff }) {
         <p className="card px-4 py-6 text-sm text-muted">لا أيام مناوبة في هذا النطاق.</p>
       )}
 
-      <div className="space-y-2">
-        {rows?.map((r) => {
+      {/* الأسابيع: مطويّة افتراضيًا عدا الأسبوع الجاري */}
+      {weeks.map((w) => {
+        const open = (openWeeks ?? defaultOpen).includes(w.key);
+        return (
+          <section key={w.key} className="overflow-hidden rounded-card border border-line bg-white">
+            <button
+              onClick={() => setOpenWeeks((prev) => {
+                const cur = prev ?? defaultOpen;
+                return cur.includes(w.key) ? cur.filter((x) => x !== w.key) : [...cur, w.key];
+              })}
+              className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-right transition-colors ${
+                w.current ? "bg-mint-tint" : "hover:bg-canvas"}`}>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-ink">
+                  الأسبوع {w.key}
+                  {w.current && <span className="mr-2 chip bg-mint-deep text-white">الجاري</span>}
+                </span>
+                <span className="num mt-0.5 block text-xs text-faint">
+                  {fmtG(w.items[0].duty_date)} — {fmtG(w.items[w.items.length - 1].duty_date)}
+                  {" · "}{w.items.length} أيام
+                </span>
+              </span>
+              <svg viewBox="0 0 24 24" fill="none"
+                   className={`h-4 w-4 shrink-0 text-faint transition-transform ${open ? "rotate-180" : ""}`}
+                   stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+
+            {open && (
+              <div className="space-y-2 border-t border-line p-3">
+                {w.items.map((r) => {
           const past = r.duty_date < todayISO();
           const isToday = r.duty_date === todayISO();
           return (
@@ -261,9 +370,13 @@ function DutyTab({ staff }) {
 
               {r.note && <p className="mt-1.5 text-xs text-warning">{r.note}</p>}
             </div>
-          );
-        })}
-      </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -288,7 +401,7 @@ function SupTab({ staff }) {
   useEffect(() => { load(); }, []);
 
   const addRow = async () => {
-    if (!add.user) { setMsg({ ok: false, text: "اختر المنسوب." }); return; }
+    if (!add.user) { setMsg({ ok: false, text: "اختر الموظف." }); return; }
     const { error } = await supabase.from("supervision_duty").insert({
       day_of_week: Number(add.day),
       person_name: nameById[add.user],
@@ -334,7 +447,7 @@ function SupTab({ staff }) {
             </select>
           </div>
           <div>
-            <label className="text-xs text-muted">المنسوب</label>
+            <label className="text-xs text-muted">اسم الموظف</label>
             <div className="mt-1">
               <StaffPick staff={staff} value={add.user} onChange={(v) => setAdd((a) => ({ ...a, user: v }))} />
             </div>

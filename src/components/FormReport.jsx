@@ -83,8 +83,13 @@ const fmt = (iso) => {
 };
 
 /* ----------------------------- الغلاف ----------------------------- */
-function Cover({ title, dept, rows, from, to, issuedBy }) {
+function Cover({ title, dept, rows, from, to, issuedBy, ack }) {
   const counts = rows.reduce((a, r) => { a[r.status] = (a[r.status] ?? 0) + 1; return a; }, {});
+  const ackSummary = ack ? {
+    sent: rows.filter((r) => r.sent_at).length,
+    acked: rows.filter((r) => r.reply_at).length,
+    pending: rows.filter((r) => r.sent_at && !r.reply_at).length,
+  } : null;
   const issuers = [...new Set(rows.map((r) => r.issuer_name).filter(Boolean))];
 
   return (
@@ -119,6 +124,23 @@ function Cover({ title, dept, rows, from, to, issuedBy }) {
               <p className="mt-1.5 text-[12px] text-muted">عدد المُصدِرين</p>
             </div>
           </div>
+
+          {ackSummary && (
+            <div className="mt-4 grid w-full max-w-[120mm] grid-cols-3 gap-3">
+              <div className="rounded-card border border-line px-3 py-3">
+                <p className="num text-[22px] font-bold leading-none text-mint-deep">{ackSummary.sent}</p>
+                <p className="mt-1.5 text-[11px] text-muted">أُرسل إليهم</p>
+              </div>
+              <div className="rounded-card border border-line px-3 py-3">
+                <p className="num text-[22px] font-bold leading-none text-mint-deep">{ackSummary.acked}</p>
+                <p className="mt-1.5 text-[11px] text-muted">اطّلعوا وأقرّوا</p>
+              </div>
+              <div className="rounded-card border border-line px-3 py-3">
+                <p className="num text-[22px] font-bold leading-none text-warning">{ackSummary.pending}</p>
+                <p className="mt-1.5 text-[11px] text-muted">بانتظار الإقرار</p>
+              </div>
+            </div>
+          )}
 
           <div className="mt-3 flex flex-wrap justify-center gap-2">
             {Object.entries(counts).map(([k, n]) => (
@@ -163,7 +185,10 @@ function Cover({ title, dept, rows, from, to, issuedBy }) {
 /* ------------------------- صفحات الجدول ------------------------- */
 const PER_PAGE = 18;
 
-function TablePage({ title, rows, startIndex, page, pages }) {
+function TablePage({ title, rows, startIndex, page, pages, ack }) {
+  const heads = ack
+    ? ["م", "رقم الإصدار", "المستفيد", "أُرسل إليه", "اطّلع وأقرّ", "وقّع", "ملاحظات"]
+    : ["م", "رقم الإصدار", "التاريخ", "المستفيد", "المُصدِر", "الحالة", "ملاحظات"];
   return (
     <div className="sheet mx-auto flex bg-white text-ink"
          style={{ width: "210mm", height: "297mm", flex: "0 0 auto",
@@ -177,7 +202,7 @@ function TablePage({ title, rows, startIndex, page, pages }) {
         <table className="mt-2 w-full border-collapse text-[11.5px]">
           <thead>
             <tr>
-              {["م", "رقم الإصدار", "التاريخ", "المستفيد", "المُصدِر", "الحالة", "ملاحظات"].map((h) => (
+              {heads.map((h) => (
                 <th key={h} className="border border-line px-2 py-1.5 text-center font-semibold text-mint-deep"
                     style={{ background: "#EDFAF2", ...INK }}>
                   {h}
@@ -190,15 +215,32 @@ function TablePage({ title, rows, startIndex, page, pages }) {
               <tr key={r.id}>
                 <td className="num border border-line px-1.5 py-1.5 text-center">{startIndex + i + 1}</td>
                 <td className="num border border-line px-1.5 py-1.5 text-center">{r.serial}</td>
-                <td className="num border border-line px-1.5 py-1.5 text-center text-[10.5px]">
-                  {fmt(r.created_at)}
-                </td>
-                <td className="border border-line px-1.5 py-1.5">{r.recipient || "—"}</td>
-                <td className="border border-line px-1.5 py-1.5">{r.issuer_name || "—"}</td>
-                <td className="border border-line px-1.5 py-1.5 text-center text-[10.5px]">
-                  {STATUS_AR[r.status] ?? r.status}
-                </td>
-                <td className="border border-line px-1.5 py-1.5" style={{ minWidth: "28mm" }}>&nbsp;</td>
+                {ack ? (
+                  <>
+                    <td className="border border-line px-1.5 py-1.5">{r.recipient || "—"}</td>
+                    <td className="num border border-line px-1.5 py-1.5 text-center text-[10.5px]">
+                      {r.sent_at ? fmt(r.sent_at) : "لم يُرسل"}
+                    </td>
+                    <td className="num border border-line px-1.5 py-1.5 text-center text-[10.5px]">
+                      {r.reply_at ? fmt(r.reply_at) : "—"}
+                    </td>
+                    <td className="border border-line px-1.5 py-1.5 text-center">
+                      {r.signed ? "✓" : "—"}
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="num border border-line px-1.5 py-1.5 text-center text-[10.5px]">
+                      {fmt(r.created_at)}
+                    </td>
+                    <td className="border border-line px-1.5 py-1.5">{r.recipient || "—"}</td>
+                    <td className="border border-line px-1.5 py-1.5">{r.issuer_name || "—"}</td>
+                    <td className="border border-line px-1.5 py-1.5 text-center text-[10.5px]">
+                      {STATUS_AR[r.status] ?? r.status}
+                    </td>
+                  </>
+                )}
+                <td className="border border-line px-1.5 py-1.5" style={{ minWidth: "26mm" }}>&nbsp;</td>
               </tr>
             ))}
           </tbody>
@@ -214,13 +256,13 @@ function TablePage({ title, rows, startIndex, page, pages }) {
   );
 }
 
-export default function FormReport({ title, dept, rows, from, to, issuedBy }) {
+export default function FormReport({ title, dept, rows, from, to, issuedBy, ack }) {
   const pages = Math.max(1, Math.ceil(rows.length / PER_PAGE));
   return (
     <>
-      <Cover title={title} dept={dept} rows={rows} from={from} to={to} issuedBy={issuedBy} />
+      <Cover title={title} dept={dept} rows={rows} from={from} to={to} issuedBy={issuedBy} ack={ack} />
       {Array.from({ length: pages }).map((_, p) => (
-        <TablePage key={p} title={title}
+        <TablePage key={p} title={title} ack={ack}
                    rows={rows.slice(p * PER_PAGE, (p + 1) * PER_PAGE)}
                    startIndex={p * PER_PAGE} page={p + 1} pages={pages} />
       ))}

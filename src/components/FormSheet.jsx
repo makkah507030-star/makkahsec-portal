@@ -387,6 +387,79 @@ function BlankTable({ field, value }) {
   );
 }
 
+/* جدول الموظف في المناوبة والإشراف — يُملأ عند الإصدار ويُطبع في الورقة */
+function DutyScheduleBlock({ field, value }) {
+  const duty = Array.isArray(value?.duty) ? value.duty : [];
+  const sup = Array.isArray(value?.supervision) ? value.supervision : [];
+
+  return (
+    <div className="mt-3">
+      <p className="mb-1.5 text-[13px] font-semibold text-mint-deep">{field.label}</p>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <p className="mb-1 text-[11.5px] font-semibold text-ink">أيام المناوبة</p>
+          <table className="w-full border-collapse text-[11px]">
+            <thead>
+              <tr>
+                {["اليوم", "التاريخ", "هجري", "مع"].map((h) => (
+                  <th key={h} className="border border-line px-1.5 py-1 text-center font-semibold text-mint-deep"
+                      style={{ background: "#EDFAF2", ...INK }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {duty.length === 0 && (
+                <tr><td colSpan={4} className="border border-line px-2 py-2 text-center text-faint">
+                  لا مناوبات مسندة
+                </td></tr>
+              )}
+              {duty.map((r, i) => (
+                <tr key={i}>
+                  <td className="border border-line px-1.5 py-1 text-center">{r.day}</td>
+                  <td className="num border border-line px-1.5 py-1 text-center">{r.date}</td>
+                  <td className="num border border-line px-1.5 py-1 text-center">{r.hijri}</td>
+                  <td className="border border-line px-1.5 py-1">{r.partner || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <p className="mb-1 text-[11.5px] font-semibold text-ink">الإشراف الأسبوعي</p>
+          <table className="w-full border-collapse text-[11px]">
+            <thead>
+              <tr>
+                {["اليوم", "الصفة"].map((h) => (
+                  <th key={h} className="border border-line px-1.5 py-1 text-center font-semibold text-mint-deep"
+                      style={{ background: "#EDFAF2", ...INK }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sup.length === 0 && (
+                <tr><td colSpan={2} className="border border-line px-2 py-2 text-center text-faint">
+                  لا إشراف مسند
+                </td></tr>
+              )}
+              {sup.map((r, i) => (
+                <tr key={i}>
+                  <td className="border border-line px-1.5 py-1 text-center">{r.day}</td>
+                  <td className="border border-line px-1.5 py-1 text-center">{r.role}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="mt-1.5 text-[10.5px] leading-relaxed text-muted">
+            الإشراف يتكرر أسبوعيًا طوال الفصل الدراسي.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* --------------------------- نموذج إداري --------------------------- */
 function Administrative(p) {
   const { v, doc, template } = p;
@@ -400,6 +473,8 @@ function Administrative(p) {
         {(template.fields ?? []).map((f) =>
           f.type === "table" ? (
             <BlankTable key={f.name} field={f} value={v[f.name]} />
+          ) : f.type === "duty_schedule" ? (
+            <DutyScheduleBlock key={f.name} field={f} value={v[f.name]} />
           ) : (
             <div key={f.name} className="flex gap-3 border-b border-line py-2">
               <span className="w-44 shrink-0 text-[13px] text-muted">{f.label}</span>

@@ -41,6 +41,7 @@ const ADMIN_GROUPS = [
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
       { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "chart" },
+      { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "calendar" },
     ],
   },
   {

@@ -324,13 +324,13 @@ export default function Forms() {
     if (!picked) return [];
     return (picked.fields ?? []).filter((f) => {
       if (f.by_recipient || f.after_reply) return false;
-      if (f.type === "table") return false;
+      if (f.type === "table" || f.type === "duty_schedule") return false;
       if (f.type === "student" || f.type === "staff") return f.required && chosen.length === 0;
       return f.required && !String(values[f.name] ?? "").trim();
     });
   }, [picked, values, chosen]);
 
-  const toggleStaff = (m) => {
+  const toggleStaff = async (m) => {
     const already = chosen.some((x) => x.id === m.id);
     const next = already ? chosen.filter((x) => x.id !== m.id) : [...chosen, m];
     setChosen(next);
@@ -352,6 +352,32 @@ export default function Forms() {
     };
     setValues((v) =>
       autoFill(picked?.fields, info, { ...v, recipient: head.full_name, job: jobValue }));
+
+    // نموذج التكليف: يُملأ جدول الموظف في المناوبة والإشراف تلقائيًا
+    const dutyField = (picked?.fields ?? []).find((f) => f.type === "duty_schedule");
+    if (dutyField && head.uid) {
+      const { data } = await supabase.rpc("my_duty_schedule", { p_user: head.uid });
+      const fmt = (d) => {
+        if (!d) return "";
+        const x = new Date(d + "T00:00:00");
+        const p = (n) => String(n).padStart(2, "0");
+        return `${p(x.getDate())}/${p(x.getMonth() + 1)}/${x.getFullYear()}`;
+      };
+      const rows = data ?? [];
+      setValues((v) => ({
+        ...v,
+        [dutyField.name]: {
+          duty: rows.filter((r) => r.kind === "duty").map((r) => ({
+            day: r.day_label, date: fmt(r.duty_date),
+            hijri: r.hijri_label ?? "", partner: r.partner ?? "",
+          })),
+          supervision: rows.filter((r) => r.kind === "supervision").map((r) => ({
+            day: r.day_label,
+            role: r.partner === "supervisor" ? "مشرف متابع" : "معلم مشرف",
+          })),
+        },
+      }));
+    }
   };
 
   // بيانات الطالب المعروفة في القاعدة — لتعبئة الحقول تلقائيًا
@@ -615,10 +641,29 @@ export default function Forms() {
       .select("id, full_name, username").in("id", ids);
     const nameBy = Object.fromEntries((us ?? []).map((u) => [u.id, u.full_name ?? u.username]));
 
+    // نموذج التكليف: يهمّ المدير من استلم ومن وقّع
+    const isAssignment = tpl.key === "frm_duty_assignment";
+    let ackBy = {};
+    if (isAssignment) {
+      const { data: acks } = await supabase.from("form_documents")
+        .select("id, sent_at, reply_at, reply_signature_path, status")
+        .in("id", data.map((d) => d.id));
+      ackBy = Object.fromEntries((acks ?? []).map((a) => [a.id, a]));
+    }
+
     setReport({
       title: tpl.title,
       dept: DEPT_LABEL[tpl.department ?? "school_admin"],
-      rows: data.map((d) => ({ ...d, issuer_name: nameBy[d.created_by] ?? "—" })),
+      ack: isAssignment,
+      rows: data.map((d) => ({
+        ...d,
+        issuer_name: nameBy[d.created_by] ?? "—",
+        ...(isAssignment ? {
+          sent_at: ackBy[d.id]?.sent_at ?? null,
+          reply_at: ackBy[d.id]?.reply_at ?? null,
+          signed: Boolean(ackBy[d.id]?.reply_signature_path),
+        } : {}),
+      })),
       from: rFrom ? `${rFrom}T00:00:00` : null,
       to: rTo ? `${rTo}T00:00:00` : null,
     });
@@ -779,6 +824,14 @@ export default function Forms() {
                       );
                     })}
                   </div>
+                ) : f.type === "duty_schedule" ? (
+                  <p className="mt-1 rounded-sm2 bg-mint-tint px-3 py-2 text-xs leading-relaxed text-mint-deep">
+                    يُدرج جدول الموظف في المناوبة والإشراف تلقائيًا بعد اختيار اسمه.
+                    {values[f.name]?.duty && (
+                      <> — <span className="num">{values[f.name].duty.length}</span> يوم مناوبة
+                      و<span className="num">{values[f.name].supervision?.length ?? 0}</span> يوم إشراف.</>
+                    )}
+                  </p>
                 ) : f.type === "table" ? (
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <span className="text-xs text-muted">عدد الصفوف الفارغة</span>
