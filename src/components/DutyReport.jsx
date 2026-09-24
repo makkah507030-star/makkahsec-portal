@@ -83,7 +83,9 @@ function Sheet({ children, page, pages }) {
 
 const PER_PAGE = 22;
 
-export default function DutyReport({ duty = [], supervision = [], term = "", issuedBy = "" }) {
+export default function DutyReport({
+  duty = [], supervision = [], term = "", deputy = "", principal = "",
+}) {
   const dutyPages = Math.max(1, Math.ceil(duty.length / PER_PAGE));
   const total = dutyPages + (supervision.length ? 1 : 0);
   let page = 0;
@@ -138,7 +140,7 @@ export default function DutyReport({ duty = [], supervision = [], term = "", iss
               </tbody>
             </table>
 
-            {p === dutyPages - 1 && <Signatures issuedBy={issuedBy} />}
+            {p === dutyPages - 1 && <Signatures deputy={deputy} principal={principal} />}
           </Sheet>
         );
       })}
@@ -181,7 +183,7 @@ export default function DutyReport({ duty = [], supervision = [], term = "", iss
               </tbody>
             </table>
 
-            <div className="mt-auto"><Signatures issuedBy={issuedBy} /></div>
+            <div className="mt-auto"><Signatures deputy={deputy} principal={principal} /></div>
           </Sheet>
         );
       })()}
@@ -189,20 +191,20 @@ export default function DutyReport({ duty = [], supervision = [], term = "", iss
   );
 }
 
-function Signatures({ issuedBy }) {
+function Signatures({ deputy, principal }) {
   return (
     <div className="mt-8 grid grid-cols-2 gap-8 text-center">
       <div>
         <p className="text-[12px] text-muted">وكيل الشؤون التعليمية</p>
         <div className="h-7" />
         <div className="mx-auto h-px w-44 bg-line" />
-        <p className="mt-1.5 text-[12.5px] font-semibold">{issuedBy || "…"}</p>
+        <p className="mt-1.5 text-[12.5px] font-semibold">{deputy || "…"}</p>
       </div>
       <div>
         <p className="text-[12px] text-muted">مدير المدرسة</p>
         <div className="h-7" />
         <div className="mx-auto h-px w-44 bg-line" />
-        <p className="mt-1.5 text-[12.5px] font-semibold">عبدالله بن حسن سليمان الفيفي</p>
+        <p className="mt-1.5 text-[12.5px] font-semibold">{principal || "…"}</p>
       </div>
     </div>
   );

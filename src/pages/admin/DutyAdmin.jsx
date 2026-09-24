@@ -59,6 +59,14 @@ export default function DutyAdmin() {
 
   // تقرير الجدولين للطباعة
   const buildReport = async () => {
+    // الموقّعان: وكيل الشؤون التعليمية ومدير المدرسة، من الحسابات الإدارية
+    const { data: signers } = await supabase
+      .from("admin_roles")
+      .select("role_type, users(full_name)")
+      .in("role_type", ["deputy_academic", "principal"]);
+    const nameOf = (role) =>
+      (signers ?? []).find((r) => r.role_type === role)?.users?.full_name ?? "";
+
     const [{ data: duty }, { data: sup }] = await Promise.all([
       supabase.from("duty_roster")
         .select("id, duty_date, hijri_label, week_label, day_label, name_a, name_b")
@@ -69,6 +77,8 @@ export default function DutyAdmin() {
     setReport({
       duty: duty ?? [],
       supervision: sup ?? [],
+      deputy: nameOf("deputy_academic"),
+      principal: nameOf("principal"),
       term: duty?.length
         ? `من ${new Date(duty[0].duty_date + "T00:00:00").toLocaleDateString("ar-SA-u-ca-gregory")}` +
           ` إلى ${new Date(duty[duty.length - 1].duty_date + "T00:00:00").toLocaleDateString("ar-SA-u-ca-gregory")}`
@@ -114,7 +124,7 @@ export default function DutyAdmin() {
 
           <div className="hidden print:block">
             <DutyPrintArea>
-              <DutyReport {...report} issuedBy={profile?.full_name ?? ""} />
+              <DutyReport {...report} />
             </DutyPrintArea>
           </div>
         </>
