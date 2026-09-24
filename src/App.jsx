@@ -70,7 +70,7 @@ import ExamCountdown from "./components/ExamCountdown.jsx";
 import HolidayBanner from "./components/HolidayBanner.jsx";
 
 export default function App() {
-  const { session, profile, loading, can, adminRoles, effectiveRole } = useSession();
+  const { session, profile, loading, profileLoading, can, adminRoles, effectiveRole, signOut } = useSession();
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const maintenance = useMaintenance(session);
@@ -123,15 +123,38 @@ export default function App() {
     );
   }
 
-  // الحساب موجود في Auth لكن لا صف له في users
-  if (!profile) {
+  // أثناء جلب بيانات المستخدم لا نحكم بشيء — وإلا ومضت شاشة «الحساب غير مفعّل»
+  if (profileLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-6">
-        <div className="card max-w-md p-6 text-center">
-          <p className="font-semibold">الحساب غير مُفعّل</p>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            حسابك موجود لكنه غير مرتبط بسجل في البوابة. راجع إدارة المدرسة.
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-muted">جارٍ التحميل…</p>
+      </div>
+    );
+  }
+
+  // الحساب موجود في Auth لكن لا صف له في users، أو صفه موقوف
+  if (!profile || profile.is_active === false) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-tint p-6">
+        <div className="card max-w-md p-7 text-center">
+          <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-warning-light">
+            <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6 text-warning"
+                 stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16.5v.01" />
+            </svg>
+          </span>
+          <p className="text-lg font-bold text-ink">
+            {profile ? "حسابك موقوف" : "الحساب غير مُفعّل"}
           </p>
+          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
+            {profile
+              ? "أُوقف حسابك في البوابة. راجع إدارة المدرسة لتفعيله."
+              : "حسابك موجود لكنه غير مرتبط بسجل في البوابة. راجع إدارة المدرسة."}
+          </p>
+          <button onClick={signOut}
+                  className="mt-5 rounded-pill border border-line px-5 py-2 text-sm font-semibold text-muted hover:bg-canvas">
+            العودة لصفحة الدخول
+          </button>
         </div>
       </div>
     );

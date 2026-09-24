@@ -37,12 +37,15 @@ export function SessionProvider({ children }) {
   const [adminRoles, setAdminRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
+  // يُرفع أثناء جلب بيانات المستخدم، فلا تُعرض شاشة «الحساب غير مفعّل» قبل وصولها
+  const [profileLoading, setProfileLoading] = useState(false);
   // دعم الدور المزدوج (معلم + إداري): هل للمستخدم سجل معلّم أيضًا؟ وأي واجهة نشطة الآن؟
   const [isTeacher, setIsTeacher] = useState(false);
   const [view, setViewState] = useState(null);
 
   const loadProfile = useCallback(async (userId) => {
     if (!userId) {
+      setProfileLoading(false);
       setProfile(null);
       setAdminRoles([]);
       setPermissions([]);
@@ -50,6 +53,8 @@ export function SessionProvider({ children }) {
       setViewState(null);
       return;
     }
+    setProfileLoading(true);
+
     const { data: u } = await supabase
       .from("users")
       .select("id, username, full_name, role, is_active, must_change_pw")
@@ -101,6 +106,8 @@ export function SessionProvider({ children }) {
       setAdminRoles([]);
       setPermissions([]);
     }
+
+    setProfileLoading(false);
   }, []);
 
   useEffect(() => {
@@ -143,6 +150,7 @@ export function SessionProvider({ children }) {
     await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
+    setProfileLoading(false);
     setAdminRoles([]);
     setPermissions([]);
     setIsTeacher(false);
@@ -170,7 +178,7 @@ export function SessionProvider({ children }) {
   return (
     <SessionContext.Provider
       value={{
-        session, profile, adminRoles, permissions, loading,
+        session, profile, adminRoles, permissions, loading, profileLoading,
         signOut, hasAdminRole, can, isSuper,
         isTeacher, dualRole, effectiveRole, view, switchView,
         reload: () => loadProfile(session?.user?.id),
@@ -204,7 +212,6 @@ export const ADMIN_ROLE_LABEL = {
   counselor_3:     "الموجه الطلابي 3",
   clerk:           "المساعد الإداري 1",
   clerk_2:         "المساعد الإداري 2",
-  clerk_3:         "المساعد الإداري 3",
   activity_leader: "رائد النشاط",
   tech_support:    "الدعم الفني",
   media_portal:    "البوابة الإعلامية",
@@ -214,10 +221,8 @@ export const ADMIN_ROLE_LABEL = {
   makkah_sport:    "مكة سبورت",
   safety_security: "مسؤول الأمن والسلامة",
   health_counselor: "الموجه الصحي",
-  science_labs:     "محضر مختبر العلوم 1",
-  science_labs_2:   "محضر مختبر العلوم 2",
-  science_labs_3:   "محضر مختبر العلوم 3",
-  computer_lab:     "محضر معمل الحاسب الآلي",
+  science_labs:     "مختبرات العلوم",
+  computer_lab:     "معمل الحاسب الآلي",
   // أدوار قديمة (للتوافق مع بيانات سابقة)
   deputy:          "الوكيل",
   counselor:       "الموجه الطلابي",
@@ -234,7 +239,6 @@ export const ASSIGNABLE_ROLES = [
   "counselor_3",
   "clerk",
   "clerk_2",
-  "clerk_3",
   "activity_leader",
   "tech_support",
   "media_portal",
@@ -245,8 +249,6 @@ export const ASSIGNABLE_ROLES = [
   "safety_security",
   "health_counselor",
   "science_labs",
-  "science_labs_2",
-  "science_labs_3",
   "computer_lab",
 ];
 
@@ -262,7 +264,6 @@ export const ROLE_COVER_HUE = {
   counselor_3:     296,
   clerk:           320,
   clerk_2:         308,
-  clerk_3:         292,
   activity_leader: 344,
   tech_support:      8,
   media_portal:     32,
@@ -273,8 +274,6 @@ export const ROLE_COVER_HUE = {
   safety_security: 356,
   health_counselor: 188,
   science_labs:     68,
-  science_labs_2:   84,
-  science_labs_3:   44,
   computer_lab:    236,
 };
 
