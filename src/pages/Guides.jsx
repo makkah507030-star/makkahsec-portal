@@ -6,6 +6,8 @@ import { AUDIENCES, audienceLabel, fmtSize } from "../lib/guidesMeta";
 import { fmtGreg } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 
+const isImage = (url = "") => /\.(png|jpe?g|webp)(\?|$)/i.test(url);
+
 export default function Guides() {
   const { session } = useSession();
   const [rows, setRows] = useState(null);
@@ -61,7 +63,7 @@ export default function Guides() {
       <main className="mx-auto max-w-5xl px-5 py-10">
         <h1 className="text-2xl font-bold text-ink">أدلة الاستخدام</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          أدلة إرشادية توضح خدمات البوابة وطريقة الاستفادة منها، لكل فئة دليلها.
+          أدلة إرشادية ومنشورات تعريفية توضح خدمات البوابة وطريقة الاستفادة منها، لكل فئة دليلها.
         </p>
 
         {!session && (
@@ -123,15 +125,28 @@ export default function Guides() {
 }
 
 function Card({ g }) {
+  const image = isImage(g.file_url);
+
   return (
-    <article className="flex gap-3.5 rounded-card border border-line bg-white p-4 transition-colors hover:border-[#CCF2DB]">
-      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-sm2 bg-mint-tint">
-        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-mint-deep"
-             stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-          <path d="M14 3v5h5" />
-        </svg>
-      </span>
+    <article className="overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-[#CCF2DB]">
+      {/* المنشور المصوّر يُعرض كاملًا، فهو المحتوى نفسه لا مجرد مرفق */}
+      {image && (
+        <a href={g.file_url} target="_blank" rel="noreferrer" className="block bg-mint-tint">
+          <img src={g.file_url} alt={g.title}
+               className="max-h-72 w-full object-contain" loading="lazy" />
+        </a>
+      )}
+
+      <div className="flex gap-3.5 p-4">
+        {!image && (
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-sm2 bg-mint-tint">
+            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-mint-deep"
+                 stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+              <path d="M14 3v5h5" />
+            </svg>
+          </span>
+        )}
 
       <div className="min-w-0 flex-1">
         <h3 className="text-sm font-bold text-ink">{g.title}</h3>
@@ -141,7 +156,7 @@ function Card({ g }) {
         )}
 
         <p className="mt-1.5 text-[11px] text-faint">
-          <span className="num">PDF</span>
+          <span className="num">{image ? "صورة" : "PDF"}</span>
           {g.file_size ? <span className="num"> · {fmtSize(g.file_size)}</span> : null}
           {g.created_at ? <span className="num"> · {fmtGreg(g.created_at)}</span> : null}
         </p>
@@ -149,13 +164,14 @@ function Card({ g }) {
         <div className="mt-3 flex flex-wrap gap-2">
           <a href={g.file_url} target="_blank" rel="noreferrer"
              className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#6AA786]">
-            عرض الدليل
+            {image ? "عرض بالحجم الكامل" : "عرض الدليل"}
           </a>
           <a href={g.file_url} download={g.file_name ?? true}
              className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep">
             تحميل
           </a>
         </div>
+      </div>
       </div>
     </article>
   );
