@@ -86,7 +86,8 @@ export default function NewsAdmin() {
       if (error) throw error;
       const { data } = supabase.storage.from("news").getPublicUrl(path);
       // رفع صورة مخصّصة (دعم فني) يلغي اختيار البطاقة اللونية تلقائيًا
-      setForm((f) => ({ ...f, cover_url: data.publicUrl, cover_theme: isTeacher ? f.cover_theme : "" }));
+      // الصورة لا تلغي بطاقة الناشر — البطاقة هي ما يُعرض في صفحة الخبر
+      setForm((f) => ({ ...f, cover_url: data.publicUrl }));
     } catch (e) {
       setMsg({ ok: false, text: "تعذّر رفع الصورة: " + (e.message ?? e) });
     } finally {
@@ -154,18 +155,26 @@ export default function NewsAdmin() {
       // الدعم الفني قد يرفع صورة مخصّصة بدلًا من البطاقة — بقية الحسابات
       // الإدارية تُخزَّن لها البطاقة فقط، والمعلم يبقى برفع الصورة كالسابق
       cover_url: form.cover_url || null,
-      cover_theme: isTeacher ? null : (form.cover_theme || null),
       body_images: form.body_images.filter(Boolean),
       video_url: form.video_url.trim() || null,
       is_published: isPublished,
       is_featured: form.is_featured,
-      published_at: isPublished ? new Date().toISOString() : null,
-      created_by: profile?.id ?? null,
     };
+
+    // الناشر وتاريخ النشر يُثبَّتان عند الإنشاء ولا يتغيّران بتعديل لاحق،
+    // فتعديل الدعم الفني لخبر غيره لا ينسبه إليه.
+    if (form.id && isPublished && !form.published_at) {
+      payload.published_at = new Date().toISOString();
+    }
 
     const { error } = form.id
       ? await supabase.from("news").update(payload).eq("id", form.id)
-      : await supabase.from("news").insert(payload);
+      : await supabase.from("news").insert({
+          ...payload,
+          cover_theme: isTeacher ? null : (form.cover_theme || null),
+          published_at: isPublished ? new Date().toISOString() : null,
+          created_by: profile?.id ?? null,
+        });
 
     setSaving(false);
     if (error) {
@@ -189,6 +198,7 @@ export default function NewsAdmin() {
       setForm({ ...empty, ...data, slug: data.slug ?? "", excerpt: data.excerpt ?? "",
                 body: data.body ?? "", cover_url: data.cover_url ?? "",
                 cover_theme: data.cover_theme ?? "",
+                published_at: data.published_at ?? null,
                 body_images: [imgs[0] ?? "", imgs[1] ?? "", imgs[2] ?? "", imgs[3] ?? ""],
                 video_url: data.video_url ?? "" });
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -309,9 +319,9 @@ export default function NewsAdmin() {
               <div className="mt-2 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 {myRoles.map((r) => (
                   <button key={r} type="button"
-                          onClick={() => setForm((f) => ({ ...f, cover_theme: r, cover_url: "" }))}
+                          onClick={() => setForm((f) => ({ ...f, cover_theme: r }))}
                           className={`overflow-hidden rounded-sm2 ring-2 transition-shadow ${
-                            form.cover_theme === r && !form.cover_url ? "ring-mint-deep" : "ring-transparent hover:ring-line"}`}>
+                            form.cover_theme === r ? "ring-mint-deep" : "ring-transparent hover:ring-line"}`}>
                     <NewsCoverCard role={r} className="aspect-[16/9] w-full" />
                   </button>
                 ))}
@@ -416,10 +426,10 @@ export default function NewsAdmin() {
           {list?.map((n) => (
             <div key={n.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
               <div className="h-12 w-20 shrink-0 overflow-hidden rounded-sm2 bg-mint-tint">
-                {n.cover_theme ? (
-                  <NewsCoverCard role={n.cover_theme} className="h-full w-full text-[10px]" />
-                ) : n.cover_url ? (
+                {n.cover_url ? (
                   <img src={n.cover_url} alt="" className="h-full w-full object-cover" />
+                ) : n.cover_theme ? (
+                  <NewsCoverCard role={n.cover_theme} className="h-full w-full text-[10px]" />
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">

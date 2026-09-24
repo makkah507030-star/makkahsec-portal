@@ -99,7 +99,9 @@ export default function NewsArticle() {
     const bodyHtml = (item.body || "")
       .split(/\n{2,}/).filter(Boolean)
       .map((p) => `<p>${escHtml(p)}</p>`).join("");
-    const imgs = Array.isArray(item.body_images) ? item.body_images.filter(Boolean) : [];
+    const imgs = Array.isArray(item.body_images)
+      ? item.body_images.filter((u) => u && u !== item.cover_url)
+      : [];
     const imagesHtml = imgs.length
       ? `<div class="imgs">${imgs.map((u) => `<img src="${escHtml(u)}" alt="">`).join("")}</div>`
       : "";
@@ -111,9 +113,9 @@ export default function NewsArticle() {
       const label = ADMIN_ROLE_LABEL[item.cover_theme] ?? "بوابة مكة الثانوية";
       const person = ROLE_PERSON_NAME[item.cover_theme] || "";
       coverBar =
-        `<div class="cover" style="background:${coverGradient(hue)}">` +
-        `<span class="cover-label">${escHtml(label)}</span>` +
-        (person ? `<span class="cover-person">${escHtml(person)}</span>` : "") +
+        `<div class="byline"><span class="dot" style="background:${coverGradient(hue)}"></span>` +
+        `<span class="by-name">${escHtml(person || label)}</span>` +
+        (person ? `<span class="by-role">${escHtml(label)}</span>` : "") +
         `</div>`;
     }
 
@@ -135,9 +137,10 @@ export default function NewsArticle() {
   .head .l3{font-size:11px;color:#5B6B63;margin-top:2px}
   .date{font-size:12px;color:#5B6B63;margin-bottom:4px}
   h1{font-size:22px;line-height:1.5;color:#12352A;margin-bottom:10px}
-  .cover{border-radius:10px;padding:12px 16px;margin:8px 0 14px;min-height:52px;display:flex;flex-direction:column;justify-content:center;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .cover-label{font-weight:700;font-size:15px}
-  .cover-person{font-size:12px;opacity:.9;margin-top:2px}
+  .byline{display:flex;align-items:center;gap:8px;margin:18px 0 0;padding-top:10px;border-top:1px solid #E7EEEA}
+  .byline .dot{width:22px;height:22px;border-radius:999px;display:inline-block;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .by-name{font-weight:700;font-size:13px}
+  .by-role{font-size:11.5px;color:#6B6B6B}
   .excerpt{font-size:15px;font-weight:600;color:#33463E;background:#E9F7F0;border:1px solid #CCF2DB;border-radius:10px;padding:10px 14px;margin-bottom:14px}
   .imgs{margin:10px 0 16px;display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;justify-content:center;align-items:stretch}
   .imgs img{flex:1 1 0;min-width:0;max-width:230px;aspect-ratio:16/9;object-fit:cover;border:1px solid #DDE6E1;border-radius:8px;background:#fff;page-break-inside:avoid}
@@ -159,11 +162,11 @@ export default function NewsArticle() {
   </div>
   ${item.published_at ? `<p class="date">${escHtml(fmtBoth(item.published_at))}</p>` : ""}
   <h1>${escHtml(item.title)}</h1>
-  ${coverBar}
   ${imagesHtml}
   ${item.excerpt ? `<p class="excerpt">${escHtml(item.excerpt)}</p>` : ""}
   ${bodyHtml ? `<div class="body">${bodyHtml}</div>` : ""}
   ${item.video_url ? `<div class="video"><span class="lbl">رابط الفيديو:</span><a href="${escHtml(item.video_url)}">${escHtml(item.video_url)}</a></div>` : ""}
+  ${coverBar}
   <div class="foot">
     <span>المصدر: ${escHtml(PORTAL_NAME)}</span>
     <span>makkahsec.com</span>
@@ -255,19 +258,7 @@ export default function NewsArticle() {
             <div className="mt-4 h-1 w-16 rounded-full bg-mint-deep" />
 
             {/* شريط الحساب الناشر — عرضي رفيع أسفل العنوان، بدل صورة غلاف كبيرة */}
-            {item.cover_theme ? (
-              <NewsCoverCard
-                role={item.cover_theme}
-                compact
-                className="mt-6 h-20 w-full rounded-card border border-line shadow-sm sm:h-24"
-              />
-            ) : item.cover_url && (
-              <img
-                src={item.cover_url}
-                alt=""
-                className="mt-6 h-28 w-full rounded-card border border-line object-cover shadow-sm sm:h-36"
-              />
-            )}
+            {/* الناشر يظهر في نهاية الخبر كتوقيع، لا شريطًا يزاحم العنوان */}
 
             {/* المقدّمة كنبذة بارزة */}
             {item.excerpt && (
@@ -276,7 +267,9 @@ export default function NewsArticle() {
               </p>
             )}
 
-            <ArticleImageSlider images={item.body_images} />
+            <ArticleImageSlider
+              images={(item.body_images ?? []).filter((u) => u && u !== item.cover_url)}
+            />
 
             {youtubeId(item.video_url) && (
               <div className="mt-7 aspect-video overflow-hidden rounded-card border border-line shadow-sm">
@@ -297,6 +290,28 @@ export default function NewsArticle() {
                     {p}
                   </p>
                 ))}
+              </div>
+            )}
+
+            {/* سطر الناشر — توقيع الخبر */}
+            {(publisherLabel || publisherPerson) && (
+              <div className="mt-10 flex items-center gap-3 border-t border-line pt-4">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full"
+                      style={{ background: coverGradient(ROLE_COVER_HUE[item.cover_theme] ?? 152) }}>
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4 text-white"
+                       stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+                    <path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6" />
+                  </svg>
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink">
+                    {publisherPerson || publisherLabel}
+                  </p>
+                  {publisherPerson && publisherLabel && (
+                    <p className="truncate text-xs text-muted">{publisherLabel}</p>
+                  )}
+                </div>
               </div>
             )}
 
