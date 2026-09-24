@@ -65,13 +65,13 @@ function Head() {
 
 function Sheet({ children, page, pages }) {
   return (
-    <div className="sheet mx-auto flex bg-white text-ink"
-         style={{ width: "210mm", minHeight: "297mm", flex: "0 0 auto",
+    <div className="sheet mx-auto flex overflow-hidden bg-white text-ink"
+         style={{ width: "210mm", height: "297mm", flex: "0 0 auto",
                   fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
-      <div className="flex w-full flex-col px-[14mm] pb-[12mm] pt-[13mm]">
+      <div className="flex h-full w-full flex-col px-[14mm] pb-[10mm] pt-[12mm]">
         <Head />
-        <div className="mt-4 flex-1">{children}</div>
-        <div className="mt-6 flex items-center justify-between gap-3 border-t border-line pt-2.5 text-[10px] text-faint">
+        <div className="mt-4 min-h-0 flex-1">{children}</div>
+        <div className="mt-3 flex shrink-0 items-center justify-between gap-3 border-t border-line pt-2.5 text-[10px] text-faint">
           <span>بوابة مكة الثانوية الرقمية</span>
           <span className="num">صفحة {page} من {pages}</span>
           <span className="font-semibold text-mint-deep" dir="ltr">makkahsec.com</span>
@@ -81,7 +81,7 @@ function Sheet({ children, page, pages }) {
   );
 }
 
-const PER_PAGE = 26;
+const PER_PAGE = 22;
 
 export default function DutyReport({ duty = [], supervision = [], term = "", issuedBy = "" }) {
   const dutyPages = Math.max(1, Math.ceil(duty.length / PER_PAGE));
@@ -181,7 +181,7 @@ export default function DutyReport({ duty = [], supervision = [], term = "", iss
               </tbody>
             </table>
 
-            <Signatures issuedBy={issuedBy} />
+            <div className="mt-auto"><Signatures issuedBy={issuedBy} /></div>
           </Sheet>
         );
       })()}
@@ -191,16 +191,16 @@ export default function DutyReport({ duty = [], supervision = [], term = "", iss
 
 function Signatures({ issuedBy }) {
   return (
-    <div className="mt-10 grid grid-cols-2 gap-8 text-center">
+    <div className="mt-8 grid grid-cols-2 gap-8 text-center">
       <div>
         <p className="text-[12px] text-muted">وكيل الشؤون التعليمية</p>
-        <div className="h-9" />
+        <div className="h-7" />
         <div className="mx-auto h-px w-44 bg-line" />
         <p className="mt-1.5 text-[12.5px] font-semibold">{issuedBy || "…"}</p>
       </div>
       <div>
         <p className="text-[12px] text-muted">مدير المدرسة</p>
-        <div className="h-9" />
+        <div className="h-7" />
         <div className="mx-auto h-px w-44 bg-line" />
         <p className="mt-1.5 text-[12.5px] font-semibold">عبدالله بن حسن سليمان الفيفي</p>
       </div>
