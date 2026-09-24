@@ -11,9 +11,28 @@ import logoIcon from "../assets/icon-mint.png";
 
 /* حقول بلون الهوية النعناعي بدل الأزرق الافتراضي للمتصفح */
 const FIELD =
-  "h-11 rounded-sm2 border border-[#CCF2DB] bg-mint-tint px-3 text-[15px] text-ink " +
+  "mk-field h-11 rounded-sm2 border border-[#CCF2DB] bg-mint-tint px-3 text-[15px] text-ink " +
   "placeholder:text-faint focus:border-mint-deep focus:bg-white focus:outline-none " +
   "focus:ring-2 focus:ring-[#89D7AD]/45 transition-colors";
+
+/* كروم يفرض خلفية زرقاء على الحقول المحفوظة (autofill) ويتجاهل background،
+   والحيلة المعتمدة أن نملأها بظل داخلي بلون الهوية ونؤخّر انتقاله طويلًا. */
+const AUTOFILL_FIX = `
+  .mk-field:-webkit-autofill,
+  .mk-field:-webkit-autofill:hover,
+  .mk-field:-webkit-autofill:focus,
+  .mk-field:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #EDFAF2 inset !important;
+    box-shadow: 0 0 0 1000px #EDFAF2 inset !important;
+    -webkit-text-fill-color: #101010 !important;
+    caret-color: #101010;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+  .mk-field:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+    box-shadow: 0 0 0 1000px #FFFFFF inset !important;
+  }
+`;
 
 export default function Login() {
   const [nationalId, setNationalId] = useState("");
@@ -72,6 +91,7 @@ export default function Login() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-white">
+      <style dangerouslySetInnerHTML={{ __html: AUTOFILL_FIX }} />
       {/* ——— الخلفية: بيضاء بنقش الهوية الخفيف ——— */}
       <div
         className="pointer-events-none absolute inset-0"
