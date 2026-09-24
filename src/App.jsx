@@ -63,6 +63,7 @@ import DocumentView from "./pages/DocumentView.jsx";
 import MyDocuments from "./pages/MyDocuments.jsx";
 import Help from "./pages/Help.jsx";
 import DutyCard from "./components/DutyCard.jsx";
+import DutyAdmin from "./pages/admin/DutyAdmin.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
@@ -260,6 +261,7 @@ export default function App() {
             )}
             {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
             {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
+            {can("staff") && <Route path="/duty" element={<DutyAdmin />} />}
             {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
             {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
