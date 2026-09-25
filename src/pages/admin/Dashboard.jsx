@@ -31,6 +31,7 @@ import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import ExamCountdown from "../../components/ExamCountdown.jsx";
 import DutyCard from "../../components/DutyCard.jsx";
+import ReferralsInbox from "../../components/ReferralsInbox.jsx";
 
 
 export default function Dashboard() {
@@ -216,6 +217,8 @@ export default function Dashboard() {
           <Fig label="فصل"     value={d.classes} />
         </section>
       )}
+
+      <ReferralsInbox />
 
       {canReports && dow > 0 && <MissingStudentsBox date={date} />}
       {canReports && dow > 0 && <OfficialStatusBox date={date} />}

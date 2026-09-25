@@ -64,6 +64,8 @@ import MyDocuments from "./pages/MyDocuments.jsx";
 import Help from "./pages/Help.jsx";
 import DutyCard from "./components/DutyCard.jsx";
 import DutyAdmin from "./pages/admin/DutyAdmin.jsx";
+import Referrals from "./pages/Referrals.jsx";
+import ReferralView from "./pages/ReferralView.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
@@ -349,6 +351,9 @@ export default function App() {
         <Route path="/doc/:id" element={<DocumentView />} />
         {/* نماذجي — ما صدر باسم المستخدم، ولولي الأمر مستندات أبنائه */}
         <Route path="/my-documents" element={<MyDocuments />} />
+        {/* إحالة الطالب — الشاشة للمعلم والإدارة، والملف لصاحبه وولي أمره */}
+        <Route path="/referrals" element={<Referrals />} />
+        <Route path="/referral/:id" element={<ReferralView />} />
         {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
         <Route path="/help" element={<Help />} />
         <Route path="/notify-guide" element={<NotifyGuide />} />

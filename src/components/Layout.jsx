@@ -99,6 +99,7 @@ const OTHER_NAV = {
     { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
     { to: "/follow-up", label: "سجل المتابعة الإلكتروني" },
     { to: "/forms",        label: "النماذج والشهادات" },
+    { to: "/referrals",    label: "إحالة طالب" },
     { to: "/my-documents", label: "نماذجي" },
     { to: "/my-signature", label: "توقيعي" },
     { to: "/help",         label: "دليل الاستخدام" },

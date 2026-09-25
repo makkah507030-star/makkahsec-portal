@@ -576,9 +576,9 @@ function MyDayBox({ periods, marked }) {
 function TeacherCard({ me }) {
   if (!me) return null;
   return (
-    <section className="flex items-center gap-3.5 rounded-card border border-line bg-white p-4">
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-mint-tint">
-        <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6 text-mint-deep"
+    <section className="sticky top-0 z-20 -mx-4 flex items-center gap-3.5 border-b border-line bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:top-[4.5rem]">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mint-tint">
+        <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 text-mint-deep"
              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 10 12 5 2 10l10 5 10-5Z" />
           <path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" />
@@ -586,7 +586,7 @@ function TeacherCard({ me }) {
         </svg>
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-base font-bold leading-tight text-ink">
+        <p className="truncate text-[15px] font-bold leading-tight text-ink">
           {me.full_name}
         </p>
         <p className="mt-0.5 truncate text-xs text-muted">
