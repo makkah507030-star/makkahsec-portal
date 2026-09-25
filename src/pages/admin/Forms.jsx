@@ -233,6 +233,11 @@ export default function Forms() {
           id: `u-${u.id}`,
           uid: u.id,
           full_name: u.full_name ?? u.username,
+          // اسم الدخول في البوابة هو رقم الهوية
+          national_id: /^\d{10}$/.test(u.username ?? "") ? u.username : "",
+          // الوكلاء والموجهون ورواد النشاط متفرّغون من التدريس،
+          // والمحضّرون والإداريون هذه وظيفتهم الأصلية — فالتخصص هو المسمّى.
+          specialization: teacherUids.has(u.id) ? "" : (jobBy[u.id] ?? ""),
           // المعلم يبقى «معلم» ولو أُسند له عمل إداري، والإداري الخالص بصفته
           job: teacherUids.has(u.id) ? "معلم" : (jobBy[u.id] ?? "إداري بالمدرسة"),
         })),
@@ -260,8 +265,8 @@ export default function Forms() {
       list.forEach((m) => {
         const extra = (m.uid && byUid[m.uid]) || byName[(m.full_name ?? "").trim()];
         if (extra) {
-          if (!m.specialization) m.specialization = extra.specialization;
-          if (!m.national_id) m.national_id = extra.national_id;
+          if (!m.specialization && extra.specialization) m.specialization = extra.specialization;
+          if (!m.national_id && extra.national_id) m.national_id = extra.national_id;
         }
       });
 
