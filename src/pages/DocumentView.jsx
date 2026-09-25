@@ -50,7 +50,10 @@ export default function DocumentView() {
   const [msg, setMsg] = useState(null);
   const [mySig, setMySig] = useState(null);      // مسار توقيعي المحفوظ
   const [mySigUrl, setMySigUrl] = useState(null);
-  const [signIt, setSignIt] = useState(true);    // إرفاق التوقيع مع الرد
+  const [signIt, setSignIt] = useState(true);
+
+  // ولي الأمر يقرّ بلا توقيع إلكتروني — الإقرار باسمه وتاريخه يكفي
+  const isGuardianReply = profile?.role === "guardian";
   const [doc, setDoc] = useState(null);
   const [assets, setAssets] = useState({});
   const [error, setError] = useState("");
@@ -135,7 +138,11 @@ export default function DocumentView() {
       status: "replied",
       reply_at: new Date().toISOString(),
     };
-    if (signIt && mySig) {
+    if (isGuardianReply) {
+      // إقرار باسمه وتاريخه بلا صورة توقيع
+      patch.reply_signature_path = null;
+      patch.reply_signature_name = profile?.full_name ?? doc.recipient ?? "";
+    } else if (signIt && mySig) {
       patch.reply_signature_path = mySig;
       patch.reply_signature_name = doc.recipient ?? "";
     }
@@ -220,27 +227,37 @@ export default function DocumentView() {
             </div>
           ))}
 
-          {/* التوقيع الإلكتروني على الرد */}
-          <div className="rounded-sm2 border border-line p-3">
-            <p className="text-xs font-semibold text-ink">التوقيع على الرد</p>
-            {mySigUrl ? (
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-1.5 text-sm text-muted">
-                  <input type="checkbox" checked={signIt}
-                         onChange={(e) => setSignIt(e.target.checked)} />
-                  أرفق توقيعي
-                </label>
-                {signIt && (
-                  <img src={mySigUrl} alt="توقيعي"
-                       className="h-12 w-auto rounded-sm2 border border-line bg-white object-contain px-2" />
-                )}
-              </div>
-            ) : (
-              <p className="mt-1.5 text-xs leading-relaxed text-warning">
-                لم ترفع توقيعك بعد. يمكنك إرسال الرد بلا توقيع، أو رفع توقيعك من صفحة «توقيعي» ثم العودة.
-              </p>
-            )}
-          </div>
+          {/* التوقيع الإلكتروني على الرد — ولي الأمر يقرّ بلا توقيع */}
+          {!isGuardianReply && (
+            <div className="rounded-sm2 border border-line p-3">
+              <p className="text-xs font-semibold text-ink">التوقيع على الرد</p>
+              {mySigUrl ? (
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <label className="flex items-center gap-1.5 text-sm text-muted">
+                    <input type="checkbox" checked={signIt}
+                           onChange={(e) => setSignIt(e.target.checked)} />
+                    أرفق توقيعي
+                  </label>
+                  {signIt && (
+                    <img src={mySigUrl} alt="توقيعي"
+                         className="h-12 w-auto rounded-sm2 border border-line bg-white object-contain px-2" />
+                  )}
+                </div>
+              ) : (
+                <p className="mt-1.5 text-xs leading-relaxed text-warning">
+                  لم ترفع توقيعك بعد. يمكنك إرسال الرد بلا توقيع، أو رفع توقيعك من صفحة «توقيعي» ثم العودة.
+                </p>
+              )}
+            </div>
+
+          )}
+
+          {isGuardianReply && (
+            <p className="rounded-sm2 bg-mint-tint px-3 py-2.5 text-xs leading-relaxed text-mint-deep">
+              إرسالك للرد يُعدّ إقرارًا منك بالاطّلاع والموافقة، ويُسجَّل باسمك وتاريخه
+              في المستند. ولا يُطلب منك توقيع إلكتروني.
+            </p>
+          )}
 
           <button className="btn-primary w-full" onClick={sendReply} disabled={sending}>
             {sending ? "جارٍ الإرسال…" : "إرسال الرد"}

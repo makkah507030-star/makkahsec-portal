@@ -130,7 +130,9 @@ function Signatures({ source, issuerUrl, issuerName, issuerRole, principalUrl, p
           {stampUrl && <img src={stampUrl} alt="" className="h-20 w-auto object-contain opacity-90" />}
         </div>
         <div className="justify-self-end">
-          <Sign url={replyUrl} name={replyName} role="توقيع المستفيد" />
+          {/* بلا صورة توقيع: إقرار باسم صاحبه، كما في موافقات أولياء الأمور */}
+          <Sign url={replyUrl} name={replyName}
+                role={replyUrl ? "توقيع المستفيد" : "إقرار المستفيد"} />
         </div>
       </div>
     );

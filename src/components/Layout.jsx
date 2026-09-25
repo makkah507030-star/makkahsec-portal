@@ -102,6 +102,7 @@ const OTHER_NAV = {
     { to: "/forms",        label: "النماذج والشهادات" },
     { to: "/referrals",    label: "إحالة طالب" },
     { to: "/exams",        label: "جداول الاختبارات" },
+    { to: "/events",       label: "الأحداث والمناسبات" },
     { to: "/my-documents", label: "نماذجي" },
     { to: "/my-signature", label: "توقيعي" },
     { to: "/help",         label: "دليل الاستخدام" },
