@@ -515,7 +515,7 @@ function RolePermissions() {
                             </span>
                             <span className="flex shrink-0 items-center gap-2">
                               <span className={`text-xs font-medium ${on ? "text-mint-deep" : "text-faint"}`}>
-                                {on ? "ممنوحة" : "معطَّلة"}
+                                {on ? "نشطة" : "متوقفة"}
                               </span>
                               <input type="checkbox" checked={on} onChange={() => toggle(k)} />
                             </span>
