@@ -155,7 +155,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
 }
 
 export default function Layout({ children }) {
-  const { profile, adminRoles, signOut, can, effectiveRole, dualRole, switchView } = useSession();
+  const { session, profile, adminRoles, signOut, can, effectiveRole, dualRole, switchView } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
