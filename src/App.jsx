@@ -65,6 +65,8 @@ import Help from "./pages/Help.jsx";
 import DutyCard from "./components/DutyCard.jsx";
 import DutyAdmin from "./pages/admin/DutyAdmin.jsx";
 import Referrals from "./pages/Referrals.jsx";
+import ExamSchedules from "./pages/ExamSchedules.jsx";
+import ExamsAdmin from "./pages/admin/ExamsAdmin.jsx";
 import ReferralView from "./pages/ReferralView.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
@@ -264,6 +266,7 @@ export default function App() {
             {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
             {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
             {can("staff") && <Route path="/duty" element={<DutyAdmin />} />}
+            {can("students") && <Route path="/exams-admin" element={<ExamsAdmin />} />}
             {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
             {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
             {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
@@ -353,6 +356,8 @@ export default function App() {
         <Route path="/my-documents" element={<MyDocuments />} />
         {/* إحالة الطالب — الشاشة للمعلم والإدارة، والملف لصاحبه وولي أمره */}
         <Route path="/referrals" element={<Referrals />} />
+        {/* جداول الاختبارات: العرض للجميع، والإدارة بصلاحية */}
+        <Route path="/exams" element={<ExamSchedules />} />
         <Route path="/referral/:id" element={<ReferralView />} />
         {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
         <Route path="/help" element={<Help />} />

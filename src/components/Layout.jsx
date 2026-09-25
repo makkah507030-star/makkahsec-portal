@@ -30,6 +30,7 @@ const ADMIN_GROUPS = [
       { to: "/period-attendance", label: "تحضير الحصص اليومية", perm: "reports", icon: "clock" },
       { to: "/reports",     label: "التقارير",  perm: "reports",     icon: "chart" },
       { to: "/permissions", label: "الاستئذان", perm: "permissions", icon: "ticket" },
+      { to: "/exams-admin", label: "جداول الاختبارات", perm: "students", icon: "calendar" },
     ],
   },
   {
@@ -100,6 +101,7 @@ const OTHER_NAV = {
     { to: "/follow-up", label: "سجل المتابعة الإلكتروني" },
     { to: "/forms",        label: "النماذج والشهادات" },
     { to: "/referrals",    label: "إحالة طالب" },
+    { to: "/exams",        label: "جداول الاختبارات" },
     { to: "/my-documents", label: "نماذجي" },
     { to: "/my-signature", label: "توقيعي" },
     { to: "/help",         label: "دليل الاستخدام" },
@@ -107,12 +109,14 @@ const OTHER_NAV = {
   ],
   student:  [
     { to: "/", label: "الرئيسية" },
+    { to: "/exams", label: "جداول الاختبارات" },
     { to: "/my-documents", label: "نماذجي" },
     { to: "/help", label: "دليل الاستخدام" },
     { to: "/contact", label: "الدعم الفني" },
   ],
   guardian: [
     { to: "/", label: "الرئيسية" },
+    { to: "/exams", label: "جداول الاختبارات" },
     { to: "/my-documents", label: "نماذجي" },
     { to: "/help", label: "دليل الاستخدام" },
     { to: "/contact", label: "الدعم الفني" },
