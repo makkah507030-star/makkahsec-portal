@@ -95,11 +95,12 @@ const AUTO_MAP = [
   { keys: ["المسمّى", "المسمى", "العمل الحالي", "الوظيفة"], from: "job" },
 ];
 
-function autoFill(fields, info, current) {
+function autoFill(fields, info, current, { overwrite = false } = {}) {
   const out = { ...current };
   (fields ?? []).forEach((f) => {
     if (["student", "staff", "theme", "table"].includes(f.type)) return;
-    if (String(out[f.name] ?? "").trim()) return;           // لا نطمس ما كتبه المستخدم
+    // عند تبديل الشخص تُحدَّث بياناته المعروفة، وفيما عدا ذلك لا يُطمس ما كُتب
+    if (!overwrite && String(out[f.name] ?? "").trim()) return;
     const label = f.label ?? "";
     const hit = AUTO_MAP.find((m) => m.keys.some((k) => label.includes(k)));
     const val = hit ? info[hit.from] : null;
@@ -245,17 +246,23 @@ export default function Forms() {
         })),
       ];
 
-      // التخصص يُنقل للإداري الذي له سجل معلّم، ليُملأ حقل «التخصص» تلقائيًا
-      const specByName = {};
+      // بيانات المعلم (التخصص والسجل المدني) تُنقل لبطاقته أيًّا كان مصدرها:
+      // المطابقة بحساب المستخدم أولًا لأنها قاطعة، ثم بالاسم احتياطًا.
+      const byUid = {}, byName = {};
       (tch ?? []).forEach((t) => {
-        if (t.full_name) specByName[t.full_name.trim()] = {
+        const extra = {
           specialization: t.specialization ?? "",
           national_id: t.national_id ?? "",
         };
+        if (t.user_id) byUid[t.user_id] = extra;
+        if (t.full_name) byName[t.full_name.trim()] = extra;
       });
       list.forEach((m) => {
-        const extra = specByName[(m.full_name ?? "").trim()];
-        if (extra && !m.specialization) Object.assign(m, extra);
+        const extra = (m.uid && byUid[m.uid]) || byName[(m.full_name ?? "").trim()];
+        if (extra) {
+          if (!m.specialization) m.specialization = extra.specialization;
+          if (!m.national_id) m.national_id = extra.national_id;
+        }
       });
 
       const seen = new Set();
@@ -372,7 +379,9 @@ export default function Forms() {
       national_id: head.national_id ?? "",
     };
     setValues((v) =>
-      autoFill(picked?.fields, info, { ...v, recipient: head.full_name, job: jobValue }));
+      autoFill(picked?.fields, info,
+               { ...v, recipient: head.full_name, job: jobValue },
+               { overwrite: true }));
 
     // نموذج التكليف: يُملأ جدول الموظف في المناوبة والإشراف تلقائيًا
     const dutyField = (picked?.fields ?? []).find((f) => f.type === "duty_schedule");
@@ -431,7 +440,9 @@ export default function Forms() {
     // التعبئة التلقائية من بيانات أول طالب مختار
     try {
       const info = await studentInfo(head);
-      setValues((v) => autoFill(picked?.fields, info, { ...v, student_id: head.id, recipient: head.full_name }));
+      setValues((v) => autoFill(picked?.fields, info,
+                                { ...v, student_id: head.id, recipient: head.full_name },
+                                { overwrite: true }));
     } catch { /* تبقى الحقول للإدخال اليدوي */ }
   };
 
@@ -961,8 +972,12 @@ export default function Forms() {
                   <textarea rows={4} className="field mt-1 w-full" value={values[f.name] ?? ""}
                             onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
                 ) : (
-                  <input className="field mt-1 w-full" value={values[f.name] ?? ""}
-                         onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
+                  <>
+                    <FieldPresets field={f}
+                                  onPick={(t) => setValues((v) => ({ ...v, [f.name]: t }))} />
+                    <input className="field mt-1 w-full" value={values[f.name] ?? ""}
+                           onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
+                  </>
                 )}
               </div>
             ))}
@@ -1240,10 +1255,15 @@ export default function Forms() {
                                     onChange={(e) => setDecision((x) => ({
                                       ...x, [d.id]: { ...(x[d.id] ?? {}), [f.name]: e.target.value } }))} />
                         ) : (
-                          <input className="field mt-1 w-full"
-                                 value={decision[d.id]?.[f.name] ?? d.data?.[f.name] ?? ""}
-                                 onChange={(e) => setDecision((x) => ({
-                                   ...x, [d.id]: { ...(x[d.id] ?? {}), [f.name]: e.target.value } }))} />
+                          <>
+                            <FieldPresets field={f}
+                              onPick={(t) => setDecision((x) => ({
+                                ...x, [d.id]: { ...(x[d.id] ?? {}), [f.name]: t } }))} />
+                            <input className="field mt-1 w-full"
+                                   value={decision[d.id]?.[f.name] ?? d.data?.[f.name] ?? ""}
+                                   onChange={(e) => setDecision((x) => ({
+                                     ...x, [d.id]: { ...(x[d.id] ?? {}), [f.name]: e.target.value } }))} />
+                          </>
                         )}
                       </div>
                     ))}
