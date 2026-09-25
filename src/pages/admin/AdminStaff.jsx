@@ -282,13 +282,24 @@ const EDITABLE_ROLES = ASSIGNABLE_ROLES.filter(
 );
 
 /* =====================================================================
-   لوحة الصلاحيات — مصفوفة: الأدوار أعمدة، والصلاحيات صفوف.
-   أدوات التسريع: تحديد صف أو عمود كاملًا، ونسخ صلاحيات دور لآخر،
-   وقوالب جاهزة لكل نوع دور، وبحث يصفّي الصلاحيات.
-   وفي الجوال: دور واحد وقائمة صلاحياته، فالمصفوفة لا تصلح لشاشة ضيقة.
+   لوحة الصلاحيات — على نمط «صلاحيات المعلمين»:
+   قائمة الأدوار على اليمين، ولوحة الدور المختار وحده على اليسار،
+   وصلاحياته مجمّعة بأقسام البوابة. بلا مصفوفة ولا تمرير أفقي.
    ===================================================================== */
 
-// قوالب جاهزة: ما يحتاجه كل نوع دور عادةً
+// تجميع الصلاحيات بأقسام البوابة
+const PERM_GROUPS = [
+  { title: "شؤون الطلاب",
+    keys: ["students", "records", "results", "reports", "permissions", "home_stats"] },
+  { title: "الشؤون التعليمية",
+    keys: ["schedules", "import", "calendar"] },
+  { title: "المحتوى والتواصل",
+    keys: ["news", "guides", "notifications", "feedback"] },
+  { title: "الحسابات والنظام",
+    keys: ["accounts", "staff", "password_reset", "login_log"] },
+];
+
+// قوالب جاهزة لكل نوع دور
 const PRESETS = [
   { key: "deputy",    label: "وكيل",
     perms: ["students", "records", "reports", "home_stats", "permissions",
@@ -297,20 +308,20 @@ const PRESETS = [
     perms: ["students", "reports", "permissions", "notifications", "feedback"] },
   { key: "clerk",     label: "مساعد إداري",
     perms: ["students", "records", "permissions", "schedules"] },
-  { key: "lab",       label: "محضّر",
-    perms: ["students", "schedules"] },
-  { key: "activity",  label: "رائد نشاط",
-    perms: ["students", "news", "notifications", "guides"] },
-  { key: "media",     label: "إعلامي",
-    perms: ["news", "guides"] },
+  { key: "lab",       label: "محضّر",      perms: ["students", "schedules"] },
+  { key: "activity",  label: "رائد نشاط",  perms: ["students", "news", "notifications", "guides"] },
+  { key: "media",     label: "إعلامي",     perms: ["news", "guides"] },
 ];
 
+const permByKey = Object.fromEntries(PERMISSIONS.map((p) => [p.key, p]));
+
 function RolePermissions() {
-  const [map, setMap] = useState(null);          // role -> Set(permissions)
-  const [saving, setSaving] = useState(null);
-  const [msg, setMsg] = useState(null);
+  const [map, setMap] = useState(null);        // role -> Set(permissions)
+  const [role, setRole] = useState(null);      // الدور المفتوح
+  const [sel, setSel] = useState(new Set());   // صلاحياته قيد التحرير
   const [q, setQ] = useState("");
-  const [mobileRole, setMobileRole] = useState(EDITABLE_ROLES[0]);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null);
   const [copyFrom, setCopyFrom] = useState("");
 
   const load = async () => {
@@ -319,228 +330,224 @@ function RolePermissions() {
     EDITABLE_ROLES.forEach((r) => { m[r] = new Set(); });
     (data ?? []).forEach((r) => { (m[r.role_type] ??= new Set()).add(r.permission); });
     setMap(m);
+    return m;
   };
 
   useEffect(() => { load(); }, []);
 
-  const perms = useMemo(() => {
-    const t = q.trim();
-    return t ? PERMISSIONS.filter((p) => p.label.includes(t) || p.desc.includes(t)) : PERMISSIONS;
-  }, [q]);
+  const pick = (r) => {
+    setRole(r);
+    setSel(new Set(map?.[r] ?? []));
+    setMsg(null);
+    setCopyFrom("");
+  };
 
-  // كتابة مجموعة صلاحيات لدور دفعة واحدة
-  const writeRole = async (role, next) => {
-    setSaving(role);
+  const toggle = (k) =>
+    setSel((prev) => {
+      const n = new Set(prev);
+      n.has(k) ? n.delete(k) : n.add(k);
+      return n;
+    });
+
+  const toggleGroup = (keys) => {
+    const inGroup = keys.filter((k) => permByKey[k]);
+    const all = inGroup.every((k) => sel.has(k));
+    setSel((prev) => {
+      const n = new Set(prev);
+      inGroup.forEach((k) => (all ? n.delete(k) : n.add(k)));
+      return n;
+    });
+  };
+
+  const save = async () => {
+    if (!role) return;
+    setSaving(true);
     setMsg(null);
     const cur = map[role] ?? new Set();
-    const add = [...next].filter((p) => !cur.has(p));
-    const del = [...cur].filter((p) => !next.has(p));
+    const add = [...sel].filter((p) => !cur.has(p));
+    const del = [...cur].filter((p) => !sel.has(p));
 
     if (del.length) {
-      await supabase.from("role_permissions").delete()
+      const { error } = await supabase.from("role_permissions").delete()
         .eq("role_type", role).in("permission", del);
+      if (error) { setMsg({ ok: false, text: error.message }); setSaving(false); return; }
     }
     if (add.length) {
-      await supabase.from("role_permissions")
+      const { error } = await supabase.from("role_permissions")
         .insert(add.map((permission) => ({ role_type: role, permission })));
+      if (error) { setMsg({ ok: false, text: error.message }); setSaving(false); return; }
     }
-    setMap((prev) => ({ ...prev, [role]: next }));
-    setSaving(null);
+
+    setMap((prev) => ({ ...prev, [role]: new Set(sel) }));
+    setSaving(false);
+    setMsg({ ok: true, text: "حُفظت الصلاحيات." });
   };
 
-  const toggle = async (role, perm) => {
-    const cur = new Set(map[role] ?? []);
-    cur.has(perm) ? cur.delete(perm) : cur.add(perm);
-    await writeRole(role, cur);
-  };
-
-  const toggleColumn = async (role) => {
+  const dirty = useMemo(() => {
+    if (!role || !map) return false;
     const cur = map[role] ?? new Set();
-    const all = PERMISSIONS.every((p) => cur.has(p.key));
-    await writeRole(role, all ? new Set() : new Set(PERMISSIONS.map((p) => p.key)));
-  };
+    return cur.size !== sel.size || [...sel].some((k) => !cur.has(k));
+  }, [role, map, sel]);
 
-  const toggleRow = async (perm) => {
-    const all = EDITABLE_ROLES.every((r) => map[r]?.has(perm));
-    setSaving(perm);
-    for (const r of EDITABLE_ROLES) {
-      const cur = new Set(map[r] ?? []);
-      all ? cur.delete(perm) : cur.add(perm);
-      await writeRole(r, cur);
-    }
-    setSaving(null);
-  };
-
-  const applyPreset = async (role, preset) => {
-    await writeRole(role, new Set(preset.perms));
-    setMsg({ ok: true, text: `طُبّق قالب «${preset.label}» على ${ADMIN_ROLE_LABEL[role]}.` });
-  };
-
-  const copyTo = async (role) => {
-    if (!copyFrom || copyFrom === role) return;
-    await writeRole(role, new Set(map[copyFrom] ?? []));
-    setMsg({ ok: true, text:
-      `نُسخت صلاحيات ${ADMIN_ROLE_LABEL[copyFrom]} إلى ${ADMIN_ROLE_LABEL[role]}.` });
-  };
+  const filteredRoles = useMemo(() => {
+    const t = q.trim();
+    if (!t) return EDITABLE_ROLES;
+    return EDITABLE_ROLES.filter((r) => (ADMIN_ROLE_LABEL[r] ?? r).includes(t));
+  }, [q]);
 
   if (!map) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
-
-  const count = (r) => (map[r]?.size ?? 0);
 
   return (
     <div className="space-y-4">
       <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
-        مدير المدرسة والدعم الفني يملكان صلاحية كاملة دائمًا، ولا يظهران هنا.
-        وكل تغيير يُحفظ فور الضغط.
+        اختر دورًا من القائمة، وحدّد صلاحياته، ثم احفظ.
+        ومدير المدرسة والدعم الفني يملكان صلاحية كاملة دائمًا ولا يظهران هنا.
       </p>
 
-      {msg && (
-        <p className={`rounded-sm2 px-3 py-2 text-sm ${
-          msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
-          {msg.text}
-        </p>
-      )}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr] lg:items-start">
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input className="field min-w-[180px] flex-1" type="search" value={q}
-               placeholder="ابحث في الصلاحيات" onChange={(e) => setQ(e.target.value)} />
-        <select className="field" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value)}>
-          <option value="">نسخ صلاحيات من…</option>
-          {EDITABLE_ROLES.map((r) => (
-            <option key={r} value={r}>{ADMIN_ROLE_LABEL[r] ?? r}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* ——— المصفوفة: المتصفح ——— */}
-      <div className="hidden overflow-x-auto rounded-card border border-line bg-white lg:block">
-        <table className="w-full border-collapse text-xs">
-          <thead className="sticky top-0 z-10">
-            <tr>
-              <th className="sticky right-0 z-20 min-w-[190px] border-b border-l border-line bg-white p-2.5 text-right">
-                <span className="text-[11px] font-bold text-faint">الصلاحية \ الدور</span>
-              </th>
-              {EDITABLE_ROLES.map((r) => (
-                <th key={r} className="border-b border-line bg-canvas p-2 align-bottom">
-                  <div className="mx-auto w-[92px]">
-                    <p className="text-[11px] font-bold leading-tight text-ink">
-                      {ADMIN_ROLE_LABEL[r] ?? r}
-                    </p>
-                    <p className="num mt-0.5 text-[10px] text-faint">{count(r)} صلاحية</p>
-                    <button onClick={() => toggleColumn(r)} disabled={saving}
-                            className="mt-1.5 w-full rounded-pill border border-line bg-white px-2 py-0.5 text-[10px] text-muted hover:border-mint-deep hover:text-mint-deep">
-                      {PERMISSIONS.every((p) => map[r]?.has(p.key)) ? "إلغاء الكل" : "تحديد الكل"}
-                    </button>
-                    {copyFrom && copyFrom !== r && (
-                      <button onClick={() => copyTo(r)} disabled={saving}
-                              className="mt-1 w-full rounded-pill bg-mint-tint px-2 py-0.5 text-[10px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
-                        لصق هنا
-                      </button>
-                    )}
-                    <select className="mt-1 w-full rounded-sm2 border border-line bg-white px-1 py-0.5 text-[10px] text-muted"
-                            value="" onChange={(e) => {
-                              const pr = PRESETS.find((x) => x.key === e.target.value);
-                              if (pr) applyPreset(r, pr);
-                            }}>
-                      <option value="">قالب…</option>
-                      {PRESETS.map((pr) => (
-                        <option key={pr.key} value={pr.key}>{pr.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {perms.map((p) => {
-              const all = EDITABLE_ROLES.every((r) => map[r]?.has(p.key));
-              return (
-                <tr key={p.key} className="hover:bg-mint-tint/40">
-                  <td className="sticky right-0 z-10 border-b border-l border-line bg-white p-2.5 text-right">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-[12.5px] font-semibold text-ink">{p.label}</p>
-                        <p className="mt-0.5 text-[10.5px] leading-tight text-faint">{p.desc}</p>
-                      </div>
-                      <button onClick={() => toggleRow(p.key)} disabled={saving}
-                              title={all ? "إلغاؤها من الجميع" : "منحها للجميع"}
-                              className="shrink-0 rounded-pill border border-line px-2 py-0.5 text-[10px] text-muted hover:border-mint-deep hover:text-mint-deep">
-                        {all ? "إلغاء" : "للجميع"}
-                      </button>
-                    </div>
-                  </td>
-                  {EDITABLE_ROLES.map((r) => {
-                    const on = map[r]?.has(p.key);
-                    return (
-                      <td key={r} className="border-b border-line p-0 text-center">
-                        <button onClick={() => toggle(r, p.key)} disabled={saving === r}
-                          aria-label={`${p.label} — ${ADMIN_ROLE_LABEL[r]}`}
-                          className={`grid h-11 w-full place-items-center transition-colors ${
-                            on ? "bg-mint-deep/10 hover:bg-mint-deep/20" : "hover:bg-canvas"}`}>
-                          <span className={`grid h-5 w-5 place-items-center rounded-[6px] border text-[11px] font-bold transition-colors ${
-                            on ? "border-mint-deep bg-mint-deep text-white"
-                               : "border-line bg-white text-transparent"}`}>
-                            ✓
-                          </span>
-                        </button>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ——— الجوال: دور واحد وقائمة صلاحياته ——— */}
-      <div className="space-y-3 lg:hidden">
-        <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
-          {EDITABLE_ROLES.map((r) => (
-            <button key={r} onClick={() => setMobileRole(r)}
-              className={`shrink-0 rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
-                mobileRole === r ? "bg-mint-deep text-white"
-                                 : "border border-line bg-white text-muted"}`}>
-              {ADMIN_ROLE_LABEL[r] ?? r}
-              <span className="num opacity-70"> ({count(r)})</span>
-            </button>
-          ))}
-        </div>
-
-        <div className="card p-3">
-          <div className="flex flex-wrap gap-1.5">
-            <button onClick={() => toggleColumn(mobileRole)} disabled={saving}
-                    className="rounded-pill border border-line px-3 py-1 text-xs text-muted">
-              {PERMISSIONS.every((p) => map[mobileRole]?.has(p.key)) ? "إلغاء الكل" : "تحديد الكل"}
-            </button>
-            {PRESETS.map((pr) => (
-              <button key={pr.key} onClick={() => applyPreset(mobileRole, pr)} disabled={saving}
-                      className="rounded-pill bg-mint-tint px-3 py-1 text-xs font-medium text-mint-deep">
-                {pr.label}
+        {/* ——— قائمة الأدوار ——— */}
+        <section className="card overflow-hidden lg:sticky lg:top-20">
+          <div className="border-b border-line p-3">
+            <input className="field" value={q} onChange={(e) => setQ(e.target.value)}
+                   placeholder="فلترة بالدور" />
+          </div>
+          <div className="max-h-[28rem] divide-y divide-line overflow-y-auto">
+            {filteredRoles.map((r) => (
+              <button key={r} onClick={() => pick(r)}
+                className={`flex w-full items-center justify-between gap-2 px-4 py-2.5 text-right transition-colors ${
+                  role === r ? "bg-mint-tint" : "hover:bg-canvas"}`}>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm text-ink">
+                    {ADMIN_ROLE_LABEL[r] ?? r}
+                  </span>
+                  <span className="num block text-[11px] text-faint">
+                    {(map[r]?.size ?? 0)} صلاحية
+                  </span>
+                </span>
+                {role === r && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mint-deep" />}
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
-        <div className="card divide-y divide-line overflow-hidden">
-          {perms.map((p) => {
-            const on = map[mobileRole]?.has(p.key);
-            return (
-              <button key={p.key} onClick={() => toggle(mobileRole, p.key)} disabled={saving}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-right">
-                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-[6px] border text-[11px] font-bold ${
-                  on ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-white text-transparent"}`}>
-                  ✓
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-ink">{p.label}</span>
-                  <span className="mt-0.5 block text-[11px] leading-tight text-faint">{p.desc}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        {/* ——— لوحة الدور المختار ——— */}
+        <section className="card min-h-[20rem] space-y-4 p-4">
+          {!role ? (
+            <p className="py-10 text-center text-sm text-muted">اختر دورًا من القائمة.</p>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-bold text-ink">{ADMIN_ROLE_LABEL[role] ?? role}</h2>
+                  <p className="num text-xs text-muted">
+                    المحدّد: {sel.size} من {PERMISSIONS.length}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button onClick={() => setSel(new Set(PERMISSIONS.map((p) => p.key)))}
+                          className="rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
+                    الكل
+                  </button>
+                  <button onClick={() => setSel(new Set())}
+                          className="rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
+                    مسح
+                  </button>
+                </div>
+              </div>
+
+              {/* قوالب ونسخ */}
+              <div className="rounded-sm2 bg-canvas p-3">
+                <p className="text-[11px] font-semibold text-faint">قالب جاهز</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {PRESETS.map((pr) => (
+                    <button key={pr.key} onClick={() => setSel(new Set(pr.perms))}
+                            className="rounded-pill bg-white px-3 py-1 text-xs font-medium text-mint-deep ring-1 ring-[#CCF2DB] hover:bg-mint-tint">
+                      {pr.label}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="mt-3 text-[11px] font-semibold text-faint">أو انسخ من دور آخر</p>
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  <select className="field flex-1" value={copyFrom}
+                          onChange={(e) => setCopyFrom(e.target.value)}>
+                    <option value="">اختر الدور…</option>
+                    {EDITABLE_ROLES.filter((r) => r !== role).map((r) => (
+                      <option key={r} value={r}>
+                        {ADMIN_ROLE_LABEL[r] ?? r} ({map[r]?.size ?? 0})
+                      </option>
+                    ))}
+                  </select>
+                  <button disabled={!copyFrom}
+                          onClick={() => setSel(new Set(map[copyFrom] ?? []))}
+                          className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white disabled:opacity-40">
+                    نسخ
+                  </button>
+                </div>
+              </div>
+
+              {/* الصلاحيات بأقسامها */}
+              {PERM_GROUPS.map((g) => {
+                const keys = g.keys.filter((k) => permByKey[k]);
+                if (!keys.length) return null;
+                const all = keys.every((k) => sel.has(k));
+                return (
+                  <div key={g.title}>
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-faint">{g.title}</p>
+                      <button onClick={() => toggleGroup(keys)}
+                              className="text-[11px] font-medium text-mint-deep hover:underline">
+                        {all ? "إلغاء القسم" : "تحديد القسم"}
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {keys.map((k) => {
+                        const p = permByKey[k];
+                        const on = sel.has(k);
+                        return (
+                          <label key={k}
+                            className={`flex cursor-pointer items-center justify-between gap-3 rounded-sm2 border px-3.5 py-2.5 transition-colors ${
+                              on ? "border-[#CCF2DB] bg-mint-tint/50" : "border-line"}`}>
+                            <span className="min-w-0">
+                              <span className="block text-sm text-ink">{p.label}</span>
+                              <span className="block text-[11px] leading-tight text-faint">{p.desc}</span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-2">
+                              <span className={`text-xs font-medium ${on ? "text-mint-deep" : "text-faint"}`}>
+                                {on ? "ممنوحة" : "معطَّلة"}
+                              </span>
+                              <input type="checkbox" checked={on} onChange={() => toggle(k)} />
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {msg && (
+                <p className={`rounded-sm2 px-3 py-2 text-sm ${
+                  msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
+                  {msg.text}
+                </p>
+              )}
+
+              <div className="sticky bottom-0 -mx-4 -mb-4 flex items-center gap-2 border-t border-line bg-white px-4 py-3">
+                <button className="btn-primary flex-1" onClick={save} disabled={saving || !dirty}>
+                  {saving ? "جارٍ الحفظ…" : dirty ? "حفظ الصلاحيات" : "لا تغييرات"}
+                </button>
+                {dirty && (
+                  <button onClick={() => setSel(new Set(map[role] ?? []))}
+                          className="rounded-pill border border-line px-4 py-2 text-sm text-muted">
+                    تراجع
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </section>
       </div>
     </div>
   );
