@@ -198,8 +198,21 @@ export default function DocumentView() {
                              onChange={(v) => setReply((r) => ({ ...r, [f.name]: v }))} />
                 </div>
               ) : f.type === "textarea" ? (
-                <textarea rows={4} className="field mt-1 w-full" value={reply[f.name] ?? ""}
-                          onChange={(e) => setReply((r) => ({ ...r, [f.name]: e.target.value }))} />
+                <>
+                  {Array.isArray(f.presets) && f.presets.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {f.presets.map((t, i) => (
+                        <button key={i} type="button" title={t}
+                                onClick={() => setReply((r) => ({ ...r, [f.name]: t }))}
+                                className="max-w-full truncate rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
+                          {t.length > 42 ? t.slice(0, 42) + "…" : t}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <textarea rows={4} className="field mt-1 w-full" value={reply[f.name] ?? ""}
+                            onChange={(e) => setReply((r) => ({ ...r, [f.name]: e.target.value }))} />
+                </>
               ) : (
                 <input className="field mt-1 w-full" value={reply[f.name] ?? ""}
                        onChange={(e) => setReply((r) => ({ ...r, [f.name]: e.target.value }))} />

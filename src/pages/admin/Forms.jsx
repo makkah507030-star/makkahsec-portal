@@ -114,6 +114,22 @@ const signedUrl = async (path) => {
   return data?.signedUrl ?? null;
 };
 
+/* صيغ جاهزة لحقل بعينه — تُدار من «إدارة النماذج» وتُحفظ مع الحقل */
+function FieldPresets({ field, onPick }) {
+  const list = Array.isArray(field?.presets) ? field.presets : [];
+  if (!list.length) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1.5">
+      {list.map((t, i) => (
+        <button key={i} type="button" onClick={() => onPick(t)} title={t}
+                className="max-w-full truncate rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
+          {t.length > 42 ? t.slice(0, 42) + "…" : t}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function Forms() {
   const { session, profile, adminRoles } = useSession();
   const isManager = (adminRoles ?? []).some((r) => r === "tech_support" || r === "principal");
@@ -195,14 +211,20 @@ export default function Forms() {
         supabase.from("admin_roles").select("user_id, role_type"),
       ]);
 
-      // المسمّى الوظيفي من مسمّيات الأدوار المعتمدة في البوابة
+      // المسمّى الوظيفي من مسمّيات الأدوار المعتمدة في البوابة.
+      // الدعم الفني صفة تقنية لا مسمّى وظيفيًا، فتُستبعد من المسمّى المطبوع.
       const jobBy = {};
-      (roles ?? []).forEach((r) => {
-        const label = ADMIN_ROLE_LABEL[r.role_type] ?? r.role_type;
-        jobBy[r.user_id] = jobBy[r.user_id]
-          ? `${jobBy[r.user_id]} و${label}`
-          : label;
-      });
+      (roles ?? [])
+        .filter((r) => r.role_type !== "tech_support")
+        .forEach((r) => {
+          const label = ADMIN_ROLE_LABEL[r.role_type] ?? r.role_type;
+          jobBy[r.user_id] = jobBy[r.user_id]
+            ? `${jobBy[r.user_id]} و${label}`
+            : label;
+        });
+
+      // من له سجل في جدول المعلمين فمسمّاه «معلم» مهما أُسند إليه من أعمال
+      const teacherUids = new Set((tch ?? []).map((t) => t.user_id).filter(Boolean));
 
       // الإداريون أولًا: من يجمع بين التدريس ودور إداري يظهر بمسمّاه الإداري
       const list = [
@@ -210,7 +232,8 @@ export default function Forms() {
           id: `u-${u.id}`,
           uid: u.id,
           full_name: u.full_name ?? u.username,
-          job: jobBy[u.id] ?? "إداري بالمدرسة",
+          // المعلم يبقى «معلم» ولو أُسند له عمل إداري، والإداري الخالص بصفته
+          job: teacherUids.has(u.id) ? "معلم" : (jobBy[u.id] ?? "إداري بالمدرسة"),
         })),
         ...(tch ?? []).map((t) => ({
           id: `t-${t.id}`,
@@ -338,11 +361,9 @@ export default function Forms() {
     const head = next[0];
     if (!head) { setValues((v) => ({ ...v, recipient: "", job: "" })); return; }
 
-    // المسمّى في النموذج: التخصص للمعلم، والمسمّى الإداري لمن له دور إداري.
-    // أما قائمة الاختيار فتظل تعرض «معلم» للتمييز السريع.
-    const jobValue = head.job === "معلم"
-      ? (head.specialization || "معلم")
-      : (head.job ?? "");
+    // المسمّى الوظيفي المطبوع: «معلم» لمن يحمل وظيفة التدريس،
+    // والصفة الإدارية لمن هو إداري خالص. والتخصص له حقله المستقل.
+    const jobValue = head.job ?? "";
 
     const info = {
       name: head.full_name,
@@ -492,9 +513,7 @@ export default function Forms() {
         data: st
           ? { ...values,
               recipient: st.full_name,
-              ...(st.job
-                ? { job: st.job === "معلم" ? (st.specialization || "معلم") : st.job }
-                : {}),
+              ...(st.job ? { job: st.job } : {}),
               ...(/^[tu]-/.test(String(st.id)) ? {} : { student_id: st.id }) }
           : values,
       });
