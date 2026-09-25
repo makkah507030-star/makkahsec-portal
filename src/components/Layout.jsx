@@ -235,9 +235,22 @@ export default function Layout({ children }) {
         return !i.tabKey || !hiddenTabs.has(i.tabKey);
       });
 
+  // تخصص المعلم — يظهر بجانب كلمة «معلم» في الشريط العلوي
+  const [spec, setSpec] = useState("");
+  useEffect(() => {
+    if (effectiveRole !== "teacher" || !session?.user?.id) { setSpec(""); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("teachers").select("specialization").eq("user_id", session.user.id).maybeSingle();
+      setSpec(data?.specialization ?? "");
+    })();
+  }, [effectiveRole, session]);
+
   const subtitle =
     isAdmin && adminRoles.length
       ? adminRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" · ")
+      : effectiveRole === "teacher" && spec
+      ? `معلم · ${spec}`
       : ROLE_LABEL[effectiveRole] ?? "";
 
   // زر التبديل بين واجهة الإدارة وواجهة المعلم — يظهر فقط لمن يجمع الدورين
