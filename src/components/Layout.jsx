@@ -1,5 +1,5 @@
 // src/components/Layout.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
@@ -89,24 +89,34 @@ const ADMIN_GROUPS = [
 ];
 
 const OTHER_NAV = {
+  // قائمة المعلم مقسّمة بحسب طبيعة العمل — تُعرض مجموعاتٍ كلوحة الإدارة
   teacher: [
-    { to: "/",         label: "الحضور والغياب اليومي",  tabKey: "attendance" },
-    { to: "/substitute", label: "الانتظار", tabKey: "substitute" },
-    { to: "/schedule", label: "جدولي",    tabKey: "schedule" },
-    { to: "/records",  label: "السجلات",  tabKey: "records" },
-    { to: "/reports",  label: "التقارير", tabKey: "reports" },
-    { to: "/notify",   label: "الإشعارات", tabKey: "notify" },
-    { to: "/permissions", label: "الاستئذان", extraTabKey: "permissions" },
-    { to: "/news-admin",  label: "الأخبار والمقالات",   extraTabKey: "news" },
-    { to: "/follow-up", label: "سجل المتابعة الإلكتروني" },
-    { to: "/forms",        label: "النماذج والشهادات" },
-    { to: "/referrals",    label: "إحالة طالب" },
-    { to: "/exams",        label: "جداول الاختبارات" },
-    { to: "/events",       label: "الأحداث والمناسبات" },
-    { to: "/my-documents", label: "نماذجي" },
-    { to: "/my-signature", label: "توقيعي" },
-    { to: "/help",         label: "دليل الاستخدام" },
-    { to: "/contact",  label: "الدعم الفني" },
+    { group: "المهام اليومية" },
+    { to: "/",           label: "الحضور والغياب اليومي", tabKey: "attendance", icon: "home" },
+    { to: "/substitute", label: "حصص الانتظار",          tabKey: "substitute", icon: "clock" },
+    { to: "/schedule",   label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
+    { to: "/permissions", label: "الاستئذان",            extraTabKey: "permissions", icon: "ticket" },
+
+    { group: "الطلاب" },
+    { to: "/records",    label: "السجلات",               tabKey: "records",    icon: "users" },
+    { to: "/follow-up",  label: "سجل المتابعة الإلكتروني", icon: "chalk" },
+    { to: "/referrals",  label: "إحالة طالب",            icon: "shield" },
+    { to: "/reports",    label: "التقارير",              tabKey: "reports",    icon: "chart" },
+
+    { group: "الاختبارات والأنشطة" },
+    { to: "/exams",      label: "جداول الاختبارات",       icon: "calendar" },
+    { to: "/events",     label: "الأحداث والمناسبات",     icon: "news" },
+
+    { group: "النماذج" },
+    { to: "/forms",        label: "النماذج والشهادات",   icon: "certificate" },
+    { to: "/my-documents", label: "نماذجي",              icon: "certificate" },
+    { to: "/my-signature", label: "توقيعي",              icon: "key" },
+    { to: "/notify",       label: "الإشعارات",            tabKey: "notify",    icon: "chat" },
+    { to: "/news-admin",   label: "الأخبار والمقالات",    extraTabKey: "news", icon: "news" },
+
+    { group: "مركز الدعم والمساندة" },
+    { to: "/help",     label: "دليل الاستخدام", icon: "book" },
+    { to: "/contact",  label: "الدعم الفني",    icon: "chat" },
   ],
   student:  [
     { to: "/", label: "الرئيسية" },
@@ -233,12 +243,20 @@ export default function Layout({ children }) {
 
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
-  const items = isAdmin
-    ? []
-    : (OTHER_NAV[effectiveRole] ?? []).filter((i) => {
-        if (i.extraTabKey) return grantedTabs.has(i.extraTabKey);
-        return !i.tabKey || !hiddenTabs.has(i.tabKey);
-      });
+  const items = useMemo(() => {
+    if (isAdmin) return [];
+    const kept = (OTHER_NAV[effectiveRole] ?? []).filter((i) => {
+      if (i.group) return true;
+      if (i.extraTabKey) return grantedTabs.has(i.extraTabKey);
+      return !i.tabKey || !hiddenTabs.has(i.tabKey);
+    });
+    // إسقاط عنوان أي مجموعة لم يبقَ تحتها رابط
+    return kept.filter((i, idx) => {
+      if (!i.group) return true;
+      const next = kept[idx + 1];
+      return next && !next.group;
+    });
+  }, [isAdmin, effectiveRole, grantedTabs, hiddenTabs]);
 
   // تخصص المعلم — يظهر بجانب كلمة «معلم» في الشريط العلوي
   const [spec, setSpec] = useState("");
@@ -538,10 +556,18 @@ export default function Layout({ children }) {
             <Brand />
           </div>
           <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-            {items.map((i) => (
-              <NavLink key={i.to} to={i.to} end={i.to === "/"} className={linkClass}>
-                <span className="truncate">{i.label}</span>
-              </NavLink>
+            {items.map((i, k) => (
+              i.group ? (
+                <p key={`g${k}`}
+                   className={`px-3 pb-1 text-[11px] font-bold text-faint ${k ? "pt-4" : ""}`}>
+                  {i.group}
+                </p>
+              ) : (
+                <NavLink key={i.to} to={i.to} end={i.to === "/"} className={linkClass}>
+                  <Icon name={i.icon} />
+                  <span className="truncate">{i.label}</span>
+                </NavLink>
+              )
             ))}
           </nav>
         </aside>
@@ -564,11 +590,19 @@ export default function Layout({ children }) {
                 </div>
               </div>
               <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-                {items.map((i) => (
-                  <NavLink key={i.to} to={i.to} end={i.to === "/"}
-                           onClick={() => setOpen(false)} className={linkClass}>
-                    <span className="truncate">{i.label}</span>
-                  </NavLink>
+                {items.map((i, k) => (
+                  i.group ? (
+                    <p key={`g${k}`}
+                       className={`px-3 pb-1 text-[11px] font-bold text-faint ${k ? "pt-4" : ""}`}>
+                      {i.group}
+                    </p>
+                  ) : (
+                    <NavLink key={i.to} to={i.to} end={i.to === "/"}
+                             onClick={() => setOpen(false)} className={linkClass}>
+                      <Icon name={i.icon} />
+                      <span className="truncate">{i.label}</span>
+                    </NavLink>
+                  )
                 ))}
               </nav>
             </aside>
