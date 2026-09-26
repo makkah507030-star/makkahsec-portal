@@ -6,81 +6,88 @@ import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
 import Layout from "./components/Layout.jsx";
 import Login from "./pages/Login.jsx";
-import ChangePassword from "./pages/ChangePassword.jsx";
-import Dashboard from "./pages/admin/Dashboard.jsx";
+const ChangePassword = lazy(() => import("./pages/ChangePassword.jsx"));
+const Dashboard = lazy(() => import("./pages/admin/Dashboard.jsx"));
 // شاشة الاستيراد تُحمّل عند فتحها فقط (مكتبة Excel ثقيلة)
 const Import = lazy(() => import("./pages/admin/Import.jsx"));
 const Records = lazy(() => import("./pages/admin/Records.jsx"));
-import Students from "./pages/admin/Students.jsx";
-import Accounts from "./pages/admin/Accounts.jsx";
-import Attendance from "./pages/teacher/Attendance.jsx";
-import SubstitutePeriod from "./pages/teacher/SubstitutePeriod.jsx";
-import TeacherRecords from "./pages/teacher/TeacherRecords.jsx";
-import FollowUpLog from "./pages/teacher/FollowUpLog.jsx";
-import TeacherPermissions from "./pages/admin/TeacherPermissions.jsx";
-import NotificationsReview from "./pages/admin/NotificationsReview.jsx";
-import TeacherNotify from "./pages/teacher/TeacherNotify.jsx";
-import MySchedule from "./pages/teacher/MySchedule.jsx";
-import StudentHome from "./pages/StudentHome.jsx";
-import GuardianHome from "./pages/GuardianHome.jsx";
-import PermissionRequestPage from "./pages/PermissionRequestPage.jsx";
-import AdminStaff from "./pages/admin/AdminStaff.jsx";
+const Students = lazy(() => import("./pages/admin/Students.jsx"));
+const Accounts = lazy(() => import("./pages/admin/Accounts.jsx"));
+const Attendance = lazy(() => import("./pages/teacher/Attendance.jsx"));
+const SubstitutePeriod = lazy(() => import("./pages/teacher/SubstitutePeriod.jsx"));
+const TeacherRecords = lazy(() => import("./pages/teacher/TeacherRecords.jsx"));
+const FollowUpLog = lazy(() => import("./pages/teacher/FollowUpLog.jsx"));
+const TeacherPermissions = lazy(() => import("./pages/admin/TeacherPermissions.jsx"));
+const NotificationsReview = lazy(() => import("./pages/admin/NotificationsReview.jsx"));
+const TeacherNotify = lazy(() => import("./pages/teacher/TeacherNotify.jsx"));
+const MySchedule = lazy(() => import("./pages/teacher/MySchedule.jsx"));
+const StudentHome = lazy(() => import("./pages/StudentHome.jsx"));
+const GuardianHome = lazy(() => import("./pages/GuardianHome.jsx"));
+const PermissionRequestPage = lazy(() => import("./pages/PermissionRequestPage.jsx"));
+const AdminStaff = lazy(() => import("./pages/admin/AdminStaff.jsx"));
 import EnableNotifications from "./components/EnableNotifications.jsx";
 import { ensureServiceWorker } from "./lib/push.js";
-import NotificationView from "./pages/NotificationView.jsx";
-import NotificationsList from "./pages/NotificationsList.jsx";
-import NotifyGuide from "./pages/NotifyGuide.jsx";
+const NotificationView = lazy(() => import("./pages/NotificationView.jsx"));
+const NotificationsList = lazy(() => import("./pages/NotificationsList.jsx"));
+const NotifyGuide = lazy(() => import("./pages/NotifyGuide.jsx"));
 import Landing from "./pages/Landing.jsx";
-import NewsList from "./pages/NewsList.jsx";
-import Guides from "./pages/Guides.jsx";
-import GuidesAdmin from "./pages/admin/GuidesAdmin.jsx";
-import NewsArticle from "./pages/NewsArticle.jsx";
-import NewsAdmin from "./pages/admin/NewsAdmin.jsx";
-import NotificationsAdmin from "./pages/admin/NotificationsAdmin.jsx";
-import AttendanceOverview from "./pages/admin/AttendanceOverview.jsx";
-import PeriodAttendance from "./pages/admin/PeriodAttendance.jsx";
-import SubstituteReport from "./pages/admin/SubstituteReport.jsx";
+const NewsList = lazy(() => import("./pages/NewsList.jsx"));
+const Guides = lazy(() => import("./pages/Guides.jsx"));
+const GuidesAdmin = lazy(() => import("./pages/admin/GuidesAdmin.jsx"));
+const NewsArticle = lazy(() => import("./pages/NewsArticle.jsx"));
+const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
+const NotificationsAdmin = lazy(() => import("./pages/admin/NotificationsAdmin.jsx"));
+const AttendanceOverview = lazy(() => import("./pages/admin/AttendanceOverview.jsx"));
+const PeriodAttendance = lazy(() => import("./pages/admin/PeriodAttendance.jsx"));
+const SubstituteReport = lazy(() => import("./pages/admin/SubstituteReport.jsx"));
 const ResultsAdmin = lazy(() => import("./pages/admin/ResultsAdmin.jsx"));
-import GeneralScheduleMaster from "./pages/admin/GeneralScheduleMaster.jsx";
-import TeacherSchedules from "./pages/admin/TeacherSchedules.jsx";
-import StudentSchedules from "./pages/admin/StudentSchedules.jsx";
-import ScheduleImport from "./pages/admin/ScheduleImport.jsx";
-import PasswordReset from "./pages/admin/PasswordReset.jsx";
-import SeasonSwitch from "./pages/admin/SeasonSwitch.jsx";
-import Reports from "./pages/Reports.jsx";
-import Feedback from "./pages/Feedback.jsx";
-import TicketDetail from "./pages/TicketDetail.jsx";
-import FeedbackAdmin from "./pages/admin/FeedbackAdmin.jsx";
-import SupportReport from "./pages/admin/SupportReport.jsx";
-import LoginLogAdmin from "./pages/admin/LoginLogAdmin.jsx";
-import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin.jsx";
-import CalendarAdmin from "./pages/admin/CalendarAdmin.jsx";
-import SiteMetrics from "./pages/admin/SiteMetrics.jsx";
-import Forms from "./pages/admin/Forms.jsx";
-import FormsAdmin from "./pages/admin/FormsAdmin.jsx";
-import MySignature from "./pages/MySignature.jsx";
-import DocumentView from "./pages/DocumentView.jsx";
-import MyDocuments from "./pages/MyDocuments.jsx";
-import Help from "./pages/Help.jsx";
-import DutyCard from "./components/DutyCard.jsx";
-import DutyAdmin from "./pages/admin/DutyAdmin.jsx";
-import Referrals from "./pages/Referrals.jsx";
-import ExamSchedules from "./pages/ExamSchedules.jsx";
-import Events from "./pages/Events.jsx";
-import EventsReports from "./pages/EventsReports.jsx";
-import MyQuizzes from "./pages/teacher/MyQuizzes.jsx";
-import QuizMarks from "./pages/teacher/QuizMarks.jsx";
-import QuizResults from "./components/QuizResults.jsx";
-import OnlineQuizzesCard from "./components/OnlineQuizzesCard.jsx";
-import QuizTake from "./pages/QuizTake.jsx";
-import ExamsAdmin from "./pages/admin/ExamsAdmin.jsx";
-import ReferralView from "./pages/ReferralView.jsx";
-import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
+const GeneralScheduleMaster = lazy(() => import("./pages/admin/GeneralScheduleMaster.jsx"));
+const TeacherSchedules = lazy(() => import("./pages/admin/TeacherSchedules.jsx"));
+const StudentSchedules = lazy(() => import("./pages/admin/StudentSchedules.jsx"));
+const ScheduleImport = lazy(() => import("./pages/admin/ScheduleImport.jsx"));
+const PasswordReset = lazy(() => import("./pages/admin/PasswordReset.jsx"));
+const SeasonSwitch = lazy(() => import("./pages/admin/SeasonSwitch.jsx"));
+const Reports = lazy(() => import("./pages/Reports.jsx"));
+const Feedback = lazy(() => import("./pages/Feedback.jsx"));
+const TicketDetail = lazy(() => import("./pages/TicketDetail.jsx"));
+const FeedbackAdmin = lazy(() => import("./pages/admin/FeedbackAdmin.jsx"));
+const SupportReport = lazy(() => import("./pages/admin/SupportReport.jsx"));
+const LoginLogAdmin = lazy(() => import("./pages/admin/LoginLogAdmin.jsx"));
+const AnnouncementsAdmin = lazy(() => import("./pages/admin/AnnouncementsAdmin.jsx"));
+const CalendarAdmin = lazy(() => import("./pages/admin/CalendarAdmin.jsx"));
+const SiteMetrics = lazy(() => import("./pages/admin/SiteMetrics.jsx"));
+const Forms = lazy(() => import("./pages/admin/Forms.jsx"));
+const FormsAdmin = lazy(() => import("./pages/admin/FormsAdmin.jsx"));
+const MySignature = lazy(() => import("./pages/MySignature.jsx"));
+const DocumentView = lazy(() => import("./pages/DocumentView.jsx"));
+const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
+const Help = lazy(() => import("./pages/Help.jsx"));
+const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
+const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
+const Referrals = lazy(() => import("./pages/Referrals.jsx"));
+const ExamSchedules = lazy(() => import("./pages/ExamSchedules.jsx"));
+const Events = lazy(() => import("./pages/Events.jsx"));
+const EventsReports = lazy(() => import("./pages/EventsReports.jsx"));
+const MyQuizzes = lazy(() => import("./pages/teacher/MyQuizzes.jsx"));
+const QuizMarks = lazy(() => import("./pages/teacher/QuizMarks.jsx"));
+const QuizResults = lazy(() => import("./components/QuizResults.jsx"));
+const OnlineQuizzesCard = lazy(() => import("./components/OnlineQuizzesCard.jsx"));
+const QuizTake = lazy(() => import("./pages/QuizTake.jsx"));
+const ExamsAdmin = lazy(() => import("./pages/admin/ExamsAdmin.jsx"));
+const ReferralView = lazy(() => import("./pages/ReferralView.jsx"));
+const MaintenanceAdmin = lazy(() => import("./pages/admin/MaintenanceAdmin.jsx"));
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
 import { useHolidays } from "./lib/useHolidays.js";
-import ExamCountdown from "./components/ExamCountdown.jsx";
+const ExamCountdown = lazy(() => import("./components/ExamCountdown.jsx"));
 import HolidayBanner from "./components/HolidayBanner.jsx";
+
+// الصفحات تُحمَّل عند فتحها فقط (lazy) لتخفيف التحميل الأول، وهذا ما يظهر لحظة جلبها
+const pageFallback = (
+  <div className="flex min-h-[40vh] items-center justify-center">
+    <p className="text-sm text-muted">جارٍ التحميل…</p>
+  </div>
+);
 
 export default function App() {
   const { session, profile, loading, profileLoading, can, adminRoles, effectiveRole, signOut } = useSession();
@@ -117,22 +124,24 @@ export default function App() {
 
   if (!session) {
     return (
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/home" element={<Landing />} />
-        <Route path="/news" element={<NewsList />} />
-        <Route path="/guides" element={<Guides />} />
-        <Route path="/news/:slug" element={<NewsArticle />} />
-        <Route path="/feedback" element={<Feedback />} />
-        <Route path="/contact" element={<Feedback />} />
-        <Route path="/login" element={<Login />} />
-        {/* دليل تفعيل الإشعارات صفحة عامة لا تحتاج تسجيل دخول */}
-        <Route path="/notify-guide" element={<NotifyGuide />} />
-        {/* فتح إشعار قبل استعادة الجلسة → لصفحة الدخول بدل الرئيسية بصمت */}
-        <Route path="/notify/:id" element={<Navigate to="/login" replace />} />
-        <Route path="/notifications-me" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={pageFallback}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/home" element={<Landing />} />
+          <Route path="/news" element={<NewsList />} />
+          <Route path="/guides" element={<Guides />} />
+          <Route path="/news/:slug" element={<NewsArticle />} />
+          <Route path="/feedback" element={<Feedback />} />
+          <Route path="/contact" element={<Feedback />} />
+          <Route path="/login" element={<Login />} />
+          {/* دليل تفعيل الإشعارات صفحة عامة لا تحتاج تسجيل دخول */}
+          <Route path="/notify-guide" element={<NotifyGuide />} />
+          {/* فتح إشعار قبل استعادة الجلسة → لصفحة الدخول بدل الرئيسية بصمت */}
+          <Route path="/notify/:id" element={<Navigate to="/login" replace />} />
+          <Route path="/notifications-me" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     );
   }
 
@@ -188,7 +197,7 @@ export default function App() {
 
   // إجبار تغيير كلمة المرور قبل أي استخدام
   if (profile.must_change_pw) {
-    return <ChangePassword />;
+    return <Suspense fallback={pageFallback}><ChangePassword /></Suspense>;
   }
 
   // معاينة الصفحة الرئيسية العامة للبوابة حتى للمستخدم المسجّل دخوله —
@@ -202,10 +211,12 @@ export default function App() {
   // للوحة التحكم لأن المسار غير مسجّل ضمن مسارات اللوحة.
   if (location.pathname === "/news" || location.pathname.startsWith("/news/")) {
     return (
-      <Routes>
-        <Route path="/news" element={<NewsList />} />
-        <Route path="/news/:slug" element={<NewsArticle />} />
-      </Routes>
+      <Suspense fallback={pageFallback}>
+        <Routes>
+          <Route path="/news" element={<NewsList />} />
+          <Route path="/news/:slug" element={<NewsArticle />} />
+        </Routes>
+      </Suspense>
     );
   }
 
@@ -245,153 +256,155 @@ export default function App() {
 
   return (
     <Layout>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <div className="space-y-4">
-              <EnableNotifications />
-              {/* واجهة المعلم فقط — لوحة الإدارة وصفحتا الطالب وولي الأمر تعرضها بنفسها */}
-              {effectiveRole === "teacher" && <HolidayBanner />}
-              {home}
-            </div>
-          }
-        />
-        {effectiveRole === "admin" && (
-          <>
-            {can("import") && <Route path="/season" element={<SeasonSwitch />} />}
-            {can("import") && (
-              <Route
-                path="/import"
-                element={
-                  <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
-                    <Import />
-                  </Suspense>
-                }
-              />
-            )}
-            {can("students") && <Route path="/students" element={<Students />} />}
-            {can("records") && (
-              <Route
-                path="/records-manual"
-                element={
-                  <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
-                    <Records />
-                  </Suspense>
-                }
-              />
-            )}
-            {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
-            {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
-            {can("staff") && <Route path="/duty" element={<DutyAdmin />} />}
-            {can("students") && <Route path="/exams-admin" element={<ExamsAdmin />} />}
-            {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
-            {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
-            {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
-            {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
-            {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
-            {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
-            {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
-            {/* النماذج والشهادات — ما يظهر لكل مستخدم تحدّده سياسات قاعدة البيانات */}
-            <Route path="/forms" element={<Forms />} />
-            <Route path="/my-signature" element={<MySignature />} />
-            {(isTechSupport || adminRoles.includes("principal")) && (
-              <Route path="/forms-admin" element={<FormsAdmin />} />
-            )}
-            {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
-            {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
-            {(can("import") || can("reports")) && <Route path="/substitute-report" element={<SubstituteReport />} />}
-            {can("results") && (
-              <Route
-                path="/results-admin"
-                element={
-                  <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
-                    <ResultsAdmin />
-                  </Suspense>
-                }
-              />
-            )}
-            {(can("import") || can("schedules")) && (
-              <>
-                <Route path="/general-schedule" element={<GeneralScheduleMaster />} />
-                <Route path="/teacher-schedules" element={<TeacherSchedules />} />
-                <Route path="/student-schedules" element={<StudentSchedules />} />
-              </>
-            )}
-            {/* استيراد الجدول الذكي حسّاس — للاستيراد فقط، لا لصلاحية الجداول */}
-            {can("import") && <Route path="/schedule-import" element={<ScheduleImport />} />}
-            {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
-            {can("calendar") && <Route path="/calendar-admin" element={<CalendarAdmin />} />}
-            {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
-            {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
-            {can("feedback") && <Route path="/support-report" element={<SupportReport />} />}
-            {can("login_log") && <Route path="/login-log" element={<LoginLogAdmin />} />}
-          </>
-        )}
-        {effectiveRole === "teacher" && (
-          <>
-            {!hiddenTabs.has("attendance") && (
-              <Route path="/attendance" element={<Attendance />} />
-            )}
-            {!hiddenTabs.has("substitute") && (
-              <Route path="/substitute" element={<SubstitutePeriod />} />
-            )}
-            {!hiddenTabs.has("records") && (
-              <Route path="/records" element={<TeacherRecords />} />
-            )}
-            <Route path="/follow-up" element={<FollowUpLog />} />
-            {!hiddenTabs.has("notify") && (
-              <Route path="/notify" element={<TeacherNotify />} />
-            )}
-            {!hiddenTabs.has("schedule") && (
-              <Route path="/schedule" element={<MySchedule />} />
-            )}
-            {/* النماذج والشهادات — النماذج المتاحة للمعلم تحدّدها سياسات القاعدة */}
-            <Route path="/forms" element={<Forms />} />
-            <Route path="/my-signature" element={<MySignature />} />
-          </>
-        )}
-        {((effectiveRole === "teacher" && !hiddenTabs.has("reports")) ||
-          (effectiveRole === "admin" && can("reports"))) && (
-          <Route path="/reports" element={<Reports />} />
-        )}
-        {/* الاستئذان: متاح للإدارة وللمعلمين المخوّلين — الصفحة نفسها تتحقق من الصلاحية */}
-        {(effectiveRole === "admin" && can("permissions")) ||
-         (effectiveRole === "teacher" && grantedTabs.has("permissions")) ? (
-          <Route path="/permissions" element={<PermissionRequestPage />} />
-        ) : null}
-        {/* الأخبار للمعلمين المخوّلين — مسودات فقط، الصفحة نفسها تفرض هذا القيد */}
-        {effectiveRole === "teacher" && grantedTabs.has("news") ? (
-          <Route path="/news-admin" element={<NewsAdmin />} />
-        ) : null}
-        <Route path="/feedback" element={<Feedback />} />
-        <Route path="/contact" element={<Feedback />} />
-        <Route path="/notifications-me" element={<NotificationsList />} />
-        <Route path="/notify/:id" element={<NotificationView />} />
-        {/* عرض مستند صادر — لصاحبه ولولي أمره ولمُصدِره وللإدارة */}
-        <Route path="/doc/:id" element={<DocumentView />} />
-        {/* نماذجي — ما صدر باسم المستخدم، ولولي الأمر مستندات أبنائه */}
-        <Route path="/my-documents" element={<MyDocuments />} />
-        {/* إحالة الطالب — الشاشة للمعلم والإدارة، والملف لصاحبه وولي أمره */}
-        <Route path="/referrals" element={<Referrals />} />
-        {/* جداول الاختبارات: العرض للجميع، والإدارة بصلاحية */}
-        <Route path="/exams" element={<ExamSchedules />} />
-        {/* الأحداث والمناسبات — لكل معلم وإداري */}
-        <Route path="/events" element={<Events />} />
-        <Route path="/events-reports" element={<EventsReports />} />
-        {/* اختباراتي — للمعلم */}
-        <Route path="/quizzes" element={<MyQuizzes />} />
-        <Route path="/quiz-marks" element={<QuizMarks />} />
-        {/* الاختبار الإلكتروني — يؤدّيه الطالب المُسند إليه (الصفحة تتحقق) */}
-        <Route path="/quiz/:id" element={<QuizTake />} />
-        <Route path="/referral/:id" element={<ReferralView />} />
-        {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
-        <Route path="/help" element={<Help />} />
-        <Route path="/notify-guide" element={<NotifyGuide />} />
-        <Route path="/ticket/:id" element={<TicketDetail />} />
-        <Route path="/guides" element={<Guides />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Suspense fallback={pageFallback}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <div className="space-y-4">
+                <EnableNotifications />
+                {/* واجهة المعلم فقط — لوحة الإدارة وصفحتا الطالب وولي الأمر تعرضها بنفسها */}
+                {effectiveRole === "teacher" && <HolidayBanner />}
+                {home}
+              </div>
+            }
+          />
+          {effectiveRole === "admin" && (
+            <>
+              {can("import") && <Route path="/season" element={<SeasonSwitch />} />}
+              {can("import") && (
+                <Route
+                  path="/import"
+                  element={
+                    <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                      <Import />
+                    </Suspense>
+                  }
+                />
+              )}
+              {can("students") && <Route path="/students" element={<Students />} />}
+              {can("records") && (
+                <Route
+                  path="/records-manual"
+                  element={
+                    <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                      <Records />
+                    </Suspense>
+                  }
+                />
+              )}
+              {can("accounts") && <Route path="/accounts" element={<Accounts />} />}
+              {can("staff") && <Route path="/staff" element={<AdminStaff />} />}
+              {can("staff") && <Route path="/duty" element={<DutyAdmin />} />}
+              {can("students") && <Route path="/exams-admin" element={<ExamsAdmin />} />}
+              {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
+              {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
+              {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
+              {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
+              {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
+              {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
+              {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
+              {/* النماذج والشهادات — ما يظهر لكل مستخدم تحدّده سياسات قاعدة البيانات */}
+              <Route path="/forms" element={<Forms />} />
+              <Route path="/my-signature" element={<MySignature />} />
+              {(isTechSupport || adminRoles.includes("principal")) && (
+                <Route path="/forms-admin" element={<FormsAdmin />} />
+              )}
+              {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
+              {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
+              {(can("import") || can("reports")) && <Route path="/substitute-report" element={<SubstituteReport />} />}
+              {can("results") && (
+                <Route
+                  path="/results-admin"
+                  element={
+                    <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                      <ResultsAdmin />
+                    </Suspense>
+                  }
+                />
+              )}
+              {(can("import") || can("schedules")) && (
+                <>
+                  <Route path="/general-schedule" element={<GeneralScheduleMaster />} />
+                  <Route path="/teacher-schedules" element={<TeacherSchedules />} />
+                  <Route path="/student-schedules" element={<StudentSchedules />} />
+                </>
+              )}
+              {/* استيراد الجدول الذكي حسّاس — للاستيراد فقط، لا لصلاحية الجداول */}
+              {can("import") && <Route path="/schedule-import" element={<ScheduleImport />} />}
+              {can("guides") && <Route path="/guides-admin" element={<GuidesAdmin />} />}
+              {can("calendar") && <Route path="/calendar-admin" element={<CalendarAdmin />} />}
+              {can("password_reset") && <Route path="/password-reset" element={<PasswordReset />} />}
+              {can("feedback") && <Route path="/feedback-admin" element={<FeedbackAdmin />} />}
+              {can("feedback") && <Route path="/support-report" element={<SupportReport />} />}
+              {can("login_log") && <Route path="/login-log" element={<LoginLogAdmin />} />}
+            </>
+          )}
+          {effectiveRole === "teacher" && (
+            <>
+              {!hiddenTabs.has("attendance") && (
+                <Route path="/attendance" element={<Attendance />} />
+              )}
+              {!hiddenTabs.has("substitute") && (
+                <Route path="/substitute" element={<SubstitutePeriod />} />
+              )}
+              {!hiddenTabs.has("records") && (
+                <Route path="/records" element={<TeacherRecords />} />
+              )}
+              <Route path="/follow-up" element={<FollowUpLog />} />
+              {!hiddenTabs.has("notify") && (
+                <Route path="/notify" element={<TeacherNotify />} />
+              )}
+              {!hiddenTabs.has("schedule") && (
+                <Route path="/schedule" element={<MySchedule />} />
+              )}
+              {/* النماذج والشهادات — النماذج المتاحة للمعلم تحدّدها سياسات القاعدة */}
+              <Route path="/forms" element={<Forms />} />
+              <Route path="/my-signature" element={<MySignature />} />
+            </>
+          )}
+          {((effectiveRole === "teacher" && !hiddenTabs.has("reports")) ||
+            (effectiveRole === "admin" && can("reports"))) && (
+            <Route path="/reports" element={<Reports />} />
+          )}
+          {/* الاستئذان: متاح للإدارة وللمعلمين المخوّلين — الصفحة نفسها تتحقق من الصلاحية */}
+          {(effectiveRole === "admin" && can("permissions")) ||
+           (effectiveRole === "teacher" && grantedTabs.has("permissions")) ? (
+            <Route path="/permissions" element={<PermissionRequestPage />} />
+          ) : null}
+          {/* الأخبار للمعلمين المخوّلين — مسودات فقط، الصفحة نفسها تفرض هذا القيد */}
+          {effectiveRole === "teacher" && grantedTabs.has("news") ? (
+            <Route path="/news-admin" element={<NewsAdmin />} />
+          ) : null}
+          <Route path="/feedback" element={<Feedback />} />
+          <Route path="/contact" element={<Feedback />} />
+          <Route path="/notifications-me" element={<NotificationsList />} />
+          <Route path="/notify/:id" element={<NotificationView />} />
+          {/* عرض مستند صادر — لصاحبه ولولي أمره ولمُصدِره وللإدارة */}
+          <Route path="/doc/:id" element={<DocumentView />} />
+          {/* نماذجي — ما صدر باسم المستخدم، ولولي الأمر مستندات أبنائه */}
+          <Route path="/my-documents" element={<MyDocuments />} />
+          {/* إحالة الطالب — الشاشة للمعلم والإدارة، والملف لصاحبه وولي أمره */}
+          <Route path="/referrals" element={<Referrals />} />
+          {/* جداول الاختبارات: العرض للجميع، والإدارة بصلاحية */}
+          <Route path="/exams" element={<ExamSchedules />} />
+          {/* الأحداث والمناسبات — لكل معلم وإداري */}
+          <Route path="/events" element={<Events />} />
+          <Route path="/events-reports" element={<EventsReports />} />
+          {/* اختباراتي — للمعلم */}
+          <Route path="/quizzes" element={<MyQuizzes />} />
+          <Route path="/quiz-marks" element={<QuizMarks />} />
+          {/* الاختبار الإلكتروني — يؤدّيه الطالب المُسند إليه (الصفحة تتحقق) */}
+          <Route path="/quiz/:id" element={<QuizTake />} />
+          <Route path="/referral/:id" element={<ReferralView />} />
+          {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
+          <Route path="/help" element={<Help />} />
+          <Route path="/notify-guide" element={<NotifyGuide />} />
+          <Route path="/ticket/:id" element={<TicketDetail />} />
+          <Route path="/guides" element={<Guides />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </Layout>
   );
 }
