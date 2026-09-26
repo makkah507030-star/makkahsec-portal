@@ -1,0 +1,9 @@
+# ملفات مولَّدة — تُعاد بالأوامر في README
+*.html
+*.png
+!icon-white.png
+!icon-mint.png
+*.wav
+*.log
+out/*.mp4
+__pycache__/
