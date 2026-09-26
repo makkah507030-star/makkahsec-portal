@@ -1,0 +1,56 @@
+/* هوية بوابة مكة الثانوية الرقمية — مولَّد من brand/tokens.json، لا تعدّله يدويًا (أعد التوليد بالأمر في brand/README.md) */
+:root {
+  --ink: #101010;
+  --muted: #6b6b6b;
+  --faint: #a9a9a9;
+  --line: #c3c3c3;
+  --canvas: #f4f4f4;
+  --paper: #ffffff;
+  --mint: #89d7ad;
+  --mint-hover: #6aa786;
+  --mint-deep: #3e6350;
+  --mint-light: #ccf2db;
+  --mint-tint: #edfaf2;
+  --mint-night: #1f3a2e;
+  --gold: #b8912f;
+  --danger: #a23b3b;
+  --danger-light: #fbebeb;
+  --warning: #9a7b22;
+  --warning-light: #fbf3de;
+  --success: var(--mint-deep);
+  --success-light: var(--mint-light);
+  --present: #4e7d66;
+  --absent: var(--danger);
+  --late: var(--warning);
+  --excused: #3f6b99;
+  --space-1: 4px;
+  --space-1\.5: 6px;
+  --space-2: 8px;
+  --space-2\.5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-sm2: 8px;
+  --radius-card: 14px;
+  --radius-xl2: 22px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px -14px rgba(0,0,0,.22);
+  --opacity-disabled: 0.4;
+  --opacity-card-border: 0.6;
+  --font-sans: "IBM Plex Sans Arabic", Tahoma, sans-serif;
+}
+.type-stat { font-family: var(--font-sans); font-size: 36px; line-height: 40px; font-weight: 700; }
+.type-h1 { font-family: var(--font-sans); font-size: 30px; line-height: 36px; font-weight: 700; }
+.type-h2 { font-family: var(--font-sans); font-size: 24px; line-height: 32px; font-weight: 700; }
+.type-h3 { font-family: var(--font-sans); font-size: 20px; line-height: 28px; font-weight: 700; }
+.type-title { font-family: var(--font-sans); font-size: 18px; line-height: 28px; font-weight: 700; }
+.type-body-lg { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 400; }
+.type-body { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 400; }
+.type-body-strong { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; }
+.type-label { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 500; }
+.type-caption { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 400; }
+.type-chip { font-family: var(--font-sans); font-size: 12px; line-height: 16px; font-weight: 600; }
+.type-display-promo { font-family: var(--font-sans); font-size: 50px; line-height: 1.28; font-weight: 700; }
+.type-headline-promo { font-family: var(--font-sans); font-size: 44px; line-height: 1.25; font-weight: 700; }
+.type-lead-promo { font-family: var(--font-sans); font-size: 15px; line-height: 1.75; font-weight: 400; }
