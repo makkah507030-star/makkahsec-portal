@@ -33,7 +33,8 @@ export function PrintArea({ landscape, children }) {
           #print-root .sheet:last-child { break-after: auto; }
           .no-print { display: none !important; }
         }
-        @page { size: ${landscape ? "297mm 210mm" : "210mm 297mm"}; margin: 0; }
+        @page formprint { size: A4 ${landscape ? "landscape" : "portrait"}; margin: 0; }
+        @media print { #form-print { page: formprint; } }
       ` }} />
       <div id="print-root">{children}</div>
     </>

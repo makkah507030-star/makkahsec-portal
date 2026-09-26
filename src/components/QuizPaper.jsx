@@ -65,7 +65,12 @@ export function QuizPrintArea({ children }) {
           #quiz-print .qbox { break-inside: avoid; }
           .no-print { display: none !important; }
         }
-        @page { size: 297mm 210mm; margin: 0; }
+        @page quizland { size: A4 landscape; margin: 0; }
+        @page { size: A4 landscape; margin: 0; }
+        @media print {
+          html, body { width: 297mm; height: 210mm; }
+          #quiz-print { page: quizland; }
+        }
       ` }} />
       <div id="quiz-print">{children}</div>
     </>
@@ -194,7 +199,8 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
 
   return (
     <div className="sheet mx-auto bg-white text-ink" dir={dir}
-         style={{ width: "297mm", height: "210mm", padding: "8mm 10mm 6mm",
+         style={{ width: "297mm", height: "209mm", maxWidth: "297mm",
+                  padding: "8mm 10mm 6mm",
                   display: "flex", flexDirection: "column", overflow: "hidden",
                   fontFamily: ltr ? "'IBM Plex Sans', system-ui, sans-serif"
                                   : "'IBM Plex Sans Arabic', sans-serif" }}>

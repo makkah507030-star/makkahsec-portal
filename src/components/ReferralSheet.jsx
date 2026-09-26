@@ -44,7 +44,8 @@ export function ReferralPrintArea({ children }) {
           #ref-print .stage { break-inside: avoid; }
           .no-print { display: none !important; }
         }
-        @page { size: 210mm 297mm; margin: 0; }
+        @page refprint { size: A4 portrait; margin: 0; }
+        @media print { #ref-print { page: refprint; } }
       ` }} />
       <div id="ref-print">{children}</div>
     </>

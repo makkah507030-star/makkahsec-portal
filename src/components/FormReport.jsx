@@ -38,7 +38,8 @@ export function ReportPrintArea({ children }) {
           #report-root tr { break-inside: avoid; }
           .no-print { display: none !important; }
         }
-        @page { size: 210mm 297mm; margin: 0; }
+        @page reportroot { size: A4 portrait; margin: 0; }
+        @media print { #report-root { page: reportroot; } }
       ` }} />
       <div id="report-root">{children}</div>
     </>

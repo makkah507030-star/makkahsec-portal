@@ -41,7 +41,8 @@ export function ExamPrintArea({ children }) {
           #exam-print tr { break-inside: avoid; }
           .no-print { display: none !important; }
         }
-        @page { size: 210mm 297mm; margin: 0; }
+        @page examprint { size: A4 portrait; margin: 0; }
+        @media print { #exam-print { page: examprint; } }
       ` }} />
       <div id="exam-print">{children}</div>
     </>

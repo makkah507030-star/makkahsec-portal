@@ -36,7 +36,8 @@ export function DutyPrintArea({ children }) {
           #duty-print tr { break-inside: avoid; }
           .no-print { display: none !important; }
         }
-        @page { size: 210mm 297mm; margin: 0; }
+        @page dutyprint { size: A4 portrait; margin: 0; }
+        @media print { #duty-print { page: dutyprint; } }
       ` }} />
       <div id="duty-print">{children}</div>
     </>
