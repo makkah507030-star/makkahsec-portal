@@ -23,6 +23,11 @@ const AR = {
   teacher: "معلم المادة", good: "مع تمنياتي لكم بالتوفيق",
   colA: "العمود الأول", colB: "العمود الثاني", answerCol: "الإجابة",
   matchHint: "اكتب في خانة الإجابة حرف العنصر المقابل من العمود الثاني.",
+  qShort: "س", fShort: "ف", item: "الفقرة", question: "السؤال",
+  cut: "✂ يُقص من هنا",
+  bubbleHint: "ظلّل الدائرة كاملة بقلم رصاص، وامحُ محوًا تامًا عند التغيير",
+  ordinals: ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"],
+  markWord: (n) => `${n} ${n === 1 ? "درجة" : n === 2 ? "درجتان" : n <= 10 ? "درجات" : "درجة"}`,
 };
 
 const EN = {
@@ -38,6 +43,11 @@ const EN = {
   teacher: "Subject Teacher", good: "Good luck",
   colA: "Column A", colB: "Column B", answerCol: "Answer",
   matchHint: "Write the letter of the matching item from column B.",
+  qShort: "Q", fShort: "P", item: "Item", question: "Question",
+  cut: "✂ cut here",
+  bubbleHint: "Fill the circle completely with a pencil; erase fully to change",
+  ordinals: ["One", "Two", "Three", "Four", "Five", "Six"],
+  markWord: (n) => `${n} ${n === 1 ? "mark" : "marks"}`,
 };
 
 export function QuizPrintArea({ children }) {
@@ -61,74 +71,107 @@ export function QuizPrintArea({ children }) {
   );
 }
 
-/* بطاقة التظليل — علامات مرجعية في الزوايا ودوائر منتظمة */
-function BubbleSheet({ questions, t, ltr }) {
+/* =====================================================================
+   بطاقة التظليل — في الثلث السفلي من الورقة بعرضها كاملًا،
+   تفصلها عن الأسئلة قصاصة متقطّعة. دوائرها 6 مم متباعدة،
+   وعلاماتها المرجعية 8 مم محاطة بفراغ أبيض ليسهل كشفها بالكاميرا.
+   ===================================================================== */
+function BubbleSheet({ questions, t, ltr, quiz, className }) {
   if (!questions.length) return null;
 
+  // صفوف البطاقة: سؤال عادي صف، والمزاوجة صف لكل فقرة
+  const rows = [];
+  questions.forEach((q, qi) => {
+    if (q.kind === "match") {
+      (q.options?.left ?? []).forEach((_, k) => {
+        rows.push({
+          key: `${q.id}-${k}`,
+          label: `${t.qShort}${qi + 1}: ${t.fShort}${k + 1}`,
+          count: (q.options?.right ?? []).length || 4,
+          letters: t.ltrs,
+        });
+      });
+    } else {
+      rows.push({
+        key: q.id,
+        label: `${t.qShort}${qi + 1}`,
+        count: q.kind === "truefalse" ? 2 : (q.options?.length ?? 4),
+        letters: q.kind === "truefalse" ? [t.tf[0][0], t.tf[1][0]] : t.ltrs,
+      });
+    }
+  });
+
+  // ثلاثة أعمدة متجاورة لتتّسع البطاقة للأسئلة في مساحة محدودة
+  const perCol = Math.ceil(rows.length / 3);
+  const cols = [rows.slice(0, perCol), rows.slice(perCol, perCol * 2), rows.slice(perCol * 2)];
+
   const Mark = () => (
-    <span className="inline-block h-[5mm] w-[5mm]" style={{ background: "#000", ...INK }} />
+    <span className="inline-block" style={{ width: "8mm", height: "8mm",
+                                            background: "#000", ...INK }} />
   );
 
   return (
-    <div className="qbox rounded-[8px] border-2 border-black p-2"
-         style={{ width: "52mm", ...INK }}>
-      <div className="flex items-start justify-between">
-        <Mark /><Mark />
+    <div style={{ marginTop: "4mm" }}>
+      {/* خط القص */}
+      <div className="flex items-center gap-2" style={{ color: "#666" }}>
+        <span className="text-[9px]">{t.cut}</span>
+        <span className="h-px flex-1"
+              style={{ backgroundImage: "repeating-linear-gradient(90deg,#666 0 3mm,transparent 3mm 6mm)",
+                       ...INK }} />
       </div>
 
-      <p className="mt-1 text-center text-[10px] font-bold">{t.answerSheet}</p>
+      {/* البطاقة: فراغ أبيض حولها ليسهل كشف العلامات */}
+      <div style={{ padding: "4mm 0" }}>
+        <div className="border-2 border-black" style={{ padding: "3mm", ...INK }}>
 
-      <div className="mt-1.5 space-y-1">
-        <div className="border border-black px-1 py-[3px] text-[8.5px]">
-          {t.name}: ______________
-        </div>
-        <div className="border border-black px-1 py-[3px] text-[8.5px]">
-          {t.cls}: __________
-        </div>
-      </div>
+          <div className="flex items-start justify-between">
+            <Mark />
+            <div className="px-3 text-center">
+              <p className="text-[11px] font-bold">{t.answerSheet}</p>
+              <p className="text-[9px]" style={{ color: "#444" }}>{t.bubbleHint}</p>
+            </div>
+            <Mark />
+          </div>
 
-      <div className="mt-2 space-y-[3px]">
-        {questions.map((q, qi) => {
-          // المزاوجة: صف لكل عنصر في العمود الأول
-          if (q.kind === "match") {
-            const left = q.options?.left ?? [];
-            const right = q.options?.right ?? [];
-            return left.map((_, k) => (
-              <div key={`${q.id}-${k}`} className="flex items-center gap-1">
-                <span className="num w-[9mm] text-[8px]"
-                      style={{ textAlign: ltr ? "left" : "right" }}>
-                  {qi + 1}-{k + 1}
-                </span>
-                {right.map((_, r) => (
-                  <span key={r}
-                        className="grid h-[4.2mm] w-[4.2mm] place-items-center rounded-full border border-black text-[6.5px]">
-                    {t.ltrs[r] ?? r + 1}
-                  </span>
+          <div className="mt-2 grid grid-cols-3 gap-2 text-[9.5px]">
+            <div className="border px-1.5 py-1" style={{ borderColor: "#000" }}>
+              {t.name}: ____________________
+            </div>
+            <div className="border px-1.5 py-1" style={{ borderColor: "#000" }}>
+              {t.cls}: <b>{className || "__________"}</b>
+            </div>
+            <div className="border px-1.5 py-1 text-center" style={{ borderColor: "#000" }}>
+              {t.marks}: _____ / <span className="num">{quiz?.total_marks}</span>
+            </div>
+          </div>
+
+          <div className="mt-2.5 grid grid-cols-3 gap-x-4">
+            {cols.map((col, ci) => (
+              <div key={ci} className="space-y-[2mm]">
+                {col.map((r) => (
+                  <div key={r.key} className="flex items-center gap-[1.5mm]">
+                    <span className="num text-[9px] font-bold"
+                          style={{ width: "14mm", textAlign: ltr ? "left" : "right" }}>
+                      {r.label}
+                    </span>
+                    {Array.from({ length: r.count }).map((_, k) => (
+                      <span key={k}
+                            className="grid place-items-center rounded-full text-[7px]"
+                            style={{ width: "6mm", height: "6mm",
+                                     border: "0.4mm solid #000", color: "#555", ...INK }}>
+                        {r.letters[k] ?? k + 1}
+                      </span>
+                    ))}
+                  </div>
                 ))}
               </div>
-            ));
-          }
+            ))}
+          </div>
 
-          const count = q.kind === "truefalse" ? 2 : (q.options?.length ?? 4);
-          return (
-            <div key={q.id} className="flex items-center gap-1">
-              <span className="num w-[9mm] text-[8.5px]"
-                    style={{ textAlign: ltr ? "left" : "right" }}>
-                {qi + 1}
-              </span>
-              {Array.from({ length: count }).map((_, k) => (
-                <span key={k}
-                      className="grid h-[4.2mm] w-[4.2mm] place-items-center rounded-full border border-black text-[6.5px]">
-                  {q.kind === "truefalse" ? (k === 0 ? t.tf[0][0] : t.tf[1][0]) : t.ltrs[k]}
-                </span>
-              ))}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="mt-2 flex items-end justify-between">
-        <Mark /><Mark />
+          <div className="mt-2 flex items-end justify-between">
+            <Mark /><Mark />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -195,17 +238,19 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
         </p>
       )}
 
-      {/* الجسم: الأسئلة وبطاقة التظليل */}
-      <div className="mt-3 flex gap-3">
-        <div className="min-w-0 flex-1 space-y-3">
+      {/* الأسئلة بعرض الصفحة */}
+      <div className="mt-3">
+        <div className="space-y-3">
           {groups.map((g, gi) => {
             const marks = g.list.reduce((a, x) => a + Number(x.marks || 0), 0);
             return (
               <div key={g.kind} className="qbox">
                 <p className="rounded-[4px] px-2 py-1 text-[12px] font-bold"
-                   style={{ background: "#E8E8E8", color: "#000", ...INK }}>
-                  <span className="num">{gi + 1}. </span>{t.kinds[g.kind]}
-                  <span className="num float-left text-[10px] font-medium">({marks})</span>
+                   style={{ background: "#EFEFEF", color: "#000", ...INK }}>
+                  {t.question} {t.ordinals[gi] ?? gi + 1}: {t.kinds[g.kind]}
+                  <span className="num float-left text-[10.5px] font-semibold">
+                    ({t.markWord(marks)})
+                  </span>
                 </p>
 
                 <div className="mt-1.5 space-y-1.5">
@@ -222,53 +267,84 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
                         </div>
 
                         {q.kind === "mcq" && (
-                          <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1"
-                               style={{ paddingInlineStart: "9mm" }}>
-                            {(q.options ?? []).map((o, k) => (
-                              <p key={k} className="flex gap-1.5 text-[11px]">
-                                <span className="num shrink-0 font-semibold">{t.ltrs[k]})</span>
-                                <span className="min-w-0">{o}</span>
-                              </p>
-                            ))}
-                          </div>
+                          <table className="mt-1 w-full border-collapse text-[11px]"
+                                 style={{ marginInlineStart: "7mm", width: "calc(100% - 7mm)" }}>
+                            <tbody>
+                              <tr>
+                                {(q.options ?? []).map((o, k) => (
+                                  <td key={k} className="border px-2 py-1.5"
+                                      style={{ borderColor: "#000",
+                                               width: `${100 / (q.options?.length || 1)}%` }}>
+                                    <span className="num font-bold">{t.ltrs[k]}) </span>{o}
+                                  </td>
+                                ))}
+                              </tr>
+                            </tbody>
+                          </table>
                         )}
 
                         {q.kind === "truefalse" && (
-                          <p className="mt-0.5 text-[11px]" style={{ paddingInlineStart: "9mm" }}>
-                            (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
-                          </p>
+                          <table className="mt-1 border-collapse text-[11px]"
+                                 style={{ marginInlineStart: "7mm" }}>
+                            <tbody>
+                              <tr>
+                                {t.tf.map((x, k) => (
+                                  <td key={k} className="border px-4 py-1 text-center font-semibold"
+                                      style={{ borderColor: "#000", minWidth: "22mm" }}>
+                                    {x}
+                                  </td>
+                                ))}
+                                <td className="border px-3 py-1 text-center"
+                                    style={{ borderColor: "#000", minWidth: "18mm",
+                                             background: "#F5F5F5", ...INK }}>
+                                  {t.answerCol}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
                         )}
 
                         {q.kind === "match" && (
                           <div className="mt-1.5" style={{ paddingInlineStart: "7mm" }}>
                             <table className="w-full border-collapse text-[11px]">
                               <thead>
-                                <tr>
-                                  <th className="border px-2 py-1 text-center font-bold"
-                                      style={{ borderColor: "#000", background: "#E8E8E8", ...INK }}>
-                                    {t.colA}
+                                <tr style={{ background: "#EFEFEF", ...INK }}>
+                                  <th className="border px-1 py-1 text-center font-bold"
+                                      style={{ borderColor: "#000", width: "10mm" }}>
+                                    {t.item}
                                   </th>
-                                  <th className="w-[16mm] border px-1 py-1 text-center font-bold"
-                                      style={{ borderColor: "#000", background: "#E8E8E8", ...INK }}>
+                                  <th className="border px-2 py-1 text-center font-bold"
+                                      style={{ borderColor: "#000" }}>{t.colA}</th>
+                                  <th className="border px-1 py-1 text-center font-bold"
+                                      style={{ borderColor: "#000", width: "14mm" }}>
                                     {t.answerCol}
                                   </th>
-                                  <th className="border px-2 py-1 text-center font-bold"
-                                      style={{ borderColor: "#000", background: "#E8E8E8", ...INK }}>
-                                    {t.colB}
+                                  <th className="border px-1 py-1 text-center font-bold"
+                                      style={{ borderColor: "#000", width: "10mm" }}>
+                                    {t.ltrs[0]}–{t.ltrs[Math.max(0, (q.options?.right ?? []).length - 1)]}
                                   </th>
+                                  <th className="border px-2 py-1 text-center font-bold"
+                                      style={{ borderColor: "#000" }}>{t.colB}</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {(q.options?.left ?? []).map((l, k) => (
                                   <tr key={k}>
+                                    <td className="num border px-1 py-1.5 text-center font-bold"
+                                        style={{ borderColor: "#000" }}>
+                                      {t.fShort}{k + 1}
+                                    </td>
                                     <td className="border px-2 py-1.5" style={{ borderColor: "#000" }}>
-                                      <span className="num font-bold">{k + 1}) </span>{l}
+                                      {l}
                                     </td>
                                     <td className="border px-1 py-1.5" style={{ borderColor: "#000" }}>
                                       &nbsp;
                                     </td>
+                                    <td className="num border px-1 py-1.5 text-center font-bold"
+                                        style={{ borderColor: "#000" }}>
+                                      {t.ltrs[k] ?? k + 1}
+                                    </td>
                                     <td className="border px-2 py-1.5" style={{ borderColor: "#000" }}>
-                                      <span className="num font-bold">{t.ltrs[k] ?? k + 1}) </span>
                                       {(q.options?.right ?? [])[k] ?? ""}
                                     </td>
                                   </tr>
@@ -288,9 +364,9 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
             );
           })}
         </div>
-
-        <BubbleSheet questions={questions} t={t} ltr={ltr} />
       </div>
+
+      <BubbleSheet questions={questions} t={t} ltr={ltr} quiz={quiz} className={className} />
 
       {/* التذييل */}
       <div className="mt-5 flex items-center justify-between gap-4 border-t pt-2"

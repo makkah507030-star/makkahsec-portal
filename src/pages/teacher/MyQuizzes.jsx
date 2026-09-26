@@ -96,12 +96,17 @@ export default function MyQuizzes() {
           return (
             <div key={q.id} className="card relative p-4 transition-colors hover:border-[#CCF2DB]">
             <button onClick={async () => {
-                      if (!window.confirm(`حذف «${q.title}» نهائيًا؟`)) return;
+                      if (!window.confirm(
+                        `حذف «${q.title}» نهائيًا؟\n\nسيُحذف معه كل أسئلته ودرجات الطلاب.`)) return;
                       await supabase.from("quizzes").delete().eq("id", q.id);
                       load();
                     }}
-                    className="absolute left-3 top-3 text-xs font-medium text-absent hover:underline">
-              حذف
+                    title="حذف الاختبار"
+                    className="absolute left-3 top-3 grid h-8 w-8 place-items-center rounded-full border border-line text-muted transition-colors hover:border-absent hover:bg-absent/10 hover:text-absent">
+              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4"
+                   stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
+              </svg>
             </button>
             <button onClick={() => setOpenId(q.id)} className="block w-full text-right">
               <div className="flex flex-wrap items-center gap-2">
@@ -393,7 +398,8 @@ function QuizEditor({ quiz, uid, onBack }) {
   };
 
   const removeQuiz = async () => {
-    if (!window.confirm(`حذف «${q.title}» وكل أسئلته ودرجاته نهائيًا؟`)) return;
+    if (!window.confirm(
+      `حذف «${q.title}» نهائيًا؟\n\nسيُحذف معه ${questions?.length ?? 0} سؤالًا وكل درجات الطلاب.`)) return;
     const { error } = await supabase.from("quizzes").delete().eq("id", q.id);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
     onBack();
@@ -523,7 +529,11 @@ function QuizEditor({ quiz, uid, onBack }) {
 
       <div className="no-print flex justify-end">
         <button onClick={removeQuiz}
-                className="rounded-pill border border-absent/40 px-4 py-1.5 text-xs font-semibold text-absent hover:bg-absent/5">
+                className="flex items-center gap-1.5 rounded-pill border border-absent/40 px-4 py-1.5 text-xs font-semibold text-absent transition-colors hover:bg-absent hover:text-white">
+          <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5"
+               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+          </svg>
           حذف الاختبار
         </button>
       </div>
