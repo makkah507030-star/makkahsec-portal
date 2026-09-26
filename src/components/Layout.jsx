@@ -112,6 +112,8 @@ const OTHER_NAV = {
 
     { group: "الاختبارات والأنشطة" },
     { to: "/exams",      label: "جداول الاختبارات",       icon: "calendar" },
+    { to: "/quizzes",    label: "اختباراتي",              icon: "edit" },
+    { to: "/quiz-marks", label: "التصحيح والدرجات",       icon: "chart" },
     { to: "/events",     label: "الأحداث والمناسبات",     icon: "news" },
 
     { group: "النماذج" },

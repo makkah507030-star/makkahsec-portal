@@ -68,6 +68,9 @@ import Referrals from "./pages/Referrals.jsx";
 import ExamSchedules from "./pages/ExamSchedules.jsx";
 import Events from "./pages/Events.jsx";
 import EventsReports from "./pages/EventsReports.jsx";
+import MyQuizzes from "./pages/teacher/MyQuizzes.jsx";
+import QuizMarks from "./pages/teacher/QuizMarks.jsx";
+import QuizResults from "./components/QuizResults.jsx";
 import ExamsAdmin from "./pages/admin/ExamsAdmin.jsx";
 import ReferralView from "./pages/ReferralView.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
@@ -223,8 +226,18 @@ export default function App() {
   const home = {
     admin: <Dashboard />,
     teacher: teacherHome,
-    student: <StudentHome />,
-    guardian: <GuardianHome />,
+    student: (
+      <div className="space-y-5">
+        <StudentHome />
+        <QuizResults compact />
+      </div>
+    ),
+    guardian: (
+      <div className="space-y-5">
+        <GuardianHome />
+        <QuizResults compact />
+      </div>
+    ),
   }[effectiveRole] ?? <p>دور غير معروف</p>;
 
   return (
@@ -363,6 +376,9 @@ export default function App() {
         {/* الأحداث والمناسبات — لكل معلم وإداري */}
         <Route path="/events" element={<Events />} />
         <Route path="/events-reports" element={<EventsReports />} />
+        {/* اختباراتي — للمعلم */}
+        <Route path="/quizzes" element={<MyQuizzes />} />
+        <Route path="/quiz-marks" element={<QuizMarks />} />
         <Route path="/referral/:id" element={<ReferralView />} />
         {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
         <Route path="/help" element={<Help />} />
