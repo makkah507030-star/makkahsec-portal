@@ -313,6 +313,8 @@ function NewQuiz({ uid, onDone }) {
 function QuizEditor({ quiz, uid, onBack }) {
   const { profile } = useSession();
   const [printing, setPrinting] = useState(null);
+  // هل تتّسع الورقة في صفحة واحدة؟ تقيسها نسخة غير مرئية تتحدّث مع كل تعديل
+  const [fit, setFit] = useState(null);
   const [q, setQ] = useState(quiz);
   const [questions, setQuestions] = useState(null);
   const [classes, setClasses] = useState([]);
@@ -444,6 +446,11 @@ function QuizEditor({ quiz, uid, onBack }) {
             <select className="field py-1.5 text-xs"
                     value=""
                     onChange={(e) => {
+                      if (fit && !fit.fits &&
+                          !window.confirm("الاختبار أطول من صفحة واحدة: سيُقتطع جزء من الأسئلة عند الطباعة.\nيُفضَّل تقليل عدد الفقرات أو اختصار نصوصها.\n\nهل تريد الطباعة رغم ذلك؟")) {
+                        e.target.value = "";
+                        return;
+                      }
                       const c = linked.find((l) => l.class_id === e.target.value);
                       setPrinting({
                         quiz: q, questions,
@@ -451,7 +458,7 @@ function QuizEditor({ quiz, uid, onBack }) {
                           ? `${GRADE_NAMES[c.classes?.grade] ?? ""} — ${c.classes?.class_no}`
                           : "",
                       });
-                      setTimeout(() => window.print(), 80);
+                      setTimeout(() => window.print(), 200);
                     }}>
               <option value="">طباعة ورقة الاختبار…</option>
               <option value="">بلا تحديد فصل</option>
@@ -468,12 +475,32 @@ function QuizEditor({ quiz, uid, onBack }) {
         </div>
       </div>
 
-      {printing && (
-        <div className="hidden print:block">
-          <QuizPrintArea>
-            <QuizPaper {...printing} teacherName={profile?.full_name ?? ""} />
-          </QuizPrintArea>
+      {/* مؤشر الصفحة الواحدة — يتحدّث مع كل إضافة أو تعديل في الأسئلة */}
+      {(questions?.length ?? 0) > 0 && fit && (
+        <p className={`rounded-card px-3 py-2 text-xs ${
+          !fit.fits ? "bg-absent/10 text-absent"
+          : fit.zoom < 0.85 ? "bg-warning/10 text-warning"
+          : "bg-present/10 text-present"}`}>
+          {!fit.fits
+            ? "الاختبار أطول من صفحة واحدة — سيُقتطع جزء منه عند الطباعة. قلّل عدد الفقرات أو اختصر نصوصها."
+            : fit.zoom < 0.85
+            ? `الاختبار كامل مع بطاقة الإجابة في صفحة واحدة، بخطّ مصغَّر (${Math.round(fit.zoom * 100)}٪).`
+            : "الاختبار كامل مع بطاقة الإجابة في صفحة واحدة."}
+        </p>
+      )}
+      {(questions?.length ?? 0) > 0 && (
+        <div aria-hidden="true"
+             style={{ position: "fixed", top: 0, left: -10000, visibility: "hidden", pointerEvents: "none" }}>
+          <QuizPaper quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
+                     onFit={setFit} />
         </div>
+      )}
+
+      {/* الورقة تُرسم خارج الشاشة (لتقيس نفسها وتتّسع في صفحة واحدة) ولا تظهر إلا عند الطباعة */}
+      {printing && (
+        <QuizPrintArea>
+          <QuizPaper {...printing} teacherName={profile?.full_name ?? ""} />
+        </QuizPrintArea>
       )}
 
       <div>
