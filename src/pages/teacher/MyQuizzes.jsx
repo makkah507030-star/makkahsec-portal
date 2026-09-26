@@ -714,10 +714,12 @@ function MatchEditor({ local, setLocal, save, ltr = false }) {
         </div>
       ))}
       <div className="flex gap-2">
-        <button onClick={() => save({ options: { left: [...left, ""], right: [...right, ""] } })}
-                className="text-xs font-medium text-mint-deep hover:underline">
-          + زوج آخر
-        </button>
+        {left.length < MATCH_MAX_ITEMS && (
+          <button onClick={() => save({ options: { left: [...left, ""], right: [...right, ""] } })}
+                  className="text-xs font-medium text-mint-deep hover:underline">
+            + زوج آخر
+          </button>
+        )}
         {left.length > 2 && (
           <button onClick={() => save({
                     options: { left: left.slice(0, -1), right: right.slice(0, -1) } })}
