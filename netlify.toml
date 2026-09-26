@@ -57,3 +57,9 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
+
+# ملفات الخط لا تتغيّر عمليًا — تُخزَّن سنة (بلا immutable لأن أسماءها ثابتة بلا hash)
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"

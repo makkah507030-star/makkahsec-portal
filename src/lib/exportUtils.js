@@ -1,8 +1,11 @@
+import { fmtBoth, fmtTime12 } from "./dates";
+
+// المكتبات الثقيلة تُجلب عند التصدير أو الطباعة فقط، لا مع فتح الصفحة:
 // xlsx-js-style: نسخة مجانية من SheetJS تدعم تنسيق الخلايا
 // (مكتبة xlsx الأساسية تتجاهل الألوان والخطوط بصمت)
-import XLSX from "xlsx-js-style";
-import { fmtBoth, fmtTime12 } from "./dates";
-import { EXPORT_FONT_CSS } from "./exportFonts";
+const loadXLSX = () => import("xlsx-js-style").then((m) => m.default);
+// الخط المدمج (base64) لتقارير الطباعة
+const loadFontCss = () => import("./exportFonts").then((m) => m.EXPORT_FONT_CSS);
 
 // اسم مدير المدرسة — يظهر في ترويسة وتذييل التقارير المطبوعة
 export const PRINCIPAL_NAME = "عبدالله بن حسن سلمان الفيفي";
@@ -31,8 +34,9 @@ const ZEBRA = "#F4F4F4";
  * @param {string} fileName - اسم الملف بدون امتداد
  * @param {string} sheetName - اسم ورقة العمل
  */
-export function exportToExcel(rows, fileName = "تقرير", sheetName = "البيانات") {
+export async function exportToExcel(rows, fileName = "تقرير", sheetName = "البيانات") {
   if (!rows?.length) return;
+  const XLSX = await loadXLSX();
 
   const ws = XLSX.utils.json_to_sheet(rows);
 
@@ -69,7 +73,7 @@ export function exportToExcel(rows, fileName = "تقرير", sheetName = "الب
  * @param {{title:string,name:string}[]} [opts.signatures]
  * @param {string}   [opts.note]
  */
-export function exportStyledExcel({
+export async function exportStyledExcel({
   title,
   subtitle,
   headers,
@@ -80,6 +84,7 @@ export function exportStyledExcel({
   note,
 }) {
   if (!headers?.length) return;
+  const XLSX = await loadXLSX();
 
   const cols = headers.length;
   const aoa = [];
@@ -261,7 +266,7 @@ export function exportStyledExcel({
  * @param {string}  [opts.tableClass]
  * @param {boolean} [opts.landscape]
  */
-export function printReport(opts) {
+export async function printReport(opts) {
   const {
     title, subtitle, headers, headerRows, rows,
     sections, logoUrl, moeLogoUrl, cover,
@@ -738,6 +743,7 @@ export function printReport(opts) {
     }
   };`;
 
+  const EXPORT_FONT_CSS = await loadFontCss();
   const html = `<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
