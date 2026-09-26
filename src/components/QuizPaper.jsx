@@ -65,12 +65,9 @@ export function QuizPrintArea({ children }) {
           #quiz-print .qbox { break-inside: avoid; }
           .no-print { display: none !important; }
         }
-        @page quizland { size: A4 landscape; margin: 0; }
-        @page { size: A4 landscape; margin: 0; }
-        @media print {
-          html, body { width: 297mm; height: 210mm; }
-          #quiz-print { page: quizland; }
-        }
+        /* عمودية — الاتجاه الافتراضي في كل متصفح وطابعة */
+        @page quizport { size: A4 portrait; margin: 0mm; }
+        @media print { #quiz-print { page: quizport; } }
       ` }} />
       <div id="quiz-print">{children}</div>
     </>
@@ -109,9 +106,9 @@ function BubbleSheet({ groups = [], t, ltr, quiz, className }) {
     });
   });
 
-  // عمودان في البطاقة الجانبية
-  const perCol = Math.ceil(rows.length / 2);
-  const cols = [rows.slice(0, perCol), rows.slice(perCol)];
+  // ثلاثة أعمدة بعرض الصفحة
+  const perCol = Math.ceil(rows.length / 3);
+  const cols = [rows.slice(0, perCol), rows.slice(perCol, perCol * 2), rows.slice(perCol * 2)];
 
   const Mark = () => (
     <span className="inline-block" style={{ width: "8mm", height: "8mm",
@@ -119,9 +116,9 @@ function BubbleSheet({ groups = [], t, ltr, quiz, className }) {
   );
 
   return (
-    <div className="flex h-full flex-col">
-      {/* خط القص الرأسي */}
-      <div className="mb-1 flex items-center gap-1.5" style={{ color: "#666" }}>
+    <div>
+      {/* خط القص */}
+      <div className="mb-1 mt-1.5 flex items-center gap-1.5" style={{ color: "#666" }}>
         <span className="text-[8px]">{t.cut}</span>
         <span className="h-px flex-1"
               style={{ backgroundImage: "repeating-linear-gradient(90deg,#666 0 2mm,transparent 2mm 4mm)",
@@ -129,7 +126,7 @@ function BubbleSheet({ groups = [], t, ltr, quiz, className }) {
       </div>
 
       {/* البطاقة: فراغ أبيض حولها ليسهل كشف العلامات */}
-      <div style={{ padding: "3mm 2mm" }}>
+      <div style={{ padding: "3mm 0" }}>
         <div className="border-2 border-black" style={{ padding: "3mm", ...INK }}>
 
           <div className="flex items-start justify-between">
@@ -153,7 +150,7 @@ function BubbleSheet({ groups = [], t, ltr, quiz, className }) {
             </div>
           </div>
 
-          <div className="mt-2 grid grid-cols-2 gap-x-3">
+          <div className="mt-2 grid grid-cols-3 gap-x-4">
             {cols.map((col, ci) => (
               <div key={ci} className="space-y-[2mm]">
                 {col.map((r) => (
@@ -199,8 +196,8 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
 
   return (
     <div className="sheet mx-auto bg-white text-ink" dir={dir}
-         style={{ width: "297mm", height: "209mm", maxWidth: "297mm",
-                  padding: "8mm 10mm 6mm",
+         style={{ width: "210mm", height: "296mm", maxWidth: "210mm",
+                  padding: "8mm 9mm 5mm",
                   display: "flex", flexDirection: "column", overflow: "hidden",
                   fontFamily: ltr ? "'IBM Plex Sans', system-ui, sans-serif"
                                   : "'IBM Plex Sans Arabic', sans-serif" }}>
@@ -248,9 +245,9 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
         </p>
       )}
 
-      {/* عمودان: الأسئلة والبطاقة */}
-      <div className="mt-2 flex min-h-0 flex-1 gap-4">
-        <div className="min-w-0 flex-1 space-y-2">
+      {/* الأسئلة في الأعلى، والبطاقة في الثلث السفلي */}
+      <div className="mt-1.5 min-h-0 flex-1 overflow-hidden">
+        <div className="space-y-1.5">
           {groups.map((g, gi) => {
             const marks = g.list.reduce((a, x) => a + Number(x.marks || 0), 0);
             return (
@@ -372,10 +369,10 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
             );
           })}
         </div>
+      </div>
 
-        <div style={{ width: "88mm", flexShrink: 0 }}>
-          <BubbleSheet groups={groups} t={t} ltr={ltr} quiz={quiz} className={className} />
-        </div>
+      <div className="shrink-0">
+        <BubbleSheet groups={groups} t={t} ltr={ltr} quiz={quiz} className={className} />
       </div>
 
       {/* التذييل */}

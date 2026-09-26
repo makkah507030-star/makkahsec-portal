@@ -451,7 +451,7 @@ function QuizEditor({ quiz, uid, onBack }) {
                           ? `${GRADE_NAMES[c.classes?.grade] ?? ""} — ${c.classes?.class_no}`
                           : "",
                       });
-                      setTimeout(() => window.print(), 60);
+                      setTimeout(() => window.print(), 80);
                     }}>
               <option value="">طباعة ورقة الاختبار…</option>
               <option value="">بلا تحديد فصل</option>
