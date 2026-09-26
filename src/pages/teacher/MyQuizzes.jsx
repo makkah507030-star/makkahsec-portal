@@ -94,8 +94,16 @@ export default function MyQuizzes() {
         {(list ?? []).map((q) => {
           const st = STATUS[q.status] ?? STATUS.draft;
           return (
-            <button key={q.id} onClick={() => setOpenId(q.id)}
-                    className="card block w-full p-4 text-right transition-colors hover:border-[#CCF2DB]">
+            <div key={q.id} className="card relative p-4 transition-colors hover:border-[#CCF2DB]">
+            <button onClick={async () => {
+                      if (!window.confirm(`حذف «${q.title}» نهائيًا؟`)) return;
+                      await supabase.from("quizzes").delete().eq("id", q.id);
+                      load();
+                    }}
+                    className="absolute left-3 top-3 text-xs font-medium text-absent hover:underline">
+              حذف
+            </button>
+            <button onClick={() => setOpenId(q.id)} className="block w-full text-right">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="min-w-0 flex-1 truncate text-sm font-bold text-ink">{q.title}</p>
                 {q.lang === "en" && (
@@ -111,6 +119,7 @@ export default function MyQuizzes() {
                 {q.exam_date ? ` · ${q.exam_date}` : ""}
               </p>
             </button>
+            </div>
           );
         })}
       </div>
@@ -383,6 +392,13 @@ function QuizEditor({ quiz, uid, onBack }) {
     }
   };
 
+  const removeQuiz = async () => {
+    if (!window.confirm(`حذف «${q.title}» وكل أسئلته ودرجاته نهائيًا؟`)) return;
+    const { error } = await supabase.from("quizzes").delete().eq("id", q.id);
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    onBack();
+  };
+
   const setStatus = async (status) => {
     await supabase.from("quizzes").update({ status }).eq("id", q.id);
     setQ((x) => ({ ...x, status }));
@@ -402,13 +418,26 @@ function QuizEditor({ quiz, uid, onBack }) {
         </button>
         <div className="flex items-center gap-2">
           {(questions?.length ?? 0) > 0 && (
-            <button onClick={() => {
-                      setPrinting({ quiz: q, questions, className: "" });
+            <select className="field py-1.5 text-xs"
+                    value=""
+                    onChange={(e) => {
+                      const c = linked.find((l) => l.class_id === e.target.value);
+                      setPrinting({
+                        quiz: q, questions,
+                        className: c
+                          ? `${GRADE_NAMES[c.classes?.grade] ?? ""} — ${c.classes?.class_no}`
+                          : "",
+                      });
                       setTimeout(() => window.print(), 60);
-                    }}
-                    className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white">
-              طباعة ورقة الاختبار
-            </button>
+                    }}>
+              <option value="">طباعة ورقة الاختبار…</option>
+              <option value="">بلا تحديد فصل</option>
+              {linked.map((l) => (
+                <option key={l.class_id} value={l.class_id}>
+                  {GRADE_NAMES[l.classes?.grade] ?? ""} — فصل {l.classes?.class_no}
+                </option>
+              ))}
+            </select>
           )}
           <span className={`chip ${(STATUS[q.status] ?? STATUS.draft).c}`}>
             {(STATUS[q.status] ?? STATUS.draft).t}
@@ -491,6 +520,13 @@ function QuizEditor({ quiz, uid, onBack }) {
           )}
         </div>
       )}
+
+      <div className="no-print flex justify-end">
+        <button onClick={removeQuiz}
+                className="rounded-pill border border-absent/40 px-4 py-1.5 text-xs font-semibold text-absent hover:bg-absent/5">
+          حذف الاختبار
+        </button>
+      </div>
 
       {tab === "classes" && (
         <section className="no-print card p-4">

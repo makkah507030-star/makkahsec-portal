@@ -21,7 +21,8 @@ const AR = {
   kinds: { mcq: "اختر الإجابة الصحيحة", truefalse: "ضع علامة صح أو خطأ",
            match: "زاوج بين العمودين" },
   teacher: "معلم المادة", good: "مع تمنياتي لكم بالتوفيق",
-  colA: "العمود الأول", colB: "العمود الثاني",
+  colA: "العمود الأول", colB: "العمود الثاني", answerCol: "الإجابة",
+  matchHint: "اكتب في خانة الإجابة حرف العنصر المقابل من العمود الثاني.",
 };
 
 const EN = {
@@ -35,7 +36,8 @@ const EN = {
   kinds: { mcq: "Choose the correct answer", truefalse: "Write True or False",
            match: "Match column A with column B" },
   teacher: "Subject Teacher", good: "Good luck",
-  colA: "Column A", colB: "Column B",
+  colA: "Column A", colB: "Column B", answerCol: "Answer",
+  matchHint: "Write the letter of the matching item from column B.",
 };
 
 export function QuizPrintArea({ children }) {
@@ -61,8 +63,7 @@ export function QuizPrintArea({ children }) {
 
 /* بطاقة التظليل — علامات مرجعية في الزوايا ودوائر منتظمة */
 function BubbleSheet({ questions, t, ltr }) {
-  const mcqLike = questions.filter((q) => q.kind === "mcq" || q.kind === "truefalse");
-  if (!mcqLike.length) return null;
+  if (!questions.length) return null;
 
   const Mark = () => (
     <span className="inline-block h-[5mm] w-[5mm]" style={{ background: "#000", ...INK }} />
@@ -87,13 +88,33 @@ function BubbleSheet({ questions, t, ltr }) {
       </div>
 
       <div className="mt-2 space-y-[3px]">
-        {mcqLike.map((q, i) => {
-          const n = questions.indexOf(q) + 1;
+        {questions.map((q, qi) => {
+          // المزاوجة: صف لكل عنصر في العمود الأول
+          if (q.kind === "match") {
+            const left = q.options?.left ?? [];
+            const right = q.options?.right ?? [];
+            return left.map((_, k) => (
+              <div key={`${q.id}-${k}`} className="flex items-center gap-1">
+                <span className="num w-[9mm] text-[8px]"
+                      style={{ textAlign: ltr ? "left" : "right" }}>
+                  {qi + 1}-{k + 1}
+                </span>
+                {right.map((_, r) => (
+                  <span key={r}
+                        className="grid h-[4.2mm] w-[4.2mm] place-items-center rounded-full border border-black text-[6.5px]">
+                    {t.ltrs[r] ?? r + 1}
+                  </span>
+                ))}
+              </div>
+            ));
+          }
+
           const count = q.kind === "truefalse" ? 2 : (q.options?.length ?? 4);
           return (
             <div key={q.id} className="flex items-center gap-1">
-              <span className="num w-[6mm] text-[8.5px]" style={{ textAlign: ltr ? "left" : "right" }}>
-                {n}
+              <span className="num w-[9mm] text-[8.5px]"
+                    style={{ textAlign: ltr ? "left" : "right" }}>
+                {qi + 1}
               </span>
               {Array.from({ length: count }).map((_, k) => (
                 <span key={k}
@@ -135,43 +156,41 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
       <div className="flex items-start justify-between gap-4">
         <div className="text-[10.5px] font-medium leading-[1.85]">
           {t.gov.map((l) => <div key={l}>{l}</div>)}
-          <div className="font-bold text-mint-deep">{t.school}</div>
+          <div className="font-bold">{t.school}</div>
         </div>
         <div className="flex items-center gap-3">
           <img src={moeLogo} alt="" className="h-9 w-auto" />
           <img src={logoIcon} alt="" className="h-9 w-auto" />
         </div>
       </div>
-      <div className="mt-2 h-px w-full" style={{
-        background: "linear-gradient(90deg,transparent,#3E635022 12%,#3E6350 50%,#3E635022 88%,transparent)",
-        ...INK }} />
+      <div className="mt-2 h-[1.5px] w-full" style={{ background: "#000", ...INK }} />
 
       {/* العنوان */}
       <div className="mt-3 text-center">
-        <p className="text-[15px] font-bold text-mint-deep">{quiz?.title}</p>
-        <p className="num mt-0.5 text-[11px] text-muted">
-          {t.subject}: {quiz?.subject_name || "—"}
-          {className ? ` · ${className}` : ""}
+        <p className="text-[15px] font-bold">{quiz?.title}</p>
+        <p className="num mt-0.5 text-[11px]" style={{ color: "#333" }}>
+          {t.subject}: <b>{quiz?.subject_name || "—"}</b>
+          {className ? <> · {t.cls}: <b>{className}</b></> : null}
           {quiz?.duration_min ? ` · ${t.duration}: ${quiz.duration_min} ${t.minutes}` : ""}
         </p>
       </div>
 
       {/* خانات الطالب */}
       <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
-        <div className="rounded-[6px] border border-line px-2 py-1.5">
+        <div className="rounded-[6px] border px-2 py-1.5" style={{ borderColor: "#999" }}>
           {t.name}: ________________________
         </div>
-        <div className="rounded-[6px] border border-line px-2 py-1.5">
-          {t.cls}: ______________
+        <div className="rounded-[6px] border px-2 py-1.5" style={{ borderColor: "#999" }}>
+          {t.cls}: <b>{className || "______________"}</b>
         </div>
-        <div className="rounded-[6px] border border-line px-2 py-1.5 text-center">
+        <div className="rounded-[6px] border px-2 py-1.5 text-center" style={{ borderColor: "#999" }}>
           {t.marks}: ______ / <span className="num">{quiz?.total_marks}</span>
         </div>
       </div>
 
       {quiz?.instructions && (
-        <p className="mt-2 rounded-[6px] px-2.5 py-1.5 text-[10.5px]"
-           style={{ background: "#EDFAF2", color: "#2F5544", ...INK }}>
+        <p className="mt-2 rounded-[6px] border px-2.5 py-1.5 text-[10.5px]"
+           style={{ borderColor: "#999", ...INK }}>
           {quiz.instructions}
         </p>
       )}
@@ -183,8 +202,8 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
             const marks = g.list.reduce((a, x) => a + Number(x.marks || 0), 0);
             return (
               <div key={g.kind} className="qbox">
-                <p className="rounded-[6px] px-2 py-1 text-[11.5px] font-bold"
-                   style={{ background: "#EDFAF2", color: "#3E6350", ...INK }}>
+                <p className="rounded-[4px] px-2 py-1 text-[12px] font-bold"
+                   style={{ background: "#E8E8E8", color: "#000", ...INK }}>
                   <span className="num">{gi + 1}. </span>{t.kinds[g.kind]}
                   <span className="num float-left text-[10px] font-medium">({marks})</span>
                 </p>
@@ -193,56 +212,73 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
                   {g.list.map((q) => {
                     const n = questions.indexOf(q) + 1;
                     return (
-                      <div key={q.id} className="qbox text-[11.5px] leading-[1.75]">
-                        <p>
-                          <span className="num font-bold">{n}) </span>
-                          {q.text}
-                          <span className="num text-faint"> ({q.marks})</span>
-                        </p>
+                      <div key={q.id} className="qbox text-[11.5px] leading-[1.9]">
+                        <div className="flex gap-2">
+                          <span className="num w-[7mm] shrink-0 font-bold">{n})</span>
+                          <p className="min-w-0 flex-1">
+                            {q.text}
+                            <span className="num" style={{ color: "#666" }}> ({q.marks})</span>
+                          </p>
+                        </div>
 
                         {q.kind === "mcq" && (
-                          <div className="mt-0.5 grid grid-cols-2 gap-x-3 gap-y-0.5 px-4">
+                          <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1"
+                               style={{ paddingInlineStart: "9mm" }}>
                             {(q.options ?? []).map((o, k) => (
-                              <p key={k} className="text-[11px]">
-                                <span className="num font-semibold">{t.ltrs[k]}) </span>{o}
+                              <p key={k} className="flex gap-1.5 text-[11px]">
+                                <span className="num shrink-0 font-semibold">{t.ltrs[k]})</span>
+                                <span className="min-w-0">{o}</span>
                               </p>
                             ))}
                           </div>
                         )}
 
                         {q.kind === "truefalse" && (
-                          <p className="px-4 text-[11px] text-faint">( &nbsp;&nbsp;&nbsp; )</p>
+                          <p className="mt-0.5 text-[11px]" style={{ paddingInlineStart: "9mm" }}>
+                            (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
+                          </p>
                         )}
 
                         {q.kind === "match" && (
-                          <table className="mt-1 w-full border-collapse text-[11px]">
-                            <thead>
-                              <tr>
-                                <th className="border border-line px-2 py-1" style={{ background: "#F7FCF9", ...INK }}>
-                                  {t.colA}
-                                </th>
-                                <th className="w-[14mm] border border-line px-2 py-1"
-                                    style={{ background: "#F7FCF9", ...INK }}>—</th>
-                                <th className="border border-line px-2 py-1" style={{ background: "#F7FCF9", ...INK }}>
-                                  {t.colB}
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {(q.options?.left ?? []).map((l, k) => (
-                                <tr key={k}>
-                                  <td className="border border-line px-2 py-1">
-                                    <span className="num">{k + 1}. </span>{l}
-                                  </td>
-                                  <td className="border border-line px-2 py-1">&nbsp;</td>
-                                  <td className="border border-line px-2 py-1">
-                                    <span className="num">{t.ltrs[k] ?? k + 1}. </span>
-                                    {(q.options?.right ?? [])[k] ?? ""}
-                                  </td>
+                          <div className="mt-1.5" style={{ paddingInlineStart: "7mm" }}>
+                            <table className="w-full border-collapse text-[11px]">
+                              <thead>
+                                <tr>
+                                  <th className="border px-2 py-1 text-center font-bold"
+                                      style={{ borderColor: "#000", background: "#E8E8E8", ...INK }}>
+                                    {t.colA}
+                                  </th>
+                                  <th className="w-[16mm] border px-1 py-1 text-center font-bold"
+                                      style={{ borderColor: "#000", background: "#E8E8E8", ...INK }}>
+                                    {t.answerCol}
+                                  </th>
+                                  <th className="border px-2 py-1 text-center font-bold"
+                                      style={{ borderColor: "#000", background: "#E8E8E8", ...INK }}>
+                                    {t.colB}
+                                  </th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {(q.options?.left ?? []).map((l, k) => (
+                                  <tr key={k}>
+                                    <td className="border px-2 py-1.5" style={{ borderColor: "#000" }}>
+                                      <span className="num font-bold">{k + 1}) </span>{l}
+                                    </td>
+                                    <td className="border px-1 py-1.5" style={{ borderColor: "#000" }}>
+                                      &nbsp;
+                                    </td>
+                                    <td className="border px-2 py-1.5" style={{ borderColor: "#000" }}>
+                                      <span className="num font-bold">{t.ltrs[k] ?? k + 1}) </span>
+                                      {(q.options?.right ?? [])[k] ?? ""}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            <p className="mt-1 text-[10px]" style={{ color: "#555" }}>
+                              {t.matchHint}
+                            </p>
+                          </div>
                         )}
                       </div>
                     );
@@ -257,15 +293,14 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
       </div>
 
       {/* التذييل */}
-      <div className="mt-5 flex items-end justify-between gap-4">
-        <span className="text-[10px] text-faint" dir="ltr">makkahsec.com</span>
-        <p className="text-[11.5px] font-semibold text-mint-deep">{t.good}</p>
-        <div className="text-center">
-          <p className="text-[10.5px] text-muted">{t.teacher}</p>
-          <div className="h-6" />
-          <div className="mx-auto h-px w-32 bg-line" />
-          <p className="mt-0.5 text-[11px] font-semibold">{teacherName || "…"}</p>
-        </div>
+      <div className="mt-5 flex items-center justify-between gap-4 border-t pt-2"
+           style={{ borderColor: "#999" }}>
+        <span className="text-[10px]" dir="ltr" style={{ color: "#666" }}>makkahsec.com</span>
+        <p className="text-[11.5px] font-bold">{t.good}</p>
+        <p className="text-[11px]">
+          <span style={{ color: "#666" }}>{t.teacher}: </span>
+          <b>{teacherName || "—"}</b>
+        </p>
       </div>
     </div>
   );

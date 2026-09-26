@@ -27,6 +27,7 @@ export default function QuizMarks() {
   const [students, setStudents] = useState([]);
   const [subs, setSubs] = useState({});      // student_id -> submission
   const [active, setActive] = useState(null); // الطالب قيد الرصد
+  const [fast, setFast] = useState(false);    // وضع الإدخال السريع
   const [msg, setMsg] = useState(null);
   const [printing, setPrinting] = useState(false);
 
@@ -216,11 +217,23 @@ export default function QuizMarks() {
             })}
           </div>
 
-          <button className="no-print btn-primary w-full" disabled={stats.done === 0}
-                  onClick={() => { setPrinting(true); setTimeout(() => window.print(), 60); }}>
-            طباعة كشف الدرجات
-          </button>
+          <div className="no-print flex flex-wrap gap-2">
+            <button className="btn-primary flex-1" onClick={() => setFast(true)}>
+              الإدخال السريع
+            </button>
+            <button className="flex-1 rounded-pill border border-line py-2 text-sm font-semibold text-muted hover:bg-canvas"
+                    disabled={stats.done === 0}
+                    onClick={() => { setPrinting(true); setTimeout(() => window.print(), 60); }}>
+              طباعة كشف الدرجات
+            </button>
+          </div>
         </>
+      )}
+
+      {fast && (
+        <FastEntry students={students} questions={questions} subs={subs} quiz={quiz}
+                   onSave={saveAnswers} onAbsent={markAbsent}
+                   onClose={() => { setFast(false); loadClass(); }} />
       )}
 
       {printing && quiz && (
@@ -406,6 +419,162 @@ function AnswerSheet({ student, questions, initial, onSave, onAbsent }) {
         <button onClick={onAbsent} disabled={busy}
                 className="rounded-pill border border-absent/40 px-4 py-2 text-sm font-semibold text-absent hover:bg-absent/5">
           غائب
+        </button>
+      </div>
+    </div>
+  );
+}
+
+
+/* =====================================================================
+   الإدخال السريع — الغرض منه ألّا يكون الرصد إعادة تصحيح يدوي:
+   الطالب أمامك، والخيارات أزرار كبيرة، وبمجرد اختيار إجابة ينتقل
+   للسؤال التالي، وبعد آخر سؤال يُحفظ ويُصحَّح وينتقل للطالب التالي.
+   فثلاثة أسئلة = ثلاث ضغطات لكل طالب.
+   ===================================================================== */
+function FastEntry({ students, questions, subs, quiz, onSave, onAbsent, onClose }) {
+  const [si, setSi] = useState(() => {
+    const first = students.findIndex((s) => !subs[s.id]);
+    return first >= 0 ? first : 0;
+  });
+  const [qi, setQi] = useState(0);
+  const [ans, setAns] = useState({});
+  const [busy, setBusy] = useState(false);
+  const [lastScore, setLastScore] = useState(null);
+
+  const student = students[si];
+  const q = questions[qi];
+
+  useEffect(() => { setAns(subs[student?.id]?.answers ?? {}); setQi(0); }, [si]);
+
+  const finish = async (answers) => {
+    setBusy(true);
+    await onSave(student, answers);
+    setBusy(false);
+    setLastScore(student.full_name);
+    if (si + 1 < students.length) { setSi(si + 1); }
+    else { onClose(); }
+  };
+
+  const choose = (value) => {
+    const next = { ...ans, [q.id]: value };
+    setAns(next);
+    if (qi + 1 < questions.length) setQi(qi + 1);
+    else finish(next);
+  };
+
+  const chooseMatch = (k, v) => {
+    const cur = { ...(ans[q.id] ?? {}), [String(k)]: v };
+    const next = { ...ans, [q.id]: cur };
+    setAns(next);
+    // تنتقل تلقائيًا بعد إكمال كل عناصر المزاوجة
+    if (Object.keys(cur).length >= (q.options?.left ?? []).length) {
+      if (qi + 1 < questions.length) setQi(qi + 1);
+      else finish(next);
+    }
+  };
+
+  if (!student || !q) return null;
+  const done = students.filter((s) => subs[s.id]).length;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      {/* الرأس */}
+      <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+        <button onClick={onClose}
+                className="rounded-pill border border-line px-3 py-1 text-xs text-muted">
+          إنهاء
+        </button>
+        <p className="num text-xs text-muted">
+          الطالب {si + 1} من {students.length} · رُصد {done}
+        </p>
+      </div>
+
+      {/* الطالب */}
+      <div className="border-b border-line bg-mint-tint px-4 py-3 text-center">
+        <p className="text-base font-bold text-ink">{student.full_name}</p>
+        {subs[student.id] && (
+          <p className="num mt-0.5 text-[11px] text-mint-deep">
+            رُصد سابقًا: {subs[student.id].absent ? "غائب" : subs[student.id].score}
+          </p>
+        )}
+      </div>
+
+      {/* السؤال */}
+      <div className="flex flex-1 flex-col justify-center px-5 py-6">
+        <p className="num text-center text-xs text-faint">
+          السؤال {qi + 1} من {questions.length}
+        </p>
+        <p className="mt-2 text-center text-sm leading-relaxed text-ink">
+          {q.text || "—"}
+        </p>
+
+        {q.kind === "mcq" && (
+          <div className="mx-auto mt-6 flex w-full max-w-sm flex-wrap justify-center gap-3">
+            {(q.options ?? []).map((_, k) => (
+              <button key={k} onClick={() => choose(String(k))} disabled={busy}
+                className={`grid h-16 w-16 place-items-center rounded-2xl border-2 text-xl font-bold transition-colors ${
+                  String(ans[q.id]) === String(k)
+                    ? "border-mint-deep bg-mint-deep text-white"
+                    : "border-line text-ink hover:border-mint-deep"}`}>
+                {LETTERS[k]}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {q.kind === "truefalse" && (
+          <div className="mx-auto mt-6 flex w-full max-w-sm gap-3">
+            {[["true", "صح"], ["false", "خطأ"]].map(([v, t]) => (
+              <button key={v} onClick={() => choose(v)} disabled={busy}
+                className={`h-16 flex-1 rounded-2xl border-2 text-lg font-bold transition-colors ${
+                  ans[q.id] === v ? "border-mint-deep bg-mint-deep text-white"
+                                  : "border-line text-ink hover:border-mint-deep"}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {q.kind === "match" && (
+          <div className="mx-auto mt-5 w-full max-w-md space-y-2">
+            {(q.options?.left ?? []).map((l, k) => (
+              <div key={k} className="flex items-center gap-2">
+                <span className="num w-6 shrink-0 text-sm font-bold text-muted">{k + 1}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-ink">{l}</span>
+                <div className="flex shrink-0 gap-1">
+                  {(q.options?.right ?? []).map((_, r) => (
+                    <button key={r} onClick={() => chooseMatch(k, String(r))} disabled={busy}
+                      className={`h-9 w-9 rounded-lg border text-xs font-bold transition-colors ${
+                        ans[q.id]?.[String(k)] === String(r)
+                          ? "border-mint-deep bg-mint-deep text-white"
+                          : "border-line text-muted"}`}>
+                      {LETTERS[r]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* الأدوات */}
+      <div className="flex gap-2 border-t border-line px-4 py-3">
+        <button onClick={() => qi > 0 ? setQi(qi - 1) : si > 0 && setSi(si - 1)}
+                disabled={busy || (qi === 0 && si === 0)}
+                className="rounded-pill border border-line px-4 py-2 text-sm text-muted disabled:opacity-40">
+          السابق
+        </button>
+        <button onClick={async () => { await onAbsent(student);
+                          si + 1 < students.length ? setSi(si + 1) : onClose(); }}
+                disabled={busy}
+                className="rounded-pill border border-absent/40 px-4 py-2 text-sm font-semibold text-absent">
+          غائب
+        </button>
+        <button onClick={() => finish(ans)} disabled={busy}
+                className="btn-primary flex-1">
+          {busy ? "جارٍ الحفظ…" : qi + 1 < questions.length ? "حفظ الآن" : "حفظ والتالي"}
         </button>
       </div>
     </div>
