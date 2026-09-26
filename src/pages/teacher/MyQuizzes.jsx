@@ -11,11 +11,14 @@ import QuizPaper, { QuizPrintArea } from "../../components/QuizPaper.jsx";
    وأنماط أسئلته ثلاثة تُصحَّح آليًا: اختيار متعدد، صح وخطأ، مزاوجة.
    ===================================================================== */
 
+// حدود التصميم: الورقة العرضية تتّسع لهذا العدد فقط، ليبقى شكلها
+// موحّدًا وبطاقتها قابلة للقراءة الآلية.
 const KINDS = [
-  { key: "mcq",       label: "اختيار متعدد" },
-  { key: "truefalse", label: "صح وخطأ" },
-  { key: "match",     label: "مزاوجة" },
+  { key: "mcq",       label: "اختيار متعدد", max: 5 },
+  { key: "truefalse", label: "صح وخطأ",      max: 5 },
+  { key: "match",     label: "مزاوجة",       max: 1 },
 ];
+const MATCH_MAX_ITEMS = 5;
 
 const PERIODS = [
   { key: "period1", label: "الفترة الأولى" },
@@ -94,36 +97,41 @@ export default function MyQuizzes() {
         {(list ?? []).map((q) => {
           const st = STATUS[q.status] ?? STATUS.draft;
           return (
-            <div key={q.id} className="card relative p-4 transition-colors hover:border-[#CCF2DB]">
-            <button onClick={async () => {
-                      if (!window.confirm(
-                        `حذف «${q.title}» نهائيًا؟\n\nسيُحذف معه كل أسئلته ودرجات الطلاب.`)) return;
-                      await supabase.from("quizzes").delete().eq("id", q.id);
-                      load();
-                    }}
-                    title="حذف الاختبار"
-                    className="absolute left-3 top-3 grid h-8 w-8 place-items-center rounded-full border border-line text-muted transition-colors hover:border-absent hover:bg-absent/10 hover:text-absent">
-              <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4"
-                   stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />
-              </svg>
-            </button>
-            <button onClick={() => setOpenId(q.id)} className="block w-full text-right">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="min-w-0 flex-1 truncate text-sm font-bold text-ink">{q.title}</p>
-                {q.lang === "en" && (
-                  <span className="chip shrink-0 bg-mint-tint text-mint-deep" dir="ltr">EN</span>
-                )}
-                <span className={`chip shrink-0 ${st.c}`}>{st.t}</span>
+            <div key={q.id} className="card p-4 transition-colors hover:border-[#CCF2DB]">
+              <div className="flex items-start gap-3">
+                <button onClick={() => setOpenId(q.id)} className="min-w-0 flex-1 text-right">
+                  <p className="truncate text-sm font-bold text-ink">{q.title}</p>
+                  <p className="num mt-1 text-xs text-faint">
+                    {q.subject_name || "—"}
+                    {q.grade ? ` · ${GRADE_NAMES[q.grade]}` : ""}
+                    {` · ${PERIODS.find((p) => p.key === q.period)?.label ?? ""}`}
+                    {` · ${q.total_marks} درجة`}
+                    {q.exam_date ? ` · ${q.exam_date}` : ""}
+                  </p>
+                </button>
+
+                <div className="flex shrink-0 flex-col items-end gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {q.lang === "en" && (
+                      <span className="chip bg-mint-tint text-mint-deep" dir="ltr">EN</span>
+                    )}
+                    <span className={`chip ${st.c}`}>{st.t}</span>
+                  </div>
+                  <button onClick={async () => {
+                            if (!window.confirm(
+                              `حذف «${q.title}» نهائيًا؟\n\nسيُحذف معه كل أسئلته ودرجات الطلاب.`)) return;
+                            await supabase.from("quizzes").delete().eq("id", q.id);
+                            load();
+                          }}
+                          title="حذف الاختبار"
+                          className="grid h-7 w-7 place-items-center rounded-full border border-line text-faint transition-colors hover:border-absent hover:bg-absent/10 hover:text-absent">
+                    <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5"
+                         stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <p className="num mt-1 text-xs text-faint">
-                {q.subject_name || "—"}
-                {q.grade ? ` · ${GRADE_NAMES[q.grade]}` : ""}
-                {` · ${PERIODS.find((p) => p.key === q.period)?.label ?? ""}`}
-                {` · ${q.total_marks} درجة`}
-                {q.exam_date ? ` · ${q.exam_date}` : ""}
-              </p>
-            </button>
             </div>
           );
         })}
@@ -354,7 +362,16 @@ function QuizEditor({ quiz, uid, onBack }) {
   const marksUsed = useMemo(
     () => (questions ?? []).reduce((a, x) => a + Number(x.marks || 0), 0), [questions]);
 
+  const countOf = (kind) => (questions ?? []).filter((x) => x.kind === kind).length;
+
   const addQuestion = async (kind) => {
+    const k = KINDS.find((x) => x.key === kind);
+    if (k && countOf(kind) >= k.max) {
+      setMsg({ ok: false,
+               text: `الحد الأعلى لأسئلة «${k.label}» ${k.max}. التصميم يتّسع لهذا العدد فقط.` });
+      return;
+    }
+
     const base = {
       quiz_id: q.id,
       sort_order: (questions?.length ?? 0) + 1,
@@ -510,13 +527,22 @@ function QuizEditor({ quiz, uid, onBack }) {
           <div className="card p-4">
             <p className="text-xs text-muted">إضافة سؤال</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {KINDS.map((k) => (
-                <button key={k.key} onClick={() => addQuestion(k.key)}
-                        className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-4 py-1.5 text-sm font-medium text-mint-deep hover:bg-[#CCF2DB]">
-                  {k.label}
-                </button>
-              ))}
+              {KINDS.map((k) => {
+                const n = countOf(k.key);
+                const full = n >= k.max;
+                return (
+                  <button key={k.key} onClick={() => addQuestion(k.key)} disabled={full}
+                    className={`rounded-pill border px-4 py-1.5 text-sm font-medium transition-colors ${
+                      full ? "border-line bg-canvas text-faint"
+                           : "border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>
+                    {k.label} <span className="num opacity-75">({n}/{k.max})</span>
+                  </button>
+                );
+              })}
             </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-faint">
+              الحدود ثابتة ليبقى تصميم الورقة موحّدًا وبطاقتها قابلة للقراءة الآلية.
+            </p>
           </div>
 
           {q.status === "draft" && (questions?.length ?? 0) > 0 && (
