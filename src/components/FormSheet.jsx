@@ -32,9 +32,9 @@ export function PrintArea({ landscape, children }) {
                                break-after: page; margin: 0 !important; }
           #print-root .sheet:last-child { break-after: auto; }
           .no-print { display: none !important; }
+          #print-root { page: formpage; }
         }
-        @page formprint { size: A4 ${landscape ? "landscape" : "portrait"}; margin: 0; }
-        @media print { #form-print { page: formprint; } }
+        @page formpage { size: A4 ${landscape ? "landscape" : "portrait"}; margin: 0; }
       ` }} />
       <div id="print-root">{children}</div>
     </>
