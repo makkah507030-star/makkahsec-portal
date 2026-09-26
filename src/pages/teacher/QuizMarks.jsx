@@ -7,6 +7,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import QuizScan from "../../components/QuizScan.jsx";
 import PrintPortal from "../../components/PrintPortal.jsx";
+import { groupQuestions } from "../../lib/omrLayout.js";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -50,6 +51,14 @@ export default function QuizMarks() {
 
   const quiz = useMemo(
     () => (quizzes ?? []).find((q) => q.id === quizId), [quizzes, quizId]);
+
+  // الأسئلة بترتيب الورقة المطبوعة (اختيار من متعدد ← صح وخطأ ← مزاوجة) وترقيمها
+  // «س١: ف٢» — حتى يطابق الرصدُ اليدوي ما بيد المعلم تمامًا، لا ترتيبَ الإضافة
+  const ordered = useMemo(() => {
+    const KIND = { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أو خطأ", match: "المزاوجة" };
+    return groupQuestions(questions).flatMap((g, gi) =>
+      g.list.map((q, qi) => ({ ...q, _label: `س${gi + 1}: ف${qi + 1}`, _kind: KIND[g.kind] })));
+  }, [questions]);
 
   // فصول الاختبار وأسئلته
   useEffect(() => {
@@ -247,7 +256,7 @@ export default function QuizMarks() {
                   </div>
 
                   {active?.id === s.id && (
-                    <AnswerSheet student={s} questions={questions}
+                    <AnswerSheet student={s} questions={ordered}
                                  initial={sub?.answers ?? {}}
                                  onSave={(a) => saveAnswers(s, a)}
                                  onAbsent={() => markAbsent(s)} />
@@ -282,7 +291,7 @@ export default function QuizMarks() {
       )}
 
       {fast && (
-        <FastEntry students={students} questions={questions} subs={subs} quiz={quiz}
+        <FastEntry students={students} questions={ordered} subs={subs} quiz={quiz}
                    onSave={saveAnswers} onAbsent={markAbsent}
                    onClose={() => { setFast(false); loadClass(); }} />
       )}
@@ -400,7 +409,7 @@ function AnswerSheet({ student, questions, initial, onSave, onAbsent }) {
       {questions.map((q, i) => (
         <div key={q.id}>
           <p className="text-xs font-medium text-ink">
-            <span className="num">{i + 1}.</span>{" "}
+            <span className="num font-bold text-mint-deep">{q._label}</span>{" "}
             {q.text ? (q.text.length > 60 ? q.text.slice(0, 60) + "…" : q.text) : "—"}
             <span className="num text-faint"> ({q.marks})</span>
           </p>
@@ -543,8 +552,9 @@ function FastEntry({ students, questions, subs, quiz, onSave, onAbsent, onClose 
 
       {/* السؤال */}
       <div className="flex flex-1 flex-col justify-center px-5 py-6">
-        <p className="num text-center text-xs text-faint">
-          السؤال {qi + 1} من {questions.length}
+        <p className="text-center text-xs text-faint">
+          <span className="font-bold text-mint-deep">{q._label}</span> · {q._kind}
+          {" "}· <span className="num">{qi + 1}</span> من <span className="num">{questions.length}</span>
         </p>
         <p className="mt-2 text-center text-sm leading-relaxed text-ink">
           {q.text || "—"}

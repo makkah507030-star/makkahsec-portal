@@ -340,3 +340,13 @@ export function gradeBlankCount(config) {
   const cols = config.periodGroups.flatMap((g) => g.cols).length;
   return (cols + 1) * 2 + 1; // فترتان (أعمدة + مجموع) + المجموع النهائي
 }
+
+/**
+ * موضع عمود الاختبارات القصيرة/التقويمات التحريرية داخل أعمدة الفترة الواحدة،
+ * وهو العمود الذي تُنقل إليه درجات الاختبارات المصحّحة في البوابة. ‎-1 إن لم يوجد
+ * (مثل النشاط، فلا يُملأ شيء).
+ */
+export function quizColumnIndex(config) {
+  const cols = config.periodGroups.flatMap((g) => g.cols);
+  return cols.findIndex((c) => /تحريري/.test(c.label ?? ""));
+}

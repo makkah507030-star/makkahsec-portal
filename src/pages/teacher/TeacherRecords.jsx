@@ -4,6 +4,8 @@ import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { printReport, PRINCIPAL_NAME, ACADEMIC_DEPUTY_NAME } from "../../lib/exportUtils";
 import { configFor, isKnownSubject, buildGradeHeader, gradeBlankCount } from "../../lib/gradeSheets";
+import { loadQuizMarks, loadEntries, sheetShape, buildRow } from "../../lib/gradeBook";
+import GradeSheetEditor from "../../components/GradeSheetEditor.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -43,6 +45,7 @@ export default function TeacherRecords() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState(new Set());
+  const [editing, setEditing] = useState(null); // الفصل×المادة المفتوح في محرّر الكشف
 
   /* ---------- تحميل الإسنادات وطلابها ---------- */
   useEffect(() => {
@@ -67,7 +70,7 @@ export default function TeacherRecords() {
 
       const { data: sch } = await supabase
         .from("schedule")
-        .select("class_id, classes(class_no, grade), subjects(name)")
+        .select("class_id, subject_id, classes(class_no, grade), subjects(name)")
         .eq("teacher_id", t0.id)
         .eq("academic_year", y)
         .eq("term", t);
@@ -81,6 +84,7 @@ export default function TeacherRecords() {
           map.set(key, {
             key,
             subject,
+            subject_id: r.subject_id ?? null,
             class_id: r.class_id,
             class_no: r.classes?.class_no ?? 0,
             grade: r.classes?.grade ?? 0,
@@ -155,32 +159,39 @@ export default function TeacherRecords() {
   });
 
   /* ---------- سجل رصد الدرجات: ملف واحد لكل المواد والفصول ---------- */
-  const printGrades = () => {
+  const printGrades = async () => {
     if (!chosen.length) return;
     setBusy(true);
+    const ctx = { uid: session?.user?.id, year, term, groups: chosen };
+    let qm = {}, entries = {};
+    try { [qm, entries] = await Promise.all([loadQuizMarks(supabase, ctx), loadEntries(supabase, ctx)]); }
+    catch { /* نطبع ما توفّر */ }
 
     const sections = chosen.map((g) => {
       const cfg = configFor(g.subject, g.grade);
+      const shape = sheetShape(g);
       const { headerRows } = buildGradeHeader(cfg);
       const blanks = gradeBlankCount(cfg);
+      const marks = qm[g.key];
 
-      // م · هوية · اسم عريض · باقي الأعمدة بالتساوي
-      const rest = blanks;
+      // م · اسم عريض · باقي الأعمدة بالتساوي
       const colWidths = [
         "3.5%", "24%",
-        ...Array.from({ length: rest }, () => `${(72.5 / rest).toFixed(2)}%`),
+        ...Array.from({ length: blanks }, () => `${(72.5 / blanks).toFixed(2)}%`),
       ];
+      const n = marks ? marks.count.period1 + marks.count.period2 : 0;
+      const src = n ? ` · عمود التقويمات التحريرية من ${n} اختبار قصير مصحَّح في البوابة` : "";
 
       return {
         colWidths,
         title: `كشف رصد درجات مادة ${g.subject}`,
-        subtitle: `${GRADE_NAMES[g.grade] ?? ""} · فصل ${g.class_no} · ${g.students.length} طالبًا`,
+        subtitle: `${GRADE_NAMES[g.grade] ?? ""} · فصل ${g.class_no} · ${g.students.length} طالبًا${src}`,
         headerRows,
         tableClass: "compact",
         rows: g.students.map((s, i) => [
           i + 1,
           { text: s.full_name ?? "", cls: "name" },
-          ...Array.from({ length: blanks }, () => ({ text: "", cls: "blank" })),
+          ...buildRow(g, shape, s, marks, entries).map((c) => ({ text: c.text, cls: "blank" })),
         ]),
       };
     });
@@ -351,6 +362,10 @@ export default function TeacherRecords() {
           كشف رصد الدرجات وسجل المتابعة — ملف واحد يشمل جميع موادك وفصولك،
           بغلاف واحد وصفحة لكل فصل.
         </p>
+        <p className="mt-1.5 text-xs leading-relaxed text-mint-deep">
+          درجات الاختبارات القصيرة المصحّحة في البوابة تُنقل تلقائيًا إلى عمود «التقويمات التحريرية»،
+          ويمكنك تعديل أي خانة في أي وقت من زر «تعديل الكشف» بجانب كل فصل.
+        </p>
       </div>
 
       {/* ملخص */}
@@ -395,6 +410,13 @@ export default function TeacherRecords() {
                   <span className="chip shrink-0 bg-warning-light text-warning">
                     توزيع افتراضي
                   </span>
+                )}
+                {g.students.length > 0 && (
+                  <button type="button"
+                          onClick={(e) => { e.preventDefault(); setEditing(g); }}
+                          className="shrink-0 rounded-pill border border-mint-deep px-3 py-1 text-xs font-semibold text-mint-deep hover:bg-mint-tint">
+                    تعديل الكشف
+                  </button>
                 )}
               </label>
             );
@@ -445,6 +467,10 @@ export default function TeacherRecords() {
           لإخفاء عنوان الصفحة أسفل الورقة.
         </div>
       </section>
+      {editing && (
+        <GradeSheetEditor g={editing} uid={session?.user?.id} year={year} term={term}
+                          onClose={() => setEditing(null)} />
+      )}
     </div>
   );
 }
