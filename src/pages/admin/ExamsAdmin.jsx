@@ -27,15 +27,24 @@ const fmtG = (s) => {
 };
 
 // تاريخ اليوم داخل أسبوع الاختبارات: الأحد = 1 … الخميس = 5
-const dateOfDay = (start, dow) => {
+// week = 1 للأسبوع الأول، و2 للأسبوع الثاني إن امتدّت الاختبارات أسبوعين
+const dateOfDay = (start, dow, week = 1) => {
   if (!start || !dow) return null;
   const d = new Date(start + "T00:00:00");
-  const shift = (dow - 1) - ((d.getDay() + 7) % 7);
+  const shift = (dow - 1) - ((d.getDay() + 7) % 7) + (week - 1) * 7;
   d.setDate(d.getDate() + shift);
   return iso(d);
 };
 
+// عدد أسابيع الفترة من تاريخي بدايتها ونهايتها
+const weeksOf = (start, end) => {
+  if (!start || !end) return 1;
+  const days = Math.round((new Date(end) - new Date(start)) / 86400000);
+  return days >= 7 ? 2 : 1;
+};
+
 export default function ExamsAdmin() {
+  const [deputy, setDeputy] = useState("");
   const [kind, setKind] = useState("period1");
   const [term, setTerm] = useState(null);
   const [classes, setClasses] = useState([]);
@@ -45,6 +54,15 @@ export default function ExamsAdmin() {
   const [printing, setPrinting] = useState(null);
 
   // الفترة وبيانات الفصول
+  // اسم وكيل شؤون الطلاب للتوقيع على الجداول المطبوعة
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("admin_roles")
+        .select("users(full_name)").eq("role_type", "deputy_students").maybeSingle();
+      setDeputy(data?.users?.full_name ?? "");
+    })();
+  }, []);
+
   useEffect(() => {
     (async () => {
       const { data: st } = await supabase.from("settings")
@@ -108,7 +126,7 @@ export default function ExamsAdmin() {
         <section className="no-print card space-y-3 p-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <label className="text-xs text-muted">بداية أسبوع الاختبارات</label>
+              <label className="text-xs text-muted">بداية فترة الاختبارات</label>
               <input type="date" className="field num mt-1 w-full" value={term.start_date ?? ""}
                      onChange={(e) => saveTerm({ start_date: e.target.value || null })} />
             </div>
@@ -195,7 +213,7 @@ export default function ExamsAdmin() {
       {printing && (
         <div className="hidden print:block">
           <ExamPrintArea>
-            <ExamTable {...printing} />
+            <ExamTable {...printing} deputy={deputy} />
           </ExamPrintArea>
         </div>
       )}
@@ -206,8 +224,10 @@ export default function ExamsAdmin() {
 /* ------------------- جدول فصل: ظلّل حصص الاختبار ------------------- */
 function ClassExamEditor({ term, cls, onPrint }) {
   const [rows, setRows] = useState(null);
-  const [slots, setSlots] = useState({});   // schedule_id -> slot
+  const [slots, setSlots] = useState({});   // "scheduleId|week" -> slot
   const [busy, setBusy] = useState(false);
+  const [week, setWeek] = useState(1);      // الأسبوع الجاري تحريره
+  const weeks = weeksOf(term.start_date, term.end_date);
 
   const load = async () => {
     const { data: st } = await supabase.from("settings")
@@ -226,17 +246,20 @@ function ClassExamEditor({ term, cls, onPrint }) {
     ]);
 
     setRows(sch ?? []);
-    setSlots(Object.fromEntries((sl ?? []).map((x) => [x.schedule_id, x])));
+    setSlots(Object.fromEntries((sl ?? []).map((x) => [`${x.schedule_id}|${x.exam_week ?? 1}`, x])));
   };
 
   useEffect(() => { load(); }, [term.id, cls.id]);
 
+  const key = (row) => `${row.id}|${week}`;
+
   const toggle = async (row) => {
     setBusy(true);
-    const existing = slots[row.id];
+    const k = key(row);
+    const existing = slots[k];
     if (existing) {
       await supabase.from("exam_slots").delete().eq("id", existing.id);
-      setSlots((s) => { const n = { ...s }; delete n[row.id]; return n; });
+      setSlots((s) => { const n = { ...s }; delete n[k]; return n; });
     } else {
       const payload = {
         exam_term_id: term.id,
@@ -247,10 +270,11 @@ function ClassExamEditor({ term, cls, onPrint }) {
         subject_name: row.subjects?.name ?? "",
         day_of_week: row.day_of_week,
         period_no: row.period_no,
-        exam_date: dateOfDay(term.start_date, row.day_of_week),
+        exam_week: week,
+        exam_date: dateOfDay(term.start_date, row.day_of_week, week),
       };
       const { data } = await supabase.from("exam_slots").insert(payload).select().single();
-      if (data) setSlots((s) => ({ ...s, [row.id]: data }));
+      if (data) setSlots((s) => ({ ...s, [k]: data }));
     }
     setBusy(false);
   };
@@ -267,8 +291,9 @@ function ClassExamEditor({ term, cls, onPrint }) {
     return [...p].sort((a, b) => a - b);
   }, [rows]);
 
-  const exams = Object.values(slots)
-    .sort((a, b) => (a.day_of_week - b.day_of_week) || (a.period_no - b.period_no));
+  const exams = Object.values(slots).sort((a, b) =>
+    ((a.exam_week ?? 1) - (b.exam_week ?? 1)) ||
+    (a.day_of_week - b.day_of_week) || (a.period_no - b.period_no));
 
   if (!rows) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
 
@@ -281,7 +306,7 @@ function ClassExamEditor({ term, cls, onPrint }) {
           </h2>
           <p className="mt-0.5 text-xs text-muted">
             اضغط الحصة لتحديدها اختبارًا، واضغطها ثانية لإلغائها.
-            {term.start_date && <> التاريخ يُحسب من أسبوع الاختبارات تلقائيًا.</>}
+            {term.start_date && <> التاريخ يُحسب من فترة الاختبارات تلقائيًا.</>}
           </p>
         </div>
         <button className="btn-primary" disabled={exams.length === 0}
@@ -294,8 +319,25 @@ function ClassExamEditor({ term, cls, onPrint }) {
 
       {!term.start_date && (
         <p className="mt-3 rounded-sm2 bg-warning/10 px-3 py-2 text-xs text-warning">
-          حدّد بداية أسبوع الاختبارات أعلاه ليُحسب تاريخ كل اختبار تلقائيًا.
+          حدّد بداية فترة الاختبارات أعلاه ليُحسب تاريخ كل اختبار تلقائيًا.
         </p>
+      )}
+
+      {weeks > 1 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted">الأسبوع:</span>
+          {[1, 2].map((w) => (
+            <button key={w} onClick={() => setWeek(w)}
+              className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                week === w ? "bg-mint-deep text-white"
+                           : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+              الأسبوع {w === 1 ? "الأول" : "الثاني"}
+              <span className="num opacity-75">
+                {" "}({Object.values(slots).filter((x) => (x.exam_week ?? 1) === w).length})
+              </span>
+            </button>
+          ))}
+        </div>
       )}
 
       <div className="mt-3 overflow-x-auto">
@@ -318,7 +360,7 @@ function ClassExamEditor({ term, cls, onPrint }) {
                 </td>
                 {periods.map((p) => {
                   const row = grid[d]?.[p];
-                  const on = row && slots[row.id];
+                  const on = row && slots[key(row)];
                   return (
                     <td key={p} className="border border-line p-0">
                       {row ? (
@@ -328,9 +370,9 @@ function ClassExamEditor({ term, cls, onPrint }) {
                           <span className="block text-[11.5px] font-medium">
                             {row.subjects?.name ?? "—"}
                           </span>
-                          {on && slots[row.id].exam_date && (
+                          {on && slots[key(row)].exam_date && (
                             <span className="num mt-0.5 block text-[10px] opacity-90">
-                              {fmtG(slots[row.id].exam_date)}
+                              {fmtG(slots[key(row)].exam_date)}
                             </span>
                           )}
                         </button>

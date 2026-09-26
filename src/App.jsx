@@ -67,6 +67,7 @@ import DutyAdmin from "./pages/admin/DutyAdmin.jsx";
 import Referrals from "./pages/Referrals.jsx";
 import ExamSchedules from "./pages/ExamSchedules.jsx";
 import Events from "./pages/Events.jsx";
+import EventsReports from "./pages/EventsReports.jsx";
 import ExamsAdmin from "./pages/admin/ExamsAdmin.jsx";
 import ReferralView from "./pages/ReferralView.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
@@ -361,6 +362,7 @@ export default function App() {
         <Route path="/exams" element={<ExamSchedules />} />
         {/* الأحداث والمناسبات — لكل معلم وإداري */}
         <Route path="/events" element={<Events />} />
+        <Route path="/events-reports" element={<EventsReports />} />
         <Route path="/referral/:id" element={<ReferralView />} />
         {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
         <Route path="/help" element={<Help />} />

@@ -48,7 +48,9 @@ export function ExamPrintArea({ children }) {
   );
 }
 
-export default function ExamTable({ title, subtitle, rows = [], note, final = false }) {
+export default function ExamTable({ title, subtitle, rows = [], note, final = false, deputy = "" }) {
+  // عمود الأسبوع يظهر فقط إذا امتدّت الاختبارات أسبوعين
+  const twoWeeks = rows.some((r) => (r.exam_week ?? 1) > 1);
   return (
     <div className="sheet mx-auto flex bg-white text-ink"
          style={{ width: "210mm", minHeight: "297mm",
@@ -80,7 +82,8 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
         <table className="mt-5 w-full border-collapse text-[12px]">
           <thead>
             <tr>
-              {["م", "المادة", "اليوم", "التاريخ", final ? "الفترة" : "الحصة"].map((h) => (
+              {["م", "المادة", ...(twoWeeks ? ["الأسبوع"] : []), "اليوم", "التاريخ",
+                final ? "الفترة" : "الحصة"].map((h) => (
                 <th key={h} className="border border-line px-2 py-2 text-center font-semibold text-mint-deep"
                     style={{ background: "#EDFAF2", ...INK }}>{h}</th>
               ))}
@@ -91,6 +94,11 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
               <tr key={r.id ?? i}>
                 <td className="num border border-line px-2 py-2 text-center">{i + 1}</td>
                 <td className="border border-line px-2 py-2 font-medium">{r.subject_name || "—"}</td>
+                {twoWeeks && (
+                  <td className="border border-line px-2 py-2 text-center">
+                    {(r.exam_week ?? 1) === 2 ? "الثاني" : "الأول"}
+                  </td>
+                )}
                 <td className="border border-line px-2 py-2 text-center">
                   {DAY_NAMES[r.day_of_week] ?? "—"}
                 </td>
@@ -103,7 +111,7 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
               </tr>
             ))}
             {rows.length === 0 && (
-              <tr><td colSpan={5} className="border border-line px-2 py-6 text-center text-faint">
+              <tr><td colSpan={twoWeeks ? 6 : 5} className="border border-line px-2 py-6 text-center text-faint">
                 لم تُحدَّد اختبارات بعد
               </td></tr>
             )}
@@ -120,9 +128,10 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
         <div className="mt-auto">
           <div className="grid grid-cols-2 gap-8 pt-8 text-center">
             <div>
-              <p className="text-[12px] text-muted">وكيل الشؤون التعليمية</p>
+              <p className="text-[12px] text-muted">وكيل شؤون الطلاب</p>
               <div className="h-8" />
               <div className="mx-auto h-px w-44 bg-line" />
+              <p className="mt-1.5 text-[12.5px] font-semibold">{deputy || "…"}</p>
             </div>
             <div>
               <p className="text-[12px] text-muted">مدير المدرسة</p>

@@ -33,6 +33,7 @@ export default function ExamSchedules() {
   const [scopes, setScopes] = useState([]);      // لولي الأمر: أبناؤه
   const [kind, setKind] = useState("period1");
   const [printing, setPrinting] = useState(null);
+  const [deputy, setDeputy] = useState("");
 
   // تحديد النطاق: الطالب فصله، وولي الأمر أبناؤه، والمعلم كل الفصول
   useEffect(() => {
@@ -41,6 +42,10 @@ export default function ExamSchedules() {
       const { data: st } = await supabase.from("settings")
         .select("key, value").in("key", ["active_year"]);
       const year = (st ?? []).find((r) => r.key === "active_year")?.value ?? "";
+
+      const { data: dep } = await supabase.from("admin_roles")
+        .select("users(full_name)").eq("role_type", "deputy_students").maybeSingle();
+      setDeputy(dep?.users?.full_name ?? "");
 
       const { data: t } = await supabase.from("exam_terms")
         .select("*").eq("is_published", true).eq("academic_year", year);
@@ -210,7 +215,7 @@ export default function ExamSchedules() {
       {printing && (
         <div className="hidden print:block">
           <ExamPrintArea>
-            <ExamTable {...printing} />
+            <ExamTable {...printing} deputy={deputy} />
           </ExamPrintArea>
         </div>
       )}

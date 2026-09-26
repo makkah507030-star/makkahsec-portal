@@ -65,6 +65,13 @@ const ADMIN_GROUPS = [
     ],
   },
   {
+    title: "الأحداث والمناسبات",
+    items: [
+      { to: "/events",         label: "الأحداث والمناسبات", perm: null, icon: "news" },
+      { to: "/events-reports", label: "تقارير الأحداث",     perm: null, icon: "chart" },
+    ],
+  },
+  {
     title: "الإعدادات",
     items: [
       { to: "/records-manual", label: "تعديل السجلات", perm: "records", icon: "edit" },
