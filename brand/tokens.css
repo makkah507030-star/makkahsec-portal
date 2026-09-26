@@ -1,5 +1,5 @@
 /* هوية بوابة مكة الثانوية الرقمية — مولَّد من brand/tokens.json، لا تعدّله يدويًا (أعد التوليد بالأمر في brand/README.md) */
-:root {
+:root, [data-theme="light"] {
   --ink: #101010;
   --muted: #6b6b6b;
   --faint: #a9a9a9;
@@ -23,6 +23,18 @@
   --absent: var(--danger);
   --late: var(--warning);
   --excused: #3f6b99;
+  --promo-ground: var(--paper);
+  --promo-ground-top: var(--paper);
+  --promo-text: var(--ink);
+  --promo-muted: var(--muted);
+  --promo-accent: var(--mint-deep);
+  --promo-card: var(--mint-tint);
+  --promo-line: var(--mint-light);
+  --promo-icon-bg: var(--mint-light);
+  --promo-icon: var(--mint-deep);
+  --promo-chip: var(--mint-deep);
+  --promo-on-chip: #ffffff;
+  --promo-pattern: rgba(62,99,80,0.05);
   --space-1: 4px;
   --space-1\.5: 6px;
   --space-2: 8px;
@@ -39,6 +51,20 @@
   --opacity-disabled: 0.4;
   --opacity-card-border: 0.6;
   --font-sans: "IBM Plex Sans Arabic", Tahoma, sans-serif;
+}
+[data-theme="dark"] {
+  --promo-ground: var(--mint-night);
+  --promo-ground-top: var(--mint-deep);
+  --promo-text: #ffffff;
+  --promo-muted: var(--mint-light);
+  --promo-accent: var(--mint);
+  --promo-card: rgba(255,255,255,0.06);
+  --promo-line: rgba(204,242,219,0.14);
+  --promo-icon-bg: var(--mint);
+  --promo-icon: var(--mint-night);
+  --promo-chip: var(--mint);
+  --promo-on-chip: var(--mint-night);
+  --promo-pattern: rgba(255,255,255,0.035);
 }
 .type-stat { font-family: var(--font-sans); font-size: 36px; line-height: 40px; font-weight: 700; }
 .type-h1 { font-family: var(--font-sans); font-size: 30px; line-height: 36px; font-weight: 700; }
