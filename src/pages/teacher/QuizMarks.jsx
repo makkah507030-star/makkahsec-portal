@@ -5,6 +5,7 @@ import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import QuizScan from "../../components/QuizScan.jsx";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -28,6 +29,7 @@ export default function QuizMarks() {
   const [subs, setSubs] = useState({});      // student_id -> submission
   const [active, setActive] = useState(null); // الطالب قيد الرصد
   const [fast, setFast] = useState(false);    // وضع الإدخال السريع
+  const [scanFrom, setScanFrom] = useState(null); // التصحيح بالكاميرا: الطالب الذي نبدأ به
   const [msg, setMsg] = useState(null);
   const [printing, setPrinting] = useState(false);
 
@@ -102,6 +104,7 @@ export default function QuizMarks() {
       await supabase.from("quizzes").update({ status: "marking" }).eq("id", quizId);
     }
     setActive(null);
+    return fresh;
   };
 
   const markAbsent = async (student) => {
@@ -200,6 +203,10 @@ export default function QuizMarks() {
                     ) : (
                       <span className="chip bg-canvas text-muted">لم يُرصد</span>
                     )}
+                    <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
+                            className="shrink-0 rounded-pill border border-mint-deep px-2.5 py-1 text-xs font-semibold text-mint-deep">
+                      📷
+                    </button>
                     <button onClick={() => setActive(active?.id === s.id ? null : s)}
                             className="shrink-0 rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white">
                       {active?.id === s.id ? "إغلاق" : sub ? "تعديل" : "رصد"}
@@ -218,7 +225,12 @@ export default function QuizMarks() {
           </div>
 
           <div className="no-print flex flex-wrap gap-2">
-            <button className="btn-primary flex-1" onClick={() => setFast(true)}>
+            <button className="btn-primary flex-1"
+                    onClick={() => setScanFrom((students.find((x) => !subs[x.id]) ?? students[0]).id)}>
+              📷 التصحيح بالكاميرا
+            </button>
+            <button className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep"
+                    onClick={() => setFast(true)}>
               الإدخال السريع
             </button>
             <button className="flex-1 rounded-pill border border-line py-2 text-sm font-semibold text-muted hover:bg-canvas"
@@ -228,6 +240,12 @@ export default function QuizMarks() {
             </button>
           </div>
         </>
+      )}
+
+      {scanFrom && (
+        <QuizScan quiz={quiz} questions={questions} students={students} subs={subs}
+                  startId={scanFrom} onSave={saveAnswers} onAbsent={markAbsent}
+                  onClose={() => { setScanFrom(null); loadClass(); }} />
       )}
 
       {fast && (

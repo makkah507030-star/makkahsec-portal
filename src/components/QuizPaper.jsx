@@ -2,6 +2,7 @@
 import { Fragment, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import logoIcon from "../assets/icon-mint.png";
+import { CARD, cardLayout, groupQuestions } from "../lib/omrLayout.js";
 import moeLogo from "../assets/moe-logo.png";
 
 /* =====================================================================
@@ -87,105 +88,75 @@ export function QuizPrintArea({ children }) {
 }
 
 /* =====================================================================
-   بطاقة التظليل — في الثلث السفلي من الورقة بعرضها كاملًا،
-   تفصلها عن الأسئلة قصاصة متقطّعة. دوائرها 6 مم متباعدة،
-   وعلاماتها المرجعية 8 مم محاطة بفراغ أبيض ليسهل كشفها بالكاميرا.
+   بطاقة الإجابة — تُرسم بمواضع مطلقة بالمليمتر من cardLayout (src/lib/omrLayout.js)،
+   وهي نفس الأرقام التي يقرأ بها قارئ الكاميرا، فتتطابق الطباعة والقراءة تمامًا.
+   علاماتها المرجعية الأربع 8 مم محاطة بفراغ أبيض ليسهل كشفها.
    ===================================================================== */
-function BubbleSheet({ groups = [], t, ltr, quiz, className }) {
-  if (!groups.length) return null;
-
-  // الترقيم يبدأ من جديد مع كل سؤال: س1: ف1، ف2 … ثم س2: ف1، ف2
-  const rows = [];
-  groups.forEach((g, gi) => {
-    g.list.forEach((q, qi) => {
-      if (q.kind === "match") {
-        (q.options?.left ?? []).forEach((_, k) => {
-          rows.push({
-            key: `${q.id}-${k}`,
-            label: `${t.qShort}${gi + 1}: ${t.fShort}${k + 1}`,
-            count: (q.options?.right ?? []).length || 4,
-            letters: t.ltrs,
-          });
-        });
-      } else {
-        rows.push({
-          key: q.id,
-          label: `${t.qShort}${gi + 1}: ${t.fShort}${qi + 1}`,
-          count: q.kind === "truefalse" ? 2 : (q.options?.length ?? 4),
-          letters: q.kind === "truefalse" ? [t.tf[0][0], t.tf[1][0]] : t.ltrs,
-        });
-      }
-    });
-  });
-
-  // ثلاثة أعمدة بعرض الصفحة، وأربعة للاختبارات الطويلة حتى لا تأكل البطاقة مساحة الأسئلة
-  const nCols = rows.length > 15 ? 4 : 3;
-  const perCol = Math.ceil(rows.length / nCols);
-  const cols = Array.from({ length: nCols }, (_, i) => rows.slice(i * perCol, (i + 1) * perCol));
-  const dense = nCols === 4;
-
-  const Mark = () => (
-    <span className="inline-block" style={{ width: "8mm", height: "8mm",
-                                            background: "#000", ...INK }} />
-  );
+function AnswerCard({ questions = [], t, ltr, quiz, className }) {
+  const L = cardLayout(questions, { ltr, labels: { qShort: t.qShort, fShort: t.fShort } });
+  if (!L.rows.length) return null;
+  const mm = (v) => `${v}mm`;
+  const { MARK, PAD } = CARD;
+  const abs = (x, y, w, h, extra = {}) =>
+    ({ position: "absolute", left: mm(x), top: mm(y), width: mm(w), height: mm(h), ...extra });
 
   return (
-    <div>
-      {/* البطاقة: فراغ أبيض حولها ليسهل كشف العلامات */}
-      <div style={{ padding: "3mm 0" }}>
-        <div className="border-2 border-black" style={{ padding: "3mm", ...INK }}>
+    <div data-omr-card style={{ marginTop: "2mm", position: "relative", width: mm(L.W), height: mm(L.H), ...INK }}>
+      {/* الإطار */}
+      <div style={{ position: "absolute", inset: 0, border: "0.5mm solid #000" }} />
 
-          <div className="flex items-start justify-between">
-            <Mark />
-            <div className="px-3 text-center">
-              <p className="text-[11px] font-bold">{t.answerSheet}</p>
-              <p className="text-[9px]" style={{ color: "#444" }}>{t.bubbleHint}</p>
-            </div>
-            <Mark />
-          </div>
+      {/* العلامات المرجعية */}
+      {Object.entries(L.marks).map(([k, c]) => (
+        <span key={k} style={abs(c.x - MARK / 2, c.y - MARK / 2, MARK, MARK, { background: "#000" })} />
+      ))}
 
-          <div className="mt-2 grid grid-cols-3 gap-2 text-[9.5px]">
-            <div className="border px-1.5 py-1" style={{ borderColor: "#000" }}>
-              {t.name}: ____________________
-            </div>
-            <div className="border px-1.5 py-1" style={{ borderColor: "#000" }}>
-              {t.cls}: <b>{className || "__________"}</b>
-            </div>
-            <div className="border px-1.5 py-1 text-center" style={{ borderColor: "#000" }}>
-              {t.marks}: _____ / <span className="num">{quiz?.total_marks}</span>
-            </div>
-          </div>
-
-          <div className="mt-2 grid gap-x-3"
-               style={{ gridTemplateColumns: `repeat(${nCols}, minmax(0, 1fr))` }}>
-            {cols.map((col, ci) => (
-              <div key={ci} style={{ display: "flex", flexDirection: "column",
-                                     gap: dense ? "1.4mm" : "2mm" }}>
-                {col.map((r) => (
-                  <div key={r.key} className="flex items-center gap-[1.2mm]">
-                    <span className="num text-[9px] font-bold"
-                          style={{ width: dense ? "12mm" : "14mm", textAlign: ltr ? "left" : "right" }}>
-                      {r.label}
-                    </span>
-                    {Array.from({ length: r.count }).map((_, k) => (
-                      <span key={k}
-                            className="grid place-items-center rounded-full text-[7px]"
-                            style={{ width: dense ? "5mm" : "6mm", height: dense ? "5mm" : "6mm",
-                                     border: "0.4mm solid #000", color: "#555", ...INK }}>
-                        {r.letters[k] ?? k + 1}
-                      </span>
-                    ))}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-2 flex items-end justify-between">
-            <Mark /><Mark />
-          </div>
-        </div>
+      {/* العنوان والتعليمات بين العلامتين العلويتين */}
+      <div className="text-center" style={abs(PAD + MARK + 4, PAD, L.W - 2 * (PAD + MARK + 4), MARK)}>
+        <p className="text-[11px] font-bold leading-[1.35]">{t.answerSheet}</p>
+        <p className="text-[9px] leading-[1.3]" style={{ color: "#444" }}>{t.bubbleHint}</p>
       </div>
+
+      {/* خانات الطالب */}
+      {(() => {
+        const x0 = CARD.SIDE, w = (L.W - 2 * CARD.SIDE - 4) / 3, y = 13, h = 6;
+        const cells = [
+          <>{t.name}: ____________________</>,
+          <>{t.cls}: <b>{className || "__________"}</b></>,
+          <>{t.marks}: _____ / <span className="num">{quiz?.total_marks}</span></>,
+        ];
+        return cells.map((c, i) => {
+          const x = ltr ? x0 + i * (w + 2) : L.W - x0 - (i + 1) * w - i * 2;
+          return (
+            <div key={i} className="flex items-center px-1.5 text-[9.5px]"
+                 style={abs(x, y, w, h, { border: "0.3mm solid #000",
+                                          justifyContent: i === 2 ? "center" : "flex-start" })}>
+              {c}
+            </div>
+          );
+        });
+      })()}
+
+      {/* الصفوف: رقم الفقرة ودوائرها */}
+      {L.rows.map((r) => {
+        const letters = r.kind === "truefalse" ? [t.tf[0][0], t.tf[1][0]] : t.ltrs;
+        return (
+          <Fragment key={r.key}>
+            <span className="num flex items-center text-[9px] font-bold"
+                  style={abs(r.labelX, r.cy - 2.5, r.labelW, 5,
+                             { justifyContent: ltr ? "flex-start" : "flex-end" })}>
+              {r.label}
+            </span>
+            {r.bubbles.map((b, k) => (
+              <span key={k} data-omr={`${r.key}:${k}`}
+                    className="grid place-items-center rounded-full text-[7px]"
+                    style={abs(b.x - L.D / 2, b.y - L.D / 2, L.D, L.D,
+                               { border: "0.4mm solid #000", color: "#555", boxSizing: "border-box" })}>
+                {letters[k] ?? k + 1}
+              </span>
+            ))}
+          </Fragment>
+        );
+      })}
     </div>
   );
 }
@@ -196,11 +167,8 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
   const dir = ltr ? "ltr" : "rtl";
 
   // تجميع الأسئلة بأنماطها لتظهر كمجموعات مرقّمة
-  const groups = [];
-  ["mcq", "truefalse", "match"].forEach((kind) => {
-    const list = questions.filter((q) => q.kind === kind);
-    if (list.length) groups.push({ kind, list });
-  });
+  // نفس تجميع بطاقة الإجابة (omrLayout) حتى يتطابق ترتيب الفقرات في الورقة والبطاقة
+  const groups = groupQuestions(questions);
 
   // ملاءمة الصفحة الواحدة: الورقة بارتفاع A4 ثابت، والبطاقة والتذييل بارتفاعهما
   // الطبيعي، ومنطقة الأسئلة تأخذ الباقي. إن زادت الأسئلة عن المساحة نصغّرها
@@ -413,7 +381,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
       </div>
 
       <div className="shrink-0">
-        <BubbleSheet groups={groups} t={t} ltr={ltr} quiz={quiz} className={className} />
+        <AnswerCard questions={questions} t={t} ltr={ltr} quiz={quiz} className={className} />
       </div>
 
       {/* التذييل */}
