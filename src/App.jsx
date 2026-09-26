@@ -71,7 +71,6 @@ import EventsReports from "./pages/EventsReports.jsx";
 import MyQuizzes from "./pages/teacher/MyQuizzes.jsx";
 import QuizMarks from "./pages/teacher/QuizMarks.jsx";
 import QuizResults from "./components/QuizResults.jsx";
-import OmrTest from "./pages/teacher/OmrTest.jsx";
 import ExamsAdmin from "./pages/admin/ExamsAdmin.jsx";
 import ReferralView from "./pages/ReferralView.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
@@ -381,7 +380,6 @@ export default function App() {
         <Route path="/quizzes" element={<MyQuizzes />} />
         <Route path="/quiz-marks" element={<QuizMarks />} />
         {/* أداة تجربة قراءة بطاقة التظليل */}
-        <Route path="/omr-test" element={<OmrTest />} />
         <Route path="/referral/:id" element={<ReferralView />} />
         {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
         <Route path="/help" element={<Help />} />

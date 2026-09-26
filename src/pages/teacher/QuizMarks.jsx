@@ -6,6 +6,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import QuizScan from "../../components/QuizScan.jsx";
+import PrintPortal from "../../components/PrintPortal.jsx";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -30,6 +31,9 @@ export default function QuizMarks() {
   const [active, setActive] = useState(null); // الطالب قيد الرصد
   const [fast, setFast] = useState(false);    // وضع الإدخال السريع
   const [scanFrom, setScanFrom] = useState(null); // التصحيح بالكاميرا: الطالب الذي نبدأ به
+  const [quizLoaded, setQuizLoaded] = useState(false);   // اكتمل جلب فصول الاختبار وأسئلته
+  const [classLoaded, setClassLoaded] = useState(false); // اكتمل جلب طلاب الفصل
+  const [loadErr, setLoadErr] = useState(null);
   const [msg, setMsg] = useState(null);
   const [printing, setPrinting] = useState(false);
 
@@ -49,9 +53,10 @@ export default function QuizMarks() {
 
   // فصول الاختبار وأسئلته
   useEffect(() => {
+    setQuizLoaded(false); setLoadErr(null);
     if (!quizId) { setClasses([]); setQuestions([]); setClassId(""); return; }
     (async () => {
-      const [{ data: lk }, { data: qs }] = await Promise.all([
+      const [{ data: lk, error: e1 }, { data: qs, error: e2 }] = await Promise.all([
         supabase.from("quiz_classes")
           .select("class_id, classes(class_no, grade)").eq("quiz_id", quizId),
         supabase.from("quiz_questions")
@@ -60,13 +65,16 @@ export default function QuizMarks() {
       setClasses((lk ?? []).map((l) => ({ id: l.class_id, ...l.classes })));
       setQuestions(qs ?? []);
       setClassId((lk ?? [])[0]?.class_id ?? "");
+      if (e1 || e2) setLoadErr((e1 || e2).message);
+      setQuizLoaded(true);
     })();
   }, [quizId]);
 
   // طلاب الفصل وإجاباتهم
   const loadClass = async () => {
+    setClassLoaded(false);
     if (!classId || !quizId) { setStudents([]); setSubs({}); return; }
-    const [{ data: en }, { data: sb }] = await Promise.all([
+    const [{ data: en, error: e1 }, { data: sb, error: e2 }] = await Promise.all([
       supabase.from("student_enrollment")
         .select("students(id, full_name)").eq("class_id", classId).eq("status", "active"),
       supabase.from("quiz_submissions")
@@ -75,6 +83,8 @@ export default function QuizMarks() {
     setStudents((en ?? []).map((x) => x.students).filter(Boolean)
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar")));
     setSubs(Object.fromEntries((sb ?? []).map((x) => [x.student_id, x])));
+    if (e1 || e2) setLoadErr((e1 || e2).message);
+    setClassLoaded(true);
   };
 
   useEffect(() => { loadClass(); }, [classId, quizId]);
@@ -166,6 +176,29 @@ export default function QuizMarks() {
         )}
       </section>
 
+      {/* حالات لا يظهر فيها شيء — نوضّح السبب بدل صفحة فارغة */}
+      {loadErr && (
+        <p className="no-print rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">
+          تعذّر جلب البيانات: {loadErr}
+        </p>
+      )}
+      {quizId && quizLoaded && !loadErr && questions.length === 0 && (
+        <p className="no-print rounded-sm2 bg-warning/10 px-3 py-2 text-sm text-warning">
+          لا توجد أسئلة في هذا الاختبار. أضفها من صفحة «اختباراتي».
+        </p>
+      )}
+      {quizId && quizLoaded && !loadErr && classes.length === 0 && (
+        <p className="no-print rounded-sm2 bg-warning/10 px-3 py-2 text-sm text-warning">
+          هذا الاختبار غير مرتبط بأي فصل، فلا يظهر طلاب لتصحيحهم. افتحه من صفحة
+          «اختباراتي» واختر فصوله من تبويب «الفصول»، ثم عُد إلى هنا.
+        </p>
+      )}
+      {quizId && classId && classLoaded && !loadErr && students.length === 0 && (
+        <p className="no-print rounded-sm2 bg-warning/10 px-3 py-2 text-sm text-warning">
+          لا يوجد طلاب مسجّلون في هذا الفصل.
+        </p>
+      )}
+
       {msg && (
         <p className={`no-print rounded-sm2 px-3 py-2 text-sm ${
           msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
@@ -256,17 +289,7 @@ export default function QuizMarks() {
 
       {printing && quiz && (
         <>
-          <style dangerouslySetInnerHTML={{ __html: `
-            @media print {
-              body * { visibility: hidden !important; }
-              #qz-sheet, #qz-sheet * { visibility: visible !important; }
-              #qz-sheet { position: absolute; inset: 0; background: #fff; }
-              #qz-sheet tr { break-inside: avoid; }
-              .no-print { display: none !important; }
-            }
-            @page { size: 210mm 297mm; margin: 0; }
-          ` }} />
-          <div id="qz-sheet" className="hidden print:block">
+          <PrintPortal id="qz-sheet" extraCss="#qz-sheet tr { break-inside: avoid; }">
             <div className="mx-auto bg-white text-ink"
                  style={{ width: "210mm", minHeight: "297mm", padding: "13mm 14mm",
                           fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
@@ -355,7 +378,7 @@ export default function QuizMarks() {
                 <span className="font-semibold text-mint-deep" dir="ltr">makkahsec.com</span>
               </div>
             </div>
-          </div>
+          </PrintPortal>
         </>
       )}
     </div>

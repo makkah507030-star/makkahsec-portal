@@ -1,6 +1,7 @@
 // src/components/ReferralSheet.jsx
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import PrintPortal from "./PrintPortal.jsx";
 
 /* =====================================================================
    ورقة إحالة الطالب — ملف واحد يوثّق المسار كاملًا:
@@ -32,23 +33,13 @@ const fmt = (ts) => {
   return `${h} (${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()})`;
 };
 
+// الطباعة عبر PrintPortal: صفحة A4 عمودية ثابتة، بلا إزاحة ولا صفحات زائدة
 export function ReferralPrintArea({ children }) {
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body * { visibility: hidden !important; }
-          #ref-print, #ref-print * { visibility: visible !important; }
-          #ref-print { position: absolute; inset: 0; background: #fff; }
-          #ref-print .sheet { box-shadow: none !important; margin: 0 !important; }
-          #ref-print .stage { break-inside: avoid; }
-          .no-print { display: none !important; }
-        }
-        @page refprint { size: A4 portrait; margin: 0; }
-        @media print { #ref-print { page: refprint; } }
-      ` }} />
-      <div id="ref-print">{children}</div>
-    </>
+    <PrintPortal id="ref-print"
+                 extraCss="#ref-print .stage { break-inside: avoid; }">
+      {children}
+    </PrintPortal>
   );
 }
 

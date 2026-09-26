@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import PrintPortal from "../components/PrintPortal.jsx";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
@@ -163,17 +164,7 @@ export default function EventsReports() {
 
       {printing && (
         <>
-          <style dangerouslySetInnerHTML={{ __html: `
-            @media print {
-              body * { visibility: hidden !important; }
-              #ev-report, #ev-report * { visibility: visible !important; }
-              #ev-report { position: absolute; inset: 0; background: #fff; }
-              #ev-report tr { break-inside: avoid; }
-              .no-print { display: none !important; }
-            }
-            @page { size: 210mm 297mm; margin: 0; }
-          ` }} />
-          <div id="ev-report" className="hidden print:block">
+          <PrintPortal id="ev-report" extraCss="#ev-report tr { break-inside: avoid; }">
             <div className="mx-auto bg-white text-ink"
                  style={{ width: "210mm", minHeight: "297mm", padding: "13mm 14mm",
                           fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
@@ -273,7 +264,7 @@ export default function EventsReports() {
                 <span className="font-semibold text-mint-deep" dir="ltr">makkahsec.com</span>
               </div>
             </div>
-          </div>
+          </PrintPortal>
         </>
       )}
     </div>

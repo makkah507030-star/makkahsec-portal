@@ -2,6 +2,7 @@
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import { DAY_NAMES } from "../lib/schoolTime";
+import PrintPortal from "./PrintPortal.jsx";
 
 /* =====================================================================
    تقرير المناوبة والإشراف — غلاف رسمي وجداول جاهزة للطباعة أو الحفظ PDF.
@@ -22,25 +23,13 @@ const fmtG = (s) => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
+// الطباعة عبر PrintPortal: صفحة A4 عمودية ثابتة، بلا إزاحة ولا صفحات زائدة
 export function DutyPrintArea({ children }) {
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body * { visibility: hidden !important; }
-          #duty-print, #duty-print * { visibility: visible !important; }
-          #duty-print { position: absolute; inset: 0; background: #fff; }
-          #duty-print .sheet { box-shadow: none !important; break-after: page; margin: 0 !important; }
-          #duty-print .sheet:last-child { break-after: auto; }
-          #duty-print thead { display: table-header-group; }
-          #duty-print tr { break-inside: avoid; }
-          .no-print { display: none !important; }
-        }
-        @page dutyprint { size: A4 portrait; margin: 0; }
-        @media print { #duty-print { page: dutyprint; } }
-      ` }} />
-      <div id="duty-print">{children}</div>
-    </>
+    <PrintPortal id="duty-print"
+                 extraCss="#duty-print .sheet { break-after: page; } #duty-print .sheet:last-child { break-after: auto; } #duty-print thead { display: table-header-group; } #duty-print tr { break-inside: avoid; }">
+      {children}
+    </PrintPortal>
   );
 }
 

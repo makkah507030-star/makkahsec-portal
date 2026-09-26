@@ -1,6 +1,7 @@
 // src/components/FormSheet.jsx
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import PrintPortal from "./PrintPortal.jsx";
 
 /* =====================================================================
    ورقة النموذج القابلة للطباعة — هوية مدرسة مكة الثانوية.
@@ -20,24 +21,13 @@ export const SHEET_PX = { portrait: 794, landscape: 1123 };
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
+// الطباعة عبر PrintPortal: صفحة A4 بالاتجاه المحدد ثابتة، بلا إزاحة ولا صفحات زائدة
 export function PrintArea({ landscape, children }) {
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body * { visibility: hidden !important; }
-          #print-root, #print-root * { visibility: visible !important; }
-          #print-root { position: absolute; inset: 0; background: #fff; }
-          #print-root .sheet { box-shadow: none !important; transform: none !important;
-                               break-after: page; margin: 0 !important; }
-          #print-root .sheet:last-child { break-after: auto; }
-          .no-print { display: none !important; }
-          #print-root { page: formpage; }
-        }
-        @page formpage { size: A4 ${landscape ? "landscape" : "portrait"}; margin: 0; }
-      ` }} />
-      <div id="print-root">{children}</div>
-    </>
+    <PrintPortal id="print-root" landscape={landscape}
+                 extraCss="#print-root .sheet { break-after: page; } #print-root .sheet:last-child { break-after: auto; }">
+      {children}
+    </PrintPortal>
   );
 }
 

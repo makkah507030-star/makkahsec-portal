@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useSession } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import PrintPortal from "../components/PrintPortal.jsx";
 
 /* =====================================================================
    دليل الاستخدام — إجراءات البوابة بخطواتها.
@@ -125,19 +126,10 @@ function PrintableGuide({ procs, scopeLabel, issuedBy }) {
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body * { visibility: hidden !important; }
-          #guide-print, #guide-print * { visibility: visible !important; }
-          #guide-print { position: absolute; inset: 0; background: #fff; }
-          #guide-print .cover { break-after: page; }
-          #guide-print .proc-card { break-inside: avoid; }
-          .no-print { display: none !important; }
-        }
-        @page { size: 210mm 297mm; margin: 14mm 12mm; }
-      ` }} />
 
-      <div id="guide-print" className="text-ink"
+      <PrintPortal id="guide-print" margin="14mm 12mm"
+                   extraCss="#guide-print .cover { break-after: page; } #guide-print .proc-card { break-inside: avoid; }">
+      <div className="text-ink"
            style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
 
         {/* الغلاف */}
@@ -216,6 +208,7 @@ function PrintableGuide({ procs, scopeLabel, issuedBy }) {
           </div>
         ))}
       </div>
+      </PrintPortal>
     </>
   );
 }

@@ -126,7 +126,7 @@ export default function NewsArticle() {
 <title>${escHtml(item.title)}</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  @page{margin:12mm}
+  @page{size:A4 portrait;margin:12mm}
   body{font-family:"Segoe UI","Tahoma",sans-serif;color:#1B2A24;padding:0;line-height:1.9;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .head{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2px solid #0F7B55;padding-bottom:10px;margin-bottom:16px}
   .head .side{width:92px;display:flex;align-items:center;justify-content:center}

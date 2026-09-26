@@ -2,6 +2,7 @@
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import { DAY_NAMES } from "../lib/schoolTime";
+import PrintPortal from "./PrintPortal.jsx";
 
 /* =====================================================================
    جدول اختبارات قابل للطباعة — بهوية المدرسة، مقاس A4 عمودي.
@@ -29,23 +30,13 @@ const fmt = (s) => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}${h ? ` (${h})` : ""}`;
 };
 
+// الطباعة عبر PrintPortal: صفحة A4 عمودية ثابتة، بلا إزاحة ولا صفحات زائدة
 export function ExamPrintArea({ children }) {
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body * { visibility: hidden !important; }
-          #exam-print, #exam-print * { visibility: visible !important; }
-          #exam-print { position: absolute; inset: 0; background: #fff; }
-          #exam-print .sheet { box-shadow: none !important; margin: 0 !important; }
-          #exam-print tr { break-inside: avoid; }
-          .no-print { display: none !important; }
-        }
-        @page examprint { size: A4 portrait; margin: 0; }
-        @media print { #exam-print { page: examprint; } }
-      ` }} />
-      <div id="exam-print">{children}</div>
-    </>
+    <PrintPortal id="exam-print"
+                 extraCss="#exam-print tr { break-inside: avoid; }">
+      {children}
+    </PrintPortal>
   );
 }
 
