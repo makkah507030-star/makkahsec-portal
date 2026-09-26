@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import QuizPaper, { QuizPrintArea } from "../../components/QuizPaper.jsx";
+import OnlineQuizPanel from "../../components/OnlineQuizPanel.jsx";
 
 /* =====================================================================
    اختباراتي — اختبارات المعلم القصيرة.
@@ -427,7 +428,8 @@ function QuizEditor({ quiz, uid, onBack }) {
   const setStatus = async (status) => {
     await supabase.from("quizzes").update({ status }).eq("id", q.id);
     setQ((x) => ({ ...x, status }));
-    setMsg({ ok: true, text: status === "ready" ? "الاختبار جاهز للطباعة." : "حُفظ." });
+    setMsg({ ok: true, text: status === "ready" ? "الاختبار جاهز للطباعة."
+                             : status === "marking" ? "أصبحت النتائج ظاهرة للطلاب." : "حُفظ." });
   };
 
   const pill = (on) =>
@@ -519,6 +521,9 @@ function QuizEditor({ quiz, uid, onBack }) {
         <button className={pill(tab === "classes")} onClick={() => setTab("classes")}>
           الفصول {linked.length > 0 && <span className="num">({linked.length})</span>}
         </button>
+        <button className={pill(tab === "online")} onClick={() => setTab("online")}>
+          اختبار إلكتروني
+        </button>
       </div>
 
       {msg && (
@@ -590,6 +595,17 @@ function QuizEditor({ quiz, uid, onBack }) {
           حذف الاختبار
         </button>
       </div>
+
+      {tab === "online" && (
+        <div className="no-print">
+          <OnlineQuizPanel quiz={q} linked={linked} questionsCount={questions?.length ?? 0}
+                           marksOk={marksUsed === Number(q.total_marks)}
+                           onStatus={(status, silent) => {
+                             if (silent) setQ((x) => ({ ...x, status }));
+                             else setStatus(status);
+                           }} />
+        </div>
+      )}
 
       {tab === "classes" && (
         <section className="no-print card p-4">

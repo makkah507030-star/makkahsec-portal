@@ -1,6 +1,7 @@
 // src/components/FormReport.jsx
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import PrintPortal from "./PrintPortal.jsx";
 
 /* =====================================================================
    تقرير النماذج الصادرة — غلاف رسمي + جدول بالمستندات.
@@ -24,25 +25,13 @@ const STATUS_AR = {
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
+// الطباعة عبر PrintPortal: صفحة A4 عمودية ثابتة، بلا إزاحة ولا صفحات زائدة
 export function ReportPrintArea({ children }) {
   return (
-    <>
-      <style dangerouslySetInnerHTML={{ __html: `
-        @media print {
-          body * { visibility: hidden !important; }
-          #report-root, #report-root * { visibility: visible !important; }
-          #report-root { position: absolute; inset: 0; background: #fff; }
-          #report-root .sheet { box-shadow: none !important; break-after: page; margin: 0 !important; }
-          #report-root .sheet:last-child { break-after: auto; }
-          #report-root thead { display: table-header-group; }
-          #report-root tr { break-inside: avoid; }
-          .no-print { display: none !important; }
-        }
-        @page reportroot { size: A4 portrait; margin: 0; }
-        @media print { #report-root { page: reportroot; } }
-      ` }} />
-      <div id="report-root">{children}</div>
-    </>
+    <PrintPortal id="report-root"
+                 extraCss="#report-root .sheet { break-after: page; } #report-root .sheet:last-child { break-after: auto; } #report-root thead { display: table-header-group; } #report-root tr { break-inside: avoid; }">
+      {children}
+    </PrintPortal>
   );
 }
 

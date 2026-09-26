@@ -71,6 +71,8 @@ import EventsReports from "./pages/EventsReports.jsx";
 import MyQuizzes from "./pages/teacher/MyQuizzes.jsx";
 import QuizMarks from "./pages/teacher/QuizMarks.jsx";
 import QuizResults from "./components/QuizResults.jsx";
+import OnlineQuizzesCard from "./components/OnlineQuizzesCard.jsx";
+import QuizTake from "./pages/QuizTake.jsx";
 import ExamsAdmin from "./pages/admin/ExamsAdmin.jsx";
 import ReferralView from "./pages/ReferralView.jsx";
 import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
@@ -228,6 +230,7 @@ export default function App() {
     teacher: teacherHome,
     student: (
       <div className="space-y-5">
+        <OnlineQuizzesCard />
         <StudentHome />
         <QuizResults compact />
       </div>
@@ -379,7 +382,8 @@ export default function App() {
         {/* اختباراتي — للمعلم */}
         <Route path="/quizzes" element={<MyQuizzes />} />
         <Route path="/quiz-marks" element={<QuizMarks />} />
-        {/* أداة تجربة قراءة بطاقة التظليل */}
+        {/* الاختبار الإلكتروني — يؤدّيه الطالب المُسند إليه (الصفحة تتحقق) */}
+        <Route path="/quiz/:id" element={<QuizTake />} />
         <Route path="/referral/:id" element={<ReferralView />} />
         {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
         <Route path="/help" element={<Help />} />
