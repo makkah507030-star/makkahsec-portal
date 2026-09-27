@@ -27,6 +27,8 @@ export default function Statistics() {
   const [view, setView] = useState("days");
   const [tick, setTick] = useState(0);
   const [skipPartial, setSkipPartial] = useState(true);
+  const [officialStart, setOfficialStart] = useState(null);
+  useEffect(() => { loadReportsStart().then(setOfficialStart); }, []);
 
   useEffect(() => {
     loadRangeStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
@@ -150,7 +152,11 @@ export default function Statistics() {
         onExcel={() => { const r = report(); exportStyledExcel({ ...r, subtitle: range(), fileName: `${r.title}-${from}_${to}`, sheetName: "الإحصاء", signatures: SIGNS }); }} />
 
       {!days ? <Loading /> : days.length === 0 ? (
-        <Empty>لا أيام معتمدة في هذه الفترة — اعتمد الأيام السابقة من الأداة أدناه.</Empty>
+        <Empty>
+          {officialStart && todayISO() < officialStart
+            ? <>يبدأ العمل الرسمي من {fmtGreg(officialStart + "T00:00:00")} — تظهر الإحصاءات بعد اعتماد أول يوم (آليًا بعد نهاية الحصة الثانية).</>
+            : "لا أيام معتمدة في هذه الفترة. اليوم الجاري يُعتمد آليًا بعد نهاية الحصة الثانية."}
+        </Empty>
       ) : view === "days" ? (
         <div className="card divide-y divide-line overflow-hidden">
           <div className="flex items-center justify-between gap-3 bg-gray-tint px-4 py-2 text-[11px] font-semibold text-muted">
@@ -275,7 +281,9 @@ function Backfill({ from, to, approved, onDone }) {
   if (!state && pendingDays.length === 0 && partialDays.length === 0) {
     return (
       <p className="text-center text-xs text-faint">
-        الاعتماد آلي يوميًا منذ {since} — لا أيام تحتاج اعتمادًا أو إعادة احتساب.
+        {todayISO() < officialStart
+          ? <>يبدأ الاعتماد الآلي اليومي من {since}.</>
+          : <>الاعتماد آلي يوميًا منذ {since} — لا أيام تحتاج اعتمادًا أو إعادة احتساب.</>}
       </p>
     );
   }
