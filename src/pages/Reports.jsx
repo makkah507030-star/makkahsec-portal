@@ -151,7 +151,7 @@ const logos = () => ({
 
 /* ============================ 1) تقرير يومي ============================ */
 
-function DailyReport({ scopeIds }) {
+export function DailyReport({ scopeIds }) {
   const [date, setDate] = useState(todayStr());
   const [rows, setRows] = useState(null);
   const [status, setStatus] = useState("all");
@@ -271,7 +271,7 @@ function DailyReport({ scopeIds }) {
 
 /* ============================ 2) تقرير طالب ============================ */
 
-function StudentReport({ scopeIds }) {
+export function StudentReport({ scopeIds }) {
   const [q, setQ] = useState("");
   const [options, setOptions] = useState([]);
   const [student, setStudent] = useState(null);
@@ -428,7 +428,7 @@ function StudentReport({ scopeIds }) {
 
 /* ============================ 3) تقرير فترة ============================ */
 
-function PeriodReport({ scopeIds }) {
+export function PeriodReport({ scopeIds }) {
   const [from, setFrom] = useState(daysAgo(30));
   const [to, setTo] = useState(todayStr());
   const [rows, setRows] = useState(null);
@@ -757,7 +757,7 @@ function DailyRateReport() {
 const YELLOW_AT = 10;
 const RED_AT = 15;
 
-function AbsenceDaysReport({ scopeIds }) {
+export function AbsenceDaysReport({ scopeIds }) {
   const [from, setFrom] = useState(daysAgo(120));
   const [to, setTo] = useState(todayStr());
   const [rows, setRows] = useState(null);
@@ -1001,7 +1001,7 @@ function AbsenceDaysReport({ scopeIds }) {
 
 /* ==================== كشوف تحضير المعلمين اليومية ==================== */
 
-function TeacherSheetsReport() {
+export function TeacherSheetsReport() {
   const [date, setDate] = useState(todayStr());
   const [rows, setRows] = useState(null);
 

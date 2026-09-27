@@ -26,9 +26,8 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/students",    label: "كشوف الطلاب",    perm: "students",    icon: "users" },
       { to: "/results-admin", label: "نتائج الطلاب", perm: "results", icon: "award" },
-      { to: "/attendance-overview", label: "الحضور والغياب", perm: "reports", icon: "check" },
-      { to: "/period-attendance", label: "تحضير الحصص اليومية", perm: "reports", icon: "clock" },
-      { to: "/reports",     label: "التقارير",  perm: "reports",     icon: "chart" },
+      // مركز واحد لكل تقارير الحضور والغياب (يضم الحضور الرسمي والتأخر وتحضير الحصص والتقارير)
+      { to: "/student-affairs", label: "تقارير شؤون الطلاب", perm: "reports", icon: "chart" },
       { to: "/permissions", label: "الاستئذان", perm: "permissions", icon: "ticket" },
       { to: "/exams-admin", label: "جداول الاختبارات", perm: "students", icon: "calendar" },
     ],
