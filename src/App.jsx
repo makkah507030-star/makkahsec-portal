@@ -38,6 +38,7 @@ const NewsArticle = lazy(() => import("./pages/NewsArticle.jsx"));
 const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
 const NotificationsAdmin = lazy(() => import("./pages/admin/NotificationsAdmin.jsx"));
 const AttendanceOverview = lazy(() => import("./pages/admin/AttendanceOverview.jsx"));
+const StudentAffairs = lazy(() => import("./pages/student-affairs/index.jsx"));
 const PeriodAttendance = lazy(() => import("./pages/admin/PeriodAttendance.jsx"));
 const SubstituteReport = lazy(() => import("./pages/admin/SubstituteReport.jsx"));
 const ResultsAdmin = lazy(() => import("./pages/admin/ResultsAdmin.jsx"));
@@ -310,6 +311,8 @@ export default function App() {
               {(isTechSupport || adminRoles.includes("principal")) && (
                 <Route path="/forms-admin" element={<FormsAdmin />} />
               )}
+              {can("reports") && <Route path="/student-affairs" element={<StudentAffairs />} />}
+              {/* الصفحتان السابقتان باقيتان بروابطهما — محتواهما صار داخل مركز تقارير شؤون الطلاب */}
               {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
               {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
               {(can("import") || can("reports")) && <Route path="/substitute-report" element={<SubstituteReport />} />}

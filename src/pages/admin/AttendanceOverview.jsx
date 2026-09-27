@@ -211,7 +211,7 @@ function OfficialTab() {
 
 /* ==================== الطلاب المفقودون ==================== */
 
-function MissingTab() {
+export function MissingTab() {
   const [date, setDate] = useState(todayISO());
   const [rows, setRows] = useState(null);
   const [openId, setOpenId] = useState(null);
@@ -516,7 +516,7 @@ function LateTab() {
 
 /* ==================== أجهزة البصمة ==================== */
 
-function DevicesTab() {
+export function DevicesTab() {
   const [devices, setDevices] = useState(null);
   const [noDevice, setNoDevice] = useState(0);
 

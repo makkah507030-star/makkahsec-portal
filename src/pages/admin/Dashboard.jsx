@@ -256,7 +256,7 @@ export default function Dashboard() {
       ))}
 
       {canReports && d.escapeCount > 0 && (
-        <Link to="/reports"
+        <Link to="/student-affairs?tab=follow"
           className="flex items-center justify-between gap-3 rounded-card border border-absent/30 bg-absent/5 px-5 py-4 transition-colors hover:bg-absent/10">
           <div>
             <p className="text-sm font-bold text-absent">بصم ولم يحضر</p>
@@ -364,7 +364,7 @@ function OfficialStatusBox({ date }) {
   const pct = resolved ? Math.round((present / resolved) * 100) : null;
 
   return (
-    <Link to="/attendance-overview"
+    <Link to="/student-affairs?tab=official"
       className="block rounded-card border border-[#CCF2DB] bg-mint-tint p-5 transition-colors hover:bg-mint-tint/70">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
