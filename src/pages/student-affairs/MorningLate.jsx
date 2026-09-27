@@ -8,10 +8,14 @@ import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { lateDeadlineLabel, LATE_GRACE_MINUTES, loadRangeStart, isMissingTable } from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, GradePills, Note, Loading, Empty, SetupNotice, useDay, daysWord,
+  useFingerprint, FingerprintLockedNote,
 } from "./shared.jsx";
 
 export default function MorningLate() {
   const [mode, setMode] = useState("day");
+  const fp = useFingerprint();
+  if (fp == null) return <Loading />;
+  if (!fp) return <FingerprintLockedNote />;
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5">

@@ -1,7 +1,7 @@
 // عناصر مشتركة لمركز تقارير شؤون الطلاب
 import { useCallback, useEffect, useState } from "react";
 import { STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
-import { loadDay, loadApproval } from "../../lib/officialAttendance";
+import { loadDay, loadApproval, loadFingerprintEnabled } from "../../lib/officialAttendance";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -134,3 +134,23 @@ export const weekdayOf = (date) => WEEKDAY[new Date(`${date}T12:00:00`).getDay()
 /** «3 أيام» / «15 يومًا» / «يوم واحد» */
 export const daysWord = (n) =>
   n === 1 ? "يوم واحد" : n === 2 ? "يومان" : n >= 3 && n <= 10 ? `${n} أيام` : `${n} يومًا`;
+
+/** حالة قفل البصمة: null أثناء التحميل، true مفعّلة، false مقفلة (مرحلة تجربة) */
+export function useFingerprint() {
+  const [enabled, setEnabled] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    loadFingerprintEnabled().then((v) => { if (alive) setEnabled(v); }).catch(() => setEnabled(false));
+    return () => { alive = false; };
+  }, []);
+  return enabled;
+}
+
+export function FingerprintLockedNote() {
+  return (
+    <Note tone="warn">
+      البصمة مقفلة — أجهزة البصمة في مرحلة التجربة، فلا تُحتسب البصمات في التأخر ولا في المتابعة.
+      يفتحها المسؤول من زر «البصمة» أعلى الصفحة عند اعتمادها رسميًا.
+    </Note>
+  );
+}

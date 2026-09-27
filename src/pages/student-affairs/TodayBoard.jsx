@@ -60,8 +60,10 @@ export default function TodayBoard({ go }) {
       key: "late", tab: "late", n: 1,
       title: "التأخر الصباحي",
       when: `بعد ${lateDeadlineLabel(live.dayStart)} (الاصطفاف + ${LATE_GRACE_MINUTES} دقائق)`,
-      state: lateStart != null && now >= lateStart ? "ready" : "wait",
-      body: <>بصم <b className="num">{punched}</b> · متأخر <b className="num text-late">{lateCount}</b></>,
+      state: !live.fingerprint ? "locked" : lateStart != null && now >= lateStart ? "ready" : "wait",
+      body: live.fingerprint
+        ? <>بصم <b className="num">{punched}</b> · متأخر <b className="num text-late">{lateCount}</b></>
+        : <>البصمة مقفلة — مرحلة تجربة، لا يُحتسب التأخر بعد.</>,
     },
     {
       key: "official", tab: "official", n: 2,
@@ -79,7 +81,7 @@ export default function TodayBoard({ go }) {
       title: "المتابعة خلال اليوم",
       when: "مستمر",
       state: conflicts + (missingCount ?? 0) > 0 ? "alert" : "ready",
-      body: <>بصم ولم يحضر <b className="num text-warning">{conflicts}</b> · مفقود <b className="num text-absent">{missingCount ?? "…"}</b></>,
+      body: <>{live.fingerprint && <>بصم ولم يحضر <b className="num text-warning">{conflicts}</b> · </>}مفقود <b className="num text-absent">{missingCount ?? "…"}</b></>,
     },
     {
       key: "final", tab: "official", n: 4,
@@ -98,6 +100,7 @@ export default function TodayBoard({ go }) {
     action: { chip: "bg-mint-deep text-white", label: "بانتظار الاعتماد الآلي" },
     alert:  { chip: "bg-warning-light text-warning", label: "للمتابعة" },
     done:   { chip: "bg-present/10 text-present", label: "✓ تم" },
+    locked: { chip: "bg-warning-light text-warning", label: "البصمة مقفلة" },
   };
 
   return (
@@ -107,8 +110,17 @@ export default function TodayBoard({ go }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Fig value={pctText(day ? day.official_pct : off_.pct)} label={day ? "نسبة الحضور الرسمية" : "نسبة الحضور (مبدئية)"} tone="text-mint-deep" />
         <Fig value={day ? day.absent : off_.absent} label="غائب رسميًا" tone="text-absent" />
-        <Fig value={lateCount} label="تأخر صباحي" tone="text-late" />
-        <Fig value={conflicts} label="بصم ولم يحضر" tone="text-warning" />
+        {live.fingerprint ? (
+          <>
+            <Fig value={lateCount} label="تأخر صباحي" tone="text-late" />
+            <Fig value={conflicts} label="بصم ولم يحضر" tone="text-warning" />
+          </>
+        ) : (
+          <>
+            <Fig value={day ? day.excused : off_.excused} label="غائب بعذر" tone="text-excused" />
+            <Fig value={missingCount ?? "…"} label="مفقودون خلال اليوم" tone="text-absent" />
+          </>
+        )}
       </div>
 
       <ol className="space-y-2">

@@ -9,7 +9,7 @@ import {
 } from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, Note, Loading, Empty, SetupNotice,
-  pctText, weekdayOf, WEEKDAY, daysWord,
+  pctText, weekdayOf, WEEKDAY, daysWord, useFingerprint,
 } from "./shared.jsx";
 
 // يوم ناقص: أكثر من خُمس الطلاب لم يُحضَّروا في الحصتين الأولى والثانية
@@ -29,6 +29,7 @@ export default function Statistics() {
   const [skipPartial, setSkipPartial] = useState(true);
   const [officialStart, setOfficialStart] = useState(null);
   useEffect(() => { loadReportsStart().then(setOfficialStart); }, []);
+  const fp = useFingerprint();
 
   useEffect(() => {
     loadRangeStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
@@ -102,7 +103,7 @@ export default function Statistics() {
       rows: [
         ...(days ?? []).map((d, i) => [
           i + 1, fmtGreg(d.attend_date + "T00:00:00"), weekdayOf(d.attend_date), d.absent, d.excused,
-          d.late_count ?? "—", pctText(d.official_pct), d.final_pct != null ? pctText(d.final_pct) : "—",
+          fp ? d.late_count ?? "—" : "—", pctText(d.official_pct), d.final_pct != null ? pctText(d.final_pct) : "—",
         ]),
         ["", "الإجمالي", "", totals.absent, totals.excused, totals.late, pctText(totals.pct), pctText(totals.fPct)],
       ],
@@ -173,7 +174,7 @@ export default function Statistics() {
                 <p className="num text-sm font-medium text-ink">{fmtGreg(d.attend_date + "T00:00:00")}</p>
                 <p className="text-xs text-muted">
                   {weekdayOf(d.attend_date)}{d.retroactive ? " · بأثر رجعي" : ""}
-                  {d.late_count != null && <> · تأخر صباحي <span className="num">{d.late_count}</span></>}
+                  {fp && d.late_count != null && <> · تأخر صباحي <span className="num">{d.late_count}</span></>}
                 </p>
                 <p className="text-[11px] text-faint">
                   طلاب <span className="num">{d.total}</span> · حاضر <span className="num">{d.present}</span>

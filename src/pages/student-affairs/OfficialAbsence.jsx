@@ -107,8 +107,9 @@ export default function OfficialAbsence({ initialDate }) {
       </div>
 
       <Note>
-        الغائب رسميًا: غائب عن الحصتين الأولى والثانية معًا. من بصم صباحًا وغاب
-        عن الحصتين يُحسب غائبًا ويظهر في «بصم ولم يحضر» للمتابعة. يُعتمد الكشف
+        الغائب رسميًا: غائب عن الحصتين الأولى والثانية معًا.
+        {live?.fingerprint && " من بصم صباحًا وغاب عن الحصتين يُحسب غائبًا ويظهر في «بصم ولم يحضر» للمتابعة."}
+        {" "}يُعتمد الكشف
         والنسبة الرسمية <b>آليًا</b> بعد نهاية الحصة الثانية بعشر دقائق، وتُحفظ النسبة المكتملة آليًا
         بعد آخر حصة. يحق للوكيل تصحيح أي حالة أو إعادة الاعتماد في أي وقت.
       </Note>
@@ -173,13 +174,15 @@ export default function OfficialAbsence({ initialDate }) {
             <Fig value={pctText(sum.pct)} label={day ? "نسبة الحضور الرسمية" : "نسبة الحضور (مبدئية)"} tone="text-mint-deep" />
             <Fig value={sum.absent} label="غائب رسميًا" tone="text-absent" />
             <Fig value={sum.excused} label="غائب بعذر" tone="text-excused" />
-            <Fig value={conflicts} label="بصم ولم يحضر" tone="text-warning" />
+            {live.fingerprint
+              ? <Fig value={conflicts} label="بصم ولم يحضر" tone="text-warning" />
+              : <Fig value={sum.pending} label="لم يُحضَّر" tone="text-warning" />}
           </div>
 
           <GradePills grade={grade} setGrade={setGrade} />
           <div className="flex flex-wrap gap-1.5">
             <Pill on={view === "absent"} onClick={() => setView("absent")}>غائب <span className="num">({sum.absent})</span></Pill>
-            <Pill on={view === "conflict"} onClick={() => setView("conflict")}>بصم ولم يحضر <span className="num">({conflicts})</span></Pill>
+            {live.fingerprint && <Pill on={view === "conflict"} onClick={() => setView("conflict")}>بصم ولم يحضر <span className="num">({conflicts})</span></Pill>}
             <Pill on={view === "excused"} onClick={() => setView("excused")}>بعذر <span className="num">({sum.excused})</span></Pill>
             <Pill on={view === "pending"} onClick={() => setView("pending")}>لم يُحضَّر <span className="num">({sum.pending})</span></Pill>
             {day && <Pill on={view === "changed"} onClick={() => setView("changed")}>مصحَّح / متغيّر</Pill>}
