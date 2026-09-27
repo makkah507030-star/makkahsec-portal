@@ -9,7 +9,7 @@ import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtGreg, fmtBoth } from "../../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
-import { WARNING_STAGES, loadTermStart, loadActiveTerm, isMissingTable } from "../../lib/officialAttendance";
+import { WARNING_STAGES, loadRangeStart, loadActiveTerm, isMissingTable } from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, GradePills, Note, Loading, Empty, SetupNotice, weekdayOf, daysWord,
 } from "./shared.jsx";
@@ -32,7 +32,7 @@ export default function Warnings() {
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    Promise.all([loadTermStart(todayISO()), loadActiveTerm()]).then(([d, t]) => {
+    Promise.all([loadRangeStart(todayISO()), loadActiveTerm()]).then(([d, t]) => {
       setFrom(d ?? todayISO().slice(0, 8) + "01");
       setTerm(t);
     });

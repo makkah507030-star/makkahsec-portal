@@ -5,7 +5,7 @@ import { todayISO } from "../../lib/schoolTime";
 import { fmtGreg, fmtTime12 } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
-import { lateDeadlineLabel, LATE_GRACE_MINUTES, loadTermStart, isMissingTable } from "../../lib/officialAttendance";
+import { lateDeadlineLabel, LATE_GRACE_MINUTES, loadRangeStart, isMissingTable } from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, GradePills, Note, Loading, Empty, SetupNotice, useDay, daysWord,
 } from "./shared.jsx";
@@ -112,7 +112,7 @@ function RangeLate() {
   const [missing, setMissing] = useState(false);
 
   useEffect(() => {
-    loadTermStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
+    loadRangeStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
   }, []);
 
   useEffect(() => {

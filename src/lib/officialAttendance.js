@@ -179,6 +179,29 @@ export async function loadActiveTerm() {
   return settingsCache;
 }
 
+/**
+ * بداية العمل الرسمي بمركز التقارير — ما قبلها مرحلة تجربة لا تدخل في
+ * الإحصاء والإنذارات (بياناتها محفوظة ولم تُحذف). يمكن تغييرها من جدول
+ * الإعدادات بالمفتاح student_affairs_start (YYYY-MM-DD).
+ */
+export const REPORTS_START_DEFAULT = "2026-09-28";
+
+let reportsStartCache = null;
+export async function loadReportsStart() {
+  if (reportsStartCache) return reportsStartCache;
+  const { data } = await supabase.from("settings").select("value")
+    .eq("key", "student_affairs_start").maybeSingle();
+  reportsStartCache = /^\d{4}-\d{2}-\d{2}$/.test(data?.value ?? "") ? data.value : REPORTS_START_DEFAULT;
+  return reportsStartCache;
+}
+
+/** بداية الفترة الافتراضية للتقارير التراكمية: الأحدث بين بداية الفصل وبداية العمل الرسمي */
+export async function loadRangeStart(today) {
+  const [term, start] = await Promise.all([loadTermStart(today), loadReportsStart()]);
+  const from = [term, start].filter(Boolean).sort().pop();
+  return from > today ? today : from;
+}
+
 /** بداية الفصل الحالي من التقويم (آخر «بداية فصل» قبل اليوم) */
 export async function loadTermStart(today) {
   const { data } = await supabase.from("academic_calendar")

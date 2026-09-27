@@ -5,7 +5,7 @@ import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtGreg } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import {
-  loadTermStart, loadDay, approveDay, saveFinal, schoolDaysBetween, isMissingTable,
+  loadRangeStart, loadReportsStart, loadDay, approveDay, saveFinal, schoolDaysBetween, isMissingTable,
 } from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, Note, Loading, Empty, SetupNotice,
@@ -29,7 +29,7 @@ export default function Statistics() {
   const [skipPartial, setSkipPartial] = useState(true);
 
   useEffect(() => {
-    loadTermStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
+    loadRangeStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
   }, []);
 
   useEffect(() => {
@@ -219,17 +219,21 @@ export default function Statistics() {
  */
 function Backfill({ from, to, approved, onDone }) {
   const [state, setState] = useState(null); // { done, total, saved, skipped, error }
+  const [officialStart, setOfficialStart] = useState(null);   // بداية العمل الرسمي — ما قبلها تجربة لا يُعاد
+  useEffect(() => { loadReportsStart().then(setOfficialStart); }, []);
 
   const pendingDays = useMemo(() => {
     const have = new Set((approved ?? []).map((d) => d.attend_date));
     const today = todayISO();
-    return schoolDaysBetween(from, to < today ? to : today).filter((d) => !have.has(d) && d < today);
-  }, [from, to, approved]);
+    if (!officialStart) return [];
+    const begin = from > officialStart ? from : officialStart;
+    return schoolDaysBetween(begin, to < today ? to : today).filter((d) => !have.has(d) && d < today);
+  }, [from, to, approved, officialStart]);
 
   // أيام معتمدة ناقصة التحضير — تُعاد بعد أن يستكمل المعلمون الرصد
   const partialDays = useMemo(
-    () => (approved ?? []).filter(isPartial).map((d) => d.attend_date),
-    [approved]
+    () => (approved ?? []).filter((d) => officialStart && d.attend_date >= officialStart && isPartial(d)).map((d) => d.attend_date),
+    [approved, officialStart]
   );
 
   const start = (list, question) => async () => {
@@ -257,13 +261,14 @@ function Backfill({ from, to, approved, onDone }) {
     onDone();
   };
 
-  if (!approved) return null;
+  if (!approved || !officialStart) return null;
   return (
     <section className="card space-y-3 p-4">
       <div>
         <h3 className="text-sm font-semibold text-ink">اعتماد الأيام السابقة بأثر رجعي</h3>
         <p className="mt-0.5 text-xs leading-relaxed text-muted">
-          يحسب كل يوم دراسي سابق غير معتمد بنفس القواعد من السجلات الموجودة، فتكتمل
+          يبدأ العمل الرسمي بالمركز من {fmtGreg(officialStart + "T00:00:00")}، وما قبله مرحلة تجربة لا يُعاد احتسابها.
+          يحسب كل يوم دراسي سابق غير معتمد (من تاريخ البداية) بنفس القواعد من السجلات الموجودة، فتكتمل
           الإحصاءات وأيام الغياب للإنذارات من بداية الفصل. الأيام المعتمدة سابقًا لا تُمسّ،
           والأيام بلا تحضير (الإجازات) تُتخطّى.
         </p>
