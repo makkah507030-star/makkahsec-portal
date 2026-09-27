@@ -61,6 +61,9 @@ function DayLate() {
       </Note>
       {error && <Empty>تعذّر التحميل: {error}</Empty>}
       {!live && !error && <Loading />}
+      {live && live.dayStart == null && (
+        <Note tone="warn">لم يُعثر على وقت الاصطفاف ولا الحصة الأولى في جدول التوقيت المفعّل — لا يمكن احتساب التأخر.</Note>
+      )}
       {live && (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

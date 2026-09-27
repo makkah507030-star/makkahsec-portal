@@ -247,7 +247,14 @@ export async function loadDay(date) {
     dayStart,
   });
 
-  return { date, rows, dayStart, hasData: attendance.length > 0 || punches.length > 0 };
+  // سجلات تحضير لم يعد جدولها موجودًا (مثلًا بعد إعادة استيراد الجدول) — لا تُحتسب
+  const orphans = attendance.filter((r) => r.schedule?.period_no == null).length;
+
+  return {
+    date, rows, dayStart, orphans,
+    punchCount: punches.length,
+    hasData: attendance.length > 0 || punches.length > 0,
+  };
 }
 
 /** اليوم المعتمد وحالاته المحفوظة، أو null إن لم يُعتمد */

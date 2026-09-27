@@ -118,6 +118,12 @@ export default function OfficialAbsence({ initialDate }) {
 
       {live && rows && (
         <>
+          {live.orphans > 0 && (
+            <Note tone="warn">
+              يوجد <span className="num">{live.orphans}</span> سجل تحضير لهذا اليوم مرتبط بحصص لم تعد موجودة
+              في الجدول (غالبًا بعد إعادة استيراد الجدول)، فلا تُحتسب — قد يظهر بسببها طلاب «لم يُحضَّروا».
+            </Note>
+          )}
           {/* حالة الاعتماد */}
           <section className="card space-y-3 p-4">
             {day ? (
