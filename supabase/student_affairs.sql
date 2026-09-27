@@ -215,9 +215,10 @@ create or replace function public.sa_save_official_day(
   p_date date, p_day jsonb, p_marks jsonb, p_mode text default 'approve'
 ) returns void language plpgsql security definer set search_path = public as $$
 declare
-  v_name text := public.sa_my_name();
+  v_system boolean := coalesce(auth.role(), '') = 'service_role';   -- الاعتماد الآلي المجدول
+  v_name text := case when v_system then 'اعتماد آلي' else public.sa_my_name() end;
 begin
-  if not public.sa_can_manage() then
+  if not (v_system or public.sa_can_manage()) then
     raise exception 'غير مصرّح: اعتماد الغياب لوكيل شؤون الطلاب والإدارة';
   end if;
 
@@ -316,6 +317,6 @@ begin
 end;
 $$;
 
-grant execute on function public.sa_save_official_day(date, jsonb, jsonb, text) to authenticated;
+grant execute on function public.sa_save_official_day(date, jsonb, jsonb, text) to authenticated, service_role;
 grant execute on function public.sa_override_mark(date, jsonb, text, text) to authenticated;
 revoke execute on function public.sa_recount_day(date) from public;

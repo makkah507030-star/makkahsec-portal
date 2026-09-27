@@ -5,12 +5,16 @@ import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtGreg } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import {
-  loadTermStart, loadDay, approveDay, saveFinal, schoolDaysBetween, isMissingTable,
+  loadRangeStart, loadReportsStart, loadDay, approveDay, saveFinal, schoolDaysBetween, isMissingTable,
 } from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, Note, Loading, Empty, SetupNotice,
   pctText, weekdayOf, WEEKDAY,
 } from "./shared.jsx";
+
+// يوم ناقص: أكثر من خُمس الطلاب لم يُحضَّروا في الحصتين الأولى والثانية
+const PARTIAL_AT = 0.2;
+const isPartial = (d) => d.total > 0 && d.pending / d.total > PARTIAL_AT;
 
 const pct = (present, total, pending = 0) =>
   total - pending > 0 ? Math.round((present * 10000) / (total - pending)) / 100 : null;
@@ -22,9 +26,10 @@ export default function Statistics() {
   const [missing, setMissing] = useState(false);
   const [view, setView] = useState("days");
   const [tick, setTick] = useState(0);
+  const [skipPartial, setSkipPartial] = useState(true);
 
   useEffect(() => {
-    loadTermStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
+    loadRangeStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
   }, []);
 
   useEffect(() => {
@@ -39,9 +44,15 @@ export default function Statistics() {
     })();
   }, [from, to, tick]);
 
+  const partialCount = (days ?? []).filter(isPartial).length;
+  const used = useMemo(
+    () => (days ?? []).filter((d) => !(skipPartial && isPartial(d))),
+    [days, skipPartial]
+  );
+
   const totals = useMemo(() => {
     const t = { total: 0, present: 0, absent: 0, excused: 0, pending: 0, fTotal: 0, fPresent: 0, fPending: 0, late: 0 };
-    (days ?? []).forEach((d) => {
+    used.forEach((d) => {
       t.total += d.total; t.present += d.present; t.absent += d.absent;
       t.excused += d.excused; t.pending += d.pending; t.late += d.late_count ?? 0;
       if (d.final_present != null) {
@@ -49,27 +60,27 @@ export default function Statistics() {
       }
     });
     return { ...t, pct: pct(t.present, t.total, t.pending), fPct: pct(t.fPresent, t.fTotal, t.fPending) };
-  }, [days]);
+  }, [used]);
 
   const byWeekday = useMemo(() => {
     const m = {};
-    (days ?? []).forEach((d) => {
+    used.forEach((d) => {
       const w = new Date(`${d.attend_date}T12:00:00`).getDay();
       const e = (m[w] ??= { n: 0, total: 0, present: 0, pending: 0, absent: 0 });
       e.n++; e.total += d.total; e.present += d.present; e.pending += d.pending; e.absent += d.absent;
     });
     return [0, 1, 2, 3, 4].filter((w) => m[w]).map((w) => ({ w, ...m[w], pct: pct(m[w].present, m[w].total, m[w].pending) }));
-  }, [days]);
+  }, [used]);
 
   const byGrade = useMemo(() => {
     const m = {};
-    (days ?? []).forEach((d) => Object.entries(d.by_grade ?? {}).forEach(([g, v]) => {
+    used.forEach((d) => Object.entries(d.by_grade ?? {}).forEach(([g, v]) => {
       const e = (m[g] ??= { total: 0, present: 0, absent: 0, excused: 0, pending: 0 });
       e.total += v.total ?? 0; e.present += v.present ?? 0; e.absent += v.absent ?? 0;
       e.excused += v.excused ?? 0; e.pending += v.pending ?? 0;
     }));
     return Object.entries(m).sort().map(([g, v]) => ({ g, ...v, pct: pct(v.present, v.total, v.pending) }));
-  }, [days]);
+  }, [used]);
 
   const range = () => `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")}`;
   const report = () => {
@@ -111,7 +122,8 @@ export default function Statistics() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Fig value={pctText(totals.pct)} label="النسبة الرسمية للفترة" tone="text-mint-deep" />
           <Fig value={pctText(totals.fPct)} label="النسبة المكتملة للفترة" tone="text-present" />
-          <Fig value={days.length} label="يوم معتمد" />
+          <Fig value={used.length} label="يوم في الإجمالي"
+               hint={partialCount ? `${partialCount} ناقص${skipPartial ? " (مستبعد)" : ""}` : undefined} />
           <Fig value={totals.absent.toLocaleString("ar")} label="حالات غياب رسمي" tone="text-absent" />
         </div>
       )}
@@ -122,6 +134,17 @@ export default function Statistics() {
         <Pill on={view === "grade"} onClick={() => setView("grade")}>حسب الصف</Pill>
       </div>
 
+      {partialCount > 0 && (
+        <Note tone="warn">
+          <span className="num">{partialCount}</span> يومًا بيانات تحضيرها ناقصة: أكثر من خُمس الطلاب لم يُحضَّروا في
+          الحصتين الأولى والثانية، فنسبتها الرسمية محسوبة على عدد قليل من الطلاب ولا تمثّل اليوم.
+          <label className="mt-2 flex items-center gap-2 font-semibold">
+            <input type="checkbox" checked={skipPartial} onChange={(e) => setSkipPartial(e.target.checked)} />
+            استبعاد الأيام الناقصة من الإجمالي والمقارنات
+          </label>
+        </Note>
+      )}
+
       <ExportBar disabled={!days?.length}
         onPrint={() => { const r = report(); printReport({ ...r, subtitle: range(), ...logos(), signatures: SIGNS }); }}
         onExcel={() => { const r = report(); exportStyledExcel({ ...r, subtitle: range(), fileName: `${r.title}-${from}_${to}`, sheetName: "الإحصاء", signatures: SIGNS }); }} />
@@ -130,17 +153,34 @@ export default function Statistics() {
         <Empty>لا أيام معتمدة في هذه الفترة — اعتمد الأيام السابقة من الأداة أدناه.</Empty>
       ) : view === "days" ? (
         <div className="card divide-y divide-line overflow-hidden">
+          <div className="flex items-center justify-between gap-3 bg-gray-tint px-4 py-2 text-[11px] font-semibold text-muted">
+            <span>اليوم</span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="w-10 text-center">غائب</span>
+              <span className="w-14 text-left">الرسمية</span>
+              <span className="w-14 text-left">المكتملة</span>
+            </div>
+          </div>
           {days.map((d) => (
-            <div key={d.attend_date} className="flex items-center justify-between gap-3 px-4 py-2.5">
+            <div key={d.attend_date} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${isPartial(d) ? "bg-warning-light/40" : ""}`}>
               <div className="min-w-0">
                 <p className="num text-sm font-medium text-ink">{fmtGreg(d.attend_date + "T00:00:00")}</p>
                 <p className="text-xs text-muted">
                   {weekdayOf(d.attend_date)}{d.retroactive ? " · بأثر رجعي" : ""}
                   {d.late_count != null && <> · تأخر صباحي <span className="num">{d.late_count}</span></>}
                 </p>
+                <p className="text-[11px] text-faint">
+                  طلاب <span className="num">{d.total}</span> · حاضر <span className="num">{d.present}</span>
+                  {d.excused > 0 && <> · بعذر <span className="num">{d.excused}</span></>}
+                  {d.pending > 0 && (
+                    <span className={isPartial(d) ? "font-semibold text-warning" : ""}>
+                      {" "}· لم يُحضَّر <span className="num">{d.pending}</span>{isPartial(d) ? " — بيانات ناقصة" : ""}
+                    </span>
+                  )}
+                </p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="num chip bg-absent/10 text-absent">{d.absent}</span>
+                <span className="num chip w-10 justify-center bg-absent/10 text-absent">{d.absent}</span>
                 <span className="num w-14 text-left text-sm font-bold text-mint-deep">{pctText(d.official_pct)}</span>
                 <span className="num w-14 text-left text-xs text-present">{d.final_pct != null ? pctText(d.final_pct) : "—"}</span>
               </div>
@@ -179,18 +219,28 @@ export default function Statistics() {
  */
 function Backfill({ from, to, approved, onDone }) {
   const [state, setState] = useState(null); // { done, total, saved, skipped, error }
+  const [officialStart, setOfficialStart] = useState(null);   // بداية العمل الرسمي — ما قبلها تجربة لا يُعاد
+  useEffect(() => { loadReportsStart().then(setOfficialStart); }, []);
 
   const pendingDays = useMemo(() => {
     const have = new Set((approved ?? []).map((d) => d.attend_date));
     const today = todayISO();
-    return schoolDaysBetween(from, to < today ? to : today).filter((d) => !have.has(d) && d < today);
-  }, [from, to, approved]);
+    if (!officialStart) return [];
+    const begin = from > officialStart ? from : officialStart;
+    return schoolDaysBetween(begin, to < today ? to : today).filter((d) => !have.has(d) && d < today);
+  }, [from, to, approved, officialStart]);
 
-  const start = async () => {
-    if (!window.confirm(`سيُحسب ${pendingDays.length} يومًا سابقًا من السجلات المحفوظة ويُعتمد بأثر رجعي. السجلات الأصلية لا تتغير. متابعة؟`)) return;
-    const st = { done: 0, total: pendingDays.length, saved: 0, skipped: 0, error: null };
+  // أيام معتمدة ناقصة التحضير — تُعاد بعد أن يستكمل المعلمون الرصد
+  const partialDays = useMemo(
+    () => (approved ?? []).filter((d) => officialStart && d.attend_date >= officialStart && isPartial(d)).map((d) => d.attend_date),
+    [approved, officialStart]
+  );
+
+  const start = (list, question) => async () => {
+    if (!window.confirm(question)) return;
+    const st = { done: 0, total: list.length, saved: 0, skipped: 0, error: null };
     setState({ ...st });
-    for (const date of pendingDays) {
+    for (const date of list) {
       try {
         const day = await loadDay(date);
         if (day.hasData) {
@@ -211,17 +261,25 @@ function Backfill({ from, to, approved, onDone }) {
     onDone();
   };
 
-  if (!approved) return null;
+  if (!approved || !officialStart) return null;
   return (
     <section className="card space-y-3 p-4">
       <div>
         <h3 className="text-sm font-semibold text-ink">اعتماد الأيام السابقة بأثر رجعي</h3>
         <p className="mt-0.5 text-xs leading-relaxed text-muted">
-          يحسب كل يوم دراسي سابق غير معتمد بنفس القواعد من السجلات الموجودة، فتكتمل
+          يبدأ العمل الرسمي بالمركز من {fmtGreg(officialStart + "T00:00:00")}، وما قبله مرحلة تجربة لا يُعاد احتسابها.
+          يحسب كل يوم دراسي سابق غير معتمد (من تاريخ البداية) بنفس القواعد من السجلات الموجودة، فتكتمل
           الإحصاءات وأيام الغياب للإنذارات من بداية الفصل. الأيام المعتمدة سابقًا لا تُمسّ،
           والأيام بلا تحضير (الإجازات) تُتخطّى.
         </p>
       </div>
+      {partialDays.length > 0 && !state && (
+        <button onClick={start(partialDays,
+            `سيُعاد احتساب ${partialDays.length} يومًا ناقص التحضير من السجلات الحالية. تصحيحات الوكيل اليدوية تبقى كما هي. متابعة؟`)}
+          className="rounded-sm2 border border-warning px-4 py-2 text-sm font-semibold text-warning hover:bg-warning-light">
+          إعادة احتساب <span className="num">{partialDays.length}</span> يومًا ناقصًا بعد استكمال الرصد
+        </button>
+      )}
       {state ? (
         <div className="space-y-2">
           <div className="h-2 overflow-hidden rounded-pill bg-gray-tint">
@@ -236,7 +294,8 @@ function Backfill({ from, to, approved, onDone }) {
       ) : pendingDays.length === 0 ? (
         <p className="text-sm text-present">كل الأيام السابقة في الفترة معتمدة.</p>
       ) : (
-        <button onClick={start}
+        <button onClick={start(pendingDays,
+            `سيُحسب ${pendingDays.length} يومًا سابقًا من السجلات المحفوظة ويُعتمد بأثر رجعي. السجلات الأصلية لا تتغير. متابعة؟`)}
           className="rounded-sm2 bg-mint-deep px-4 py-2 text-sm font-semibold text-white">
           اعتماد <span className="num">{pendingDays.length}</span> يومًا سابقًا
         </button>

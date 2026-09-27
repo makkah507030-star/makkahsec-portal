@@ -20,6 +20,11 @@
 [functions."attendance-daily-summary"]
   schedule = "20 11 * * 0-4"
 
+# الاعتماد الآلي للغياب الرسمي (بعد الحصة الثانية) والنسبة المكتملة (بعد آخر حصة)
+# كل ١٠ دقائق من 7 صباحًا حتى 2:50 ظهرًا بتوقيت السعودية، الأحد إلى الخميس
+[functions."attendance-auto-approve"]
+  schedule = "*/10 4-11 * * 0-4"
+
 # مسارات أجهزة البصمة (ZKTeco ADMS) — يجب أن تسبق قاعدة SPA
 [[redirects]]
   from = "/iclock/*"

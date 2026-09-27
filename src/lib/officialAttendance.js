@@ -179,6 +179,29 @@ export async function loadActiveTerm() {
   return settingsCache;
 }
 
+/**
+ * بداية العمل الرسمي بمركز التقارير — ما قبلها مرحلة تجربة لا تدخل في
+ * الإحصاء والإنذارات (بياناتها محفوظة ولم تُحذف). يمكن تغييرها من جدول
+ * الإعدادات بالمفتاح student_affairs_start (YYYY-MM-DD).
+ */
+export const REPORTS_START_DEFAULT = "2026-09-28";
+
+let reportsStartCache = null;
+export async function loadReportsStart() {
+  if (reportsStartCache) return reportsStartCache;
+  const { data } = await supabase.from("settings").select("value")
+    .eq("key", "student_affairs_start").maybeSingle();
+  reportsStartCache = /^\d{4}-\d{2}-\d{2}$/.test(data?.value ?? "") ? data.value : REPORTS_START_DEFAULT;
+  return reportsStartCache;
+}
+
+/** بداية الفترة الافتراضية للتقارير التراكمية: الأحدث بين بداية الفصل وبداية العمل الرسمي */
+export async function loadRangeStart(today) {
+  const [term, start] = await Promise.all([loadTermStart(today), loadReportsStart()]);
+  const from = [term, start].filter(Boolean).sort().pop();
+  return from > today ? today : from;
+}
+
 /** بداية الفصل الحالي من التقويم (آخر «بداية فصل» قبل اليوم) */
 export async function loadTermStart(today) {
   const { data } = await supabase.from("academic_calendar")
@@ -211,7 +234,7 @@ export async function loadDay(date) {
     activeStudents(),
     fetchAllPaged(() =>
       supabase.from("class_attendance")
-        .select("id, student_id, status, schedule(period_no)")
+        .select("id, student_id, status, schedule_id, schedule(period_no)")
         .eq("attend_date", date)
         .order("id", { ascending: true })),
     fetchAllPaged(() =>
@@ -223,7 +246,7 @@ export async function loadDay(date) {
       .lte("date_from", date).gte("date_to", date),
     loadPeriodTimes(),
     dow
-      ? supabase.from("schedule").select("period_no, classes(class_no, grade)")
+      ? supabase.from("schedule").select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
           .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
       : Promise.resolve({ data: [] }),
   ]);
@@ -247,7 +270,27 @@ export async function loadDay(date) {
     dayStart,
   });
 
-  return { date, rows, dayStart, hasData: attendance.length > 0 || punches.length > 0 };
+  // سجلات تحضير لم يعد جدولها موجودًا (مثلًا بعد إعادة استيراد الجدول) — لا تُحتسب
+  const orphans = attendance.filter((r) => r.schedule?.period_no == null).length;
+
+  // حصص الأولى والثانية المجدولة لهذا اليوم ولم يرصدها معلموها
+  const marked = new Set(attendance.map((r) => r.schedule_id));
+  const unmarked = (schedRes.data ?? [])
+    .filter((r) => OFFICIAL_PERIODS.includes(r.period_no) && !marked.has(r.id))
+    .map((r) => ({
+      period_no: r.period_no,
+      grade: r.classes?.grade ?? null,
+      class_no: r.classes?.class_no ?? null,
+      teacher: r.teachers?.full_name ?? "غير محدّد",
+      subject: r.subjects?.name ?? "",
+    }))
+    .sort((a, b) => a.period_no - b.period_no || (a.grade ?? 0) - (b.grade ?? 0) || (a.class_no ?? 0) - (b.class_no ?? 0));
+
+  return {
+    date, rows, dayStart, orphans, unmarked,
+    punchCount: punches.length,
+    hasData: attendance.length > 0 || punches.length > 0,
+  };
 }
 
 /** اليوم المعتمد وحالاته المحفوظة، أو null إن لم يُعتمد */

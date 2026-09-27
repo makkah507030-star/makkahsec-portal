@@ -109,7 +109,8 @@ export default function OfficialAbsence({ initialDate }) {
       <Note>
         الغائب رسميًا: غائب عن الحصتين الأولى والثانية معًا. من بصم صباحًا وغاب
         عن الحصتين يُحسب غائبًا ويظهر في «بصم ولم يحضر» للمتابعة. يُعتمد الكشف
-        بعد الحصة الثانية، ويحق للوكيل تصحيح أي حالة بعد الاعتماد.
+        والنسبة الرسمية <b>آليًا</b> بعد نهاية الحصة الثانية بعشر دقائق، وتُحفظ النسبة المكتملة آليًا
+        بعد آخر حصة. يحق للوكيل تصحيح أي حالة أو إعادة الاعتماد في أي وقت.
       </Note>
 
       {approval?.missingTables && <SetupNotice />}
@@ -118,6 +119,12 @@ export default function OfficialAbsence({ initialDate }) {
 
       {live && rows && (
         <>
+          {live.orphans > 0 && (
+            <Note tone="warn">
+              يوجد <span className="num">{live.orphans}</span> سجل تحضير لهذا اليوم مرتبط بحصص لم تعد موجودة
+              في الجدول (غالبًا بعد إعادة استيراد الجدول)، فلا تُحتسب — قد يظهر بسببها طلاب «لم يُحضَّروا».
+            </Note>
+          )}
           {/* حالة الاعتماد */}
           <section className="card space-y-3 p-4">
             {day ? (
@@ -142,6 +149,7 @@ export default function OfficialAbsence({ initialDate }) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-warning">لم يُعتمد بعد — الأرقام مبدئية</p>
+                  <p className="text-xs text-muted">يُعتمد آليًا بعد نهاية الحصة الثانية بعشر دقائق، أو اعتمده الآن يدويًا.</p>
                   <p className="mt-0.5 text-xs text-muted">
                     {liveSum.pending > 0
                       ? <>لم يُحضَّر بعد <span className="num">{liveSum.pending}</span> طالبًا في الحصة الأولى أو الثانية.</>
@@ -158,6 +166,8 @@ export default function OfficialAbsence({ initialDate }) {
             )}
             {msg && <p className={`text-sm ${msg.ok ? "text-present" : "text-absent"}`}>{msg.text}</p>}
           </section>
+
+          {live.unmarked.length > 0 && <UnmarkedPeriods date={date} list={live.unmarked} />}
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Fig value={pctText(sum.pct)} label={day ? "نسبة الحضور الرسمية" : "نسبة الحضور (مبدئية)"} tone="text-mint-deep" />
@@ -232,7 +242,7 @@ export default function OfficialAbsence({ initialDate }) {
             <div>
               <h3 className="text-sm font-semibold text-ink">النسبة المكتملة (للإجراءات الإحصائية)</h3>
               <p className="mt-0.5 text-xs text-muted">
-                تُكمَل بعد الحصة الثانية: الطالب الذي حضر أي حصة خلال اليوم يُحسب حاضرًا. لا تغيّر الاعتماد الرسمي.
+                تُكمَل بعد الحصة الثانية: الطالب الذي حضر أي حصة خلال اليوم يُحسب حاضرًا. تُحفظ آليًا بعد آخر حصة، ولا تغيّر الاعتماد الرسمي.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -275,5 +285,57 @@ function OverrideForm({ row, busy, onSave }) {
         حفظ
       </button>
     </div>
+  );
+}
+
+/** الحصص الأولى والثانية التي لم يرصدها معلموها — سبب «لم يُحضَّر» */
+function UnmarkedPeriods({ date, list }) {
+  const [open, setOpen] = useState(false);
+  const byTeacher = list.reduce((m, r) => {
+    (m[r.teacher] ??= []).push(r);
+    return m;
+  }, {});
+  const teachers = Object.entries(byTeacher).sort((a, b) => b[1].length - a[1].length);
+  const cls = (r) => `ح${r.period_no} · ${r.grade ?? "—"}/${r.class_no ?? "—"}`;
+
+  const headers = ["م", "المعلم", "الحصة", "الصف", "الفصل", "المادة"];
+  const table = () => list.map((r, i) => [i + 1, r.teacher, r.period_no, r.grade ?? "", r.class_no ?? "", r.subject]);
+  const title = "حصص الأولى والثانية غير المرصودة";
+
+  return (
+    <section className="card overflow-hidden border-warning/40">
+      <button onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 bg-warning-light px-4 py-3 text-right">
+        <div>
+          <p className="text-sm font-semibold text-warning">
+            <span className="num">{list.length}</span> حصة في الأولى والثانية لم تُرصد —
+            {" "}<span className="num">{teachers.length}</span> معلمًا
+          </p>
+          <p className="mt-0.5 text-xs text-muted">لهذا يظهر طلاب «لم يُحضَّروا». اضغط لعرض المعلمين والفصول.</p>
+        </div>
+        <span className="text-xs text-warning">{open ? "إخفاء" : "عرض"}</span>
+      </button>
+      {open && (
+        <div className="space-y-3 p-4">
+          <ExportBar onPrint={() => printReport({ title, subtitle: fmtGreg(date), headers, rows: table(), ...logos(), signatures: SIGNS })}
+            onExcel={() => exportStyledExcel({ title, subtitle: fmtGreg(date), headers, rows: table(), fileName: `حصص-غير-مرصودة-${date}`, sheetName: "غير مرصودة", signatures: SIGNS })} />
+          <div className="divide-y divide-line">
+            {teachers.map(([name, rows]) => (
+              <div key={name} className="flex items-start justify-between gap-3 py-2">
+                <p className="text-sm font-medium text-ink">{name}</p>
+                <div className="flex flex-wrap justify-end gap-1">
+                  {rows.map((r, i) => (
+                    <span key={i} className="num rounded-sm2 bg-gray-tint px-2 py-0.5 text-[11px] text-ink">{cls(r)}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-faint">
+            بعد أن يرصد المعلمون حصصهم، أعد فتح اليوم واضغط «إعادة الاعتماد» ليُحدَّث الكشف والنسبة.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }

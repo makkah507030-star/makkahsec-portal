@@ -95,7 +95,7 @@ export default function TodayBoard({ go }) {
   const STATE = {
     wait:   { chip: "bg-gray-tint text-muted", label: "لم يحن وقته" },
     ready:  { chip: "bg-present/10 text-present", label: "جاهز" },
-    action: { chip: "bg-mint-deep text-white", label: "مطلوب إجراء" },
+    action: { chip: "bg-mint-deep text-white", label: "بانتظار الاعتماد الآلي" },
     alert:  { chip: "bg-warning-light text-warning", label: "للمتابعة" },
     done:   { chip: "bg-present/10 text-present", label: "✓ تم" },
   };

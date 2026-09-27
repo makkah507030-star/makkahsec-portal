@@ -5,7 +5,7 @@ import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtGreg, fmtTime12 } from "../../lib/dates";
 import { printReport } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
-import { loadTermStart, WARNING_STAGES, OFFICIAL_LABEL } from "../../lib/officialAttendance";
+import { loadRangeStart, WARNING_STAGES, OFFICIAL_LABEL } from "../../lib/officialAttendance";
 import { SIGNS, logos, Fig, DateInput, Note, Loading, weekdayOf } from "./shared.jsx";
 
 const STAGE = Object.fromEntries(WARNING_STAGES.map((s) => [s.key, s]));
@@ -18,7 +18,7 @@ export default function StudentFile() {
   const [to, setTo] = useState(todayISO());
 
   useEffect(() => {
-    loadTermStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
+    loadRangeStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
     fetchAllPaged(() => supabase.from("v_active_students")
       .select("student_id, full_name, class_no, grade").order("student_id", { ascending: true }))
       .then(setAll).catch(() => setAll([]));
