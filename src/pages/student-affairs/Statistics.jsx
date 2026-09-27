@@ -9,7 +9,7 @@ import {
 } from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, Note, Loading, Empty, SetupNotice,
-  pctText, weekdayOf, WEEKDAY,
+  pctText, weekdayOf, WEEKDAY, daysWord,
 } from "./shared.jsx";
 
 // يوم ناقص: أكثر من خُمس الطلاب لم يُحضَّروا في الحصتين الأولى والثانية
@@ -189,13 +189,20 @@ export default function Statistics() {
         </div>
       ) : (
         <div className="card divide-y divide-line overflow-hidden">
-          {(view === "weekday" ? byWeekday.map((r) => ({ k: r.w, name: WEEKDAY[r.w], sub: `${r.n} أيام · متوسط الغياب ${Math.round(r.absent / r.n)}`, pct: r.pct }))
-            : byGrade.map((r) => ({ k: r.g, name: GRADE_NAMES[r.g] ?? r.g, sub: `غياب ${r.absent} · بعذر ${r.excused}`, pct: r.pct })))
+          {(view === "weekday"
+            ? byWeekday.map((r) => ({
+                k: r.w, name: WEEKDAY[r.w], pct: r.pct,
+                sub: <>{daysWord(r.n)} · متوسط الغياب اليومي <span className="num">{Math.round(r.absent / r.n)}</span></>,
+              }))
+            : byGrade.map((r) => ({
+                k: r.g, name: GRADE_NAMES[r.g] ?? r.g, pct: r.pct,
+                sub: <>غياب <span className="num">{r.absent}</span> · بعذر <span className="num">{r.excused}</span></>,
+              })))
             .map((r) => (
               <div key={r.k} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
                   <p className="text-sm font-medium text-ink">{r.name}</p>
-                  <p className="num text-xs text-muted">{r.sub}</p>
+                  <p className="text-xs text-muted">{r.sub}</p>
                 </div>
                 <div className="flex w-40 items-center gap-2">
                   <div className="h-2 flex-1 overflow-hidden rounded-pill bg-gray-tint">

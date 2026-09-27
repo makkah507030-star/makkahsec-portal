@@ -186,7 +186,7 @@ export default function Warnings() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   {s.due.length > 0 && <span className="chip bg-absent/10 text-absent">مستحق</span>}
-                  <span className={`num chip ${s.days >= STAGE.warn2.days ? "bg-absent/10 text-absent"
+                  <span className={`chip ${s.days >= STAGE.warn2.days ? "bg-absent/10 text-absent"
                     : s.days >= STAGE.warn1.days ? "bg-late/10 text-late" : "bg-warning-light text-warning"}`}>
                     {daysWord(s.days)}
                   </span>
@@ -223,7 +223,7 @@ function StudentActions({ s, onIssue, onPaper, onReprint }) {
         <p className="mb-1 text-xs font-semibold text-muted">أيام الغياب بدون عذر</p>
         <div className="flex flex-wrap gap-1">
           {s.dates.map((d) => (
-            <span key={d} className="num rounded-sm2 bg-white px-2 py-0.5 text-[11px] text-ink">
+            <span key={d} className="rounded-sm2 bg-white px-2 py-0.5 text-[11px] text-ink">
               {weekdayOf(d)} {fmtGreg(d + "T00:00:00")}
             </span>
           ))}
