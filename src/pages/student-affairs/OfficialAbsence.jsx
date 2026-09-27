@@ -109,7 +109,8 @@ export default function OfficialAbsence({ initialDate }) {
       <Note>
         الغائب رسميًا: غائب عن الحصتين الأولى والثانية معًا. من بصم صباحًا وغاب
         عن الحصتين يُحسب غائبًا ويظهر في «بصم ولم يحضر» للمتابعة. يُعتمد الكشف
-        بعد الحصة الثانية، ويحق للوكيل تصحيح أي حالة بعد الاعتماد.
+        والنسبة الرسمية <b>آليًا</b> بعد نهاية الحصة الثانية بعشر دقائق، وتُحفظ النسبة المكتملة آليًا
+        بعد آخر حصة. يحق للوكيل تصحيح أي حالة أو إعادة الاعتماد في أي وقت.
       </Note>
 
       {approval?.missingTables && <SetupNotice />}
@@ -148,6 +149,7 @@ export default function OfficialAbsence({ initialDate }) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-warning">لم يُعتمد بعد — الأرقام مبدئية</p>
+                  <p className="text-xs text-muted">يُعتمد آليًا بعد نهاية الحصة الثانية بعشر دقائق، أو اعتمده الآن يدويًا.</p>
                   <p className="mt-0.5 text-xs text-muted">
                     {liveSum.pending > 0
                       ? <>لم يُحضَّر بعد <span className="num">{liveSum.pending}</span> طالبًا في الحصة الأولى أو الثانية.</>
@@ -240,7 +242,7 @@ export default function OfficialAbsence({ initialDate }) {
             <div>
               <h3 className="text-sm font-semibold text-ink">النسبة المكتملة (للإجراءات الإحصائية)</h3>
               <p className="mt-0.5 text-xs text-muted">
-                تُكمَل بعد الحصة الثانية: الطالب الذي حضر أي حصة خلال اليوم يُحسب حاضرًا. لا تغيّر الاعتماد الرسمي.
+                تُكمَل بعد الحصة الثانية: الطالب الذي حضر أي حصة خلال اليوم يُحسب حاضرًا. تُحفظ آليًا بعد آخر حصة، ولا تغيّر الاعتماد الرسمي.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
