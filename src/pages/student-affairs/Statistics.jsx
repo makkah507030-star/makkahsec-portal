@@ -269,24 +269,27 @@ function Backfill({ from, to, approved, onDone }) {
   };
 
   if (!approved || !officialStart) return null;
+  const since = fmtGreg(officialStart + "T00:00:00");
+
+  // لا شيء يحتاج إجراء: سطر واحد فقط
+  if (!state && pendingDays.length === 0 && partialDays.length === 0) {
+    return (
+      <p className="text-center text-xs text-faint">
+        الاعتماد آلي يوميًا منذ {since} — لا أيام تحتاج اعتمادًا أو إعادة احتساب.
+      </p>
+    );
+  }
+
   return (
     <section className="card space-y-3 p-4">
       <div>
-        <h3 className="text-sm font-semibold text-ink">اعتماد الأيام السابقة بأثر رجعي</h3>
+        <h3 className="text-sm font-semibold text-ink">أيام تحتاج اعتمادًا أو إعادة احتساب</h3>
         <p className="mt-0.5 text-xs leading-relaxed text-muted">
-          يبدأ العمل الرسمي بالمركز من {fmtGreg(officialStart + "T00:00:00")}، وما قبله مرحلة تجربة لا يُعاد احتسابها.
-          يحسب كل يوم دراسي سابق غير معتمد (من تاريخ البداية) بنفس القواعد من السجلات الموجودة، فتكتمل
-          الإحصاءات وأيام الغياب للإنذارات من بداية الفصل. الأيام المعتمدة سابقًا لا تُمسّ،
-          والأيام بلا تحضير (الإجازات) تُتخطّى.
+          الاعتماد آلي يوميًا منذ {since} (ما قبله مرحلة تجربة لا يُحتسب). هنا فقط ما فاته
+          الاعتماد الآلي، أو ما اعتُمد ناقص التحضير ثم استكمل المعلمون رصده. تبقى تصحيحات
+          الوكيل اليدوية، والأيام بلا تحضير (الإجازات) تُتخطّى.
         </p>
       </div>
-      {partialDays.length > 0 && !state && (
-        <button onClick={start(partialDays,
-            `سيُعاد احتساب ${partialDays.length} يومًا ناقص التحضير من السجلات الحالية. تصحيحات الوكيل اليدوية تبقى كما هي. متابعة؟`)}
-          className="rounded-sm2 border border-warning px-4 py-2 text-sm font-semibold text-warning hover:bg-warning-light">
-          إعادة احتساب <span className="num">{partialDays.length}</span> يومًا ناقصًا بعد استكمال الرصد
-        </button>
-      )}
       {state ? (
         <div className="space-y-2">
           <div className="h-2 overflow-hidden rounded-pill bg-gray-tint">
@@ -298,18 +301,24 @@ function Backfill({ from, to, approved, onDone }) {
           </p>
           {state.error && <p className="text-sm text-absent">توقّف عند {state.error}</p>}
         </div>
-      ) : pendingDays.length === 0 ? (
-        <p className="text-sm text-present">كل الأيام السابقة في الفترة معتمدة.</p>
       ) : (
-        <button onClick={start(pendingDays,
-            `سيُحسب ${pendingDays.length} يومًا سابقًا من السجلات المحفوظة ويُعتمد بأثر رجعي. السجلات الأصلية لا تتغير. متابعة؟`)}
-          className="rounded-sm2 bg-mint-deep px-4 py-2 text-sm font-semibold text-white">
-          اعتماد <span className="num">{pendingDays.length}</span> يومًا سابقًا
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {pendingDays.length > 0 && (
+            <button onClick={start(pendingDays,
+                `سيُحسب ${pendingDays.length} يومًا فاته الاعتماد من السجلات المحفوظة. السجلات الأصلية لا تتغير. متابعة؟`)}
+              className="rounded-sm2 bg-mint-deep px-4 py-2 text-sm font-semibold text-white">
+              اعتماد <span className="num">{pendingDays.length}</span> يومًا فاته الاعتماد
+            </button>
+          )}
+          {partialDays.length > 0 && (
+            <button onClick={start(partialDays,
+                `سيُعاد احتساب ${partialDays.length} يومًا ناقص التحضير من السجلات الحالية. تصحيحات الوكيل اليدوية تبقى كما هي. متابعة؟`)}
+              className="rounded-sm2 border border-warning px-4 py-2 text-sm font-semibold text-warning hover:bg-warning-light">
+              إعادة احتساب <span className="num">{partialDays.length}</span> يومًا ناقصًا بعد استكمال الرصد
+            </button>
+          )}
+        </div>
       )}
-      <Note tone="warn">
-        ملاحظة: الحساب بأثر رجعي يعتمد على قائمة الطلاب النشطين حاليًا وجدول الفصل الحالي.
-      </Note>
     </section>
   );
 }
