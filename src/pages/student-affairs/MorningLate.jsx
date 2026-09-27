@@ -5,7 +5,7 @@ import { todayISO } from "../../lib/schoolTime";
 import { fmtGreg, fmtTime12 } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
-import { lateDeadlineLabel, LATE_GRACE_MINUTES, loadTermStart, isMissingTable } from "../../lib/officialAttendance";
+import { lateDeadlineLabel, LATE_GRACE_MINUTES, loadTermStart, isMissingTable, lateProcedure } from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, GradePills, Note, Loading, Empty, SetupNotice, useDay, daysWord,
 } from "./shared.jsx";
@@ -143,9 +143,10 @@ function RangeLate() {
       .sort((a, b) => b.days - a.days || b.minutes - a.minutes);
   }, [rows, grade, min]);
 
-  const headers = ["م", "اسم الطالب", "الصف", "الفصل", "أيام التأخر", "مجموع الدقائق", "آخر تأخر"];
+  const headers = ["م", "اسم الطالب", "الصف", "الفصل", "أيام التأخر", "مجموع الدقائق", "آخر تأخر", "الإجراء المستحق"];
   const table = () => students.map((s, i) => [
     i + 1, s.full_name, s.grade, s.class_no, s.days, s.minutes, fmtGreg(s.dates[s.dates.length - 1] + "T00:00:00"),
+    lateProcedure(s.days)?.label ?? "",
   ]);
   const subtitle = () => `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")} · ${min} أيام فأكثر`;
 
@@ -164,7 +165,11 @@ function RangeLate() {
           أيام
         </label>
       </div>
-      <Note>يُبنى من الأيام المعتمدة. الأيام السابقة تُضاف من «الإحصاء والنسب ← اعتماد الأيام السابقة».</Note>
+      <Note>
+        التأخر الصباحي مشكلة سلوكية من الدرجة الأولى (المادة 10): أول مرة الإجراء الأول،
+        ومع كل تكرار الإجراء الذي يليه حتى الرابع. يُبنى من الأيام المعتمدة، والأيام السابقة
+        تُضاف من «الإحصاء والنسب ← اعتماد الأيام السابقة».
+      </Note>
       {missing && <SetupNotice />}
       <GradePills grade={grade} setGrade={setGrade} />
       <ExportBar disabled={!students.length}
@@ -181,6 +186,9 @@ function RangeLate() {
                 <p className="text-xs text-muted">
                   صف <span className="num">{s.grade}</span> · فصل <span className="num">{s.class_no}</span> · مجموع{" "}
                   <span className="num">{s.minutes}</span> دقيقة
+                </p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-mint-deep">
+                  <b>{lateProcedure(s.days).label}:</b> {lateProcedure(s.days).text}
                 </p>
               </div>
               <span className="num chip shrink-0 bg-late/10 text-late">{daysWord(s.days)}</span>

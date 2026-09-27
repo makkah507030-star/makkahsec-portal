@@ -5,7 +5,7 @@ import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtGreg, fmtTime12 } from "../../lib/dates";
 import { printReport } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
-import { loadTermStart, WARNING_STAGES, OFFICIAL_LABEL } from "../../lib/officialAttendance";
+import { loadTermStart, WARNING_STAGES, OFFICIAL_LABEL, attendanceMark, lateProcedure } from "../../lib/officialAttendance";
 import { SIGNS, logos, Fig, DateInput, Note, Loading, weekdayOf } from "./shared.jsx";
 
 const STAGE = Object.fromEntries(WARNING_STAGES.map((s) => [s.key, s]));
@@ -107,8 +107,8 @@ function FileBody({ s, from, to }) {
     const html = `
       <table>${kv("اسم الطالب", s.full_name)}${kv("رقم الهوية", data.nid)}${kv("الصف / الفصل", `${GRADE_NAMES[s.grade] ?? s.grade} / ${s.class_no}`)}
       ${kv("الفترة", `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")}`)}</table>
-      <table style="margin-top:10px">${kv("أيام الغياب الرسمي بدون عذر", absent.length)}${kv("أيام الغياب بعذر", excused.length)}
-      ${kv("أيام التأخر الصباحي", late.length)}${kv("حصص الغياب", pAbsent.length)}${kv("حصص التأخر", pLate.length)}
+      <table style="margin-top:10px">${kv("أيام الغياب الرسمي بدون عذر", absent.length)}${kv("درجة المواظبة", `${attendanceMark(absent.length)} من 100`)}${kv("أيام الغياب بعذر", excused.length)}
+      ${kv("أيام التأخر الصباحي", late.length ? `${late.length} — ${lateProcedure(late.length).label}` : 0)}${kv("حصص الغياب", pAbsent.length)}${kv("حصص التأخر", pLate.length)}
       ${kv("الإنذارات الصادرة", data.warns.map((w) => `${STAGE[w.stage]?.label} (${fmtGreg(w.issued_on + "T12:00:00")})`).join("، ") || "—")}</table>
       ${absent.length ? `<table style="margin-top:10px"><thead><tr><th>م</th><th>أيام الغياب الرسمي</th></tr></thead><tbody>
         ${absent.map((m, i) => `<tr><td>${i + 1}</td><td>${weekdayOf(m.attend_date)} ${fmtGreg(m.attend_date + "T12:00:00")}</td></tr>`).join("")}</tbody></table>` : ""}`;
@@ -119,9 +119,11 @@ function FileBody({ s, from, to }) {
     <div className="space-y-4">
       {data.notReady && <Note tone="warn">الأيام المعتمدة غير متاحة بعد — نفّذ ملف SQL الخاص بالمركز.</Note>}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Fig value={absent.length} label="غياب رسمي بدون عذر" tone="text-absent" />
+        <Fig value={absent.length} label="غياب رسمي بدون عذر" tone="text-absent"
+             hint={`درجة المواظبة ${attendanceMark(absent.length)}/100`} />
         <Fig value={excused.length} label="غياب بعذر" tone="text-excused" />
-        <Fig value={late.length} label="تأخر صباحي" tone="text-late" />
+        <Fig value={late.length} label="تأخر صباحي" tone="text-late"
+             hint={late.length ? lateProcedure(late.length).label : undefined} />
         <Fig value={pAbsent.length} label="حصص غياب" tone="text-absent" hint={`تأخر عن ${pLate.length} حصة`} />
       </div>
 

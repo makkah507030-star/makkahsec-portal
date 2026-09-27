@@ -9,7 +9,10 @@ import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtGreg, fmtBoth } from "../../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
-import { WARNING_STAGES, loadTermStart, loadActiveTerm, isMissingTable } from "../../lib/officialAttendance";
+import {
+  WARNING_STAGES, loadTermStart, loadActiveTerm, isMissingTable,
+  attendanceMark, DEPRIVATION_PCT, EXCUSE_WINDOW_DAYS, schoolDaysBetween,
+} from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, GradePills, Note, Loading, Empty, SetupNotice, weekdayOf, daysWord,
 } from "./shared.jsx";
@@ -24,6 +27,7 @@ export default function Warnings() {
   const [term, setTerm] = useState(null);
   const [marks, setMarks] = useState(null);
   const [issued, setIssued] = useState([]);
+  const [schoolDays, setSchoolDays] = useState(0);
   const [missing, setMissing] = useState(false);
   const [grade, setGrade] = useState(0);
   const [view, setView] = useState("due");
@@ -43,7 +47,7 @@ export default function Warnings() {
     (async () => {
       setMarks(null);
       try {
-        const [m, w] = await Promise.all([
+        const [m, w, d] = await Promise.all([
           fetchAllPaged(() =>
             supabase.from("official_day_marks")
               .select("student_id, attend_date, full_name, grade, class_no")
@@ -52,15 +56,25 @@ export default function Warnings() {
           supabase.from("absence_warnings").select("*")
             .eq("academic_year", term.year).eq("term", term.term)
             .order("issued_on", { ascending: true }),
+          supabase.from("official_attendance_days").select("attend_date", { count: "exact", head: true })
+            .gte("attend_date", from).lte("attend_date", to),
         ]);
         if (w.error) throw w.error;
-        setMarks(m); setIssued(w.data ?? []);
+        setMarks(m); setIssued(w.data ?? []); setSchoolDays(d.count ?? 0);
       } catch (e) {
         if (isMissingTable(e)) setMissing(true);
         console.error("Warnings:", e); setMarks([]);
       }
     })();
   }, [from, to, term, tick]);
+
+  // آخر أيام دراسية ضمن مهلة تقديم العذر — غيابها قد يتحوّل إلى «بعذر»
+  const recentDays = useMemo(() => {
+    const back = new Date(`${to}T12:00:00`); back.setDate(back.getDate() - 10);
+    const p = (n) => String(n).padStart(2, "0");
+    const start = `${back.getFullYear()}-${p(back.getMonth() + 1)}-${p(back.getDate())}`;
+    return new Set(schoolDaysBetween(start, to).slice(-EXCUSE_WINDOW_DAYS));
+  }, [to]);
 
   const students = useMemo(() => {
     const by = new Map();
@@ -81,9 +95,11 @@ export default function Warnings() {
       const days = s.dates.length;
       const done = issuedBy.get(s.student_id) ?? {};
       const due = WARNING_STAGES.filter((st) => days >= st.days && !done[st.key]).map((st) => st.key);
-      return { ...s, days, done, due };
+      const pct = schoolDays ? Math.round((days * 1000) / schoolDays) / 10 : null;
+      const recent = s.dates.filter((d) => recentDays.has(d)).length;
+      return { ...s, days, done, due, pct, mark: attendanceMark(days), recent };
     }).sort((a, b) => b.days - a.days || a.full_name.localeCompare(b.full_name, "ar"));
-  }, [marks, issued]);
+  }, [marks, issued, schoolDays, recentDays]);
 
   const list = useMemo(() => students
     .filter((s) => !grade || s.grade === grade)
@@ -98,6 +114,7 @@ export default function Warnings() {
     warn2: students.filter((s) => s.days >= STAGE.warn2.days).length,
     transfer: students.filter((s) => s.days >= STAGE.transfer.days).length,
     watch: students.filter((s) => s.days >= WATCH_AT && s.days < STAGE.warn1.days).length,
+    deprived: students.filter((s) => s.pct != null && s.pct > DEPRIVATION_PCT).length,
   }), [students]);
 
   const record = async (s, stage, { source = "system", issuedOn = todayISO(), note = null } = {}) => {
@@ -119,9 +136,9 @@ export default function Warnings() {
     } catch (e) { setMsg(e.message ?? String(e)); }
   };
 
-  const headers = ["م", "اسم الطالب", "الصف", "الفصل", "أيام الغياب بدون عذر", "الإجراء المستحق", "الصادر"];
+  const headers = ["م", "اسم الطالب", "الصف", "الفصل", "أيام الغياب بدون عذر", "درجة المواظبة", "النسبة", "الإجراء المستحق", "الصادر"];
   const table = () => list.map((s, i) => [
-    i + 1, s.full_name, s.grade, s.class_no, s.days,
+    i + 1, s.full_name, s.grade, s.class_no, s.days, s.mark, s.pct != null ? `${s.pct}%` : "—",
     s.due.map((k) => STAGE[k].label).join("، ") || "—",
     Object.values(s.done).map((w) => `${STAGE[w.stage].label} (${fmtGreg(w.issued_on)})`).join("، ") || "—",
   ]);
@@ -143,15 +160,23 @@ export default function Warnings() {
         {" "}<span className="num">{STAGE.transfer.days}</span> يومًا ← تحويل لوكيل شؤون الطلاب مع محضر تحويل لدراسة الحالة.
         الإنذارات الصادرة ورقيًا سابقًا تُسجَّل بتاريخها حتى لا تُطلب مرة أخرى.
       </Note>
+      <Note tone="warn">
+        قواعد السلوك والمواظبة 1447هـ (المادة 31): للمواظبة <b>100 درجة</b> تُحسم منها درجة عن كل يوم
+        بدون عذر، ويُحرم طالب الثانوية من الانتقال للفصل التالي إذا تجاوز غيابه بدون عذر
+        <b> {DEPRIVATION_PCT}%</b>. مهلة تقديم العذر <span className="num">{EXCUSE_WINDOW_DAYS}</span> أيام عمل
+        (حتى 10 بمبرر مقبول) — يُحوَّل اليوم إلى «بعذر» من تبويب الغياب الرسمي ← تصحيح.
+        النسبة هنا من أيام الفترة المعتمدة (<span className="num">{schoolDays}</span> يومًا).
+      </Note>
       {missing && <SetupNotice />}
       {msg && <p className="text-sm text-absent">{msg}</p>}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Fig value={counts.due} label="إجراء مستحق لم يصدر" tone="text-absent" />
         <Fig value={counts.warn1} label={`بلغوا ${STAGE.warn1.days} أيام`} tone="text-late" />
         <Fig value={counts.warn2} label={`بلغوا ${STAGE.warn2.days} يومًا`} tone="text-absent" />
         <Fig value={counts.transfer} label={`بلغوا ${STAGE.transfer.days} يومًا (تحويل)`} tone="text-absent" />
         <Fig value={counts.watch} label={`تحت المتابعة (${WATCH_AT}–${STAGE.warn1.days - 1})`} tone="text-warning" />
+        <Fig value={counts.deprived} label={`تجاوزوا ${DEPRIVATION_PCT}% (حرمان)`} tone="text-absent" />
       </div>
 
       <GradePills grade={grade} setGrade={setGrade} />
@@ -182,6 +207,14 @@ export default function Warnings() {
                     {Object.values(s.done).map((w) => (
                       <span key={w.stage} className="text-present"> · ✓ {STAGE[w.stage].label}{w.source === "paper" ? " (ورقي)" : ""}</span>
                     ))}
+                  </p>
+                  <p className="text-[11px] text-muted">
+                    درجة المواظبة <span className="num font-semibold text-ink">{s.mark}</span>/100
+                    {s.pct != null && (
+                      <> · <span className={`num ${s.pct > DEPRIVATION_PCT ? "font-semibold text-absent" : ""}`}>{s.pct}%</span> من أيام الفترة
+                        {s.pct > DEPRIVATION_PCT && <span className="font-semibold text-absent"> — تجاوز حد الحرمان</span>}</>
+                    )}
+                    {s.recent > 0 && <span className="text-warning"> · {s.recent} ضمن مهلة العذر</span>}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -292,7 +325,7 @@ async function printMinutes(s, stage, { from, to, done, issuedOn }) {
       signs: [
         { title: "الطالب", name: s.full_name },
         { title: "ولي الأمر", name: ".............................." },
-        { title: "الموجه الطلابي", name: ".............................." },
+        { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
       ],
     },
     warn2: {
@@ -303,7 +336,7 @@ async function printMinutes(s, stage, { from, to, done, issuedOn }) {
       signs: [
         { title: "الطالب", name: s.full_name },
         { title: "ولي الأمر", name: ".............................." },
-        { title: "الموجه الطلابي", name: ".............................." },
+        { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
       ],
     },
     transfer: {
@@ -313,7 +346,7 @@ async function printMinutes(s, stage, { from, to, done, issuedOn }) {
         + P("فقد تم تحويل الطالب إلى وكيل شؤون الطلاب لدراسة حالته وأسباب غيابه، واتخاذ ما يلزم وفق قواعد السلوك والمواظبة، مرفقًا به بيان أيام الغياب ومحاضر الإنذارات السابقة.")
         + dates,
       signs: [
-        { title: "الموجه الطلابي", name: ".............................." },
+        { title: "مُعِدّ المحضر", name: ".............................." },
         { title: "وكيل شؤون الطلاب (المستلم)", name: STUDENT_DEPUTY_NAME },
         { title: "مدير المدرسة", name: PRINCIPAL_NAME },
       ],
