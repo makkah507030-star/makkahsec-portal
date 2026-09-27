@@ -6,10 +6,20 @@ import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import { MissingTab } from "../admin/AttendanceOverview.jsx";
 import {
   SIGNS, logos, Pill, DateInput, ExportBar, GradePills, Note, Loading, Empty, useDay,
+  useFingerprint, FingerprintLockedNote,
 } from "./shared.jsx";
 
 export default function FollowUp() {
   const [mode, setMode] = useState("conflict");
+  const fp = useFingerprint();
+  if (fp == null) return <Loading />;
+  // البصمة مقفلة: المتابعة من تحضير الحصص فقط (المفقودون)
+  if (!fp) return (
+    <div className="space-y-4">
+      <FingerprintLockedNote />
+      <MissingTab />
+    </div>
+  );
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5">

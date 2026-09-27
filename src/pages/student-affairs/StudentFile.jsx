@@ -6,7 +6,7 @@ import { fmtGreg, fmtTime12 } from "../../lib/dates";
 import { printReport } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { loadRangeStart, WARNING_STAGES, OFFICIAL_LABEL } from "../../lib/officialAttendance";
-import { SIGNS, logos, Fig, DateInput, Note, Loading, weekdayOf } from "./shared.jsx";
+import { SIGNS, logos, Fig, DateInput, Note, Loading, weekdayOf, useFingerprint } from "./shared.jsx";
 
 const STAGE = Object.fromEntries(WARNING_STAGES.map((s) => [s.key, s]));
 
@@ -63,6 +63,7 @@ export default function StudentFile() {
 
 function FileBody({ s, from, to }) {
   const [data, setData] = useState(null);
+  const fp = useFingerprint();
 
   useEffect(() => {
     (async () => {
@@ -121,7 +122,8 @@ function FileBody({ s, from, to }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Fig value={absent.length} label="غياب رسمي بدون عذر" tone="text-absent" />
         <Fig value={excused.length} label="غياب بعذر" tone="text-excused" />
-        <Fig value={late.length} label="تأخر صباحي" tone="text-late" />
+        {fp ? <Fig value={late.length} label="تأخر صباحي" tone="text-late" />
+            : <Fig value="—" label="تأخر صباحي" hint="البصمة مقفلة" />}
         <Fig value={pAbsent.length} label="حصص غياب" tone="text-absent" hint={`تأخر عن ${pLate.length} حصة`} />
       </div>
 
@@ -153,7 +155,7 @@ function FileBody({ s, from, to }) {
         )}
       </Section>
 
-      <Section title="التأخر الصباحي">
+      {fp && <Section title="التأخر الصباحي">
         {late.length === 0 ? <p className="text-sm text-muted">لا تأخر في الفترة.</p> : (
           <div className="flex flex-wrap gap-1.5">
             {late.map((m) => (
@@ -163,7 +165,7 @@ function FileBody({ s, from, to }) {
             ))}
           </div>
         )}
-      </Section>
+      </Section>}
 
       <Section title="غياب الحصص حسب المادة">
         {Object.keys(bySubject).length === 0 ? <p className="text-sm text-muted">لا غياب حصص.</p> : (

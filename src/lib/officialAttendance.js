@@ -169,6 +169,27 @@ export function summarize(rows, field = "official") {
 
 /* ============================ تحميل البيانات ============================ */
 
+/**
+ * قفل البصمة: ما دامت أجهزة البصمة في مرحلة التجربة تبقى «مقفلة» — تُتجاهل
+ * البصمات في كل الحسابات (الاعتماد اليدوي والآلي) وتُخفى أجزاؤها من المركز.
+ * الإعداد: settings.fingerprint_enabled = "true" للتفعيل (الافتراضي مقفلة).
+ */
+let fingerprintCache = null;
+export async function loadFingerprintEnabled() {
+  if (fingerprintCache != null) return fingerprintCache;
+  const { data } = await supabase.from("settings").select("value")
+    .eq("key", "fingerprint_enabled").maybeSingle();
+  fingerprintCache = data?.value === "true";
+  return fingerprintCache;
+}
+
+export async function setFingerprintEnabled(enabled) {
+  const { error } = await supabase.from("settings")
+    .upsert({ key: "fingerprint_enabled", value: enabled ? "true" : "false" }, { onConflict: "key" });
+  if (error) throw error;
+  fingerprintCache = enabled;
+}
+
 let settingsCache = null;
 export async function loadActiveTerm() {
   if (settingsCache) return settingsCache;
@@ -230,7 +251,7 @@ export async function loadDay(date) {
   const dow = dowOf(date);
   const { year, term } = await loadActiveTerm();
 
-  const [students, attendance, punches, excRes, { rows: ptimes }, schedRes] = await Promise.all([
+  const [students, attendance, allPunches, excRes, { rows: ptimes }, schedRes, fingerprint] = await Promise.all([
     activeStudents(),
     fetchAllPaged(() =>
       supabase.from("class_attendance")
@@ -249,7 +270,10 @@ export async function loadDay(date) {
       ? supabase.from("schedule").select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
           .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
       : Promise.resolve({ data: [] }),
+    loadFingerprintEnabled(),
   ]);
+  // البصمة المقفلة (مرحلة تجربة) لا تدخل في أي حساب
+  const punches = fingerprint ? allPunches : [];
 
   const scheduleByClass = new Map();
   (schedRes.data ?? []).forEach((r) => {
@@ -287,7 +311,7 @@ export async function loadDay(date) {
     .sort((a, b) => a.period_no - b.period_no || (a.grade ?? 0) - (b.grade ?? 0) || (a.class_no ?? 0) - (b.class_no ?? 0));
 
   return {
-    date, rows, dayStart, orphans, unmarked,
+    date, rows, dayStart, orphans, unmarked, fingerprint,
     punchCount: punches.length,
     hasData: attendance.length > 0 || punches.length > 0,
   };

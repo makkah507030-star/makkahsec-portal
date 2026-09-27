@@ -14,6 +14,7 @@
 //  أي تعديل على القواعد هناك يُنقل هنا أيضًا.
 //
 //  يُعطَّل بإعداد: settings.attendance_auto_approve = "false"
+//  البصمات تُتجاهل ما لم يكن settings.fingerprint_enabled = "true" (قفل البصمة)
 // =====================================================================
 
 const { createClient } = require("@supabase/supabase-js");
@@ -101,8 +102,8 @@ async function fetchAll(makeQuery) {
   return all;
 }
 
-async function computeToday(db, date, sched, pt) {
-  const [students, attendance, punches, exc] = await Promise.all([
+async function computeToday(db, date, sched, pt, fingerprint) {
+  const [students, attendance, allPunches, exc] = await Promise.all([
     fetchAll(() => db.from("v_active_students")
       .select("student_id, full_name, class_no, grade").order("student_id", { ascending: true })),
     fetchAll(() => db.from("class_attendance")
@@ -112,6 +113,9 @@ async function computeToday(db, date, sched, pt) {
       .select("student_id, punch_time").eq("attend_date", date).order("student_id", { ascending: true })),
     db.from("excused_absences").select("student_id").lte("date_from", date).gte("date_to", date),
   ]);
+
+  // البصمة المقفلة (مرحلة تجربة) لا تدخل في أي حساب
+  const punches = fingerprint ? allPunches : [];
 
   const scheduleByClass = new Map();
   sched.forEach((r) => {
@@ -219,7 +223,7 @@ exports.handler = async () => {
 
   try {
     const { data: st } = await db.from("settings").select("key, value")
-      .in("key", ["attendance_auto_approve", "active_year", "active_term", "active_season"]);
+      .in("key", ["attendance_auto_approve", "fingerprint_enabled", "active_year", "active_term", "active_season"]);
     const s = Object.fromEntries((st || []).map((r) => [r.key, r.value]));
     if (s.attendance_auto_approve === "false") return { statusCode: 200, body: "disabled" };
 
@@ -254,7 +258,7 @@ exports.handler = async () => {
     const finalDue = lastEnd != null && now >= lastEnd + BUFFER_MIN && !(day && day.final_at);
     if (!officialDue && !finalDue) return { statusCode: 200, body: "nothing due" };
 
-    const { rows, hasData } = await computeToday(db, date, sched, pt || []);
+    const { rows, hasData } = await computeToday(db, date, sched, pt || [], s.fingerprint_enabled === "true");
     if (!hasData) return { statusCode: 200, body: "no attendance data yet" };
 
     // 1) الاعتماد الرسمي بعد الحصة الثانية
