@@ -9,7 +9,7 @@ import {
 } from "../../lib/officialAttendance";
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, Note, Loading, Empty, SetupNotice,
-  pctText, weekdayOf, WEEKDAY,
+  pctText, weekdayOf, WEEKDAY, daysWord,
 } from "./shared.jsx";
 
 // يوم ناقص: أكثر من خُمس الطلاب لم يُحضَّروا في الحصتين الأولى والثانية
@@ -27,6 +27,8 @@ export default function Statistics() {
   const [view, setView] = useState("days");
   const [tick, setTick] = useState(0);
   const [skipPartial, setSkipPartial] = useState(true);
+  const [officialStart, setOfficialStart] = useState(null);
+  useEffect(() => { loadReportsStart().then(setOfficialStart); }, []);
 
   useEffect(() => {
     loadRangeStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
@@ -150,7 +152,11 @@ export default function Statistics() {
         onExcel={() => { const r = report(); exportStyledExcel({ ...r, subtitle: range(), fileName: `${r.title}-${from}_${to}`, sheetName: "الإحصاء", signatures: SIGNS }); }} />
 
       {!days ? <Loading /> : days.length === 0 ? (
-        <Empty>لا أيام معتمدة في هذه الفترة — اعتمد الأيام السابقة من الأداة أدناه.</Empty>
+        <Empty>
+          {officialStart && todayISO() < officialStart
+            ? <>يبدأ العمل الرسمي من {fmtGreg(officialStart + "T00:00:00")} — تظهر الإحصاءات بعد اعتماد أول يوم (آليًا بعد نهاية الحصة الثانية).</>
+            : "لا أيام معتمدة في هذه الفترة. اليوم الجاري يُعتمد آليًا بعد نهاية الحصة الثانية."}
+        </Empty>
       ) : view === "days" ? (
         <div className="card divide-y divide-line overflow-hidden">
           <div className="flex items-center justify-between gap-3 bg-gray-tint px-4 py-2 text-[11px] font-semibold text-muted">
@@ -189,13 +195,20 @@ export default function Statistics() {
         </div>
       ) : (
         <div className="card divide-y divide-line overflow-hidden">
-          {(view === "weekday" ? byWeekday.map((r) => ({ k: r.w, name: WEEKDAY[r.w], sub: `${r.n} أيام · متوسط الغياب ${Math.round(r.absent / r.n)}`, pct: r.pct }))
-            : byGrade.map((r) => ({ k: r.g, name: GRADE_NAMES[r.g] ?? r.g, sub: `غياب ${r.absent} · بعذر ${r.excused}`, pct: r.pct })))
+          {(view === "weekday"
+            ? byWeekday.map((r) => ({
+                k: r.w, name: WEEKDAY[r.w], pct: r.pct,
+                sub: <>{daysWord(r.n)} · متوسط الغياب اليومي <span className="num">{Math.round(r.absent / r.n)}</span></>,
+              }))
+            : byGrade.map((r) => ({
+                k: r.g, name: GRADE_NAMES[r.g] ?? r.g, pct: r.pct,
+                sub: <>غياب <span className="num">{r.absent}</span> · بعذر <span className="num">{r.excused}</span></>,
+              })))
             .map((r) => (
               <div key={r.k} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div>
                   <p className="text-sm font-medium text-ink">{r.name}</p>
-                  <p className="num text-xs text-muted">{r.sub}</p>
+                  <p className="text-xs text-muted">{r.sub}</p>
                 </div>
                 <div className="flex w-40 items-center gap-2">
                   <div className="h-2 flex-1 overflow-hidden rounded-pill bg-gray-tint">
@@ -262,24 +275,29 @@ function Backfill({ from, to, approved, onDone }) {
   };
 
   if (!approved || !officialStart) return null;
+  const since = fmtGreg(officialStart + "T00:00:00");
+
+  // لا شيء يحتاج إجراء: سطر واحد فقط
+  if (!state && pendingDays.length === 0 && partialDays.length === 0) {
+    return (
+      <p className="text-center text-xs text-faint">
+        {todayISO() < officialStart
+          ? <>يبدأ الاعتماد الآلي اليومي من {since}.</>
+          : <>الاعتماد آلي يوميًا منذ {since} — لا أيام تحتاج اعتمادًا أو إعادة احتساب.</>}
+      </p>
+    );
+  }
+
   return (
     <section className="card space-y-3 p-4">
       <div>
-        <h3 className="text-sm font-semibold text-ink">اعتماد الأيام السابقة بأثر رجعي</h3>
+        <h3 className="text-sm font-semibold text-ink">أيام تحتاج اعتمادًا أو إعادة احتساب</h3>
         <p className="mt-0.5 text-xs leading-relaxed text-muted">
-          يبدأ العمل الرسمي بالمركز من {fmtGreg(officialStart + "T00:00:00")}، وما قبله مرحلة تجربة لا يُعاد احتسابها.
-          يحسب كل يوم دراسي سابق غير معتمد (من تاريخ البداية) بنفس القواعد من السجلات الموجودة، فتكتمل
-          الإحصاءات وأيام الغياب للإنذارات من بداية الفصل. الأيام المعتمدة سابقًا لا تُمسّ،
-          والأيام بلا تحضير (الإجازات) تُتخطّى.
+          الاعتماد آلي يوميًا منذ {since} (ما قبله مرحلة تجربة لا يُحتسب). هنا فقط ما فاته
+          الاعتماد الآلي، أو ما اعتُمد ناقص التحضير ثم استكمل المعلمون رصده. تبقى تصحيحات
+          الوكيل اليدوية، والأيام بلا تحضير (الإجازات) تُتخطّى.
         </p>
       </div>
-      {partialDays.length > 0 && !state && (
-        <button onClick={start(partialDays,
-            `سيُعاد احتساب ${partialDays.length} يومًا ناقص التحضير من السجلات الحالية. تصحيحات الوكيل اليدوية تبقى كما هي. متابعة؟`)}
-          className="rounded-sm2 border border-warning px-4 py-2 text-sm font-semibold text-warning hover:bg-warning-light">
-          إعادة احتساب <span className="num">{partialDays.length}</span> يومًا ناقصًا بعد استكمال الرصد
-        </button>
-      )}
       {state ? (
         <div className="space-y-2">
           <div className="h-2 overflow-hidden rounded-pill bg-gray-tint">
@@ -291,18 +309,24 @@ function Backfill({ from, to, approved, onDone }) {
           </p>
           {state.error && <p className="text-sm text-absent">توقّف عند {state.error}</p>}
         </div>
-      ) : pendingDays.length === 0 ? (
-        <p className="text-sm text-present">كل الأيام السابقة في الفترة معتمدة.</p>
       ) : (
-        <button onClick={start(pendingDays,
-            `سيُحسب ${pendingDays.length} يومًا سابقًا من السجلات المحفوظة ويُعتمد بأثر رجعي. السجلات الأصلية لا تتغير. متابعة؟`)}
-          className="rounded-sm2 bg-mint-deep px-4 py-2 text-sm font-semibold text-white">
-          اعتماد <span className="num">{pendingDays.length}</span> يومًا سابقًا
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {pendingDays.length > 0 && (
+            <button onClick={start(pendingDays,
+                `سيُحسب ${pendingDays.length} يومًا فاته الاعتماد من السجلات المحفوظة. السجلات الأصلية لا تتغير. متابعة؟`)}
+              className="rounded-sm2 bg-mint-deep px-4 py-2 text-sm font-semibold text-white">
+              اعتماد <span className="num">{pendingDays.length}</span> يومًا فاته الاعتماد
+            </button>
+          )}
+          {partialDays.length > 0 && (
+            <button onClick={start(partialDays,
+                `سيُعاد احتساب ${partialDays.length} يومًا ناقص التحضير من السجلات الحالية. تصحيحات الوكيل اليدوية تبقى كما هي. متابعة؟`)}
+              className="rounded-sm2 border border-warning px-4 py-2 text-sm font-semibold text-warning hover:bg-warning-light">
+              إعادة احتساب <span className="num">{partialDays.length}</span> يومًا ناقصًا بعد استكمال الرصد
+            </button>
+          )}
+        </div>
       )}
-      <Note tone="warn">
-        ملاحظة: الحساب بأثر رجعي يعتمد على قائمة الطلاب النشطين حاليًا وجدول الفصل الحالي.
-      </Note>
     </section>
   );
 }

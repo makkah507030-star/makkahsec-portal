@@ -143,7 +143,7 @@ function FileBody({ s, from, to }) {
         {absent.length + excused.length === 0 ? <p className="text-sm text-muted">لا غياب رسمي في الفترة.</p> : (
           <div className="flex flex-wrap gap-1.5">
             {[...absent, ...excused].sort((a, b) => a.attend_date.localeCompare(b.attend_date)).map((m) => (
-              <span key={m.attend_date} className={`num rounded-sm2 px-2 py-1 text-xs ${
+              <span key={m.attend_date} className={`rounded-sm2 px-2 py-1 text-xs ${
                 m.status === "absent" ? "bg-absent/10 text-absent" : "bg-excused/10 text-excused"}`}>
                 {weekdayOf(m.attend_date)} {fmtGreg(m.attend_date + "T12:00:00")} · {OFFICIAL_LABEL[m.status]}
                 {m.punched ? " · بصم ولم يحضر" : ""}
@@ -157,7 +157,7 @@ function FileBody({ s, from, to }) {
         {late.length === 0 ? <p className="text-sm text-muted">لا تأخر في الفترة.</p> : (
           <div className="flex flex-wrap gap-1.5">
             {late.map((m) => (
-              <span key={m.attend_date} className="num rounded-sm2 bg-late/10 px-2 py-1 text-xs text-late">
+              <span key={m.attend_date} className="rounded-sm2 bg-late/10 px-2 py-1 text-xs text-late">
                 {fmtGreg(m.attend_date + "T12:00:00")} · {fmtTime12(m.punch_time)} · {m.late_minutes} د
               </span>
             ))}

@@ -91,7 +91,7 @@ function DayLate() {
                       <span className="num">{fmtTime12(r.punch)}</span>
                     </p>
                   </div>
-                  <span className="num chip shrink-0 bg-late/10 text-late">{r.lateMinutes} د</span>
+                  <span className="chip shrink-0 bg-late/10 text-late"><span className="num">{r.lateMinutes}</span> د</span>
                 </div>
               ))}
             </div>
@@ -186,7 +186,7 @@ function RangeLate() {
                   <span className="num">{s.minutes}</span> دقيقة
                 </p>
               </div>
-              <span className="num chip shrink-0 bg-late/10 text-late">{daysWord(s.days)}</span>
+              <span className="chip shrink-0 bg-late/10 text-late">{daysWord(s.days)}</span>
             </div>
           ))}
         </div>

@@ -727,7 +727,7 @@ function DailyRateReport() {
                 <span className="num chip bg-present/10 text-present">{r.present}</span>
                 <span className="num chip bg-absent/10 text-absent">{r.absent}</span>
                 {r.pending > 0 && (
-                  <span className="num chip bg-warning-light text-warning">{r.pending} لم يُحضَّر</span>
+                  <span className="chip bg-warning-light text-warning"><span className="num">{r.pending}</span> لم يُحضَّر</span>
                 )}
                 <span className="num w-12 text-left text-sm font-bold text-mint-deep">
                   {r.pct != null ? `${r.pct}%` : "—"}

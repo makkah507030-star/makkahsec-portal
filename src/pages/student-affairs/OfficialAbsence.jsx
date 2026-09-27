@@ -325,7 +325,7 @@ function UnmarkedPeriods({ date, list }) {
                 <p className="text-sm font-medium text-ink">{name}</p>
                 <div className="flex flex-wrap justify-end gap-1">
                   {rows.map((r, i) => (
-                    <span key={i} className="num rounded-sm2 bg-gray-tint px-2 py-0.5 text-[11px] text-ink">{cls(r)}</span>
+                    <span key={i} className="rounded-sm2 bg-gray-tint px-2 py-0.5 text-[11px] text-ink">{cls(r)}</span>
                   ))}
                 </div>
               </div>
