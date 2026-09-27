@@ -1,6 +1,7 @@
 // الإنذارات والمحاضر: أيام الغياب الرسمي بدون عذر من الأيام المعتمدة
 //   10 أيام ← إنذار أول + محضر
-//   15 يومًا ← إنذار ثانٍ + محضر، وتحويل لوكيل شؤون الطلاب + محضر تحويل
+//   15 يومًا ← إنذار ثانٍ + محضر
+//   20 يومًا ← تحويل لوكيل شؤون الطلاب + محضر تحويل لدراسة الحالة
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
@@ -95,6 +96,7 @@ export default function Warnings() {
     due: students.filter((s) => s.due.length).length,
     warn1: students.filter((s) => s.days >= STAGE.warn1.days).length,
     warn2: students.filter((s) => s.days >= STAGE.warn2.days).length,
+    transfer: students.filter((s) => s.days >= STAGE.transfer.days).length,
     watch: students.filter((s) => s.days >= WATCH_AT && s.days < STAGE.warn1.days).length,
   }), [students]);
 
@@ -137,16 +139,18 @@ export default function Warnings() {
       <Note>
         تُعدّ أيام الغياب الرسمي <b>بدون عذر</b> من الأيام المعتمدة:
         {" "}<span className="num">{STAGE.warn1.days}</span> أيام ← إنذار أول مع محضر ·
-        {" "}<span className="num">{STAGE.warn2.days}</span> يومًا ← إنذار ثانٍ مع محضر، وتحويل لوكيل شؤون الطلاب مع محضر تحويل.
+        {" "}<span className="num">{STAGE.warn2.days}</span> يومًا ← إنذار ثانٍ مع محضر ·
+        {" "}<span className="num">{STAGE.transfer.days}</span> يومًا ← تحويل لوكيل شؤون الطلاب مع محضر تحويل لدراسة الحالة.
         الإنذارات الصادرة ورقيًا سابقًا تُسجَّل بتاريخها حتى لا تُطلب مرة أخرى.
       </Note>
       {missing && <SetupNotice />}
       {msg && <p className="text-sm text-absent">{msg}</p>}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Fig value={counts.due} label="إجراء مستحق لم يصدر" tone="text-absent" />
         <Fig value={counts.warn1} label={`بلغوا ${STAGE.warn1.days} أيام`} tone="text-late" />
         <Fig value={counts.warn2} label={`بلغوا ${STAGE.warn2.days} يومًا`} tone="text-absent" />
+        <Fig value={counts.transfer} label={`بلغوا ${STAGE.transfer.days} يومًا (تحويل)`} tone="text-absent" />
         <Fig value={counts.watch} label={`تحت المتابعة (${WATCH_AT}–${STAGE.warn1.days - 1})`} tone="text-warning" />
       </div>
 
@@ -294,7 +298,7 @@ async function printMinutes(s, stage, { from, to, done, issuedOn }) {
     warn2: {
       title: "محضر إنذار ثانٍ — غياب بدون عذر",
       body: P(`إنه في يوم ${when}، وبناءً على سجلات الحضور والغياب الرسمية المعتمدة في المدرسة، فقد بلغ غياب ${who} ${days} بدون عذر ${period}${done?.warn1 ? `، وسبق إنذاره إنذارًا أول ${prev("warn1")}` : ""}.`)
-        + P("وعليه تم إبلاغ الطالب بالإنذار الثاني، واستدعاء ولي أمره وإطلاعه على غياب ابنه، وأُخذ عليهما التعهد بالانتظام، وتقرر تحويل الطالب إلى وكيل شؤون الطلاب لاستكمال الإجراءات النظامية.")
+        + P(`وعليه تم إبلاغ الطالب بالإنذار الثاني، واستدعاء ولي أمره وإطلاعه على غياب ابنه، وأُخذ عليهما التعهد بالانتظام، مع العلم بأن بلوغ الغياب (${STAGE.transfer.days}) يومًا يستوجب تحويل الطالب إلى وكيل شؤون الطلاب لدراسة حالته.`)
         + dates,
       signs: [
         { title: "الطالب", name: s.full_name },
@@ -303,10 +307,10 @@ async function printMinutes(s, stage, { from, to, done, issuedOn }) {
       ],
     },
     transfer: {
-      title: "محضر تحويل طالب إلى وكيل شؤون الطلاب — الغياب",
+      title: "محضر تحويل طالب إلى وكيل شؤون الطلاب لدراسة الحالة — الغياب",
       body: P(`إنه في يوم ${when}، نظرًا لبلوغ غياب ${who} ${days} بدون عذر ${period}${
         done?.warn1 ? `، وصدور الإنذار الأول ${prev("warn1")}` : ""}${done?.warn2 ? ` والإنذار الثاني ${prev("warn2")}` : "، وصدور الإنذار الثاني"}.`)
-        + P("فقد تم تحويل الطالب إلى وكيل شؤون الطلاب لاتخاذ ما يلزم وفق قواعد السلوك والمواظبة، مرفقًا به بيان أيام الغياب ومحاضر الإنذارات السابقة.")
+        + P("فقد تم تحويل الطالب إلى وكيل شؤون الطلاب لدراسة حالته وأسباب غيابه، واتخاذ ما يلزم وفق قواعد السلوك والمواظبة، مرفقًا به بيان أيام الغياب ومحاضر الإنذارات السابقة.")
         + dates,
       signs: [
         { title: "الموجه الطلابي", name: ".............................." },

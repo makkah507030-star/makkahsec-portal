@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { loadDay, loadApproval, summarize } from "../../lib/officialAttendance";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
@@ -334,9 +335,13 @@ function OfficialStatusBox({ date }) {
   useEffect(() => {
     if (!period2Done) return;
     (async () => {
-      const { data: rows, error } = await supabase.rpc("official_daily_status", { p_date: date });
-      if (error) { console.error(error); return; }
-      setData(rows ?? []);
+      // نفس قواعد مركز تقارير شؤون الطلاب: المعتمد إن اعتُمد اليوم، وإلا الحساب المبدئي
+      try {
+        const { day } = await loadApproval(date);
+        if (day) { setData({ ...day, pct: day.official_pct, approved: true }); return; }
+        const { rows } = await loadDay(date);
+        setData({ ...summarize(rows), approved: false });
+      } catch (e) { console.error(e); }
     })();
   }, [date, period2Done]);
 
@@ -357,18 +362,17 @@ function OfficialStatusBox({ date }) {
     </section>;
   }
 
-  const present = data.filter((r) => r.official === "present").length;
-  const absent = data.filter((r) => r.official === "absent").length;
-  const pending = data.filter((r) => r.official === "pending").length;
-  const resolved = present + absent;
-  const pct = resolved ? Math.round((present / resolved) * 100) : null;
+  const { present, absent, excused, pending } = data;
+  const pct = data.pct != null ? Math.round(Number(data.pct)) : null;
 
   return (
     <Link to="/student-affairs?tab=official"
       className="block rounded-card border border-[#CCF2DB] bg-mint-tint p-5 transition-colors hover:bg-mint-tint/70">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-[#6AA786]">الحضور والغياب الرسمي</p>
+          <p className="text-xs font-medium text-[#6AA786]">
+            الحضور والغياب الرسمي{data.approved ? " — معتمد" : " — مبدئي"}
+          </p>
           <div className="mt-1.5 flex items-baseline gap-4">
             <p className="text-3xl font-bold leading-none text-mint-deep">
               {pct != null ? <span className="num">{pct}%</span> : "—"}
@@ -389,6 +393,12 @@ function OfficialStatusBox({ date }) {
             <p className="num text-xl font-bold text-absent">{absent}</p>
             <p className="text-[11px] text-muted">غائب</p>
           </div>
+          {excused > 0 && (
+            <div>
+              <p className="num text-xl font-bold text-excused">{excused}</p>
+              <p className="text-[11px] text-muted">بعذر</p>
+            </div>
+          )}
           {pending > 0 && (
             <div>
               <p className="num text-xl font-bold text-warning">{pending}</p>

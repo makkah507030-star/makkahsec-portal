@@ -21,7 +21,7 @@ export const OFFICIAL_PERIODS = [1, 2];
 export const WARNING_STAGES = [
   { key: "warn1",    days: 10, label: "الإنذار الأول",  doc: "محضر إنذار أول" },
   { key: "warn2",    days: 15, label: "الإنذار الثاني", doc: "محضر إنذار ثانٍ" },
-  { key: "transfer", days: 15, label: "التحويل لوكيل شؤون الطلاب", doc: "محضر تحويل" },
+  { key: "transfer", days: 20, label: "التحويل لوكيل شؤون الطلاب", doc: "محضر تحويل لدراسة الحالة" },
 ];
 
 export const OFFICIAL_LABEL = {
