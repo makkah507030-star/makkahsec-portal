@@ -226,11 +226,17 @@ function Backfill({ from, to, approved, onDone }) {
     return schoolDaysBetween(from, to < today ? to : today).filter((d) => !have.has(d) && d < today);
   }, [from, to, approved]);
 
-  const start = async () => {
-    if (!window.confirm(`سيُحسب ${pendingDays.length} يومًا سابقًا من السجلات المحفوظة ويُعتمد بأثر رجعي. السجلات الأصلية لا تتغير. متابعة؟`)) return;
-    const st = { done: 0, total: pendingDays.length, saved: 0, skipped: 0, error: null };
+  // أيام معتمدة ناقصة التحضير — تُعاد بعد أن يستكمل المعلمون الرصد
+  const partialDays = useMemo(
+    () => (approved ?? []).filter(isPartial).map((d) => d.attend_date),
+    [approved]
+  );
+
+  const start = (list, question) => async () => {
+    if (!window.confirm(question)) return;
+    const st = { done: 0, total: list.length, saved: 0, skipped: 0, error: null };
     setState({ ...st });
-    for (const date of pendingDays) {
+    for (const date of list) {
       try {
         const day = await loadDay(date);
         if (day.hasData) {
@@ -262,6 +268,13 @@ function Backfill({ from, to, approved, onDone }) {
           والأيام بلا تحضير (الإجازات) تُتخطّى.
         </p>
       </div>
+      {partialDays.length > 0 && !state && (
+        <button onClick={start(partialDays,
+            `سيُعاد احتساب ${partialDays.length} يومًا ناقص التحضير من السجلات الحالية. تصحيحات الوكيل اليدوية تبقى كما هي. متابعة؟`)}
+          className="rounded-sm2 border border-warning px-4 py-2 text-sm font-semibold text-warning hover:bg-warning-light">
+          إعادة احتساب <span className="num">{partialDays.length}</span> يومًا ناقصًا بعد استكمال الرصد
+        </button>
+      )}
       {state ? (
         <div className="space-y-2">
           <div className="h-2 overflow-hidden rounded-pill bg-gray-tint">
@@ -276,7 +289,8 @@ function Backfill({ from, to, approved, onDone }) {
       ) : pendingDays.length === 0 ? (
         <p className="text-sm text-present">كل الأيام السابقة في الفترة معتمدة.</p>
       ) : (
-        <button onClick={start}
+        <button onClick={start(pendingDays,
+            `سيُحسب ${pendingDays.length} يومًا سابقًا من السجلات المحفوظة ويُعتمد بأثر رجعي. السجلات الأصلية لا تتغير. متابعة؟`)}
           className="rounded-sm2 bg-mint-deep px-4 py-2 text-sm font-semibold text-white">
           اعتماد <span className="num">{pendingDays.length}</span> يومًا سابقًا
         </button>
