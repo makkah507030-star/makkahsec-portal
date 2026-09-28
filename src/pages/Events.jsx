@@ -678,7 +678,8 @@ const hijriYear = () => {
 
 /* ③ موافقة أولياء الأمور — عبر نظام النماذج */
 /* المعلمون المشاركون في تنظيم الحدث — يوقّعون مع المنظّم على نماذج الموافقة */
-function CoOrganizers({ e, uid, patch }) {
+function CoOrganizers({ e, uid, patch, onNote }) {
+  const { adminRoles, isTeacher } = useSession();
   const [dir, setDir] = useState(null);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
@@ -691,29 +692,40 @@ function CoOrganizers({ e, uid, patch }) {
     })();
   }, []);
 
-  const save = async (next) => {
+  // صفة المنظّم في التوقيع — لمن يملك أكثر من صفة (معلم وصفة إدارية)
+  const roles = adminRoles ?? [];
+  const capacities = [
+    ...(isTeacher || !roles.length ? ["معلم"] : []),
+    ...roles.map((r) => ADMIN_ROLE_LABEL[r]).filter(Boolean),
+  ].filter((v, i, a) => a.indexOf(v) === i);
+  const canPickCapacity = e.organizer_id === uid && capacities.length > 1;
+
+  // الموافقات الصادرة تُحدَّث عبر الخادم — المنظّم لا يعدّلها مباشرةً بعد ردّ ولي الأمر
+  const syncIssued = async () => {
+    const { error } = await supabase.rpc("ev_sync_consent_signers", { p_event: e.id });
+    return error;
+  };
+
+  const save = async (fields, okText) => {
     setBusy(true);
-    const ok = await patch({ co_organizers: next },
-      next.length > list.length ? "أُضيف المعلم إلى التوقيع." : "أُزيل المعلم من التوقيع.");
-    // النماذج الصادرة من قبل تُحدَّث بالأسماء الجديدة
+    const ok = await patch(fields);
     if (ok) {
-      const ids = (await supabase.from("event_participants")
-        .select("consent_doc_id").eq("event_id", e.id).not("consent_doc_id", "is", null))
-        .data?.map((x) => x.consent_doc_id) ?? [];
-      if (ids.length) {
-        await supabase.from("form_documents")
-          .update({ co_signers: next }).in("id", ids);
-      }
+      const err = await syncIssued();
+      onNote(err ? { ok: false, text: `حُفظ، لكن تعذّر تحديث الموافقات الصادرة: ${err.message}` }
+                 : { ok: true, text: okText });
     }
     setBusy(false);
   };
+  const saveList = (next) => save({ co_organizers: next },
+    next.length > list.length ? "أُضيف المعلم إلى التوقيع، وحُدّثت الموافقات الصادرة."
+                              : "أُزيل المعلم من التوقيع، وحُدّثت الموافقات الصادرة.");
 
   const add = (t) => {
     if (list.some((x) => x.user_id === t.user_id)) return;
     setQ("");
-    save([...list, { user_id: t.user_id, name: t.full_name, role: "المعلم" }]);
+    saveList([...list, { user_id: t.user_id, name: t.full_name, role: "المعلم" }]);
   };
-  const remove = (id) => save(list.filter((x) => x.user_id !== id));
+  const remove = (id) => saveList(list.filter((x) => x.user_id !== id));
 
   const hits = q.trim().length < 2 ? [] : (dir ?? [])
     .filter((t) => t.user_id !== uid && t.user_id !== e.organizer_id
@@ -722,7 +734,27 @@ function CoOrganizers({ e, uid, patch }) {
     .slice(0, 6);
 
   return (
-    <div className="mt-4 rounded-sm2 border border-line p-3">
+    <div className="mt-4 space-y-3">
+    {canPickCapacity && (
+      <div className="rounded-sm2 border border-line p-3">
+        <p className="text-xs font-semibold text-ink">صفتك في التوقيع</p>
+        <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
+          تظهر تحت اسمك في الموافقات والشهادات والتقرير، ومنها ما صدر من قبل.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {capacities.map((c) => (
+            <button key={c} type="button" disabled={busy}
+              onClick={() => c !== e.organizer_role && save({ organizer_role: c }, `صارت صفتك «${c}»، وحُدّثت الموافقات الصادرة.`)}
+              className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                e.organizer_role === c ? "bg-mint-deep text-white"
+                                       : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+    <div className="rounded-sm2 border border-line p-3">
       <p className="text-xs font-semibold text-ink">المعلمون المشاركون في التنظيم</p>
       <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
         تظهر أسماؤهم وتواقيعهم المحفوظة مع توقيعك في نماذج الموافقة، ومنها ما صدر من قبل.
@@ -754,6 +786,7 @@ function CoOrganizers({ e, uid, patch }) {
           ))}
         </div>
       )}
+    </div>
     </div>
   );
 }
@@ -968,7 +1001,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName, patch }) {
           ))}
         </div>
 
-        <CoOrganizers e={e} uid={uid} patch={patch} />
+        <CoOrganizers e={e} uid={uid} patch={patch} onNote={setNote} />
 
         {note && (
           <p className={`mt-3 rounded-sm2 px-3 py-2 text-sm ${
