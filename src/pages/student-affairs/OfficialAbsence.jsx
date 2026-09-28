@@ -30,6 +30,7 @@ export default function OfficialAbsence({ initialDate }) {
   // تحويل الغياب إلى «بعذر» أو إعادته «بدون عذر»: الوكيل والمساعد الإداري 1 و 2 (والمدير والدعم الفني)
   const { hasAdminRole } = useSession();
   const canExcuse = hasAdminRole("deputy_students", "clerk", "clerk_2", "principal", "tech_support");
+  const [picked, setPicked] = useState(() => new Set());   // المحدَّدون للتحويل دفعة واحدة
 
   const day = approval?.day ?? null;
   const markBy = useMemo(
@@ -71,6 +72,42 @@ export default function OfficialAbsence({ initialDate }) {
     return list.slice().sort((a, b) =>
       a.grade - b.grade || a.class_no - b.class_no || a.full_name.localeCompare(b.full_name, "ar"));
   }, [rows, grade, view]);
+
+  // من يقبل تحويل العذر في القائمة المعروضة
+  const excusable = useMemo(
+    () => (day && canExcuse ? filtered.slice(0, 400).filter((r) => r.shown === "absent" || r.shown === "excused") : []),
+    [day, canExcuse, filtered]);
+  const pickedRows = excusable.filter((r) => picked.has(r.student_id));
+  const toExcuse = pickedRows.filter((r) => r.shown === "absent");
+  const toAbsent = pickedRows.filter((r) => r.shown === "excused");
+  const allPicked = excusable.length > 0 && pickedRows.length === excusable.length;
+  const togglePick = (id) => setPicked((s) => {
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  });
+
+  // تحويل المحدَّدين دفعة واحدة — طالبًا طالبًا، ويُذكر كم تمّ إن توقّف في منتصفه
+  const bulk = async (list, status) => {
+    if (!list.length) return;
+    const word = status === "excused" ? "بعذر" : "بدون عذر";
+    if (!window.confirm(`تحويل غياب ${list.length} طالبًا إلى «${word}»؟`)) return;
+    setBusy(true); setMsg(null);
+    let done = 0;
+    try {
+      for (const r of list) {
+        await overrideMark(date, r, status, status === "excused" ? "غياب بعذر" : "غياب بدون عذر");
+        done++;
+      }
+      setMsg({ ok: true, text: `حُوّل غياب ${done} طالبًا إلى «${word}».` });
+    } catch (e) {
+      setMsg({ ok: false, text: `حُوّل ${done} من ${list.length}، ثم تعذّر الباقي: ${e.message ?? e}` });
+    } finally {
+      setPicked(new Set());
+      setBusy(false);
+      reload();
+    }
+  };
 
   const run = async (fn, okText) => {
     setBusy(true); setMsg(null);
@@ -197,6 +234,29 @@ export default function OfficialAbsence({ initialDate }) {
           <ExportBar disabled={!absentees.length} onPrint={printIt} onExcel={excelIt}
                      printLabel="كشف الغائبين — PDF" excelLabel="كشف الغائبين — Excel" />
 
+          {excusable.length > 0 && (
+            <div className="card flex flex-wrap items-center gap-2 p-3">
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-ink">
+                <input type="checkbox" checked={allPicked} disabled={busy}
+                  onChange={() => setPicked(allPicked ? new Set() : new Set(excusable.map((r) => r.student_id)))} />
+                تحديد الكل <span className="num text-muted">({excusable.length})</span>
+              </label>
+              <span className="text-xs text-muted">
+                المحدَّد: <span className="num">{pickedRows.length}</span>
+              </span>
+              <div className="ms-auto flex flex-wrap gap-2">
+                <button disabled={busy || !toExcuse.length} onClick={() => bulk(toExcuse, "excused")}
+                  className="rounded-sm2 bg-excused px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40">
+                  تحويل إلى بعذر <span className="num">({toExcuse.length})</span>
+                </button>
+                <button disabled={busy || !toAbsent.length} onClick={() => bulk(toAbsent, "absent")}
+                  className="rounded-sm2 border border-line px-3 py-1.5 text-sm text-muted hover:bg-canvas disabled:opacity-40">
+                  إعادة بدون عذر <span className="num">({toAbsent.length})</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {filtered.length === 0 ? (
             <Empty>لا نتائج مطابقة.</Empty>
           ) : (
@@ -204,6 +264,11 @@ export default function OfficialAbsence({ initialDate }) {
               {filtered.slice(0, 400).map((r) => (
                 <div key={r.student_id} className="px-4 py-2.5">
                   <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                    {excusable.includes(r) && (
+                      <input type="checkbox" className="shrink-0" checked={picked.has(r.student_id)} disabled={busy}
+                        onChange={() => togglePick(r.student_id)} aria-label={`تحديد ${r.full_name}`} />
+                    )}
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-ink">{r.full_name}</p>
                       <p className="text-xs text-muted">
@@ -222,6 +287,7 @@ export default function OfficialAbsence({ initialDate }) {
                           التحضير الآن: {OFFICIAL_LABEL[r.official]} (يختلف عن المعتمد)
                         </p>
                       )}
+                    </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className={`chip ${TONE[r.shown]}`}>{OFFICIAL_LABEL[r.shown]}</span>
