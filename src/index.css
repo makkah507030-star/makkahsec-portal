@@ -64,16 +64,14 @@
 @keyframes ld-fade { from { opacity: 0; } to { opacity: 1; } }
 .ld-fade { animation: ld-fade .35s ease-out .15s both; }
 
-/* ——— بطاقات التنبيه ——— */
-@keyframes nt-in  { from { opacity: 0; transform: translateY(-14px) scale(.97); } to { opacity: 1; transform: none; } }
-@keyframes nt-out { to   { opacity: 0; transform: translateY(-10px) scale(.97); } }
+/* ——— صندوق التحميل والنتائج وسط الشاشة ——— */
 @keyframes nt-pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: none; } }
-@keyframes nt-rise{ from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes nt-draw{ from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
 @keyframes nt-bar { from { width: 100%; } to { width: 0; } }
-.nt-in   { animation: nt-in .32s cubic-bezier(.2,.9,.3,1.2) both; }
-.nt-out  { animation: nt-out .22s ease-in both; }
 .nt-pop  { animation: nt-pop .28s cubic-bezier(.2,.9,.3,1.2) both; }
-.nt-rise { animation: nt-rise .3s ease-out both; }
 .nt-draw { stroke-dasharray: 24; animation: nt-draw .45s ease-out .18s both; }
 .nt-bar  { animation-name: nt-bar; animation-timing-function: linear; animation-fill-mode: both; }
+@keyframes nt-veil { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nt-ring { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: none; } }
+.nt-veil { animation: nt-veil .25s ease-out both; }
+.nt-ring { animation: nt-ring .45s cubic-bezier(.2,.9,.3,1.2) both; }

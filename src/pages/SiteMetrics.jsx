@@ -328,7 +328,7 @@ export default function SiteMetrics() {
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-ink">Netlify — النشر والنطاق</h2>
         {!plat?.netlify ? (
-          <Loader compact />
+          platErr ? null : <Loader compact />
         ) : plat.netlify.configured === false ? (
           <NotConfigured what="Netlify" />
         ) : plat.netlify.error ? (
@@ -356,7 +356,7 @@ export default function SiteMetrics() {
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-ink">Supabase — المشروع والاشتراك</h2>
         {!plat?.supabase ? (
-          <Loader compact />
+          platErr ? null : <Loader compact />
         ) : plat.supabase.configured === false ? (
           <NotConfigured what="Supabase" />
         ) : plat.supabase.error ? (

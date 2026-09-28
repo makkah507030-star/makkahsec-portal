@@ -35,33 +35,34 @@ export function useWaitHint(on = true) {
   return hint;
 }
 
+// بعد هذه المدة يُرفع الحجب عن الصفحة ويظهر المؤشر في مكانه — فلا يجمّد
+// جزءٌ عالق البوابةَ كلها
+const HAND_OFF_MS = 12000;
+
 /**
- * مؤشر التحميل:
- *   <Loader />          وسط المساحة — لتحميل صفحة أو قسم
- *   <Loader compact />  سطر صغير داخل بطاقة أو قائمة
+ * جزء من الصفحة يُحمَّل. لا يُرسم شيء في مكانه: تُحجب الصفحة بتضليل خفيف
+ * ويظهر شعار التحميل في صندوق وسط الشاشة (NoticeHost). وإن طال التحميل
+ * يُرفع الحجب ويظهر مؤشر صغير هنا.
+ *   <Loader />          مكان قسم أو صفحة
+ *   <Loader compact />  سطر داخل بطاقة أو قائمة
  *   <Loader screen />   ملء الشاشة — عند فتح البوابة
  */
 export default function Loader({ compact = false, screen = false, label = "جاري التحميل" }) {
-  useEffect(() => loaderMounted(), []);
-  const hint = useWaitHint(!compact);
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (slow) return undefined;
+    const release = loaderMounted();
+    const t = setTimeout(() => setSlow(true), HAND_OFF_MS);
+    return () => { clearTimeout(t); release(); };
+  }, [slow]);
 
-  if (compact) {
-    return (
-      <div className="ld-fade flex items-center gap-2 py-2 text-sm text-muted" role="status">
-        <BrandMark size={22} />
-        <span>{label}<span className="ld-dots" /></span>
-      </div>
-    );
-  }
+  const box = screen ? "min-h-screen" : compact ? "min-h-[2.5rem]" : "min-h-[30vh]";
+  if (!slow) return <div className={box} aria-hidden="true" />;
+
   return (
-    <div role="status"
-         className={`ld-fade flex flex-col items-center justify-center gap-3 text-center ${
-           screen ? "min-h-screen" : "min-h-[30vh] py-10"}`}>
-      <BrandMark size={screen ? 76 : 60} />
-      <p className="text-sm font-medium text-mint-deep">{label}<span className="ld-dots" /></p>
-      <p className={`min-h-[1.25rem] text-xs text-muted transition-opacity duration-500 ${hint ? "opacity-100" : "opacity-0"}`}>
-        {hint}
-      </p>
+    <div role="status" className={`ld-fade flex items-center justify-center gap-2 py-3 text-sm text-muted ${box}`}>
+      <BrandMark size={compact ? 22 : 30} />
+      <span>{label}<span className="ld-dots" /> <span className="text-xs text-faint">الاتصال أبطأ من المعتاد</span></span>
     </div>
   );
 }

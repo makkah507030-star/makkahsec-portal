@@ -3,9 +3,10 @@
 //  مخزن التنبيهات ونشاط الشبكة — بلا React، فيُستورد من أي مكان
 //  (ومنه عميل Supabase نفسه).
 //
-//  • notify(): رسالة نجاح أو خطأ تظهر في بطاقة عائمة أعلى الشاشة.
-//  • trackedFetch: يغلّف طلبات Supabase ليعرف متى يجري «تنفيذ» (حفظ/حذف)
-//    أو «تحميل» يطول، فتظهر بطاقة التنفيذ أو شارة التحميل.
+//  • notify(): نتيجة إجراء (نجاح أو خطأ) تظهر في صندوق وسط الشاشة.
+//  • loaderMounted(): جزء من الصفحة يُحمَّل — يحجب الصفحة بتضليل خفيف.
+//  • trackedFetch: يغلّف طلبات Supabase ليعرف متى يجري «تنفيذ» بدأه المستخدم
+//    (حفظ/حذف بعد ضغطة)، لا الكتابات الخلفية كتعليم الإشعار مقروءًا.
 // =====================================================================
 
 const listeners = new Set();
@@ -67,17 +68,28 @@ function kindOf(input, init) {
   return "reads";
 }
 
+// الكتابة «تنفيذ» فقط إن بدأت بعد ضغطة أو مفتاح بقليل، أو تلت كتابة تنفيذية
+// أخرى (كالتحويل دفعة واحدة طالبًا بعد طالب). ما عداها خلفي لا يحجب الصفحة.
+let interactUntil = 0;
+if (typeof window !== "undefined") {
+  const mark = () => { interactUntil = Math.max(interactUntil, Date.now() + 2000); };
+  window.addEventListener("pointerdown", mark, true);
+  window.addEventListener("keydown", mark, true);
+}
+
 export async function trackedFetch(input, init) {
-  const k = kindOf(input, init);
+  let k = kindOf(input, init);
+  if (k === "writes" && Date.now() > interactUntil) k = "reads";
   if (k) { active = { ...active, [k]: active[k] + 1 }; emit(); }
   try {
     return await fetch(input, init);
   } finally {
+    if (k === "writes") interactUntil = Math.max(interactUntil, Date.now() + 1500);
     if (k) { active = { ...active, [k]: Math.max(0, active[k] - 1) }; emit(); }
   }
 }
 
-// مؤشرات التحميل الظاهرة داخل الصفحة — فلا تتكرر معها شارة التحميل العائمة
+// أجزاء الصفحة التي تُحمَّل الآن — ما دام أحدها قائمًا تُحجب الصفحة
 export function loaderMounted() {
   active = { ...active, loaders: active.loaders + 1 }; emit();
   return () => { active = { ...active, loaders: Math.max(0, active.loaders - 1) }; emit(); };
