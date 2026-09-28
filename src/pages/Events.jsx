@@ -680,6 +680,15 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
     const guardianOf = new Map();
     (gs ?? []).forEach((x) => { if (!guardianOf.has(x.student_id)) guardianOf.set(x.student_id, x); });
 
+    // المُصدِر في خانة التوقيع: اسم منظّم الحدث وصفته وتوقيعه المحفوظ (إن وُجد)
+    const { data: mySig } = await supabase
+      .from("user_signatures").select("path").eq("user_id", uid).maybeSingle();
+    const issuer = {
+      signature_path: mySig?.path ?? null,
+      signature_name: e.organizer_name || organizerName || "",
+      signature_role: e.organizer_role || "المعلم",
+    };
+
     for (const p of (parts ?? []).filter((x) => !x.consent_doc_id)) {
       // ولي الأمر المستلم
       const g = guardianOf.get(p.student_id);
@@ -701,6 +710,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
         status: "awaiting_reply",
         hijri_year: year,
         created_by: uid,
+        ...issuer,
         data: {
           recipient: p.student_name,
           class_label: p.class_label,
