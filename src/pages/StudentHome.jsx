@@ -6,7 +6,8 @@ import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
 import HolidayBanner from "../components/HolidayBanner.jsx";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
-import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime, lateInfo } from "../lib/periodTimes";
+import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from "../lib/periodTimes";
+import { loadFingerprintEnabled, morningLate, dayStartMinutes } from "../lib/officialAttendance";
 import ExamCountdown from "../components/ExamCountdown.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AbsenceHistory from "../components/AbsenceHistory.jsx";
@@ -21,6 +22,9 @@ export default function StudentHome() {
   const [showWeek, setShowWeek] = useState(false);
   const [records, setRecords] = useState([]);
   const [punches, setPunches] = useState([]);
+  // البصمة المقفلة (مرحلة تجربة) لا تُعرض للطالب ولا لولي الأمر
+  const [fpOn, setFpOn] = useState(false);
+  useEffect(() => { loadFingerprintEnabled().then(setFpOn).catch(() => setFpOn(false)); }, []);
   const [ptimes, setPtimes] = useState([]);
   const [nowPeriod, setNowPeriod] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -233,6 +237,7 @@ export default function StudentHome() {
       <AbsenceHistory records={records} />
 
       {/* البصمة الصباحية */}
+      {fpOn && (
       <section className="card overflow-hidden">
         <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
           حضوري الصباحي
@@ -245,7 +250,8 @@ export default function StudentHome() {
               <span className="num text-sm text-ink">{fmtGreg(d.attend_date + "T00:00:00")}</span>
               <span className="flex items-center gap-2">
                 {(() => {
-                  const li = lateInfo(ptimes, d.punch_time);
+                  // قاعدة مركز التقارير نفسها: بعد بداية الاصطفاف بخمس دقائق
+                  const li = morningLate(d.punch_time, dayStartMinutes(ptimes));
                   return li?.isLate ? (
                     <span className="chip bg-late/10 text-late">
                       متأخر <span className="num">{li.minutes}</span> د
@@ -260,6 +266,7 @@ export default function StudentHome() {
           ))
         )}
       </section>
+      )}
 
       <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
     </div>
