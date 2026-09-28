@@ -8,8 +8,8 @@ import moeLogo from "../../assets/moe-logo.png";
 import QuizScan from "../../components/QuizScan.jsx";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import { groupQuestions } from "../../lib/omrLayout.js";
-import { groupPaper, PAPER_KINDS } from "../../lib/paperExam.js";
 import { useNotice } from "../../lib/useNotice.js";
+import { quietly } from "../../lib/notice.js";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -58,16 +58,10 @@ export default function QuizMarks() {
   // «س١: ف٢» — حتى يطابق الرصدُ اليدوي ما بيد المعلم تمامًا، لا ترتيبَ الإضافة
   const isPaper = quiz?.mode === "paper";
   const ordered = useMemo(() => {
-    if (isPaper) {
-      // الاختبار الورقي: بترتيب ورقته (بحسب النمط) ويُرصد يدويًا فقرةً فقرة
-      return groupPaper(questions).flatMap((g, gi) =>
-        g.list.map((q, qi) => ({ ...q, _label: `س${gi + 1}: ف${qi + 1}`,
-                                 _kind: PAPER_KINDS.find((k) => k.key === g.kind)?.label })));
-    }
     const KIND = { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أو خطأ", match: "المزاوجة" };
     return groupQuestions(questions).flatMap((g, gi) =>
       g.list.map((q, qi) => ({ ...q, _label: `س${gi + 1}: ف${qi + 1}`, _kind: KIND[g.kind] })));
-  }, [questions, isPaper]);
+  }, [questions]);
 
   // فصول الاختبار وأسئلته
   useEffect(() => {
@@ -135,14 +129,14 @@ export default function QuizMarks() {
     return fresh;
   };
 
-  // الاختبار الورقي: رصد يدوي — الخادم يتحقق من المعلم ويجمع الدرجة
-  const saveManual = async (student, marks, absent = false) => {
-    const { data, error } = await supabase.rpc("quiz_save_manual_marks", {
-      p_quiz: quizId, p_class: classId, p_student: student.id, p_marks: marks, p_absent: absent,
-    });
+  // الاختبار الورقي: يُرصد مجموع الطالب مباشرة — حفظ هادئ لا يقطع الكتابة
+  const saveScore = async (student, score, absent = false) => {
+    const { data, error } = await quietly(() => supabase.rpc("quiz_save_manual_score", {
+      p_quiz: quizId, p_class: classId, p_student: student.id, p_score: score, p_absent: absent,
+    }));
     if (error) {
-      setMsg({ ok: false, text: /quiz_save_manual_marks/.test(error.message)
-        ? "الرصد اليدوي يحتاج تنفيذ ملف supabase/quiz_paper_mode.sql في قاعدة البيانات مرة واحدة."
+      setMsg({ ok: false, text: /quiz_save_manual_score/.test(error.message)
+        ? "الرصد يحتاج تنفيذ ملف supabase/quiz_paper_mode.sql في قاعدة البيانات مرة واحدة."
         : error.message });
       return null;
     }
@@ -151,19 +145,8 @@ export default function QuizMarks() {
     return row;
   };
 
-  // حفظ ثم فتح الطالب التالي الذي لم يُرصد
-  const saveManualNext = async (student, marks) => {
-    const row = await saveManual(student, marks);
-    if (!row) return;
-    const i = students.findIndex((x) => x.id === student.id);
-    const next = students.slice(i + 1).find((x) => !subs[x.id]) ?? null;
-    setActive(next);
-    setMsg({ ok: true, text: `رُصدت درجة ${student.full_name}: ${row.score} من ${quiz?.total_marks}.` });
-  };
-
   const markAbsent = async (student) => {
-    if (isPaper) { await saveManual(student, {}, true); setActive(null); }
-    else await saveAnswers(student, {}, true);
+    await saveAnswers(student, {}, true);
     setMsg({ ok: true, text: `سُجّل غياب ${student.full_name}.` });
   };
 
@@ -189,7 +172,7 @@ export default function QuizMarks() {
         <h1 className="text-lg font-bold text-ink">التصحيح والدرجات</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           اختر الاختبار وفصله، ثم ارصد إجابات كل طالب فتُصحَّح آليًا —
-          أو درجات فقراته إن كان اختبارًا ورقيًا.
+          أو مجموعه مباشرة إن كان اختبارًا ورقيًا.
         </p>
       </div>
 
@@ -264,6 +247,11 @@ export default function QuizMarks() {
             ))}
           </div>
 
+          {isPaper && (
+            <ScoreGrid key={`${quizId}-${classId}`} students={students} subs={subs} total={Number(quiz?.total_marks ?? 0)} onSave={saveScore} />
+          )}
+
+          {!isPaper && (
           <div className="no-print card divide-y divide-line overflow-hidden">
             {students.map((s) => {
               const sub = subs[s.id];
@@ -282,28 +270,17 @@ export default function QuizMarks() {
                     ) : (
                       <span className="chip bg-canvas text-muted">لم يُرصد</span>
                     )}
-                    {!isPaper && (
-                      <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
-                              className="shrink-0 rounded-pill border border-mint-deep px-2.5 py-1 text-xs font-semibold text-mint-deep">
-                        📷
-                      </button>
-                    )}
+                    <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
+                            className="shrink-0 rounded-pill border border-mint-deep px-2.5 py-1 text-xs font-semibold text-mint-deep">
+                      📷
+                    </button>
                     <button onClick={() => setActive(active?.id === s.id ? null : s)}
                             className="shrink-0 rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white">
                       {active?.id === s.id ? "إغلاق" : sub ? "تعديل" : "رصد"}
                     </button>
                   </div>
 
-                  {active?.id === s.id && isPaper && (
-                    <ManualSheet key={s.id} questions={ordered} total={quiz?.total_marks}
-                                 initial={sub?.answers?.manual ?? {}}
-                                 onSave={(m) => saveManual(s, m).then((r) => {
-                                   if (r) { setActive(null); setMsg({ ok: true, text: `رُصدت درجة ${s.full_name}: ${r.score} من ${quiz?.total_marks}.` }); }
-                                 })}
-                                 onNext={(m) => saveManualNext(s, m)}
-                                 onAbsent={() => markAbsent(s)} />
-                  )}
-                  {active?.id === s.id && !isPaper && (
+                  {active?.id === s.id && (
                     <AnswerSheet student={s} questions={ordered}
                                  initial={sub?.answers ?? {}}
                                  onSave={(a) => saveAnswers(s, a)}
@@ -314,13 +291,10 @@ export default function QuizMarks() {
             })}
           </div>
 
+          )}
+
           <div className="no-print flex flex-wrap gap-2">
-            {isPaper ? (
-              <button className="btn-primary flex-1"
-                      onClick={() => setActive(students.find((x) => !subs[x.id]) ?? students[0])}>
-                رصد الطالب التالي
-              </button>
-            ) : (
+            {isPaper ? null : (
               <>
                 <button className="btn-primary flex-1"
                         onClick={() => setScanFrom((students.find((x) => !subs[x.id]) ?? students[0]).id)}>
@@ -689,66 +663,78 @@ function FastEntry({ students, questions, subs, quiz, onSave, onAbsent, onClose 
   );
 }
 
-/* ------------------ رصد الاختبار الورقي: درجة لكل فقرة ------------------ */
-function ManualSheet({ questions, total, initial, onSave, onNext, onAbsent }) {
-  const [m, setM] = useState(() => Object.fromEntries(
-    questions.map((q) => [q.id, initial?.[q.id] != null ? String(initial[q.id]) : ""])));
-  const [busy, setBusy] = useState(false);
-  const sum = Math.round(questions.reduce((a, q) => a + (Number(m[q.id]) || 0), 0) * 100) / 100;
-  const filled = questions.filter((q) => m[q.id] !== "").length;
-  const clean = () => Object.fromEntries(Object.entries(m).filter(([, v]) => v !== "")
-    .map(([k, v]) => [k, Math.min(Number(questions.find((q) => q.id === k)?.marks || 0), Math.max(0, Number(v) || 0))]));
-  const run = async (fn) => { setBusy(true); try { await fn(clean()); } finally { setBusy(false); } };
+/* ------------------ رصد الاختبار الورقي: المجموع مباشرة ------------------ */
+// خانة لكل طالب: اكتب الدرجة ثم Enter فتُحفظ وينتقل المؤشر للطالب التالي.
+// «غ» تعني غائب، والخانة الفارغة لا تُحفظ.
+function ScoreGrid({ students, subs, total, onSave }) {
+  const shown = (sub) => (sub?.absent ? "غ" : sub?.score != null ? String(Number(sub.score)) : "");
+  const [vals, setVals] = useState(() => Object.fromEntries(students.map((s) => [s.id, shown(subs[s.id])])));
+  const [state, setState] = useState({});   // student_id -> saving | ok | err
 
-  // Enter ينقل للخانة التالية، وفي الأخيرة يحفظ وينتقل للطالب التالي
-  const onKey = (e, i) => {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    const next = document.querySelector(`[data-ms="${i + 1}"]`);
-    if (next) next.focus(); else run(onNext);
+  const parse = (v) => {
+    const t = String(v ?? "").trim().replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+    if (!t) return { empty: true };
+    if (/^(غ|غا|غائب|a|A)$/.test(t)) return { absent: true };
+    const n = Number(t.replace(",", "."));
+    if (!Number.isFinite(n) || n < 0 || n > total) return { bad: true };
+    return { score: n };
   };
 
+  const commit = async (st) => {
+    const v = vals[st.id] ?? "";
+    if (v === shown(subs[st.id])) return;                 // لم يتغيّر
+    const p = parse(v);
+    if (p.empty) return;
+    if (p.bad) { setState((x) => ({ ...x, [st.id]: "err" })); return; }
+    setState((x) => ({ ...x, [st.id]: "saving" }));
+    const row = await onSave(st, p.absent ? null : p.score, !!p.absent);
+    setState((x) => ({ ...x, [st.id]: row ? "ok" : "err" }));
+    if (row) setVals((x) => ({ ...x, [st.id]: shown(row) }));
+  };
+
+  const focusRow = (i) => {
+    const el = document.querySelector(`[data-sg="${i}"]`);
+    if (el) { el.focus(); el.select(); }
+  };
+  const onKey = (e, i) => {
+    if (e.key === "Enter" || e.key === "ArrowDown") { e.preventDefault(); commit(students[i]); focusRow(i + 1); }
+    if (e.key === "ArrowUp") { e.preventDefault(); commit(students[i]); focusRow(i - 1); }
+  };
+
+  const done = students.filter((s) => subs[s.id]).length;
   return (
-    <div className="mt-3 space-y-2 rounded-card border border-[#CCF2DB] bg-mint-tint/40 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-xs text-muted">درجة كل فقرة — <span className="num">{filled}/{questions.length}</span></p>
-        <p className="num text-sm font-bold text-mint-deep">{sum} / {total}</p>
+    <div className="no-print card overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-mint-tint/50 px-4 py-2.5">
+        <p className="text-xs text-muted">
+          اكتب مجموع الطالب ثم <b>Enter</b> للتالي · <b>غ</b> للغائب ·
+          الدرجة من <span className="num">0</span> إلى <span className="num">{total}</span>
+        </p>
+        <p className="num text-xs font-semibold text-mint-deep">{done}/{students.length}</p>
       </div>
-      <div className="space-y-1">
-        {questions.map((q, i) => {
-          // عنوان السؤال قبل أول فقراته
-          const head = i === 0 || questions[i - 1]._kind !== q._kind ? q._kind : null;
-          const max = Number(q.marks || 0);
-          const v = m[q.id];
-          const over = v !== "" && Number(v) > max;
+      <div className="divide-y divide-line">
+        {students.map((s, i) => {
+          const st = state[s.id];
+          const bad = st === "err";
           return (
-            <div key={q.id}>
-              {head && <p className="pt-1.5 text-[11px] font-bold text-mint-deep">{q._label.split(":")[0]}: {head}</p>}
-              <div className="flex items-center gap-2 rounded-sm2 bg-white px-2 py-1.5">
-                <span className="num w-12 shrink-0 text-[11px] text-muted">{q._label.split(":")[1]}</span>
-                <p className="min-w-0 flex-1 truncate text-xs text-ink" title={q.text}>{q.text || "—"}</p>
-                <button tabIndex={-1} onClick={() => setM((x) => ({ ...x, [q.id]: "0" }))}
-                        className="shrink-0 rounded-pill border border-line px-2 py-0.5 text-[11px] text-muted hover:bg-canvas">0</button>
-                <button tabIndex={-1} onClick={() => setM((x) => ({ ...x, [q.id]: String(max) }))}
-                        className="shrink-0 rounded-pill border border-[#CCF2DB] px-2 py-0.5 text-[11px] text-mint-deep hover:bg-mint-tint">كاملة</button>
-                <input data-ms={i} inputMode="decimal" value={v}
-                       onChange={(e) => setM((x) => ({ ...x, [q.id]: e.target.value.replace(/[^\d.]/g, "") }))}
-                       onKeyDown={(e) => onKey(e, i)}
-                       className={`field num w-14 shrink-0 py-1 text-center ${over ? "border-absent text-absent" : ""}`} />
-                <span className="num w-8 shrink-0 text-[11px] text-faint">/{max}</span>
-              </div>
+            <div key={s.id} className="flex items-center gap-3 px-4 py-2">
+              <span className="num w-6 shrink-0 text-center text-xs text-faint">{i + 1}</span>
+              <p className="min-w-0 flex-1 truncate text-sm text-ink">{s.full_name}</p>
+              <input data-sg={i} inputMode="decimal" autoComplete="off" value={vals[s.id] ?? ""}
+                     onChange={(e) => { setVals((x) => ({ ...x, [s.id]: e.target.value })); if (bad) setState((x) => ({ ...x, [s.id]: null })); }}
+                     onKeyDown={(e) => onKey(e, i)} onBlur={() => commit(s)} onFocus={(e) => e.target.select()}
+                     className={`field num w-20 shrink-0 py-1.5 text-center ${bad ? "border-absent text-absent" : ""} ${
+                       vals[s.id] === "غ" ? "text-absent" : ""}`} />
+              <span className="num w-9 shrink-0 text-xs text-faint">/{total}</span>
+              <span className="grid w-5 shrink-0 place-items-center text-sm" aria-live="polite">
+                {st === "saving" ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-mint border-t-transparent" />
+                  : st === "ok" ? <span className="text-present">✓</span>
+                  : bad ? <span className="text-absent" title={`اكتب رقمًا من 0 إلى ${total} أو «غ»`}>!</span>
+                  : null}
+              </span>
             </div>
           );
         })}
       </div>
-      <div className="flex flex-wrap gap-2 pt-1">
-        <button disabled={busy} onClick={() => run(onNext)} className="btn-primary flex-1">حفظ والتالي</button>
-        <button disabled={busy} onClick={() => run(onSave)}
-                className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep">حفظ</button>
-        <button disabled={busy} onClick={onAbsent}
-                className="rounded-pill border border-absent/40 px-4 py-2 text-sm font-semibold text-absent">غائب</button>
-      </div>
-      <p className="text-[11px] text-faint">Enter ينقلك للفقرة التالية، وفي آخرها يحفظ ويفتح الطالب التالي. لا تتجاوز الفقرة درجتها.</p>
     </div>
   );
 }

@@ -77,9 +77,16 @@ if (typeof window !== "undefined") {
   window.addEventListener("keydown", mark, true);
 }
 
+// حفظ متتابع هادئ (كرصد الدرجات خانةً خانة): لا يحجب الصفحة ولا يقطع الكتابة
+let quiet = 0;
+export async function quietly(fn) {
+  quiet++;
+  try { return await fn(); } finally { quiet--; }
+}
+
 export async function trackedFetch(input, init) {
   let k = kindOf(input, init);
-  if (k === "writes" && Date.now() > interactUntil) k = "reads";
+  if (k === "writes" && (quiet > 0 || Date.now() > interactUntil)) k = "reads";
   if (k) { active = { ...active, [k]: active[k] + 1 }; emit(); }
   try {
     return await fetch(input, init);
