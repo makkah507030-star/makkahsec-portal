@@ -5,7 +5,7 @@ import { useSession } from "../../lib/session.jsx";
 import { todayDow, todayISO, todayLabel, todayOff, GRADE_NAMES, STATUS } from "../../lib/schoolTime";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../../components/ColorLegend.jsx";
 import {
-  loadPeriodTimes, byPeriodNo, currentPeriodNo, nearestPeriodNo, fmtRange,
+  loadPeriodTimes, byPeriodNo, currentPeriodNo, lastStartedPeriodNo, periodStarted, fmtRange, fmtTime,
 } from "../../lib/periodTimes";
 
 const ORDER = ["present", "absent", "late", "excused"];        // للعدادات والعرض
@@ -58,6 +58,7 @@ export default function Attendance() {
   const [ptimes, setPtimes] = useState([]);
   const [absStats, setAbsStats] = useState({}); // student_id -> { absent, total }
   const [nowPeriod, setNowPeriod] = useState(null);
+  const [clock, setClock] = useState(() => new Date());   // يتحدّث كل دقيقة لفتح الحصة حين يحين وقتها
   const date = todayISO();
   const dow = todayDow();
 
@@ -67,7 +68,7 @@ export default function Attendance() {
     (async () => {
       const { rows } = await loadPeriodTimes();
       setPtimes(rows);
-      const tick = () => setNowPeriod(currentPeriodNo(rows));
+      const tick = () => { setNowPeriod(currentPeriodNo(rows)); setClock(new Date()); };
       tick();
       timer = setInterval(tick, 60000);
     })();
@@ -105,11 +106,15 @@ export default function Attendance() {
         const doneSet = new Set((done ?? []).map((r) => r.schedule_id));
         setMarked(doneSet);
 
-        // الحصة الافتراضية: الجارية الآن إن وُجدت، وإلا أول حصة غير محضَّرة
+        // الحصة الافتراضية: الجارية الآن، وإلا آخر حصة للمعلم بدأت (في الفسحة: التي انتهت للتو).
+        // لا تُختار حصة لم تبدأ — كانت الفسحة تفتح الحصة القادمة فيُحضّرها المعلم قبل وقتها.
         const { rows: pt } = await loadPeriodTimes();
-        const near = nearestPeriodNo(pt);
-        const byNow = list.find((p) => p.period_no === near);
-        setActive(byNow ?? list.find((p) => !doneSet.has(p.id)) ?? list[0]);
+        const last = lastStartedPeriodNo(pt);
+        const started = last == null ? [] : list.filter((p) => p.period_no <= last);
+        setActive(list.find((p) => p.period_no === last)
+          ?? started.find((p) => !doneSet.has(p.id))
+          ?? started[started.length - 1]
+          ?? list[0]);
       }
       setLoading(false);
     })();
@@ -233,6 +238,12 @@ export default function Attendance() {
 
   const save = async () => {
     if (!active) return;
+    // لا تحضير لحصة لم تبدأ — والقاعدة ترفضه كذلك وإن كانت ساعة الجهاز مقدَّمة
+    const row = byPeriodNo(ptimes)[active.period_no];
+    if (!periodStarted(row)) {
+      setMsg({ ok: false, text: `لم تبدأ الحصة بعد — يُفتح تحضيرها الساعة ${fmtTime(row.start_time)}.` });
+      return;
+    }
     setSaving(true); setMsg(null);
     const rows = students.map((s) => ({
       student_id: s.id, schedule_id: active.id, attend_date: date,
@@ -270,6 +281,8 @@ export default function Attendance() {
   const allDone = marked.size === periods.length;
   const ptMap = byPeriodNo(ptimes);
   const ptimeOf = (no) => (no == null ? null : ptMap[no] ?? null);
+  const notStarted = (p) => !!p && !periodStarted(ptimeOf(p.period_no), clock);
+  const activeLocked = notStarted(active);
 
   return (
     <div className="space-y-4">
@@ -286,6 +299,9 @@ export default function Attendance() {
             </p>
             {nowPeriod === active?.period_no && (
               <span className="chip bg-mint-deep text-white">جارية الآن</span>
+            )}
+            {activeLocked && (
+              <span className="chip bg-warning-light text-warning">لم تبدأ بعد</span>
             )}
           </div>
           <h1 className="mt-1 text-xl font-bold leading-tight text-ink">
@@ -317,11 +333,13 @@ export default function Attendance() {
           {periods.map((p) => {
             const on = active?.id === p.id;
             const done = marked.has(p.id);
+            const later = notStarted(p);
             return (
               <button key={p.id} onClick={() => setActive(p)}
                 className={[
                   "shrink-0 rounded-card border px-3 py-2 text-right transition-colors",
-                  on ? "border-mint-deep bg-mint-tint" : done ? "border-line bg-paper" : "border-line bg-warning-light",
+                  on ? "border-mint-deep bg-mint-tint" : done || later ? "border-line bg-paper" : "border-line bg-warning-light",
+                  later && !on ? "opacity-60" : "",
                   nowPeriod === p.period_no && !on ? "ring-1 ring-mint-deep" : "",
                 ].join(" ")}>
                 <span className="flex items-center gap-1.5">
@@ -473,8 +491,10 @@ export default function Attendance() {
       <div className="fixed inset-x-0 bottom-14 border-t border-line bg-paper/95 p-3 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <div className="mx-auto max-w-5xl">
           <button className="btn-primary w-full sm:w-auto" onClick={save}
-                  disabled={saving || !students.length}>
-            {saving ? "جارٍ الحفظ…" : marked.has(active?.id) ? "تحديث التحضير" : "حفظ التحضير"}
+                  disabled={saving || !students.length || activeLocked}>
+            {activeLocked
+              ? `يُفتح التحضير الساعة ${fmtTime(ptimeOf(active?.period_no)?.start_time)}`
+              : saving ? "جارٍ الحفظ…" : marked.has(active?.id) ? "تحديث التحضير" : "حفظ التحضير"}
           </button>
         </div>
       </div>
