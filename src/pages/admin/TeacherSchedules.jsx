@@ -5,6 +5,7 @@ import { buildWeeklyPrintTable } from "../../lib/scheduleGrid";
 import WeeklyGrid from "../../components/WeeklyGrid.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 export default function TeacherSchedules() {
   const [q, setQ] = useState("");
@@ -149,7 +150,7 @@ export default function TeacherSchedules() {
           </div>
 
           {!teachers ? (
-            <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>
+            <Loader />
           ) : filtered.length === 0 ? (
             <p className="px-4 py-6 text-sm text-muted">لا نتائج مطابقة.</p>
           ) : (
@@ -185,7 +186,7 @@ export default function TeacherSchedules() {
               </div>
 
               {!rows ? (
-                <p className="text-sm text-muted">جارٍ التحميل…</p>
+                <Loader compact />
               ) : (
                 <WeeklyGrid rows={rows} cell={cell} />
               )}

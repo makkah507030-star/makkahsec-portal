@@ -8,6 +8,7 @@ import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } f
 import ColorLegend from "../../components/ColorLegend.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 const TABS = [
   { key: "official", label: "الحضور والغياب الرسمي" },
@@ -180,7 +181,7 @@ function OfficialTab() {
         جاهز للاستخدام الفوري عند طلب الجهات الرقابية.
       </p>
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
       {rows && filtered.length === 0 && (
         <p className="rounded-card bg-gray-tint px-4 py-6 text-center text-sm text-muted">
           لا نتائج مطابقة.
@@ -290,7 +291,7 @@ export function MissingTab() {
         </button>
       </div>
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
       {rows && rows.length === 0 && (
         <p className="rounded-card bg-present/10 px-4 py-6 text-center text-sm text-present">
           لا حالات فقدان في هذا اليوم.
@@ -322,7 +323,7 @@ export function MissingTab() {
                 {open && (
                   <div className="border-t border-line bg-gray-tint px-4 py-3">
                     {!timeline ? (
-                      <p className="text-xs text-muted">جارٍ التحميل…</p>
+                      <Loader compact />
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {timeline.map((p) => {
@@ -485,7 +486,7 @@ function LateTab() {
         </button>
       </div>
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
       {rows && lateList.length === 0 && (
         <p className="rounded-card bg-present/10 px-4 py-6 text-center text-sm text-present">
           لا حالات تأخر مسجّلة في هذا اليوم.
@@ -600,7 +601,7 @@ export function DevicesTab() {
   }, [data]);
 
   if (err) return <p className="text-sm text-absent">تعذّر التحميل: {err}</p>;
-  if (!data || !view) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!data || !view) return <Loader compact />;
 
   const label = (sn) => data.devices.find((d) => d.serial_no === sn)?.label ?? sn;
   const shownClasses = allClasses ? view.classes : view.classes.filter((c) => c.ident > 0);

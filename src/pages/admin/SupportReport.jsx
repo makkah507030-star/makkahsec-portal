@@ -4,6 +4,7 @@ import { fmtDateTime } from "../../lib/dates";
 import { printReport, PRINCIPAL_NAME, TECH_SUPPORT_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 const CAT_LABEL = { bug: "مشكلة تقنية", suggestion: "اقتراح", data: "خطأ بيانات", other: "أخرى" };
 const CAT_ORDER = ["bug", "suggestion", "data", "other"];
@@ -148,7 +149,7 @@ export default function SupportReport() {
     });
   };
 
-  if (!rows) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader compact />;
 
   return (
     <div className="space-y-5">

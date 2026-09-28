@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { fmtBoth } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import NewsCoverCard from "../components/NewsCoverCard.jsx";
+import Loader from "../components/Loader.jsx";
 
 
 
@@ -41,7 +42,7 @@ export default function NewsList() {
       <main className="mx-auto max-w-5xl px-5 py-10">
         <h1 className="text-2xl font-bold text-ink">الأخبار والمقالات</h1>
 
-        {!items && <p className="py-16 text-center text-sm text-muted">جارٍ التحميل…</p>}
+        {!items && <Loader />}
 
         {items?.length === 0 && (
           <p className="mt-8 rounded-card border border-line px-6 py-12 text-center text-sm text-muted">

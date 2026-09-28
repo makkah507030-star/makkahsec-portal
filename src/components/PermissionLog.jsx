@@ -5,6 +5,7 @@ import { useSession } from "../lib/session.jsx";
 import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import Loader from "./Loader.jsx";
 
 const daysAgo = (n) =>
   new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
@@ -216,7 +217,7 @@ export default function PermissionLog() {
         </div>
       </div>
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
 
       {rows && filtered.length === 0 && (
         <div className="card px-6 py-12 text-center">

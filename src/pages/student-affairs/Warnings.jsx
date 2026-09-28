@@ -13,6 +13,7 @@ import { WARNING_STAGES, loadRangeStart, loadActiveTerm, isMissingTable } from "
 import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, GradePills, Note, Loading, Empty, SetupNotice, weekdayOf, daysWord,
 } from "./shared.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const STAGE = Object.fromEntries(WARNING_STAGES.map((s) => [s.key, s]));
 const WATCH_AT = 5;
@@ -28,7 +29,7 @@ export default function Warnings() {
   const [grade, setGrade] = useState(0);
   const [view, setView] = useState("due");
   const [open, setOpen] = useState(null);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null, "error");
   const [tick, setTick] = useState(0);
 
   useEffect(() => {

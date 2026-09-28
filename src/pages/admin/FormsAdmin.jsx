@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 /* =====================================================================
    إدارة النماذج — للدعم الفني ومدير المدرسة:
@@ -123,7 +125,7 @@ export default function FormsAdmin() {
   const [rows, setRows] = useState([]);
   const [assets, setAssets] = useState({});
   const [urls, setUrls] = useState({});
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [principalName, setPrincipalName] = useState("");
   const [adding, setAdding] = useState(false);
   const [nf, setNf] = useState(null);   // بيانات النموذج الجديد
@@ -241,7 +243,7 @@ export default function FormsAdmin() {
     load();
   };
 
-  if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (loading) return <Loader />;
 
   return (
     <div className="space-y-5">

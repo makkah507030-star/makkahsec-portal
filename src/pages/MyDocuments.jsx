@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { fmtDateTime } from "../lib/dates";
+import Loader from "../components/Loader.jsx";
 
 /* =====================================================================
    نماذجي — كل مستند صدر باسم المستخدم يظهر هنا.
@@ -53,7 +54,7 @@ export default function MyDocuments() {
     })();
   }, [session]);
 
-  if (docs === null) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (docs === null) return <Loader />;
 
   return (
     <div className="space-y-5">

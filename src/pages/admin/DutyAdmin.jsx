@@ -4,6 +4,8 @@ import { supabase } from "../../lib/supabase";
 import { DAY_NAMES } from "../../lib/schoolTime";
 import DutyReport, { DutyPrintArea } from "../../components/DutyReport.jsx";
 import { useSession } from "../../lib/session.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 /* =====================================================================
    إدارة المناوبة والإشراف.
@@ -153,7 +155,7 @@ function StaffPick({ staff, value, onChange, placeholder = "اختر…" }) {
 /* --------------------------- المناوبة --------------------------- */
 function DutyTab({ staff }) {
   const [rows, setRows] = useState(null);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [from, setFrom] = useState("");
   const [adding, setAdding] = useState(false);
   const [openWeeks, setOpenWeeks] = useState(null);   // أسماء الأسابيع المفتوحة
@@ -311,7 +313,7 @@ function DutyTab({ staff }) {
         </p>
       )}
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
       {rows?.length === 0 && (
         <p className="card px-4 py-6 text-sm text-muted">لا أيام مناوبة في هذا النطاق.</p>
       )}
@@ -394,7 +396,7 @@ function DutyTab({ staff }) {
 /* -------------------------- الإشراف -------------------------- */
 function SupTab({ staff }) {
   const [rows, setRows] = useState(null);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [add, setAdd] = useState({ day: 1, kind: "teacher", user: null });
 
   const nameById = useMemo(
@@ -472,7 +474,7 @@ function SupTab({ staff }) {
         )}
       </section>
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
 
       {[1, 2, 3, 4, 5].map((d) => {
         const day = (rows ?? []).filter((r) => r.day_of_week === d);

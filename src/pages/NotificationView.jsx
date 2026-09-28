@@ -5,6 +5,7 @@ import { useSession } from "../lib/session.jsx";
 import { KIND_META } from "../lib/useNotifications";
 import { fmtDateTime } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
+import Loader from "../components/Loader.jsx";
 
 // صفحة عرض إشعار واحد بتنسيق احترافي — تُفتح من إشعار الجوال ومن جرس الإشعارات
 export default function NotificationView() {
@@ -43,7 +44,7 @@ export default function NotificationView() {
   const back = () => navigate("/notifications-me");
 
   if (n === undefined) {
-    return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+    return <Loader />;
   }
 
   if (!n) {

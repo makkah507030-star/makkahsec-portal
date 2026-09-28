@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { trackedFetch } from "./notice";
 
 const url = import.meta.env.VITE_SUPABASE_URL;
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -13,6 +14,8 @@ if (!url || !key) {
 
 export const supabase = createClient(url ?? "", key ?? "", {
   auth: { persistSession: true, autoRefreshToken: true },
+  // لمعرفة متى يجري حفظ أو تحميل يطول — تُظهره طبقة التنبيهات العامة
+  global: { fetch: trackedFetch },
 });
 
 export const isConfigured = Boolean(url && key);

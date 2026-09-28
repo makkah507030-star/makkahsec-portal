@@ -8,6 +8,7 @@ import { loadQuizMarks, loadEntries, sheetShape, buildRow } from "../../lib/grad
 import GradeSheetEditor from "../../components/GradeSheetEditor.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
 
@@ -328,7 +329,7 @@ export default function TeacherRecords() {
   /* ---------- العرض ---------- */
 
   if (loading) {
-    return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+    return <Loader />;
   }
 
   if (!me) {

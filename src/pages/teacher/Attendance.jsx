@@ -7,6 +7,8 @@ import ColorLegend, { ATTENDANCE_LEGEND } from "../../components/ColorLegend.jsx
 import {
   loadPeriodTimes, byPeriodNo, currentPeriodNo, lastStartedPeriodNo, periodStarted, fmtRange, fmtTime,
 } from "../../lib/periodTimes";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const ORDER = ["present", "absent", "late", "excused"];        // للعدادات والعرض
 const TEACHER_ORDER = ["present", "absent", "late"];           // ما يختاره المعلم
@@ -50,7 +52,7 @@ export default function Attendance() {
   const [permits, setPermits] = useState({}); // student_id -> { by, note }
   const [returns, setReturns] = useState({}); // student_id -> { from_period }
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [year, setYear] = useState("");
   const [loading, setLoading] = useState(true);
   const [me, setMe] = useState(null);
@@ -228,7 +230,7 @@ export default function Attendance() {
         setAbsStats(stats);
       }
     })();
-  }, [active, date, mySchedIds]);
+  }, [active, date, mySchedIds, setMsg]);
 
   const counts = useMemo(() => {
     const c = { present: 0, absent: 0, late: 0, excused: 0 };
@@ -258,7 +260,7 @@ export default function Attendance() {
     setMsg({ ok: true, text: "حُفظ التحضير" });
   };
 
-  if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (loading) return <Loader />;
   if (!dow) {
     // إجازة رسمية باسمها، أو عطلة نهاية أسبوع
     const off = todayOff();

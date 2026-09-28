@@ -5,6 +5,7 @@ import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } 
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 export default function PeriodAttendance() {
   const [d, setD] = useState(null);
@@ -40,7 +41,7 @@ export default function PeriodAttendance() {
     })();
   }, [dow, date]);
 
-  if (!d) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!d) return <Loader />;
 
   return (
     <div className="space-y-5">

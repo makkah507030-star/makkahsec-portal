@@ -5,6 +5,7 @@ import { useSession } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "../components/PrintPortal.jsx";
+import Loader from "../components/Loader.jsx";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
@@ -92,7 +93,7 @@ export default function EventsReports() {
     `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
       on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
-  if (!rows) return <p className="py-8 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader />;
 
   return (
     <div className="space-y-4">

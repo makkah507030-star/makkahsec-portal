@@ -5,6 +5,8 @@ import { KIND_META } from "../../lib/useNotifications";
 import { fmtDateTime } from "../../lib/dates";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { ADMIN_ROLE_LABEL, ROLE_LABEL } from "../../lib/session.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const roleLabel = (r) => ADMIN_ROLE_LABEL[r] ?? ROLE_LABEL[r] ?? r;
 
@@ -25,7 +27,7 @@ export default function NotificationsReview() {
   const { session } = useSession();
   const [rows, setRows] = useState(null);
   const [busyId, setBusyId] = useState(null);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
     const { data } = await supabase
@@ -120,7 +122,7 @@ export default function NotificationsReview() {
     setRows((r) => r.filter((x) => x.id !== d.id));
   };
 
-  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader />;
 
   return (
     <div className="space-y-4">

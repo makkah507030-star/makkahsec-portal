@@ -5,6 +5,7 @@ import { cleanIdentity } from "../../lib/importer";
 import { extractResultCandidates } from "../../lib/pdfResults";
 import { gradeBand, REPORT_TYPE_LABEL } from "../../lib/gradeBands";
 import { GRADE_NAMES } from "../../lib/schoolTime";
+import { useNotice } from "../../lib/useNotice.js";
 
 const REPORT_TYPES = ["period1", "period2", "final"];
 
@@ -27,8 +28,8 @@ export default function ResultsAdmin() {
   const [queue, setQueue] = useState([]); // processing queue for new uploads
   const [existing, setExisting] = useState([]); // rows already in DB for this report_type+year
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [msg, setMsg] = useState("");
+  const [err, setErr] = useNotice("", "error");
+  const [msg, setMsg] = useNotice("");
 
   useEffect(() => {
     (async () => {

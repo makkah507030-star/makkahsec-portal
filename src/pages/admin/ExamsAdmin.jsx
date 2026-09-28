@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { DAY_NAMES, GRADE_NAMES } from "../../lib/schoolTime";
 import ExamTable, { ExamPrintArea } from "../../components/ExamTable.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 /* =====================================================================
    جداول الاختبارات.
@@ -50,7 +52,7 @@ export default function ExamsAdmin() {
   const [classes, setClasses] = useState([]);
   const [grade, setGrade] = useState(null);
   const [classId, setClassId] = useState(null);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [printing, setPrinting] = useState(null);
 
   // الفترة وبيانات الفصول
@@ -295,7 +297,7 @@ function ClassExamEditor({ term, cls, onPrint }) {
     ((a.exam_week ?? 1) - (b.exam_week ?? 1)) ||
     (a.day_of_week - b.day_of_week) || (a.period_no - b.period_no));
 
-  if (!rows) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader compact />;
 
   return (
     <section className="no-print card p-4">
@@ -433,7 +435,7 @@ function FinalExamEditor({ term, grade, onPrint }) {
     load();
   };
 
-  if (!rows) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader compact />;
 
   return (
     <section className="no-print card space-y-4 p-4">

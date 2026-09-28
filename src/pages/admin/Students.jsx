@@ -4,6 +4,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 const TRACK_LABEL = {
   common_year: "السنة المشتركة",
@@ -174,7 +175,7 @@ export default function Students() {
     });
   };
 
-  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader />;
 
   return (
     <div className="space-y-4">

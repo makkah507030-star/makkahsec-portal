@@ -7,6 +7,7 @@ import moeLogo from "../assets/moe-logo.png";
 import NewsCoverCard from "../components/NewsCoverCard.jsx";
 import ArticleImageSlider from "../components/ArticleImageSlider.jsx";
 import { ROLE_COVER_HUE, ADMIN_ROLE_LABEL, ROLE_PERSON_NAME, coverGradient } from "../lib/session.jsx";
+import Loader from "../components/Loader.jsx";
 
 const escHtml = (s) =>
   String(s ?? "").replace(/[&<>"]/g, (c) =>
@@ -213,7 +214,7 @@ export default function NewsArticle() {
 
       <main className="mx-auto max-w-3xl px-5 py-10">
         {item === undefined && (
-          <p className="py-16 text-center text-sm text-muted">جارٍ التحميل…</p>
+          <Loader />
         )}
 
         {item === null && (

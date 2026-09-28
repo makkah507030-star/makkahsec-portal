@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const CORE_TABS = [
   { key: "attendance", label: "الحضور والغياب اليومي" },
@@ -22,7 +24,7 @@ export default function TeacherPermissions() {
   const [hidden, setHidden] = useState(new Set());   // الأساسية المخفية للمعلم المختار
   const [granted, setGranted] = useState(new Set()); // الإضافية الممنوحة للمعلم المختار
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   useEffect(() => {
     supabase.from("teachers").select("id, full_name, specialization").order("full_name")
@@ -105,7 +107,7 @@ export default function TeacherPermissions() {
                    placeholder="فلترة بالاسم" />
           </div>
           {!teachers ? (
-            <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>
+            <Loader />
           ) : (
             <div className="max-h-[28rem] divide-y divide-line overflow-y-auto">
               {filtered.map((t) => (

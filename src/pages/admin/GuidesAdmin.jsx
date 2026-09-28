@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { AUDIENCES, audienceLabel, fmtSize } from "../../lib/guidesMeta";
 import ColorLegend from "../../components/ColorLegend.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 // الصيغ المقبولة: ملف PDF أو صورة منشور تعريفي
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -26,7 +28,7 @@ export default function GuidesAdmin() {
   const [form, setForm] = useState(empty);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
     const { data } = await supabase
@@ -253,7 +255,7 @@ export default function GuidesAdmin() {
           الأدلة {list && <span className="num text-muted">({list.length})</span>}
         </h2>
 
-        {!list && <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>}
+        {!list && <Loader />}
         {list?.length === 0 && (
           <p className="px-4 py-6 text-sm text-muted">لم تُضف أدلة بعد.</p>
         )}

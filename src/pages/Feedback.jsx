@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { fmtDateTime } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
+import { useNotice } from "../lib/useNotice.js";
 
 const CATEGORIES = [
   { key: "bug",        label: "مشكلة تقنية" },
@@ -33,7 +34,7 @@ export default function Feedback() {
 
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useNotice("", "error");
 
   const [tickets, setTickets] = useState(null);
 

@@ -33,6 +33,7 @@ import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import ExamCountdown from "../../components/ExamCountdown.jsx";
 import DutyCard from "../../components/DutyCard.jsx";
 import ReferralsInbox from "../../components/ReferralsInbox.jsx";
+import Loader from "../../components/Loader.jsx";
 
 
 export default function Dashboard() {
@@ -146,7 +147,7 @@ export default function Dashboard() {
     })();
   }, [date, dow, canFigures, canReports, canImport, isSupportOnly]);
 
-  if (!d) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!d) return <Loader />;
 
   // الحساب المساند: بطاقة ترحيب فقط، بلا أي بيانات
   if (d.supportOnly) {
@@ -594,7 +595,7 @@ function MissingStudentsBox({ date }) {
                 {open && (
                   <div className="space-y-3 bg-white px-5 py-3">
                     {!timeline ? (
-                      <p className="text-xs text-muted">جارٍ التحميل…</p>
+                      <Loader compact />
                     ) : (
                       <StudentTimeline rows={timeline} missingPeriod={r.missing_period} />
                     )}

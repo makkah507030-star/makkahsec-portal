@@ -6,6 +6,7 @@ import { buildWeeklyPrintTable } from "../../lib/scheduleGrid";
 import WeeklyGrid from "../../components/WeeklyGrid.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 export default function StudentSchedules() {
   const [classList, setClassList] = useState(null);
@@ -143,7 +144,7 @@ export default function StudentSchedules() {
         </div>
 
         {!classList ? (
-          <p className="text-sm text-muted">جارٍ التحميل…</p>
+          <Loader compact />
         ) : (
           <div className="flex flex-wrap gap-2">
             {filtered.map((c) => (
@@ -170,7 +171,7 @@ export default function StudentSchedules() {
           </div>
 
           {!rows ? (
-            <p className="text-sm text-muted">جارٍ التحميل…</p>
+            <Loader compact />
           ) : (
             <WeeklyGrid rows={rows} cell={cell} />
           )}

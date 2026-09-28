@@ -9,6 +9,8 @@ import { normalizeImage } from "../lib/imageResize.js";
 import EventCertificate, {
   CERT_TEMPLATES, DEFAULT_CERT_TITLE, certPresets, isNationalDay, officialCert, readCert,
 } from "../components/EventCertificate.jsx";
+import Loader from "../components/Loader.jsx";
+import { useNotice } from "../lib/useNotice.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -45,7 +47,7 @@ export default function Events() {
   const [list, setList] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
     const { data } = await supabase.from("school_events")
@@ -93,7 +95,7 @@ export default function Events() {
                   onDone={(id, t) => { setCreating(false); setMsg(t); load(); setOpenId(id); }} />
       )}
 
-      {!list && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!list && <Loader compact />}
       {list?.length === 0 && (
         <p className="card px-4 py-8 text-center text-sm text-muted">
           لا أحداث بعد. ابدأ بـ«حدث جديد».
@@ -652,7 +654,7 @@ const hijriYear = () => {
 function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
   const [busy, setBusy] = useState(false);
   const [tpl, setTpl] = useState(null);
-  const [note, setNote] = useState(null);
+  const [note, setNote] = useNotice(null);
 
   useEffect(() => {
     (async () => {
@@ -947,7 +949,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
 /* ④ الاستئذان */
 function StagePermission({ e, parts, uid, onNext }) {
   const [busy, setBusy] = useState(false);
-  const [doneMsg, setDoneMsg] = useState(null);
+  const [doneMsg, setDoneMsg] = useNotice(null);
   const approved = (parts ?? []).filter((p) => p.consent_at);
 
   const raise = async () => {
@@ -1354,7 +1356,7 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
   });
   const [photoUrls, setPhotoUrls] = useState({});   // المسار ← رابط موقّع
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(null);
+  const [err, setErr] = useNotice(null, "error");
   const [printing, setPrinting] = useState(false);
   const { sigUrl, school } = useEventSignatures(e.organizer_id);
 

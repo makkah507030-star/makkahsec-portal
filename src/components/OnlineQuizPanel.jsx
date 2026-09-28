@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
 import { GRADE_NAMES } from "../lib/schoolTime";
+import Loader from "./Loader.jsx";
+import { useNotice } from "../lib/useNotice.js";
 
 /* =====================================================================
    تبويب «اختبار إلكتروني» في محرّر الاختبار (للمعلم).
@@ -33,7 +35,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   const [roster, setRoster] = useState({});          // class_id → [{id, full_name}]
   const [form, setForm] = useState(null);            // عند الإنشاء أو التعديل
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [tick, setTick] = useState(Date.now());
 
   const classLabel = (cid) => {
@@ -144,7 +146,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     load();
   };
 
-  if (online === undefined) return <p className="card p-4 text-sm text-muted">جارٍ التحميل…</p>;
+  if (online === undefined) return <Loader compact />;
 
   const box = (m) => m && (
     <p className={`rounded-sm2 px-3 py-2 text-sm ${m.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>

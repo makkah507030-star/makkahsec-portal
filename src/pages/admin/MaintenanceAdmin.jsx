@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDateTime } from "../../lib/dates";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 export default function MaintenanceAdmin() {
   const { profile, adminRoles } = useSession();
@@ -10,7 +12,7 @@ export default function MaintenanceAdmin() {
   const [row, setRow] = useState(null);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
     const { data } = await supabase
@@ -68,7 +70,7 @@ export default function MaintenanceAdmin() {
     await load();
   };
 
-  if (!row) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!row) return <Loader compact />;
 
   return (
     <div className="space-y-5">

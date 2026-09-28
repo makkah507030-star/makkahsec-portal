@@ -4,6 +4,7 @@ import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 // بداية الشهر الحالي — نطاق افتراضي معقول للتقرير
 function monthStartISO() {
@@ -134,7 +135,7 @@ export default function SubstituteReport() {
       </div>
 
       {rows === null ? (
-        <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>
+        <Loader />
       ) : rows.length === 0 ? (
         <div className="card px-6 py-10 text-center">
           <p className="font-semibold">لا حصص انتظار في هذه الفترة</p>

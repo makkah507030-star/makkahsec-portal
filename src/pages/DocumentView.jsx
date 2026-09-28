@@ -5,6 +5,8 @@ import { supabase } from "../lib/supabase";
 import FormSheet, { PrintArea, SHEET_PX } from "../components/FormSheet.jsx";
 import DateField, { TimeField } from "../components/DateField.jsx";
 import { useSession } from "../lib/session.jsx";
+import Loader from "../components/Loader.jsx";
+import { useNotice } from "../lib/useNotice.js";
 
 /* =====================================================================
    عرض مستند صادر لصاحبه: الطالب أو المنسوب أو ولي أمر الطالب،
@@ -47,7 +49,7 @@ export default function DocumentView() {
   const { session } = useSession();
   const [reply, setReply] = useState({});
   const [sending, setSending] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [mySig, setMySig] = useState(null);      // مسار توقيعي المحفوظ
   const [mySigUrl, setMySigUrl] = useState(null);
   const [signIt, setSignIt] = useState(true);
@@ -106,7 +108,7 @@ export default function DocumentView() {
     })();
   }, [id]);
 
-  if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (loading) return <Loader />;
 
   if (error) {
     return (

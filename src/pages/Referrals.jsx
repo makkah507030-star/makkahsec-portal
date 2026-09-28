@@ -5,6 +5,8 @@ import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { todayISO, todayDow, GRADE_NAMES } from "../lib/schoolTime";
 import { currentPeriodNo, loadPeriodTimes } from "../lib/periodTimes";
 import ReferralSheet, { ReferralPrintArea } from "../components/ReferralSheet.jsx";
+import Loader from "../components/Loader.jsx";
+import { useNotice } from "../lib/useNotice.js";
 
 /* =====================================================================
    إحالة الطالب — شاشة واحدة تخدم المسار كاملًا بحسب دور المستخدم:
@@ -43,7 +45,7 @@ export default function Referrals() {
 
   const [rows, setRows] = useState(null);
   const [tab, setTab] = useState(isTeacher ? "new" : "inbox");
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [viewing, setViewing] = useState(null);
 
   const load = async () => {
@@ -100,7 +102,7 @@ export default function Referrals() {
 
       {tab !== "new" && (
         <div className="no-print space-y-2">
-          {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+          {!rows && <Loader compact />}
           {(tab === "inbox" ? mine : rows ?? []).length === 0 && rows && (
             <p className="card px-4 py-6 text-sm text-muted">لا إحالات هنا.</p>
           )}

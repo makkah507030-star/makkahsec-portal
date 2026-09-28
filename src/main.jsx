@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { SessionProvider } from "./lib/session.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import NoticeHost from "./components/NoticeHost.jsx";
 import "./fonts.css";
 import "./index.css";
 
@@ -30,6 +31,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <SessionProvider>
           <App />
         </SessionProvider>
+        <NoticeHost />
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>

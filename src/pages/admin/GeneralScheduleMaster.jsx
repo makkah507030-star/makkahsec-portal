@@ -6,6 +6,7 @@ import { buildMasterPrintSections } from "../../lib/scheduleGrid";
 import MasterGrid from "../../components/MasterGrid.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 export default function GeneralScheduleMaster() {
   const [rows, setRows] = useState(null);
@@ -68,7 +69,7 @@ export default function GeneralScheduleMaster() {
     });
   };
 
-  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader />;
 
   return (
     <div className="space-y-5">

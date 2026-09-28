@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { DAY_NAMES, GRADE_NAMES, todayISO } from "../lib/schoolTime";
 import ExamTable, { ExamPrintArea } from "../components/ExamTable.jsx";
+import Loader from "../components/Loader.jsx";
 
 /* =====================================================================
    جداول الاختبارات — للطالب وولي الأمر والمعلم.
@@ -111,7 +112,7 @@ export default function ExamSchedules() {
     `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
       on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
-  if (!terms) return <p className="py-8 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!terms) return <Loader />;
 
   if (terms.length === 0) {
     return (

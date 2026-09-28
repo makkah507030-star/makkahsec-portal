@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { fmtGreg } from "../../lib/dates";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 // أنواع محطات التقويم — «إجازة» فقط هي التي تُعطّل الدراسة في البوابة،
 // والبقية للعرض في شريط «التقويم الدراسي» العام.
@@ -45,7 +47,7 @@ export default function CalendarAdmin() {
   const [rows, setRows] = useState(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
     const { data } = await supabase
@@ -231,7 +233,7 @@ export default function CalendarAdmin() {
           المحطات المسجّلة
         </h2>
         {!rows ? (
-          <p className="px-4 py-5 text-sm text-muted">جارٍ التحميل…</p>
+          <Loader compact />
         ) : rows.length === 0 ? (
           <p className="px-4 py-5 text-sm text-muted">لا توجد محطات بعد.</p>
         ) : (
