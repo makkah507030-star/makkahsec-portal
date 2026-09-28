@@ -1217,20 +1217,36 @@ function StageAttendance({ e, parts, reload, onNext }) {
 const signedUrl = async (p) =>
   (p ? (await supabase.storage.from("form-assets").createSignedUrl(p, 3600)).data?.signedUrl ?? null : null);
 
-/** توقيع منظّم الحدث، وختم المدرسة وتوقيع المدير — للشهادات والتقرير */
-function useEventSignatures(organizerId) {
+/** توقيع منظّم الحدث والمعلمين المشاركين في تنظيمه، وختم المدرسة وتوقيع المدير — للشهادات والتقرير */
+function useEventSignatures(e) {
   const [sigUrl, setSigUrl] = useState(null);
+  const [coUrls, setCoUrls] = useState({});
   const [school, setSchool] = useState({});
+  const co = Array.isArray(e.co_organizers) ? e.co_organizers : [];
+  const coKey = co.map((c) => c.user_id).join(",");
 
-  // توقيع المنظّم يظهر لمن أنشأ الحدث (سياسات التوقيع تمنع قراءة توقيع غيره)
+  // مخزن التواقيع لا يُقرأ منه إلا توقيع صاحبه — فتواقيع المنظّم والمشاركين تُجلب عبر الخادم
   useEffect(() => {
     (async () => {
-      if (!organizerId) return;
+      if (!e.organizer_id) return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch("/.netlify/functions/event-signatures", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.access_token ?? ""}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ event_id: e.id }),
+        });
+        const j = await res.json();
+        if (res.ok) { setSigUrl(j.organizer ?? null); setCoUrls(j.co ?? {}); return; }
+      } catch { /* يُجرَّب توقيع المستخدم نفسه أدناه */ }
       const { data: sig } = await supabase.from("user_signatures")
-        .select("path").eq("user_id", organizerId).maybeSingle();
+        .select("path").eq("user_id", e.organizer_id).maybeSingle();
       setSigUrl(await signedUrl(sig?.path));
     })();
-  }, [organizerId]);
+  }, [e.id, e.organizer_id, coKey]);
 
   useEffect(() => {
     (async () => {
@@ -1244,7 +1260,8 @@ function useEventSignatures(organizerId) {
     })();
   }, []);
 
-  return { sigUrl, school };
+  const coSigs = co.map((c) => ({ ...c, url: coUrls[c.user_id] ?? null }));
+  return { sigUrl, coSigs, school };
 }
 
 /** الطباعة بعد اكتمال تحميل صور منطقة الطباعة (الشعارات والتواقيع والصور) */
@@ -1276,7 +1293,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
   // الصيغة الرسمية لا تُحفظ نصًا، فتبقى متابعة لعنوان الحدث وتاريخه إن تغيّرا
   const certText = isOfficial ? null : JSON.stringify(text);
   const [saveErr, setSaveErr] = useState(false);
-  const { sigUrl, school } = useEventSignatures(e.organizer_id);
+  const { sigUrl, coSigs, school } = useEventSignatures(e);
   const [printing, setPrinting] = useState(null);   // الشهادات المُعدّة للطباعة
 
   const attended = useMemo(() => (parts ?? []).filter((p) => p.attended === true), [parts]);
@@ -1396,7 +1413,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
       <section className="card space-y-2 p-4">
         <p className="text-xs font-semibold text-ink">معاينة</p>
         <CertPreview>
-          <EventCertificate event={draft} sigUrl={sigUrl} {...school}
+          <EventCertificate event={draft} sigUrl={sigUrl} coSigs={coSigs} {...school}
                             participant={attended[0] ?? { student_name: "اسم الطالب", class_label: "الصف الأول — فصل 1" }}
                             serial={attended[0] ? serialOf(attended[0]) : `${e.serial}-001`} />
         </CertPreview>
@@ -1439,7 +1456,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
         <PrintPortal id="ev-cert" landscape margin="0"
                      extraCss="#ev-cert .sheet { page-break-after: always; } #ev-cert .sheet:last-child { page-break-after: auto; }">
           {printing.map((p) => (
-            <EventCertificate key={p.id} event={draft} participant={p} sigUrl={sigUrl} {...school} serial={serialOf(p)} />
+            <EventCertificate key={p.id} event={draft} participant={p} sigUrl={sigUrl} coSigs={coSigs} {...school} serial={serialOf(p)} />
           ))}
         </PrintPortal>
       )}
@@ -1478,7 +1495,7 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useNotice(null, "error");
   const [printing, setPrinting] = useState(false);
-  const { sigUrl, school } = useEventSignatures(e.organizer_id);
+  const { sigUrl, coSigs, school } = useEventSignatures(e);
 
   const approved = e.stage === "approved";
   const submitted = !!e.report_submitted_at;
@@ -1672,7 +1689,7 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
       {printing && (
         <PrintPortal id="ev-report-sheet" margin="0" extraCss="#ev-report-sheet tr { break-inside: avoid; }">
           <EventReportSheet event={{ ...e, ...f }} stats={stats} attended={attended} photos={photos}
-                            sigUrl={sigUrl} stampUrl={school.stampUrl} principalName={school.principalName}
+                            sigUrl={sigUrl} coSigs={coSigs} stampUrl={school.stampUrl} principalName={school.principalName}
                             principalUrl={approved ? school.principalUrl : null} />
         </PrintPortal>
       )}

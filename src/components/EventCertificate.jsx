@@ -131,14 +131,14 @@ function PixelStrip({ cols = 4, rows = 44, size = 4.8 }) {
 }
 
 /* توقيع واحد: الصفة، ثم صورة التوقيع، ثم الاسم تحت خط رفيع — كقالب النماذج */
-function Sign({ url, name, role }) {
+function Sign({ url, name, role, w = 58 }) {
   return (
-    <div className="text-center" style={{ minWidth: "58mm" }}>
+    <div className="text-center" style={{ minWidth: `${w}mm`, maxWidth: w < 58 ? `${w}mm` : undefined }}>
       <p style={{ fontSize: "10pt", color: "#6B7A72" }}>{role}</p>
       <div className="flex items-center justify-center" style={{ height: "16mm" }}>
-        {url && <img src={url} alt="" style={{ maxHeight: "16mm", maxWidth: "50mm", objectFit: "contain" }} />}
+        {url && <img src={url} alt="" style={{ maxHeight: "16mm", maxWidth: `${w - 8}mm`, objectFit: "contain" }} />}
       </div>
-      <div className="mx-auto" style={{ height: "0.25mm", width: "45mm", background: "#DDE5E0" }} />
+      <div className="mx-auto" style={{ height: "0.25mm", width: `${w - 13}mm`, background: "#DDE5E0" }} />
       <p style={{ marginTop: "1.2mm", fontSize: "11pt", fontWeight: 600 }}>{name || "…"}</p>
     </div>
   );
@@ -149,7 +149,9 @@ const Rule = ({ color }) => (
                 background: `linear-gradient(90deg,transparent,${color}22 12%,${color} 50%,${color}22 88%,transparent)` }} />
 );
 
-export default function EventCertificate({ event, participant, sigUrl, stampUrl, principalUrl, principalName, serial }) {
+export default function EventCertificate({ event, participant, sigUrl, coSigs = [], stampUrl, principalUrl, principalName, serial }) {
+  // المنظّم والمعلمون المشاركون يتقاسمون جانب التواقيع في سطر واحد
+  const signW = coSigs.length ? Math.max(34, Math.min(58, Math.floor(150 / (coSigs.length + 1)) - 4)) : 58;
   const tpl = THEMES[event?.cert_template] ? event.cert_template : "classic";
   const th = THEMES[tpl];
   const national = tpl === "national";
@@ -225,8 +227,11 @@ export default function EventCertificate({ event, participant, sigUrl, stampUrl,
 
         {/* التواقيع: المنظّم يمينًا، والختم وسطًا، والمدير يسارًا */}
         <div className="grid items-end" style={{ gridTemplateColumns: "1fr auto 1fr", gap: "6mm" }}>
-          <div className="justify-self-start">
-            <Sign url={sigUrl} name={event?.organizer_name} role={event?.organizer_role || "منفّذ البرنامج"} />
+          <div className="flex items-end justify-self-start" style={{ gap: "4mm" }}>
+            <Sign w={signW} url={sigUrl} name={event?.organizer_name} role={event?.organizer_role || "منفّذ البرنامج"} />
+            {coSigs.map((c) => (
+              <Sign key={c.user_id} w={signW} url={c.url} name={c.name} role={c.role || "المعلم"} />
+            ))}
           </div>
           <div className="justify-self-center" style={{ minHeight: "22mm" }}>
             {stampUrl && <img src={stampUrl} alt="" style={{ height: "22mm", width: "auto", opacity: 0.9 }} />}

@@ -43,7 +43,7 @@ function Time12({ t }) {
   return <BidiDate value={`${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} `} suffix={h < 12 ? "ص" : "م"} />;
 }
 
-export default function EventReportSheet({ event: e, stats, attended, photos, sigUrl, stampUrl, principalName, principalUrl }) {
+export default function EventReportSheet({ event: e, stats, attended, photos, sigUrl, coSigs = [], stampUrl, principalName, principalUrl }) {
   const date = e?.event_date ? `${e.event_date}T12:00:00` : null;
   const info = [
     ["رقم الحدث", <span className="num">{e.serial}</span>],
@@ -155,10 +155,16 @@ export default function EventReportSheet({ event: e, stats, attended, photos, si
         </>
       )}
 
-      {/* التواقيع */}
-      <div className="grid items-end" style={{ gridTemplateColumns: "1fr auto 1fr", gap: "6mm", marginTop: "10mm", breakInside: "avoid" }}>
-        <div className="justify-self-start">
+      {/* التواقيع — المعلمون المشاركون في التنظيم في صف مع المنظّم */}
+      {coSigs.length > 0 && (
+        <div className="flex flex-wrap items-end justify-start" style={{ gap: "4mm 6mm", marginTop: "10mm", breakInside: "avoid" }}>
           <Sign url={sigUrl} name={e.organizer_name} role={e.organizer_role || "منظّم الحدث"} />
+          {coSigs.map((c) => <Sign key={c.user_id} url={c.url} name={c.name} role={c.role || "المعلم"} />)}
+        </div>
+      )}
+      <div className="grid items-end" style={{ gridTemplateColumns: "1fr auto 1fr", gap: "6mm", marginTop: coSigs.length ? "6mm" : "10mm", breakInside: "avoid" }}>
+        <div className="justify-self-start">
+          {!coSigs.length && <Sign url={sigUrl} name={e.organizer_name} role={e.organizer_role || "منظّم الحدث"} />}
         </div>
         <div className="justify-self-center" style={{ minHeight: "20mm" }}>
           {stampUrl && <img src={stampUrl} alt="" style={{ height: "20mm", width: "auto", opacity: 0.9 }} />}
