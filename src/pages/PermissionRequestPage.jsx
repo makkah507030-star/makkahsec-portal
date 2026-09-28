@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import PermissionLog from "../components/PermissionLog.jsx";
+import { useNotice } from "../lib/useNotice.js";
 
 const GRADES = [1, 2, 3];
 const MAX_PERIODS = 7; // أقصى عدد حصص باليوم (الأحد/الاثنين = 7)
@@ -28,7 +29,7 @@ export default function PermissionRequestPage() {
   const [note, setNote] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState(null); // { ok: bool, message: string }
+  const [result, setResult] = useNotice(null); // { ok: bool, message: string }
   const [tab, setTab] = useState("new");
 
   // تحقق من الصلاحية: إدارة، أو معلم مُنح صلاحية الاستئذان صراحة

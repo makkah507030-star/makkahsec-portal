@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { readSmartSchedule, normalizeArabic, stripGradeSuffix } from "../../lib/importer";
+import { useNotice } from "../../lib/useNotice.js";
 
 const BATCH = 400;
 
@@ -18,7 +19,7 @@ export default function ScheduleImport() {
   const [stage, setStage] = useState("pick");
   const [report, setReport] = useState(null);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState("");
+  const [error, setError] = useNotice("", "error");
   const [year, setYear] = useState(null);
   const [yearLabel, setYearLabel] = useState(null);
   const [term, setTerm] = useState(null);

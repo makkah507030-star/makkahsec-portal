@@ -4,6 +4,8 @@ import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDateTime } from "../../lib/dates";
 import { KIND_META } from "../../lib/useNotifications";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 export default function TeacherNotify() {
   const { session } = useSession();
@@ -14,7 +16,7 @@ export default function TeacherNotify() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [log, setLog] = useState(null);
 
   useEffect(() => {
@@ -103,7 +105,7 @@ export default function TeacherNotify() {
   };
 
   if (classes === null) {
-    return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+    return <Loader />;
   }
 
   if (!me) {
@@ -186,7 +188,7 @@ export default function TeacherNotify() {
             <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
               إشعاراتي الأخيرة
             </h2>
-            {!log && <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>}
+            {!log && <Loader />}
             {log?.length === 0 && (
               <p className="px-4 py-6 text-sm text-muted">لم ترسل إشعارات بعد.</p>
             )}

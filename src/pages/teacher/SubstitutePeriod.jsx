@@ -5,6 +5,8 @@ import { todayDow, todayISO, todayLabel, GRADE_NAMES, STATUS } from "../../lib/s
 import {
   loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, toMinutes, nowMinutes,
 } from "../../lib/periodTimes";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const TEACHER_ORDER = ["present", "absent", "late"];
 const SOLID = {
@@ -30,7 +32,7 @@ export default function SubstitutePeriod() {
   const [marks, setMarks] = useState({});
   const [excused, setExcused] = useState(new Set());
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [loading, setLoading] = useState(true);
   const date = todayISO();
   const dow = todayDow();
@@ -165,7 +167,7 @@ export default function SubstitutePeriod() {
     return nowMinutes() - toMinutes(row.start_time) >= GRACE_MINUTES;
   })();
 
-  if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (loading) return <Loader />;
 
   if (!dow) {
     return <Empty title="اليوم عطلة" body="الأسبوع الدراسي من الأحد إلى الخميس." />;
@@ -277,7 +279,7 @@ export default function SubstitutePeriod() {
       )}
 
       {candidates === null ? (
-        <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>
+        <Loader />
       ) : !graceOk ? (
         <Empty title="ما زال الوقت مبكرًا"
                body={`تظهر الفصول المتاحة للانتظار بعد ${GRACE_MINUTES} دقائق من بداية الحصة، لإعطاء معلمها الأصلي فرصة تحضيرها بنفسه.`} />

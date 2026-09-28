@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { fmtDateTime, fmtGreg } from "../../lib/dates";
+import Loader from "../../components/Loader.jsx";
 
 /* ---------- أدوات تنسيق ---------- */
 function fmtBytes(n) {
@@ -502,7 +503,7 @@ export default function SiteMetrics() {
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-ink">Netlify — النشر والنطاق</h2>
         {!plat?.netlify ? (
-          <p className="text-sm text-muted">جارٍ التحميل…</p>
+          <Loader compact />
         ) : plat.netlify.configured === false ? (
           <NotConfigured what="Netlify" />
         ) : plat.netlify.error ? (
@@ -530,7 +531,7 @@ export default function SiteMetrics() {
       <section className="space-y-2">
         <h2 className="text-sm font-semibold text-ink">Supabase — المشروع والاشتراك</h2>
         {!plat?.supabase ? (
-          <p className="text-sm text-muted">جارٍ التحميل…</p>
+          <Loader compact />
         ) : plat.supabase.configured === false ? (
           <NotConfigured what="Supabase" />
         ) : plat.supabase.error ? (

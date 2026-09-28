@@ -6,6 +6,7 @@ import { buildWeeklyPrintTable } from "../../lib/scheduleGrid";
 import WeeklyGrid from "../../components/WeeklyGrid.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 export default function MySchedule() {
   const { session } = useSession();
@@ -67,7 +68,7 @@ export default function MySchedule() {
     });
   };
 
-  if (rows === null) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (rows === null) return <Loader />;
 
   if (!me) {
     return (

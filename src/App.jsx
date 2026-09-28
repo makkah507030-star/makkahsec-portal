@@ -82,12 +82,11 @@ import { useMaintenance } from "./lib/useMaintenance.js";
 import { useHolidays } from "./lib/useHolidays.js";
 const ExamCountdown = lazy(() => import("./components/ExamCountdown.jsx"));
 import HolidayBanner from "./components/HolidayBanner.jsx";
+import Loader from "./components/Loader.jsx";
 
 // الصفحات تُحمَّل عند فتحها فقط (lazy) لتخفيف التحميل الأول، وهذا ما يظهر لحظة جلبها
 const pageFallback = (
-  <div className="flex min-h-[40vh] items-center justify-center">
-    <p className="text-sm text-muted">جارٍ التحميل…</p>
-  </div>
+  <Loader />
 );
 
 export default function App() {
@@ -117,9 +116,7 @@ export default function App() {
 
   if (loading || !holidaysReady) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted">جارٍ التحميل…</p>
-      </div>
+      <Loader screen />
     );
   }
 
@@ -149,9 +146,7 @@ export default function App() {
   // أثناء جلب بيانات المستخدم لا نحكم بشيء — وإلا ومضت شاشة «الحساب غير مفعّل»
   if (profileLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted">جارٍ التحميل…</p>
-      </div>
+      <Loader screen />
     );
   }
 
@@ -186,9 +181,7 @@ export default function App() {
   // وضع الصيانة: يحجب البوابة عن الجميع ما عدا الدعم الفني
   if (maintenance.loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted">جارٍ التحميل…</p>
-      </div>
+      <Loader screen />
     );
   }
   const isTechSupport = adminRoles.includes("tech_support");
@@ -277,7 +270,7 @@ export default function App() {
                 <Route
                   path="/import"
                   element={
-                    <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                    <Suspense fallback={<Loader />}>
                       <Import />
                     </Suspense>
                   }
@@ -288,7 +281,7 @@ export default function App() {
                 <Route
                   path="/records-manual"
                   element={
-                    <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                    <Suspense fallback={<Loader />}>
                       <Records />
                     </Suspense>
                   }
@@ -320,7 +313,7 @@ export default function App() {
                 <Route
                   path="/results-admin"
                   element={
-                    <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                    <Suspense fallback={<Loader />}>
                       <ResultsAdmin />
                     </Suspense>
                   }

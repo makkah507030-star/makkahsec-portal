@@ -6,6 +6,8 @@ import { KIND_META } from "../../lib/useNotifications";
 import { fmtDateTime } from "../../lib/dates";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { normalizeImage } from "../../lib/imageResize";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const ROLES = [
   { key: "teacher",  label: "المعلمون" },
@@ -65,7 +67,7 @@ function SendForm() {
   const [picked, setPicked] = useState([]);
 
   const [sending, setSending] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   useEffect(() => {
     (async () => {
@@ -453,7 +455,7 @@ function SentLog() {
     await load();
   };
 
-  if (!rows) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader compact />;
   if (!rows.length) {
     return (
       <div className="card px-6 py-12 text-center">

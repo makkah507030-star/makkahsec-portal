@@ -11,6 +11,7 @@ import { loadFingerprintPublic, morningLate, dayStartMinutes } from "../lib/offi
 import ExamCountdown from "../components/ExamCountdown.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AbsenceHistory from "../components/AbsenceHistory.jsx";
+import Loader from "../components/Loader.jsx";
 
 const LABEL = { absent: "غائب", late: "متأخر", excused: "مستأذن" };
 
@@ -137,7 +138,7 @@ export default function StudentHome() {
 
   const ptMap = byPeriodNo(ptimes);
 
-  if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (loading) return <Loader />;
 
   if (!me) {
     return (
@@ -221,7 +222,7 @@ export default function StudentHome() {
         {showWeek && (
           <div className="border-t border-line p-4">
             {!weekSchedule ? (
-              <p className="text-sm text-muted">جارٍ التحميل…</p>
+              <Loader compact />
             ) : (
               <WeeklyGrid
                 rows={weekSchedule}

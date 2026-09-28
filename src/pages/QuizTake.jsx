@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
 import { groupQuestions } from "../lib/omrLayout.js";
+import Loader from "../components/Loader.jsx";
 
 /* =====================================================================
    الاختبار الإلكتروني — صفحة الطالب (/quiz/:id).
@@ -146,7 +147,7 @@ export default function QuizTake() {
   const t = ltr ? EN : AR;
 
   if (err && !data) return <Box><p className="text-sm text-absent">{err}</p></Box>;
-  if (!data) return <Box><p className="text-sm text-muted">جارٍ التحميل…</p></Box>;
+  if (!data) return <Box><Loader compact /></Box>;
 
   const head = (
     <div>

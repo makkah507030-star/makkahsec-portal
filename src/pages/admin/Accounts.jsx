@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 // يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
 // (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
@@ -28,7 +30,7 @@ export default function Accounts() {
   const [stats, setStats] = useState(null);
   const [busy, setBusy] = useState(null);
   const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useNotice("", "error");
   const [confirming, setConfirming] = useState(null);
 
   const load = async () => {
@@ -74,7 +76,7 @@ export default function Accounts() {
     }
   };
 
-  if (!stats) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!stats) return <Loader compact />;
 
   return (
     <div className="space-y-5">

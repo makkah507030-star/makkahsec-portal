@@ -4,6 +4,8 @@ import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import ColorLegend from "../../components/ColorLegend.jsx";
 import NewsCoverCard from "../../components/NewsCoverCard.jsx";
 import { normalizeImage } from "../../lib/imageResize.js";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const empty = {
   id: null,
@@ -43,7 +45,7 @@ export default function NewsAdmin() {
   const [form, setForm] = useState(empty);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   // اختيار بطاقة غلاف افتراضية أول مرة يفتح فيها نموذج جديد
   useEffect(() => {
@@ -415,7 +417,7 @@ export default function NewsAdmin() {
           {isTeacher ? "مسوداتي" : "كل الأخبار والمقالات"} {list && <span className="num text-muted">({list.length})</span>}
         </h2>
 
-        {!list && <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>}
+        {!list && <Loader />}
         {list?.length === 0 && (
           <p className="px-4 py-6 text-sm text-muted">
             {isTeacher ? "لم تُضف أي مساهمة بعد." : "لا توجد أخبار بعد."}

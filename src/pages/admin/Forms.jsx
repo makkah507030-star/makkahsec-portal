@@ -6,6 +6,8 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -144,7 +146,7 @@ export default function Forms() {
   const [picked, setPicked] = useState(null);
   const [values, setValues] = useState({});
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [issued, setIssued] = useState(null);      // المستند بعد الحفظ
 
   const [docs, setDocs] = useState([]);
@@ -718,7 +720,7 @@ export default function Forms() {
 
   const printNow = () => window.print();
 
-  if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (loading) return <Loader />;
 
   /* ---------------- معاينة مستند من الأرشيف ---------------- */
   if (viewing) {

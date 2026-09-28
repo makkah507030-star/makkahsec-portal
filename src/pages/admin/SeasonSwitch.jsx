@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { clearPeriodTimesCache, fmtRange } from "../../lib/periodTimes";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const SEASONS = [
   { key: "summer", label: "التوقيت الصيفي" },
@@ -14,7 +16,7 @@ export default function SeasonSwitch() {
   const [rows, setRows] = useState([]);
   const [counts, setCounts] = useState({});
   const [view, setView] = useState("summer");
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
     const { data: st } = await supabase
@@ -75,7 +77,7 @@ export default function SeasonSwitch() {
     setMsg({ ok: true, text: "حُفظت مهلة السماح." });
   };
 
-  if (season === null) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (season === null) return <Loader compact />;
 
   return (
     <div className="space-y-5">

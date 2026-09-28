@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { fmtDateTime } from "../../lib/dates";
 import ColorLegend from "../../components/ColorLegend.jsx";
+import Loader from "../../components/Loader.jsx";
 
 const CAT_LABEL = {
   bug: "مشكلة تقنية",
@@ -112,7 +113,7 @@ export default function FeedbackAdmin() {
         ))}
       </div>
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
 
       {rows && filtered.length === 0 && (
         <div className="card px-6 py-12 text-center">

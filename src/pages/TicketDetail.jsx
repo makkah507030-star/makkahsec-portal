@@ -3,6 +3,8 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { fmtDateTime } from "../lib/dates";
+import Loader from "../components/Loader.jsx";
+import { useNotice } from "../lib/useNotice.js";
 
 const CAT_LABEL = {
   bug: "مشكلة تقنية",
@@ -27,7 +29,7 @@ export default function TicketDetail() {
   const [message, setMessage] = useState("");
   const [file, setFile] = useState(null);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useNotice("", "error");
   const fileRef = useRef(null);
 
   const load = async () => {
@@ -123,7 +125,7 @@ export default function TicketDetail() {
   };
 
   if (ticket === undefined) {
-    return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+    return <Loader compact />;
   }
 
   if (ticket === null) {

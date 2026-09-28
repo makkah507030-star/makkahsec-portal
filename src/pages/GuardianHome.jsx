@@ -11,6 +11,7 @@ import HolidayBanner from "../components/HolidayBanner.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AbsenceHistory from "../components/AbsenceHistory.jsx";
 import { useSession } from "../lib/session.jsx";
+import Loader from "../components/Loader.jsx";
 
 const LABEL = { absent: "غائب", late: "متأخر", excused: "مستأذن" };
 
@@ -154,7 +155,7 @@ export default function GuardianHome() {
   const ptMap = byPeriodNo(ptimes);
 
   if (children === null) {
-    return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+    return <Loader />;
   }
 
   if (children.length === 0) {
@@ -202,7 +203,7 @@ export default function GuardianHome() {
       <ResultsCard key={active?.id} studentId={active?.id} />
 
       {loading ? (
-        <p className="py-6 text-center text-sm text-muted">جارٍ التحميل…</p>
+        <Loader />
       ) : (
         <>
           <section className="grid grid-cols-3 gap-3">
@@ -261,7 +262,7 @@ export default function GuardianHome() {
             {showWeek && (
               <div className="border-t border-line p-4">
                 {!weekSchedule ? (
-                  <p className="text-sm text-muted">جارٍ التحميل…</p>
+                  <Loader compact />
                 ) : (
                   <WeeklyGrid
                     rows={weekSchedule}

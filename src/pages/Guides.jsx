@@ -5,6 +5,7 @@ import { useSession } from "../lib/session.jsx";
 import { AUDIENCES, audienceLabel, fmtSize } from "../lib/guidesMeta";
 import { fmtGreg } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
+import Loader from "../components/Loader.jsx";
 
 const isImage = (url = "") => /\.(png|jpe?g|webp)(\?|$)/i.test(url);
 
@@ -83,7 +84,7 @@ export default function Guides() {
           ))}
         </div>
 
-        {!rows && <p className="mt-8 text-sm text-muted">جارٍ التحميل…</p>}
+        {!rows && <Loader compact />}
 
         {rows && rows.length === 0 && (
           <div className="mt-8 rounded-card border border-line bg-white px-6 py-14 text-center">

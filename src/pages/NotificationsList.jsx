@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useSession } from "../lib/session.jsx";
 import { useNotifications, KIND_META } from "../lib/useNotifications";
 import { fmtDateTime } from "../lib/dates";
+import Loader from "../components/Loader.jsx";
 
 // صفحة كل إشعارات المستخدم — إليها يعود زر «رجوع» من صفحة الإشعار
 export default function NotificationsList() {
@@ -26,7 +27,7 @@ export default function NotificationsList() {
       </div>
 
       {loading ? (
-        <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>
+        <Loader />
       ) : items.length === 0 ? (
         <div className="card px-6 py-12 text-center">
           <p className="font-semibold text-ink">لا توجد إشعارات</p>

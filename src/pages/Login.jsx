@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase, idToEmail, isConfigured } from "../lib/supabase";
 import logoIcon from "../assets/icon-mint.png";
+import { useNotice } from "../lib/useNotice.js";
 
 /* =====================================================================
    صفحة الدخول — خلفية بنقش الهوية وبطاقة زجاجية.
@@ -38,7 +39,7 @@ export default function Login() {
   const [nationalId, setNationalId] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useNotice("", "error");
   const [busy, setBusy] = useState(false);
 
   // تسجيل محاولة الدخول (ناجحة أو فاشلة) في سجل الدخول والخروج — بلا

@@ -43,6 +43,7 @@ import MaintenanceAdmin from "./pages/admin/MaintenanceAdmin.jsx";
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
 import ExamCountdown from "./components/ExamCountdown.jsx";
+import Loader from "./Loader.jsx";
 
 export default function App() {
   const { session, profile, loading, can, adminRoles } = useSession();
@@ -52,9 +53,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted">جارٍ التحميل…</p>
-      </div>
+      <Loader screen />
     );
   }
 
@@ -89,9 +88,7 @@ export default function App() {
   // وضع الصيانة: يحجب البوابة عن الجميع ما عدا الدعم الفني
   if (maintenance.loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted">جارٍ التحميل…</p>
-      </div>
+      <Loader screen />
     );
   }
   const isTechSupport = adminRoles.includes("tech_support");
@@ -134,7 +131,7 @@ export default function App() {
               <Route
                 path="/import"
                 element={
-                  <Suspense fallback={<p className="text-sm text-muted">جارٍ التحميل…</p>}>
+                  <Suspense fallback={<Loader />}>
                     <Import />
                   </Suspense>
                 }

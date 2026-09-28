@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
+import Loader from "../components/Loader.jsx";
+import { useNotice } from "../lib/useNotice.js";
 
 /* =====================================================================
    توقيعي — يرفع كل مستخدم توقيعه ويستبدله أو يحذفه.
@@ -18,7 +20,7 @@ export default function MySignature() {
   const [path, setPath] = useState(null);
   const [url, setUrl] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
@@ -67,7 +69,7 @@ export default function MySignature() {
     load();
   };
 
-  if (loading) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (loading) return <Loader />;
 
   return (
     <div className="space-y-5">

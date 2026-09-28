@@ -4,6 +4,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import ReferralSheet, { ReferralPrintArea } from "../components/ReferralSheet.jsx";
+import Loader from "../components/Loader.jsx";
+import { useNotice } from "../lib/useNotice.js";
 
 /* =====================================================================
    عرض ملف الإحالة لصاحبه: الطالب للاطّلاع، وولي الأمر للاطّلاع
@@ -20,7 +22,7 @@ export default function ReferralView() {
   const [isGuardian, setIsGuardian] = useState(false);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [error, setError] = useState("");
 
   const box = useRef(null);
@@ -94,7 +96,7 @@ export default function ReferralView() {
     );
   }
 
-  if (!r) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!r) return <Loader />;
 
   const needsAck = isGuardian && !r.guardian_ack_at;
 

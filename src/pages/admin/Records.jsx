@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { cleanIdentity, cleanMobile, cleanText, guessIdentityType } from "../../lib/importer";
 import { ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const TRACK_LABEL = { common_year: "السنة المشتركة", general_track: "المسار العام" };
 const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
@@ -123,8 +125,8 @@ function StudentsTab({ year, yearLabel }) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [msg, setMsg] = useState("");
+  const [err, setErr] = useNotice("", "error");
+  const [msg, setMsg] = useNotice("");
 
   const load = async () => {
     const { data: s } = await supabase
@@ -294,7 +296,7 @@ function StudentsTab({ year, yearLabel }) {
     }
   };
 
-  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader />;
 
   return (
     <div className="space-y-4">
@@ -623,8 +625,8 @@ function TeachersTab() {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [msg, setMsg] = useState("");
+  const [err, setErr] = useNotice("", "error");
+  const [msg, setMsg] = useNotice("");
 
   const load = async () => {
     const { data } = await supabase
@@ -688,7 +690,7 @@ function TeachersTab() {
     }
   };
 
-  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader />;
 
   return (
     <div className="space-y-4">
@@ -825,8 +827,8 @@ function GuardiansTab() {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [msg, setMsg] = useState("");
+  const [err, setErr] = useNotice("", "error");
+  const [msg, setMsg] = useNotice("");
 
   const load = async () => {
     const [{ data }, { data: links }] = await Promise.all([
@@ -891,7 +893,7 @@ function GuardiansTab() {
     }
   };
 
-  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader />;
 
   return (
     <div className="space-y-4">
@@ -1030,8 +1032,8 @@ function AdminAccountsTab() {
   const [editingId, setEditingId] = useState(null);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [msg, setMsg] = useState("");
+  const [err, setErr] = useNotice("", "error");
+  const [msg, setMsg] = useNotice("");
 
   const load = async () => {
     const { data: admins } = await supabase
@@ -1096,7 +1098,7 @@ function AdminAccountsTab() {
     }
   };
 
-  if (!rows) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader />;
 
   return (
     <div className="space-y-4">

@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import {
   useSession, ADMIN_ROLE_LABEL, ASSIGNABLE_ROLES, PERMISSIONS,
 } from "../../lib/session.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 // يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
 // (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
@@ -55,7 +57,7 @@ function Members() {
   const [nationalId, setNationalId] = useState("");
   const [roles, setRoles] = useState(new Set());
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
     const { data: admins } = await supabase
@@ -186,7 +188,7 @@ function Members() {
           الأعضاء الحاليون {list && <span className="num text-muted">({list.length})</span>}
         </h2>
 
-        {!list && <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>}
+        {!list && <Loader />}
         {list?.length === 0 && (
           <p className="px-4 py-6 text-sm text-muted">لا توجد حسابات إدارية بعد.</p>
         )}
@@ -321,7 +323,7 @@ function RolePermissions() {
   const [sel, setSel] = useState(new Set());   // صلاحياته قيد التحرير
   const [q, setQ] = useState("");
   const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [copyFrom, setCopyFrom] = useState("");
 
   const load = async () => {
@@ -395,7 +397,7 @@ function RolePermissions() {
     return EDITABLE_ROLES.filter((r) => (ADMIN_ROLE_LABEL[r] ?? r).includes(t));
   }, [q]);
 
-  if (!map) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!map) return <Loader compact />;
 
   return (
     <div className="space-y-4">

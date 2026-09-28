@@ -5,6 +5,8 @@ import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import QuizPaper, { QuizPrintArea } from "../../components/QuizPaper.jsx";
 import OnlineQuizPanel from "../../components/OnlineQuizPanel.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 /* =====================================================================
    اختباراتي — اختبارات المعلم القصيرة.
@@ -43,7 +45,7 @@ export default function MyQuizzes() {
   const [list, setList] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
     const { data } = await supabase.from("quizzes")
@@ -87,7 +89,7 @@ export default function MyQuizzes() {
         }} />
       )}
 
-      {!list && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!list && <Loader compact />}
       {list?.length === 0 && (
         <p className="card px-4 py-8 text-center text-sm text-muted">
           لا اختبارات بعد. ابدأ بـ«اختبار جديد».
@@ -321,7 +323,7 @@ function QuizEditor({ quiz, uid, onBack }) {
   const [classes, setClasses] = useState([]);
   const [linked, setLinked] = useState([]);
   const [tab, setTab] = useState("questions");
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
     const [{ data: qs }, { data: lk }] = await Promise.all([

@@ -11,6 +11,7 @@ import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, GradePills, Note, Loading, Empty,
   SetupNotice, useDay, pctText,
 } from "./shared.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const TONE = {
   present: "bg-present/10 text-present",
@@ -25,7 +26,7 @@ export default function OfficialAbsence({ initialDate }) {
   const [grade, setGrade] = useState(0);
   const [view, setView] = useState("absent");
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [editing, setEditing] = useState(null);
   // تحويل الغياب إلى «بعذر» أو إعادته «بدون عذر»: الوكيل والمساعد الإداري 1 و 2 (والمدير والدعم الفني)
   const { hasAdminRole } = useSession();

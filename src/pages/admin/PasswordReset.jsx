@@ -6,6 +6,8 @@ import { fmtDateTime } from "../../lib/dates";
 import { printReport, exportStyledExcel, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const ROLES = ["admin", "teacher", "student", "guardian"];
 
@@ -15,7 +17,7 @@ export default function PasswordReset() {
   const [searching, setSearching] = useState(false);
   const [confirming, setConfirming] = useState(null); // صف المستخدم
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const search = async () => {
     const term = q.trim();
@@ -400,7 +402,7 @@ function UnactivatedBoxes() {
 
           <div className="max-h-64 overflow-y-auto">
             {!list ? (
-              <p className="px-4 py-6 text-sm text-muted">جارٍ التحميل…</p>
+              <Loader />
             ) : list.length === 0 ? (
               <p className="px-4 py-6 text-sm text-present">لا حسابات غير مفعَّلة في هذه الفئة.</p>
             ) : (
@@ -458,7 +460,7 @@ function ActivationLog() {
         ))}
       </div>
 
-      {!rows && <p className="px-4 pb-4 text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
       {rows && filtered.length === 0 && (
         <p className="px-4 pb-6 text-sm text-muted">لا عمليات تفعيل مسجّلة بعد.</p>
       )}

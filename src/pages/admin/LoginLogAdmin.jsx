@@ -4,6 +4,7 @@ import { fmtDateTime } from "../../lib/dates";
 import { printReport, PRINCIPAL_NAME, TECH_SUPPORT_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 const ROLE_LABEL = { student: "طالب", teacher: "معلم", guardian: "ولي أمر", admin: "إداري" };
 const ROLE_ORDER = ["student", "teacher", "guardian", "admin", "unknown"];
@@ -169,7 +170,7 @@ export default function LoginLogAdmin() {
     });
   };
 
-  if (!rows) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader compact />;
 
   return (
     <div className="space-y-5">

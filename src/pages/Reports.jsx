@@ -8,6 +8,7 @@ import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { fmtGreg, fmtTime12 } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import Loader from "../components/Loader.jsx";
 
 const TAB_GROUPS = [
   {
@@ -72,7 +73,7 @@ export default function Reports() {
     })();
   }, [isTeacher, session]);
 
-  if (!ready) return <p className="py-10 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  if (!ready) return <Loader />;
 
   return (
     <div className="space-y-5">
@@ -242,7 +243,7 @@ export function DailyReport({ scopeIds }) {
           })}
       />
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
 
       {rows && filtered.length === 0 ? (
         <Empty title="لا سجلات" body="لا توجد حالات غياب أو تأخر في هذا اليوم." />
@@ -399,7 +400,7 @@ export function StudentReport({ scopeIds }) {
               })}
           />
 
-          {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+          {!rows && <Loader compact />}
           {rows && rows.length === 0 && (
             <Empty title="سجل نظيف" body="لا غياب ولا تأخر خلال هذه الفترة." />
           )}
@@ -548,7 +549,7 @@ export function PeriodReport({ scopeIds }) {
           })}
       />
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
 
       {rows && filtered.length === 0 ? (
         <Empty title="لا سجلات" body="لا حالات غياب أو تأخر في هذه الفترة." />
@@ -711,7 +712,7 @@ function DailyRateReport() {
         onPrint={printIt}
       />
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
       {rows && rows.length === 0 && (
         <Empty title="لا بيانات" body="لا توجد أيام دراسية مسجَّلة في هذه الفترة." />
       )}
@@ -947,7 +948,7 @@ export function AbsenceDaysReport({ scopeIds }) {
           })}
       />
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
 
       {rows && filtered.length === 0 ? (
         <Empty
@@ -1199,7 +1200,7 @@ export function TeacherSheetsReport() {
         </div>
       )}
 
-      {!rows && <p className="text-sm text-muted">جارٍ التحميل…</p>}
+      {!rows && <Loader compact />}
 
       {rows && teachers.length === 0 ? (
         <Empty title="لا كشوف" body="لم يرصد أي معلم تحضيرًا في هذا اليوم." />

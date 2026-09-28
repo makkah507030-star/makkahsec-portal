@@ -4,6 +4,7 @@ import { STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { loadDay, loadApproval, loadFingerprintEnabled } from "../../lib/officialAttendance";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import Loader from "../../components/Loader.jsx";
 
 export const SIGNS = [
   { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
@@ -80,7 +81,7 @@ export function Note({ children, tone = "mint" }) {
 }
 
 export function Loading() {
-  return <p className="py-6 text-center text-sm text-muted">جارٍ التحميل…</p>;
+  return <Loader />;
 }
 
 export function Empty({ children, tone = "gray" }) {

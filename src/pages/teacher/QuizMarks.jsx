@@ -8,6 +8,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import QuizScan from "../../components/QuizScan.jsx";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import { groupQuestions } from "../../lib/omrLayout.js";
+import { useNotice } from "../../lib/useNotice.js";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -35,7 +36,7 @@ export default function QuizMarks() {
   const [quizLoaded, setQuizLoaded] = useState(false);   // اكتمل جلب فصول الاختبار وأسئلته
   const [classLoaded, setClassLoaded] = useState(false); // اكتمل جلب طلاب الفصل
   const [loadErr, setLoadErr] = useState(null);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
   const [printing, setPrinting] = useState(false);
 
   useEffect(() => {

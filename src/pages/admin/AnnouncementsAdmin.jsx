@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDateTime } from "../../lib/dates";
 import { ANNOUNCEMENT_COLORS, colorMeta } from "../../components/AnnouncementModal.jsx";
+import Loader from "../../components/Loader.jsx";
+import { useNotice } from "../../lib/useNotice.js";
 
 const ROLES = [
   { key: "admin",    label: "الإدارة" },
@@ -54,7 +56,7 @@ function ComposeForm({ onSent }) {
     return toLocalInput(d);
   });
   const [sending, setSending] = useState(false);
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useNotice(null);
 
   const toggleRole = (k) =>
     setRoles((prev) => {
@@ -204,7 +206,7 @@ function BannerLog() {
     return { label: "نشطة الآن", tone: "bg-present/10 text-present" };
   };
 
-  if (!rows) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  if (!rows) return <Loader compact />;
   if (!rows.length) {
     return (
       <div className="card px-6 py-12 text-center">
