@@ -334,43 +334,48 @@ export default function QuizMarks() {
 
       {printing && quiz && (
         <>
-          <PrintPortal id="qz-sheet" extraCss="#qz-sheet tr { break-inside: avoid; }">
-            <div className="mx-auto bg-white text-ink"
-                 style={{ width: "210mm", minHeight: "297mm", padding: "13mm 14mm",
-                          fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="text-[11px] font-medium leading-[1.9]">
-                  <div>المملكة العربية السعودية</div>
-                  <div>وزارة التعليم</div>
-                  <div>الإدارة العامة للتعليم بمنطقة مكة المكرمة</div>
-                  <div className="font-bold text-mint-deep">مدرسة مكة الثانوية</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <img src={moeLogo} alt="" className="h-10 w-auto" />
-                  <img src={logoIcon} alt="" className="h-10 w-auto" />
-                </div>
-              </div>
-              <div className="mt-2.5 h-px w-full" style={{
-                background: "linear-gradient(90deg,transparent,#3E635022 12%,#3E6350 50%,#3E635022 88%,transparent)",
-                ...INK }} />
-
-              <div className="mt-5 text-center">
-                <span className="rounded-pill px-5 py-1.5 text-[12.5px] font-semibold"
-                      style={{ background: "#EDFAF2", color: "#3E6350", ...INK }}>
-                  كشف درجات اختبار
-                </span>
-                <p className="mt-2 text-[15px] font-bold">{quiz.title}</p>
-                <p className="num mt-1 text-[12px] text-muted">
-                  {quiz.subject_name} ·{" "}
-                  {classes.find((c) => c.id === classId)
-                    ? `${GRADE_NAMES[classes.find((c) => c.id === classId).grade]} — فصل ${classes.find((c) => c.id === classId).class_no}`
-                    : ""}
-                  {" "}· من {quiz.total_marks} درجة
-                </p>
-              </div>
-
-              <table className="mt-5 w-full border-collapse text-[12px]">
+          {/* الترويسة وعناوين الأعمدة داخل thead فتتكرر أعلى كل صفحة مطبوعة،
+              وهوامش الصفحة من @page فتنطبق على الصفحات كلها لا الأولى وحدها */}
+          <PrintPortal id="qz-sheet" margin="11mm 14mm"
+                       extraCss="#qz-sheet tr { break-inside: avoid; } #qz-sheet thead { display: table-header-group; }">
+            <div className="mx-auto w-full bg-white text-ink"
+                 style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
+              <table className="w-full border-collapse text-[12px]">
                 <thead>
+                  <tr>
+                    <td colSpan={5} className="pb-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="text-[11px] font-medium leading-[1.9]">
+                          <div>المملكة العربية السعودية</div>
+                          <div>وزارة التعليم</div>
+                          <div>الإدارة العامة للتعليم بمنطقة مكة المكرمة</div>
+                          <div className="font-bold text-mint-deep">مدرسة مكة الثانوية</div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <img src={moeLogo} alt="" className="h-10 w-auto" />
+                          <img src={logoIcon} alt="" className="h-10 w-auto" />
+                        </div>
+                      </div>
+                      <div className="mt-2.5 h-px w-full" style={{
+                        background: "linear-gradient(90deg,transparent,#3E635022 12%,#3E6350 50%,#3E635022 88%,transparent)",
+                        ...INK }} />
+
+                      <div className="mt-5 text-center">
+                        <span className="rounded-pill px-5 py-1.5 text-[12.5px] font-semibold"
+                              style={{ background: "#EDFAF2", color: "#3E6350", ...INK }}>
+                          كشف درجات اختبار
+                        </span>
+                        <p className="mt-2 text-[15px] font-bold">{quiz.title}</p>
+                        <p className="num mt-1 text-[12px] text-muted">
+                          {quiz.subject_name} ·{" "}
+                          {classes.find((c) => c.id === classId)
+                            ? `${GRADE_NAMES[classes.find((c) => c.id === classId).grade]} — فصل ${classes.find((c) => c.id === classId).class_no}`
+                            : ""}
+                          {" "}· من {quiz.total_marks} درجة
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
                   <tr>
                     {["م", "اسم الطالب", "الدرجة", "النسبة", "ملاحظات"].map((h) => (
                       <th key={h} className="border border-line px-2 py-2 text-center font-semibold text-mint-deep"
