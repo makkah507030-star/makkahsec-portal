@@ -4,6 +4,8 @@ import { supabase } from "../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
 import PrintPortal from "../components/PrintPortal.jsx";
+import EventReportSheet from "../components/EventReportSheet.jsx";
+import { normalizeImage } from "../lib/imageResize.js";
 import EventCertificate, {
   CERT_TEMPLATES, CERT_VARS, DEFAULT_CERT_TITLE, defaultCertText, isNationalDay,
 } from "../components/EventCertificate.jsx";
@@ -22,7 +24,7 @@ export const STAGES = [
   { key: "attendance",   n: 5, label: "كشف الحضور" },
   { key: "certificates", n: 6, label: "الشهادات" },
   { key: "report",       n: 7, label: "التقرير" },
-  { key: "approved",     n: 8, label: "معتمد ومنتهٍ" },
+  { key: "approved",     n: 8, label: "الاعتماد" },
 ];
 
 const stageIndex = (k) => Math.max(0, STAGES.findIndex((s) => s.key === k));
@@ -58,6 +60,7 @@ export default function Events() {
   if (open) {
     return (
       <EventWizard ev={open} uid={uid} profile={profile} isSupport={isSupport}
+                   isPrincipal={roles.includes("principal")}
                    onBack={() => { setOpenId(null); load(); }}
                    onMsg={setMsg} msg={msg} />
     );
@@ -112,8 +115,10 @@ export default function Events() {
                 </p>
                 <span className={`chip shrink-0 ${
                   cancelled ? "bg-absent/10 text-absent"
-                  : done ? "bg-present/10 text-present" : "bg-mint-tint text-mint-deep"}`}>
-                  {cancelled ? "ملغى" : done ? "معتمد" : `المرحلة ${i + 1} من 8`}
+                  : done ? "bg-present/10 text-present"
+                  : e.report_submitted_at ? "bg-warning-light text-warning" : "bg-mint-tint text-mint-deep"}`}>
+                  {cancelled ? "ملغى" : done ? "معتمد"
+                    : e.report_submitted_at ? "بانتظار الاعتماد" : `المرحلة ${i + 1} من 8`}
                 </span>
               </div>
               <p className="num mt-1 text-xs text-faint">
@@ -249,7 +254,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
 }
 
 /* --------------------------- مسار الحدث --------------------------- */
-function EventWizard({ ev, uid, profile, isSupport, onBack, onMsg, msg }) {
+function EventWizard({ ev, uid, profile, isSupport, isPrincipal, onBack, onMsg, msg }) {
   const [e, setE] = useState(ev);
   const [parts, setParts] = useState(null);
   const [step, setStep] = useState(stageIndex(ev.stage));
@@ -335,7 +340,8 @@ function EventWizard({ ev, uid, profile, isSupport, onBack, onMsg, msg }) {
       {/* شريط المراحل */}
       <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
         {STAGES.map((s, i) => {
-          const reached = i <= done;
+          // مرحلة الاعتماد تُفتح حين يُرفع التقرير لمدير المدرسة
+          const reached = i <= done || (i === 7 && !!e.report_submitted_at);
           const active = i === step;
           return (
             <button key={s.key} onClick={() => reached && setStep(i)} disabled={!reached}
@@ -374,12 +380,10 @@ function EventWizard({ ev, uid, profile, isSupport, onBack, onMsg, msg }) {
                                       onNext={() => advance("certificates", "انتقلنا للشهادات.")} />}
       {!cancelled && step === 5 && <StageCertificates e={e} parts={parts} patch={patch} isSupport={isSupport}
                                         onNext={() => advance("report", "انتقلنا للتقرير.")} />}
-      {!cancelled && step >= 6 && (
-        <section className="card px-6 py-10 text-center">
-          <p className="font-semibold text-ink">{STAGES[step].label}</p>
-          <p className="mt-1.5 text-sm text-muted">قيد الإعداد — ستتوفّر في التحديث القادم.</p>
-        </section>
-      )}
+      {!cancelled && step === 6 && <StageReport e={e} parts={parts} patch={patch} onMsg={onMsg}
+                                                onSubmitted={() => setStep(7)} />}
+      {!cancelled && step === 7 && <StageApproval e={e} patch={patch} onMsg={onMsg} isPrincipal={isPrincipal}
+                                                  byName={profile?.full_name ?? ""} goReport={() => setStep(6)} />}
     </div>
   );
 }
@@ -1062,6 +1066,55 @@ function StageAttendance({ e, parts, reload, onNext }) {
   );
 }
 
+const signedUrl = async (p) =>
+  (p ? (await supabase.storage.from("form-assets").createSignedUrl(p, 3600)).data?.signedUrl ?? null : null);
+
+/** توقيع منظّم الحدث، وختم المدرسة وتوقيع المدير — للشهادات والتقرير */
+function useEventSignatures(organizerId) {
+  const [sigUrl, setSigUrl] = useState(null);
+  const [school, setSchool] = useState({});
+
+  // توقيع المنظّم يظهر لمن أنشأ الحدث (سياسات التوقيع تمنع قراءة توقيع غيره)
+  useEffect(() => {
+    (async () => {
+      if (!organizerId) return;
+      const { data: sig } = await supabase.from("user_signatures")
+        .select("path").eq("user_id", organizerId).maybeSingle();
+      setSigUrl(await signedUrl(sig?.path));
+    })();
+  }, [organizerId]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("school_assets").select("key, path, label");
+      const get = (k) => (data ?? []).find((r) => r.key === k);
+      setSchool({
+        stampUrl: await signedUrl(get("stamp")?.path),
+        principalUrl: await signedUrl(get("principal_signature")?.path),
+        principalName: get("principal_signature")?.label ?? "",
+      });
+    })();
+  }, []);
+
+  return { sigUrl, school };
+}
+
+/** الطباعة بعد اكتمال تحميل صور منطقة الطباعة (الشعارات والتواقيع والصور) */
+function usePrintWhenReady(id, trigger, onDone) {
+  useEffect(() => {
+    if (!trigger) return;
+    const t = setTimeout(async () => {
+      const imgs = [...document.querySelectorAll(`#${id} img`)];
+      await Promise.all(imgs.map((i) => (i.complete ? null
+        : new Promise((r) => { i.onload = r; i.onerror = r; }))));
+      window.print();
+      onDone();
+    }, 150);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger]);
+}
+
 /* ⑥ الشهادات */
 function StageCertificates({ e, parts, patch, isSupport, onNext }) {
   const [f, setF] = useState({
@@ -1070,8 +1123,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
     cert_text: e.cert_text?.trim() ? e.cert_text : defaultCertText(e),
   });
   const [saveErr, setSaveErr] = useState(false);
-  const [sigUrl, setSigUrl] = useState(null);
-  const [school, setSchool] = useState({});          // ختم المدرسة وتوقيع المدير
+  const { sigUrl, school } = useEventSignatures(e.organizer_id);
   const [printing, setPrinting] = useState(null);   // الشهادات المُعدّة للطباعة
   const textRef = useRef(null);
 
@@ -1079,43 +1131,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
   const serialOf = (p) => `${e.serial}-${String(attended.indexOf(p) + 1).padStart(3, "0")}`;
   const draft = { ...e, ...f };
 
-  // توقيع منظّم الحدث — يظهر لمن أنشأه (سياسات التوقيع تمنع قراءة توقيع غيره)
-  useEffect(() => {
-    (async () => {
-      if (!e.organizer_id) return;
-      const { data: sig } = await supabase.from("user_signatures")
-        .select("path").eq("user_id", e.organizer_id).maybeSingle();
-      if (!sig?.path) return;
-      const { data: su } = await supabase.storage.from("form-assets").createSignedUrl(sig.path, 3600);
-      setSigUrl(su?.signedUrl ?? null);
-    })();
-  }, [e.organizer_id]);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase.from("school_assets").select("key, path, label");
-      const get = (k) => (data ?? []).find((r) => r.key === k);
-      const url = async (p) => (p ? (await supabase.storage.from("form-assets").createSignedUrl(p, 3600)).data?.signedUrl ?? null : null);
-      setSchool({
-        stampUrl: await url(get("stamp")?.path),
-        principalUrl: await url(get("principal_signature")?.path),
-        principalName: get("principal_signature")?.label ?? "",
-      });
-    })();
-  }, []);
-
-  // الطباعة بعد اكتمال تحميل الصور (الشعارات والتوقيع)
-  useEffect(() => {
-    if (!printing) return;
-    const t = setTimeout(async () => {
-      const imgs = [...document.querySelectorAll("#ev-cert img")];
-      await Promise.all(imgs.map((i) => (i.complete ? null
-        : new Promise((r) => { i.onload = r; i.onerror = r; }))));
-      window.print();
-      setPrinting(null);
-    }, 150);
-    return () => clearTimeout(t);
-  }, [printing]);
+  usePrintWhenReady("ev-cert", printing, () => setPrinting(null));
 
   const save = async () => {
     const ok = await patch(f, "حُفظت إعدادات الشهادة.");
@@ -1271,6 +1287,323 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
         </PrintPortal>
       )}
     </div>
+  );
+}
+
+/** إشعار في الجرس وعلى الجوال لمستخدمين محدّدين */
+async function notifyUsers(userIds, title, body, link = "/events") {
+  const ids = [...new Set(userIds.filter(Boolean))];
+  if (!ids.length) return;
+  const { data: nid } = await supabase.rpc("send_notification", {
+    p_title: title, p_body: body, p_kind: "general", p_link: link,
+    p_roles: null, p_user_ids: ids, p_grade: null, p_class_no: null, p_is_auto: false,
+  });
+  if (!nid) return;
+  try {
+    await fetch("/.netlify/functions/push-send", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notification_id: nid }),
+    });
+  } catch { /* الإشعار في الجرس وصل */ }
+}
+
+/* ⑦ التقرير — يكتبه المنظّم، وبيانات الحدث وأعداده وقائمة الحاضرين تُملأ آليًا */
+const MAX_REPORT_PHOTOS = 4;
+
+function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
+  const [f, setF] = useState({
+    report_summary: e.report_summary ?? "",
+    report_outcomes: e.report_outcomes ?? "",
+    report_recommendations: e.report_recommendations ?? "",
+    report_photos: e.report_photos ?? [],
+  });
+  const [photoUrls, setPhotoUrls] = useState({});   // المسار ← رابط موقّع
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+  const [printing, setPrinting] = useState(false);
+  const { sigUrl, school } = useEventSignatures(e.organizer_id);
+
+  const approved = e.stage === "approved";
+  const submitted = !!e.report_submitted_at;
+  const locked = approved || submitted;              // لا يُعدَّل بعد رفعه، إلا إن أُعيد
+
+  const all = parts ?? [];
+  const consented = all.filter((p) => p.consent_at);
+  const attended = all.filter((p) => p.attended === true);
+  const noPhoto = consented.filter((p) => p.consent_photo === false).length;
+  const stats = [
+    ["المرشّحون", all.length],
+    ["وافق أولياؤهم", consented.length],
+    ["وافق على التصوير", consented.filter((p) => p.consent_photo).length],
+    ["الحاضرون", attended.length],
+    ["نسبة الحضور", consented.length ? `${Math.round((attended.length / consented.length) * 100)}%` : "—"],
+  ];
+
+  // الصور في مخزن خاص، فتُقرأ بروابط موقّعة مؤقتة
+  useEffect(() => {
+    (async () => {
+      const missing = f.report_photos.filter((p) => !photoUrls[p]);
+      if (!missing.length) return;
+      const { data } = await supabase.storage.from("event-reports").createSignedUrls(missing, 3600);
+      setPhotoUrls((m) => ({ ...m, ...Object.fromEntries((data ?? []).map((d) => [d.path, d.signedUrl])) }));
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [f.report_photos]);
+
+  usePrintWhenReady("ev-report-sheet", printing, () => setPrinting(false));
+
+  const save = async (next = f, okText = "حُفظ التقرير.") => {
+    const ok = await patch(next, okText);
+    setErr(ok ? null : "تعذّر الحفظ — نفّذ ملف supabase/events_report.sql في قاعدة البيانات مرة واحدة.");
+    return ok;
+  };
+
+  const upload = async (file) => {
+    if (!file || f.report_photos.length >= MAX_REPORT_PHOTOS) return;
+    setBusy(true); setErr(null);
+    try {
+      const blob = await normalizeImage(file);
+      const path = `${e.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const { error } = await supabase.storage.from("event-reports")
+        .upload(path, blob, { contentType: "image/jpeg", upsert: false });
+      if (error) throw error;
+      const next = { ...f, report_photos: [...f.report_photos, path] };
+      setF(next);
+      await save(next, "أُضيفت الصورة.");
+    } catch (x) {
+      setErr(`تعذّر رفع الصورة: ${x.message ?? x}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removePhoto = async (path) => {
+    if (!window.confirm("حذف الصورة من التقرير؟")) return;
+    setBusy(true);
+    await supabase.storage.from("event-reports").remove([path]);
+    const next = { ...f, report_photos: f.report_photos.filter((p) => p !== path) };
+    setF(next);
+    await save(next, "حُذفت الصورة.");
+    setBusy(false);
+  };
+
+  // رفع التقرير لمدير المدرسة للاعتماد
+  const submit = async () => {
+    if (!window.confirm("رفع التقرير لمدير المدرسة للاعتماد؟ لا يمكن تعديله بعد الرفع إلا إن أُعيد إليك.")) return;
+    setBusy(true);
+    const ok = await save({ ...f, report_submitted_at: new Date().toISOString(), approval_note: null },
+                          "رُفع التقرير لمدير المدرسة للاعتماد.");
+    if (ok) {
+      // إشعار مدير المدرسة — إن تعذّرت قراءة الأدوار يبقى الحدث ظاهرًا له «بانتظار الاعتماد»
+      const { data: ps } = await supabase.from("admin_roles").select("user_id").eq("role_type", "principal");
+      await notifyUsers((ps ?? []).map((r) => r.user_id), "حدث بانتظار اعتمادك",
+                        `رفع ${e.organizer_name ?? "المنظّم"} تقرير «${e.title}» للاعتماد.`);
+      onSubmitted();
+    }
+    setBusy(false);
+  };
+
+  const area = (k, label, placeholder, rows = 3) => (
+    <div>
+      <label className="text-xs text-muted">{label}</label>
+      <textarea rows={rows} className="field mt-1 w-full leading-relaxed disabled:bg-canvas" value={f[k]}
+                placeholder={placeholder} disabled={locked}
+                onChange={(x) => setF((v) => ({ ...v, [k]: x.target.value }))} />
+    </div>
+  );
+
+  const photos = f.report_photos.map((p) => photoUrls[p]).filter(Boolean);
+
+  return (
+    <div className="space-y-4">
+      {e.approval_note && !submitted && !approved && (
+        <section className="card border-warning/40 bg-warning-light p-4">
+          <p className="text-sm font-semibold text-warning">أُعيد التقرير إليك من مدير المدرسة</p>
+          <p className="mt-1 text-sm leading-relaxed text-ink">{e.approval_note}</p>
+        </section>
+      )}
+
+      <section className="card space-y-4 p-4">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">تقرير تنفيذ الحدث</h2>
+          <p className="mt-0.5 text-xs text-muted">
+            بيانات الحدث ونبذته وأهدافه وأعداد المشاركين وقائمة الحاضرين تُدرج في التقرير آليًا. اكتب ما يخص التنفيذ.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {stats.map(([k, v]) => (
+            <div key={k} className="rounded-sm2 border border-line px-2 py-2 text-center">
+              <p className="num text-base font-bold text-mint-deep">{v}</p>
+              <p className="text-[11px] text-muted">{k}</p>
+            </div>
+          ))}
+        </div>
+
+        {area("report_summary", "وصف التنفيذ", "ما الذي نُفّذ؟ الفقرات والبرامج، وسير الحدث…", 4)}
+        {area("report_outcomes", "النتائج والأثر", "ما تحقق من الأهداف، وتفاعل الطلاب…")}
+        {area("report_recommendations", "التوصيات", "مقترحات لتحسين الحدث في المرات القادمة…", 2)}
+
+        <div>
+          <div className="flex items-center justify-between gap-2">
+            <label className="text-xs text-muted">
+              صور من التنفيذ (<span className="num">{f.report_photos.length}</span> من{" "}
+              <span className="num">{MAX_REPORT_PHOTOS}</span>)
+            </label>
+            {!locked && f.report_photos.length < MAX_REPORT_PHOTOS && (
+              <label className={`cursor-pointer rounded-pill border border-mint-deep px-3 py-1 text-xs font-semibold text-mint-deep hover:bg-mint-tint ${
+                busy ? "pointer-events-none opacity-50" : ""}`}>
+                {busy ? "جارٍ الرفع…" : "+ إضافة صورة"}
+                <input type="file" accept="image/*" className="hidden"
+                       onChange={(x) => { upload(x.target.files?.[0]); x.target.value = ""; }} />
+              </label>
+            )}
+          </div>
+          {noPhoto > 0 && !locked && (
+            <p className="mt-1.5 rounded-sm2 bg-warning-light px-3 py-2 text-[11px] text-warning">
+              <span className="num">{noPhoto}</span> من أولياء الأمور لم يوافقوا على تصوير أبنائهم — لا ترفع صورًا تُظهرهم.
+            </p>
+          )}
+          {f.report_photos.length > 0 && (
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {f.report_photos.map((p) => (
+                <div key={p} className="relative overflow-hidden rounded-sm2 border border-line bg-canvas"
+                     style={{ aspectRatio: "16 / 9" }}>
+                  {photoUrls[p] && <img src={photoUrls[p]} alt="" className="h-full w-full object-cover" />}
+                  {!locked && (
+                    <button onClick={() => removePhoto(p)} disabled={busy}
+                            className="absolute left-1.5 top-1.5 rounded-pill bg-white/90 px-2 py-0.5 text-[11px] text-absent">
+                      حذف
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-xs text-absent">{err}</p>}
+
+        <div className="flex flex-wrap gap-2">
+          {!locked && (
+            <button className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
+                    onClick={() => save()} disabled={busy}>
+              حفظ التقرير
+            </button>
+          )}
+          <button className="flex-1 rounded-pill border border-line py-2 text-sm text-ink hover:bg-canvas"
+                  onClick={async () => { if (!locked) await save(f, null); setPrinting(true); }}>
+            طباعة / حفظ PDF
+          </button>
+        </div>
+        {!locked && (
+          <button className="btn-primary w-full" onClick={submit}
+                  disabled={busy || f.report_summary.trim().length < 10}>
+            رفع التقرير للاعتماد
+          </button>
+        )}
+        {!locked && f.report_summary.trim().length < 10 && (
+          <p className="text-[11px] text-faint">اكتب وصف التنفيذ لتتمكّن من رفع التقرير للاعتماد.</p>
+        )}
+        {submitted && !approved && (
+          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-xs text-warning">
+            التقرير مرفوع لمدير المدرسة وبانتظار الاعتماد.
+          </p>
+        )}
+      </section>
+
+      {printing && (
+        <PrintPortal id="ev-report-sheet" margin="0" extraCss="#ev-report-sheet tr { break-inside: avoid; }">
+          <EventReportSheet event={{ ...e, ...f }} stats={stats} attended={attended} photos={photos}
+                            sigUrl={sigUrl} stampUrl={school.stampUrl} principalName={school.principalName}
+                            principalUrl={approved ? school.principalUrl : null} />
+        </PrintPortal>
+      )}
+    </div>
+  );
+}
+
+/* ⑧ الاعتماد — يعتمده مدير المدرسة فيُقفل الحدث، أو يعيده للمنظّم بملاحظة */
+function StageApproval({ e, patch, onMsg, isPrincipal, byName, goReport }) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const approved = e.stage === "approved";
+
+  const approve = async () => {
+    if (!window.confirm(`اعتماد «${e.title}» وإقفاله؟`)) return;
+    setBusy(true);
+    const ok = await patch({ stage: "approved", approved_at: new Date().toISOString(),
+                             approved_by_name: byName || null, approval_note: null },
+                           "اعتُمد الحدث وأُقفل.");
+    if (ok) await notifyUsers([e.organizer_id], "اعتُمد الحدث",
+                              `اعتمد مدير المدرسة تقرير «${e.title}». يمكنك طباعة التقرير المعتمد.`);
+    else onMsg({ ok: false, text: "تعذّر الاعتماد — نفّذ ملف supabase/events_report.sql في قاعدة البيانات مرة واحدة." });
+    setBusy(false);
+  };
+
+  const sendBack = async () => {
+    if (note.trim().length < 3) return;
+    setBusy(true);
+    const ok = await patch({ report_submitted_at: null, approval_note: note.trim() },
+                           "أُعيد التقرير للمنظّم بملاحظتك.");
+    if (ok) {
+      await notifyUsers([e.organizer_id], "أُعيد تقرير الحدث إليك",
+                        `أعاد مدير المدرسة تقرير «${e.title}»: ${note.trim()}`);
+      goReport();
+    }
+    setBusy(false);
+  };
+
+  if (approved) {
+    return (
+      <section className="card space-y-3 border-present/30 bg-present/5 p-4">
+        <p className="text-sm font-bold text-present">اعتُمد الحدث وأُقفل</p>
+        <p className="num text-xs text-muted">
+          {e.approved_by_name ? `${e.approved_by_name} · ` : ""}
+          {e.approved_at ? fmtG(String(e.approved_at).slice(0, 10)) : ""}
+        </p>
+        <button onClick={goReport}
+                className="rounded-pill border border-line bg-white px-4 py-1.5 text-sm text-ink hover:bg-canvas">
+          طباعة التقرير المعتمد
+        </button>
+      </section>
+    );
+  }
+
+  if (!isPrincipal) {
+    return (
+      <section className="card px-6 py-10 text-center">
+        <p className="font-semibold text-ink">بانتظار اعتماد مدير المدرسة</p>
+        <p className="mt-1.5 text-sm text-muted">يصلك إشعار حين يُعتمد التقرير أو يُعاد إليك بملاحظة.</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card space-y-4 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-ink">اعتماد الحدث</h2>
+        <p className="mt-0.5 text-xs text-muted">
+          راجع التقرير من مرحلة «التقرير»، ثم اعتمده فيُقفل الحدث ويُطبع التقرير بتوقيعك، أو أعِده للمنظّم بملاحظة.
+        </p>
+      </div>
+      <button onClick={goReport}
+              className="w-full rounded-pill border border-line py-2 text-sm text-ink hover:bg-canvas">
+        مراجعة التقرير
+      </button>
+      <button className="btn-primary w-full" onClick={approve} disabled={busy}>
+        اعتماد الحدث وإقفاله
+      </button>
+      <div className="space-y-2 border-t border-line pt-3">
+        <label className="text-xs text-muted">أو إعادة للمنظّم بملاحظة</label>
+        <textarea rows={2} className="field w-full" value={note} placeholder="مثال: أضف صورًا من التنفيذ"
+                  onChange={(x) => setNote(x.target.value)} />
+        <button onClick={sendBack} disabled={busy || note.trim().length < 3}
+                className="w-full rounded-pill border border-warning/50 py-2 text-sm font-semibold text-warning hover:bg-warning-light disabled:opacity-50">
+          إعادة للمنظّم
+        </button>
+      </div>
+    </section>
   );
 }
 

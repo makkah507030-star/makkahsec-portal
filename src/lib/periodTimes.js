@@ -125,6 +125,24 @@ export function nearestPeriodNo(rows, at = new Date()) {
   return periods[periods.length - 1].period_no;
 }
 
+/**
+ * الحصة الجارية، وإلا آخر حصة بدأت (في الفسحة: الحصة التي انتهت للتو).
+ * لا ترجع حصة لم تبدأ — فلا تُفتح للتحضير قبل وقتها. null قبل بداية الدوام.
+ */
+export function lastStartedPeriodNo(rows, at = new Date()) {
+  const now = nowMinutes(at);
+  const started = (rows ?? []).filter(
+    (r) => r.kind === "period" && r.period_no != null && toMinutes(r.start_time) <= now
+  );
+  return started.length ? started[started.length - 1].period_no : null;
+}
+
+/** هل بدأت الحصة؟ (بلا توقيت معروف تُعدّ بادئة، فلا تُقفل خطأً) */
+export function periodStarted(row, at = new Date()) {
+  const s = toMinutes(row?.start_time);
+  return s == null || nowMinutes(at) >= s;
+}
+
 /* ---------------- التأخر الصباحي ---------------- */
 
 /**
