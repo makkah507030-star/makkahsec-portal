@@ -49,7 +49,8 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-white">
-      <TrialBanner />
+      {/* للزوار: من تعثّر دخوله يُوجَّه إلى مركز الدعم والمساندة */}
+      <TrialBanner variant="support" />
 
       {/* شريط علوي — نقطة الدخول الوحيدة للبوابة، ثابت طوال الصفحة */}
       <header className="sticky top-0 z-10 border-b border-line bg-white/90 backdrop-blur">

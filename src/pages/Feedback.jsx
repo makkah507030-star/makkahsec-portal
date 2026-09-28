@@ -7,6 +7,7 @@ import logoIcon from "../assets/icon-mint.png";
 import { useNotice } from "../lib/useNotice.js";
 
 const CATEGORIES = [
+  { key: "login",      label: "مشكلة في الدخول" },
   { key: "bug",        label: "مشكلة تقنية" },
   { key: "suggestion", label: "اقتراح تحسين" },
   { key: "data",       label: "خطأ في البيانات" },
@@ -14,6 +15,15 @@ const CATEGORIES = [
 ];
 
 const ROLE_MAP = { student: "طالب", teacher: "معلم", guardian: "ولي أمر", admin: "إداري" };
+// صفة الزائر غير المسجّل
+const GUEST_ROLES = ["طالب", "ولي أمر", "معلم", "أخرى"];
+
+// الجوال السعودي بصيغة 05XXXXXXXX (يقبل الأرقام العربية و+966)
+const normMobile = (v) => {
+  let d = String(v ?? "").replace(/[٠-٩]/g, (c) => "٠١٢٣٤٥٦٧٨٩".indexOf(c)).replace(/\D/g, "");
+  if (/^9665\d{8}$/.test(d)) d = "0" + d.slice(3);
+  return d;
+};
 
 const STATUS_META = {
   new:         { label: "جديدة",       cls: "bg-warning-light text-warning" },
@@ -29,8 +39,12 @@ export default function Feedback() {
   // المعرّف المعتمد له عند عدم توفر رقم هوية) — كلاهما اسم المستخدم نفسه
   const nationalId = profile?.username ?? "";
 
-  const [category, setCategory] = useState("bug");
+  const [category, setCategory] = useState(session ? "bug" : "login");
   const [message, setMessage] = useState("");
+  // الاسم والجوال: الزائر يكتبهما (إلزاميان)، والمسجّل اسمه من حسابه وجواله اختياري
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [guestRole, setGuestRole] = useState("طالب");
 
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
@@ -54,11 +68,13 @@ export default function Feedback() {
     e.preventDefault();
     setError("");
 
-    if (!profile?.id) {
-      setError("سجّل الدخول أولًا لإرسال طلب دعم.");
-      return;
+    const phone = normMobile(mobile);
+    if (!session) {
+      if (name.trim().length < 3) { setError("اكتب اسمك الثلاثي."); return; }
+      if (!/^05\d{8}$/.test(phone)) { setError("اكتب رقم جوال صحيحًا بصيغة 05XXXXXXXX."); return; }
+    } else if (phone && !/^05\d{8}$/.test(phone)) {
+      setError("رقم الجوال غير صحيح — اكتبه بصيغة 05XXXXXXXX أو اتركه فارغًا."); return;
     }
-
     if (message.trim().length < 10) {
       setError("اكتب وصفًا أوضح للطلب (١٠ أحرف على الأقل).");
       return;
@@ -66,16 +82,34 @@ export default function Feedback() {
 
     setSending(true);
 
+    // الزائر غير المسجّل: عبر دالة آمنة في الخادم (تتحقق وتحدّ من التكرار)
+    if (!session) {
+      const { error: err } = await supabase.rpc("submit_public_feedback", {
+        p_name: name.trim(), p_mobile: phone, p_role: guestRole,
+        p_category: category, p_message: message.trim(), p_page: window.location.origin,
+      });
+      setSending(false);
+      if (err) {
+        setError(/submit_public_feedback/.test(err.message)
+          ? "الدعم الفني للزوار غير مفعّل بعد — يحتاج تنفيذ ملف supabase/feedback_public.sql."
+          : err.message);
+        return;
+      }
+      setDone(true);
+      return;
+    }
+
     const { data: inserted, error: err } = await supabase
       .from("feedback")
       .insert({
-        name: profile.full_name?.trim() || null,
+        name: profile?.full_name?.trim() || null,
         national_id: nationalId.trim() || null,
         role_label: roleLabel,
+        contact: phone || null,
         category,
         message: message.trim(),
         page_url: window.location.origin,
-        user_id: profile.id,
+        user_id: profile?.id ?? null,
       })
       .select("id")
       .single();
@@ -154,32 +188,23 @@ export default function Feedback() {
           </svg>
         </a>
 
-        {!session ? (
-          <div className="card mt-6 px-6 py-12 text-center">
-            <p className="font-semibold text-ink">يلزم تسجيل الدخول</p>
-            <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-muted">
-              لإرسال طلب دعم ومتابعة الرد عليه بسهولة عبر الإشعارات، يلزم تسجيل
-              الدخول إلى البوابة أولًا.
-            </p>
-            <Link to="/login" className="btn-primary mt-5 inline-block">
-              تسجيل الدخول
-            </Link>
-          </div>
-        ) : done ? (
+        {done ? (
           <div className="card mt-6 px-6 py-14 text-center">
             <p className="text-lg font-bold text-mint-deep">وصلنا طلبك</p>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
-              شكرًا لتواصلك. سيراجع الدعم الفني طلبك ويصلك إشعار داخل الموقع
-              فور الرد.
+              {session
+                ? "شكرًا لتواصلك. سيراجع الدعم الفني طلبك ويصلك إشعار داخل الموقع فور الرد."
+                : `شكرًا لتواصلك. سيراجع الدعم الفني طلبك ويتواصل معك على الرقم ${normMobile(mobile)}.`}
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               <Link to="/" className="btn-primary">العودة للرئيسية</Link>
+              {!session && <Link to="/login" className="btn-ghost">تسجيل الدخول</Link>}
               <button
                 className="btn-ghost"
                 onClick={() => {
                   setDone(false);
                   setMessage("");
-                  setCategory("bug");
+                  setCategory(session ? "bug" : "login");
                 }}
               >
                 إرسال طلب آخر
@@ -216,6 +241,39 @@ export default function Feedback() {
             )}
 
             <form onSubmit={submit} className="card mt-6 space-y-5 p-5">
+              {/* بيانات التواصل */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="label" htmlFor="fb-name">الاسم{!session && <span className="text-absent"> *</span>}</label>
+                  {session
+                    ? <p className="field mt-1 bg-canvas text-muted">{profile?.full_name ?? "—"}</p>
+                    : <input id="fb-name" className="field mt-1" value={name} autoComplete="name"
+                             placeholder="الاسم الثلاثي" onChange={(e) => setName(e.target.value)} />}
+                </div>
+                <div>
+                  <label className="label" htmlFor="fb-mobile">
+                    رقم الجوال{session ? <span className="text-faint"> (اختياري)</span> : <span className="text-absent"> *</span>}
+                  </label>
+                  <input id="fb-mobile" className="field num mt-1" value={mobile} inputMode="tel" autoComplete="tel"
+                         dir="ltr" placeholder="05XXXXXXXX" onChange={(e) => setMobile(e.target.value)} />
+                </div>
+              </div>
+
+              {!session && (
+                <div>
+                  <label className="label">أنت</label>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {GUEST_ROLES.map((r) => (
+                      <button key={r} type="button" onClick={() => setGuestRole(r)}
+                        className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
+                          guestRole === r ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="label">نوع الطلب</label>
                 <div className="mt-1.5 flex flex-wrap gap-2">
@@ -255,7 +313,9 @@ export default function Feedback() {
                      stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 16v-4M12 8h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z" />
                 </svg>
-                سيصلك ردّ فريق الدعم داخل حسابك عبر الإشعارات في الموقع — لا حاجة لمتابعة الجوال أو البريد.
+                {session
+                  ? "سيصلك ردّ فريق الدعم داخل حسابك عبر الإشعارات في الموقع."
+                  : "لا تحتاج حسابًا لإرسال الطلب — سيتواصل معك الدعم الفني على رقم جوالك. وإن كانت مشكلتك في الدخول فاذكر اسمك الكامل ورقم هويتك أو هوية ابنك في التفاصيل."}
               </p>
 
               {error && (

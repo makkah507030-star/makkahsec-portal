@@ -43,7 +43,31 @@ function NationalDayBanner() {
   );
 }
 
-export default function TrialBanner() {
+/* شريط الدعم للزوار (الصفحة الرئيسية وصفحة الدخول): بلون الشريط الذهبي نفسه،
+   يدلّ من تعثّر دخوله على مركز الدعم والمساندة — يُرسل طلبه دون حساب. */
+function SupportBanner() {
+  return (
+    <div className="bg-[#9A7B22] text-white">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-5 py-2.5 text-center text-xs leading-relaxed sm:text-sm">
+        <span className="font-semibold">تواجه صعوبة في الدخول إلى البوابة؟</span>
+        <span className="opacity-60">·</span>
+        <span className="opacity-95">
+          فريق الدعم الفني في خدمتك — أرسل طلبك باسمك ورقم جوالك دون الحاجة إلى تسجيل الدخول، ونتواصل معك.
+        </span>
+        <Link
+          to="/contact"
+          className="whitespace-nowrap rounded-pill bg-white/15 px-3 py-0.5 font-semibold transition-colors hover:bg-white/25"
+        >
+          مركز الدعم والمساندة ←
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+/** variant="support": شريط الدعم للزوار بدل الشريط الافتراضي */
+export default function TrialBanner({ variant }) {
+  if (variant === "support") return <SupportBanner />;
   if (isNationalDay()) return <NationalDayBanner />;
 
   return (

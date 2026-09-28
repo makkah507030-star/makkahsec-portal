@@ -6,6 +6,7 @@ import ColorLegend from "../../components/ColorLegend.jsx";
 import Loader from "../../components/Loader.jsx";
 
 const CAT_LABEL = {
+  login: "مشكلة في الدخول",
   bug: "مشكلة تقنية",
   suggestion: "اقتراح",
   data: "خطأ بيانات",
@@ -136,6 +137,9 @@ export default function FeedbackAdmin() {
                   {f.role_label && (
                     <span className="chip bg-gray-tint text-muted">{f.role_label}</span>
                   )}
+                  {!f.user_id && (
+                    <span className="chip bg-warning-light text-warning">من خارج البوابة — تواصل هاتفيًا</span>
+                  )}
                   <span className="ms-auto text-xs text-faint">
                     {fmtDateTime(f.created_at)}
                   </span>
@@ -158,6 +162,11 @@ export default function FeedbackAdmin() {
                 <Link to={`/ticket/${f.id}`} className="text-mint-deep hover:underline">
                   فتح المحادثة والرد
                 </Link>
+                {f.contact && (
+                  <a href={`tel:${f.contact}`} className="text-mint-deep hover:underline">
+                    اتصال <span className="num">{f.contact}</span>
+                  </a>
+                )}
                 <button onClick={() => remove(f.id)} className="text-absent hover:underline">
                   حذف
                 </button>
