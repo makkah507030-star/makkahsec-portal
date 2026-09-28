@@ -57,6 +57,7 @@ export default function QuizMarks() {
   // الأسئلة بترتيب الورقة المطبوعة (اختيار من متعدد ← صح وخطأ ← مزاوجة) وترقيمها
   // «س١: ف٢» — حتى يطابق الرصدُ اليدوي ما بيد المعلم تمامًا، لا ترتيبَ الإضافة
   const isPaper = quiz?.mode === "paper";
+  const isOnline = quiz?.mode === "online";   // لا بطاقة تظليل، فلا تصحيح بالكاميرا
   const ordered = useMemo(() => {
     const KIND = { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أو خطأ", match: "المزاوجة" };
     return groupQuestions(questions).flatMap((g, gi) =>
@@ -184,7 +185,7 @@ export default function QuizMarks() {
             <option value="">اختر الاختبار…</option>
             {(quizzes ?? []).map((q) => (
               <option key={q.id} value={q.id}>
-                {q.mode === "paper" ? "📝 " : ""}{q.title} — {q.subject_name ?? ""} ({q.total_marks} درجة)
+                {q.mode === "paper" ? "📝 " : q.mode === "online" ? "📱 " : ""}{q.title} — {q.subject_name ?? ""} ({q.total_marks} درجة)
               </option>
             ))}
           </select>
@@ -270,10 +271,12 @@ export default function QuizMarks() {
                     ) : (
                       <span className="chip bg-canvas text-muted">لم يُرصد</span>
                     )}
-                    <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
-                            className="shrink-0 rounded-pill border border-mint-deep px-2.5 py-1 text-xs font-semibold text-mint-deep">
-                      📷
-                    </button>
+                    {!isOnline && (
+                      <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
+                              className="shrink-0 rounded-pill border border-mint-deep px-2.5 py-1 text-xs font-semibold text-mint-deep">
+                        📷
+                      </button>
+                    )}
                     <button onClick={() => setActive(active?.id === s.id ? null : s)}
                             className="shrink-0 rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white">
                       {active?.id === s.id ? "إغلاق" : sub ? "تعديل" : "رصد"}
@@ -296,10 +299,12 @@ export default function QuizMarks() {
           <div className="no-print flex flex-wrap gap-2">
             {isPaper ? null : (
               <>
-                <button className="btn-primary flex-1"
-                        onClick={() => setScanFrom((students.find((x) => !subs[x.id]) ?? students[0]).id)}>
-                  📷 التصحيح بالكاميرا
-                </button>
+                {!isOnline && (
+                  <button className="btn-primary flex-1"
+                          onClick={() => setScanFrom((students.find((x) => !subs[x.id]) ?? students[0]).id)}>
+                    📷 التصحيح بالكاميرا
+                  </button>
+                )}
                 <button className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep"
                         onClick={() => setFast(true)}>
                   الإدخال السريع

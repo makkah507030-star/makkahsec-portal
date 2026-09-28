@@ -29,17 +29,21 @@ const MATCH_MAX_ITEMS = 5;
 const PAPER_MATCH_MAX = 8;
 const ORDER_MAX = 8;
 
+// ثلاثة أنواع منفصلة — ولكل نوع قسمه في قائمة الاختبارات
 const MODES = [
-  { key: "omr", title: "اختبار قصير", icon: "◉",
-    desc: "بطاقة تظليل تُصحَّح بالكاميرا، أو إلكتروني يؤديه الطالب من جواله. صفحة واحدة وثلاثة أنماط." },
-  { key: "paper", title: "اختبار ورقي", icon: "✎",
-    desc: "ورقة تقليدية بلا بطاقة تظليل، بسبعة أنماط منها المقالي وأكمل الفراغ. تتوزّع على أكثر من صفحة وتُطبع بأسماء الطلاب." },
+  { key: "paper", title: "اختبار ورقي", short: "ورقي", icon: "✎", chip: "bg-excused/10 text-excused",
+    desc: "ورقة تقليدية بسبعة أنماط منها المقالي وأكمل الفراغ. تتوزّع على أكثر من صفحة، وتُطبع بأسماء الطلاب، ويُرصد مجموعها يدويًا." },
+  { key: "omr", title: "اختبار ورقي (تصحيح آلي)", short: "تصحيح آلي", icon: "◉", chip: "bg-mint-tint text-mint-deep",
+    desc: "ورقة من صفحة واحدة ببطاقة تظليل، تُصحَّح بالكاميرا أو برصد الإجابات. ثلاثة أنماط: اختيار من متعدد، وصح وخطأ، ومزاوجة." },
+  { key: "online", title: "اختبار إلكتروني", short: "إلكتروني", icon: "⌁", chip: "bg-warning/10 text-warning",
+    desc: "يؤديه الطالب من جواله في وقت تحدّده، ويُصحَّح آليًا فور تسليمه. ثلاثة أنماط: اختيار من متعدد، وصح وخطأ، ومزاوجة." },
 ];
+const modeOf = (q) => MODES.find((m) => m.key === (q?.mode ?? "omr")) ?? MODES[1];
 
 // رسالة واضحة إن لم يُنفَّذ ملف قاعدة البيانات بعد
 const setupHint = (e) =>
-  /mode|paper_opts|kind_check|quiz_save_manual_marks/.test(e?.message ?? "")
-    ? "ميزة الاختبار الورقي تحتاج تنفيذ ملف supabase/quiz_paper_mode.sql في قاعدة البيانات مرة واحدة."
+  /mode|paper_opts|kind_check|quiz_save_manual/.test(e?.message ?? "")
+    ? "أنواع الاختبارات الجديدة تحتاج تنفيذ ملف supabase/quiz_paper_mode.sql في قاعدة البيانات مرة واحدة."
     : e?.message;
 
 const PERIODS = [
@@ -54,6 +58,10 @@ const STATUS = {
   marking: { t: "قيد التصحيح",  c: "bg-warning/10 text-warning" },
   closed:  { t: "مُقفل",        c: "bg-present/10 text-present" },
 };
+
+// الإلكتروني لا يُطبع: «جاهز» بدل «جاهز للطباعة»
+const statusLabel = (q) =>
+  q.status === "ready" && q.mode === "online" ? "جاهز للإطلاق" : (STATUS[q.status] ?? STATUS.draft).t;
 
 const LETTERS = ["أ", "ب", "ج", "د", "هـ"];
 const ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن"];
@@ -87,8 +95,8 @@ export default function MyQuizzes() {
         <div>
           <h1 className="text-lg font-bold text-ink">اختباراتي</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            اختبارات قصيرة تُصحَّح آليًا وتُرصد في كشف المادة.
-            النموذج الواحد يُسند لأكثر من فصل.
+            ثلاثة أنواع: ورقي، وورقي بتصحيح آلي، وإلكتروني. تُرصد درجاتها في كشف المادة،
+            والنموذج الواحد يُسند لأكثر من فصل.
           </p>
         </div>
         <button className="btn-primary shrink-0" onClick={() => setCreating((v) => !v)}>
@@ -116,8 +124,17 @@ export default function MyQuizzes() {
         </p>
       )}
 
-      <div className="space-y-2">
-        {(list ?? []).map((q) => {
+      {MODES.map((m) => {
+        const items = (list ?? []).filter((q) => modeOf(q).key === m.key);
+        if (!items.length) return null;
+        return (
+          <section key={m.key} className="space-y-2">
+            <h2 className="flex items-center gap-2 px-1 text-sm font-bold text-ink">
+              <span className={`grid h-6 w-6 place-items-center rounded-full text-xs ${m.chip}`}>{m.icon}</span>
+              {m.title}
+              <span className="num text-xs font-normal text-faint">({items.length})</span>
+            </h2>
+        {items.map((q) => {
           const st = STATUS[q.status] ?? STATUS.draft;
           return (
             <div key={q.id} className="card p-4 transition-colors hover:border-[#CCF2DB]">
@@ -135,13 +152,10 @@ export default function MyQuizzes() {
 
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <div className="flex items-center gap-1.5">
-                    {q.mode === "paper" && (
-                      <span className="chip bg-excused/10 text-excused">ورقي</span>
-                    )}
                     {q.lang === "en" && (
                       <span className="chip bg-mint-tint text-mint-deep" dir="ltr">EN</span>
                     )}
-                    <span className={`chip ${st.c}`}>{st.t}</span>
+                    <span className={`chip ${st.c}`}>{statusLabel(q)}</span>
                   </div>
                   <button onClick={async () => {
                             if (!window.confirm(
@@ -161,7 +175,9 @@ export default function MyQuizzes() {
             </div>
           );
         })}
-      </div>
+          </section>
+        );
+      })}
     </div>
   );
 }
@@ -170,7 +186,7 @@ export default function MyQuizzes() {
 function NewQuiz({ uid, onDone }) {
   const [subjects, setSubjects] = useState([]);
   const [f, setF] = useState({
-    mode: "omr",
+    mode: "paper",
     title: "", subject_id: "", grade: "", period: "period1", lang: "ar",
     total_marks: 20, exam_date: todayISO(), duration_min: 30, instructions: "",
   });
@@ -213,7 +229,7 @@ function NewQuiz({ uid, onDone }) {
 
     const { data, error } = await supabase.from("quizzes").insert({
       teacher_id: uid,
-      ...(f.mode === "paper" ? { mode: "paper" } : {}),
+      ...(f.mode !== "omr" ? { mode: f.mode } : {}),
       title: f.title.trim(),
       subject_id: f.subject_id || null,
       subject_name: subj?.name ?? null,
@@ -237,7 +253,7 @@ function NewQuiz({ uid, onDone }) {
     <section className="card space-y-4 p-4">
       <div>
         <label className="text-xs text-muted">نوع الاختبار</label>
-        <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+        <div className="mt-1.5 grid gap-2 sm:grid-cols-3">
           {MODES.map((m) => {
             const on = f.mode === m.key;
             return (
@@ -376,9 +392,21 @@ function QuizEditor({ quiz, uid, onBack }) {
   const [msg, setMsg] = useNotice(null);
   // الاختبار الورقي: عدد صفحاته وأين تبدأ كل صفحة، وما يُطبع الآن
   const paper = q.mode === "paper";
+  const online = q.mode === "online";
+  const omr = !paper && !online;
   const [layout, setLayout] = useState(null);
   const [paperPrint, setPaperPrint] = useState(null);   // { copies, answerKey }
-  const kinds = paper ? PAPER_KINDS.map((k) => ({ ...k, max: Infinity })) : KINDS;
+  // الإلكتروني بلا حدود الورقة الواحدة
+  const kinds = paper ? PAPER_KINDS.map((k) => ({ ...k, max: Infinity }))
+              : online ? KINDS.map((k) => ({ ...k, max: Infinity })) : KINDS;
+
+  // اختبار «تصحيح آلي» قديم سبق نشره إلكترونيًا يبقى تبويبه، فلا تضيع نتائجه
+  const [legacyOnline, setLegacyOnline] = useState(false);
+  useEffect(() => {
+    if (!omr) return;
+    supabase.from("quiz_online").select("quiz_id").eq("quiz_id", q.id).maybeSingle()
+      .then(({ data }) => setLegacyOnline(!!data));
+  }, [q.id, omr]);
 
   const load = async () => {
     const [{ data: qs }, { data: lk }] = await Promise.all([
@@ -493,7 +521,7 @@ function QuizEditor({ quiz, uid, onBack }) {
   const setStatus = async (status) => {
     await supabase.from("quizzes").update({ status }).eq("id", q.id);
     setQ((x) => ({ ...x, status }));
-    setMsg({ ok: true, text: status === "ready" ? "الاختبار جاهز للطباعة."
+    setMsg({ ok: true, text: status === "ready" ? (online ? "الاختبار جاهز — أطلقه من «الإطلاق والمتابعة»." : "الاختبار جاهز للطباعة.")
                              : status === "marking" ? "أصبحت النتائج ظاهرة للطلاب." : "حُفظ." });
   };
 
@@ -515,7 +543,7 @@ function QuizEditor({ quiz, uid, onBack }) {
               الورقة والطباعة
             </button>
           )}
-          {!paper && (questions?.length ?? 0) > 0 && (
+          {omr && (questions?.length ?? 0) > 0 && (
             <select className="field py-1.5 text-xs"
                     value=""
                     onChange={(e) => {
@@ -542,8 +570,9 @@ function QuizEditor({ quiz, uid, onBack }) {
               ))}
             </select>
           )}
+          <span className={`chip ${modeOf(q).chip}`}>{modeOf(q).short}</span>
           <span className={`chip ${(STATUS[q.status] ?? STATUS.draft).c}`}>
-            {(STATUS[q.status] ?? STATUS.draft).t}
+            {statusLabel(q)}
           </span>
         </div>
       </div>
@@ -566,7 +595,7 @@ function QuizEditor({ quiz, uid, onBack }) {
         </QuizPrintArea>
       )}
 
-      {!paper && (questions?.length ?? 0) > 0 && fit && (
+      {omr && (questions?.length ?? 0) > 0 && fit && (
         <p className={`rounded-card px-3 py-2 text-xs ${
           !fit.fits ? "bg-absent/10 text-absent"
           : fit.zoom < 0.85 ? "bg-warning/10 text-warning"
@@ -578,7 +607,7 @@ function QuizEditor({ quiz, uid, onBack }) {
             : "الاختبار كامل مع بطاقة الإجابة في صفحة واحدة."}
         </p>
       )}
-      {!paper && (questions?.length ?? 0) > 0 && (
+      {omr && (questions?.length ?? 0) > 0 && (
         <div aria-hidden="true"
              style={{ position: "fixed", top: 0, left: -10000, visibility: "hidden", pointerEvents: "none" }}>
           <QuizPaper quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
@@ -613,11 +642,11 @@ function QuizEditor({ quiz, uid, onBack }) {
           <button className={pill(tab === "paper")} onClick={() => setTab("paper")}>
             الورقة والطباعة {layout && <span className="num">({layout.pages} {layout.pages === 1 ? "صفحة" : "صفحات"})</span>}
           </button>
-        ) : (
+        ) : (online || legacyOnline) ? (
           <button className={pill(tab === "online")} onClick={() => setTab("online")}>
-            اختبار إلكتروني
+            {online ? "الإطلاق والمتابعة" : "اختبار إلكتروني"}
           </button>
-        )}
+        ) : null}
       </div>
 
       {msg && (
@@ -654,12 +683,14 @@ function QuizEditor({ quiz, uid, onBack }) {
                   </p>
                   {g.list.map((row, qi) => (
                     <QuestionCard key={row.id} row={row} index={qi + 1} lang={q.lang ?? "ar"} paper
+                                  matchMax={PAPER_MATCH_MAX}
                                   onPatch={patchQ} onRemove={removeQ} />
                   ))}
                 </div>
               ))
             : (questions ?? []).map((row, i) => (
                 <QuestionCard key={row.id} row={row} index={i + 1} lang={q.lang ?? "ar"}
+                              matchMax={online ? PAPER_MATCH_MAX : MATCH_MAX_ITEMS}
                               onPatch={patchQ} onRemove={removeQ} />
               ))}
 
@@ -675,7 +706,7 @@ function QuizEditor({ quiz, uid, onBack }) {
                       full ? "border-line bg-canvas text-faint"
                            : "border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>
                     {paper ? "+ " : ""}{k.label}{" "}
-                    <span className="num opacity-75">{paper ? (n ? `(${n})` : "") : `(${n}/${k.max})`}</span>
+                    <span className="num opacity-75">{omr ? `(${n}/${k.max})` : (n ? `(${n})` : "")}</span>
                   </button>
                 );
               })}
@@ -683,13 +714,15 @@ function QuizEditor({ quiz, uid, onBack }) {
             <p className="mt-2 text-[11px] leading-relaxed text-faint">
               {paper
                 ? "تُرتَّب الأسئلة في الورقة بحسب نوعها، ويُرقَّم كل نوع سؤالًا مستقلًا. لا حدّ للعدد: إذا امتلأت الصفحة الأولى انتقل الباقي إلى صفحة ثانية."
+                : online
+                ? "لا حدّ لعدد الأسئلة في الاختبار الإلكتروني، ويُصحَّح آليًا فور تسليم الطالب."
                 : "الحدود ثابتة ليبقى تصميم الورقة موحّدًا وبطاقتها قابلة للقراءة الآلية."}
             </p>
           </div>
 
           {q.status === "draft" && (questions?.length ?? 0) > 0 && (
             <button className="btn-primary w-full" onClick={() => setStatus("ready")}>
-              اعتماد الاختبار وجعله جاهزًا
+              {online ? "اعتماد الاختبار — ثم أطلقه من «الإطلاق والمتابعة»" : "اعتماد الاختبار وجعله جاهزًا"}
             </button>
           )}
         </div>
@@ -717,7 +750,7 @@ function QuizEditor({ quiz, uid, onBack }) {
                   onPrint={setPaperPrint} />
       )}
 
-      {!paper && tab === "online" && (
+      {(online || legacyOnline) && tab === "online" && (
         <div className="no-print">
           <OnlineQuizPanel quiz={q} linked={linked} questionsCount={questions?.length ?? 0}
                            marksOk={marksUsed === Number(q.total_marks)}
@@ -757,7 +790,7 @@ function QuizEditor({ quiz, uid, onBack }) {
 }
 
 /* --------------------------- بطاقة السؤال --------------------------- */
-function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false }) {
+function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false, matchMax = MATCH_MAX_ITEMS }) {
   const ltr = lang === "en";
   const [local, setLocal] = useState(row);
 
@@ -818,7 +851,7 @@ function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = fals
 
       {row.kind === "match" && (
         <MatchEditor local={local} setLocal={setLocal} save={save} ltr={ltr}
-                     max={paper ? PAPER_MATCH_MAX : MATCH_MAX_ITEMS} />
+                     max={matchMax} />
       )}
 
       {row.kind === "order" && (
