@@ -46,7 +46,7 @@ function SheetPreview({ landscape, children }) {
 export default function DocumentView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { session } = useSession();
+  const { session, profile } = useSession();
   const [reply, setReply] = useState({});
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useNotice(null);
