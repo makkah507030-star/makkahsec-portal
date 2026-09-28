@@ -35,25 +35,35 @@ export const CERT_VARS = [
   { k: "الذكرى", d: "رقم ذكرى اليوم الوطني" },
 ];
 
+/* الصيغة: ما قبل {الطالب} سطر تمهيدي، والاسم سطر بارز، وما بعده نص الشهادة،
+   وكل سطر جديد بعده سطر ختامي — على نسق قالب الشهادات المعتمد في المدرسة. */
 export const defaultCertText = (e) =>
   isNationalDay(e)
-    ? "تشهد إدارة مدرسة مكة الثانوية بأن الطالب/ {الطالب} من {الصف} قد شارك في «{الحدث}» " +
-      "المُقام بتاريخ {التاريخ}، احتفاءً بذكرى اليوم الوطني {الذكرى} للمملكة العربية السعودية، " +
-      "تعبيرًا عن اعتزازه بوطنه وانتمائه إليه. سائلين الله أن يديم على وطننا عزّه وأمنه ورخاءه."
-    : "تشهد إدارة مدرسة مكة الثانوية بأن الطالب/ {الطالب} من {الصف} قد شارك في «{الحدث}» " +
-      "المُقام بتاريخ {التاريخ}، متمنّين له دوام التميّز والتوفيق.";
+    ? "تشهد مدرسة مكة الثانوية بأن الطالب {الطالب}\n" +
+      "من {الصف} قد شارك في «{الحدث}» المُقام بتاريخ {التاريخ}، " +
+      "احتفاءً بذكرى اليوم الوطني {الذكرى} للمملكة العربية السعودية.\n" +
+      "سائلين الله أن يديم على وطننا عزّه وأمنه ورخاءه"
+    : "تشهد مدرسة مكة الثانوية بأن الطالب {الطالب}\n" +
+      "من {الصف} قد شارك في «{الحدث}» المُقام بتاريخ {التاريخ}.\n" +
+      "مع تمنياتنا له بالتوفيق والسداد";
 
 export const DEFAULT_CERT_TITLE = "شهادة مشاركة";
 
-/** استبدال المتغيرات بقيمها — يُرجع أجزاءً ليُبرز اسم الطالب */
-function fillParts(text, vals) {
+/** استبدال المتغيرات بقيمها داخل سطر */
+function fill(text, vals) {
   return String(text ?? "").split(/(\{[^{}]+\})/g).filter(Boolean).map((seg, i) => {
     const m = seg.match(/^\{([^{}]+)\}$/);
-    if (!m || !(m[1] in vals)) return <span key={i}>{seg}</span>;
-    return m[1] === "الطالب"
-      ? <b key={i} style={{ fontWeight: 700 }}>{vals[m[1]]}</b>
-      : <span key={i}>{vals[m[1]]}</span>;
+    return <span key={i}>{m && m[1] in vals ? vals[m[1]] : seg}</span>;
   });
+}
+
+/** تقسيم الصيغة: تمهيد قبل الاسم، ثم النص، ثم الأسطر الختامية */
+function splitText(text) {
+  const t = String(text ?? "");
+  const at = t.indexOf("{الطالب}");
+  const intro = at >= 0 ? t.slice(0, at).trim() : "";
+  const rest = (at >= 0 ? t.slice(at + "{الطالب}".length) : t).split("\n").map((l) => l.trim()).filter(Boolean);
+  return { intro, hasName: at >= 0, body: rest[0] ?? "", closing: rest.slice(1) };
 }
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
@@ -87,7 +97,26 @@ function PixelStrip({ cols = 4, rows = 44, size = 4.8 }) {
   );
 }
 
-export default function EventCertificate({ event, participant, sigUrl, serial }) {
+/* توقيع واحد: الصفة، ثم صورة التوقيع، ثم الاسم تحت خط رفيع — كقالب النماذج */
+function Sign({ url, name, role }) {
+  return (
+    <div className="text-center" style={{ minWidth: "58mm" }}>
+      <p style={{ fontSize: "10pt", color: "#6B7A72" }}>{role}</p>
+      <div className="flex items-center justify-center" style={{ height: "16mm" }}>
+        {url && <img src={url} alt="" style={{ maxHeight: "16mm", maxWidth: "50mm", objectFit: "contain" }} />}
+      </div>
+      <div className="mx-auto" style={{ height: "0.25mm", width: "45mm", background: "#DDE5E0" }} />
+      <p style={{ marginTop: "1.2mm", fontSize: "11pt", fontWeight: 600 }}>{name || "…"}</p>
+    </div>
+  );
+}
+
+const Rule = ({ color }) => (
+  <div style={{ height: "0.3mm", width: "100%", ...INK,
+                background: `linear-gradient(90deg,transparent,${color}22 12%,${color} 50%,${color}22 88%,transparent)` }} />
+);
+
+export default function EventCertificate({ event, participant, sigUrl, stampUrl, principalUrl, principalName, serial }) {
   const tpl = THEMES[event?.cert_template] ? event.cert_template : "classic";
   const th = THEMES[tpl];
   const national = tpl === "national";
@@ -106,76 +135,91 @@ export default function EventCertificate({ event, participant, sigUrl, serial })
     ) : "",
     "الذكرى": String(nationalDayNo(event?.event_date)),
   };
-  const text = event?.cert_text?.trim() ? event.cert_text : defaultCertText(event);
+  const { intro, hasName, body, closing } =
+    splitText(event?.cert_text?.trim() ? event.cert_text : defaultCertText(event));
   const title = event?.cert_title?.trim() || DEFAULT_CERT_TITLE;
 
   return (
     <div className="sheet relative overflow-hidden bg-white"
          style={{ width: "297mm", height: "210mm", fontFamily: "'IBM Plex Sans Arabic', sans-serif",
-                  color: th.ink, breakAfter: "page", ...INK }}>
+                  color: "#1F2A24", breakAfter: "page", ...INK }}>
       {/* الإطار */}
       {national ? (
         <>
-          <div className="absolute inset-y-0 right-0" style={{ width: "19mm" }}><PixelStrip /></div>
-          <div className="absolute inset-y-0 left-0" style={{ width: "19mm", transform: "scaleX(-1)" }}><PixelStrip /></div>
-          <div className="absolute" style={{ inset: "8mm 25mm", border: `0.6mm solid ${th.frame}`, borderRadius: "2mm" }} />
+          <div className="absolute inset-y-0 right-0" style={{ width: "16mm" }}><PixelStrip /></div>
+          <div className="absolute inset-y-0 left-0" style={{ width: "16mm", transform: "scaleX(-1)" }}><PixelStrip /></div>
+          <div className="absolute" style={{ inset: "8mm 22mm", border: `0.4mm solid ${th.frame}33`, borderRadius: "2mm" }} />
         </>
       ) : (
-        <>
-          <div className="absolute" style={{ inset: "8mm", border: `1.4mm solid ${th.frame}`, borderRadius: "2mm" }} />
-          <div className="absolute" style={{ inset: "11mm", border: `0.3mm solid ${th.frame}`, borderRadius: "1.5mm" }} />
-        </>
+        <div className="absolute" style={{ inset: "8mm", border: `0.4mm solid ${th.frame}40`, borderRadius: "2mm" }} />
       )}
 
-      <div className="absolute flex flex-col" style={{ inset: national ? "13mm 31mm 12mm" : "16mm 20mm 14mm" }}>
+      <div className="absolute flex flex-col" style={{ inset: national ? "13mm 29mm 11mm" : "14mm 17mm 11mm" }}>
         {/* الترويسة */}
         <div className="flex items-start justify-between">
-          <div style={{ fontSize: "10.5pt", lineHeight: 1.75, fontWeight: 500 }}>
+          <div style={{ fontSize: "9.5pt", lineHeight: 1.8, fontWeight: 500 }}>
             <div>المملكة العربية السعودية</div>
             <div>وزارة التعليم</div>
             <div>الإدارة العامة للتعليم بمنطقة مكة المكرمة</div>
-            <div style={{ fontWeight: 700, color: th.accent }}>مدرسة مكة الثانوية</div>
+            <div style={{ color: th.accent, fontWeight: 600 }}>مدرسة مكة الثانوية</div>
           </div>
           {national && (
             <div className="text-center">
-              <img src={slogan} alt="عزّنا بطبعنا" style={{ height: "24mm", width: "auto", display: "block" }} />
-              <div style={{ fontSize: "14pt", fontWeight: 700, color: th.accent, marginTop: "1.5mm", lineHeight: 1.2 }}>
+              <img src={slogan} alt="عزّنا بطبعنا" style={{ height: "20mm", width: "auto", display: "block" }} />
+              <div style={{ fontSize: "12pt", fontWeight: 700, color: th.accent, marginTop: "1.2mm", lineHeight: 1.2 }}>
                 اليوم الوطني السعودي <span className="num">{vals["الذكرى"]}</span>
               </div>
             </div>
           )}
-          <div className="flex items-center" style={{ gap: "5mm" }}>
-            <img src={moeLogo} alt="" style={{ height: "15mm", width: "auto" }} />
-            <img src={logoIcon} alt="" style={{ height: "15mm", width: "auto" }} />
+          <div className="flex items-center" style={{ gap: "4mm" }}>
+            <img src={logoIcon} alt="" style={{ height: "11mm", width: "auto" }} />
+            <img src={moeLogo} alt="" style={{ height: "11mm", width: "auto" }} />
+          </div>
+        </div>
+        <div style={{ marginTop: "3mm" }}><Rule color={th.accent} /></div>
+
+        {/* المتن */}
+        <div className="flex flex-1 flex-col items-center justify-center text-center">
+          <div style={{ fontSize: "30pt", fontWeight: 700, color: th.accent, lineHeight: 1.2 }}>{title}</div>
+          <div className="flex items-center" style={{ gap: "2mm", marginTop: "3mm" }}>
+            <div style={{ width: "22mm", height: "0.3mm", background: `${th.accent}55` }} />
+            <div style={{ width: "1.6mm", height: "1.6mm", transform: "rotate(45deg)", background: th.accent }} />
+            <div style={{ width: "22mm", height: "0.3mm", background: `${th.accent}55` }} />
+          </div>
+
+          {intro && <p style={{ marginTop: "6mm", fontSize: "12.5pt", color: "#4A5A52" }}>{fill(intro, vals)}</p>}
+          {hasName && (
+            <p style={{ marginTop: "3mm", fontSize: "26pt", fontWeight: 700, lineHeight: 1.3 }}>{vals["الطالب"]}</p>
+          )}
+          {body && (
+            <p style={{ marginTop: "4mm", fontSize: "13pt", lineHeight: 1.95, maxWidth: "205mm" }}>{fill(body, vals)}</p>
+          )}
+          {closing.map((l, i) => (
+            <p key={i} style={{ marginTop: i ? "1mm" : "5mm", fontSize: "12pt", color: th.accent, fontWeight: 500 }}>
+              {fill(l, vals)}
+            </p>
+          ))}
+        </div>
+
+        {/* التواقيع: المنظّم يمينًا، والختم وسطًا، والمدير يسارًا */}
+        <div className="grid items-end" style={{ gridTemplateColumns: "1fr auto 1fr", gap: "6mm" }}>
+          <div className="justify-self-start">
+            <Sign url={sigUrl} name={event?.organizer_name} role={event?.organizer_role || "منفّذ البرنامج"} />
+          </div>
+          <div className="justify-self-center" style={{ minHeight: "22mm" }}>
+            {stampUrl && <img src={stampUrl} alt="" style={{ height: "22mm", width: "auto", opacity: 0.9 }} />}
+          </div>
+          <div className="justify-self-end">
+            <Sign url={principalUrl} name={principalName} role="مدير المدرسة" />
           </div>
         </div>
 
-        {/* العنوان */}
-        <div className="text-center" style={{ marginTop: national ? "5mm" : "9mm" }}>
-          <div style={{ fontSize: "32pt", fontWeight: 700, color: th.accent, lineHeight: 1.3 }}>{title}</div>
-          <div className="mx-auto" style={{ marginTop: "3mm", width: "60mm", height: "0.8mm", background: th.accent, borderRadius: "1mm" }} />
-        </div>
-
-        {/* النص */}
-        <div className="flex flex-1 items-center justify-center">
-          <p className="text-center" style={{ fontSize: "17pt", lineHeight: 2.1, maxWidth: "228mm", fontWeight: 500 }}>
-            {fillParts(text, vals)}
-          </p>
-        </div>
-
-        {/* التذييل: رقم الشهادة والتوقيع */}
-        <div className="flex items-end justify-between" style={{ fontSize: "10.5pt" }}>
-          <div style={{ lineHeight: 1.8 }}>
-            {serial && <div>رقم الشهادة: <span className="num">{serial}</span></div>}
-            <div>تاريخ الإصدار: <BidiDate value={fmtHijri(new Date(), false)} suffix="هـ" /></div>
-          </div>
-          <div className="text-center" style={{ minWidth: "70mm" }}>
-            <div style={{ fontWeight: 600 }}>{event?.organizer_role || "منفّذ البرنامج"}</div>
-            <div style={{ height: "17mm" }} className="flex items-center justify-center">
-              {sigUrl && <img src={sigUrl} alt="" style={{ maxHeight: "17mm", maxWidth: "55mm", objectFit: "contain" }} />}
-            </div>
-            <div style={{ fontWeight: 700 }}>{event?.organizer_name ?? ""}</div>
-          </div>
+        {/* التذييل */}
+        <div style={{ marginTop: "4mm" }}><Rule color={th.accent} /></div>
+        <div className="flex items-center justify-between" style={{ marginTop: "2mm", fontSize: "8.5pt", color: "#8A968F" }}>
+          <span>بوابة مكة الثانوية الرقمية</span>
+          {serial && <span>رقم الشهادة: <bdi dir="ltr" className="num">{serial}</bdi></span>}
+          <span dir="ltr" style={{ fontWeight: 600, color: th.accent }}>makkahsec.com</span>
         </div>
       </div>
     </div>

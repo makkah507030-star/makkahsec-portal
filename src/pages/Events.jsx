@@ -925,6 +925,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
   });
   const [saveErr, setSaveErr] = useState(false);
   const [sigUrl, setSigUrl] = useState(null);
+  const [school, setSchool] = useState({});          // ختم المدرسة وتوقيع المدير
   const [printing, setPrinting] = useState(null);   // الشهادات المُعدّة للطباعة
   const textRef = useRef(null);
 
@@ -943,6 +944,19 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
       setSigUrl(su?.signedUrl ?? null);
     })();
   }, [e.organizer_id]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("school_assets").select("key, path, label");
+      const get = (k) => (data ?? []).find((r) => r.key === k);
+      const url = async (p) => (p ? (await supabase.storage.from("form-assets").createSignedUrl(p, 3600)).data?.signedUrl ?? null : null);
+      setSchool({
+        stampUrl: await url(get("stamp")?.path),
+        principalUrl: await url(get("principal_signature")?.path),
+        principalName: get("principal_signature")?.label ?? "",
+      });
+    })();
+  }, []);
 
   // الطباعة بعد اكتمال تحميل الصور (الشعارات والتوقيع)
   useEffect(() => {
@@ -985,7 +999,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
         <div>
           <h2 className="text-sm font-semibold text-ink">شهادة الحدث</h2>
           <p className="mt-0.5 text-xs text-muted">
-            تصدر شهادة لكل طالب سُجّل «حضر» في كشف الحضور، موقّعة باسم منظّم الحدث.
+            تصدر شهادة لكل طالب سُجّل «حضر» في كشف الحضور، على قالب الشهادات المعتمد: توقيع منظّم الحدث وختم المدرسة وتوقيع المدير.
           </p>
         </div>
 
@@ -1018,7 +1032,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
               استعادة الصيغة المقترحة
             </button>
           </div>
-          <textarea ref={textRef} rows={5} className="field mt-1 w-full leading-relaxed" value={f.cert_text}
+          <textarea ref={textRef} rows={6} className="field mt-1 w-full leading-relaxed" value={f.cert_text}
                     onChange={(x) => setF((v) => ({ ...v, cert_text: x.target.value }))} />
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] text-faint">إدراج:</span>
@@ -1030,7 +1044,8 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
             ))}
           </div>
           <p className="mt-1 text-[11px] text-faint">
-            الكلمات بين القوسين تُستبدل عند الطباعة ببيانات كل طالب والحدث.
+            الكلمات بين القوسين تُستبدل عند الطباعة ببيانات كل طالب والحدث. ما قبل {"{الطالب}"} سطر تمهيدي
+            والاسم يُكتب بارزًا في سطر مستقل، والسطر الأول بعده نص الشهادة، وكل سطر جديد بعده سطر ختامي.
           </p>
         </div>
 
@@ -1062,7 +1077,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
       <section className="card space-y-2 p-4">
         <p className="text-xs font-semibold text-ink">معاينة</p>
         <CertPreview>
-          <EventCertificate event={draft} sigUrl={sigUrl}
+          <EventCertificate event={draft} sigUrl={sigUrl} {...school}
                             participant={attended[0] ?? { student_name: "اسم الطالب", class_label: "الصف الأول — فصل 1" }}
                             serial={attended[0] ? serialOf(attended[0]) : `${e.serial}-001`} />
         </CertPreview>
@@ -1105,7 +1120,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
         <PrintPortal id="ev-cert" landscape margin="0"
                      extraCss="#ev-cert .sheet { page-break-after: always; } #ev-cert .sheet:last-child { page-break-after: auto; }">
           {printing.map((p) => (
-            <EventCertificate key={p.id} event={draft} participant={p} sigUrl={sigUrl} serial={serialOf(p)} />
+            <EventCertificate key={p.id} event={draft} participant={p} sigUrl={sigUrl} {...school} serial={serialOf(p)} />
           ))}
         </PrintPortal>
       )}
