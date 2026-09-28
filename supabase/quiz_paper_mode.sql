@@ -71,21 +71,15 @@ begin
     v_score := greatest(0, least(p_score, coalesce(v_quiz.total_marks, p_score)));
   end if;
 
-  select * into v_row from public.quiz_submissions
-  where quiz_id = p_quiz and student_id = p_student
-  limit 1;
-
-  if v_row.id is null then
-    insert into public.quiz_submissions (quiz_id, class_id, student_id, answers, absent, score, marked_by)
-    values (p_quiz, p_class, p_student, '{}'::jsonb, coalesce(p_absent, false), v_score, auth.uid())
-    returning * into v_row;
-  else
-    update public.quiz_submissions set
-      class_id = p_class, absent = coalesce(p_absent, false),
-      score = v_score, marked_by = auth.uid()
-    where id = v_row.id
-    returning * into v_row;
-  end if;
+  -- سجل واحد لكل طالب في الاختبار (قيد quiz_submissions_quiz_id_student_id_key):
+  -- إدراج أو تحديث في خطوة واحدة، فلا يتعارض حفظان متزامنان
+  insert into public.quiz_submissions as qs
+    (quiz_id, class_id, student_id, answers, absent, score, marked_by)
+  values (p_quiz, p_class, p_student, '{}'::jsonb, coalesce(p_absent, false), v_score, auth.uid())
+  on conflict (quiz_id, student_id) do update set
+    class_id = excluded.class_id, absent = excluded.absent,
+    score = excluded.score, marked_by = excluded.marked_by
+  returning * into v_row;
 
   if v_quiz.status = 'ready' then
     update public.quizzes set status = 'marking' where id = p_quiz;

@@ -538,7 +538,7 @@ function QuizEditor({ quiz, uid, onBack }) {
         : kind === "fill"
         ? { ...base, options: null, answer: [] }
         : kind === "order"
-        ? { ...base, options: { items: ["", "", ""] }, answer: null }
+        ? { ...base, options: { items: ["", "", ""] }, answer: [] }   // الترتيب الصحيح هو ترتيب العناصر نفسها
         : { ...base, marks: kind === "essay" ? 4 : 2,
             options: { lines: LINES[kind].def }, answer: "" };
 

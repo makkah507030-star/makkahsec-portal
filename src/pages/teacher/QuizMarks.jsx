@@ -1,5 +1,5 @@
 // src/pages/teacher/QuizMarks.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
@@ -690,16 +690,24 @@ function ScoreGrid({ students, subs, total, onSave }) {
     return { score: n };
   };
 
+  // Enter ثم خروج المؤشر من الخانة يستدعيان الحفظ معًا — تُحفظ القيمة مرة واحدة
+  const inflight = useRef({});   // student_id -> القيمة الجاري حفظها
   const commit = async (st) => {
     const v = vals[st.id] ?? "";
     if (v === shown(subs[st.id])) return;                 // لم يتغيّر
+    if (inflight.current[st.id] === v) return;            // يُحفظ الآن
     const p = parse(v);
     if (p.empty) return;
     if (p.bad) { setState((x) => ({ ...x, [st.id]: "err" })); return; }
+    inflight.current[st.id] = v;
     setState((x) => ({ ...x, [st.id]: "saving" }));
-    const row = await onSave(st, p.absent ? null : p.score, !!p.absent);
-    setState((x) => ({ ...x, [st.id]: row ? "ok" : "err" }));
-    if (row) setVals((x) => ({ ...x, [st.id]: shown(row) }));
+    try {
+      const row = await onSave(st, p.absent ? null : p.score, !!p.absent);
+      setState((x) => ({ ...x, [st.id]: row ? "ok" : "err" }));
+      if (row) setVals((x) => ({ ...x, [st.id]: shown(row) }));
+    } finally {
+      delete inflight.current[st.id];
+    }
   };
 
   const focusRow = (i) => {
