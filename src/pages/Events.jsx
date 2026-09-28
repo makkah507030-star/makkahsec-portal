@@ -39,7 +39,7 @@ const fmtG = (s) => {
 };
 
 export default function Events() {
-  const { session, profile, adminRoles } = useSession();
+  const { session, profile, adminRoles, isTeacher, effectiveRole } = useSession();
   const uid = session?.user?.id;
   const roles = adminRoles ?? [];
   const isSupport = roles.includes("tech_support") || roles.includes("principal");
@@ -92,6 +92,7 @@ export default function Events() {
 
       {creating && (
         <NewEvent uid={uid} profile={profile} roles={roles}
+                  isTeacher={isTeacher} effectiveRole={effectiveRole}
                   onDone={(id, t) => { setCreating(false); setMsg(t); load(); setOpenId(id); }} />
       )}
 
@@ -141,7 +142,15 @@ export default function Events() {
 }
 
 /* --------------------------- حدث جديد --------------------------- */
-function NewEvent({ uid, profile, roles, onDone }) {
+function NewEvent({ uid, profile, roles, isTeacher, effectiveRole, onDone }) {
+  // الصفة التي يُنشأ بها الحدث وتظهر في توقيع نماذج الموافقة:
+  // «معلم» و/أو صفاته الإدارية — افتراضيًا صفة الواجهة التي يعمل منها الآن
+  const capacities = [
+    ...(isTeacher || !roles.length ? ["معلم"] : []),
+    ...roles.map((r) => ADMIN_ROLE_LABEL[r]).filter(Boolean),
+  ].filter((v, i, a) => a.indexOf(v) === i);
+  const [capacity, setCapacity] = useState(
+    effectiveRole === "teacher" || !roles.length ? "معلم" : (ADMIN_ROLE_LABEL[roles[0]] ?? "معلم"));
   const [cats, setCats] = useState([]);
   const [f, setF] = useState({
     title: "", category: "", event_date: todayISO(),
@@ -161,7 +170,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
     if (f.title.trim().length < 3 || !f.event_date) return;
     setBusy(true);
     const { data: serial } = await supabase.rpc("next_event_serial");
-    const roleLabel = roles.length ? (ADMIN_ROLE_LABEL[roles[0]] ?? "") : "معلم";
+    const roleLabel = capacity;
 
     const { data, error } = await supabase.from("school_events").insert({
       serial,
@@ -195,6 +204,23 @@ function NewEvent({ uid, profile, roles, onDone }) {
                placeholder="مثال: الاحتفاء باليوم الوطني ٩٦"
                onChange={(e) => setF((x) => ({ ...x, title: e.target.value }))} />
       </div>
+
+      {capacities.length > 1 && (
+        <div>
+          <label className="text-xs text-muted">الصفة التي تُنشئ بها الحدث</label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {capacities.map((c) => (
+              <button key={c} type="button" onClick={() => setCapacity(c)}
+                className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                  capacity === c ? "bg-mint-deep text-white"
+                                 : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                {c}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[11.5px] text-faint">تظهر في توقيع نماذج موافقة أولياء الأمور.</p>
+        </div>
+      )}
 
       <div>
         <label className="text-xs text-muted">التصنيف</label>
@@ -686,7 +712,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
     const issuer = {
       signature_path: mySig?.path ?? null,
       signature_name: e.organizer_name || organizerName || "",
-      signature_role: e.organizer_role || "المعلم",
+      signature_role: !e.organizer_role || e.organizer_role === "معلم" ? "المعلم" : e.organizer_role,
     };
 
     for (const p of (parts ?? []).filter((x) => !x.consent_doc_id)) {

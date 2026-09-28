@@ -6,7 +6,7 @@
 -- =====================================================================
 update public.form_documents d
 set signature_name = coalesce(nullif(ev.organizer_name, ''), pr.full_name, ''),
-    signature_role = coalesce(nullif(ev.organizer_role, ''), 'المعلم'),
+    signature_role = case when coalesce(ev.organizer_role, '') in ('', 'معلم') then 'المعلم' else ev.organizer_role end,
     signature_path = coalesce(d.signature_path, us.path)
 from public.event_participants ep
 join public.school_events ev on ev.id = ep.event_id
