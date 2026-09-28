@@ -34,7 +34,7 @@ const AR = {
     essay: "أجب عمّا يلي",
   },
   ltrs: ["أ", "ب", "ج", "د", "هـ"],
-  colA: "العمود الأول", colB: "العمود الثاني", answer: "الإجابة",
+  colA: "العمود الأول", colB: "العمود الثاني", answer: "الإجابة", statement: "العبارة",
   marksTable: "جدول الدرجات", obtained: "الدرجة المستحقة", sum: "المجموع",
   page: (a, b) => `الصفحة ${a} من ${b}`, cont: "يتبع في الصفحة التالية ←", end: "انتهت الأسئلة",
   good: "مع تمنياتي لكم بالتوفيق والنجاح", teacher: "معلم المادة",
@@ -57,7 +57,7 @@ const EN = {
     essay: "Answer the following",
   },
   ltrs: ["A", "B", "C", "D", "E"],
-  colA: "Column A", colB: "Column B", answer: "Answer",
+  colA: "Column A", colB: "Column B", answer: "Answer", statement: "Statement",
   marksTable: "Marks", obtained: "Obtained", sum: "Total",
   page: (a, b) => `Page ${a} of ${b}`, cont: "Continued on next page →", end: "End of questions",
   good: "Good luck", teacher: "Subject teacher",
@@ -73,8 +73,11 @@ function buildBlocks(questions) {
   const blocks = [];
   groupPaper(questions).forEach((g, gi) => {
     const marks = round(g.list.reduce((a, x) => a + Number(x.marks || 0), 0));
+    // أكبر عدد خيارات في السؤال — لتتساوى خانات الخيارات في كل فقراته
+    const maxOpts = Math.max(2, ...g.list.map((x) => (Array.isArray(x.options) ? x.options.length : 0)));
     g.list.forEach((q, qi) => {
-      blocks.push({ key: q.id, gi, qi, q, kind: g.kind, head: qi === 0 ? { marks, count: g.list.length } : null });
+      blocks.push({ key: q.id, gi, qi, q, kind: g.kind, maxOpts,
+                    head: qi === 0 ? { marks, count: g.list.length } : null });
     });
   });
   return blocks;
@@ -292,11 +295,17 @@ function Foot({ t, page, total, last, teacherName }) {
 }
 
 /* ------------------------------ الفقرات ------------------------------ */
+// الأنماط المجدولة: فقراتها جداول متلاصقة تبدو جدولًا واحدًا (تتراكب حدودها بـ -1px)
+const TABLED = new Set(["mcq", "truefalse", "fill"]);
+
 function Block({ b, t, answerKey, opts, images }) {
-  const { q, qi, gi, head, kind } = b;
+  const { q, qi, gi, head, kind, maxOpts } = b;
   const gap = opts.compact ? "3px" : "5px";
+  const hasImg = !!(q.image_path && images?.[q.image_path]);
+  const img = hasImg ? <QImage q={q} images={images} /> : null;
+  const top = head ? (opts.compact ? "7px" : "10px") : TABLED.has(kind) ? "-1px" : gap;
   return (
-    <div style={{ marginTop: head ? (opts.compact ? "7px" : "10px") : gap }}>
+    <div style={{ marginTop: top }}>
       {head && (
         <div className="mb-1 flex items-center justify-between gap-2 rounded-[3px] px-2 py-[3px] text-[12px] font-bold"
              style={{ background: "#EAEAEA", ...INK }}>
@@ -306,7 +315,7 @@ function Block({ b, t, answerKey, opts, images }) {
           </span>
         </div>
       )}
-      <Item q={q} n={qi + 1} t={t} answerKey={answerKey} img={<QImage q={q} images={images} />} />
+      <Item q={q} n={qi + 1} t={t} answerKey={answerKey} img={img} first={qi === 0} maxOpts={maxOpts} />
     </div>
   );
 }
@@ -317,47 +326,84 @@ const Mark = ({ q, t }) => (
 );
 const Key = ({ children }) => <span style={{ color: KEY, fontWeight: 700, ...INK }}>{children}</span>;
 
+/* خلايا الجداول */
+const TB = { borderColor: "#000" };
+const CELL = "border px-2 py-[3px] align-middle";
+const NumCell = ({ n, rows = 1 }) => (
+  <td rowSpan={rows} className="num border text-center align-middle font-bold"
+      style={{ ...TB, background: "#F2F2F2", ...INK }}>{n}</td>
+);
+const ImgRow = ({ img, span }) => (img ? <tr><td colSpan={span} className="border" style={TB}>{img}</td></tr> : null);
+
 // img: صورة السؤال — تأتي بعد نصه مباشرة، قبل الخيارات أو أسطر الإجابة
-function Item({ q, n, t, answerKey, img }) {
+function Item({ q, n, t, answerKey, img, first, maxOpts = 4 }) {
   const a = ansOf(q);
 
+  // اختيار من متعدد: رقم الفقرة في خانة مستقلة، ثم السؤال، ثم الخيارات بخانات متساوية
   if (q.kind === "mcq") {
     const opts = Array.isArray(q.options) ? q.options : [];
-    const long = opts.some((o) => String(o).length > 22);
+    const span = maxOpts * 2;
     return (
-      <div className="px-1">
-        <div className="flex gap-1"><Num n={n} /><p className="min-w-0 flex-1">{q.text}</p></div>
-        {img}
-        <div className="mt-[2px] grid gap-x-3 gap-y-[2px]"
-             style={{ paddingInlineStart: "6mm", gridTemplateColumns: `repeat(${long ? 2 : Math.min(4, opts.length || 1)}, minmax(0,1fr))` }}>
-          {opts.map((o, k) => {
-            const hit = answerKey && String(k) === String(a);
-            return (
-              <div key={k} className="flex items-baseline gap-1.5">
-                <span className="grid h-[5.2mm] w-[5.2mm] shrink-0 place-items-center rounded-full text-[11px] font-bold"
-                      style={hit ? { border: `0.5mm solid ${KEY}`, color: KEY, ...INK } : {}}>{t.ltrs[k]}</span>
-                <span className="min-w-0">{o}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+        <colgroup>
+          <col style={{ width: "9mm" }} />
+          {Array.from({ length: maxOpts }).map((_, k) => (
+            <Fragment key={k}><col style={{ width: "7mm" }} /><col /></Fragment>
+          ))}
+        </colgroup>
+        <tbody>
+          <tr>
+            <NumCell n={n} rows={img ? 3 : 2} />
+            <td colSpan={span} className={`${CELL} font-medium`} style={TB}>{q.text}</td>
+          </tr>
+          <ImgRow img={img} span={span} />
+          <tr>
+            {Array.from({ length: maxOpts }).map((_, k) => {
+              const has = opts[k] != null;
+              const hit = answerKey && has && String(k) === String(a);
+              return (
+                <Fragment key={k}>
+                  <td className="border text-center align-middle font-bold" style={{ ...TB, background: "#F7F7F7", ...INK }}>
+                    {has && (hit
+                      ? <span className="inline-grid h-[5.2mm] w-[5.2mm] place-items-center rounded-full"
+                              style={{ border: `0.5mm solid ${KEY}`, color: KEY, ...INK }}>{t.ltrs[k]}</span>
+                      : t.ltrs[k])}
+                  </td>
+                  <td className={CELL} style={TB}>{has ? opts[k] : ""}</td>
+                </Fragment>
+              );
+            })}
+          </tr>
+        </tbody>
+      </table>
     );
   }
 
+  // صح وخطأ: رقم | العبارة | خانة الإجابة — وعناوين الأعمدة فوق أول فقرة
   if (q.kind === "truefalse") {
     return (
-      <div className="px-1">
-        <div className="flex items-start gap-1">
-          <Num n={n} />
-          <p className="min-w-0 flex-1">{q.text}</p>
-          <span className="grid h-[6mm] w-[11mm] shrink-0 place-items-center border text-[13px] font-bold"
-                style={{ borderColor: "#000" }}>
-            {answerKey ? <Key>{a === "false" ? t.tf[1] : t.tf[0]}</Key> : ""}
-          </span>
-        </div>
-        {img}
-      </div>
+      <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+        <colgroup><col style={{ width: "9mm" }} /><col /><col style={{ width: "20mm" }} /></colgroup>
+        {first && (
+          <thead>
+            <tr style={{ background: "#EFEFEF", ...INK }}>
+              <th className={`${CELL} text-center`} style={TB}>م</th>
+              <th className={`${CELL} text-center`} style={TB}>{t.statement}</th>
+              <th className={`${CELL} text-center`} style={TB}>{t.answer}</th>
+            </tr>
+          </thead>
+        )}
+        <tbody>
+          <tr>
+            <NumCell n={n} rows={img ? 2 : 1} />
+            <td className={CELL} style={TB}>{q.text}</td>
+            <td rowSpan={img ? 2 : 1} className="border text-center align-middle text-[14px] font-bold" style={TB}>
+              {answerKey ? <Key>{a === "false" ? t.tf[1] : t.tf[0]}</Key> : ""}
+            </td>
+          </tr>
+          {img && <tr><td className="border" style={TB}>{img}</td></tr>}
+        </tbody>
+      </table>
     );
   }
 
@@ -399,29 +445,33 @@ function Item({ q, n, t, answerKey, img }) {
     );
   }
 
+  // أكمل الفراغ: رقم | العبارة بفراغاتها
   if (q.kind === "fill") {
     const answers = Array.isArray(a) ? a : [];
     const parts = String(q.text ?? "").split(BLANK_RE);
     return (
-      <div className="px-1">
-      <div className="flex gap-1">
-        <Num n={n} />
-        <p className="min-w-0 flex-1" style={{ lineHeight: 2.1 }}>
-          {parts.map((p, k) => (
-            <Fragment key={k}>
-              {p}
-              {k < parts.length - 1 && (
-                <span className="inline-block border-b border-dotted text-center align-baseline"
-                      style={{ borderColor: "#000", minWidth: "30mm", paddingInline: "2mm" }}>
-                  {answerKey ? <Key>{answers[k] ?? ""}</Key> : " "}
-                </span>
-              )}
-            </Fragment>
-          ))}
-        </p>
-      </div>
-      {img}
-      </div>
+      <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+        <colgroup><col style={{ width: "9mm" }} /><col /></colgroup>
+        <tbody>
+          <tr>
+            <NumCell n={n} rows={img ? 2 : 1} />
+            <td className={CELL} style={{ ...TB, lineHeight: 2.1 }}>
+              {parts.map((p, k) => (
+                <Fragment key={k}>
+                  {p}
+                  {k < parts.length - 1 && (
+                    <span className="inline-block border-b border-dotted text-center align-baseline"
+                          style={{ borderColor: "#000", minWidth: "30mm", paddingInline: "2mm" }}>
+                      {answerKey ? <Key>{answers[k] ?? ""}</Key> : "\u00a0"}
+                    </span>
+                  )}
+                </Fragment>
+              ))}
+            </td>
+          </tr>
+          {img && <tr><td className="border" style={TB}>{img}</td></tr>}
+        </tbody>
+      </table>
     );
   }
 
