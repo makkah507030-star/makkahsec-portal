@@ -44,7 +44,7 @@ exports.handler = async (event) => {
 
     const { data: doc } = await admin
       .from("form_documents")
-      .select("id, status, created_by, recipient_user_id, student_id, signature_path, stamp_path, reply_signature_path, reply_signature_name")
+      .select("id, status, created_by, recipient_user_id, student_id, signature_path, stamp_path, reply_signature_path, reply_signature_name, co_signers")
       .eq("id", document_id)
       .maybeSingle();
     if (!doc) return json({ error: "المستند غير موجود" }, 404);
@@ -91,8 +91,19 @@ exports.handler = async (event) => {
     const principalPath = (assets || []).find((a) => a.key === "principal_signature")?.path;
     const principalName = (assets || []).find((a) => a.key === "principal_signature")?.label ?? "";
 
+    // تواقيع المعلمين المشاركين في التنظيم — تُقرأ هنا لأن مخزن التواقيع مغلق
+    const coIds = (Array.isArray(doc.co_signers) ? doc.co_signers : [])
+      .map((c) => c?.user_id).filter(Boolean);
+    const coSignatures = {};
+    if (coIds.length) {
+      const { data: sigs } = await admin
+        .from("user_signatures").select("user_id, path").in("user_id", coIds);
+      for (const s of sigs || []) coSignatures[s.user_id] = await sign(s.path);
+    }
+
     return json({
       ok: true,
+      co_signatures: coSignatures,
       signature: await sign(doc.signature_path),
       reply_signature: await sign(doc.reply_signature_path),
       reply_signature_name: doc.reply_signature_name ?? "",

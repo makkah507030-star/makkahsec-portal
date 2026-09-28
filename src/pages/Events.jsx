@@ -399,7 +399,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, onBack, onMsg, 
                                 onNext={() => advance("participants")} />}
       {!cancelled && step === 1 && <StageParticipants e={e} parts={parts} reload={loadParts}
                                         onNext={() => advance("consent", "انتقلنا لإرسال الموافقات.")} />}
-      {!cancelled && step === 2 && <StageConsent e={e} parts={parts} reload={loadParts}
+      {!cancelled && step === 2 && <StageConsent e={e} parts={parts} reload={loadParts} patch={patch}
                                    uid={uid} organizerName={profile?.full_name ?? ""}
                                    onNext={() => advance("permission", "انتقلنا للاستئذان.")} />}
       {!cancelled && step === 3 && <StagePermission e={e} parts={parts} uid={uid}
@@ -677,7 +677,88 @@ const hijriYear = () => {
 };
 
 /* ③ موافقة أولياء الأمور — عبر نظام النماذج */
-function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
+/* المعلمون المشاركون في تنظيم الحدث — يوقّعون مع المنظّم على نماذج الموافقة */
+function CoOrganizers({ e, uid, patch }) {
+  const [dir, setDir] = useState(null);
+  const [q, setQ] = useState("");
+  const [busy, setBusy] = useState(false);
+  const list = Array.isArray(e.co_organizers) ? e.co_organizers : [];
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.rpc("ev_teacher_directory");
+      setDir(data ?? []);
+    })();
+  }, []);
+
+  const save = async (next) => {
+    setBusy(true);
+    const ok = await patch({ co_organizers: next },
+      next.length > list.length ? "أُضيف المعلم إلى التوقيع." : "أُزيل المعلم من التوقيع.");
+    // النماذج الصادرة من قبل تُحدَّث بالأسماء الجديدة
+    if (ok) {
+      const ids = (await supabase.from("event_participants")
+        .select("consent_doc_id").eq("event_id", e.id).not("consent_doc_id", "is", null))
+        .data?.map((x) => x.consent_doc_id) ?? [];
+      if (ids.length) {
+        await supabase.from("form_documents")
+          .update({ co_signers: next }).in("id", ids);
+      }
+    }
+    setBusy(false);
+  };
+
+  const add = (t) => {
+    if (list.some((x) => x.user_id === t.user_id)) return;
+    setQ("");
+    save([...list, { user_id: t.user_id, name: t.full_name, role: "المعلم" }]);
+  };
+  const remove = (id) => save(list.filter((x) => x.user_id !== id));
+
+  const hits = q.trim().length < 2 ? [] : (dir ?? [])
+    .filter((t) => t.user_id !== uid && t.user_id !== e.organizer_id
+      && !list.some((x) => x.user_id === t.user_id)
+      && (t.full_name ?? "").includes(q.trim()))
+    .slice(0, 6);
+
+  return (
+    <div className="mt-4 rounded-sm2 border border-line p-3">
+      <p className="text-xs font-semibold text-ink">المعلمون المشاركون في التنظيم</p>
+      <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
+        تظهر أسماؤهم وتواقيعهم المحفوظة مع توقيعك في نماذج الموافقة، ومنها ما صدر من قبل.
+      </p>
+
+      {list.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {list.map((x) => (
+            <span key={x.user_id}
+                  className="inline-flex items-center gap-1.5 rounded-pill bg-mint-tint px-3 py-1 text-[12.5px] font-medium text-mint-deep">
+              {x.name}
+              <button type="button" onClick={() => remove(x.user_id)} disabled={busy}
+                      className="text-mint-deep/70 hover:text-absent" aria-label="إزالة">×</button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <input className="field mt-2 w-full" value={q} disabled={busy || !dir}
+             placeholder={dir ? "ابحث باسم المعلم لإضافته…" : "جارٍ تحميل المعلمين…"}
+             onChange={(ev) => setQ(ev.target.value)} />
+      {hits.length > 0 && (
+        <div className="mt-1 divide-y divide-line rounded-sm2 border border-line">
+          {hits.map((t) => (
+            <button key={t.user_id} type="button" onClick={() => add(t)}
+                    className="block w-full px-3 py-2 text-start text-sm text-ink hover:bg-canvas">
+              {t.full_name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StageConsent({ e, parts, reload, onNext, uid, organizerName, patch }) {
   const [busy, setBusy] = useState(false);
   const [tpl, setTpl] = useState(null);
   const [note, setNote] = useNotice(null);
@@ -710,6 +791,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
     const { data: mySig } = await supabase
       .from("user_signatures").select("path").eq("user_id", uid).maybeSingle();
     const issuer = {
+      co_signers: Array.isArray(e.co_organizers) ? e.co_organizers : [],
       signature_path: mySig?.path ?? null,
       signature_name: e.organizer_name || organizerName || "",
       signature_role: !e.organizer_role || e.organizer_role === "معلم" ? "المعلم" : e.organizer_role,
@@ -885,6 +967,8 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
             </div>
           ))}
         </div>
+
+        <CoOrganizers e={e} uid={uid} patch={patch} />
 
         {note && (
           <p className={`mt-3 rounded-sm2 px-3 py-2 text-sm ${

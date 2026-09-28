@@ -287,6 +287,7 @@ export default function DocumentView() {
             sigUrl={assets.signature} stampUrl={assets.stamp}
             principalSigUrl={assets.principal} principalName={assets.principal_name}
             replySigUrl={assets.reply_signature} replySigName={assets.reply_signature_name}
+            coSigUrls={assets.co_signatures}
           />
         </SheetPreview>
       </div>
@@ -299,6 +300,7 @@ export default function DocumentView() {
               sigUrl={assets.signature} stampUrl={assets.stamp}
               principalSigUrl={assets.principal} principalName={assets.principal_name}
               replySigUrl={assets.reply_signature} replySigName={assets.reply_signature_name}
+            coSigUrls={assets.co_signatures}
             />
           </PrintArea>
         </div>

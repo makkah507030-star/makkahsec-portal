@@ -85,11 +85,46 @@ function Sign({ url, name, role }) {
   );
 }
 
+/* المُصدِرون المشاركون المحفوظون في المستند، مع روابط تواقيعهم إن وُجدت */
+const coSignersOf = (doc, urls) =>
+  (Array.isArray(doc?.co_signers) ? doc.co_signers : [])
+    .map((c) => ({ ...c, url: urls?.[c.user_id] ?? null }));
+
 function Signatures({ source, issuerUrl, issuerName, issuerRole, principalUrl, principalName,
-                     stampUrl, center, replyUrl, replyName }) {
+                     stampUrl, center, replyUrl, replyName, coSigners = [] }) {
   if (source === "none" && !stampUrl) return null;
   const showIssuer = source === "issuer" || source === "both";
   const showPrincipal = source === "principal" || source === "both";
+
+  // أكثر من مُصدِر (معلمون مشاركون في التنظيم): صف للمُصدِرين، ثم الختم والمدير والمستفيد
+  if (showIssuer && coSigners.length) {
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-wrap items-end justify-start gap-x-6 gap-y-4">
+          <Sign url={issuerUrl} name={issuerName} role={issuerRole || "المعلم"} />
+          {coSigners.map((c, i) => (
+            <Sign key={c.user_id ?? i} url={c.url} name={c.name} role={c.role || "المعلم"} />
+          ))}
+        </div>
+        {(stampUrl || showPrincipal || replyUrl || replyName) && (
+          <div className="grid grid-cols-3 items-end gap-4">
+            <div className="justify-self-start">
+              {showPrincipal && <Sign url={principalUrl} name={principalName} role="مدير المدرسة" />}
+            </div>
+            <div className="justify-self-center">
+              {stampUrl && <img src={stampUrl} alt="" className="h-20 w-auto object-contain opacity-90" />}
+            </div>
+            <div className="justify-self-end">
+              {(replyUrl || replyName) && (
+                <Sign url={replyUrl} name={replyName}
+                      role={replyUrl ? "توقيع المستفيد" : "إقرار المستفيد"} />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // التوسيط في الشهادات فقط — الرسميات تبقى على اليسار كما هو معتاد
   if (center && showIssuer !== showPrincipal) {
@@ -268,6 +303,7 @@ function Certificate(p) {
           principalUrl={p.principalSigUrl} principalName={p.principalName}
           stampUrl={p.stampUrl}
           replyUrl={p.replySigUrl} replyName={p.replySigName}
+          coSigners={coSignersOf(doc, p.coSigUrls)}
         />
 
         {theme === "modern" && (
@@ -337,6 +373,7 @@ function Official(p) {
           principalUrl={p.principalSigUrl} principalName={p.principalName}
           stampUrl={p.stampUrl}
           replyUrl={p.replySigUrl} replyName={p.replySigName}
+          coSigners={coSignersOf(doc, p.coSigUrls)}
         />
       </div>
       <div className="mt-7"><Foot serial={doc?.serial} /></div>
@@ -484,6 +521,7 @@ function Administrative(p) {
           principalUrl={p.principalSigUrl} principalName={p.principalName}
           stampUrl={p.stampUrl}
           replyUrl={p.replySigUrl} replyName={p.replySigName}
+          coSigners={coSignersOf(doc, p.coSigUrls)}
         />
       </div>
       <div className="mt-7"><Foot serial={doc?.serial} /></div>
@@ -493,7 +531,7 @@ function Administrative(p) {
 
 export default function FormSheet({
   template, values, doc, sigUrl, stampUrl, principalSigUrl, principalName,
-  replySigUrl, replySigName, scale = 1,
+  replySigUrl, replySigName, coSigUrls, scale = 1,
 }) {
   if (!template) return null;
   const landscape = template.orientation === "landscape";
@@ -516,7 +554,8 @@ export default function FormSheet({
       <Body template={template} v={values ?? {}} doc={doc}
             sigUrl={sigUrl} stampUrl={stampUrl}
             principalSigUrl={principalSigUrl} principalName={principalName}
-            replySigUrl={replySigUrl} replySigName={replySigName} />
+            replySigUrl={replySigUrl} replySigName={replySigName}
+            coSigUrls={coSigUrls} />
     </div>
   );
 }
