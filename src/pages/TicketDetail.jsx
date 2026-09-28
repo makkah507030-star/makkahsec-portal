@@ -7,6 +7,7 @@ import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 
 const CAT_LABEL = {
+  login: "مشكلة في الدخول",
   bug: "مشكلة تقنية",
   suggestion: "اقتراح",
   data: "خطأ بيانات",
@@ -176,6 +177,14 @@ export default function TicketDetail() {
             {ticket.role_label}
             {(ticket.name || ticket.role_label) && ticket.contact && " · "}
             {ticket.contact && <span className="num">{ticket.contact}</span>}
+          </p>
+        )}
+        {isSupport && !ticket.user_id && (
+          <p className="mt-2 rounded-sm2 bg-warning-light px-3 py-2 text-xs leading-relaxed text-warning">
+            صاحب الطلب من خارج البوابة (لم يستطع الدخول)، فلن يصله الرد عبر الإشعارات —
+            {ticket.contact
+              ? <> تواصل معه على جواله: <a href={`tel:${ticket.contact}`} className="num font-bold underline">{ticket.contact}</a>.</>
+              : " لا رقم جوال في الطلب."}
           </p>
         )}
       </div>
