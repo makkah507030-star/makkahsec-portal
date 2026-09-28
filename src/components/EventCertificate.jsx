@@ -9,7 +9,7 @@ import BidiDate from "./BidiDate.jsx";
    شهادة الحدث — ورقة A4 أفقية، شهادة لكل طالب.
    • قالب «اليوم الوطني» بهوية «عزّنا بطبعنا»: الأخضر الداكن وإطار المربعات.
    • بقية القوالب بتصميم رسمي موحّد بألوان البوابة.
-   • نص الشهادة بالصيغة الرسمية المعتمدة، بمتغيرات تُستبدل عند الطباعة.
+   • نص الشهادة يبدأ بالصيغة الرسمية، ويعدّله المنظّم نصًا عاديًا كشهادة الشكر في النماذج.
    • التوقيع لمنظّم الحدث (منفّذ البرنامج).
    ===================================================================== */
 
@@ -26,35 +26,77 @@ export const isNationalDay = (e) =>
 /** رقم ذكرى اليوم الوطني من سنة الحدث: 2026 ← 96 */
 export const nationalDayNo = (iso) => (Number(String(iso ?? "").slice(0, 4)) || new Date().getFullYear()) - 1930;
 
-/* الصيغة: ما قبل {الطالب} سطر تمهيدي، والاسم سطر بارز، وما بعده نص الشهادة،
-   وكل سطر جديد بعده سطر ختامي — على نسق قالب الشهادات المعتمد في المدرسة. */
-export const defaultCertText = (e) =>
-  isNationalDay(e)
-    ? "تشهد مدرسة مكة الثانوية بأن الطالب {الطالب}\n" +
-      "قد شارك في «{الحدث}» المُقام بتاريخ {التاريخ}، " +
-      "احتفاءً بذكرى اليوم الوطني {الذكرى} للمملكة العربية السعودية.\n" +
-      "سائلين الله أن يديم على وطننا عزّه وأمنه ورخاءه"
-    : "تشهد مدرسة مكة الثانوية بأن الطالب {الطالب}\n" +
-      "قد شارك في «{الحدث}» المُقام بتاريخ {التاريخ}.\n" +
-      "مع تمنياتنا له بالتوفيق والسداد";
-
 export const DEFAULT_CERT_TITLE = "شهادة مشاركة";
 
-/** استبدال المتغيرات بقيمها داخل سطر */
-function fill(text, vals) {
-  return String(text ?? "").split(/(\{[^{}]+\})/g).filter(Boolean).map((seg, i) => {
-    const m = seg.match(/^\{([^{}]+)\}$/);
-    return <span key={i}>{m && m[1] in vals ? vals[m[1]] : seg}</span>;
-  });
+/** تاريخ الحدث نصًا: 1448/04/17هـ الموافق 28/09/2026م */
+function eventDateText(e) {
+  const d = e?.event_date ? `${e.event_date}T12:00:00` : null;
+  return d ? `${fmtHijri(d, false)}هـ الموافق ${fmtGreg(d)}م` : "";
 }
 
-/** تقسيم الصيغة: تمهيد قبل الاسم، ثم النص، ثم الأسطر الختامية */
-function splitText(text) {
+/* الصيغة الرسمية بقيم الحدث الفعلية — نص عادي بلا متغيرات.
+   السطر التمهيدي، ثم اسم الطالب بارزًا (تلقائي)، ثم نص الشهادة، ثم الختام. */
+export function officialCert(e) {
+  const when = eventDateText(e);
+  const at = `«${e?.title ?? ""}» المُقام${when ? ` بتاريخ ${when}` : ""}`;
+  return isNationalDay(e)
+    ? {
+        intro: "تشهد مدرسة مكة الثانوية بأن الطالب",
+        body: `قد شارك في ${at}، احتفاءً بذكرى اليوم الوطني ${nationalDayNo(e?.event_date)} للمملكة العربية السعودية.`,
+        closing: "سائلين الله أن يديم على وطننا عزّه وأمنه ورخاءه",
+      }
+    : {
+        intro: "تشهد مدرسة مكة الثانوية بأن الطالب",
+        body: `قد شارك في ${at}.`,
+        closing: "مع تمنياتنا له بالتوفيق والسداد",
+      };
+}
+
+/** صيغ جاهزة لكل جزء — أولها الصيغة الرسمية */
+export function certPresets(e) {
+  const o = officialCert(e);
+  const at = `«${e?.title ?? ""}»`;
+  return {
+    intro: [o.intro, "تتقدّم مدرسة مكة الثانوية بالشكر والتقدير إلى الطالب"],
+    body: [
+      o.body,
+      `لمشاركته الفاعلة وإسهامه المتميّز في ${at}، وما أبداه من حرص والتزام.`,
+      `تقديرًا لجهوده المتميّزة في إنجاح ${at}.`,
+    ],
+    closing: [...new Set([
+      o.closing,
+      "مع تمنياتنا له بالتوفيق والسداد",
+      "شاكرين له جهوده، سائلين الله له دوام التوفيق",
+    ])],
+  };
+}
+
+/** نص الشهادة المحفوظ مع الحدث — وإلا فالصيغة الرسمية.
+    يُحفظ JSON بالأجزاء الثلاثة؛ والصيغ القديمة ذات المتغيرات تُتجاهل. */
+export function readCert(e) {
+  const o = officialCert(e);
+  let saved = null;
+  try { saved = JSON.parse(e?.cert_text ?? ""); } catch { /* صيغة قديمة أو فارغ */ }
+  if (!saved || typeof saved !== "object") return o;
+  const pick = (k) => (typeof saved[k] === "string" ? saved[k] : o[k]);
+  return { intro: pick("intro"), body: pick("body"), closing: pick("closing") };
+}
+
+/* التواريخ داخل النص الحر (1448/04/17هـ أو 28/09/2026م) تُعرض عبر BidiDate
+   حتى لا يختلّ ترتيبها بجانب العربي */
+const DATE_RE = /(\d{1,4}\/\d{1,2}\/\d{1,4})\s*(هـ|م)(?![\u0621-\u064A])/g;
+function withDates(text) {
+  const out = [];
+  let last = 0, m, i = 0;
   const t = String(text ?? "");
-  const at = t.indexOf("{الطالب}");
-  const intro = at >= 0 ? t.slice(0, at).trim() : "";
-  const rest = (at >= 0 ? t.slice(at + "{الطالب}".length) : t).split("\n").map((l) => l.trim()).filter(Boolean);
-  return { intro, hasName: at >= 0, body: rest[0] ?? "", closing: rest.slice(1) };
+  DATE_RE.lastIndex = 0;
+  while ((m = DATE_RE.exec(t))) {
+    if (m.index > last) out.push(<span key={i++}>{t.slice(last, m.index)}</span>);
+    out.push(<BidiDate key={i++} value={m[1]} suffix={m[2]} />);
+    last = m.index + m[0].length;
+  }
+  if (last < t.length) out.push(<span key={i++}>{t.slice(last)}</span>);
+  return out;
 }
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
@@ -111,23 +153,10 @@ export default function EventCertificate({ event, participant, sigUrl, stampUrl,
   const tpl = THEMES[event?.cert_template] ? event.cert_template : "classic";
   const th = THEMES[tpl];
   const national = tpl === "national";
-  const date = event?.event_date ? `${event.event_date}T12:00:00` : null;
 
-  const vals = {
-    "الطالب": participant?.student_name ?? "",
-    "الصف": participant?.class_label ?? "",
-    "الحدث": event?.title ?? "",
-    "المكان": event?.venue ?? "",
-    "التاريخ": date ? (
-      <>
-        <BidiDate value={fmtHijri(date, false)} suffix="هـ" /> الموافق{" "}
-        <BidiDate value={fmtGreg(date)} suffix="م" />
-      </>
-    ) : "",
-    "الذكرى": String(nationalDayNo(event?.event_date)),
-  };
-  const { intro, hasName, body, closing } =
-    splitText(defaultCertText(event));   // الصيغة الرسمية دائمًا — يُتجاهل أي نص محفوظ قديم
+  const { intro, body, closing } = readCert(event);
+  const closingLines = closing.split("\n").map((l) => l.trim()).filter(Boolean);
+  const dayNo = String(nationalDayNo(event?.event_date));
   const title = event?.cert_title?.trim() || DEFAULT_CERT_TITLE;
 
   return (
@@ -158,7 +187,7 @@ export default function EventCertificate({ event, participant, sigUrl, stampUrl,
             <div className="text-center">
               <img src={slogan} alt="عزّنا بطبعنا" style={{ height: "20mm", width: "auto", display: "block" }} />
               <div style={{ fontSize: "12pt", fontWeight: 700, color: th.accent, marginTop: "1.2mm", lineHeight: 1.2 }}>
-                اليوم الوطني السعودي <span className="num">{vals["الذكرى"]}</span>
+                اليوم الوطني السعودي <span className="num">{dayNo}</span>
               </div>
             </div>
           )}
@@ -178,16 +207,18 @@ export default function EventCertificate({ event, participant, sigUrl, stampUrl,
             <div style={{ width: "22mm", height: "0.3mm", background: `${th.accent}55` }} />
           </div>
 
-          {intro && <p style={{ marginTop: "6mm", fontSize: "12.5pt", color: "#4A5A52" }}>{fill(intro, vals)}</p>}
-          {hasName && (
-            <p style={{ marginTop: "3mm", fontSize: "26pt", fontWeight: 700, lineHeight: 1.3 }}>{vals["الطالب"]}</p>
-          )}
+          {intro && <p style={{ marginTop: "6mm", fontSize: "12.5pt", color: "#4A5A52" }}>{withDates(intro)}</p>}
+          <p style={{ marginTop: "3mm", fontSize: "26pt", fontWeight: 700, lineHeight: 1.3 }}>
+            {participant?.student_name ?? ""}
+          </p>
           {body && (
-            <p style={{ marginTop: "4mm", fontSize: "13pt", lineHeight: 1.95, maxWidth: "205mm" }}>{fill(body, vals)}</p>
+            <p style={{ marginTop: "4mm", fontSize: "13pt", lineHeight: 1.95, maxWidth: "205mm", whiteSpace: "pre-line" }}>
+              {withDates(body)}
+            </p>
           )}
-          {closing.map((l, i) => (
+          {closingLines.map((l, i) => (
             <p key={i} style={{ marginTop: i ? "1mm" : "5mm", fontSize: "12pt", color: th.accent, fontWeight: 500 }}>
-              {fill(l, vals)}
+              {withDates(l)}
             </p>
           ))}
         </div>
