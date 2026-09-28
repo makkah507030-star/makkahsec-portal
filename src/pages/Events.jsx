@@ -658,14 +658,22 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
   const issueAll = async () => {
     if (!tpl) { setNote({ ok: false, text: "نموذج الموافقة غير مفعّل. راجع مكتبة النماذج." }); return; }
     setBusy(true);
-    let sent = 0, skipped = 0;
+    let sent = 0, noGuardian = 0, failed = 0, lastError = "";
+
+    // أولياء الأمور بحسابات — عبر دالة الخادم لأن المنظّم لا يقرأ جداولهم مباشرة
+    const { data: gs, error: gErr } = await supabase.rpc("ev_participant_guardians", { p_event: e.id });
+    if (gErr) {
+      setBusy(false);
+      setNote({ ok: false, text: `تعذّرت قراءة أولياء الأمور: ${gErr.message}` });
+      return;
+    }
+    const guardianOf = new Map();
+    (gs ?? []).forEach((x) => { if (!guardianOf.has(x.student_id)) guardianOf.set(x.student_id, x); });
 
     for (const p of (parts ?? []).filter((x) => !x.consent_doc_id)) {
       // ولي الأمر المستلم
-      const { data: gs } = await supabase.from("guardian_student")
-        .select("guardians(user_id, full_name)").eq("student_id", p.student_id);
-      const g = (gs ?? []).map((x) => x.guardians).find((x) => x?.user_id);
-      if (!g) { skipped++; continue; }
+      const g = guardianOf.get(p.student_id);
+      if (!g) { noGuardian++; continue; }
 
       const { data: serial } = await supabase.rpc("next_form_serial", { p_category: "administrative" });
 
@@ -687,7 +695,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
         },
       }).select("id").single();
 
-      if (error || !doc) { skipped++; continue; }
+      if (error || !doc) { failed++; lastError = error?.message ?? ""; continue; }
 
       await supabase.from("event_participants")
         .update({ consent_doc_id: doc.id, consent_sent_at: new Date().toISOString() })
@@ -713,12 +721,15 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
 
     await reload();
     setBusy(false);
+    const why = [
+      noGuardian ? `${noGuardian} لعدم وجود حساب ولي أمر` : "",
+      failed ? `${failed} لخطأ في إنشاء المستند${lastError ? ` (${lastError})` : ""}` : "",
+    ].filter(Boolean).join("، و");
     setNote({
       ok: sent > 0,
       text: sent > 0
-        ? `صدرت ${sent} موافقة وأُرسلت لأولياء الأمور.` +
-          (skipped ? ` وتعذّر إرسال ${skipped} لعدم وجود حساب ولي أمر.` : "")
-        : "تعذّر الإصدار: لا أولياء أمور بحسابات لهؤلاء الطلاب.",
+        ? `صدرت ${sent} موافقة وأُرسلت لأولياء الأمور.` + (why ? ` وتعذّر إرسال ${why}.` : "")
+        : `تعذّر الإصدار: ${why || "لا طلاب بانتظار الموافقة"}.`,
     });
   };
 
