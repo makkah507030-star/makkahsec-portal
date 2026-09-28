@@ -46,11 +46,13 @@ const setupHint = (e) =>
     ? "أنواع الاختبارات الجديدة تحتاج تنفيذ ملف supabase/quiz_paper_mode.sql في قاعدة البيانات مرة واحدة."
     : e?.message;
 
+// الفترات المتاحة عند إنشاء اختبار: الأولى والثانية فقط
 const PERIODS = [
   { key: "period1", label: "الفترة الأولى" },
   { key: "period2", label: "الفترة الثانية" },
-  { key: "final",   label: "النهائي" },
 ];
+// أسماء الفترات للعرض — يبقى «النهائي» لاختبارات سابقة أُنشئت به
+const PERIOD_LABEL = { period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي" };
 
 const STATUS = {
   draft:   { t: "مسودة",        c: "bg-canvas text-muted" },
@@ -144,7 +146,7 @@ export default function MyQuizzes() {
                   <p className="num mt-1 text-xs text-faint">
                     {q.subject_name || "—"}
                     {q.grade ? ` · ${GRADE_NAMES[q.grade]}` : ""}
-                    {` · ${PERIODS.find((p) => p.key === q.period)?.label ?? ""}`}
+                    {` · ${PERIOD_LABEL[q.period] ?? ""}`}
                     {` · ${q.total_marks} درجة`}
                     {q.exam_date ? ` · ${q.exam_date}` : ""}
                   </p>
