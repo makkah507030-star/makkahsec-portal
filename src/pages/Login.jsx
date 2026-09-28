@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { supabase, idToEmail, isConfigured } from "../lib/supabase";
 import logoIcon from "../assets/icon-mint.png";
 import { useNotice } from "../lib/useNotice.js";
+import TrialBanner from "../components/TrialBanner.jsx";
 
 /* =====================================================================
    صفحة الدخول — خلفية بنقش الهوية وبطاقة زجاجية.
@@ -91,6 +92,8 @@ export default function Login() {
   }
 
   return (
+    <>
+    <div className="relative z-10"><TrialBanner variant="support" /></div>
     <div className="relative min-h-screen overflow-hidden bg-white">
       <style dangerouslySetInnerHTML={{ __html: AUTOFILL_FIX }} />
       {/* ——— الخلفية: بيضاء بنقش الهوية الخفيف ——— */}
@@ -238,5 +241,6 @@ export default function Login() {
         </div>
       </div>
     </div>
+    </>
   );
 }
