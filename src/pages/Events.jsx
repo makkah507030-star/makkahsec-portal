@@ -101,14 +101,19 @@ export default function Events() {
         {(list ?? []).map((e) => {
           const i = stageIndex(e.stage);
           const done = e.stage === "approved";
+          const cancelled = !!e.cancelled_at;
           return (
             <button key={e.id} onClick={() => setOpenId(e.id)}
-                    className="card block w-full p-4 text-right transition-colors hover:border-[#CCF2DB]">
+                    className={`card block w-full p-4 text-right transition-colors hover:border-[#CCF2DB] ${
+                      cancelled ? "opacity-70" : ""}`}>
               <div className="flex flex-wrap items-center gap-2">
-                <p className="min-w-0 flex-1 truncate text-sm font-bold text-ink">{e.title}</p>
+                <p className={`min-w-0 flex-1 truncate text-sm font-bold text-ink ${cancelled ? "line-through" : ""}`}>
+                  {e.title}
+                </p>
                 <span className={`chip shrink-0 ${
-                  done ? "bg-present/10 text-present" : "bg-mint-tint text-mint-deep"}`}>
-                  {done ? "معتمد" : `المرحلة ${i + 1} من 8`}
+                  cancelled ? "bg-absent/10 text-absent"
+                  : done ? "bg-present/10 text-present" : "bg-mint-tint text-mint-deep"}`}>
+                  {cancelled ? "ملغى" : done ? "معتمد" : `المرحلة ${i + 1} من 8`}
                 </span>
               </div>
               <p className="num mt-1 text-xs text-faint">
@@ -117,7 +122,7 @@ export default function Events() {
                 {e.organizer_name ? ` · ${e.organizer_name}` : ""}
               </p>
               <div className="mt-2.5 h-1.5 overflow-hidden rounded-pill bg-canvas">
-                <div className="h-full rounded-pill bg-mint-deep transition-all"
+                <div className={`h-full rounded-pill transition-all ${cancelled ? "bg-line" : "bg-mint-deep"}`}
                      style={{ width: `${((i + 1) / 8) * 100}%` }} />
               </div>
             </button>
@@ -272,6 +277,14 @@ function EventWizard({ ev, uid, profile, isSupport, onBack, onMsg, msg }) {
   };
 
   const done = stageIndex(e.stage);
+  const cancelled = !!e.cancelled_at;
+  const [cancelling, setCancelling] = useState(false);
+
+  // استعادة حدث أُلغي بالخطأ — يعود لمرحلته، والاستئذان المسحوب يُرفع من جديد يدويًا
+  const restore = async () => {
+    if (!window.confirm("استعادة الحدث وإعادته لمرحلته؟ الاستئذان المسحوب لا يعود تلقائيًا، فارفعه من جديد من مرحلة الاستئذان.")) return;
+    await patch({ cancelled_at: null, cancel_reason: null, cancelled_by_name: null }, "استُعيد الحدث.");
+  };
 
   return (
     <div className="space-y-5">
@@ -280,8 +293,35 @@ function EventWizard({ ev, uid, profile, isSupport, onBack, onMsg, msg }) {
                 className="rounded-pill border border-line px-4 py-1.5 text-sm text-muted hover:bg-canvas">
           ← كل الأحداث
         </button>
-        <span className="num text-xs text-faint">{e.serial}</span>
+        <div className="flex items-center gap-2">
+          <span className="num text-xs text-faint">{e.serial}</span>
+          {!cancelled && e.stage !== "approved" && (
+            <button onClick={() => setCancelling((v) => !v)}
+                    className="rounded-pill border border-absent/40 px-3.5 py-1.5 text-xs font-semibold text-absent transition-colors hover:bg-absent hover:text-white">
+              {cancelling ? "تراجع" : "إلغاء الحدث"}
+            </button>
+          )}
+        </div>
       </div>
+
+      {cancelling && !cancelled && (
+        <CancelEvent e={e} parts={parts} patch={patch} reload={loadParts} onMsg={onMsg}
+                     byName={profile?.full_name ?? ""} onDone={() => setCancelling(false)} />
+      )}
+
+      {cancelled && (
+        <section className="card space-y-2 border-absent/30 bg-absent/5 p-4">
+          <p className="text-sm font-bold text-absent">أُلغي هذا الحدث</p>
+          <p className="text-sm leading-relaxed text-ink">السبب: {e.cancel_reason || "—"}</p>
+          <p className="num text-xs text-muted">
+            {e.cancelled_by_name ? `${e.cancelled_by_name} · ` : ""}{fmtG(String(e.cancelled_at).slice(0, 10))}
+          </p>
+          <button onClick={restore}
+                  className="rounded-pill border border-line bg-white px-3.5 py-1.5 text-xs text-muted hover:bg-canvas">
+            استعادة الحدث
+          </button>
+        </section>
+      )}
 
       <div>
         <h1 className="text-lg font-bold text-ink">{e.title}</h1>
@@ -320,26 +360,132 @@ function EventWizard({ ev, uid, profile, isSupport, onBack, onMsg, msg }) {
         </p>
       )}
 
-      {step === 0 && <StageInfo e={e} patch={patch}
+      {/* الحدث الملغى يُعرض ببياناته فقط، بلا إجراءات */}
+      {!cancelled && step === 0 && <StageInfo e={e} patch={patch}
                                 onNext={() => advance("participants")} />}
-      {step === 1 && <StageParticipants e={e} parts={parts} reload={loadParts}
+      {!cancelled && step === 1 && <StageParticipants e={e} parts={parts} reload={loadParts}
                                         onNext={() => advance("consent", "انتقلنا لإرسال الموافقات.")} />}
-      {step === 2 && <StageConsent e={e} parts={parts} reload={loadParts}
+      {!cancelled && step === 2 && <StageConsent e={e} parts={parts} reload={loadParts}
                                    uid={uid} organizerName={profile?.full_name ?? ""}
                                    onNext={() => advance("permission", "انتقلنا للاستئذان.")} />}
-      {step === 3 && <StagePermission e={e} parts={parts} uid={uid}
+      {!cancelled && step === 3 && <StagePermission e={e} parts={parts} uid={uid}
                                       onNext={() => advance("attendance", "انتقلنا لكشف الحضور.")} />}
-      {step === 4 && <StageAttendance e={e} parts={parts} reload={loadParts}
+      {!cancelled && step === 4 && <StageAttendance e={e} parts={parts} reload={loadParts}
                                       onNext={() => advance("certificates", "انتقلنا للشهادات.")} />}
-      {step === 5 && <StageCertificates e={e} parts={parts} patch={patch} isSupport={isSupport}
+      {!cancelled && step === 5 && <StageCertificates e={e} parts={parts} patch={patch} isSupport={isSupport}
                                         onNext={() => advance("report", "انتقلنا للتقرير.")} />}
-      {step >= 6 && (
+      {!cancelled && step >= 6 && (
         <section className="card px-6 py-10 text-center">
           <p className="font-semibold text-ink">{STAGES[step].label}</p>
           <p className="mt-1.5 text-sm text-muted">قيد الإعداد — ستتوفّر في التحديث القادم.</p>
         </section>
       )}
     </div>
+  );
+}
+
+/* إلغاء الحدث — حين يتعذّر إكماله لأي ظرف. لا يُحذف: يبقى موثّقًا بسببه ومن ألغاه،
+   ويُسحب استئذان المشاركين إن لم يمضِ يومه، ويُشعَر أولياء الأمور إن رغب المنظّم. */
+function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
+  const [reason, setReason] = useState("");
+  const [notify, setNotify] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const permIds = [...new Set((parts ?? []).map((p) => p.permission_id).filter(Boolean))];
+  const upcoming = e.event_date >= todayISO();               // الاستئذان لم يمضِ يومه
+  const guardians = (parts ?? []).filter((p) => p.consent_doc_id);
+
+  const run = async () => {
+    if (reason.trim().length < 3) return;
+    if (!window.confirm(`إلغاء «${e.title}»؟`)) return;
+    setBusy(true);
+    const ok = await patch({
+      cancelled_at: new Date().toISOString(),
+      cancel_reason: reason.trim(),
+      cancelled_by_name: byName || null,
+    });
+    if (!ok) {
+      onMsg({ ok: false, text: "تعذّر الإلغاء — نفّذ ملف supabase/events_cancel.sql في قاعدة البيانات مرة واحدة." });
+      setBusy(false);
+      return;
+    }
+
+    const notes = ["أُلغي الحدث."];
+
+    if (upcoming && permIds.length) {
+      const { error } = await supabase.from("permission_requests").delete().in("id", permIds);
+      if (error) notes.push(`تعذّر سحب الاستئذان: ${error.message}`);
+      else {
+        await supabase.from("event_participants").update({ permission_id: null }).eq("event_id", e.id);
+        notes.push("سُحب استئذان المشاركين.");
+      }
+    }
+
+    if (notify && guardians.length) {
+      let n = 0;
+      for (const p of guardians) {
+        const { data: doc } = await supabase.from("form_documents")
+          .select("recipient_user_id").eq("id", p.consent_doc_id).maybeSingle();
+        if (!doc?.recipient_user_id) continue;
+        const { data: nid } = await supabase.rpc("send_notification", {
+          p_title: "إلغاء فعالية",
+          p_body: `نعتذر عن إلغاء «${e.title}» المقرر ${fmtG(e.event_date)}، ` +
+                  `فلا حاجة لمشاركة ${p.student_name} فيها. السبب: ${reason.trim()}`,
+          p_kind: "general", p_link: null,
+          p_roles: null, p_user_ids: [doc.recipient_user_id],
+          p_grade: null, p_class_no: null, p_is_auto: false,
+        });
+        if (nid) {
+          n++;
+          try {
+            await fetch("/.netlify/functions/push-send", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ notification_id: nid }),
+            });
+          } catch { /* الإشعار في الجرس وصل */ }
+        }
+      }
+      notes.push(`أُشعر ${n} من أولياء الأمور.`);
+    }
+
+    await reload();
+    setBusy(false);
+    onMsg({ ok: true, text: notes.join(" ") });
+    onDone();
+  };
+
+  return (
+    <section className="card space-y-3 border-absent/30 p-4">
+      <div>
+        <p className="text-sm font-semibold text-absent">إلغاء الحدث</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">
+          يبقى الحدث موثّقًا في القائمة والتقارير بحالة «ملغى» وسببه، ولا يدخل في الإجماليات.
+        </p>
+      </div>
+      <div>
+        <label className="text-xs text-muted">سبب الإلغاء</label>
+        <textarea rows={2} className="field mt-1 w-full" value={reason}
+                  placeholder="مثال: تعليق الدراسة بسبب الأحوال الجوية"
+                  onChange={(x) => setReason(x.target.value)} />
+      </div>
+      {permIds.length > 0 && (
+        <p className="rounded-sm2 bg-gray-tint px-3 py-2 text-xs text-muted">
+          {upcoming
+            ? "سيُسحب استئذان الطلاب المشاركين، فيعودون للتحضير المعتاد يوم الحدث."
+            : "يوم الحدث مضى، فيبقى الاستئذان المرفوع كما هو في سجلات الحضور."}
+        </p>
+      )}
+      {guardians.length > 0 && (
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={notify} onChange={(x) => setNotify(x.target.checked)} />
+          إشعار أولياء الأمور الذين وصلتهم الموافقة (<span className="num">{guardians.length}</span>)
+        </label>
+      )}
+      <button onClick={run} disabled={busy || reason.trim().length < 3}
+              className="w-full rounded-pill bg-absent py-2 text-sm font-semibold text-white disabled:opacity-50">
+        {busy ? "جارٍ الإلغاء…" : "تأكيد إلغاء الحدث"}
+      </button>
+    </section>
   );
 }
 
