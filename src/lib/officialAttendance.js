@@ -13,6 +13,7 @@
 import { supabase } from "./supabase";
 import { fetchAllPaged } from "./attendanceHelpers";
 import { loadPeriodTimes, toMinutes } from "./periodTimes";
+import { todayISO } from "./schoolTime";
 
 export const LATE_GRACE_MINUTES = 5;
 export const OFFICIAL_PERIODS = [1, 2];
@@ -184,10 +185,29 @@ export async function loadFingerprintEnabled() {
 }
 
 export async function setFingerprintEnabled(enabled) {
-  const { error } = await supabase.from("settings")
-    .upsert({ key: "fingerprint_enabled", value: enabled ? "true" : "false" }, { onConflict: "key" });
+  // عند الفتح يُحفظ تاريخه: ما قبله تجربة لا تُعرض للطالب ولا لولي الأمر
+  const rows = [{ key: "fingerprint_enabled", value: enabled ? "true" : "false" }];
+  if (enabled) rows.push({ key: "fingerprint_enabled_since", value: todayISO() });
+  const { error } = await supabase.from("settings").upsert(rows, { onConflict: "key" });
   if (error) throw error;
   fingerprintCache = enabled;
+  if (enabled) fingerprintSinceCache = todayISO();
+}
+
+/** تاريخ فتح البصمة (YYYY-MM-DD)، أو null إن فُتحت قبل حفظ التاريخ */
+let fingerprintSinceCache;
+export async function loadFingerprintSince() {
+  if (fingerprintSinceCache !== undefined) return fingerprintSinceCache;
+  const { data } = await supabase.from("settings").select("value")
+    .eq("key", "fingerprint_enabled_since").maybeSingle();
+  fingerprintSinceCache = data?.value || null;
+  return fingerprintSinceCache;
+}
+
+/** البصمة كما تُعرض للطالب وولي الأمر: مفتوحة، ومن تاريخ فتحها فقط */
+export async function loadFingerprintPublic() {
+  const [on, since] = await Promise.all([loadFingerprintEnabled(), loadFingerprintSince()]);
+  return { on, since };
 }
 
 let settingsCache = null;
