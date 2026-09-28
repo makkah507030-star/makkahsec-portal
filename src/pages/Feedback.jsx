@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { fmtDateTime } from "../lib/dates";
@@ -39,7 +39,10 @@ export default function Feedback() {
   // المعرّف المعتمد له عند عدم توفر رقم هوية) — كلاهما اسم المستخدم نفسه
   const nationalId = profile?.username ?? "";
 
-  const [category, setCategory] = useState(session ? "bug" : "login");
+  // ?type=suggestion من شريط «شاركنا رأيك» يختار نوع الطلب مسبقًا
+  const [params] = useSearchParams();
+  const preset = CATEGORIES.some((c) => c.key === params.get("type")) ? params.get("type") : null;
+  const [category, setCategory] = useState(preset ?? (session ? "bug" : "login"));
   const [message, setMessage] = useState("");
   // الاسم والجوال: الزائر يكتبهما (إلزاميان)، والمسجّل اسمه من حسابه وجواله اختياري
   const [name, setName] = useState("");

@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { holidayToday, todayISO } from "../lib/schoolTime";
 
 /* شريط أعلى البوابة:
-   في اليوم الوطني يتحوّل إلى شريط احتفائي أخضر بألوان الهوية،
-   ثم يعود تلقائيًا إلى شريط «نسخة تجريبية» بعد انقضائه.
+   • للمسجّلين: تلقي الاقتراحات والملاحظات والشكاوى.
+   • للزوار (variant="support"): من تعثّر دخوله يُوجَّه إلى مركز الدعم.
+   • في اليوم الوطني يتحوّل شريط المسجّلين إلى شريط احتفائي أخضر، ثم يعود تلقائيًا.
 
    يُكتشف الموسم الوطني بطريقتين، فيظهر ولو لم يُسجَّل في التقويم:
    ١) إجازة مفعّلة في «التقويم والإجازات» يحوي اسمها «الوطني».
@@ -70,19 +71,20 @@ export default function TrialBanner({ variant }) {
   if (variant === "support") return <SupportBanner />;
   if (isNationalDay()) return <NationalDayBanner />;
 
+  // للمسجّلين: شريط لتلقي الاقتراحات والملاحظات والشكاوى
   return (
     <div className="bg-[#9A7B22] text-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-5 py-2.5 text-center text-xs leading-relaxed sm:text-sm">
-        <span className="font-semibold">نسخة تجريبية</span>
+        <span className="font-semibold">رأيك يصنع الفرق</span>
         <span className="opacity-60">·</span>
         <span className="opacity-95">
-          البوابة قيد التجربة وسيبدأ العمل بها رسميًا قريبًا، وقد تتغيّر البيانات أو الخصائص خلال هذه المرحلة.
+          نسعد باستقبال اقتراحاتكم وملاحظاتكم وشكاواكم، لنطوّر البوابة ونرتقي بخدماتها معًا.
         </span>
         <Link
-          to="/contact"
-          className="font-semibold underline underline-offset-2 hover:opacity-80"
+          to="/contact?type=suggestion"
+          className="whitespace-nowrap rounded-pill bg-white/15 px-3 py-0.5 font-semibold transition-colors hover:bg-white/25"
         >
-          مركز الدعم والمساندة
+          شاركنا رأيك ←
         </Link>
       </div>
     </div>
