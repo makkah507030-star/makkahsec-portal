@@ -1,8 +1,12 @@
 // src/pages/Events.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
+import PrintPortal from "../components/PrintPortal.jsx";
+import EventCertificate, {
+  CERT_TEMPLATES, CERT_VARS, DEFAULT_CERT_TITLE, defaultCertText, isNationalDay,
+} from "../components/EventCertificate.jsx";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -160,6 +164,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
       organizer_id: uid,
       organizer_name: profile?.full_name ?? "",
       organizer_role: roleLabel,
+      cert_template: isNationalDay({ title: f.title, category: f.category }) ? "national" : "classic",
       stage: "participants",
     }).select("id").single();
 
@@ -315,7 +320,7 @@ function EventWizard({ ev, uid, profile, isSupport, onBack, onMsg, msg }) {
         </p>
       )}
 
-      {step === 0 && <StageInfo e={e} patch={patch} isSupport={isSupport}
+      {step === 0 && <StageInfo e={e} patch={patch}
                                 onNext={() => advance("participants")} />}
       {step === 1 && <StageParticipants e={e} parts={parts} reload={loadParts}
                                         onNext={() => advance("consent", "انتقلنا لإرسال الموافقات.")} />}
@@ -326,7 +331,9 @@ function EventWizard({ ev, uid, profile, isSupport, onBack, onMsg, msg }) {
                                       onNext={() => advance("attendance", "انتقلنا لكشف الحضور.")} />}
       {step === 4 && <StageAttendance e={e} parts={parts} reload={loadParts}
                                       onNext={() => advance("certificates", "انتقلنا للشهادات.")} />}
-      {step >= 5 && (
+      {step === 5 && <StageCertificates e={e} parts={parts} patch={patch} isSupport={isSupport}
+                                        onNext={() => advance("report", "انتقلنا للتقرير.")} />}
+      {step >= 6 && (
         <section className="card px-6 py-10 text-center">
           <p className="font-semibold text-ink">{STAGES[step].label}</p>
           <p className="mt-1.5 text-sm text-muted">قيد الإعداد — ستتوفّر في التحديث القادم.</p>
@@ -337,17 +344,10 @@ function EventWizard({ ev, uid, profile, isSupport, onBack, onMsg, msg }) {
 }
 
 /* ① بيانات الحدث */
-function StageInfo({ e, patch, isSupport, onNext }) {
+function StageInfo({ e, patch, onNext }) {
   const [f, setF] = useState({
-    description: e.description ?? "", goals: e.goals ?? "",
-    venue: e.venue ?? "", cert_title: e.cert_title ?? "",
-    cert_template: e.cert_template ?? "classic",
+    description: e.description ?? "", goals: e.goals ?? "", venue: e.venue ?? "",
   });
-
-  const TEMPLATES = [
-    { k: "classic", t: "كلاسيكي" }, { k: "gold", t: "ذهبي" },
-    { k: "medal", t: "وسام" }, { k: "modern", t: "حديث" }, { k: "ornate", t: "مزخرف" },
-  ];
 
   return (
     <section className="card space-y-4 p-4">
@@ -366,37 +366,7 @@ function StageInfo({ e, patch, isSupport, onNext }) {
         <textarea rows={2} className="field mt-1 w-full" value={f.goals}
                   onChange={(x) => setF((v) => ({ ...v, goals: x.target.value }))} />
       </div>
-
-      <div className="rounded-sm2 border border-line p-3">
-        <p className="text-xs font-semibold text-ink">شهادة الحدث</p>
-        <div className="mt-2">
-          <label className="text-xs text-muted">عنوان الشهادة</label>
-          <input className="field mt-1 w-full" value={f.cert_title}
-                 placeholder="مثال: شهادة مشاركة في الاحتفاء باليوم الوطني"
-                 onChange={(x) => setF((v) => ({ ...v, cert_title: x.target.value }))} />
-        </div>
-        <div className="mt-2.5">
-          <label className="text-xs text-muted">القالب</label>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {TEMPLATES.map((t) => (
-              <button key={t.k} type="button"
-                      onClick={() => setF((v) => ({ ...v, cert_template: t.k }))}
-                className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
-                  f.cert_template === t.k ? "bg-mint-deep text-white"
-                                          : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-                {t.t}
-              </button>
-            ))}
-          </div>
-        </div>
-        {isSupport && (
-          <p className="mt-2.5 rounded-sm2 bg-mint-tint px-3 py-2 text-[11px] leading-relaxed text-mint-deep">
-            خلفية خاصة بالحدث تُرفع من الدعم الفني: A4 أفقي ٢٩٧×٢١٠ مم،
-            أي ٣٥٠٨×٢٤٨٠ بكسل بدقة ٣٠٠، بصيغة PNG أو JPG ولا تتجاوز ٥ ميجابايت،
-            مع ترك ٢٥ مم آمنة من كل جانب و٤٠ مم أسفل للتوقيع والختم.
-          </p>
-        )}
-      </div>
+      <p className="text-[11px] text-faint">عنوان الشهادة وقالبها ونصّها تُضبط في مرحلة «الشهادات».</p>
 
       <button className="btn-primary w-full"
               onClick={async () => { await patch(f, "حُفظت البيانات."); onNext(); }}>
@@ -942,6 +912,241 @@ function StageAttendance({ e, parts, reload, onNext }) {
       <button className="btn-primary w-full" onClick={onNext} disabled={present === 0}>
         المتابعة لإصدار الشهادات
       </button>
+    </div>
+  );
+}
+
+/* ⑥ الشهادات */
+function StageCertificates({ e, parts, patch, isSupport, onNext }) {
+  const [f, setF] = useState({
+    cert_title: e.cert_title ?? "",
+    cert_template: e.cert_template ?? (isNationalDay(e) ? "national" : "classic"),
+    cert_text: e.cert_text?.trim() ? e.cert_text : defaultCertText(e),
+  });
+  const [saveErr, setSaveErr] = useState(false);
+  const [sigUrl, setSigUrl] = useState(null);
+  const [school, setSchool] = useState({});          // ختم المدرسة وتوقيع المدير
+  const [printing, setPrinting] = useState(null);   // الشهادات المُعدّة للطباعة
+  const textRef = useRef(null);
+
+  const attended = useMemo(() => (parts ?? []).filter((p) => p.attended === true), [parts]);
+  const serialOf = (p) => `${e.serial}-${String(attended.indexOf(p) + 1).padStart(3, "0")}`;
+  const draft = { ...e, ...f };
+
+  // توقيع منظّم الحدث — يظهر لمن أنشأه (سياسات التوقيع تمنع قراءة توقيع غيره)
+  useEffect(() => {
+    (async () => {
+      if (!e.organizer_id) return;
+      const { data: sig } = await supabase.from("user_signatures")
+        .select("path").eq("user_id", e.organizer_id).maybeSingle();
+      if (!sig?.path) return;
+      const { data: su } = await supabase.storage.from("form-assets").createSignedUrl(sig.path, 3600);
+      setSigUrl(su?.signedUrl ?? null);
+    })();
+  }, [e.organizer_id]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("school_assets").select("key, path, label");
+      const get = (k) => (data ?? []).find((r) => r.key === k);
+      const url = async (p) => (p ? (await supabase.storage.from("form-assets").createSignedUrl(p, 3600)).data?.signedUrl ?? null : null);
+      setSchool({
+        stampUrl: await url(get("stamp")?.path),
+        principalUrl: await url(get("principal_signature")?.path),
+        principalName: get("principal_signature")?.label ?? "",
+      });
+    })();
+  }, []);
+
+  // الطباعة بعد اكتمال تحميل الصور (الشعارات والتوقيع)
+  useEffect(() => {
+    if (!printing) return;
+    const t = setTimeout(async () => {
+      const imgs = [...document.querySelectorAll("#ev-cert img")];
+      await Promise.all(imgs.map((i) => (i.complete ? null
+        : new Promise((r) => { i.onload = r; i.onerror = r; }))));
+      window.print();
+      setPrinting(null);
+    }, 150);
+    return () => clearTimeout(t);
+  }, [printing]);
+
+  const save = async () => {
+    const ok = await patch(f, "حُفظت إعدادات الشهادة.");
+    setSaveErr(!ok);
+    return ok;
+  };
+
+  const insertVar = (k) => {
+    const el = textRef.current;
+    const tag = `{${k}}`;
+    setF((v) => {
+      const at = el ? el.selectionStart : v.cert_text.length;
+      return { ...v, cert_text: v.cert_text.slice(0, at) + tag + v.cert_text.slice(at) };
+    });
+    el?.focus();
+  };
+
+  const printList = async (list) => {
+    if (!list.length) return;
+    await save();
+    setPrinting(list);
+  };
+
+  return (
+    <div className="space-y-4">
+      <section className="card space-y-4 p-4">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">شهادة الحدث</h2>
+          <p className="mt-0.5 text-xs text-muted">
+            تصدر شهادة لكل طالب سُجّل «حضر» في كشف الحضور، على قالب الشهادات المعتمد: توقيع منظّم الحدث وختم المدرسة وتوقيع المدير.
+          </p>
+        </div>
+
+        <div>
+          <label className="text-xs text-muted">عنوان الشهادة</label>
+          <input className="field mt-1 w-full" value={f.cert_title} placeholder={DEFAULT_CERT_TITLE}
+                 onChange={(x) => setF((v) => ({ ...v, cert_title: x.target.value }))} />
+        </div>
+
+        <div>
+          <label className="text-xs text-muted">القالب</label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {CERT_TEMPLATES.map((t) => (
+              <button key={t.k} type="button"
+                      onClick={() => setF((v) => ({ ...v, cert_template: t.k }))}
+                className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                  f.cert_template === t.k ? "bg-mint-deep text-white"
+                                          : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                {t.t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="text-xs text-muted">نص الشهادة</label>
+            <button type="button" className="text-[11px] text-mint-deep hover:underline"
+                    onClick={() => setF((v) => ({ ...v, cert_text: defaultCertText(e) }))}>
+              استعادة الصيغة المقترحة
+            </button>
+          </div>
+          <textarea ref={textRef} rows={6} className="field mt-1 w-full leading-relaxed" value={f.cert_text}
+                    onChange={(x) => setF((v) => ({ ...v, cert_text: x.target.value }))} />
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] text-faint">إدراج:</span>
+            {CERT_VARS.map((v) => (
+              <button key={v.k} type="button" title={v.d} onClick={() => insertVar(v.k)}
+                      className="rounded-pill border border-line bg-white px-2.5 py-0.5 text-[11px] text-muted hover:bg-canvas">
+                {`{${v.k}}`}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-[11px] text-faint">
+            الكلمات بين القوسين تُستبدل عند الطباعة ببيانات كل طالب والحدث. ما قبل {"{الطالب}"} سطر تمهيدي
+            والاسم يُكتب بارزًا في سطر مستقل، والسطر الأول بعده نص الشهادة، وكل سطر جديد بعده سطر ختامي.
+          </p>
+        </div>
+
+        {!sigUrl && (
+          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-[11px] text-warning">
+            لا يظهر توقيع منظّم الحدث. يرفعه المنظّم من صفحة «توقيعي»، ويظهر في الشهادات التي يطبعها بنفسه.
+          </p>
+        )}
+        {isSupport && (
+          <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-[11px] leading-relaxed text-mint-deep">
+            خلفية خاصة بالحدث تُرفع من الدعم الفني: A4 أفقي ٢٩٧×٢١٠ مم،
+            أي ٣٥٠٨×٢٤٨٠ بكسل بدقة ٣٠٠، بصيغة PNG أو JPG ولا تتجاوز ٥ ميجابايت،
+            مع ترك ٢٥ مم آمنة من كل جانب و٤٠ مم أسفل للتوقيع والختم.
+          </p>
+        )}
+        {saveErr && (
+          <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-[11px] text-absent">
+            تعذّر حفظ نص الشهادة — نفّذ ملف supabase/events_certificates.sql في قاعدة البيانات مرة واحدة.
+          </p>
+        )}
+
+        <button className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
+                onClick={save}>
+          حفظ إعدادات الشهادة
+        </button>
+      </section>
+
+      {/* المعاينة */}
+      <section className="card space-y-2 p-4">
+        <p className="text-xs font-semibold text-ink">معاينة</p>
+        <CertPreview>
+          <EventCertificate event={draft} sigUrl={sigUrl} {...school}
+                            participant={attended[0] ?? { student_name: "اسم الطالب", class_label: "الصف الأول — فصل 1" }}
+                            serial={attended[0] ? serialOf(attended[0]) : `${e.serial}-001`} />
+        </CertPreview>
+      </section>
+
+      {/* الطلاب */}
+      <section className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+          <p className="text-sm text-ink">
+            الحاضرون <span className="num font-semibold text-present">{attended.length}</span>
+          </p>
+          <button className="btn-primary" disabled={!attended.length} onClick={() => printList(attended)}>
+            طباعة كل الشهادات ({attended.length})
+          </button>
+        </div>
+        <div className="divide-y divide-line">
+          {attended.map((p) => (
+            <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-ink">{p.student_name}</p>
+                <p className="num truncate text-xs text-faint">{p.class_label} · {serialOf(p)}</p>
+              </div>
+              <button onClick={() => printList([p])}
+                      className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
+                طباعة
+              </button>
+            </div>
+          ))}
+          {attended.length === 0 && (
+            <p className="px-4 py-6 text-sm text-muted">لا طلاب حاضرون. سجّل الحضور في المرحلة السابقة أولًا.</p>
+          )}
+        </div>
+      </section>
+
+      <button className="btn-primary w-full" onClick={async () => { await save(); onNext(); }}>
+        المتابعة للتقرير
+      </button>
+
+      {printing && (
+        <PrintPortal id="ev-cert" landscape margin="0"
+                     extraCss="#ev-cert .sheet { page-break-after: always; } #ev-cert .sheet:last-child { page-break-after: auto; }">
+          {printing.map((p) => (
+            <EventCertificate key={p.id} event={draft} participant={p} sigUrl={sigUrl} {...school} serial={serialOf(p)} />
+          ))}
+        </PrintPortal>
+      )}
+    </div>
+  );
+}
+
+/* معاينة مصغّرة للشهادة بعرض البطاقة */
+function CertPreview({ children }) {
+  const ref = useRef(null);
+  const [scale, setScale] = useState(0.5);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const fit = () => setScale(el.clientWidth / 1122.5);   // 297mm ≈ 1122.5px
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={ref} className="overflow-hidden rounded-sm2 border border-line"
+         style={{ height: 793.7 * scale }}>
+      <div style={{ width: "297mm", transform: `scale(${scale})`, transformOrigin: "top right" }}>
+        {children}
+      </div>
     </div>
   );
 }
