@@ -1,10 +1,10 @@
 -- =====================================================================
--- الاختبار الورقي: نوع ثالث من الاختبارات، يُطبع بلا بطاقة تظليل
--- ويُصحَّح يدويًا.
+-- أنواع الاختبارات الثلاثة، والاختبار الورقي الذي يُطبع بلا بطاقة تظليل
+-- ويُرصد مجموعه يدويًا.
 --
 --   • quizzes.paper_opts: خيارات الورقة (مضغوط، جدول الدرجات).
---   • quizzes.mode: 'omr' (الاختبار القصير ببطاقة التظليل والإلكتروني — كما كان)
---                   أو 'paper' (الاختبار الورقي).
+--   • quizzes.mode: 'paper' (ورقي) أو 'omr' (ورقي بتصحيح آلي — كل الاختبارات السابقة)
+--                   أو 'online' (إلكتروني).
 --   • أنماط أسئلة جديدة للورقي: أكمل الفراغ، رتّب، أجب باختصار، سؤال مقالي.
 --   • quiz_save_manual_score: رصد مجموع الطالب مباشرة (أو غيابه).
 --
@@ -19,13 +19,10 @@ alter table public.quizzes
 alter table public.quizzes
   add column if not exists paper_opts jsonb not null default '{}'::jsonb;
 
-do $$
-begin
-  if not exists (select 1 from pg_constraint where conname = 'quizzes_mode_check') then
-    alter table public.quizzes
-      add constraint quizzes_mode_check check (mode in ('omr', 'paper'));
-  end if;
-end $$;
+-- الأنواع الثلاثة: ورقي، وورقي بتصحيح آلي (omr)، وإلكتروني
+alter table public.quizzes drop constraint if exists quizzes_mode_check;
+alter table public.quizzes
+  add constraint quizzes_mode_check check (mode in ('omr', 'paper', 'online'));
 
 -- أنماط الأسئلة: يُزال أي قيد سابق على kind ويُضاف قيد يشمل الأنماط الجديدة
 do $$
