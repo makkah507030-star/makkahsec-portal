@@ -1,6 +1,7 @@
 // الغياب الرسمي: يُحسب بعد الحصة الثانية، ويعتمده الوكيل، ويحق له تصحيحه لاحقًا
 import { useMemo, useState } from "react";
 import { todayISO, STATUS } from "../../lib/schoolTime";
+import { useSession } from "../../lib/session.jsx";
 import { fmtGreg, fmtDateTime, fmtTime12 } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import {
@@ -26,6 +27,9 @@ export default function OfficialAbsence({ initialDate }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
   const [editing, setEditing] = useState(null);
+  // تحويل الغياب إلى «بعذر» أو إعادته «بدون عذر»: الوكيل والمساعد الإداري 1 و 2 (والمدير والدعم الفني)
+  const { hasAdminRole } = useSession();
+  const canExcuse = hasAdminRole("deputy_students", "clerk", "clerk_2", "principal", "tech_support");
 
   const day = approval?.day ?? null;
   const markBy = useMemo(
@@ -112,6 +116,7 @@ export default function OfficialAbsence({ initialDate }) {
         {" "}يُعتمد الكشف
         والنسبة الرسمية <b>آليًا</b> بعد نهاية الحصة الثانية بعشر دقائق، وتُحفظ النسبة المكتملة آليًا
         بعد آخر حصة. يحق للوكيل تصحيح أي حالة أو إعادة الاعتماد في أي وقت.
+        {" "}الغياب يُسجَّل <b>بدون عذر</b>، ويحوّله إلى «بعذر» وكيل شؤون الطلاب أو المساعد الإداري 1 و 2 بزر «بعذر» أمام الطالب.
       </Note>
 
       {approval?.missingTables && <SetupNotice />}
@@ -220,6 +225,17 @@ export default function OfficialAbsence({ initialDate }) {
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className={`chip ${TONE[r.shown]}`}>{OFFICIAL_LABEL[r.shown]}</span>
+                      {day && canExcuse && (r.shown === "absent" || r.shown === "excused") && (
+                        <button disabled={busy}
+                          onClick={() => r.shown === "absent"
+                            ? run(() => overrideMark(date, r, "excused", "غياب بعذر"), `سُجّل غياب ${r.full_name} بعذر.`)
+                            : run(() => overrideMark(date, r, "absent", "غياب بدون عذر"), `أُعيد غياب ${r.full_name} بدون عذر.`)}
+                          className={`rounded-sm2 px-2 py-1 text-xs font-semibold disabled:opacity-50 ${
+                            r.shown === "absent" ? "bg-excused/10 text-excused hover:bg-excused/20"
+                                                 : "border border-line text-muted hover:bg-canvas"}`}>
+                          {r.shown === "absent" ? "بعذر" : "بدون عذر"}
+                        </button>
+                      )}
                       {day && (
                         <button onClick={() => setEditing(editing === r.student_id ? null : r.student_id)}
                           className="rounded-sm2 border border-line px-2 py-1 text-xs text-muted hover:bg-canvas">
@@ -229,7 +245,7 @@ export default function OfficialAbsence({ initialDate }) {
                     </div>
                   </div>
                   {editing === r.student_id && (
-                    <OverrideForm row={r} busy={busy}
+                    <OverrideForm row={r} busy={busy} canExcuse={canExcuse}
                       onSave={(status, note) => run(async () => {
                         await overrideMark(date, r, status, note);
                         setEditing(null);
@@ -270,7 +286,7 @@ export default function OfficialAbsence({ initialDate }) {
 
 const periodWord = (s) => (s ? STATUS[s]?.label ?? s : "—");
 
-function OverrideForm({ row, busy, onSave }) {
+function OverrideForm({ row, busy, canExcuse, onSave }) {
   const [status, setStatus] = useState(row.shown === "present" ? "absent" : "present");
   const [note, setNote] = useState("");
   return (
@@ -279,7 +295,7 @@ function OverrideForm({ row, busy, onSave }) {
         className="rounded-sm2 border border-line bg-white px-2 py-1.5 text-sm">
         <option value="present">حاضر</option>
         <option value="absent">غائب</option>
-        <option value="excused">غائب بعذر</option>
+        {(canExcuse || row.shown === "excused") && <option value="excused">غائب بعذر</option>}
       </select>
       <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="سبب التصحيح (مثال: خطأ في التحضير)"
         className="min-w-0 flex-1 rounded-sm2 border border-line bg-white px-2 py-1.5 text-sm" />
