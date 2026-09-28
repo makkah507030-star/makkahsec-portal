@@ -113,6 +113,7 @@ const OTHER_NAV = {
     { to: "/exams",      label: "جداول الاختبارات",       icon: "calendar" },
     { to: "/quizzes",    label: "اختباراتي",              icon: "edit" },
     { to: "/quiz-marks", label: "التصحيح والدرجات",       icon: "chart" },
+    { to: "/quiz-analytics", label: "تحليل النتائج",      icon: "trend" },
     { to: "/events",     label: "الأحداث والمناسبات",     icon: "news" },
 
     { group: "النماذج" },
@@ -148,6 +149,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     home:   "M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5",
     users:  "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9",
     chart:  "M3 3v18h18M7 15V9m5 6V5m5 10v-4",
+    trend:  "M3 3v18h18M7 14l4-4 3 3 6-7",
     ticket: "M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z",
     news:   "M4 5h12v14H4zM16 8h4v9a2 2 0 0 1-4 0zM7 9h6M7 12h6M7 15h4",
     chat:   "M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4Z",
