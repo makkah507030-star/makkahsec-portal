@@ -974,8 +974,12 @@ export default function Forms() {
                                onChange={(val) => setValues((v) => ({ ...v, [f.name]: val }))} />
                   </div>
                 ) : f.type === "textarea" ? (
-                  <textarea rows={4} className="field mt-1 w-full" value={values[f.name] ?? ""}
-                            onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
+                  <>
+                    <FieldPresets field={f}
+                                  onPick={(t) => setValues((v) => ({ ...v, [f.name]: t }))} />
+                    <textarea rows={4} className="field mt-1 w-full" value={values[f.name] ?? ""}
+                              onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
+                  </>
                 ) : (
                   <>
                     <FieldPresets field={f}
@@ -1255,10 +1259,15 @@ export default function Forms() {
                       <div key={f.name}>
                         <label className="text-[11px] text-muted">{f.label}</label>
                         {f.type === "textarea" ? (
-                          <textarea rows={3} className="field mt-1 w-full"
-                                    value={decision[d.id]?.[f.name] ?? d.data?.[f.name] ?? ""}
-                                    onChange={(e) => setDecision((x) => ({
-                                      ...x, [d.id]: { ...(x[d.id] ?? {}), [f.name]: e.target.value } }))} />
+                          <>
+                            <FieldPresets field={f}
+                              onPick={(t) => setDecision((x) => ({
+                                ...x, [d.id]: { ...(x[d.id] ?? {}), [f.name]: t } }))} />
+                            <textarea rows={3} className="field mt-1 w-full"
+                                      value={decision[d.id]?.[f.name] ?? d.data?.[f.name] ?? ""}
+                                      onChange={(e) => setDecision((x) => ({
+                                        ...x, [d.id]: { ...(x[d.id] ?? {}), [f.name]: e.target.value } }))} />
+                          </>
                         ) : (
                           <>
                             <FieldPresets field={f}
