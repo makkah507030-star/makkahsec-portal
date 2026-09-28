@@ -5,13 +5,17 @@ import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import QuizPaper, { QuizPrintArea } from "../../components/QuizPaper.jsx";
 import OnlineQuizPanel from "../../components/OnlineQuizPanel.jsx";
+import PaperExam from "../../components/PaperExam.jsx";
+import { PAPER_KINDS, BLANK, BLANK_RE, LINES, groupPaper, paperOpts } from "../../lib/paperExam.js";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 
 /* =====================================================================
-   اختباراتي — اختبارات المعلم القصيرة.
-   الاختبار وحدة مستقلة يملكها المعلم، يُسندها لفصل أو أكثر،
-   وأنماط أسئلته ثلاثة تُصحَّح آليًا: اختيار متعدد، صح وخطأ، مزاوجة.
+   اختباراتي — اختبارات المعلم.
+   الاختبار وحدة مستقلة يملكها المعلم، يُسندها لفصل أو أكثر. نوعان:
+   • قصير (omr): ثلاثة أنماط تُصحَّح آليًا ببطاقة التظليل أو إلكترونيًا.
+   • ورقي (paper): سبعة أنماط بلا حدود عدد، يتوزّع على صفحات A4، ويُطبع
+     بأسماء طلاب الفصل أو نموذجًا واحدًا، ويُرصد يدويًا.
    ===================================================================== */
 
 // حدود التصميم: الورقة العرضية تتّسع لهذا العدد فقط، ليبقى شكلها
@@ -22,6 +26,21 @@ const KINDS = [
   { key: "match",     label: "مزاوجة",       max: 1 },
 ];
 const MATCH_MAX_ITEMS = 5;
+const PAPER_MATCH_MAX = 8;
+const ORDER_MAX = 8;
+
+const MODES = [
+  { key: "omr", title: "اختبار قصير", icon: "◉",
+    desc: "بطاقة تظليل تُصحَّح بالكاميرا، أو إلكتروني يؤديه الطالب من جواله. صفحة واحدة وثلاثة أنماط." },
+  { key: "paper", title: "اختبار ورقي", icon: "✎",
+    desc: "ورقة تقليدية بلا بطاقة تظليل، بسبعة أنماط منها المقالي وأكمل الفراغ. تتوزّع على أكثر من صفحة وتُطبع بأسماء الطلاب." },
+];
+
+// رسالة واضحة إن لم يُنفَّذ ملف قاعدة البيانات بعد
+const setupHint = (e) =>
+  /mode|paper_opts|kind_check|quiz_save_manual_marks/.test(e?.message ?? "")
+    ? "ميزة الاختبار الورقي تحتاج تنفيذ ملف supabase/quiz_paper_mode.sql في قاعدة البيانات مرة واحدة."
+    : e?.message;
 
 const PERIODS = [
   { key: "period1", label: "الفترة الأولى" },
@@ -37,6 +56,7 @@ const STATUS = {
 };
 
 const LETTERS = ["أ", "ب", "ج", "د", "هـ"];
+const ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن"];
 
 export default function MyQuizzes() {
   const { session, profile } = useSession();
@@ -115,6 +135,9 @@ export default function MyQuizzes() {
 
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <div className="flex items-center gap-1.5">
+                    {q.mode === "paper" && (
+                      <span className="chip bg-excused/10 text-excused">ورقي</span>
+                    )}
                     {q.lang === "en" && (
                       <span className="chip bg-mint-tint text-mint-deep" dir="ltr">EN</span>
                     )}
@@ -147,6 +170,7 @@ export default function MyQuizzes() {
 function NewQuiz({ uid, onDone }) {
   const [subjects, setSubjects] = useState([]);
   const [f, setF] = useState({
+    mode: "omr",
     title: "", subject_id: "", grade: "", period: "period1", lang: "ar",
     total_marks: 20, exam_date: todayISO(), duration_min: 30, instructions: "",
   });
@@ -189,6 +213,7 @@ function NewQuiz({ uid, onDone }) {
 
     const { data, error } = await supabase.from("quizzes").insert({
       teacher_id: uid,
+      ...(f.mode === "paper" ? { mode: "paper" } : {}),
       title: f.title.trim(),
       subject_id: f.subject_id || null,
       subject_name: subj?.name ?? null,
@@ -204,12 +229,37 @@ function NewQuiz({ uid, onDone }) {
     }).select("id").single();
 
     setBusy(false);
-    if (error) { onDone(null, { ok: false, text: error.message }); return; }
+    if (error) { onDone(null, { ok: false, text: setupHint(error) }); return; }
     onDone(data.id, { ok: true, text: "أُنشئ الاختبار. أضف أسئلته الآن." });
   };
 
   return (
     <section className="card space-y-4 p-4">
+      <div>
+        <label className="text-xs text-muted">نوع الاختبار</label>
+        <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+          {MODES.map((m) => {
+            const on = f.mode === m.key;
+            return (
+              <button key={m.key} type="button"
+                      onClick={() => setF((x) => ({
+                        ...x, mode: m.key,
+                        duration_min: m.key === "paper" && x.duration_min === 30 ? 45 : x.duration_min,
+                      }))}
+                className={`rounded-card border p-3 text-right transition-colors ${
+                  on ? "border-mint-deep bg-mint-tint" : "border-line hover:bg-canvas"}`}>
+                <span className="flex items-center gap-2">
+                  <span className={`grid h-7 w-7 place-items-center rounded-full text-sm ${
+                    on ? "bg-mint-deep text-white" : "bg-canvas text-muted"}`}>{m.icon}</span>
+                  <b className={`text-sm ${on ? "text-mint-deep" : "text-ink"}`}>{m.title}</b>
+                </span>
+                <span className="mt-1.5 block text-[11.5px] leading-relaxed text-muted">{m.desc}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div>
         <label className="text-xs text-muted">عنوان الاختبار</label>
         <input className="field mt-1 w-full" value={f.title}
@@ -324,6 +374,11 @@ function QuizEditor({ quiz, uid, onBack }) {
   const [linked, setLinked] = useState([]);
   const [tab, setTab] = useState("questions");
   const [msg, setMsg] = useNotice(null);
+  // الاختبار الورقي: عدد صفحاته وأين تبدأ كل صفحة، وما يُطبع الآن
+  const paper = q.mode === "paper";
+  const [layout, setLayout] = useState(null);
+  const [paperPrint, setPaperPrint] = useState(null);   // { copies, answerKey }
+  const kinds = paper ? PAPER_KINDS.map((k) => ({ ...k, max: Infinity })) : KINDS;
 
   const load = async () => {
     const [{ data: qs }, { data: lk }] = await Promise.all([
@@ -370,7 +425,7 @@ function QuizEditor({ quiz, uid, onBack }) {
   const countOf = (kind) => (questions ?? []).filter((x) => x.kind === kind).length;
 
   const addQuestion = async (kind) => {
-    const k = KINDS.find((x) => x.key === kind);
+    const k = kinds.find((x) => x.key === kind);
     if (k && countOf(kind) >= k.max) {
       setMsg({ ok: false,
                text: `الحد الأعلى لأسئلة «${k.label}» ${k.max}. التصميم يتّسع لهذا العدد فقط.` });
@@ -386,12 +441,20 @@ function QuizEditor({ quiz, uid, onBack }) {
     };
     const payload =
       kind === "mcq"
-        ? { ...base, options: ["", "", ""], answer: "0" }
+        ? { ...base, options: paper ? ["", "", "", ""] : ["", "", ""], answer: "0" }
         : kind === "truefalse"
         ? { ...base, options: null, answer: "true" }
-        : { ...base, options: { left: ["", ""], right: ["", ""] }, answer: {} };
+        : kind === "match"
+        ? { ...base, options: { left: ["", "", ""], right: ["", "", ""] }, answer: {} }
+        : kind === "fill"
+        ? { ...base, options: null, answer: [] }
+        : kind === "order"
+        ? { ...base, options: { items: ["", "", ""] }, answer: null }
+        : { ...base, marks: kind === "essay" ? 4 : 2,
+            options: { lines: LINES[kind].def }, answer: "" };
 
-    const { data } = await supabase.from("quiz_questions").insert(payload).select().single();
+    const { data, error } = await supabase.from("quiz_questions").insert(payload).select().single();
+    if (error) { setMsg({ ok: false, text: setupHint(error) }); return; }
     if (data) setQuestions((prev) => [...(prev ?? []), data]);
   };
 
@@ -446,7 +509,13 @@ function QuizEditor({ quiz, uid, onBack }) {
           ← اختباراتي
         </button>
         <div className="flex items-center gap-2">
-          {(questions?.length ?? 0) > 0 && (
+          {paper && (questions?.length ?? 0) > 0 && (
+            <button onClick={() => setTab("paper")}
+                    className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white hover:bg-mint-hover">
+              الورقة والطباعة
+            </button>
+          )}
+          {!paper && (questions?.length ?? 0) > 0 && (
             <select className="field py-1.5 text-xs"
                     value=""
                     onChange={(e) => {
@@ -480,7 +549,24 @@ function QuizEditor({ quiz, uid, onBack }) {
       </div>
 
       {/* مؤشر الصفحة الواحدة — يتحدّث مع كل إضافة أو تعديل في الأسئلة */}
-      {(questions?.length ?? 0) > 0 && fit && (
+      {paper && (questions?.length ?? 0) > 0 && layout && tab !== "paper" && (
+        <PagesNote layout={layout} onOpen={() => setTab("paper")} />
+      )}
+      {paper && (questions?.length ?? 0) > 0 && (
+        <div aria-hidden="true"
+             style={{ position: "fixed", top: 0, left: -10000, visibility: "hidden", pointerEvents: "none" }}>
+          <PaperExam quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
+                     copies={[]} onLayout={setLayout} />
+        </div>
+      )}
+      {paperPrint && (
+        <QuizPrintArea>
+          <PaperExam quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
+                     copies={paperPrint.copies} answerKey={paperPrint.answerKey} />
+        </QuizPrintArea>
+      )}
+
+      {!paper && (questions?.length ?? 0) > 0 && fit && (
         <p className={`rounded-card px-3 py-2 text-xs ${
           !fit.fits ? "bg-absent/10 text-absent"
           : fit.zoom < 0.85 ? "bg-warning/10 text-warning"
@@ -492,7 +578,7 @@ function QuizEditor({ quiz, uid, onBack }) {
             : "الاختبار كامل مع بطاقة الإجابة في صفحة واحدة."}
         </p>
       )}
-      {(questions?.length ?? 0) > 0 && (
+      {!paper && (questions?.length ?? 0) > 0 && (
         <div aria-hidden="true"
              style={{ position: "fixed", top: 0, left: -10000, visibility: "hidden", pointerEvents: "none" }}>
           <QuizPaper quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
@@ -523,9 +609,15 @@ function QuizEditor({ quiz, uid, onBack }) {
         <button className={pill(tab === "classes")} onClick={() => setTab("classes")}>
           الفصول {linked.length > 0 && <span className="num">({linked.length})</span>}
         </button>
-        <button className={pill(tab === "online")} onClick={() => setTab("online")}>
-          اختبار إلكتروني
-        </button>
+        {paper ? (
+          <button className={pill(tab === "paper")} onClick={() => setTab("paper")}>
+            الورقة والطباعة {layout && <span className="num">({layout.pages} {layout.pages === 1 ? "صفحة" : "صفحات"})</span>}
+          </button>
+        ) : (
+          <button className={pill(tab === "online")} onClick={() => setTab("online")}>
+            اختبار إلكتروني
+          </button>
+        )}
       </div>
 
       {msg && (
@@ -553,29 +645,45 @@ function QuizEditor({ quiz, uid, onBack }) {
             )}
           </div>
 
-          {(questions ?? []).map((row, i) => (
-            <QuestionCard key={row.id} row={row} index={i + 1} lang={q.lang ?? "ar"}
-                          onPatch={patchQ} onRemove={removeQ} />
-          ))}
+          {paper
+            ? groupPaper(questions ?? []).map((g, gi) => (
+                <div key={g.kind} className="space-y-2">
+                  <p className="px-1 pt-1 text-xs font-bold text-mint-deep">
+                    السؤال {ORDINALS[gi] ?? gi + 1}: {PAPER_KINDS.find((k) => k.key === g.kind)?.label}
+                    <span className="num font-normal text-muted"> · {g.list.length} {g.list.length === 1 ? "فقرة" : "فقرات"}</span>
+                  </p>
+                  {g.list.map((row, qi) => (
+                    <QuestionCard key={row.id} row={row} index={qi + 1} lang={q.lang ?? "ar"} paper
+                                  onPatch={patchQ} onRemove={removeQ} />
+                  ))}
+                </div>
+              ))
+            : (questions ?? []).map((row, i) => (
+                <QuestionCard key={row.id} row={row} index={i + 1} lang={q.lang ?? "ar"}
+                              onPatch={patchQ} onRemove={removeQ} />
+              ))}
 
           <div className="card p-4">
             <p className="text-xs text-muted">إضافة سؤال</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              {KINDS.map((k) => {
+              {kinds.map((k) => {
                 const n = countOf(k.key);
                 const full = n >= k.max;
                 return (
-                  <button key={k.key} onClick={() => addQuestion(k.key)} disabled={full}
+                  <button key={k.key} onClick={() => addQuestion(k.key)} disabled={full} title={k.hint}
                     className={`rounded-pill border px-4 py-1.5 text-sm font-medium transition-colors ${
                       full ? "border-line bg-canvas text-faint"
                            : "border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>
-                    {k.label} <span className="num opacity-75">({n}/{k.max})</span>
+                    {paper ? "+ " : ""}{k.label}{" "}
+                    <span className="num opacity-75">{paper ? (n ? `(${n})` : "") : `(${n}/${k.max})`}</span>
                   </button>
                 );
               })}
             </div>
             <p className="mt-2 text-[11px] leading-relaxed text-faint">
-              الحدود ثابتة ليبقى تصميم الورقة موحّدًا وبطاقتها قابلة للقراءة الآلية.
+              {paper
+                ? "تُرتَّب الأسئلة في الورقة بحسب نوعها، ويُرقَّم كل نوع سؤالًا مستقلًا. لا حدّ للعدد: إذا امتلأت الصفحة الأولى انتقل الباقي إلى صفحة ثانية."
+                : "الحدود ثابتة ليبقى تصميم الورقة موحّدًا وبطاقتها قابلة للقراءة الآلية."}
             </p>
           </div>
 
@@ -598,7 +706,18 @@ function QuizEditor({ quiz, uid, onBack }) {
         </button>
       </div>
 
-      {tab === "online" && (
+      {paper && tab === "paper" && (
+        <PaperTab quiz={q} questions={questions ?? []} linked={linked} layout={layout}
+                  teacherName={profile?.full_name ?? ""}
+                  onOpts={async (paper_opts) => {
+                    setQ((x) => ({ ...x, paper_opts }));
+                    const { error } = await supabase.from("quizzes").update({ paper_opts }).eq("id", q.id);
+                    if (error) setMsg({ ok: false, text: setupHint(error) });
+                  }}
+                  onPrint={setPaperPrint} />
+      )}
+
+      {!paper && tab === "online" && (
         <div className="no-print">
           <OnlineQuizPanel quiz={q} linked={linked} questionsCount={questions?.length ?? 0}
                            marksOk={marksUsed === Number(q.total_marks)}
@@ -638,7 +757,7 @@ function QuizEditor({ quiz, uid, onBack }) {
 }
 
 /* --------------------------- بطاقة السؤال --------------------------- */
-function QuestionCard({ row, index, onPatch, onRemove, lang = "ar" }) {
+function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false }) {
   const ltr = lang === "en";
   const [local, setLocal] = useState(row);
 
@@ -646,7 +765,8 @@ function QuestionCard({ row, index, onPatch, onRemove, lang = "ar" }) {
 
   const save = (fields) => { setLocal((x) => ({ ...x, ...fields })); onPatch(row, fields); };
 
-  const kindLabel = KINDS.find((k) => k.key === row.kind)?.label ?? row.kind;
+  const kindLabel = (paper ? PAPER_KINDS : KINDS).find((k) => k.key === row.kind)?.label ?? row.kind;
+  const optionalText = row.kind === "match" || row.kind === "order";
 
   return (
     <section className="card space-y-3 p-4">
@@ -666,11 +786,16 @@ function QuestionCard({ row, index, onPatch, onRemove, lang = "ar" }) {
         </div>
       </div>
 
-      <textarea rows={2} className="field w-full" value={local.text ?? ""}
-                dir={ltr ? "ltr" : "rtl"}
-                placeholder={ltr ? "Question text" : "نص السؤال"}
-                onChange={(e) => setLocal((x) => ({ ...x, text: e.target.value }))}
-                onBlur={() => save({ text: local.text })} />
+      {row.kind === "fill" ? (
+        <FillEditor local={local} setLocal={setLocal} save={save} ltr={ltr} />
+      ) : (
+        <textarea rows={row.kind === "essay" ? 3 : 2} className="field w-full" value={local.text ?? ""}
+                  dir={ltr ? "ltr" : "rtl"}
+                  placeholder={ltr ? (optionalText ? "Instruction (optional)" : "Question text")
+                                   : (optionalText ? "تعليمات أو عنوان للفقرة (اختياري)" : "نص السؤال")}
+                  onChange={(e) => setLocal((x) => ({ ...x, text: e.target.value }))}
+                  onBlur={() => save({ text: local.text })} />
+      )}
 
       {row.kind === "mcq" && (
         <McqEditor local={local} setLocal={setLocal} save={save} ltr={ltr} />
@@ -692,7 +817,16 @@ function QuestionCard({ row, index, onPatch, onRemove, lang = "ar" }) {
       )}
 
       {row.kind === "match" && (
-        <MatchEditor local={local} setLocal={setLocal} save={save} ltr={ltr} />
+        <MatchEditor local={local} setLocal={setLocal} save={save} ltr={ltr}
+                     max={paper ? PAPER_MATCH_MAX : MATCH_MAX_ITEMS} />
+      )}
+
+      {row.kind === "order" && (
+        <OrderEditor local={local} setLocal={setLocal} save={save} ltr={ltr} />
+      )}
+
+      {(row.kind === "short" || row.kind === "essay") && (
+        <WrittenEditor local={local} setLocal={setLocal} save={save} ltr={ltr} kind={row.kind} />
       )}
     </section>
   );
@@ -745,7 +879,7 @@ function McqEditor({ local, setLocal, save, ltr = false }) {
   );
 }
 
-function MatchEditor({ local, setLocal, save, ltr = false }) {
+function MatchEditor({ local, setLocal, save, ltr = false, max = MATCH_MAX_ITEMS }) {
   const LTRS = ltr ? ["A", "B", "C", "D", "E"] : LETTERS;
   const o = local.options ?? { left: ["", ""], right: ["", ""] };
   const left = o.left ?? [];
@@ -785,7 +919,7 @@ function MatchEditor({ local, setLocal, save, ltr = false }) {
         </div>
       ))}
       <div className="flex gap-2">
-        {left.length < MATCH_MAX_ITEMS && (
+        {left.length < max && (
           <button onClick={() => save({ options: { left: [...left, ""], right: [...right, ""] } })}
                   className="text-xs font-medium text-mint-deep hover:underline">
             + زوج آخر
@@ -800,5 +934,265 @@ function MatchEditor({ local, setLocal, save, ltr = false }) {
         )}
       </div>
     </div>
+  );
+}
+
+/* ------------------------ محرّرات الاختبار الورقي ------------------------ */
+
+/** أكمل الفراغ: العبارة بفراغاتها، ثم إجابة كل فراغ لنموذج الإجابة */
+function FillEditor({ local, setLocal, save, ltr = false }) {
+  const [ref, setRef] = useState(null);
+  const text = local.text ?? "";
+  const blanks = (text.match(BLANK_RE) ?? []).length;
+  const answers = Array.isArray(local.answer) ? local.answer : [];
+
+  const insertBlank = () => {
+    const at = ref?.selectionStart ?? text.length;
+    const before = text.slice(0, at), after = text.slice(at);
+    const next = `${before}${before && !/\s$/.test(before) ? " " : ""}${BLANK}${after && !/^\s/.test(after) ? " " : ""}${after}`;
+    save({ text: next });
+    requestAnimationFrame(() => ref?.focus());
+  };
+
+  return (
+    <div className="space-y-2">
+      <textarea ref={setRef} rows={2} className="field w-full" value={text} dir={ltr ? "ltr" : "rtl"}
+                placeholder={ltr ? "Write the sentence and insert blanks" : "اكتب العبارة، وضع المؤشر حيث تريد الفراغ ثم اضغط «إدراج فراغ»"}
+                onChange={(e) => setLocal((x) => ({ ...x, text: e.target.value }))}
+                onBlur={() => save({ text: local.text })} />
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertBlank}
+                className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-xs font-medium text-mint-deep hover:bg-[#CCF2DB]">
+          + إدراج فراغ
+        </button>
+        <span className="num text-[11px] text-faint">
+          {blanks ? `في العبارة ${blanks} ${blanks === 1 ? "فراغ" : "فراغات"}` : "لا فراغات بعد — تُكتب ثلاث شرطات سفلية ___ أو أكثر"}
+        </span>
+      </div>
+      {blanks > 0 && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {Array.from({ length: blanks }).map((_, i) => (
+            <input key={i} className="field" dir={ltr ? "ltr" : "rtl"} value={answers[i] ?? ""}
+                   placeholder={`إجابة الفراغ ${i + 1} (لنموذج الإجابة)`}
+                   onChange={(e) => {
+                     const next = [...answers]; next[i] = e.target.value;
+                     setLocal((x) => ({ ...x, answer: next }));
+                   }}
+                   onBlur={() => save({ answer: (Array.isArray(local.answer) ? local.answer : []).slice(0, blanks) })} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** رتّب: العناصر بترتيبها الصحيح، وتُخلط في الورقة تلقائيًا */
+function OrderEditor({ local, setLocal, save, ltr = false }) {
+  const items = local.options?.items ?? [];
+  const setItem = (i, v) => {
+    const next = [...items]; next[i] = v;
+    setLocal((x) => ({ ...x, options: { ...(x.options ?? {}), items: next } }));
+  };
+  return (
+    <div className="space-y-2">
+      <p className="text-[11px] text-faint">اكتب العناصر بترتيبها الصحيح — تُخلط في الورقة تلقائيًا، ويظهر ترتيبها في نموذج الإجابة.</p>
+      {items.map((it, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="num grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint-tint text-xs font-bold text-mint-deep">{i + 1}</span>
+          <input className="field flex-1" dir={ltr ? "ltr" : "rtl"} value={it}
+                 placeholder={`العنصر ${i + 1}`}
+                 onChange={(e) => setItem(i, e.target.value)}
+                 onBlur={() => save({ options: { ...(local.options ?? {}), items } })} />
+          {items.length > 2 && (
+            <button onClick={() => save({ options: { ...(local.options ?? {}), items: items.filter((_, k) => k !== i) } })}
+                    className="shrink-0 text-xs text-absent">×</button>
+          )}
+        </div>
+      ))}
+      {items.length < ORDER_MAX && (
+        <button onClick={() => save({ options: { ...(local.options ?? {}), items: [...items, ""] } })}
+                className="text-xs font-medium text-mint-deep hover:underline">+ عنصر آخر</button>
+      )}
+    </div>
+  );
+}
+
+/** أجب باختصار / مقالي: عدد أسطر الإجابة، والإجابة النموذجية (اختيارية) */
+function WrittenEditor({ local, setLocal, save, ltr = false, kind }) {
+  const lim = LINES[kind];
+  const lines = Math.min(lim.max, Math.max(lim.min, Number(local.options?.lines ?? lim.def)));
+  const setLines = (n) => save({ options: { ...(local.options ?? {}), lines: Math.min(lim.max, Math.max(lim.min, n)) } });
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted">أسطر الإجابة</span>
+        <div className="flex items-center overflow-hidden rounded-pill border border-line">
+          <button onClick={() => setLines(lines - 1)} disabled={lines <= lim.min}
+                  className="px-3 py-1 text-sm text-muted hover:bg-canvas disabled:opacity-30">−</button>
+          <span className="num w-8 text-center text-sm font-semibold text-ink">{lines}</span>
+          <button onClick={() => setLines(lines + 1)} disabled={lines >= lim.max}
+                  className="px-3 py-1 text-sm text-muted hover:bg-canvas disabled:opacity-30">+</button>
+        </div>
+      </div>
+      <textarea rows={2} className="field w-full" dir={ltr ? "ltr" : "rtl"}
+                value={typeof local.answer === "string" ? local.answer.replace(/^"|"$/g, "") : ""}
+                placeholder="الإجابة النموذجية (اختيارية) — تظهر في نموذج الإجابة وتعين على التصحيح"
+                onChange={(e) => setLocal((x) => ({ ...x, answer: e.target.value }))}
+                onBlur={() => save({ answer: local.answer ?? "" })} />
+    </div>
+  );
+}
+
+/* ------------------------ الورقة والطباعة ------------------------ */
+
+/** توجيه المعلم: كم صفحة، وأين تبدأ الصفحة الثانية */
+function PagesNote({ layout, onOpen }) {
+  const one = layout.pages === 1;
+  return (
+    <button onClick={onOpen}
+            className={`flex w-full items-start gap-2 rounded-card px-3 py-2 text-right text-xs ${
+              one ? "bg-present/10 text-present" : layout.pages === 2 ? "bg-warning/10 text-warning" : "bg-absent/10 text-absent"}`}>
+      <span className="text-base leading-none">{one ? "✓" : "⚠"}</span>
+      <span className="leading-relaxed">
+        {one
+          ? "الاختبار كامل في صفحة واحدة."
+          : <>تعدّى الاختبار الصفحة الأولى، فأصبح على <b className="num">{layout.pages}</b> صفحات:
+              {" "}{layout.starts.map((s, i) => <span key={i}>تبدأ الصفحة <span className="num">{i + 2}</span> من «{s.label}»{i < layout.starts.length - 1 ? "، و" : "."}</span>)}
+              {layout.pages === 2 && " يمكن طباعته على وجهَي ورقة واحدة."}
+            </>}
+        <span className="mr-1 underline underline-offset-2">معاينة</span>
+      </span>
+    </button>
+  );
+}
+
+function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrint }) {
+  const opts = paperOpts(quiz);
+  const [busy, setBusy] = useState(false);
+
+  // الطباعة: تُرسم النسخ ثم تُفتح نافذة الطباعة، وتُزال بعدها
+  const print = async (mode, classIds = []) => {
+    setBusy(true);
+    let copies = [{}];
+    if (mode === "class") {
+      const { data } = await supabase.from("student_enrollment")
+        .select("class_id, students(id, full_name)").in("class_id", classIds).eq("status", "active");
+      const label = (id) => {
+        const c = linked.find((l) => l.class_id === id)?.classes;
+        return c ? `${GRADE_NAMES[c.grade] ?? ""} — ${c.class_no}` : "";
+      };
+      copies = classIds.flatMap((cid) =>
+        (data ?? []).filter((r) => r.class_id === cid && r.students)
+          .map((r) => r.students)
+          .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"))
+          .map((st) => ({ student: st, className: label(cid) })));
+      if (!copies.length) { setBusy(false); window.alert("لا طلاب في الفصل المختار."); return; }
+    } else if (mode === "blankClass") {
+      const c = linked.find((l) => l.class_id === classIds[0])?.classes;
+      copies = [{ className: c ? `${GRADE_NAMES[c.grade] ?? ""} — ${c.class_no}` : "" }];
+    }
+    onPrint({ copies, answerKey: mode === "key" });
+    const done = () => { onPrint(null); window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    setTimeout(() => { setBusy(false); window.print(); }, 500);
+  };
+
+  const toggle = (k) => onOpts({ ...(quiz.paper_opts ?? {}), [k]: !opts[k] });
+  const pages = layout?.pages ?? 1;
+  const sheets = (n) => `${n * pages} ${n * pages === 1 ? "صفحة" : "صفحة"}`;
+
+  return (
+    <div className="no-print grid gap-4 lg:grid-cols-[minmax(0,1fr),340px]">
+      {/* المعاينة */}
+      <section className="card min-w-0 overflow-hidden p-3">
+        <div className="mb-2 flex items-center justify-between gap-2 px-1">
+          <p className="text-sm font-semibold text-ink">معاينة الورقة</p>
+          {layout && (
+            <span className={`chip ${pages === 1 ? "bg-present/10 text-present" : "bg-warning/10 text-warning"}`}>
+              <span className="num">{pages}</span>&nbsp;{pages === 1 ? "صفحة" : "صفحات"}
+            </span>
+          )}
+        </div>
+        <div className="max-h-[75vh] overflow-auto rounded-sm2 bg-canvas p-3">
+          {questions.length
+            ? <PaperExam quiz={quiz} questions={questions} teacherName={teacherName} scale={0.62} />
+            : <p className="py-10 text-center text-sm text-muted">أضف أسئلة لتظهر الورقة.</p>}
+        </div>
+      </section>
+
+      <div className="space-y-4">
+        {layout && <PagesNote layout={layout} onOpen={() => {}} />}
+
+        <section className="card space-y-3 p-4">
+          <p className="text-sm font-semibold text-ink">تنسيق الورقة</p>
+          {[
+            ["compact", "تنسيق مضغوط", "خط ومسافات أصغر قليلًا — يفيد حين يتعدّى الاختبار الصفحة بقليل"],
+            ["marksTable", "جدول الدرجات", "خانة لدرجة كل سؤال والمجموع والمصحّح والمراجع"],
+            ["seat", "خانة رقم الجلوس", "بجانب اسم الطالب وصفه"],
+          ].map(([k, t, d]) => (
+            <label key={k} className="flex cursor-pointer items-start gap-3">
+              <input type="checkbox" className="mt-1" checked={!!opts[k]} onChange={() => toggle(k)} />
+              <span>
+                <span className="block text-sm text-ink">{t}</span>
+                <span className="block text-[11px] leading-relaxed text-faint">{d}</span>
+              </span>
+            </label>
+          ))}
+        </section>
+
+        <section className="card space-y-2.5 p-4">
+          <p className="text-sm font-semibold text-ink">الطباعة والتصدير</p>
+          <p className="text-[11px] leading-relaxed text-faint">
+            للتصدير ملفَّ PDF اختر «حفظ بصيغة PDF» في نافذة الطباعة. اجعل الورق A4 والهوامش «بلا».
+          </p>
+
+          <PrintBtn busy={busy} onClick={() => print("blank")}
+                    title="نموذج واحد بلا أسماء" sub={`${sheets(1)} — تصوّره بالعدد الذي تريد`} />
+
+          {linked.length > 0 && (
+            <>
+              <p className="pt-1 text-xs font-medium text-muted">بأسماء الطلاب — ملف واحد</p>
+              {linked.map((l) => (
+                <PrintBtn key={l.class_id} busy={busy} onClick={() => print("class", [l.class_id])}
+                          title={`${GRADE_NAMES[l.classes?.grade] ?? ""} — فصل ${l.classes?.class_no}`}
+                          sub="نسخة لكل طالب، مرتّبة أبجديًا" />
+              ))}
+              {linked.length > 1 && (
+                <PrintBtn busy={busy} onClick={() => print("class", linked.map((l) => l.class_id))}
+                          title={`كل الفصول المسندة (${linked.length})`} sub="فصلًا بعد فصل في ملف واحد" />
+              )}
+            </>
+          )}
+          {linked.length === 0 && (
+            <p className="rounded-sm2 bg-canvas px-3 py-2 text-[11px] text-muted">
+              أسند الاختبار لفصولك من تبويب «الفصول» لتطبع أوراقًا بأسماء طلابها.
+            </p>
+          )}
+
+          <div className="border-t border-line pt-2.5">
+            <PrintBtn busy={busy} onClick={() => print("key")} tone="key"
+                      title="نموذج الإجابة" sub="للمعلم — الإجابات الصحيحة باللون الأخضر" />
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function PrintBtn({ title, sub, onClick, busy, tone }) {
+  return (
+    <button onClick={onClick} disabled={busy}
+      className={`flex w-full items-center justify-between gap-3 rounded-sm2 border px-3 py-2.5 text-right transition-colors disabled:opacity-50 ${
+        tone === "key" ? "border-[#CCF2DB] bg-mint-tint hover:bg-[#CCF2DB]" : "border-line hover:bg-canvas"}`}>
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium text-ink">{title}</span>
+        <span className="block truncate text-[11px] text-faint">{sub}</span>
+      </span>
+      <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-mint-deep" fill="none" stroke="currentColor"
+           strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+        <path d="M6 14h12v7H6z" />
+      </svg>
+    </button>
   );
 }

@@ -8,6 +8,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import QuizScan from "../../components/QuizScan.jsx";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import { groupQuestions } from "../../lib/omrLayout.js";
+import { groupPaper, PAPER_KINDS } from "../../lib/paperExam.js";
 import { useNotice } from "../../lib/useNotice.js";
 
 /* =====================================================================
@@ -55,11 +56,18 @@ export default function QuizMarks() {
 
   // الأسئلة بترتيب الورقة المطبوعة (اختيار من متعدد ← صح وخطأ ← مزاوجة) وترقيمها
   // «س١: ف٢» — حتى يطابق الرصدُ اليدوي ما بيد المعلم تمامًا، لا ترتيبَ الإضافة
+  const isPaper = quiz?.mode === "paper";
   const ordered = useMemo(() => {
+    if (isPaper) {
+      // الاختبار الورقي: بترتيب ورقته (بحسب النمط) ويُرصد يدويًا فقرةً فقرة
+      return groupPaper(questions).flatMap((g, gi) =>
+        g.list.map((q, qi) => ({ ...q, _label: `س${gi + 1}: ف${qi + 1}`,
+                                 _kind: PAPER_KINDS.find((k) => k.key === g.kind)?.label })));
+    }
     const KIND = { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أو خطأ", match: "المزاوجة" };
     return groupQuestions(questions).flatMap((g, gi) =>
       g.list.map((q, qi) => ({ ...q, _label: `س${gi + 1}: ف${qi + 1}`, _kind: KIND[g.kind] })));
-  }, [questions]);
+  }, [questions, isPaper]);
 
   // فصول الاختبار وأسئلته
   useEffect(() => {
@@ -127,8 +135,35 @@ export default function QuizMarks() {
     return fresh;
   };
 
+  // الاختبار الورقي: رصد يدوي — الخادم يتحقق من المعلم ويجمع الدرجة
+  const saveManual = async (student, marks, absent = false) => {
+    const { data, error } = await supabase.rpc("quiz_save_manual_marks", {
+      p_quiz: quizId, p_class: classId, p_student: student.id, p_marks: marks, p_absent: absent,
+    });
+    if (error) {
+      setMsg({ ok: false, text: /quiz_save_manual_marks/.test(error.message)
+        ? "الرصد اليدوي يحتاج تنفيذ ملف supabase/quiz_paper_mode.sql في قاعدة البيانات مرة واحدة."
+        : error.message });
+      return null;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) setSubs((x) => ({ ...x, [student.id]: row }));
+    return row;
+  };
+
+  // حفظ ثم فتح الطالب التالي الذي لم يُرصد
+  const saveManualNext = async (student, marks) => {
+    const row = await saveManual(student, marks);
+    if (!row) return;
+    const i = students.findIndex((x) => x.id === student.id);
+    const next = students.slice(i + 1).find((x) => !subs[x.id]) ?? null;
+    setActive(next);
+    setMsg({ ok: true, text: `رُصدت درجة ${student.full_name}: ${row.score} من ${quiz?.total_marks}.` });
+  };
+
   const markAbsent = async (student) => {
-    await saveAnswers(student, {}, true);
+    if (isPaper) { await saveManual(student, {}, true); setActive(null); }
+    else await saveAnswers(student, {}, true);
     setMsg({ ok: true, text: `سُجّل غياب ${student.full_name}.` });
   };
 
@@ -153,7 +188,8 @@ export default function QuizMarks() {
       <div className="no-print">
         <h1 className="text-lg font-bold text-ink">التصحيح والدرجات</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          اختر الاختبار وفصله، ثم ارصد إجابات كل طالب فتُصحَّح آليًا.
+          اختر الاختبار وفصله، ثم ارصد إجابات كل طالب فتُصحَّح آليًا —
+          أو درجات فقراته إن كان اختبارًا ورقيًا.
         </p>
       </div>
 
@@ -165,7 +201,7 @@ export default function QuizMarks() {
             <option value="">اختر الاختبار…</option>
             {(quizzes ?? []).map((q) => (
               <option key={q.id} value={q.id}>
-                {q.title} — {q.subject_name ?? ""} ({q.total_marks} درجة)
+                {q.mode === "paper" ? "📝 " : ""}{q.title} — {q.subject_name ?? ""} ({q.total_marks} درجة)
               </option>
             ))}
           </select>
@@ -246,17 +282,28 @@ export default function QuizMarks() {
                     ) : (
                       <span className="chip bg-canvas text-muted">لم يُرصد</span>
                     )}
-                    <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
-                            className="shrink-0 rounded-pill border border-mint-deep px-2.5 py-1 text-xs font-semibold text-mint-deep">
-                      📷
-                    </button>
+                    {!isPaper && (
+                      <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
+                              className="shrink-0 rounded-pill border border-mint-deep px-2.5 py-1 text-xs font-semibold text-mint-deep">
+                        📷
+                      </button>
+                    )}
                     <button onClick={() => setActive(active?.id === s.id ? null : s)}
                             className="shrink-0 rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white">
                       {active?.id === s.id ? "إغلاق" : sub ? "تعديل" : "رصد"}
                     </button>
                   </div>
 
-                  {active?.id === s.id && (
+                  {active?.id === s.id && isPaper && (
+                    <ManualSheet key={s.id} questions={ordered} total={quiz?.total_marks}
+                                 initial={sub?.answers?.manual ?? {}}
+                                 onSave={(m) => saveManual(s, m).then((r) => {
+                                   if (r) { setActive(null); setMsg({ ok: true, text: `رُصدت درجة ${s.full_name}: ${r.score} من ${quiz?.total_marks}.` }); }
+                                 })}
+                                 onNext={(m) => saveManualNext(s, m)}
+                                 onAbsent={() => markAbsent(s)} />
+                  )}
+                  {active?.id === s.id && !isPaper && (
                     <AnswerSheet student={s} questions={ordered}
                                  initial={sub?.answers ?? {}}
                                  onSave={(a) => saveAnswers(s, a)}
@@ -268,14 +315,23 @@ export default function QuizMarks() {
           </div>
 
           <div className="no-print flex flex-wrap gap-2">
-            <button className="btn-primary flex-1"
-                    onClick={() => setScanFrom((students.find((x) => !subs[x.id]) ?? students[0]).id)}>
-              📷 التصحيح بالكاميرا
-            </button>
-            <button className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep"
-                    onClick={() => setFast(true)}>
-              الإدخال السريع
-            </button>
+            {isPaper ? (
+              <button className="btn-primary flex-1"
+                      onClick={() => setActive(students.find((x) => !subs[x.id]) ?? students[0])}>
+                رصد الطالب التالي
+              </button>
+            ) : (
+              <>
+                <button className="btn-primary flex-1"
+                        onClick={() => setScanFrom((students.find((x) => !subs[x.id]) ?? students[0]).id)}>
+                  📷 التصحيح بالكاميرا
+                </button>
+                <button className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep"
+                        onClick={() => setFast(true)}>
+                  الإدخال السريع
+                </button>
+              </>
+            )}
             <button className="flex-1 rounded-pill border border-line py-2 text-sm font-semibold text-muted hover:bg-canvas"
                     disabled={stats.done === 0}
                     onClick={() => { setPrinting(true); setTimeout(() => window.print(), 60); }}>
@@ -629,6 +685,70 @@ function FastEntry({ students, questions, subs, quiz, onSave, onAbsent, onClose 
           {busy ? "جارٍ الحفظ…" : qi + 1 < questions.length ? "حفظ الآن" : "حفظ والتالي"}
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ------------------ رصد الاختبار الورقي: درجة لكل فقرة ------------------ */
+function ManualSheet({ questions, total, initial, onSave, onNext, onAbsent }) {
+  const [m, setM] = useState(() => Object.fromEntries(
+    questions.map((q) => [q.id, initial?.[q.id] != null ? String(initial[q.id]) : ""])));
+  const [busy, setBusy] = useState(false);
+  const sum = Math.round(questions.reduce((a, q) => a + (Number(m[q.id]) || 0), 0) * 100) / 100;
+  const filled = questions.filter((q) => m[q.id] !== "").length;
+  const clean = () => Object.fromEntries(Object.entries(m).filter(([, v]) => v !== "")
+    .map(([k, v]) => [k, Math.min(Number(questions.find((q) => q.id === k)?.marks || 0), Math.max(0, Number(v) || 0))]));
+  const run = async (fn) => { setBusy(true); try { await fn(clean()); } finally { setBusy(false); } };
+
+  // Enter ينقل للخانة التالية، وفي الأخيرة يحفظ وينتقل للطالب التالي
+  const onKey = (e, i) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    const next = document.querySelector(`[data-ms="${i + 1}"]`);
+    if (next) next.focus(); else run(onNext);
+  };
+
+  return (
+    <div className="mt-3 space-y-2 rounded-card border border-[#CCF2DB] bg-mint-tint/40 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-muted">درجة كل فقرة — <span className="num">{filled}/{questions.length}</span></p>
+        <p className="num text-sm font-bold text-mint-deep">{sum} / {total}</p>
+      </div>
+      <div className="space-y-1">
+        {questions.map((q, i) => {
+          // عنوان السؤال قبل أول فقراته
+          const head = i === 0 || questions[i - 1]._kind !== q._kind ? q._kind : null;
+          const max = Number(q.marks || 0);
+          const v = m[q.id];
+          const over = v !== "" && Number(v) > max;
+          return (
+            <div key={q.id}>
+              {head && <p className="pt-1.5 text-[11px] font-bold text-mint-deep">{q._label.split(":")[0]}: {head}</p>}
+              <div className="flex items-center gap-2 rounded-sm2 bg-white px-2 py-1.5">
+                <span className="num w-12 shrink-0 text-[11px] text-muted">{q._label.split(":")[1]}</span>
+                <p className="min-w-0 flex-1 truncate text-xs text-ink" title={q.text}>{q.text || "—"}</p>
+                <button tabIndex={-1} onClick={() => setM((x) => ({ ...x, [q.id]: "0" }))}
+                        className="shrink-0 rounded-pill border border-line px-2 py-0.5 text-[11px] text-muted hover:bg-canvas">0</button>
+                <button tabIndex={-1} onClick={() => setM((x) => ({ ...x, [q.id]: String(max) }))}
+                        className="shrink-0 rounded-pill border border-[#CCF2DB] px-2 py-0.5 text-[11px] text-mint-deep hover:bg-mint-tint">كاملة</button>
+                <input data-ms={i} inputMode="decimal" value={v}
+                       onChange={(e) => setM((x) => ({ ...x, [q.id]: e.target.value.replace(/[^\d.]/g, "") }))}
+                       onKeyDown={(e) => onKey(e, i)}
+                       className={`field num w-14 shrink-0 py-1 text-center ${over ? "border-absent text-absent" : ""}`} />
+                <span className="num w-8 shrink-0 text-[11px] text-faint">/{max}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="flex flex-wrap gap-2 pt-1">
+        <button disabled={busy} onClick={() => run(onNext)} className="btn-primary flex-1">حفظ والتالي</button>
+        <button disabled={busy} onClick={() => run(onSave)}
+                className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep">حفظ</button>
+        <button disabled={busy} onClick={onAbsent}
+                className="rounded-pill border border-absent/40 px-4 py-2 text-sm font-semibold text-absent">غائب</button>
+      </div>
+      <p className="text-[11px] text-faint">Enter ينقلك للفقرة التالية، وفي آخرها يحفظ ويفتح الطالب التالي. لا تتجاوز الفقرة درجتها.</p>
     </div>
   );
 }
