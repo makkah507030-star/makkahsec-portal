@@ -47,17 +47,59 @@ export const linesOf = (q) => {
 export function shuffledOrder(q) {
   const items = (q.options?.items ?? []).map((text, i) => ({ text, i }));
   if (items.length < 2) return items;
-  let seed = [...String(q.id ?? "")].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-  const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32);
-  const out = [...items];
-  for (let k = out.length - 1; k > 0; k--) {
-    const j = Math.floor(rnd() * (k + 1));
-    [out[k], out[j]] = [out[j], out[k]];
-  }
+  const out = shuffle(items, q._seed ?? q.id);
   // لا تُطبع مرتّبة أصلًا
   if (out.every((x, k) => x.i === k)) out.push(out.shift());
   return out;
 }
+
+/** خلط ثابت: البذرة نفسها تعطي الترتيب نفسه في كل طباعة */
+function shuffle(list, seedText) {
+  let seed = [...String(seedText ?? "")].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 2 ** 32);
+  const out = [...list];
+  for (let k = out.length - 1; k > 0; k--) {
+    const j = Math.floor(rnd() * (k + 1));
+    [out[k], out[j]] = [out[j], out[k]];
+  }
+  return out;
+}
+
+/** خلط يختلف عن الأصل حتمًا (إن أمكن) — حتى لا يتطابق النموذجان صدفة */
+function shuffleDiff(list, seedText) {
+  const out = shuffle(list, seedText);
+  if (out.length > 1 && out.every((x, k) => x === list[k])) out.push(out.shift());
+  return out;
+}
+
+/**
+ * النموذج (ب): نفس الأسئلة بترتيب مختلف —
+ * تُخلط فقرات كل سؤال، وخيارات الاختيار من متعدد، وعمود المزاوجة الثاني،
+ * وعناصر «رتّب»، مع إعادة ربط الإجابات الصحيحة. النموذج (أ) هو الأصل.
+ */
+export function variantFor(questions = [], model) {
+  if (model !== "B") return questions;
+  const qs = questions.map((q) => {
+    const seed = `${q.id}:B`;
+    const a = typeof q.answer === "string" ? q.answer.replace(/^"|"$/g, "") : q.answer;
+    if (q.kind === "mcq" && Array.isArray(q.options) && q.options.length > 1) {
+      const idx = shuffleDiff(q.options.map((_, i) => i), seed);
+      return { ...q, options: idx.map((i) => q.options[i]), answer: String(idx.indexOf(Number(a))) };
+    }
+    if (q.kind === "match" && Array.isArray(q.options?.right) && q.options.right.length > 1) {
+      const idx = shuffleDiff(q.options.right.map((_, i) => i), seed);
+      const map = (a && typeof a === "object") ? a : {};
+      const next = Object.fromEntries(Object.entries(map).map(([l, r]) => [l, String(idx.indexOf(Number(r)))]));
+      return { ...q, options: { ...q.options, right: idx.map((i) => q.options.right[i]) }, answer: next };
+    }
+    if (q.kind === "order") return { ...q, _seed: seed };
+    return q;
+  });
+  // فقرات كل سؤال بترتيب آخر (المجموعات نفسها تبقى بترتيب الأنماط)
+  return PAPER_ORDER.flatMap((kind) => shuffleDiff(qs.filter((q) => q.kind === kind), `${kind}:B`));
+}
+
+export const MODEL_LABEL = { A: "أ", B: "ب" };
 
 /** نص الإجابة النموذجية لفقرة (لنموذج الإجابة) */
 export function modelAnswer(q, ltr = false) {
@@ -71,5 +113,5 @@ export function modelAnswer(q, ltr = false) {
 }
 
 /** خيارات الورقة المحفوظة مع الاختبار */
-export const PAPER_OPTS = { compact: false, marksTable: true };
+export const PAPER_OPTS = { compact: false, marksTable: true, models: false };
 export const paperOpts = (quiz) => ({ ...PAPER_OPTS, ...(quiz?.paper_opts ?? {}) });

@@ -6,7 +6,8 @@ import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import QuizPaper, { QuizPrintArea } from "../../components/QuizPaper.jsx";
 import OnlineQuizPanel from "../../components/OnlineQuizPanel.jsx";
 import PaperExam from "../../components/PaperExam.jsx";
-import { PAPER_KINDS, BLANK, BLANK_RE, LINES, groupPaper, paperOpts } from "../../lib/paperExam.js";
+import { PAPER_KINDS, BLANK, BLANK_RE, LINES, MODEL_LABEL, groupPaper, paperOpts } from "../../lib/paperExam.js";
+import { shrinkImage } from "../../lib/imageResize.js";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 
@@ -549,7 +550,41 @@ function QuizEditor({ quiz, uid, onBack }) {
 
   const patchQ = async (row, fields) => {
     setQuestions((prev) => prev.map((x) => (x.id === row.id ? { ...x, ...fields } : x)));
-    await supabase.from("quiz_questions").update(fields).eq("id", row.id);
+    const { error } = await supabase.from("quiz_questions").update(fields).eq("id", row.id);
+    return error;
+  };
+
+  // صور الأسئلة: مخزن خاص، فتُعرض بروابط مؤقتة تُجلب لما لم يُجلب بعد
+  const [images, setImages] = useState({});
+  useEffect(() => {
+    const need = [...new Set((questions ?? []).map((x) => x.image_path).filter(Boolean))]
+      .filter((path) => !images[path]);
+    if (!need.length) return;
+    supabase.storage.from("quiz-images").createSignedUrls(need, 6 * 3600).then(({ data }) => {
+      const got = (data ?? []).filter((d) => d.signedUrl && d.path).map((d) => [d.path, d.signedUrl]);
+      if (got.length) setImages((m) => ({ ...m, ...Object.fromEntries(got) }));
+    });
+  }, [questions]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const imgHint = (e) => (/bucket|not found|row-level|image_path|image_width/i.test(e?.message ?? "")
+    ? "صور الأسئلة تحتاج تنفيذ ملف supabase/quiz_models_images.sql في قاعدة البيانات مرة واحدة."
+    : e?.message);
+
+  const uploadImage = async (row, file) => {
+    if (!file) return;
+    const img = await shrinkImage(file);
+    const path = `${q.id}/${row.id}-${Date.now()}.${img.type === "image/png" ? "png" : "jpg"}`;
+    const { error } = await supabase.storage.from("quiz-images").upload(path, img, { contentType: img.type });
+    if (error) { setMsg({ ok: false, text: imgHint(error) }); return; }
+    const err = await patchQ(row, { image_path: path });
+    if (err) { setMsg({ ok: false, text: imgHint(err) }); return; }
+    if (row.image_path) supabase.storage.from("quiz-images").remove([row.image_path]);
+  };
+
+  const removeImage = async (row) => {
+    if (!row.image_path || !window.confirm("حذف صورة السؤال؟")) return;
+    await patchQ(row, { image_path: null });
+    supabase.storage.from("quiz-images").remove([row.image_path]);
   };
 
   const removeQ = async (row) => {
@@ -646,13 +681,16 @@ function QuizEditor({ quiz, uid, onBack }) {
         <div aria-hidden="true"
              style={{ position: "fixed", top: 0, left: -10000, visibility: "hidden", pointerEvents: "none" }}>
           <PaperExam quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
-                     copies={[]} onLayout={setLayout} />
+                     images={images} copies={[]} onLayout={setLayout} />
         </div>
       )}
       {paperPrint && (
         <QuizPrintArea>
-          <PaperExam quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
-                     copies={paperPrint.copies} answerKey={paperPrint.answerKey} />
+          {/* نسخة لكل ورقة، ولكل نسخة نموذجها (أ أو ب) */}
+          {paperPrint.copies.map((c, i) => (
+            <PaperExam key={i} quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
+                       images={images} copies={[c]} model={c.model ?? null} answerKey={paperPrint.answerKey} />
+          ))}
         </QuizPrintArea>
       )}
 
@@ -745,6 +783,7 @@ function QuizEditor({ quiz, uid, onBack }) {
                   {g.list.map((row, qi) => (
                     <QuestionCard key={row.id} row={row} index={qi + 1} lang={q.lang ?? "ar"} paper
                                   matchMax={PAPER_MATCH_MAX}
+                                  image={{ url: images[row.image_path], onUpload: uploadImage, onRemove: removeImage }}
                                   onPatch={patchQ} onRemove={removeQ} />
                   ))}
                 </div>
@@ -801,7 +840,7 @@ function QuizEditor({ quiz, uid, onBack }) {
       </div>
 
       {paper && tab === "paper" && (
-        <PaperTab quiz={q} questions={questions ?? []} linked={linked} layout={layout}
+        <PaperTab quiz={q} questions={questions ?? []} linked={linked} layout={layout} images={images}
                   teacherName={profile?.full_name ?? ""}
                   onOpts={async (paper_opts) => {
                     setQ((x) => ({ ...x, paper_opts }));
@@ -851,7 +890,7 @@ function QuizEditor({ quiz, uid, onBack }) {
 }
 
 /* --------------------------- بطاقة السؤال --------------------------- */
-function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false, matchMax = MATCH_MAX_ITEMS }) {
+function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false, matchMax = MATCH_MAX_ITEMS, image = null }) {
   const ltr = lang === "en";
   const [local, setLocal] = useState(row);
 
@@ -922,6 +961,8 @@ function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = fals
       {(row.kind === "short" || row.kind === "essay") && (
         <WrittenEditor local={local} setLocal={setLocal} save={save} ltr={ltr} kind={row.kind} />
       )}
+
+      {image && <QuestionImage row={row} image={image} save={save} />}
     </section>
   );
 }
@@ -1160,9 +1201,10 @@ function PagesNote({ layout, onOpen }) {
   );
 }
 
-function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrint }) {
+function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrint, images = {} }) {
   const opts = paperOpts(quiz);
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState("A");   // معاينة النموذج (أ) أو (ب)
 
   // الطباعة: تُرسم النسخ ثم تُفتح نافذة الطباعة، وتُزال بعدها
   const print = async (mode, classIds = []) => {
@@ -1179,16 +1221,28 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
         (data ?? []).filter((r) => r.class_id === cid && r.students)
           .map((r) => r.students)
           .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"))
-          .map((st) => ({ student: st, className: label(cid) })));
+          // النموذجان بالتناوب: المتجاوران في الترتيب لا يأخذان النموذج نفسه
+          .map((st, i) => ({ student: st, className: label(cid), ...(opts.models ? { model: i % 2 ? "B" : "A" } : {}) })));
       if (!copies.length) { setBusy(false); window.alert("لا طلاب في الفصل المختار."); return; }
     } else if (mode === "blankClass") {
       const c = linked.find((l) => l.class_id === classIds[0])?.classes;
       copies = [{ className: c ? `${GRADE_NAMES[c.grade] ?? ""} — ${c.class_no}` : "" }];
     }
+    // بلا أسماء أو نموذج الإجابة: نسخة من كل نموذج
+    if (opts.models && (mode === "blank" || mode === "key")) copies = [{ model: "A" }, { model: "B" }];
     onPrint({ copies, answerKey: mode === "key" });
     const done = () => { onPrint(null); window.removeEventListener("afterprint", done); };
     window.addEventListener("afterprint", done);
-    setTimeout(() => { setBusy(false); window.print(); }, 500);
+    // تُنتظر صور الأسئلة حتى تكتمل قبل فتح نافذة الطباعة
+    setTimeout(async () => {
+      const until = Date.now() + 6000;
+      while (Date.now() < until &&
+             [...document.querySelectorAll("#quiz-print img")].some((im) => !im.complete)) {
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      setBusy(false);
+      window.print();
+    }, 500);
   };
 
   const toggle = (k) => onOpts({ ...(quiz.paper_opts ?? {}), [k]: !opts[k] });
@@ -1200,7 +1254,16 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
       {/* المعاينة */}
       <section className="card min-w-0 overflow-hidden p-3">
         <div className="mb-2 flex items-center justify-between gap-2 px-1">
-          <p className="text-sm font-semibold text-ink">معاينة الورقة</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-ink">معاينة الورقة</p>
+            {opts.models && ["A", "B"].map((m) => (
+              <button key={m} onClick={() => setView(m)}
+                      className={`rounded-pill px-2.5 py-0.5 text-xs font-semibold ${
+                        view === m ? "bg-mint-deep text-white" : "border border-line text-muted hover:bg-canvas"}`}>
+                النموذج ({MODEL_LABEL[m]})
+              </button>
+            ))}
+          </div>
           {layout && (
             <span className={`chip ${pages === 1 ? "bg-present/10 text-present" : "bg-warning/10 text-warning"}`}>
               <span className="num">{pages}</span>&nbsp;{pages === 1 ? "صفحة" : "صفحات"}
@@ -1209,7 +1272,8 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
         </div>
         <div className="max-h-[75vh] overflow-auto rounded-sm2 bg-canvas p-3">
           {questions.length
-            ? <PaperExam quiz={quiz} questions={questions} teacherName={teacherName} scale={0.62} />
+            ? <PaperExam quiz={quiz} questions={questions} teacherName={teacherName} scale={0.62}
+                         images={images} model={opts.models ? view : null} />
             : <p className="py-10 text-center text-sm text-muted">أضف أسئلة لتظهر الورقة.</p>}
         </div>
       </section>
@@ -1222,6 +1286,7 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
           {[
             ["compact", "تنسيق مضغوط", "خط ومسافات أصغر قليلًا — يفيد حين يتعدّى الاختبار الصفحة بقليل"],
             ["marksTable", "جدول الدرجات", "خانة لدرجة كل سؤال، والمجموع"],
+            ["models", "نموذجان (أ) و(ب)", "الأسئلة نفسها بترتيب مختلف للفقرات والخيارات — يُوزَّعان بالتناوب على أسماء الطلاب فلا يتجاور نموذجان متطابقان"],
           ].map(([k, t, d]) => (
             <label key={k} className="flex cursor-pointer items-start gap-3">
               <input type="checkbox" className="mt-1" checked={!!opts[k]} onChange={() => toggle(k)} />
@@ -1240,7 +1305,8 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
           </p>
 
           <PrintBtn busy={busy} onClick={() => print("blank")}
-                    title="نموذج واحد بلا أسماء" sub={`${sheets(1)} — تصوّره بالعدد الذي تريد`} />
+                    title={opts.models ? "النموذجان (أ) و(ب) بلا أسماء" : "نموذج واحد بلا أسماء"}
+                    sub={`${sheets(opts.models ? 2 : 1)} — تصوّره بالعدد الذي تريد`} />
 
           {linked.length > 0 && (
             <>
@@ -1248,7 +1314,7 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
               {linked.map((l) => (
                 <PrintBtn key={l.class_id} busy={busy} onClick={() => print("class", [l.class_id])}
                           title={`${GRADE_NAMES[l.classes?.grade] ?? ""} — فصل ${l.classes?.class_no}`}
-                          sub="نسخة لكل طالب، مرتّبة أبجديًا" />
+                          sub={opts.models ? "نسخة لكل طالب أبجديًا، والنموذجان بالتناوب" : "نسخة لكل طالب، مرتّبة أبجديًا"} />
               ))}
               {linked.length > 1 && (
                 <PrintBtn busy={busy} onClick={() => print("class", linked.map((l) => l.class_id))}
@@ -1264,7 +1330,8 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
 
           <div className="border-t border-line pt-2.5">
             <PrintBtn busy={busy} onClick={() => print("key")} tone="key"
-                      title="نموذج الإجابة" sub="للمعلم — الإجابات الصحيحة باللون الأخضر" />
+                      title={opts.models ? "نموذجا الإجابة (أ) و(ب)" : "نموذج الإجابة"}
+                      sub="للمعلم — الإجابات الصحيحة باللون الأخضر" />
           </div>
         </section>
       </div>
@@ -1287,5 +1354,49 @@ function PrintBtn({ title, sub, onClick, busy, tone }) {
         <path d="M6 14h12v7H6z" />
       </svg>
     </button>
+  );
+}
+
+/** صورة السؤال: رفع، وعرضها في الورقة (٪ من عرض الصفحة)، وحذف */
+function QuestionImage({ row, image, save }) {
+  const [busy, setBusy] = useState(false);
+  const width = Number(row.image_width) || 60;
+  const pick = (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setBusy(true);
+    image.onUpload(row, f).finally(() => setBusy(false));
+  };
+  const input = <input type="file" accept="image/*" className="hidden" onChange={pick} />;
+
+  if (!row.image_path) {
+    return (
+      <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-pill border border-dashed border-line px-3 py-1 text-xs text-muted hover:border-mint-deep hover:text-mint-deep ${busy ? "opacity-50" : ""}`}>
+        {input}
+        {busy ? "جارٍ رفع الصورة…" : "+ صورة للسؤال (شكل، رسم، خريطة…)"}
+      </label>
+    );
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-sm2 border border-line bg-canvas p-2">
+      <div className="grid h-20 w-28 shrink-0 place-items-center overflow-hidden rounded-[6px] bg-white">
+        {image.url ? <img src={image.url} alt="" className="max-h-full max-w-full object-contain" />
+                   : <span className="text-[11px] text-faint">…</span>}
+      </div>
+      <div className="min-w-[160px] flex-1 space-y-1">
+        <label className="flex items-center justify-between text-[11px] text-muted">
+          <span>عرضها في الورقة</span><span className="num">{width}٪</span>
+        </label>
+        <input type="range" min="20" max="100" step="10" value={width} className="w-full accent-[#3E6350]"
+               onChange={(e) => save({ image_width: Number(e.target.value) })} />
+      </div>
+      <div className="flex shrink-0 flex-col gap-1">
+        <label className="cursor-pointer text-xs font-medium text-mint-deep hover:underline">
+          {input}{busy ? "…" : "تغيير"}
+        </label>
+        <button onClick={() => image.onRemove(row)} className="text-xs font-medium text-absent hover:underline">حذف</button>
+      </div>
+    </div>
   );
 }
