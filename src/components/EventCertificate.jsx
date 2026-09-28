@@ -9,7 +9,7 @@ import BidiDate from "./BidiDate.jsx";
    شهادة الحدث — ورقة A4 أفقية، شهادة لكل طالب.
    • قالب «اليوم الوطني» بهوية «عزّنا بطبعنا»: الأخضر الداكن وإطار المربعات.
    • بقية القوالب بتصميم رسمي موحّد بألوان البوابة.
-   • نص الشهادة قابل للتعديل لكل حدث، بمتغيرات تُستبدل عند الطباعة.
+   • نص الشهادة بالصيغة الرسمية المعتمدة، بمتغيرات تُستبدل عند الطباعة.
    • التوقيع لمنظّم الحدث (منفّذ البرنامج).
    ===================================================================== */
 
@@ -25,15 +25,6 @@ export const isNationalDay = (e) =>
 
 /** رقم ذكرى اليوم الوطني من سنة الحدث: 2026 ← 96 */
 export const nationalDayNo = (iso) => (Number(String(iso ?? "").slice(0, 4)) || new Date().getFullYear()) - 1930;
-
-export const CERT_VARS = [
-  { k: "الطالب", d: "اسم الطالب" },
-  { k: "الصف", d: "الصف والفصل" },
-  { k: "الحدث", d: "عنوان الحدث" },
-  { k: "المكان", d: "مكان التنفيذ" },
-  { k: "التاريخ", d: "تاريخ الحدث هجريًا وميلاديًا" },
-  { k: "الذكرى", d: "رقم ذكرى اليوم الوطني" },
-];
 
 /* الصيغة: ما قبل {الطالب} سطر تمهيدي، والاسم سطر بارز، وما بعده نص الشهادة،
    وكل سطر جديد بعده سطر ختامي — على نسق قالب الشهادات المعتمد في المدرسة. */
@@ -136,7 +127,7 @@ export default function EventCertificate({ event, participant, sigUrl, stampUrl,
     "الذكرى": String(nationalDayNo(event?.event_date)),
   };
   const { intro, hasName, body, closing } =
-    splitText(event?.cert_text?.trim() ? event.cert_text : defaultCertText(event));
+    splitText(defaultCertText(event));   // الصيغة الرسمية دائمًا — يُتجاهل أي نص محفوظ قديم
   const title = event?.cert_title?.trim() || DEFAULT_CERT_TITLE;
 
   return (

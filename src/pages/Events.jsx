@@ -7,7 +7,7 @@ import PrintPortal from "../components/PrintPortal.jsx";
 import EventReportSheet from "../components/EventReportSheet.jsx";
 import { normalizeImage } from "../lib/imageResize.js";
 import EventCertificate, {
-  CERT_TEMPLATES, CERT_VARS, DEFAULT_CERT_TITLE, defaultCertText, isNationalDay,
+  CERT_TEMPLATES, DEFAULT_CERT_TITLE, defaultCertText, isNationalDay,
 } from "../components/EventCertificate.jsx";
 
 /* =====================================================================
@@ -1146,12 +1146,10 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
   const [f, setF] = useState({
     cert_title: e.cert_title ?? "",
     cert_template: e.cert_template ?? (isNationalDay(e) ? "national" : "classic"),
-    cert_text: e.cert_text?.trim() ? e.cert_text : defaultCertText(e),
   });
   const [saveErr, setSaveErr] = useState(false);
   const { sigUrl, school } = useEventSignatures(e.organizer_id);
   const [printing, setPrinting] = useState(null);   // الشهادات المُعدّة للطباعة
-  const textRef = useRef(null);
 
   const attended = useMemo(() => (parts ?? []).filter((p) => p.attended === true), [parts]);
   const serialOf = (p) => `${e.serial}-${String(attended.indexOf(p) + 1).padStart(3, "0")}`;
@@ -1163,16 +1161,6 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
     const ok = await patch(f, "حُفظت إعدادات الشهادة.");
     setSaveErr(!ok);
     return ok;
-  };
-
-  const insertVar = (k) => {
-    const el = textRef.current;
-    const tag = `{${k}}`;
-    setF((v) => {
-      const at = el ? el.selectionStart : v.cert_text.length;
-      return { ...v, cert_text: v.cert_text.slice(0, at) + tag + v.cert_text.slice(at) };
-    });
-    el?.focus();
   };
 
   const printList = async (list) => {
@@ -1212,28 +1200,14 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
           </div>
         </div>
 
+        {/* النص بالصيغة الرسمية المعتمدة — لا يُعدَّل */}
         <div>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <label className="text-xs text-muted">نص الشهادة</label>
-            <button type="button" className="text-[11px] text-mint-deep hover:underline"
-                    onClick={() => setF((v) => ({ ...v, cert_text: defaultCertText(e) }))}>
-              استعادة الصيغة المقترحة
-            </button>
-          </div>
-          <textarea ref={textRef} rows={6} className="field mt-1 w-full leading-relaxed" value={f.cert_text}
-                    onChange={(x) => setF((v) => ({ ...v, cert_text: x.target.value }))} />
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] text-faint">إدراج:</span>
-            {CERT_VARS.map((v) => (
-              <button key={v.k} type="button" title={v.d} onClick={() => insertVar(v.k)}
-                      className="rounded-pill border border-line bg-white px-2.5 py-0.5 text-[11px] text-muted hover:bg-canvas">
-                {`{${v.k}}`}
-              </button>
-            ))}
+          <label className="text-xs text-muted">نص الشهادة (الصيغة الرسمية)</label>
+          <div className="mt-1 whitespace-pre-line rounded-sm2 border border-line bg-canvas px-3 py-2.5 text-sm leading-relaxed text-ink">
+            {defaultCertText(e)}
           </div>
           <p className="mt-1 text-[11px] text-faint">
-            الكلمات بين القوسين تُستبدل عند الطباعة ببيانات كل طالب والحدث. ما قبل {"{الطالب}"} سطر تمهيدي
-            والاسم يُكتب بارزًا في سطر مستقل، والسطر الأول بعده نص الشهادة، وكل سطر جديد بعده سطر ختامي.
+            تُستبدل الكلمات بين القوسين عند الطباعة ببيانات كل طالب والحدث.
           </p>
         </div>
 
