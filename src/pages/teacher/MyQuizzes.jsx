@@ -1127,8 +1127,7 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
           <p className="text-sm font-semibold text-ink">تنسيق الورقة</p>
           {[
             ["compact", "تنسيق مضغوط", "خط ومسافات أصغر قليلًا — يفيد حين يتعدّى الاختبار الصفحة بقليل"],
-            ["marksTable", "جدول الدرجات", "خانة لدرجة كل سؤال والمجموع والمصحّح والمراجع"],
-            ["seat", "خانة رقم الجلوس", "بجانب اسم الطالب وصفه"],
+            ["marksTable", "جدول الدرجات", "خانة لدرجة كل سؤال، والمجموع"],
           ].map(([k, t, d]) => (
             <label key={k} className="flex cursor-pointer items-start gap-3">
               <input type="checkbox" className="mt-1" checked={!!opts[k]} onChange={() => toggle(k)} />

@@ -2,7 +2,7 @@
 -- الاختبار الورقي: نوع ثالث من الاختبارات، يُطبع بلا بطاقة تظليل
 -- ويُصحَّح يدويًا.
 --
---   • quizzes.paper_opts: خيارات الورقة (مضغوط، جدول الدرجات، رقم الجلوس).
+--   • quizzes.paper_opts: خيارات الورقة (مضغوط، جدول الدرجات).
 --   • quizzes.mode: 'omr' (الاختبار القصير ببطاقة التظليل والإلكتروني — كما كان)
 --                   أو 'paper' (الاختبار الورقي).
 --   • أنماط أسئلة جديدة للورقي: أكمل الفراغ، رتّب، أجب باختصار، سؤال مقالي.
@@ -15,7 +15,7 @@
 alter table public.quizzes
   add column if not exists mode text not null default 'omr';
 
--- خيارات الورقة: التنسيق المضغوط، وجدول الدرجات، وخانة رقم الجلوس
+-- خيارات الورقة: التنسيق المضغوط، وجدول الدرجات
 alter table public.quizzes
   add column if not exists paper_opts jsonb not null default '{}'::jsonb;
 

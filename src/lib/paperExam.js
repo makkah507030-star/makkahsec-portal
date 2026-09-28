@@ -70,5 +70,5 @@ export function modelAnswer(q, ltr = false) {
 }
 
 /** خيارات الورقة المحفوظة مع الاختبار */
-export const PAPER_OPTS = { compact: false, marksTable: true, seat: true };
+export const PAPER_OPTS = { compact: false, marksTable: true };
 export const paperOpts = (quiz) => ({ ...PAPER_OPTS, ...(quiz?.paper_opts ?? {}) });

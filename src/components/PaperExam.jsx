@@ -8,7 +8,7 @@ import { BLANK_RE, groupPaper, linesOf, paperOpts, shuffledOrder } from "../lib/
    ورقة الاختبار الورقي — صفحات A4 تتوزّع عليها الأسئلة تلقائيًا.
    • تُقاس كل فقرة في نسخة غير مرئية، ثم تُرصّ في الصفحات دون أن تنقسم
      فقرة بين صفحتين، ولا يبقى عنوان سؤال وحيدًا أسفل صفحة.
-   • الصفحة الأولى بترويستها وخانات الطالب وجدول الدرجات، وما بعدها
+   • الصفحة الأولى بترويستها واسم الطالب وصفه وجدول الدرجات، وما بعدها
      بترويسة مختصرة. في التذييل رقم الصفحة و«يتبع» أو «انتهت الأسئلة».
    • نسخة لكل طالب بأسمائهم، أو نموذج واحد بلا أسماء، أو نموذج الإجابة.
    ===================================================================== */
@@ -21,7 +21,7 @@ const PAGE_H = 297, PAD_Y = 10, PAD_X = 11;   // بالمليمتر
 const AR = {
   gov: ["المملكة العربية السعودية", "وزارة التعليم", "الإدارة العامة للتعليم بمنطقة مكة المكرمة"],
   school: "مدرسة مكة الثانوية",
-  name: "اسم الطالب", cls: "الصف", seat: "رقم الجلوس", subject: "المادة",
+  name: "اسم الطالب", cls: "الصف", subject: "المادة",
   date: "التاريخ", duration: "الزمن", minutes: "دقيقة", total: "الدرجة الكلية",
   question: "السؤال", ordinals: ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن"],
   kinds: {
@@ -35,8 +35,7 @@ const AR = {
   },
   ltrs: ["أ", "ب", "ج", "د", "هـ"],
   colA: "العمود الأول", colB: "العمود الثاني", answer: "الإجابة",
-  marksTable: "جدول الدرجات", obtained: "الدرجة المستحقة", inWords: "كتابةً",
-  grader: "المصحّح", reviewer: "المراجع", sum: "المجموع",
+  marksTable: "جدول الدرجات", obtained: "الدرجة المستحقة", sum: "المجموع",
   page: (a, b) => `الصفحة ${a} من ${b}`, cont: "يتبع في الصفحة التالية ←", end: "انتهت الأسئلة",
   good: "مع تمنياتي لكم بالتوفيق والنجاح", teacher: "معلم المادة",
   key: "نموذج الإجابة", tf: ["✓", "✗"], contHead: "تابع",
@@ -45,7 +44,7 @@ const AR = {
 const EN = {
   gov: ["Kingdom of Saudi Arabia", "Ministry of Education", "Makkah Education Directorate"],
   school: "Makkah Secondary School",
-  name: "Student name", cls: "Class", seat: "Seat No.", subject: "Subject",
+  name: "Student name", cls: "Class", subject: "Subject",
   date: "Date", duration: "Time", minutes: "min", total: "Total marks",
   question: "Question", ordinals: ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"],
   kinds: {
@@ -59,8 +58,7 @@ const EN = {
   },
   ltrs: ["A", "B", "C", "D", "E"],
   colA: "Column A", colB: "Column B", answer: "Answer",
-  marksTable: "Marks", obtained: "Obtained", inWords: "In words",
-  grader: "Marked by", reviewer: "Checked by", sum: "Total",
+  marksTable: "Marks", obtained: "Obtained", sum: "Total",
   page: (a, b) => `Page ${a} of ${b}`, cont: "Continued on next page →", end: "End of questions",
   good: "Good luck", teacher: "Subject teacher",
   key: "Answer key", tf: ["✓", "✗"], contHead: "Continued",
@@ -207,11 +205,9 @@ function FirstHead({ quiz, t, opts, answerKey, groups, copy }) {
       </div>
 
       {/* خانات الطالب */}
-      <div className="mt-1.5 grid gap-1.5 text-[11.5px]"
-           style={{ gridTemplateColumns: opts.seat ? "2.3fr 1.2fr 1fr" : "2.3fr 1.2fr" }}>
+      <div className="mt-1.5 grid gap-1.5 text-[11.5px]" style={{ gridTemplateColumns: "2.3fr 1.2fr" }}>
         <Cell label={t.name} value={name} />
         <Cell label={t.cls} value={cls} />
-        {opts.seat && <Cell label={t.seat} />}
       </div>
 
       {opts.marksTable && !answerKey && <MarksTable t={t} groups={groups} total={quiz?.total_marks} />}
@@ -233,7 +229,7 @@ const Cell = ({ label, value }) => (
   </div>
 );
 
-/** جدول الدرجات: خانة لكل سؤال، والمجموع، والمصحّح والمراجع */
+/** جدول الدرجات: خانة لكل سؤال، والمجموع */
 function MarksTable({ t, groups, total }) {
   const cell = "border px-1 py-[2px] text-center";
   const bc = { borderColor: "#000" };
@@ -243,10 +239,7 @@ function MarksTable({ t, groups, total }) {
         <tr style={{ background: "#EFEFEF", ...INK }}>
           <th className={cell} style={{ ...bc, width: "22mm" }}>{t.question}</th>
           {groups.map((g, i) => <th key={g.kind} className={cell} style={bc}>{t.ordinals[i] ?? i + 1}</th>)}
-          <th className={cell} style={{ ...bc, width: "16mm" }}>{t.sum}</th>
-          <th className={cell} style={{ ...bc, width: "24mm" }}>{t.inWords}</th>
-          <th className={cell} style={{ ...bc, width: "20mm" }}>{t.grader}</th>
-          <th className={cell} style={{ ...bc, width: "20mm" }}>{t.reviewer}</th>
+          <th className={cell} style={{ ...bc, width: "22mm" }}>{t.sum}</th>
         </tr>
         <tr>
           <th className={cell} style={bc}>{t.obtained}</th>
@@ -261,7 +254,6 @@ function MarksTable({ t, groups, total }) {
           <td className={cell} style={{ ...bc, verticalAlign: "bottom" }}>
             <span className="text-[9px]" style={{ color: "#666" }}>/{total}</span>
           </td>
-          <td className={cell} style={bc} /><td className={cell} style={bc} /><td className={cell} style={bc} />
         </tr>
       </tbody>
     </table>
