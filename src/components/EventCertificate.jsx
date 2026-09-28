@@ -3,6 +3,7 @@ import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
 import slogan from "../assets/national-day-slogan.webp";
 import { fmtGreg, fmtHijri } from "../lib/dates";
+import BidiDate from "./BidiDate.jsx";
 
 /* =====================================================================
    شهادة الحدث — ورقة A4 أفقية، شهادة لكل طالب.
@@ -58,7 +59,7 @@ function fillParts(text, vals) {
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
 const THEMES = {
-  national: { ink: "#0B3B2E", accent: "#127A4A", soft: "#E9F5EE", frame: "#0B3B2E" },
+  national: { ink: "#08191D", accent: "#0E8C4E", soft: "#E9F5EE", frame: "#0F363C" },
   classic:  { ink: "#23372C", accent: "#3E6350", soft: "#EDFAF2", frame: "#3E6350" },
   gold:     { ink: "#3B2F12", accent: "#A8842C", soft: "#FBF5E6", frame: "#A8842C" },
   medal:    { ink: "#1E2E48", accent: "#2E5597", soft: "#EEF3FB", frame: "#2E5597" },
@@ -68,20 +69,19 @@ const THEMES = {
 
 /* شريط مربعات بأسلوب هوية اليوم الوطني — ألوان ثابتة الترتيب ليبقى متطابقًا في كل طباعة */
 function PixelStrip({ cols = 4, rows = 44, size = 4.8 }) {
-  const shades = ["#0B3B2E", "#127A4A", "#1F9B5E", "#0E5A3A", "#3DBB76", "#0B3B2E"];
+  const DARK = "#08191D", TEAL = "#0F363C", GREEN = "#0E8C4E";
   const cells = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const v = (r * 7 + c * 13 + ((r * c) % 5)) % shades.length;
-      if ((r + c) % 2 === 0 || v % 3 === 0) {
-        cells.push(<rect key={`${r}-${c}`} x={c * size} y={r * size} width={size} height={size} fill={shades[v]} />);
-      }
+      if ((r + c) % 2 === 1) continue;                 // رقعة شطرنج كالشعار
+      const fill = c % 2 === 0 && r % 4 < 2 ? GREEN : (r + c * 3) % 5 === 0 ? GREEN : TEAL;
+      cells.push(<rect key={`${r}-${c}`} x={c * size} y={r * size} width={size} height={size} fill={fill} />);
     }
   }
   return (
-    <svg viewBox={`0 0 ${cols * size} ${rows * size}`} preserveAspectRatio="none"
+    <svg viewBox={`0 0 ${cols * size} ${rows * size}`} preserveAspectRatio="xMidYMid slice"
          style={{ width: "100%", height: "100%", display: "block", ...INK }}>
-      <rect width="100%" height="100%" fill="#0B3B2E" />
+      <rect width="100%" height="100%" fill={DARK} />
       {cells}
     </svg>
   );
@@ -98,7 +98,12 @@ export default function EventCertificate({ event, participant, sigUrl, serial })
     "الصف": participant?.class_label ?? "",
     "الحدث": event?.title ?? "",
     "المكان": event?.venue ?? "",
-    "التاريخ": date ? `${fmtHijri(date)} الموافق ${fmtGreg(date)}م` : "",
+    "التاريخ": date ? (
+      <>
+        <BidiDate value={fmtHijri(date, false)} suffix="هـ" /> الموافق{" "}
+        <BidiDate value={fmtGreg(date)} suffix="م" />
+      </>
+    ) : "",
     "الذكرى": String(nationalDayNo(event?.event_date)),
   };
   const text = event?.cert_text?.trim() ? event.cert_text : defaultCertText(event);
@@ -132,7 +137,12 @@ export default function EventCertificate({ event, participant, sigUrl, serial })
             <div style={{ fontWeight: 700, color: th.accent }}>مدرسة مكة الثانوية</div>
           </div>
           {national && (
-            <img src={slogan} alt="عزّنا بطبعنا" style={{ height: "21mm", width: "auto", borderRadius: "1mm" }} />
+            <div className="text-center">
+              <img src={slogan} alt="عزّنا بطبعنا" style={{ height: "24mm", width: "auto", display: "block" }} />
+              <div style={{ fontSize: "14pt", fontWeight: 700, color: th.accent, marginTop: "1.5mm", lineHeight: 1.2 }}>
+                اليوم الوطني السعودي <span className="num">{vals["الذكرى"]}</span>
+              </div>
+            </div>
           )}
           <div className="flex items-center" style={{ gap: "5mm" }}>
             <img src={moeLogo} alt="" style={{ height: "15mm", width: "auto" }} />
@@ -141,19 +151,14 @@ export default function EventCertificate({ event, participant, sigUrl, serial })
         </div>
 
         {/* العنوان */}
-        <div className="text-center" style={{ marginTop: national ? "7mm" : "9mm" }}>
+        <div className="text-center" style={{ marginTop: national ? "5mm" : "9mm" }}>
           <div style={{ fontSize: "32pt", fontWeight: 700, color: th.accent, lineHeight: 1.3 }}>{title}</div>
-          {national && (
-            <div style={{ fontSize: "12.5pt", fontWeight: 600, marginTop: "1mm" }}>
-              اليوم الوطني السعودي <span className="num">{vals["الذكرى"]}</span>
-            </div>
-          )}
           <div className="mx-auto" style={{ marginTop: "3mm", width: "60mm", height: "0.8mm", background: th.accent, borderRadius: "1mm" }} />
         </div>
 
         {/* النص */}
         <div className="flex flex-1 items-center justify-center">
-          <p className="text-center" style={{ fontSize: "15.5pt", lineHeight: 2.05, maxWidth: "215mm", fontWeight: 500 }}>
+          <p className="text-center" style={{ fontSize: "17pt", lineHeight: 2.1, maxWidth: "228mm", fontWeight: 500 }}>
             {fillParts(text, vals)}
           </p>
         </div>
@@ -162,7 +167,7 @@ export default function EventCertificate({ event, participant, sigUrl, serial })
         <div className="flex items-end justify-between" style={{ fontSize: "10.5pt" }}>
           <div style={{ lineHeight: 1.8 }}>
             {serial && <div>رقم الشهادة: <span className="num">{serial}</span></div>}
-            <div>تاريخ الإصدار: <span className="num">{fmtHijri(new Date())}</span></div>
+            <div>تاريخ الإصدار: <BidiDate value={fmtHijri(new Date(), false)} suffix="هـ" /></div>
           </div>
           <div className="text-center" style={{ minWidth: "70mm" }}>
             <div style={{ fontWeight: 600 }}>{event?.organizer_role || "منفّذ البرنامج"}</div>
