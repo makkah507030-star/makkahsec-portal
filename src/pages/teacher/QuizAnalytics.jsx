@@ -7,11 +7,14 @@ import Loader from "../../components/Loader.jsx";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import BidiDate from "../../components/BidiDate.jsx";
+import { fmtHijri } from "../../lib/dates";
 
 /* =====================================================================
    تحليل النتائج — للمعلم وحده، لاختباراته المنفّذة عبر البوابة فقط
    (الورقي، والورقي بتصحيح آلي، والإلكتروني) في المواد المسندة إليه.
-   • مؤشرات: الاختبارات، والطلاب، ومتوسط النسبة، ونسبة النجاح، والغياب.
+   • مؤشرات: الاختبارات، والطلاب، ومتوسط الأداء، ونسبة التفوق (90٪ فأكثر)، والغياب.
+     لا نجاح ولا رسوب في اختبارات الفترات، فالمؤشر هو التفوق.
    • رسوم: متوسط كل اختبار، وتوزيع الدرجات، ومقارنة الفصول.
    • تحليل الفقرات لاختبار واحد مصحَّح آليًا: نسبة الإجابة الصحيحة لكل فقرة.
    • المتفوقون ومن يحتاجون دعمًا، وتقرير مطبوع.
@@ -20,18 +23,21 @@ import moeLogo from "../../assets/moe-logo.png";
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 const BAR = "#3E6350";        // لون البيانات: أخضر الهوية
 const BAR_SOFT = "#89D7AD";
-const FAIL = "#A23B3B";       // حالة «دون النجاح» — تصحبها دائمًا كلمة
-const PASS_PCT = 50;
+const HARD = "#A23B3B";       // فقرة صعبة (أجاب عنها أقل من نصف الطلاب) — تصحبها دائمًا كلمة وعلامة
+const HARD_PCT = 50;
+const EXCEL_PCT = 90;         // التفوق: 90٪ فأكثر
+const SUPPORT_PCT = 60;       // يحتاج دعمًا: متوسطه أقل من 60٪
+// فئات التوزيع بتدرّج لونٍ واحد من الفاتح إلى الداكن (الأعلى أدكن)
 
 const MODE_LABEL = { paper: "ورقي", omr: "ورقي (تصحيح آلي)", online: "إلكتروني" };
 const PERIOD_LABEL = { period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي" };
 const BANDS = [
-  { k: "f", t: "أقل من 50", min: 0, max: 50, fail: true },
-  { k: "d", t: "50 – 59", min: 50, max: 60 },
-  { k: "c", t: "60 – 69", min: 60, max: 70 },
-  { k: "b", t: "70 – 79", min: 70, max: 80 },
-  { k: "a", t: "80 – 89", min: 80, max: 90 },
-  { k: "x", t: "90 – 100", min: 90, max: 101 },
+  { k: "f", t: "أقل من 50", min: 0, max: 50, c: "#CCF2DB" },
+  { k: "d", t: "50 – 59", min: 50, max: 60, c: "#A9E4C4" },
+  { k: "c", t: "60 – 69", min: 60, max: 70, c: "#89D7AD" },
+  { k: "b", t: "70 – 79", min: 70, max: 80, c: "#6AA786" },
+  { k: "a", t: "80 – 89", min: 80, max: 90, c: "#4E7D66" },
+  { k: "x", t: "90 – 100", min: 90, max: 101, c: "#3E6350", excel: true },
 ];
 
 const pct = (score, total) => (Number(total) > 0 ? (Number(score) / Number(total)) * 100 : 0);
@@ -62,6 +68,31 @@ export default function QuizAnalytics() {
   const [err, setErr] = useState(null);
   const [f, setF] = useState({ period: "", subject: "", classId: "", quizId: "" });
   const [printing, setPrinting] = useState(false);
+
+  // توقيع المعلم (من «توقيعي») لذيل التقرير المطبوع
+  const [sigUrl, setSigUrl] = useState(null);
+  useEffect(() => {
+    if (!uid) return;
+    (async () => {
+      const { data: sig } = await supabase.from("user_signatures").select("path").eq("user_id", uid).maybeSingle();
+      if (!sig?.path) return;
+      const { data: u } = await supabase.storage.from("form-assets").createSignedUrl(sig.path, 3600);
+      setSigUrl(u?.signedUrl ?? null);
+    })();
+  }, [uid]);
+
+  // الطباعة بعد اكتمال الصور (الشعارات والتوقيع)
+  const printReport = () => {
+    setPrinting(true);
+    setTimeout(async () => {
+      const until = Date.now() + 5000;
+      while (Date.now() < until && [...document.querySelectorAll("#qa-report img")].some((im) => !im.complete)) {
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      window.print();
+      setPrinting(false);
+    }, 300);
+  };
 
   useEffect(() => {
     if (!uid) return;
@@ -130,7 +161,7 @@ export default function QuizAnalytics() {
     quizzes: new Set(rows.map((r) => r.quiz_id)).size,
     students: new Set(graded.map((r) => r.student_id)).size,
     avg: r1(avg(graded.map((r) => r.pct))),
-    pass: graded.length ? Math.round((graded.filter((r) => r.pct >= PASS_PCT).length / graded.length) * 100) : 0,
+    excel: graded.length ? Math.round((graded.filter((r) => r.pct >= EXCEL_PCT).length / graded.length) * 100) : 0,
     absent: rows.filter((r) => r.absent).length,
     sheets: graded.length,
   };
@@ -149,7 +180,7 @@ export default function QuizAnalytics() {
   const perClass = classIds.filter((id) => !f.classId || id === f.classId).map((id) => {
     const g = graded.filter((r) => r.class_id === id);
     return { id, label: classLabel(data.classes[id]), value: g.length ? r1(avg(g.map((r) => r.pct))) : null, n: g.length,
-             pass: g.length ? Math.round((g.filter((r) => r.pct >= PASS_PCT).length / g.length) * 100) : 0 };
+             excel: g.length ? Math.round((g.filter((r) => r.pct >= EXCEL_PCT).length / g.length) * 100) : 0 };
   }).filter((x) => x.value != null);
 
   // الطلاب: متوسط كل طالب عبر اختبارات النطاق
@@ -161,8 +192,10 @@ export default function QuizAnalytics() {
     });
     return [...m.values()].map((x) => ({ ...x, avg: r1(avg(x.list)) })).sort((a, b) => b.avg - a.avg);
   }, [graded, data]);
-  const top = perStudent.slice(0, 5);
-  const support = perStudent.filter((s) => s.avg < 60).slice(-8).reverse();
+  // المتفوقون: متوسطهم 90٪ فأكثر — وإن لم يوجد فأعلى خمسة
+  const excellent = perStudent.filter((s) => s.avg >= EXCEL_PCT);
+  const top = (excellent.length ? excellent : perStudent.slice(0, 5)).slice(0, 15);
+  const support = perStudent.filter((s) => s.avg < SUPPORT_PCT).slice(-8).reverse();
 
   // تحليل الفقرات: اختبار واحد مصحَّح آليًا
   const one = f.quizId ? qById[f.quizId] : null;
@@ -195,7 +228,7 @@ export default function QuizAnalytics() {
         </div>
         {!nothing && (
           <button className="btn-ghost shrink-0" disabled={!kpi.sheets}
-                  onClick={() => { setPrinting(true); setTimeout(() => { window.print(); setPrinting(false); }, 400); }}>
+                  onClick={printReport}>
             طباعة التقرير
           </button>
         )}
@@ -265,7 +298,8 @@ export default function QuizAnalytics() {
             </div>
             <div className="mb-4 mt-2 h-px w-full" style={{ background: BAR, ...INK }} />
             <Report print kpi={kpi} perQuiz={perQuiz} dist={dist} perClass={perClass} items={items}
-                    one={one} top={top} support={support} classes={data.classes} graded={graded.length} />
+                    one={one} top={top} support={support} classes={data.classes} graded={graded.length}
+                    teacher={{ name: profile?.full_name ?? "", sigUrl }} />
           </div>
         </PrintPortal>
       )}
@@ -274,26 +308,31 @@ export default function QuizAnalytics() {
 }
 
 /* ------------------------------ التقرير ------------------------------ */
-export function Report({ print = false, kpi, perQuiz, dist, perClass, items, one, top, support, classes, graded }) {
+/* على الشاشة: كل الأقسام متتابعة. عند الطباعة: الصفحة الأولى للمؤشرات والرسوم،
+   والثانية للمتفوقين ومن يحتاجون دعمًا مع اسم المعلم وتوقيعه (teacher). */
+export function Report({ print = false, kpi, perQuiz, dist, perClass, items, one, top, support, classes, graded, teacher }) {
   if (!graded) {
     return <p className="card px-4 py-10 text-center text-sm text-muted">لا درجات مرصودة في هذا النطاق.</p>;
   }
   const maxDist = Math.max(1, ...dist.map((d) => d.n));
-  const hard = items.filter((x) => x.value < 50);
-  return (
-    <div className={print ? "space-y-4" : "space-y-4"}>
+  const hard = items.filter((x) => x.value < HARD_PCT);
+  const two = print ? "grid grid-cols-2 gap-3" : "grid gap-4 lg:grid-cols-2";
+  const topAreExcellent = top.length && top.every((s) => s.avg >= EXCEL_PCT);
+
+  const indicators = (
+    <>
       {/* المؤشرات */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+      <div className={`grid gap-2.5 ${print ? "grid-cols-5" : "grid-cols-2 sm:grid-cols-5"}`}>
         <Tile label="اختبارات منفّذة" value={kpi.quizzes} />
         <Tile label="طلاب مُختبَرون" value={kpi.students} hint={`${kpi.sheets} ورقة`} />
         <Tile label="متوسط الأداء" value={`${kpi.avg}٪`} hero />
-        <Tile label="نسبة النجاح" value={`${kpi.pass}٪`} hint={`النجاح من ${PASS_PCT}٪`} />
+        <Tile label="نسبة التفوق" value={`${kpi.excel}٪`} hint={`من الأوراق ${EXCEL_PCT}٪ فأكثر`} />
         <Tile label="حالات الغياب" value={kpi.absent} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={two}>
         <Panel title="متوسط كل اختبار" sub="نسبة متوسط الدرجات من الدرجة الكلية">
-          <Columns data={perQuiz} unit="٪" max={100} line={PASS_PCT} lineLabel="النجاح" />
+          <Columns data={perQuiz} unit="٪" max={100} short={print} />
         </Panel>
 
         <Panel title="توزيع الدرجات" sub="عدد أوراق الطلاب في كل فئة من النسبة المئوية">
@@ -302,25 +341,21 @@ export function Report({ print = false, kpi, perQuiz, dist, perClass, items, one
               <div key={d.k} className="flex items-center gap-2 text-xs" title={`${d.t}: ${d.n}`}>
                 <span className="w-[70px] shrink-0 text-muted" style={{ unicodeBidi: "plaintext" }}>{d.t}</span>
                 <div className="h-5 flex-1 rounded-[3px] bg-canvas" style={INK}>
-                  <div className="flex h-full items-center rounded-l-[4px] rounded-r-[1px]"
-                       style={{ width: `${(d.n / maxDist) * 100}%`, minWidth: d.n ? 3 : 0,
-                                background: d.fail ? FAIL : BAR, ...INK }} />
+                  <div className="h-full rounded-l-[4px] rounded-r-[1px]"
+                       style={{ width: `${(d.n / maxDist) * 100}%`, minWidth: d.n ? 3 : 0, background: d.c, ...INK }} />
                 </div>
                 <span className="num w-8 shrink-0 text-ink">{d.n}</span>
+                <span className="w-9 shrink-0 text-[10.5px] font-semibold text-mint-deep">{d.excel ? "تفوّق" : ""}</span>
               </div>
             ))}
-            <p className="pt-1 text-[11px] text-muted">
-              <span className="inline-block h-2 w-2 rounded-full align-middle" style={{ background: FAIL, ...INK }} /> دون النجاح
-              <span className="mx-2 text-faint">·</span>
-              <span className="inline-block h-2 w-2 rounded-full align-middle" style={{ background: BAR, ...INK }} /> ناجح
-            </p>
+            <p className="pt-1 text-[10.5px] text-faint">الأدكن للأعلى نسبة · التفوق {EXCEL_PCT}٪ فأكثر</p>
           </div>
         </Panel>
       </div>
 
       {perClass.length > 0 && (
-        <Panel title="مقارنة الفصول" sub="متوسط الأداء ونسبة النجاح لكل فصل">
-          <HBars data={perClass.map((c) => ({ ...c, note: `نجاح ${c.pass}٪ · ${c.n} ورقة` }))} unit="٪" max={100} line={PASS_PCT} />
+        <Panel title="مقارنة الفصول" sub="متوسط الأداء ونسبة التفوق لكل فصل">
+          <HBars data={perClass.map((c) => ({ ...c, note: `تفوّق ${c.excel}٪ · ${c.n} ورقة` }))} unit="٪" max={100} />
         </Panel>
       )}
 
@@ -331,7 +366,8 @@ export function Report({ print = false, kpi, perQuiz, dist, perClass, items, one
                  : "نسبة الطلاب الذين أجابوا كل فقرة إجابة صحيحة"}>
           {items.length > 0 && (
             <>
-              <HBars data={items.map((x) => ({ ...x, note: x.text }))} unit="٪" max={100} line={PASS_PCT} compact />
+              <HBars data={items.map((x) => ({ ...x, note: x.text }))} unit="٪" max={100}
+                     line={HARD_PCT} lowLabel="فقرة صعبة" compact />
               {hard.length > 0 && (
                 <p className="mt-3 rounded-sm2 bg-warning-light px-3 py-2 text-xs leading-relaxed text-warning">
                   ⚠ فقرات أجاب عنها أقل من نصف الطلاب إجابة صحيحة: <b className="num">{hard.map((x) => x.label).join("، ")}</b> — تستحق المراجعة أو إعادة الشرح.
@@ -341,14 +377,55 @@ export function Report({ print = false, kpi, perQuiz, dist, perClass, items, one
           )}
         </Panel>
       )}
+    </>
+  );
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="المتفوقون" sub="أعلى متوسط في اختبارات النطاق">
-          <StudentList list={top} classes={classes} tone="good" empty="—" />
-        </Panel>
-        <Panel title="يحتاجون دعمًا" sub="متوسط أقل من 60٪ — الأدنى أولًا">
-          <StudentList list={support} classes={classes} tone="low" empty="لا طلاب دون 60٪ — أحسنت 👏" />
-        </Panel>
+  // في الطباعة: القائمتان بعرض الصفحة، كلٌّ في صفّها — لتتسع الأسماء والفصول
+  const students = (
+    <div className={print ? "space-y-4" : two}>
+      <Panel title="المتفوقون" sub={topAreExcellent ? `متوسطهم ${EXCEL_PCT}٪ فأكثر` : "أعلى المتوسطات في النطاق"}>
+        <StudentList list={top} classes={classes} tone="good" empty="—" />
+      </Panel>
+      <Panel title="يحتاجون دعمًا" sub={`متوسط أقل من ${SUPPORT_PCT}٪ — الأدنى أولًا`}>
+        <StudentList list={support} classes={classes} tone="low" empty={`لا طلاب دون ${SUPPORT_PCT}٪ — أحسنت 👏`} />
+      </Panel>
+    </div>
+  );
+
+  if (!print) return <div className="space-y-4">{indicators}{students}</div>;
+
+  return (
+    <>
+      <div className="space-y-3 px-0.5">{indicators}</div>
+      {/* الصفحة الثانية */}
+      <div className="space-y-4 px-0.5" style={{ breakBefore: "page", pageBreakBefore: "always" }}>
+        <p className="border-b pb-1.5 text-[12px] font-bold text-mint-deep" style={{ borderColor: BAR }}>
+          الطلاب — المتفوقون ومن يحتاجون دعمًا
+        </p>
+        {students}
+        <Signature teacher={teacher} />
+      </div>
+    </>
+  );
+}
+
+/** اسم المعلم وتوقيعه في ذيل التقرير */
+function Signature({ teacher }) {
+  return (
+    <div className="grid grid-cols-2 gap-8 pt-6 text-center" style={{ breakInside: "avoid" }}>
+      <div>
+        <p className="text-[12px] text-muted">معلم المادة</p>
+        <div className="flex h-16 items-center justify-center">
+          {teacher?.sigUrl && <img src={teacher.sigUrl} alt="" style={{ maxHeight: "15mm", maxWidth: "50mm", objectFit: "contain" }} />}
+        </div>
+        <div className="mx-auto h-px w-48" style={{ background: "#C3C3C3" }} />
+        <p className="mt-1.5 text-[13px] font-bold">{teacher?.name || "…"}</p>
+      </div>
+      <div>
+        <p className="text-[12px] text-muted">تاريخ التقرير</p>
+        <div className="h-16" />
+        <div className="mx-auto h-px w-48" style={{ background: "#C3C3C3" }} />
+        <p className="mt-1.5 text-[13px] font-bold"><BidiDate value={fmtHijri(new Date(), false)} suffix="هـ" /></p>
       </div>
     </div>
   );
@@ -375,16 +452,14 @@ function Panel({ title, sub, children }) {
   );
 }
 
-/** أعمدة رأسية لمتوسط كل اختبار، مع خط النجاح وتلميح عند المرور */
-function Columns({ data, unit, max, line, lineLabel }) {
+/** أعمدة رأسية لمتوسط كل اختبار، وتلميح عند المرور */
+function Columns({ data, unit, max, short = false }) {
   const [hover, setHover] = useState(null);
   if (!data.length) return <p className="py-6 text-center text-xs text-muted">لا بيانات.</p>;
-  const H = 150;
+  const H = short ? 120 : 150;
   return (
     <div>
       <div className="relative flex items-end gap-2" style={{ height: H + 22 }}>
-        {/* خط النجاح */}
-        <div className="pointer-events-none absolute inset-x-0 border-t border-dashed" style={{ bottom: 22 + (line / max) * H, borderColor: "#A9A9A9" }} />
         {data.map((d, i) => (
           <div key={d.id} className="relative flex min-w-0 flex-1 flex-col items-center justify-end"
                style={{ height: H + 22 }} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
@@ -402,7 +477,6 @@ function Columns({ data, unit, max, line, lineLabel }) {
           </div>
         ))}
       </div>
-      <p className="mt-1 text-[10.5px] text-faint">الخط المتقطّع: حد {lineLabel} {line}{unit}</p>
       <ol className="mt-2 space-y-0.5 text-[10.5px] text-muted">
         {data.map((d, i) => <li key={d.id} className="truncate"><span className="num font-semibold text-ink">{i + 1}.</span> {d.label}</li>)}
       </ol>
@@ -410,20 +484,22 @@ function Columns({ data, unit, max, line, lineLabel }) {
   );
 }
 
-/** أشرطة أفقية: الفصول أو الفقرات، مع خط النجاح */
-function HBars({ data, unit, max, line, compact = false }) {
+/** أشرطة أفقية: الفصول أو الفقرات. line اختياري: حدٌّ يُبرز ما دونه (الفقرات الصعبة) */
+function HBars({ data, unit, max, line = null, lowLabel = "", compact = false }) {
   return (
     <div className={compact ? "space-y-1" : "space-y-2"}>
       {data.map((d) => {
-        const low = d.value < line;
+        const low = line != null && d.value < line;
         return (
           <div key={d.id} className="grid items-center gap-2 text-xs" style={{ gridTemplateColumns: compact ? "34px 1fr 58px" : "132px 1fr 58px" }}
                title={d.note ? `${d.label}: ${d.value}${unit} — ${d.note}` : undefined}>
             <span className="truncate font-medium text-ink">{d.label}</span>
             <div className="relative h-5 rounded-[3px] bg-canvas" style={INK}>
               <div className="h-full rounded-l-[4px] rounded-r-[1px]"
-                   style={{ width: `${(d.value / max) * 100}%`, minWidth: 3, background: low ? FAIL : BAR, ...INK }} />
-              <div className="absolute inset-y-0 border-r border-dashed" style={{ right: `${(line / max) * 100}%`, borderColor: "#A9A9A9" }} />
+                   style={{ width: `${(d.value / max) * 100}%`, minWidth: 3, background: low ? HARD : BAR, ...INK }} />
+              {line != null && (
+                <div className="absolute inset-y-0 border-r border-dashed" style={{ right: `${(line / max) * 100}%`, borderColor: "#A9A9A9" }} />
+              )}
               {!compact && d.note && (
                 <span className="num absolute inset-y-0 left-2 flex items-center text-[10px] text-muted">{d.note}</span>
               )}
@@ -434,7 +510,9 @@ function HBars({ data, unit, max, line, compact = false }) {
           </div>
         );
       })}
-      <p className="pt-1 text-[10.5px] text-faint">الخط المتقطّع: حد النجاح {line}{unit} · ▼ دونه</p>
+      {line != null && (
+        <p className="pt-1 text-[10.5px] text-faint">الخط المتقطّع: {line}{unit} · ▼ {lowLabel}</p>
+      )}
     </div>
   );
 }
@@ -449,7 +527,7 @@ function StudentList({ list, classes, tone, empty }) {
             <td className="num w-6 py-1.5 text-faint">{i + 1}</td>
             <td className="py-1.5 font-medium text-ink">{s.name}</td>
             <td className="py-1.5 text-muted">{classLabel(classes[s.cls])}</td>
-            <td className="num py-1.5 text-muted">{s.list.length} اختبار</td>
+            <td className="py-1.5 text-muted"><span className="num">{s.list.length}</span> {s.list.length === 1 ? "اختبار" : s.list.length === 2 ? "اختباران" : "اختبارات"}</td>
             <td className={`num py-1.5 text-left font-bold ${tone === "low" ? "text-absent" : "text-mint-deep"}`}>{s.avg}٪</td>
           </tr>
         ))}
