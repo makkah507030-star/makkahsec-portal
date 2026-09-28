@@ -640,6 +640,14 @@ function StageParticipants({ e, parts, reload, onNext }) {
   );
 }
 
+// السنة الهجرية الحالية — كما في مكتبة النماذج
+const hijriYear = () => {
+  try {
+    const s = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { year: "numeric" }).format(new Date());
+    return parseInt(String(s).replace(/\D/g, ""), 10);
+  } catch { return new Date().getFullYear() - 579; }
+};
+
 /* ③ موافقة أولياء الأمور — عبر نظام النماذج */
 function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
   const [busy, setBusy] = useState(false);
@@ -675,15 +683,22 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
       const g = guardianOf.get(p.student_id);
       if (!g) { noGuardian++; continue; }
 
-      const { data: serial } = await supabase.rpc("next_form_serial", { p_category: "administrative" });
+      const year = hijriYear();
+      const { data: serial, error: se } = await supabase
+        .rpc("next_form_serial", { p_category: "administrative", p_hijri_year: year });
+      if (se) { failed++; lastError = se.message; continue; }
 
+      // الحقول نفسها التي تُرسلها مكتبة النماذج — created_by شرط في قاعدة الإدراج
       const { data: doc, error } = await supabase.from("form_documents").insert({
         template_id: tpl.id,
         serial,
         title: tpl.title,
         recipient: p.student_name,
+        student_id: p.student_id,
         recipient_user_id: g.user_id,
         status: "awaiting_reply",
+        hijri_year: year,
+        created_by: uid,
         data: {
           recipient: p.student_name,
           class_label: p.class_label,
