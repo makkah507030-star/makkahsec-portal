@@ -9,6 +9,7 @@ import QuizScan from "../../components/QuizScan.jsx";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import { groupQuestions } from "../../lib/omrLayout.js";
 import { useNotice } from "../../lib/useNotice.js";
+import { quietly } from "../../lib/notice.js";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -55,6 +56,7 @@ export default function QuizMarks() {
 
   // الأسئلة بترتيب الورقة المطبوعة (اختيار من متعدد ← صح وخطأ ← مزاوجة) وترقيمها
   // «س١: ف٢» — حتى يطابق الرصدُ اليدوي ما بيد المعلم تمامًا، لا ترتيبَ الإضافة
+  const isPaper = quiz?.mode === "paper";
   const ordered = useMemo(() => {
     const KIND = { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أو خطأ", match: "المزاوجة" };
     return groupQuestions(questions).flatMap((g, gi) =>
@@ -127,6 +129,22 @@ export default function QuizMarks() {
     return fresh;
   };
 
+  // الاختبار الورقي: يُرصد مجموع الطالب مباشرة — حفظ هادئ لا يقطع الكتابة
+  const saveScore = async (student, score, absent = false) => {
+    const { data, error } = await quietly(() => supabase.rpc("quiz_save_manual_score", {
+      p_quiz: quizId, p_class: classId, p_student: student.id, p_score: score, p_absent: absent,
+    }));
+    if (error) {
+      setMsg({ ok: false, text: /quiz_save_manual_score/.test(error.message)
+        ? "الرصد يحتاج تنفيذ ملف supabase/quiz_paper_mode.sql في قاعدة البيانات مرة واحدة."
+        : error.message });
+      return null;
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) setSubs((x) => ({ ...x, [student.id]: row }));
+    return row;
+  };
+
   const markAbsent = async (student) => {
     await saveAnswers(student, {}, true);
     setMsg({ ok: true, text: `سُجّل غياب ${student.full_name}.` });
@@ -153,7 +171,8 @@ export default function QuizMarks() {
       <div className="no-print">
         <h1 className="text-lg font-bold text-ink">التصحيح والدرجات</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          اختر الاختبار وفصله، ثم ارصد إجابات كل طالب فتُصحَّح آليًا.
+          اختر الاختبار وفصله، ثم ارصد إجابات كل طالب فتُصحَّح آليًا —
+          أو مجموعه مباشرة إن كان اختبارًا ورقيًا.
         </p>
       </div>
 
@@ -165,7 +184,7 @@ export default function QuizMarks() {
             <option value="">اختر الاختبار…</option>
             {(quizzes ?? []).map((q) => (
               <option key={q.id} value={q.id}>
-                {q.title} — {q.subject_name ?? ""} ({q.total_marks} درجة)
+                {q.mode === "paper" ? "📝 " : ""}{q.title} — {q.subject_name ?? ""} ({q.total_marks} درجة)
               </option>
             ))}
           </select>
@@ -228,6 +247,11 @@ export default function QuizMarks() {
             ))}
           </div>
 
+          {isPaper && (
+            <ScoreGrid key={`${quizId}-${classId}`} students={students} subs={subs} total={Number(quiz?.total_marks ?? 0)} onSave={saveScore} />
+          )}
+
+          {!isPaper && (
           <div className="no-print card divide-y divide-line overflow-hidden">
             {students.map((s) => {
               const sub = subs[s.id];
@@ -267,15 +291,21 @@ export default function QuizMarks() {
             })}
           </div>
 
+          )}
+
           <div className="no-print flex flex-wrap gap-2">
-            <button className="btn-primary flex-1"
-                    onClick={() => setScanFrom((students.find((x) => !subs[x.id]) ?? students[0]).id)}>
-              📷 التصحيح بالكاميرا
-            </button>
-            <button className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep"
-                    onClick={() => setFast(true)}>
-              الإدخال السريع
-            </button>
+            {isPaper ? null : (
+              <>
+                <button className="btn-primary flex-1"
+                        onClick={() => setScanFrom((students.find((x) => !subs[x.id]) ?? students[0]).id)}>
+                  📷 التصحيح بالكاميرا
+                </button>
+                <button className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep"
+                        onClick={() => setFast(true)}>
+                  الإدخال السريع
+                </button>
+              </>
+            )}
             <button className="flex-1 rounded-pill border border-line py-2 text-sm font-semibold text-muted hover:bg-canvas"
                     disabled={stats.done === 0}
                     onClick={() => { setPrinting(true); setTimeout(() => window.print(), 60); }}>
@@ -628,6 +658,82 @@ function FastEntry({ students, questions, subs, quiz, onSave, onAbsent, onClose 
                 className="btn-primary flex-1">
           {busy ? "جارٍ الحفظ…" : qi + 1 < questions.length ? "حفظ الآن" : "حفظ والتالي"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------ رصد الاختبار الورقي: المجموع مباشرة ------------------ */
+// خانة لكل طالب: اكتب الدرجة ثم Enter فتُحفظ وينتقل المؤشر للطالب التالي.
+// «غ» تعني غائب، والخانة الفارغة لا تُحفظ.
+function ScoreGrid({ students, subs, total, onSave }) {
+  const shown = (sub) => (sub?.absent ? "غ" : sub?.score != null ? String(Number(sub.score)) : "");
+  const [vals, setVals] = useState(() => Object.fromEntries(students.map((s) => [s.id, shown(subs[s.id])])));
+  const [state, setState] = useState({});   // student_id -> saving | ok | err
+
+  const parse = (v) => {
+    const t = String(v ?? "").trim().replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+    if (!t) return { empty: true };
+    if (/^(غ|غا|غائب|a|A)$/.test(t)) return { absent: true };
+    const n = Number(t.replace(",", "."));
+    if (!Number.isFinite(n) || n < 0 || n > total) return { bad: true };
+    return { score: n };
+  };
+
+  const commit = async (st) => {
+    const v = vals[st.id] ?? "";
+    if (v === shown(subs[st.id])) return;                 // لم يتغيّر
+    const p = parse(v);
+    if (p.empty) return;
+    if (p.bad) { setState((x) => ({ ...x, [st.id]: "err" })); return; }
+    setState((x) => ({ ...x, [st.id]: "saving" }));
+    const row = await onSave(st, p.absent ? null : p.score, !!p.absent);
+    setState((x) => ({ ...x, [st.id]: row ? "ok" : "err" }));
+    if (row) setVals((x) => ({ ...x, [st.id]: shown(row) }));
+  };
+
+  const focusRow = (i) => {
+    const el = document.querySelector(`[data-sg="${i}"]`);
+    if (el) { el.focus(); el.select(); }
+  };
+  const onKey = (e, i) => {
+    if (e.key === "Enter" || e.key === "ArrowDown") { e.preventDefault(); commit(students[i]); focusRow(i + 1); }
+    if (e.key === "ArrowUp") { e.preventDefault(); commit(students[i]); focusRow(i - 1); }
+  };
+
+  const done = students.filter((s) => subs[s.id]).length;
+  return (
+    <div className="no-print card overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-mint-tint/50 px-4 py-2.5">
+        <p className="text-xs text-muted">
+          اكتب مجموع الطالب ثم <b>Enter</b> للتالي · <b>غ</b> للغائب ·
+          الدرجة من <span className="num">0</span> إلى <span className="num">{total}</span>
+        </p>
+        <p className="num text-xs font-semibold text-mint-deep">{done}/{students.length}</p>
+      </div>
+      <div className="divide-y divide-line">
+        {students.map((s, i) => {
+          const st = state[s.id];
+          const bad = st === "err";
+          return (
+            <div key={s.id} className="flex items-center gap-3 px-4 py-2">
+              <span className="num w-6 shrink-0 text-center text-xs text-faint">{i + 1}</span>
+              <p className="min-w-0 flex-1 truncate text-sm text-ink">{s.full_name}</p>
+              <input data-sg={i} inputMode="decimal" autoComplete="off" value={vals[s.id] ?? ""}
+                     onChange={(e) => { setVals((x) => ({ ...x, [s.id]: e.target.value })); if (bad) setState((x) => ({ ...x, [s.id]: null })); }}
+                     onKeyDown={(e) => onKey(e, i)} onBlur={() => commit(s)} onFocus={(e) => e.target.select()}
+                     className={`field num w-20 shrink-0 py-1.5 text-center ${bad ? "border-absent text-absent" : ""} ${
+                       vals[s.id] === "غ" ? "text-absent" : ""}`} />
+              <span className="num w-9 shrink-0 text-xs text-faint">/{total}</span>
+              <span className="grid w-5 shrink-0 place-items-center text-sm" aria-live="polite">
+                {st === "saving" ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-mint border-t-transparent" />
+                  : st === "ok" ? <span className="text-present">✓</span>
+                  : bad ? <span className="text-absent" title={`اكتب رقمًا من 0 إلى ${total} أو «غ»`}>!</span>
+                  : null}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
