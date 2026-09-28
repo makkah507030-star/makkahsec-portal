@@ -47,3 +47,33 @@ export function normalizeImage(file, targetW = 1280, targetH = 720, quality = 0.
     img.src = url;
   });
 }
+
+/**
+ * تصغير صورة مع الحفاظ على نسبتها كاملة (بلا قصّ) — لصور الأسئلة والرسوم.
+ * لا تُكبَّر الصورة الصغيرة. PNG يبقى PNG (للرسوم الحادة)، وغيره JPEG.
+ */
+export function shrinkImage(file, maxSide = 1600, quality = 0.88) {
+  return new Promise((resolve) => {
+    if (!file || !(file.type || "").startsWith("image/")) { resolve(file); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const k = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.round(img.width * k), h = Math.round(img.height * k);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        const png = file.type === "image/png";
+        if (!png) { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h); }
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        const type = png ? "image/png" : "image/jpeg";
+        canvas.toBlob((blob) => resolve(blob ? new File([blob], png ? "image.png" : "image.jpg", { type }) : file),
+                      type, quality);
+      } catch { URL.revokeObjectURL(url); resolve(file); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}

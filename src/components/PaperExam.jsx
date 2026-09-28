@@ -2,7 +2,7 @@
 import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
-import { BLANK_RE, groupPaper, linesOf, paperOpts, shuffledOrder } from "../lib/paperExam.js";
+import { BLANK_RE, MODEL_LABEL, groupPaper, linesOf, paperOpts, shuffledOrder, variantFor } from "../lib/paperExam.js";
 
 /* =====================================================================
    ورقة الاختبار الورقي — صفحات A4 تتوزّع عليها الأسئلة تلقائيًا.
@@ -38,7 +38,7 @@ const AR = {
   marksTable: "جدول الدرجات", obtained: "الدرجة المستحقة", sum: "المجموع",
   page: (a, b) => `الصفحة ${a} من ${b}`, cont: "يتبع في الصفحة التالية ←", end: "انتهت الأسئلة",
   good: "مع تمنياتي لكم بالتوفيق والنجاح", teacher: "معلم المادة",
-  key: "نموذج الإجابة", tf: ["✓", "✗"], contHead: "تابع",
+  key: "نموذج الإجابة", tf: ["✓", "✗"], contHead: "تابع", model: "النموذج",
   markWord: (n) => `${n} ${n === 1 ? "درجة" : n === 2 ? "درجتان" : n <= 10 ? "درجات" : "درجة"}`,
 };
 const EN = {
@@ -61,7 +61,7 @@ const EN = {
   marksTable: "Marks", obtained: "Obtained", sum: "Total",
   page: (a, b) => `Page ${a} of ${b}`, cont: "Continued on next page →", end: "End of questions",
   good: "Good luck", teacher: "Subject teacher",
-  key: "Answer key", tf: ["✓", "✗"], contHead: "Continued",
+  key: "Answer key", tf: ["✓", "✗"], contHead: "Continued", model: "Version",
   markWord: (n) => `${n} ${n === 1 ? "mark" : "marks"}`,
 };
 
@@ -86,11 +86,13 @@ function buildBlocks(questions) {
  * answerKey: نموذج الإجابة
  * onLayout({ pages, starts }) — عدد الصفحات وأين تبدأ كل صفحة (للمعلم)
  */
-export default function PaperExam({ quiz, questions = [], teacherName = "", copies = [{}],
-                                    answerKey = false, onLayout, scale }) {
+export default function PaperExam({ quiz, questions: base = [], teacherName = "", copies = [{}],
+                                    answerKey = false, onLayout, scale, model = null, images = {} }) {
   const ltr = quiz?.lang === "en";
   const t = ltr ? EN : AR;
   const opts = paperOpts(quiz);
+  // النموذج (ب) بترتيب مختلف للفقرات والخيارات
+  const questions = model ? variantFor(base, model) : base;
   const blocks = buildBlocks(questions);
   const groups = groupPaper(questions);
 
@@ -132,15 +134,18 @@ export default function PaperExam({ quiz, questions = [], teacherName = "", copi
     };
     run();
     document.fonts?.ready?.then(run);
+    // الصور تغيّر ارتفاع فقراتها حين تكتمل — يُعاد التوزيع بعد تحميل كل صورة
+    const imgs = [...(measRef.current?.querySelectorAll("img") ?? [])];
+    imgs.forEach((im) => { if (!im.complete) im.addEventListener("load", run, { once: true }); });
     return () => { dead = true; };
-  }, [quiz, questions, answerKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [quiz, base, answerKey, model, images]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const style = {
     fontFamily: ltr ? "'IBM Plex Sans', system-ui, sans-serif" : "'IBM Plex Sans Arabic', sans-serif",
     fontSize: opts.compact ? "11.5px" : "12.5px",
     lineHeight: opts.compact ? 1.55 : 1.75,
   };
-  const ctx = { quiz, t, ltr, opts, answerKey, groups, teacherName };
+  const ctx = { quiz, t, ltr, opts, answerKey, groups, teacherName, model, images };
 
   return (
     <>
@@ -173,7 +178,7 @@ export default function PaperExam({ quiz, questions = [], teacherName = "", copi
 }
 
 /* ------------------------------ الترويسة ------------------------------ */
-function FirstHead({ quiz, t, opts, answerKey, groups, copy }) {
+function FirstHead({ quiz, t, opts, answerKey, groups, copy, model }) {
   const name = copy?.student?.full_name;
   const cls = copy?.className;
   return (
@@ -185,10 +190,16 @@ function FirstHead({ quiz, t, opts, answerKey, groups, copy }) {
         </div>
         <div className="text-center">
           <p className="text-[15px] font-bold leading-tight">{quiz?.title}</p>
-          {answerKey && (
-            <span className="mt-1 inline-block rounded-[4px] px-2 py-[1px] text-[11px] font-bold text-white"
-                  style={{ background: KEY, ...INK }}>{t.key}</span>
-          )}
+          <div className="mt-1 flex items-center justify-center gap-1.5">
+            {model && (
+              <span className="inline-block rounded-[4px] border-[1.5px] px-2 py-[1px] text-[11px] font-bold"
+                    style={{ borderColor: "#000" }}>{t.model} ({MODEL_LABEL[model] ?? model})</span>
+            )}
+            {answerKey && (
+              <span className="inline-block rounded-[4px] px-2 py-[1px] text-[11px] font-bold text-white"
+                    style={{ background: KEY, ...INK }}>{t.key}</span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2.5">
           <img src={moeLogo} alt="" className="h-9 w-auto" />
@@ -260,11 +271,11 @@ function MarksTable({ t, groups, total }) {
   );
 }
 
-function RunHead({ quiz, t, copy }) {
+function RunHead({ quiz, t, copy, model }) {
   const name = copy?.student?.full_name;
   return (
     <div className="mb-2 flex items-center justify-between gap-3 border-b pb-1 text-[10.5px]" style={{ borderColor: "#999" }}>
-      <span><b>{t.contHead}:</b> {quiz?.title}</span>
+      <span><b>{t.contHead}:</b> {quiz?.title}{model ? ` — ${t.model} (${MODEL_LABEL[model] ?? model})` : ""}</span>
       <span>{t.name}: {name ? <b>{name}</b> : "………………………………"}</span>
     </div>
   );
@@ -281,7 +292,7 @@ function Foot({ t, page, total, last, teacherName }) {
 }
 
 /* ------------------------------ الفقرات ------------------------------ */
-function Block({ b, t, answerKey, opts }) {
+function Block({ b, t, answerKey, opts, images }) {
   const { q, qi, gi, head, kind } = b;
   const gap = opts.compact ? "3px" : "5px";
   return (
@@ -295,7 +306,7 @@ function Block({ b, t, answerKey, opts }) {
           </span>
         </div>
       )}
-      <Item q={q} n={qi + 1} t={t} answerKey={answerKey} />
+      <Item q={q} n={qi + 1} t={t} answerKey={answerKey} img={<QImage q={q} images={images} />} />
     </div>
   );
 }
@@ -306,7 +317,8 @@ const Mark = ({ q, t }) => (
 );
 const Key = ({ children }) => <span style={{ color: KEY, fontWeight: 700, ...INK }}>{children}</span>;
 
-function Item({ q, n, t, answerKey }) {
+// img: صورة السؤال — تأتي بعد نصه مباشرة، قبل الخيارات أو أسطر الإجابة
+function Item({ q, n, t, answerKey, img }) {
   const a = ansOf(q);
 
   if (q.kind === "mcq") {
@@ -315,6 +327,7 @@ function Item({ q, n, t, answerKey }) {
     return (
       <div className="px-1">
         <div className="flex gap-1"><Num n={n} /><p className="min-w-0 flex-1">{q.text}</p></div>
+        {img}
         <div className="mt-[2px] grid gap-x-3 gap-y-[2px]"
              style={{ paddingInlineStart: "6mm", gridTemplateColumns: `repeat(${long ? 2 : Math.min(4, opts.length || 1)}, minmax(0,1fr))` }}>
           {opts.map((o, k) => {
@@ -334,13 +347,16 @@ function Item({ q, n, t, answerKey }) {
 
   if (q.kind === "truefalse") {
     return (
-      <div className="flex items-start gap-1 px-1">
-        <Num n={n} />
-        <p className="min-w-0 flex-1">{q.text}</p>
-        <span className="grid h-[6mm] w-[11mm] shrink-0 place-items-center border text-[13px] font-bold"
-              style={{ borderColor: "#000" }}>
-          {answerKey ? <Key>{a === "false" ? t.tf[1] : t.tf[0]}</Key> : ""}
-        </span>
+      <div className="px-1">
+        <div className="flex items-start gap-1">
+          <Num n={n} />
+          <p className="min-w-0 flex-1">{q.text}</p>
+          <span className="grid h-[6mm] w-[11mm] shrink-0 place-items-center border text-[13px] font-bold"
+                style={{ borderColor: "#000" }}>
+            {answerKey ? <Key>{a === "false" ? t.tf[1] : t.tf[0]}</Key> : ""}
+          </span>
+        </div>
+        {img}
       </div>
     );
   }
@@ -354,6 +370,7 @@ function Item({ q, n, t, answerKey }) {
     return (
       <div className="px-1">
         {q.text && <div className="mb-1 flex gap-1"><Num n={n} /><p className="flex-1">{q.text}</p></div>}
+        {img}
         <table className="w-full border-collapse text-[11.5px]" style={{ tableLayout: "fixed" }}>
           <thead>
             <tr style={{ background: "#EFEFEF", ...INK }}>
@@ -386,7 +403,8 @@ function Item({ q, n, t, answerKey }) {
     const answers = Array.isArray(a) ? a : [];
     const parts = String(q.text ?? "").split(BLANK_RE);
     return (
-      <div className="flex gap-1 px-1">
+      <div className="px-1">
+      <div className="flex gap-1">
         <Num n={n} />
         <p className="min-w-0 flex-1" style={{ lineHeight: 2.1 }}>
           {parts.map((p, k) => (
@@ -402,6 +420,8 @@ function Item({ q, n, t, answerKey }) {
           ))}
         </p>
       </div>
+      {img}
+      </div>
     );
   }
 
@@ -410,6 +430,7 @@ function Item({ q, n, t, answerKey }) {
     return (
       <div className="px-1">
         {q.text && <div className="flex gap-1"><Num n={n} /><p className="flex-1">{q.text}</p></div>}
+        {img}
         <div className="mt-[2px] grid gap-x-4 gap-y-[3px]"
              style={{ paddingInlineStart: q.text ? "6mm" : 0, gridTemplateColumns: "repeat(2, minmax(0,1fr))" }}>
           {items.map((it) => (
@@ -432,6 +453,7 @@ function Item({ q, n, t, answerKey }) {
   return (
     <div className="px-1">
       <div className="flex items-start gap-1"><Num n={n} /><p className="min-w-0 flex-1">{q.text}</p><Mark q={q} t={t} /></div>
+      {img}
       <div style={{ paddingInlineStart: "6mm" }}>
         {answerKey && model
           ? <p className="mt-1 whitespace-pre-line" style={{ color: KEY, ...INK }}>{model}</p>
@@ -439,6 +461,18 @@ function Item({ q, n, t, answerKey }) {
               <div key={k} className="border-b border-dotted" style={{ borderColor: "#666", height: "8mm" }} />
             ))}
       </div>
+    </div>
+  );
+}
+
+/** صورة السؤال تحته، بعرضها المحدّد (نسبة من عرض الورقة) */
+function QImage({ q, images }) {
+  const src = q.image_path ? images?.[q.image_path] : null;
+  if (!src) return null;
+  return (
+    <div className="my-1 flex justify-center px-1">
+      <img src={src} alt="" style={{ width: `${Math.min(100, Math.max(20, Number(q.image_width) || 60))}%`,
+                                     maxHeight: "95mm", objectFit: "contain", display: "block" }} />
     </div>
   );
 }
