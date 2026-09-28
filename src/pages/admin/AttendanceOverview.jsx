@@ -516,46 +516,210 @@ function LateTab() {
 
 /* ==================== أجهزة البصمة ==================== */
 
+/* الربط الفعلي يُعرف من البصمات نفسها: البوابة لا تعرف قائمة المستخدمين داخل
+   الجهاز، فالطالب «معرَّف» إن وصلت له بصمة خلال هذه المدة. */
+const IDENTIFIED_DAYS = 14;
+const ONLINE_MINUTES = 10;   // الجهاز يتصل كل دقيقة تقريبًا؛ أبعد من هذا يُعدّ منقطعًا
+
+const isoDaysAgo = (n) => {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  const p = (x) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
 export function DevicesTab() {
-  const [devices, setDevices] = useState(null);
-  const [noDevice, setNoDevice] = useState(0);
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
+  const [allClasses, setAllClasses] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const [dv, nd] = await Promise.all([
-        supabase.from("devices").select("serial_no, label, last_seen"),
-        supabase.from("v_students_without_device").select("id", { count: "exact", head: true }),
-      ]);
-      setDevices(dv.data ?? []);
-      setNoDevice(nd.count ?? 0);
+      try {
+        const today = todayISO();
+        const [dv, punches, enr, un] = await Promise.all([
+          supabase.from("devices").select("serial_no, label, last_seen, is_active"),
+          fetchAllPaged(() => supabase.from("daily_attendance")
+            .select("student_id, attend_date, device_serial")
+            .gte("attend_date", isoDaysAgo(IDENTIFIED_DAYS - 1))
+            .order("student_id").order("attend_date")),
+          fetchAllPaged(() => supabase.from("student_enrollment")
+            .select("student_id, classes(grade, class_no)")
+            .eq("status", "active").order("student_id")),
+          supabase.from("unmatched_logs").select("device_uid, device_serial, punch_time")
+            .gte("punch_time", `${today}T00:00:00+03:00`).order("punch_time", { ascending: false }).limit(2000),
+        ]);
+        setData({ today, devices: dv.data ?? [], punches, enr, unmatched: un.data ?? [], unErr: un.error });
+      } catch (e) {
+        setErr(e.message ?? String(e));
+      }
     })();
   }, []);
 
-  if (!devices) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+  const view = useMemo(() => {
+    if (!data) return null;
+    const { today, punches, enr, unmatched } = data;
+
+    const todayByDevice = {};
+    const punchedToday = new Set();
+    const identified = new Set();
+    punches.forEach((p) => {
+      identified.add(p.student_id);
+      if (p.attend_date === today) {
+        punchedToday.add(p.student_id);
+        todayByDevice[p.device_serial ?? "—"] = (todayByDevice[p.device_serial ?? "—"] ?? 0) + 1;
+      }
+    });
+
+    const byClass = {};
+    enr.forEach((e) => {
+      const c = e.classes;
+      if (!c) return;
+      const k = `${c.grade}-${c.class_no}`;
+      byClass[k] ??= { grade: c.grade, class_no: c.class_no, total: 0, today: 0, ident: 0 };
+      byClass[k].total++;
+      if (punchedToday.has(e.student_id)) byClass[k].today++;
+      if (identified.has(e.student_id)) byClass[k].ident++;
+    });
+    const classes = Object.values(byClass)
+      .sort((a, b) => (b.ident > 0) - (a.ident > 0) || a.grade - b.grade || Number(a.class_no) - Number(b.class_no));
+
+    const unByUid = {};
+    unmatched.forEach((u) => {
+      const k = `${u.device_serial}|${u.device_uid}`;
+      unByUid[k] ??= { device_serial: u.device_serial, device_uid: u.device_uid, times: 0, last: u.punch_time };
+      unByUid[k].times++;
+    });
+
+    const students = new Set(enr.map((e) => e.student_id)).size;
+    return {
+      todayByDevice, classes, students,
+      identified: [...identified].length, punchedToday: punchedToday.size,
+      unmatched: Object.values(unByUid).sort((a, b) => b.times - a.times),
+    };
+  }, [data]);
+
+  if (err) return <p className="text-sm text-absent">تعذّر التحميل: {err}</p>;
+  if (!data || !view) return <p className="text-sm text-muted">جارٍ التحميل…</p>;
+
+  const label = (sn) => data.devices.find((d) => d.serial_no === sn)?.label ?? sn;
+  const shownClasses = allClasses ? view.classes : view.classes.filter((c) => c.ident > 0);
 
   return (
     <div className="space-y-4">
+      {/* الأجهزة */}
       <section className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold text-ink">أجهزة البصمة</h2>
-          {noDevice > 0 && (
-            <span className="chip bg-late/10 text-late">
-              <span className="num">{noDevice}</span>&nbsp;طالبًا بلا ربط
-            </span>
-          )}
+          <span className="chip bg-mint-tint text-mint-deep">
+            بصم اليوم <span className="num">&nbsp;{view.punchedToday}&nbsp;</span> طالبًا
+          </span>
         </div>
-        {devices.length === 0 ? (
+        {data.devices.length === 0 ? (
           <p className="px-4 py-4 text-sm text-muted">لم تُسجَّل أجهزة بعد.</p>
         ) : (
-          devices.map((v) => (
-            <div key={v.serial_no}
-                 className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-0">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{v.label ?? v.serial_no}</p>
-                <p className="num truncate text-right text-xs text-faint">{v.serial_no}</p>
+          data.devices.map((v) => {
+            const mins = v.last_seen ? (Date.now() - new Date(v.last_seen).getTime()) / 60000 : null;
+            const online = mins != null && mins <= ONLINE_MINUTES;
+            const n = view.todayByDevice[v.serial_no] ?? 0;
+            return (
+              <div key={v.serial_no}
+                   className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 last:border-0">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{v.label ?? v.serial_no}</p>
+                  <p className="num truncate text-right text-xs text-faint">
+                    {v.serial_no}{v.last_seen ? ` · بصمات اليوم: ${n}` : ""}
+                  </p>
+                </div>
+                <span className={`chip shrink-0 ${
+                  v.is_active === false ? "bg-absent/10 text-absent"
+                  : online ? "bg-present/10 text-present"
+                  : "bg-warning-light text-warning"}`}>
+                  {v.is_active === false ? "معطّل"
+                    : !v.last_seen ? "لم يتصل بعد"
+                    : online ? "متصل الآن"
+                    : `انقطع · آخر اتصال ${fmtDateTime(v.last_seen)}`}
+                </span>
               </div>
-              <span className={`chip shrink-0 ${v.last_seen ? "bg-present/10 text-present" : "bg-warning-light text-warning"}`}>
-                {v.last_seen ? fmtDateTime(v.last_seen) : "لم يتصل بعد"}
+            );
+          })
+        )}
+      </section>
+
+      {/* تغطية الفصول */}
+      <section className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+          <div>
+            <h2 className="text-sm font-semibold text-ink">تغطية البصمة حسب الفصل</h2>
+            <p className="mt-0.5 text-xs text-muted">
+              المعرَّف: من وصلت له بصمة خلال آخر <span className="num">{IDENTIFIED_DAYS}</span> يومًا ·{" "}
+              <span className="num">{view.identified}</span> من <span className="num">{view.students}</span> طالبًا
+            </p>
+          </div>
+          <button onClick={() => setAllClasses((v) => !v)}
+                  className="rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
+            {allClasses ? "الفصول المعرَّفة فقط" : "كل الفصول"}
+          </button>
+        </div>
+        {shownClasses.length === 0 ? (
+          <p className="px-4 py-4 text-sm text-muted">لم تصل بصمة لأي فصل خلال المدة.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-canvas text-xs text-muted">
+                <tr>
+                  <th className="px-4 py-2 text-right font-medium">الفصل</th>
+                  <th className="px-2 py-2 font-medium">الطلاب</th>
+                  <th className="px-2 py-2 font-medium">المعرَّفون</th>
+                  <th className="px-2 py-2 font-medium">بصم اليوم</th>
+                  <th className="px-4 py-2 text-right font-medium">غير المعرَّفين</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shownClasses.map((c) => {
+                  const missing = c.total - c.ident;
+                  return (
+                    <tr key={`${c.grade}-${c.class_no}`} className="border-t border-line">
+                      <td className="px-4 py-2">{GRADE_NAMES[c.grade] ?? c.grade} — فصل <span className="num">{c.class_no}</span></td>
+                      <td className="num px-2 py-2 text-center">{c.total}</td>
+                      <td className="num px-2 py-2 text-center">{c.ident}</td>
+                      <td className="num px-2 py-2 text-center">{c.today}</td>
+                      <td className="px-4 py-2">
+                        {c.ident === 0 ? <span className="text-xs text-faint">لم يُعرَّف بعد</span>
+                          : missing === 0 ? <span className="chip bg-present/10 text-present">مكتمل</span>
+                          : <span className="chip bg-late/10 text-late"><span className="num">{missing}</span>&nbsp;طالبًا</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* الأرقام غير المطابقة */}
+      <section className="card overflow-hidden">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold text-ink">بصمات اليوم التي لم تطابق أي طالب</h2>
+          <p className="mt-0.5 text-xs text-muted">
+            الرقم المُدخل في الجهاز لا يطابق رقم الطالب في الجهاز ولا رقم هويته — صحّحه في الجهاز.
+          </p>
+        </div>
+        {data.unErr ? (
+          <p className="px-4 py-4 text-sm text-muted">تعذّر قراءتها: {data.unErr.message}</p>
+        ) : view.unmatched.length === 0 ? (
+          <p className="px-4 py-4 text-sm text-present">لا توجد — كل بصمات اليوم طابقت طلابًا.</p>
+        ) : (
+          view.unmatched.map((u) => (
+            <div key={`${u.device_serial}|${u.device_uid}`}
+                 className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 last:border-0">
+              <div className="min-w-0">
+                <p className="num text-sm font-medium" dir="ltr">{u.device_uid}</p>
+                <p className="truncate text-xs text-faint">{label(u.device_serial)}</p>
+              </div>
+              <span className="chip shrink-0 bg-late/10 text-late">
+                <span className="num">{u.times}</span>&nbsp;مرة · <span className="num">{fmtTime12(u.last)}</span>
               </span>
             </div>
           ))
@@ -567,9 +731,9 @@ export function DevicesTab() {
           {
             title: "أجهزة البصمة",
             items: [
-              { chip: "bg-present/10 text-present", sample: "متصل", label: "الجهاز يعمل ويرسل البيانات" },
-              { chip: "bg-warning-light text-warning", sample: "لم يتصل", label: "لم يصل منه أي اتصال بعد" },
-              { chip: "bg-late/10 text-late", sample: "بلا ربط", label: "طلاب بلا رقم في جهاز البصمة" },
+              { chip: "bg-present/10 text-present", sample: "متصل الآن", label: `اتصل خلال آخر ${ONLINE_MINUTES} دقائق` },
+              { chip: "bg-warning-light text-warning", sample: "انقطع", label: "لم يتصل منذ مدة، أو لم يتصل بعد" },
+              { chip: "bg-late/10 text-late", sample: "غير المعرَّفين", label: "طلاب الفصل الذين لم تصل لهم بصمة خلال المدة" },
             ],
           },
         ]}
