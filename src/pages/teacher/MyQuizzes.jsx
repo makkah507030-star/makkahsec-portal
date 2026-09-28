@@ -185,6 +185,8 @@ export default function MyQuizzes() {
 /* --------------------------- اختبار جديد --------------------------- */
 function NewQuiz({ uid, onDone }) {
   const [subjects, setSubjects] = useState([]);
+  const [assigned, setAssigned] = useState([]);     // فصول المعلم: { subject_id, id, grade, class_no }
+  const [picked, setPicked] = useState(null);       // الفصول المختارة (null = كل الفصول المعروضة)
   const [f, setF] = useState({
     mode: "paper",
     title: "", subject_id: "", grade: "", period: "period1", lang: "ar",
@@ -204,7 +206,7 @@ function NewQuiz({ uid, onDone }) {
       if (!t) return;
 
       const { data: sch } = await supabase.from("schedule")
-        .select("subject_id, subjects(name), classes(grade)")
+        .select("subject_id, class_id, subjects(name), classes(class_no, grade)")
         .eq("teacher_id", t.id)
         .eq("academic_year", m.active_year ?? "")
         .eq("term", Number(m.active_term ?? 1));
@@ -216,8 +218,33 @@ function NewQuiz({ uid, onDone }) {
         }
       });
       setSubjects([...seen.values()]);
+
+      // الفصول المسندة للمعلم في كل مادة — منها وحدها تُعرض الصفوف والفصول
+      const cls = new Map();
+      (sch ?? []).forEach((r) => {
+        if (!r.subject_id || !r.class_id || !r.classes) return;
+        const k = `${r.subject_id}|${r.class_id}`;
+        if (!cls.has(k)) cls.set(k, { subject_id: r.subject_id, id: r.class_id, ...r.classes });
+      });
+      setAssigned([...cls.values()].sort((a, b) => a.grade - b.grade || a.class_no - b.class_no));
     })();
   }, [uid]);
+
+  // صفوف المادة المختارة وفصولها
+  const subjClasses = assigned.filter((c) => c.subject_id === f.subject_id);
+  const grades = [...new Set(subjClasses.map((c) => c.grade))].sort();
+  const shownClasses = subjClasses.filter((c) => !f.grade || c.grade === Number(f.grade));
+  const chosen = picked ?? new Set(shownClasses.map((c) => c.id));
+  const togglePick = (id) => {
+    const n = new Set(chosen);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    setPicked(n);
+  };
+  const pickSubject = (id) => {
+    const g = [...new Set(assigned.filter((c) => c.subject_id === id).map((c) => c.grade))];
+    setF((x) => ({ ...x, subject_id: id, grade: g.length === 1 ? String(g[0]) : "" }));
+    setPicked(null);
+  };
 
   const save = async () => {
     if (f.title.trim().length < 3) return;
@@ -244,9 +271,18 @@ function NewQuiz({ uid, onDone }) {
       term: Number(m.active_term ?? 1),
     }).select("id").single();
 
+    if (error) { setBusy(false); onDone(null, { ok: false, text: setupHint(error) }); return; }
+
+    // إسناد الفصول المختارة مباشرة
+    const ids = shownClasses.map((c) => c.id).filter((id) => chosen.has(id));
+    if (ids.length) {
+      await supabase.from("quiz_classes").insert(
+        ids.map((class_id) => ({ quiz_id: data.id, class_id, exam_date: f.exam_date || null })));
+    }
     setBusy(false);
-    if (error) { onDone(null, { ok: false, text: setupHint(error) }); return; }
-    onDone(data.id, { ok: true, text: "أُنشئ الاختبار. أضف أسئلته الآن." });
+    onDone(data.id, { ok: true, text: ids.length
+      ? `أُنشئ الاختبار وأُسند إلى ${ids.length} ${ids.length === 1 ? "فصل" : "فصول"}. أضف أسئلته الآن.`
+      : "أُنشئ الاختبار. أضف أسئلته الآن." });
   };
 
   return (
@@ -287,20 +323,43 @@ function NewQuiz({ uid, onDone }) {
         <div>
           <label className="text-xs text-muted">المادة</label>
           <select className="field mt-1 w-full" value={f.subject_id}
-                  onChange={(e) => setF((x) => ({ ...x, subject_id: e.target.value }))}>
+                  onChange={(e) => pickSubject(e.target.value)}>
             <option value="">اختر المادة…</option>
             {subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
         <div>
           <label className="text-xs text-muted">الصف</label>
-          <select className="field mt-1 w-full" value={f.grade}
-                  onChange={(e) => setF((x) => ({ ...x, grade: e.target.value }))}>
-            <option value="">كل الصفوف</option>
-            {[1, 2, 3].map((g) => <option key={g} value={g}>{GRADE_NAMES[g]}</option>)}
+          <select className="field mt-1 w-full" value={f.grade} disabled={!f.subject_id}
+                  onChange={(e) => { setF((x) => ({ ...x, grade: e.target.value })); setPicked(null); }}>
+            {!f.subject_id && <option value="">اختر المادة أولًا</option>}
+            {f.subject_id && grades.length > 1 && <option value="">كل صفوفي في المادة</option>}
+            {grades.map((g) => <option key={g} value={g}>{GRADE_NAMES[g]}</option>)}
           </select>
         </div>
       </div>
+
+      {f.subject_id && (
+        <div>
+          <label className="text-xs text-muted">الفصول المسندة إليك في المادة</label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {shownClasses.map((c) => {
+              const on = chosen.has(c.id);
+              return (
+                <button key={c.id} type="button" onClick={() => togglePick(c.id)}
+                  className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                    on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                  {on ? "✓ " : ""}{GRADE_NAMES[c.grade]} — فصل {c.class_no}
+                </button>
+              );
+            })}
+            {shownClasses.length === 0 && (
+              <p className="text-sm text-muted">لا فصول مسندة إليك في هذه المادة.</p>
+            )}
+          </div>
+          <p className="mt-1 text-[11px] text-faint">يُسند الاختبار للفصول المحدّدة عند إنشائه، ويمكن تعديلها لاحقًا من تبويب «الفصول».</p>
+        </div>
+      )}
 
       <div>
         <label className="text-xs text-muted">لغة ورقة الاختبار</label>
