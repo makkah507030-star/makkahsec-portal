@@ -5,7 +5,7 @@ import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from "../lib/periodTimes";
-import { loadFingerprintEnabled, morningLate, dayStartMinutes } from "../lib/officialAttendance";
+import { loadFingerprintPublic, morningLate, dayStartMinutes } from "../lib/officialAttendance";
 import ExamCountdown from "../components/ExamCountdown.jsx";
 import HolidayBanner from "../components/HolidayBanner.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
@@ -24,9 +24,12 @@ export default function GuardianHome() {
   const [showWeek, setShowWeek] = useState(false);
   const [records, setRecords] = useState([]);
   const [punches, setPunches] = useState([]);
-  // البصمة المقفلة (مرحلة تجربة) لا تُعرض للطالب ولا لولي الأمر
-  const [fpOn, setFpOn] = useState(false);
-  useEffect(() => { loadFingerprintEnabled().then(setFpOn).catch(() => setFpOn(false)); }, []);
+  // البصمة المقفلة (مرحلة تجربة) لا تُعرض للطالب ولا لولي الأمر، وبعد فتحها
+  // تُعرض بصمات ما بعد تاريخ الفتح فقط — لا بصمات أيام التجربة
+  const [fp, setFp] = useState({ on: false, since: null });
+  useEffect(() => { loadFingerprintPublic().then(setFp).catch(() => setFp({ on: false, since: null })); }, []);
+  const fpOn = fp.on;
+  const shownPunches = punches.filter((d) => !fp.since || d.attend_date >= fp.since);
   const [ptimes, setPtimes] = useState([]);
   const [nowPeriod, setNowPeriod] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -281,10 +284,10 @@ export default function GuardianHome() {
             <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
               الحضور الصباحي
             </h2>
-            {punches.length === 0 ? (
+            {shownPunches.length === 0 ? (
               <p className="px-4 py-5 text-sm text-muted">لا توجد سجلات بعد.</p>
             ) : (
-              punches.map((d, i) => (
+              shownPunches.map((d, i) => (
                 <div key={i} className="flex items-center justify-between border-b border-line px-4 py-2.5 last:border-0">
                   <span className="num text-sm text-ink">{fmtGreg(d.attend_date + "T00:00:00")}</span>
                   <span className="flex items-center gap-2">
