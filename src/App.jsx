@@ -71,6 +71,7 @@ const Events = lazy(() => import("./pages/Events.jsx"));
 const EventsReports = lazy(() => import("./pages/EventsReports.jsx"));
 const MyQuizzes = lazy(() => import("./pages/teacher/MyQuizzes.jsx"));
 const QuizMarks = lazy(() => import("./pages/teacher/QuizMarks.jsx"));
+const QuizAnalytics = lazy(() => import("./pages/teacher/QuizAnalytics.jsx"));
 const QuizResults = lazy(() => import("./components/QuizResults.jsx"));
 const OnlineQuizzesCard = lazy(() => import("./components/OnlineQuizzesCard.jsx"));
 const QuizTake = lazy(() => import("./pages/QuizTake.jsx"));
@@ -390,6 +391,7 @@ export default function App() {
           {/* اختباراتي — للمعلم */}
           <Route path="/quizzes" element={<MyQuizzes />} />
           <Route path="/quiz-marks" element={<QuizMarks />} />
+          <Route path="/quiz-analytics" element={<QuizAnalytics />} />
           {/* الاختبار الإلكتروني — يؤدّيه الطالب المُسند إليه (الصفحة تتحقق) */}
           <Route path="/quiz/:id" element={<QuizTake />} />
           <Route path="/referral/:id" element={<ReferralView />} />
