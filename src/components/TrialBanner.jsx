@@ -7,18 +7,20 @@ import { holidayToday, todayISO } from "../lib/schoolTime";
    • للزوار (variant="support"): من تعثّر دخوله يُوجَّه إلى مركز الدعم.
    • في اليوم الوطني يتحوّل شريط المسجّلين إلى شريط احتفائي أخضر، ثم يعود تلقائيًا.
 
-   يُكتشف الموسم الوطني بطريقتين، فيظهر ولو لم يُسجَّل في التقويم:
-   ١) إجازة مفعّلة في «التقويم والإجازات» يحوي اسمها «الوطني».
-   ٢) الفترة من ٢٣ إلى ٢٨ سبتمبر ميلادي. */
-const NATIONAL_FROM = 23;   // بداية العرض في سبتمبر
-const NATIONAL_TO   = 28;   // آخر يوم يظهر فيه الشريط
+   يظهر الشريط الوطني يومَي ٢٣ و٢٤ سبتمبر فقط (اليوم الوطني واليوم الذي بعده)،
+   أو في إجازة مفعّلة يحوي اسمها «الوطني» ما دامت في هذه الأيام — فلا تمتد
+   إجازة طويلة بالشريط الاحتفائي بعد انقضاء المناسبة. */
+const NATIONAL_FROM = 23;   // اليوم الوطني (سبتمبر)
+const NATIONAL_TO   = 24;   // آخر يوم يظهر فيه الشريط
 
 function isNationalDay() {
-  const h = holidayToday();
-  if (h?.name && h.name.includes("الوطني")) return true;
   const [, m, d] = todayISO().split("-");
   const day = Number(d);
-  return m === "09" && day >= NATIONAL_FROM && day <= NATIONAL_TO;
+  const inWindow = m === "09" && day >= NATIONAL_FROM && day <= NATIONAL_TO;
+  // إجازة «اليوم الوطني» في التقويم قد تبدأ قبله بيوم (إن وافق عطلة) — تُقبل حتى نهاية النافذة
+  const h = holidayToday();
+  const nearby = m === "09" && day >= NATIONAL_FROM - 2 && day <= NATIONAL_TO;
+  return inWindow || (nearby && !!h?.name?.includes("الوطني"));
 }
 
 function NationalDayBanner() {
