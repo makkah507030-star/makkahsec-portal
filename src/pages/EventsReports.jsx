@@ -77,8 +77,10 @@ export default function EventsReports() {
   }, [rows, scope, uid, from, to]);
 
   const totals = useMemo(() => {
-    const t = { events: shown.length, students: 0, certs: 0, approved: 0 };
-    shown.forEach((e) => {
+    // الأحداث الملغاة تظهر في القائمة بحالتها، ولا تدخل في الإجماليات
+    const live = shown.filter((e) => !e.cancelled_at);
+    const t = { events: live.length, students: 0, certs: 0, approved: 0 };
+    live.forEach((e) => {
       t.students += counts[e.id]?.attended ?? 0;
       t.certs += counts[e.id]?.certs ?? 0;
       if (e.stage === "approved") t.approved++;
@@ -145,8 +147,9 @@ export default function EventsReports() {
               <div className="flex flex-wrap items-center gap-2">
                 <p className="min-w-0 flex-1 truncate text-sm font-bold text-ink">{e.title}</p>
                 <span className={`chip shrink-0 ${
-                  e.stage === "approved" ? "bg-present/10 text-present" : "bg-mint-tint text-mint-deep"}`}>
-                  {STAGE_AR[e.stage] ?? e.stage}
+                  e.cancelled_at ? "bg-absent/10 text-absent"
+                  : e.stage === "approved" ? "bg-present/10 text-present" : "bg-mint-tint text-mint-deep"}`}>
+                  {e.cancelled_at ? "ملغى" : STAGE_AR[e.stage] ?? e.stage}
                 </span>
               </div>
               <p className="num mt-1 text-xs text-faint">
@@ -234,7 +237,7 @@ export default function EventsReports() {
                         <td className="num border border-line px-1.5 py-1.5 text-center">{c.attended}</td>
                         <td className="num border border-line px-1.5 py-1.5 text-center">{c.certs}</td>
                         <td className="border border-line px-1.5 py-1.5 text-center text-[10.5px]">
-                          {STAGE_AR[e.stage] ?? e.stage}
+                          {e.cancelled_at ? "ملغى" : STAGE_AR[e.stage] ?? e.stage}
                         </td>
                       </tr>
                     );
