@@ -3,7 +3,7 @@ import { loadDay, loadApproval, summarize } from "../../lib/officialAttendance";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
-import { todayISO, todayLabel, todayDow } from "../../lib/schoolTime";
+import { todayISO, todayLabel, todayDow, GRADE_NAMES } from "../../lib/schoolTime";
 import HolidayBanner from "../../components/HolidayBanner.jsx";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
@@ -24,10 +24,10 @@ const SUPPORT_ROLES = [
   "computer_lab",
 ];
 import ColorLegend from "../../components/ColorLegend.jsx";
-import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME, STUDENT_DEPUTY_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
-import { fmtDateTime } from "../../lib/dates";
+import { fmtDateTime, fmtBoth } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import ExamCountdown from "../../components/ExamCountdown.jsx";
@@ -463,10 +463,23 @@ function MissingStudentsBox({ date }) {
     (async () => {
       const { data, error } = await supabase.rpc("missing_students", { p_date: date });
       if (error) { console.error(error); setRows([]); return; }
-      setRows(data ?? []);
+      // الصف والفصل لكل طالب — لتجميع القائمة بالفصول
+      const ids = (data ?? []).map((r) => r.student_id);
+      const cls = {};
+      if (ids.length) {
+        const { data: enr } = await supabase.from("student_enrollment")
+          .select("student_id, classes(grade, class_no)")
+          .eq("status", "active")
+          .in("student_id", ids);
+        (enr ?? []).forEach((e) => { if (e.classes) cls[e.student_id] = e.classes; });
+      }
+      setRows((data ?? []).map((r) => ({
+        ...r,
+        grade: cls[r.student_id]?.grade ?? null,
+        class_no: cls[r.student_id]?.class_no ?? r.class_no,
+      })));
 
       // حمّل الإجراءات المسجّلة مسبقًا اليوم لهؤلاء الطلاب
-      const ids = (data ?? []).map((r) => r.student_id);
       await reloadNotes(ids);
     })();
   }, [date]);
@@ -549,6 +562,34 @@ function MissingStudentsBox({ date }) {
 
   if (!rows || rows.length === 0) return null;
 
+  // التجميع بالفصول: الصف ثم رقم الفصل، والطلاب داخل الفصل بحصة الفقدان ثم الاسم
+  const groups = groupMissingByClass(rows);
+
+  // طباعة فصل واحد، أو الكل (null) في جدول واحد مرتّب بالفصول
+  const printMissing = (g) => {
+    const list = g ? g.rows : groups.flatMap((x) => x.rows);
+    const headers = g
+      ? ["م", "اسم الطالب", "آخر حضور", "حصة الفقدان", "المادة", "إجراء الإدارة"]
+      : ["م", "اسم الطالب", "الصف", "الفصل", "آخر حضور", "حصة الفقدان", "المادة", "إجراء الإدارة"];
+    const body = list.map((r, i) => [
+      i + 1, r.full_name,
+      ...(g ? [] : [GRADE_NAMES[r.grade] ?? "—", r.class_no ?? "—"]),
+      `الحصة ${r.last_seen_period}`, `الحصة ${r.missing_period}`, r.subject ?? "—",
+      ACTION_LABEL[done[r.student_id]] ?? "لم يُتخذ",
+    ]);
+    printReport({
+      title: g ? `الطلاب المفقودون — ${g.label}` : "الطلاب المفقودون خلال اليوم",
+      subtitle: `${fmtBoth(date + "T12:00:00")} · عدد الطلاب: ${list.length}`,
+      headers, rows: body,
+      logoUrl: new URL(logoIcon, window.location.origin).href,
+      moeLogoUrl: new URL(moeLogo, window.location.origin).href,
+      signatures: [
+        { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
+        { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+      ],
+    });
+  };
+
   const currentPeriod = ptimes ? currentPeriodNo(ptimes) : null;
 
   return (
@@ -557,7 +598,18 @@ function MissingStudentsBox({ date }) {
               className="flex w-full items-center justify-between gap-3 px-5 py-4 text-right">
         <div>
           <p className="text-sm font-bold text-absent">طلاب مفقودون خلال اليوم</p>
-          <p className="mt-0.5 text-xs text-muted">اضغط لعرض القائمة والتفاصيل</p>
+          {groups.length > 0 ? (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {groups.map((g) => (
+                <span key={g.key} className="inline-flex items-center gap-1.5 rounded-pill border border-absent/20 bg-white py-0.5 pl-0.5 pr-2 text-[11px] text-ink">
+                  {g.short}
+                  <span className="num grid h-4 min-w-4 place-items-center rounded-full bg-absent px-1 text-[10px] font-bold text-white">{g.rows.length}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-0.5 text-xs text-muted">اضغط لعرض القائمة والتفاصيل</p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="num text-2xl font-bold text-absent">{rows.length}</span>
@@ -570,116 +622,185 @@ function MissingStudentsBox({ date }) {
       </button>
 
       {expanded && (
-        <div className="max-h-80 overflow-y-auto border-t border-absent/15">
-          {rows.map((r) => {
-            const open = openId === r.student_id;
-            return (
-              <div key={r.student_id} className="border-b border-absent/10 last:border-0">
-                <button onClick={() => toggleStudent(r)}
-                  className="flex w-full items-center justify-between gap-3 px-5 py-2.5 text-right hover:bg-absent/5">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-ink">{r.full_name}</p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      فصل <span className="num">{r.class_no}</span> · آخر حضور ح
-                      <span className="num">{r.last_seen_period}</span> · فُقد في ح
-                      <span className="num font-semibold text-absent">{r.missing_period}</span>
-                    </p>
-                  </div>
-                  <svg viewBox="0 0 24 24" fill="none"
-                       className={`h-3.5 w-3.5 shrink-0 text-faint transition-transform ${open ? "rotate-180" : ""}`}
-                       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-absent/15 bg-white/60 px-5 py-2.5">
+          <p className="text-xs text-muted">
+            <span className="num font-semibold text-ink">{groups.length}</span> فصل ·
+            اضغط اسم الطالب للتفاصيل والإجراء
+          </p>
+          <button onClick={() => printMissing(null)}
+            className="flex items-center gap-1.5 rounded-pill bg-absent px-3.5 py-1.5 text-xs font-semibold text-white hover:opacity-90">
+            <PrintIcon /> طباعة الكل
+          </button>
+        </div>
+      )}
+
+      {expanded && (
+        <div className="max-h-[32rem] overflow-y-auto border-t border-absent/15">
+          {groups.map((g) => (
+            <div key={g.key} className="border-b border-absent/15 last:border-0">
+              <div className="sticky top-0 z-[1] flex items-center justify-between gap-2 bg-[#FBF1F1] px-5 py-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="num grid h-6 min-w-6 place-items-center rounded-full bg-absent px-1.5 text-[11px] font-bold text-white">{g.rows.length}</span>
+                  <p className="truncate text-sm font-bold text-ink">{g.label}</p>
+                </div>
+                <button onClick={() => printMissing(g)}
+                  className="flex shrink-0 items-center gap-1 rounded-pill border border-absent/30 bg-white px-2.5 py-1 text-[11px] font-semibold text-absent hover:bg-absent/5">
+                  <PrintIcon /> طباعة الفصل
                 </button>
+              </div>
+              {g.rows.map((r) => {
+                const open = openId === r.student_id;
+                return (
+                  <div key={r.student_id} className="border-b border-absent/10 bg-white last:border-0">
+                    <button onClick={() => toggleStudent(r)}
+                      className="flex w-full items-center justify-between gap-3 px-5 py-2.5 text-right hover:bg-absent/5">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-ink">{r.full_name}</p>
+                        <p className="mt-0.5 text-xs text-muted">
+                          آخر حضور ح<span className="num">{r.last_seen_period}</span> · فُقد في ح
+                          <span className="num font-semibold text-absent">{r.missing_period}</span>
+                          {r.subject && <> · {r.subject}</>}
+                        </p>
+                        {done[r.student_id] && (
+                          <span className="mt-1 inline-block rounded-pill bg-mint-tint px-2 py-0.5 text-[10px] font-semibold text-mint-deep">
+                            ✓ {ACTION_LABEL[done[r.student_id]]}
+                          </span>
+                        )}
+                      </div>
+                      <svg viewBox="0 0 24 24" fill="none"
+                           className={`h-3.5 w-3.5 shrink-0 text-faint transition-transform ${open ? "rotate-180" : ""}`}
+                           stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                    </button>
 
-                {open && (
-                  <div className="space-y-3 bg-white px-5 py-3">
-                    {!timeline ? (
-                      <Loader compact />
-                    ) : (
-                      <StudentTimeline rows={timeline} missingPeriod={r.missing_period} />
-                    )}
+                    {open && (
+                      <div className="space-y-3 bg-white px-5 py-3">
+                        {!timeline ? (
+                          <Loader compact />
+                        ) : (
+                          <StudentTimeline rows={timeline} missingPeriod={r.missing_period} />
+                        )}
 
-                    <div className="border-t border-line pt-3">
-                      {done[r.student_id] ? (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-mint-deep">
-                            ✓ تم تسجيل: {ACTION_LABEL[done[r.student_id]]}
-                          </p>
+                        <div className="border-t border-line pt-3">
+                          {done[r.student_id] ? (
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-mint-deep">
+                                ✓ تم تسجيل: {ACTION_LABEL[done[r.student_id]]}
+                              </p>
 
-                          {(done[r.student_id] === "escaped" || done[r.student_id] === "parent_permission") && (
-                            resolved[r.student_id] != null ? (
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="num chip bg-present/15 text-present">
-                                  عاد للفصل من الحصة {resolved[r.student_id]}
-                                </span>
-                                <button
-                                  onClick={() => undoReturned(r.student_id)}
-                                  disabled={busyId === r.student_id}
-                                  className="shrink-0 text-[11px] font-medium text-absent hover:underline disabled:opacity-50">
-                                  تراجع
-                                </button>
-                              </div>
-                            ) : periodPick === r.student_id ? (
-                              <div className="border-t border-line pt-2">
-                                <p className="text-[11px] text-muted">
-                                  من أي حصة يُتابع الطالب حضوره بشكل طبيعي؟
-                                </p>
-                                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                  {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
-                                    <button key={n}
-                                      onClick={() => markReturned(r.student_id, n)}
+                              {(done[r.student_id] === "escaped" || done[r.student_id] === "parent_permission") && (
+                                resolved[r.student_id] != null ? (
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="num chip bg-present/15 text-present">
+                                      عاد للفصل من الحصة {resolved[r.student_id]}
+                                    </span>
+                                    <button
+                                      onClick={() => undoReturned(r.student_id)}
                                       disabled={busyId === r.student_id}
-                                      className={`num rounded-sm2 border px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
-                                        n === currentPeriod
-                                          ? "border-present bg-present/10 text-present"
-                                          : "border-line text-ink hover:border-present hover:bg-present/10"}`}>
-                                      {n}
+                                      className="shrink-0 text-[11px] font-medium text-absent hover:underline disabled:opacity-50">
+                                      تراجع
                                     </button>
-                                  ))}
-                                </div>
-                                <button
-                                  onClick={() => setPeriodPick(null)}
-                                  className="mt-1.5 text-[11px] font-medium text-muted hover:underline">
-                                  إلغاء
-                                </button>
+                                  </div>
+                                ) : periodPick === r.student_id ? (
+                                  <div className="border-t border-line pt-2">
+                                    <p className="text-[11px] text-muted">
+                                      من أي حصة يُتابع الطالب حضوره بشكل طبيعي؟
+                                    </p>
+                                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                      {Array.from({ length: 7 }, (_, i) => i + 1).map((n) => (
+                                        <button key={n}
+                                          onClick={() => markReturned(r.student_id, n)}
+                                          disabled={busyId === r.student_id}
+                                          className={`num rounded-sm2 border px-2.5 py-1 text-xs font-medium disabled:opacity-50 ${
+                                            n === currentPeriod
+                                              ? "border-present bg-present/10 text-present"
+                                              : "border-line text-ink hover:border-present hover:bg-present/10"}`}>
+                                          {n}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <button
+                                      onClick={() => setPeriodPick(null)}
+                                      className="mt-1.5 text-[11px] font-medium text-muted hover:underline">
+                                      إلغاء
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setPeriodPick(r.student_id)}
+                                    disabled={busyId === r.student_id}
+                                    className="rounded-pill border border-present/40 bg-present/10 px-3 py-1 text-[11px] font-semibold text-present hover:bg-present/20 disabled:opacity-50">
+                                    عاد الطالب / تمت معالجته
+                                  </button>
+                                )
+                              )}
+                            </div>
+                          ) : (
+                            <>
+                              <p className="mb-1.5 text-xs font-medium text-muted">إجراء الإدارة:</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {MISSING_ACTIONS.map((a) => (
+                                  <button key={a.key}
+                                    disabled={busyId === r.student_id}
+                                    onClick={() => recordAction(r.student_id, a.key)}
+                                    className={`rounded-sm2 px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${a.tone}`}>
+                                    {a.label}
+                                  </button>
+                                ))}
                               </div>
-                            ) : (
-                              <button
-                                onClick={() => setPeriodPick(r.student_id)}
-                                disabled={busyId === r.student_id}
-                                className="rounded-pill border border-present/40 bg-present/10 px-3 py-1 text-[11px] font-semibold text-present hover:bg-present/20 disabled:opacity-50">
-                                عاد الطالب / تمت معالجته
-                              </button>
-                            )
+                            </>
                           )}
                         </div>
-                      ) : (
-                        <>
-                          <p className="mb-1.5 text-xs font-medium text-muted">إجراء الإدارة:</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {MISSING_ACTIONS.map((a) => (
-                              <button key={a.key}
-                                disabled={busyId === r.student_id}
-                                onClick={() => recordAction(r.student_id, a.key)}
-                                className={`rounded-sm2 px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${a.tone}`}>
-                                {a.label}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          ))}
         </div>
       )}
     </section>
   );
 }
+
+const GRADE_SHORT = { 1: "أول", 2: "ثاني", 3: "ثالث" };
+
+/** تجميع الطلاب المفقودين بالفصول، مرتّبة بالصف ثم رقم الفصل */
+function groupMissingByClass(rows) {
+  const map = new Map();
+  rows.forEach((r) => {
+    const key = `${r.grade ?? "x"}-${r.class_no ?? "x"}`;
+    if (!map.has(key)) {
+      const grade = GRADE_NAMES[r.grade];
+      map.set(key, {
+        key, grade: r.grade ?? 9, class_no: r.class_no,
+        label: grade ? `${grade} — فصل ${r.class_no}` : r.class_no ? `فصل ${r.class_no}` : "بلا فصل",
+        short: r.grade ? `${GRADE_SHORT[r.grade] ?? ""} ${r.class_no}` : r.class_no ? `فصل ${r.class_no}` : "—",
+        rows: [],
+      });
+    }
+    map.get(key).rows.push(r);
+  });
+  const num = (v) => { const n = parseInt(v, 10); return Number.isNaN(n) ? 999 : n; };
+  return [...map.values()]
+    .sort((a, b) => a.grade - b.grade || num(a.class_no) - num(b.class_no)
+      || String(a.class_no).localeCompare(String(b.class_no), "ar"))
+    .map((g) => ({
+      ...g,
+      rows: g.rows.sort((a, b) => a.missing_period - b.missing_period
+        || a.full_name.localeCompare(b.full_name, "ar")),
+    }));
+}
+
+const PrintIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+       strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+    <path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+    <rect x="6" y="14" width="12" height="7" />
+  </svg>
+);
 
 function StudentTimeline({ rows, missingPeriod }) {
   const punch = rows[0]?.punch_time;
