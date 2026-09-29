@@ -9,15 +9,19 @@ import ColorLegend from "../../components/ColorLegend.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import { useSession } from "../../lib/session.jsx";
 
 const TABS = [
   { key: "official", label: "الحضور والغياب الرسمي" },
   { key: "missing",  label: "الطلاب المفقودون" },
   { key: "late",     label: "التأخر الصباحي" },
-  { key: "devices",  label: "أجهزة البصمة" },
+  // أجهزة البصمة لمدير المدرسة والدعم الفني فقط
+  { key: "devices",  label: "أجهزة البصمة", superOnly: true },
 ];
 
 export default function AttendanceOverview() {
+  const { isSuper } = useSession();
+  const tabs = TABS.filter((t) => !t.superOnly || isSuper);
   const [tab, setTab] = useState("official");
 
   return (
@@ -30,7 +34,7 @@ export default function AttendanceOverview() {
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
               tab === t.key ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
@@ -42,7 +46,7 @@ export default function AttendanceOverview() {
       {tab === "official" && <OfficialTab />}
       {tab === "missing" && <MissingTab />}
       {tab === "late" && <LateTab />}
-      {tab === "devices" && <DevicesTab />}
+      {tab === "devices" && isSuper && <DevicesTab />}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 // مرتّبة حسب تسلسل اليوم الدراسي.
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useSession } from "../../lib/session.jsx";
 import { Loading } from "./shared.jsx";
 import { loadFingerprintEnabled, setFingerprintEnabled } from "../../lib/officialAttendance";
 
@@ -29,20 +30,23 @@ const GROUPS = [
   },
   {
     title: "التراكمي والإجراءات",
+    superOnly: true,
     tabs: [
       { key: "stats", label: "الإحصاء والنسب" },
       { key: "warnings", label: "الإنذارات والمحاضر" },
       { key: "student", label: "ملف الطالب" },
     ],
   },
-  { title: "الأجهزة", tabs: [{ key: "devices", label: "أجهزة البصمة" }] },
+  { title: "الأجهزة", superOnly: true, tabs: [{ key: "devices", label: "أجهزة البصمة" }] },
 ];
 
-const KEYS = new Set(GROUPS.flatMap((g) => g.tabs.map((t) => t.key)));
-
 export default function StudentAffairs() {
+  const { isSuper } = useSession();
+  // التراكمي والإجراءات وأجهزة البصمة لمدير المدرسة والدعم الفني فقط
+  const groups = GROUPS.filter((g) => !g.superOnly || isSuper);
+  const keys = new Set(groups.flatMap((g) => g.tabs.map((t) => t.key)));
   const [params, setParams] = useSearchParams();
-  const tab = KEYS.has(params.get("tab")) ? params.get("tab") : "today";
+  const tab = keys.has(params.get("tab")) ? params.get("tab") : "today";
   const go = (key) => setParams({ tab: key });
   const [fp, setFp] = useState(null);
   useEffect(() => { loadFingerprintEnabled().then(setFp).catch(() => setFp(false)); }, []);
@@ -61,7 +65,7 @@ export default function StudentAffairs() {
       </div>
 
       <div className="space-y-3">
-        {GROUPS.map((g) => (
+        {groups.map((g) => (
           <div key={g.title}>
             <p className="mb-1.5 text-[11px] font-semibold text-faint">{g.title}</p>
             <div className="flex flex-wrap gap-1.5">
