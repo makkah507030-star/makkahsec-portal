@@ -1,9 +1,10 @@
-// الإحصاء والنسب: من الأيام المعتمدة — النسبة الرسمية والمكتملة، حسب اليوم والصف
+// الإحصاء والنسب: من الأيام المعتمدة — النسبة الرسمية والمكتملة، حسب اليوم والصف والفصل
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtGreg } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
+import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import {
   loadRangeStart, loadReportsStart, loadDay, approveDay, saveFinal, schoolDaysBetween, isMissingTable,
 } from "../../lib/officialAttendance";
@@ -75,6 +76,51 @@ export default function Statistics() {
     return [0, 1, 2, 3, 4].filter((w) => m[w]).map((w) => ({ w, ...m[w], pct: pct(m[w].present, m[w].total, m[w].pending) }));
   }, [used]);
 
+  // الغياب الرسمي حسب الفصل: من حالات الطلاب المعتمدة في الأيام المحتسبة
+  const [classRows, setClassRows] = useState(null);
+  const [classGrade, setClassGrade] = useState(0);
+  const usedKey = used.map((d) => d.attend_date).join(",");
+  useEffect(() => {
+    if (view !== "class" || !used.length) { setClassRows(used.length ? null : []); return; }
+    (async () => {
+      setClassRows(null);
+      const dates = used.map((d) => d.attend_date);
+      const [marks, { data: roster }] = await Promise.all([
+        fetchAllPaged(() => supabase.from("official_day_marks")
+          .select("attend_date, student_id, status, grade, class_no")
+          .gte("attend_date", dates[0]).lte("attend_date", dates[dates.length - 1])
+          .in("status", ["absent", "excused"])
+          .order("attend_date").order("student_id")),
+        supabase.from("v_active_students").select("student_id, grade, class_no"),
+      ]);
+      const inUse = new Set(dates);
+      const m = new Map();
+      const row = (g, c) => {
+        const k = `${g}-${c}`;
+        if (!m.has(k)) m.set(k, { g, c, size: 0, absent: 0, excused: 0, students: new Set() });
+        return m.get(k);
+      };
+      (roster ?? []).forEach((s) => { if (s.grade && s.class_no) row(s.grade, s.class_no).size++; });
+      marks.forEach((x) => {
+        if (!inUse.has(x.attend_date) || !x.grade || !x.class_no) return;
+        const r = row(x.grade, x.class_no);
+        if (x.status === "absent") { r.absent++; r.students.add(x.student_id); }
+        else r.excused++;
+      });
+      const n = dates.length;
+      setClassRows([...m.values()].map((r) => ({
+        ...r,
+        absentStudents: r.students.size,
+        avg: Math.round((r.absent / n) * 10) / 10,
+        // نسبة الغياب الرسمي: أيام غياب الفصل من أيام طلابه في الفترة
+        rate: r.size ? Math.round((r.absent * 10000) / (r.size * n)) / 100 : null,
+      })).sort((a, b) => (b.rate ?? 0) - (a.rate ?? 0) || b.absent - a.absent));
+    })().catch((e) => { console.error("byClass:", e); setClassRows([]); });
+  }, [view, usedKey]);
+
+  const classShown = (classRows ?? []).filter((r) => !classGrade || r.g === classGrade);
+  const classLabel = (r) => `${GRADE_NAMES[r.g] ?? r.g} — فصل ${r.c}`;
+
   const byGrade = useMemo(() => {
     const m = {};
     used.forEach((d) => Object.entries(d.by_grade ?? {}).forEach(([g, v]) => {
@@ -91,6 +137,13 @@ export default function Statistics() {
       title: "نسبة الحضور حسب أيام الأسبوع",
       headers: ["اليوم", "عدد الأيام", "متوسط الغياب اليومي", "نسبة الحضور الرسمية"],
       rows: byWeekday.map((r) => [WEEKDAY[r.w], r.n, Math.round(r.absent / r.n), pctText(r.pct)]),
+    };
+    if (view === "class") return {
+      title: "الغياب الرسمي حسب الفصل",
+      headers: ["م", "الفصل", "عدد الطلاب", "أيام الغياب الرسمي", "طلاب غابوا", "بعذر", "متوسط الغياب اليومي", "نسبة الغياب"],
+      rows: classShown.map((r, i) => [
+        i + 1, classLabel(r), r.size, r.absent, r.absentStudents, r.excused, r.avg, pctText(r.rate),
+      ]),
     };
     if (view === "grade") return {
       title: "نسبة الحضور حسب الصفوف",
@@ -135,7 +188,19 @@ export default function Statistics() {
         <Pill on={view === "days"} onClick={() => setView("days")}>حسب اليوم</Pill>
         <Pill on={view === "weekday"} onClick={() => setView("weekday")}>حسب أيام الأسبوع</Pill>
         <Pill on={view === "grade"} onClick={() => setView("grade")}>حسب الصف</Pill>
+        <Pill on={view === "class"} onClick={() => setView("class")}>حسب الفصل</Pill>
       </div>
+
+      {view === "class" && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-faint">الصف:</span>
+          {[0, 1, 2, 3].map((g) => (
+            <Pill key={g} on={classGrade === g} onClick={() => setClassGrade(g)}>
+              {g ? GRADE_NAMES[g] : "الكل"}
+            </Pill>
+          ))}
+        </div>
+      )}
 
       {partialCount > 0 && (
         <Note tone="warn">
@@ -194,6 +259,8 @@ export default function Statistics() {
             </div>
           ))}
         </div>
+      ) : view === "class" ? (
+        <ClassTable rows={classShown} label={classLabel} days={used.length} />
       ) : (
         <div className="card divide-y divide-line overflow-hidden">
           {(view === "weekday"
@@ -223,6 +290,54 @@ export default function Statistics() {
       )}
 
       {!missing && <Backfill from={from} to={to} approved={days} onDone={() => setTick((t) => t + 1)} />}
+    </div>
+  );
+}
+
+/** الغياب الرسمي لكل فصل، الأعلى نسبة غياب أولًا */
+function ClassTable({ rows, label, days }) {
+  if (!rows) return <Loading />;
+  if (!rows.length) return <Empty>لا بيانات غياب للفصول في هذه الفترة.</Empty>;
+  const max = Math.max(...rows.map((r) => r.rate ?? 0), 1);
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted">
+        الغياب الرسمي (بعد الحصة الثانية) في <span className="num">{days}</span> يومًا محتسبًا.
+        النسبة = أيام غياب طلاب الفصل ÷ (عدد طلابه × عدد الأيام). الأعلى غيابًا أولًا.
+      </p>
+      <div className="card divide-y divide-line overflow-hidden">
+        <div className="flex items-center justify-between gap-3 bg-gray-tint px-4 py-2 text-[11px] font-semibold text-muted">
+          <span>الفصل</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="w-12 text-center">غياب</span>
+            <span className="w-40 text-left">نسبة الغياب</span>
+          </div>
+        </div>
+        {rows.map((r, i) => (
+          <div key={`${r.g}-${r.c}`} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${
+            i < 3 && r.absent > 0 ? "bg-absent/5" : ""}`}>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-ink">
+                <span className="num text-faint">{i + 1}. </span>{label(r)}
+              </p>
+              <p className="text-[11px] text-faint">
+                طلاب <span className="num">{r.size}</span> · غاب منهم <span className="num">{r.absentStudents}</span>
+                {" "}· متوسط يومي <span className="num">{r.avg}</span>
+                {r.excused > 0 && <> · بعذر <span className="num">{r.excused}</span></>}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="num chip w-12 justify-center bg-absent/10 text-absent">{r.absent}</span>
+              <div className="flex w-40 items-center gap-2">
+                <div className="h-2 flex-1 overflow-hidden rounded-pill bg-gray-tint">
+                  <div className="h-full rounded-pill bg-absent" style={{ width: `${((r.rate ?? 0) / max) * 100}%` }} />
+                </div>
+                <span className="num w-12 text-left text-sm font-bold text-absent">{pctText(r.rate)}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
