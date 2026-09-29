@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { GRADE_NAMES, todayISO, PERIODS_PER_DAY } from "../lib/schoolTime";
 import PrintPortal from "../components/PrintPortal.jsx";
+import { printThen } from "../lib/print.js";
 import EventReportSheet from "../components/EventReportSheet.jsx";
 import { normalizeImage } from "../lib/imageResize.js";
 import EventCertificate, {
@@ -1332,8 +1333,8 @@ function usePrintWhenReady(id, trigger, onDone) {
       const imgs = [...document.querySelectorAll(`#${id} img`)];
       await Promise.all(imgs.map((i) => (i.complete ? null
         : new Promise((r) => { i.onload = r; i.onerror = r; }))));
-      window.print();
-      onDone();
+      // على الجوال تعود الطباعة فورًا: تبقى منطقة الطباعة حتى يعود المستخدم للصفحة
+      printThen(onDone);
     }, 150);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
