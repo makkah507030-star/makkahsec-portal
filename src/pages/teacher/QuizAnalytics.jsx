@@ -5,6 +5,7 @@ import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import Loader from "../../components/Loader.jsx";
 import PrintPortal from "../../components/PrintPortal.jsx";
+import { printThen } from "../../lib/print.js";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import BidiDate from "../../components/BidiDate.jsx";
@@ -89,8 +90,7 @@ export default function QuizAnalytics() {
       while (Date.now() < until && [...document.querySelectorAll("#qa-report img")].some((im) => !im.complete)) {
         await new Promise((r) => setTimeout(r, 150));
       }
-      window.print();
-      setPrinting(false);
+      printThen(() => setPrinting(false));
     }, 300);
   };
 

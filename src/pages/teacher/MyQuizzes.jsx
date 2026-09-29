@@ -8,6 +8,7 @@ import OnlineQuizPanel from "../../components/OnlineQuizPanel.jsx";
 import PaperExam from "../../components/PaperExam.jsx";
 import { PAPER_KINDS, BLANK, BLANK_RE, LINES, MODEL_LABEL, groupPaper, paperOpts } from "../../lib/paperExam.js";
 import { shrinkImage } from "../../lib/imageResize.js";
+import { printThen } from "../../lib/print.js";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 
@@ -1231,8 +1232,6 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
     // بلا أسماء أو نموذج الإجابة: نسخة من كل نموذج
     if (opts.models && (mode === "blank" || mode === "key")) copies = [{ model: "A" }, { model: "B" }];
     onPrint({ copies, answerKey: mode === "key" });
-    const done = () => { onPrint(null); window.removeEventListener("afterprint", done); };
-    window.addEventListener("afterprint", done);
     // تُنتظر صور الأسئلة حتى تكتمل قبل فتح نافذة الطباعة
     setTimeout(async () => {
       const until = Date.now() + 6000;
@@ -1241,7 +1240,8 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
         await new Promise((r) => setTimeout(r, 150));
       }
       setBusy(false);
-      window.print();
+      // لا يُعتمد على afterprint: على الجوال قد يسبق التقاط الصفحة للطباعة
+      printThen(() => onPrint(null));
     }, 500);
   };
 

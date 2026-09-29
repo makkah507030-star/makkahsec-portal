@@ -1,4 +1,5 @@
 import { fmtBoth, fmtTime12 } from "./dates";
+import { isMobileDevice } from "./print";
 
 // المكتبات الثقيلة تُجلب عند التصدير أو الطباعة فقط، لا مع فتح الصفحة:
 // xlsx-js-style: نسخة مجانية من SheetJS تدعم تنسيق الخلايا
@@ -274,6 +275,17 @@ export async function printReport(opts) {
     signOnLastPageOnly = false,
     note, tableClass, landscape = false,
   } = opts;
+
+  /* على الجوال: الإطار المخفي لا يُطبع وحده (يُطبع ما حوله من الصفحة كاملًا)،
+     فيُعرض التقرير في تبويب مستقل يطبع نفسه. يُفتح التبويب هنا قبل أي انتظار
+     حتى يبقى ضمن نقرة المستخدم فلا يحجبه المتصفح. إن حُجب نعود للإطار. */
+  const mobileWin = isMobileDevice() ? window.open("", "_blank") : null;
+  if (mobileWin) {
+    mobileWin.document.write(
+      '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>جارٍ تجهيز التقرير…</title></head>'
+      + '<body style="font-family:sans-serif;text-align:center;padding:40px;color:#3E6350">جارٍ تجهيز التقرير…</body></html>');
+    mobileWin.document.close();
+  }
 
   const now = new Date();
   const stampText = `${fmtBoth(now)} · ${fmtTime12(now)}`;
@@ -761,6 +773,45 @@ ${sectionsHtml}
 <script>${paginatorJs}</script>
 </body>
 </html>`;
+
+  if (mobileWin && !mobileWin.closed) {
+    // شريط أزرار للجوال (لا يُطبع) + طباعة تلقائية بعد الخطوط وتقسيم الصفحات
+    const mobileBar = `
+<style>
+  .mbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 8px; justify-content: center;
+          padding: 10px; background: ${TINT}; border-bottom: 1px solid ${LIGHT}; }
+  .mbar button { font: inherit; font-size: 16px; font-weight: 700; padding: 10px 22px;
+                 border-radius: 999px; border: 1px solid ${DEEP}; background: #fff; color: ${DEEP}; }
+  .mbar button.pri { background: ${DEEP}; color: #fff; }
+  @media print { .mbar { display: none !important; } }
+</style>
+<div class="mbar">
+  <button class="pri" onclick="window.print()">طباعة / حفظ PDF</button>
+  <button onclick="window.close()">إغلاق</button>
+</div>`;
+    const mobileRun = `
+<script>
+(function(){
+  var started = false;
+  function go(){
+    if (started) return; started = true;
+    var f = document.fonts && document.fonts.ready ? document.fonts.ready.catch(function(){}) : Promise.resolve();
+    f.then(function(){
+      try { window.__paginate && window.__paginate(); } catch(e) {}
+      setTimeout(function(){ window.print(); }, 300);
+    });
+  }
+  if (document.readyState === 'complete') go(); else window.addEventListener('load', go);
+})();
+</script>`;
+    const mdoc = mobileWin.document;
+    mdoc.open();
+    mdoc.write(html.replace("<body>", () => "<body>" + mobileBar)
+                   .replace("</body>", () => mobileRun + "</body>"));
+    mdoc.close();
+    mobileWin.focus();
+    return;
+  }
 
   /* ---------- الطباعة عبر إطار مخفي ----------
      تتفادى حاجب النوافذ المنبثقة، ولا تُظهر about:blank في التذييل. */
