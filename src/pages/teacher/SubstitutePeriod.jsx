@@ -7,6 +7,7 @@ import {
 } from "../../lib/periodTimes";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { isMissingTable } from "../../lib/officialAttendance.js";
 
 const TEACHER_ORDER = ["present", "absent", "late"];
 const SOLID = {
@@ -26,7 +27,9 @@ export default function SubstitutePeriod() {
   const [term, setTerm] = useState(null);
   const [ptimes, setPtimes] = useState([]);
   const [nowPeriod, setNowPeriod] = useState(null);
+  const [, setClock] = useState(() => new Date()); // يتحدّث كل ٣٠ ثانية لتنتهي المهلة وتتبدّل الحصة دون إعادة تحميل
   const [candidates, setCandidates] = useState(null); // null = جارٍ التحميل
+  const [busy, setBusy] = useState(false); // للمعلم حصة في جدوله الآن
   const [selected, setSelected] = useState(null); // صف الجدول المختار للتغطية
   const [students, setStudents] = useState([]);
   const [marks, setMarks] = useState({});
@@ -37,12 +40,17 @@ export default function SubstitutePeriod() {
   const date = todayISO();
   const dow = todayDow();
 
+  // التوقيت الزمني + تحديث الحصة الجارية ومهلة السماح دوريًا
   useEffect(() => {
+    let timer;
     (async () => {
       const { rows } = await loadPeriodTimes();
       setPtimes(rows);
-      setNowPeriod(currentPeriodNo(rows));
+      const tick = () => { setNowPeriod(currentPeriodNo(rows)); setClock(new Date()); };
+      tick();
+      timer = setInterval(tick, 30000);
     })();
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -66,10 +74,13 @@ export default function SubstitutePeriod() {
     if (!me || !dow || nowPeriod == null || !year) { setCandidates([]); return; }
     setCandidates(null);
     const { data: sched } = await supabase.from("schedule")
-      .select("id, teacher_id, class_id, classes(class_no, grade), subjects(name), teachers(full_name)")
+      .select("id, teacher_id, class_id, period_no, classes(class_no, grade), subjects(name), teachers(full_name)")
       .eq("academic_year", year).eq("term", term).eq("day_of_week", dow).eq("period_no", nowPeriod);
 
-    const list = (sched ?? []).filter((s) => s.teacher_id !== me.id);
+    // من له حصة في جدوله الآن لا يغطّي فصلًا آخر في الوقت نفسه
+    const mine = (sched ?? []).some((s) => s.teacher_id === me.id);
+    setBusy(mine);
+    const list = mine ? [] : (sched ?? []).filter((s) => s.teacher_id !== me.id);
     if (!list.length) { setCandidates([]); return; }
 
     const { data: done } = await supabase.from("class_attendance")
@@ -128,9 +139,40 @@ export default function SubstitutePeriod() {
     setSelected(sched);
   };
 
+  const done = async (text) => {
+    setSaving(false);
+    setMsg({ ok: true, text });
+    setSelected(null);
+    await loadCandidates();
+  };
+  const fail = async (text, { close = false } = {}) => {
+    setSaving(false);
+    setMsg({ ok: false, text });
+    if (close) { setSelected(null); await loadCandidates(); }
+  };
+
   const save = async () => {
     if (!selected || !me) return;
     setSaving(true); setMsg(null);
+
+    // الطريقة الأساسية: دالة واحدة في القاعدة تتحقق من الوقت والتعارض، وتحجز
+    // الحصة وتحفظ التحضير معًا (supabase/substitute_take_1.sql و _2.sql)
+    const { error: rpcErr } = await supabase.rpc("substitute_take", {
+      p_schedule_id: selected.id,
+      p_date: date,
+      p_marks: marks,
+    });
+    if (!rpcErr) return done("تم تسجيلك معلم انتظار وحُفظ التحضير.");
+    if (!isMissingTable(rpcErr)) {
+      // سبقني غيري أو حضّرها معلمها: لا فائدة من البقاء في الكشف
+      return fail(rpcErr.message, { close: rpcErr.code === "23505" });
+    }
+
+    // الطريقة السابقة إلى أن يُنفَّذ ملفا substitute_take_1/2.sql في القاعدة
+    // تحقّق أخير: إن حضّر المعلم الأصلي حصته أثناء فتح الكشف فلا نكتب فوقها
+    const { count } = await supabase.from("class_attendance")
+      .select("id", { count: "exact", head: true })
+      .eq("schedule_id", selected.id).eq("attend_date", date);
 
     // تثبيت حجز الحصة أولًا (يمنع أي تعارض مع معلم انتظار آخر بفضل القيد الفريد)
     const { error: subErr } = await supabase.from("substitute_periods").insert({
@@ -139,14 +181,14 @@ export default function SubstitutePeriod() {
       cover_teacher_id: me.id,
       absent_teacher_id: selected.teacher_id,
       attend_date: date,
-      period_no: nowPeriod,
+      period_no: selected.period_no ?? nowPeriod,
       day_of_week: dow,
       academic_year: year,
       term,
     });
     // الحجز موجود مسبقًا (23505): إن كان حجزي أنا — من محاولة سابقة لم يكتمل
     // فيها حفظ التحضير — نُكمل الحفظ، وإلا فقد سبقني معلم آخر
-    let reservedNow = !subErr;
+    const reservedNow = !subErr;
     if (subErr) {
       let mine = false;
       if (subErr.code === "23505") {
@@ -156,17 +198,15 @@ export default function SubstitutePeriod() {
         mine = ex?.cover_teacher_id === me.id;
       }
       if (!mine) {
-        setSaving(false);
-        setMsg({
-          ok: false,
-          text: subErr.code === "23505"
-            ? "سبقك معلم آخر لتحضير هذه الحصة."
-            : "تعذّر حجز الحصة: " + subErr.message,
-        });
-        setSelected(null);
-        await loadCandidates();
-        return;
+        return fail(subErr.code === "23505"
+          ? "سبقك معلم آخر لتحضير هذه الحصة."
+          : "تعذّر حجز الحصة: " + subErr.message, { close: true });
       }
+    } else if (count > 0) {
+      // حجز جديد لحصة حُضِّرت قبله: نتراجع عنه
+      await supabase.from("substitute_periods").delete()
+        .eq("schedule_id", selected.id).eq("attend_date", date).eq("cover_teacher_id", me.id);
+      return fail("حُضِّرت هذه الحصة قبل حفظك — غالبًا حضر معلمها.", { close: true });
     }
 
     const rows = students.map((s) => ({
@@ -182,15 +222,9 @@ export default function SubstitutePeriod() {
         await supabase.from("substitute_periods").delete()
           .eq("schedule_id", selected.id).eq("attend_date", date).eq("cover_teacher_id", me.id);
       }
-      setSaving(false);
-      setMsg({ ok: false, text: `تعذّر حفظ التحضير: ${error.message}` });
-      return;
+      return fail(`تعذّر حفظ التحضير: ${error.message}`);
     }
-    setSaving(false);
-
-    setMsg({ ok: true, text: "تم تسجيلك معلم انتظار وحُفظ التحضير." });
-    setSelected(null);
-    await loadCandidates();
+    return done("تم تسجيلك معلم انتظار وحُفظ التحضير.");
   };
 
   const ptMap = byPeriodNo(ptimes);
@@ -206,21 +240,15 @@ export default function SubstitutePeriod() {
   if (!dow) {
     return <Empty title="اليوم عطلة" body="الأسبوع الدراسي من الأحد إلى الخميس." />;
   }
-  if (nowPeriod == null) {
-    return (
-      <Empty title="لا توجد حصة جارية الآن"
-             body="تظهر حصص الانتظار فقط أثناء وقت حصة فعلية من اليوم الدراسي." />
-    );
-  }
-
-  /* ---------------- شاشة تحضير الفصل المختار ---------------- */
+  /* ---------------- شاشة تحضير الفصل المختار ----------------
+     تسبق فحص «الحصة الجارية»: إن رنّ الجرس والكشف مفتوح لا تضيع الإدخالات */
   if (selected) {
     return (
       <div className="space-y-4">
         <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-4">
           <p className="text-xs font-medium text-[#6AA786]">
-            {todayLabel()} · الحصة <span className="num">{nowPeriod}</span>
-            {ptimeOf(nowPeriod) && <span className="num"> · {fmtRange(ptimeOf(nowPeriod))}</span>}
+            {todayLabel()} · الحصة <span className="num">{selected.period_no}</span>
+            {ptimeOf(selected.period_no) && <span className="num"> · {fmtRange(ptimeOf(selected.period_no))}</span>}
             {" "}· انتظار
           </p>
           <h1 className="mt-1 text-xl font-bold leading-tight text-ink">
@@ -289,6 +317,13 @@ export default function SubstitutePeriod() {
     );
   }
 
+  if (nowPeriod == null) {
+    return (
+      <Empty title="لا توجد حصة جارية الآن"
+             body="تظهر حصص الانتظار فقط أثناء وقت حصة فعلية من اليوم الدراسي." />
+    );
+  }
+
   /* ---------------- شاشة اختيار الفصل ---------------- */
   return (
     <div className="space-y-4">
@@ -314,6 +349,9 @@ export default function SubstitutePeriod() {
 
       {candidates === null ? (
         <Loader />
+      ) : busy ? (
+        <Empty title="لديك حصة في جدولك الآن"
+               body="لا يمكن تغطية فصل آخر في وقت حصتك. حضّر حصتك من شاشة التحضير." />
       ) : !graceOk ? (
         <Empty title="ما زال الوقت مبكرًا"
                body={`تظهر الفصول المتاحة للانتظار بعد ${GRACE_MINUTES} دقائق من بداية الحصة، لإعطاء معلمها الأصلي فرصة، في حال حضوره، لاستكمال الحصة وإدخال الغياب.`} />
