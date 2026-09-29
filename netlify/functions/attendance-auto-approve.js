@@ -17,7 +17,7 @@
 //  البصمات تُتجاهل ما لم يكن settings.fingerprint_enabled = "true" (قفل البصمة)
 // =====================================================================
 
-const { createClient } = require("@supabase/supabase-js");
+import { createClient } from "@supabase/supabase-js";
 
 const KSA = 3 * 60 * 60 * 1000;
 const BUFFER_MIN = 10;               // مهلة بعد نهاية الحصة قبل الاعتماد
@@ -214,7 +214,7 @@ async function notify(db, title, body) {
 
 /* ------------------------- التشغيل ------------------------- */
 
-exports.handler = async () => {
+export const handler = async () => {
   const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });

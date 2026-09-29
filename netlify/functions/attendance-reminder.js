@@ -11,7 +11,7 @@
 //  مرة واحدة فقط لكل حصة في اليوم.
 // =====================================================================
 
-const { createClient } = require("@supabase/supabase-js");
+import { createClient } from "@supabase/supabase-js";
 
 const KSA = 3 * 60 * 60 * 1000;
 
@@ -36,7 +36,7 @@ const ksaDow = (d = ksaNow()) => {
   return n >= 1 && n <= 5 ? n : 0;
 };
 
-exports.handler = async () => {
+export const handler = async () => {
   const db = admin();
   const today = ksaDate();
 

@@ -13,8 +13,8 @@
 //    VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:info@makkahsec.com)
 // =====================================================================
 
-const webpush = require("web-push");
-const { createClient } = require("@supabase/supabase-js");
+import webpush from "web-push";
+import { createClient } from "@supabase/supabase-js";
 
 const json = (body, status = 200) => ({
   statusCode: status,
@@ -22,7 +22,7 @@ const json = (body, status = 200) => ({
   body: JSON.stringify(body),
 });
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   if (event.httpMethod !== "POST") return json({ error: "method not allowed" }, 405);
 
   const SUPABASE_URL = process.env.SUPABASE_URL;

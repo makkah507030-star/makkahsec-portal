@@ -11,7 +11,7 @@
 //  الردود نص عادي (text/plain) بصيغة يفهمها الجهاز.
 // =====================================================================
 
-const { createClient } = require("@supabase/supabase-js");
+import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -50,7 +50,7 @@ function riyadhNow() {
   return { attendDate, punchTime };
 }
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });

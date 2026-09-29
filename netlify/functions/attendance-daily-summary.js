@@ -10,7 +10,7 @@
 //  إغراقهم بإشعار مع كل حصة.
 // =====================================================================
 
-const { createClient } = require("@supabase/supabase-js");
+import { createClient } from "@supabase/supabase-js";
 
 const KSA = 3 * 60 * 60 * 1000;
 const ksaNow = () => new Date(Date.now() + KSA);
@@ -23,7 +23,7 @@ const ksaDow = () => {
 // من يصله الملخّص
 const ADMIN_ROLES = ["principal", "deputy_academic", "deputy_students", "tech_support"];
 
-exports.handler = async () => {
+export const handler = async () => {
   const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
