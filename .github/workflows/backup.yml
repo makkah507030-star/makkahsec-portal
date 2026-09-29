@@ -39,6 +39,12 @@ jobs:
 
       - uses: actions/checkout@v4
 
+      - name: تصحيح رابط قاعدة البيانات
+        run: |
+          url=$(python3 scripts/normalize-db-url.py)
+          echo "::add-mask::$url"
+          echo "SUPABASE_DB_URL=$url" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
