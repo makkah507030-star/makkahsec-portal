@@ -14,7 +14,7 @@
 //  وتستورد الدالة المجدولة site-status-snapshot.mjs الدالة buildSnapshot من هنا.
 // =====================================================================
 
-const { createClient } = require("@supabase/supabase-js");
+import { createClient } from "@supabase/supabase-js";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -248,7 +248,7 @@ async function buildSnapshot(admin, source = "scheduled") {
 
 // =====================================================================
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors, body: "" };
 
   // التحقق من هوية المستدعي: دعم فني أو مدير فقط
@@ -291,5 +291,4 @@ exports.handler = async (event) => {
 };
 
 // للاستخدام من الدالة المجدولة
-exports.adminClient = adminClient;
-exports.buildSnapshot = buildSnapshot;
+export { adminClient, buildSnapshot };

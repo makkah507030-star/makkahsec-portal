@@ -9,7 +9,7 @@
 //  فالصور لا تُقرأ إلا عبر هذا التحقق.
 // =====================================================================
 
-const { createClient } = require("@supabase/supabase-js");
+import { createClient } from "@supabase/supabase-js";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -22,7 +22,7 @@ const json = (body, status = 200) => ({
   body: JSON.stringify(body),
 });
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors, body: "" };
   if (event.httpMethod !== "POST") return json({ error: "method not allowed" }, 405);
 
