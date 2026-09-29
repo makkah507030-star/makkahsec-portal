@@ -205,7 +205,12 @@ async function notify(db, title, body) {
   if (nid) {
     try {
       await fetch(`${process.env.URL || ""}/.netlify/functions/push-send`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // طلب داخلي من دالة مجدولة: يُعرَّف بمفتاح الخادم
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+        },
         body: JSON.stringify({ notification_id: nid }),
       });
     } catch (e) { console.error("[auto-approve] push:", e && e.message); }

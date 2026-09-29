@@ -7,6 +7,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import { ADMIN_ROLE_LABEL, ROLE_LABEL } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { sendPush } from "../../lib/pushSend.js";
 
 const roleLabel = (r) => ADMIN_ROLE_LABEL[r] ?? ROLE_LABEL[r] ?? r;
 
@@ -81,10 +82,7 @@ export default function NotificationsReview() {
       });
     } catch { /* تجاهل */ }
     try {
-      await fetch("/.netlify/functions/push-send", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notification_id: nid }),
-      });
+      await sendPush(nid);
     } catch { /* تجاهل */ }
 
     // 3) تعليم المسودّة معتمدة

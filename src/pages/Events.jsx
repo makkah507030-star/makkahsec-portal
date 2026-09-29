@@ -13,6 +13,7 @@ import EventCertificate, {
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes.js";
+import { sendPush } from "../lib/pushSend.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -446,10 +447,7 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
         if (nid) {
           n++;
           try {
-            await fetch("/.netlify/functions/push-send", {
-              method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ notification_id: nid }),
-            });
+            await sendPush(nid);
           } catch { /* الإشعار في الجرس وصل */ }
         }
       }
@@ -747,10 +745,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
       });
       if (nid) {
         try {
-          await fetch("/.netlify/functions/push-send", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ notification_id: nid }),
-          });
+          await sendPush(nid);
         } catch { /* الإشعار في البوابة وصل */ }
       }
       sent++;
@@ -789,10 +784,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
       });
       if (nid) {
         try {
-          await fetch("/.netlify/functions/push-send", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ notification_id: nid }),
-          });
+          await sendPush(nid);
         } catch { /* الإشعار في البوابة وصل */ }
       }
       await supabase.from("event_participants")
@@ -1535,10 +1527,7 @@ async function notifyUsers(userIds, title, body, link = "/events") {
   });
   if (!nid) return;
   try {
-    await fetch("/.netlify/functions/push-send", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notification_id: nid }),
-    });
+    await sendPush(nid);
   } catch { /* الإشعار في الجرس وصل */ }
 }
 

@@ -1,5 +1,6 @@
 // src/lib/referrals.js
 import { supabase } from "./supabase";
+import { sendPush } from "./pushSend.js";
 
 /* =====================================================================
    متابعة الإحالات — ما تشترك فيه صفحة الإحالات وصندوق لوحة التحكم:
@@ -93,10 +94,7 @@ export async function notifyUsers(userIds, title, body, link) {
       p_roles: null, p_user_ids: ids, p_grade: null, p_class_no: null, p_is_auto: false,
     });
     if (nid) {
-      await fetch("/.netlify/functions/push-send", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notification_id: nid }),
-      });
+      await sendPush(nid);
     }
   } catch { /* الإجراء نفسه حُفظ */ }
 }

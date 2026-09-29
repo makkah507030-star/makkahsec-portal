@@ -7,6 +7,7 @@ import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "../components/PrintPortal.jsx";
 import Loader from "../components/Loader.jsx";
 import PrincipalSign from "../components/PrincipalSign.jsx";
+import { PRINCIPAL_NAME } from "../lib/exportUtils.js";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
@@ -260,7 +261,7 @@ export default function EventsReports() {
                   <p className="text-[12px] text-muted">مدير المدرسة</p>
                   <PrincipalSign height="h-8" />
                   <div className="mx-auto h-px w-44 bg-line" />
-                  <p className="mt-1.5 text-[12.5px] font-semibold">عبدالله بن حسن سليمان الفيفي</p>
+                  <p className="mt-1.5 text-[12.5px] font-semibold">{PRINCIPAL_NAME}</p>
                 </div>
               </div>
 
