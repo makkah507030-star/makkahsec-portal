@@ -30,6 +30,13 @@ export default function PrintPortal({ id, landscape = false, margin = "0", extra
           #${id} { background: #fff; }
           #${id} .sheet { box-shadow: none !important; margin: 0 !important; transform: none !important; }
           .no-print { display: none !important; }
+          ${margin === "0" ? `
+          /* iPhone/iPad (Safari): يتجاهل ‏@page margin:0 ويفرض هوامش (~11مم جانبًا
+             و~13مم أعلى وأسفل) لرابط الصفحة وتاريخها، فتفيض الورقة المصمّمة بملء
+             A4 إلى ورقة ثانية. نصغّرها لتتسع داخل تلك الهوامش. الشرط يطابق iOS وحده. */
+          @supports (-webkit-touch-callout: none) {
+            #${id} .sheet { zoom: 0.86; margin: 0 auto !important; }
+          }` : ""}
           ${extraCss}
         }
       ` }} />
