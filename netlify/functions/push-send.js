@@ -11,6 +11,8 @@
 //  متغيّرات البيئة المطلوبة في Netlify:
 //    SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
 //    VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (mailto:info@makkahsec.com)
+//    PUSH_INTERNAL_SECRET — مفتاح دالة قاعدة البيانات push_notification
+//      (القيمة نفسها محفوظة في خزنة Supabase باسم push_internal_secret)
 // =====================================================================
 
 import webpush from "web-push";
@@ -41,12 +43,14 @@ export const handler = async (event) => {
   });
 
   // ---------- هوية المستدعي ----------
-  // مستخدم بجلسة صالحة في البوابة، أو دالة مجدولة داخلية بمفتاح الخادم.
+  // مستخدم بجلسة صالحة في البوابة، أو دالة مجدولة داخلية بمفتاح الخادم،
+  // أو دالة قاعدة البيانات push_notification بالمفتاح المشترك.
   // بدون ذلك كان أي شخص يعرف الرابط يستطيع إعادة إرسال الإشعارات لمستلميها.
+  const INTERNAL_SECRET = process.env.PUSH_INTERNAL_SECRET;
   const auth = event.headers.authorization || event.headers.Authorization || "";
   const token = auth.replace(/^Bearer\s+/i, "");
   if (!token) return json({ error: "غير مصرّح" }, 401);
-  if (token !== SERVICE_KEY) {
+  if (token !== SERVICE_KEY && !(INTERNAL_SECRET && token === INTERNAL_SECRET)) {
     const { data: u } = await admin.auth.getUser(token);
     if (!u?.user?.id) return json({ error: "جلسة غير صالحة" }, 401);
   }
