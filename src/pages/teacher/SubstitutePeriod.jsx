@@ -77,7 +77,15 @@ export default function SubstitutePeriod() {
       .in("schedule_id", list.map((s) => s.id));
     const doneSet = new Set((done ?? []).map((r) => r.schedule_id));
 
-    setCandidates(list.filter((s) => !doneSet.has(s.id)));
+    // حصص حجزها معلم انتظار آخر اليوم (ولو لم يكتمل تحضيره) لا تظهر لغيره؛
+    // أما حجزي أنا غير المكتمل فيبقى ظاهرًا لأُكمل تحضيره
+    const { data: taken } = await supabase.from("substitute_periods")
+      .select("schedule_id, cover_teacher_id").eq("attend_date", date)
+      .in("schedule_id", list.map((s) => s.id));
+    const takenSet = new Set((taken ?? [])
+      .filter((r) => r.cover_teacher_id !== me.id).map((r) => r.schedule_id));
+
+    setCandidates(list.filter((s) => !doneSet.has(s.id) && !takenSet.has(s.id)));
   };
 
   useEffect(() => { loadCandidates(); }, [me, dow, nowPeriod, year, term]);
@@ -136,12 +144,29 @@ export default function SubstitutePeriod() {
       academic_year: year,
       term,
     });
+    // الحجز موجود مسبقًا (23505): إن كان حجزي أنا — من محاولة سابقة لم يكتمل
+    // فيها حفظ التحضير — نُكمل الحفظ، وإلا فقد سبقني معلم آخر
+    let reservedNow = !subErr;
     if (subErr) {
-      setSaving(false);
-      setMsg({ ok: false, text: "سبقك معلم آخر لهذه الحصة، أو تعذّر الحجز: " + subErr.message });
-      setSelected(null);
-      await loadCandidates();
-      return;
+      let mine = false;
+      if (subErr.code === "23505") {
+        const { data: ex } = await supabase.from("substitute_periods")
+          .select("cover_teacher_id").eq("schedule_id", selected.id)
+          .eq("attend_date", date).maybeSingle();
+        mine = ex?.cover_teacher_id === me.id;
+      }
+      if (!mine) {
+        setSaving(false);
+        setMsg({
+          ok: false,
+          text: subErr.code === "23505"
+            ? "سبقك معلم آخر لتحضير هذه الحصة."
+            : "تعذّر حجز الحصة: " + subErr.message,
+        });
+        setSelected(null);
+        await loadCandidates();
+        return;
+      }
     }
 
     const rows = students.map((s) => ({
@@ -151,8 +176,17 @@ export default function SubstitutePeriod() {
     }));
     const { error } = await supabase.from("class_attendance")
       .upsert(rows, { onConflict: "student_id,schedule_id,attend_date" });
+    if (error) {
+      // تراجع عن الحجز حتى لا تبقى الحصة محجوزة بلا تحضير
+      if (reservedNow) {
+        await supabase.from("substitute_periods").delete()
+          .eq("schedule_id", selected.id).eq("attend_date", date).eq("cover_teacher_id", me.id);
+      }
+      setSaving(false);
+      setMsg({ ok: false, text: `تعذّر حفظ التحضير: ${error.message}` });
+      return;
+    }
     setSaving(false);
-    if (error) { setMsg({ ok: false, text: `تعذّر حفظ التحضير: ${error.message}` }); return; }
 
     setMsg({ ok: true, text: "تم تسجيلك معلم انتظار وحُفظ التحضير." });
     setSelected(null);
