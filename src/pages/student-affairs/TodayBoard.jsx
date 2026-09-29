@@ -68,7 +68,7 @@ export default function TodayBoard({ go }) {
     {
       key: "official", tab: "official", n: 2,
       title: "الغياب الرسمي ونسبة الحضور الرسمية",
-      when: `بعد نهاية الحصة الثانية ${times.p2Label}`,
+      when: "في موعده اليومي",
       state: day ? "done" : off_.pending === 0 && live.hasData ? "action" : times.p2End != null && now >= times.p2End ? "action" : "wait",
       body: day
         ? <>معتمد · النسبة <b className="num">{pctText(day.official_pct)}</b> · غائب <b className="num text-absent">{day.absent}</b>

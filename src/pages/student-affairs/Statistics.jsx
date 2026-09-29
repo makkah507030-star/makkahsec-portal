@@ -204,8 +204,8 @@ export default function Statistics() {
 
       {partialCount > 0 && (
         <Note tone="warn">
-          <span className="num">{partialCount}</span> يومًا بيانات تحضيرها ناقصة: أكثر من خُمس الطلاب لم يُحضَّروا في
-          الحصتين الأولى والثانية، فنسبتها الرسمية محسوبة على عدد قليل من الطلاب ولا تمثّل اليوم.
+          <span className="num">{partialCount}</span> يومًا بيانات تحضيرها ناقصة: أكثر من خُمس الطلاب لم يُحضَّروا
+          في الحصص المعتمدة، فنسبتها الرسمية محسوبة على عدد قليل من الطلاب ولا تمثّل اليوم.
           <label className="mt-2 flex items-center gap-2 font-semibold">
             <input type="checkbox" checked={skipPartial} onChange={(e) => setSkipPartial(e.target.checked)} />
             استبعاد الأيام الناقصة من الإجمالي والمقارنات
@@ -220,8 +220,8 @@ export default function Statistics() {
       {!days ? <Loading /> : days.length === 0 ? (
         <Empty>
           {officialStart && todayISO() < officialStart
-            ? <>يبدأ العمل الرسمي من {fmtGreg(officialStart + "T00:00:00")} — تظهر الإحصاءات بعد اعتماد أول يوم (آليًا بعد نهاية الحصة الثانية).</>
-            : "لا أيام معتمدة في هذه الفترة. اليوم الجاري يُعتمد آليًا بعد نهاية الحصة الثانية."}
+            ? <>يبدأ العمل الرسمي من {fmtGreg(officialStart + "T00:00:00")} — تظهر الإحصاءات بعد اعتماد أول يوم (آليًا في موعده اليومي).</>
+            : "لا أيام معتمدة في هذه الفترة. اليوم الجاري يُعتمد آليًا في موعده اليومي."}
         </Empty>
       ) : view === "days" ? (
         <div className="card divide-y divide-line overflow-hidden">
@@ -302,7 +302,7 @@ function ClassTable({ rows, label, days }) {
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted">
-        الغياب الرسمي (بعد الحصة الثانية) في <span className="num">{days}</span> يومًا محتسبًا.
+        الغياب الرسمي في <span className="num">{days}</span> يومًا محتسبًا.
         النسبة = أيام غياب طلاب الفصل ÷ (عدد طلابه × عدد الأيام). الأعلى غيابًا أولًا.
       </p>
       <div className="card divide-y divide-line overflow-hidden">

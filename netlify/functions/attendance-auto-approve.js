@@ -266,7 +266,7 @@ exports.handler = async () => {
       const sum = await approve(db, date, rows, s);
       const pct = sum.pct != null ? `${sum.pct}%` : "—";
       await notify(db, "اعتماد الغياب الرسمي",
-        `اعتُمد الغياب الرسمي آليًا بعد الحصة الثانية.\n` +
+        `اعتُمد الغياب الرسمي لليوم آليًا.\n` +
         `نسبة الحضور الرسمية: ${pct}\nغائب: ${sum.absent} · بعذر: ${sum.excused}` +
         (sum.pending ? `\nلم يُحضَّر: ${sum.pending} طالبًا (حصص لم يرصدها معلموها)` : ""));
       console.log(`[auto-approve] official ${date}: ${pct}, absent ${sum.absent}, pending ${sum.pending}`);

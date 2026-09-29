@@ -351,7 +351,7 @@ function OfficialStatusBox({ date }) {
       <section className="rounded-card border border-line bg-white p-5">
         <p className="text-sm font-semibold text-ink">الحضور والغياب الرسمي</p>
         <p className="mt-1.5 text-xs text-muted">
-          يُحتسب اعتمادًا على الحصتين الأولى والثانية، ويظهر هنا بعد انتهائهما.
+          يظهر هنا في موعده اليومي بعد اكتمال تحضير الحصص المعتمدة.
         </p>
       </section>
     );
