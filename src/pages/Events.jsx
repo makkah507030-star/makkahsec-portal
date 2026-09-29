@@ -11,6 +11,7 @@ import EventCertificate, {
 } from "../components/EventCertificate.jsx";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
+import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -499,10 +500,24 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
 function StageInfo({ e, patch, onNext }) {
   const [f, setF] = useState({
     description: e.description ?? "", goals: e.goals ?? "", venue: e.venue ?? "",
+    start_time: String(e.start_time ?? "").slice(0, 5), end_time: String(e.end_time ?? "").slice(0, 5),
   });
 
   return (
     <section className="card space-y-4 p-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-muted">من الساعة</label>
+          <input type="time" className="field num mt-1 w-full" value={f.start_time}
+                 onChange={(x) => setF((v) => ({ ...v, start_time: x.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs text-muted">إلى الساعة</label>
+          <input type="time" className="field num mt-1 w-full" value={f.end_time}
+                 onChange={(x) => setF((v) => ({ ...v, end_time: x.target.value }))} />
+        </div>
+      </div>
+      <p className="-mt-2 text-[11px] text-faint">من وقت الحدث تُحسب حصص الاستئذان، ويعود الطلاب لفصولهم تلقائيًا بعده.</p>
       <div>
         <label className="text-xs text-muted">مكان التنفيذ</label>
         <input className="field mt-1 w-full" value={f.venue}
@@ -521,7 +536,11 @@ function StageInfo({ e, patch, onNext }) {
       <p className="text-[11px] text-faint">عنوان الشهادة وقالبها ونصّها تُضبط في مرحلة «الشهادات».</p>
 
       <button className="btn-primary w-full"
-              onClick={async () => { await patch(f, "حُفظت البيانات."); onNext(); }}>
+              onClick={async () => {
+                await patch({ ...f, start_time: f.start_time || null, end_time: f.end_time || null },
+                            "حُفظت البيانات.");
+                onNext();
+              }}>
         حفظ والمتابعة
       </button>
     </section>
@@ -956,7 +975,9 @@ const periodsOn = (d) => {
 function StagePermission({ e, parts, uid, reload, onNext }) {
   const [busy, setBusy] = useState(false);
   const [doneMsg, setDoneMsg] = useNotice(null);
-  const [scope, setScope] = useState("day");           // day | periods
+  const hasTime = !!(e.start_time && e.end_time);
+  const [scope, setScope] = useState(hasTime ? "auto" : "day"); // auto | day | periods
+  const [ptimes, setPtimes] = useState([]);
   const [picked, setPicked] = useState(new Set());      // الحصص المختارة
   const [req, setReq] = useState(null);                 // الاستئذان المرفوع { scope, period_numbers }
   const [returns, setReturns] = useState([]);           // عودات الطلاب يوم الحدث
@@ -967,6 +988,23 @@ function StagePermission({ e, parts, uid, reload, onNext }) {
   const allRaised = approved.length > 0 && raised.length === approved.length;
   const periods = periodsOn(e.event_date);
   const reqId = raised[0]?.permission_id ?? null;
+
+  useEffect(() => { loadPeriodTimes().then(({ rows }) => setPtimes(rows)); }, []);
+
+  // الحصص التي يتقاطع وقتها مع وقت الحدث — بعدها يعود الطلاب لفصولهم تلقائيًا
+  const autoPeriods = useMemo(() => {
+    if (!hasTime) return [];
+    const s = toMinutes(e.start_time), en = toMinutes(e.end_time);
+    return ptimes
+      .filter((r) => r.kind === "period" && periods.includes(r.period_no)
+        && toMinutes(r.start_time) < en && toMinutes(r.end_time) > s)
+      .map((r) => r.period_no)
+      .sort((a, b) => a - b);
+  }, [ptimes, hasTime, e.start_time, e.end_time, periods.length]);
+  const autoBack = autoPeriods.length
+    ? periods.find((n) => n > autoPeriods[autoPeriods.length - 1]) ?? null
+    : null;
+  const chosen = scope === "auto" ? autoPeriods : [...picked].sort((a, b) => a - b);
 
   // الاستئذان المرفوع وعودات طلابه
   const loadState = async () => {
@@ -989,12 +1027,12 @@ function StagePermission({ e, parts, uid, reload, onNext }) {
   });
 
   const raise = async () => {
-    if (scope === "periods" && !picked.size) return;
+    if (scope !== "day" && !chosen.length) return;
     setBusy(true);
     const { data: newReq, error } = await supabase.from("permission_requests").insert({
       request_date: e.event_date,
-      scope,
-      period_numbers: scope === "periods" ? [...picked].sort((a, b) => a - b) : null,
+      scope: scope === "day" ? "day" : "periods",
+      period_numbers: scope === "day" ? null : chosen,
       note: `مشاركة في «${e.title}»`,
       created_by: uid,
     }).select("id").single();
@@ -1070,15 +1108,38 @@ function StagePermission({ e, parts, uid, reload, onNext }) {
 
       {!allRaised && (
         <div className="space-y-3">
-          <div className="flex gap-2">
-            {[["day", "اليوم كاملًا"], ["periods", "حصص محددة"]].map(([k, t]) => (
+          <div className="flex flex-wrap gap-2">
+            {[
+              ...(hasTime ? [["auto", "حسب وقت الحدث"]] : []),
+              ["day", "اليوم كاملًا"],
+              ["periods", "حصص محددة"],
+            ].map(([k, t]) => (
               <button key={k} onClick={() => setScope(k)}
-                      className={`flex-1 rounded-pill px-3 py-2 text-sm font-medium ${
+                      className={`flex-1 whitespace-nowrap rounded-pill px-3 py-2 text-sm font-medium ${
                         scope === k ? "bg-mint-deep text-white" : "border border-line text-muted hover:bg-canvas"}`}>
                 {t}
               </button>
             ))}
           </div>
+          {scope === "auto" && (
+            <p className={`rounded-sm2 px-3 py-2.5 text-xs leading-relaxed ${
+              autoPeriods.length ? "bg-canvas text-ink" : "bg-warning/10 text-warning"}`}>
+              وقت الحدث <span className="num">{fmtTime(e.start_time)} — {fmtTime(e.end_time)}</span>
+              {autoPeriods.length ? (
+                <>
+                  {" "}· الاستئذان للحصص <span className="num font-semibold">{autoPeriods.join("، ")}</span>
+                  {autoBack
+                    ? <>، ويعود الطلاب لفصولهم تلقائيًا من الحصة <span className="num font-semibold">{autoBack}</span>.</>
+                    : "، وهي حتى آخر اليوم الدراسي."}
+                </>
+              ) : " · لا يتقاطع مع أي حصة، فلا حاجة لاستئذان."}
+            </p>
+          )}
+          {!hasTime && (
+            <p className="text-[11px] text-faint">
+              أضف وقت بداية الحدث ونهايته في مرحلة «البيانات» لتُحسب الحصص ويعود الطلاب تلقائيًا بعده.
+            </p>
+          )}
           {scope === "periods" && (
             <div>
               <p className="mb-1.5 text-xs text-muted">اختر حصص المشاركة:</p>
@@ -1097,7 +1158,7 @@ function StagePermission({ e, parts, uid, reload, onNext }) {
       )}
 
       <button className="btn-primary w-full" onClick={raise}
-              disabled={busy || approved.length === 0 || allRaised || (scope === "periods" && !picked.size)}>
+              disabled={busy || approved.length === 0 || allRaised || (scope !== "day" && !chosen.length)}>
         {busy && !allRaised ? "جارٍ الرفع…" : allRaised ? "رُفع الاستئذان" : "رفع الاستئذان"}
       </button>
 
