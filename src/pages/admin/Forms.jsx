@@ -111,6 +111,13 @@ function autoFill(fields, info, current, { overwrite = false } = {}) {
   return out;
 }
 
+/* المستند الذي يُصدره صاحبه لنفسه لا يصدر مباشرة: يمرّ على اعتماد المدير
+   أيًّا كان إعداد النموذج. يُعرف بحساب المستفيد، أو باسمه إن كُتب يدويًا. */
+const normName = (v) => String(v ?? "").replace(/\s+/g, " ").trim();
+const isSelfTarget = (target, recipient, uid, myName) =>
+  (target && (target.uid ?? target.user_id) === uid) ||
+  (normName(myName) !== "" && normName(recipient) === normName(myName));
+
 const signedUrl = async (path) => {
   if (!path) return null;
   const { data } = await supabase.storage.from("form-assets").createSignedUrl(path, 600);
@@ -522,18 +529,21 @@ export default function Forms() {
         if (me) { setSaving(false); setMsg({ ok: false, text: me.message }); return; }
         sr = more;
       }
+      const self = isSelfTarget(st, st ? st.full_name : row.recipient,
+                                session.user.id, profile?.full_name);
       rows.push({
         ...row,
+        ...(self ? { status: "pending" } : {}),
         recipient_user_id: st ? (st.uid ?? st.user_id ?? null) : null,
         serial: sr,
         recipient: st ? st.full_name : row.recipient,
         student_id: st && !/^[tu]-/.test(String(st.id)) ? st.id : row.student_id,
-        data: st
+        data: { ...(st
           ? { ...values,
               recipient: st.full_name,
               ...(st.job ? { job: st.job } : {}),
               ...(/^[tu]-/.test(String(st.id)) ? {} : { student_id: st.id }) }
-          : values,
+          : values), ...(self ? { self_issued: true } : {}) },
       });
     }
 
@@ -543,9 +553,14 @@ export default function Forms() {
 
     setIssued(data[0]);
     setBatch(data);
+    const selfCount = rows.filter((x) => x.status === "pending" && !picked.requires_approval).length;
     setMsg({
       ok: true,
-      text: needsReply
+      text: selfCount && !needsReply
+        ? (data.length === selfCount
+            ? `حُفظ برقم ${data[0].serial} — المستند باسمك، فلا يصدر إلا بعد اعتماد المدير.`
+            : `صدرت ${data.length - selfCount} شهادة، والتي باسمك بانتظار اعتماد المدير.`)
+        : needsReply
         ? `أُرسل ${data[0].serial} للمستفيد — سيصلك إشعار عند وصول ردّه.`
         : picked.requires_approval
         ? `حُفظ ${data.length > 1 ? `${data.length} مستندات` : `برقم ${data[0].serial}`} — بانتظار اعتماد المدير قبل الطباعة.`
@@ -770,7 +785,12 @@ export default function Forms() {
   /* ---------------- تعبئة نموذج ---------------- */
   if (picked) {
     const d = issued ?? { serial: null, signature_name: profile?.full_name, signature_source: picked.signature_source };
-    const showSign = !picked.requires_approval || issued?.status === "approved";
+    const selfNow = !issued && !editing && (chosen.length
+      ? chosen.some((c) => isSelfTarget(c, c.full_name, session.user.id, profile?.full_name))
+      : isSelfTarget(null, values.recipient, session.user.id, profile?.full_name));
+    const needsApproval = picked.requires_approval || selfNow || issued?.status === "pending";
+    const showSign = !needsApproval || issued?.status === "approved";
+    const printable = batch.filter((b) => b.status === "issued" || b.status === "approved");
     return (
       <div className="space-y-4">
         <div className="no-print flex flex-wrap items-center justify-between gap-2">
@@ -784,10 +804,10 @@ export default function Forms() {
         </div>
 
         {/* منطقة الطباعة: مخفية على الشاشة، تظهر عند الطباعة فقط */}
-        {batch.length > 0 && batch[0].status !== "pending" && (
+        {printable.length > 0 && (
           <div className="hidden print:block">
             <PrintArea landscape={picked.orientation === "landscape"}>
-              {batch.map((b) => (
+              {printable.map((b) => (
                 <FormSheet key={b.id} template={picked} values={b.data} doc={b}
                            sigUrl={urls.sig}
                            stampUrl={picked.show_stamp ? urls.stamp : null}
@@ -1011,8 +1031,14 @@ export default function Forms() {
               {saving ? "جارٍ الحفظ…"
                 : issued ? "تم"
                 : editing ? "إعادة الإرسال للاعتماد"
-                : picked.requires_approval ? "إرسال للاعتماد" : "إصدار وحفظ"}
+                : needsApproval ? "إرسال للاعتماد" : "إصدار وحفظ"}
             </button>
+
+            {selfNow && !picked.requires_approval && (
+              <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+                المستند باسمك، فلا يصدر إلا بعد اعتماد المدير.
+              </p>
+            )}
 
             {issued && issued.status === "issued" && picked.orientation === "landscape" && (
               <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs leading-relaxed text-mint-deep">
@@ -1021,10 +1047,10 @@ export default function Forms() {
               </p>
             )}
 
-            {issued && issued.status === "issued" && (
+            {issued && printable.length > 0 && (
               <button className="w-full rounded-sm2 border border-line py-2 text-sm text-mint-deep hover:bg-canvas"
                       onClick={printNow}>
-                {batch.length > 1 ? `طباعة ${batch.length} شهادات` : "طباعة"}
+                {printable.length > 1 ? `طباعة ${printable.length} شهادات` : "طباعة"}
               </button>
             )}
 
@@ -1466,7 +1492,14 @@ export default function Forms() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold text-ink">{d.title}</p>
-                  <p className="num mt-0.5 text-xs text-faint">{d.serial}</p>
+                  <p className="num mt-0.5 text-xs text-faint">
+                    {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
+                  </p>
+                  {(d.data?.self_issued || (d.created_by && d.recipient_user_id === d.created_by)) && (
+                    <p className="mt-1.5 inline-block rounded-pill bg-absent/10 px-2.5 py-0.5 text-[11px] font-semibold text-absent">
+                      أصدره لنفسه
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => openDoc(d)}
