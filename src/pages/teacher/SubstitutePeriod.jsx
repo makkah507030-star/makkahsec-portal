@@ -156,7 +156,7 @@ export default function SubstitutePeriod() {
     setSaving(true); setMsg(null);
 
     // الطريقة الأساسية: دالة واحدة في القاعدة تتحقق من الوقت والتعارض، وتحجز
-    // الحصة وتحفظ التحضير معًا (supabase/substitute_take.sql)
+    // الحصة وتحفظ التحضير معًا (supabase/substitute_take_1.sql و _2.sql)
     const { error: rpcErr } = await supabase.rpc("substitute_take", {
       p_schedule_id: selected.id,
       p_date: date,
@@ -168,7 +168,7 @@ export default function SubstitutePeriod() {
       return fail(rpcErr.message, { close: rpcErr.code === "23505" });
     }
 
-    // الطريقة السابقة إلى أن يُنفَّذ ملف substitute_take.sql في القاعدة
+    // الطريقة السابقة إلى أن يُنفَّذ ملفا substitute_take_1/2.sql في القاعدة
     // تحقّق أخير: إن حضّر المعلم الأصلي حصته أثناء فتح الكشف فلا نكتب فوقها
     const { count } = await supabase.from("class_attendance")
       .select("id", { count: "exact", head: true })
