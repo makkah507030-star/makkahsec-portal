@@ -20,7 +20,52 @@ const Rule = () => (
 
 function Heading({ children }) {
   return (
-    <p style={{ fontSize: "11.5pt", fontWeight: 700, color: ACCENT, margin: "5mm 0 1.8mm" }}>{children}</p>
+    <p style={{ fontSize: "11.5pt", fontWeight: 700, color: ACCENT, margin: "5mm 0 1.8mm", breakAfter: "avoid" }}>{children}</p>
+  );
+}
+
+/** قسم قصير (عنوان ونص) لا يُقسم بين صفحتين، فلا يبقى عنوان وحده أسفل الصفحة */
+function Section({ title, children }) {
+  return (
+    <div style={{ breakInside: "avoid" }}>
+      <Heading>{title}</Heading>
+      {children}
+    </div>
+  );
+}
+
+/** الترويسة — تتكرر أعلى كل صفحة مطبوعة */
+function Letterhead() {
+  return (
+    <>
+      <div className="flex items-start justify-between">
+        <div style={{ fontSize: "9pt", lineHeight: 1.7, fontWeight: 500 }}>
+          <div>المملكة العربية السعودية</div>
+          <div>وزارة التعليم</div>
+          <div>الإدارة العامة للتعليم بمنطقة مكة المكرمة</div>
+          <div style={{ color: ACCENT, fontWeight: 600 }}>مدرسة مكة الثانوية</div>
+        </div>
+        <div className="flex items-center" style={{ gap: "4mm" }}>
+          <img src={logoIcon} alt="" style={{ height: "11mm", width: "auto" }} />
+          <img src={moeLogo} alt="" style={{ height: "11mm", width: "auto" }} />
+        </div>
+      </div>
+      <div style={{ margin: "2.5mm 0 4mm" }}><Rule /></div>
+    </>
+  );
+}
+
+/** التذييل — يتكرر أسفل كل صفحة مطبوعة */
+function Footer() {
+  return (
+    <div style={{ paddingTop: "4mm" }}>
+      <Rule />
+      <div className="flex items-center justify-between" style={{ marginTop: "2mm", fontSize: "8.5pt", color: "#8A968F" }}>
+        <span>بوابة مكة الثانوية الرقمية</span>
+        <span>تاريخ التقرير: <BidiDate value={fmtHijri(new Date(), false)} suffix="هـ" /></span>
+        <span dir="ltr" style={{ fontWeight: 600, color: ACCENT }}>makkahsec.com</span>
+      </div>
+    </div>
   );
 }
 
@@ -58,26 +103,20 @@ export default function EventReportSheet({ event: e, stats, attended, photos, si
   const cell = { border: "0.25mm solid #DDE5E0", padding: "1.6mm 2.5mm" };
   const para = { fontSize: "10.5pt", lineHeight: 1.9, whiteSpace: "pre-line" };
 
+  const has = (v) => typeof v === "string" && v.trim() !== "";
+
+  /* الترويسة في thead والتذييل في tfoot: المتصفح يكرّرهما أعلى كل صفحة
+     وأسفلها عند الطباعة، والهوامش من ‏@page (في Events.jsx) فلا يلتصق
+     محتوى الصفحات التالية بحافة الورقة. */
   return (
     <div className="sheet bg-white"
-         style={{ width: "210mm", minHeight: "297mm", padding: "12mm 14mm", color: "#1F2A24",
-                  fontFamily: "'IBM Plex Sans Arabic', sans-serif", ...INK }}>
-      {/* الترويسة */}
-      <div className="flex items-start justify-between">
-        <div style={{ fontSize: "9.5pt", lineHeight: 1.8, fontWeight: 500 }}>
-          <div>المملكة العربية السعودية</div>
-          <div>وزارة التعليم</div>
-          <div>الإدارة العامة للتعليم بمنطقة مكة المكرمة</div>
-          <div style={{ color: ACCENT, fontWeight: 600 }}>مدرسة مكة الثانوية</div>
-        </div>
-        <div className="flex items-center" style={{ gap: "4mm" }}>
-          <img src={logoIcon} alt="" style={{ height: "11mm", width: "auto" }} />
-          <img src={moeLogo} alt="" style={{ height: "11mm", width: "auto" }} />
-        </div>
-      </div>
-      <div style={{ marginTop: "3mm" }}><Rule /></div>
+         style={{ width: "100%", color: "#1F2A24", fontFamily: "'IBM Plex Sans Arabic', sans-serif", ...INK }}>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead><tr><td style={{ padding: 0 }}><Letterhead /></td></tr></thead>
+        <tfoot><tr><td style={{ padding: 0 }}><Footer /></td></tr></tfoot>
+        <tbody><tr><td style={{ padding: 0, verticalAlign: "top" }}>
 
-      <div className="text-center" style={{ marginTop: "5mm" }}>
+      <div className="text-center" style={{ marginTop: "1mm" }}>
         <span style={{ background: "#EDFAF2", color: ACCENT, borderRadius: "10mm", padding: "1.5mm 6mm",
                        fontSize: "11pt", fontWeight: 600, ...INK }}>
           تقرير تنفيذ حدث
@@ -100,35 +139,35 @@ export default function EventReportSheet({ event: e, stats, attended, photos, si
         </tbody>
       </table>
 
-      {e.description && (<><Heading>نبذة عن الحدث</Heading><p style={para}>{e.description}</p></>)}
-      {e.goals && (<><Heading>الأهداف</Heading><p style={para}>{e.goals}</p></>)}
+      {has(e.description) && <Section title="نبذة عن الحدث"><p style={para}>{e.description.trim()}</p></Section>}
+      {has(e.goals) && <Section title="الأهداف"><p style={para}>{e.goals.trim()}</p></Section>}
 
       {/* الأعداد */}
-      <Heading>المشاركة</Heading>
-      <div className="grid" style={{ gridTemplateColumns: `repeat(${stats.length}, 1fr)`, gap: "2mm" }}>
-        {stats.map(([k, v]) => (
-          <div key={k} className="text-center" style={{ border: "0.25mm solid #DDE5E0", borderRadius: "1.5mm", padding: "2mm 1mm" }}>
-            <p className="num" style={{ fontSize: "15pt", fontWeight: 700, color: ACCENT }}>{v}</p>
-            <p style={{ fontSize: "8.5pt", color: "#6B7A72" }}>{k}</p>
-          </div>
-        ))}
-      </div>
+      <Section title="المشاركة">
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${stats.length}, 1fr)`, gap: "2mm" }}>
+          {stats.map(([k, v]) => (
+            <div key={k} className="text-center" style={{ border: "0.25mm solid #DDE5E0", borderRadius: "1.5mm", padding: "2mm 1mm" }}>
+              <p className="num" style={{ fontSize: "15pt", fontWeight: 700, color: ACCENT }}>{v}</p>
+              <p style={{ fontSize: "8.5pt", color: "#6B7A72" }}>{k}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
 
-      {e.report_summary && (<><Heading>وصف التنفيذ</Heading><p style={para}>{e.report_summary}</p></>)}
+      {has(e.report_summary) && <Section title="وصف التنفيذ"><p style={para}>{e.report_summary.trim()}</p></Section>}
 
       {photos.length > 0 && (
-        <>
-          <Heading>صور من التنفيذ</Heading>
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "3mm", breakInside: "avoid" }}>
+        <Section title="صور من التنفيذ">
+          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "3mm" }}>
             {photos.map((u) => (
               <img key={u} src={u} alt="" style={{ width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: "1.5mm" }} />
             ))}
           </div>
-        </>
+        </Section>
       )}
 
-      {e.report_outcomes && (<><Heading>النتائج والأثر</Heading><p style={para}>{e.report_outcomes}</p></>)}
-      {e.report_recommendations && (<><Heading>التوصيات</Heading><p style={para}>{e.report_recommendations}</p></>)}
+      {has(e.report_outcomes) && <Section title="النتائج والأثر"><p style={para}>{e.report_outcomes.trim()}</p></Section>}
+      {has(e.report_recommendations) && <Section title="التوصيات"><p style={para}>{e.report_recommendations.trim()}</p></Section>}
 
       {/* الحاضرون */}
       {attended.length > 0 && (
@@ -169,12 +208,8 @@ export default function EventReportSheet({ event: e, stats, attended, photos, si
         </div>
       </div>
 
-      <div style={{ marginTop: "6mm" }}><Rule /></div>
-      <div className="flex items-center justify-between" style={{ marginTop: "2mm", fontSize: "8.5pt", color: "#8A968F" }}>
-        <span>بوابة مكة الثانوية الرقمية</span>
-        <span>تاريخ التقرير: <BidiDate value={fmtHijri(new Date(), false)} suffix="هـ" /></span>
-        <span dir="ltr" style={{ fontWeight: 600, color: ACCENT }}>makkahsec.com</span>
-      </div>
+        </td></tr></tbody>
+      </table>
     </div>
   );
 }

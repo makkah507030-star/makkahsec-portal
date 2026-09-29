@@ -3,6 +3,7 @@ import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import { DAY_NAMES } from "../lib/schoolTime";
 import PrintPortal from "./PrintPortal.jsx";
+import PrincipalSign from "./PrincipalSign.jsx";
 
 /* =====================================================================
    تقرير المناوبة والإشراف — غلاف رسمي وجداول جاهزة للطباعة أو الحفظ PDF.
@@ -192,7 +193,7 @@ function Signatures({ deputy, principal }) {
       </div>
       <div>
         <p className="text-[12px] text-muted">مدير المدرسة</p>
-        <div className="h-7" />
+        <PrincipalSign height="h-7" />
         <div className="mx-auto h-px w-44 bg-line" />
         <p className="mt-1.5 text-[12.5px] font-semibold">{principal || "…"}</p>
       </div>

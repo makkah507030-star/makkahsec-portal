@@ -1748,7 +1748,7 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
       </section>
 
       {printing && (
-        <PrintPortal id="ev-report-sheet" margin="0" extraCss="#ev-report-sheet tr { break-inside: avoid; }">
+        <PrintPortal id="ev-report-sheet" margin="10mm 14mm">
           <EventReportSheet event={{ ...e, ...f }} stats={stats} attended={attended} photos={photos}
                             sigUrl={sigUrl} stampUrl={school.stampUrl} principalName={school.principalName}
                             principalUrl={approved ? school.principalUrl : null} />

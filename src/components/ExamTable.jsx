@@ -3,6 +3,7 @@ import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import { DAY_NAMES } from "../lib/schoolTime";
 import PrintPortal from "./PrintPortal.jsx";
+import PrincipalSign from "./PrincipalSign.jsx";
 
 /* =====================================================================
    جدول اختبارات قابل للطباعة — بهوية المدرسة، مقاس A4 عمودي.
@@ -127,7 +128,7 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
             </div>
             <div>
               <p className="text-[12px] text-muted">مدير المدرسة</p>
-              <div className="h-8" />
+              <PrincipalSign height="h-8" />
               <div className="mx-auto h-px w-44 bg-line" />
               <p className="mt-1.5 text-[12.5px] font-semibold">عبدالله بن حسن سليمان الفيفي</p>
             </div>
