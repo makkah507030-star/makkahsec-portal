@@ -4,18 +4,84 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import {
+  ALWAYS_ROLES, GENERAL_ROLES, SPECIFIC_ROLES, roleLabel, suggestRoles,
+} from "../../lib/formRoles";
 
 /* =====================================================================
    إدارة النماذج — للدعم الفني ومدير المدرسة:
    الصلاحيات لكل نموذج، والاعتماد، والتوقيع المطبوع، وختم المدرسة.
    ===================================================================== */
 
-const ROLES = [
-  { key: "principal",    label: "مدير المدرسة" },
-  { key: "tech_support", label: "الدعم الفني" },
-  { key: "admin",        label: "الإدارة" },
-  { key: "teacher",      label: "المعلمون" },
-];
+/* اختيار من يُصدر النموذج: عامّ (كل الإداريين، المعلمون) أو أدوار بعينها.
+   المدير والدعم الفني يصلان لكل النماذج، فلا يُعرضان للاختيار. */
+function RolePicker({ value, onToggle }) {
+  const chip = (role) => {
+    const on = value.includes(role.key);
+    return (
+      <button key={role.key} type="button" onClick={() => onToggle(role.key)}
+        className={`rounded-pill px-3 py-1 text-xs font-medium transition-colors ${
+          on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+        {role.label}
+      </button>
+    );
+  };
+  const wide = value.includes("admin");
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5">{GENERAL_ROLES.map(chip)}</div>
+      {wide && (
+        <p className="text-[11px] text-warning">
+          «كل الإداريين» تفتحه لجميع الأدوار الإدارية. ألغِه واختر الأدوار المعنية فقط.
+        </p>
+      )}
+      <div className={`flex flex-wrap gap-1.5 ${wide ? "opacity-50" : ""}`}>
+        {SPECIFIC_ROLES.map(chip)}
+      </div>
+      <p className="text-[11px] text-faint">المدير والدعم الفني يصلان لكل النماذج دائمًا.</p>
+    </div>
+  );
+}
+
+/* توزيع الصلاحيات حسب الدور: اختر دورًا فترى كل النماذج وتفعّل ما يخصّه */
+function ByRole({ rows, onToggle }) {
+  const [role, setRole] = useState(SPECIFIC_ROLES[0]?.key ?? "");
+  const all = [...GENERAL_ROLES, ...SPECIFIC_ROLES];
+  const count = (k) => rows.filter((r) => (r.allowed_roles ?? []).includes(k)).length;
+  return (
+    <section className="card space-y-3 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-ink">توزيع الصلاحيات حسب الدور</h2>
+        <p className="mt-1 text-xs text-muted">اختر الدور ثم فعّل النماذج التي يُصدرها.</p>
+      </div>
+      <select className="field w-full" value={role} onChange={(e) => setRole(e.target.value)}>
+        {all.map((r) => (
+          <option key={r.key} value={r.key}>{r.label} ({count(r.key)})</option>
+        ))}
+      </select>
+      <div className="divide-y divide-line rounded-sm2 border border-line">
+        {rows.map((r) => {
+          const on = (r.allowed_roles ?? []).includes(role);
+          const viaAll = !on && role !== "teacher" && role !== "admin" &&
+                         (r.allowed_roles ?? []).includes("admin");
+          return (
+            <label key={r.id} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-canvas">
+              <input type="checkbox" checked={on} onChange={() => onToggle(r, role)} />
+              <span className="min-w-0 flex-1">
+                <span className={`block truncate text-sm ${r.is_active ? "text-ink" : "text-faint"}`}>
+                  {r.title}
+                </span>
+                {viaAll && (
+                  <span className="text-[11px] text-warning">متاح له الآن عبر «كل الإداريين»</span>
+                )}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 const SIGN_SOURCE = [
   { key: "none",      label: "بلا توقيع" },
@@ -179,7 +245,7 @@ export default function FormsAdmin() {
 
   const NEW = {
     title: "", description: "", department: "school_admin", category: "certificate",
-    recipient: "student", allowed_roles: ["principal", "tech_support"],
+    recipient: "student", allowed_roles: suggestRoles("school_admin"),
     requires_approval: false, show_stamp: false, signature_source: "issuer",
     presets: "", custom: [{ label: "", type: "text", required: false }],
   };
@@ -276,7 +342,10 @@ export default function FormsAdmin() {
             <div>
               <label className="text-xs text-muted">القسم</label>
               <select className="field mt-1 w-full" value={nf.department}
-                      onChange={(e) => setNf((f) => ({ ...f, department: e.target.value }))}>
+                      onChange={(e) => setNf((f) => ({
+                        ...f, department: e.target.value,
+                        allowed_roles: suggestRoles(e.target.value),
+                      }))}>
                 {DEPARTMENTS.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
               </select>
             </div>
@@ -382,25 +451,14 @@ export default function FormsAdmin() {
           )}
 
           <div>
-            <p className="text-xs text-muted">من يُصدره</p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {ROLES.map((role) => {
-                const on = nf.allowed_roles.includes(role.key);
-                return (
-                  <button key={role.key} type="button"
-                    onClick={() => setNf((f) => ({
-                      ...f,
-                      allowed_roles: on
-                        ? f.allowed_roles.filter((r) => r !== role.key)
-                        : [...f.allowed_roles, role.key],
-                    }))}
-                    className={`rounded-pill px-3 py-1 text-xs font-medium transition-colors ${
-                      on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-                    {role.label}
-                  </button>
-                );
-              })}
-            </div>
+            <p className="mb-1.5 text-xs text-muted">من يُصدره (مقترح بحسب القسم)</p>
+            <RolePicker value={nf.allowed_roles}
+              onToggle={(k) => setNf((f) => ({
+                ...f,
+                allowed_roles: f.allowed_roles.includes(k)
+                  ? f.allowed_roles.filter((r) => r !== k)
+                  : [...f.allowed_roles, k],
+              }))} />
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -471,6 +529,8 @@ export default function FormsAdmin() {
         </p>
       )}
 
+      {rows.length > 0 && <ByRole rows={rows} onToggle={toggleRole} />}
+
       <div className="space-y-3">
         {rows.map((r) => (
           <section key={r.id} className="card space-y-3 p-4">
@@ -494,19 +554,14 @@ export default function FormsAdmin() {
             </div>
 
             <div>
-              <p className="text-xs text-muted">من يُصدر هذا النموذج</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {ROLES.map((role) => {
-                  const on = (r.allowed_roles ?? []).includes(role.key);
-                  return (
-                    <button key={role.key} onClick={() => toggleRole(r, role.key)}
-                      className={`rounded-pill px-3 py-1 text-xs font-medium transition-colors ${
-                        on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-                      {role.label}
-                    </button>
-                  );
-                })}
-              </div>
+              <p className="mb-1.5 text-xs text-muted">
+                من يُصدر هذا النموذج
+                <span className="text-faint">
+                  {" — "}{(r.allowed_roles ?? []).filter((k) => !ALWAYS_ROLES.includes(k))
+                    .map(roleLabel).join("، ") || "المدير والدعم الفني فقط"}
+                </span>
+              </p>
+              <RolePicker value={r.allowed_roles ?? []} onToggle={(k) => toggleRole(r, k)} />
             </div>
 
             <div>
