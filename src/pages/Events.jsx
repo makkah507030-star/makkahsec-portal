@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
-import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
+import { GRADE_NAMES, todayISO, PERIODS_PER_DAY } from "../lib/schoolTime";
 import PrintPortal from "../components/PrintPortal.jsx";
 import EventReportSheet from "../components/EventReportSheet.jsx";
 import { normalizeImage } from "../lib/imageResize.js";
@@ -376,7 +376,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, onBack, onMsg, 
       {!cancelled && step === 2 && <StageConsent e={e} parts={parts} reload={loadParts}
                                    uid={uid} organizerName={profile?.full_name ?? ""}
                                    onNext={() => advance("permission", "انتقلنا للاستئذان.")} />}
-      {!cancelled && step === 3 && <StagePermission e={e} parts={parts} uid={uid}
+      {!cancelled && step === 3 && <StagePermission e={e} parts={parts} uid={uid} reload={loadParts}
                                       onNext={() => advance("attendance", "انتقلنا لكشف الحضور.")} />}
       {!cancelled && step === 4 && <StageAttendance e={e} parts={parts} reload={loadParts}
                                       onNext={() => advance("certificates", "انتقلنا للشهادات.")} />}
@@ -947,46 +947,118 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
 }
 
 /* ④ الاستئذان */
-function StagePermission({ e, parts, uid, onNext }) {
+// حصص يوم الحدث: الأحد والاثنين ٧، وبقية الأيام ٦
+const periodsOn = (d) => {
+  const n = PERIODS_PER_DAY[new Date(d + "T00:00:00").getDay() + 1] ?? 7;
+  return Array.from({ length: n }, (_, i) => i + 1);
+};
+
+function StagePermission({ e, parts, uid, reload, onNext }) {
   const [busy, setBusy] = useState(false);
   const [doneMsg, setDoneMsg] = useNotice(null);
+  const [scope, setScope] = useState("day");           // day | periods
+  const [picked, setPicked] = useState(new Set());      // الحصص المختارة
+  const [req, setReq] = useState(null);                 // الاستئذان المرفوع { scope, period_numbers }
+  const [returns, setReturns] = useState([]);           // عودات الطلاب يوم الحدث
+  const [backFrom, setBackFrom] = useState(null);       // حصة العودة المختارة
+
   const approved = (parts ?? []).filter((p) => p.consent_at);
+  const raised = approved.filter((p) => p.permission_id);
+  const allRaised = approved.length > 0 && raised.length === approved.length;
+  const periods = periodsOn(e.event_date);
+  const reqId = raised[0]?.permission_id ?? null;
+
+  // الاستئذان المرفوع وعودات طلابه
+  const loadState = async () => {
+    if (!reqId) { setReq(null); setReturns([]); return; }
+    const ids = raised.map((p) => p.student_id);
+    const [{ data: r }, { data: rets }] = await Promise.all([
+      supabase.from("permission_requests").select("scope, period_numbers").eq("id", reqId).maybeSingle(),
+      supabase.from("permission_returns").select("student_id, from_period")
+        .eq("return_date", e.event_date).in("student_id", ids),
+    ]);
+    setReq(r ?? null);
+    setReturns(rets ?? []);
+  };
+  useEffect(() => { loadState(); }, [reqId, parts]);
+
+  const togglePeriod = (n) => setPicked((prev) => {
+    const next = new Set(prev);
+    if (next.has(n)) next.delete(n); else next.add(n);
+    return next;
+  });
 
   const raise = async () => {
+    if (scope === "periods" && !picked.size) return;
     setBusy(true);
-    const { data: req, error } = await supabase.from("permission_requests").insert({
+    const { data: newReq, error } = await supabase.from("permission_requests").insert({
       request_date: e.event_date,
-      scope: "day",
-      period_numbers: null,
+      scope,
+      period_numbers: scope === "periods" ? [...picked].sort((a, b) => a - b) : null,
       note: `مشاركة في «${e.title}»`,
       created_by: uid,
     }).select("id").single();
 
     if (error) { setDoneMsg({ ok: false, text: error.message }); setBusy(false); return; }
 
-    const rows = approved.map((p) => ({ request_id: req.id, student_id: p.student_id }));
+    const rows = approved.map((p) => ({ request_id: newReq.id, student_id: p.student_id }));
     const { error: e2 } = await supabase.from("permission_request_students").insert(rows);
-    setBusy(false);
-    if (e2) { setDoneMsg({ ok: false, text: e2.message }); return; }
+    if (e2) { setBusy(false); setDoneMsg({ ok: false, text: e2.message }); return; }
 
     await supabase.from("event_participants")
-      .update({ permission_id: req.id }).in("id", approved.map((p) => p.id));
+      .update({ permission_id: newReq.id }).in("id", approved.map((p) => p.id));
+    setBusy(false);
     setDoneMsg({ ok: true, text: `رُفع الاستئذان لـ ${rows.length} طالبًا، ويظهر عند معلميهم.` });
+    await reload?.();
   };
+
+  // عودة الطلاب للفصل: ينتهي استئذانهم من الحصة المختارة فما بعدها
+  const markReturn = async () => {
+    if (!backFrom) return;
+    setBusy(true);
+    const { error } = await supabase.from("permission_returns").upsert(
+      raised.map((p) => ({
+        student_id: p.student_id, return_date: e.event_date,
+        from_period: backFrom, returned_by: uid,
+      })),
+      { onConflict: "student_id,return_date" },
+    );
+    setBusy(false);
+    if (error) { setDoneMsg({ ok: false, text: "تعذّر تسجيل العودة: " + error.message }); return; }
+    setDoneMsg({ ok: true, text: `سُجّلت عودة الطلاب للفصل من الحصة ${backFrom}، فيُحضَّرون عادةً من هذه الحصة.` });
+    setBackFrom(null);
+    await loadState();
+  };
+
+  const undoReturn = async () => {
+    setBusy(true);
+    const { error } = await supabase.from("permission_returns").delete()
+      .eq("return_date", e.event_date).in("student_id", raised.map((p) => p.student_id));
+    setBusy(false);
+    if (error) { setDoneMsg({ ok: false, text: "تعذّر التراجع: " + error.message }); return; }
+    setDoneMsg({ ok: true, text: "أُلغيت العودة، وعاد الطلاب مستأذنين." });
+    await loadState();
+  };
+
+  const scopeText = !req ? ""
+    : req.scope === "day" ? "اليوم كاملًا"
+    : `الحصص ${(req.period_numbers ?? []).join("، ")}`;
+  const backPeriods = [...new Set(returns.map((r) => r.from_period))].sort((a, b) => a - b);
 
   return (
     <section className="card space-y-4 p-4">
       <div>
         <p className="text-sm font-semibold text-ink">استئذان الطلاب المشاركين</p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted">
-          يُرفع استئذان ليوم الحدث لمن وافق أولياء أمورهم، فيظهرون عند معلميهم
-          «مستأذنين» بدل الغياب.
+          يُرفع استئذان يوم الحدث لمن وافق أولياء أمورهم، فيظهرون عند معلميهم
+          «مستأذنين» بدل الغياب: لليوم كاملًا، أو لحصص محددة.
         </p>
       </div>
 
       <div className="rounded-sm2 bg-mint-tint px-3 py-2.5 text-sm text-mint-deep">
         <span className="num font-bold">{approved.length}</span> طالبًا وافق أولياؤهم
         · التاريخ <span className="num">{fmtG(e.event_date)}</span>
+        {req && <> · الاستئذان: {scopeText}</>}
       </div>
 
       {doneMsg && (
@@ -996,12 +1068,76 @@ function StagePermission({ e, parts, uid, onNext }) {
         </p>
       )}
 
+      {!allRaised && (
+        <div className="space-y-3">
+          <div className="flex gap-2">
+            {[["day", "اليوم كاملًا"], ["periods", "حصص محددة"]].map(([k, t]) => (
+              <button key={k} onClick={() => setScope(k)}
+                      className={`flex-1 rounded-pill px-3 py-2 text-sm font-medium ${
+                        scope === k ? "bg-mint-deep text-white" : "border border-line text-muted hover:bg-canvas"}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+          {scope === "periods" && (
+            <div>
+              <p className="mb-1.5 text-xs text-muted">اختر حصص المشاركة:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {periods.map((n) => (
+                  <button key={n} onClick={() => togglePeriod(n)}
+                          className={`num h-9 w-9 rounded-full text-sm font-semibold ${
+                            picked.has(n) ? "bg-mint-deep text-white" : "border border-line text-muted hover:bg-canvas"}`}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <button className="btn-primary w-full" onClick={raise}
-              disabled={busy || approved.length === 0 || approved.every((p) => p.permission_id)}>
-        {busy ? "جارٍ الرفع…"
-          : approved.every((p) => p.permission_id) && approved.length ? "رُفع الاستئذان"
-          : "رفع الاستئذان"}
+              disabled={busy || approved.length === 0 || allRaised || (scope === "periods" && !picked.size)}>
+        {busy && !allRaised ? "جارٍ الرفع…" : allRaised ? "رُفع الاستئذان" : "رفع الاستئذان"}
       </button>
+
+      {allRaised && (
+        <div className="space-y-2.5 rounded-sm2 border border-line p-3">
+          <p className="text-sm font-semibold text-ink">عودة الطلاب للفصل</p>
+          {backPeriods.length ? (
+            <>
+              <p className="text-sm text-present">
+                عاد الطلاب للفصل من الحصة <span className="num">{backPeriods.join("، ")}</span>
+                {" "}— يُحضَّرون عادةً من هذه الحصة.
+              </p>
+              <button onClick={undoReturn} disabled={busy}
+                      className="rounded-pill border border-line px-4 py-1.5 text-xs text-muted hover:bg-canvas">
+                تراجع عن العودة
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-xs leading-relaxed text-muted">
+                إن انتهت المشاركة مبكرًا فاختر الحصة التي يعود فيها الطلاب لفصولهم،
+                فينتهي استئذانهم منها ويحضّرهم معلموهم عاديًا.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {periods.map((n) => (
+                  <button key={n} onClick={() => setBackFrom(n)}
+                          className={`num h-9 w-9 rounded-full text-sm font-semibold ${
+                            backFrom === n ? "bg-mint-deep text-white" : "border border-line text-muted hover:bg-canvas"}`}>
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <button onClick={markReturn} disabled={busy || !backFrom}
+                      className="w-full rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint disabled:opacity-40">
+                {backFrom ? `عاد الطلاب من الحصة ${backFrom}` : "اختر حصة العودة"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       <button className="w-full rounded-pill border border-line py-2 text-sm text-muted hover:bg-canvas"
               onClick={onNext}>
