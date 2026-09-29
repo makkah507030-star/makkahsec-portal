@@ -8,15 +8,47 @@
 --  الاسترجاع على مشروع Supabase جديد: شغّل الملف كاملًا بالترتيب
 --  (مخططا auth وstorage وإضافة pg_net يوفّرها Supabase).
 --  الأسرار (مفاتيح، كلمات مرور) لا تُحفظ هنا وتُضبط يدويًا.
---
---  ⚠ ناقص: قيم الأنواع المخصّصة (enum) لم تكن في هذا التصدير — أُضيفت
---  إلى export_schema.sql، وتكتمل بإعادة التصدير. حتى ذلك الحين أنشئها
---  يدويًا قبل الجداول: admin_role_type, attendance_source,
---  class_att_status, enrollment_status, excuse_type, identity_type_enum,
---  import_status, review_status_enum, sms_status, track_type, user_role.
 -- =====================================================================
 
 set check_function_bodies = off;
+
+
+-- ---------------------------------------------------------------------
+--  0) الأنواع (enum) — 11
+-- ---------------------------------------------------------------------
+
+-- admin_role_type
+create type public.admin_role_type as enum ('principal', 'deputy', 'counselor', 'clerk', 'activity_leader', 'tech_support', 'deputy_academic', 'deputy_school', 'deputy_students', 'counselor_1', 'counselor_2', 'counselor_3', 'media_portal', 'gifted_program', 'globe_program', 'student_voice', 'makkah_sport', 'safety_security', 'health_counselor', 'science_labs', 'computer_lab', 'clerk_2', 'clerk_3', 'science_labs_2', 'science_labs_3', 'data_registrar');
+
+-- attendance_source
+create type public.attendance_source as enum ('device', 'manual');
+
+-- class_att_status
+create type public.class_att_status as enum ('present', 'absent', 'late', 'excused');
+
+-- enrollment_status
+create type public.enrollment_status as enum ('active', 'transferred', 'withdrawn');
+
+-- excuse_type
+create type public.excuse_type as enum ('trip', 'competition', 'exam', 'medical', 'other');
+
+-- identity_type_enum
+create type public.identity_type_enum as enum ('national', 'iqama', 'border', 'temporary');
+
+-- import_status
+create type public.import_status as enum ('running', 'completed', 'failed');
+
+-- review_status_enum
+create type public.review_status_enum as enum ('pending', 'approved', 'rejected');
+
+-- sms_status
+create type public.sms_status as enum ('queued', 'sent', 'failed');
+
+-- track_type
+create type public.track_type as enum ('common_year', 'general_track');
+
+-- user_role
+create type public.user_role as enum ('admin', 'teacher', 'student', 'guardian');
 
 
 -- ---------------------------------------------------------------------
