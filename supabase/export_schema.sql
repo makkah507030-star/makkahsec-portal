@@ -6,9 +6,11 @@
 --  (supabase/schema/). أعد تشغيله بعد أي تعديل في البنية.
 --
 --  يُخرج صفًّا لكل عنصر مرتّبًا بترتيب إعادة الإنشاء (عمود ord):
---  التسلسلات، الجداول وأعمدتها، القيود والمفاتيح، الفهارس،
---  تفعيل RLS وسياساته، الدوال، المشغّلات (triggers)، والعروض (views) —
+--  الأنواع (enum) والتسلسلات، الجداول وأعمدتها، الدوال، القيود والمفاتيح،
+--  الفهارس، العروض (views)، تفعيل RLS وسياساته، والمشغّلات (triggers) —
 --  لمخطط public، وسياسات التخزين (storage.objects).
+--  الدوال قبل العروض والقيود لأن بعضها يستدعيها؛ ولذلك يبدأ الناتج بإيقاف
+--  فحص أجسام الدوال عند الإنشاء (كما يفعل pg_dump).
 -- =====================================================================
 
 with
@@ -16,6 +18,23 @@ tbl as (
   select c.oid, c.relname
   from pg_class c join pg_namespace n on n.oid = c.relnamespace
   where n.nspname = 'public' and c.relkind in ('r', 'p')
+),
+
+-- إيقاف فحص أجسام الدوال: دوال تستدعي دوالًا أو عروضًا تُنشأ بعدها
+setting as (
+  select -1 as ord, 'setting' as kind, 'check_function_bodies' as name,
+    'set check_function_bodies = off;' as ddl
+),
+
+-- ٠) الأنواع المخصّصة (enum) — تحتاجها أعمدة الجداول
+enums as (
+  select 0 as ord, 'type' as kind, t.typname as name,
+    format('create type public.%I as enum (%s);', t.typname,
+      string_agg(quote_literal(e.enumlabel), ', ' order by e.enumsortorder)) as ddl
+  from pg_type t join pg_namespace n on n.oid = t.typnamespace
+  join pg_enum e on e.enumtypid = t.oid
+  where n.nspname = 'public'
+  group by t.typname
 ),
 
 -- ٠) التسلسلات (الأعمدة ذات الترقيم التلقائي تحتاجها قبل الجداول)
@@ -41,23 +60,23 @@ tables as (
   group by t.relname
 ),
 
--- ٢) القيود: المفاتيح الأساسية والفريدة والخارجية والتحقق
+-- ٣) القيود: المفاتيح الأساسية والفريدة والخارجية والتحقق
 constraints as (
-  select case when con.contype in ('p', 'u', 'x') then 2 else 3 end,
+  select case when con.contype in ('p', 'u', 'x') then 3 else 4 end,
     'constraint', t.relname || '.' || con.conname,
     format('alter table public.%I add constraint %I %s;', t.relname, con.conname, pg_get_constraintdef(con.oid))
   from pg_constraint con join tbl t on t.oid = con.conrelid
 ),
 
--- ٣) الفهارس غير الناتجة عن قيود (بعد القيود)
+-- ٥) الفهارس غير الناتجة عن قيود (بعد القيود)
 indexes as (
-  select 4, 'index', i.indexname, i.indexdef || ';'
+  select 5, 'index', i.indexname, i.indexdef || ';'
   from pg_indexes i
   where i.schemaname = 'public'
     and not exists (select 1 from pg_constraint c where c.conname = i.indexname)
 ),
 
--- ٤) تفعيل RLS
+-- ٧) تفعيل RLS
 rls as (
   select 7, 'rls', c.relname,
     format('alter table public.%I enable row level security;', c.relname)
@@ -65,7 +84,7 @@ rls as (
   where n.nspname = 'public' and c.relkind in ('r', 'p') and c.relrowsecurity
 ),
 
--- ٥) سياسات الصلاحيات (public + storage)
+-- ٨) سياسات الصلاحيات (public + storage)
 policies as (
   select 8, 'policy', p.schemaname || '.' || p.tablename || ': ' || p.policyname,
     format('create policy %I on %I.%I as %s for %s to %s%s%s;',
@@ -77,16 +96,16 @@ policies as (
   where p.schemaname in ('public', 'storage')
 ),
 
--- ٦) الدوال (عدا ما تملكه الإضافات)
+-- ٢) الدوال (عدا ما تملكه الإضافات) — بعد الجداول لأن بعض معاملاتها أنواع جداول
 functions as (
-  select 6, 'function', p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
+  select 2, 'function', p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')',
     pg_get_functiondef(p.oid) || ';'
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public' and p.prokind in ('f', 'p')
     and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')
 ),
 
--- ٧) المشغّلات
+-- ٩) المشغّلات
 triggers as (
   select 9, 'trigger', c.relname || '.' || tg.tgname, pg_get_triggerdef(tg.oid) || ';'
   from pg_trigger tg join pg_class c on c.oid = tg.tgrelid
@@ -94,14 +113,16 @@ triggers as (
   where n.nspname = 'public' and not tg.tgisinternal
 ),
 
--- ٨) العروض
+-- ٦) العروض — بعد الدوال لأن بعضها يستدعيها
 views as (
-  select 5, 'view', v.viewname,
+  select 6, 'view', v.viewname,
     format(E'create or replace view public.%I as\n%s', v.viewname, v.definition)
   from pg_views v where v.schemaname = 'public'
 )
 
-select * from sequences
+select * from setting
+union all select * from enums
+union all select * from sequences
 union all select * from tables
 union all select * from constraints
 union all select * from indexes
