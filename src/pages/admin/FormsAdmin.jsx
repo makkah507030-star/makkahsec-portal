@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import SignatureCleaner from "../../components/SignatureCleaner.jsx";
 import {
   ALWAYS_ROLES, GENERAL_ROLES, SPECIFIC_ROLES, roleLabel, suggestRoles,
 } from "../../lib/formRoles";
@@ -198,6 +199,8 @@ export default function FormsAdmin() {
   const [loading, setLoading] = useState(true);
   const stampRef = useRef(null);
   const signRef = useRef(null);
+  const [rawSign, setRawSign] = useState(null);   // توقيع المدير قبل التحسين
+  const [signBusy, setSignBusy] = useState(false);
 
   const load = async () => {
     const [{ data: t }, { data: a }] = await Promise.all([
@@ -305,8 +308,28 @@ export default function FormsAdmin() {
       .upsert({ key, path, updated_at: new Date().toISOString(), updated_by: session.user.id },
               { onConflict: "key" });
     if (error) { setMsg({ ok: false, text: error.message }); return; }
+    // ملف قديم بصيغة أخرى لم يعد مستخدمًا
+    if (assets[key] && assets[key] !== path) await supabase.storage.from("form-assets").remove([assets[key]]);
     setMsg({ ok: true, text: "حُفظ الملف." });
     load();
+  };
+
+  // توقيع المدير يمرّ أولًا بنافذة التحسين (أسود عريض بخلفية شفافة)
+  const pickAsset = (key, file) => {
+    if (!file) return;
+    if (key !== "principal_signature") { uploadAsset(key, file); return; }
+    if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
+      setMsg({ ok: false, text: "الصيغ المقبولة: PNG أو JPG أو WEBP." }); return;
+    }
+    if (file.size > 15 * 1024 * 1024) { setMsg({ ok: false, text: "الحجم يتجاوز ١٥ ميغابايت." }); return; }
+    setRawSign(file);
+  };
+
+  const savePrincipalSign = async (file) => {
+    setSignBusy(true);
+    await uploadAsset("principal_signature", file);
+    setSignBusy(false);
+    setRawSign(null);
   };
 
   if (loading) return <Loader />;
@@ -494,7 +517,7 @@ export default function FormsAdmin() {
           {[["stamp", "ختم المدرسة", stampRef], ["principal_signature", "توقيع المدير", signRef]].map(
             ([key, label, ref]) => (
               <div key={key} className="rounded-card border border-line p-3">
-                <div className="grid h-24 place-items-center rounded-sm2 bg-canvas">
+                <div className="grid h-24 place-items-center rounded-sm2 border border-line bg-paper">
                   {urls[key]
                     ? <img src={urls[key]} alt={label} className="max-h-20 object-contain" />
                     : <span className="text-xs text-faint">غير مرفوع</span>}
@@ -507,11 +530,16 @@ export default function FormsAdmin() {
                   </button>
                 </div>
                 <input ref={ref} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
-                       onChange={(e) => { uploadAsset(key, e.target.files?.[0]); e.target.value = ""; }} />
+                       onChange={(e) => { pickAsset(key, e.target.files?.[0]); e.target.value = ""; }} />
               </div>
             ),
           )}
         </div>
+
+        {rawSign && (
+          <SignatureCleaner file={rawSign} busy={signBusy}
+                            onSave={savePrincipalSign} onCancel={() => setRawSign(null)} />
+        )}
 
         <div className="mt-3">
           <label className="text-xs text-muted">اسم المدير كما يُطبع تحت توقيعه</label>
