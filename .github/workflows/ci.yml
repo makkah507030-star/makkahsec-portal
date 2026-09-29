@@ -1,0 +1,37 @@
+# فحص آلي لكل طلب دمج وكل تحديث على main — قبل أن يصل التعديل إلى Netlify.
+# يفشل الفحص إن فشل أيٌّ من: فحص الأخطاء البرمجية، دوال Netlify، بناء الموقع.
+name: فحص البوابة
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: البناء والدوال
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: تثبيت المكتبات
+        run: npm ci
+
+      - name: فحص الأخطاء البرمجية (oxlint)
+        run: npm run lint
+
+      - name: فحص دوال Netlify
+        run: npm run check:functions
+
+      - name: بناء الموقع
+        run: npm run build
