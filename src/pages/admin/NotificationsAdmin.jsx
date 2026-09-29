@@ -8,6 +8,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import { normalizeImage } from "../../lib/imageResize";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { sendPush } from "../../lib/pushSend.js";
 
 const ROLES = [
   { key: "teacher",  label: "المعلمون" },
@@ -193,10 +194,7 @@ function SendForm() {
 
       setSending(false);
       try {
-        await fetch("/.netlify/functions/push-send", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ notification_id: data }),
-        });
+        await sendPush(data);
       } catch { /* تجاهل */ }
 
       setMsg({ ok: true, text: "أُرسل الإشعار." });

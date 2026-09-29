@@ -40,6 +40,17 @@ export const handler = async (event) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // ---------- هوية المستدعي ----------
+  // مستخدم بجلسة صالحة في البوابة، أو دالة مجدولة داخلية بمفتاح الخادم.
+  // بدون ذلك كان أي شخص يعرف الرابط يستطيع إعادة إرسال الإشعارات لمستلميها.
+  const auth = event.headers.authorization || event.headers.Authorization || "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  if (!token) return json({ error: "غير مصرّح" }, 401);
+  if (token !== SERVICE_KEY) {
+    const { data: u } = await admin.auth.getUser(token);
+    if (!u?.user?.id) return json({ error: "جلسة غير صالحة" }, 401);
+  }
+
   let payload = {};
   try {
     payload = JSON.parse(event.body || "{}");

@@ -9,6 +9,7 @@ import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/Fo
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { canUseTemplate } from "../../lib/formRoles";
+import { sendPush } from "../../lib/pushSend.js";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -665,11 +666,7 @@ export default function Forms() {
 
     // إشعار الجوال
     try {
-      await fetch("/.netlify/functions/push-send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notification_id: nid }),
-      });
+      await sendPush(nid);
     } catch { /* الإشعار داخل البوابة وصل على كل حال */ }
 
     await supabase.from("form_documents")

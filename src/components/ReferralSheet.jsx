@@ -3,6 +3,7 @@ import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
 import PrincipalSign from "./PrincipalSign.jsx";
+import { PRINCIPAL_NAME } from "../lib/exportUtils.js";
 
 /* =====================================================================
    ورقة إحالة الطالب — ملف واحد يوثّق المسار كاملًا:
@@ -186,7 +187,7 @@ export default function ReferralSheet({ r, stampUrl }) {
           <p className="text-[11px] text-muted">مدير المدرسة</p>
           <PrincipalSign height="h-8" />
           <div className="mx-auto h-px w-40 bg-line" />
-          <p className="mt-1 text-[11.5px] font-semibold">عبدالله بن حسن سليمان الفيفي</p>
+          <p className="mt-1 text-[11.5px] font-semibold">{PRINCIPAL_NAME}</p>
         </div>
       </div>
     </div>

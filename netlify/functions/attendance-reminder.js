@@ -133,7 +133,11 @@ export const handler = async () => {
         try {
           await fetch(`${process.env.URL || ""}/.netlify/functions/push-send`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              // طلب داخلي من دالة مجدولة: يُعرَّف بمفتاح الخادم
+              Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            },
             body: JSON.stringify({ notification_id: nid }),
           });
         } catch (e) { console.error("push:", e?.message); }
