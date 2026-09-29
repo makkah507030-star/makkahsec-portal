@@ -2,6 +2,7 @@
 // مرتّبة حسب تسلسل اليوم الدراسي.
 import { lazy, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useSession } from "../../lib/session.jsx";
 import { Loading } from "./shared.jsx";
 import { loadFingerprintEnabled, setFingerprintEnabled } from "../../lib/officialAttendance";
 
@@ -16,33 +17,39 @@ const StudentFile = lazy(() => import("./StudentFile.jsx"));
 const Devices = lazy(() =>
   import("../admin/AttendanceOverview.jsx").then((m) => ({ default: m.DevicesTab })));
 
+/* الأقسام ومن يراها: all لكل من له صلاحية التقارير،
+   warnings لوكيل شؤون الطلاب مع المدير والدعم الفني، super للمدير والدعم الفني فقط. */
 const GROUPS = [
-  { title: "اليوم", tabs: [{ key: "today", label: "لوحة اليوم" }] },
-  {
-    title: "الحضور اليومي",
+  { title: "اليوم", hint: "حالة اليوم الدراسي مرحلة بمرحلة", access: "all",
+    tabs: [{ key: "today", label: "لوحة اليوم" }] },
+  { title: "الحضور اليومي", hint: "التأخر والغياب والمتابعة خلال اليوم", access: "all",
     tabs: [
       { key: "late", label: "التأخر الصباحي" },
       { key: "official", label: "الغياب الرسمي" },
       { key: "follow", label: "المتابعة" },
       { key: "periods", label: "غياب الحصص" },
-    ],
-  },
-  {
-    title: "التراكمي والإجراءات",
+    ] },
+  { title: "الإنذارات", hint: "إنذارات الغياب ومحاضرها والتحويل لدراسة الحالة", access: "warnings",
+    tabs: [{ key: "warnings", label: "الإنذارات والمحاضر" }] },
+  { title: "التراكمي", hint: "النسب على الفصل وملف كل طالب", access: "super",
     tabs: [
       { key: "stats", label: "الإحصاء والنسب" },
-      { key: "warnings", label: "الإنذارات والمحاضر" },
       { key: "student", label: "ملف الطالب" },
-    ],
-  },
-  { title: "الأجهزة", tabs: [{ key: "devices", label: "أجهزة البصمة" }] },
+    ] },
+  { title: "الأجهزة", hint: "حالة أجهزة البصمة وتغطيتها", access: "super",
+    tabs: [{ key: "devices", label: "أجهزة البصمة" }] },
 ];
 
-const KEYS = new Set(GROUPS.flatMap((g) => g.tabs.map((t) => t.key)));
+const ACCESS_NOTE = { warnings: "للوكيل والمدير والدعم الفني", super: "للمدير والدعم الفني" };
 
 export default function StudentAffairs() {
+  const { isSuper, adminRoles } = useSession();
+  const isDeputy = (adminRoles ?? []).includes("deputy_students");
+  const groups = GROUPS.filter((g) =>
+    g.access === "all" || isSuper || (g.access === "warnings" && isDeputy));
+  const keys = new Set(groups.flatMap((g) => g.tabs.map((t) => t.key)));
   const [params, setParams] = useSearchParams();
-  const tab = KEYS.has(params.get("tab")) ? params.get("tab") : "today";
+  const tab = keys.has(params.get("tab")) ? params.get("tab") : "today";
   const go = (key) => setParams({ tab: key });
   const [fp, setFp] = useState(null);
   useEffect(() => { loadFingerprintEnabled().then(setFp).catch(() => setFp(false)); }, []);
@@ -60,23 +67,36 @@ export default function StudentAffairs() {
       {fp != null && <FingerprintSwitch enabled={fp} onChange={setFp} />}
       </div>
 
-      <div className="space-y-3">
-        {GROUPS.map((g) => (
-          <div key={g.title}>
-            <p className="mb-1.5 text-[11px] font-semibold text-faint">{g.title}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {g.tabs.map((t) => (
-                <button key={t.key} onClick={() => go(t.key)}
-                  className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
-                    tab === t.key ? "bg-mint-deep text-white"
-                                  : "border border-line bg-paper text-muted hover:bg-canvas"}`}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      <nav className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {groups.map((g) => {
+          const active = g.tabs.some((t) => t.key === tab);
+          return (
+            <section key={g.title}
+              className={`rounded-card border p-3 transition-colors ${
+                active ? "border-mint-deep/40 bg-mint-tint/40" : "border-line bg-paper"}`}>
+              <div className="flex items-center justify-between gap-2">
+                <p className={`text-sm font-bold ${active ? "text-mint-deep" : "text-ink"}`}>{g.title}</p>
+                {ACCESS_NOTE[g.access] && (
+                  <span className="shrink-0 rounded-pill bg-canvas px-2 py-0.5 text-[10.5px] text-faint">
+                    {ACCESS_NOTE[g.access]}
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-faint">{g.hint}</p>
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {g.tabs.map((t) => (
+                  <button key={t.key} onClick={() => go(t.key)}
+                    className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                      tab === t.key ? "bg-mint-deep text-white"
+                                    : "border border-line bg-paper text-muted hover:bg-canvas"}`}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </nav>
 
       <Suspense key={String(fp)} fallback={<Loading />}>
         {tab === "today" && <TodayBoard go={go} />}
