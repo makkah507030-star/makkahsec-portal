@@ -8,6 +8,7 @@ import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { canUseTemplate } from "../../lib/formRoles";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -141,13 +142,19 @@ function FieldPresets({ field, onPick }) {
 }
 
 export default function Forms() {
-  const { session, profile, adminRoles } = useSession();
+  const { session, profile, adminRoles, isTeacher } = useSession();
   const isManager = (adminRoles ?? []).some((r) => r === "tech_support" || r === "principal");
   const isApprover = (adminRoles ?? []).includes("principal");
 
   const [tab, setTab] = useState("issue");
   const [dept, setDept] = useState("all");
   const [templates, setTemplates] = useState([]);
+  // ما يحق لهذا الحساب إصداره بحسب «من يُصدره» في إدارة النماذج
+  const usable = useMemo(() => templates.filter((t) => canUseTemplate(t, {
+    adminRoles: adminRoles ?? [],
+    isAdmin: profile?.role === "admin",
+    isTeacher: isTeacher || profile?.role === "teacher",
+  })), [templates, adminRoles, profile?.role, isTeacher]);
   const [loading, setLoading] = useState(true);
 
   const [picked, setPicked] = useState(null);
@@ -1149,7 +1156,7 @@ export default function Forms() {
       </div>
 
       {tab === "issue" && (
-        templates.length === 0 ? (
+        usable.length === 0 ? (
           <div className="card px-6 py-10 text-center">
             <p className="font-semibold text-ink">لا نماذج متاحة لحسابك</p>
             <p className="mt-1.5 text-sm text-muted">راجع الدعم الفني لإتاحة النماذج المناسبة لدورك.</p>
@@ -1159,7 +1166,7 @@ export default function Forms() {
           {/* أقسام المدرسة — تظهر الأقسام التي لها نماذج متاحة لهذا الحساب */}
           {(() => {
             const used = DEPARTMENTS.filter((dp) =>
-              templates.some((t) => (t.department ?? "school_admin") === dp.key));
+              usable.some((t) => (t.department ?? "school_admin") === dp.key));
             if (used.length < 2) return null;
             return (
               <div className="mb-3 flex flex-wrap gap-1.5">
@@ -1176,7 +1183,7 @@ export default function Forms() {
           })()}
 
           <div className="grid gap-3 sm:grid-cols-2">
-            {templates
+            {usable
               .filter((t) => dept === "all" || (t.department ?? "school_admin") === dept)
               .map((t) => (
               <button key={t.id} onClick={() => start(t)}
