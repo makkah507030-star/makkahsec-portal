@@ -5,9 +5,11 @@ import { useSession } from "../lib/session.jsx";
 import { todayISO, todayDow, DAY_NAMES } from "../lib/schoolTime";
 
 /* =====================================================================
-   صندوق المناوبة والإشراف.
-   يعرض للمنسوب: يوم إشرافه الأسبوعي، وأقرب مناوبة له.
-   ويتحوّل إلى تنبيه بارز في يوم مناوبته أو يوم إشرافه.
+   صندوق المناوبة والإشراف في اللوحة الرئيسية.
+   • مناوبو اليوم (جدول المناوبة) والإشراف اليومي حسب جدول الإشراف الأسبوعي
+     (المعلمون المشرفون والمشرف المتابع) — يراهم الجميع.
+   • شريط شخصي: مناوبتي القادمة وأيام إشرافي.
+   • في يوم مناوبة المنسوب أو إشرافه يظهر تنبيه بارز أعلى الصندوق.
    ===================================================================== */
 
 const fmtG = (iso) => {
@@ -23,9 +25,56 @@ const daysBetween = (iso) => {
   return Math.round((b - a) / 86400000);
 };
 
+const Icon = ({ d, className = "h-4 w-4" }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+       strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    {d}
+  </svg>
+);
+const SHIELD = <path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6l-7-3Z" />;
+const EYE = <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" /></>;
+const CAL = <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>;
+const BELL = <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" /></>;
+
+/** اسم في قائمة اليوم — يُميَّز صاحب الحساب */
+function Person({ name, me, tone = "mint" }) {
+  const ring = me
+    ? "border-mint-deep bg-mint-deep text-white"
+    : tone === "amber"
+      ? "border-warning/25 bg-warning-light text-ink"
+      : "border-mint-light bg-white text-ink";
+  const initial = (name ?? "").trim().charAt(0) || "؟";
+  return (
+    <span className={`inline-flex max-w-full items-center gap-2 rounded-pill border py-1 pl-3 pr-1 text-sm ${ring}`}>
+      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
+        me ? "bg-white/20 text-white" : tone === "amber" ? "bg-warning/15 text-warning" : "bg-mint-tint text-mint-deep"}`}>
+        {initial}
+      </span>
+      <span className="truncate font-medium">{name}</span>
+      {me && <span className="shrink-0 rounded-pill bg-white/20 px-1.5 text-[10px] font-bold">أنت</span>}
+    </span>
+  );
+}
+
+function Block({ icon, title, hint, children }) {
+  return (
+    <div className="min-w-0 rounded-xl2 border border-mint-light/70 bg-white/80 p-3.5">
+      <div className="flex items-center gap-2">
+        <span className="grid h-7 w-7 place-items-center rounded-full bg-mint-tint text-mint-deep">
+          <Icon d={icon} className="h-3.5 w-3.5" />
+        </span>
+        <p className="text-sm font-bold text-ink">{title}</p>
+        {hint && <span className="mr-auto text-[11px] text-faint">{hint}</span>}
+      </div>
+      <div className="mt-2.5">{children}</div>
+    </div>
+  );
+}
+
 export default function DutyCard() {
   const { session } = useSession();
   const [data, setData] = useState(null);
+  const dow = todayDow();
 
   useEffect(() => {
     (async () => {
@@ -33,7 +82,7 @@ export default function DutyCard() {
       if (!uid) { setData({ none: true }); return; }
       const today = todayISO();
 
-      const [{ data: mine }, { data: todayRow }, { data: sup }] = await Promise.all([
+      const [{ data: mine }, { data: todayRow }, { data: sup }, { data: supToday }] = await Promise.all([
         // أقرب مناوبة لي من اليوم فصاعدًا
         supabase.from("duty_roster")
           .select("duty_date, hijri_label, day_label, name_a, name_b, user_a, user_b")
@@ -43,102 +92,181 @@ export default function DutyCard() {
           .limit(1),
         // مناوبو اليوم — يراهم الجميع
         supabase.from("duty_roster")
-          .select("duty_date, hijri_label, day_label, name_a, name_b, note")
+          .select("duty_date, hijri_label, day_label, name_a, name_b, user_a, user_b, note")
           .eq("duty_date", today)
           .maybeSingle(),
         // إشرافي الأسبوعي
         supabase.from("supervision_duty")
           .select("day_of_week, kind")
           .eq("user_id", uid),
+        // الإشراف اليومي حسب الجدول الأسبوعي
+        dow
+          ? supabase.from("supervision_duty")
+              .select("person_name, kind, user_id")
+              .eq("day_of_week", dow)
+              .order("kind").order("person_name")
+          : Promise.resolve({ data: [] }),
       ]);
 
       setData({
+        uid,
         next: mine?.[0] ?? null,
         today: todayRow ?? null,
         sup: sup ?? [],
+        supToday: supToday ?? [],
       });
     })();
-  }, [session]);
+  }, [session, dow]);
 
   if (!data || data.none) return null;
 
-  const dow = todayDow();
+  const { uid } = data;
   const myDuty = data.next && data.next.duty_date === todayISO();
-  const mySupToday = (data.sup ?? []).some((s) => s.day_of_week === dow);
+  const mySupToday = data.sup.some((s) => s.day_of_week === dow);
+  const todayDuty = data.today && (data.today.name_a || data.today.name_b)
+    ? [
+        { name: data.today.name_a, me: data.today.user_a === uid },
+        { name: data.today.name_b, me: data.today.user_b === uid },
+      ].filter((p) => p.name)
+    : [];
+  const teachers = data.supToday.filter((r) => r.kind === "teacher");
+  const followers = data.supToday.filter((r) => r.kind === "supervisor");
+  const supDays = [...new Set(data.sup.map((s) => s.day_of_week))]
+    .sort()
+    .map((d) => DAY_NAMES[d])
+    .filter(Boolean);
 
-  // لا يظهر الصندوق لمن لا مناوبة له ولا إشراف
-  if (!data.next && (data.sup ?? []).length === 0 && !data.today) return null;
+  // لا يظهر الصندوق إن لم يكن هناك ما يُعرض إطلاقًا
+  if (!data.next && !supDays.length && !todayDuty.length && !data.supToday.length) return null;
 
-  /* ——— اليوم يوم مناوبتي أو إشرافي: تنبيه بارز ——— */
-  if (myDuty || mySupToday) {
-    const isDuty = myDuty;
-    const tone = isDuty
-      ? { bg: "bg-absent/8", border: "border-absent/35", text: "text-absent", chip: "bg-absent text-white" }
-      : { bg: "bg-warning/8", border: "border-warning/35", text: "text-warning", chip: "bg-warning text-white" };
-    const partner = isDuty
-      ? [data.next.name_a, data.next.name_b].filter(Boolean).join(" و ")
-      : null;
-
-    return (
-      <section className={`rounded-card border ${tone.border} ${tone.bg} p-5`}>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <span className={`chip ${tone.chip}`}>اليوم</span>
-            <p className={`mt-2 text-lg font-bold ${tone.text}`}>
-              {isDuty ? "أنت مناوب اليوم" : "أنت مشرف اليوم"}
-            </p>
-            <p className="mt-1 text-sm leading-relaxed text-muted">
-              {isDuty
-                ? `المناوبة مع: ${partner}`
-                : `إشراف ${DAY_NAMES[dow] ?? ""} — تابع مواقع الإشراف في الفسحة وبداية اليوم.`}
-            </p>
-          </div>
-          {isDuty && data.next.hijri_label && (
-            <span className="num shrink-0 text-xs text-faint">{data.next.hijri_label}هـ</span>
-          )}
-        </div>
-      </section>
-    );
-  }
-
-  /* ——— بقية الأيام: بطاقة هادئة ——— */
   const inDays = data.next ? daysBetween(data.next.duty_date) : null;
-  const supDays = (data.sup ?? []).map((s) => DAY_NAMES[s.day_of_week]).filter(Boolean);
+  const partner = myDuty
+    ? todayDuty.filter((p) => !p.me).map((p) => p.name).join(" و ")
+    : "";
 
   return (
-    <section className="rounded-card border border-line bg-white p-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {data.next && (
-          <div>
-            <p className="text-xs font-medium text-faint">مناوبتي القادمة</p>
-            <p className="mt-1 text-sm font-bold text-ink">
-              {data.next.day_label} <span className="num">{fmtG(data.next.duty_date)}</span>
-            </p>
-            <p className="mt-0.5 text-xs text-muted">
-              {inDays === 0 ? "اليوم" : inDays === 1 ? "غدًا" : <>بعد <span className="num">{inDays}</span> يومًا</>}
-              {data.next.hijri_label && <span className="num"> · {data.next.hijri_label}هـ</span>}
+    <section className="overflow-hidden rounded-card border border-mint-light bg-gradient-to-b from-mint-tint to-white shadow-card">
+      {/* الترويسة */}
+      <div className="flex items-center justify-between gap-3 bg-mint-deep px-4 py-3 text-white">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/15">
+            <Icon d={SHIELD} className="h-[18px] w-[18px]" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold">المناوبة والإشراف</p>
+            <p className="text-[11px] text-white/75">
+              {dow ? `يوم ${DAY_NAMES[dow]}` : "لا دوام اليوم"}
+              {data.today?.hijri_label && <> · <bdi className="num">{data.today.hijri_label}</bdi>هـ</>}
             </p>
           </div>
-        )}
-
-        {supDays.length > 0 && (
-          <div>
-            <p className="text-xs font-medium text-faint">إشرافي الأسبوعي</p>
-            <p className="mt-1 text-sm font-bold text-ink">{supDays.join(" · ")}</p>
-            <p className="mt-0.5 text-xs text-muted">يتكرر كل أسبوع</p>
-          </div>
+        </div>
+        {(myDuty || mySupToday) && (
+          <span className="shrink-0 animate-pulse rounded-pill bg-white px-3 py-1 text-xs font-bold text-mint-deep">
+            لديك مهمة اليوم
+          </span>
         )}
       </div>
 
-      {data.today && (data.today.name_a || data.today.name_b) && (
-        <p className="mt-3 border-t border-line pt-2.5 text-xs text-muted">
-          مناوبو اليوم:{" "}
-          <span className="font-medium text-ink">
-            {[data.today.name_a, data.today.name_b].filter(Boolean).join(" و ")}
-          </span>
-          {data.today.note && <span className="text-faint"> · {data.today.note}</span>}
-        </p>
-      )}
+      <div className="space-y-3 p-3.5 sm:p-4">
+        {/* تنبيه شخصي في يوم المهمة */}
+        {(myDuty || mySupToday) && (
+          <div className={`flex items-start gap-3 rounded-xl2 border p-3.5 ${
+            myDuty ? "border-absent/30 bg-danger-light" : "border-warning/30 bg-warning-light"}`}>
+            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-white ${
+              myDuty ? "bg-absent" : "bg-warning"}`}>
+              <Icon d={BELL} className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <p className={`font-bold ${myDuty ? "text-absent" : "text-warning"}`}>
+                {myDuty && mySupToday ? "أنت مناوب ومشرف اليوم" : myDuty ? "أنت مناوب اليوم" : "أنت مشرف اليوم"}
+              </p>
+              <p className="mt-0.5 text-sm leading-relaxed text-muted">
+                {myDuty
+                  ? (partner ? `المناوبة مع: ${partner}` : "تابع الطلاب في بداية اليوم ونهايته.")
+                  : "تابع مواقع الإشراف في الفسحة وبداية اليوم."}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* اليوم: المناوبة والإشراف */}
+        {dow > 0 && (todayDuty.length > 0 || data.supToday.length > 0) && (
+          <div className="grid gap-3 md:grid-cols-2">
+            <Block icon={SHIELD} title="مناوبو اليوم" hint={data.today?.note || null}>
+              {todayDuty.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {todayDuty.map((p, i) => <Person key={i} name={p.name} me={p.me} />)}
+                </div>
+              ) : (
+                <p className="text-xs text-muted">لا مناوبة مسجّلة لهذا اليوم.</p>
+              )}
+            </Block>
+
+            <Block icon={EYE} title="الإشراف اليومي" hint="حسب جدول الإشراف">
+              {data.supToday.length ? (
+                <div className="space-y-2.5">
+                  {teachers.length > 0 && (
+                    <div>
+                      <p className="mb-1 text-[11px] font-medium text-faint">
+                        المعلمون المشرفون · <span className="num">{teachers.length}</span>
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {teachers.map((r, i) => (
+                          <Person key={i} name={r.person_name} me={r.user_id === uid} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {followers.length > 0 && (
+                    <div>
+                      <p className="mb-1 text-[11px] font-medium text-faint">المشرف المتابع</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {followers.map((r, i) => (
+                          <Person key={i} name={r.person_name} me={r.user_id === uid} tone="amber" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted">لا مشرفين مسجّلين لهذا اليوم.</p>
+              )}
+            </Block>
+          </div>
+        )}
+
+        {/* الشريط الشخصي */}
+        {(data.next || supDays.length > 0) && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {data.next && (
+              <div className="flex items-center gap-3 rounded-sm2 border border-line/60 bg-white px-3 py-2.5">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-sm2 bg-mint-tint text-center leading-none text-mint-deep">
+                  {inDays === 0
+                    ? <span className="text-[11px] font-bold">اليوم</span>
+                    : <span><span className="num block text-base font-bold">{inDays}</span><span className="text-[9px]">{inDays === 1 ? "يوم" : "يومًا"}</span></span>}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-faint">مناوبتي القادمة</p>
+                  <p className="truncate text-sm font-bold text-ink">
+                    {data.next.day_label} <span className="num font-medium text-muted">{fmtG(data.next.duty_date)}</span>
+                  </p>
+                </div>
+              </div>
+            )}
+            {supDays.length > 0 && (
+              <div className="flex items-center gap-3 rounded-sm2 border border-line/60 bg-white px-3 py-2.5">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-sm2 bg-warning-light text-warning">
+                  <Icon d={CAL} className="h-[18px] w-[18px]" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-faint">إشرافي الأسبوعي</p>
+                  <p className="truncate text-sm font-bold text-ink">{supDays.join(" · ")}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
