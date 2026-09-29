@@ -2,6 +2,7 @@
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
+import PrincipalSign from "./PrincipalSign.jsx";
 
 /* =====================================================================
    تقرير النماذج الصادرة — غلاف رسمي + جدول بالمستندات.
@@ -155,7 +156,7 @@ function Cover({ title, dept, rows, from, to, issuedBy, ack }) {
             </div>
             <div className="text-center">
               <p className="text-[12px] text-muted">مدير المدرسة</p>
-              <div className="h-10" />
+              <PrincipalSign height="h-10" />
               <div className="mx-auto h-px w-44 bg-line" />
               <p className="mt-1 text-[13px] font-semibold text-ink">…</p>
             </div>

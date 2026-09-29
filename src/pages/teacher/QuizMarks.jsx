@@ -10,6 +10,7 @@ import PrintPortal from "../../components/PrintPortal.jsx";
 import { groupQuestions } from "../../lib/omrLayout.js";
 import { useNotice } from "../../lib/useNotice.js";
 import { quietly } from "../../lib/notice.js";
+import PrincipalSign from "../../components/PrincipalSign.jsx";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -417,7 +418,7 @@ export default function QuizMarks() {
                 </div>
                 <div>
                   <p className="text-[12px] text-muted">مدير المدرسة</p>
-                  <div className="h-8" />
+                  <PrincipalSign height="h-8" />
                   <div className="mx-auto h-px w-44 bg-line" />
                   <p className="mt-1.5 text-[12.5px] font-semibold">عبدالله بن حسن سليمان الفيفي</p>
                 </div>

@@ -9,6 +9,7 @@ import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
+import { loadPrincipalSignature } from "../lib/principalSignature.js";
 
 /* أقسام قائمة الإدارة — مجمّعة منطقيًا */
 const ADMIN_GROUPS = [
@@ -184,6 +185,9 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+
+  // تحميل توقيع المدير المعتمد مسبقًا — ليظهر في التقارير المطبوعة فورًا
+  useEffect(() => { if (session) loadPrincipalSignature(); }, [session]);
 
   // عدّاد الإشعارات المعلّقة بانتظار الاعتماد — للدعم الفني فقط
   const [pendingReview, setPendingReview] = useState(0);

@@ -1,5 +1,6 @@
 import { fmtBoth, fmtTime12 } from "./dates";
 import { isMobileDevice } from "./print";
+import { loadPrincipalSignature } from "./principalSignature";
 
 // المكتبات الثقيلة تُجلب عند التصدير أو الطباعة فقط، لا مع فتح الصفحة:
 // xlsx-js-style: نسخة مجانية من SheetJS تدعم تنسيق الخلايا
@@ -298,6 +299,12 @@ export async function printReport(opts) {
         { title: "مدير المدرسة", name: PRINCIPAL_NAME },
       ];
 
+  // توقيع المدير المعتمد (من «إدارة النماذج») يظهر آليًا في خانة «مدير المدرسة»
+  const isPrincipal = (sg) => String(sg.title ?? "").includes("مدير المدرسة");
+  const principalSig = !hideSignatures && signList.some(isPrincipal)
+    ? await loadPrincipalSignature()
+    : null;
+
   const signBlock = hideSignatures ? "" : `
   <div class="sign ${signList.length === 1 ? "one" : signList.length >= 3 ? "three" : ""}">
     ${signList
@@ -306,7 +313,9 @@ export async function printReport(opts) {
     <div class="sign-box">
       <p class="sign-title">${sg.title}</p>
       <p class="sign-name">${sg.name}</p>
-      ${hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..........................</p>`}
+      ${isPrincipal(sg) && principalSig?.url
+        ? `<img class="sign-img" src="${principalSig.url}" alt="" />`
+        : hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..........................</p>`}
     </div>`
       )
       .join("")}
@@ -594,6 +603,7 @@ export async function printReport(opts) {
   .sign-title { margin: 0; font-size: 9.5px; color: ${GRAY}; }
   .sign-name { margin: 3px 0 0; font-size: 11px; font-weight: 700; color: ${INK}; }
   .sign-line { margin: 16px 0 0; font-size: 9.5px; color: ${GRAY}; }
+  .sign-img { display: block; height: 42px; max-width: 150px; margin: 4px auto 0; object-fit: contain; }
 
   /* الغلاف */
   .cover { display: flex; flex-direction: column; min-height: 96vh; }
