@@ -38,19 +38,14 @@ const BELL = <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M1
 
 /** اسم في قائمة اليوم — يُميَّز صاحب الحساب */
 function Person({ name, me, tone = "mint" }) {
-  const ring = me
+  const look = me
     ? "border-mint-deep bg-mint-deep text-white"
     : tone === "amber"
       ? "border-warning/25 bg-warning-light text-ink"
       : "border-mint-light bg-white text-ink";
-  const initial = (name ?? "").trim().charAt(0) || "؟";
   return (
-    <span className={`inline-flex max-w-full items-center gap-2 rounded-pill border py-1 pl-3 pr-1 text-sm ${ring}`}>
-      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
-        me ? "bg-white/20 text-white" : tone === "amber" ? "bg-warning/15 text-warning" : "bg-mint-tint text-mint-deep"}`}>
-        {initial}
-      </span>
-      <span className="truncate font-medium">{name}</span>
+    <span className={`inline-flex max-w-full items-center gap-1.5 rounded-pill border px-3 py-1 text-sm font-medium ${look}`}>
+      <span className="truncate">{name}</span>
       {me && <span className="shrink-0 rounded-pill bg-white/20 px-1.5 text-[10px] font-bold">أنت</span>}
     </span>
   );
@@ -189,9 +184,39 @@ export default function DutyCard() {
           </div>
         )}
 
-        {/* اليوم: المناوبة والإشراف */}
-        {dow > 0 && (todayDuty.length > 0 || data.supToday.length > 0) && (
-          <div className="grid gap-3 md:grid-cols-2">
+        {/* الإشراف اليومي حسب الجدول — شريط بعرض الصندوق */}
+        {dow > 0 && data.supToday.length > 0 && (
+          <Block icon={EYE} title="الإشراف اليومي" hint="حسب جدول الإشراف">
+            <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
+              {teachers.length > 0 && (
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1.5 text-[11px] font-medium text-faint">
+                    المعلمون المشرفون · <span className="num">{teachers.length}</span>
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {teachers.map((r, i) => (
+                      <Person key={i} name={r.person_name} me={r.user_id === uid} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {followers.length > 0 && (
+                <div className="shrink-0 border-t border-mint-light pt-3 md:border-r md:border-t-0 md:pr-4 md:pt-0">
+                  <p className="mb-1.5 text-[11px] font-medium text-faint">المشرف المتابع</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {followers.map((r, i) => (
+                      <Person key={i} name={r.person_name} me={r.user_id === uid} tone="amber" />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Block>
+        )}
+
+        {/* مناوبو اليوم + الشريط الشخصي */}
+        <div className="grid gap-3 md:grid-cols-2">
+          {dow > 0 && (
             <Block icon={SHIELD} title="مناوبو اليوم" hint={data.today?.note || null}>
               {todayDuty.length ? (
                 <div className="flex flex-wrap gap-1.5">
@@ -201,71 +226,40 @@ export default function DutyCard() {
                 <p className="text-xs text-muted">لا مناوبة مسجّلة لهذا اليوم.</p>
               )}
             </Block>
+          )}
 
-            <Block icon={EYE} title="الإشراف اليومي" hint="حسب جدول الإشراف">
-              {data.supToday.length ? (
-                <div className="space-y-2.5">
-                  {teachers.length > 0 && (
-                    <div>
-                      <p className="mb-1 text-[11px] font-medium text-faint">
-                        المعلمون المشرفون · <span className="num">{teachers.length}</span>
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {teachers.map((r, i) => (
-                          <Person key={i} name={r.person_name} me={r.user_id === uid} />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {followers.length > 0 && (
-                    <div>
-                      <p className="mb-1 text-[11px] font-medium text-faint">المشرف المتابع</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {followers.map((r, i) => (
-                          <Person key={i} name={r.person_name} me={r.user_id === uid} tone="amber" />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+          {/* الشريط الشخصي */}
+          {(data.next || supDays.length > 0) && (
+            <div className="grid gap-2">
+              {data.next && (
+                <div className="flex items-center gap-3 rounded-xl2 border border-mint-light/70 bg-white/80 px-3.5 py-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-sm2 bg-mint-tint text-center leading-none text-mint-deep">
+                    {inDays === 0
+                      ? <span className="text-[11px] font-bold">اليوم</span>
+                      : <span><span className="num block text-base font-bold">{inDays}</span><span className="text-[9px]">{inDays === 1 ? "يوم" : "يومًا"}</span></span>}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-faint">مناوبتي القادمة</p>
+                    <p className="truncate text-sm font-bold text-ink">
+                      {data.next.day_label} <span className="num font-medium text-muted">{fmtG(data.next.duty_date)}</span>
+                    </p>
+                  </div>
                 </div>
-              ) : (
-                <p className="text-xs text-muted">لا مشرفين مسجّلين لهذا اليوم.</p>
               )}
-            </Block>
-          </div>
-        )}
-
-        {/* الشريط الشخصي */}
-        {(data.next || supDays.length > 0) && (
-          <div className="grid gap-2 sm:grid-cols-2">
-            {data.next && (
-              <div className="flex items-center gap-3 rounded-sm2 border border-line/60 bg-white px-3 py-2.5">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-sm2 bg-mint-tint text-center leading-none text-mint-deep">
-                  {inDays === 0
-                    ? <span className="text-[11px] font-bold">اليوم</span>
-                    : <span><span className="num block text-base font-bold">{inDays}</span><span className="text-[9px]">{inDays === 1 ? "يوم" : "يومًا"}</span></span>}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-faint">مناوبتي القادمة</p>
-                  <p className="truncate text-sm font-bold text-ink">
-                    {data.next.day_label} <span className="num font-medium text-muted">{fmtG(data.next.duty_date)}</span>
-                  </p>
+              {supDays.length > 0 && (
+                <div className="flex items-center gap-3 rounded-xl2 border border-mint-light/70 bg-white/80 px-3.5 py-3">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-sm2 bg-warning-light text-warning">
+                    <Icon d={CAL} className="h-[18px] w-[18px]" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-faint">إشرافي الأسبوعي</p>
+                    <p className="truncate text-sm font-bold text-ink">{supDays.join(" · ")}</p>
+                  </div>
                 </div>
-              </div>
-            )}
-            {supDays.length > 0 && (
-              <div className="flex items-center gap-3 rounded-sm2 border border-line/60 bg-white px-3 py-2.5">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-sm2 bg-warning-light text-warning">
-                  <Icon d={CAL} className="h-[18px] w-[18px]" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[11px] text-faint">إشرافي الأسبوعي</p>
-                  <p className="truncate text-sm font-bold text-ink">{supDays.join(" · ")}</p>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
