@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
-import { GRADE_NAMES, STATUS } from "../lib/schoolTime";
+import { GRADE_NAMES, STATUS, PERIODS_PER_DAY } from "../lib/schoolTime";
 import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
 import { fetchAllPaged } from "../lib/attendanceHelpers";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
@@ -156,6 +156,7 @@ export function DailyReport({ scopeIds }) {
   const [date, setDate] = useState(todayStr());
   const [rows, setRows] = useState(null);
   const [status, setStatus] = useState("all");
+  const [period, setPeriod] = useState("all"); // رقم الحصة، أو "all" لكل الحصص
 
   useEffect(() => {
     (async () => {
@@ -175,16 +176,43 @@ export function DailyReport({ scopeIds }) {
     })();
   }, [date, scopeIds]);
 
+  // حصص اليوم المختار (الأحد والاثنين ٧، وبقية الأيام ٦)، مع أي حصة أخرى ظهرت في السجلات
+  const periodList = useMemo(() => {
+    const dow = new Date(date + "T00:00:00").getDay() + 1;
+    const n = PERIODS_PER_DAY[dow] ?? 7;
+    const set = new Set(Array.from({ length: n }, (_, i) => i + 1));
+    (rows ?? []).forEach((r) => { if (r.schedule?.period_no != null) set.add(r.schedule.period_no); });
+    return [...set].sort((a, b) => a - b);
+  }, [date, rows]);
+
+  const inPeriod = useMemo(
+    () => (period === "all" ? rows ?? [] : (rows ?? []).filter((r) => r.schedule?.period_no === period)),
+    [rows, period]
+  );
+
   const filtered = useMemo(
-    () => (status === "all" ? rows ?? [] : (rows ?? []).filter((r) => r.status === status)),
-    [rows, status]
+    () => (status === "all" ? inPeriod : inPeriod.filter((r) => r.status === status)),
+    [inPeriod, status]
   );
 
   const counts = useMemo(() => {
-    const c = { all: rows?.length ?? 0, absent: 0, late: 0, excused: 0 };
-    (rows ?? []).forEach((r) => { c[r.status] = (c[r.status] ?? 0) + 1; });
+    const c = { all: inPeriod.length, absent: 0, late: 0, excused: 0 };
+    inPeriod.forEach((r) => { c[r.status] = (c[r.status] ?? 0) + 1; });
     return c;
-  }, [rows]);
+  }, [inPeriod]);
+
+  // عدد الحالات في كل حصة حسب فلتر الحالة المختار
+  const periodCounts = useMemo(() => {
+    const c = {};
+    (rows ?? []).forEach((r) => {
+      if (status !== "all" && r.status !== status) return;
+      const p = r.schedule?.period_no;
+      c[p] = (c[p] ?? 0) + 1;
+    });
+    return c;
+  }, [rows, status]);
+
+  const subtitle = period === "all" ? date : `${date} · الحصة ${period}`;
 
   const table = () =>
     filtered
@@ -208,8 +236,18 @@ export function DailyReport({ scopeIds }) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm font-medium text-ink">التاريخ:</label>
-        <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+        <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setPeriod("all"); }}
                className="rounded-sm2 border border-line px-3 py-2 text-sm" />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-sm font-medium text-ink">الحصة:</span>
+        <Pill on={period === "all"} onClick={() => setPeriod("all")}>كل الحصص</Pill>
+        {periodList.map((p) => (
+          <Pill key={p} on={period === p} onClick={() => setPeriod(p)}>
+            <span className="num">{p}</span> <span className="num text-xs opacity-75">({periodCounts[p] ?? 0})</span>
+          </Pill>
+        ))}
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -228,17 +266,17 @@ export function DailyReport({ scopeIds }) {
         onExcel={() =>
           exportStyledExcel({
             title: "تقرير الغياب اليومي",
-            subtitle: date,
+            subtitle,
             headers,
             rows: table(),
-            fileName: `غياب-${date}`,
+            fileName: period === "all" ? `غياب-${date}` : `غياب-${date}-الحصة-${period}`,
             sheetName: "الغياب",
             signatures: SIGNS,
           })}
         onPrint={() =>
           printReport({
             title: "تقرير الغياب اليومي",
-            subtitle: date,
+            subtitle,
             headers, rows: table(), ...logos(),
           })}
       />
@@ -246,7 +284,10 @@ export function DailyReport({ scopeIds }) {
       {!rows && <Loader compact />}
 
       {rows && filtered.length === 0 ? (
-        <Empty title="لا سجلات" body="لا توجد حالات غياب أو تأخر في هذا اليوم." />
+        <Empty title="لا سجلات"
+               body={period === "all"
+                 ? "لا توجد حالات غياب أو تأخر في هذا اليوم."
+                 : `لا توجد حالات غياب أو تأخر في الحصة ${period} من هذا اليوم.`} />
       ) : (
         <div className="card divide-y divide-line overflow-hidden">
           {filtered.slice(0, 300).map((r, i) => (
