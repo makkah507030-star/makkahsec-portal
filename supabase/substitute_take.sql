@@ -14,6 +14,7 @@
 -- • تحتاج جدولي substitute_periods و class_attendance كما هما.
 -- • يُنفَّذ مرة واحدة في Supabase ← SQL Editor، ويمكن إعادة تنفيذه بأمان.
 -- • قبل تنفيذه تعمل الواجهة بالطريقة القديمة تلقائيًا.
+-- • انسخ الملف كاملًا واضغط Run دون تظليل جزء منه.
 -- =====================================================================
 
 create or replace function public.substitute_take(
@@ -25,7 +26,7 @@ returns integer
 language plpgsql
 security definer
 set search_path = public
-as $$
+as $fn$
 declare
   v_now     timestamp := now() at time zone 'Asia/Riyadh';
   v_grace   constant integer := 10;   -- يطابق GRACE_MINUTES في الواجهة
@@ -96,7 +97,7 @@ begin
   end if;
 
   -- قفل الحصة لهذا اليوم حتى نهاية العملية: لا يحضّرها اثنان في اللحظة نفسها
-  perform pg_advisory_xact_lock(hashtext('substitute:' || p_schedule_id::text || ':' || p_date::text));
+  perform pg_advisory_xact_lock(hashtext(p_schedule_id::text), hashtext(p_date::text));
 
   select sp.cover_teacher_id into v_holder
   from public.substitute_periods sp
@@ -153,7 +154,7 @@ begin
   end if;
   return v_count;
 end;
-$$;
+$fn$;
 
 revoke all on function public.substitute_take(public.schedule.id%type, date, jsonb) from public;
 grant execute on function public.substitute_take(public.schedule.id%type, date, jsonb) to authenticated;
