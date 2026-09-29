@@ -29,7 +29,7 @@ export default function AttendanceOverview() {
       <div>
         <h1 className="text-lg font-bold text-ink">الحضور والغياب</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          الحالة الرسمية معتمدة على الحصتين الأوليين فقط، والتأخر الصباحي من بيانات البصمة.
+          الحالة الرسمية من تحضير الحصص المعتمدة، والتأخر الصباحي من بيانات البصمة.
         </p>
       </div>
 
@@ -96,7 +96,7 @@ function OfficialTab() {
 
   const printIt = () => printReport({
     title: "كشف الطلاب الغائبين رسميًا",
-    subtitle: `${fmtGreg(date)} · معتمد على غياب الحصتين الأولى والثانية معًا`,
+    subtitle: `${fmtGreg(date)} · الغياب الرسمي المعتمد`,
     headers, rows: table(),
     logoUrl: new URL(logoIcon, window.location.origin).href,
     moeLogoUrl: new URL(moeLogo, window.location.origin).href,
@@ -108,7 +108,7 @@ function OfficialTab() {
 
   const excelIt = () => exportStyledExcel({
     title: "كشف الطلاب الغائبين رسميًا",
-    subtitle: `${fmtGreg(date)} · معتمد على غياب الحصتين الأولى والثانية معًا`,
+    subtitle: `${fmtGreg(date)} · الغياب الرسمي المعتمد`,
     headers, rows: table(),
     fileName: `الغياب-الرسمي-${date}`,
     sheetName: "الغياب",

@@ -60,7 +60,7 @@ export default function StudentAffairs() {
       <div>
         <h1 className="text-lg font-bold text-ink">تقارير شؤون الطلاب</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          التأخر الصباحي بعد الاصطفاف بخمس دقائق · الغياب الرسمي بعد الحصة الثانية ·
+          التأخر الصباحي بعد الاصطفاف بخمس دقائق · الغياب الرسمي المعتمد يوميًا ·
           المتابعة خلال اليوم · النسبة المكتملة للإحصاء.
         </p>
       </div>

@@ -23,7 +23,7 @@ export default function FollowUp() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-1.5">
-        <Pill on={mode === "conflict"} onClick={() => setMode("conflict")}>بصم ولم يحضر الحصتين</Pill>
+        <Pill on={mode === "conflict"} onClick={() => setMode("conflict")}>بصم ولم يحضر</Pill>
         <Pill on={mode === "missing"} onClick={() => setMode("missing")}>المفقودون خلال اليوم</Pill>
         <Pill on={mode === "nopunch"} onClick={() => setMode("nopunch")}>حضر بلا بصمة</Pill>
       </div>
@@ -34,10 +34,10 @@ export default function FollowUp() {
 
 const MODES = {
   conflict: {
-    title: "طلاب بصموا صباحًا ولم يحضروا الحصتين الأولى والثانية",
+    title: "طلاب بصموا صباحًا ولم يحضروا الحصص",
     note: "دخلوا المدرسة ولم يدخلوا الفصل — يُحسبون غائبين رسميًا ويجب تحديد أماكنهم ومتابعتهم فورًا.",
     pick: (r) => r.official === "absent" && r.punched,
-    empty: "لا حالات — كل من بصم حضر الحصتين أو إحداهما.",
+    empty: "لا حالات — كل من بصم حضر حصصه.",
     file: "بصم-ولم-يحضر",
   },
   nopunch: {

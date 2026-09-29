@@ -128,9 +128,9 @@ export default function OfficialAbsence({ initialDate }) {
     .sort((a, b) => a.grade - b.grade || a.class_no - b.class_no || a.full_name.localeCompare(b.full_name, "ar"));
   const headers = ["م", "اسم الطالب", "الصف", "الفصل", "ملاحظة"];
   const table = () => absentees.map((r, i) => [
-    i + 1, r.full_name, r.grade, r.class_no, r.punched ? "بصم ولم يحضر الحصتين" : "",
+    i + 1, r.full_name, r.grade, r.class_no, r.punched ? "بصم ولم يحضر" : "",
   ]);
-  const subtitle = () => `${fmtGreg(date)} · غياب الحصتين الأولى والثانية · ${
+  const subtitle = () => `${fmtGreg(date)} · الغياب الرسمي · ${
     day ? `معتمد — نسبة الحضور ${pctText(sum.pct)}` : "غير معتمد بعد"}`;
 
   const printIt = () => printReport({
@@ -149,10 +149,8 @@ export default function OfficialAbsence({ initialDate }) {
       </div>
 
       <Note>
-        الغائب رسميًا: غائب عن الحصتين الأولى والثانية معًا.
-        {live?.fingerprint && " من بصم صباحًا وغاب عن الحصتين يُحسب غائبًا ويظهر في «بصم ولم يحضر» للمتابعة."}
-        {" "}يُعتمد الكشف
-        والنسبة الرسمية <b>آليًا</b> بعد نهاية الحصة الثانية بعشر دقائق، وتُحفظ النسبة المكتملة آليًا
+        {live?.fingerprint && "من بصم صباحًا ولم يحضر الحصص يُحسب غائبًا ويظهر في «بصم ولم يحضر» للمتابعة. "}
+        يُعتمد الكشف والنسبة الرسمية <b>آليًا</b> في موعدهما اليومي، وتُحفظ النسبة المكتملة آليًا
         بعد آخر حصة. يحق للوكيل تصحيح أي حالة أو إعادة الاعتماد في أي وقت.
         {" "}الغياب يُسجَّل <b>بدون عذر</b>، ويحوّله إلى «بعذر» وكيل شؤون الطلاب أو المساعد الإداري 1 و 2 بزر «بعذر» أمام الطالب.
       </Note>
@@ -193,11 +191,11 @@ export default function OfficialAbsence({ initialDate }) {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-warning">لم يُعتمد بعد — الأرقام مبدئية</p>
-                  <p className="text-xs text-muted">يُعتمد آليًا بعد نهاية الحصة الثانية بعشر دقائق، أو اعتمده الآن يدويًا.</p>
+                  <p className="text-xs text-muted">يُعتمد آليًا في موعده اليومي، أو اعتمده الآن يدويًا.</p>
                   <p className="mt-0.5 text-xs text-muted">
                     {liveSum.pending > 0
-                      ? <>لم يُحضَّر بعد <span className="num">{liveSum.pending}</span> طالبًا في الحصة الأولى أو الثانية.</>
-                      : "اكتمل تحضير الحصتين — جاهز للاعتماد."}
+                      ? <>لم يُحضَّر بعد <span className="num">{liveSum.pending}</span> طالبًا.</>
+                      : "اكتمل التحضير — جاهز للاعتماد."}
                   </p>
                 </div>
                 {!approval?.missingTables && (
@@ -328,7 +326,7 @@ export default function OfficialAbsence({ initialDate }) {
             <div>
               <h3 className="text-sm font-semibold text-ink">النسبة المكتملة (للإجراءات الإحصائية)</h3>
               <p className="mt-0.5 text-xs text-muted">
-                تُكمَل بعد الحصة الثانية: الطالب الذي حضر أي حصة خلال اليوم يُحسب حاضرًا. تُحفظ آليًا بعد آخر حصة، ولا تغيّر الاعتماد الرسمي.
+                الطالب الذي حضر أي حصة خلال اليوم يُحسب حاضرًا. تُحفظ آليًا بعد آخر حصة، ولا تغيّر الاعتماد الرسمي.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -386,7 +384,7 @@ function UnmarkedPeriods({ date, list }) {
 
   const headers = ["م", "المعلم", "الحصة", "الصف", "الفصل", "المادة"];
   const table = () => list.map((r, i) => [i + 1, r.teacher, r.period_no, r.grade ?? "", r.class_no ?? "", r.subject]);
-  const title = "حصص الأولى والثانية غير المرصودة";
+  const title = "حصص لم تُرصد";
 
   return (
     <section className="card overflow-hidden border-warning/40">
@@ -394,7 +392,7 @@ function UnmarkedPeriods({ date, list }) {
         className="flex w-full items-center justify-between gap-3 bg-warning-light px-4 py-3 text-right">
         <div>
           <p className="text-sm font-semibold text-warning">
-            <span className="num">{list.length}</span> حصة في الأولى والثانية لم تُرصد —
+            <span className="num">{list.length}</span> حصة لم تُرصد —
             {" "}<span className="num">{teachers.length}</span> معلمًا
           </p>
           <p className="mt-0.5 text-xs text-muted">لهذا يظهر طلاب «لم يُحضَّروا». اضغط لعرض المعلمين والفصول.</p>

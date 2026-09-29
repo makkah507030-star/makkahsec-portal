@@ -672,8 +672,8 @@ function DailyRateReport() {
   return (
     <div className="space-y-4">
       <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
-        نسبة الحضور محسوبة يوميًا بنفس قاعدة الحضور الرسمي (الحصتان الأولى
-        والثانية)، وفي آخر السجل مجموع وإجمالي نسبة الفصل الدراسي كاملًا.
+        نسبة الحضور محسوبة يوميًا بنفس قاعدة الحضور الرسمي، وفي آخر السجل
+        مجموع وإجمالي نسبة الفصل الدراسي كاملًا.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">

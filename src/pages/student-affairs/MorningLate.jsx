@@ -76,7 +76,7 @@ function DayLate() {
             <Fig value={`${stats.punched ? Math.round((stats.late / stats.punched) * 100) : 0}%`}
                  label="نسبة التأخر من الحاضرين" tone="text-late" />
             <Fig value={stats.noPunch} label="لم يبصموا" tone="text-muted"
-                 hint="ليست نسبة غياب — الغياب الرسمي من الحصتين" />
+                 hint="ليست نسبة غياب — الغياب الرسمي من تحضير الحصص" />
           </div>
           <GradePills grade={grade} setGrade={setGrade} />
           <ExportBar disabled={!lateList.length}
