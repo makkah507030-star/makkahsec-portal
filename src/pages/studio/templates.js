@@ -84,6 +84,7 @@ export const TEMPLATES = [
       { name: "points", label: "نقاط مرقّمة (اختياري)", type: "list", rows: 5, max: 100 },
       { name: "signer", label: "الموقّع (الاسم)", max: 50 },
       { name: "signerTitle", label: "الموقّع (الصفة)", max: 50 },
+      { name: "stamp", label: "ختم المدرسة", type: "opts", options: () => [["on", "بالختم"], ["off", "بدون ختم"]] },
     ],
     sample: {
       title: "مواعيد اختبارات منتصف الفصل",
@@ -93,7 +94,7 @@ export const TEMPLATES = [
     defaults: (c) => ({
       kind: "تعميم", no: `${c.deptCode || "AD"}-01`, date: hijriToday(), to: "جميع المعلمين",
       title: "", body: "", points: [],
-      signer: c.name ? `أ. ${c.name}` : "", signerTitle: c.roleTitle, year: c.year,
+      signer: c.name ? `أ. ${c.name}` : "", signerTitle: c.roleTitle, stamp: "on", year: c.year,
     }),
   },
   {
@@ -408,10 +409,11 @@ export const TEMPLATES = [
       { name: "reason", label: "العبارة", type: "textarea", rows: 2, max: 140 },
       { name: "signer", label: "الموقّع (الاسم)", max: 50 },
       { name: "signerTitle", label: "الموقّع (الصفة)", max: 50 },
+      { name: "stamp", label: "ختم المدرسة", type: "opts", options: () => [["on", "بالختم"], ["off", "بدون ختم"]] },
       { name: "date", label: "التاريخ", max: 20 },
     ],
     defaults: (c, section) => ({
-      kind: "شكر وتقدير", mode: "one", people: [], cls: "", reason: "لتميّزه الدراسي وتفوّقه",
+      kind: "شكر وتقدير", mode: "one", people: [], cls: "", reason: "لتميّزه الدراسي وتفوّقه", stamp: "on",
       signer: c.name ? `أ. ${c.name}` : "", signerTitle: c.roleTitle || (c.subject ? `معلم ${c.subject}` : "المعلم"),
       date: hijriToday(), year: c.year,
     }),
@@ -436,10 +438,11 @@ export const TEMPLATES = [
       { name: "points", label: "نقاط (اختياري)", type: "list", rows: 4, max: 90 },
       { name: "signer", label: "الموقّع (الاسم)", max: 50 },
       { name: "signerTitle", label: "الموقّع (الصفة)", max: 50 },
+      { name: "stamp", label: "ختم المدرسة", type: "opts", options: () => [["on", "بالختم"], ["off", "بدون ختم"]] },
       { name: "date", label: "التاريخ", max: 20 },
     ],
     defaults: (c) => ({
-      kind: "إعلان", mode: "class", people: [], cls: "", title: "", body: "", points: [],
+      kind: "إعلان", mode: "class", people: [], cls: "", title: "", body: "", points: [], stamp: "off",
       signer: c.name ? `أ. ${c.name}` : "", signerTitle: c.roleTitle || (c.subject ? `معلم ${c.subject}` : "المعلم"),
       date: hijriToday(), year: c.year,
     }),

@@ -435,3 +435,7 @@
 .stu-nto .lbl { flex: none; margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--stu-accent); border: 1.5px solid var(--stu-pillB); border-radius: 999px; padding: 2px 12px; }
 .stu-nto .who { flex: 1; min-width: 0; }
 .stu-notice .stu-rmeta { font-size: 16px; }
+
+/* ختم المدرسة المعتمد مكان الدائرة المنقّطة */
+.stu .stamp.img { border: none; width: auto; min-width: 104px; height: 118px; }
+.stu .stamp.img img { max-height: 118px; max-width: 150px; object-fit: contain; opacity: .92; }
