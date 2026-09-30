@@ -395,9 +395,10 @@
                  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
 .stu-rlogo .ph svg { width: 170px; height: 170px; stroke-width: 1.4; }
 .stu-rlogo .ph small { font-size: 30px; color: var(--stu-text2); }
-.stu-rollup .stu-h1 { margin-top: 90px; line-height: 1.15; }
+/* مسافة تتسع لنزول الحروف (ي، ع) تحت العنوان الكبير قبل العبارة */
+.stu-rollup .stu-h1, .stu-rollup .stu-h1.wrap { margin-top: 90px; line-height: 1.38; }
 .stu-rollup .stu-official .stu-h1, .stu-rollup.stu-official .stu-h1 { color: #3E6350; }
-.stu-rollup .stu-accent { margin-top: 20px; }
+.stu-rollup .stu-accent { margin-top: 30px; line-height: 1.3; }
 .stu-rollup .stu-grule { width: 360px; height: 3px; margin: 50px auto 0; }
 .stu-rdate { display: inline-block; border: 2px solid var(--stu-pillB); color: var(--stu-pillT); border-radius: 999px; font-weight: 700; }
 .stu-rollup .stu-rdate { margin-top: 44px; font-size: 34px; padding: 10px 40px; }
