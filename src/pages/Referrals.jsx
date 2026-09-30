@@ -9,6 +9,9 @@ import ReferralSheet, { ReferralPrintArea } from "../components/ReferralSheet.js
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { fmtGreg } from "../lib/dates";
+import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
+import logoIcon from "../assets/icon-mint.png";
+import moeLogo from "../assets/moe-logo.png";
 import {
   STATUS, OPEN_STATUSES, LATE_DAYS, stageOf, daysSince, daysLabel, isLate, timelineOf, notifyUsers,
 } from "../lib/referrals";
@@ -120,6 +123,9 @@ export default function Referrals() {
 
       {(tab === "inbox" || tab === "all") && (
         <div className="no-print space-y-2">
+          {tab === "all" && rows?.length > 0 && (
+            <ReportBar list={rows} title="سجل الإحالات" />
+          )}
           {!rows && <Loader compact />}
           {(tab === "inbox" ? mine : rows ?? []).length === 0 && rows && (
             <p className="card px-4 py-6 text-sm text-muted">لا إحالات هنا.</p>
@@ -375,6 +381,12 @@ function FollowUp({ list, rows, onOpen, onChange, ...rowProps }) {
         ))}
       </div>
 
+      {shown.length > 0 && (
+        <ReportBar list={shown}
+                   title={g === "all" ? "تقرير متابعة الإحالات"
+                                      : `تقرير متابعة الإحالات — ${GROUPS.find((x) => x.k === g).t}`} />
+      )}
+
       <p className="text-[11px] text-faint">
         الأقدم في مرحلته أولًا. تُعدّ متأخرة إن بقيت في مرحلتها أكثر من <span className="num">{LATE_DAYS}</span> أيام.
       </p>
@@ -383,6 +395,76 @@ function FollowUp({ list, rows, onOpen, onChange, ...rowProps }) {
       {shown.map((r) => (
         <ReferralRow key={r.id} r={r} {...rowProps} onOpen={onOpen} onChange={onChange} />
       ))}
+    </div>
+  );
+}
+
+/* ------------------ تقرير المتابعة (طباعة / Excel) ------------------ */
+const escHtml = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+const REPORT_HEADERS = [
+  "م", "رقم الإحالة", "الطالب", "الفصل", "سبب الإحالة", "المعلم",
+  "تاريخ الرفع", "الحالة", "عند من الآن", "المدة",
+];
+
+/* صف لكل إحالة: حالتها، وعند من هي الآن ولماذا، ومنذ متى */
+function reportRows(list) {
+  return list.map((r, i) => {
+    const s = stageOf(r);
+    const open = s.group !== "done";
+    const late = isLate(r);
+    return {
+      late,
+      cells: [
+        i + 1, r.serial ?? "", r.student_name ?? "", r.class_label ?? "", r.reason ?? "",
+        r.teacher_name ?? "", fmtGreg(r.teacher_at ?? r.created_at),
+        STATUS[r.status]?.t ?? r.status,
+        open ? `${s.who} — ${s.what}` : "—",
+        open ? daysLabel(daysSince(s.since)) + (late ? " (متأخرة)" : "")
+             : r.closed_at ? `أُقفلت ${fmtGreg(r.closed_at)}` : "—",
+      ],
+    };
+  });
+}
+
+function ReportBar({ list, title }) {
+  const summary = () => {
+    const open = list.filter((r) => OPEN_STATUSES.includes(r.status)).length;
+    const late = list.filter(isLate).length;
+    return `عدد الإحالات ${list.length} · قيد المتابعة ${open} · متأخرة ${late}` +
+           ` · منتهية ${list.length - open} — حتى ${fmtGreg(new Date())}`;
+  };
+  const note = `تُعدّ الإحالة متأخرة إن بقيت في مرحلتها أكثر من ${LATE_DAYS} أيام.`;
+  const signatures = [
+    { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
+    { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+  ];
+
+  const print = () => printReport({
+    title, subtitle: summary(), headers: REPORT_HEADERS, note, signatures, landscape: true,
+    rows: reportRows(list).map(({ late, cells }) => cells.map((c, k) =>
+      k === 9 && late ? { text: escHtml(c), cls: "st-absent" } : escHtml(c))),
+    logoUrl: new URL(logoIcon, window.location.origin).href,
+    moeLogoUrl: new URL(moeLogo, window.location.origin).href,
+  });
+
+  const excel = () => exportStyledExcel({
+    title, subtitle: summary(), headers: REPORT_HEADERS, note, signatures,
+    rows: reportRows(list).map((x) => x.cells),
+    fileName: "متابعة-الإحالات", sheetName: "الإحالات",
+  });
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button onClick={print}
+        className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas">
+        طباعة التقرير / PDF
+      </button>
+      <button onClick={excel}
+        className="rounded-sm2 border border-line bg-paper px-4 py-2 text-sm font-medium text-ink hover:bg-canvas">
+        تصدير Excel
+      </button>
     </div>
   );
 }
