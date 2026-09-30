@@ -301,6 +301,7 @@ export default function App() {
               {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
               {/* النماذج والشهادات — ما يظهر لكل مستخدم تحدّده سياسات قاعدة البيانات */}
               <Route path="/forms" element={<Forms />} />
+              <Route path="/forms-review" element={<Forms view="review" />} />
               <Route path="/my-signature" element={<MySignature />} />
               {(isTechSupport || adminRoles.includes("principal")) && (
                 <Route path="/forms-admin" element={<FormsAdmin />} />
@@ -357,6 +358,7 @@ export default function App() {
               )}
               {/* النماذج والشهادات — النماذج المتاحة للمعلم تحدّدها سياسات القاعدة */}
               <Route path="/forms" element={<Forms />} />
+              <Route path="/forms-review" element={<Forms view="review" />} />
               <Route path="/my-signature" element={<MySignature />} />
             </>
           )}

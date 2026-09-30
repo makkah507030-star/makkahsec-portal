@@ -1,5 +1,6 @@
 // src/pages/admin/Forms.jsx
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
@@ -143,12 +144,16 @@ function FieldPresets({ field, onPick }) {
   );
 }
 
-export default function Forms() {
+/* view: "issue" صفحة النماذج والشهادات (الإصدار والأرشيف والتقارير)،
+   و"review" صفحة «الاعتماد والمتابعة» (متابعة الإفادات واعتماد النماذج). */
+export default function Forms({ view = "issue" }) {
+  const review = view === "review";
+  const navigate = useNavigate();
   const { session, profile, adminRoles, isTeacher } = useSession();
   const isManager = (adminRoles ?? []).some((r) => r === "tech_support" || r === "principal");
   const isApprover = (adminRoles ?? []).includes("principal");
 
-  const [tab, setTab] = useState("issue");
+  const [tab, setTab] = useState(review ? "replies" : "issue");
   const [dept, setDept] = useState("all");
   const [templates, setTemplates] = useState([]);
   // ما يحق لهذا الحساب إصداره بحسب «من يُصدره» في إدارة النماذج
@@ -1139,13 +1144,15 @@ export default function Forms() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-bold text-ink">النماذج والشهادات</h1>
+        <h1 className="text-lg font-bold text-ink">{review ? "الاعتماد والمتابعة" : "النماذج والشهادات"}</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          اختر نموذجًا لتعبئته وطباعته. كل ما يصدر يُحفظ في الأرشيف برقم تسلسلي.
+          {review
+            ? "متابعة النماذج التي تنتظر إفادة أصحابها، واعتماد الإفادات أو إعادتها بملاحظة، واعتماد النماذج."
+            : "اختر نموذجًا لتعبئته وطباعته. كل ما يصدر يُحفظ في الأرشيف برقم تسلسلي."}
         </p>
       </div>
 
-      {replies.filter((d) => d.status === "replied").length > 0 && (
+      {!review && replies.filter((d) => d.status === "replied").length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
           <p className="text-sm text-mint-deep">
             <span className="font-semibold">
@@ -1153,14 +1160,14 @@ export default function Forms() {
             </span>
             {" "}— راجعه لاعتماده أو إعادته بملاحظة.
           </p>
-          <button onClick={() => setTab("replies")}
+          <button onClick={() => navigate("/forms-review")}
                   className="shrink-0 rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white">
             عرضها
           </button>
         </div>
       )}
 
-      {returned.length > 0 && (
+      {!review && returned.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-absent/30 bg-absent/5 px-4 py-3">
           <p className="text-sm text-absent">
             <span className="font-semibold">
@@ -1176,12 +1183,13 @@ export default function Forms() {
       )}
 
       <div className="flex flex-wrap gap-1.5">
-        {[["issue", "إصدار نموذج"],
-          ...(returned.length ? [["returned", `المُعادة إليّ (${returned.length})`]] : []),
-          ...(replies.length ? [["replies", `ردود المستفيدين (${replies.filter((d) => d.status === "replied").length})`]] : []),
-          ["archive", "الأرشيف"],
-          ["report", "التقارير"],
-          ...(isApprover ? [["approve", `الاعتماد${pending.length ? ` (${pending.length})` : ""}`]] : [])]
+        {(review
+          ? [["replies", `متابعة الإفادات (${replies.filter((d) => d.status === "replied").length})`],
+             ...(isApprover ? [["approve", `اعتماد النماذج${pending.length ? ` (${pending.length})` : ""}`]] : [])]
+          : [["issue", "إصدار نموذج"],
+             ...(returned.length ? [["returned", `المُعادة إليّ (${returned.length})`]] : []),
+             ["archive", "الأرشيف"],
+             ["report", "التقارير"]])
           .map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)}
               className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
