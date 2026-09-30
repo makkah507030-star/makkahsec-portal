@@ -10,8 +10,7 @@ import { SIGNS, logos, Fig, DateInput, Note, Loading, weekdayOf, useFingerprint 
 import { useSession } from "../../lib/session.jsx";
 
 // من يعدّل حضور الحصص (supabase/class_attendance_staff_edit.sql)
-const EDIT_ROLES = ["principal", "tech_support", "deputy", "deputy_students", "deputy_academic",
-                    "deputy_school", "clerk", "clerk_2", "clerk_3"];
+const EDIT_ROLES = ["principal", "tech_support", "deputy_students"];
 
 const P_STATUS = {
   present: { t: "حاضر",   c: "text-present" },

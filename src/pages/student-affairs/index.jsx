@@ -18,7 +18,8 @@ const Devices = lazy(() =>
   import("../admin/AttendanceOverview.jsx").then((m) => ({ default: m.DevicesTab })));
 
 /* الأقسام ومن يراها: all لكل من له صلاحية التقارير،
-   warnings لوكيل شؤون الطلاب مع المدير والدعم الفني، super للمدير والدعم الفني فقط. */
+   warnings لوكيل شؤون الطلاب مع المدير والدعم الفني، super للمدير والدعم الفني فقط.
+   ويمكن لتبويب أن يحدّد access خاصًّا به يتقدّم على قسمه. */
 const GROUPS = [
   { title: "اليوم", hint: "حالة اليوم الدراسي مرحلة بمرحلة", access: "all",
     tabs: [{ key: "today", label: "لوحة اليوم" }] },
@@ -32,9 +33,11 @@ const GROUPS = [
   { title: "الإنذارات", hint: "إنذارات الغياب ومحاضرها والتحويل لدراسة الحالة", access: "warnings",
     tabs: [{ key: "warnings", label: "الإنذارات والمحاضر" }] },
   { title: "التراكمي", hint: "النسب على الفصل وملف كل طالب", access: "super",
+    note: "للمدير والدعم الفني · ملف الطالب لوكيل شؤون الطلاب أيضًا",
     tabs: [
       { key: "stats", label: "الإحصاء والنسب" },
-      { key: "student", label: "ملف الطالب" },
+      // ملف الطالب وفيه «تعديل حضور الحصص» — لوكيل شؤون الطلاب أيضًا
+      { key: "student", label: "ملف الطالب", access: "warnings" },
     ] },
   { title: "الأجهزة", hint: "حالة أجهزة البصمة وتغطيتها", access: "super",
     tabs: [{ key: "devices", label: "أجهزة البصمة" }] },
@@ -45,8 +48,11 @@ const ACCESS_NOTE = { warnings: "للوكيل والمدير والدعم الف
 export default function StudentAffairs() {
   const { isSuper, adminRoles } = useSession();
   const isDeputy = (adminRoles ?? []).includes("deputy_students");
-  const groups = GROUPS.filter((g) =>
-    g.access === "all" || isSuper || (g.access === "warnings" && isDeputy));
+  const allowed = (access) =>
+    access === "all" || isSuper || (access === "warnings" && isDeputy);
+  const groups = GROUPS
+    .map((g) => ({ ...g, tabs: g.tabs.filter((t) => allowed(t.access ?? g.access)) }))
+    .filter((g) => g.tabs.length > 0);
   const keys = new Set(groups.flatMap((g) => g.tabs.map((t) => t.key)));
   const [params, setParams] = useSearchParams();
   const tab = keys.has(params.get("tab")) ? params.get("tab") : "today";
@@ -76,9 +82,9 @@ export default function StudentAffairs() {
                 active ? "border-mint-deep/40 bg-mint-tint/40" : "border-line bg-paper"}`}>
               <div className="flex items-center justify-between gap-2">
                 <p className={`text-sm font-bold ${active ? "text-mint-deep" : "text-ink"}`}>{g.title}</p>
-                {ACCESS_NOTE[g.access] && (
+                {(g.note ?? ACCESS_NOTE[g.access]) && (
                   <span className="shrink-0 rounded-pill bg-canvas px-2 py-0.5 text-[10.5px] text-faint">
-                    {ACCESS_NOTE[g.access]}
+                    {g.note ?? ACCESS_NOTE[g.access]}
                   </span>
                 )}
               </div>
