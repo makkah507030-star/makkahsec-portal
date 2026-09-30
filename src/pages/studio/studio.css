@@ -263,8 +263,6 @@
 .stu-official .stu-cno { background: #3E6350; color: #fff; box-shadow: none; border-radius: 26px; }
 .stu-cno small { font-size: 26px; font-weight: 600; }
 .stu-cno b { font-size: 132px; font-weight: 700; line-height: 1; letter-spacing: -2px; }
-.stu-cname { margin-top: 4px; font-size: 40px; font-weight: 700; color: var(--stu-accent); }
-.stu-official .stu-cname { color: #3E6350; }
 .stu-track { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 18px; font-weight: 600;
              color: var(--stu-pillT); border: 1.5px solid var(--stu-pillB); border-radius: 999px; padding: 5px 16px; }
 .stu-track svg { width: 20px; height: 20px; }

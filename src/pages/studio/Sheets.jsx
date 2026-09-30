@@ -339,7 +339,6 @@ export function ClassDoor({ theme = "light", d }) {
           <div className="stu-cno"><small>فصل</small><b className="num">{code}</b></div>
           <div className="stu-dtext">
             <div className="stu-h1" style={{ fontSize: fitSize(d.grade, { max: 88, min: 50, width: 640 }) }}>{d.grade}</div>
-            <div className="stu-cname">الفصل {ORDINAL[n] ?? n}</div>
             {d.track && <span className="stu-track">{ICONS.cap}{d.track}</span>}
             <div className="stu-grule" />
           </div>
