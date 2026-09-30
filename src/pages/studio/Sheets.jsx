@@ -2,7 +2,7 @@
 import iconMint from "../../assets/icon-mint.png";
 import iconWhite from "../../assets/icon-white.png";
 import moeLogo from "../../assets/moe-logo.png";
-import { fitSize, fitTitle, bodySize } from "./lib";
+import { fitSize, fitTitle, bodySize, classCode, GRADE_OPTIONS } from "./lib";
 import "./studio.css";
 
 /* =====================================================================
@@ -29,12 +29,15 @@ export const ICONS = {
   shield:   <svg {...P}><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>,
   trophy:   <svg {...P}><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/></svg>,
   clock:    <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
+  star:     <svg {...P}><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>,
+  globe:    <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/></svg>,
   send:     <svg {...P}><path d="M21 3L3 11l7 3 3 7z"/><path d="M10 14l11-11"/></svg>,
 };
 // أسماء الرموز كما تظهر للمستخدم في اختيار رمز اللوحة
 export const ICON_LABEL = {
   building: "مكتب", user: "شخص", hall: "قاعة", cap: "فصل", book: "مكتبة", flask: "مختبر", monitor: "حاسب",
   health: "عيادة", chat: "توجيه", shield: "أمن وسلامة", trophy: "نشاط",
+  star: "موهوبين", globe: "جلوب",
 };
 
 const YEAR_FALLBACK = "";
@@ -326,22 +329,19 @@ export function Social({ theme = "dark", d }) {
 /* ----------------------------- لوحة الفصل ----------------------------- */
 export function ClassDoor({ theme = "light", d }) {
   const n = Math.max(1, Number(d.classNo) || 1);
+  const code = classCode(GRADE_OPTIONS.indexOf(d.grade) + 1 || 1, n);
   return (
     <div className={`stu stu-door stu-class stu-${theme} stu-landscape sheet`}>
       <Decor />
       <div className="stu-page">
         <Head theme={theme} year={d.year} />
         <div className="stu-dbody">
-          <div className="stu-cno"><small>فصل</small><b className="num">{n}</b></div>
+          <div className="stu-cno"><small>فصل</small><b className="num">{code}</b></div>
           <div className="stu-dtext">
             <div className="stu-h1" style={{ fontSize: fitSize(d.grade, { max: 88, min: 50, width: 640 }) }}>{d.grade}</div>
             <div className="stu-cname">الفصل {ORDINAL[n] ?? n}</div>
             {d.track && <span className="stu-track">{ICONS.cap}{d.track}</span>}
             <div className="stu-grule" />
-            <div className="stu-mentor">
-              <span>رائد الفصل</span>
-              {d.mentor ? <b>{d.mentor}</b> : <i />}
-            </div>
           </div>
         </div>
         <div className="stu-dfoot">

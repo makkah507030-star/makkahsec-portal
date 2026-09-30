@@ -211,7 +211,10 @@ function Editor({ init, ctx, uid, onBack }) {
   // قالب الدفعة (لوحات الفصول) يطبع صفحة لكل فصل
   const pages = tpl.pages ? tpl.pages(data, ctx ?? {}) : [data];
 
-  const set = (name, v) => setData((d) => ({ ...d, [name]: v }));
+  const set = (name, v) => setData((d) => {
+    const next = { ...d, [name]: v };
+    return tpl.derive ? tpl.derive(next, name, ctx ?? {}) : next;
+  });
 
   const printNow = () => {
     // عنوان الصفحة يصبح اسم ملف PDF المقترح عند الحفظ
@@ -376,9 +379,9 @@ function Field({ f, tpl, data, set, ctx }) {
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {Array.from({ length: f.max - f.min + 1 }, (_, i) => i + f.min).map((n) => (
             <button key={n} onClick={() => set(f.name, n)}
-              className={`num h-8 w-8 rounded-sm2 text-sm font-semibold ${
+              className={`num h-8 rounded-sm2 text-sm font-semibold ${f.display ? "min-w-[2.75rem] px-2" : "w-8"} ${
                 Number(data[f.name]) === n ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-              {n}
+              {f.display ? f.display(n, data) : n}
             </button>
           ))}
         </div>
@@ -418,7 +421,7 @@ function Field({ f, tpl, data, set, ctx }) {
         </div>
         {data[f.name] && data[f.name] !== "one" && (
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-            تُطبع لوحة لكل فصل من جدول الفصول بمساره، ويُترك رائد الفصل سطرًا للكتابة. المعاينة للفصل المختار.
+            تُطبع لوحة لكل فصل من جدول الفصول برقمه ومساره. المعاينة للفصل المختار.
           </p>
         )}
       </div>

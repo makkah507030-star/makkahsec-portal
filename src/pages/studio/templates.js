@@ -1,5 +1,5 @@
 // src/pages/studio/templates.js
-import { hijriToday, GRADE_OPTIONS, TRACK_LABEL } from "./lib";
+import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode } from "./lib";
 
 /* =====================================================================
    قوالب استوديو البوابة: القسم الذي يظهر فيه كل قالب، وحقوله، وتعبئته
@@ -103,12 +103,13 @@ export const TEMPLATES = [
     presets: {
       place: ["مكتب مدير المدرسة", "مكتب وكيل الشؤون التعليمية", "مكتب وكيل الشؤون المدرسية", "مكتب وكيل شؤون الطلاب",
               "مكتب الموجّه الطلابي", "مكتب رائد النشاط الطلابي", "مكتب المساعد الإداري", "غرفة المعلمين",
+              "برنامج الموهوبين", "برنامج جلوب البيئي العالمي",
               "معمل الحاسب الآلي", "مختبر العلوم", "العيادة المدرسية", "مصادر التعلم",
               "قاعة الاجتماعات", "قاعة النشاط", "القاعة متعددة الأغراض"],
       hours: ["7:30 – 12:30", "بعد الحصة الثالثة", "طوال اليوم الدراسي"],
     },
     fields: [
-      { name: "icon", label: "الرمز", type: "icon", options: ["building", "user", "hall", "cap", "book", "flask", "monitor", "health", "chat", "shield", "trophy"] },
+      { name: "icon", label: "الرمز", type: "icon", options: ["building", "user", "hall", "cap", "book", "flask", "monitor", "health", "chat", "shield", "trophy", "star", "globe"] },
       { name: "place", label: "اسم المكتب أو القاعة", max: 40 },
       { name: "name", label: "الاسم (اختياري)", max: 50 },
       { name: "role", label: "الصفة (اختياري)", max: 50 },
@@ -131,7 +132,7 @@ export const TEMPLATES = [
     fixedOrient: "landscape",
     batch: true,
     title: "لوحة فصل",
-    desc: "لوحة باب الفصل برقمه وصفّه ومساره ورائده — وتُطبع لكل الفصول دفعة واحدة.",
+    desc: "لوحة باب الفصل برقمه وصفّه ومساره — وتُطبع لكل الفصول دفعة واحدة.",
     presets: {
       track: ["السنة الأولى المشتركة", "المسار العام", "مسار الصحة والحياة", "مسار علوم الحاسب والهندسة",
               "مسار إدارة الأعمال", "المسار الشرعي"],
@@ -139,22 +140,29 @@ export const TEMPLATES = [
     },
     fields: [
       { name: "grade", label: "الصف", type: "choice", options: GRADE_OPTIONS },
-      { name: "classNo", label: "رقم الفصل", type: "number", min: 1, max: 12 },
+      { name: "classNo", label: "رقم الفصل", type: "number", min: 1, max: 12,
+        display: (n, d) => classCode(GRADE_OPTIONS.indexOf(d.grade) + 1, n) },
       { name: "track", label: "المسار (اختياري)", max: 40 },
-      { name: "mentor", label: "رائد الفصل (اختياري — الفارغ يُترك سطرًا للكتابة)", max: 50 },
       { name: "room", label: "رقم الغرفة (اختياري)", max: 6, dir: "ltr" },
       { name: "motto", label: "عبارة الفصل (اختياري)", max: 40 },
       { name: "batch", label: "الطباعة", type: "batch" },
     ],
-    defaults: (c, section) => {
+    defaults: (c) => {
       const first = c.classList?.[0];
       return {
         grade: GRADE_OPTIONS[(first?.grade ?? 1) - 1] ?? GRADE_OPTIONS[0], classNo: first?.class_no ?? 1,
-        track: TRACK_LABEL[first?.track] ?? "", mentor: section === "teacher" && c.name ? `أ. ${c.name}` : "",
+        track: TRACK_LABEL[first?.track] ?? "",
         room: "", motto: "", batch: "one", year: c.year,
       };
     },
-    sample: { classNo: 3, mentor: "أ. اسم رائد الفصل", room: "B-12" },
+    sample: { classNo: 3, room: "B-12" },
+    /* عند تغيير الصف أو رقم الفصل يُؤخذ مساره من جدول الفصول إن وُجد */
+    derive: (d, name, c) => {
+      if (name !== "grade" && name !== "classNo") return d;
+      const g = GRADE_OPTIONS.indexOf(d.grade) + 1;
+      const k = c.classList?.find((x) => x.grade === g && x.class_no === Number(d.classNo));
+      return k && TRACK_LABEL[k.track] ? { ...d, track: TRACK_LABEL[k.track] } : d;
+    },
     /* صفحات الطباعة: هذا الفصل، أو كل فصول الصف، أو كل الفصول — من جدول الفصول */
     pages: (d, c) => {
       if (d.batch === "one" || !c.classList?.length) return [d];
@@ -163,7 +171,7 @@ export const TEMPLATES = [
         .filter((k) => d.batch === "all" || k.grade === g)
         .map((k) => ({
           ...d, grade: GRADE_OPTIONS[k.grade - 1] ?? d.grade, classNo: k.class_no,
-          track: TRACK_LABEL[k.track] ?? d.track, mentor: "", room: "",
+          track: TRACK_LABEL[k.track] ?? d.track, room: "",
         }));
     },
   },
