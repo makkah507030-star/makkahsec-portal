@@ -209,6 +209,13 @@ export default function DocumentView() {
             </p>
           </div>
 
+          {replyFields.length === 0 && (
+            <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+              تعذّر تحميل حقول الإفادة لهذا النموذج. أبلغ الدعم الفني ليتحقق من صلاحية قراءة
+              القالب (supabase/form_templates_recipient_read.sql).
+            </p>
+          )}
+
           {replyFields.map((f) => (
             <div key={f.name}>
               <label className="text-xs text-muted">
