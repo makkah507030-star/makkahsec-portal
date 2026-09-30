@@ -1,6 +1,11 @@
 import { fmtBoth, fmtTime12 } from "./dates";
 import { isMobileDevice } from "./print";
 import { loadPrincipalSignature } from "./principalSignature";
+// أسماء الموقّعين — من إعدادات البوابة (lib/signers.js)
+import {
+  PRINCIPAL_NAME, STUDENT_DEPUTY_NAME, ACADEMIC_DEPUTY_NAME, TECH_SUPPORT_NAME,
+} from "./signers";
+export { PRINCIPAL_NAME, STUDENT_DEPUTY_NAME, ACADEMIC_DEPUTY_NAME, TECH_SUPPORT_NAME };
 
 // المكتبات الثقيلة تُجلب عند التصدير أو الطباعة فقط، لا مع فتح الصفحة:
 // xlsx-js-style: نسخة مجانية من SheetJS تدعم تنسيق الخلايا
@@ -8,18 +13,6 @@ import { loadPrincipalSignature } from "./principalSignature";
 const loadXLSX = () => import("xlsx-js-style").then((m) => m.default);
 // الخط المدمج (base64) لتقارير الطباعة
 const loadFontCss = () => import("./exportFonts").then((m) => m.EXPORT_FONT_CSS);
-
-// اسم مدير المدرسة — يظهر في ترويسة وتذييل التقارير المطبوعة
-export const PRINCIPAL_NAME = "عبدالله بن حسن سلمان الفيفي";
-
-// وكيل شؤون الطلاب — يظهر في تقارير الطلاب وأولياء الأمور
-export const STUDENT_DEPUTY_NAME = "فهد بن نايف ماطر المعبدي";
-
-// وكيل الشؤون التعليمية
-export const ACADEMIC_DEPUTY_NAME = "فهد بن سعود حضرواي";
-
-// مسؤول الدعم الفني للبوابة — يظهر في تقارير مركز الدعم والمساندة
-export const TECH_SUPPORT_NAME = "محمد بن حسن الحازمي";
 
 /* ألوان الهوية المستخدمة في التقارير المطبوعة */
 const DEEP  = "#3E6350";

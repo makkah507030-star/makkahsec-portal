@@ -5985,6 +5985,11 @@ create policy "update events" on public.school_events as PERMISSIVE for UPDATE t
 create policy settings_read on public.settings as PERMISSIVE for SELECT to authenticated
   using (true);
 
+-- public.settings: settings_signers_write
+create policy settings_signers_write on public.settings as PERMISSIVE for ALL to authenticated
+  using (((key ~~ 'signer\_%'::text) AND has_admin_role('tech_support'::admin_role_type)))
+  with check (((key ~~ 'signer\_%'::text) AND has_admin_role('tech_support'::admin_role_type)));
+
 -- public.settings: settings_write
 create policy settings_write on public.settings as PERMISSIVE for ALL to authenticated
   using (has_admin_role('principal'::admin_role_type))

@@ -5,6 +5,7 @@ import {
 } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { SIGNERS, loadSigners } from "../../lib/signers.js";
 
 // يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
 // (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
@@ -32,7 +33,7 @@ export default function AdminStaff() {
       <div>
         <h1 className="text-lg font-bold text-ink">الإدارة المدرسية</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          أعضاء الإدارة وأدوارهم، وصلاحيات كل دور.
+          أعضاء الإدارة وأدوارهم، وصلاحيات كل دور، وأسماء الموقّعين في التقارير.
         </p>
       </div>
 
@@ -41,10 +42,14 @@ export default function AdminStaff() {
         {isSuper && (
           <Tab on={tab === "perms"} onClick={() => setTab("perms")}>الصلاحيات</Tab>
         )}
+        {isSuper && (
+          <Tab on={tab === "signers"} onClick={() => setTab("signers")}>أسماء الموقّعين</Tab>
+        )}
       </div>
 
       {tab === "members" && <Members />}
       {tab === "perms" && isSuper && <RolePermissions />}
+      {tab === "signers" && isSuper && <Signers />}
     </div>
   );
 }
@@ -552,6 +557,64 @@ function RolePermissions() {
         </section>
       </div>
     </div>
+  );
+}
+
+/* ===================== أسماء الموقّعين ===================== */
+
+function Signers() {
+  const [names, setNames] = useState(null);
+  const [saved, setSaved] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useNotice(null);
+
+  useEffect(() => {
+    loadSigners(true).then((m) => { setNames(m); setSaved(m); });
+  }, []);
+
+  const dirty = names && SIGNERS.some((s) => names[s.key].trim() !== saved[s.key]);
+  const valid = names && SIGNERS.every((s) => names[s.key].trim().length >= 3);
+
+  const save = async () => {
+    setSaving(true);
+    const rows = SIGNERS.map((s) => ({
+      key: s.key, value: names[s.key].trim(), updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase.from("settings").upsert(rows, { onConflict: "key" });
+    setSaving(false);
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    const m = await loadSigners(true);
+    setNames(m); setSaved(m);
+    setMsg({ ok: true, text: "حُفظت الأسماء، وتظهر في التقارير المطبوعة من الآن." });
+  };
+
+  if (!names) return <Loader compact />;
+
+  return (
+    <section className="card space-y-4 p-4">
+      <p className="text-sm leading-relaxed text-muted">
+        الأسماء التي تظهر تحت التوقيعات في التقارير والجداول المطبوعة.
+        اكتب الاسم كما يُراد طباعته.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {SIGNERS.map((s) => (
+          <label key={s.key} className="block">
+            <span className="text-xs text-muted">{s.label}</span>
+            <input className="field mt-1 w-full" value={names[s.key]}
+                   onChange={(e) => setNames({ ...names, [s.key]: e.target.value })} />
+          </label>
+        ))}
+      </div>
+      <button className="btn-primary" onClick={save} disabled={saving || !dirty || !valid}>
+        {saving ? "جارٍ الحفظ…" : dirty ? "حفظ الأسماء" : "لا تغييرات"}
+      </button>
+      {msg && (
+        <p className={`rounded-sm2 px-3 py-2 text-sm ${
+          msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
+          {msg.text}
+        </p>
+      )}
+    </section>
   );
 }
 
