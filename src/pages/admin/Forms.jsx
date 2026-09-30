@@ -1367,7 +1367,7 @@ export default function Forms() {
                   </button>
                   {d.status === "replied" && (
                     <button onClick={() => handleReply(d, "approve")} className="btn-primary px-4 py-1.5 text-xs">
-                      اعتماد وإغلاق المساءلة
+                      {/مساءلة/.test(d.title ?? "") ? "اعتماد وإغلاق المساءلة" : "اعتماد وإغلاق النموذج"}
                     </button>
                   )}
                   {d.status === "awaiting_reply" && (
