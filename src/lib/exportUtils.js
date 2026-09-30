@@ -659,7 +659,16 @@ export async function printReport(opts) {
   @media print {
     section { padding: 0; }
     #out .pg { page-break-inside: avoid; break-inside: avoid; }
-    @page { margin: 10mm; ${landscape ? "size: A4 landscape;" : "size: A4 portrait;"} }
+    /* هامش الصفحة صفر، والمسافة البيضاء حشوة داخل كل ورقة: المتصفح يطبع
+       شريط العنوان والتاريخ والرابط في هامش الصفحة، فلا يجد له مكانًا */
+    @page { margin: 0; ${landscape ? "size: A4 landscape;" : "size: A4 portrait;"} }
+    #out .pg { box-sizing: content-box; padding: 10mm 9mm; }
+    /* iPhone/iPad (Safari) يتجاهل الهامش الصفري ويفرض هامشه، فنُبقي له
+       الهامش السابق بلا حشوة حتى لا تفيض الورقة إلى صفحة ثانية */
+    @supports (-webkit-touch-callout: none) {
+      @page { margin: 10mm; }
+      #out .pg { padding: 0; }
+    }
   }`;
 
   /* ---------- محرّك التقسيم والترقيم (يعمل داخل الإطار) ---------- */
