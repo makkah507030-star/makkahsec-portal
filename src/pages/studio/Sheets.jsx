@@ -480,7 +480,7 @@ export function Sign({ theme = "light", orient = "landscape", d }) {
          strokeLinecap="round" strokeLinejoin="round">{ARROWS[d.arrow]}</svg>
   );
   return (
-    <div className={`stu stu-sign stu-${theme} stu-${orient}${warn ? " warn" : ""} sheet`}>
+    <div className={`stu stu-signage stu-${theme} stu-${orient}${warn ? " warn" : ""} sheet`}>
       <Decor />
       <div className="stu-page">
         <Head theme={theme} />
