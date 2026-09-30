@@ -60,6 +60,7 @@ const ADMIN_GROUPS = [
     title: "النماذج والشهادات",
     items: [
       { to: "/forms",        label: "إصدار النماذج", perm: null, icon: "certificate" },
+      { to: "/forms-review", label: "الاعتماد والمتابعة", perm: null, icon: "check" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "shield" },
       { to: "/my-documents", label: "نماذجي",        perm: null, icon: "certificate" },
       { to: "/my-signature", label: "توقيعي",        perm: null, icon: "edit" },
@@ -120,6 +121,7 @@ const OTHER_NAV = {
 
     { group: "النماذج" },
     { to: "/forms",        label: "النماذج والشهادات",   icon: "certificate" },
+    { to: "/forms-review", label: "الاعتماد والمتابعة",  icon: "check" },
     { to: "/my-documents", label: "نماذجي",              icon: "certificate" },
     { to: "/my-signature", label: "توقيعي",              icon: "key" },
     { to: "/notify",       label: "الإشعارات",            tabKey: "notify",    icon: "chat" },
