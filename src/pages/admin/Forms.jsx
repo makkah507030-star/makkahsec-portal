@@ -154,9 +154,15 @@ export default function Forms({ view = "issue" }) {
   const isApprover = (adminRoles ?? []).includes("principal");
 
   const [tab, setTab] = useState(review ? "replies" : "issue");
+  const [fQ, setFQ] = useState("");
+  const [fTpl, setFTpl] = useState("");
+  const [fStatus, setFStatus] = useState("");
+  const [sel, setSel] = useState(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
   // تبويبا المتابعة والاعتماد لصفحة «الاعتماد والمتابعة» وحدها، وتبويبات الإصدار لغيرها
   const REVIEW_TABS = ["replies", "approve"];
   if (review !== REVIEW_TABS.includes(tab)) setTab(review ? "replies" : "issue");
+  const switchTab = (k) => { setTab(k); setSel(new Set()); setFStatus(""); };
   const [dept, setDept] = useState("all");
   const [templates, setTemplates] = useState([]);
   // ما يحق لهذا الحساب إصداره بحسب «من يُصدره» في إدارة النماذج
@@ -1144,6 +1150,88 @@ export default function Forms({ view = "issue" }) {
            (d.created_by === session.user.id || isManager),
   );
 
+  // فلترة قائمتي المتابعة والاعتماد: بحث، ونوع النموذج، والحالة
+  const matchFilter = (d) => {
+    const q = fQ.trim();
+    if (fTpl && d.title !== fTpl) return false;
+    if (fStatus && d.status !== fStatus) return false;
+    return !q || [d.recipient, d.serial, d.title, d.signature_name]
+      .some((v) => String(v ?? "").includes(q));
+  };
+  const shownReplies = replies.filter(matchFilter);
+  const shownPending = pending.filter(matchFilter);
+  // ما يُعتمد جماعيًا: الإفادات الواصلة، والمستندات بانتظار الاعتماد
+  const selectable = tab === "replies"
+    ? shownReplies.filter((d) => d.status === "replied")
+    : shownPending;
+  const chosenDocs = selectable.filter((d) => sel.has(d.id));
+  const toggleSel = (id) => setSel((prev) => {
+    const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+
+  // اعتماد المحدد دفعة واحدة — لكل مستند قرار الإدارة المكتوب له إن وُجد
+  const bulkApprove = async () => {
+    if (!chosenDocs.length) return;
+    if (!confirm(`اعتماد ${chosenDocs.length} ${tab === "replies" ? "إفادة وإغلاقها" : "مستند"}؟`)) return;
+    setBulkBusy(true); setMsg(null);
+    let ok = 0;
+    for (const d of chosenDocs) {
+      const patch = tab === "replies"
+        ? { status: "issued", decision_note: null, data: { ...d.data, ...(decision[d.id] ?? {}) } }
+        : { status: "approved", decision_note: null, approved_by: session.user.id,
+            approved_at: new Date().toISOString() };
+      const { data } = await supabase.from("form_documents").update(patch).eq("id", d.id).select("id");
+      if (data?.length) ok += 1;
+    }
+    setBulkBusy(false);
+    setSel(new Set());
+    const fail = chosenDocs.length - ok;
+    setMsg({ ok: fail === 0, text: fail === 0
+      ? `اعتُمد ${ok} ${tab === "replies" ? "وأُغلقت، وهي في الأرشيف" : "مستند"}.`
+      : `اعتُمد ${ok}، وتعذّر ${fail} — حسابك لا يملك صلاحية اعتمادها.` });
+    loadDocs();
+  };
+
+  const filterBar = (list) => {
+    const titles = [...new Set(list.map((d) => d.title).filter(Boolean))].sort();
+    return (
+      <div className="card space-y-2.5 p-3">
+        <div className="flex flex-wrap gap-2">
+          <input className="field min-w-[160px] flex-1" placeholder="بحث بالاسم أو الرقم أو المُصدِر"
+                 value={fQ} onChange={(e) => setFQ(e.target.value)} />
+          <select className="field w-auto" value={fTpl} onChange={(e) => setFTpl(e.target.value)}>
+            <option value="">كل النماذج</option>
+            {titles.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          {tab === "replies" && (
+            <select className="field w-auto" value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
+              <option value="">كل الحالات</option>
+              <option value="replied">وصلت الإفادة</option>
+              <option value="awaiting_reply">بانتظار الإفادة</option>
+            </select>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input type="checkbox" disabled={!selectable.length}
+                   checked={selectable.length > 0 && chosenDocs.length === selectable.length}
+                   onChange={(e) => setSel(e.target.checked ? new Set(selectable.map((d) => d.id)) : new Set())} />
+            تحديد الكل{selectable.length ? <span className="num"> ({selectable.length})</span> : ""}
+          </label>
+          <button className="btn-primary px-4 py-1.5 text-xs" disabled={!chosenDocs.length || bulkBusy}
+                  onClick={bulkApprove}>
+            {bulkBusy ? "جارٍ الاعتماد…" : `اعتماد المحدد (${chosenDocs.length})`}
+          </button>
+        </div>
+        {tab === "replies" && (
+          <p className="text-[11px] text-faint">
+            يُحدَّد ما وصلت إفادته فقط. ويُحفظ مع كل مستند ما كتبته له في «قرار الإدارة» إن وُجد.
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-5">
       <div>
@@ -1194,7 +1282,7 @@ export default function Forms({ view = "issue" }) {
              ["archive", "الأرشيف"],
              ["report", "التقارير"]])
           .map(([k, label]) => (
-            <button key={k} onClick={() => setTab(k)}
+            <button key={k} onClick={() => switchTab(k)}
               className={`rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
                 tab === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
               {label}
@@ -1292,9 +1380,18 @@ export default function Forms({ view = "issue" }) {
           {replies.length === 0 && (
             <p className="card px-4 py-6 text-sm text-muted">لا نماذج بانتظار رد.</p>
           )}
-          {replies.map((d) => (
-            <div key={d.id} className="card space-y-2 p-4">
+          {replies.length > 0 && filterBar(replies)}
+          {replies.length > 0 && shownReplies.length === 0 && (
+            <p className="card px-4 py-6 text-sm text-muted">لا نتائج مطابقة للفلتر.</p>
+          )}
+          {shownReplies.map((d) => (
+            <div key={d.id} className={`card space-y-2 p-4 ${sel.has(d.id) ? "ring-2 ring-mint-deep" : ""}`}>
               <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex min-w-0 items-start gap-2.5">
+                  {d.status === "replied" && (
+                    <input type="checkbox" className="mt-1.5" checked={sel.has(d.id)}
+                           onChange={() => toggleSel(d.id)} aria-label="تحديد" />
+                  )}
                 <div className="min-w-0">
                   <p className="font-semibold text-ink">{d.title}</p>
                   <p className="num mt-0.5 text-xs text-faint">
@@ -1303,6 +1400,7 @@ export default function Forms({ view = "issue" }) {
                   {d.created_by !== session.user.id && d.signature_name && (
                     <p className="mt-0.5 text-[11px] text-faint">أصدرها: {d.signature_name}</p>
                   )}
+                </div>
                 </div>
                 <span className={`chip shrink-0 ${STATUS_CHIP[d.status].c}`}>{STATUS_CHIP[d.status].t}</span>
               </div>
@@ -1529,6 +1627,13 @@ export default function Forms({ view = "issue" }) {
           {pending.length === 0 && (
             <p className="card px-4 py-6 text-sm text-muted">لا مستندات بانتظار الاعتماد.</p>
           )}
+          {msg && (
+            <p className={`rounded-sm2 px-3 py-2 text-sm ${
+              msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
+              {msg.text}
+            </p>
+          )}
+          {pending.length > 0 && filterBar(pending)}
           {rejectFor && (
             <div className="card space-y-2 border-absent/30 p-4">
               <p className="text-sm font-semibold text-ink">
@@ -1551,9 +1656,12 @@ export default function Forms({ view = "issue" }) {
             </div>
           )}
 
-          {pending.map((d) => (
-            <div key={d.id} className="card p-4">
+          {shownPending.map((d) => (
+            <div key={d.id} className={`card p-4 ${sel.has(d.id) ? "ring-2 ring-mint-deep" : ""}`}>
               <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex items-start gap-2.5">
+                <input type="checkbox" className="mt-1.5" checked={sel.has(d.id)}
+                       onChange={() => toggleSel(d.id)} aria-label="تحديد" />
                 <div>
                   <p className="font-semibold text-ink">{d.title}</p>
                   <p className="num mt-0.5 text-xs text-faint">
@@ -1564,6 +1672,7 @@ export default function Forms({ view = "issue" }) {
                       أصدره لنفسه
                     </p>
                   )}
+                </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => openDoc(d)}
