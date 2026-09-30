@@ -22,6 +22,7 @@ const STATUS_CHIP = {
 export default function MyDocuments() {
   const { session, profile } = useSession();
   const [docs, setDocs] = useState(null);
+  const [toReply, setToReply] = useState([]);   // بانتظار ردّي أو قرار الإدارة على ردّي
 
   useEffect(() => {
     (async () => {
@@ -50,6 +51,16 @@ export default function MyDocuments() {
         .order("created_at", { ascending: false })
         .limit(100);
 
+      // المساءلات والنماذج التي تنتظر ردّي (لصاحبها وحده) — لا يعتمد الوصول
+      // إليها على الإشعار، فقد يُحذف أو لا يُنتبه له
+      const { data: open } = await supabase
+        .from("form_documents")
+        .select("id, title, serial, status, decision_note, created_at")
+        .eq("recipient_user_id", uid)
+        .in("status", ["awaiting_reply", "replied"])
+        .order("created_at", { ascending: false });
+
+      setToReply(open ?? []);
       setDocs(data ?? []);
     })();
   }, [session]);
@@ -66,7 +77,43 @@ export default function MyDocuments() {
         </p>
       </div>
 
-      {docs.length === 0 ? (
+      {toReply.length > 0 && (
+        <section className="overflow-hidden rounded-card border border-warning/30 bg-warning-light">
+          <p className="px-4 pt-3 text-sm font-bold text-warning">
+            مطلوب ردّك
+            {toReply.some((d) => d.status === "awaiting_reply") && (
+              <span className="num mr-1">({toReply.filter((d) => d.status === "awaiting_reply").length})</span>
+            )}
+          </p>
+          <div className="mt-2 divide-y divide-warning/20">
+            {toReply.map((d) => {
+              const waiting = d.status === "awaiting_reply";
+              return (
+                <Link key={d.id} to={`/doc/${d.id}`}
+                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/60">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-ink">{d.title}</p>
+                    <p className="num mt-0.5 text-xs text-faint">
+                      {d.serial}
+                      {d.created_at ? ` · ${fmtDateTime(d.created_at)}` : ""}
+                    </p>
+                    {waiting && d.decision_note && (
+                      <p className="mt-1 text-xs leading-relaxed text-absent">
+                        أعادته الإدارة بملاحظة: {d.decision_note}
+                      </p>
+                    )}
+                  </div>
+                  <span className={`chip shrink-0 ${waiting ? "bg-warning text-white" : "bg-white text-muted"}`}>
+                    {waiting ? "اكتب ردّك" : "ردّك قيد المراجعة"}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {docs.length === 0 && toReply.length > 0 ? null : docs.length === 0 ? (
         <div className="card px-6 py-12 text-center">
           <p className="font-semibold text-ink">لا توجد نماذج بعد</p>
           <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-muted">
