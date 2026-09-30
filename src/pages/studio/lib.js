@@ -102,3 +102,53 @@ export function classRange(nums) {
   if (a.length > 2 && contiguous) return `${a[0]} – ${a[a.length - 1]}`;
   return a.join("، ");
 }
+
+/* تاريخ اليوم الهجري بأرقام إنجليزية — مثل «1448/04/08 هـ» */
+export function hijriToday(now = new Date()) {
+  try {
+    const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn",
+      { day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(now);
+    const p = Object.fromEntries(parts.map((x) => [x.type, x.value]));
+    return `${String(p.year).replace(/\D/g, "")}/${p.month}/${p.day} هـ`;
+  } catch { return ""; }
+}
+
+/* حجم نص المتن بحسب طوله، ليبقى في صفحة واحدة دون أن يصغر أكثر من اللازم */
+export function bodySize(text, { max = 21, min = 15, from = 320, step = 110 } = {}) {
+  const len = String(text ?? "").length;
+  if (len <= from) return max;
+  return Math.max(min, Math.round((max - (len - from) / step) * 2) / 2);
+}
+
+/* ----------------------- صلاحيات القوالب -----------------------
+   تُحفظ في settings.studio_access نصًّا بصيغة JSON: { "<قالب>": ["teacher", "admin", "deputy_students", …] }
+   القالب غير المذكور يتبع قسمه: قوالب المعلمين للمعلمين، وقوالب الإداريين للإداريين.
+   والمدير والدعم الفني يصلان لكل القوالب دائمًا. */
+export const STUDIO_ACCESS_KEY = "studio_access";
+
+export const defaultAccess = (tpl) => tpl.sections.map((s) => (s === "teacher" ? "teacher" : "admin"));
+
+export function parseAccess(value) {
+  try { const v = JSON.parse(value ?? "{}"); return v && typeof v === "object" ? v : {}; }
+  catch { return {}; }
+}
+
+/* تنزيل عنصر من الصفحة صورةً PNG باسم عربي */
+export async function downloadNode(node, name, pixelRatio = 1) {
+  const { toBlob } = await import("html-to-image");
+  await document.fonts?.ready;
+  const blob = await toBlob(node, { pixelRatio, cacheBust: true });
+  downloadBlob(blob, name);
+}
+
+export function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  // يُضاف للصفحة قبل الضغط ليحترم المتصفح اسم الملف
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}

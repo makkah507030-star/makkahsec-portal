@@ -2,7 +2,7 @@
 import iconMint from "../../assets/icon-mint.png";
 import iconWhite from "../../assets/icon-white.png";
 import moeLogo from "../../assets/moe-logo.png";
-import { fitSize, fitTitle } from "./lib";
+import { fitSize, fitTitle, bodySize } from "./lib";
 import "./studio.css";
 
 /* =====================================================================
@@ -20,11 +20,25 @@ export const ICONS = {
   calendar: <svg {...P}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>,
   building: <svg {...P}><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>,
   hourglass:<svg {...P}><path d="M5 3h14M5 21h14M7 3c0 5 10 5 10 9s-10 4-10 9M17 3c0 5-10 5-10 9"/></svg>,
+  megaphone:<svg {...P}><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 8a5 5 0 0 1 0 8M8 14l1 5h2"/></svg>,
+  flask:    <svg {...P}><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/></svg>,
+  monitor:  <svg {...P}><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>,
+  health:   <svg {...P}><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 6-8 11-8 11z"/><path d="M12 9v5M9.5 11.5h5"/></svg>,
+  chat:     <svg {...P}><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg>,
+  shield:   <svg {...P}><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>,
+  trophy:   <svg {...P}><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/></svg>,
+  clock:    <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
+  send:     <svg {...P}><path d="M21 3L3 11l7 3 3 7z"/><path d="M10 14l11-11"/></svg>,
+};
+// أسماء الرموز كما تظهر للمستخدم في اختيار رمز اللوحة
+export const ICON_LABEL = {
+  building: "مكتب", user: "شخص", cap: "قاعة", book: "مكتبة", flask: "مختبر", monitor: "حاسب",
+  health: "عيادة", chat: "توجيه", shield: "أمن وسلامة", trophy: "نشاط",
 };
 
 const YEAR_FALLBACK = "";
 
-function Decor() {
+export function Decor() {
   return (
     <div className="stu-bgbox">
       <div className="stu-tex" /><div className="stu-blob" />
@@ -199,6 +213,110 @@ export function Spines({ theme = "light", d }) {
       <p className="note">
         {cfg.count === 2 ? "ملصقان" : `${cfg.count} ملصقات`} بعرض {size === "wide" ? "7.5" : "4"} سم — قصّ على الخط المتقطع
       </p>
+    </div>
+  );
+}
+
+/* ----------------------------- تعميم وإعلان ----------------------------- */
+const KIND_ICON = { "تعميم": "send", "إعلان": "megaphone", "تنبيه": "shield", "دعوة": "calendar" };
+
+export function Circular({ theme = "light", d }) {
+  const points = (d.points ?? []).filter((x) => x?.trim());
+  const paras = String(d.body ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
+  const size = bodySize([d.body, ...points].join(" "), { max: 20, min: 14.5, from: 380, step: 90 });
+  const t = fitTitle(d.title, { max: 44, min: 24, width: 640 });
+  return (
+    <div className={`stu stu-circular stu-${theme} stu-portrait sheet`}>
+      <Decor />
+      <div className="stu-page">
+        <Head theme={theme} year={d.year} />
+        <div className="stu-cmeta">
+          <span className="stu-tag">{ICONS[KIND_ICON[d.kind] ?? "send"]}{d.kind || "تعميم"}</span>
+          <div className="refs">
+            {d.no && <span>الرقم <b dir="ltr">{d.no}</b></span>}
+            {d.date && <span>التاريخ <b>{d.date}</b></span>}
+          </div>
+        </div>
+        {d.to && <div className="stu-to"><span>إلى</span>{d.to}</div>}
+        <div className="stu-subj">الموضوع</div>
+        <div className={`stu-h1${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{d.title}</div>
+        <div className="stu-grule" />
+        <div className="stu-text" style={{ fontSize: size }}>
+          {paras.map((x, i) => <p key={i}>{x}</p>)}
+          {points.length > 0 && (
+            <ol className="stu-points">
+              {points.map((x, i) => <li key={i}><i className="num">{i + 1}</i><span>{x}</span></li>)}
+            </ol>
+          )}
+        </div>
+        <div className="stu-sign">
+          <div className="who">
+            {d.signerTitle && <small>{d.signerTitle}</small>}
+            <b>{d.signer}</b>
+            <span className="line">التوقيع</span>
+          </div>
+          <div className="stamp">الختم</div>
+        </div>
+        <Foot />
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------- لوحة الباب ----------------------------- */
+export function DoorSign({ theme = "light", d }) {
+  const place = fitTitle(d.place, { max: 96, min: 44, width: 700 });
+  return (
+    <div className={`stu stu-door stu-${theme} stu-landscape sheet`}>
+      <Decor />
+      <div className="stu-page">
+        <Head theme={theme} />
+        <div className="stu-dbody">
+          <div className="stu-dicon">{ICONS[d.icon] ?? ICONS.building}</div>
+          <div className="stu-dtext">
+            <div className={`stu-h1${place.wrap ? " wrap" : ""}`} style={{ fontSize: place.size }}>{d.place}</div>
+            <div className="stu-grule" />
+            {d.name && <div className="stu-dname" style={{ fontSize: fitSize(d.name, { max: 40, min: 24, width: 700 }) }}>{d.name}</div>}
+            {d.role && <div className="stu-drole">{d.role}</div>}
+          </div>
+        </div>
+        <div className="stu-dfoot">
+          {d.hours ? <span className="stu-hours">{ICONS.clock}أوقات المراجعة <b>{d.hours}</b></span> : <span />}
+          {d.room && <span className="stu-room"><small>غرفة</small><b dir="ltr">{d.room}</b></span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------- منشور التواصل ----------------------------- */
+export function Social({ theme = "dark", d }) {
+  const story = d.format === "story";
+  const points = (d.points ?? []).filter((x) => x?.trim());
+  const h = fitTitle(d.title, { max: story ? 118 : 104, min: 50, width: 900 });
+  const a = fitTitle(d.accent, { max: story ? 96 : 84, min: 40, width: 900 });
+  return (
+    <div className={`stu stu-social stu-${theme} ${story ? "story" : "square"}`}
+         style={{ width: 1080, height: story ? 1920 : 1080 }}>
+      <Decor />
+      <div className="stu-spage">
+        <Head theme={theme} year={d.date} />
+        <div className="stu-smid">
+          {d.tag && <span className="stu-tag">{ICONS.megaphone}{d.tag}</span>}
+          <div className={`stu-h1${h.wrap ? " wrap" : ""}`} style={{ fontSize: h.size }}>{d.title}</div>
+          {d.accent && <div className={`stu-accent${a.wrap ? " wrap" : ""}`} style={{ fontSize: a.size }}>{d.accent}</div>}
+          {d.sub && <p className="stu-slead">{d.sub}</p>}
+          {points.length > 0 && (
+            <div className="stu-scards">
+              {points.map((x, i) => <div key={i}><i className="num">{i + 1}</i><span>{x}</span></div>)}
+            </div>
+          )}
+        </div>
+        <div className="stu-sfoot">
+          <span>مدرسة مكة الثانوية</span>
+          <span className="site">makkahsec.com</span>
+        </div>
+      </div>
     </div>
   );
 }

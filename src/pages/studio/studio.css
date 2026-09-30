@@ -161,3 +161,96 @@
 .stu-lab.wide .no { width: 110px; height: 110px; } .stu-lab.wide .no b { font-size: 46px; }
 .stu-lab.empty .in { background: transparent; border: none; }
 .stu-spines .note { position: absolute; bottom: 22px; left: 0; right: 0; text-align: center; font-size: 12px; color: #9A9A9A; }
+
+/* =====================================================================
+   المرحلة الثانية: التعميم، ولوحة الباب، ومنشور التواصل
+   ===================================================================== */
+
+/* ——— تعميم وإعلان ——— */
+.stu-circular .stu-page { padding: 40px 50px 30px; }
+.stu-cmeta { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; }
+.stu-cmeta .refs { display: flex; gap: 10px; }
+.stu-cmeta .refs span { font-size: 14px; color: var(--stu-text2); border: 1.5px solid var(--stu-cardB); background: var(--stu-card);
+                        border-radius: 10px; padding: 5px 12px; white-space: nowrap; }
+.stu-cmeta .refs b { color: var(--stu-text); font-weight: 700; margin-right: 6px; }
+.stu-to { margin-top: 22px; font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.stu-to span { font-size: 14px; font-weight: 600; color: var(--stu-accent); border: 1.5px solid var(--stu-pillB); border-radius: 999px; padding: 2px 12px; }
+.stu-subj { margin-top: 22px; font-size: 14px; font-weight: 600; color: var(--stu-gold); }
+.stu-circular .stu-h1 { margin-top: 4px; }
+.stu-circular .stu-grule { margin-top: 16px; }
+.stu-text { flex: 1; min-height: 0; overflow: hidden; margin-top: 22px; line-height: 1.95; }
+.stu-text p + p { margin-top: .55em; }
+.stu-points { list-style: none; margin-top: .9em; display: grid; gap: .55em; }
+.stu-points li { display: flex; gap: 12px; align-items: flex-start; }
+.stu-points i { flex: none; width: 1.6em; height: 1.6em; margin-top: .15em; border-radius: 8px; background: #89D7AD; color: #16301F;
+                font-style: normal; font-weight: 700; font-size: .85em; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.stu-official .stu-points i { background: #EDFAF2; color: #3E6350; border: 1px solid #CCE3D4; }
+.stu-points span { line-height: 1.75; }
+.stu-sign { display: flex; justify-content: flex-end; align-items: flex-end; gap: 26px; margin: 18px 0 20px; }
+.stu-sign .who { text-align: center; min-width: 240px; }
+.stu-sign small { display: block; font-size: 15px; color: var(--stu-text2); font-weight: 500; }
+.stu-sign b { display: block; margin-top: 4px; font-size: 21px; font-weight: 700; }
+.stu-sign .line { display: block; margin-top: 30px; border-top: 1.5px dotted var(--stu-pillB); padding-top: 4px; font-size: 12px; color: var(--stu-text2); }
+.stu-sign .stamp { width: 104px; height: 104px; border-radius: 50%; border: 1.5px dashed var(--stu-pillB); color: var(--stu-text2);
+                   font-size: 12px; display: flex; align-items: center; justify-content: center; }
+
+/* ——— لوحة الباب ——— */
+.stu-door .stu-page { padding: 40px 54px 36px; }
+.stu-dbody { flex: 1; display: flex; align-items: center; gap: 46px; min-height: 0; }
+.stu-dicon { flex: none; width: 190px; height: 190px; border-radius: 44px; background: #89D7AD; color: #16301F;
+             display: flex; align-items: center; justify-content: center; box-shadow: 0 24px 50px -24px rgba(62,99,80,.55); }
+.stu-dark .stu-dicon { box-shadow: 0 24px 60px -20px rgba(137,215,173,.45); }
+.stu-official .stu-dicon { background: #3E6350; color: #fff; box-shadow: none; border-radius: 24px; }
+.stu-dicon svg { width: 104px; height: 104px; stroke-width: 1.8; }
+.stu-dtext { flex: 1; min-width: 0; overflow: hidden; }
+.stu-door .stu-h1 { margin-top: 0; }
+.stu-door .stu-grule { width: 300px; margin-top: 20px; }
+.stu-dname { margin-top: 22px; font-weight: 700; white-space: nowrap; }
+.stu-drole { margin-top: 6px; font-size: 24px; font-weight: 600; color: var(--stu-accent); }
+.stu-official .stu-drole { color: #6B6B6B; font-weight: 500; }
+.stu-dfoot { display: flex; justify-content: space-between; align-items: center; }
+.stu-hours { display: inline-flex; align-items: center; gap: 10px; font-size: 18px; color: var(--stu-text2);
+             border: 1.5px solid var(--stu-cardB); background: var(--stu-card); border-radius: 999px; padding: 8px 20px; }
+.stu-hours svg { width: 22px; height: 22px; color: var(--stu-accent); }
+.stu-hours b { color: var(--stu-text); font-weight: 700; }
+.stu-room { display: inline-flex; align-items: baseline; gap: 10px; background: #89D7AD; color: #16301F; border-radius: 18px; padding: 8px 22px; }
+.stu-official .stu-room { background: #3E6350; color: #fff; }
+.stu-room small { font-size: 15px; font-weight: 600; }
+.stu-room b { font-size: 34px; font-weight: 700; letter-spacing: 1px; }
+
+/* ——— منشور التواصل: مقاس رقمي كامل بلا هامش طباعة ——— */
+.stu-social .stu-bgbox { inset: 0; border-radius: 0; }
+.stu-social.stu-official .stu-bgbox { inset: 22px; border-radius: 10px; }
+.stu-social .stu-progress { height: 10px; }
+.stu-social .stu-cube { width: 640px; height: 640px; border-radius: 110px; }
+.stu-social .stu-cube.a { left: -330px; bottom: -200px; } .stu-social .stu-cube.b { left: -270px; bottom: -420px; }
+.stu-social .stu-blob { width: 760px; height: 760px; filter: blur(150px); left: 120px; top: 300px; }
+.stu-social.story .stu-blob { top: 760px; }
+.stu-spage { position: absolute; inset: 0; padding: 70px 76px 64px; display: flex; flex-direction: column; }
+.stu-social.stu-official .stu-spage { padding: 76px 84px 70px; }
+.stu-social .stu-brand img { width: 64px; height: 64px; }
+.stu-social .stu-brand b { font-size: 27px; }
+.stu-social .stu-brand span { font-size: 19px; }
+.stu-social .stu-year { font-size: 20px; padding: 7px 22px; }
+.stu-social .stu-gov .lines { font-size: 19px; }
+.stu-social .stu-gov .logos img { height: 78px; }
+.stu-smid { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; overflow: hidden; }
+.stu-social .stu-tag { align-self: flex-start; font-size: 26px; padding: 10px 28px; gap: 12px; }
+.stu-social .stu-tag svg { width: 28px; height: 28px; }
+.stu-social .stu-h1 { margin-top: 28px; line-height: 1.1; }
+.stu-accent { font-weight: 700; color: #89D7AD; line-height: 1.15; margin-top: 8px; white-space: nowrap; }
+.stu-accent.wrap { white-space: normal; }
+.stu-light .stu-accent { color: #3E8A62; }
+.stu-official .stu-accent { color: #3E6350; }
+.stu-slead { margin-top: 30px; font-size: 32px; line-height: 1.7; color: var(--stu-text2); max-width: 900px; }
+.stu-scards { margin-top: 40px; display: grid; gap: 18px; }
+.stu-scards div { display: flex; align-items: center; gap: 22px; border: 1.5px solid var(--stu-cardB); background: var(--stu-card);
+                  border-radius: 26px; padding: 22px 28px; font-size: 30px; font-weight: 600; }
+.stu-scards i { flex: none; width: 58px; height: 58px; border-radius: 16px; background: #89D7AD; color: #16301F;
+                font-style: normal; font-weight: 700; font-size: 28px; display: flex; align-items: center; justify-content: center; }
+.stu-official .stu-scards i { background: #3E6350; color: #fff; }
+.stu-social.story .stu-slead { font-size: 36px; }
+.stu-social.story .stu-scards div { font-size: 34px; padding: 28px 32px; }
+.stu-sfoot { display: flex; justify-content: space-between; align-items: center; font-size: 22px; color: var(--stu-text2); font-weight: 500; }
+.stu-sfoot .site { direction: ltr; font-size: 28px; font-weight: 700; color: var(--stu-accent); }
+.stu-dark .stu-sfoot .site { color: #89D7AD; }

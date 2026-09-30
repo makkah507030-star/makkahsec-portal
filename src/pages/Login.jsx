@@ -11,7 +11,7 @@ import TrialBanner from "../components/TrialBanner.jsx";
    النقش مبنيّ بـ CSS خالص (بلا صور)، فلا يزيد حجم الصفحة ولا يبطئها.
    ===================================================================== */
 
-/* حقول بلون الهوية النعناعي بدل الأزرق الافتراضي للمتصفح */
+/* حقول بلون الهوية الأخضر بدل الأزرق الافتراضي للمتصفح */
 const FIELD =
   "mk-field h-11 rounded-sm2 border border-[#CCF2DB] bg-mint-tint px-3 text-[15px] text-ink " +
   "placeholder:text-faint focus:border-mint-deep focus:bg-white focus:outline-none " +
