@@ -59,6 +59,7 @@ const CalendarAdmin = lazy(() => import("./pages/admin/CalendarAdmin.jsx"));
 const SiteMetrics = lazy(() => import("./pages/admin/SiteMetrics.jsx"));
 const Forms = lazy(() => import("./pages/admin/Forms.jsx"));
 const FormsAdmin = lazy(() => import("./pages/admin/FormsAdmin.jsx"));
+const Studio = lazy(() => import("./pages/studio/Studio.jsx"));
 const MySignature = lazy(() => import("./pages/MySignature.jsx"));
 const DocumentView = lazy(() => import("./pages/DocumentView.jsx"));
 const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
@@ -304,6 +305,8 @@ export default function App() {
               <Route path="/forms" element={<Forms key="issue" />} />
               <Route path="/forms-review" element={<Forms key="review" view="review" />} />
               <Route path="/my-signature" element={<MySignature />} />
+              {/* استوديو البوابة — قوالب الهوية البصرية للطباعة والتصدير */}
+              <Route path="/studio" element={<Studio />} />
               {(isTechSupport || adminRoles.includes("principal")) && (
                 <Route path="/forms-admin" element={<FormsAdmin />} />
               )}
@@ -362,6 +365,8 @@ export default function App() {
               <Route path="/forms" element={<Forms key="issue" />} />
               <Route path="/forms-review" element={<Forms key="review" view="review" />} />
               <Route path="/my-signature" element={<MySignature />} />
+              {/* استوديو البوابة — قوالب الهوية البصرية للطباعة والتصدير */}
+              <Route path="/studio" element={<Studio />} />
             </>
           )}
           {((effectiveRole === "teacher" && !hiddenTabs.has("reports")) ||

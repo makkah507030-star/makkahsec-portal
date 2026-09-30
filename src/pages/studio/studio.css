@@ -1,0 +1,162 @@
+/* =====================================================================
+   استوديو البوابة — أوراق الهوية البصرية (A4 بمقاس 96dpi: 794×1123).
+   ثلاث نسخ: فاتحة (الافتراضية)، وغامقة (هوية الفيديو)، ورسمية (ترويسة الوزارة).
+   كل الأبعاد بالبكسل الثابت لأن الورقة تُصغَّر للمعاينة وتُطبع بمقاسها.
+   ===================================================================== */
+
+.stu {
+  position: relative; overflow: hidden; background: #fff; color: var(--stu-text);
+  font-family: "IBM Plex Sans Arabic", Tahoma, sans-serif; direction: rtl;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.stu *, .stu *::before, .stu *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.stu.stu-portrait  { width: 794px;  height: 1123px; }
+.stu.stu-landscape { width: 1123px; height: 794px; }
+
+.stu-dark {
+  --stu-bg: radial-gradient(ellipse 90% 55% at 95% 0%, #2f5240 0%, transparent 60%),
+            linear-gradient(160deg, #284836 0%, #193326 42%, #12261c 72%, #0e1f17 100%);
+  --stu-lines: rgba(255,255,255,.03); --stu-shape: rgba(120,170,140,.14); --stu-blob: rgba(96,150,118,.3);
+  --stu-text: #fff; --stu-text2: #A9BCB1; --stu-accent: #89D7AD; --stu-gold: #D9B45A;
+  --stu-card: rgba(255,255,255,.05); --stu-cardB: rgba(255,255,255,.14); --stu-div: rgba(255,255,255,.12);
+  --stu-pillB: rgba(255,255,255,.3); --stu-pillT: #DCE7E1;
+}
+.stu-light {
+  --stu-bg: radial-gradient(ellipse 90% 55% at 95% 0%, #DDF3E6 0%, transparent 60%),
+            linear-gradient(160deg, #F2FAF5 0%, #F8FBF9 45%, #EDF6F0 100%);
+  --stu-lines: rgba(62,99,80,.04); --stu-shape: rgba(62,99,80,.07); --stu-blob: rgba(137,215,173,.4);
+  --stu-text: #1C3328; --stu-text2: #5E7268; --stu-accent: #3E8A62; --stu-gold: #B8912F;
+  --stu-card: rgba(255,255,255,.85); --stu-cardB: #D5E7DC; --stu-div: #E1EEE6;
+  --stu-pillB: rgba(62,99,80,.35); --stu-pillT: #3E6350;
+}
+.stu-official {
+  --stu-bg: #fff; --stu-lines: transparent; --stu-shape: transparent; --stu-blob: transparent;
+  --stu-text: #101010; --stu-text2: #6B6B6B; --stu-accent: #3E6350; --stu-gold: #B8912F;
+  --stu-card: #fff; --stu-cardB: #CCE3D4; --stu-div: #E3EFE7;
+  --stu-pillB: #B8912F88; --stu-pillT: #9A7B22;
+}
+.stu .num { font-family: "IBM Plex Sans Arabic", sans-serif; }
+
+/* الخلفية داخل هامش آمن 8 مم — طابعات المدارس لا تطبع حتى الحافة */
+.stu-bgbox { position: absolute; inset: 30px; background: var(--stu-bg); border-radius: 18px; overflow: hidden; }
+.stu-official .stu-bgbox { border-radius: 6px; border: 1.5px solid #3E6350; }
+.stu-official .stu-bgbox::after { content: ""; position: absolute; inset: 6px; border: 1px solid #B8912F; border-radius: 3px; opacity: .8; }
+.stu-tex { position: absolute; inset: 0; background: repeating-linear-gradient(135deg, var(--stu-lines) 0 1.5px, transparent 1.5px 22px); }
+.stu-blob { position: absolute; width: 520px; height: 520px; border-radius: 50%; background: var(--stu-blob); filter: blur(110px); left: 80px; top: 480px; }
+.stu-landscape .stu-blob { left: 60px; top: 220px; }
+.stu-cube { position: absolute; width: 440px; height: 440px; border-radius: 76px; background: var(--stu-shape); transform: rotate(32deg) skewX(-14deg); filter: blur(3px); }
+.stu-cube.a { left: -230px; bottom: -150px; } .stu-cube.b { left: -190px; bottom: -300px; opacity: .7; }
+.stu-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: rgba(137,215,173,.25); }
+.stu-progress::after { content: ""; position: absolute; inset: 0 0 0 22%; background: #89D7AD; }
+.stu-official .stu-progress, .stu-official .stu-tex, .stu-official .stu-blob, .stu-official .stu-cube { display: none; }
+
+.stu-page { position: absolute; inset: 30px; padding: 40px 46px; display: flex; flex-direction: column; }
+.stu-official .stu-page { padding: 44px 50px; }
+
+/* الترويسة: شريط البوابة (فاتح/غامق) أو الترويسة الحكومية (رسمي) */
+.stu-bar { display: flex; justify-content: space-between; align-items: center; }
+.stu-brand { display: flex; align-items: center; gap: 12px; }
+.stu-brand img { width: 44px; height: 44px; object-fit: contain; }
+.stu-brand b { display: block; font-size: 19px; font-weight: 700; }
+.stu-brand span { display: block; font-size: 13px; color: var(--stu-text2); }
+.stu-year { border: 1.5px solid var(--stu-pillB); color: var(--stu-pillT); border-radius: 999px; padding: 5px 16px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.stu-gov { display: flex; justify-content: space-between; align-items: flex-start; }
+.stu-gov .lines { font-size: 14px; font-weight: 500; line-height: 1.8; }
+.stu-gov .lines b { display: block; color: #3E6350; font-weight: 700; }
+.stu-gov .logos { display: flex; gap: 16px; align-items: center; }
+.stu-gov .logos img { height: 58px; }
+.stu-rule { height: 1.5px; margin-top: 18px; background: linear-gradient(90deg, transparent, #3E635022 12%, #3E6350 50%, #3E635022 88%, transparent); }
+
+/* الشارة والعنوان */
+.stu-tag { display: inline-flex; align-items: center; gap: 8px; background: #89D7AD; color: #16301F; border-radius: 999px; padding: 7px 20px; font-size: 18px; font-weight: 700; }
+.stu-tag svg { width: 20px; height: 20px; }
+.stu-official .stu-tag { background: transparent; color: #9A7B22; border: 1px solid #B8912F88; font-weight: 600; }
+.stu-h1 { margin-top: 14px; font-weight: 700; line-height: 1.12; white-space: nowrap; }
+.stu-official .stu-h1 { color: #3E6350; }
+.stu-h1.wrap, .stu-sub.wrap { white-space: normal; line-height: 1.2; }
+.stu-hero, .stu-mid { min-width: 0; overflow: hidden; }
+.stu-sub { display: block; font-weight: 700; color: var(--stu-accent); margin-top: 10px; line-height: 1.25; white-space: nowrap; }
+.stu-official .stu-sub { color: #6B6B6B; font-weight: 500; }
+.stu-grule { height: 1.5px; width: 240px; margin-top: 22px; background: linear-gradient(90deg, transparent, var(--stu-gold), transparent); }
+.stu-code { display: inline-block; margin-top: 16px; font-size: 16px; color: var(--stu-text2); border: 1.5px dashed var(--stu-pillB); border-radius: 10px; padding: 5px 14px; }
+.stu-code b { color: var(--stu-accent); letter-spacing: 1px; margin-right: 6px; }
+
+/* بطاقة البيانات */
+.stu-info { border: 1.5px solid var(--stu-cardB); background: var(--stu-card); border-radius: 18px; overflow: hidden; }
+.stu-official .stu-info { border-radius: 10px; }
+.stu-row { display: grid; grid-template-columns: 44px 120px 1fr; align-items: center; gap: 12px; padding: 14px 20px; }
+.stu-row + .stu-row { border-top: 1px solid var(--stu-div); }
+.stu-ic { width: 40px; height: 40px; border-radius: 11px; background: #89D7AD; color: #16301F; display: flex; align-items: center; justify-content: center; }
+.stu-official .stu-ic { background: #EDFAF2; color: #3E6350; border: 1px solid #CCE3D4; }
+.stu-ic svg { width: 21px; height: 21px; }
+.stu-row .k { font-size: 16px; color: var(--stu-text2); font-weight: 500; }
+.stu-row .v { font-size: 21px; font-weight: 700; white-space: nowrap; overflow: hidden; }
+.stu-row .v small { display: block; margin-top: 2px; font-size: 15px; font-weight: 500; color: var(--stu-text2); }
+
+.stu-foot { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--stu-text2); }
+.stu-foot .site { font-weight: 700; color: var(--stu-accent); font-size: 16px; direction: ltr; }
+.stu-official .stu-foot { border-top: 1px solid #E3EFE7; padding-top: 12px; }
+
+/* ——— غلاف السجل ——— */
+.stu-cover .stu-body { flex: 1; display: flex; }
+.stu-portrait.stu-cover .stu-body { flex-direction: column; justify-content: center; }
+.stu-landscape.stu-cover .stu-body { flex-direction: row; align-items: center; gap: 44px; }
+.stu-landscape.stu-cover .stu-hero { flex: 1.15; min-width: 0; }
+.stu-landscape.stu-cover .stu-info { flex: 1; min-width: 0; }
+.stu-portrait.stu-cover .stu-info { margin-top: 40px; }
+.stu-official.stu-cover .stu-hero { text-align: center; }
+.stu-official.stu-cover .stu-grule { margin-left: auto; margin-right: auto; }
+
+/* ——— فاصل الأقسام ——— */
+.stu-divider .stu-page { padding: 40px 46px 40px 110px; }
+.stu-tab { position: absolute; left: 30px; width: 64px; height: 150px; background: #89D7AD; color: #16301F; z-index: 2;
+           border-radius: 0 16px 16px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.stu-tab b { font-size: 34px; font-weight: 700; line-height: 1; }
+.stu-tab span { font-size: 12px; font-weight: 600; writing-mode: vertical-rl; }
+.stu-official .stu-tab { background: #3E6350; color: #fff; }
+.stu-divider .stu-brand img { width: 40px; height: 40px; }
+.stu-divider .stu-brand b { font-size: 17px; }
+.stu-rec { font-size: 14px; color: var(--stu-text2); font-weight: 500; white-space: nowrap; }
+.stu-rec b { color: var(--stu-accent); font-weight: 700; }
+.stu-mid { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.stu-big { font-size: 230px; font-weight: 700; line-height: .9; color: var(--stu-accent); opacity: .9; }
+.stu-official .stu-big { color: #3E6350; }
+.stu-lbl { margin-top: 18px; font-size: 18px; font-weight: 600; color: var(--stu-gold); }
+.stu-divider .stu-h1 { margin-top: 6px; }
+.stu-desc { margin-top: 14px; font-size: 20px; line-height: 1.7; color: var(--stu-text2); max-width: 540px; }
+.stu-toc { margin-top: 30px; border: 1.5px solid var(--stu-cardB); background: var(--stu-card); border-radius: 16px; overflow: hidden; max-width: 560px; }
+.stu-official .stu-toc { border-radius: 10px; }
+.stu-toc div { display: flex; justify-content: space-between; gap: 16px; padding: 11px 18px; font-size: 17px; }
+.stu-toc div + div { border-top: 1px solid var(--stu-div); }
+.stu-toc i { font-style: normal; color: var(--stu-text2); white-space: nowrap; }
+
+/* ——— ملصقات الظهر: ورقة A4 عليها ملصقات بارتفاع 270 مم وخطوط قص ——— */
+.stu-spines { background: #fff; }
+.stu-spines .row { position: absolute; top: 51px; left: 0; right: 0; display: flex; justify-content: center; }
+.stu-lab { position: relative; height: 1020px; border: 1px dashed #BDBDBD; padding: 6px; }
+.stu-lab.narrow { width: 151px; }  /* 40 مم */
+.stu-lab.wide { width: 283px; }    /* 75 مم */
+.stu-lab .in { position: relative; height: 100%; border-radius: 12px; overflow: hidden; background: var(--stu-bg);
+               display: flex; flex-direction: column; align-items: center; padding: 22px 10px 18px; }
+.stu-official .stu-lab .in { background: #fff; border: 1.5px solid #3E6350; border-radius: 6px; }
+.stu-lab .in::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, var(--stu-lines) 0 1.5px, transparent 1.5px 18px); }
+.stu-lab .in > * { position: relative; }
+.stu-lab img { width: 58px; height: 58px; object-fit: contain; flex: none; }
+.stu-lab.wide img { width: 76px; height: 76px; }
+.stu-lab .sch { margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--stu-text2); text-align: center; line-height: 1.4; }
+.stu-lab.wide .sch { font-size: 14px; }
+.stu-lab .yr { margin-top: 10px; font-size: 12.5px; font-weight: 600; color: var(--stu-pillT); border: 1px solid var(--stu-pillB); border-radius: 999px; padding: 2px 10px; white-space: nowrap; }
+.stu-lab .gr { width: 60%; height: 1.5px; margin: 16px 0; background: linear-gradient(90deg, transparent, var(--stu-gold), transparent); flex: none; }
+.stu-lab .v { flex: 1; display: flex; gap: 10px; justify-content: center; align-items: center; min-height: 0; }
+.stu-lab .v h2, .stu-lab .v p { writing-mode: vertical-rl; white-space: nowrap; }
+.stu-lab .v h2 { font-weight: 700; line-height: 1.1; }
+.stu-official .stu-lab .v h2 { color: #3E6350; }
+.stu-lab .v p { font-weight: 600; color: var(--stu-accent); }
+.stu-lab .no { margin-top: 14px; width: 84px; height: 84px; border-radius: 20px; background: #89D7AD; color: #16301F; flex: none;
+               display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.stu-official .stu-lab .no { background: #3E6350; color: #fff; }
+.stu-lab .no small { font-size: 11px; font-weight: 600; }
+.stu-lab .no b { font-size: 34px; line-height: 1; font-weight: 700; }
+.stu-lab.wide .no { width: 110px; height: 110px; } .stu-lab.wide .no b { font-size: 46px; }
+.stu-lab.empty .in { background: transparent; border: none; }
+.stu-spines .note { position: absolute; bottom: 22px; left: 0; right: 0; text-align: center; font-size: 12px; color: #9A9A9A; }
