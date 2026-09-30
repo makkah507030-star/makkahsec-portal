@@ -362,7 +362,7 @@ export default function Forms({ view = "issue" }) {
   useEffect(() => { loadDocs(); }, [tab]);
 
   useEffect(() => {
-    if (!review || !isApprover) return;
+    if (!review || !isManager) return;
     (async () => {
       const { data } = await supabase.from("school_events")
         .select("id, serial, title, event_date, category, organizer_name, report_submitted_at")
@@ -370,7 +370,7 @@ export default function Forms({ view = "issue" }) {
         .order("report_submitted_at", { ascending: true });
       setPendingEvents(data ?? []);
     })();
-  }, [review, isApprover, tab]);
+  }, [review, isManager, tab]);
 
   // فتح مستند مُعاد لتصحيحه بنفس رقمه التسلسلي
   const startEdit = (d) => {
@@ -1289,8 +1289,9 @@ export default function Forms({ view = "issue" }) {
       <div className="flex flex-wrap gap-1.5">
         {(review
           ? [["replies", `متابعة الإفادات (${replies.filter((d) => d.status === "replied").length})`],
-             ...(isApprover ? [["approve", `اعتماد النماذج${pending.length ? ` (${pending.length})` : ""}`],
-                               ["events", `اعتماد الأحداث${pendingEvents.length ? ` (${pendingEvents.length})` : ""}`]] : [])]
+             ...(isApprover ? [["approve", `اعتماد النماذج${pending.length ? ` (${pending.length})` : ""}`]] : []),
+             // الأحداث: يعتمدها المدير، ويتابعها الدعم الفني
+             ...(isManager ? [["events", `اعتماد الأحداث${pendingEvents.length ? ` (${pendingEvents.length})` : ""}`]] : [])]
           : [["issue", "إصدار نموذج"],
              ...(returned.length ? [["returned", `المُعادة إليّ (${returned.length})`]] : []),
              ["archive", "الأرشيف"],
@@ -1639,7 +1640,9 @@ export default function Forms({ view = "issue" }) {
       {tab === "events" && (
         <div className="space-y-2">
           <p className="text-xs leading-relaxed text-muted">
-            أحداث رفع منظّموها تقاريرها وتنتظر اعتمادك. افتح الحدث لمراجعة تقريره، ثم اعتمده أو أعده بملاحظة.
+            {isApprover
+              ? "أحداث رفع منظّموها تقاريرها وتنتظر اعتمادك. افتح الحدث لمراجعة تقريره، ثم اعتمده أو أعده بملاحظة."
+              : "أحداث رفع منظّموها تقاريرها وتنتظر اعتماد مدير المدرسة — للمتابعة، والاعتماد لمدير المدرسة."}
           </p>
           {pendingEvents.length === 0 && (
             <p className="card px-4 py-6 text-sm text-muted">لا أحداث بانتظار الاعتماد.</p>
@@ -1659,7 +1662,7 @@ export default function Forms({ view = "issue" }) {
               </div>
               <button onClick={() => navigate(`/events?open=${e.id}&step=approval`)}
                       className="btn-primary shrink-0 px-4 py-1.5 text-xs">
-                فتح للاعتماد
+                {isApprover ? "فتح للاعتماد" : "فتح الحدث"}
               </button>
             </div>
           ))}
