@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { fmtTime } from "../lib/periodTimes";
 import { supabase } from "../lib/supabase";
 import { fmtGreg } from "../lib/dates";
 import { useSession } from "../lib/session.jsx";
@@ -32,7 +33,7 @@ export default function PermissionLog() {
     let q = supabase
       .from("permission_requests")
       .select(`
-        id, request_date, scope, period_numbers, note, created_by, created_at,
+        *,
         permission_request_students (
           student_id,
           students ( full_name, national_id )
@@ -83,7 +84,9 @@ export default function PermissionLog() {
   const scopeText = (r) =>
     r.scope === "day"
       ? "اليوم كاملاً"
-      : `الحصص ${(r.period_numbers ?? []).join("، ")}`;
+      : r.return_time
+        ? `مؤقت ${fmtTime(r.start_time)} — ${fmtTime(r.return_time)} · الحصص ${(r.period_numbers ?? []).join("، ")}`
+        : `الحصص ${(r.period_numbers ?? []).join("، ")}`;
 
   const remove = async (r) => {
     if (!confirm(`حذف استئذان ${r.request_date} نهائيًا؟`)) return;
