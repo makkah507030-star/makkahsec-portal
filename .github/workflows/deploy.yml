@@ -1,0 +1,58 @@
+# النشر على Netlify من GitHub مباشرة، بعد كل دمج في main (ويدويًا من Actions ← Deploy).
+# المستودع خاص، وNetlify لا يستطيع سحبه (خطأ 404 عند preparing repo)، فيُبنى
+# الموقع هنا ويُرفع جاهزًا بمفتاح Netlify. متغيرات Supabase تُقرأ من إعدادات
+# الموقع في Netlify كما كانت. خطوات الإعداد: docs/deploy.md
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# نشر واحد في كل مرة؛ الأحدث لا يُلغي الجاري حتى لا يُقطع رفع نصفه
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: النشر على Netlify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+    steps:
+      - name: التحقق من الأسرار
+        run: |
+          missing=""
+          for v in NETLIFY_AUTH_TOKEN NETLIFY_SITE_ID; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::أسرار ناقصة في Settings ← Secrets and variables ← Actions:$missing"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: تثبيت المكتبات
+        run: npm ci
+
+      - name: فحص الأخطاء البرمجية (oxlint)
+        run: npm run lint
+
+      - name: فحص دوال Netlify
+        run: npm run check:functions
+
+      # يبني الموقع والدوال (بإعدادات netlify.toml ومتغيرات الموقع في Netlify) ثم ينشرها
+      - name: البناء والنشر
+        run: npx --yes netlify-cli@27.10.2 deploy --prod --message "GitHub Actions ${GITHUB_SHA::7}"
