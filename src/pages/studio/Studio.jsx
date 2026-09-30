@@ -402,7 +402,7 @@ function Field({ f, tpl, data, set }) {
     return (
       <div>
         <label className="text-xs text-muted">{f.label}</label>
-        <div className="mt-1.5 grid grid-cols-5 gap-1.5">
+        <div className="mt-1.5 grid grid-cols-4 gap-1.5">
           {f.options.map((k) => (
             <button key={k} onClick={() => set(f.name, k)} title={ICON_LABEL[k]}
               className={`flex flex-col items-center gap-1 rounded-sm2 py-2 text-[10.5px] [&_svg]:h-5 [&_svg]:w-5 ${

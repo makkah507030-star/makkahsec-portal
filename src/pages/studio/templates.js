@@ -101,12 +101,14 @@ export const TEMPLATES = [
     title: "لوحة باب",
     desc: "لوحة موحّدة لأبواب المكاتب والقاعات والمعامل — A4 بالعرض.",
     presets: {
-      place: ["مكتب مدير المدرسة", "مكتب وكيل شؤون الطلاب", "مكتب الموجّه الطلابي", "غرفة المعلمين",
-              "معمل الحاسب الآلي", "مختبر العلوم", "العيادة المدرسية", "مصادر التعلم"],
+      place: ["مكتب مدير المدرسة", "مكتب وكيل الشؤون التعليمية", "مكتب وكيل الشؤون المدرسية", "مكتب وكيل شؤون الطلاب",
+              "مكتب الموجّه الطلابي", "مكتب رائد النشاط الطلابي", "مكتب المساعد الإداري", "غرفة المعلمين",
+              "معمل الحاسب الآلي", "مختبر العلوم", "العيادة المدرسية", "مصادر التعلم",
+              "قاعة الاجتماعات", "قاعة النشاط", "القاعة متعددة الأغراض"],
       hours: ["7:30 – 12:30", "بعد الحصة الثالثة", "طوال اليوم الدراسي"],
     },
     fields: [
-      { name: "icon", label: "الرمز", type: "icon", options: ["building", "user", "cap", "book", "flask", "monitor", "health", "chat", "shield", "trophy"] },
+      { name: "icon", label: "الرمز", type: "icon", options: ["building", "user", "hall", "cap", "book", "flask", "monitor", "health", "chat", "shield", "trophy"] },
       { name: "place", label: "اسم المكتب أو القاعة", max: 40 },
       { name: "name", label: "الاسم (اختياري)", max: 50 },
       { name: "role", label: "الصفة (اختياري)", max: 50 },
@@ -116,7 +118,7 @@ export const TEMPLATES = [
     defaults: (c, section) => section === "admin"
       ? { icon: "building", place: c.roleTitle ? `مكتب ${c.roleTitle}` : "", name: c.name ? `أ. ${c.name}` : "",
           role: c.roleTitle, hours: "", room: "" }
-      : { icon: "cap", place: c.subject ? `قاعة ${c.subject}` : "", name: c.name ? `أ. ${c.name}` : "",
+      : { icon: "hall", place: c.subject ? `قاعة ${c.subject}` : "", name: c.name ? `أ. ${c.name}` : "",
           role: c.subject ? `معلم ${c.subject}` : "", hours: "", room: "" },
     sample: (c, section) => section === "admin"
       ? { hours: "7:30 – 12:30", room: "A-04" }

@@ -16,6 +16,7 @@ export const ICONS = {
   case:     <svg {...P}><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg>,
   user:     <svg {...P}><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>,
   cap:      <svg {...P}><path d="M2 7l10-4 10 4-10 4z"/><path d="M6 9v5c0 2 3 3 6 3s6-1 6-3V9"/></svg>,
+  hall:     <svg {...P}><rect x="3" y="3.5" width="18" height="11.5" rx="1.5"/><path d="M7 11l3-3 2.5 2 4-4M12 15v3M8 21l4-3 4 3"/></svg>,
   table:    <svg {...P}><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>,
   calendar: <svg {...P}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>,
   building: <svg {...P}><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>,
@@ -23,7 +24,7 @@ export const ICONS = {
   megaphone:<svg {...P}><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 8a5 5 0 0 1 0 8M8 14l1 5h2"/></svg>,
   flask:    <svg {...P}><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/></svg>,
   monitor:  <svg {...P}><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>,
-  health:   <svg {...P}><path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 6-8 11-8 11z"/><path d="M12 9v5M9.5 11.5h5"/></svg>,
+  health:   <svg {...P}><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v2"/><path d="M12 10.5v6M9 13.5h6"/></svg>,
   chat:     <svg {...P}><path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12z"/></svg>,
   shield:   <svg {...P}><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>,
   trophy:   <svg {...P}><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/></svg>,
@@ -32,7 +33,7 @@ export const ICONS = {
 };
 // أسماء الرموز كما تظهر للمستخدم في اختيار رمز اللوحة
 export const ICON_LABEL = {
-  building: "مكتب", user: "شخص", cap: "قاعة", book: "مكتبة", flask: "مختبر", monitor: "حاسب",
+  building: "مكتب", user: "شخص", hall: "قاعة", cap: "فصل", book: "مكتبة", flask: "مختبر", monitor: "حاسب",
   health: "عيادة", chat: "توجيه", shield: "أمن وسلامة", trophy: "نشاط",
 };
 
