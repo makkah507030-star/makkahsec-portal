@@ -31,7 +31,8 @@ export const ICONS = {
   clock:    <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
   star:     <svg {...P}><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>,
   globe:    <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/></svg>,
-  wc:       <svg {...P}><circle cx="7" cy="4.5" r="1.8"/><circle cx="17" cy="4.5" r="1.8"/><path d="M5 9h4l.5 6H8.5v6h-3v-6H4.5zM12 3v18M15 9h4l1.5 7h-2v5h-3v-5h-2z"/></svg>,
+  // دورات مياه (رجال) — مدرسة بنين
+  wc:       <svg {...P}><circle cx="12" cy="4.2" r="2"/><path d="M9.5 8h5a1.5 1.5 0 0 1 1.5 1.5V15h-1.5v6.5h-5V15H8V9.5A1.5 1.5 0 0 1 9.5 8z"/><path d="M12 15v6.5"/></svg>,
   mosque:   <svg {...P}><path d="M12 3c-2.5 2-5 3.5-5 6.5V11h10V9.5C17 6.5 14.5 5 12 3zM5 11h14v10H5zM10 21v-4a2 2 0 0 1 4 0v4M3 21h18M20 8v13M20 6v-.5"/></svg>,
   exit:     <svg {...P}><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h8"/><path d="M10 12h11M17 8l4 4-4 4"/></svg>,
   assembly: <svg {...P}><circle cx="12" cy="6" r="2"/><circle cx="5.5" cy="9" r="1.7"/><circle cx="18.5" cy="9" r="1.7"/><path d="M8.5 21v-5l-1-4h9l-1 4v5M3 21v-4.5L2.5 13h6M21 21v-4.5l.5-3.5h-6"/></svg>,
