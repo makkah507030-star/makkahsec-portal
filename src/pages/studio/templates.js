@@ -160,7 +160,9 @@ export const TEMPLATES = [
     derive: (d, name, c) => {
       if (name !== "grade" && name !== "classNo") return d;
       const g = GRADE_OPTIONS.indexOf(d.grade) + 1;
-      const k = c.classList?.find((x) => x.grade === g && classShort(x.class_no) === classShort(d.classNo));
+      // الفصل نفسه، وإلا أول فصل في الصف — فالمسار يتبع الصف عادةً
+      const inGrade = c.classList?.filter((x) => x.grade === g) ?? [];
+      const k = inGrade.find((x) => classShort(x.class_no) === classShort(d.classNo)) ?? inGrade[0];
       return k && TRACK_LABEL[k.track] ? { ...d, track: TRACK_LABEL[k.track] } : d;
     },
     /* صفحات الطباعة: هذا الفصل، أو كل فصول الصف، أو كل الفصول — من جدول الفصول */

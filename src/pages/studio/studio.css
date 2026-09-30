@@ -266,5 +266,8 @@
 .stu-track { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 18px; font-weight: 600;
              color: var(--stu-pillT); border: 1.5px solid var(--stu-pillB); border-radius: 999px; padding: 5px 16px; }
 .stu-track svg { width: 20px; height: 20px; }
+/* مسافة تتسع لنزول حروف مثل «ي» في «الثاني» تحت سطر الصف */
+.stu-class .stu-h1 { line-height: 1.35; }
+.stu-class .stu-track { margin-top: 26px; }
 .stu-class .stu-grule { margin-top: 22px; }
 .stu-motto { font-size: 22px; font-weight: 700; color: var(--stu-gold); }
