@@ -6,11 +6,11 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
-import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
+import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, Rollup, Thanks, Notice, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
 import { SECTIONS, TEMPLATES, templateOf, sheetDims, SOCIAL_FORMATS } from "./templates";
 import {
   THEMES, toWestern, useFontsReady, academicYearLabel, TERM_LABEL, ROLE_DEPT, classRange,
-  STUDIO_ACCESS_KEY, parseAccess, defaultAccess, GRADE_OPTIONS,
+  STUDIO_ACCESS_KEY, parseAccess, defaultAccess, GRADE_OPTIONS, classCode,
 } from "./lib";
 import { canUseTemplate } from "../../lib/formRoles";
 import Identity from "./Identity.jsx";
@@ -102,6 +102,9 @@ export function SheetFor({ tpl, theme, orient, data }) {
   if (tpl.sheet === "seats") return <Seats theme={theme} d={data} />;
   if (tpl.sheet === "sign") return <Sign theme={theme} orient={orient} d={data} />;
   if (tpl.sheet === "badge") return <Badges theme={theme} d={data} />;
+  if (tpl.sheet === "rollup") return <Rollup theme={theme} d={data} />;
+  if (tpl.sheet === "thanks") return <Thanks theme={theme} d={data} />;
+  if (tpl.sheet === "notice") return <Notice theme={theme} d={data} />;
   return <Spines theme={theme} d={data} />;
 }
 
@@ -118,7 +121,8 @@ export default function Studio() {
 
   // المعلم يرى قسم المعلمين، والإداري قسم الإداريين، والمدير والدعم الفني القسمين
   const isAdmin = profile?.role === "admin";
-  const sectionOk = (key) => isSuper || (key === "teacher" ? isTeacher : isAdmin);
+  // «للطالب» للمعلمين والإداريين معًا
+  const sectionOk = (key) => isSuper || (key === "teacher" ? isTeacher : key === "admin" ? isAdmin : isTeacher || isAdmin);
   const sections = SECTIONS.filter((s) => sectionOk(s.key));
   const [section, setSection] = useState(null);
   const current = section ?? sections[0]?.key ?? "teacher";
@@ -250,7 +254,7 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
       const { toBlob } = await import("html-to-image");
       await document.fonts?.ready;
       // المنشور بمقاسه الرقمي الفعلي (1080)، والأوراق بدقة مضاعفة للوضوح
-      const blob = await toBlob(node, { pixelRatio: tpl.sheet === "social" ? 1 : 2, cacheBust: true });
+      const blob = await toBlob(node, { pixelRatio: tpl.exportRatio ?? (tpl.sheet === "social" ? 1 : 2), cacheBust: true });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -366,7 +370,9 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
             </div>
             <p className="text-[11px] leading-relaxed text-faint">
               {printable
-                ? <>{pages.length > 1 && <b className="text-mint-deep">ستُطبع {boardsLabel(pages.length)}، كل لوحة في صفحة. </b>}
+                ? tpl.printSize
+                  ? <>«طباعة / حفظ PDF» يُخرج ملف PDF بالمقاس الحقيقي {size.w / 10} × {size.h / 10} سم — اختر «حفظ بتنسيق PDF» وأرسله للمطبعة. والصورة PNG بدقة 100 نقطة/بوصة. أبقِ المحتوى المهم أعلى من آخر 20 سم (تدخل في قاعدة الستاند).</>
+                  : <>{pages.length > 1 && <b className="text-mint-deep">ستُطبع {pagesLabel(pages.length)}. </b>}
                     في نافذة الطباعة: الورق A4{size.w > size.h ? " بالعرض" : " بالطول"}، والهوامش «بلا»، وفعّل «طباعة الخلفيات».</>
                 : <>الصورة بمقاس {size.w}×{size.h} جاهزة للنشر. الغامقة أنسب لوسائل التواصل.</>}
             </p>
@@ -376,7 +382,10 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
 
       {printable && (
         <PrintPortal id="studio-print" landscape={size.w > size.h}
-          extraCss="#studio-print .sheet { break-after: page; } #studio-print .sheet:last-child { break-after: auto; }">
+          extraCss={`#studio-print .sheet { break-after: page; } #studio-print .sheet:last-child { break-after: auto; }${
+            tpl.printSize
+              // مقاس الطباعة الفعلي (مثل رول أب 85 × 200 سم): الورقة مرسومة 1 بكسل = 1 مم فتُكبَّر إلى المليمتر
+              ? ` @page { size: ${size.w}mm ${size.h}mm; margin: 0; } #studio-print .sheet { zoom: 3.7795; }` : ""}`}>
           {pages.map((p, i) => <SheetFor key={i} tpl={tpl} theme={theme} orient={orient} data={p} />)}
         </PrintPortal>
       )}
@@ -384,8 +393,8 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
   );
 }
 
-// العدد مع المعدود: لوحتان، 3 لوحات، 11 لوحة
-const boardsLabel = (n) => (n === 2 ? "لوحتان" : n >= 3 && n <= 10 ? `${n} لوحات` : `${n} لوحة`);
+// العدد مع المعدود: صفحتان، 3 صفحات، 11 صفحة
+const pagesLabel = (n) => (n === 2 ? "صفحتان" : n >= 3 && n <= 10 ? `${n} صفحات` : `${n} صفحة`);
 
 /* ----------------------------- الحقول ----------------------------- */
 function Field({ f, tpl, data, set, ctx }) {
@@ -417,6 +426,38 @@ function Field({ f, tpl, data, set, ctx }) {
           {f.options.map((o) => (
             <button key={o} className={pill(data[f.name] === o)} onClick={() => set(f.name, o)}>{o}</button>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (f.type === "students") return <StudentsField data={data} set={set} ctx={ctx} />;
+
+  if (f.type === "logo") {
+    // الشعار يُحفظ PNG بشفافيته، وأطول ضلع 1400 بكسل — يكفي لطباعة واضحة على الرول أب
+    const pick = (file) => {
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 1400 / Math.max(img.width, img.height));
+        const cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        set(f.name, cv.toDataURL("image/png"));
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = URL.createObjectURL(file);
+    };
+    return (
+      <div>
+        <label className="text-xs text-muted">{f.label}</label>
+        <div className="mt-1.5 flex items-center gap-2">
+          {data[f.name] && <img src={data[f.name]} alt="" className="h-12 w-12 rounded-sm2 bg-canvas object-contain p-1 ring-1 ring-line" />}
+          <label className="cursor-pointer rounded-pill border border-line bg-white px-4 py-1.5 text-sm text-muted hover:bg-canvas">
+            {data[f.name] ? "تغيير الشعار" : "رفع شعار المناسبة"}
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+          </label>
+          {data[f.name] && <button className="text-xs text-absent" onClick={() => set(f.name, "")}>إزالة</button>}
         </div>
       </div>
     );
@@ -636,6 +677,81 @@ function Field({ f, tpl, data, set, ctx }) {
               {p}
             </button>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ----------------------------- اختيار الطلاب ----------------------------- */
+function StudentsField({ data, set, ctx }) {
+  const all = useMemo(() => (ctx?.students ?? []).map((s) => ({ id: s.student_id, name: s.full_name, grade: s.grade, cls: classCode(s.grade, s.class_no) })), [ctx]);
+  const classes = useMemo(() => [...new Set(all.map((s) => s.cls))].sort((a, b) => Number(a) - Number(b)), [all]);
+  const [fc, setFc] = useState("");
+  const [manual, setManual] = useState({ name: "", cls: "" });
+  const cur = fc || classes[0] || "";
+  const people = data.people ?? [];
+  // المطابقة بمعرّف الطالب (قد يتشابه اسمان في فصل واحد)، وبالاسم والفصل لما أُضيف يدويًا
+  const same = (x, p) => (p.id ? x.id === p.id : !x.id && x.name === p.name && x.cls === p.cls);
+  const has = (p) => people.some((x) => same(x, p));
+  const toggle = (p) => set("people", has(p) ? people.filter((x) => !same(x, p)) : [...people, p]);
+  const inClass = all.filter((s) => s.cls === cur);
+
+  if (data.mode === "class") {
+    return (
+      <div>
+        <label className="text-xs text-muted">الفصل</label>
+        {classes.length ? (
+          <select className="field mt-1 w-full" value={data.cls || ""} onChange={(e) => set("cls", e.target.value)}>
+            <option value="">اختر الفصل</option>
+            {classes.map((c) => <option key={c} value={c}>فصل {c}</option>)}
+          </select>
+        ) : (
+          <input className="field mt-1 w-full" placeholder="رقم الفصل، مثل 101" value={data.cls || ""}
+                 onChange={(e) => set("cls", toWestern(e.target.value).slice(0, 6))} />
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <label className="text-xs text-muted">الطلاب — اختر من الفصل أو أضف اسمًا يدويًا</label>
+      {classes.length > 0 && (
+        <div className="rounded-sm2 bg-canvas p-2">
+          <div className="flex items-center gap-2">
+            <select className="field flex-1" value={cur} onChange={(e) => setFc(e.target.value)}>
+              {classes.map((c) => <option key={c} value={c}>فصل {c}</option>)}
+            </select>
+            <button className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs text-mint-deep"
+                    onClick={() => set("people", [...people, ...inClass.filter((p) => !has(p))])}>تحديد الكل</button>
+          </div>
+          <div className="mt-2 max-h-44 space-y-0.5 overflow-y-auto">
+            {inClass.map((p) => (
+              <label key={p.id ?? p.name} className="flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-sm hover:bg-white">
+                <input type="checkbox" checked={has(p)} onChange={() => toggle(p)} />{p.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-[1fr_76px_auto] gap-1.5">
+        <input className="field" placeholder="اسم الطالب" value={manual.name} onChange={(e) => setManual({ ...manual, name: e.target.value.slice(0, 50) })} />
+        <input className="field num text-center" placeholder="الفصل" value={manual.cls}
+               onChange={(e) => setManual({ ...manual, cls: toWestern(e.target.value).slice(0, 4) })} />
+        <button className="rounded-pill border border-line bg-white px-3 text-xs text-mint-deep disabled:opacity-40" disabled={!manual.name.trim()}
+                onClick={() => { const c = manual.cls.trim(); set("people", [...people, { name: manual.name.trim(), cls: c, grade: Number(c[0]) || null }]); setManual({ name: "", cls: "" }); }}>
+          إضافة
+        </button>
+      </div>
+      {people.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {people.map((p, i) => (
+            <span key={i} className="inline-flex items-center gap-1 rounded-pill bg-mint-tint px-2.5 py-0.5 text-[11px] text-mint-deep">
+              {p.name}{p.cls && <span className="num opacity-70">· {p.cls}</span>}
+              <button className="text-absent" onClick={() => set("people", people.filter((_, j) => j !== i))}>×</button>
+            </span>
+          ))}
+          <button className="text-[11px] text-absent" onClick={() => set("people", [])}>مسح الكل</button>
         </div>
       )}
     </div>

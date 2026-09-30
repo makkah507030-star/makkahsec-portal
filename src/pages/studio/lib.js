@@ -141,7 +141,8 @@ export function bodySize(text, { max = 21, min = 15, from = 320, step = 110 } = 
    والمدير والدعم الفني يصلان لكل القوالب دائمًا. */
 export const STUDIO_ACCESS_KEY = "studio_access";
 
-export const defaultAccess = (tpl) => tpl.sections.map((s) => (s === "teacher" ? "teacher" : "admin"));
+export const defaultAccess = (tpl) => [...new Set(tpl.sections.flatMap((s) =>
+  s === "teacher" ? ["teacher"] : s === "admin" ? ["admin"] : ["teacher", "admin"]))];
 
 export function parseAccess(value) {
   try { const v = JSON.parse(value ?? "{}"); return v && typeof v === "object" ? v : {}; }

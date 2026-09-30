@@ -12,6 +12,7 @@ import { DAY_NAMES, GRADE_NAMES } from "../../lib/schoolTime";
 export const SECTIONS = [
   { key: "teacher", label: "المعلمين" },
   { key: "admin", label: "الإداريين" },
+  { key: "student", label: "للطالب" },
 ];
 
 export const TEMPLATES = [
@@ -363,6 +364,90 @@ export const TEMPLATES = [
     view: (d) => ({ ...d, cards: badgeCards(d, {})[0] }),
     pages: (d, c) => badgeCards(d, c).map((cards) => ({ ...d, cards })),
   },
+  /* ============================ المناسبات والطالب ============================ */
+  {
+    key: "rollup",
+    sections: ["admin", "teacher"],
+    sheet: "rollup",
+    title: "رول أب للمناسبات",
+    desc: "لافتة واقفة بالمقاس المعتمد (85 × 200 سم وغيره) لبداية العام واليوم الوطني ويوم المعلم وأي مناسبة، بشعار المناسبة.",
+    printSize: (d) => ROLLUP_SIZES[d.size] ?? ROLLUP_SIZES["85x200"],
+    exportRatio: 100 / 25.4,            // 1 بكسل = 1 مم، فالصورة 100 نقطة/بوصة
+    presets: {
+      occasion: ["بداية العام الدراسي", "اليوم الوطني السعودي", "يوم التأسيس", "يوم المعلم العالمي",
+                 "اليوم العالمي للغة العربية", "الحفل الختامي", "حفل التخرج", "أسبوع النشاط"],
+      tagline: ["أهلًا وسهلًا بكم", "معًا نصنع المستقبل", "كل عام وأنتم بخير", "شكرًا معلمي"],
+    },
+    fields: [
+      { name: "size", label: "المقاس", type: "opts", options: () => Object.entries(ROLLUP_SIZES).map(([k, v]) => [k, v.label]) },
+      { name: "occasion", label: "المناسبة", max: 40 },
+      { name: "tagline", label: "العبارة", max: 50 },
+      { name: "logo", label: "شعار المناسبة (اختياري — PNG بخلفية شفافة أفضل)", type: "logo" },
+      { name: "date", label: "التاريخ أو الموعد (اختياري)", max: 40 },
+      { name: "sub", label: "سطر إضافي (اختياري)", type: "textarea", rows: 2, max: 120 },
+    ],
+    defaults: (c) => ({ size: "85x200", occasion: "بداية العام الدراسي", tagline: "أهلًا وسهلًا بكم", logo: "", date: c.year, sub: "" }),
+  },
+  {
+    key: "thanks",
+    sections: ["student"],
+    sheet: "thanks",
+    fixedOrient: "landscape",
+    batch: true,
+    title: "بطاقة شكر للطالب",
+    desc: "شكر أو تهنئة أو تحفيز لطالب أو مجموعة أو فصل كامل — بالاسم والصف والفصل، وبطاقة لكل طالب عند الحاجة.",
+    load: loadStudents,
+    presets: {
+      reason: ["لتميّزه الدراسي وتفوّقه", "لانضباطه والتزامه بالحضور", "لمشاركته المتميّزة في الإذاعة المدرسية",
+               "لأخلاقه الرفيعة وتعاونه مع زملائه", "لتحسّن مستواه واجتهاده"],
+    },
+    fields: [
+      { name: "kind", label: "النوع", type: "choice", options: ["شكر وتقدير", "تهنئة", "تحفيز", "تميّز"] },
+      { name: "mode", label: "لمن؟", type: "opts", options: () => RECIPIENT_MODES },
+      { name: "people", label: "الطلاب", type: "students" },
+      { name: "reason", label: "العبارة", type: "textarea", rows: 2, max: 140 },
+      { name: "signer", label: "الموقّع (الاسم)", max: 50 },
+      { name: "signerTitle", label: "الموقّع (الصفة)", max: 50 },
+      { name: "date", label: "التاريخ", max: 20 },
+    ],
+    defaults: (c, section) => ({
+      kind: "شكر وتقدير", mode: "one", people: [], cls: "", reason: "لتميّزه الدراسي وتفوّقه",
+      signer: c.name ? `أ. ${c.name}` : "", signerTitle: c.roleTitle || (c.subject ? `معلم ${c.subject}` : "المعلم"),
+      date: hijriToday(), year: c.year,
+    }),
+    sample: { people: [{ name: "عبدالله محمد سعيد الغامدي", grade: 1, cls: "103" }] },
+    view: (d) => studentPages(d)[0],
+    pages: (d) => studentPages(d),
+  },
+  {
+    key: "notice",
+    sections: ["student"],
+    sheet: "notice",
+    batch: true,
+    title: "إعلان للطلاب",
+    desc: "إعلان أو تنبيه موجّه لطالب أو مجموعة أو فصل كامل — A4 بالاسم والفصل، ونسخة لكل طالب عند الحاجة.",
+    load: loadStudents,
+    fields: [
+      { name: "kind", label: "النوع", type: "choice", options: ["إعلان", "تنبيه", "دعوة", "تذكير"] },
+      { name: "mode", label: "لمن؟", type: "opts", options: () => RECIPIENT_MODES },
+      { name: "people", label: "الطلاب", type: "students" },
+      { name: "title", label: "الموضوع", max: 60 },
+      { name: "body", label: "النص — كل سطر فقرة", type: "textarea", rows: 5, max: 700 },
+      { name: "points", label: "نقاط (اختياري)", type: "list", rows: 4, max: 90 },
+      { name: "signer", label: "الموقّع (الاسم)", max: 50 },
+      { name: "signerTitle", label: "الموقّع (الصفة)", max: 50 },
+      { name: "date", label: "التاريخ", max: 20 },
+    ],
+    defaults: (c) => ({
+      kind: "إعلان", mode: "class", people: [], cls: "", title: "", body: "", points: [],
+      signer: c.name ? `أ. ${c.name}` : "", signerTitle: c.roleTitle || (c.subject ? `معلم ${c.subject}` : "المعلم"),
+      date: hijriToday(), year: c.year,
+    }),
+    sample: { cls: "101", title: "موعد الاختبار القصير", body: "نذكّركم بموعد الاختبار القصير يوم الأحد القادم في الحصة الثالثة.",
+      points: ["إحضار الآلة الحاسبة", "مراجعة الوحدة الثانية"] },
+    view: (d) => studentPages(d)[0],
+    pages: (d) => studentPages(d),
+  },
 ];
 
 export const templateOf = (key) => TEMPLATES.find((t) => t.key === key);
@@ -374,6 +459,7 @@ export const SOCIAL_FORMATS = {
 };
 export function sheetDims(tpl, orient, data) {
   if (tpl.sheet === "social") return SOCIAL_FORMATS[data?.format] ?? SOCIAL_FORMATS.square;
+  if (tpl.sheet === "rollup") return ROLLUP_SIZES[data?.size] ?? ROLLUP_SIZES["85x200"];
   const o = tpl.fixedOrient ?? (tpl.orients ? orient : "portrait");
   return o === "landscape" ? { w: 1123, h: 794 } : { w: 794, h: 1123 };
 }
@@ -446,4 +532,23 @@ function badgeCards(d, c) {
     return out;
   }
   return [[me]];
+}
+
+/* ----------------------------- الرول أب ----------------------------- */
+// المقاسات بالمليمتر؛ الورقة تُرسم 1 بكسل = 1 مم
+export const ROLLUP_SIZES = {
+  "85x200": { label: "85 × 200 سم (الأشيع)", w: 850, h: 2000 },
+  "100x200": { label: "100 × 200 سم", w: 1000, h: 2000 },
+  "120x200": { label: "120 × 200 سم", w: 1200, h: 2000 },
+};
+
+/* ----------------------------- مستندات الطالب ----------------------------- */
+const RECIPIENT_MODES = [["one", "فردي (نسخة لكل طالب)"], ["group", "جماعي (نسخة بالأسماء)"], ["class", "الفصل كاملًا"]];
+
+// نسخة لكل طالب في الوضع الفردي، ونسخة واحدة للمجموعة أو الفصل
+function studentPages(d) {
+  const people = d.people ?? [];
+  if (d.mode === "one") return people.length ? people.map((p) => ({ ...d, to: [p] })) : [{ ...d, to: [] }];
+  if (d.mode === "group") return [{ ...d, to: people }];
+  return [{ ...d, to: [], toClass: d.cls }];
 }

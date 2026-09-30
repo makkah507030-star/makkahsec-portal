@@ -373,3 +373,64 @@
                  font-size: 9.5px; color: var(--stu-text2); border-top: 1px solid var(--stu-div); }
 .stu-badge .ft .site { direction: ltr; font-weight: 700; color: var(--stu-accent); }
 .stu-badge .in::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: #89D7AD; }
+
+/* =====================================================================
+   رول أب المناسبات (1 بكسل = 1 مم) ومستندات الطالب
+   ===================================================================== */
+.stu-rollup .stu-bgbox { inset: 0; border-radius: 0; }
+.stu-rollup.stu-official .stu-bgbox { inset: 24px; border-radius: 10px; }
+.stu-rollup .stu-cube { width: 900px; height: 900px; border-radius: 160px; }
+.stu-rollup .stu-cube.a { left: -520px; bottom: 120px; } .stu-rollup .stu-cube.b { left: -440px; bottom: -260px; }
+.stu-rollup .stu-blob { width: 900px; height: 900px; filter: blur(170px); left: 0; top: 700px; }
+.stu-rollup .stu-progress { height: 14px; }
+.stu-rpage { position: absolute; inset: 0; padding: 110px 85px 230px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.stu-rhead { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.stu-rhead img { width: 150px; height: 150px; object-fit: contain; }
+.stu-rhead img.moe { width: 190px; height: 120px; margin-bottom: 10px; }
+.stu-rhead b { margin-top: 10px; font-size: 44px; font-weight: 700; }
+.stu-rhead span { font-size: 26px; color: var(--stu-text2); }
+.stu-rlogo { margin-top: 90px; width: 100%; height: 560px; display: flex; align-items: center; justify-content: center; }
+.stu-rlogo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.stu-rlogo .ph { width: 420px; height: 420px; border-radius: 50%; border: 5px dashed var(--stu-pillB); color: var(--stu-accent);
+                 display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
+.stu-rlogo .ph svg { width: 170px; height: 170px; stroke-width: 1.4; }
+.stu-rlogo .ph small { font-size: 30px; color: var(--stu-text2); }
+.stu-rollup .stu-h1 { margin-top: 90px; line-height: 1.15; }
+.stu-rollup .stu-official .stu-h1, .stu-rollup.stu-official .stu-h1 { color: #3E6350; }
+.stu-rollup .stu-accent { margin-top: 20px; }
+.stu-rollup .stu-grule { width: 360px; height: 3px; margin: 50px auto 0; }
+.stu-rdate { display: inline-block; border: 2px solid var(--stu-pillB); color: var(--stu-pillT); border-radius: 999px; font-weight: 700; }
+.stu-rollup .stu-rdate { margin-top: 44px; font-size: 34px; padding: 10px 40px; }
+.stu-rsub { margin-top: 36px; font-size: 32px; line-height: 1.6; color: var(--stu-text2); max-width: 640px; }
+/* آخر 20 سم تدخل في قاعدة الستاند: التذييل فوقها */
+.stu-rfoot { margin-top: auto; padding-top: 30px; text-align: center; }
+.stu-rfoot .site { direction: ltr; font-size: 36px; font-weight: 700; color: var(--stu-accent); }
+.stu-dark .stu-rfoot .site { color: #89D7AD; }
+
+/* ——— بطاقة الشكر ——— */
+.stu-thanks .stu-page { padding: 40px 56px 34px; }
+.stu-tbody { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.stu-thanks .stu-tag { align-self: flex-start; font-size: 20px; }
+.stu-tlead { margin-top: 18px; font-size: 22px; color: var(--stu-text2); }
+.stu-rname { margin-top: 6px; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+.stu-rname.wrap { white-space: normal; text-wrap: balance; }
+.stu-official .stu-rname { color: #3E6350; }
+.stu-rmeta { margin-top: 6px; font-size: 20px; font-weight: 600; color: var(--stu-accent); }
+.stu-rgroup { margin-top: 12px; display: grid; gap: 8px 18px; }
+.stu-rgroup div { display: flex; align-items: baseline; gap: 8px; border-bottom: 1px dashed var(--stu-div); padding-bottom: 4px; }
+.stu-rgroup b { font-weight: 700; }
+.stu-rgroup small { font-size: .7em; color: var(--stu-text2); }
+.stu-thanks .stu-grule { margin-top: 22px; }
+.stu-treason { margin-top: 20px; font-size: 26px; font-weight: 600; line-height: 1.6; color: var(--stu-text); max-width: 880px; }
+.stu-tfoot { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+.stu-tfoot .who small { display: block; font-size: 15px; color: var(--stu-text2); }
+.stu-tfoot .who b { display: block; margin-top: 2px; font-size: 22px; font-weight: 700; }
+.stu-thanks .stu-rdate { font-size: 16px; padding: 5px 18px; }
+.stu-tfoot .stamp { width: 96px; height: 96px; border-radius: 50%; border: 1.5px dashed var(--stu-pillB); color: var(--stu-text2);
+                    font-size: 12px; display: flex; align-items: center; justify-content: center; }
+
+/* ——— إعلان للطلاب ——— */
+.stu-nto { margin-top: 22px; display: flex; gap: 14px; align-items: flex-start; }
+.stu-nto .lbl { flex: none; margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--stu-accent); border: 1.5px solid var(--stu-pillB); border-radius: 999px; padding: 2px 12px; }
+.stu-nto .who { flex: 1; min-width: 0; }
+.stu-notice .stu-rmeta { font-size: 16px; }

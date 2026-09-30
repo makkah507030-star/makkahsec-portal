@@ -3,6 +3,7 @@ import iconMint from "../../assets/icon-mint.png";
 import iconWhite from "../../assets/icon-white.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fitSize, fitTitle, bodySize, classCode, classShort, GRADE_OPTIONS } from "./lib";
+import { ROLLUP_SIZES } from "./templates";
 import "./studio.css";
 
 /* =====================================================================
@@ -532,6 +533,124 @@ export function Badges({ theme = "light", d }) {
         ))}
       </div>
       <p className="note">بطاقات 5.4 × 8.6 سم · قصّ على الخط المتقطع</p>
+    </div>
+  );
+}
+
+/* ----------------------------- رول أب المناسبات ----------------------------- */
+export function Rollup({ theme = "light", d }) {
+  const { w, h } = ROLLUP_SIZES[d.size] ?? ROLLUP_SIZES["85x200"];
+  const t = fitTitle(d.occasion, { max: 128, min: 60, width: w - 170 });
+  const a = fitTitle(d.tagline, { max: 64, min: 34, width: w - 170, weight: 700 });
+  return (
+    <div className={`stu stu-rollup stu-${theme} sheet`} style={{ width: w, height: h }}>
+      <Decor />
+      <div className="stu-rpage">
+        <div className="stu-rhead">
+          {theme === "official" && <img src={moeLogo} alt="" className="moe" />}
+          <img src={theme === "dark" ? iconWhite : iconMint} alt="" />
+          <b>مدرسة مكة الثانوية</b>
+          <span>بوابة مكة الثانوية الرقمية</span>
+        </div>
+        <div className="stu-rlogo">
+          {d.logo ? <img src={d.logo} alt="" /> : <div className="ph">{ICONS.star}<small>شعار المناسبة</small></div>}
+        </div>
+        <div className={`stu-h1${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{d.occasion}</div>
+        {d.tagline && <div className={`stu-accent${a.wrap ? " wrap" : ""}`} style={{ fontSize: a.size }}>{d.tagline}</div>}
+        <div className="stu-grule" />
+        {d.date && <span className="stu-rdate">{d.date}</span>}
+        {d.sub && <p className="stu-rsub">{d.sub}</p>}
+        <div className="stu-rfoot"><span className="site">makkahsec.com</span></div>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------- مستندات الطالب ----------------------------- */
+const STAGE = "المرحلة الثانوية";
+const gradeOf = (p) => GRADE_NAMES_S[p.grade] ?? GRADE_NAMES_S[Number(String(p.cls ?? "")[0])] ?? "";
+const GRADE_NAMES_S = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
+
+// المرسَل إليه: طالب، أو أسماء، أو فصل كامل
+function Recipient({ d, big = 64, width = 900 }) {
+  const to = d.to ?? [];
+  if (d.mode === "class" || d.toClass) {
+    const cls = d.toClass || d.cls || "…";
+    return (<>
+      <div className="stu-rname" style={{ fontSize: fitSize(`طلاب الفصل ${cls}`, { max: big, min: 30, width }) }}>طلاب الفصل <span className="num">{cls}</span></div>
+      <div className="stu-rmeta">{[GRADE_NAMES_S[Number(String(cls)[0])], STAGE].filter(Boolean).join(" · ")}</div>
+    </>);
+  }
+  if (to.length <= 1) {
+    const p = to[0] ?? { name: "اسم الطالب", cls: "" };
+    const t = fitTitle(p.name, { max: big, min: 28, width });
+    return (<>
+      <div className={`stu-rname${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{p.name}</div>
+      <div className="stu-rmeta">{[gradeOf(p), p.cls && `فصل ${p.cls}`, STAGE].filter(Boolean).join(" · ")}</div>
+    </>);
+  }
+  const size = to.length > 12 ? 15 : to.length > 6 ? 18 : 22;
+  return (
+    <div className="stu-rgroup" style={{ fontSize: size, gridTemplateColumns: `repeat(${to.length > 8 ? 3 : 2}, 1fr)` }}>
+      {to.map((p, i) => <div key={i}><b>{p.name}</b>{p.cls && <small className="num">{p.cls}</small>}</div>)}
+    </div>
+  );
+}
+
+export function Thanks({ theme = "light", d }) {
+  return (
+    <div className={`stu stu-thanks stu-${theme} stu-landscape sheet`}>
+      <Decor />
+      <div className="stu-page">
+        <Head theme={theme} year={d.year} />
+        <div className="stu-tbody">
+          <span className="stu-tag">{ICONS.star}{d.kind}</span>
+          <p className="stu-tlead">يسرّنا أن نتقدّم بخالص {d.kind === "شكر وتقدير" ? "الشكر والتقدير" : d.kind === "تهنئة" ? "التهنئة" : d.kind === "تحفيز" ? "التحفيز والتشجيع" : "التقدير"} إلى</p>
+          <Recipient d={d} big={62} width={860} />
+          <div className="stu-grule" />
+          {d.reason && <p className="stu-treason">{d.reason}</p>}
+        </div>
+        <div className="stu-tfoot">
+          <div className="who">{d.signerTitle && <small>{d.signerTitle}</small>}<b>{d.signer}</b></div>
+          {d.date && <span className="stu-rdate">{d.date}</span>}
+          <div className="stamp">الختم</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function Notice({ theme = "light", d }) {
+  const points = (d.points ?? []).filter((x) => x?.trim());
+  const paras = String(d.body ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
+  const size = bodySize([d.body, ...points].join(" "), { max: 20, min: 14.5, from: 380, step: 90 });
+  const t = fitTitle(d.title, { max: 42, min: 24, width: 640 });
+  return (
+    <div className={`stu stu-circular stu-notice stu-${theme} stu-portrait sheet`}>
+      <Decor />
+      <div className="stu-page">
+        <Head theme={theme} year={d.year} />
+        <div className="stu-cmeta">
+          <span className="stu-tag">{ICONS.megaphone}{d.kind}</span>
+          <div className="refs">{d.date && <span>التاريخ <b>{d.date}</b></span>}</div>
+        </div>
+        <div className="stu-nto"><span className="lbl">إلى</span><div className="who"><Recipient d={d} big={34} width={560} /></div></div>
+        {d.title && <>
+          <div className="stu-subj">الموضوع</div>
+          <div className={`stu-h1${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{d.title}</div>
+        </>}
+        <div className="stu-grule" />
+        <div className="stu-text" style={{ fontSize: size }}>
+          {paras.map((x, i) => <p key={i}>{x}</p>)}
+          {points.length > 0 && (
+            <ol className="stu-points">{points.map((x, i) => <li key={i}><i className="num">{i + 1}</i><span>{x}</span></li>)}</ol>
+          )}
+        </div>
+        <div className="stu-sign">
+          <div className="who">{d.signerTitle && <small>{d.signerTitle}</small>}<b>{d.signer}</b><span className="line">التوقيع</span></div>
+        </div>
+        <Foot />
+      </div>
     </div>
   );
 }
