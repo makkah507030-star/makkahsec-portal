@@ -1117,8 +1117,10 @@ export default function Forms() {
 
   /* ---------------- القوائم ---------------- */
   const pending = docs.filter((d) => d.status === "pending");
+  // ردود المستفيدين: المُصدِر يرى ما أصدره، والمدير والدعم الفني يرون الردود كلها
   const replies = docs.filter(
-    (d) => (d.status === "replied" || d.status === "awaiting_reply") && d.created_by === session.user.id,
+    (d) => (d.status === "replied" || d.status === "awaiting_reply") &&
+           (d.created_by === session.user.id || isManager),
   );
 
   return (
@@ -1274,6 +1276,9 @@ export default function Forms() {
                   <p className="num mt-0.5 text-xs text-faint">
                     {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
                   </p>
+                  {d.created_by !== session.user.id && d.signature_name && (
+                    <p className="mt-0.5 text-[11px] text-faint">أصدرها: {d.signature_name}</p>
+                  )}
                 </div>
                 <span className={`chip shrink-0 ${STATUS_CHIP[d.status].c}`}>{STATUS_CHIP[d.status].t}</span>
               </div>
