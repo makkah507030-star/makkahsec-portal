@@ -152,3 +152,10 @@ export function downloadBlob(blob, name) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
+/* الصفوف والمسارات كما تُكتب على لوحة الفصل */
+export const GRADE_OPTIONS = ["الأول الثانوي", "الثاني الثانوي", "الثالث الثانوي"];
+// رمز الفصل في المدرسة ثلاثة أرقام: الصف ثم رقم الفصل — 101، 205، 307
+export const classCode = (grade, no) => String((Number(grade) || 1) * 100 + (Number(no) || 1));
+
+export const TRACK_LABEL = { common_year: "السنة الأولى المشتركة", general_track: "المسار العام" };
