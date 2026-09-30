@@ -2,7 +2,7 @@
 import iconMint from "../../assets/icon-mint.png";
 import iconWhite from "../../assets/icon-white.png";
 import moeLogo from "../../assets/moe-logo.png";
-import { fitSize, fitTitle, bodySize, classCode, GRADE_OPTIONS } from "./lib";
+import { fitSize, fitTitle, bodySize, classCode, classShort, GRADE_OPTIONS } from "./lib";
 import "./studio.css";
 
 /* =====================================================================
@@ -328,7 +328,7 @@ export function Social({ theme = "dark", d }) {
 
 /* ----------------------------- لوحة الفصل ----------------------------- */
 export function ClassDoor({ theme = "light", d }) {
-  const n = Math.max(1, Number(d.classNo) || 1);
+  const n = classShort(d.classNo);
   const code = classCode(GRADE_OPTIONS.indexOf(d.grade) + 1 || 1, n);
   return (
     <div className={`stu stu-door stu-class stu-${theme} stu-landscape sheet`}>
@@ -339,7 +339,6 @@ export function ClassDoor({ theme = "light", d }) {
           <div className="stu-cno"><small>فصل</small><b className="num">{code}</b></div>
           <div className="stu-dtext">
             <div className="stu-h1" style={{ fontSize: fitSize(d.grade, { max: 88, min: 50, width: 640 }) }}>{d.grade}</div>
-            <div className="stu-cname">الفصل {ORDINAL[n] ?? n}</div>
             {d.track && <span className="stu-track">{ICONS.cap}{d.track}</span>}
             <div className="stu-grule" />
           </div>

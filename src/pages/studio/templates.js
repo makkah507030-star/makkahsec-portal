@@ -1,5 +1,5 @@
 // src/pages/studio/templates.js
-import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode } from "./lib";
+import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode, classShort } from "./lib";
 
 /* =====================================================================
    قوالب استوديو البوابة: القسم الذي يظهر فيه كل قالب، وحقوله، وتعبئته
@@ -150,7 +150,7 @@ export const TEMPLATES = [
     defaults: (c) => {
       const first = c.classList?.[0];
       return {
-        grade: GRADE_OPTIONS[(first?.grade ?? 1) - 1] ?? GRADE_OPTIONS[0], classNo: first?.class_no ?? 1,
+        grade: GRADE_OPTIONS[(first?.grade ?? 1) - 1] ?? GRADE_OPTIONS[0], classNo: classShort(first?.class_no ?? 1),
         track: TRACK_LABEL[first?.track] ?? "",
         room: "", motto: "", batch: "one", year: c.year,
       };
@@ -160,7 +160,7 @@ export const TEMPLATES = [
     derive: (d, name, c) => {
       if (name !== "grade" && name !== "classNo") return d;
       const g = GRADE_OPTIONS.indexOf(d.grade) + 1;
-      const k = c.classList?.find((x) => x.grade === g && x.class_no === Number(d.classNo));
+      const k = c.classList?.find((x) => x.grade === g && classShort(x.class_no) === classShort(d.classNo));
       return k && TRACK_LABEL[k.track] ? { ...d, track: TRACK_LABEL[k.track] } : d;
     },
     /* صفحات الطباعة: هذا الفصل، أو كل فصول الصف، أو كل الفصول — من جدول الفصول */
@@ -170,7 +170,7 @@ export const TEMPLATES = [
       return c.classList
         .filter((k) => d.batch === "all" || k.grade === g)
         .map((k) => ({
-          ...d, grade: GRADE_OPTIONS[k.grade - 1] ?? d.grade, classNo: k.class_no,
+          ...d, grade: GRADE_OPTIONS[k.grade - 1] ?? d.grade, classNo: classShort(k.class_no),
           track: TRACK_LABEL[k.track] ?? d.track, room: "",
         }));
     },
