@@ -23,6 +23,15 @@ const LOGOS = [
   { src: logoFull, file: "شعار-المدرسة-كامل.png", title: "الشعار الكامل", use: "مع اسم المدرسة وسنة التأسيس 1387 هـ — للأغلفة واللوحات.", bg: "bg-white" },
 ];
 
+const OFFICE = [
+  { href: "/templates/report-template.docx", file: "قالب-تقرير-مدرسة-مكة-الثانوية.docx", ext: "W", bg: "bg-[#2B579A]",
+    title: "قالب تقرير (Word)",
+    desc: "غلاف، وفهرس يتحدّث تلقائيًا، وصفحات بالترويسة الرسمية، واسم التقرير في التذييل يؤخذ من عنوان الغلاف، مع ترقيم الصفحات." },
+  { href: "/templates/presentation-template.pptx", file: "قالب-عرض-مدرسة-مكة-الثانوية.pptx", ext: "P", bg: "bg-[#C43E1C]",
+    title: "قالب عرض (PowerPoint)",
+    desc: "14 شريحة: غلاف، ومحتويات، وفاصل قسم، ونقاط، ومقارنة، وصورة ونص، وأرقام، ورسم بياني، وجدول، وخط زمني، وخطوات، واقتباس، وفريق العمل، وختام." },
+];
+
 const COLORS = [
   { hex: "#3E6350", name: "أخضر الهوية", use: "العناوين والأزرار والترويسة الرسمية", dark: true },
   { hex: "#89D7AD", name: "الأخضر", use: "الشارات والأرقام وعناصر التمييز" },
@@ -115,6 +124,24 @@ export default function Identity() {
             </div>
           ))}
         </div>
+      </Section>
+
+      <Section title="قوالب Word وPowerPoint" desc="للتقارير والعروض خارج الاستوديو — بالخط والألوان والترويسة المعتمدة.">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {OFFICE.map((o) => (
+            <div key={o.href} className="flex items-start gap-3 rounded-card border border-line p-3">
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-sm2 text-sm font-bold text-white ${o.bg}`}>{o.ext}</div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-ink">{o.title}</p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-muted">{o.desc}</p>
+              </div>
+              <a href={o.href} download={o.file} className="btn-primary shrink-0 px-3 py-1.5 text-xs">تنزيل</a>
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] leading-relaxed text-faint">
+          ثبّت خط IBM Plex Sans Arabic (مجاني من Google Fonts) ليظهر القالب كما صُمّم.
+        </p>
       </Section>
 
       <Section title="الألوان" desc="اضغط على اللون لنسخ رمزه.">
