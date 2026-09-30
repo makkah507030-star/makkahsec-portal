@@ -16,6 +16,8 @@ import { canUseTemplate } from "../../lib/formRoles";
 import Identity from "./Identity.jsx";
 import Access from "./Access.jsx";
 import Scaled from "./Scaled.jsx";
+import { StudioAssets } from "./assets";
+import { loadSchoolStamp } from "./data";
 
 /* =====================================================================
    استوديو البوابة — قوالب بهوية المدرسة يملؤها المستخدم ويطبعها أو يصدّرها.
@@ -117,6 +119,10 @@ export default function Studio() {
   const { session, profile, adminRoles, isTeacher, isSuper } = useSession();
   const ctx = useStudioCtx();
   const [access, setAccess] = useState(null);     // بعد الحفظ من «إدارة القوالب» دون إعادة تحميل
+  const [stamp, setStamp] = useState(null);       // ختم المدرسة المعتمد من البوابة
+  useEffect(() => { loadSchoolStamp().then(setStamp); }, []);
+  const assets = useMemo(() => ({ stamp }), [stamp]);
+  const withAssets = (el) => <StudioAssets.Provider value={assets}>{el}</StudioAssets.Provider>;
   useFontsReady();
 
   // المعلم يرى قسم المعلمين، والإداري قسم الإداريين، والمدير والدعم الفني القسمين
@@ -140,7 +146,7 @@ export default function Studio() {
   if (!ctx) return <Loader />;
 
   if (edit) {
-    return <Editor key={edit.id ?? edit.tpl.key} init={edit} ctx={ctx} uid={session?.user?.id} onBack={() => setEdit(null)} />;
+    return withAssets(<Editor key={edit.id ?? edit.tpl.key} init={edit} ctx={ctx} uid={session?.user?.id} onBack={() => setEdit(null)} />);
   }
 
   /* قوالب القسم المسموحة للمستخدم. والقالب الممنوح لدور خارج أقسامه
@@ -148,7 +154,7 @@ export default function Studio() {
   const list = TEMPLATES.filter((t) => allowed(t) &&
     (t.sections.includes(current) || (!t.sections.some(sectionOk) && current === sections[0]?.key)));
 
-  return (
+  return withAssets(
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">استوديو البوابة</h1>

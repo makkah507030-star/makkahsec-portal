@@ -4,6 +4,7 @@ import iconWhite from "../../assets/icon-white.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fitSize, fitTitle, bodySize, classCode, classShort, GRADE_OPTIONS } from "./lib";
 import { ROLLUP_SIZES } from "./templates";
+import { useStudioAssets } from "./assets";
 import "./studio.css";
 
 /* =====================================================================
@@ -56,6 +57,15 @@ export const ICON_LABEL = {
 };
 
 const YEAR_FALLBACK = "";
+
+/* الختم: ختم المدرسة المعتمد إن رُفع في البوابة، وإلا دائرة منقّطة لختم يدوي */
+function Stamp({ show = true }) {
+  const { stamp } = useStudioAssets();
+  if (!show) return null;
+  return stamp
+    ? <div className="stamp img"><img src={stamp} alt="" /></div>
+    : <div className="stamp">الختم</div>;
+}
 
 export function Decor() {
   return (
@@ -275,7 +285,7 @@ export function Circular({ theme = "light", d }) {
             <b>{d.signer}</b>
             <span className="line">التوقيع</span>
           </div>
-          <div className="stamp">الختم</div>
+          <Stamp show={d.stamp !== "off"} />
         </div>
         <Foot />
       </div>
@@ -613,7 +623,7 @@ export function Thanks({ theme = "light", d }) {
         <div className="stu-tfoot">
           <div className="who">{d.signerTitle && <small>{d.signerTitle}</small>}<b>{d.signer}</b></div>
           {d.date && <span className="stu-rdate">{d.date}</span>}
-          <div className="stamp">الختم</div>
+          <Stamp show={d.stamp !== "off"} />
         </div>
       </div>
     </div>
@@ -648,6 +658,7 @@ export function Notice({ theme = "light", d }) {
         </div>
         <div className="stu-sign">
           <div className="who">{d.signerTitle && <small>{d.signerTitle}</small>}<b>{d.signer}</b><span className="line">التوقيع</span></div>
+          <Stamp show={d.stamp === "on"} />
         </div>
         <Foot />
       </div>

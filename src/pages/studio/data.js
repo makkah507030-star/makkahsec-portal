@@ -57,3 +57,22 @@ export async function loadStaff() {
     .select("full_name, specialization").eq("is_active", true).order("full_name");
   return { staff: data ?? [] };
 }
+
+/* ختم المدرسة المعتمد (school_assets.stamp في مخزن form-assets) — يُحوَّل صورةً
+   داخل الصفحة (data URL) ليُصدَّر مع التصميم دون قيود النطاقات. null إن لم يُرفع. */
+let stampCache = null;
+export function loadSchoolStamp() {
+  stampCache ??= (async () => {
+    try {
+      const { data } = await supabase.from("school_assets").select("path").eq("key", "stamp").maybeSingle();
+      if (!data?.path) return null;
+      const { data: s } = await supabase.storage.from("form-assets").createSignedUrl(data.path, 3600);
+      if (!s?.signedUrl) return null;
+      try {
+        const blob = await (await fetch(s.signedUrl)).blob();
+        return await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ok(s.signedUrl); r.readAsDataURL(blob); });
+      } catch { return s.signedUrl; }
+    } catch { return null; }
+  })();
+  return stampCache;
+}
