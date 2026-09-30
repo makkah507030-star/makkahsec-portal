@@ -153,7 +153,7 @@ export default function DocumentView() {
     setSending(false);
     if (error) { setMsg({ ok: false, text: `تعذّر الإرسال: ${error.message}` }); return; }
     setDoc((d) => ({ ...d, status: "replied", data: { ...d.data, ...reply } }));
-    setMsg({ ok: true, text: "أُرسل ردّك. ستصلك النتيجة بعد مراجعته." });
+    setMsg({ ok: true, text: "أُرسلت إفادتك. ستصلك النتيجة بعد مراجعتها." });
   };
   const printable = doc.status === "issued" || doc.status === "approved";
   const landscape = template.orientation === "landscape";
@@ -177,7 +177,7 @@ export default function DocumentView() {
 
       {doc.decision_note && myTurn && (
         <div className="no-print rounded-card border border-warning/40 bg-warning/5 px-4 py-3">
-          <p className="text-sm font-semibold text-warning">ملاحظة على ردّك السابق</p>
+          <p className="text-sm font-semibold text-warning">ملاحظة على إفادتك السابقة</p>
           <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-ink">{doc.decision_note}</p>
         </div>
       )}
@@ -185,7 +185,7 @@ export default function DocumentView() {
       {myTurn && (
         <section className="no-print card space-y-3 p-4">
           <div>
-            <p className="text-sm font-semibold text-ink">مطلوب ردّك</p>
+            <p className="text-sm font-semibold text-ink">مطلوب إفادتك</p>
             <p className="mt-0.5 text-xs text-muted">
               اكتب إفادتك ثم أرسلها، وستصل مُصدِر النموذج لمراجعتها.
             </p>
@@ -262,7 +262,7 @@ export default function DocumentView() {
           )}
 
           <button className="btn-primary w-full" onClick={sendReply} disabled={sending}>
-            {sending ? "جارٍ الإرسال…" : "إرسال الرد"}
+            {sending ? "جارٍ الإرسال…" : "إرسال الإفادة"}
           </button>
 
           {msg && (
@@ -276,7 +276,7 @@ export default function DocumentView() {
 
       {doc.status === "replied" && (
         <p className="no-print rounded-card bg-mint-tint px-4 py-3 text-sm text-mint-deep">
-          وصل ردّك وهو قيد المراجعة.
+          وصلت إفادتك وهي قيد المراجعة.
         </p>
       )}
 
