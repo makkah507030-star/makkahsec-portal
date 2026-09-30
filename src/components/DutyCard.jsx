@@ -10,6 +10,8 @@ import { todayISO, todayDow, DAY_NAMES } from "../lib/schoolTime";
      (المعلمون المشرفون والمشرف المتابع) — يراهم الجميع.
    • شريط شخصي: مناوبتي القادمة وأيام إشرافي.
    • في يوم مناوبة المنسوب أو إشرافه يظهر تنبيه بارز أعلى الصندوق.
+   • personal (حساب المعلم): ما يخصّه فقط — التنبيه، ومناوبته القادمة وأيام
+     إشرافه، بلا قوائم الجميع. ولا يظهر الصندوق إن لم تكن له مهمة.
    ===================================================================== */
 
 const fmtG = (iso) => {
@@ -66,7 +68,7 @@ function Block({ icon, title, hint, children }) {
   );
 }
 
-export default function DutyCard() {
+export default function DutyCard({ personal = false }) {
   const { session } = useSession();
   const [data, setData] = useState(null);
   const dow = todayDow();
@@ -132,11 +134,16 @@ export default function DutyCard() {
     .filter(Boolean);
 
   // لا يظهر الصندوق إن لم يكن هناك ما يُعرض إطلاقًا
-  if (!data.next && !supDays.length && !todayDuty.length && !data.supToday.length) return null;
+  if (!data.next && !supDays.length &&
+      (personal || (!todayDuty.length && !data.supToday.length))) return null;
 
   const inDays = data.next ? daysBetween(data.next.duty_date) : null;
   const partner = myDuty
     ? todayDuty.filter((p) => !p.me).map((p) => p.name).join(" و ")
+    : "";
+  // المشرف المتابع في يوم إشرافي — يظهر في التنبيه للمعلم
+  const follower = mySupToday && !followers.some((r) => r.user_id === uid)
+    ? followers.map((r) => r.person_name).join(" و ")
     : "";
 
   return (
@@ -180,12 +187,15 @@ export default function DutyCard() {
                   ? (partner ? `المناوبة مع: ${partner}` : "تابع الطلاب في بداية اليوم ونهايته.")
                   : "تابع مواقع الإشراف في الفسحة وبداية اليوم."}
               </p>
+              {personal && follower && (
+                <p className="mt-0.5 text-sm leading-relaxed text-muted">المشرف المتابع: {follower}</p>
+              )}
             </div>
           </div>
         )}
 
         {/* الإشراف اليومي حسب الجدول — شريط بعرض الصندوق */}
-        {dow > 0 && data.supToday.length > 0 && (
+        {!personal && dow > 0 && data.supToday.length > 0 && (
           <Block icon={EYE} title="الإشراف اليومي" hint="حسب جدول الإشراف">
             <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
               {teachers.length > 0 && (
@@ -215,8 +225,8 @@ export default function DutyCard() {
         )}
 
         {/* مناوبو اليوم + الشريط الشخصي */}
-        <div className="grid gap-3 md:grid-cols-2">
-          {dow > 0 && (
+        <div className={`grid gap-3 ${personal ? "sm:grid-cols-2" : "md:grid-cols-2"}`}>
+          {!personal && dow > 0 && (
             <Block icon={SHIELD} title="مناوبو اليوم" hint={data.today?.note || null}>
               {todayDuty.length ? (
                 <div className="flex flex-wrap gap-1.5">
@@ -230,7 +240,7 @@ export default function DutyCard() {
 
           {/* الشريط الشخصي */}
           {(data.next || supDays.length > 0) && (
-            <div className="grid gap-2">
+            <div className={personal ? "contents" : "grid gap-2"}>
               {data.next && (
                 <div className="flex items-center gap-3 rounded-xl2 border border-mint-light/70 bg-white/80 px-3.5 py-3">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-sm2 bg-mint-tint text-center leading-none text-mint-deep">

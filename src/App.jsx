@@ -217,7 +217,7 @@ export default function App() {
 
   const teacherHome = hiddenTabs.has("attendance") ? (
     <div className="space-y-5">
-      <DutyCard />
+      <DutyCard personal />
       <div className="card px-6 py-12 text-center">
         <p className="font-semibold text-ink">تبويب الحضور والغياب اليومي غير متاح لحسابك</p>
         <p className="mt-1.5 text-sm text-muted">اختر تبويبًا آخر من القائمة الجانبية.</p>
@@ -225,7 +225,7 @@ export default function App() {
     </div>
   ) : (
     <div className="space-y-5">
-      <DutyCard />
+      <DutyCard personal />
       <ExamCountdown />
       <Attendance />
     </div>
