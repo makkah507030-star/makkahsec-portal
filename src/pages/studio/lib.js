@@ -28,13 +28,28 @@ export function fitSize(text, { max, min, width, weight = 700 }) {
   return Math.max(min, Math.floor((max * width) / w));
 }
 
+/* عدد الأسطر عند التفاف النص بكلمات كاملة على عرض معيّن */
+function linesAt(text, size, width, weight) {
+  ctx ??= document.createElement("canvas").getContext("2d");
+  ctx.font = `${weight} ${size}px "IBM Plex Sans Arabic"`;
+  const space = ctx.measureText(" ").width;
+  let lines = 1, cur = 0;
+  for (const w of String(text).split(/\s+/).filter(Boolean)) {
+    const ww = ctx.measureText(w).width;
+    if (cur && cur + space + ww > width) { lines += 1; cur = ww; } else cur += (cur ? space : 0) + ww;
+  }
+  return lines;
+}
+
 /* عنوان بسطر أو سطرين: يبقى سطرًا ما دام حجمه لا يقل عن 70% من الأقصى،
-   وإلا ينقسم على سطرين بحجم أكبر من تصغيره في سطر واحد. */
+   وإلا ينقسم على سطرين بأكبر حجم يتسع فيه بكلمات كاملة — فلا يصير ثلاثة أسطر. */
 export function fitTitle(text, { max, min, width, weight = 700 }) {
   const one = fitSize(text, { max, min: 1, width, weight });
   if (one >= max * 0.7) return { size: Math.max(one, min), wrap: false };
-  const two = fitSize(text, { max, min: 1, width: width * 1.8, weight });
-  return { size: Math.max(min, Math.min(max, two)), wrap: true };
+  for (let s = max; s > min; s -= 2) {
+    if (linesAt(text, s, width, weight) <= 2) return { size: s, wrap: true };
+  }
+  return { size: min, wrap: true };
 }
 
 // يعيد الرسم بعد تحميل الخط، لأن القياس قبله يكون بخط بديل

@@ -73,7 +73,7 @@
 .stu-official .stu-tag { background: transparent; color: #9A7B22; border: 1px solid #B8912F88; font-weight: 600; }
 .stu-h1 { margin-top: 14px; font-weight: 700; line-height: 1.12; white-space: nowrap; }
 .stu-official .stu-h1 { color: #3E6350; }
-.stu-h1.wrap, .stu-sub.wrap { white-space: normal; line-height: 1.2; }
+.stu-h1.wrap, .stu-sub.wrap { white-space: normal; line-height: 1.2; text-wrap: balance; }
 .stu-hero, .stu-mid { min-width: 0; overflow: hidden; }
 .stu-sub { display: block; font-weight: 700; color: var(--stu-accent); margin-top: 10px; line-height: 1.25; white-space: nowrap; }
 .stu-official .stu-sub { color: #6B6B6B; font-weight: 500; }
@@ -239,7 +239,7 @@
 .stu-social .stu-tag svg { width: 28px; height: 28px; }
 .stu-social .stu-h1 { margin-top: 28px; line-height: 1.1; }
 .stu-accent { font-weight: 700; color: #89D7AD; line-height: 1.15; margin-top: 8px; white-space: nowrap; }
-.stu-accent.wrap { white-space: normal; }
+.stu-accent.wrap { white-space: normal; text-wrap: balance; }
 .stu-light .stu-accent { color: #3E8A62; }
 .stu-official .stu-accent { color: #3E6350; }
 .stu-slead { margin-top: 30px; font-size: 32px; line-height: 1.7; color: var(--stu-text2); max-width: 900px; }
