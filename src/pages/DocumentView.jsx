@@ -7,6 +7,7 @@ import DateField, { TimeField } from "../components/DateField.jsx";
 import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
+import { ReplyFilesEditor, ReplyFilesList, REPLY_BUCKET } from "../components/ReplyFiles.jsx";
 
 /* =====================================================================
    عرض مستند صادر لصاحبه: الطالب أو المنسوب أو ولي أمر الطالب،
@@ -76,6 +77,23 @@ export default function DocumentView() {
       }
       setDoc(data);
       setReply(data.data ?? {});
+
+      // مرفقات رُفعت ثم غادر صاحبها قبل الإرسال — تبقى في المخزن فنستعيدها
+      if (data.status === "awaiting_reply") {
+        const { data: objs } = await supabase.storage.from(REPLY_BUCKET).list(data.id);
+        const known = new Set((data.data?.reply_files ?? []).map((f) => f.path));
+        const extra = (objs ?? [])
+          .filter((o) => o.name && !known.has(`${data.id}/${o.name}`))
+          .map((o, i) => ({
+            path: `${data.id}/${o.name}`,
+            name: `مرفق ${known.size + i + 1}${/\.pdf$/i.test(o.name) ? ".pdf" : ""}`,
+            type: o.metadata?.mimetype ?? "",
+            size: o.metadata?.size ?? 0,
+          }));
+        if (extra.length) {
+          setReply((r) => ({ ...r, reply_files: [...(r.reply_files ?? []), ...extra] }));
+        }
+      }
 
       // توقيع المستخدم الحالي — ليُرفق بردّه إن رغب
       const uid = (await supabase.auth.getUser()).data?.user?.id;
@@ -229,6 +247,9 @@ export default function DocumentView() {
             </div>
           ))}
 
+          <ReplyFilesEditor docId={doc.id} files={reply.reply_files ?? []}
+                            onChange={(f) => setReply((r) => ({ ...r, reply_files: f }))} />
+
           {/* التوقيع الإلكتروني على الرد — ولي الأمر يقرّ بلا توقيع */}
           {!isGuardianReply && (
             <div className="rounded-sm2 border border-line p-3">
@@ -278,6 +299,12 @@ export default function DocumentView() {
         <p className="no-print rounded-card bg-mint-tint px-4 py-3 text-sm text-mint-deep">
           وصلت إفادتك وهي قيد المراجعة.
         </p>
+      )}
+
+      {!myTurn && doc.data?.reply_files?.length > 0 && (
+        <div className="no-print card p-4">
+          <ReplyFilesList files={doc.data.reply_files} />
+        </div>
       )}
 
       <div className="no-print">
