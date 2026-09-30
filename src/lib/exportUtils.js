@@ -645,6 +645,8 @@ export async function printReport(opts) {
   }
   #out .pg:last-child { page-break-after: auto; break-after: auto; }
   #out .pgbody { overflow: hidden; padding: 0 2mm; }
+  #out .pgbody.cover-pg { display: flex; flex-direction: column; }
+  #out .pgbody.cover-pg > .cover-body { flex: 1; }
   #out .pg .head { margin-bottom: 8px; }
   #out .pg .meta { margin-bottom: 8px; }
   #out .pgfoot {
@@ -663,11 +665,14 @@ export async function printReport(opts) {
        شريط العنوان والتاريخ والرابط في هامش الصفحة، فلا يجد له مكانًا */
     @page { margin: 0; ${landscape ? "size: A4 landscape;" : "size: A4 portrait;"} }
     #out .pg { box-sizing: content-box; padding: 10mm 9mm; }
+    /* التذييل يُحسب من حافة الحشوة، فنعيده داخل منطقة المحتوى لا على حافة الورقة */
+    #out .pgfoot { bottom: 10mm; left: 9mm; right: 9mm; }
     /* iPhone/iPad (Safari) يتجاهل الهامش الصفري ويفرض هامشه، فنُبقي له
        الهامش السابق بلا حشوة حتى لا تفيض الورقة إلى صفحة ثانية */
     @supports (-webkit-touch-callout: none) {
       @page { margin: 10mm; }
       #out .pg { padding: 0; }
+      #out .pgfoot { bottom: 0; left: 0; right: 0; }
     }
   }`;
 
@@ -699,6 +704,7 @@ export async function printReport(opts) {
       secs.forEach(function(sec){
         if(sec.classList.contains('cover')){
           var pg = newPage();
+          pg._b.classList.add('cover-pg');   /* سطر الإصدار أسفل الورقة لا تحت المحتوى */
           [].slice.call(sec.children).forEach(function(ch){ pg._b.appendChild(ch); });
           return;
         }
