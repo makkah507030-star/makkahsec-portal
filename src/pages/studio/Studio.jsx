@@ -6,7 +6,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
-import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
+import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
 import { SECTIONS, TEMPLATES, templateOf, sheetDims, SOCIAL_FORMATS } from "./templates";
 import {
   THEMES, toWestern, useFontsReady, academicYearLabel, TERM_LABEL, ROLE_DEPT, classRange,
@@ -44,9 +44,10 @@ function useStudioCtx() {
       const term = Number(m.active_term ?? 1);
 
       // المعلم: مادته الأكثر حصصًا وفصوله مجمّعة بالصف
-      let subject = "", classes = "";
+      let subject = "", classes = "", teacherId = null;
       if (isTeacher) {
         const { data: t } = await supabase.from("teachers").select("id").eq("user_id", uid).maybeSingle();
+        teacherId = t?.id ?? null;
         if (t) {
           const { data: sch } = await supabase.from("schedule")
             .select("classes(class_no, grade), subjects(name)")
@@ -80,6 +81,7 @@ function useStudioCtx() {
         subject, classes, dept, deptCode,
         roleTitle: ADMIN_ROLE_LABEL[role] ?? "",
         access: parseAccess(m[STUDIO_ACCESS_KEY]),
+        activeYear: m.active_year ?? "", activeTerm: term, teacherId,
         classList,
       });
     })();
@@ -96,6 +98,10 @@ export function SheetFor({ tpl, theme, orient, data }) {
   if (tpl.sheet === "door") return <DoorSign theme={theme} d={data} />;
   if (tpl.sheet === "social") return <Social theme={theme} d={data} />;
   if (tpl.sheet === "classdoor") return <ClassDoor theme={theme} d={data} />;
+  if (tpl.sheet === "timetable") return <Timetable theme={theme} d={data} />;
+  if (tpl.sheet === "seats") return <Seats theme={theme} d={data} />;
+  if (tpl.sheet === "sign") return <Sign theme={theme} orient={orient} d={data} />;
+  if (tpl.sheet === "badge") return <Badges theme={theme} d={data} />;
   return <Spines theme={theme} d={data} />;
 }
 
@@ -125,7 +131,7 @@ export default function Studio() {
 
   const open = (tpl, saved) => setEdit(saved
     ? { tpl, theme: saved.theme, orient: saved.orient, data: saved.data, id: saved.id, section: saved.section }
-    : { tpl, theme: tpl.defaultTheme ?? "light", orient: "portrait", data: tpl.defaults(ctx ?? {}, current), id: null, section: current });
+    : { tpl, theme: tpl.defaultTheme ?? "light", orient: tpl.defaultOrient ?? "portrait", data: tpl.defaults(ctx ?? {}, current), id: null, section: current });
 
   if (!ctx) return <Loader />;
 
@@ -197,19 +203,31 @@ export default function Studio() {
 }
 
 /* ----------------------------- المحرّر ----------------------------- */
-function Editor({ init, ctx, uid, onBack }) {
+function Editor({ init, ctx: baseCtx, uid, onBack }) {
   const { tpl } = init;
   const [theme, setTheme] = useState(init.theme);
   const [orient, setOrient] = useState(init.orient);
   const [data, setData] = useState(init.data);
   const [id, setId] = useState(init.id);
   const [busy, setBusy] = useState(false);
+  // بيانات إضافية يحتاجها القالب (جدول الحصص، الطلاب، المنسوبون) تُحمَّل عند فتحه
+  const [extra, setExtra] = useState(tpl.load ? null : {});
+  useEffect(() => {
+    if (!tpl.load) return;
+    let alive = true;
+    tpl.load(baseCtx ?? {}).then((x) => { if (alive) setExtra(x ?? {}); })
+      .catch(() => { if (alive) setExtra({}); });
+    return () => { alive = false; };
+  }, [tpl, baseCtx]);
+  const ctx = useMemo(() => ({ ...(baseCtx ?? {}), ...(extra ?? {}) }), [baseCtx, extra]);
   const [msg, setMsg] = useNotice(null);
   const sheetRef = useRef(null);
   const size = sheetDims(tpl, orient, data);
   const printable = tpl.print !== false;
   // قالب الدفعة (لوحات الفصول) يطبع صفحة لكل فصل
-  const pages = tpl.pages ? tpl.pages(data, ctx ?? {}) : [data];
+  const pages = tpl.pages ? tpl.pages(data, ctx) : [data];
+  // المعاينة: ما يُعرض فعلًا للاختيار الحالي (مثل جدول الفصل المختار)
+  const view = tpl.view ? tpl.view(data, ctx) : data;
 
   const set = (name, v) => setData((d) => {
     const next = { ...d, [name]: v };
@@ -285,7 +303,9 @@ function Editor({ init, ctx, uid, onBack }) {
         {/* المعاينة */}
         <div className="order-2 lg:sticky lg:top-4 lg:order-1">
           <Scaled w={size.w} h={size.h} innerRef={sheetRef}>
-            <SheetFor tpl={tpl} theme={theme} orient={orient} data={data} />
+            {extra
+              ? <SheetFor tpl={tpl} theme={theme} orient={orient} data={view} />
+              : <div className="flex items-center justify-center" style={{ height: size.h }}><Loader /></div>}
           </Scaled>
         </div>
 
@@ -397,6 +417,68 @@ function Field({ f, tpl, data, set, ctx }) {
           {f.options.map((o) => (
             <button key={o} className={pill(data[f.name] === o)} onClick={() => set(f.name, o)}>{o}</button>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (f.type === "select") {
+    const opts = f.options(data, ctx ?? {});
+    return (
+      <div>
+        <label className="text-xs text-muted">{f.label}</label>
+        <select className="field mt-1 w-full" value={data[f.name] || opts[0]?.[0] || ""}
+                onChange={(e) => set(f.name, e.target.value)}>
+          {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+        {!opts.length && <p className="mt-1 text-[11px] text-muted">لا توجد بيانات بعد في البوابة لهذا الخيار.</p>}
+      </div>
+    );
+  }
+
+  if (f.type === "opts") {
+    const opts = f.options(data, ctx ?? {});
+    return (
+      <div>
+        <label className="text-xs text-muted">{f.label}</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {opts.map(([v, l]) => (
+            <button key={v} className={pill((data[f.name] ?? "") === v)} onClick={() => set(f.name, v)}>{l}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (f.type === "photo") {
+    // تُصغَّر الصورة إلى 360 بكسل مربعًا وتُحفظ مع التصميم — لا تُرفع لأي خادم
+    const pick = (file) => {
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        const n = 360, cv = document.createElement("canvas");
+        cv.width = cv.height = n;
+        const k = Math.min(img.width, img.height);
+        const g = cv.getContext("2d");
+        g.fillStyle = "#fff"; g.fillRect(0, 0, n, n);   // الخلفية الشفافة تصير بيضاء لا سوداء
+        g.drawImage(img, (img.width - k) / 2, (img.height - k) / 2, k, k, 0, 0, n, n);
+        set(f.name, cv.toDataURL("image/jpeg", 0.85));
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = URL.createObjectURL(file);
+    };
+    return (
+      <div>
+        <label className="text-xs text-muted">{f.label}</label>
+        <div className="mt-1.5 flex items-center gap-2">
+          {data[f.name] && <img src={data[f.name]} alt="" className="h-12 w-12 rounded-full object-cover ring-1 ring-line" />}
+          <label className="cursor-pointer rounded-pill border border-line bg-white px-4 py-1.5 text-sm text-muted hover:bg-canvas">
+            {data[f.name] ? "تغيير الصورة" : "اختيار صورة"}
+            <input type="file" accept="image/*" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
+          </label>
+          {data[f.name] && (
+            <button className="text-xs text-absent" onClick={() => set(f.name, "")}>إزالة</button>
+          )}
         </div>
       </div>
     );

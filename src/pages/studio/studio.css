@@ -271,3 +271,105 @@
 .stu-class .stu-track { margin-top: 26px; }
 .stu-class .stu-grule { margin-top: 22px; }
 .stu-motto { font-size: 22px; font-weight: 700; color: var(--stu-gold); }
+
+/* =====================================================================
+   المرحلة الثالثة: جدول الحصص، وأرقام الجلوس، واللافتة، وبطاقة التعريف
+   ===================================================================== */
+
+/* ——— جدول الحصص ——— */
+.stu-tt .stu-page { padding: 32px 40px 26px; }
+.stu-tthead { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 18px; }
+.stu-tt .stu-h1 { margin-top: 0; }
+.stu-ttsub { margin-top: 4px; font-size: 16px; font-weight: 600; color: var(--stu-accent); max-width: 700px;
+             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stu-grid { flex: 1; margin-top: 16px; display: grid; grid-template-rows: 54px repeat(5, 1fr); gap: 6px; min-height: 0; }
+.stu-corner { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--stu-text2); font-weight: 600; }
+.stu-ph { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+          background: #89D7AD; color: #16301F; border-radius: 12px; }
+.stu-official .stu-ph { background: #3E6350; color: #fff; }
+.stu-ph b { font-size: 20px; font-weight: 700; line-height: 1; }
+.stu-ph small { font-size: 10.5px; font-weight: 600; opacity: .8; }
+.stu-brk { display: flex; align-items: center; justify-content: center; border-radius: 12px;
+           background: repeating-linear-gradient(135deg, var(--stu-div) 0 6px, transparent 6px 12px); border: 1px dashed var(--stu-cardB); }
+.stu-brk span { writing-mode: vertical-rl; font-size: 13px; font-weight: 700; color: var(--stu-gold); letter-spacing: 1px; }
+.stu-day { display: flex; align-items: center; justify-content: center; border-radius: 12px; font-size: 17px; font-weight: 700;
+           border: 1.5px solid var(--stu-cardB); background: var(--stu-card); color: var(--stu-accent); }
+.stu-official .stu-day { color: #3E6350; }
+.stu-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center;
+            border-radius: 12px; border: 1px solid var(--stu-cardB); background: var(--stu-card); padding: 4px 7px; overflow: hidden; }
+.stu-cell b { font-weight: 700; line-height: 1.2; white-space: nowrap; }
+.stu-cell small { color: var(--stu-text2); font-weight: 500; white-space: nowrap; }
+.stu-cell.empty { background: transparent; border-style: dashed; }
+.stu-cell i { font-style: normal; color: var(--stu-text2); opacity: .5; }
+.stu-ttfoot { margin-top: 14px; display: flex; justify-content: space-between; font-size: 13px; color: var(--stu-text2); }
+.stu-ttfoot .site { direction: ltr; font-weight: 700; color: var(--stu-accent); }
+
+/* ——— أرقام الجلوس: 14 ملصقًا (2 × 7) بخطوط قص ——— */
+.stu-seats { background: #fff; }
+.stu-seats .grid { position: absolute; top: 34px; left: 34px; right: 34px; display: grid; grid-template-columns: 1fr 1fr; }
+.stu-seat { height: 146px; border: 1px dashed #BDBDBD; margin: -0.5px; padding: 7px; }
+.stu-seat .in { height: 100%; display: flex; gap: 12px; align-items: stretch; border-radius: 12px; background: var(--stu-bg); padding: 8px; overflow: hidden; }
+.stu-official .stu-seat .in { background: #fff; border: 1.5px solid #3E6350; border-radius: 6px; }
+.stu-seat .no { flex: none; width: 118px; border-radius: 10px; background: #89D7AD; color: #16301F;
+                display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.stu-official .stu-seat .no { background: #3E6350; color: #fff; }
+.stu-seat .no small { font-size: 10.5px; font-weight: 600; }
+.stu-seat .no b { font-size: 38px; font-weight: 700; line-height: 1.05; }
+.stu-seat .tx { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+.stu-seat .top { display: flex; align-items: center; gap: 6px; color: var(--stu-gold); font-weight: 600; white-space: nowrap; overflow: hidden; }
+.stu-seat .top img { width: 20px; height: 20px; object-fit: contain; }
+.stu-seat .nm { font-weight: 700; line-height: 1.25; }
+.stu-seat .tags { display: flex; gap: 6px; }
+.stu-seat .tags span { font-size: 12px; color: var(--stu-text2); border: 1px solid var(--stu-cardB); background: var(--stu-card); border-radius: 999px; padding: 2px 10px; }
+.stu-seat .tags b { color: var(--stu-text); font-weight: 700; }
+.stu-seat.empty { border-color: transparent; }
+.stu-seats .note, .stu-badges .note { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 11px; color: #9A9A9A; }
+
+/* ——— اللافتة الإرشادية (stu-signage: منفصل عن stu-sign توقيع التعميم) ——— */
+.stu-sbody { flex: 1; display: flex; align-items: center; justify-content: center; min-height: 0; }
+.stu-sbody.row { gap: 44px; }
+.stu-sbody.col { flex-direction: column; gap: 30px; text-align: center; }
+.stu-sicon { flex: none; width: 230px; height: 230px; border-radius: 52px; background: #89D7AD; color: #16301F;
+             display: flex; align-items: center; justify-content: center; box-shadow: 0 24px 50px -24px rgba(62,99,80,.55); }
+.stu-official .stu-sicon { background: #3E6350; color: #fff; box-shadow: none; border-radius: 28px; }
+.stu-sicon svg { width: 130px; height: 130px; stroke-width: 1.7; }
+.stu-stext { min-width: 0; }
+.stu-signage .stu-h1 { margin-top: 0; }
+.stu-ssub { margin-top: 12px; font-size: 26px; font-weight: 600; color: var(--stu-accent); }
+.stu-arrow { flex: none; width: 170px; height: 170px; color: var(--stu-accent); }
+.stu-official .stu-arrow { color: #3E6350; }
+.stu-signage.warn .stu-sicon { background: #A23B3B; color: #fff; box-shadow: 0 24px 50px -24px rgba(162,59,59,.55); }
+.stu-signage.warn .stu-h1 { color: #A23B3B; }
+.stu-signage.stu-dark.warn .stu-h1 { color: #F2A7A7; }
+.stu-signage.warn .stu-arrow, .stu-signage.warn .stu-ssub { color: #A23B3B; }
+
+/* ——— بطاقات التعريف: 9 بطاقات 54 × 86 مم ——— */
+.stu-badges { background: #fff; }
+.stu-badges .grid { position: absolute; top: 58px; left: 0; right: 0; display: grid; grid-template-columns: repeat(3, 204px);
+                    grid-auto-rows: 325px; justify-content: center; gap: 0; }
+.stu-badge { border: 1px dashed #BDBDBD; margin: -0.5px; padding: 6px; }
+.stu-badge.empty { border-color: transparent; }
+.stu-badge .in { position: relative; height: 100%; border-radius: 14px; overflow: hidden; background: var(--stu-bg);
+                 display: flex; flex-direction: column; align-items: center; text-align: center; }
+.stu-official .stu-badge .in { background: #fff; border: 1.5px solid #3E6350; }
+.stu-badge .band { width: 100%; height: 100px; flex: none; background: linear-gradient(160deg, #284836, #12261c); color: #fff;
+                   display: flex; flex-direction: column; align-items: center; padding-top: 12px; }
+.stu-badge .sch { display: flex; align-items: center; gap: 6px; }
+.stu-dark .stu-badge .band { background: linear-gradient(160deg, #3E6350, #284836); }
+.stu-official .stu-badge .band { background: #3E6350; }
+.stu-badge .slot { width: 40px; height: 7px; border-radius: 4px; border: 1.5px solid rgba(255,255,255,.55); margin-bottom: 8px; }
+.stu-badge .band img { width: 24px; height: 24px; object-fit: contain; }
+.stu-badge .band b { font-size: 12.5px; font-weight: 700; }
+.stu-badge .ph { margin-top: -44px; width: 92px; height: 92px; border-radius: 50%; border: 4px solid #89D7AD; background: #EDFAF2;
+                 color: #3E6350; display: flex; align-items: center; justify-content: center; overflow: hidden; flex: none; }
+.stu-badge .ph img { width: 100%; height: 100%; object-fit: cover; }
+.stu-badge .ph svg { width: 46px; height: 46px; stroke-width: 1.8; }
+.stu-badge .nm { margin-top: 10px; padding: 0 12px; font-weight: 700; line-height: 1.25; white-space: nowrap; }
+.stu-badge .nm.wrap { white-space: normal; text-wrap: balance; }
+.stu-badge .rl { margin-top: 7px; background: #89D7AD; color: #16301F; border-radius: 999px; padding: 3px 14px; font-size: 12px; font-weight: 700; }
+.stu-official .stu-badge .rl { background: #3E6350; color: #fff; }
+.stu-badge .dp { margin-top: 6px; color: var(--stu-text2); font-weight: 500; padding: 0 12px; }
+.stu-badge .ft { margin-top: auto; width: 100%; display: flex; justify-content: space-between; padding: 8px 12px 10px;
+                 font-size: 9.5px; color: var(--stu-text2); border-top: 1px solid var(--stu-div); }
+.stu-badge .ft .site { direction: ltr; font-weight: 700; color: var(--stu-accent); }
+.stu-badge .in::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: #89D7AD; }

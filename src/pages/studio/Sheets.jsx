@@ -31,6 +31,17 @@ export const ICONS = {
   clock:    <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
   star:     <svg {...P}><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>,
   globe:    <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/></svg>,
+  wc:       <svg {...P}><circle cx="7" cy="4.5" r="1.8"/><circle cx="17" cy="4.5" r="1.8"/><path d="M5 9h4l.5 6H8.5v6h-3v-6H4.5zM12 3v18M15 9h4l1.5 7h-2v5h-3v-5h-2z"/></svg>,
+  mosque:   <svg {...P}><path d="M12 3c-2.5 2-5 3.5-5 6.5V11h10V9.5C17 6.5 14.5 5 12 3zM5 11h14v10H5zM10 21v-4a2 2 0 0 1 4 0v4M3 21h18M20 8v13M20 6v-.5"/></svg>,
+  exit:     <svg {...P}><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h8"/><path d="M10 12h11M17 8l4 4-4 4"/></svg>,
+  assembly: <svg {...P}><circle cx="12" cy="6" r="2"/><circle cx="5.5" cy="9" r="1.7"/><circle cx="18.5" cy="9" r="1.7"/><path d="M8.5 21v-5l-1-4h9l-1 4v5M3 21v-4.5L2.5 13h6M21 21v-4.5l.5-3.5h-6"/></svg>,
+  noentry:  <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M7 12h10"/></svg>,
+  quiet:    <svg {...P}><path d="M4 10v4h3l5 4V6L7 10z"/><path d="M16 9l5 6M21 9l-5 6"/></svg>,
+  food:     <svg {...P}><path d="M6 3v8a2 2 0 0 0 2 2v8M10 3v8M8 3v6M16 21V3c2.5 1 3.5 4 3.5 7s-1.5 4-3.5 4"/></svg>,
+  stairs:   <svg {...P}><path d="M3 21h5v-5h5v-5h5V6h3M3 21V3"/></svg>,
+  elevator: <svg {...P}><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 3v18M7.5 10l1.5-2 1.5 2M13.5 14l1.5 2 1.5-2"/></svg>,
+  water:    <svg {...P}><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M9.5 15a2.5 2.5 0 0 0 2.5 2.5"/></svg>,
+  info:     <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>,
   send:     <svg {...P}><path d="M21 3L3 11l7 3 3 7z"/><path d="M10 14l11-11"/></svg>,
 };
 // أسماء الرموز كما تظهر للمستخدم في اختيار رمز اللوحة
@@ -38,6 +49,8 @@ export const ICON_LABEL = {
   building: "مكتب", user: "شخص", hall: "قاعة", cap: "فصل", book: "مكتبة", flask: "مختبر", monitor: "حاسب",
   health: "عيادة", chat: "توجيه", shield: "أمن وسلامة", trophy: "نشاط",
   star: "موهوبين", globe: "جلوب",
+  wc: "دورات مياه", mosque: "مصلى", exit: "مخرج", assembly: "تجمّع", noentry: "ممنوع", quiet: "هدوء",
+  food: "مقصف", stairs: "درج", elevator: "مصعد", water: "ماء", info: "استقبال",
 };
 
 const YEAR_FALLBACK = "";
@@ -348,6 +361,176 @@ export function ClassDoor({ theme = "light", d }) {
           {d.room && <span className="stu-room"><small>غرفة</small><b dir="ltr">{d.room}</b></span>}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ----------------------------- جدول الحصص ----------------------------- */
+const DEMO_SUBJECTS = [["الرياضيات", "أحمد الغامدي"], ["اللغة العربية", "سعد الحربي"], ["الفيزياء", "خالد الزهراني"],
+  ["اللغة الإنجليزية", "فهد القرني"], ["الدراسات الإسلامية", "علي الشهري"], ["الكيمياء", "ماجد العمري"], ["الأحياء", "ناصر المالكي"]];
+const DEMO_COLS = [1, 2, 3, { kind: "break", label: "الفسحة" }, 4, 5, { kind: "break", label: "الصلاة" }, 6, 7]
+  .map((x) => (typeof x === "number" ? { kind: "period", n: x, time: "" } : x));
+const DAYS = { 1: "الأحد", 2: "الاثنين", 3: "الثلاثاء", 4: "الأربعاء", 5: "الخميس" };
+
+export function Timetable({ theme = "light", d }) {
+  const cols = d.cols?.length ? d.cols : DEMO_COLS;
+  const days = d.days ?? [1, 2, 3, 4, 5];
+  let cells = d.cells ?? {};
+  if (!d.cells && d.sampleGrid) {
+    days.forEach((dy) => cols.forEach((c) => {
+      if (c.kind !== "period") return;
+      const [a, b] = DEMO_SUBJECTS[(dy * 3 + c.n) % DEMO_SUBJECTS.length];
+      if ((dy + c.n) % 6) cells[`${dy}-${c.n}`] = { a, b };
+    }));
+  }
+  const periods = cols.filter((c) => c.kind === "period").length;
+  const cellW = (983 - 110 - (cols.length - periods) * 38 - cols.length * 6) / Math.max(1, periods) - 14;
+  const template = `110px ${cols.map((c) => (c.kind === "period" ? "1fr" : "38px")).join(" ")}`;
+  return (
+    <div className={`stu stu-tt stu-${theme} stu-landscape sheet`}>
+      <Decor />
+      <div className="stu-page">
+        <Head theme={theme} year={d.year} />
+        <div className="stu-tthead">
+          <div>
+            <div className="stu-h1" style={{ fontSize: fitSize(d.heading, { max: 34, min: 20, width: 640 }) }}>{d.heading}</div>
+            {d.sub && <div className="stu-ttsub">{d.sub}</div>}
+          </div>
+          {d.term && <span className="stu-year">{d.term}</span>}
+        </div>
+        <div className="stu-grid" style={{ gridTemplateColumns: template }}>
+          <div className="stu-corner" style={{ gridRow: 1, gridColumn: 1 }}>اليوم / الحصة</div>
+          {cols.map((c, i) => c.kind === "period"
+            ? <div key={i} className="stu-ph" style={{ gridRow: 1, gridColumn: i + 2 }}><b className="num">{c.n}</b>{c.time && <small className="num">{c.time}</small>}</div>
+            : <div key={i} className="stu-brk" style={{ gridRow: `1 / span ${days.length + 1}`, gridColumn: i + 2 }}><span>{c.label}</span></div>)}
+          {days.map((dy, r) => (
+            <FragmentRow key={dy} dy={dy} r={r} cols={cols} cells={cells} cellW={cellW} />
+          ))}
+        </div>
+        <div className="stu-ttfoot">
+          <span>{d.note || "بوابة مكة الثانوية الرقمية · استوديو البوابة"}</span>
+          <span className="site">makkahsec.com</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FragmentRow({ dy, r, cols, cells, cellW }) {
+  return (
+    <>
+      <div className="stu-day" style={{ gridRow: r + 2, gridColumn: 1 }}>{DAYS[dy]}</div>
+      {cols.map((c, i) => {
+        if (c.kind !== "period") return null;
+        const v = cells[`${dy}-${c.n}`];
+        return (
+          <div key={i} className={`stu-cell${v ? "" : " empty"}`} style={{ gridRow: r + 2, gridColumn: i + 2 }}>
+            {v ? <>
+              <b style={{ fontSize: fitSize(v.a, { max: 16, min: 10, width: cellW }) }}>{v.a}</b>
+              {v.b && <small style={{ fontSize: fitSize(v.b, { max: 12, min: 9, width: cellW, weight: 500 }) }}>{v.b}</small>}
+            </> : <i>—</i>}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+/* ----------------------------- أرقام الجلوس ----------------------------- */
+export function Seats({ theme = "light", d }) {
+  const labels = Array.from({ length: 14 }, (_, i) => d.labels?.[i] ?? null);
+  return (
+    <div className={`stu stu-seats stu-${theme} stu-portrait sheet`}>
+      <div className="grid">
+        {labels.map((l, i) => (
+          <div key={i} className={`stu-seat${l ? "" : " empty"}`}>
+            {l && (
+              <div className="in">
+                <div className="no"><small>رقم الجلوس</small><b className="num" dir="ltr">{l.seat}</b></div>
+                <div className="tx">
+                  <div className="top"><img src={theme === "dark" ? iconWhite : iconMint} alt="" />
+                    <span style={{ fontSize: fitSize(d.title, { max: 11, min: 8, width: 170, weight: 600 }) }}>{d.title}</span></div>
+                  <div className="nm" style={{ fontSize: fitSize(l.name, { max: 19, min: 11, width: 200 }) }}>{l.name}</div>
+                  <div className="tags"><span>فصل <b className="num">{l.cls}</b></span><span>لجنة <b className="num">{l.com}</b></span></div>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="note">قصّ على الخط المتقطع · مدرسة مكة الثانوية</p>
+    </div>
+  );
+}
+
+/* ----------------------------- اللافتة الإرشادية ----------------------------- */
+const ARROWS = {
+  right: <path d="M4 12h15M13 6l6 6-6 6" />, left: <path d="M20 12H5M11 6l-6 6 6 6" />,
+  up: <path d="M12 20V5M6 11l6-6 6 6" />, down: <path d="M12 4v15M6 13l6 6 6-6" />,
+};
+
+export function Sign({ theme = "light", orient = "landscape", d }) {
+  const land = orient === "landscape";
+  const warn = d.tone === "warn";
+  const side = land && (d.arrow === "right" || d.arrow === "left");
+  // مع السهم الجانبي يضيق عرض النص حتى لا يتداخل معه
+  const t = fitTitle(d.title, { max: land ? 110 : 96, min: 44, width: side ? 420 : land ? 580 : 620 });
+  const arrow = d.arrow && ARROWS[d.arrow] && (
+    <svg className={`stu-arrow ${d.arrow}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+         strokeLinecap="round" strokeLinejoin="round">{ARROWS[d.arrow]}</svg>
+  );
+  return (
+    <div className={`stu stu-signage stu-${theme} stu-${orient}${warn ? " warn" : ""} sheet`}>
+      <Decor />
+      <div className="stu-page">
+        <Head theme={theme} />
+        <div className={`stu-sbody ${land ? "row" : "col"}`}>
+          {side && d.arrow === "right" && arrow}
+          {!side && d.arrow === "up" && arrow}
+          <div className="stu-sicon">{ICONS[d.icon] ?? ICONS.info}</div>
+          <div className="stu-stext">
+            <div className={`stu-h1${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{d.title}</div>
+            {d.sub && <div className="stu-ssub">{d.sub}</div>}
+          </div>
+          {side && d.arrow === "left" && arrow}
+          {!side && d.arrow && d.arrow !== "up" && arrow}
+        </div>
+        <Foot />
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------- بطاقة التعريف ----------------------------- */
+export function Badges({ theme = "light", d }) {
+  const cards = Array.from({ length: 9 }, (_, i) => (d.cards ?? [d])[i] ?? null);
+  return (
+    <div className={`stu stu-badges stu-${theme} stu-portrait sheet`}>
+      <div className="grid">
+        {cards.map((c, i) => (
+          <div key={i} className={`stu-badge${c ? "" : " empty"}`}>
+            {c && (
+              <div className="in">
+                <div className="band">
+                  <i className="slot" />
+                  <div className="sch"><img src={iconWhite} alt="" /><b>مدرسة مكة الثانوية</b></div>
+                </div>
+                <div className="ph">
+                  {c.photo ? <img src={c.photo} alt="" /> : ICONS.user}
+                </div>
+                {(() => {
+                  const t = fitTitle(c.name, { max: 19, min: 12, width: 160 });
+                  return <div className={`nm${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{c.name}</div>;
+                })()}
+                {c.role && <span className="rl">{c.role}</span>}
+                {c.dept && <div className="dp" style={{ fontSize: fitSize(c.dept, { max: 12.5, min: 9, width: 170, weight: 500 }) }}>{c.dept}</div>}
+                <div className="ft"><span className="num">{d.year}</span><span className="site">makkahsec.com</span></div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="note">بطاقات 5.4 × 8.6 سم · قصّ على الخط المتقطع</p>
     </div>
   );
 }
