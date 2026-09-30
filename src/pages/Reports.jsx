@@ -139,9 +139,10 @@ function ExportBar({ disabled, onExcel, onPrint }) {
   );
 }
 
+// getter: الاسم يُقرأ وقت الطباعة، بعد جلب الأسماء من الإعدادات
 const SIGNS = [
-  { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
-  { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+  { title: "وكيل شؤون الطلاب", get name() { return STUDENT_DEPUTY_NAME; } },
+  { title: "مدير المدرسة", get name() { return PRINCIPAL_NAME; } },
 ];
 
 const logos = () => ({

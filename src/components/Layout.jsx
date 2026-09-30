@@ -10,6 +10,7 @@ import TrialBanner from "./TrialBanner.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
 import { loadPrincipalSignature } from "../lib/principalSignature.js";
+import { loadSigners } from "../lib/signers.js";
 
 /* أقسام قائمة الإدارة — مجمّعة منطقيًا */
 const ADMIN_GROUPS = [
@@ -186,8 +187,8 @@ export default function Layout({ children }) {
   const location = useLocation();
   const [open, setOpen] = useState(false);
 
-  // تحميل توقيع المدير المعتمد مسبقًا — ليظهر في التقارير المطبوعة فورًا
-  useEffect(() => { if (session) loadPrincipalSignature(); }, [session]);
+  // تحميل توقيع المدير المعتمد وأسماء الموقّعين مسبقًا — لتظهر في التقارير المطبوعة فورًا
+  useEffect(() => { if (session) { loadPrincipalSignature(); loadSigners(); } }, [session]);
 
   // عدّاد الإشعارات المعلّقة بانتظار الاعتماد — للدعم الفني فقط
   const [pendingReview, setPendingReview] = useState(0);

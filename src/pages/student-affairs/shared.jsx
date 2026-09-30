@@ -6,9 +6,10 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 
+// getter: الاسم يُقرأ وقت الطباعة، بعد جلب الأسماء من الإعدادات
 export const SIGNS = [
-  { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
-  { title: "مدير المدرسة", name: PRINCIPAL_NAME },
+  { title: "وكيل شؤون الطلاب", get name() { return STUDENT_DEPUTY_NAME; } },
+  { title: "مدير المدرسة", get name() { return PRINCIPAL_NAME; } },
 ];
 
 export const logos = () => ({
