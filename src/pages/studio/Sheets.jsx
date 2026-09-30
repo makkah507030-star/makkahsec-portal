@@ -16,6 +16,7 @@ export const ICONS = {
   case:     <svg {...P}><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg>,
   user:     <svg {...P}><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>,
   cap:      <svg {...P}><path d="M2 7l10-4 10 4-10 4z"/><path d="M6 9v5c0 2 3 3 6 3s6-1 6-3V9"/></svg>,
+  hall:     <svg {...P}><rect x="3" y="3.5" width="18" height="11.5" rx="1.5"/><path d="M7 11l3-3 2.5 2 4-4M12 15v3M8 21l4-3 4 3"/></svg>,
   table:    <svg {...P}><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg>,
   calendar: <svg {...P}><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>,
   building: <svg {...P}><path d="M3 21h18M5 21V8l7-5 7 5v13"/><path d="M9 21v-6h6v6"/></svg>,
@@ -32,7 +33,7 @@ export const ICONS = {
 };
 // أسماء الرموز كما تظهر للمستخدم في اختيار رمز اللوحة
 export const ICON_LABEL = {
-  building: "مكتب", user: "شخص", cap: "قاعة", book: "مكتبة", flask: "مختبر", monitor: "حاسب",
+  building: "مكتب", user: "شخص", hall: "قاعة", cap: "فصل", book: "مكتبة", flask: "مختبر", monitor: "حاسب",
   health: "عيادة", chat: "توجيه", shield: "أمن وسلامة", trophy: "نشاط",
 };
 
