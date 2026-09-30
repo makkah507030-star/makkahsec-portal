@@ -64,6 +64,12 @@ const ADMIN_GROUPS = [
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "shield" },
       { to: "/my-documents", label: "نماذجي",        perm: null, icon: "certificate" },
       { to: "/my-signature", label: "توقيعي",        perm: null, icon: "edit" },
+    ],
+  },
+  {
+    // قسم مستقل — تُضاف إليه قوالب المرحلة التالية وأرشيف الهوية البصرية
+    title: "استوديو البوابة",
+    items: [
       { to: "/studio",       label: "استوديو البوابة", perm: null, icon: "palette" },
     ],
   },
@@ -125,9 +131,11 @@ const OTHER_NAV = {
     { to: "/forms-review", label: "الاعتماد والمتابعة",  icon: "check" },
     { to: "/my-documents", label: "نماذجي",              icon: "certificate" },
     { to: "/my-signature", label: "توقيعي",              icon: "key" },
-    { to: "/studio",       label: "استوديو البوابة",     icon: "palette" },
     { to: "/notify",       label: "الإشعارات",            tabKey: "notify",    icon: "chat" },
     { to: "/news-admin",   label: "الأخبار والمقالات",    extraTabKey: "news", icon: "news" },
+
+    { group: "استوديو البوابة" },
+    { to: "/studio",       label: "استوديو البوابة",     icon: "palette" },
 
     { group: "مركز الدعم والمساندة" },
     { to: "/help",     label: "دليل الاستخدام", icon: "book" },
