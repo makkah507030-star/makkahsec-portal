@@ -168,6 +168,18 @@ export function downloadBlob(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
+/* رمز لوحة الباب من اسم المكان أو الصفة — الأخص أولًا (مختبر قبل مكتب) */
+const ICON_RULES = [
+  [/عياد|صحي|إسعاف/, "health"], [/مختبر|علوم/, "flask"], [/حاسب|حاسوب|تقني|الدعم الفني/, "monitor"],
+  [/موهوب/, "star"], [/جلوب|بيئ/, "globe"], [/نشاط|الرياضة|البدنية|سبورت/, "trophy"], [/موجّه|موجه|توجيه|إرشاد/, "chat"],
+  [/أمن|سلامة/, "shield"], [/مصادر|مكتبة/, "book"], [/قاعة/, "hall"], [/فصل/, "cap"], [/المعلمين/, "user"],
+  [/مكتب|مدير|وكيل|مساعد|إدار/, "building"],
+];
+export const iconFor = (...texts) => {
+  const t = texts.filter(Boolean).join(" ");
+  return ICON_RULES.find(([re]) => re.test(t))?.[1] ?? null;
+};
+
 /* الصفوف والمسارات كما تُكتب على لوحة الفصل */
 export const GRADE_OPTIONS = ["الأول الثانوي", "الثاني الثانوي", "الثالث الثانوي"];
 /* رمز الفصل في المدرسة ثلاثة أرقام: الصف ثم رقم الفصل — 101، 205، 307.

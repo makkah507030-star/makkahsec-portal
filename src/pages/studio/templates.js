@@ -1,5 +1,5 @@
 // src/pages/studio/templates.js
-import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode, classShort } from "./lib";
+import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode, classShort, iconFor } from "./lib";
 
 /* =====================================================================
    قوالب استوديو البوابة: القسم الذي يظهر فيه كل قالب، وحقوله، وتعبئته
@@ -117,10 +117,17 @@ export const TEMPLATES = [
       { name: "room", label: "رقم الغرفة (اختياري)", max: 6, dir: "ltr" },
     ],
     defaults: (c, section) => section === "admin"
-      ? { icon: "building", place: c.roleTitle ? `مكتب ${c.roleTitle}` : "", name: c.name ? `أ. ${c.name}` : "",
-          role: c.roleTitle, hours: "", room: "" }
+      ? { icon: iconFor(c.roleTitle) ?? "building", place: c.roleTitle ? `مكتب ${c.roleTitle}` : "",
+          name: c.name ? `أ. ${c.name}` : "", role: c.roleTitle, hours: "", room: "" }
       : { icon: "hall", place: c.subject ? `قاعة ${c.subject}` : "", name: c.name ? `أ. ${c.name}` : "",
           role: c.subject ? `معلم ${c.subject}` : "", hours: "", room: "" },
+    /* الرمز يتبع اسم المكان أو الصفة عند كتابتهما، ويبقى تغييره يدويًا ممكنًا */
+    derive: (d, name) => {
+      if (name !== "place" && name !== "role") return d;
+      // النصان معًا، فيغلب الأخص منهما («مكتب» + «رائد النشاط» ← نشاط)
+      const icon = iconFor(d.place, d.role);
+      return icon ? { ...d, icon } : d;
+    },
     sample: (c, section) => section === "admin"
       ? { hours: "7:30 – 12:30", room: "A-04" }
       : { room: "B-12" },
