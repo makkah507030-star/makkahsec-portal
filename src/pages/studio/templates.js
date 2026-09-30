@@ -448,6 +448,25 @@ export const TEMPLATES = [
     view: (d) => studentPages(d)[0],
     pages: (d) => studentPages(d),
   },
+  /* ——— ملفات Office جاهزة: تُنزَّل مباشرة من المعرض ——— */
+  {
+    key: "word-report",
+    sections: ["teacher", "admin"],
+    title: "قالب تقرير (Word)",
+    desc: "غلاف، وفهرس تلقائي، وصفحات بالترويسة الرسمية، واسم التقرير ورقم الصفحة في التذييل.",
+    download: { href: "/templates/report-template.docx", file: "قالب-تقرير-مدرسة-مكة-الثانوية.docx",
+      preview: "/templates/report-template.jpg", app: "Word", color: "#2B579A", ratio: "794 / 1123" },
+    fields: [], defaults: () => ({}),
+  },
+  {
+    key: "ppt-deck",
+    sections: ["teacher", "admin"],
+    title: "قالب عرض (PowerPoint)",
+    desc: "14 شريحة بهوية المدرسة: غلاف ومحتويات ونقاط ومقارنة وأرقام ورسم بياني وجدول وخط زمني وختام.",
+    download: { href: "/templates/presentation-template.pptx", file: "قالب-عرض-مدرسة-مكة-الثانوية.pptx",
+      preview: "/templates/presentation-template.jpg", app: "PowerPoint", color: "#C43E1C", ratio: "16 / 9" },
+    fields: [], defaults: () => ({}),
+  },
 ];
 
 export const templateOf = (key) => TEMPLATES.find((t) => t.key === key);

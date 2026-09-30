@@ -183,6 +183,22 @@ export default function Studio() {
       {tab === "gallery" ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {list.map((tpl) => {
+            // ملف Office: بطاقة تنزيل مباشرة بمعاينة الملف
+            if (tpl.download) {
+              const x = tpl.download;
+              return (
+                <a key={tpl.key} href={x.href} download={x.file}
+                  className="card group flex flex-col overflow-hidden p-3 text-right transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40">
+                  <div className="relative overflow-hidden rounded-card shadow-card ring-1 ring-line/60" style={{ aspectRatio: x.ratio }}>
+                    <img src={x.preview} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    <span className="absolute left-2 top-2 rounded-sm2 px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: x.color }}>{x.app}</span>
+                  </div>
+                  <p className="mt-3 font-semibold text-ink">{tpl.title}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-muted">{tpl.desc}</p>
+                  <span className="mt-2 self-start rounded-pill bg-mint-deep px-3 py-1 text-xs font-medium text-white">تنزيل الملف</span>
+                </a>
+              );
+            }
             const d = galleryData(tpl, ctx, current);
             const sz = sheetDims(tpl, "portrait", d);
             return (
