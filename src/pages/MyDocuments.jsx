@@ -80,7 +80,7 @@ export default function MyDocuments() {
       {toReply.length > 0 && (
         <section className="overflow-hidden rounded-card border border-warning/30 bg-warning-light">
           <p className="px-4 pt-3 text-sm font-bold text-warning">
-            مطلوب ردّك
+            مطلوب إفادتك
             {toReply.some((d) => d.status === "awaiting_reply") && (
               <span className="num mr-1">({toReply.filter((d) => d.status === "awaiting_reply").length})</span>
             )}
@@ -104,7 +104,7 @@ export default function MyDocuments() {
                     )}
                   </div>
                   <span className={`chip shrink-0 ${waiting ? "bg-warning text-white" : "bg-white text-muted"}`}>
-                    {waiting ? "اكتب ردّك" : "ردّك قيد المراجعة"}
+                    {waiting ? "اكتب الإفادة" : "إفادتك قيد المراجعة"}
                   </span>
                 </Link>
               );
