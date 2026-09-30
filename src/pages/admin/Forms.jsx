@@ -154,6 +154,9 @@ export default function Forms({ view = "issue" }) {
   const isApprover = (adminRoles ?? []).includes("principal");
 
   const [tab, setTab] = useState(review ? "replies" : "issue");
+  // تبويبا المتابعة والاعتماد لصفحة «الاعتماد والمتابعة» وحدها، وتبويبات الإصدار لغيرها
+  const REVIEW_TABS = ["replies", "approve"];
+  if (review !== REVIEW_TABS.includes(tab)) setTab(review ? "replies" : "issue");
   const [dept, setDept] = useState("all");
   const [templates, setTemplates] = useState([]);
   // ما يحق لهذا الحساب إصداره بحسب «من يُصدره» في إدارة النماذج

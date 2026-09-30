@@ -300,8 +300,9 @@ export default function App() {
               {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
               {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
               {/* النماذج والشهادات — ما يظهر لكل مستخدم تحدّده سياسات قاعدة البيانات */}
-              <Route path="/forms" element={<Forms />} />
-              <Route path="/forms-review" element={<Forms view="review" />} />
+              {/* key مختلف: الانتقال بين الصفحتين يبدأ مكوّنًا جديدًا فلا يبقى تبويب الأخرى مفتوحًا */}
+              <Route path="/forms" element={<Forms key="issue" />} />
+              <Route path="/forms-review" element={<Forms key="review" view="review" />} />
               <Route path="/my-signature" element={<MySignature />} />
               {(isTechSupport || adminRoles.includes("principal")) && (
                 <Route path="/forms-admin" element={<FormsAdmin />} />
@@ -357,8 +358,9 @@ export default function App() {
                 <Route path="/schedule" element={<MySchedule />} />
               )}
               {/* النماذج والشهادات — النماذج المتاحة للمعلم تحدّدها سياسات القاعدة */}
-              <Route path="/forms" element={<Forms />} />
-              <Route path="/forms-review" element={<Forms view="review" />} />
+              {/* key مختلف: الانتقال بين الصفحتين يبدأ مكوّنًا جديدًا فلا يبقى تبويب الأخرى مفتوحًا */}
+              <Route path="/forms" element={<Forms key="issue" />} />
+              <Route path="/forms-review" element={<Forms key="review" view="review" />} />
               <Route path="/my-signature" element={<MySignature />} />
             </>
           )}
