@@ -4,9 +4,25 @@ import { useSession } from "../lib/session.jsx";
 import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import PermissionLog from "../components/PermissionLog.jsx";
 import { useNotice } from "../lib/useNotice.js";
+import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes";
 
 const GRADES = [1, 2, 3];
 const MAX_PERIODS = 7; // أقصى عدد حصص باليوم (الأحد/الاثنين = 7)
+
+// ملاحظات جاهزة — تُملأ بضغطة ويمكن تعديلها بعدها
+const NOTE_CARDS = [
+  "الرجاء السماح للطالب بالدخول للفصل",
+  "استئذان رسمي مع ولي الأمر",
+  "مشاركة داخل المدرسة",
+  "مشاركة خارج المدرسة",
+  "تواجد الطالب في قسم الدعم الفني",
+];
+
+// الوقت الحالي بصيغة HH:MM
+const nowHM = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
 
 export default function PermissionRequestPage() {
   const { profile } = useSession();
@@ -24,9 +40,26 @@ export default function PermissionRequestPage() {
   const [requestDate, setRequestDate] = useState(
     () => new Date().toISOString().slice(0, 10)
   );
-  const [scope, setScope] = useState("day"); // day | periods
+  const [scope, setScope] = useState("day"); // day | periods | temporary
   const [selectedPeriods, setSelectedPeriods] = useState(new Set());
   const [note, setNote] = useState("");
+  // الاستئذان المؤقت: وقت الخروج ووقت العودة، ويُحسب منهما ما يشمله من حصص
+  const [outTime, setOutTime] = useState(nowHM);
+  const [backTime, setBackTime] = useState("");
+  const [ptimes, setPtimes] = useState([]);
+
+  useEffect(() => { loadPeriodTimes().then((c) => setPtimes(c.rows ?? [])); }, []);
+
+  // الحصص التي يتقاطع وقتها مع مدة الخروج، والحصة التي يعود فيها
+  const tempPeriods = useMemo(() => {
+    const a = toMinutes(outTime), b = toMinutes(backTime);
+    if (a == null || b == null || b <= a) return [];
+    return ptimes
+      .filter((r) => r.kind === "period" && toMinutes(r.start_time) < b && toMinutes(r.end_time) > a)
+      .map((r) => r.period_no)
+      .sort((x, y) => x - y);
+  }, [ptimes, outTime, backTime]);
+  const tempBadTime = scope === "temporary" && backTime && toMinutes(backTime) <= toMinutes(outTime);
 
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useNotice(null); // { ok: bool, message: string }
@@ -102,7 +135,9 @@ export default function PermissionRequestPage() {
   const canSubmit =
     selectedIds.size > 0 &&
     requestDate &&
-    (scope === "day" || selectedPeriods.size > 0);
+    (scope === "day" ||
+     (scope === "periods" && selectedPeriods.size > 0) ||
+     (scope === "temporary" && tempPeriods.length > 0));
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -113,9 +148,12 @@ export default function PermissionRequestPage() {
       .from("permission_requests")
       .insert({
         request_date: requestDate,
-        scope,
+        // المؤقت يُحفظ كحصص محددة ليعمل التحضير والتقارير كما هي، ومعه وقتاه
+        scope: scope === "day" ? "day" : "periods",
         period_numbers:
-          scope === "periods" ? Array.from(selectedPeriods).sort() : null,
+          scope === "periods" ? Array.from(selectedPeriods).sort((a, b) => a - b)
+          : scope === "temporary" ? tempPeriods : null,
+        ...(scope === "temporary" ? { start_time: outTime, return_time: backTime } : {}),
         note: note.trim() || null,
         created_by: profile.id,
       })
@@ -124,7 +162,9 @@ export default function PermissionRequestPage() {
 
     if (reqErr) {
       setSubmitting(false);
-      setResult({ ok: false, message: "تعذّر إنشاء الطلب: " + reqErr.message });
+      setResult({ ok: false, message: /return_time|start_time/.test(reqErr.message)
+        ? "الاستئذان المؤقت يحتاج تنفيذ ملف supabase/permission_temporary.sql في Supabase أولًا."
+        : "تعذّر إنشاء الطلب: " + reqErr.message });
       return;
     }
 
@@ -148,6 +188,7 @@ export default function PermissionRequestPage() {
     setSelectedIds(new Set());
     setNote("");
     setSelectedPeriods(new Set());
+    setBackTime("");
   };
 
   if (allowed === null) {
@@ -264,9 +305,9 @@ export default function PermissionRequestPage() {
         />
       </div>
 
-      {/* النطاق: يوم كامل أو حصص محددة */}
+      {/* النطاق: يوم كامل، أو حصص محددة، أو استئذان مؤقت بوقت عودة */}
       <div className="space-y-2">
-        <div className="flex gap-4 text-sm">
+        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
           <label className="flex items-center gap-2">
             <input
               type="radio"
@@ -283,7 +324,41 @@ export default function PermissionRequestPage() {
             />
             حصص محددة
           </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={scope === "temporary"}
+              onChange={() => { setScope("temporary"); if (!backTime) setOutTime(nowHM()); }}
+            />
+            استئذان مؤقت
+          </label>
         </div>
+
+        {scope === "temporary" && (
+          <div className="space-y-2 rounded-sm2 border border-line bg-canvas p-3">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <label className="flex items-center gap-2">
+                <span className="text-muted">يخرج الساعة</span>
+                <input type="time" value={outTime} onChange={(e) => setOutTime(e.target.value)}
+                       className="rounded-sm2 border border-line bg-white px-2 py-1.5 text-sm" />
+              </label>
+              <label className="flex items-center gap-2">
+                <span className="text-muted">ويعود الساعة</span>
+                <input type="time" value={backTime} onChange={(e) => setBackTime(e.target.value)}
+                       className="rounded-sm2 border border-line bg-white px-2 py-1.5 text-sm" />
+              </label>
+            </div>
+            <p className={`text-xs leading-relaxed ${
+              tempBadTime || (backTime && !tempPeriods.length) ? "text-[#A23B3B]" : "text-muted"}`}>
+              {!backTime ? "حدّد وقت العودة، فتُحسب الحصص التي يغيبها تلقائيًا."
+                : tempBadTime ? "وقت العودة يجب أن يكون بعد وقت الخروج."
+                : !tempPeriods.length ? "لا تقع أي حصة في هذه المدة."
+                : <>يشمل الحصص <b className="text-ink">{tempPeriods.join("، ")}</b>
+                    {" "}(من <bdi>{fmtTime(outTime)}</bdi> حتى <bdi>{fmtTime(backTime)}</bdi>)،
+                    ويُحضَّر عاديًّا فيما بعدها.</>}
+            </p>
+          </div>
+        )}
 
         {scope === "periods" && (
           <div className="flex flex-wrap gap-2">
@@ -308,6 +383,16 @@ export default function PermissionRequestPage() {
       {/* ملاحظة */}
       <div>
         <label className="text-sm font-medium text-ink">ملاحظة (اختياري)</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {NOTE_CARDS.map((t) => (
+            <button key={t} type="button" onClick={() => setNote(note === t ? "" : t)}
+                    className={`rounded-pill border px-3 py-1 text-xs font-medium transition-colors ${
+                      note === t ? "border-mint-deep bg-mint-deep text-white"
+                                 : "border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>
+              {t}
+            </button>
+          ))}
+        </div>
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}

@@ -144,7 +144,7 @@ export default function Attendance() {
           supabase.from("daily_attendance").select("student_id")
             .eq("attend_date", date).in("student_id", ids),
           supabase.from("permission_request_students")
-            .select("student_id, permission_requests!inner(scope, period_numbers, note, created_by, request_date)")
+            .select("student_id, permission_requests!inner(*)")
             .in("student_id", ids)
             .eq("permission_requests.request_date", date),
           supabase.from("permission_returns")
@@ -189,6 +189,7 @@ export default function Attendance() {
             by: nameBy[r.created_by] ?? titleBy[r.created_by] ?? "الإدارة",
             title: titleBy[r.created_by] ?? null,
             note: r.note ?? null,
+            back: r.return_time ?? null,   // استئذان مؤقت: وقت العودة
           };
         });
         setPermits(map);
@@ -421,6 +422,7 @@ export default function Attendance() {
                     استئذان داخلي — بواسطة {permit.by}
                     {permit.title ? ` (${permit.title})` : ""}
                     {permit.note ? ` · ${permit.note}` : ""}
+                    {permit.back ? ` · مؤقت، يعود الساعة ${fmtTime(permit.back)}` : ""}
                   </p>
                 )}
 
