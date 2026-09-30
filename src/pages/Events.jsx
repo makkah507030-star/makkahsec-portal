@@ -1,5 +1,6 @@
 // src/pages/Events.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { GRADE_NAMES, todayISO, PERIODS_PER_DAY } from "../lib/schoolTime";
@@ -48,7 +49,10 @@ export default function Events() {
   const isSupport = roles.includes("tech_support") || roles.includes("principal");
 
   const [list, setList] = useState(null);
-  const [openId, setOpenId] = useState(null);
+  // ?open=<معرّف>&step=approval — من «الاعتماد والمتابعة»: يفتح الحدث على مرحلة الاعتماد
+  const [params, setParams] = useSearchParams();
+  const [openId, setOpenId] = useState(params.get("open"));
+  const openStep = params.get("step");
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useNotice(null);
 
@@ -66,7 +70,8 @@ export default function Events() {
     return (
       <EventWizard ev={open} uid={uid} profile={profile} isSupport={isSupport}
                    isPrincipal={roles.includes("principal")}
-                   onBack={() => { setOpenId(null); load(); }}
+                   startAtApproval={openStep === "approval" && !!open.report_submitted_at}
+                   onBack={() => { setOpenId(null); setParams({}, { replace: true }); load(); }}
                    onMsg={setMsg} msg={msg} />
     );
   }
@@ -259,10 +264,10 @@ function NewEvent({ uid, profile, roles, onDone }) {
 }
 
 /* --------------------------- مسار الحدث --------------------------- */
-function EventWizard({ ev, uid, profile, isSupport, isPrincipal, onBack, onMsg, msg }) {
+function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval, onBack, onMsg, msg }) {
   const [e, setE] = useState(ev);
   const [parts, setParts] = useState(null);
-  const [step, setStep] = useState(stageIndex(ev.stage));
+  const [step, setStep] = useState(startAtApproval ? 7 : stageIndex(ev.stage));
 
   const loadParts = async () => {
     const { data } = await supabase.from("event_participants")

@@ -159,8 +159,10 @@ export default function Forms({ view = "issue" }) {
   const [fStatus, setFStatus] = useState("");
   const [sel, setSel] = useState(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  // الأحداث المرفوعة تقاريرها لمدير المدرسة وبانتظار اعتماده
+  const [pendingEvents, setPendingEvents] = useState([]);
   // تبويبا المتابعة والاعتماد لصفحة «الاعتماد والمتابعة» وحدها، وتبويبات الإصدار لغيرها
-  const REVIEW_TABS = ["replies", "approve"];
+  const REVIEW_TABS = ["replies", "approve", "events"];
   if (review !== REVIEW_TABS.includes(tab)) setTab(review ? "replies" : "issue");
   const switchTab = (k) => { setTab(k); setSel(new Set()); setFStatus(""); };
   const [dept, setDept] = useState("all");
@@ -358,6 +360,17 @@ export default function Forms({ view = "issue" }) {
   };
   // يُحمَّل عند فتح الصفحة ليُحتسب عدّاد الردود والاعتماد فورًا
   useEffect(() => { loadDocs(); }, [tab]);
+
+  useEffect(() => {
+    if (!review || !isApprover) return;
+    (async () => {
+      const { data } = await supabase.from("school_events")
+        .select("id, serial, title, event_date, category, organizer_name, report_submitted_at")
+        .not("report_submitted_at", "is", null).neq("stage", "approved").is("cancelled_at", null)
+        .order("report_submitted_at", { ascending: true });
+      setPendingEvents(data ?? []);
+    })();
+  }, [review, isApprover, tab]);
 
   // فتح مستند مُعاد لتصحيحه بنفس رقمه التسلسلي
   const startEdit = (d) => {
@@ -1276,7 +1289,8 @@ export default function Forms({ view = "issue" }) {
       <div className="flex flex-wrap gap-1.5">
         {(review
           ? [["replies", `متابعة الإفادات (${replies.filter((d) => d.status === "replied").length})`],
-             ...(isApprover ? [["approve", `اعتماد النماذج${pending.length ? ` (${pending.length})` : ""}`]] : [])]
+             ...(isApprover ? [["approve", `اعتماد النماذج${pending.length ? ` (${pending.length})` : ""}`],
+                               ["events", `اعتماد الأحداث${pendingEvents.length ? ` (${pendingEvents.length})` : ""}`]] : [])]
           : [["issue", "إصدار نموذج"],
              ...(returned.length ? [["returned", `المُعادة إليّ (${returned.length})`]] : []),
              ["archive", "الأرشيف"],
@@ -1620,6 +1634,36 @@ export default function Forms({ view = "issue" }) {
             ))}
           </div>
         </>
+      )}
+
+      {tab === "events" && (
+        <div className="space-y-2">
+          <p className="text-xs leading-relaxed text-muted">
+            أحداث رفع منظّموها تقاريرها وتنتظر اعتمادك. افتح الحدث لمراجعة تقريره، ثم اعتمده أو أعده بملاحظة.
+          </p>
+          {pendingEvents.length === 0 && (
+            <p className="card px-4 py-6 text-sm text-muted">لا أحداث بانتظار الاعتماد.</p>
+          )}
+          {pendingEvents.map((e) => (
+            <div key={e.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
+              <div className="min-w-0">
+                <p className="font-semibold text-ink">{e.title}</p>
+                <p className="num mt-0.5 text-xs text-faint">
+                  {e.serial} · {e.event_date}
+                  {e.category ? ` · ${e.category}` : ""}
+                  {e.organizer_name ? ` · ${e.organizer_name}` : ""}
+                </p>
+                <p className="mt-0.5 text-[11px] text-faint">
+                  رُفع التقرير {new Date(e.report_submitted_at).toLocaleDateString("ar-SA-u-ca-gregory")}
+                </p>
+              </div>
+              <button onClick={() => navigate(`/events?open=${e.id}&step=approval`)}
+                      className="btn-primary shrink-0 px-4 py-1.5 text-xs">
+                فتح للاعتماد
+              </button>
+            </div>
+          ))}
+        </div>
       )}
 
       {tab === "approve" && (
