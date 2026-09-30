@@ -1,5 +1,7 @@
 // src/pages/studio/templates.js
-import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode, classShort, iconFor } from "./lib";
+import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode, classShort, iconFor, signIconFor } from "./lib";
+import { loadSchedule, loadStudents, loadStaff, shortName } from "./data";
+import { DAY_NAMES, GRADE_NAMES } from "../../lib/schoolTime";
 
 /* =====================================================================
    قوالب استوديو البوابة: القسم الذي يظهر فيه كل قالب، وحقوله، وتعبئته
@@ -264,6 +266,103 @@ export const TEMPLATES = [
       format: "square", tag: "إعلان", title: "", accent: "", sub: "", points: [], date: hijriToday(),
     }),
   },
+  /* ============================ المرحلة الثالثة ============================ */
+  {
+    key: "timetable",
+    sections: ["admin", "teacher"],
+    sheet: "timetable",
+    fixedOrient: "landscape",
+    batch: true,
+    title: "جدول الحصص",
+    desc: "جدول الفصل أو المعلم من جدول البوابة بأوقات الحصص والفسح — ويُطبع لكل الفصول أو المعلمين دفعة واحدة.",
+    load: loadSchedule,
+    fields: [
+      { name: "mode", label: "النوع", type: "choice", options: ["جدول فصل", "جدول معلم"] },
+      { name: "target", label: "الفصل أو المعلم", type: "select", options: (d, c) => ttTargets(d, c) },
+      { name: "note", label: "ملاحظة أسفل الجدول (اختياري)", max: 80 },
+      { name: "scope", label: "الطباعة", type: "opts",
+        options: (d, c) => [["one", "هذا الجدول فقط"],
+          ["all", d.mode === "جدول معلم" ? `كل المعلمين (${c.teachers?.length ?? 0})` : `كل الفصول (${ttClasses(c).length})`]] },
+    ],
+    defaults: (c, section) => ({
+      mode: section === "teacher" ? "جدول معلم" : "جدول فصل", target: section === "teacher" ? (c.teacherId ?? "") : "",
+      note: "", scope: "one", year: c.year, term: c.term,
+    }),
+    derive: (d, name) => (name === "mode" ? { ...d, target: "" } : d),
+    sample: { heading: "جدول حصص الفصل 101", sub: "الأول الثانوي · السنة الأولى المشتركة", sampleGrid: true },
+    view: (d, c) => ttBuild(d, c, d.target || ttTargets(d, c)[0]?.[0]),
+    pages: (d, c) => (d.scope === "all" ? ttTargets(d, c).map(([v]) => ttBuild(d, c, v)) : [ttBuild(d, c, d.target || ttTargets(d, c)[0]?.[0])]),
+  },
+  {
+    key: "seats",
+    sections: ["admin"],
+    sheet: "seats",
+    batch: true,
+    title: "ملصقات أرقام الجلوس",
+    desc: "ملصق لكل طالب برقم جلوسه ولجنته وفصله، من كشوف البوابة — 14 ملصقًا في الورقة تُقصّ.",
+    load: loadStudents,
+    presets: { title: ["اختبارات نهاية الفصل الدراسي الأول", "اختبارات نهاية الفصل الدراسي الثاني", "اختبارات نهاية الفصل الدراسي الثالث", "اختبارات منتصف الفصل"] },
+    fields: [
+      { name: "title", label: "عنوان الاختبارات", max: 50 },
+      { name: "scope", label: "الطلاب", type: "select", options: (d, c) => seatScopes(c) },
+      { name: "order", label: "الترتيب", type: "opts", options: () => [["class", "بالفصل ثم الاسم"], ["name", "بالاسم"]] },
+      { name: "start", label: "أول رقم جلوس", max: 6, dir: "ltr" },
+      { name: "per", label: "عدد الطلاب في اللجنة", max: 3, dir: "ltr" },
+    ],
+    defaults: () => ({ title: "اختبارات نهاية الفصل الدراسي الأول", scope: "all", order: "class", start: "1001", per: "20", year: "" }),
+    sample: { labels: Array.from({ length: 14 }, (_, i) => ({ seat: String(1001 + i), name: "اسم الطالب الرباعي", cls: "101", com: 1 + Math.floor(i / 20) })) },
+    view: (d, c) => seatPages(d, c)[0] ?? { ...d, labels: [] },
+    pages: (d, c) => { const p = seatPages(d, c); return p.length ? p : [{ ...d, labels: [] }]; },
+  },
+  {
+    key: "sign",
+    sections: ["admin", "teacher"],
+    sheet: "sign",
+    orients: true,
+    defaultOrient: "landscape",
+    title: "لافتة إرشادية",
+    desc: "لافتات الاتجاهات والتعليمات بسهم ورمز: دورات المياه، المصلى، نقطة التجمع، ممنوع الدخول…",
+    presets: {
+      title: ["دورات المياه", "المصلى", "مخرج الطوارئ", "نقطة التجمع", "ممنوع الدخول", "الهدوء من فضلك",
+              "الإدارة", "المقصف", "الدرج", "المصعد", "برادة الماء", "الاستقبال"],
+    },
+    fields: [
+      { name: "title", label: "النص الرئيسي", max: 30 },
+      { name: "sub", label: "سطر إضافي (اختياري)", max: 60 },
+      { name: "icon", label: "الرمز", type: "icon", options: ["wc", "mosque", "exit", "assembly", "noentry", "quiet", "food", "stairs", "elevator", "water", "info", "building"] },
+      { name: "arrow", label: "السهم", type: "opts", options: () => [["", "بلا"], ["right", "→ يمين"], ["left", "← يسار"], ["up", "↑ أمام"], ["down", "↓ أسفل"]] },
+      { name: "tone", label: "الطابع", type: "opts", options: () => [["", "إرشادي"], ["warn", "تنبيه"]] },
+    ],
+    defaults: () => ({ title: "دورات المياه", sub: "", icon: "wc", arrow: "left", tone: "" }),
+    derive: (d, name) => {
+      if (name !== "title") return d;
+      const icon = signIconFor(d.title);
+      return { ...d, ...(icon ? { icon } : {}), tone: /ممنوع|تحذير|خطر|انتبه/.test(d.title) ? "warn" : "" };
+    },
+  },
+  {
+    key: "badge",
+    sections: ["admin", "teacher"],
+    sheet: "badge",
+    batch: true,
+    title: "بطاقة تعريف",
+    desc: "بطاقة تعليق بالاسم والصفة وصورة اختيارية (5.4 × 8.6 سم) — 9 بطاقات في الورقة، ولكل المعلمين دفعة واحدة.",
+    load: loadStaff,
+    fields: [
+      { name: "name", label: "الاسم", max: 40 },
+      { name: "role", label: "الصفة", max: 36 },
+      { name: "dept", label: "القسم أو المادة (اختياري)", max: 36 },
+      { name: "photo", label: "الصورة (اختيارية)", type: "photo" },
+      { name: "scope", label: "الطباعة", type: "opts",
+        options: (d, c) => [["one", "بطاقة واحدة"], ["page", "ورقة كاملة (9 نسخ)"], ["staff", `كل المعلمين (${c.staff?.length ?? 0})`]] },
+    ],
+    defaults: (c, section) => ({
+      name: c.name ? `أ. ${c.name}` : "", role: section === "admin" ? (c.roleTitle || "إداري") : "معلم",
+      dept: section === "admin" ? c.dept : c.subject, photo: "", scope: "one", year: c.year,
+    }),
+    view: (d) => ({ ...d, cards: badgeCards(d, {})[0] }),
+    pages: (d, c) => badgeCards(d, c).map((cards) => ({ ...d, cards })),
+  },
 ];
 
 export const templateOf = (key) => TEMPLATES.find((t) => t.key === key);
@@ -277,4 +376,74 @@ export function sheetDims(tpl, orient, data) {
   if (tpl.sheet === "social") return SOCIAL_FORMATS[data?.format] ?? SOCIAL_FORMATS.square;
   const o = tpl.fixedOrient ?? (tpl.orients ? orient : "portrait");
   return o === "landscape" ? { w: 1123, h: 794 } : { w: 794, h: 1123 };
+}
+
+/* ----------------------------- جدول الحصص ----------------------------- */
+const ttClasses = (c) => [...new Map((c.sched ?? []).filter((r) => r.classNo != null)
+  .map((r) => [classCode(r.grade, r.classNo), r])).entries()]
+  .sort((a, b) => Number(a[0]) - Number(b[0]));
+
+function ttTargets(d, c) {
+  if (d.mode === "جدول معلم") return (c.teachers ?? []).map((t) => [t.id, `أ. ${t.name}`]);
+  return ttClasses(c).map(([code, r]) => [code, `${code} — ${GRADE_NAMES[r.grade] ?? ""}`]);
+}
+
+function ttBuild(d, c, target) {
+  const byTeacher = d.mode === "جدول معلم";
+  const rows = (c.sched ?? []).filter((r) => (byTeacher ? r.teacherId === target : classCode(r.grade, r.classNo) === target));
+  const cells = {};
+  rows.forEach((r) => {
+    cells[`${r.day}-${r.period}`] = byTeacher
+      ? { a: r.subject, b: `فصل ${classCode(r.grade, r.classNo)}` }
+      : { a: r.subject, b: shortName(r.teacher) };
+  });
+  const first = rows[0];
+  const t = byTeacher ? (c.teachers ?? []).find((x) => x.id === target) : null;
+  const subjects = [...new Set(rows.map((r) => r.subject).filter(Boolean))];
+  return {
+    ...d, cells, cols: c.cols ?? [], days: Object.keys(DAY_NAMES).map(Number),
+    heading: byTeacher ? `جدول حصص أ. ${t?.name ?? ""}` : `جدول حصص الفصل ${target ?? ""}`,
+    sub: byTeacher ? `${subjects.join("، ")}${rows.length ? ` · ${rows.length} حصة` : ""}`
+      : first ? [GRADE_NAMES[first.grade], TRACK_LABEL[(c.classList ?? []).find((k) => classCode(k.grade, k.class_no) === target)?.track]]
+        .filter(Boolean).join(" · ") : "",
+    count: rows.length,
+  };
+}
+
+/* ----------------------------- أرقام الجلوس ----------------------------- */
+function seatScopes(c) {
+  const st = c.students ?? [];
+  const grades = [...new Set(st.map((s) => s.grade))].sort();
+  const classes = [...new Set(st.map((s) => classCode(s.grade, s.class_no)))].sort();
+  return [["all", `كل الطلاب (${st.length})`],
+    ...grades.map((g) => [`g${g}`, `${GRADE_NAMES[g] ?? g} (${st.filter((s) => s.grade === g).length})`]),
+    ...classes.map((k) => [`c${k}`, `فصل ${k}`])];
+}
+
+function seatPages(d, c) {
+  let st = (c.students ?? []).map((s) => ({ ...s, code: classCode(s.grade, s.class_no) }));
+  if (d.scope?.startsWith("g")) st = st.filter((s) => `g${s.grade}` === d.scope);
+  if (d.scope?.startsWith("c")) st = st.filter((s) => `c${s.code}` === d.scope);
+  st.sort(d.order === "name"
+    ? (a, b) => a.full_name.localeCompare(b.full_name, "ar")
+    : (a, b) => Number(a.code) - Number(b.code) || a.full_name.localeCompare(b.full_name, "ar"));
+  const start = parseInt(d.start, 10) || 1;
+  const per = Math.max(1, parseInt(d.per, 10) || 20);
+  const labels = st.map((s, i) => ({ seat: String(start + i), name: s.full_name, cls: s.code, com: Math.floor(i / per) + 1 }));
+  const out = [];
+  for (let i = 0; i < labels.length; i += 14) out.push({ ...d, labels: labels.slice(i, i + 14) });
+  return out;
+}
+
+/* ----------------------------- بطاقات التعريف ----------------------------- */
+function badgeCards(d, c) {
+  const me = { name: d.name, role: d.role, dept: d.dept, photo: d.photo };
+  if (d.scope === "page") return [Array.from({ length: 9 }, () => me)];
+  if (d.scope === "staff" && c.staff?.length) {
+    const all = c.staff.map((t) => ({ name: `أ. ${t.full_name}`, role: "معلم", dept: t.specialization ?? "" }));
+    const out = [];
+    for (let i = 0; i < all.length; i += 9) out.push(all.slice(i, i + 9));
+    return out;
+  }
+  return [[me]];
 }
