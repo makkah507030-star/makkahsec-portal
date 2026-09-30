@@ -112,7 +112,8 @@
 .stu-tab { position: absolute; left: 30px; width: 64px; height: 150px; background: #89D7AD; color: #16301F; z-index: 2;
            border-radius: 0 16px 16px 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
 .stu-tab b { font-size: 34px; font-weight: 700; line-height: 1; }
-.stu-tab span { font-size: 12px; font-weight: 600; writing-mode: vertical-rl; }
+/* «القسم» أفقية فوق الرقم */
+.stu-tab span { font-size: 13px; font-weight: 600; line-height: 1; }
 .stu-official .stu-tab { background: #3E6350; color: #fff; }
 .stu-divider .stu-brand img { width: 40px; height: 40px; }
 .stu-divider .stu-brand b { font-size: 17px; }

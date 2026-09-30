@@ -133,7 +133,7 @@ export function Divider({ theme = "light", d }) {
     <div className={`stu stu-divider stu-${theme} stu-portrait sheet`}>
       <Decor />
       {/* اللسان على الحافة اليسرى (جهة فتح الملف العربي) وينزل بحسب رقم القسم */}
-      <div className="stu-tab" style={{ top: 70 + ((n - 1) % 5) * 160 }}><b>{n}</b><span>القسم</span></div>
+      <div className="stu-tab" style={{ top: 70 + ((n - 1) % 5) * 160 }}><span>القسم</span><b>{n}</b></div>
       <div className="stu-page">
         <div className="stu-bar">
           <div className="stu-brand">
