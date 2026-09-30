@@ -280,11 +280,14 @@ function Editor({ init, uid, onBack }) {
                 <button key={t.key} className={pill(theme === t.key)} onClick={() => setTheme(t.key)}>{t.label}</button>
               ))}
             </div>
-            {theme === "dark" && (
-              <p className="mt-1.5 text-[11px] leading-relaxed text-warning">
-                الغامقة تستهلك حبرًا كثيرًا؛ مناسبة للطابعة الملوّنة والصور، والفاتحة للطباعة اليومية.
-              </p>
-            )}
+            <ul className="mt-2 space-y-1 rounded-sm2 bg-canvas px-3 py-2">
+              {THEMES.map((t) => (
+                <li key={t.key} className={`text-[11.5px] leading-relaxed ${
+                  theme === t.key ? "font-semibold text-mint-deep" : "text-muted"}`}>
+                  <span className="font-semibold">{t.label}:</span> {t.hint}
+                </li>
+              ))}
+            </ul>
           </div>
 
           {tpl.orients && (
