@@ -64,6 +64,7 @@ const ADMIN_GROUPS = [
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "shield" },
       { to: "/my-documents", label: "نماذجي",        perm: null, icon: "certificate" },
       { to: "/my-signature", label: "توقيعي",        perm: null, icon: "edit" },
+      { to: "/studio",       label: "استوديو البوابة", perm: null, icon: "palette" },
     ],
   },
   {
@@ -124,6 +125,7 @@ const OTHER_NAV = {
     { to: "/forms-review", label: "الاعتماد والمتابعة",  icon: "check" },
     { to: "/my-documents", label: "نماذجي",              icon: "certificate" },
     { to: "/my-signature", label: "توقيعي",              icon: "key" },
+    { to: "/studio",       label: "استوديو البوابة",     icon: "palette" },
     { to: "/notify",       label: "الإشعارات",            tabKey: "notify",    icon: "chat" },
     { to: "/news-admin",   label: "الأخبار والمقالات",    extraTabKey: "news", icon: "news" },
 
@@ -173,6 +175,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM8.2 13.5 6 21l6-3 6 3-2.2-7.5",
     calendar: "M3 5h18v16H3zM3 10h18M8 3v4M16 3v4",
     certificate: "M6 3h12v13l-6 5-6-5zM9 8h6M9 11h6",
+    palette: "M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.9 1.4-1.8-.4-1.1.4-2.2 1.6-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10ZM7.5 11.5h.01M10 7.5h.01M14 7.5h.01M16.5 11h.01",
   }[name];
 
   return (
