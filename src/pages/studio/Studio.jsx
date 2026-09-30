@@ -1,16 +1,21 @@
 // src/pages/studio/Studio.jsx
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
-import { RegisterCover, Divider, Spines, SPINE_SIZES } from "./Sheets.jsx";
-import { SECTIONS, TEMPLATES, templateOf } from "./templates";
+import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
+import { SECTIONS, TEMPLATES, templateOf, sheetDims, SOCIAL_FORMATS } from "./templates";
 import {
   THEMES, toWestern, useFontsReady, academicYearLabel, TERM_LABEL, ROLE_DEPT, classRange,
+  STUDIO_ACCESS_KEY, parseAccess, defaultAccess,
 } from "./lib";
+import { canUseTemplate } from "../../lib/formRoles";
+import Identity from "./Identity.jsx";
+import Access from "./Access.jsx";
+import Scaled from "./Scaled.jsx";
 
 /* =====================================================================
    استوديو البوابة — قوالب بهوية المدرسة يملؤها المستخدم ويطبعها أو يصدّرها.
@@ -34,7 +39,7 @@ function useStudioCtx() {
     if (!uid) return;
     (async () => {
       const { data: st } = await supabase.from("settings")
-        .select("key, value").in("key", ["active_year", "active_term"]);
+        .select("key, value").in("key", ["active_year", "active_term", STUDIO_ACCESS_KEY]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const term = Number(m.active_term ?? 1);
 
@@ -69,6 +74,7 @@ function useStudioCtx() {
         term: TERM_LABEL[term] ?? "",
         subject, classes, dept, deptCode,
         roleTitle: ADMIN_ROLE_LABEL[role] ?? "",
+        access: parseAccess(m[STUDIO_ACCESS_KEY]),
       });
     })();
   }, [session, profile, adminRoles, isTeacher]);
@@ -80,54 +86,39 @@ function useStudioCtx() {
 export function SheetFor({ tpl, theme, orient, data }) {
   if (tpl.sheet === "cover") return <RegisterCover theme={theme} orient={orient} kind={tpl.kind} d={data} />;
   if (tpl.sheet === "divider") return <Divider theme={theme} d={data} />;
+  if (tpl.sheet === "circular") return <Circular theme={theme} d={data} />;
+  if (tpl.sheet === "door") return <DoorSign theme={theme} d={data} />;
+  if (tpl.sheet === "social") return <Social theme={theme} d={data} />;
   return <Spines theme={theme} d={data} />;
 }
 
-const sheetSize = (tpl, orient) =>
-  tpl.orients && orient === "landscape" ? { w: 1123, h: 794 } : { w: 794, h: 1123 };
-
-/* تصغير الورقة لعرض حاويتها */
-function Scaled({ w, h, children, innerRef, shadow = true }) {
-  const box = useRef(null);
-  const [scale, setScale] = useState(0.3);
-  useLayoutEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const fit = () => setScale(Math.min(1, el.clientWidth / w));
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [w]);
-  return (
-    <div ref={box} className="w-full">
-      <div className={`overflow-hidden rounded-card ${shadow ? "shadow-card ring-1 ring-line/60" : ""}`}
-           style={{ height: h * scale, width: w * scale }}>
-        <div ref={innerRef} style={{ width: w, height: h, transform: `scale(${scale})`, transformOrigin: "top right" }}>
-          {children}
-        </div>
-      </div>
-    </div>
-  );
-}
+// بيانات المعرض: التعبئة التلقائية مع عيّنة توضيحية
+const galleryData = (tpl, ctx, section) =>
+  ({ ...tpl.defaults(ctx, section), ...(typeof tpl.sample === "function" ? tpl.sample(ctx, section) : tpl.sample ?? {}) });
 
 /* ----------------------------- الصفحة ----------------------------- */
 export default function Studio() {
-  const { session, profile, isTeacher, isSuper } = useSession();
+  const { session, profile, adminRoles, isTeacher, isSuper } = useSession();
   const ctx = useStudioCtx();
+  const [access, setAccess] = useState(null);     // بعد الحفظ من «إدارة القوالب» دون إعادة تحميل
   useFontsReady();
 
   // المعلم يرى قسم المعلمين، والإداري قسم الإداريين، والمدير والدعم الفني القسمين
-  const sections = SECTIONS.filter((s) =>
-    isSuper || (s.key === "teacher" ? isTeacher : profile?.role === "admin"));
+  const isAdmin = profile?.role === "admin";
+  const sectionOk = (key) => isSuper || (key === "teacher" ? isTeacher : isAdmin);
+  const sections = SECTIONS.filter((s) => sectionOk(s.key));
   const [section, setSection] = useState(null);
   const current = section ?? sections[0]?.key ?? "teacher";
-  const [tab, setTab] = useState("gallery");      // gallery | mine
+  const [tab, setTab] = useState("gallery");      // gallery | mine | identity | access
   const [edit, setEdit] = useState(null);         // { tpl, theme, orient, data, id, section }
+
+  const rules = access ?? ctx?.access ?? {};
+  const allowed = (tpl) => isSuper || canUseTemplate(
+    { allowed_roles: rules[tpl.key] ?? defaultAccess(tpl) }, { adminRoles, isAdmin, isTeacher });
 
   const open = (tpl, saved) => setEdit(saved
     ? { tpl, theme: saved.theme, orient: saved.orient, data: saved.data, id: saved.id, section: saved.section }
-    : { tpl, theme: "light", orient: "portrait", data: tpl.defaults(ctx ?? {}, current), id: null, section: current });
+    : { tpl, theme: tpl.defaultTheme ?? "light", orient: "portrait", data: tpl.defaults(ctx ?? {}, current), id: null, section: current });
 
   if (!ctx) return <Loader />;
 
@@ -135,7 +126,10 @@ export default function Studio() {
     return <Editor key={edit.id ?? edit.tpl.key} init={edit} uid={session?.user?.id} onBack={() => setEdit(null)} />;
   }
 
-  const list = TEMPLATES.filter((t) => t.sections.includes(current));
+  /* قوالب القسم المسموحة للمستخدم. والقالب الممنوح لدور خارج أقسامه
+     (مثل غلاف المعلم لرائد النشاط) يظهر في أول قسم يراه. */
+  const list = TEMPLATES.filter((t) => allowed(t) &&
+    (t.sections.includes(current) || (!t.sections.some(sectionOk) && current === sections[0]?.key)));
 
   return (
     <div className="space-y-5">
@@ -143,7 +137,7 @@ export default function Studio() {
         <h1 className="text-lg font-bold text-ink">استوديو البوابة</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           قوالب بهوية المدرسة: اختر القالب، واملأ بياناته، واطبعه أو صدّره. التصميم ثابت،
-          فيخرج كل ما يصدر من المدرسة بمظهر واحد.
+          فيخرج كل ما يصدر من المدرسة بمظهر واحد — من غلاف السجل إلى التعميم ومنشور التواصل.
         </p>
       </div>
 
@@ -158,18 +152,28 @@ export default function Studio() {
           <button className={pill(tab === "gallery")} onClick={() => setTab("gallery")}>القوالب</button>
         )}
         <button className={pill(tab === "mine")} onClick={() => setTab("mine")}>تصاميمي</button>
+        <button className={pill(tab === "identity")} onClick={() => setTab("identity")}>الهوية البصرية</button>
+        {isSuper && (
+          <button className={pill(tab === "access")} onClick={() => setTab("access")}>إدارة القوالب</button>
+        )}
       </div>
 
+      {tab === "identity" && <Identity />}
+      {tab === "access" && isSuper && <Access rules={rules} onSaved={setAccess} />}
+      {tab === "gallery" && !list.length && (
+        <p className="card px-4 py-6 text-sm text-muted">لا توجد قوالب متاحة لك في هذا القسم بعد.</p>
+      )}
       {tab === "gallery" ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {list.map((tpl) => {
-            const sz = sheetSize(tpl, "portrait");
+            const d = galleryData(tpl, ctx, current);
+            const sz = sheetDims(tpl, "portrait", d);
             return (
               <button key={tpl.key} onClick={() => open(tpl)}
                 className="card group overflow-hidden p-3 text-right transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40">
                 <div className="pointer-events-none">
                   <Scaled w={sz.w} h={sz.h}>
-                    <SheetFor tpl={tpl} theme="light" orient="portrait" data={{ ...tpl.defaults(ctx, current), ...(typeof tpl.sample === "function" ? tpl.sample(ctx, current) : tpl.sample ?? {}) }} />
+                    <SheetFor tpl={tpl} theme={tpl.defaultTheme ?? "light"} orient="portrait" data={d} />
                   </Scaled>
                 </div>
                 <p className="mt-3 font-semibold text-ink">{tpl.title}</p>
@@ -178,7 +182,7 @@ export default function Studio() {
             );
           })}
         </div>
-      ) : (
+      ) : tab === "mine" && (
         <MyDesigns uid={session?.user?.id} onOpen={(row) => { const tpl = templateOf(row.template); if (tpl) open(tpl, row); }} />
       )}
     </div>
@@ -195,7 +199,8 @@ function Editor({ init, uid, onBack }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useNotice(null);
   const sheetRef = useRef(null);
-  const size = sheetSize(tpl, orient);
+  const size = sheetDims(tpl, orient, data);
+  const printable = tpl.print !== false;
 
   const set = (name, v) => setData((d) => ({ ...d, [name]: v }));
 
@@ -214,7 +219,8 @@ function Editor({ init, uid, onBack }) {
     try {
       const { toBlob } = await import("html-to-image");
       await document.fonts?.ready;
-      const blob = await toBlob(node, { pixelRatio: 2, cacheBust: true });
+      // المنشور بمقاسه الرقمي الفعلي (1080)، والأوراق بدقة مضاعفة للوضوح
+      const blob = await toBlob(node, { pixelRatio: tpl.sheet === "social" ? 1 : 2, cacheBust: true });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -311,28 +317,35 @@ function Editor({ init, uid, onBack }) {
           )}
 
           <div className="grid gap-2 border-t border-line pt-4">
-            <button className="btn-primary w-full" onClick={printNow}>طباعة / حفظ PDF</button>
-            <div className="grid grid-cols-2 gap-2">
-              <button disabled={busy} onClick={exportPng}
-                className="rounded-sm2 border border-line py-2 text-sm font-medium text-mint-deep hover:bg-canvas disabled:opacity-50">
-                تنزيل صورة PNG
-              </button>
+            {printable
+              ? <button className="btn-primary w-full" onClick={printNow}>طباعة / حفظ PDF</button>
+              : <button disabled={busy} className="btn-primary w-full disabled:opacity-50" onClick={exportPng}>تنزيل الصورة</button>}
+            <div className={`grid gap-2 ${printable ? "grid-cols-2" : ""}`}>
+              {printable && (
+                <button disabled={busy} onClick={exportPng}
+                  className="rounded-sm2 border border-line py-2 text-sm font-medium text-mint-deep hover:bg-canvas disabled:opacity-50">
+                  تنزيل صورة PNG
+                </button>
+              )}
               <button disabled={busy} onClick={save}
                 className="rounded-sm2 border border-line py-2 text-sm font-medium text-mint-deep hover:bg-canvas disabled:opacity-50">
                 {id ? "حفظ التعديل" : "حفظ في تصاميمي"}
               </button>
             </div>
             <p className="text-[11px] leading-relaxed text-faint">
-              في نافذة الطباعة: الورق A4{tpl.orients ? (orient === "landscape" ? " بالعرض" : " بالطول") : ""}،
-              والهوامش «بلا»، وفعّل «طباعة الخلفيات».
+              {printable
+                ? <>في نافذة الطباعة: الورق A4{size.w > size.h ? " بالعرض" : " بالطول"}، والهوامش «بلا»، وفعّل «طباعة الخلفيات».</>
+                : <>الصورة بمقاس {size.w}×{size.h} جاهزة للنشر. الغامقة أنسب لوسائل التواصل.</>}
             </p>
           </div>
         </section>
       </div>
 
-      <PrintPortal id="studio-print" landscape={tpl.orients && orient === "landscape"}>
-        <SheetFor tpl={tpl} theme={theme} orient={orient} data={data} />
-      </PrintPortal>
+      {printable && (
+        <PrintPortal id="studio-print" landscape={size.w > size.h}>
+          <SheetFor tpl={tpl} theme={theme} orient={orient} data={data} />
+        </PrintPortal>
+      )}
     </div>
   );
 }
@@ -359,11 +372,70 @@ function Field({ f, tpl, data, set }) {
     );
   }
 
+  if (f.type === "choice") {
+    return (
+      <div>
+        <label className="text-xs text-muted">{f.label}</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {f.options.map((o) => (
+            <button key={o} className={pill(data[f.name] === o)} onClick={() => set(f.name, o)}>{o}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (f.type === "format") {
+    return (
+      <div>
+        <label className="text-xs text-muted">{f.label}</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {Object.entries(SOCIAL_FORMATS).map(([k, s]) => (
+            <button key={k} className={pill((data[f.name] ?? "square") === k)} onClick={() => set(f.name, k)}>{s.label}</button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (f.type === "icon") {
+    return (
+      <div>
+        <label className="text-xs text-muted">{f.label}</label>
+        <div className="mt-1.5 grid grid-cols-5 gap-1.5">
+          {f.options.map((k) => (
+            <button key={k} onClick={() => set(f.name, k)} title={ICON_LABEL[k]}
+              className={`flex flex-col items-center gap-1 rounded-sm2 py-2 text-[10.5px] [&_svg]:h-5 [&_svg]:w-5 ${
+                data[f.name] === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+              {ICONS[k]}{ICON_LABEL[k]}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (f.type === "list") {
+    const rows = Array.from({ length: f.rows }, (_, i) => data[f.name]?.[i] ?? "");
+    const put = (i, v) => set(f.name, rows.map((r, j) => (j === i ? toWestern(v).slice(0, f.max ?? 80) : r)));
+    return (
+      <div>
+        <label className="text-xs text-muted">{f.label} — الفارغ لا يظهر</label>
+        <div className="mt-1 space-y-1.5">
+          {rows.map((r, i) => (
+            <input key={i} className="field w-full" placeholder={`النقطة ${i + 1}`} value={r}
+                   onChange={(e) => put(i, e.target.value)} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (f.type === "textarea") {
     return (
       <div>
         <label className="text-xs text-muted">{f.label}</label>
-        <textarea rows={2} className="field mt-1 w-full" value={data[f.name] ?? ""}
+        <textarea rows={f.rows ?? 2} className="field mt-1 w-full leading-relaxed" value={data[f.name] ?? ""}
                   onChange={(e) => set(f.name, text(e.target.value))} />
       </div>
     );

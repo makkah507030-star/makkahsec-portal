@@ -1,4 +1,5 @@
 // src/pages/studio/templates.js
+import { hijriToday } from "./lib";
 
 /* =====================================================================
    قوالب استوديو البوابة: القسم الذي يظهر فيه كل قالب، وحقوله، وتعبئته
@@ -62,6 +63,66 @@ export const TEMPLATES = [
     }),
   },
   {
+    key: "circular",
+    sections: ["admin"],
+    sheet: "circular",
+    title: "تعميم وإعلان",
+    desc: "تعميم أو إعلان أو تنبيه أو دعوة على A4 — برقم وتاريخ وتوقيع، والرسمية بترويسة الوزارة.",
+    presets: {
+      to: ["جميع المعلمين", "جميع منسوبي المدرسة", "جميع الطلاب", "أولياء الأمور", "رواد الفصول"],
+    },
+    fields: [
+      { name: "kind", label: "نوع الورقة", type: "choice", options: ["تعميم", "إعلان", "تنبيه", "دعوة"] },
+      { name: "no", label: "الرقم", max: 14, dir: "ltr" },
+      { name: "date", label: "التاريخ", max: 20 },
+      { name: "to", label: "إلى", max: 50 },
+      { name: "title", label: "الموضوع", max: 60 },
+      { name: "body", label: "النص — كل سطر فقرة", type: "textarea", rows: 7, max: 1100 },
+      { name: "points", label: "نقاط مرقّمة (اختياري)", type: "list", rows: 5, max: 100 },
+      { name: "signer", label: "الموقّع (الاسم)", max: 50 },
+      { name: "signerTitle", label: "الموقّع (الصفة)", max: 50 },
+    ],
+    sample: {
+      title: "مواعيد اختبارات منتصف الفصل",
+      body: "نفيدكم بأن اختبارات منتصف الفصل تبدأ يوم الأحد القادم وفق الجدول المعتمد في البوابة، ونأمل التعاون في تهيئة الطلاب ومتابعة حضورهم.",
+      points: ["تسليم الأسئلة للشؤون التعليمية قبل الاختبار بثلاثة أيام", "رصد الدرجات في البوابة خلال أسبوع", "إشعار ولي أمر الطالب المتغيب"],
+    },
+    defaults: (c) => ({
+      kind: "تعميم", no: `${c.deptCode || "AD"}-01`, date: hijriToday(), to: "جميع المعلمين",
+      title: "", body: "", points: [],
+      signer: c.name ? `أ. ${c.name}` : "", signerTitle: c.roleTitle, year: c.year,
+    }),
+  },
+  {
+    key: "door",
+    sections: ["admin", "teacher"],
+    sheet: "door",
+    fixedOrient: "landscape",
+    title: "لوحة باب",
+    desc: "لوحة موحّدة لأبواب المكاتب والقاعات والمعامل — A4 بالعرض.",
+    presets: {
+      place: ["مكتب مدير المدرسة", "مكتب وكيل شؤون الطلاب", "مكتب الموجّه الطلابي", "غرفة المعلمين",
+              "معمل الحاسب الآلي", "مختبر العلوم", "العيادة المدرسية", "مصادر التعلم"],
+      hours: ["7:30 – 12:30", "بعد الحصة الثالثة", "طوال اليوم الدراسي"],
+    },
+    fields: [
+      { name: "icon", label: "الرمز", type: "icon", options: ["building", "user", "cap", "book", "flask", "monitor", "health", "chat", "shield", "trophy"] },
+      { name: "place", label: "اسم المكتب أو القاعة", max: 40 },
+      { name: "name", label: "الاسم (اختياري)", max: 50 },
+      { name: "role", label: "الصفة (اختياري)", max: 50 },
+      { name: "hours", label: "أوقات المراجعة (اختياري)", max: 40 },
+      { name: "room", label: "رقم الغرفة (اختياري)", max: 6, dir: "ltr" },
+    ],
+    defaults: (c, section) => section === "admin"
+      ? { icon: "building", place: c.roleTitle ? `مكتب ${c.roleTitle}` : "", name: c.name ? `أ. ${c.name}` : "",
+          role: c.roleTitle, hours: "", room: "" }
+      : { icon: "cap", place: c.subject ? `قاعة ${c.subject}` : "", name: c.name ? `أ. ${c.name}` : "",
+          role: c.subject ? `معلم ${c.subject}` : "", hours: "", room: "" },
+    sample: (c, section) => section === "admin"
+      ? { hours: "7:30 – 12:30", room: "A-04" }
+      : { room: "B-12" },
+  },
+  {
     key: "divider",
     sections: ["teacher", "admin"],
     sheet: "divider",
@@ -115,6 +176,43 @@ export const TEMPLATES = [
         : [{ title: "سجل الدرجات", sub: c.subject, no: "1" }],
     }),
   },
+  {
+    key: "social",
+    sections: ["admin", "teacher"],
+    sheet: "social",
+    defaultTheme: "dark",
+    print: false,
+    title: "منشور للتواصل",
+    desc: "منشور مربع أو قصة (ستوري) بهوية الفيديو — للواتساب ووسائل التواصل، ويُنزَّل صورة.",
+    presets: { tag: ["خبر", "إعلان", "تهنئة", "تذكير", "إنجاز", "فعالية"] },
+    fields: [
+      { name: "format", label: "المقاس", type: "format" },
+      { name: "tag", label: "الشارة", max: 20 },
+      { name: "title", label: "العنوان", max: 40 },
+      { name: "accent", label: "السطر الملوّن", max: 40 },
+      { name: "sub", label: "النص (اختياري)", type: "textarea", rows: 3, max: 170 },
+      { name: "points", label: "نقاط (اختياري)", type: "list", rows: 4, max: 60 },
+      { name: "date", label: "التاريخ أو الموعد (اختياري)", max: 34 },
+    ],
+    sample: {
+      title: "اختبارات منتصف الفصل", accent: "تبدأ الأحد القادم",
+      points: ["الجدول متاح في البوابة", "الحضور قبل الاختبار بعشر دقائق"],
+    },
+    defaults: () => ({
+      format: "square", tag: "إعلان", title: "", accent: "", sub: "", points: [], date: hijriToday(),
+    }),
+  },
 ];
 
 export const templateOf = (key) => TEMPLATES.find((t) => t.key === key);
+
+// مقاس الورقة بالبكسل: A4 طولي أو عرضي، أو مقاس المنشور
+export const SOCIAL_FORMATS = {
+  square: { label: "مربع 1080×1080", w: 1080, h: 1080 },
+  story:  { label: "قصة 1080×1920", w: 1080, h: 1920 },
+};
+export function sheetDims(tpl, orient, data) {
+  if (tpl.sheet === "social") return SOCIAL_FORMATS[data?.format] ?? SOCIAL_FORMATS.square;
+  const o = tpl.fixedOrient ?? (tpl.orients ? orient : "portrait");
+  return o === "landscape" ? { w: 1123, h: 794 } : { w: 794, h: 1123 };
+}
