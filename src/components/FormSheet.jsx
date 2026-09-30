@@ -85,6 +85,17 @@ function Sign({ url, name, role }) {
   );
 }
 
+/* عدد مرفقات الإفادة — المرفقات نفسها لا تُطبع، تُحفظ في البوابة */
+function ReplyFilesNote({ v }) {
+  const n = v?.reply_files?.length ?? 0;
+  if (!n) return null;
+  return (
+    <p className="mt-2 text-[12px] text-muted">
+      مرفقات الإفادة: <b className="num text-ink">{n}</b> (محفوظة في البوابة الرقمية)
+    </p>
+  );
+}
+
 function Signatures({ source, issuerUrl, issuerName, issuerRole, principalUrl, principalName,
                      stampUrl, center, replyUrl, replyName }) {
   if (source === "none" && !stampUrl) return null;
@@ -261,6 +272,7 @@ function Certificate(p) {
           <p className="num mt-3 text-[13px] text-muted">{v.date || ""}</p>
         </div>
 
+        <ReplyFilesNote v={v} />
         <Signatures
           center
           source={template.signature_source}
@@ -331,6 +343,7 @@ function Official(p) {
       )}
 
       <div className="mt-4">
+        <ReplyFilesNote v={v} />
         <Signatures
           source={template.signature_source}
           issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}
@@ -478,6 +491,7 @@ function Administrative(p) {
       </div>
 
       <div className="mt-4">
+        <ReplyFilesNote v={v} />
         <Signatures
           source={template.signature_source}
           issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}

@@ -7,6 +7,7 @@ import DateField, { TimeField, rangeDays } from "../../components/DateField.jsx"
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 import Loader from "../../components/Loader.jsx";
+import { ReplyFilesList } from "../../components/ReplyFiles.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { canUseTemplate } from "../../lib/formRoles";
 import { sendPush } from "../../lib/pushSend.js";
@@ -1286,6 +1287,13 @@ export default function Forms() {
                   </p>
                 </div>
               ))}
+
+              {/* مرفقات الإفادة: تقرير طبي أو مستند عذر — تُفتح برابط مؤقت */}
+              {d.data?.reply_files?.length > 0 && (
+                <div className="rounded-sm2 bg-canvas px-3 py-2">
+                  <ReplyFilesList files={d.data.reply_files} />
+                </div>
+              )}
 
               {rejectFor?.id === d.id ? (
                 <div className="space-y-2 rounded-sm2 border border-absent/30 p-3">
