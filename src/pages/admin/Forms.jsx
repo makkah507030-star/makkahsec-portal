@@ -561,6 +561,25 @@ export default function Forms() {
 
     setIssued(data[0]);
     setBatch(data);
+
+    // ما يحتاج إفادة يُرسل لصاحبه فورًا — كان يُكتفى بالحفظ فلا يعلم به المستفيد
+    const toSend = data.filter((d) => d.status === "awaiting_reply");
+    if (toSend.length) {
+      const res = await Promise.all(toSend.map(notifyRecipient));
+      const failed = toSend.filter((d, i) => !res[i].ok);
+      loadDocs();
+      if (failed.length) {
+        const noAccount = failed.every((d) => !d.recipient_user_id);
+        setMsg({
+          ok: false,
+          text: noAccount
+            ? `حُفظ ${failed.map((d) => d.serial).join("، ")} لكن المستفيد غير مرتبط بحساب في البوابة، فلن يصله إشعار ولن يظهر عنده. اختر المستفيد من القائمة لا بكتابة اسمه.`
+            : `حُفظ ${failed.map((d) => d.serial).join("، ")} لكن تعذّر إرسال الإشعار: ${res.find((r) => !r.ok).text} — أعد الإرسال من الأرشيف بزر «إرسال للمستفيد».`,
+        });
+        return;
+      }
+    }
+
     const selfCount = rows.filter((x) => x.status === "pending" && !picked.requires_approval).length;
     setMsg({
       ok: true,
@@ -628,13 +647,18 @@ export default function Forms() {
 
   // إرسال المستند للمستفيد: إشعار داخل البوابة (جرس) وإشعار على الجوال
   const sendToRecipient = async (d) => {
+    const r = await notifyRecipient(d);
+    setMsg(r);
+    if (r.ok) loadDocs();
+  };
+
+  /* إشعار المستفيد (داخل البوابة وعلى الجوال) — يعيد { ok, text } */
+  const notifyRecipient = async (d) => {
     if (!d.recipient_user_id) {
-      setMsg({ ok: false, text: "هذا المستند غير مرتبط بحساب مستفيد." });
-      return;
+      return { ok: false, text: "هذا المستند غير مرتبط بحساب مستفيد." };
     }
     if (!["issued", "approved", "awaiting_reply"].includes(d.status)) {
-      setMsg({ ok: false, text: "لا يُرسل المستند قبل اعتماده." });
-      return;
+      return { ok: false, text: "لا يُرسل المستند قبل اعتماده." };
     }
 
     // المستفيد، ومعه أولياء أمره إن كان طالبًا
@@ -661,8 +685,8 @@ export default function Forms() {
       p_is_auto: false,
     });
 
-    if (error) { setMsg({ ok: false, text: `تعذّر الإرسال: ${error.message}` }); return; }
-    if (!nid)  { setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
+    if (error) return { ok: false, text: `تعذّر الإرسال: ${error.message}` };
+    if (!nid)  return { ok: false, text: "لا يوجد مستلمون مطابقون." };
 
     // إشعار الجوال
     try {
@@ -672,8 +696,7 @@ export default function Forms() {
     await supabase.from("form_documents")
       .update({ sent_at: new Date().toISOString() }).eq("id", d.id);
 
-    setMsg({ ok: true, text: `أُرسل إشعار المستند ${d.serial} للمستفيد.` });
-    loadDocs();
+    return { ok: true, text: `أُرسل إشعار المستند ${d.serial} للمستفيد.` };
   };
 
   // تقرير نموذج: مستنداته في المدى المحدّد مع أسماء مُصدِريها
