@@ -610,8 +610,16 @@ export default function Forms() {
       action === "approve"
         ? { status: "issued", decision_note: null, data: { ...d.data, ...(decision[d.id] ?? {}) } }
         : { status: "awaiting_reply", decision_note: note };
-    const { error } = await supabase.from("form_documents").update(patch).eq("id", d.id);
+    const { data: saved, error } = await supabase.from("form_documents")
+      .update(patch).eq("id", d.id).select("id");
     if (error) { setMsg({ ok: false, text: error.message }); return; }
+    // RLS تُسقط التعديل غير المسموح بصمت (بلا خطأ) — نتحقق أن الصف تغيّر فعلًا
+    if (!saved?.length) {
+      setMsg({ ok: false, text: "لم يُحفظ القرار: حسابك لا يملك صلاحية تعديل هذا المستند. "
+        + "الاعتماد لمُصدِره أو لمدير المدرسة أو للدعم الفني (بعد تنفيذ supabase/form_replies_managers.sql)." });
+      loadDocs();
+      return;
+    }
     setRejectFor(null); setRejectNote("");
     setMsg({
       ok: true,
@@ -624,15 +632,20 @@ export default function Forms() {
   };
 
   const decide = async (doc, status, note = null) => {
-    const { error } = await supabase.from("form_documents")
+    const { data, error } = await supabase.from("form_documents")
       .update({
         status,
         decision_note: note,
         approved_by: session.user.id,
         approved_at: new Date().toISOString(),
       })
-      .eq("id", doc.id);
+      .eq("id", doc.id).select("id");
     if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (!data?.length) {
+      setMsg({ ok: false, text: "لم يُحفظ القرار: حسابك لا يملك صلاحية اعتماد هذا المستند." });
+      loadDocs();
+      return;
+    }
     setRejectFor(null); setRejectNote("");
     loadDocs();
   };
