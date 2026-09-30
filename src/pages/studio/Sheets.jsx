@@ -139,7 +139,8 @@ export function RegisterCover({ theme = "light", orient = "portrait", kind = "te
 }
 
 /* ----------------------------- فاصل الأقسام ----------------------------- */
-const ORDINAL = ["", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر"];
+const ORDINAL = ["", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر",
+  "الحادي عشر", "الثاني عشر"];
 
 export function Divider({ theme = "light", d }) {
   const n = Math.max(1, Math.min(10, Number(d.n) || 1));
@@ -316,6 +317,36 @@ export function Social({ theme = "dark", d }) {
         <div className="stu-sfoot">
           <span>مدرسة مكة الثانوية</span>
           <span className="site">makkahsec.com</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------- لوحة الفصل ----------------------------- */
+export function ClassDoor({ theme = "light", d }) {
+  const n = Math.max(1, Number(d.classNo) || 1);
+  return (
+    <div className={`stu stu-door stu-class stu-${theme} stu-landscape sheet`}>
+      <Decor />
+      <div className="stu-page">
+        <Head theme={theme} year={d.year} />
+        <div className="stu-dbody">
+          <div className="stu-cno"><small>فصل</small><b className="num">{n}</b></div>
+          <div className="stu-dtext">
+            <div className="stu-h1" style={{ fontSize: fitSize(d.grade, { max: 88, min: 50, width: 640 }) }}>{d.grade}</div>
+            <div className="stu-cname">الفصل {ORDINAL[n] ?? n}</div>
+            {d.track && <span className="stu-track">{ICONS.cap}{d.track}</span>}
+            <div className="stu-grule" />
+            <div className="stu-mentor">
+              <span>رائد الفصل</span>
+              {d.mentor ? <b>{d.mentor}</b> : <i />}
+            </div>
+          </div>
+        </div>
+        <div className="stu-dfoot">
+          {d.motto ? <span className="stu-motto">{d.motto}</span> : <span />}
+          {d.room && <span className="stu-room"><small>غرفة</small><b dir="ltr">{d.room}</b></span>}
         </div>
       </div>
     </div>

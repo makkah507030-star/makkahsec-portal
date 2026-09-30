@@ -1,5 +1,5 @@
 // src/pages/studio/templates.js
-import { hijriToday } from "./lib";
+import { hijriToday, GRADE_OPTIONS, TRACK_LABEL } from "./lib";
 
 /* =====================================================================
    قوالب استوديو البوابة: القسم الذي يظهر فيه كل قالب، وحقوله، وتعبئته
@@ -123,6 +123,49 @@ export const TEMPLATES = [
     sample: (c, section) => section === "admin"
       ? { hours: "7:30 – 12:30", room: "A-04" }
       : { room: "B-12" },
+  },
+  {
+    key: "classdoor",
+    sections: ["admin", "teacher"],
+    sheet: "classdoor",
+    fixedOrient: "landscape",
+    batch: true,
+    title: "لوحة فصل",
+    desc: "لوحة باب الفصل برقمه وصفّه ومساره ورائده — وتُطبع لكل الفصول دفعة واحدة.",
+    presets: {
+      track: ["السنة الأولى المشتركة", "المسار العام", "مسار الصحة والحياة", "مسار علوم الحاسب والهندسة",
+              "مسار إدارة الأعمال", "المسار الشرعي"],
+      motto: ["فصلٌ متميّز", "هنا نصنع المستقبل", "نتعلّم لنرتقي"],
+    },
+    fields: [
+      { name: "grade", label: "الصف", type: "choice", options: GRADE_OPTIONS },
+      { name: "classNo", label: "رقم الفصل", type: "number", min: 1, max: 12 },
+      { name: "track", label: "المسار (اختياري)", max: 40 },
+      { name: "mentor", label: "رائد الفصل (اختياري — الفارغ يُترك سطرًا للكتابة)", max: 50 },
+      { name: "room", label: "رقم الغرفة (اختياري)", max: 6, dir: "ltr" },
+      { name: "motto", label: "عبارة الفصل (اختياري)", max: 40 },
+      { name: "batch", label: "الطباعة", type: "batch" },
+    ],
+    defaults: (c, section) => {
+      const first = c.classList?.[0];
+      return {
+        grade: GRADE_OPTIONS[(first?.grade ?? 1) - 1] ?? GRADE_OPTIONS[0], classNo: first?.class_no ?? 1,
+        track: TRACK_LABEL[first?.track] ?? "", mentor: section === "teacher" && c.name ? `أ. ${c.name}` : "",
+        room: "", motto: "", batch: "one", year: c.year,
+      };
+    },
+    sample: { classNo: 3, mentor: "أ. اسم رائد الفصل", room: "B-12" },
+    /* صفحات الطباعة: هذا الفصل، أو كل فصول الصف، أو كل الفصول — من جدول الفصول */
+    pages: (d, c) => {
+      if (d.batch === "one" || !c.classList?.length) return [d];
+      const g = GRADE_OPTIONS.indexOf(d.grade) + 1;
+      return c.classList
+        .filter((k) => d.batch === "all" || k.grade === g)
+        .map((k) => ({
+          ...d, grade: GRADE_OPTIONS[k.grade - 1] ?? d.grade, classNo: k.class_no,
+          track: TRACK_LABEL[k.track] ?? d.track, mentor: "", room: "",
+        }));
+    },
   },
   {
     key: "divider",

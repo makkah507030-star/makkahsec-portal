@@ -152,3 +152,7 @@ export function downloadBlob(blob, name) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
+/* الصفوف والمسارات كما تُكتب على لوحة الفصل */
+export const GRADE_OPTIONS = ["الأول الثانوي", "الثاني الثانوي", "الثالث الثانوي"];
+export const TRACK_LABEL = { common_year: "السنة الأولى المشتركة", general_track: "المسار العام" };

@@ -6,11 +6,11 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
-import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
+import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
 import { SECTIONS, TEMPLATES, templateOf, sheetDims, SOCIAL_FORMATS } from "./templates";
 import {
   THEMES, toWestern, useFontsReady, academicYearLabel, TERM_LABEL, ROLE_DEPT, classRange,
-  STUDIO_ACCESS_KEY, parseAccess, defaultAccess,
+  STUDIO_ACCESS_KEY, parseAccess, defaultAccess, GRADE_OPTIONS,
 } from "./lib";
 import { canUseTemplate } from "../../lib/formRoles";
 import Identity from "./Identity.jsx";
@@ -63,6 +63,11 @@ function useStudioCtx() {
         }
       }
 
+      // فصول العام الحالي — للوحات الفصول وطباعتها دفعة واحدة
+      const { data: cls } = await supabase.from("classes").select("class_no, grade, track")
+        .eq("academic_year", m.active_year ?? "").eq("is_active", true);
+      const classList = (cls ?? []).slice().sort((a, b) => a.grade - b.grade || a.class_no - b.class_no);
+
       // الإداري: قسمه ورمز سجلاته وصفته من دوره الأول المعروف
       const role = (adminRoles ?? []).find((r) => ROLE_DEPT[r] && r !== "tech_support")
         ?? (adminRoles ?? []).find((r) => ROLE_DEPT[r]);
@@ -75,6 +80,7 @@ function useStudioCtx() {
         subject, classes, dept, deptCode,
         roleTitle: ADMIN_ROLE_LABEL[role] ?? "",
         access: parseAccess(m[STUDIO_ACCESS_KEY]),
+        classList,
       });
     })();
   }, [session, profile, adminRoles, isTeacher]);
@@ -89,6 +95,7 @@ export function SheetFor({ tpl, theme, orient, data }) {
   if (tpl.sheet === "circular") return <Circular theme={theme} d={data} />;
   if (tpl.sheet === "door") return <DoorSign theme={theme} d={data} />;
   if (tpl.sheet === "social") return <Social theme={theme} d={data} />;
+  if (tpl.sheet === "classdoor") return <ClassDoor theme={theme} d={data} />;
   return <Spines theme={theme} d={data} />;
 }
 
@@ -123,7 +130,7 @@ export default function Studio() {
   if (!ctx) return <Loader />;
 
   if (edit) {
-    return <Editor key={edit.id ?? edit.tpl.key} init={edit} uid={session?.user?.id} onBack={() => setEdit(null)} />;
+    return <Editor key={edit.id ?? edit.tpl.key} init={edit} ctx={ctx} uid={session?.user?.id} onBack={() => setEdit(null)} />;
   }
 
   /* قوالب القسم المسموحة للمستخدم. والقالب الممنوح لدور خارج أقسامه
@@ -190,7 +197,7 @@ export default function Studio() {
 }
 
 /* ----------------------------- المحرّر ----------------------------- */
-function Editor({ init, uid, onBack }) {
+function Editor({ init, ctx, uid, onBack }) {
   const { tpl } = init;
   const [theme, setTheme] = useState(init.theme);
   const [orient, setOrient] = useState(init.orient);
@@ -201,6 +208,8 @@ function Editor({ init, uid, onBack }) {
   const sheetRef = useRef(null);
   const size = sheetDims(tpl, orient, data);
   const printable = tpl.print !== false;
+  // قالب الدفعة (لوحات الفصول) يطبع صفحة لكل فصل
+  const pages = tpl.pages ? tpl.pages(data, ctx ?? {}) : [data];
 
   const set = (name, v) => setData((d) => ({ ...d, [name]: v }));
 
@@ -307,7 +316,7 @@ function Editor({ init, uid, onBack }) {
           )}
 
           {tpl.fields.map((f) => (
-            <Field key={f.name} f={f} tpl={tpl} data={data} set={set} />
+            <Field key={f.name} f={f} tpl={tpl} data={data} set={set} ctx={ctx} />
           ))}
 
           {msg && (
@@ -334,7 +343,8 @@ function Editor({ init, uid, onBack }) {
             </div>
             <p className="text-[11px] leading-relaxed text-faint">
               {printable
-                ? <>في نافذة الطباعة: الورق A4{size.w > size.h ? " بالعرض" : " بالطول"}، والهوامش «بلا»، وفعّل «طباعة الخلفيات».</>
+                ? <>{pages.length > 1 && <b className="text-mint-deep">ستُطبع {boardsLabel(pages.length)}، كل لوحة في صفحة. </b>}
+                    في نافذة الطباعة: الورق A4{size.w > size.h ? " بالعرض" : " بالطول"}، والهوامش «بلا»، وفعّل «طباعة الخلفيات».</>
                 : <>الصورة بمقاس {size.w}×{size.h} جاهزة للنشر. الغامقة أنسب لوسائل التواصل.</>}
             </p>
           </div>
@@ -342,16 +352,20 @@ function Editor({ init, uid, onBack }) {
       </div>
 
       {printable && (
-        <PrintPortal id="studio-print" landscape={size.w > size.h}>
-          <SheetFor tpl={tpl} theme={theme} orient={orient} data={data} />
+        <PrintPortal id="studio-print" landscape={size.w > size.h}
+          extraCss="#studio-print .sheet { break-after: page; } #studio-print .sheet:last-child { break-after: auto; }">
+          {pages.map((p, i) => <SheetFor key={i} tpl={tpl} theme={theme} orient={orient} data={p} />)}
         </PrintPortal>
       )}
     </div>
   );
 }
 
+// العدد مع المعدود: لوحتان، 3 لوحات، 11 لوحة
+const boardsLabel = (n) => (n === 2 ? "لوحتان" : n >= 3 && n <= 10 ? `${n} لوحات` : `${n} لوحة`);
+
 /* ----------------------------- الحقول ----------------------------- */
-function Field({ f, tpl, data, set }) {
+function Field({ f, tpl, data, set, ctx }) {
   const presets = tpl.presets?.[f.name];
   const text = (v) => toWestern(v).slice(0, f.max ?? 80);
 
@@ -381,6 +395,32 @@ function Field({ f, tpl, data, set }) {
             <button key={o} className={pill(data[f.name] === o)} onClick={() => set(f.name, o)}>{o}</button>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (f.type === "batch") {
+    const list = ctx?.classList ?? [];
+    const g = GRADE_OPTIONS.indexOf(data.grade) + 1;
+    const inGrade = list.filter((k) => k.grade === g).length;
+    const opts = [
+      ["one", "هذا الفصل فقط"],
+      ...(inGrade ? [["grade", `كل فصول ${data.grade} (${inGrade})`]] : []),
+      ...(list.length ? [["all", `كل الفصول (${list.length})`]] : []),
+    ];
+    return (
+      <div>
+        <label className="text-xs text-muted">{f.label}</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {opts.map(([k, l]) => (
+            <button key={k} className={pill((data[f.name] ?? "one") === k)} onClick={() => set(f.name, k)}>{l}</button>
+          ))}
+        </div>
+        {data[f.name] && data[f.name] !== "one" && (
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+            تُطبع لوحة لكل فصل من جدول الفصول بمساره، ويُترك رائد الفصل سطرًا للكتابة. المعاينة للفصل المختار.
+          </p>
+        )}
       </div>
     );
   }
