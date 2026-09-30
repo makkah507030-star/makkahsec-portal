@@ -14,7 +14,6 @@ const PeriodReports = lazy(() => import("./PeriodReports.jsx"));
 const Statistics = lazy(() => import("./Statistics.jsx"));
 const Warnings = lazy(() => import("./Warnings.jsx"));
 const StudentFile = lazy(() => import("./StudentFile.jsx"));
-const FileSpines = lazy(() => import("./FileSpines.jsx"));
 const Devices = lazy(() =>
   import("../admin/AttendanceOverview.jsx").then((m) => ({ default: m.DevicesTab })));
 
@@ -42,8 +41,6 @@ const GROUPS = [
     ] },
   { title: "الأجهزة", hint: "حالة أجهزة البصمة وتغطيتها", access: "super",
     tabs: [{ key: "devices", label: "أجهزة البصمة" }] },
-  { title: "الملفات", hint: "كعوب ملفات شؤون الطلاب جاهزة للطباعة", access: "all",
-    tabs: [{ key: "spines", label: "كعب الملفات" }] },
 ];
 
 const ACCESS_NOTE = { warnings: "للوكيل والمدير والدعم الفني", super: "للمدير والدعم الفني" };
@@ -117,7 +114,6 @@ export default function StudentAffairs() {
         {tab === "warnings" && <Warnings />}
         {tab === "student" && <StudentFile />}
         {tab === "devices" && <Devices />}
-        {tab === "spines" && <FileSpines />}
       </Suspense>
     </div>
   );
