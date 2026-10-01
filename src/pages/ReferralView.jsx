@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
-import ReferralSheet, { ReferralPrintArea } from "../components/ReferralSheet.jsx";
+import ReferralSheet, { ReferralPrintArea, sheetPages } from "../components/ReferralSheet.jsx";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 
@@ -15,7 +15,7 @@ import { useNotice } from "../lib/useNotice.js";
 export default function ReferralView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { session } = useSession();
+  const { session, effectiveRole } = useSession();
 
   const [r, setR] = useState(null);
   const [stamp, setStamp] = useState(null);
@@ -99,12 +99,15 @@ export default function ReferralView() {
   if (!r) return <Loader />;
 
   const needsAck = isGuardian && !r.guardian_ack_at;
+  // ولي الأمر والطالب يرون إشعار ولي الأمر فقط؛ خطاب الإحالة للموجه سري
+  const guardianView = isGuardian || effectiveRole === "student";
 
   return (
     <div className="space-y-4">
       <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="truncate text-lg font-bold text-ink">إحالة {r.student_name}</h1>
+          <h1 className="truncate text-lg font-bold text-ink">
+            {r.kind === "behavior" ? "إشعار بمشكلة سلوكية" : "إحالة"} — {r.student_name}</h1>
           <p className="num mt-0.5 text-xs text-faint">{r.serial}</p>
         </div>
         <button className="btn-primary" onClick={() => window.print()}>طباعة / حفظ PDF</button>
@@ -141,14 +144,14 @@ export default function ReferralView() {
 
       <div ref={box} className="no-print overflow-hidden rounded-card border border-line bg-white">
         <div style={{ transform: `scale(${scale})`, transformOrigin: "top right",
-                      width: 794, height: 1123 * scale }}>
-          <ReferralSheet r={r} stampUrl={stamp} />
+                      width: 794, height: 1123 * sheetPages(r, guardianView) * scale }}>
+          <ReferralSheet r={r} stampUrl={stamp} guardianView={guardianView} />
         </div>
       </div>
 
       <div className="hidden print:block">
         <ReferralPrintArea>
-          <ReferralSheet r={r} stampUrl={stamp} />
+          <ReferralSheet r={r} stampUrl={stamp} guardianView={guardianView} />
         </ReferralPrintArea>
       </div>
 

@@ -24,7 +24,7 @@ export const OPEN_STATUSES = [
 
 // الأعمدة اللازمة لحساب المرحلة
 export const STAGE_COLS =
-  "id, serial, student_name, class_label, reason, status, teacher_name, created_at, teacher_at, " +
+  "id, serial, kind, student_name, class_label, reason, status, teacher_name, created_at, teacher_at, " +
   "deputy_at, counselor_id, counselor_name, counselor_at, closed_at, guardian_ack_at";
 
 // تُعدّ الإحالة متأخرة إن بقيت في مرحلتها أكثر من هذا
@@ -75,6 +75,13 @@ export const daysLabel = (n) =>
 
 /* مسار الإحالة خطوة خطوة: ما تمّ بتاريخه، وما بقي */
 export function timelineOf(r) {
+  // إحالة المخالفة السلوكية يصدرها الوكيل مباشرة (بلا مرحلة المعلم)
+  if (r.kind === "behavior") return [
+    { t: "أحالها الوكيل",  who: r.deputy_name,    at: r.deputy_at },
+    { t: "إجراء الموجه",   who: r.counselor_name, at: r.counselor_at },
+    { t: "اعتمدها الوكيل وأُشعر ولي الأمر", who: "", at: r.closed_at },
+    { t: "رد ولي الأمر",   who: "",               at: r.guardian_ack_at },
+  ];
   return [
     { t: "رفعها المعلم",   who: r.teacher_name,   at: r.teacher_at ?? r.created_at },
     { t: "حوّلها الوكيل",  who: r.deputy_name,    at: r.deputy_at },
