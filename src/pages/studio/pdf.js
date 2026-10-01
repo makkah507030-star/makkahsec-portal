@@ -58,18 +58,3 @@ export function jpegsToPdf(jpegs, pageMm) {
   push(`trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
   return new Blob(parts, { type: "application/pdf" });
 }
-
-/** يشارك الملف (ومنه «طباعة» في قائمة الجوال)، أو ينزّله إن تعذّرت المشاركة */
-export async function shareOrDownload(blob, name) {
-  const file = new File([blob], name, { type: blob.type });
-  if (navigator.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: name }); return "shared"; }
-    catch (e) { if (e?.name === "AbortError") return "cancelled"; }
-  }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-  return "downloaded";
-}

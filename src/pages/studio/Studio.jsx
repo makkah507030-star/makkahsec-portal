@@ -5,6 +5,7 @@ import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import { isMobileDevice } from "../../lib/print";
+import { jpegsToPdf } from "./pdf";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, Rollup, Thanks, Notice, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
@@ -268,22 +269,30 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
   const mobile = useMemo(isMobileDevice, []);
   const liveRef = useRef(null);
   const [printImgs, setPrintImgs] = useState(null);
+  // ملف PDF جاهز مسبقًا: المشاركة يجب أن تُستدعى فور اللمسة (Chrome على الجوال يرفضها بعد أي انتظار)
+  const [pdf, setPdf] = useState(null);
+  const fileTitle = [tpl.title, data.title || data.place || data.items?.[0]?.title]
+    .filter(Boolean).join(" - ").replace(/[\\/:*?"<>|]/g, "-");
   const capture = useCallback(async () => {
     const imgs = await rasterSheets(liveRef.current, size);
     setPrintImgs(imgs);
+    if (imgs?.length) {
+      const page = tpl.printSize ? { w: size.w, h: size.h }
+        : size.w > size.h ? { w: 297, h: 210 } : { w: 210, h: 297 };
+      const blob = jpegsToPdf(imgs, page);
+      setPdf({ blob, url: URL.createObjectURL(blob), name: `${fileTitle}.pdf` });
+    }
     return imgs;
-  }, [size.w, size.h]);
+  }, [size.w, size.h, tpl.printSize, fileTitle]);
   useEffect(() => {
     if (!mobile || !printable) return;
-    setPrintImgs(null);
+    setPrintImgs(null); setPdf(null);
     const t = setTimeout(() => { capture().catch((e) => console.error("rasterSheets:", e)); }, 1200);
     return () => clearTimeout(t);
   }, [mobile, printable, capture, data, theme, orient, ctx]);
+  useEffect(() => () => { if (pdf?.url) setTimeout(() => URL.revokeObjectURL(pdf.url), 60000); }, [pdf]);
 
-  const fileTitle = [tpl.title, data.title || data.place || data.items?.[0]?.title]
-    .filter(Boolean).join(" - ").replace(/[\\/:*?"<>|]/g, "-");
-
-  const printNow = async () => {
+  const printNow = () => {
     if (mobile) return mobilePdf();
     // عنوان الصفحة يصبح اسم ملف PDF المقترح عند الحفظ
     const prev = document.title;
@@ -292,20 +301,24 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
     setTimeout(() => { document.title = prev; }, 500);
   };
 
-  const mobilePdf = async () => {
-    setBusy(true);
-    try {
-      const imgs = printImgs ?? await capture();
-      if (!imgs?.length) throw new Error("لا أوراق للطباعة");
-      const page = tpl.printSize ? { w: size.w, h: size.h }
-        : size.w > size.h ? { w: 297, h: 210 } : { w: 210, h: 297 };
-      const { jpegsToPdf, shareOrDownload } = await import("./pdf");
-      const how = await shareOrDownload(jpegsToPdf(imgs, page), `${fileTitle}.pdf`);
-      if (how === "downloaded") setMsg({ ok: true, text: "نُزّل ملف PDF بالمقاس الصحيح — افتحه واطبعه من «مشاركة ← طباعة»." });
-    } catch (e) {
-      setMsg({ ok: false, text: `تعذّر تجهيز ملف الطباعة: ${e.message ?? e}` });
+  // بلا أي انتظار قبل المشاركة: تُستدعى في اللمسة نفسها
+  const mobilePdf = () => {
+    if (!pdf) {
+      setBusy(true);
+      capture()
+        .then(() => setMsg({ ok: true, text: "الملف جاهز — اضغط «طباعة / حفظ PDF» مرة أخرى." }))
+        .catch((e) => setMsg({ ok: false, text: `تعذّر تجهيز ملف الطباعة: ${e.message ?? e}` }))
+        .finally(() => setBusy(false));
+      return;
     }
-    setBusy(false);
+    const file = new File([pdf.blob], pdf.name, { type: "application/pdf" });
+    if (navigator.canShare?.({ files: [file] })) {
+      navigator.share({ files: [file], title: pdf.name }).catch((e) => {
+        if (e?.name !== "AbortError") setMsg({ ok: true, text: "افتح الملف من رابط «فتح ملف PDF» أسفل الزر، ثم اطبعه." });
+      });
+    } else {
+      setMsg({ ok: true, text: "افتح الملف من رابط «فتح ملف PDF» أسفل الزر، ثم اطبعه من قائمة المتصفح." });
+    }
   };
 
   const exportPng = async () => {
@@ -420,6 +433,14 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
                   {mobile && busy ? "جارٍ تجهيز ملف PDF…" : "طباعة / حفظ PDF"}
                 </button>
               : <button disabled={busy} className="btn-primary w-full disabled:opacity-50" onClick={exportPng}>تنزيل الصورة</button>}
+            {/* بديل لكل المتصفحات: رابط يلمسه المستخدم بنفسه فيفتح الملف أو ينزّله */}
+            {mobile && printable && pdf && (
+              <a href={pdf.url} target="_blank" rel="noopener noreferrer"
+                 download={/Android/i.test(navigator.userAgent) ? pdf.name : undefined}
+                 className="text-center text-xs font-semibold text-mint-deep underline underline-offset-4">
+                فتح ملف PDF
+              </a>
+            )}
             <div className={`grid gap-2 ${printable ? "grid-cols-2" : ""}`}>
               {printable && (
                 <button disabled={busy} onClick={exportPng}
