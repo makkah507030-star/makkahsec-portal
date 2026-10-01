@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import PrintPortal from "../../components/PrintPortal.jsx";
+import { isMobileDevice } from "../../lib/print";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, Rollup, Thanks, Notice, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
@@ -260,10 +261,11 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
     return tpl.derive ? tpl.derive(next, name, ctx ?? {}) : next;
   });
 
-  // على iPhone/iPad تُطبع صورة الورقة لا الورقة نفسها: محرّك الطباعة هناك يتجاهل شفافية
-  // الألوان والتدرّجات (تسودّ الخلفية وتظهر الهالة دائرة صلبة)، والصورة تطابق المعاينة تمامًا.
-  // تُجهَّز الصور مسبقًا بعد كل تعديل، فتصحّ الطباعة من الزر ومن قائمة «مشاركة ← طباعة» في Safari.
-  const ios = useMemo(isIOS, []);
+  // على الجوال (iPhone وiPad وAndroid، في Safari وChrome) لا تُطبع صفحة الويب: متصفحات الجوال
+  // تتجاهل شفافية الألوان والتدرّجات وتفرض هوامشها فتفيض الورقة. بدلًا من ذلك تُلتقط كل ورقة
+  // صورةً (بعد ثانية من آخر تعديل) ويُنشأ منها ملف PDF بالمقاس الصحيح يُشارك للطباعة أو الحفظ.
+  // وتبقى الصور في منطقة الطباعة أيضًا لمن يطبع من قائمة المتصفح.
+  const mobile = useMemo(isMobileDevice, []);
   const liveRef = useRef(null);
   const [printImgs, setPrintImgs] = useState(null);
   const capture = useCallback(async () => {
@@ -272,26 +274,38 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
     return imgs;
   }, [size.w, size.h]);
   useEffect(() => {
-    if (!ios || !printable) return;
+    if (!mobile || !printable) return;
     setPrintImgs(null);
     const t = setTimeout(() => { capture().catch((e) => console.error("rasterSheets:", e)); }, 1200);
     return () => clearTimeout(t);
-  }, [ios, printable, capture, data, theme, orient, ctx]);
+  }, [mobile, printable, capture, data, theme, orient, ctx]);
+
+  const fileTitle = [tpl.title, data.title || data.place || data.items?.[0]?.title]
+    .filter(Boolean).join(" - ").replace(/[\\/:*?"<>|]/g, "-");
 
   const printNow = async () => {
+    if (mobile) return mobilePdf();
     // عنوان الصفحة يصبح اسم ملف PDF المقترح عند الحفظ
     const prev = document.title;
-    document.title = `${tpl.title} - ${data.title || data.items?.[0]?.title || ""}`.trim();
-    if (ios && !printImgs) {
-      setBusy(true);
-      try { await capture(); }
-      catch (e) { setMsg({ ok: false, text: `تعذّر تجهيز الطباعة: ${e.message ?? e}` }); setBusy(false); return; }
-      setBusy(false);
-      // انتظار رسم الصور في منطقة الطباعة قبل فتح نافذتها
-      await new Promise((r) => setTimeout(r, 300));
-    }
+    document.title = fileTitle;
     window.print();
     setTimeout(() => { document.title = prev; }, 500);
+  };
+
+  const mobilePdf = async () => {
+    setBusy(true);
+    try {
+      const imgs = printImgs ?? await capture();
+      if (!imgs?.length) throw new Error("لا أوراق للطباعة");
+      const page = tpl.printSize ? { w: size.w, h: size.h }
+        : size.w > size.h ? { w: 297, h: 210 } : { w: 210, h: 297 };
+      const { jpegsToPdf, shareOrDownload } = await import("./pdf");
+      const how = await shareOrDownload(jpegsToPdf(imgs, page), `${fileTitle}.pdf`);
+      if (how === "downloaded") setMsg({ ok: true, text: "نُزّل ملف PDF بالمقاس الصحيح — افتحه واطبعه من «مشاركة ← طباعة»." });
+    } catch (e) {
+      setMsg({ ok: false, text: `تعذّر تجهيز ملف الطباعة: ${e.message ?? e}` });
+    }
+    setBusy(false);
   };
 
   const exportPng = async () => {
@@ -402,7 +416,9 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
 
           <div className="grid gap-2 border-t border-line pt-4">
             {printable
-              ? <button className="btn-primary w-full" onClick={printNow}>طباعة / حفظ PDF</button>
+              ? <button disabled={busy} className="btn-primary w-full disabled:opacity-50" onClick={printNow}>
+                  {mobile && busy ? "جارٍ تجهيز ملف PDF…" : "طباعة / حفظ PDF"}
+                </button>
               : <button disabled={busy} className="btn-primary w-full disabled:opacity-50" onClick={exportPng}>تنزيل الصورة</button>}
             <div className={`grid gap-2 ${printable ? "grid-cols-2" : ""}`}>
               {printable && (
@@ -421,7 +437,9 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
                 ? tpl.printSize
                   ? <>«طباعة / حفظ PDF» يُخرج ملف PDF بالمقاس الحقيقي {size.w / 10} × {size.h / 10} سم — اختر «حفظ بتنسيق PDF» وأرسله للمطبعة. والصورة PNG بدقة 100 نقطة/بوصة. أبقِ المحتوى المهم أعلى من آخر 20 سم (تدخل في قاعدة الستاند).</>
                   : <>{pages.length > 1 && <b className="text-mint-deep">ستُطبع {pagesLabel(pages.length)}. </b>}
-                    في نافذة الطباعة: الورق A4{size.w > size.h ? " بالعرض" : " بالطول"}، والهوامش «بلا»، وفعّل «طباعة الخلفيات».</>
+                    {mobile
+                      ? <>على الجوال يُنشأ ملف PDF بمقاس A4 الصحيح — اختر منه «طباعة» أو «حفظ في الملفات».</>
+                      : <>في نافذة الطباعة: الورق A4{size.w > size.h ? " بالعرض" : " بالطول"}، والهوامش «بلا»، وفعّل «طباعة الخلفيات».</>}</>
                 : <>الصورة بمقاس {size.w}×{size.h} جاهزة للنشر. الغامقة أنسب لوسائل التواصل.</>}
             </p>
           </div>
@@ -429,7 +447,7 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
       </div>
 
       {/* نسخة حيّة خارج الشاشة تُلتقط منها صور الطباعة على iPhone/iPad */}
-      {ios && printable && (
+      {mobile && printable && (
         <div ref={liveRef} aria-hidden="true"
              style={{ position: "fixed", left: -20000, top: 0, pointerEvents: "none" }}>
           {pages.map((p, i) => <SheetFor key={i} tpl={tpl} theme={theme} orient={orient} data={p} />)}
@@ -453,10 +471,7 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
   );
 }
 
-const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent)
-  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-/* مقاس صورة الطباعة على iOS بالمليمتر: Safari هناك يفرض هوامش (~14 مم) لرابط الصفحة
+/* مقاس صورة الطباعة على الجوال بالمليمتر (لمن يطبع من قائمة المتصفح): Safari يفرض هوامش (~14 مم) لرابط الصفحة
    وتاريخها ولا يلتزم بتصغير zoom للصور، فتُحسب الصورة لتتسع داخل الورقة ناقص 32 مم
    في كل اتجاه مع حفظ نسبتها — فلا تفيض إلى ورقة ثانية */
 function iosFit(size, realSize) {
@@ -470,15 +485,15 @@ function iosFit(size, realSize) {
 /* صور أوراق الطباعة من النسخة الحيّة الموضوعة خارج الشاشة */
 async function rasterSheets(root, size) {
   if (!root) return null;
-  const { toPng } = await import("html-to-image");
+  const { toJpeg } = await import("html-to-image");
   await document.fonts?.ready;
   // دقة تقارب 300 نقطة/بوصة للـ A4، ضمن حد مساحة الرسم في Safari (~16 مليون بكسل)
   const ratio = Math.min(3, Math.sqrt(15e6 / (size.w * size.h)));
   const out = [];
   for (const node of root.querySelectorAll(".sheet")) {
-    const opts = { pixelRatio: ratio, cacheBust: true, width: size.w, height: size.h };
-    await toPng(node, opts); // Safari يرسم الصور المضمّنة في المرة الثانية فقط
-    out.push(await toPng(node, opts));
+    const opts = { pixelRatio: ratio, cacheBust: true, width: size.w, height: size.h, quality: 0.93, backgroundColor: "#fff" };
+    await toJpeg(node, opts); // Safari يرسم الصور المضمّنة في المرة الثانية فقط
+    out.push(await toJpeg(node, opts));
   }
   return out;
 }
