@@ -19,11 +19,15 @@ const TRACK = { common_year: "السنة المشتركة", general_track: "ال
 const TO_PRESETS = ["من يهمه الأمر", "المديرية العامة للجوازات", "إدارة التعليم", "جهة العمل", "السفارة"];
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
-// العام الدراسي بصيغة نظام نور: السنة الهجرية السابقة - الحالية (1447-1448)
-const noorYear = () => {
+// العام الدراسي: سنة بدايته الهجرية - التي تليها (1448 - 1449)، ويبدأ العام في أغسطس
+const schoolYear = (now = new Date()) => {
+  const start = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
   let h = 1448;
-  try { h = parseInt(new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { year: "numeric" }).format(new Date()).replace(/\D/g, ""), 10); } catch { /* تجاهل */ }
-  return `${h - 1}-${h}`;
+  try {
+    h = parseInt(new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", { year: "numeric" })
+      .format(new Date(start, 7, 20)).replace(/\D/g, ""), 10);
+  } catch { /* تجاهل */ }
+  return `${h} - ${h + 1}`;
 };
 // التاريخ الهجري يومًا/شهرًا/سنة كما في الشهادة الرسمية
 const hijriDMY = (d) => fmtHijri(d, false).split("/").reverse().join("/");
@@ -51,7 +55,7 @@ export default function StudentCertificate() {
   const [to, setTo] = useState(TO_PRESETS[0]);
   const [no, setNo] = useState("");
   const [date, setDate] = useState(todayISO());
-  const [year, setYear] = useState(noorYear());
+  const [year, setYear] = useState(schoolYear());
   const [stamp, setStamp] = useState(null);
 
   useEffect(() => {
@@ -178,7 +182,7 @@ export function CertificateSheet({ c, stamp }) {
         </div>
         <div className="flex justify-center"><img src={moeLogo} alt="" className="h-20 w-auto" /></div>
         <div className="mr-auto text-[12px] leading-[1.9]">
-          <div><span className="text-muted">العام الدراسي: </span><b><Ltr>{c.year}</Ltr></b></div>
+          <div><span className="text-muted">العام الدراسي: </span><b><Ltr>{c.year}</Ltr> هـ</b></div>
           <div><span className="text-muted">الرقم: </span><b className="num">{c.no || "...................."}</b></div>
           <div><span className="text-muted">التاريخ: </span><b><Ltr>{hijriDMY(c.date)}</Ltr></b></div>
         </div>
@@ -203,7 +207,7 @@ export function CertificateSheet({ c, stamp }) {
 
       <div className="mt-8 space-y-3 px-1 text-[15px] leading-[2.1]">
         <p className="font-bold">تشهد إدارة مدرسة مكة الثانوية - مسارات</p>
-        <p>بأن الطالب الموضحة بياناته أعلاه هو أحد الطلاب المنتظمين في المدرسة للعام الدراسي <b><Ltr>{c.year}</Ltr>هـ</b>.</p>
+        <p>بأن الطالب الموضحة بياناته أعلاه هو أحد الطلاب المنتظمين في المدرسة للعام الدراسي <b><Ltr>{c.year}</Ltr> هـ</b>.</p>
         <p>وقد أُعطي هذه الشهادة بناءً على طلبه لتقديمها إلى <b>{c.to}</b>.</p>
         <p className="pt-2 text-center font-bold">والله الموفق ،،،</p>
       </div>
