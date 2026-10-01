@@ -3,13 +3,14 @@
 --   pledge   تعهد سلوكي              (نموذج 8)  — يقرّ به الطالب وولي أمره
 --   invite   خطاب دعوة ولي الأمر      (نموذج 10) — يرد ولي الأمر بالحضور أو تغيير الموعد
 --   incident سري: محضر ضبط واقعة     (نموذج 11) — داخلي للإدارة
+--   statement إفادة طالب                        — داخلية، تُطبع ليوقّع عليها الطالب
 -- يُنفَّذ مرة واحدة من Supabase ← SQL Editor.
 -- =====================================================================
 
 create table if not exists public.behavior_forms (
   id uuid primary key default gen_random_uuid(),
   serial text unique,
-  kind text not null check (kind in ('pledge', 'invite', 'incident')),
+  kind text not null,
   student_id uuid not null references public.students(id) on delete cascade,
   student_name text,
   class_label text,
@@ -31,6 +32,10 @@ create table if not exists public.behavior_forms (
   guardian_note text,
   created_at timestamptz not null default now()
 );
+
+alter table public.behavior_forms drop constraint if exists behavior_forms_kind_check;
+alter table public.behavior_forms add constraint behavior_forms_kind_check
+  check (kind in ('pledge', 'invite', 'incident', 'statement'));
 
 create index if not exists behavior_forms_student_idx on public.behavior_forms (student_id);
 create index if not exists behavior_forms_kind_idx on public.behavior_forms (kind, created_at desc);
@@ -60,10 +65,10 @@ create policy "staff read behavior forms" on public.behavior_forms for select to
   using (
     issued_by = auth.uid()
     or has_admin_role(array['principal', 'tech_support', 'deputy_students', 'counselor_1', 'counselor_2', 'counselor_3'])
-    -- الطالب وولي أمره: التعهد والدعوة فقط (المحضر سري)
-    or (kind <> 'incident' and exists (
+    -- الطالب وولي أمره: التعهد والدعوة فقط (المحضر والإفادة داخليان)
+    or (kind in ('pledge', 'invite') and exists (
           select 1 from public.students s where s.id = behavior_forms.student_id and s.user_id = auth.uid()))
-    or (kind <> 'incident' and exists (
+    or (kind in ('pledge', 'invite') and exists (
           select 1 from public.guardian_student gs join public.guardians g on g.id = gs.guardian_id
           where gs.student_id = behavior_forms.student_id and g.user_id = auth.uid()))
   );
@@ -90,7 +95,7 @@ returns void language plpgsql security definer set search_path = public as $$
 declare f public.behavior_forms; is_student boolean; is_guardian boolean;
 begin
   select * into f from public.behavior_forms where id = p_id;
-  if f.id is null or f.kind = 'incident' then raise exception 'غير متاح'; end if;
+  if f.id is null or f.kind not in ('pledge', 'invite') then raise exception 'غير متاح'; end if;
 
   select exists (select 1 from public.students s where s.id = f.student_id and s.user_id = auth.uid())
     into is_student;

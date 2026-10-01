@@ -11,7 +11,7 @@ import { degreeName, typeLabel } from "../lib/behavior";
 import Loader from "../components/Loader.jsx";
 import ViolationPicker from "../components/ViolationPicker.jsx";
 import StudentPicker, { studentClassLabel } from "../components/StudentPicker.jsx";
-import BehaviorSheet, { FORM_KINDS, EVIDENCE, MEET_WITH, weekday } from "../components/BehaviorSheet.jsx";
+import BehaviorSheet, { FORM_KINDS, EVIDENCE, MEET_WITH, STATEMENT_CLOSING, weekday } from "../components/BehaviorSheet.jsx";
 import { ReferralPrintArea } from "../components/ReferralSheet.jsx";
 
 /* =====================================================================
@@ -101,7 +101,7 @@ export default function BehaviorForms() {
       )}
 
       {tab === "new" && !kind && (
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {Object.entries(FORM_KINDS).map(([k, x]) => (
             <button key={k} onClick={() => setParams({ kind: k })}
                     className="card p-4 text-right transition-colors hover:border-mint-deep/40 hover:bg-mint-tint/30">
@@ -110,7 +110,7 @@ export default function BehaviorForms() {
                 {x.secret && <span className="chip bg-absent/10 text-absent">سري</span>}
               </div>
               <p className="mt-1.5 text-xs leading-relaxed text-muted">{x.hint}</p>
-              <p className="mt-2 text-[11px] text-faint">نموذج ({x.n}) في الدليل</p>
+              <p className="mt-2 text-[11px] text-faint">{x.n ? `نموذج (${x.n}) في الدليل` : "نموذج داخلي للمدرسة"}</p>
             </button>
           ))}
         </div>
@@ -134,7 +134,7 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
   const k = FORM_KINDS[kind];
   const [student, setStudent] = useState(null);
   const [violation, setViolation] = useState(null);
-  const [linkViolation, setLinkViolation] = useState(kind !== "invite");
+  const [linkViolation, setLinkViolation] = useState(false);
   const [vDate, setVDate] = useState(todayISO());
   // الدعوة
   const [meetDate, setMeetDate] = useState(todayISO());
@@ -149,13 +149,18 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
   const [witnesses, setWitnesses] = useState([{ name: profile?.full_name ?? "", job: ADMIN_ROLE_LABEL[roles[0]] ?? "", task: "" }]);
   const [busy, setBusy] = useState(false);
 
-  const needViolation = kind !== "invite" || linkViolation;
+  // الإفادة: نصها وتاريخها، وربطها بمخالفة اختياري كالدعوة
+  const [stText, setStText] = useState("");
+  const [stDate, setStDate] = useState(todayISO());
+  const optionalViolation = kind === "invite" || kind === "statement";
+  const needViolation = !optionalViolation || linkViolation;
   const ready = student && (!needViolation || violation) && (kind !== "invite" || (meetDate && purpose.trim()))
-    && (kind !== "incident" || place.trim());
+    && (kind !== "incident" || place.trim()) && (kind !== "statement" || stText.trim());
 
   const data = kind === "invite" ? { date: meetDate, time: time.trim(), meet_with: meetWith, purpose: purpose.trim() }
     : kind === "incident" ? { evidence, evidence_other: evOther.trim(), place: place.trim(), time: time.trim(),
                               description: desc.trim(), witnesses: witnesses.filter((w) => w.name.trim()) }
+    : kind === "statement" ? { text: stText.trim(), date: stDate, time: time.trim() }
     : {};
 
   const submit = async () => {
@@ -168,14 +173,14 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
       violation_degree: needViolation ? violation.degree : null,
       violation_type: needViolation ? violation.type : null,
       violation_text: needViolation ? violation.text : null,
-      violation_date: needViolation && kind !== "invite" ? vDate : null,
+      violation_date: needViolation && !optionalViolation ? vDate : null,
       data, issued_by: uid, issued_name: profile?.full_name ?? "",
       issued_role: roles.map((r) => ADMIN_ROLE_LABEL[r]).filter(Boolean)[0] ?? "",
       issued_sig: sig?.path ?? null,
-      status: kind === "incident" ? "closed" : "sent",
+      status: k.internal ? "closed" : "sent",
     };
     const { data: saved, error } = await supabase.from("behavior_forms").insert(row).select().single();
-    if (!error && kind !== "incident") {
+    if (!error && !k.internal) {
       // الطالب يُشعر بالتعهد فقط، وولي الأمر بالتعهد والدعوة
       const ids = new Set();
       if (kind === "pledge") {
@@ -195,7 +200,8 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
       ? { ok: false, text: /behavior_forms/.test(error.message)
           ? "نفّذ ملف supabase/behavior_forms.sql أولًا من Supabase ← SQL Editor." : error.message }
       : { ok: true, text: kind === "incident" ? `حُفظ ${k.title} برقم ${saved.serial}. اطبعه للتوقيع.`
-                                              : `صدر ${k.title} برقم ${saved.serial} وأُشعر ${kind === "pledge" ? "الطالب وولي أمره" : "ولي الأمر"}.` },
+          : kind === "statement" ? `حُفظت ${k.title} برقم ${saved.serial}. اطبعها ليوقّع عليها الطالب.`
+          : `صدر ${k.title} برقم ${saved.serial} وأُشعر ${kind === "pledge" ? "الطالب وولي أمره" : "ولي الأمر"}.` },
       saved);
   };
 
@@ -256,6 +262,18 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
         </>
       )}
 
+      {kind === "statement" && (
+        <StatementFields text={stText} setText={setStText} date={stDate} setDate={setStDate}
+                         time={time} setTime={setTime} student={student} />
+      )}
+
+      {kind === "statement" && (
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input type="checkbox" checked={linkViolation} onChange={(e) => setLinkViolation(e.target.checked)} />
+          ربط الإفادة بمخالفة سلوكية (تُذكر في رأس الإفادة)
+        </label>
+      )}
+
       {needViolation && (
         <div>
           <label className="text-xs text-muted">المخالفة السلوكية</label>
@@ -266,7 +284,7 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
         </div>
       )}
 
-      {kind !== "invite" && (
+      {!optionalViolation && (
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="text-xs text-muted">تاريخ المخالفة</label>
@@ -337,9 +355,58 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
       {preview && <MiniPreview f={preview} />}
 
       <button className="btn-primary w-full" disabled={!ready || busy} onClick={submit}>
-        {busy ? "جارٍ الحفظ…" : kind === "incident" ? "حفظ المحضر" : `إصدار ${k.title} وإرساله`}
+        {busy ? "جارٍ الحفظ…" : kind === "incident" ? "حفظ المحضر" : kind === "statement" ? "حفظ الإفادة" : `إصدار ${k.title} وإرساله`}
       </button>
     </section>
+  );
+}
+
+/* صيغ مقترحة لإفادات الطلاب — تُدرج في مربع النص وتُكمل بالتفاصيل */
+const STATEMENT_TEMPLATES = [
+  { t: "سرد واقعة", v: (s, d) => `أفيد أنا الطالب / ${s}، بأنه في يوم ${d}، وأثناء ........................، حدث ما يلي:\n` },
+  { t: "شاهد على واقعة", v: (s, d) => `أفيد أنا الطالب / ${s}، بأنني كنت شاهدًا على الواقعة التي حدثت يوم ${d} في ........................ بين الطالب / ........................ والطالب / ........................، وكانت تفاصيلها كالتالي:\n` },
+  { t: "سبب تأخر أو غياب", v: (s, d) => `أفيد أنا الطالب / ${s}، بأن سبب تأخري / غيابي يوم ${d} هو:\n` },
+  { t: "الخروج من الحصة", v: (s, d) => `أفيد أنا الطالب / ${s}، بأنني خرجت من حصة ........................ يوم ${d} دون استئذان، وذلك بسبب:\n` },
+  { t: "مواد أو أدوات بحوزته", v: (s, d) => `أفيد أنا الطالب / ${s}، بأن ما وُجد بحوزتي يوم ${d} هو ........................، وقد أحضرته إلى المدرسة بسبب:\n` },
+  { t: "نفي المشاركة", v: (s, d) => `أفيد أنا الطالب / ${s}، بأنني لم أكن طرفًا فيما حدث يوم ${d}، وأن دوري اقتصر على:\n` },
+  { t: "اعتذار وإقرار بالخطأ", v: (s, d) => `أفيد أنا الطالب / ${s}، بأنني أخطأت يوم ${d} في ........................، وأعتذر عن ذلك، وأتعهد بعدم تكراره.\n` },
+];
+
+function StatementFields({ text, setText, date, setDate, time, setTime, student }) {
+  const name = student?.full_name ?? "........................";
+  const dayText = date ? `${weekday(date)} ${fmtGreg(date)}` : "........";
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="text-xs text-muted">تاريخ الإفادة</label>
+          <input type="date" className="field mt-1 w-full" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-muted">الوقت (اختياري)</label>
+          <input className="field mt-1 w-full" value={time} placeholder="مثال: الحصة الثالثة — 9:40" onChange={(e) => setTime(e.target.value)} />
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-muted">صيغ مقترحة — تُدرج في النص ثم تُكمل</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {STATEMENT_TEMPLATES.map((x) => (
+            <button key={x.t} type="button"
+              onClick={() => setText((cur) => (cur.trim() ? `${cur.trimEnd()}\n` : "") + x.v(name, dayText))}
+              className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
+              + {x.t}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-muted">نص الإفادة</label>
+        <textarea rows={10} className="field mt-1 w-full leading-relaxed" value={text}
+                  placeholder="اكتب إفادة الطالب كما يرويها، أو ابدأ بصيغة مقترحة من الأعلى"
+                  onChange={(e) => setText(e.target.value)} />
+        <p className="mt-1 text-[11px] text-faint">تُختم الإفادة تلقائيًا بعبارة: «{STATEMENT_CLOSING}»</p>
+      </div>
+    </>
   );
 }
 
@@ -392,7 +459,7 @@ function Log({ rows, onOpen }) {
                   {" · "}{r.issued_name}
                 </p>
               </div>
-              {r.kind !== "incident" && <span className={`chip shrink-0 ${st.c}`}>{st.t}</span>}
+              {!FORM_KINDS[r.kind]?.internal && <span className={`chip shrink-0 ${st.c}`}>{st.t}</span>}
               <button onClick={() => onOpen(r)}
                       className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">الملف</button>
             </div>
