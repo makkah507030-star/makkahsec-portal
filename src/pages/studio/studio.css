@@ -439,3 +439,12 @@
 /* ختم المدرسة المعتمد مكان الدائرة المنقّطة */
 .stu .stamp.img { border: none; width: auto; min-width: 104px; height: 118px; }
 .stu .stamp.img img { max-height: 118px; max-width: 150px; object-fit: contain; opacity: .92; }
+
+/* الطباعة من الجوال: محرّك الطباعة في iPhone/iPad يرسم طبقات filter: blur الكبيرة خطأً
+   (تظهر دائرة صلبة وتنقلب شفافية الألوان فتسودّ الخلفية ويبهت النص).
+   في الطباعة نستبدل التمويه بتدرّج دائري ناعم يعطي الأثر نفسه بلا فلاتر. */
+@media print {
+  .stu .stu-blob { filter: none; transform: scale(1.6);
+                   background: radial-gradient(closest-side, var(--stu-blob) 0%, var(--stu-blob) 15%, transparent 100%); }
+  .stu .stu-cube { filter: none; }
+}
