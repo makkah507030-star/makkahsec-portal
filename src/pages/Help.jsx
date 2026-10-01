@@ -265,6 +265,48 @@ function PrintableGuide({ procs, scopeLabel, issuedBy }) {
   );
 }
 
+/* رموز الأقسام (خطوط 24×24) */
+const CAT_ICON = {
+  "": "M4 5h7v6H4zM13 5h7v6h-7zM4 13h7v6H4zM13 13h7v6h-7z",
+  "الدخول والحساب": "M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3",
+  "المعلم": "M3 7l9-4 9 4-9 4zM7 9.5V15c0 1.5 2.5 3 5 3s5-1.5 5-3V9.5",
+  "شؤون الطلاب": "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0",
+  "التوجيه الطلابي": "M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z",
+  "الشؤون التعليمية": "M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM8 7h7M8 11h7",
+  "النتائج": "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8.5 14l-1.5 7 5-3 5 3-1.5-7",
+  "الاختبارات القصيرة": "M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9",
+  "المحتوى والإشعارات": "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0",
+  "استوديو البوابة": "M12 3l9 5-9 5-9-5zM3 13l9 5 9-5M3 17l9 5 9-5",
+  "النماذج والشهادات": "M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5",
+  "الأحداث والمناسبات": "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4",
+  "الطالب وولي الأمر": "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20a6 6 0 0 1 12 0M17 11a2.5 2.5 0 1 0 0-5M16 20h5a5 5 0 0 0-4-4.9",
+  "الحسابات والصلاحيات": "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4",
+  "الدعم الفني": "M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z",
+};
+
+function CatTile({ label, count, on, onClick }) {
+  return (
+    <button onClick={onClick}
+      className={`flex items-center gap-2.5 rounded-card border px-3 py-2.5 text-right transition-colors ${
+        on ? "border-mint-deep bg-mint-deep text-white shadow-sm"
+           : "border-line bg-white text-ink hover:border-mint-deep/40 hover:bg-mint-tint/40"}`}>
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${
+        on ? "bg-white/15 text-white" : "bg-mint-tint text-mint-deep"}`}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round"
+             strokeLinejoin="round" className="h-[18px] w-[18px]">
+          <path d={CAT_ICON[label === "كل الأقسام" ? "" : label] ?? CAT_ICON[""]} />
+        </svg>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13px] font-semibold leading-snug">{label}</span>
+        <span className={`num mt-0.5 block text-[11px] ${on ? "text-white/75" : "text-faint"}`}>
+          {count} {count === 1 ? "إجراء" : count === 2 ? "إجراءان" : count <= 10 ? "إجراءات" : "إجراءً"}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export default function Help() {
   const { effectiveRole, adminRoles, profile } = useSession();
   const mine = useMemo(() => myRoles(effectiveRole, adminRoles ?? []), [effectiveRole, adminRoles]);
@@ -300,9 +342,13 @@ export default function Help() {
     return seen;
   }, [mine]);
 
-  const pill = (on) =>
-    `shrink-0 rounded-pill px-3.5 py-1.5 text-xs font-medium transition-colors ${
-      on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
+  // عدد إجراءات القسم ضمن ما يخص المستخدم (مع البحث إن وُجد)
+  const catCount = (c) => {
+    const term = q.trim();
+    return PROCS.filter((p) =>
+      (p.who.includes("الجميع") || p.who.some((w) => mine.has(w))) && (!c || p.cat === c) &&
+      (!term || (p.title + " " + p.path + " " + p.steps.join(" ")).includes(term))).length;
+  };
 
   return (
     <div className="space-y-4">
@@ -334,11 +380,11 @@ export default function Help() {
         placeholder="ابحث: تحضير، شهادة، إشعار، كلمة المرور…"
       />
 
-      {/* الأقسام */}
-      <div className="no-print -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
-        <button className={pill(!cat)} onClick={() => setCat("")}>كل الأقسام</button>
+      {/* الأقسام: بطاقات برمز وعدد الإجراءات، تلتف على الشاشة بلا شريط تمرير */}
+      <div className="no-print grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <CatTile label="كل الأقسام" count={catCount("")} on={!cat} onClick={() => setCat("")} />
         {catsAll.map((c) => (
-          <button key={c} className={pill(cat === c)} onClick={() => setCat(c)}>{c}</button>
+          <CatTile key={c} label={c} count={catCount(c)} on={cat === c} onClick={() => setCat(cat === c ? "" : c)} />
         ))}
       </div>
 
