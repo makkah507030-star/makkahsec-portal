@@ -221,7 +221,7 @@ export function behaviorLetter(r) {
 
 const lines = (t) => String(t ?? "").split(/\n+/).map((x) => x.replace(/^[\s\-–•\d.)]+/, "").trim()).filter(Boolean);
 
-function Head({ title, serial }) {
+function Head({ title, serial, secret = true }) {
   return (
     <>
       <div className="flex items-start justify-between gap-4">
@@ -237,7 +237,7 @@ function Head({ title, serial }) {
       <div className="mt-2.5 h-px w-full" style={{
         background: "linear-gradient(90deg,transparent,#3E635022 12%,#3E6350 50%,#3E635022 88%,transparent)", ...INK }} />
       <div className="mt-4 text-center">
-        <p className="text-[12px] font-bold tracking-wide text-absent">سري</p>
+        {secret && <p className="text-[12px] font-bold tracking-wide text-absent">سري</p>}
         <span className="mt-1 inline-block rounded-pill px-5 py-1.5 text-[13px] font-bold"
               style={{ background: "#EDFAF2", color: "#3E6350", ...INK }}>{title}</span>
         {serial && <p className="num mt-1.5 text-[11px] text-faint">{serial}</p>}
@@ -347,3 +347,6 @@ function BehaviorSheets({ r, stampUrl, guardianView }) {
     </>
   );
 }
+
+// مشتركة مع نماذج السلوك والمواظبة (BehaviorSheet)
+export { Head as OfficialHead, Foot as GuideFoot, SHEET_STYLE, fmt as fmtDual, Field as SheetField };

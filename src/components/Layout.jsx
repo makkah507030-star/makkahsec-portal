@@ -31,6 +31,9 @@ const ADMIN_GROUPS = [
       // مركز واحد لكل تقارير الحضور والغياب (يضم الحضور الرسمي والتأخر وتحضير الحصص والتقارير)
       { to: "/student-affairs", label: "تقارير شؤون الطلاب", perm: "reports", icon: "chart" },
       { to: "/permissions", label: "الاستئذان", perm: "permissions", icon: "ticket" },
+      // السلوك والمواظبة: لوكيل شؤون الطلاب والموجهين والمدير والدعم الفني
+      { to: "/referrals", label: "إحالة طالب", perm: null, icon: "shield", roles: ["principal", "tech_support", "deputy_students", "counselor_1", "counselor_2", "counselor_3"] },
+      { to: "/behavior", label: "نماذج السلوك والمواظبة", perm: null, icon: "edit", roles: ["principal", "tech_support", "deputy_students", "counselor_1", "counselor_2", "counselor_3"] },
       { to: "/exams-admin", label: "جداول الاختبارات", perm: "students", icon: "calendar" },
     ],
   },
@@ -247,6 +250,7 @@ export default function Layout({ children }) {
       ...g,
       items: g.items.filter((i) => {
         if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
+        if (i.roles && !i.roles.some((r) => adminRoles.includes(r))) return false;
         // anyPerm: يظهر العنصر لمن يملك أيًّا من الصلاحيات المذكورة
         const permOk = i.anyPerm
           ? i.anyPerm.some((p) => can(p))
