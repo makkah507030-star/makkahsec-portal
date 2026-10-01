@@ -15,8 +15,10 @@ export const FORM_KINDS = {
               hint: "يقرّ فيه الطالب بالمخالفة ويتعهد بعدم تكرارها، ويقرّ ولي أمره بالاطّلاع." },
   invite:   { title: "خطاب دعوة ولي الأمر", short: "دعوة ولي أمر", n: 10, secret: false,
               hint: "يُرسل لولي الأمر بموعد الحضور وهدفه، فيرد بالحضور أو بطلب تغيير الموعد." },
-  incident: { title: "محضر ضبط واقعة",      short: "محضر ضبط",     n: 11, secret: true,
+  incident: { title: "محضر ضبط واقعة",      short: "محضر ضبط",     n: 11, secret: true, internal: true,
               hint: "سري للإدارة: توثيق الواقعة ونوع المشاهدة المضبوطة ومكانها وشهودها." },
+  statement: { title: "إفادة طالب",         short: "إفادة طالب",   n: null, secret: true, internal: true,
+              hint: "يكتب الوكيل إفادة الطالب بنصوص مقترحة، ثم يطبعها ليوقّع عليها الطالب." },
 };
 
 export const EVIDENCE = ["صور", "مقاطع فيديو", "محادثات", "أخرى"];
@@ -72,6 +74,7 @@ export default function BehaviorSheet({ f, stampUrl }) {
       {f.kind === "pledge" && <Pledge f={f} stampUrl={stampUrl} />}
       {f.kind === "invite" && <Invite f={f} d={d} stampUrl={stampUrl} />}
       {f.kind === "incident" && <Incident f={f} d={d} stampUrl={stampUrl} />}
+      {f.kind === "statement" && <Statement f={f} d={d} stampUrl={stampUrl} />}
       <GuideFoot />
     </div>
   );
@@ -189,6 +192,41 @@ function Incident({ f, d, stampUrl }) {
       </div>
       <div className="mt-3 flex justify-center"><Stamp url={stampUrl} /></div>
       <p className="mt-2 text-center text-[10.5px] text-faint">حرّره: {f.issued_name}{f.issued_role ? ` — ${f.issued_role}` : ""}</p>
+    </>
+  );
+}
+
+/* ------------------------------ إفادة طالب ------------------------------
+   نص حر يكتبه الوكيل بصيغ مقترحة، ويوقّع عليه الطالب ورقيًا بعد الطباعة. */
+export const STATEMENT_CLOSING = "وهذه إفادتي، وأُقرّ بصحة ما ورد فيها، وعلى ذلك جرى التوقيع.";
+
+function Statement({ f, d, stampUrl }) {
+  const paras = String(d.text ?? "").split(/\n+/).map((x) => x.trim()).filter(Boolean);
+  return (
+    <>
+      <div className="mt-5 grid grid-cols-2 gap-x-6 rounded-[10px] border border-line px-4 py-2">
+        <P>اسم الطالب: <b>{f.student_name}</b></P>
+        <P>الصف: {f.class_label}</P>
+        <P>تاريخ الإفادة: {day(d.date)}</P>
+        <P>{d.time ? `الوقت: ${d.time}` : "\u00A0"}</P>
+        {f.violation_text && (
+          <div className="col-span-2">
+            <P>بخصوص: {violationPhrase(f.violation_text)} — مخالفة سلوكية من الدرجة ({degreeName(f.violation_degree)})</P>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 min-h-[110mm] rounded-[10px] border border-line px-4 py-3">
+        <p className="mb-1 text-[12.5px] font-bold text-mint-deep">نص الإفادة:</p>
+        {paras.map((x, i) => <P key={i}>{x}</P>)}
+        <P>{STATEMENT_CLOSING}</P>
+      </div>
+
+      <div className="mt-8 flex items-end gap-3">
+        <Sign title="الطالب" name={f.student_name} />
+        <Stamp url={stampUrl} />
+        <Sign title={f.issued_role || "وكيل شؤون الطلاب"} name={f.issued_name} at={f.created_at} atLabel="دُوّنت في" />
+      </div>
     </>
   );
 }
