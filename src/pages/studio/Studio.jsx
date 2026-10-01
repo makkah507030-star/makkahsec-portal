@@ -441,10 +441,11 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
           extraCss={`#studio-print .sheet { break-after: page; } #studio-print .sheet:last-child { break-after: auto; }${
             tpl.printSize
               // مقاس الطباعة الفعلي (مثل رول أب 85 × 200 سم): الورقة مرسومة 1 بكسل = 1 مم فتُكبَّر إلى المليمتر
-              ? ` @page { size: ${size.w}mm ${size.h}mm; margin: 0; } #studio-print .sheet { zoom: 3.7795; }` : ""}`}>
+              ? ` @page { size: ${size.w}mm ${size.h}mm; margin: 0; } #studio-print .sheet { zoom: 3.7795; }` : ""}
+            #studio-print img.ios-print { zoom: 1 !important; margin: 0 auto !important; break-inside: avoid; }`}>
           {printImgs
-            ? printImgs.map((src, i) => <img key={i} className="sheet" src={src} alt=""
-                style={{ display: "block", width: size.w, height: size.h }} />)
+            ? printImgs.map((src, i) => <img key={i} className="sheet ios-print" src={src} alt=""
+                style={{ display: "block", margin: "0 auto", ...iosFit(size, tpl.printSize) }} />)
             : pages.map((p, i) => <SheetFor key={i} tpl={tpl} theme={theme} orient={orient} data={p} />)}
         </PrintPortal>
       )}
@@ -454,6 +455,17 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
 
 const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent)
   || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+/* مقاس صورة الطباعة على iOS بالمليمتر: Safari هناك يفرض هوامش (~14 مم) لرابط الصفحة
+   وتاريخها ولا يلتزم بتصغير zoom للصور، فتُحسب الصورة لتتسع داخل الورقة ناقص 32 مم
+   في كل اتجاه مع حفظ نسبتها — فلا تفيض إلى ورقة ثانية */
+function iosFit(size, realSize) {
+  const toMm = realSize ? 1 : 25.4 / 96; // القالب بالمقاس الحقيقي مرسوم 1 بكسل = 1 مم
+  const w = size.w * toMm, h = size.h * toMm;
+  const [pw, ph] = realSize ? [w, h] : size.w > size.h ? [297, 210] : [210, 297];
+  const k = Math.min(1, (pw - 32) / w, (ph - 32) / h);
+  return { width: `${(w * k).toFixed(1)}mm`, height: `${(h * k).toFixed(1)}mm` };
+}
 
 /* صور أوراق الطباعة من النسخة الحيّة الموضوعة خارج الشاشة */
 async function rasterSheets(root, size) {
