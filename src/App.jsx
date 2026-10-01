@@ -78,6 +78,8 @@ const OnlineQuizzesCard = lazy(() => import("./components/OnlineQuizzesCard.jsx"
 const QuizTake = lazy(() => import("./pages/QuizTake.jsx"));
 const ExamsAdmin = lazy(() => import("./pages/admin/ExamsAdmin.jsx"));
 const ReferralView = lazy(() => import("./pages/ReferralView.jsx"));
+const BehaviorForms = lazy(() => import("./pages/BehaviorForms.jsx"));
+const BehaviorFormView = lazy(() => import("./pages/BehaviorFormView.jsx"));
 const MaintenanceAdmin = lazy(() => import("./pages/admin/MaintenanceAdmin.jsx"));
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
@@ -404,6 +406,9 @@ export default function App() {
           {/* الاختبار الإلكتروني — يؤدّيه الطالب المُسند إليه (الصفحة تتحقق) */}
           <Route path="/quiz/:id" element={<QuizTake />} />
           <Route path="/referral/:id" element={<ReferralView />} />
+          {/* نماذج السلوك والمواظبة — الإصدار للإدارة والموجهين، والنموذج لصاحبه وولي أمره */}
+          <Route path="/behavior" element={<BehaviorForms />} />
+          <Route path="/behavior/:id" element={<BehaviorFormView />} />
           {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
           <Route path="/help" element={<Help />} />
           <Route path="/notify-guide" element={<NotifyGuide />} />

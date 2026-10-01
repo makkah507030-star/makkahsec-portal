@@ -5,7 +5,10 @@ import { supabase } from "../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { todayISO, todayDow, GRADE_NAMES } from "../lib/schoolTime";
 import { currentPeriodNo, loadPeriodTimes } from "../lib/periodTimes";
-import ReferralSheet, { ReferralPrintArea } from "../components/ReferralSheet.jsx";
+import ReferralSheet, { ReferralPrintArea, behaviorLetter, sheetPages } from "../components/ReferralSheet.jsx";
+import ViolationPicker from "../components/ViolationPicker.jsx";
+import StudentPicker from "../components/StudentPicker.jsx";
+import { degreeName, typeLabel } from "../lib/behavior";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { fmtGreg } from "../lib/dates";
@@ -45,7 +48,8 @@ export default function Referrals() {
   const [rows, setRows] = useState(null);
   const [params] = useSearchParams();
   const [tab, setTab] = useState(
-    params.get("tab") === "follow" && isDeputy ? "follow" : isTeacher ? "new" : "inbox");
+    params.get("tab") === "follow" && isDeputy ? "follow"
+      : params.get("tab") === "behavior" && isDeputy ? "behavior" : isTeacher ? "new" : "inbox");
   const [msg, setMsg] = useNotice(null);
   const [viewing, setViewing] = useState(null);
 
@@ -91,6 +95,9 @@ export default function Referrals() {
         {isTeacher && (
           <button className={pill(tab === "new")} onClick={() => setTab("new")}>إحالة جديدة</button>
         )}
+        {isDeputy && (
+          <button className={pill(tab === "behavior")} onClick={() => setTab("behavior")}>إحالة مخالفة سلوكية</button>
+        )}
         <button className={pill(tab === "inbox")} onClick={() => setTab("inbox")}>
           {isDeputy || isCounselor ? "الواردة إليّ" : "إحالاتي"}
           {mine.length > 0 && <span className="num"> ({mine.length})</span>}
@@ -113,6 +120,11 @@ export default function Referrals() {
 
       {tab === "new" && isTeacher && (
         <NewReferral uid={uid} profile={profile} onDone={(t) => { setMsg(t); setTab("inbox"); load(); }} />
+      )}
+
+      {tab === "behavior" && isDeputy && (
+        <NewBehaviorReferral uid={uid} profile={profile}
+          onDone={(t) => { setMsg(t); if (t.ok) { setTab("follow"); load(); } }} />
       )}
 
       {tab === "follow" && isDeputy && (
@@ -142,6 +154,135 @@ export default function Referrals() {
         <SheetModal r={viewing} onClose={() => setViewing(null)} />
       )}
     </div>
+  );
+}
+
+/* ------------------ إحالة مخالفة سلوكية (وكيل شؤون الطلاب) ------------------
+   الوكيل يختار الطالب والمخالفة من دليل السلوك والمواظبة، فيصدر خطاب إحالة
+   للموجه الطلابي مباشرة. ثم يسير في المسار نفسه: إجراء الموجه ← اعتماد الوكيل
+   ← إشعار ولي الأمر بالنموذج. */
+function NewBehaviorReferral({ uid, profile, onDone }) {
+  const [student, setStudent] = useState(null);
+  const [violation, setViolation] = useState(null);
+  const [date, setDate] = useState(todayISO());
+  const [counselors, setCounselors] = useState([]);
+  const [counselor, setCounselor] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    supabase.from("admin_roles").select("user_id, role_type, users(full_name)")
+      .in("role_type", ["counselor_1", "counselor_2", "counselor_3"])
+      .then(({ data }) => setCounselors((data ?? []).map((x) => ({
+        id: x.user_id, name: x.users?.full_name ?? "",
+        role: ADMIN_ROLE_LABEL[x.role_type] ?? x.role_type,
+        grade: Number(String(x.role_type).replace(/\D/g, "")) || null,
+      }))));
+  }, []);
+
+  const pick = (s) => {
+    setStudent(s);
+    // الإسناد الآلي: موجه صف الطالب
+    const auto = counselors.find((c) => c.grade === s.grade);
+    if (auto) setCounselor(auto.id);
+  };
+
+  const c = counselors.find((x) => x.id === counselor);
+  const classLabel = student ? `${GRADE_NAMES[student.grade] ?? ""} — فصل ${student.class_no}` : "";
+  const draft = student && violation ? {
+    kind: "behavior", student_name: student.full_name, class_label: classLabel,
+    counselor_name: c?.name ?? "", violation_degree: violation.degree, violation_text: violation.text,
+    violation_date: date,
+  } : null;
+
+  const submit = async () => {
+    if (!draft || !c) return;
+    setBusy(true);
+    const { data: serial } = await supabase.rpc("next_referral_serial");
+    const { data: sig } = await supabase.from("user_signatures").select("path").eq("user_id", uid).maybeSingle();
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("student_referrals").insert({
+      serial, kind: "behavior",
+      student_id: student.student_id, student_name: student.full_name,
+      class_label: classLabel, grade: student.grade ?? null,
+      referral_date: todayISO(),
+      violation_degree: violation.degree, violation_type: violation.type,
+      violation_text: violation.text, violation_date: date,
+      reason: `مخالفة سلوكية من الدرجة ${degreeName(violation.degree)}: ${violation.text}`,
+      teacher_at: null,
+      deputy_id: uid, deputy_name: profile?.full_name ?? "", deputy_note: note.trim() || null,
+      deputy_sig: sig?.path ?? null, deputy_at: now,
+      counselor_id: c.id, counselor_name: c.name,
+      status: "with_counselor",
+    });
+    if (!error) {
+      await notifyUsers([c.id], "إحالة مخالفة سلوكية",
+        `أحال إليك وكيل شؤون الطلاب الطالب ${student.full_name} لارتكابه مخالفة سلوكية من الدرجة ${degreeName(violation.degree)} (${serial}).`,
+        "/referrals");
+    }
+    setBusy(false);
+    onDone(error
+      ? { ok: false, text: /column|kind|violation/i.test(error.message)
+          ? "نفّذ ملف supabase/behavior_referrals.sql أولًا من Supabase ← SQL Editor." : error.message }
+      : { ok: true, text: `أُحيل الطالب للموجه ${c.name} برقم ${serial}، وأُشعر بها.` });
+  };
+
+  return (
+    <section className="card space-y-4 p-4">
+      <div>
+        <p className="text-sm font-bold text-ink">إحالة طالب للموجه الطلابي — مخالفة سلوكية</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted">
+          المخالفات من دليل السلوك والمواظبة للمرحلة الثانوية. بعد إجراء الموجه تعود إليك للاعتماد،
+          ثم يُشعر ولي الأمر ويظهر له النموذج.
+        </p>
+      </div>
+
+      <div>
+        <label className="text-xs text-muted">الطالب</label>
+        <div className="mt-1"><StudentPicker value={student} onChange={(x) => (x ? pick(x) : setStudent(null))} /></div>
+      </div>
+
+      <div>
+        <label className="text-xs text-muted">المخالفة السلوكية</label>
+        <div className="mt-1.5"><ViolationPicker value={violation} onChange={setViolation} /></div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="text-xs text-muted">تاريخ المخالفة</label>
+          <input type="date" className="field mt-1 w-full" value={date} onChange={(e) => setDate(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-muted">الموجه الطلابي</label>
+          <select className="field mt-1 w-full" value={counselor} onChange={(e) => setCounselor(e.target.value)}>
+            <option value="">اختر الموجه الطلابي…</option>
+            {counselors.map((x) => (
+              <option key={x.id} value={x.id}>{x.name} — {x.role}{student && x.grade === student.grade ? " (موجه الصف)" : ""}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="text-xs text-muted">ملاحظات الوكيل (اختياري)</label>
+        <textarea rows={2} className="field mt-1 w-full" value={note} onChange={(e) => setNote(e.target.value)}
+                  placeholder="ما اتُّخذ من إجراء أو تفاصيل الواقعة" />
+      </div>
+
+      {draft && (
+        <div className="rounded-sm2 border border-line bg-canvas/50 px-4 py-3">
+          <p className="mb-1.5 text-[11px] font-semibold text-muted">نص الخطاب</p>
+          {behaviorLetter(draft).map((line, i) => (
+            <p key={i} className={`text-[13px] leading-[1.9] text-ink ${i === 0 ? "font-bold" : ""}`}>{line}</p>
+          ))}
+          <p className="mt-1 text-[11px] text-faint">{typeLabel(violation.type)}</p>
+        </div>
+      )}
+
+      <button className="btn-primary w-full" disabled={!draft || !c || busy} onClick={submit}>
+        {busy ? "جارٍ الإرسال…" : "إصدار الإحالة وإرسالها للموجه"}
+      </button>
+    </section>
   );
 }
 
@@ -542,7 +683,8 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
   // ④ الوكيل يقفلها ويُشعر ولي الأمر
   const close = async () => {
     const patch = {
-      close_note: note.trim() || "اعتُمد الإجراء وأُقفلت الإحالة.",
+      close_note: note.trim() || (r.kind === "behavior"
+        ? "اعتُمد إجراء الموجه الطلابي، وأُرسل الإشعار لولي الأمر." : "اعتُمد الإجراء وأُقفلت الإحالة."),
       closed_at: new Date().toISOString(),
       status: "with_guardian",
     };
@@ -558,9 +700,11 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       .select("guardians(user_id)").eq("student_id", r.student_id);
     (gs ?? []).forEach((g) => { if (g.guardians?.user_id) ids.add(g.guardians.user_id); });
 
-    await notifyUsers([...ids], "إحالة طالب",
-      `صدرت إحالة بشأن ${r.student_name} برقم ${r.serial}. افتحها من البوابة للاطّلاع` +
-      ` وتأكيد الاستلام.`, `/referral/${r.id}`);
+    await notifyUsers([...ids], r.kind === "behavior" ? "إشعار بمشكلة سلوكية" : "إحالة طالب",
+      (r.kind === "behavior"
+        ? `صدر إشعار بمشكلة سلوكية بشأن ${r.student_name} (${r.serial}) والإجراءات المتخذة حياله.`
+        : `صدرت إحالة بشأن ${r.student_name} برقم ${r.serial}.`) +
+      " افتحه من البوابة للاطّلاع وتأكيد الاستلام.", `/referral/${r.id}`);
     setOpen(false);
     onChange({ ok: true, text: "أُقفلت الإحالة وأُشعر الطالب وولي أمره." });
   };
@@ -592,8 +736,9 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-ink">{r.student_name}</p>
           <p className="num mt-0.5 text-xs text-faint">
-            {r.serial} · {r.class_label} · {r.subject}
+            {r.serial} · {r.class_label}{r.subject ? ` · ${r.subject}` : ""}
             {r.period_no ? ` · الحصة ${r.period_no}` : ""}
+            {r.kind === "behavior" && ` · مخالفة سلوكية — الدرجة ${degreeName(r.violation_degree)}`}
           </p>
         </div>
         <span className={`chip shrink-0 ${st.c}`}>{st.t}</span>
@@ -625,8 +770,10 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       {open && (
         <div className="mt-3 space-y-2 rounded-sm2 bg-mint-tint/50 p-3">
           <textarea rows={3} className="field w-full" value={note}
-                    placeholder={counselorTurn ? "الإجراء المتخذ والملاحظات"
-                                             : "ما تم عمله والملاحظات"}
+                    placeholder={counselorTurn
+                      ? (r.kind === "behavior" ? "دراسة الحالة والإجراءات التربوية والعلاجية — كل إجراء في سطر (تظهر في إشعار ولي الأمر)"
+                                               : "الإجراء المتخذ والملاحظات")
+                      : "ما تم عمله والملاحظات"}
                     onChange={(e) => setNote(e.target.value)} />
 
           {isDeputy && r.status === "with_deputy" && !r.counselor_id && (
@@ -663,7 +810,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
           {isDeputy && r.counselor_id && r.status === "with_deputy" && (
             <div className="flex flex-wrap gap-2">
               <button className="btn-primary flex-1" disabled={busy} onClick={close}>
-                اعتماد وإقفال وإشعار ولي الأمر
+                {r.kind === "behavior" ? "اعتماد وإرسال الإشعار لولي الأمر" : "اعتماد وإقفال وإشعار ولي الأمر"}
               </button>
               <button disabled={busy || !note.trim()} onClick={returnToCounselor}
                       className="flex-1 rounded-pill border border-warning/40 px-4 py-2 text-sm font-semibold text-warning hover:bg-warning/5">
@@ -756,7 +903,7 @@ function SheetModal({ r, onClose }) {
 
         <div ref={box} className="no-print overflow-hidden rounded-card bg-white">
           <div style={{ transform: `scale(${scale})`, transformOrigin: "top right",
-                        width: 794, height: 1123 * scale }}>
+                        width: 794, height: 1123 * sheetPages(r) * scale }}>
             <ReferralSheet r={r} stampUrl={stamp} />
           </div>
         </div>
