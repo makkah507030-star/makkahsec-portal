@@ -11,6 +11,7 @@ const MorningLate = lazy(() => import("./MorningLate.jsx"));
 const OfficialAbsence = lazy(() => import("./OfficialAbsence.jsx"));
 const FollowUp = lazy(() => import("./FollowUp.jsx"));
 const PeriodReports = lazy(() => import("./PeriodReports.jsx"));
+const DetailedReports = lazy(() => import("./DetailedReports.jsx"));
 const Statistics = lazy(() => import("./Statistics.jsx"));
 const Warnings = lazy(() => import("./Warnings.jsx"));
 const StudentFile = lazy(() => import("./StudentFile.jsx"));
@@ -23,12 +24,13 @@ const Devices = lazy(() =>
 const GROUPS = [
   { title: "اليوم", hint: "حالة اليوم الدراسي مرحلة بمرحلة", access: "all",
     tabs: [{ key: "today", label: "لوحة اليوم" }] },
-  { title: "الحضور اليومي", hint: "التأخر والغياب والمتابعة خلال اليوم", access: "all",
+  { title: "الحضور اليومي", hint: "التأخر والغياب والمتابعة، وتقارير مفصلة بالفصل والحصة والطالب", access: "all",
     tabs: [
       { key: "late", label: "التأخر الصباحي" },
       { key: "official", label: "الغياب الرسمي" },
       { key: "follow", label: "المتابعة" },
       { key: "periods", label: "غياب الحصص" },
+      { key: "detailed", label: "تقارير مفصلة" },
     ] },
   { title: "الإنذارات", hint: "إنذارات الغياب ومحاضرها والتحويل لدراسة الحالة", access: "warnings",
     tabs: [{ key: "warnings", label: "الإنذارات والمحاضر" }] },
@@ -110,6 +112,7 @@ export default function StudentAffairs() {
         {tab === "official" && <OfficialAbsence />}
         {tab === "follow" && <FollowUp />}
         {tab === "periods" && <PeriodReports />}
+        {tab === "detailed" && <DetailedReports />}
         {tab === "stats" && <Statistics />}
         {tab === "warnings" && <Warnings />}
         {tab === "student" && <StudentFile />}
