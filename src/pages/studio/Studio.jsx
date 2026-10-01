@@ -260,10 +260,30 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
     return tpl.derive ? tpl.derive(next, name, ctx ?? {}) : next;
   });
 
-  const printNow = () => {
+  // على iPhone/iPad تُطبع صورة الورقة لا الورقة نفسها: محرّك الطباعة هناك يتجاهل شفافية
+  // الألوان والتدرّجات (تسودّ الخلفية وتظهر الهالة دائرة صلبة)، والصورة تطابق المعاينة تمامًا
+  const [printImgs, setPrintImgs] = useState(null);
+  useEffect(() => {
+    const clear = () => setPrintImgs(null);
+    window.addEventListener("afterprint", clear);
+    return () => window.removeEventListener("afterprint", clear);
+  }, []);
+
+  const printNow = async () => {
     // عنوان الصفحة يصبح اسم ملف PDF المقترح عند الحفظ
     const prev = document.title;
     document.title = `${tpl.title} - ${data.title || data.items?.[0]?.title || ""}`.trim();
+    if (isIOS()) {
+      setBusy(true);
+      // تُعاد الأوراق الحيّة أولًا (لا صور طباعة سابقة) ثم تُلتقط
+      setPrintImgs(null);
+      await new Promise((r) => setTimeout(r, 50));
+      try { setPrintImgs(await rasterSheets(size)); }
+      catch (e) { setMsg({ ok: false, text: `تعذّر تجهيز الطباعة: ${e.message ?? e}` }); setBusy(false); return; }
+      setBusy(false);
+      // انتظار رسم الصور في منطقة الطباعة قبل فتح نافذتها
+      await new Promise((r) => setTimeout(r, 300));
+    }
     window.print();
     setTimeout(() => { document.title = prev; }, 500);
   };
@@ -408,11 +428,37 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
             tpl.printSize
               // مقاس الطباعة الفعلي (مثل رول أب 85 × 200 سم): الورقة مرسومة 1 بكسل = 1 مم فتُكبَّر إلى المليمتر
               ? ` @page { size: ${size.w}mm ${size.h}mm; margin: 0; } #studio-print .sheet { zoom: 3.7795; }` : ""}`}>
-          {pages.map((p, i) => <SheetFor key={i} tpl={tpl} theme={theme} orient={orient} data={p} />)}
+          {printImgs
+            ? printImgs.map((src, i) => <img key={i} className="sheet" src={src} alt=""
+                style={{ display: "block", width: size.w, height: size.h }} />)
+            : pages.map((p, i) => <SheetFor key={i} tpl={tpl} theme={theme} orient={orient} data={p} />)}
         </PrintPortal>
       )}
     </div>
   );
+}
+
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+/* صور أوراق منطقة الطباعة: تُظهر المنطقة خارج الشاشة لحظة الالتقاط ثم تعود مخفية */
+async function rasterSheets(size) {
+  const portal = document.querySelector("#studio-print")?.parentElement;
+  if (!portal) return [];
+  const { toPng } = await import("html-to-image");
+  await document.fonts?.ready;
+  // دقة تقارب 300 نقطة/بوصة للـ A4، ضمن حد مساحة الرسم في Safari (~16 مليون بكسل)
+  const ratio = Math.min(3, Math.sqrt(15e6 / (size.w * size.h)));
+  portal.style.cssText = "display:block;position:fixed;left:-20000px;top:0;";
+  try {
+    const out = [];
+    for (const node of portal.querySelectorAll("#studio-print .sheet")) {
+      const opts = { pixelRatio: ratio, cacheBust: true, width: size.w, height: size.h };
+      await toPng(node, opts); // Safari يرسم الصور المضمّنة في المرة الثانية فقط
+      out.push(await toPng(node, opts));
+    }
+    return out;
+  } finally { portal.style.cssText = ""; }
 }
 
 // العدد مع المعدود: صفحتان، 3 صفحات، 11 صفحة
