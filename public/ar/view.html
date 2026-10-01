@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#00234E">
+<title>بطاقة المعلم — الواقع المعزز</title>
+<!--
+  مشهد الواقع المعزز لبطاقة يوم المعلم (A-Frame + MindAR، مستضافان محليًا).
+  البيانات تصل من /ar/<الرمز> في الرابط بعد # بصيغة base64، ولا تُرسل لأي خادم.
+  عند التعرف على البطاقة المطبوعة: تُعتم البطاقة، وترتفع أشكال الهوية طبقات
+  ثلاثية الأبعاد، ثم يظهر الاسم والأرقام، ثم فيديو التهنئة فوق البطاقة.
+-->
+<style>
+  @font-face { font-family: Harir; src: url(harir.woff2) format("woff2"); }
+  @font-face { font-family: Harir; font-weight: 700; src: url(harir-bold.woff2) format("woff2"); }
+  html, body { margin: 0; height: 100%; background: #00234E; font-family: Harir, system-ui, sans-serif; overflow: hidden; }
+  #intro { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px; text-align: center; color: #fff;
+    background: radial-gradient(120% 80% at 50% 25%, #1d2a6b 0%, #0a2558 50%, #00234E 100%); }
+  #intro h1 { margin: 0; font-size: 26px; font-weight: 700; }
+  #intro .name { color: #FFCB05; font-size: 20px; font-weight: 700; }
+  #intro p { margin: 0; max-width: 340px; font-size: 15px; line-height: 1.8; opacity: .85; }
+  #intro img.mark { width: 220px; max-width: 70vw; margin-bottom: 6px; }
+  #go { margin-top: 10px; border: 0; border-radius: 999px; padding: 14px 40px; font: 700 18px Harir, sans-serif;
+    color: #00234E; background: #FFCB05; box-shadow: 0 8px 30px rgba(255,203,5,.35); cursor: pointer; }
+  #intro a { color: #9fb3ff; font-size: 13px; }
+  #hud { position: fixed; z-index: 10; left: 0; right: 0; bottom: 18px; display: none; justify-content: center; gap: 10px; pointer-events: none; }
+  #hud span, #hud button { pointer-events: auto; border: 0; border-radius: 999px; padding: 9px 16px; font: 14px Harir, sans-serif;
+    color: #fff; background: rgba(0,35,78,.78); backdrop-filter: blur(6px); }
+  #hud button { cursor: pointer; }
+  #ar { position: fixed; inset: 0; overflow: hidden; }
+  .a-enter-vr, .a-enter-ar, .a-fullscreen { display: none !important; }
+  .mindar-ui-overlay { z-index: 5 !important; }
+</style>
+<script src="aframe.min.js"></script>
+<script src="mindar-image-aframe.js"></script>
+</head>
+<body>
+
+<div id="intro">
+  <h1>بطاقتك تحيا أمامك</h1>
+  <div class="name" id="introName"></div>
+  <p>اضغط «ابدأ» واسمح باستخدام الكاميرا، ثم وجّه الجوال نحو البطاقة المطبوعة.</p>
+  <button id="go">ابدأ</button>
+  <a href="card.jpg" target="_blank">لا تملك البطاقة؟ اعرضها على شاشة أخرى</a>
+</div>
+
+<div id="hud">
+  <span id="hint">وجّه الكاميرا نحو البطاقة</span>
+  <button id="sound" style="display:none">تشغيل الصوت</button>
+</div>
+
+<video id="vid" src="greeting.mp4" muted loop playsinline webkit-playsinline crossorigin="anonymous" preload="auto" style="display:none"></video>
+
+<!-- حاوية مستقلة باتجاه LTR: MindAR يضبط left/width للمشهد والكاميرا، ومع RTL يُهمَل left -->
+<div id="ar" dir="ltr">
+<a-scene id="scene" embedded renderer="colorManagement: true; antialias: true; alpha: true"
+  mindar-image="imageTargetSrc: card.mind; autoStart: false; uiLoading: no; uiScanning: yes; uiError: yes; filterMinCF: 0.0001; filterBeta: 0.001"
+  vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" style="position:absolute;top:0;left:0;width:100%;height:100%">
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <a-entity id="target" mindar-image-target="targetIndex: 0" teacher-ar></a-entity>
+</a-scene>
+</div>
+
+<script>
+/* ============================ البيانات ============================ */
+const DATA = (() => {
+  try { return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(location.hash.slice(1)), (c) => c.charCodeAt(0)))); }
+  catch (e) { return { name: "معلمنا العزيز" }; }
+})();
+const AR_NUM = (n) => Number(n || 0).toLocaleString("ar-SA");
+document.getElementById("introName").textContent = DATA.name || "";
+if (DATA.video) document.getElementById("vid").src = DATA.video;
+
+const C = { navy: "#00234E", green: "#55AA5C", purple: "#7a6bd6", yellow: "#FFCB05", sky: "#8fb4ff" };
+const W = 1080, H = 1350;                       // أبعاد البطاقة بالبكسل؛ عرضها في المشهد = 1
+const px = (x, y) => [x / W - 0.5, H / W / 2 - y / W];
+
+/* ====================== أدوات الرسم على Canvas ====================== */
+// النص العربي يُرسم على Canvas ليتشكّل صحيحًا ثم يُستعمل خامة (texture)
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath();
+}
+function glass(g, w, h, accent) {
+  roundRect(g, 4, 4, w - 8, h - 8, 34);
+  const bg = g.createLinearGradient(0, 0, 0, h); bg.addColorStop(0, "rgba(17,40,110,.94)"); bg.addColorStop(1, "rgba(0,28,66,.94)");
+  g.fillStyle = bg; g.fill();
+  const br = g.createLinearGradient(0, 0, w, 0);
+  if (accent) { br.addColorStop(0, accent); br.addColorStop(1, accent); }
+  else { br.addColorStop(0, C.green); br.addColorStop(.5, C.purple); br.addColorStop(1, C.yellow); }
+  g.lineWidth = 6; g.strokeStyle = br; g.stroke();
+}
+function fitFont(g, text, weight, max, width) {
+  let s = max; do { g.font = `${weight} ${s}px Harir`; s -= 2; } while (g.measureText(text).width > width && s > 20);
+}
+function canvasPanel(w, h, draw) {
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  const g = cv.getContext("2d"); g.direction = "rtl"; g.textAlign = "center"; g.textBaseline = "middle";
+  draw(g, w, h); return cv;
+}
+
+/* =========================== المشهد =========================== */
+AFRAME.registerComponent("teacher-ar", {
+  init() {
+    this.items = []; this.t0 = null; this.lostAt = 0;
+    this.video = document.getElementById("vid");
+    // الخامات النصية تُرسم بعد تحميل خط حرير، وإلا رُسمت بخط بديل
+    Promise.all([document.fonts.load("700 40px Harir"), document.fonts.load("400 40px Harir")])
+      .catch(() => {}).then(() => this.build());
+
+    this.el.addEventListener("targetFound", () => {
+      // إعادة العرض من البداية إن غابت البطاقة أكثر من ٤ ثوانٍ
+      if (this.t0 === null || performance.now() - this.lostAt > 4000) this.t0 = performance.now();
+      this.video.play().catch(() => {});
+      ui.found(true);
+    });
+    this.el.addEventListener("targetLost", () => { this.lostAt = performance.now(); this.video.pause(); ui.found(false); });
+  },
+
+  build() {
+    const T = AFRAME.THREE, root = this.el.object3D;
+    const items = []; const loader = new T.TextureLoader();
+    const tex = (src) => { const t = src instanceof HTMLCanvasElement ? new T.CanvasTexture(src) : loader.load(src);
+      t.colorSpace = T.SRGBColorSpace; t.anisotropy = 4; return t; };
+    const plane = (w, h, map, opts = {}) => {
+      const m = new T.Mesh(new T.PlaneGeometry(w, h),
+        new T.MeshBasicMaterial({ map, transparent: true, opacity: 0, depthWrite: false, side: T.DoubleSide, ...opts }));
+      root.add(m); return m;
+    };
+    const add = (mesh, spec) => { items.push({ mesh, ...spec }); mesh.visible = false; return mesh; };
+
+    // ١) تعتيم البطاقة المطبوعة لتبرز الطبقات فوقها
+    add(plane(1.02, H / W + 0.02, null, { color: C.navy }), { kind: "dim", at: 0, z: 0.002 });
+
+    // ٢) أشكال الهوية: كل شكل في مكانه على البطاقة ثم يرتفع لعمق مختلف
+    const k = 1240 / 1950, mx = -80, my = H - 40 - 706 * k;
+    [["gray", 0, 175, 721, 531, .10, 0.15], ["purple", 677, 106, 720, 531, .18, 0.3],
+     ["green", 1230, 175, 720, 531, .13, 0.45], ["yellow", 664, 0, 409, 418, .26, 0.6]]
+      .forEach(([n, x, y, w, h, z, at], i) => {
+        const cx = mx + (x + w / 2) * k, cy = my + (y + h / 2) * k, [ux, uy] = px(cx, cy);
+        const m = plane(w * k / W, h * k / W, tex(`l-${n}.png`));
+        m.position.set(ux, uy, 0.004);
+        add(m, { kind: "lift", at, z, bob: i });
+      });
+
+    // ٣) لوحة الاسم: الاسم والتخصص والمواد
+    const subj = (DATA.subjects || []).join("  ·  ");
+    const NH = subj ? 400 : 330;
+    const nameCv = canvasPanel(1024, NH, (g, w, h) => {
+      glass(g, w, h);
+      g.fillStyle = C.yellow; g.font = "400 40px Harir"; g.fillText("إلى المعلم المُلهِم", w / 2, 66);
+      g.fillStyle = "#fff"; fitFont(g, DATA.name || "", 700, 88, w - 110); g.fillText(DATA.name || "", w / 2, 160);
+      if (DATA.spec) { g.fillStyle = C.sky; g.font = "400 40px Harir"; g.fillText(`تخصص ${DATA.spec}`, w / 2, 250); }
+      if (subj) { g.fillStyle = "rgba(255,255,255,.82)"; fitFont(g, subj, 400, 36, w - 110); g.fillText(subj, w / 2, DATA.spec ? 325 : 250); }
+    });
+    const nameM = plane(0.8, 0.8 * NH / 1024, tex(nameCv));
+    nameM.position.set(0, px(0, 300 + NH * 0.8 * W / 1024 / 2)[1], 0.14);
+    add(nameM, { kind: "pop", at: 1.1, z: 0.14 });
+
+    // ٤) شرائح الأرقام: تعدّ تصاعديًا — فوق منطقة الشعار، والشعار يبقى ظاهرًا تحتها
+    const stats = [
+      ["periods", "حصة أسبوعيًا", C.yellow], ["students", "طالبًا", C.green],
+      ["classes", "فصلًا", C.purple], ["subjectsN", "مادة", C.sky],
+    ].map(([key, label, color]) => ({ key, label, color,
+      value: key === "subjectsN" ? (DATA.subjects || []).length : Number(DATA[key] || 0) }))
+     .filter((s) => s.value > 0);
+    const cols = stats.length > 2 ? 2 : stats.length;
+    const top = 300 + NH * 0.8 * W / 1024 + 30;            // أسفل لوحة الاسم بالبكسل
+    stats.forEach((s, i) => {
+      const cv = canvasPanel(480, 230, () => {}); const t = tex(cv);
+      s.draw = (v) => { const g = cv.getContext("2d"); g.clearRect(0, 0, 480, 230); glass(g, 480, 230, s.color);
+        g.fillStyle = s.color; g.font = "700 96px Harir"; g.fillText(AR_NUM(v), 240, 98);
+        g.fillStyle = "#fff"; g.font = "400 38px Harir"; g.fillText(s.label, 240, 180); t.needsUpdate = true; };
+      s.draw(0);
+      const m = plane(0.36, 0.36 * 230 / 480, t);
+      const col = i % cols, row = Math.floor(i / cols);
+      const x = cols === 1 ? 0 : (col === 0 ? 0.19 : -0.19);           // من اليمين لليسار
+      m.position.set(x, px(0, top + 90 + row * 195)[1], 0.09);
+      add(m, { kind: "pop", at: 1.9 + i * 0.35, z: 0.09, stat: s });
+    });
+
+    // ٦) فيديو التهنئة فوق البطاقة
+    const vt = new T.VideoTexture(this.video); vt.colorSpace = T.SRGBColorSpace;
+    const vid = plane(0.62, 0.62, vt, { transparent: false, opacity: 1 });
+    vid.position.set(0, H / W / 2 + 0.36, 0.05);
+    add(vid, { kind: "video", at: 3.9 });
+    const frameCv = canvasPanel(512, 512, (g, w, h) => { roundRect(g, 6, 6, w - 12, h - 12, 26); g.lineWidth = 10;
+      const br = g.createLinearGradient(0, 0, w, h); br.addColorStop(0, C.green); br.addColorStop(.5, C.purple); br.addColorStop(1, C.yellow);
+      g.strokeStyle = br; g.stroke(); });
+    const fr = plane(0.66, 0.66, tex(frameCv)); fr.position.set(0, H / W / 2 + 0.36, 0.049);
+    add(fr, { kind: "video", at: 3.9 });
+
+    // ٧) شرارات ذهبية تتصاعد
+    const N = 70, pos = new Float32Array(N * 3); this.sp = [];
+    for (let i = 0; i < N; i++) this.sp.push({ x: (Math.random() - .5) * 1.1, y: -0.62 + Math.random() * 0.3, s: .08 + Math.random() * .12, ph: Math.random() * 6 });
+    const pg = new T.BufferGeometry(); pg.setAttribute("position", new T.BufferAttribute(pos, 3));
+    const pts = new T.Points(pg, new T.PointsMaterial({ color: C.yellow, size: 0.012, transparent: true, opacity: 0,
+      depthWrite: false, blending: T.AdditiveBlending }));
+    root.add(pts); add(pts, { kind: "spark", at: 0.5 });
+    this.items = items;
+  },
+
+  tick() {
+    if (this.t0 === null) return;
+    const t = (performance.now() - this.t0) / 1000;
+    const ease = (x) => { x = Math.max(0, Math.min(1, x)); return 1 - Math.pow(1 - x, 3); };
+    const back = (x) => { x = Math.max(0, Math.min(1, x)); const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+    for (const it of this.items) {
+      const p = (t - it.at), m = it.mesh;
+      m.visible = p > 0;
+      if (p <= 0) continue;
+      if (it.kind === "dim") m.material.opacity = 0.88 * ease(p / 0.8);
+      else if (it.kind === "lift") {
+        m.material.opacity = ease(p / 0.3);
+        m.position.z = 0.004 + it.z * back(p / 1.1) + Math.sin(t * 1.4 + it.bob) * 0.008 * ease(p - 1);
+      } else if (it.kind === "pop") {
+        const v = back(p / 0.7); m.material.opacity = ease(p / 0.4);
+        m.scale.setScalar(Math.max(0.01, v)); m.position.z = it.z * ease(p / 0.7) + Math.sin(t * 1.1 + it.at) * 0.006;
+        if (it.stat) { const c = ease((p - 0.2) / 1.3); const v2 = Math.round(it.stat.value * c);
+          if (v2 !== it.last) { it.last = v2; it.stat.draw(v2); } }
+      } else if (it.kind === "video") {
+        const v = ease(p / 0.8); m.scale.set(1, Math.max(0.01, v), 1);
+        m.material.opacity = v; m.rotation.x = -0.25 * (1 - v);
+      } else if (it.kind === "spark") {
+        m.material.opacity = 0.9 * ease(p);
+        const a = m.geometry.attributes.position;
+        this.sp.forEach((s, i) => { const y = s.y + ((t * s.s + s.ph) % 1.6);
+          a.setXYZ(i, s.x + Math.sin(t + s.ph) * 0.02, y, 0.05 + (y + 0.6) * 0.15); });
+        a.needsUpdate = true;
+      }
+    }
+  },
+});
+
+/* ============================ الواجهة ============================ */
+const ui = {
+  found(on) {
+    document.getElementById("hint").textContent = on ? "ابتعد قليلًا لترى المشهد كاملًا" : "وجّه الكاميرا نحو البطاقة";
+  },
+};
+document.getElementById("go").addEventListener("click", async () => {
+  const v = document.getElementById("vid");
+  // لمسة المستخدم تفتح تشغيل الفيديو على iOS
+  try { await v.play(); v.pause(); } catch (e) {}
+  await document.fonts.load("700 40px Harir");
+  document.getElementById("intro").style.display = "none";
+  document.getElementById("hud").style.display = "flex";
+  if (DATA.video) document.getElementById("sound").style.display = "";
+  document.getElementById("scene").systems["mindar-image-system"].start();
+});
+document.getElementById("sound").addEventListener("click", (e) => {
+  const v = document.getElementById("vid"); v.muted = !v.muted; v.play().catch(() => {});
+  e.target.textContent = v.muted ? "تشغيل الصوت" : "كتم الصوت";
+});
+</script>
+</body>
+</html>
