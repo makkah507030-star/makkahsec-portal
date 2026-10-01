@@ -81,6 +81,7 @@ const ReferralView = lazy(() => import("./pages/ReferralView.jsx"));
 const BehaviorForms = lazy(() => import("./pages/BehaviorForms.jsx"));
 const StudentCertificate = lazy(() => import("./pages/StudentCertificate.jsx"));
 const BehaviorFormView = lazy(() => import("./pages/BehaviorFormView.jsx"));
+const ArLaunch = lazy(() => import("./pages/ArLaunch.jsx"));
 const MaintenanceAdmin = lazy(() => import("./pages/admin/MaintenanceAdmin.jsx"));
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
@@ -118,6 +119,11 @@ export default function App() {
     sw.addEventListener("message", onMsg);
     return () => sw.removeEventListener("message", onMsg);
   }, [navigate]);
+
+  // بطاقة الواقع المعزز للمعلم: صفحة عامة مستقلة لا تنتظر الجلسة ولا الصيانة
+  if (location.pathname.startsWith("/ar/")) {
+    return <Suspense fallback={pageFallback}><ArLaunch /></Suspense>;
+  }
 
   if (loading || !holidaysReady) {
     return (
