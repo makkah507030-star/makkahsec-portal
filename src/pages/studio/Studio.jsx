@@ -266,7 +266,7 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
   // تتجاهل شفافية الألوان والتدرّجات وتفرض هوامشها فتفيض الورقة. بدلًا من ذلك تُلتقط كل ورقة
   // صورةً (بعد ثانية من آخر تعديل) ويُنشأ منها ملف PDF بالمقاس الصحيح يُشارك للطباعة أو الحفظ.
   // وتبقى الصور في منطقة الطباعة أيضًا لمن يطبع من قائمة المتصفح.
-  const mobile = useMemo(isMobileDevice, []);
+  const mobile = useMemo(isTouchDevice, []);
   const liveRef = useRef(null);
   const [printImgs, setPrintImgs] = useState(null);
   // ملف PDF جاهز مسبقًا: المشاركة يجب أن تُستدعى فور اللمسة (Chrome على الجوال يرفضها بعد أي انتظار)
@@ -501,6 +501,15 @@ function iosFit(size, realSize) {
   const [pw, ph] = realSize ? [w, h] : size.w > size.h ? [297, 210] : [210, 297];
   const k = Math.min(1, (pw - 32) / w, (ph - 32) / h);
   return { width: `${(w * k).toFixed(1)}mm`, height: `${(h * k).toFixed(1)}mm` };
+}
+
+/* جهاز لمسي (جوال أو لوحي) — يشمل Chrome على iPhone ولو طُلب «موقع سطح المكتب»
+   فصار يعرّف نفسه كجهاز Mac */
+function isTouchDevice() {
+  if (isMobileDevice()) return true;
+  const ua = navigator.userAgent || "";
+  if (/CriOS|FxiOS|EdgiOS/.test(ua)) return true;
+  return !!window.matchMedia?.("(pointer: coarse)").matches && navigator.maxTouchPoints > 0;
 }
 
 /* صور أوراق الطباعة من النسخة الحيّة الموضوعة خارج الشاشة */
