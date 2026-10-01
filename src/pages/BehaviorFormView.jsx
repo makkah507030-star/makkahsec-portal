@@ -93,6 +93,9 @@ export default function BehaviorFormView() {
               اطّلع على التعهد أدناه، ثم أكّد تعهّدك بعدم تكرار أي مشكلة سلوكية مستقبلًا.
             </p>
           )}
+          {guardianTurn && f.kind === "notice" && (
+            <p className="text-sm leading-relaxed text-ink">اطّلع على الإشعار والإجراءات المقررة أدناه، ثم أكّد اطّلاعك واكتب ملاحظتك إن رغبت.</p>
+          )}
           {guardianTurn && f.kind === "pledge" && (
             <p className="text-sm leading-relaxed text-ink">اطّلع على تعهد ابنكم أدناه، ثم أكّد اطّلاعك واكتب ملاحظتك إن رغبت.</p>
           )}

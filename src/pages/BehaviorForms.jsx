@@ -154,13 +154,18 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
   const [stDate, setStDate] = useState(todayISO());
   const optionalViolation = kind === "invite" || kind === "statement";
   const needViolation = !optionalViolation || linkViolation;
+  // الإشعار: الإجراءات المقررة (سطر لكل إجراء)
+  const [steps, setSteps] = useState("");
+  const stepList = steps.split(/\n+/).map((x) => x.replace(/^[\s\-–•\d.)]+/, "").trim()).filter(Boolean);
   const ready = student && (!needViolation || violation) && (kind !== "invite" || (meetDate && purpose.trim()))
+    && (kind !== "notice" || stepList.length)
     && (kind !== "incident" || place.trim()) && (kind !== "statement" || stText.trim());
 
   const data = kind === "invite" ? { date: meetDate, time: time.trim(), meet_with: meetWith, purpose: purpose.trim() }
     : kind === "incident" ? { evidence, evidence_other: evOther.trim(), place: place.trim(), time: time.trim(),
                               description: desc.trim(), witnesses: witnesses.filter((w) => w.name.trim()) }
     : kind === "statement" ? { text: stText.trim(), date: stDate, time: time.trim() }
+    : kind === "notice" ? { steps: stepList }
     : {};
 
   const submit = async () => {
@@ -192,6 +197,8 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
       await notifyUsers([...ids], k.title,
         kind === "pledge"
           ? `صدر تعهد سلوكي بشأن ${student.full_name} (${saved.serial}). افتحه للاطّلاع والإقرار.`
+          : kind === "notice"
+          ? `إشعار بمشكلة سلوكية بشأن الطالب ${student.full_name} والإجراءات المقررة حياله (${saved.serial}). افتحه للاطّلاع والإقرار.`
           : `دعوة لولي أمر الطالب ${student.full_name} لزيارة المدرسة (${saved.serial}). افتحها للاطّلاع والرد.`,
         `/behavior/${saved.id}`);
     }
@@ -299,6 +306,10 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
         </div>
       )}
 
+      {kind === "notice" && (
+        <StepsField degree={violation?.degree} value={steps} onChange={setSteps} />
+      )}
+
       {kind === "incident" && (
         <>
           <div>
@@ -358,6 +369,53 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
         {busy ? "جارٍ الحفظ…" : kind === "incident" ? "حفظ المحضر" : kind === "statement" ? "حفظ الإفادة" : `إصدار ${k.title} وإرساله`}
       </button>
     </section>
+  );
+}
+
+/* إجراءات مقترحة لكل درجة — مختصرة من المواد (10–16) في دليل السلوك والمواظبة */
+const STEPS_BY_DEGREE = {
+  1: ["التنبيه الشفهي للطالب بأسلوب تربوي", "تدوين المشكلة السلوكية وتوقيع الطالب عليها",
+      "إشعار ولي الأمر هاتفيًا والتنسيق معه لتعديل السلوك", "حسم درجة من درجات السلوك الإيجابي مع تمكينه من فرص التعويض",
+      "تحويل الطالب للموجه الطلابي لدراسة حالته"],
+  2: ["إشعار ولي الأمر هاتفيًا بالمشكلة والإجراءات المتخذة", "حسم درجتين من درجات السلوك الإيجابي مع تمكينه من فرص التعويض",
+      "أخذ تعهد خطي على الطالب بعدم تكرار المخالفة", "تحويل الطالب للموجه الطلابي لدراسة حالته",
+      "دعوة ولي الأمر حضوريًا ووضع خطة لتعديل السلوك", "نقل الطالب إلى فصل آخر وفقًا لقرار لجنة التوجيه الطلابي"],
+  3: ["دعوة ولي الأمر وتوضيح الإجراءات المترتبة على تكرار السلوك", "حسم ثلاث درجات من درجات السلوك الإيجابي مع تمكينه من فرص التعويض",
+      "أخذ تعهد خطي على الطالب بعدم تكرار المخالفة", "الاعتذار لمن أساء إليه", "إصلاح ما أتلفه الطالب أو إحضار بديل عنه",
+      "مصادرة ما بحوزته من مواد ممنوعة", "تحويل الطالب للموجه الطلابي لدراسة حالته",
+      "إنذار الطالب كتابيًا بالنقل إلى مدرسة أخرى في حال تكرار المخالفة"],
+  4: ["إحالة الطالب إلى لجنة التوجيه الطلابي لدراسة مشكلته", "حسم عشر درجات من درجات السلوك الإيجابي مع تمكينه من فرص التعويض",
+      "أخذ تعهد خطي على الطالب وإنذاره بالنقل إلى مدرسة أخرى في حال التكرار", "تقديم الاعتذار لمن أسيء إليهم",
+      "إصلاح ما أتلفه الطالب أو إحضار بديل عنه", "نقل الطالب من فصل إلى آخر وفقًا لقرار لجنة التوجيه الطلابي",
+      "متابعة حالته من قبل الموجه الطلابي وتقديم الخدمات التربوية"],
+  5: ["تدوين محضر بالواقعة من قبل إدارة المدرسة", "حسم خمس عشرة درجة من درجات السلوك الإيجابي مع تمكينه من فرص التعويض",
+      "اجتماع لجنة التوجيه الطلابي لدراسة ظروف الواقعة وملابساتها", "رفع محضر اجتماع لجنة التوجيه إلى إدارة التعليم",
+      "متابعة حالته من قبل الموجه الطلابي وتقديم الخدمات التربوية"],
+};
+
+function StepsField({ degree, value, onChange }) {
+  const sugg = STEPS_BY_DEGREE[degree] ?? [];
+  const add = (t) => onChange((cur) => (cur.includes(t) ? cur : (cur.trim() ? `${cur.trimEnd()}\n` : "") + t));
+  return (
+    <div>
+      <label className="text-xs text-muted">الإجراءات المقررة حيال الطالب (إجراء في كل سطر)</label>
+      {sugg.length > 0 ? (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {sugg.map((t) => (
+            <button key={t} type="button" onClick={() => add(t)}
+              className={`rounded-pill px-3 py-1 text-[11.5px] font-medium ${value.includes(t)
+                ? "bg-mint-deep text-white" : "border border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>
+              {value.includes(t) ? "✓ " : "+ "}{t}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-1 text-[11px] text-faint">اختر المخالفة أولًا لتظهر الإجراءات المقترحة لدرجتها.</p>
+      )}
+      <textarea rows={5} className="field mt-1.5 w-full leading-relaxed" value={value}
+                placeholder="مثال: أخذ تعهد خطي على الطالب بعدم تكرار المخالفة"
+                onChange={(e) => onChange(e.target.value)} />
+    </div>
   );
 }
 
@@ -463,6 +521,9 @@ function Log({ rows, onOpen }) {
               <button onClick={() => onOpen(r)}
                       className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">الملف</button>
             </div>
+            {r.kind === "notice" && (
+              <p className="mt-1.5 text-xs text-muted">ولي الأمر: {r.guardian_ack_at ? "أقرّ بالاطّلاع ✓" : "لم يطّلع بعد"}</p>
+            )}
             {r.kind === "pledge" && (
               <p className="mt-1.5 text-xs text-muted">
                 الطالب: {r.student_ack_at ? "تعهّد ✓" : "لم يتعهد بعد"} · ولي الأمر: {r.guardian_ack_at ? "أقرّ ✓" : "لم يطّلع بعد"}
