@@ -13,6 +13,8 @@ import { degreeName, violationPhrase } from "../lib/behavior.js";
 export const FORM_KINDS = {
   pledge:   { title: "تعهد سلوكي",          short: "تعهد سلوكي",   n: 8,  secret: false,
               hint: "يقرّ فيه الطالب بالمخالفة ويتعهد بعدم تكرارها، ويقرّ ولي أمره بالاطّلاع." },
+  notice:   { title: "إشعار ولي أمر الطالب بمشكلة سلوكية", short: "إشعار ولي أمر", n: 9, secret: true,
+              hint: "يُشعر ولي الأمر بالمخالفة والإجراءات المقررة حيالها، فيقرّ بالاطّلاع ويكتب ملاحظته." },
   invite:   { title: "خطاب دعوة ولي الأمر", short: "دعوة ولي أمر", n: 10, secret: false,
               hint: "يُرسل لولي الأمر بموعد الحضور وهدفه، فيرد بالحضور أو بطلب تغيير الموعد." },
   incident: { title: "محضر ضبط واقعة",      short: "محضر ضبط",     n: 11, secret: true, internal: true,
@@ -75,6 +77,7 @@ export default function BehaviorSheet({ f, stampUrl }) {
       {f.kind === "invite" && <Invite f={f} d={d} stampUrl={stampUrl} />}
       {f.kind === "incident" && <Incident f={f} d={d} stampUrl={stampUrl} />}
       {f.kind === "statement" && <Statement f={f} d={d} stampUrl={stampUrl} />}
+      {f.kind === "notice" && <Notice f={f} d={d} stampUrl={stampUrl} />}
       <GuideFoot />
     </div>
   );
@@ -226,6 +229,42 @@ function Statement({ f, d, stampUrl }) {
         <Sign title="الطالب" name={f.student_name} />
         <Stamp url={stampUrl} />
         <Sign title={f.issued_role || "وكيل شؤون الطلاب"} name={f.issued_name} at={f.created_at} atLabel="دُوّنت في" />
+      </div>
+    </>
+  );
+}
+
+/* --------------- (9) سري: إشعار ولي أمر الطالب بمشكلة سلوكية --------------- */
+function Notice({ f, d, stampUrl }) {
+  const steps = (d.steps ?? []).filter((x) => String(x).trim());
+  return (
+    <>
+      <div className="mt-6 space-y-1 px-1">
+        <P bold>المكرم ولي أمر الطالب / {f.student_name}</P>
+        <P>بالصف / {f.class_label}</P>
+        <P center>السلام عليكم ورحمة الله وبركاته، وبعد:</P>
+        <P>نشعركم بأن الطالب قام في يوم {day(f.violation_date)} بمشكلة سلوكية من الدرجة
+          ({degreeName(f.violation_degree)})، وهي: {violationPhrase(f.violation_text)}.</P>
+        <P>وقد قُرّرت الإجراءات التالية حياله وفق ما ورد في قواعد السلوك والمواظبة:</P>
+        <ol className="list-inside list-decimal pr-2 text-[13.5px] leading-[2.1]">
+          {(steps.length ? steps : ["........................................................"]).map((x, i) => <li key={i}>{x}</li>)}
+        </ol>
+        <P>لذا يرجى منكم المتابعة والتعاون مع المدرسة بما يسهم في انضباط سلوك ابنكم.</P>
+      </div>
+      <div className="mt-6 flex items-end gap-3">
+        <Stamp url={stampUrl} />
+        <div className="flex-1" />
+        <Principal at={f.created_at} />
+      </div>
+
+      <div className="mt-6 rounded-[10px] border border-[#F0E3C4] px-4 py-3">
+        <p className="text-[12.5px] font-bold text-[#7E6318]">إقرار ولي الأمر:</p>
+        <P><Box on={!!f.guardian_ack_at} /> أُقرّ بالاطّلاع على هذا الإشعار، وبمتابعة سلوك ابني والتعاون مع المدرسة.</P>
+        {f.guardian_note && <SheetField label="ملاحظة ولي الأمر" value={f.guardian_note} />}
+        <p className="mt-1 text-[11px] text-muted">
+          {f.guardian_ack_at ? <>أقرّ ولي الأمر إلكترونيًا بتاريخ <span className="num">{fmtDual(f.guardian_ack_at)}</span></>
+                             : "الاسم: ........................   التوقيع: ........................   التاريخ: ........................"}
+        </p>
       </div>
     </>
   );
