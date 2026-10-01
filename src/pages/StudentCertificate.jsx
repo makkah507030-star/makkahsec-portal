@@ -54,6 +54,8 @@ export default function StudentCertificate() {
   const [info, setInfo] = useState(null);
   const [to, setTo] = useState(TO_PRESETS[0]);
   const [no, setNo] = useState("");
+  // الجنسية تُختار يدويًا: سعودي / غير سعودي (تُقترح من أول رقم في الهوية: 1 = سعودي)
+  const [nationality, setNationality] = useState("سعودي");
   const [date, setDate] = useState(todayISO());
   const [year, setYear] = useState(schoolYear());
   const [stamp, setStamp] = useState(null);
@@ -73,15 +75,17 @@ export default function StudentCertificate() {
     let alive = true;
     (async () => {
       const [{ data: s }, { data: v }] = await Promise.all([
-        supabase.from("students").select("national_id, nationality, full_name").eq("id", student.student_id).maybeSingle(),
+        supabase.from("students").select("national_id, full_name").eq("id", student.student_id).maybeSingle(),
         supabase.from("v_active_students").select("track, grade, class_no").eq("student_id", student.student_id).maybeSingle(),
       ]);
-      if (alive) setInfo({ ...student, ...(v ?? {}), ...(s ?? {}) });
+      if (!alive) return;
+      setInfo({ ...student, ...(v ?? {}), ...(s ?? {}) });
+      setNationality(String(s?.national_id ?? "").startsWith("1") ? "سعودي" : "غير سعودي");
     })();
     return () => { alive = false; };
   }, [student]);
 
-  const cert = info && { ...info, to: to.trim() || "من يهمه الأمر", no: no.trim(), date, year };
+  const cert = info && { ...info, nationality, to: to.trim() || "من يهمه الأمر", no: no.trim(), date, year };
 
   return (
     <div className="space-y-4">
@@ -125,11 +129,16 @@ export default function StudentCertificate() {
             <input type="date" className="field mt-1 w-full" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
         </div>
-        {info && !info.nationality && (
-          <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs text-warning">
-            جنسية الطالب غير مسجّلة في البوابة — تظهر خانتها فارغة في الشهادة.
-          </p>
-        )}
+        <div>
+          <label className="text-xs text-muted">الجنسية</label>
+          <div className="mt-1.5 flex gap-1.5">
+            {["سعودي", "غير سعودي"].map((n) => (
+              <button key={n} type="button" onClick={() => setNationality(n)}
+                className={`rounded-pill px-4 py-1.5 text-sm font-medium ${nationality === n
+                  ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>{n}</button>
+            ))}
+          </div>
+        </div>
       </section>
 
       {cert ? <Preview cert={cert} stamp={stamp} /> : (
