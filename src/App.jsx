@@ -79,6 +79,7 @@ const QuizTake = lazy(() => import("./pages/QuizTake.jsx"));
 const ExamsAdmin = lazy(() => import("./pages/admin/ExamsAdmin.jsx"));
 const ReferralView = lazy(() => import("./pages/ReferralView.jsx"));
 const BehaviorForms = lazy(() => import("./pages/BehaviorForms.jsx"));
+const StudentCertificate = lazy(() => import("./pages/StudentCertificate.jsx"));
 const BehaviorFormView = lazy(() => import("./pages/BehaviorFormView.jsx"));
 const MaintenanceAdmin = lazy(() => import("./pages/admin/MaintenanceAdmin.jsx"));
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
@@ -408,6 +409,8 @@ export default function App() {
           <Route path="/referral/:id" element={<ReferralView />} />
           {/* نماذج السلوك والمواظبة — الإصدار للإدارة والموجهين، والنموذج لصاحبه وولي أمره */}
           <Route path="/behavior" element={<BehaviorForms />} />
+          {/* شهادة تعريف طالب منتظم — لمن له صلاحية كشوف الطلاب */}
+          <Route path="/student-certificate" element={<StudentCertificate />} />
           <Route path="/behavior/:id" element={<BehaviorFormView />} />
           {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
           <Route path="/help" element={<Help />} />
