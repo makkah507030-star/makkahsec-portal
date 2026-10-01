@@ -1,5 +1,5 @@
 // src/pages/studio/Studio.jsx
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
@@ -260,10 +260,36 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
     return tpl.derive ? tpl.derive(next, name, ctx ?? {}) : next;
   });
 
-  const printNow = () => {
+  // على iPhone/iPad تُطبع صورة الورقة لا الورقة نفسها: محرّك الطباعة هناك يتجاهل شفافية
+  // الألوان والتدرّجات (تسودّ الخلفية وتظهر الهالة دائرة صلبة)، والصورة تطابق المعاينة تمامًا.
+  // تُجهَّز الصور مسبقًا بعد كل تعديل، فتصحّ الطباعة من الزر ومن قائمة «مشاركة ← طباعة» في Safari.
+  const ios = useMemo(isIOS, []);
+  const liveRef = useRef(null);
+  const [printImgs, setPrintImgs] = useState(null);
+  const capture = useCallback(async () => {
+    const imgs = await rasterSheets(liveRef.current, size);
+    setPrintImgs(imgs);
+    return imgs;
+  }, [size.w, size.h]);
+  useEffect(() => {
+    if (!ios || !printable) return;
+    setPrintImgs(null);
+    const t = setTimeout(() => { capture().catch((e) => console.error("rasterSheets:", e)); }, 1200);
+    return () => clearTimeout(t);
+  }, [ios, printable, capture, data, theme, orient, ctx]);
+
+  const printNow = async () => {
     // عنوان الصفحة يصبح اسم ملف PDF المقترح عند الحفظ
     const prev = document.title;
     document.title = `${tpl.title} - ${data.title || data.items?.[0]?.title || ""}`.trim();
+    if (ios && !printImgs) {
+      setBusy(true);
+      try { await capture(); }
+      catch (e) { setMsg({ ok: false, text: `تعذّر تجهيز الطباعة: ${e.message ?? e}` }); setBusy(false); return; }
+      setBusy(false);
+      // انتظار رسم الصور في منطقة الطباعة قبل فتح نافذتها
+      await new Promise((r) => setTimeout(r, 300));
+    }
     window.print();
     setTimeout(() => { document.title = prev; }, 500);
   };
@@ -402,17 +428,47 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
         </section>
       </div>
 
+      {/* نسخة حيّة خارج الشاشة تُلتقط منها صور الطباعة على iPhone/iPad */}
+      {ios && printable && (
+        <div ref={liveRef} aria-hidden="true"
+             style={{ position: "fixed", left: -20000, top: 0, pointerEvents: "none" }}>
+          {pages.map((p, i) => <SheetFor key={i} tpl={tpl} theme={theme} orient={orient} data={p} />)}
+        </div>
+      )}
+
       {printable && (
         <PrintPortal id="studio-print" landscape={size.w > size.h}
           extraCss={`#studio-print .sheet { break-after: page; } #studio-print .sheet:last-child { break-after: auto; }${
             tpl.printSize
               // مقاس الطباعة الفعلي (مثل رول أب 85 × 200 سم): الورقة مرسومة 1 بكسل = 1 مم فتُكبَّر إلى المليمتر
               ? ` @page { size: ${size.w}mm ${size.h}mm; margin: 0; } #studio-print .sheet { zoom: 3.7795; }` : ""}`}>
-          {pages.map((p, i) => <SheetFor key={i} tpl={tpl} theme={theme} orient={orient} data={p} />)}
+          {printImgs
+            ? printImgs.map((src, i) => <img key={i} className="sheet" src={src} alt=""
+                style={{ display: "block", width: size.w, height: size.h }} />)
+            : pages.map((p, i) => <SheetFor key={i} tpl={tpl} theme={theme} orient={orient} data={p} />)}
         </PrintPortal>
       )}
     </div>
   );
+}
+
+const isIOS = () => /iP(hone|ad|od)/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+/* صور أوراق الطباعة من النسخة الحيّة الموضوعة خارج الشاشة */
+async function rasterSheets(root, size) {
+  if (!root) return null;
+  const { toPng } = await import("html-to-image");
+  await document.fonts?.ready;
+  // دقة تقارب 300 نقطة/بوصة للـ A4، ضمن حد مساحة الرسم في Safari (~16 مليون بكسل)
+  const ratio = Math.min(3, Math.sqrt(15e6 / (size.w * size.h)));
+  const out = [];
+  for (const node of root.querySelectorAll(".sheet")) {
+    const opts = { pixelRatio: ratio, cacheBust: true, width: size.w, height: size.h };
+    await toPng(node, opts); // Safari يرسم الصور المضمّنة في المرة الثانية فقط
+    out.push(await toPng(node, opts));
+  }
+  return out;
 }
 
 // العدد مع المعدود: صفحتان، 3 صفحات، 11 صفحة
