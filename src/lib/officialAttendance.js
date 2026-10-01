@@ -332,6 +332,8 @@ export async function loadDay(date) {
 
   return {
     date, rows, dayStart, orphans, unmarked, fingerprint,
+    // جدول اليوم كاملًا (المادة والمعلم لكل حصة في كل فصل) — للتقارير المفصلة
+    schedule: schedRes.data ?? [],
     punchCount: punches.length,
     hasData: attendance.length > 0 || punches.length > 0,
   };
