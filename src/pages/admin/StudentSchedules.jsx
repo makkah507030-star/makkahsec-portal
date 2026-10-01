@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
-import { printReport, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { buildWeeklyPrintTable } from "../../lib/scheduleGrid";
 import WeeklyGrid from "../../components/WeeklyGrid.jsx";
 import logoIcon from "../../assets/icon-mint.png";
@@ -63,7 +63,7 @@ export default function StudentSchedules() {
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       signatures: [
-        { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME },
+        { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
         { title: "مدير المدرسة", name: PRINCIPAL_NAME },
       ],
       hideSignatureLine: true,
@@ -105,7 +105,7 @@ export default function StudentSchedules() {
         logoUrl: new URL(logoIcon, window.location.origin).href,
         moeLogoUrl: new URL(moeLogo, window.location.origin).href,
         signatures: [
-          { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME },
+          { title: "وكيل شؤون الطلاب", name: STUDENT_DEPUTY_NAME },
           { title: "مدير المدرسة", name: PRINCIPAL_NAME },
         ],
         hideSignatureLine: true,
