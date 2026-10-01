@@ -27,6 +27,7 @@ const ADMIN_GROUPS = [
     title: "شؤون الطلاب",
     items: [
       { to: "/students",    label: "كشوف الطلاب",    perm: "students",    icon: "users" },
+      { to: "/student-certificate", label: "تعريف طالب منتظم", perm: "students", icon: "certificate" },
       { to: "/results-admin", label: "نتائج الطلاب", perm: "results", icon: "award" },
       // مركز واحد لكل تقارير الحضور والغياب (يضم الحضور الرسمي والتأخر وتحضير الحصص والتقارير)
       { to: "/student-affairs", label: "تقارير شؤون الطلاب", perm: "reports", icon: "chart" },
