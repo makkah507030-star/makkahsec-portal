@@ -8,7 +8,7 @@ import { FORM_KINDS } from "../../components/BehaviorSheet.jsx";
 import { TEMPLATES } from "../studio/templates";
 
 /* =====================================================================
-   استخدام النماذج والاستوديو — للدعم الفني وحده.
+   إحصائية الاستخدام — للدعم الفني وحده.
    الأرقام من الدالة usage_report (supabase/usage_stats.sql)، وكل قائمة تُكمَّل
    بأسماء نماذجها المعروفة حتى يظهر ما لم يُستخدم أبدًا بصفر.
    ===================================================================== */
@@ -153,7 +153,7 @@ export default function UsageReport() {
     "المستخدمون": Number(i.users),
     "الطباعة والتنزيل": i.prints == null ? "" : Number(i.prints),
     "آخر استخدام": i.last_used ? fmtDateTime(i.last_used) : "",
-  })), "استخدام-النماذج-والاستوديو", "الاستخدام");
+  })), "إحصائية-الاستخدام", "الاستخدام");
 
   const missing = error && /usage_report|function|42883|PGRST202/i.test(`${error.message} ${error.code}`);
 
@@ -162,7 +162,7 @@ export default function UsageReport() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-bold text-ink">استخدام النماذج والاستوديو</h1>
+            <h1 className="text-lg font-bold text-ink">إحصائية الاستخدام</h1>
             <span className="chip bg-mint-tint text-mint-deep">للدعم الفني فقط</span>
           </div>
           <p className="mt-1 text-sm text-muted">عدد مرات الاستخدام الفعلي لكل نموذج وقالب، لتقييم فعاليتها.</p>
