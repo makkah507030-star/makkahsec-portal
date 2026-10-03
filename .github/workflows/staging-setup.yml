@@ -173,7 +173,7 @@ jobs:
         run: |
           # --force: عند إعادة التشغيل المفتاح موجود، فبدونه تطلب الأداة تأكيدًا وتفشل
           set_env() {
-            out=$(npx --yes netlify-cli@27.10.2 env:set "$@" --context production --scope functions --force 2>&1); s=$?
+            out=$(npx --yes netlify-cli@27.10.2 env:set "$@" --context production --scope functions --force 2>&1) && s=0 || s=$?
             echo "$out"
             if [ "$s" -ne 0 ]; then
               echo "::error title=مفاتيح Netlify::$(echo "$out" | tail -15 | sed 's/\x1b\[[0-9;]*m//g' | sed ':a;N;$!ba;s/\n/%0A/g')"
