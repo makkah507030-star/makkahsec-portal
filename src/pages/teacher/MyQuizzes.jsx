@@ -1,5 +1,5 @@
 // src/pages/teacher/MyQuizzes.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
@@ -11,6 +11,8 @@ import { shrinkImage } from "../../lib/imageResize.js";
 import { printThen } from "../../lib/print.js";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import MathSymbolsToolbar from "../../components/MathSymbolsToolbar.jsx";
+import { isMathSubject } from "../../lib/mathSymbols.js";
 
 /* =====================================================================
    اختباراتي — اختبارات المعلم.
@@ -453,6 +455,8 @@ function QuizEditor({ quiz, uid, onBack }) {
   const [linked, setLinked] = useState([]);
   const [tab, setTab] = useState("questions");
   const [msg, setMsg] = useNotice(null);
+  const questionsRef = useRef(null);
+  const isMath = isMathSubject(q.subject_name);
   // الاختبار الورقي: عدد صفحاته وأين تبدأ كل صفحة، وما يُطبع الآن
   const paper = q.mode === "paper";
   const online = q.mode === "online";
@@ -774,26 +778,30 @@ function QuizEditor({ quiz, uid, onBack }) {
             )}
           </div>
 
-          {paper
-            ? groupPaper(questions ?? []).map((g, gi) => (
-                <div key={g.kind} className="space-y-2">
-                  <p className="px-1 pt-1 text-xs font-bold text-mint-deep">
-                    السؤال {ORDINALS[gi] ?? gi + 1}: {PAPER_KINDS.find((k) => k.key === g.kind)?.label}
-                    <span className="num font-normal text-muted"> · {g.list.length} {g.list.length === 1 ? "فقرة" : "فقرات"}</span>
-                  </p>
-                  {g.list.map((row, qi) => (
-                    <QuestionCard key={row.id} row={row} index={qi + 1} lang={q.lang ?? "ar"} paper
-                                  matchMax={PAPER_MATCH_MAX}
-                                  image={{ url: images[row.image_path], onUpload: uploadImage, onRemove: removeImage }}
-                                  onPatch={patchQ} onRemove={removeQ} />
-                  ))}
-                </div>
-              ))
-            : (questions ?? []).map((row, i) => (
-                <QuestionCard key={row.id} row={row} index={i + 1} lang={q.lang ?? "ar"}
-                              matchMax={online ? PAPER_MATCH_MAX : MATCH_MAX_ITEMS}
-                              onPatch={patchQ} onRemove={removeQ} />
-              ))}
+          {isMath && <MathSymbolsToolbar containerRef={questionsRef} />}
+
+          <div ref={questionsRef} className="space-y-3">
+            {paper
+              ? groupPaper(questions ?? []).map((g, gi) => (
+                  <div key={g.kind} className="space-y-2">
+                    <p className="px-1 pt-1 text-xs font-bold text-mint-deep">
+                      السؤال {ORDINALS[gi] ?? gi + 1}: {PAPER_KINDS.find((k) => k.key === g.kind)?.label}
+                      <span className="num font-normal text-muted"> · {g.list.length} {g.list.length === 1 ? "فقرة" : "فقرات"}</span>
+                    </p>
+                    {g.list.map((row, qi) => (
+                      <QuestionCard key={row.id} row={row} index={qi + 1} lang={q.lang ?? "ar"} paper
+                                    matchMax={PAPER_MATCH_MAX}
+                                    image={{ url: images[row.image_path], onUpload: uploadImage, onRemove: removeImage }}
+                                    onPatch={patchQ} onRemove={removeQ} />
+                    ))}
+                  </div>
+                ))
+              : (questions ?? []).map((row, i) => (
+                  <QuestionCard key={row.id} row={row} index={i + 1} lang={q.lang ?? "ar"}
+                                matchMax={online ? PAPER_MATCH_MAX : MATCH_MAX_ITEMS}
+                                onPatch={patchQ} onRemove={removeQ} />
+                ))}
+          </div>
 
           <div className="card p-4">
             <p className="text-xs text-muted">إضافة سؤال</p>
