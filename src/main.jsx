@@ -5,6 +5,7 @@ import App from "./App.jsx";
 import { SessionProvider } from "./lib/session.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import NoticeHost from "./components/NoticeHost.jsx";
+import StagingBadge from "./components/StagingBadge.jsx";
 import "./fonts.css";
 import "./index.css";
 
@@ -32,6 +33,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <App />
         </SessionProvider>
         <NoticeHost />
+        <StagingBadge />
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>

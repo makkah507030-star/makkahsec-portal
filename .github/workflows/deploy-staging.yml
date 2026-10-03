@@ -1,0 +1,54 @@
+# نشر النسخة التجريبية (makkahsec-staging.netlify.app) من فروع العمل، قبل الدمج في main.
+# كل دفع إلى فرع claude/... يُنشر هنا تلقائيًا (آخر دفع يحلّ محل ما قبله)،
+# ويمكن نشر أي فرع يدويًا: Actions ← نشر النسخة التجريبية ← Run workflow ← اختر الفرع.
+# الموقع الحقيقي لا يتأثر: له سير عمل Deploy الخاص به من main فقط. التفاصيل: docs/staging.md
+name: نشر النسخة التجريبية
+
+on:
+  push:
+    branches: ["claude/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: النشر على الموقع التجريبي
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      # الموقع التجريبي — ليس سرًّا، ومختلف عن NETLIFY_SITE_ID للموقع الحقيقي
+      NETLIFY_SITE_ID: "6bbc8306-2d84-41fb-b091-e95d05a182bc"
+    steps:
+      - name: التحقق من الأسرار
+        run: |
+          if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
+            echo "::error::سرّ ناقص في Settings ← Secrets and variables ← Actions: NETLIFY_AUTH_TOKEN"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: تثبيت المكتبات
+        run: npm ci
+
+      - name: فحص الأخطاء البرمجية (oxlint)
+        run: npm run lint
+
+      - name: فحص دوال Netlify
+        run: npm run check:functions
+
+      # يبني بمتغيرات الموقع التجريبي في Netlify (قاعدة البيانات التجريبية وVITE_STAGING)
+      - name: البناء والنشر
+        run: npx --yes netlify-cli@27.10.2 deploy --prod --message "تجريبي ${GITHUB_REF_NAME} ${GITHUB_SHA::7}"
