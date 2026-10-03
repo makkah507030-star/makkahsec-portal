@@ -1,6 +1,6 @@
 // src/components/MathSymbolsToolbar.jsx
 import { useEffect, useRef, useState } from "react";
-import { MATH_SYMBOL_GROUPS } from "../lib/mathSymbols.js";
+import { MATH_SYMBOL_GROUPS, MATH_SYMBOLS } from "../lib/mathSymbols.js";
 import { insertAtCursor } from "../lib/textInsert.js";
 
 const RECENT_KEY = "makkah_math_symbols_recent";
@@ -9,7 +9,7 @@ const RECENT_MAX = 14;
 function loadRecent() {
   try {
     const arr = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
-    return Array.isArray(arr) ? arr.filter((s) => typeof s === "string").slice(0, RECENT_MAX) : [];
+    return Array.isArray(arr) ? arr.filter((s) => MATH_SYMBOLS.has(s)).slice(0, RECENT_MAX) : [];
   } catch { return []; }
 }
 function saveRecent(list) {
@@ -63,7 +63,9 @@ export default function MathSymbolsToolbar({ containerRef }) {
 
   const q = query.trim();
   const results = q
-    ? MATH_SYMBOL_GROUPS.flatMap((g) => g.items).filter((it) => it.sym.includes(q) || it.label.includes(q))
+    ? MATH_SYMBOL_GROUPS.flatMap((g) => g.items)
+        .filter((it) => it.sym.includes(q) || it.label.includes(q))
+        .filter((it, i, all) => all.findIndex((x) => x.sym === it.sym && x.label === it.label) === i)
     : null;
   const activeGroup = MATH_SYMBOL_GROUPS[groupIdx] ?? MATH_SYMBOL_GROUPS[0];
 
@@ -86,7 +88,7 @@ export default function MathSymbolsToolbar({ containerRef }) {
           </p>
 
           <input className="field" value={query} onChange={(e) => setQuery(e.target.value)}
-                 placeholder="ابحث عن رمز بالاسم أو الشكل… مثل: جذر، مثلث، سيجما، ≤" />
+                 placeholder="ابحث عن رمز بالاسم أو الشكل… مثل: جذر، مثلث، تكامل، ≤" />
 
           {hint && (
             <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs text-warning">
