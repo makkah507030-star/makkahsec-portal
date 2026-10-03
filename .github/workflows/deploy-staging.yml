@@ -50,5 +50,13 @@ jobs:
         run: npm run check:functions
 
       # يبني بمتغيرات الموقع التجريبي في Netlify (قاعدة البيانات التجريبية وVITE_STAGING)
+      # عند الفشل تظهر آخر أسطر الخطأ في ملخص التشغيل نفسه، بلا فتح السجل الكامل
       - name: البناء والنشر
-        run: npx --yes netlify-cli@27.10.2 deploy --prod --message "تجريبي ${GITHUB_REF_NAME} ${GITHUB_SHA::7}"
+        run: |
+          set +e
+          npx --yes netlify-cli@27.10.2 deploy --prod --message "تجريبي ${GITHUB_REF_NAME} ${GITHUB_SHA::7}" 2>&1 | tee /tmp/deploy.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            echo "::error title=فشل النشر::$(tail -40 /tmp/deploy.log | sed 's/\x1b\[[0-9;]*m//g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+          fi
+          exit "$status"
