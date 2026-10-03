@@ -53,7 +53,9 @@ export default function MathSymbolsToolbar({ containerRef }) {
       hintTimer.current = window.setTimeout(() => setHint(false), 2500);
       return;
     }
-    insertAtCursor(el, sym);
+    // عزل يسار←يمين غير مرئي (LRI…PDI): في الحقول العربية تُقلب الأقواس وتُعكس < و≤
+    // بدونه، فتظهر [f ∘ g](x) هكذا (x)[f ∘ g] — في الحقل والورقة المطبوعة وشاشة الطالب
+    insertAtCursor(el, `⁦${sym}⁩`);
     setRecent((prev) => {
       const next = [sym, ...prev.filter((s) => s !== sym)].slice(0, RECENT_MAX);
       saveRecent(next);
