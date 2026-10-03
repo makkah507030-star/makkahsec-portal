@@ -172,8 +172,9 @@ jobs:
       - name: مفاتيح دوال Netlify للموقع التجريبي
         run: |
           cli="npx --yes netlify-cli@27.10.2"
-          $cli env:set SUPABASE_URL "$STAGING_SUPABASE_URL" --context production --scope functions
-          $cli env:set SUPABASE_SERVICE_ROLE_KEY "$STAGING_SERVICE_ROLE_KEY" --context production --scope functions --secret
+          # --force: عند إعادة التشغيل المفتاح موجود، فبدونه تطلب الأداة تأكيدًا وتفشل
+          $cli env:set SUPABASE_URL "$STAGING_SUPABASE_URL" --context production --scope functions --force
+          $cli env:set SUPABASE_SERVICE_ROLE_KEY "$STAGING_SERVICE_ROLE_KEY" --context production --scope functions --secret --force
 
       - name: النتيجة
         run: |
