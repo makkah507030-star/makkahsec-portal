@@ -92,6 +92,17 @@ jobs:
           sudo apt-get install -y -qq postgresql-common
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y -qq postgresql-client-17
+          # psql يتوقف عند أول خطأ، ويُظهر نص الخطأ في ملخص التشغيل
+          cat > /tmp/q.sh <<'EOF'
+          #!/usr/bin/env bash
+          out=$(psql "$DB" -v ON_ERROR_STOP=1 -q "$@" 2>&1); s=$?
+          [ -n "$out" ] && echo "$out"
+          if [ "$s" -ne 0 ]; then
+            echo "::error title=قاعدة البيانات::$(echo "$out" | tail -15 | sed ':a;N;$!ba;s/\n/%0A/g')"
+          fi
+          exit "$s"
+          EOF
+          chmod +x /tmp/q.sh
 
       # إشعارات الجوال من القاعدة التجريبية تذهب للموقع التجريبي، لا لـ makkahsec.com
       - name: تجهيز ملفات SQL
@@ -116,13 +127,13 @@ jobs:
 
       - name: بنية قاعدة البيانات (مرة واحدة)
         run: |
-          exists=$(psql "$DB" -tAc "select to_regclass('public.users') is not null")
+          exists=$(/tmp/q.sh -tAc "select to_regclass('public.users') is not null") || { echo "$exists"; exit 1; }
           if [ "$exists" = "t" ]; then
             echo "البنية موجودة مسبقًا — تُتخطّى."
           else
             # الإشعارات تُرسل عبر pg_net، وهي غير مفعّلة افتراضيًا في المشاريع الجديدة
-            psql "$DB" -v ON_ERROR_STOP=1 -q -c "create extension if not exists pg_net;"
-            psql "$DB" -v ON_ERROR_STOP=1 -q -f /tmp/sql/schema.sql
+            /tmp/q.sh -c "create extension if not exists pg_net;"
+            /tmp/q.sh -f /tmp/sql/schema.sql
           fi
 
       - name: ملفات SQL الأحدث من البنية
@@ -130,7 +141,7 @@ jobs:
           [ -f /tmp/sql/order.txt ] || exit 0
           while read -r f; do
             echo "← $f"
-            psql "$DB" -v ON_ERROR_STOP=1 -q -f "/tmp/sql/$f"
+            /tmp/q.sh -f "/tmp/sql/$f"
           done < /tmp/sql/order.txt
 
       - name: حاويات الملفات
@@ -156,7 +167,7 @@ jobs:
         run: node scripts/staging-users.mjs
 
       - name: بيانات المدرسة الوهمية
-        run: psql "$DB" -v ON_ERROR_STOP=1 -q -f supabase/staging/seed.sql
+        run: /tmp/q.sh -f supabase/staging/seed.sql
 
       - name: مفاتيح دوال Netlify للموقع التجريبي
         run: |
