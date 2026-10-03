@@ -1,10 +1,17 @@
 # إعداد النسخة التجريبية (makkahsec-staging): ينشئ بنية قاعدة البيانات التجريبية
 # ويملؤها بمدرسة وهمية، ويضبط مفاتيح دوال Netlify للموقع التجريبي.
-# يُشغَّل يدويًا: Actions ← إعداد النسخة التجريبية ← Run workflow.
-# آمن لإعادة التشغيل (مثلًا بعد إضافة ملف SQL جديد). التفاصيل: docs/staging.md
+# يعمل تلقائيًا حين يتغيّر ملف SQL أو بيانات المدرسة الوهمية في فرع claude/...،
+# فتبقى القاعدة التجريبية مطابقة لبنية الفرع، ويدويًا من Actions ← Run workflow.
+# آمن لإعادة التشغيل. التفاصيل: docs/staging.md
 name: إعداد النسخة التجريبية
 
 on:
+  push:
+    branches: ["claude/**"]
+    paths:
+      - "supabase/**"
+      - "scripts/staging-users.mjs"
+      - ".github/workflows/staging-setup.yml"
   workflow_dispatch:
 
 concurrency:
