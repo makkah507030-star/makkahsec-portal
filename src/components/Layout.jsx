@@ -103,6 +103,7 @@ const ADMIN_GROUPS = [
       { to: "/support-report", label: "تقرير ومتابعة الدعم", perm: "feedback", icon: "chart" },
       { to: "/login-log", label: "سجل الدخول والخروج", perm: "login_log", icon: "key" },
       { to: "/site-metrics", label: "مؤشرات الموقع", techOnly: true, icon: "chart" },
+      { to: "/usage-report", label: "استخدام النماذج والاستوديو", techOnly: true, icon: "trend" },
       { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
     ],
   },

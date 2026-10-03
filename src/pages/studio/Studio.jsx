@@ -8,6 +8,8 @@ import { isMobileDevice } from "../../lib/print";
 import { jpegsToPdf } from "./pdf";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { trackUsage, useUsageCounts } from "../../lib/usage.js";
+import UsageBadge from "../../components/UsageBadge.jsx";
 import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, Rollup, Thanks, Notice, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
 import { SECTIONS, TEMPLATES, templateOf, sheetDims, SOCIAL_FORMATS } from "./templates";
 import {
@@ -119,6 +121,7 @@ const galleryData = (tpl, ctx, section) =>
 /* ----------------------------- الصفحة ----------------------------- */
 export default function Studio() {
   const { session, profile, adminRoles, isTeacher, isSuper } = useSession();
+  const usage = useUsageCounts();
   const ctx = useStudioCtx();
   const [access, setAccess] = useState(null);     // بعد الحفظ من «إدارة القوالب» دون إعادة تحميل
   const [stamp, setStamp] = useState(null);       // ختم المدرسة المعتمد من البوابة
@@ -196,12 +199,16 @@ export default function Studio() {
               const x = tpl.download;
               return (
                 <a key={tpl.key} href={x.href} download={x.file}
+                  onClick={() => trackUsage("studio", tpl.key, "download")}
                   className="card group flex flex-col overflow-hidden p-3 text-right transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40">
                   <div className="relative overflow-hidden rounded-card shadow-card ring-1 ring-line/60" style={{ aspectRatio: x.ratio }}>
                     <img src={x.preview} alt="" className="h-full w-full object-cover" loading="lazy" />
                     <span className="absolute left-2 top-2 rounded-sm2 px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: x.color }}>{x.app}</span>
                   </div>
-                  <p className="mt-3 font-semibold text-ink">{tpl.title}</p>
+                  <div className="mt-3 flex items-start justify-between gap-2">
+                    <p className="font-semibold text-ink">{tpl.title}</p>
+                    <UsageBadge map={usage} category="studio" itemKey={tpl.key} />
+                  </div>
                   <p className="mt-0.5 text-xs leading-relaxed text-muted">{tpl.desc}</p>
                   <span className="mt-2 self-start rounded-pill bg-mint-deep px-3 py-1 text-xs font-medium text-white">تنزيل الملف</span>
                 </a>
@@ -217,7 +224,10 @@ export default function Studio() {
                     <SheetFor tpl={tpl} theme={tpl.defaultTheme ?? "light"} orient="portrait" data={d} />
                   </Scaled>
                 </div>
-                <p className="mt-3 font-semibold text-ink">{tpl.title}</p>
+                <div className="mt-3 flex items-start justify-between gap-2">
+                  <p className="font-semibold text-ink">{tpl.title}</p>
+                  <UsageBadge map={usage} category="studio" itemKey={tpl.key} />
+                </div>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted">{tpl.desc}</p>
               </button>
             );
@@ -297,6 +307,7 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
     // عنوان الصفحة يصبح اسم ملف PDF المقترح عند الحفظ
     const prev = document.title;
     document.title = fileTitle;
+    trackUsage("studio", tpl.key, "print");
     window.print();
     setTimeout(() => { document.title = prev; }, 500);
   };
@@ -311,6 +322,7 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
         .finally(() => setBusy(false));
       return;
     }
+    trackUsage("studio", tpl.key, "print");
     const file = new File([pdf.blob], pdf.name, { type: "application/pdf" });
     if (navigator.canShare?.({ files: [file] })) {
       navigator.share({ files: [file], title: pdf.name }).catch((e) => {
@@ -338,6 +350,7 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
       document.body.appendChild(a);
       a.click();
       a.remove();
+      trackUsage("studio", tpl.key, "png");
       setTimeout(() => URL.revokeObjectURL(url), 2000);
     } catch (e) {
       setMsg({ ok: false, text: `تعذّر تصدير الصورة: ${e.message ?? e}` });
@@ -363,6 +376,7 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
       return;
     }
     setId(r.id);
+    if (!id) trackUsage("studio", tpl.key, "save");
     setMsg({ ok: true, text: "حُفظ في «تصاميمي»، ويمكنك الرجوع إليه وتعديله في أي وقت." });
   };
 

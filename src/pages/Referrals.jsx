@@ -15,6 +15,8 @@ import { fmtGreg } from "../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import { useUsageCounts } from "../lib/usage.js";
+import UsageBadge from "../components/UsageBadge.jsx";
 import {
   STATUS, OPEN_STATUSES, LATE_DAYS, stageOf, daysSince, daysLabel, isLate, timelineOf, notifyUsers,
 } from "../lib/referrals";
@@ -37,6 +39,7 @@ const signedUrl = async (path) => {
 
 export default function Referrals() {
   const { session, profile, adminRoles, effectiveRole } = useSession();
+  const usage = useUsageCounts();
   const uid = session?.user?.id;
   const roles = adminRoles ?? [];
 
@@ -84,7 +87,10 @@ export default function Referrals() {
   return (
     <div className="space-y-5">
       <div className="no-print">
-        <h1 className="text-lg font-bold text-ink">إحالة الطالب</h1>
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="text-lg font-bold text-ink">إحالة الطالب</h1>
+          <UsageBadge map={usage} category="referral" itemKey="referral" />
+        </div>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           ملف واحد يوثّق مسار الإحالة كاملًا: المعلم، فوكيل شؤون الطلاب، فالموجه الطلابي،
           ثم إشعار الطالب وولي أمره.

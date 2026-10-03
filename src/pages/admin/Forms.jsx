@@ -12,6 +12,8 @@ import { ReplyFilesList } from "../../components/ReplyFiles.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { canUseTemplate } from "../../lib/formRoles";
 import { sendPush } from "../../lib/pushSend.js";
+import { useUsageCounts } from "../../lib/usage.js";
+import UsageBadge from "../../components/UsageBadge.jsx";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -152,6 +154,7 @@ export default function Forms({ view = "issue" }) {
   const { session, profile, adminRoles, isTeacher } = useSession();
   const isManager = (adminRoles ?? []).some((r) => r === "tech_support" || r === "principal");
   const isApprover = (adminRoles ?? []).includes("principal");
+  const usage = useUsageCounts();
 
   const [tab, setTab] = useState(review ? "replies" : "issue");
   const [fQ, setFQ] = useState("");
@@ -1340,7 +1343,10 @@ export default function Forms({ view = "issue" }) {
                       className="card p-4 text-right transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-semibold text-ink">{t.title}</p>
-                  <span className="chip bg-mint-tint text-mint-deep">{CAT_LABEL[t.category]}</span>
+                  <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                    <UsageBadge map={usage} category="form" itemKey={t.key} />
+                    <span className="chip bg-mint-tint text-mint-deep">{CAT_LABEL[t.category]}</span>
+                  </div>
                 </div>
                 <p className="mt-0.5 text-[11px] text-faint">
                   {DEPT_LABEL[t.department ?? "school_admin"]}
