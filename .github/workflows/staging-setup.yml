@@ -171,9 +171,11 @@ jobs:
 
       - name: مفاتيح دوال Netlify للموقع التجريبي
         run: |
-          # --force: عند إعادة التشغيل المفتاح موجود، فبدونه تطلب الأداة تأكيدًا وتفشل
+          # الأداة لا تغيّر السياق والنطاق معًا لمفتاح موجود، فيُحذف أولًا ثم يُنشأ (إعادة التشغيل آمنة)
+          cli="npx --yes netlify-cli@27.10.2"
           set_env() {
-            out=$(npx --yes netlify-cli@27.10.2 env:set "$@" --context production --scope functions --force 2>&1) && s=0 || s=$?
+            $cli env:unset "$1" --force >/dev/null 2>&1 || true
+            out=$($cli env:set "$@" --context production --scope functions --force 2>&1) && s=0 || s=$?
             echo "$out"
             if [ "$s" -ne 0 ]; then
               echo "::error title=مفاتيح Netlify::$(echo "$out" | tail -15 | sed 's/\x1b\[[0-9;]*m//g' | sed ':a;N;$!ba;s/\n/%0A/g')"
