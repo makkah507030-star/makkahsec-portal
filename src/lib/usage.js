@@ -36,10 +36,3 @@ export function useUsageCounts() {
   }, [tech]);
   return tech ? map : null;
 }
-
-export function timesLabel(n) {
-  if (!n) return "لم يُستخدم";
-  if (n === 1) return "مرة واحدة";
-  if (n === 2) return "مرتان";
-  return `${n} ${n <= 10 ? "مرات" : "مرة"}`;
-}
