@@ -16,7 +16,7 @@ permissions:
 
 env:
   # قيم عامة غير سرية (تظهر أصلًا في كود الموقع التجريبي)
-  STAGING_SUPABASE_URL: "__PENDING__"
+  STAGING_SUPABASE_URL: "https://dwkkxthgocemakkhfrbe.supabase.co"
   NETLIFY_SITE_ID: "6bbc8306-2d84-41fb-b091-e95d05a182bc"
   STAGING_SITE_URL: "https://makkahsec-staging.netlify.app"
   STAGING_PASSWORD: "Mk@Staging-1448"
