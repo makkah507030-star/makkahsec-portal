@@ -12,6 +12,8 @@ import Loader from "../components/Loader.jsx";
 import ViolationPicker from "../components/ViolationPicker.jsx";
 import StudentPicker, { studentClassLabel } from "../components/StudentPicker.jsx";
 import BehaviorSheet, { FORM_KINDS, EVIDENCE, MEET_WITH, STATEMENT_CLOSING, weekday } from "../components/BehaviorSheet.jsx";
+import { useUsageCounts } from "../lib/usage.js";
+import UsageBadge from "../components/UsageBadge.jsx";
 import { ReferralPrintArea } from "../components/ReferralSheet.jsx";
 
 /* =====================================================================
@@ -50,6 +52,7 @@ export async function loadStamp() {
 
 export default function BehaviorForms() {
   const { session, profile, adminRoles } = useSession();
+  const usage = useUsageCounts();
   const uid = session?.user?.id;
   const roles = adminRoles ?? [];
   const allowed = roles.some((r) => BEHAVIOR_STAFF.includes(r));
@@ -107,7 +110,10 @@ export default function BehaviorForms() {
                     className="card p-4 text-right transition-colors hover:border-mint-deep/40 hover:bg-mint-tint/30">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-base font-bold text-ink">{x.title}</p>
-                {x.secret && <span className="chip bg-absent/10 text-absent">سري</span>}
+                <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                  <UsageBadge map={usage} category="behavior" itemKey={k} />
+                  {x.secret && <span className="chip bg-absent/10 text-absent">سري</span>}
+                </div>
               </div>
               <p className="mt-1.5 text-xs leading-relaxed text-muted">{x.hint}</p>
               <p className="mt-2 text-[11px] text-faint">{x.n ? `نموذج (${x.n}) في الدليل` : "نموذج داخلي للمدرسة"}</p>

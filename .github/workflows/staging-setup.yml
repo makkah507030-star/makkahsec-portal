@@ -169,11 +169,31 @@ jobs:
       - name: بيانات المدرسة الوهمية
         run: /tmp/q.sh -f supabase/staging/seed.sql
 
+      # تقرير الاستخدام: يعمل لحساب الدعم الفني التجريبي، ويُرفض لمعلم الرياضيات
+      - name: فحص تقرير الاستخدام
+        run: |
+          as_user() { printf "begin; set local role authenticated; set local request.jwt.claims = '{\"sub\":\"%s\",\"role\":\"authenticated\"}'; %s; commit;" "$1" "$2"; }
+          /tmp/q.sh -tAc "$(as_user 00000000-0000-4000-a000-000000000001 'select count(*) from public.usage_report()')"
+          if psql "$DB" -tAc "$(as_user 00000000-0000-4000-a000-000000000011 'select count(*) from public.usage_report()')" 2>/dev/null; then
+            echo "::error title=تقرير الاستخدام::التقرير لم يُرفض لحساب معلم"; exit 1
+          fi
+          echo "✓ يعمل للدعم الفني ويُرفض لغيره"
+
       - name: مفاتيح دوال Netlify للموقع التجريبي
         run: |
+          # الأداة لا تغيّر السياق والنطاق معًا لمفتاح موجود، فيُحذف أولًا ثم يُنشأ (إعادة التشغيل آمنة)
           cli="npx --yes netlify-cli@27.10.2"
-          $cli env:set SUPABASE_URL "$STAGING_SUPABASE_URL" --context production --scope functions
-          $cli env:set SUPABASE_SERVICE_ROLE_KEY "$STAGING_SERVICE_ROLE_KEY" --context production --scope functions --secret
+          set_env() {
+            $cli env:unset "$1" --force >/dev/null 2>&1 || true
+            out=$($cli env:set "$@" --context production --scope functions --force 2>&1) && s=0 || s=$?
+            echo "$out"
+            if [ "$s" -ne 0 ]; then
+              echo "::error title=مفاتيح Netlify::$(echo "$out" | tail -15 | sed 's/\x1b\[[0-9;]*m//g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+              exit "$s"
+            fi
+          }
+          set_env SUPABASE_URL "$STAGING_SUPABASE_URL"
+          set_env SUPABASE_SERVICE_ROLE_KEY "$STAGING_SERVICE_ROLE_KEY" --secret
 
       - name: النتيجة
         run: |

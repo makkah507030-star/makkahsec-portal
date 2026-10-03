@@ -8,6 +8,8 @@ import StudentPicker from "../components/StudentPicker.jsx";
 import PrintPortal from "../components/PrintPortal.jsx";
 import PrincipalSign from "../components/PrincipalSign.jsx";
 import moeLogo from "../assets/moe-logo.png";
+import { trackUsage, useUsageCounts } from "../lib/usage.js";
+import UsageBadge from "../components/UsageBadge.jsx";
 
 /* =====================================================================
    شهادة تعريف طالب منتظم — على صيغة شهادة نظام نور: تُملأ من بيانات
@@ -50,6 +52,7 @@ export function splitName(full) {
 }
 
 export default function StudentCertificate() {
+  const usage = useUsageCounts();
   const [student, setStudent] = useState(null);
   const [info, setInfo] = useState(null);
   const [to, setTo] = useState(TO_PRESETS[0]);
@@ -91,12 +94,15 @@ export default function StudentCertificate() {
     <div className="space-y-4">
       <div className="no-print flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold text-ink">شهادة تعريف طالب منتظم</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-lg font-bold text-ink">شهادة تعريف طالب منتظم</h1>
+            <UsageBadge map={usage} category="certificate" itemKey="student-certificate" />
+          </div>
           <p className="mt-1 text-sm leading-relaxed text-muted">
             اختر الطالب، فتُملأ الشهادة من بياناته في البوابة، ثم اطبعها بختم المدرسة وتوقيع المدير.
           </p>
         </div>
-        <button className="btn-primary shrink-0" disabled={!cert} onClick={() => window.print()}>طباعة / حفظ PDF</button>
+        <button className="btn-primary shrink-0" disabled={!cert} onClick={() => { trackUsage("certificate", "student-certificate", "print"); window.print(); }}>طباعة / حفظ PDF</button>
       </div>
 
       <section className="no-print card space-y-3 p-4">
