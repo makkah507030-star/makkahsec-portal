@@ -93,7 +93,7 @@ export default function Login() {
 
   return (
     <>
-    <div className="relative z-10"><TrialBanner variant="support" /></div>
+    <div className="relative z-10"><TrialBanner variant="support" occasions={false} /></div>
     <div className="relative min-h-screen overflow-hidden bg-white">
       <style dangerouslySetInnerHTML={{ __html: AUTOFILL_FIX }} />
       {/* ——— الخلفية: بيضاء بنقش الهوية الخفيف ——— */}

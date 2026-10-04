@@ -1,11 +1,14 @@
 // src/components/TrialBanner.jsx
 import { Link } from "react-router-dom";
 import { holidayToday, todayISO } from "../lib/schoolTime";
+import { isTeacherDay } from "../lib/teacherDay.js";
 
 /* شريط أعلى البوابة:
    • للمسجّلين: تلقي الاقتراحات والملاحظات والشكاوى.
    • للزوار (variant="support"): من تعثّر دخوله يُوجَّه إلى مركز الدعم.
    • في اليوم الوطني يتحوّل شريط المسجّلين إلى شريط احتفائي أخضر، ثم يعود تلقائيًا.
+   • في يوم المعلم يتحوّل الشريطان (للمسجّلين وللزوار) إلى شريط شكر للمعلم بهوية اليوم،
+     ويعودان كما كانا في اليوم التالي.
 
    يظهر الشريط الوطني يومَي ٢٣ و٢٤ سبتمبر فقط (اليوم الوطني واليوم الذي بعده)،
    أو في إجازة مفعّلة يحوي اسمها «الوطني» ما دامت في هذه الأيام — فلا تمتد
@@ -46,6 +49,30 @@ function NationalDayBanner() {
   );
 }
 
+/* شريط يوم المعلم: بألوان هوية اليوم (الكحلي والأصفر) */
+function TeacherDayBanner() {
+  return (
+    <div
+      className="text-white"
+      style={{
+        background: "linear-gradient(90deg,#001b3d 0%,#00234E 50%,#0b3570 100%)",
+        WebkitPrintColorAdjust: "exact",
+        printColorAdjust: "exact",
+      }}
+    >
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-2.5 gap-y-1 px-5 py-2.5 text-center text-xs leading-relaxed sm:text-sm">
+        <span className="font-bold">يوم المعلم</span>
+        <span className="opacity-50">·</span>
+        <span className="font-semibold text-[#FFCB05]">أنت الأساس</span>
+        <span className="opacity-50">·</span>
+        <span className="opacity-95">
+          شكرًا لمعلمينا على عطائهم.. بكم يسمو العلم وتثمر المعرفة
+        </span>
+      </div>
+    </div>
+  );
+}
+
 /* شريط الدعم للزوار (الصفحة الرئيسية وصفحة الدخول): بلون الشريط الذهبي نفسه،
    يدلّ من تعثّر دخوله على مركز الدعم والمساندة — يُرسل طلبه دون حساب. */
 function SupportBanner() {
@@ -68,8 +95,10 @@ function SupportBanner() {
   );
 }
 
-/** variant="support": شريط الدعم للزوار بدل الشريط الافتراضي */
-export default function TrialBanner({ variant }) {
+/** variant="support": شريط الدعم للزوار بدل الشريط الافتراضي.
+    occasions={false}: يبقى شريط الدعم في المناسبات (صفحة الدخول لمن تعثّر دخوله). */
+export default function TrialBanner({ variant, occasions = true }) {
+  if (occasions && isTeacherDay()) return <TeacherDayBanner />;
   if (variant === "support") return <SupportBanner />;
   if (isNationalDay()) return <NationalDayBanner />;
 
