@@ -116,10 +116,10 @@ export default function SymbolsToolbar({ library, containerRef }) {
                 تنسيق الصيغ الكيميائية
               </button>
               <p className="min-w-[200px] flex-1 text-xs leading-relaxed text-muted">
-                اكتب الصيغة بلوحة المفاتيح العادية مثل <span dir="ltr" className="font-semibold text-ink">H2SO4</span> أو
-                {" "}<span dir="ltr" className="font-semibold text-ink">Fe3+</span> أو
-                {" "}<span dir="ltr" className="font-semibold text-ink">2H2 + O2 -&gt; 2H2O</span>، ثم اضغط الزر
-                فتصير <span dir="ltr" className="font-semibold text-ink">H₂SO₄</span> و<span dir="ltr" className="font-semibold text-ink">Fe³⁺</span> و<span dir="ltr" className="font-semibold text-ink">2H₂ + O₂ → 2H₂O</span>.
+                اكتب الصيغة بلوحة المفاتيح العادية مثل <Ltr>H2SO4</Ltr> أو
+                {" "}<Ltr>Fe3+</Ltr> أو
+                {" "}<Ltr>2H2 + O2 -&gt; 2H2O</Ltr>، ثم اضغط الزر
+                فتصير <Ltr>H₂SO₄</Ltr> و<Ltr>Fe³⁺</Ltr> و<Ltr>2H₂ + O₂ → 2H₂O</Ltr>.
                 يُنسَّق الحقل كله، أو الجزء المظلَّل منه فقط.
               </p>
             </div>
@@ -157,10 +157,13 @@ export default function SymbolsToolbar({ library, containerRef }) {
   );
 }
 
+// مثال لاتيني داخل السطر العربي، معزول فلا ينقلب ترتيبه
+const Ltr = ({ children }) => <bdi dir="ltr" className="whitespace-nowrap font-semibold text-ink">{children}</bdi>;
+
 // الرموز الطويلة (الوحدات المركبة والثوابت) تأخذ عرض خانتين أو أكثر
 const span = (sym) => {
   const n = [...sym].length;
-  if (n > 12) return "col-span-5 text-sm sm:col-span-4";
+  if (n > 12) return "col-span-5 text-sm sm:col-span-4 md:col-span-5";
   if (n > 5) return "col-span-2 text-sm";
   return "text-base";
 };
