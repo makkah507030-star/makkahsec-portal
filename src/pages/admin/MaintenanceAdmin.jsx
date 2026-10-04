@@ -4,6 +4,8 @@ import { useSession } from "../../lib/session.jsx";
 import { fmtDateTime } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 export default function MaintenanceAdmin() {
   const { profile, adminRoles } = useSession();
@@ -36,6 +38,19 @@ export default function MaintenanceAdmin() {
   }
 
   const toggle = async (next) => {
+    const ok = await confirmDanger(next ? {
+      title: "تفعيل وضع الصيانة",
+      impact: [
+        "تُغلق البوابة فورًا أمام كل المستخدمين عدا الدعم الفني، ويرون رسالة الصيانة بدل صفحاتهم.",
+        "يتوقف التحضير وكل العمل في البوابة حتى إلغاء الوضع.",
+      ],
+      confirmLabel: "تفعيل الصيانة",
+    } : {
+      title: "إلغاء وضع الصيانة",
+      impact: ["تُفتح البوابة فورًا لكل المستخدمين."],
+      confirmLabel: "إلغاء الصيانة",
+    });
+    if (!ok) return;
     setSaving(true);
     setMsg(null);
     const { error } = await supabase
@@ -95,14 +110,16 @@ export default function MaintenanceAdmin() {
               <p className="mt-1 text-xs text-muted">آخر تحديث: {fmtDateTime(row.updated_at)}</p>
             )}
           </div>
-          <button
-            onClick={() => toggle(!row.is_enabled)}
-            disabled={saving}
-            className={`rounded-sm2 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${
-              row.is_enabled ? "bg-present hover:opacity-90" : "bg-absent hover:opacity-90"}`}
-          >
-            {saving ? "جارٍ الحفظ…" : row.is_enabled ? "إلغاء وضع الصيانة" : "تفعيل وضع الصيانة"}
-          </button>
+          <DangerZone className="p-2" note="يغلق البوابة أمام الجميع أو يفتحها">
+            <button
+              onClick={() => toggle(!row.is_enabled)}
+              disabled={saving}
+              className={`rounded-sm2 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 ${
+                row.is_enabled ? "bg-present hover:opacity-90" : "bg-absent hover:opacity-90"}`}
+            >
+              {saving ? "جارٍ الحفظ…" : row.is_enabled ? "إلغاء وضع الصيانة" : "تفعيل وضع الصيانة"}
+            </button>
+          </DangerZone>
         </div>
       </section>
 

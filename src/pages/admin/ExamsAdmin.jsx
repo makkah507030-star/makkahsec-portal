@@ -5,6 +5,8 @@ import { DAY_NAMES, GRADE_NAMES } from "../../lib/schoolTime";
 import ExamTable, { ExamPrintArea } from "../../components/ExamTable.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 /* =====================================================================
    جداول الاختبارات.
@@ -145,11 +147,23 @@ export default function ExamsAdmin() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-ink">
-            <input type="checkbox" checked={term.is_published}
-                   onChange={(e) => saveTerm({ is_published: e.target.checked })} />
-            منشور — يظهر للمعلمين والطلاب وأولياء الأمور
-          </label>
+          <DangerZone className="p-2" note="النشر يُظهر جدول الاختبارات لكل المعلمين والطلاب وأولياء الأمور">
+            <label className="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" checked={term.is_published}
+                     onChange={async (e) => {
+                       const on = e.target.checked;
+                       const ok = await confirmDanger({
+                         title: on ? "نشر جدول الاختبارات" : "إلغاء نشر جدول الاختبارات",
+                         impact: [on
+                           ? "يظهر الجدول فورًا للمعلمين والطلاب وأولياء الأمور."
+                           : "يختفي الجدول من حسابات المعلمين والطلاب وأولياء الأمور حتى يُنشر من جديد."],
+                         confirmLabel: on ? "نشر" : "إلغاء النشر",
+                       });
+                       if (ok) saveTerm({ is_published: on });
+                     }} />
+              منشور — يظهر للمعلمين والطلاب وأولياء الأمور
+            </label>
+          </DangerZone>
 
           {msg && (
             <p className={`rounded-sm2 px-3 py-2 text-sm ${

@@ -5,6 +5,8 @@ import {
 } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 import { SIGNERS, loadSigners } from "../../lib/signers.js";
 
 // يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
@@ -222,6 +224,15 @@ function MemberRow({ member, onSave }) {
 
   const save = async () => {
     if (sel.size === 0) { alert("اختر دورًا واحدًا على الأقل."); return; }
+    const ok = await confirmDanger({
+      title: `تغيير أدوار ${member.full_name ?? member.username}`,
+      impact: [
+        `الأدوار الجديدة: ${Array.from(sel).map((k) => ADMIN_ROLE_LABEL[k]).join("، ")}.`,
+        "تتغيّر الصفحات والصلاحيات المتاحة لهذا الحساب، وما يصدره من نماذج باسم الدور.",
+      ],
+      confirmLabel: "حفظ الأدوار",
+    });
+    if (!ok) return;
     setBusy(true);
     await onSave(member, Array.from(sel));
     setBusy(false);
@@ -270,12 +281,14 @@ function MemberRow({ member, onSave }) {
               </button>
             ))}
           </div>
-          <div className="mt-3 flex gap-2">
-            <button className="btn-primary" onClick={save} disabled={busy}>
-              {busy ? "جارٍ الحفظ…" : "حفظ"}
-            </button>
-            <button className="btn-ghost" onClick={() => setEditing(false)}>إلغاء</button>
-          </div>
+          <DangerZone className="mt-3 p-2" note="يغيّر صلاحيات هذا الحساب في البوابة">
+            <div className="flex gap-2">
+              <button className="btn-primary" onClick={save} disabled={busy}>
+                {busy ? "جارٍ الحفظ…" : "حفظ"}
+              </button>
+              <button className="btn-ghost" onClick={() => setEditing(false)}>إلغاء</button>
+            </div>
+          </DangerZone>
         </div>
       )}
     </div>
@@ -368,11 +381,20 @@ function RolePermissions() {
 
   const save = async () => {
     if (!role) return;
-    setSaving(true);
-    setMsg(null);
     const cur = map[role] ?? new Set();
     const add = [...sel].filter((p) => !cur.has(p));
     const del = [...cur].filter((p) => !sel.has(p));
+    const ok = await confirmDanger({
+      title: `صلاحيات دور «${ADMIN_ROLE_LABEL[role] ?? role}»`,
+      impact: [
+        `تتغيّر صلاحيات كل من يحمل هذا الدور فورًا: تُضاف ${add.length} وتُزال ${del.length}.`,
+        "إزالة صلاحية تُخفي صفحتها عنهم، وإضافتها تفتح لهم تعديل بياناتها.",
+      ],
+      confirmLabel: "حفظ الصلاحيات",
+    });
+    if (!ok) return;
+    setSaving(true);
+    setMsg(null);
 
     if (del.length) {
       const { error } = await supabase.from("role_permissions").delete()
@@ -541,7 +563,9 @@ function RolePermissions() {
                 </p>
               )}
 
-              <div className="sticky bottom-0 -mx-4 -mb-4 flex items-center gap-2 border-t border-line bg-white px-4 py-3">
+              <div className="sticky bottom-0 -mx-4 -mb-4 border-t border-line bg-white px-4 py-3">
+              <DangerZone className="p-2" note="يغيّر صلاحيات كل من يحمل هذا الدور">
+              <div className="flex items-center gap-2">
                 <button className="btn-primary flex-1" onClick={save} disabled={saving || !dirty}>
                   {saving ? "جارٍ الحفظ…" : dirty ? "حفظ الصلاحيات" : "لا تغييرات"}
                 </button>
@@ -551,6 +575,8 @@ function RolePermissions() {
                     تراجع
                   </button>
                 )}
+              </div>
+              </DangerZone>
               </div>
             </>
           )}
@@ -576,6 +602,12 @@ function Signers() {
   const valid = names && SIGNERS.every((s) => names[s.key].trim().length >= 3);
 
   const save = async () => {
+    const ok = await confirmDanger({
+      title: "أسماء الموقّعين في التقارير",
+      impact: ["تظهر الأسماء الجديدة فورًا في كل التقارير والشهادات المطبوعة من البوابة."],
+      confirmLabel: "حفظ الأسماء",
+    });
+    if (!ok) return;
     setSaving(true);
     const rows = SIGNERS.map((s) => ({
       key: s.key, value: names[s.key].trim(), updated_at: new Date().toISOString(),
@@ -605,9 +637,11 @@ function Signers() {
           </label>
         ))}
       </div>
-      <button className="btn-primary" onClick={save} disabled={saving || !dirty || !valid}>
-        {saving ? "جارٍ الحفظ…" : dirty ? "حفظ الأسماء" : "لا تغييرات"}
-      </button>
+      <DangerZone className="p-2" note="الأسماء تُطبع في كل تقارير البوابة وشهاداتها">
+        <button className="btn-primary" onClick={save} disabled={saving || !dirty || !valid}>
+          {saving ? "جارٍ الحفظ…" : dirty ? "حفظ الأسماء" : "لا تغييرات"}
+        </button>
+      </DangerZone>
       {msg && (
         <p className={`rounded-sm2 px-3 py-2 text-sm ${
           msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>

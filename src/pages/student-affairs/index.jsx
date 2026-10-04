@@ -5,6 +5,8 @@ import { useSearchParams } from "react-router-dom";
 import { useSession } from "../../lib/session.jsx";
 import { Loading } from "./shared.jsx";
 import { loadFingerprintEnabled, setFingerprintEnabled } from "../../lib/officialAttendance";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const TodayBoard = lazy(() => import("./TodayBoard.jsx"));
 const MorningLate = lazy(() => import("./MorningLate.jsx"));
@@ -72,7 +74,7 @@ export default function StudentAffairs() {
           المتابعة خلال اليوم · النسبة المكتملة للإحصاء.
         </p>
       </div>
-      {fp != null && <FingerprintSwitch enabled={fp} onChange={setFp} />}
+      {fp != null && <FingerprintSwitch enabled={fp} onChange={setFp} canToggle={isSuper || isDeputy} />}
       </div>
 
       <nav className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -123,22 +125,35 @@ export default function StudentAffairs() {
 }
 
 /** زر قفل البصمة / فتحها — يُحفظ في الإعدادات ويسري على الاعتماد اليدوي والآلي */
-function FingerprintSwitch({ enabled, onChange }) {
+// التبديل للمدير والدعم الفني ووكيل شؤون الطلاب؛ غيرهم يرى الحالة فقط
+function FingerprintSwitch({ enabled, onChange, canToggle }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
   const toggle = async () => {
     const next = !enabled;
-    const q = next
-      ? "فتح البصمة: تُحتسب البصمات من الآن في التأخر الصباحي والمتابعة والاعتماد (اليدوي والآلي). متابعة؟"
-      : "إقفال البصمة: تُتجاهل البصمات في كل الحسابات وتُخفى أجزاؤها (مرحلة تجربة). متابعة؟";
-    if (!window.confirm(q)) return;
+    const ok = await confirmDanger({
+      level: "high",
+      title: next ? "فتح البصمة" : "إقفال البصمة",
+      impact: next
+        ? ["تُحتسب البصمات من الآن في التأخر الصباحي والمتابعة والاعتماد اليدوي والآلي.", "تتغيّر نتائج التأخر والغياب في تقارير المدرسة كلها."]
+        : ["تُتجاهل البصمات في كل الحسابات وتُخفى أجزاؤها (مرحلة تجربة).", "تتغيّر نتائج التأخر والغياب في تقارير المدرسة كلها."],
+      confirmLabel: next ? "فتح البصمة" : "إقفال البصمة",
+    });
+    if (!ok) return;
     setBusy(true); setErr(null);
     try { await setFingerprintEnabled(next); onChange(next); }
     catch (e) { setErr(e.message ?? String(e)); }
     finally { setBusy(false); }
   };
+  if (!canToggle) {
+    return (
+      <span className={`chip ${enabled ? "bg-present/10 text-present" : "bg-warning-light text-warning"}`}>
+        {enabled ? "البصمة مفعّلة" : "البصمة مقفلة (تجربة)"}
+      </span>
+    );
+  }
   return (
-    <div className="text-left">
+    <DangerZone className="p-2 text-left" note="يغيّر حسابات التأخر والغياب للمدرسة كلها">
       <button onClick={toggle} disabled={busy}
         className={`flex items-center gap-2 rounded-pill border px-3.5 py-1.5 text-sm font-semibold transition-colors disabled:opacity-50 ${
           enabled ? "border-present/40 bg-present/10 text-present hover:bg-present/15"
@@ -151,6 +166,6 @@ function FingerprintSwitch({ enabled, onChange }) {
         {enabled ? "البصمة مفعّلة" : "البصمة مقفلة (تجربة)"}
       </button>
       {err && <p className="mt-1 text-xs text-absent">تعذّر الحفظ: {err}</p>}
-    </div>
+    </DangerZone>
   );
 }

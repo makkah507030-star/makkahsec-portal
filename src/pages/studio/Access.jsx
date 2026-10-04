@@ -3,6 +3,8 @@ import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GENERAL_ROLES, SPECIFIC_ROLES } from "../../lib/formRoles";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 import { SECTIONS, TEMPLATES } from "./templates";
 import { STUDIO_ACCESS_KEY, defaultAccess } from "./lib";
 
@@ -30,6 +32,12 @@ export default function Access({ rules, onSaved }) {
   });
 
   const save = async () => {
+    const ok = await confirmDanger({
+      title: "صلاحيات قوالب الاستوديو",
+      impact: ["يتغيّر من يرى كل قالب في استوديو البوابة ويستخدمه، لكل المعلمين والإداريين فورًا."],
+      confirmLabel: "حفظ الصلاحيات",
+    });
+    if (!ok) return;
     setBusy(true);
     const { error } = await supabase.from("settings")
       .upsert({ key: STUDIO_ACCESS_KEY, value: JSON.stringify(draft) }, { onConflict: "key" });
@@ -93,6 +101,7 @@ export default function Access({ rules, onSaved }) {
           {msg.text}
         </p>
       )}
+      <DangerZone className="p-2" note="يغيّر من يستخدم قوالب الاستوديو في المدرسة كلها">
       <div className="flex flex-wrap gap-2">
         <button disabled={busy} onClick={save} className="btn-primary px-6 disabled:opacity-50">حفظ الصلاحيات</button>
         <button onClick={() => setDraft(Object.fromEntries(TEMPLATES.map((t) => [t.key, defaultAccess(t)])))}
@@ -100,6 +109,7 @@ export default function Access({ rules, onSaved }) {
           الرجوع للافتراضي
         </button>
       </div>
+      </DangerZone>
     </div>
   );
 }

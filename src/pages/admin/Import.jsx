@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { IMPORT_TYPES, readSheet, validateRows } from "../../lib/importer";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const BATCH = 400;
 
@@ -63,6 +65,17 @@ export default function Import() {
 
   /* ---------------- المرحلة 2: التنفيذ ---------------- */
   const run = async () => {
+    const ok = await confirmDanger({
+      level: "high",
+      title: `استيراد «${def.label}» إلى البوابة`,
+      impact: [
+        `سيُكتب ${report.valid.length} سجلًا في بيانات المدرسة: ${report.newCount ?? 0} جديد، و${report.updateCount ?? 0} تُستبدل بياناته الحالية.`,
+        "الأسماء والفصول المسجّلة حاليًا تُستبدل ببيانات الملف، ولا يمكن استرجاعها من البوابة.",
+        "يظهر الأثر فورًا في التحضير والتقارير والإحصاءات لكل المستخدمين.",
+      ],
+      confirmLabel: "تنفيذ الاستيراد",
+    });
+    if (!ok) return;
     setStage("running");
     setProgress(0);
     setError("");
@@ -234,18 +247,20 @@ export default function Import() {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              className="btn-primary"
-              onClick={run}
-              disabled={report.valid.length === 0}
-            >
-              تنفيذ الاستيراد ({report.valid.length} سجل)
-            </button>
-            <button className="btn-ghost" onClick={reset}>
-              إلغاء
-            </button>
-          </div>
+          <DangerZone note="الاستيراد يستبدل بيانات المدرسة الحالية — راجع المعاينة أعلاه قبل التنفيذ">
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="btn-primary"
+                onClick={run}
+                disabled={report.valid.length === 0}
+              >
+                تنفيذ الاستيراد ({report.valid.length} سجل)
+              </button>
+              <button className="btn-ghost" onClick={reset}>
+                إلغاء
+              </button>
+            </div>
+          </DangerZone>
         </>
       )}
 

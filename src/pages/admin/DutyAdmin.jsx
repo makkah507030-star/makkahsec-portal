@@ -6,6 +6,7 @@ import DutyReport, { DutyPrintArea } from "../../components/DutyReport.jsx";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
 
 /* =====================================================================
    إدارة المناوبة والإشراف.
@@ -433,7 +434,17 @@ function SupTab({ staff }) {
   };
 
   const clearDay = async (d) => {
-    if (!window.confirm(`حذف كل مشرفي ${DAY_NAMES[d]}؟ يُستعمل عند إدخال جدول فصل جديد.`)) return;
+    const n = (rows ?? []).filter((r) => r.day_of_week === d).length;
+    const ok = await confirmDanger({
+      level: "high",
+      title: `حذف كل مشرفي يوم ${DAY_NAMES[d]}`,
+      impact: [
+        `يُحذف ${n} من المسجّلين في إشراف ${DAY_NAMES[d]} نهائيًا، ولا يمكن استرجاعهم.`,
+        "يختفي إشراف هذا اليوم من صناديق المعلمين والإدارة. يُستعمل عند إدخال جدول فصل جديد.",
+      ],
+      confirmLabel: "حذف الكل",
+    });
+    if (!ok) return;
     await supabase.from("supervision_duty").delete().eq("day_of_week", d);
     load();
   };
@@ -486,8 +497,8 @@ function SupTab({ staff }) {
               <h2 className="text-sm font-bold text-mint-deep">{DAY_NAMES[d]}</h2>
               {day.length > 0 && (
                 <button onClick={() => clearDay(d)}
-                        className="text-xs font-medium text-absent hover:underline">
-                  حذف الكل
+                        className="rounded-pill border-2 border-absent/40 bg-absent/5 px-3 py-1 text-xs font-bold text-absent hover:bg-absent/10">
+                  ⚠ حذف الكل
                 </button>
               )}
             </div>

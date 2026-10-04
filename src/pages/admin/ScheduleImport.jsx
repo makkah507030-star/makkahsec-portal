@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { readSmartSchedule, normalizeArabic, stripGradeSuffix } from "../../lib/importer";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const BATCH = 400;
 
@@ -62,6 +64,17 @@ export default function ScheduleImport() {
   };
 
   const run = async () => {
+    const ok = await confirmDanger({
+      level: "high",
+      title: "استيراد الجدول الدراسي للفصل كاملًا",
+      impact: [
+        `سيُكتب ${report.valid.length} حصة في جدول المدرسة للفصل الدراسي الحالي، وتُستبدل الحصص المطابقة.`,
+        "تحضير الحصص المرصود سابقًا قد ينفصل عن الحصص الجديدة، فيظهر خلل في الغياب الرسمي والتقارير.",
+        "يظهر الجدول الجديد فورًا عند كل المعلمين والطلاب.",
+      ],
+      confirmLabel: "تنفيذ الاستيراد",
+    });
+    if (!ok) return;
     setStage("running");
     setProgress(0);
     setError("");
@@ -203,12 +216,14 @@ export default function ScheduleImport() {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            <button className="btn-primary" onClick={run} disabled={report.valid.length === 0}>
-              تنفيذ الاستيراد ({report.valid.length} حصة)
-            </button>
-            <button className="btn-ghost" onClick={reset}>إلغاء</button>
-          </div>
+          <DangerZone note="استيراد الجدول يستبدل حصص الفصل الدراسي ويؤثر على التحضير والغياب الرسمي">
+            <div className="flex flex-wrap gap-2">
+              <button className="btn-primary" onClick={run} disabled={report.valid.length === 0}>
+                تنفيذ الاستيراد ({report.valid.length} حصة)
+              </button>
+              <button className="btn-ghost" onClick={reset}>إلغاء</button>
+            </div>
+          </DangerZone>
         </>
       )}
 

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const CORE_TABS = [
   { key: "attendance", label: "الحضور والغياب اليومي" },
@@ -64,6 +66,12 @@ export default function TeacherPermissions() {
 
   const save = async () => {
     if (!teacher) return;
+    const ok = await confirmDanger({
+      title: `صلاحيات المعلم ${teacher.full_name}`,
+      impact: ["تتغيّر الصفحات والأقسام المتاحة لهذا المعلم فورًا: ما يُخفى يختفي من قائمته، وما يُمنح يفتح له العمل فيه."],
+      confirmLabel: "حفظ الصلاحيات",
+    });
+    if (!ok) return;
     setSaving(true);
     setMsg(null);
 
@@ -184,9 +192,11 @@ export default function TeacherPermissions() {
                 </p>
               )}
 
-              <button className="btn-primary" onClick={save} disabled={saving}>
-                {saving ? "جارٍ الحفظ…" : "حفظ"}
-              </button>
+              <DangerZone className="p-2" note="يغيّر ما يراه هذا المعلم ويعمل فيه داخل البوابة">
+                <button className="btn-primary" onClick={save} disabled={saving}>
+                  {saving ? "جارٍ الحفظ…" : "حفظ"}
+                </button>
+              </DangerZone>
             </>
           )}
         </section>

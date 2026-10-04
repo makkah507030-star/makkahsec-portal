@@ -9,6 +9,8 @@ import { normalizeImage } from "../../lib/imageResize";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { sendPush } from "../../lib/pushSend.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const ROLES = [
   { key: "teacher",  label: "المعلمون" },
@@ -112,6 +114,23 @@ function SendForm() {
   }, [title, mode, roles, classRoles, grade, classNo, picked]);
 
   const send = async () => {
+    // الدعم الفني يرسل مباشرة إلى جوالات الجميع؛ غيره يرسل مسودة للاعتماد فلا خطر فيها
+    if (isTechSupport) {
+      const names = (set) => ROLES.filter((r) => set.has(r.key)).map((r) => r.label).join(" و");
+      const target = mode === "roles" ? names(roles)
+        : mode === "class" ? `${names(classRoles)} — ${grade ? GRADE_NAMES[grade] : "كل الصفوف"}${classNo ? ` فصل ${classNo}` : ""}`
+        : `${picked.length} شخصًا`;
+      const ok = await confirmDanger({
+        level: "high",
+        title: `إرسال الإشعار «${title.trim()}»`,
+        impact: [
+          `يصل فورًا إلى: ${target}.`,
+          "يظهر على جوالاتهم وفي صناديق إشعاراتهم، ولا يمكن سحبه من جوالاتهم بعد وصوله.",
+        ],
+        confirmLabel: "إرسال الإشعار",
+      });
+      if (!ok) return;
+    }
     setSending(true);
     setMsg(null);
 
@@ -422,11 +441,18 @@ function SendForm() {
         </p>
       )}
 
-      <button className="btn-primary" onClick={send} disabled={!canSend || sending}>
-        {sending
-          ? "جارٍ الإرسال…"
-          : isTechSupport ? "إرسال الإشعار" : "إرسال للاعتماد"}
-      </button>
+      {(() => {
+        const btn = (
+          <button className="btn-primary" onClick={send} disabled={!canSend || sending}>
+            {sending
+              ? "جارٍ الإرسال…"
+              : isTechSupport ? "إرسال الإشعار" : "إرسال للاعتماد"}
+          </button>
+        );
+        return isTechSupport
+          ? <DangerZone note="الإرسال يصل مباشرة إلى جوالات المستلمين ولا يمكن سحبه">{btn}</DangerZone>
+          : btn;
+      })()}
     </div>
   );
 }

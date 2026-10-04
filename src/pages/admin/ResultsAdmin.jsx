@@ -6,6 +6,8 @@ import { extractResultCandidates } from "../../lib/pdfResults";
 import { gradeBand, REPORT_TYPE_LABEL } from "../../lib/gradeBands";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const REPORT_TYPES = ["period1", "period2", "final"];
 
@@ -191,6 +193,11 @@ export default function ResultsAdmin() {
   /* ---------------- احتساب الترتيب ---------------- */
 
   const recomputeRanks = async () => {
+    if (!(await confirmDanger({
+      title: `إعادة احتساب الترتيب — ${REPORT_TYPE_LABEL[reportType]}`,
+      impact: ["يُعاد حساب ترتيب كل طالب على فصله وصفّه في جميع نتائج هذا النوع، ويظهر الترتيب الجديد للطلاب وأولياء الأمور."],
+      confirmLabel: "احتساب الترتيب",
+    }))) return;
     setBusy(true); setErr(""); setMsg("");
     try {
       const { data: rows } = await supabase
@@ -255,6 +262,20 @@ export default function ResultsAdmin() {
   };
 
   const publishAll = async (value) => {
+    const ok = await confirmDanger(value ? {
+      level: "high",
+      title: `نشر كل النتائج — ${REPORT_TYPE_LABEL[reportType]}`,
+      impact: [
+        `تظهر ${existing.length} نتيجة للطلاب وأولياء أمورهم فورًا.`,
+        "يُرسل إشعار تلقائي لكل طالب وولي أمر، ولا يمكن سحب الإشعار بعد وصوله.",
+      ],
+      confirmLabel: "نشر الكل",
+    } : {
+      title: `إلغاء نشر كل النتائج — ${REPORT_TYPE_LABEL[reportType]}`,
+      impact: [`تختفي ${existing.length} نتيجة من حسابات الطلاب وأولياء الأمور حتى تُنشر من جديد.`],
+      confirmLabel: "إلغاء نشر الكل",
+    });
+    if (!ok) return;
     setBusy(true);
     const ids = existing.map((r) => r.id);
     if (ids.length) await supabase.from("student_results").update({ published: value }).in("id", ids);
@@ -385,6 +406,7 @@ export default function ResultsAdmin() {
           <h2 className="text-sm font-semibold text-ink">
             النتائج المرفوعة — {REPORT_TYPE_LABEL[reportType]} <span className="num">({existing.length})</span>
           </h2>
+          <DangerZone className="w-full sm:w-auto" note="النشر والترتيب يظهران لكل الطلاب وأولياء الأمور">
           <div className="flex flex-wrap gap-2">
             <button onClick={recomputeRanks} disabled={busy}
               className="rounded-sm2 border border-line bg-paper px-3 py-1.5 text-xs font-medium text-ink hover:bg-canvas disabled:opacity-40">
@@ -399,6 +421,7 @@ export default function ResultsAdmin() {
               إلغاء نشر الكل
             </button>
           </div>
+          </DangerZone>
         </div>
 
         {existing.length === 0 ? (
