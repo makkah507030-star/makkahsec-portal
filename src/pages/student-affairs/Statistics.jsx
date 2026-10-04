@@ -1,4 +1,6 @@
 // الإحصاء والنسب: من الأيام المعتمدة — النسبة الرسمية والمكتملة، حسب اليوم والصف والفصل
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
@@ -366,7 +368,13 @@ function Backfill({ from, to, approved, onDone }) {
   );
 
   const start = (list, question) => async () => {
-    if (!window.confirm(question)) return;
+    const ok = await confirmDanger({
+      level: "high",
+      title: "إعادة كتابة إحصاءات أيام سابقة",
+      impact: [question.replace(/ متابعة؟$/, ""), "تتغيّر نسب الغياب الرسمي والإحصاءات المعتمدة لهذه الأيام عند كل من يطّلع عليها."],
+      confirmLabel: "متابعة",
+    });
+    if (!ok) return;
     const st = { done: 0, total: list.length, saved: 0, skipped: 0, error: null };
     setState({ ...st });
     for (const date of list) {
@@ -426,6 +434,7 @@ function Backfill({ from, to, approved, onDone }) {
           {state.error && <p className="text-sm text-absent">توقّف عند {state.error}</p>}
         </div>
       ) : (
+        <DangerZone note="الاعتماد وإعادة الاحتساب يغيّران إحصاءات الأيام السابقة للمدرسة كلها">
         <div className="flex flex-wrap gap-2">
           {pendingDays.length > 0 && (
             <button onClick={start(pendingDays,
@@ -442,6 +451,7 @@ function Backfill({ from, to, approved, onDone }) {
             </button>
           )}
         </div>
+        </DangerZone>
       )}
     </section>
   );

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 // يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
 // (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
@@ -31,7 +33,6 @@ export default function Accounts() {
   const [busy, setBusy] = useState(null);
   const [result, setResult] = useState(null);
   const [error, setError] = useNotice("", "error");
-  const [confirming, setConfirming] = useState(null);
 
   const load = async () => {
     // نستخدم عدّ "exact" مع head بدل جلب الصفوف — الطريقة السابقة كانت
@@ -58,7 +59,6 @@ export default function Accounts() {
     setBusy(target);
     setError("");
     setResult(null);
-    setConfirming(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("create-accounts", {
@@ -111,26 +111,23 @@ export default function Accounts() {
               </div>
             </div>
 
-            {confirming === t.key ? (
-              <div className="mt-4 rounded-sm2 bg-late/5 p-3">
-                <p className="text-sm leading-relaxed">
-                  سيُنشأ <b className="num">{st.missing}</b> حسابًا لـ{t.label}.
-                  العملية قد تستغرق دقيقة. هل تريد المتابعة؟
-                </p>
-                <div className="mt-3 flex gap-2">
-                  <button className="btn-primary" onClick={() => run(t.key)}>
-                    نعم، أنشئ الحسابات
-                  </button>
-                  <button className="btn-ghost" onClick={() => setConfirming(null)}>
-                    إلغاء
-                  </button>
-                </div>
-              </div>
-            ) : (
+            <DangerZone className="mt-4" note="ينشئ حسابات دخول حقيقية دفعة واحدة، ولا يمكن حذفها من هنا">
               <button
-                className="btn-primary mt-4"
+                className="btn-primary"
                 disabled={busy !== null || st.missing === 0}
-                onClick={() => setConfirming(t.key)}
+                onClick={async () => {
+                  const ok = await confirmDanger({
+                    level: "high",
+                    title: `إنشاء حسابات ${t.label}`,
+                    impact: [
+                      `سيُنشأ ${st.missing} حسابًا جديدًا لـ${t.label}، وكلمة المرور الأولية هي اسم المستخدم نفسه.`,
+                      "تصبح الحسابات قادرة على الدخول فورًا، ولا يمكن حذفها من هذه الصفحة.",
+                      "العملية قد تستغرق دقيقة.",
+                    ],
+                    confirmLabel: "إنشاء الحسابات",
+                  });
+                  if (ok) run(t.key);
+                }}
               >
                 {busy === t.key
                   ? "جارٍ الإنشاء…"
@@ -138,7 +135,7 @@ export default function Accounts() {
                   ? "كل الحسابات جاهزة"
                   : `إنشاء ${st.missing} حسابًا`}
               </button>
-            )}
+            </DangerZone>
           </section>
         );
       })}

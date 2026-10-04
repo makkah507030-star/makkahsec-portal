@@ -8,6 +8,8 @@ import { ADMIN_ROLE_LABEL, ROLE_LABEL } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { sendPush } from "../../lib/pushSend.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const roleLabel = (r) => ADMIN_ROLE_LABEL[r] ?? ROLE_LABEL[r] ?? r;
 
@@ -52,6 +54,16 @@ export default function NotificationsReview() {
   };
 
   const approve = async (d) => {
+    const ok = await confirmDanger({
+      level: "high",
+      title: `اعتماد وإرسال «${d.title}»`,
+      impact: [
+        `يصل فورًا إلى: ${targetText(d)}.`,
+        "يظهر على جوالاتهم وفي صناديق إشعاراتهم، ولا يمكن سحبه من جوالاتهم بعد وصوله.",
+      ],
+      confirmLabel: "اعتماد وإرسال",
+    });
+    if (!ok) return;
     setBusyId(d.id); setMsg(null);
 
     // 1) إرسال الإشعار فعليًا بنفس فئته المستهدفة
@@ -175,7 +187,9 @@ export default function NotificationsReview() {
                 </div>
               </div>
 
-              <div className="flex gap-2 border-t border-line px-4 py-3">
+              <div className="border-t border-line px-4 py-3">
+              <DangerZone note="الاعتماد يرسل الإشعار مباشرة إلى جوالات المستلمين ولا يمكن سحبه">
+              <div className="flex gap-2">
                 <button onClick={() => approve(d)} disabled={busyId === d.id}
                   className="btn-primary disabled:opacity-60">
                   {busyId === d.id ? "…" : "اعتماد وإرسال"}
@@ -184,6 +198,8 @@ export default function NotificationsReview() {
                   className="rounded-pill border border-absent/30 bg-absent/10 px-4 py-2 text-sm font-semibold text-absent hover:bg-absent/20 disabled:opacity-60">
                   رفض
                 </button>
+              </div>
+              </DangerZone>
               </div>
             </section>
           );
