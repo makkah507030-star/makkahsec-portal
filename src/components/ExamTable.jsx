@@ -36,15 +36,32 @@ const fmt = (s) => {
 export function ExamPrintArea({ children }) {
   return (
     <PrintPortal id="exam-print"
-                 extraCss="#exam-print tr { break-inside: avoid; }">
+                 extraCss="#exam-print tr, #exam-print tbody { break-inside: avoid; }">
       {children}
     </PrintPortal>
   );
 }
 
-export default function ExamTable({ title, subtitle, rows = [], note, final = false, deputy = "" }) {
+// ترتيب الجدول: بالتاريخ (أو الأسبوع ثم اليوم)، ثم الحصة
+const order = (a, b) =>
+  (a.exam_date && b.exam_date ? a.exam_date.localeCompare(b.exam_date) : 0) ||
+  ((a.exam_week ?? 1) - (b.exam_week ?? 1)) ||
+  ((a.day_of_week ?? 0) - (b.day_of_week ?? 0)) ||
+  ((a.period_no ?? 0) - (b.period_no ?? 0));
+
+export default function ExamTable({ title, subtitle, rows = [], note, final = false, deputy = "", deputySig = null }) {
   // عمود الأسبوع يظهر فقط إذا امتدّت الاختبارات أسبوعين
   const twoWeeks = rows.some((r) => (r.exam_week ?? 1) > 1);
+
+  // اليوم الواحد صف واحد: تُدمج خلايا اليوم والتاريخ، وتحتها مواده بحصصها
+  const days = [];
+  [...rows].sort(order).forEach((r) => {
+    const k = `${r.exam_week ?? 1}|${r.day_of_week ?? ""}|${r.exam_date ?? ""}`;
+    const last = days[days.length - 1];
+    if (last?.key === k) last.items.push(r); else days.push({ key: k, items: [r] });
+  });
+  const cell = "border border-line px-2 py-2 text-center";
+
   return (
     <div className="sheet mx-auto flex bg-white text-ink"
          style={{ width: "210mm", minHeight: "297mm",
@@ -76,40 +93,46 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
         <table className="mt-5 w-full border-collapse text-[12px]">
           <thead>
             <tr>
-              {["م", "المادة", ...(twoWeeks ? ["الأسبوع"] : []), "اليوم", "التاريخ",
+              {[...(twoWeeks ? ["الأسبوع"] : []), "اليوم", "التاريخ", "المادة",
                 final ? "الفترة" : "الحصة"].map((h) => (
                 <th key={h} className="border border-line px-2 py-2 text-center font-semibold text-mint-deep"
                     style={{ background: "#EDFAF2", ...INK }}>{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.id ?? i}>
-                <td className="num border border-line px-2 py-2 text-center">{i + 1}</td>
-                <td className="border border-line px-2 py-2 font-medium">{r.subject_name || "—"}</td>
-                {twoWeeks && (
-                  <td className="border border-line px-2 py-2 text-center">
-                    {(r.exam_week ?? 1) === 2 ? "الثاني" : "الأول"}
-                  </td>
-                )}
-                <td className="border border-line px-2 py-2 text-center">
-                  {DAY_NAMES[r.day_of_week] ?? "—"}
-                </td>
-                <td className="num border border-line px-2 py-2 text-center text-[11px]">
-                  {fmt(r.exam_date)}
-                </td>
-                <td className="num border border-line px-2 py-2 text-center">
-                  {final ? (r.period_no === 2 ? "الثانية" : "الأولى") : r.period_no ?? "—"}
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && (
-              <tr><td colSpan={twoWeeks ? 6 : 5} className="border border-line px-2 py-6 text-center text-faint">
+          {/* كل يوم في tbody مستقل لا ينقسم بين صفحتين */}
+          {days.map((d) => {
+            const head = d.items[0];
+            const span = d.items.length;
+            return (
+              <tbody key={d.key} style={{ breakInside: "avoid" }}>
+                {d.items.map((r, i) => (
+                  <tr key={r.id ?? i}>
+                    {i === 0 && (
+                      <>
+                        {twoWeeks && (
+                          <td rowSpan={span} className={cell}>{(head.exam_week ?? 1) === 2 ? "الثاني" : "الأول"}</td>
+                        )}
+                        <td rowSpan={span} className={`${cell} font-semibold`}>{DAY_NAMES[head.day_of_week] ?? "—"}</td>
+                        <td rowSpan={span} className={`${cell} num text-[11px]`}>{fmt(head.exam_date)}</td>
+                      </>
+                    )}
+                    <td className="border border-line px-2 py-2 font-medium">{r.subject_name || "—"}</td>
+                    <td className={`${cell} num`}>
+                      {final ? (r.period_no === 2 ? "الثانية" : "الأولى") : r.period_no ?? "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            );
+          })}
+          {rows.length === 0 && (
+            <tbody>
+              <tr><td colSpan={twoWeeks ? 5 : 4} className="border border-line px-2 py-6 text-center text-faint">
                 لم تُحدَّد اختبارات بعد
               </td></tr>
-            )}
-          </tbody>
+            </tbody>
+          )}
         </table>
 
         {note && (
@@ -123,13 +146,15 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
           <div className="grid grid-cols-2 gap-8 pt-8 text-center">
             <div>
               <p className="text-[12px] text-muted">وكيل شؤون الطلاب</p>
-              <div className="h-8" />
+              <div className="flex h-14 items-end justify-center">
+                {deputySig && <img src={deputySig} alt="" className="h-full w-auto max-w-[45mm] object-contain" />}
+              </div>
               <div className="mx-auto h-px w-44 bg-line" />
               <p className="mt-1.5 text-[12.5px] font-semibold">{deputy || "…"}</p>
             </div>
             <div>
               <p className="text-[12px] text-muted">مدير المدرسة</p>
-              <PrincipalSign height="h-8" />
+              <PrincipalSign height="h-14" />
               <div className="mx-auto h-px w-44 bg-line" />
               <p className="mt-1.5 text-[12.5px] font-semibold">{PRINCIPAL_NAME}</p>
             </div>
