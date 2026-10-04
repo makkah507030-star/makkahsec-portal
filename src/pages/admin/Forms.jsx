@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
-import DateField, { TimeField, rangeDays } from "../../components/DateField.jsx";
+import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
 import Loader from "../../components/Loader.jsx";
@@ -14,6 +14,7 @@ import { canUseTemplate } from "../../lib/formRoles";
 import { sendPush } from "../../lib/pushSend.js";
 import { useUsageCounts } from "../../lib/usage.js";
 import UsageBadge from "../../components/UsageBadge.jsx";
+import { fmtDate } from "../../lib/dates";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -52,14 +53,10 @@ const hijriYear = () => {
   } catch { return new Date().getFullYear() - 579; }
 };
 
-// التاريخ الهجري بصيغة رقمية: يوم/شهر/سنة — بلا أسماء شهور ولا حرف الهاء
-const hijriToday = () => {
-  try {
-    const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura",
-      { day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(new Date());
-    const g = (t) => parts.find((x) => x.type === t)?.value ?? "";
-    return `${g("day")}/${g("month")}/${String(g("year")).replace(/\D/g, "")}`;
-  } catch { return ""; }
+// تاريخ اليوم بالصيغة المعتمدة: الهجري - الميلادي (يوم/شهر/سنة، بلا هـ ولا م)
+const todayBoth = () => {
+  const n = new Date();
+  return formatBoth(new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())));
 };
 
 /* معاينة مصغّرة: تُقاس عرض الحاوية فتُصغَّر الورقة لتناسبها */
@@ -499,9 +496,9 @@ export default function Forms({ view = "issue", openKey = null }) {
     setIssued(null); setMsg(null); setClassId(""); setChosen([]); setBatch([]); setLessons(null);
     const init = {};
     (t.fields ?? []).forEach((f) => {
-      if (f.type === "date") init[f.name] = hijriToday();
+      if (f.type === "date") init[f.name] = todayBoth();
       // «@hijri_year»: العام الهجري الحالي، فلا يتقادم الافتراضي المحفوظ مع النموذج
-      else if (f.default === "@hijri_year") init[f.name] = `${hijriYear()} هـ`;
+      else if (f.default === "@hijri_year") init[f.name] = `${hijriYear()}`;
       else if (f.default) init[f.name] = f.default;
     });
     setValues(init);
@@ -1833,7 +1830,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                   {e.organizer_name ? ` · ${e.organizer_name}` : ""}
                 </p>
                 <p className="mt-0.5 text-[11px] text-faint">
-                  رُفع التقرير {new Date(e.report_submitted_at).toLocaleDateString("ar-SA-u-ca-gregory")}
+                  رُفع التقرير {fmtDate(e.report_submitted_at)}
                 </p>
               </div>
               <button onClick={() => navigate(`/events?open=${e.id}&step=approval`)}

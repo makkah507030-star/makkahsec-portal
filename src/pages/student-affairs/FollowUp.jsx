@@ -1,7 +1,7 @@
 // المتابعة: بصم ولم يحضر، والمفقودون خلال اليوم، ومن حضر بلا بصمة
 import { useMemo, useState } from "react";
 import { todayISO } from "../../lib/schoolTime";
-import { fmtGreg, fmtTime12 } from "../../lib/dates";
+import { fmtDate, fmtTime12 } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import { MissingTab } from "../admin/AttendanceOverview.jsx";
 import {
@@ -74,8 +74,8 @@ function DayList({ mode }) {
       <Note tone={mode === "conflict" ? "warn" : "mint"}>{cfg.note}</Note>
       <GradePills grade={grade} setGrade={setGrade} />
       <ExportBar disabled={!list.length}
-        onPrint={() => printReport({ title: cfg.title, subtitle: fmtGreg(date), headers, rows: table(), ...logos(), signatures: SIGNS })}
-        onExcel={() => exportStyledExcel({ title: cfg.title, subtitle: fmtGreg(date), headers, rows: table(), fileName: `${cfg.file}-${date}`, sheetName: "المتابعة", signatures: SIGNS })} />
+        onPrint={() => printReport({ title: cfg.title, subtitle: fmtDate(date), headers, rows: table(), ...logos(), signatures: SIGNS })}
+        onExcel={() => exportStyledExcel({ title: cfg.title, subtitle: fmtDate(date), headers, rows: table(), fileName: `${cfg.file}-${date}`, sheetName: "المتابعة", signatures: SIGNS })} />
       {error && <Empty>تعذّر التحميل: {error}</Empty>}
       {!live && !error ? <Loading /> : live && list.length === 0 ? (
         <Empty tone="good">{cfg.empty}</Empty>

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { todayISO } from "../../lib/schoolTime";
-import { fmtGreg, fmtTime12 } from "../../lib/dates";
+import { fmtDate, fmtTime12 } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { lateDeadlineLabel, LATE_GRACE_MINUTES, loadRangeStart, isMissingTable } from "../../lib/officialAttendance";
@@ -54,7 +54,7 @@ function DayLate() {
   const table = () => lateList.map((r, i) => [
     i + 1, r.full_name, r.grade, r.class_no, fmtTime12(r.punch), r.lateMinutes,
   ]);
-  const subtitle = () => `${fmtGreg(date)} · يُحتسب التأخر بعد ${deadline}`;
+  const subtitle = () => `${fmtDate(date)} · يُحتسب التأخر بعد ${deadline}`;
 
   return (
     <div className="space-y-4">
@@ -152,9 +152,9 @@ function RangeLate() {
 
   const headers = ["م", "اسم الطالب", "الصف", "الفصل", "أيام التأخر", "مجموع الدقائق", "آخر تأخر"];
   const table = () => students.map((s, i) => [
-    i + 1, s.full_name, s.grade, s.class_no, s.days, s.minutes, fmtGreg(s.dates[s.dates.length - 1] + "T00:00:00"),
+    i + 1, s.full_name, s.grade, s.class_no, s.days, s.minutes, fmtDate(s.dates[s.dates.length - 1] + "T00:00:00"),
   ]);
-  const subtitle = () => `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")} · ${min} أيام فأكثر`;
+  const subtitle = () => `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")} · ${min} أيام فأكثر`;
 
   if (!from) return <Loading />;
   return (

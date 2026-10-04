@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { fmtDateTime, fmtGreg } from "../../lib/dates";
+import { fmtDateTime, fmtDate } from "../../lib/dates";
 import Loader from "../components/Loader.jsx";
 
 /* ---------- أدوات تنسيق ---------- */
@@ -169,7 +169,7 @@ function HealthSummary({ health, ready }) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-bold text-ink">ملخّص حالة الموقع</h2>
-          <p className="text-xs text-muted">الحالة الأمنية والتقنية · {fmtGreg(new Date().toISOString())}</p>
+          <p className="text-xs text-muted">الحالة الأمنية والتقنية · {fmtDate(new Date().toISOString())}</p>
         </div>
         <span className={`chip ${v.chip} text-sm`}>{ready ? v.t : "…"}</span>
       </div>

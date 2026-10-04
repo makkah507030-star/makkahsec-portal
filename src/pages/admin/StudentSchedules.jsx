@@ -7,6 +7,7 @@ import WeeklyGrid from "../../components/WeeklyGrid.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import { noEra } from "../../lib/dates";
 
 export default function StudentSchedules() {
   const [classList, setClassList] = useState(null);
@@ -24,7 +25,7 @@ export default function StudentSchedules() {
         .from("settings").select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       setYear(m.active_year ?? "");
-      setYearLabel(m.active_year_label ?? m.active_year ?? "");
+      setYearLabel(noEra(m.active_year_label) ?? m.active_year ?? "");
       setTerm(Number(m.active_term ?? 1));
 
       const { data } = await supabase

@@ -1,7 +1,7 @@
 // src/components/EventReportSheet.jsx
 import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
-import { fmtGreg, fmtHijri } from "../lib/dates";
+import { fmtDate } from "../lib/dates";
 import BidiDate from "./BidiDate.jsx";
 
 /* =====================================================================
@@ -62,7 +62,7 @@ function Footer() {
       <Rule />
       <div className="flex items-center justify-between" style={{ marginTop: "2mm", fontSize: "8.5pt", color: "#8A968F" }}>
         <span>بوابة مكة الثانوية الرقمية</span>
-        <span>تاريخ التقرير: <BidiDate value={fmtHijri(new Date(), false)} suffix="هـ" /></span>
+        <span>تاريخ التقرير: {fmtDate(new Date())}</span>
         <span dir="ltr" style={{ fontWeight: 600, color: ACCENT }}>makkahsec.com</span>
       </div>
     </div>
@@ -93,7 +93,7 @@ export default function EventReportSheet({ event: e, stats, attended, photos, si
   const info = [
     ["رقم الحدث", <span className="num">{e.serial}</span>],
     ["التصنيف", e.category || "—"],
-    ["التاريخ", date ? <><BidiDate value={fmtHijri(date, false)} suffix="هـ" /> الموافق <BidiDate value={fmtGreg(date)} suffix="م" /></> : "—"],
+    ["التاريخ", date ? fmtDate(date) : "—"],
     ["الوقت", e.start_time
       ? <>من <Time12 t={e.start_time} />{e.end_time && <> إلى <Time12 t={e.end_time} /></>}</>
       : "—"],

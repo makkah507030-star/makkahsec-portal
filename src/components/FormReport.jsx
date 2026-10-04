@@ -3,6 +3,7 @@ import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
 import PrincipalSign from "./PrincipalSign.jsx";
+import { fmtDate } from "../lib/dates";
 
 /* =====================================================================
    تقرير النماذج الصادرة — غلاف رسمي + جدول بالمستندات.
@@ -59,19 +60,7 @@ function Rule() {
   );
 }
 
-const fmt = (iso) => {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  const p = (n) => String(n).padStart(2, "0");
-  let h = "";
-  try {
-    const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura",
-      { day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(d);
-    const g = (t) => parts.find((x) => x.type === t)?.value ?? "";
-    h = `${g("day")}/${g("month")}/${String(g("year")).replace(/\D/g, "")}هـ`;
-  } catch { /* تجاهل */ }
-  return `${h} (${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}م)`;
-};
+const fmt = (iso) => (iso ? fmtDate(iso) : "—");
 
 /* ----------------------------- الغلاف ----------------------------- */
 function Cover({ title, dept, rows, from, to, issuedBy, ack }) {

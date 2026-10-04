@@ -1,26 +1,15 @@
 /**
  * تنسيق موحّد للتواريخ والأوقات في كل النظام.
- * الأرقام لاتينية (إنجليزية) في كل الصيغ.
+ * الأرقام لاتينية (إنجليزية)، ولا يُلحق بالتاريخ حرف «هـ» ولا «م».
  *
- *   الميلادي : 14/09/2026
- *   الهجري   : 1448/03/03هـ
- *   المدموج  : 14/09/2026 · 1448/03/03هـ
- *   الوقت    : 7:12 ص
+ *   التاريخ (المعتمد في كل البوابة): 03/03/1448 - 14/09/2026   (الهجري ثم الميلادي)
+ *   الهجري وحده  : 03/03/1448
+ *   الميلادي وحده: 14/09/2026
+ *   الوقت        : 7:12 ص
  *
- * ملاحظة مهمة (اتجاه النص - Bidi):
- * أي تاريخ (هجري أو ميلادي مع حرفه اللاحق هـ/م) يُعرض بجانب نص عربي آخر
- * في نفس السطر يجب أن يُغلَّف بمكوّن <BidiDate> (من
- * "../components/BidiDate.jsx"). بدون هذا يقوم المتصفح بنقل الحرف
- * اللاحق إلى بداية الرقم بدل نهايته — تم التأكد من الحل فعليًا بمتصفح
- * Chromium بعد تجربة أكثر من 15 طريقة. مثال:
- *
- *   import BidiDate from "../components/BidiDate.jsx";
- *   import { fmtHijri, fmtGreg } from "../lib/dates";
- *   ...
- *   الأحد الموافق <BidiDate value={fmtHijri(date, false)} suffix="هـ" />
- *   <BidiDate value={fmtGreg(date)} suffix="م" />
- *
- * (لا حاجة لهذا في سطر مستقل لا يوجد قبله نص عربي — كما في القوائم.)
+ * اتجاه النص (Bidi): fmtDate يغلّف كل تاريخ بعلامتي عزل (LRI…PDI) والسطر كله
+ * بعلامة عزل يمينية (RLI…PDI)، فيظهر الهجري يمينًا والميلادي يسارًا أينما وُضع:
+ * داخل نص عربي، أو داخل عنصر .num الاتجاه، أو في سطر مستقل — جُرّب في Chromium.
  */
 
 const toDate = (v) => {
@@ -55,8 +44,8 @@ const hijriFmt = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn", {
   timeZone: TZ,
 });
 
-// 1448/03/03هـ
-export function fmtHijri(v, withSuffix = true) {
+// 03/03/1448 (المعامل الثاني بقي للتوافق ولا أثر له — لا يُلحق «هـ»)
+export function fmtHijri(v) {
   const d = toDate(v);
   if (!d) return "";
 
@@ -66,16 +55,35 @@ export function fmtHijri(v, withSuffix = true) {
   const m = get("month").padStart(2, "0");
   const day = get("day").padStart(2, "0");
 
-  return `${y}/${m}/${day}${withSuffix ? "هـ" : ""}`;
+  return `${day}/${m}/${y}`;
 }
 
-/* ---------------- المدموج ---------------- */
+/* ---------------- التاريخ المعتمد (الهجري - الميلادي) ---------------- */
 
-// 14/09/2026 · 1448/03/03هـ
-export function fmtBoth(v) {
+const LRI = "\u2066", RLI = "\u2067", PDI = "\u2069";
+
+/** يحذف علامات العزل — لما يُصدَّر إلى Excel أو يُقارن نصًا */
+export const stripBidi = (s) => String(s ?? "").replace(/[\u2066-\u2069]/g, "");
+
+// 03/03/1448 - 14/09/2026
+export function fmtDate(v) {
   const d = toDate(v);
   if (!d) return "";
-  return `${fmtGreg(d)} · ${fmtHijri(d)}`;
+  return `${RLI}${LRI}${fmtHijri(d)}${PDI} - ${LRI}${fmtGreg(d)}${PDI}${PDI}`;
+}
+
+// اسم قديم بقي للتوافق
+export const fmtBoth = fmtDate;
+
+/** يحذف «هـ» و«م» الملحقتين بالسنوات والتواريخ في نصوص محفوظة مسبقًا
+ *  (مثل «1448 - 1449 هـ»)، ويقلب الهجري المكتوب سنة/شهر/يوم إلى يوم/شهر/سنة. */
+export function noEra(s) {
+  if (s == null) return s;
+  return String(s)
+    .replace(/(\d)\s*هـ?(?![\u0621-\u064A])/g, "$1")
+    .replace(/(\d{4})\s*م(?![\u0621-\u064A])/g, "$1")
+    .replace(/\b(1[34]\d\d)\/(\d{1,2})\/(\d{1,2})\b/g, (_, y, m, d) => `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y}`)
+    .trim();
 }
 
 /* ---------------- الوقت ---------------- */
@@ -116,9 +124,9 @@ export function fmtClockRange(row) {
 
 /* ---------------- التاريخ والوقت معًا ---------------- */
 
-// 14/09/2026 · 7:12 ص
+// 03/03/1448 - 14/09/2026 · 7:12 ص
 export function fmtDateTime(v) {
   const d = toDate(v);
   if (!d) return "";
-  return `${fmtGreg(d)} · ${fmtTime12(d)}`;
+  return `${RLI}${fmtDate(d)} · ${fmtTime12(d)}${PDI}`;
 }

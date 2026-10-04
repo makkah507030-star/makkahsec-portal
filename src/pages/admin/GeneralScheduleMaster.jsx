@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { fmtGreg } from "../../lib/dates";
+import { fmtDate, noEra } from "../../lib/dates";
 import { printReport, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { buildMasterPrintSections } from "../../lib/scheduleGrid";
 import MasterGrid from "../../components/MasterGrid.jsx";
@@ -20,7 +20,7 @@ export default function GeneralScheduleMaster() {
         .from("settings").select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const y = m.active_year ?? "";
-      setYearLabel(m.active_year_label ?? y);
+      setYearLabel(noEra(m.active_year_label) ?? y);
       const t = Number(m.active_term ?? 1);
       setYear(y); setTerm(t);
 
@@ -56,7 +56,7 @@ export default function GeneralScheduleMaster() {
     const sections = buildMasterPrintSections(entities, rowsByEntity, cellText, "الفصل");
     printReport({
       title: "الجدول العام — جدول الفصول",
-      subtitle: `${yearLabel} · الفصل الدراسي ${term} · ${fmtGreg(new Date())}`,
+      subtitle: `${yearLabel} · الفصل الدراسي ${term} · ${fmtDate(new Date())}`,
       sections,
       landscape: true,
       logoUrl: new URL(logoIcon, window.location.origin).href,

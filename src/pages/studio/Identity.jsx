@@ -20,7 +20,7 @@ const pill = (on) =>
 const LOGOS = [
   { src: iconMint, file: "شعار-البوابة-أخضر.png", title: "الرمز الأخضر", use: "على الخلفيات الفاتحة والأوراق المطبوعة.", bg: "bg-mint-tint" },
   { src: iconWhite, file: "شعار-البوابة-أبيض.png", title: "الرمز الأبيض", use: "على الخلفية الغامقة وفوق الصور.", bg: "bg-[#193326]" },
-  { src: logoFull, file: "شعار-المدرسة-كامل.png", title: "الشعار الكامل", use: "مع اسم المدرسة وسنة التأسيس 1387 هـ — للأغلفة واللوحات.", bg: "bg-white" },
+  { src: logoFull, file: "شعار-المدرسة-كامل.png", title: "الشعار الكامل", use: "مع اسم المدرسة وسنة التأسيس 1387 — للأغلفة واللوحات.", bg: "bg-white" },
 ];
 
 const OFFICE = [

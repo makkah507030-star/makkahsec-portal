@@ -4,7 +4,7 @@ import DangerZone from "../../components/DangerZone.jsx";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
-import { fmtGreg } from "../../lib/dates";
+import { fmtDate } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import {
@@ -133,7 +133,7 @@ export default function Statistics() {
     return Object.entries(m).sort().map(([g, v]) => ({ g, ...v, pct: pct(v.present, v.total, v.pending) }));
   }, [used]);
 
-  const range = () => `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")}`;
+  const range = () => `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")}`;
   const report = () => {
     if (view === "weekday") return {
       title: "نسبة الحضور حسب أيام الأسبوع",
@@ -157,7 +157,7 @@ export default function Statistics() {
       headers: ["م", "التاريخ", "اليوم", "غائب رسميًا", "بعذر", "متأخر صباحًا", "النسبة الرسمية", "النسبة المكتملة"],
       rows: [
         ...(days ?? []).map((d, i) => [
-          i + 1, fmtGreg(d.attend_date + "T00:00:00"), weekdayOf(d.attend_date), d.absent, d.excused,
+          i + 1, fmtDate(d.attend_date + "T00:00:00"), weekdayOf(d.attend_date), d.absent, d.excused,
           fp ? d.late_count ?? "—" : "—", pctText(d.official_pct), d.final_pct != null ? pctText(d.final_pct) : "—",
         ]),
         ["", "الإجمالي", "", totals.absent, totals.excused, totals.late, pctText(totals.pct), pctText(totals.fPct)],
@@ -222,7 +222,7 @@ export default function Statistics() {
       {!days ? <Loading /> : days.length === 0 ? (
         <Empty>
           {officialStart && todayISO() < officialStart
-            ? <>يبدأ العمل الرسمي من {fmtGreg(officialStart + "T00:00:00")} — تظهر الإحصاءات بعد اعتماد أول يوم (آليًا في موعده اليومي).</>
+            ? <>يبدأ العمل الرسمي من {fmtDate(officialStart + "T00:00:00")} — تظهر الإحصاءات بعد اعتماد أول يوم (آليًا في موعده اليومي).</>
             : "لا أيام معتمدة في هذه الفترة. اليوم الجاري يُعتمد آليًا في موعده اليومي."}
         </Empty>
       ) : view === "days" ? (
@@ -238,7 +238,7 @@ export default function Statistics() {
           {days.map((d) => (
             <div key={d.attend_date} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${isPartial(d) ? "bg-warning-light/40" : ""}`}>
               <div className="min-w-0">
-                <p className="num text-sm font-medium text-ink">{fmtGreg(d.attend_date + "T00:00:00")}</p>
+                <p className="num text-sm font-medium text-ink">{fmtDate(d.attend_date + "T00:00:00")}</p>
                 <p className="text-xs text-muted">
                   {weekdayOf(d.attend_date)}{d.retroactive ? " · بأثر رجعي" : ""}
                   {fp && d.late_count != null && <> · تأخر صباحي <span className="num">{d.late_count}</span></>}
@@ -399,7 +399,7 @@ function Backfill({ from, to, approved, onDone }) {
   };
 
   if (!approved || !officialStart) return null;
-  const since = fmtGreg(officialStart + "T00:00:00");
+  const since = fmtDate(officialStart + "T00:00:00");
 
   // لا شيء يحتاج إجراء: سطر واحد فقط
   if (!state && pendingDays.length === 0 && partialDays.length === 0) {

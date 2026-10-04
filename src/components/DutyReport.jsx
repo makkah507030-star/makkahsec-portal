@@ -2,6 +2,7 @@
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import { DAY_NAMES } from "../lib/schoolTime";
+import { fmtDate } from "../lib/dates";
 import PrintPortal from "./PrintPortal.jsx";
 import PrincipalSign from "./PrincipalSign.jsx";
 
@@ -17,12 +18,7 @@ const GOV = [
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
-const fmtG = (s) => {
-  if (!s) return "—";
-  const d = new Date(s + "T00:00:00");
-  const p = (n) => String(n).padStart(2, "0");
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
-};
+const fmtG = (s) => (s ? fmtDate(s + "T12:00:00") : "—");
 
 // الطباعة عبر PrintPortal: صفحة A4 عمودية ثابتة، بلا إزاحة ولا صفحات زائدة
 export function DutyPrintArea({ children }) {
@@ -108,7 +104,7 @@ export default function DutyReport({
             <table className="w-full border-collapse text-[11.5px]">
               <thead>
                 <tr>
-                  {["م", "اليوم", "التاريخ", "هجري", "المناوب الأول", "المناوب الثاني", "التوقيع"].map((h) => (
+                  {["م", "اليوم", "التاريخ", "المناوب الأول", "المناوب الثاني", "التوقيع"].map((h) => (
                     <th key={h} className="border border-line px-2 py-1.5 text-center font-semibold text-mint-deep"
                         style={{ background: "#EDFAF2", ...INK }}>{h}</th>
                   ))}
@@ -119,10 +115,7 @@ export default function DutyReport({
                   <tr key={r.id}>
                     <td className="num border border-line px-1.5 py-1.5 text-center">{p * PER_PAGE + i + 1}</td>
                     <td className="border border-line px-1.5 py-1.5 text-center">{r.day_label || "—"}</td>
-                    <td className="num border border-line px-1.5 py-1.5 text-center">{fmtG(r.duty_date)}</td>
-                    <td className="num border border-line px-1.5 py-1.5 text-center text-[10.5px]">
-                      {r.hijri_label || "—"}
-                    </td>
+                    <td className="whitespace-nowrap border border-line px-1.5 py-1.5 text-center">{fmtG(r.duty_date)}</td>
                     <td className="border border-line px-1.5 py-1.5">{r.name_a || "—"}</td>
                     <td className="border border-line px-1.5 py-1.5">{r.name_b || "—"}</td>
                     <td className="border border-line px-1.5 py-1.5" style={{ minWidth: "22mm" }}>&nbsp;</td>

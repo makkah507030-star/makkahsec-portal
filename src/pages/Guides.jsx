@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { AUDIENCES, audienceLabel, fmtSize } from "../lib/guidesMeta";
-import { fmtGreg } from "../lib/dates";
+import { fmtDate } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import Loader from "../components/Loader.jsx";
 
@@ -160,7 +160,7 @@ function Card({ g }) {
         <p className="mt-1.5 text-[11px] text-faint">
           <span className="num">{image ? "صورة" : "PDF"}</span>
           {g.file_size ? <span className="num"> · {fmtSize(g.file_size)}</span> : null}
-          {g.created_at ? <span className="num"> · {fmtGreg(g.created_at)}</span> : null}
+          {g.created_at ? <span className="num"> · {fmtDate(g.created_at)}</span> : null}
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">

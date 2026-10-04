@@ -1,5 +1,6 @@
 // src/pages/Help.jsx
 import { useMemo, useState } from "react";
+import { fmtDate } from "../lib/dates";
 import { useSession } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
@@ -162,14 +163,7 @@ const GOV_LINES = [
   "الإدارة العامة للتعليم بمنطقة مكة المكرمة",
 ];
 
-const hijriToday = () => {
-  try {
-    const p = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura",
-      { day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(new Date());
-    const g = (t) => p.find((x) => x.type === t)?.value ?? "";
-    return `${g("day")}/${g("month")}/${String(g("year")).replace(/\D/g, "")}هـ`;
-  } catch { return ""; }
-};
+const hijriToday = () => fmtDate(new Date());
 
 /* نسخة الطباعة: غلاف رسمي ثم الإجراءات كاملة بخطواتها */
 function PrintableGuide({ procs, scopeLabel, issuedBy }) {
@@ -223,7 +217,7 @@ function PrintableGuide({ procs, scopeLabel, issuedBy }) {
 
           <div className="flex items-center justify-between gap-3 border-t border-line pt-3 text-[10.5px] text-faint">
             <span>إعداد: {issuedBy || "الدعم الفني للبوابة"}</span>
-            <span className="num">{hijriToday()}</span>
+            <span>{hijriToday()}</span>
             <span className="font-semibold text-mint-deep" dir="ltr">makkahsec.com</span>
           </div>
         </div>

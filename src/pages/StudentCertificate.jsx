@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
-import { fmtHijri } from "../lib/dates";
+import { fmtDate } from "../lib/dates";
 import { PRINCIPAL_NAME } from "../lib/exportUtils";
 import StudentPicker from "../components/StudentPicker.jsx";
 import PrintPortal from "../components/PrintPortal.jsx";
@@ -31,8 +31,8 @@ const schoolYear = (now = new Date()) => {
   } catch { /* تجاهل */ }
   return `${h} - ${h + 1}`;
 };
-// التاريخ الهجري يومًا/شهرًا/سنة كما في الشهادة الرسمية
-const hijriDMY = (d) => fmtHijri(d, false).split("/").reverse().join("/");
+// التاريخ بالصيغة المعتمدة: الهجري - الميلادي
+const hijriDMY = (d) => fmtDate(d);
 // الأرقام والتواريخ داخل نص عربي: تُعزل لتبقى بترتيبها
 const Ltr = ({ children }) => <span className="num" style={{ unicodeBidi: "isolate", direction: "ltr", display: "inline-block" }}>{children}</span>;
 
@@ -197,7 +197,7 @@ export function CertificateSheet({ c, stamp }) {
         </div>
         <div className="flex justify-center"><img src={moeLogo} alt="" className="h-20 w-auto" /></div>
         <div className="mr-auto text-[12px] leading-[1.9]">
-          <div><span className="text-muted">العام الدراسي: </span><b><Ltr>{c.year}</Ltr> هـ</b></div>
+          <div><span className="text-muted">العام الدراسي: </span><b><Ltr>{c.year}</Ltr></b></div>
           <div><span className="text-muted">الرقم: </span><b className="num">{c.no || "...................."}</b></div>
           <div><span className="text-muted">التاريخ: </span><b><Ltr>{hijriDMY(c.date)}</Ltr></b></div>
         </div>
@@ -222,7 +222,7 @@ export function CertificateSheet({ c, stamp }) {
 
       <div className="mt-8 space-y-3 px-1 text-[15px] leading-[2.1]">
         <p className="font-bold">تشهد إدارة مدرسة مكة الثانوية - مسارات</p>
-        <p>بأن الطالب الموضحة بياناته أعلاه هو أحد الطلاب المنتظمين في المدرسة للعام الدراسي <b><Ltr>{c.year}</Ltr> هـ</b>.</p>
+        <p>بأن الطالب الموضحة بياناته أعلاه هو أحد الطلاب المنتظمين في المدرسة للعام الدراسي <b><Ltr>{c.year}</Ltr></b>.</p>
         <p>وقد أُعطي هذه الشهادة بناءً على طلبه لتقديمها إلى <b>{c.to}</b>.</p>
         <p className="pt-2 text-center font-bold">والله الموفق ،،،</p>
       </div>

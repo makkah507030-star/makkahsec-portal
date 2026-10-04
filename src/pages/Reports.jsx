@@ -5,7 +5,7 @@ import { GRADE_NAMES, STATUS, PERIODS_PER_DAY } from "../lib/schoolTime";
 import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
 import { fetchAllPaged } from "../lib/attendanceHelpers";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
-import { fmtGreg, fmtTime12 } from "../lib/dates";
+import { fmtDate, fmtTime12 } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import Loader from "../components/Loader.jsx";
@@ -360,7 +360,7 @@ export function StudentReport({ scopeIds }) {
   const headers = ["م", "التاريخ", "الحصة", "المادة", "الحالة"];
   const table = () =>
     (rows ?? []).map((r, i) => [
-      i + 1, fmtGreg(r.attend_date + "T00:00:00"), r.schedule?.period_no ?? "",
+      i + 1, fmtDate(r.attend_date + "T00:00:00"), r.schedule?.period_no ?? "",
       r.schedule?.subjects?.name ?? "", label(r.status),
     ]);
 
@@ -452,7 +452,7 @@ export function StudentReport({ scopeIds }) {
               {rows.map((r, i) => (
                 <div key={i} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="min-w-0">
-                    <p className="num text-sm font-medium text-ink">{fmtGreg(r.attend_date + "T00:00:00")}</p>
+                    <p className="num text-sm font-medium text-ink">{fmtDate(r.attend_date + "T00:00:00")}</p>
                     <p className="mt-0.5 truncate text-xs text-muted">
                       الحصة <span className="num">{r.schedule?.period_no}</span> ·{" "}
                       {r.schedule?.subjects?.name ?? "—"}
@@ -670,7 +670,7 @@ function DailyRateReport() {
 
   const headers = ["م", "التاريخ", "حاضر", "غائب", "نسبة الحضور"];
   const dayRows = withPct.map((r, i) => [
-    i + 1, fmtGreg(r.attend_date + "T00:00:00"), r.present, r.absent,
+    i + 1, fmtDate(r.attend_date + "T00:00:00"), r.present, r.absent,
     r.pct != null ? `${r.pct}%` : "—",
   ]);
   const totalPlain = ["", "الإجمالي — الفصل الدراسي", totals.present, totals.absent,
@@ -688,7 +688,7 @@ function DailyRateReport() {
   const printIt = () =>
     printReport({
       title: "معدل الحضور والغياب اليومي",
-      subtitle: `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")}`,
+      subtitle: `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")}`,
       headers, rows: tablePdf(),
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
@@ -701,7 +701,7 @@ function DailyRateReport() {
   const excelIt = () =>
     exportStyledExcel({
       title: "معدل الحضور والغياب اليومي",
-      subtitle: `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")}`,
+      subtitle: `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")}`,
       headers, rows: table(),
       fileName: `معدل-الحضور-اليومي-${from}_${to}`,
       sheetName: "المعدل اليومي",
@@ -764,7 +764,7 @@ function DailyRateReport() {
           {withPct.map((r) => (
             <div key={r.attend_date} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <span className="num text-sm font-medium text-ink">
-                {fmtGreg(r.attend_date + "T00:00:00")}
+                {fmtDate(r.attend_date + "T00:00:00")}
               </span>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="num chip bg-present/10 text-present">{r.present}</span>
@@ -1164,7 +1164,7 @@ export function TeacherSheetsReport() {
     return out;
   }, [rows]);
 
-  const dateLabel = fmtGreg(date + "T00:00:00");
+  const dateLabel = fmtDate(date + "T00:00:00");
   // ملاحظة الانتظار: إن اختلف من رصد عن معلم الجدول
   const coverNote = (sh) =>
     sh.orig_teacher && sh.orig_teacher !== sh.recorder ? ` · (انتظار بدل ${sh.orig_teacher})` : "";

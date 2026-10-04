@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { fmtGreg } from "../../lib/dates";
+import { fmtDate } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
@@ -277,9 +277,9 @@ export default function CalendarAdmin() {
                   {!r.is_active && <span className="mr-2 text-xs font-normal text-faint">(موقوفة)</span>}
                 </p>
                 <p className="truncate text-xs text-muted">
-                  {kindLabel(r.kind)} · {fmtGreg(r.start_date + "T00:00:00")}
+                  {kindLabel(r.kind)} · {fmtDate(r.start_date + "T00:00:00")}
                   {r.end_date && r.end_date !== r.start_date &&
-                    ` — ${fmtGreg(r.end_date + "T00:00:00")}`}
+                    ` — ${fmtDate(r.end_date + "T00:00:00")}`}
                 </p>
               </div>
               <div className="flex shrink-0 gap-1.5">

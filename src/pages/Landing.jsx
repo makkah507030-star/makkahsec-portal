@@ -85,7 +85,7 @@ export default function Landing() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 py-16 md:grid-cols-[1.1fr_.9fr] md:py-20">
           <div>
             <p className="text-sm font-semibold text-[#6AA786]">
-              العام الدراسي <span className="num">1448–1449</span>هـ
+              العام الدراسي <span className="num">1448–1449</span>
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.35] text-ink md:text-[2.6rem]">
               كل ما تحتاجه المدرسة
