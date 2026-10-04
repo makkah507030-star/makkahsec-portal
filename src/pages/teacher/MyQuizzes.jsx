@@ -410,6 +410,7 @@ function NewQuiz({ uid, onDone }) {
           <label className="text-xs text-muted">الدرجة الكلية</label>
           <input className="field num mt-1 w-full" inputMode="numeric" value={f.total_marks}
                  onChange={(e) => setF((x) => ({ ...x, total_marks: e.target.value.replace(/\D/g, "") }))} />
+          <MarksHint period={f.period} marks={f.total_marks} />
         </div>
         <div>
           <label className="text-xs text-muted">تاريخ الاختبار</label>
@@ -626,6 +627,36 @@ function QuizEditor({ quiz, uid, onBack }) {
                              : status === "marking" ? "أصبحت النتائج ظاهرة للطلاب." : "حُفظ." });
   };
 
+  const classLabel = (l) => `${GRADE_NAMES[l.classes?.grade] ?? ""} — فصل ${l.classes?.class_no}`;
+  const sheetClass = (l) => (l ? `${GRADE_NAMES[l.classes?.grade] ?? ""} — ${l.classes?.class_no}` : "");
+
+  // طباعة ورقة «التصحيح الآلي»: «blank:فصل» نسخة واحدة، و«names:فصل» ورقة باسم كل طالب
+  const printOmr = async (value) => {
+    if (!value) return;
+    if (fit && !fit.fits &&
+        !window.confirm("الاختبار أطول من صفحة واحدة: سيُقتطع جزء من الأسئلة عند الطباعة.\nيُفضَّل تقليل عدد الفقرات أو اختصار نصوصها.\n\nهل تريد الطباعة رغم ذلك؟")) return;
+    const [kind, id] = value.split(":");
+    let copies;
+    if (kind === "names") {
+      const ids = id === "*" ? linked.map((l) => l.class_id) : [id];
+      const { data } = await supabase.from("student_enrollment")
+        .select("class_id, students(id, full_name)").in("class_id", ids).eq("status", "active");
+      copies = ids.flatMap((cid) => {
+        const cls = sheetClass(linked.find((l) => l.class_id === cid));
+        return (data ?? []).filter((r) => r.class_id === cid && r.students)
+          .map((r) => r.students)
+          .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"))
+          .map((st) => ({ studentName: st.full_name, className: cls }));
+      });
+      if (!copies.length) { window.alert("لا طلاب في الفصل المختار."); return; }
+    } else {
+      copies = [{ className: sheetClass(linked.find((l) => l.class_id === id)) }];
+    }
+    setPrinting({ copies });
+    // تُترك الأوراق لتقيس نفسها وتتّسع في صفحة واحدة قبل فتح نافذة الطباعة
+    setTimeout(() => printThen(() => setPrinting(null)), copies.length > 1 ? 700 : 250);
+  };
+
   const pill = (on) =>
     `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
       on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
@@ -645,30 +676,23 @@ function QuizEditor({ quiz, uid, onBack }) {
             </button>
           )}
           {omr && (questions?.length ?? 0) > 0 && (
-            <select className="field py-1.5 text-xs"
-                    value=""
-                    onChange={(e) => {
-                      if (fit && !fit.fits &&
-                          !window.confirm("الاختبار أطول من صفحة واحدة: سيُقتطع جزء من الأسئلة عند الطباعة.\nيُفضَّل تقليل عدد الفقرات أو اختصار نصوصها.\n\nهل تريد الطباعة رغم ذلك؟")) {
-                        e.target.value = "";
-                        return;
-                      }
-                      const c = linked.find((l) => l.class_id === e.target.value);
-                      setPrinting({
-                        quiz: q, questions,
-                        className: c
-                          ? `${GRADE_NAMES[c.classes?.grade] ?? ""} — ${c.classes?.class_no}`
-                          : "",
-                      });
-                      setTimeout(() => window.print(), 200);
-                    }}>
-              <option value="">طباعة ورقة الاختبار…</option>
-              <option value="">بلا تحديد فصل</option>
-              {linked.map((l) => (
-                <option key={l.class_id} value={l.class_id}>
-                  {GRADE_NAMES[l.classes?.grade] ?? ""} — فصل {l.classes?.class_no}
-                </option>
-              ))}
+            <select className="field py-1.5 text-xs" value="" disabled={!!printing}
+                    onChange={(e) => printOmr(e.target.value)}>
+              <option value="">{printing ? "جارٍ تجهيز الأوراق…" : "طباعة ورقة الاختبار…"}</option>
+              <optgroup label="بلا أسماء — تصوّرها بالعدد الذي تريد">
+                <option value="blank:">بلا تحديد فصل</option>
+                {linked.map((l) => (
+                  <option key={l.class_id} value={`blank:${l.class_id}`}>{classLabel(l)}</option>
+                ))}
+              </optgroup>
+              {linked.length > 0 && (
+                <optgroup label="بأسماء الطلاب — ورقة لكل طالب">
+                  {linked.map((l) => (
+                    <option key={l.class_id} value={`names:${l.class_id}`}>{classLabel(l)}</option>
+                  ))}
+                  {linked.length > 1 && <option value="names:*">كل الفصول المسندة ({linked.length})</option>}
+                </optgroup>
+              )}
             </select>
           )}
           <span className={`chip ${modeOf(q).chip}`}>{modeOf(q).short}</span>
@@ -722,18 +746,13 @@ function QuizEditor({ quiz, uid, onBack }) {
       {/* الورقة تُرسم خارج الشاشة (لتقيس نفسها وتتّسع في صفحة واحدة) ولا تظهر إلا عند الطباعة */}
       {printing && (
         <QuizPrintArea>
-          <QuizPaper {...printing} teacherName={profile?.full_name ?? ""} />
+          {printing.copies.map((c, i) => (
+            <QuizPaper key={i} quiz={q} questions={questions} {...c} teacherName={profile?.full_name ?? ""} />
+          ))}
         </QuizPrintArea>
       )}
 
-      <div>
-        <h1 className="text-lg font-bold text-ink">{q.title}</h1>
-        <p className="num mt-1 text-xs text-muted">
-          {q.subject_name || "—"}
-          {q.grade ? ` · ${GRADE_NAMES[q.grade]}` : ""}
-          {` · ${q.total_marks} درجة`}
-        </p>
-      </div>
+      <QuizDetails q={q} onSaved={(fields) => { setQ((x) => ({ ...x, ...fields })); setMsg({ ok: true, text: "حُفظت بيانات الاختبار." }); }} />
 
       <div className="no-print flex flex-wrap gap-1.5">
         <button className={pill(tab === "questions")} onClick={() => setTab("questions")}>
@@ -899,6 +918,103 @@ function QuizEditor({ quiz, uid, onBack }) {
 }
 
 /* --------------------------- بطاقة السؤال --------------------------- */
+// درجة اختبار الفترة الأولى المعتمدة — تنبيه لا إلزام، فالكشف يحوّل أي درجة لسقف عموده
+const PERIOD1_MARKS = 20;
+function MarksHint({ period, marks }) {
+  if (period !== "period1") return null;
+  const off = String(marks).trim() !== "" && Number(marks) !== PERIOD1_MARKS;
+  return (
+    <p className={`mt-1 text-[11px] leading-relaxed ${off ? "text-warning" : "text-faint"}`}>
+      {off ? `تنبيه: درجة اختبار الفترة الأولى ${PERIOD1_MARKS} درجة.` : `درجة اختبار الفترة الأولى ${PERIOD1_MARKS} درجة.`}
+    </p>
+  );
+}
+
+/* عنوان الاختبار ودرجته الكلية، مع تعديلهما بعد الحفظ.
+   الدرجة الكلية تُقفل متى رُصدت درجة لأي طالب: الدرجات المرصودة محسوبة منها. */
+function QuizDetails({ q, onSaved }) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(q.title);
+  const [marks, setMarks] = useState(String(q.total_marks));
+  const [graded, setGraded] = useState(null);   // عدد الدرجات المرصودة
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState(null);
+
+  const open = async () => {
+    setTitle(q.title); setMarks(String(Number(q.total_marks))); setErr(null); setEditing(true);
+    const { count } = await supabase.from("quiz_submissions")
+      .select("id", { count: "exact", head: true }).eq("quiz_id", q.id);
+    setGraded(count ?? 0);
+  };
+
+  const locked = graded !== 0;
+  const save = async () => {
+    const t = title.trim();
+    const m = Number(marks);
+    if (t.length < 3) { setErr("العنوان قصير جدًا."); return; }
+    if (!locked && (!m || m <= 0 || m > 100)) { setErr("الدرجة الكلية رقم من 1 إلى 100."); return; }
+    const fields = { title: t, ...(locked ? {} : { total_marks: m }) };
+    setBusy(true);
+    const { error } = await supabase.from("quizzes").update(fields).eq("id", q.id);
+    setBusy(false);
+    if (error) { setErr(error.message); return; }
+    setEditing(false);
+    onSaved(fields);
+  };
+
+  if (!editing) {
+    return (
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold text-ink">{q.title}</h1>
+          <p className="num mt-1 text-xs text-muted">
+            {q.subject_name || "—"}
+            {q.grade ? ` · ${GRADE_NAMES[q.grade]}` : ""}
+            {` · ${PERIOD_LABEL[q.period] ?? ""}`}
+            {` · ${Number(q.total_marks)} درجة`}
+          </p>
+        </div>
+        <button onClick={open}
+                className="no-print shrink-0 rounded-pill border border-line px-3.5 py-1.5 text-xs text-muted hover:bg-canvas">
+          ✎ تعديل العنوان والدرجة
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <section className="card no-print space-y-3 p-4">
+      <p className="text-sm font-semibold text-ink">تعديل بيانات الاختبار</p>
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr),160px]">
+        <div>
+          <label className="text-xs text-muted">عنوان الاختبار</label>
+          <input className="field mt-1 w-full" value={title} autoFocus
+                 onChange={(e) => setTitle(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-muted">الدرجة الكلية</label>
+          <input className="field num mt-1 w-full" inputMode="numeric" value={marks}
+                 disabled={locked}
+                 onChange={(e) => setMarks(e.target.value.replace(/\D/g, ""))} />
+        </div>
+      </div>
+      {graded == null ? null : locked ? (
+        <p className="rounded-sm2 bg-canvas px-3 py-2 text-[11px] leading-relaxed text-muted">
+          الدرجة الكلية مقفلة: رُصدت درجات <span className="num">{graded}</span> طالب محسوبة منها.
+          لتغييرها احذف الدرجات المرصودة أولًا، أو أنشئ اختبارًا جديدًا.
+        </p>
+      ) : <MarksHint period={q.period} marks={marks} />}
+      {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-xs text-absent">{err}</p>}
+      <div className="flex gap-2">
+        <button className="btn-primary" onClick={save} disabled={busy || graded == null}>
+          {busy ? "جارٍ الحفظ…" : "حفظ"}
+        </button>
+        <button className="btn-ghost" onClick={() => setEditing(false)} disabled={busy}>إلغاء</button>
+      </div>
+    </section>
+  );
+}
+
 function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false, matchMax = MATCH_MAX_ITEMS, image = null }) {
   const ltr = lang === "en";
   const [local, setLocal] = useState(row);

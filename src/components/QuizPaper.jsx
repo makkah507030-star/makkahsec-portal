@@ -92,7 +92,7 @@ export function QuizPrintArea({ children }) {
    وهي نفس الأرقام التي يقرأ بها قارئ الكاميرا، فتتطابق الطباعة والقراءة تمامًا.
    علاماتها المرجعية الأربع 8 مم محاطة بفراغ أبيض ليسهل كشفها.
    ===================================================================== */
-function AnswerCard({ questions = [], t, ltr, quiz, className }) {
+function AnswerCard({ questions = [], t, ltr, quiz, className, studentName }) {
   const L = cardLayout(questions, { ltr, labels: { qShort: t.qShort, fShort: t.fShort } });
   if (!L.rows.length) return null;
   const mm = (v) => `${v}mm`;
@@ -120,14 +120,16 @@ function AnswerCard({ questions = [], t, ltr, quiz, className }) {
       {(() => {
         const x0 = CARD.SIDE, w = (L.W - 2 * CARD.SIDE - 4) / 3, y = 13, h = 6;
         const cells = [
-          <>{t.name}: ____________________</>,
+          studentName
+            ? <span key="n" className="truncate">{t.name}: <b className={studentName.length > 26 ? "text-[8px]" : ""}>{studentName}</b></span>
+            : <>{t.name}: ____________________</>,
           <>{t.cls}: <b>{className || "__________"}</b></>,
           <>{t.marks}: _____ / <span className="num">{quiz?.total_marks}</span></>,
         ];
         return cells.map((c, i) => {
           const x = ltr ? x0 + i * (w + 2) : L.W - x0 - (i + 1) * w - i * 2;
           return (
-            <div key={i} className="flex items-center px-1.5 text-[9.5px]"
+            <div key={i} className="flex items-center overflow-hidden whitespace-nowrap px-1.5 text-[9.5px]"
                  style={abs(x, y, w, h, { border: "0.3mm solid #000",
                                           justifyContent: i === 2 ? "center" : "flex-start" })}>
               {c}
@@ -161,7 +163,7 @@ function AnswerCard({ questions = [], t, ltr, quiz, className }) {
   );
 }
 
-export default function QuizPaper({ quiz, questions = [], className = "", teacherName = "", onFit }) {
+export default function QuizPaper({ quiz, questions = [], className = "", studentName = "", teacherName = "", onFit }) {
   const ltr = quiz?.lang === "en";
   const t = ltr ? EN : AR;
   const dir = ltr ? "ltr" : "rtl";
@@ -192,7 +194,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
     // هل اتّسع كل شيء فعلًا؟ (بعد أدنى تصغير قد يبقى جزء مقتطعًا)
     const fits = inner.getBoundingClientRect().height <= area.getBoundingClientRect().height + 1;
     onFit?.({ zoom: z, fits });
-  }, [quiz, questions, className]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [quiz, questions, className, studentName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="sheet mx-auto bg-white text-ink" dir={dir}
@@ -227,8 +229,8 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
 
       {/* خانات الطالب */}
       <div className="mt-1.5 grid shrink-0 grid-cols-3 gap-2 text-[10px]">
-        <div className="rounded-[6px] border px-2 py-1.5" style={{ borderColor: "#999" }}>
-          {t.name}: ________________________
+        <div className="truncate rounded-[6px] border px-2 py-1.5" style={{ borderColor: "#999" }}>
+          {t.name}: {studentName ? <b>{studentName}</b> : "________________________"}
         </div>
         <div className="rounded-[6px] border px-2 py-1.5" style={{ borderColor: "#999" }}>
           {t.cls}: <b>{className || "______________"}</b>
@@ -381,7 +383,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", teache
       </div>
 
       <div className="shrink-0">
-        <AnswerCard questions={questions} t={t} ltr={ltr} quiz={quiz} className={className} />
+        <AnswerCard questions={questions} t={t} ltr={ltr} quiz={quiz} className={className} studentName={studentName} />
       </div>
 
       {/* التذييل */}
