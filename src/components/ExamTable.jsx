@@ -130,7 +130,7 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
                         <td rowSpan={span} className={`${cell} num leading-[1.5]`}><DateCell value={head.exam_date} /></td>
                       </>
                     )}
-                    <td className="border border-line px-2 py-2 font-medium">{r.subject_name || "—"}</td>
+                    <td className={`${cell} font-medium`}>{r.subject_name || "—"}</td>
                     <td className={`${cell} num`}>
                       {final ? (r.period_no === 2 ? "الثانية" : "الأولى") : r.period_no ?? "—"}
                     </td>
