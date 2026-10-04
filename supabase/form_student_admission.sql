@@ -3,11 +3,11 @@
 -- على قبوله وطلب ملفه. تصميمه في FormSheet (StudentAdmission) بالمفتاح
 -- student_admission.
 --
--- • يُصدره شؤون الطلاب (الوكيل والمساعدون الإداريون)، والمدير والدعم الفني دائمًا.
--- • يحمل توقيع مدير المدرسة والختم، فيمرّ على اعتماد المدير قبل طباعته.
---   (يُغيَّر ذلك من «إدارة النماذج» إن رُغب.)
+-- • يُصدره مدير المدرسة وحده (والدعم الفني يصل لكل النماذج للدعم)، بتوقيعه
+--   والختم، فلا يحتاج اعتمادًا.
 --
--- يُنفَّذ مرة واحدة في Supabase ← SQL Editor، وتكرار التنفيذ لا يكرّر النموذج.
+-- يُنفَّذ مرة واحدة في Supabase ← SQL Editor. تكرار التنفيذ لا يكرّر النموذج،
+-- ويعيد صلاحية إصداره للمدير وحده.
 -- =====================================================================
 
 insert into public.form_templates
@@ -32,14 +32,16 @@ select
     {"name": "notes",       "label": "ملاحظات",                      "type": "textarea", "required": false},
     {"name": "extra",       "label": "متطلبات إضافية في ملف الطالب (كل سطر بند)", "type": "textarea", "required": false}
   ]'::jsonb,
-  array['principal', 'tech_support', 'deputy_students', 'clerk', 'clerk_2', 'clerk_3'],
-  true,
+  array['principal', 'tech_support'],
+  false,
   'principal',
   true,
   true,
   20
-where not exists (select 1 from public.form_templates where key = 'student_admission');
+on conflict (key) do update
+  set allowed_roles = excluded.allowed_roles,
+      requires_approval = excluded.requires_approval;
 
 -- للتحقق بعد التنفيذ
-select key, title, category, department, requires_approval, signature_source
+select key, title, category, department, allowed_roles, requires_approval, signature_source
 from public.form_templates where key = 'student_admission';
