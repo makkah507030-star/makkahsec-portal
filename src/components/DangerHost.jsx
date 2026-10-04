@@ -1,7 +1,7 @@
 // src/components/DangerHost.jsx
 // نافذة تأكيد الإجراءات الحساسة (confirmDanger) — تُركَّب مرة واحدة في جذر التطبيق.
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { CONFIRM_WORD, getDanger, subscribeDanger } from "../lib/danger";
+import { CONFIRM_WORD, getDanger, isConfirmWord, subscribeDanger } from "../lib/danger";
 import { IS_STAGING } from "./StagingBadge.jsx";
 
 export default function DangerHost() {
@@ -19,7 +19,7 @@ export default function DangerHost() {
 
   if (!d) return null;
   const high = d.level === "high";
-  const ok = !high || typed.trim() === CONFIRM_WORD;
+  const ok = !high || isConfirmWord(typed);
 
   return (
     <div className="no-print fixed inset-0 z-[1000] grid place-items-center bg-ink/30 px-4 backdrop-blur-[1.5px]"

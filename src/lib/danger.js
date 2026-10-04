@@ -2,10 +2,13 @@
 // تأكيد الإجراءات الحساسة — بديل window.confirm يُعرض في نافذة واحدة (DangerHost).
 //   if (!(await confirmDanger({ title, impact, level: "high" }))) return;
 //
-// level "high": إجراء على المدرسة كلها لا يُتراجع عنه بالكامل، فيلزم كتابة كلمة التأكيد.
+// level "high": إجراء على المدرسة كلها لا يُتراجع عنه بالكامل، فيلزم كتابة كلمة التأكيد «مكة».
 // level "medium": يؤثر على الجميع ويمكن التراجع عنه، فيكفي زر التأكيد بعد قراءة الأثر.
 
-export const CONFIRM_WORD = "تأكيد";
+export const CONFIRM_WORD = "مكة";
+
+// «مكه» بالهاء مقبولة أيضًا، فكثيرون يكتبونها هكذا على لوحة الجوال
+export const isConfirmWord = (v) => String(v ?? "").trim().replace(/ه$/, "ة") === CONFIRM_WORD;
 
 const listeners = new Set();
 let current = null;
