@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { fmtBoth } from "../lib/dates";
+import { fmtDate } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import NewsCoverCard from "../components/NewsCoverCard.jsx";
 import Loader from "../components/Loader.jsx";
@@ -67,7 +67,7 @@ export default function NewsList() {
               <div className="p-4">
                 {n.published_at && (
                   <p className="text-xs text-muted">
-                    {fmtBoth(n.published_at)}
+                    {fmtDate(n.published_at)}
                   </p>
                 )}
                 <h2 className="mt-1.5 text-sm font-bold leading-snug text-ink group-hover:text-mint-deep">

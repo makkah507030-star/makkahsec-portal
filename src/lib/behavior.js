@@ -100,4 +100,4 @@ export const VIOLATIONS = RAW.map(([degree, type, text, article], i) => ({
 /** نص المخالفة بلا النقطة الأخيرة — لإدراجه داخل جملة الخطاب */
 export const violationPhrase = (t) => String(t ?? "").trim().replace(/[.。]$/, "");
 
-export const BEHAVIOR_SOURCE = "دليل السلوك والمواظبة (الإجراءات الخاصة) 1447هـ";
+export const BEHAVIOR_SOURCE = "دليل السلوك والمواظبة (الإجراءات الخاصة) 1447";

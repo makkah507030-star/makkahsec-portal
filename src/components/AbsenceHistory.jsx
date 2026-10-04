@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { fmtGreg } from "../lib/dates";
+import { fmtDate } from "../lib/dates";
 
 const LABEL = { absent: "غائب", late: "متأخر", excused: "مستأذن" };
 const TONE = {
@@ -47,7 +47,7 @@ export default function AbsenceHistory({ records }) {
                   className="flex w-full flex-wrap items-center justify-between gap-2 px-4 py-3 text-right hover:bg-canvas"
                 >
                   <span className="num text-sm font-medium text-ink">
-                    {fmtGreg(date + "T00:00:00")}
+                    {fmtDate(date + "T00:00:00")}
                   </span>
                   <span className="flex items-center gap-1.5">
                     {["absent", "late", "excused"].map((k) =>

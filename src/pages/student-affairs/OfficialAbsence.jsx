@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { todayISO, STATUS } from "../../lib/schoolTime";
 import { useSession } from "../../lib/session.jsx";
-import { fmtGreg, fmtDateTime, fmtTime12 } from "../../lib/dates";
+import { fmtDate, fmtDateTime, fmtTime12 } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import {
   approveDay, saveFinal, overrideMark, summarize, OFFICIAL_LABEL,
@@ -140,7 +140,7 @@ export default function OfficialAbsence({ initialDate }) {
   const table = () => absentees.map((r, i) => [
     i + 1, r.full_name, r.grade, r.class_no, r.punched ? "بصم ولم يحضر" : "",
   ]);
-  const subtitle = () => `${fmtGreg(date)} · الغياب الرسمي · ${
+  const subtitle = () => `${fmtDate(date)} · الغياب الرسمي · ${
     day ? `معتمد — نسبة الحضور ${pctText(sum.pct)}` : "غير معتمد بعد"}`;
 
   const printIt = () => printReport({
@@ -424,8 +424,8 @@ function UnmarkedPeriods({ date, list }) {
       </button>
       {open && (
         <div className="space-y-3 p-4">
-          <ExportBar onPrint={() => printReport({ title, subtitle: fmtGreg(date), headers, rows: table(), ...logos(), signatures: SIGNS })}
-            onExcel={() => exportStyledExcel({ title, subtitle: fmtGreg(date), headers, rows: table(), fileName: `حصص-غير-مرصودة-${date}`, sheetName: "غير مرصودة", signatures: SIGNS })} />
+          <ExportBar onPrint={() => printReport({ title, subtitle: fmtDate(date), headers, rows: table(), ...logos(), signatures: SIGNS })}
+            onExcel={() => exportStyledExcel({ title, subtitle: fmtDate(date), headers, rows: table(), fileName: `حصص-غير-مرصودة-${date}`, sheetName: "غير مرصودة", signatures: SIGNS })} />
           <div className="divide-y divide-line">
             {teachers.map(([name, rows]) => (
               <div key={name} className="flex items-start justify-between gap-3 py-2">

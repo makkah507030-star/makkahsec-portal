@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { todayISO, PERIODS_PER_DAY, GRADE_NAMES, STATUS } from "../../lib/schoolTime";
-import { fmtGreg, fmtTime12 } from "../../lib/dates";
+import { fmtDate, fmtTime12 } from "../../lib/dates";
 import { printReport, exportStyledExcel } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { loadRangeStart, OFFICIAL_LABEL } from "../../lib/officialAttendance";
@@ -164,7 +164,7 @@ function ByClass() {
       const list = studentsOf(c); const s = statsOf(list);
       return {
         title: `تقرير الحضور المفصل — فصل ${c.code}`,
-        subtitle: `${weekdayOf(date)} ${fmtGreg(date)} · ${GRADE_NAMES[c.grade] ?? ""} · ${list.length} طالبًا`,
+        subtitle: `${weekdayOf(date)} ${fmtDate(date)} · ${GRADE_NAMES[c.grade] ?? ""} · ${list.length} طالبًا`,
         headers: head, tableClass: "compact",
         rows: [...list.map(rowCells),
           [{ text: "غياب الحصة", colspan: 2, cls: "total" }, ...periods.map((p) => ({ text: s.perPeriod[p], cls: "total" })),
@@ -183,7 +183,7 @@ function ByClass() {
         OFFICIAL_LABEL[r.official] ?? r.official, ...(fp ? [r.punch ? fmtTime12(r.punch) : "—"] : []), followNote(r, fp)]);
     }));
     exportStyledExcel({
-      title: "تقرير الحضور المفصل بالفصل", subtitle: `${weekdayOf(date)} ${fmtGreg(date)}`,
+      title: "تقرير الحضور المفصل بالفصل", subtitle: `${weekdayOf(date)} ${fmtDate(date)}`,
       headers: ["م", "الفصل", "اسم الطالب", ...periods.map((p) => `الحصة ${p}`), "الحالة الرسمية", ...(fp ? ["البصمة"] : []), "المتابعة"],
       rows, fileName: `حضور-مفصل-بالفصل-${date}`, sheetName: "بالفصل", signatures: SIGNS,
     });
@@ -296,7 +296,7 @@ function ByPeriod() {
     ...(l.marked ? [l.n.absent ? { text: l.n.absent, cls: "st-absent" } : 0, l.n.late, l.n.excused] : []),
     names(l),
   ]);
-  const subtitle = `${weekdayOf(date)} ${fmtGreg(date)} · الحصة ${period}${grade ? ` · ${GRADE_NAMES[grade]}` : ""}`;
+  const subtitle = `${weekdayOf(date)} ${fmtDate(date)} · الحصة ${period}${grade ? ` · ${GRADE_NAMES[grade]}` : ""}`;
 
   return (
     <div className="space-y-4">
@@ -408,7 +408,7 @@ function ByStudent() {
   const DAY_LABEL = { present: "حاضر", absent: "غائب اليوم", excused: "مستأذن" };
 
   const who = student ? `${student.full_name} · فصل ${classCode(student.grade, student.class_no)}` : "";
-  const subtitle = from ? `${who} · من ${fmtGreg(from)} إلى ${fmtGreg(to)}` : who;
+  const subtitle = from ? `${who} · من ${fmtDate(from)} إلى ${fmtDate(to)}` : who;
   const headers = ["م", "اليوم", "التاريخ", ...periods.map((p) => `ح${p}`), "حالة اليوم"];
   const summary = `أيام مرصودة ${sum.days} · غياب يوم كامل ${daysWord(sum.absentDays)} · حصص الغياب ${sum.absent} · التأخر ${sum.late} · الاستئذان ${sum.excused}`;
 
@@ -445,7 +445,7 @@ function ByStudent() {
           <ExportBar disabled={!days.length}
             onPrint={() => printReport({
               title: "تقرير الحضور المفصل للطالب", subtitle, headers, tableClass: "compact", landscape: true,
-              rows: days.map((d, i) => [i + 1, weekdayOf(d.date), fmtGreg(d.date),
+              rows: days.map((d, i) => [i + 1, weekdayOf(d.date), fmtDate(d.date),
                 ...periods.map((p) => { const s = d.periods[p]; return s ? { text: MARK[s], cls: `st-${s}` } : "—"; }),
                 d.day === "absent" ? { text: DAY_LABEL[d.day], cls: "st-absent" } : DAY_LABEL[d.day]]),
               note: `${summary}<br/>${LEGEND}`, ...logos(), signatures: SIGNS,
@@ -471,7 +471,7 @@ function ByStudent() {
                 {days.map((d) => (
                   <tr key={d.date} className={d.day === "absent" ? "bg-absent/5" : ""}>
                     <td className="whitespace-nowrap px-2.5 py-1.5 text-xs text-muted">{weekdayOf(d.date)}</td>
-                    <td className="num whitespace-nowrap px-2.5 py-1.5 text-xs">{fmtGreg(d.date)}</td>
+                    <td className="num whitespace-nowrap px-2.5 py-1.5 text-xs">{fmtDate(d.date)}</td>
                     {periods.map((p) => {
                       const st = d.periods[p];
                       return <td key={p} title={st ? `${stLabel(st)}${d.subjects[p] ? ` — ${d.subjects[p]}` : ""}` : ""}

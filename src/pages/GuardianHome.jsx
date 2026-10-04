@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { fmtGreg, fmtTime12 } from "../lib/dates";
+import { fmtDate, fmtTime12 } from "../lib/dates";
 import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
@@ -290,7 +290,7 @@ export default function GuardianHome() {
             ) : (
               shownPunches.map((d, i) => (
                 <div key={i} className="flex items-center justify-between border-b border-line px-4 py-2.5 last:border-0">
-                  <span className="num text-sm text-ink">{fmtGreg(d.attend_date + "T00:00:00")}</span>
+                  <span className="num text-sm text-ink">{fmtDate(d.attend_date + "T00:00:00")}</span>
                   <span className="flex items-center gap-2">
                     {(() => {
                       // قاعدة مركز التقارير نفسها: بعد بداية الاصطفاف بخمس دقائق

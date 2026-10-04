@@ -27,7 +27,7 @@ import ColorLegend from "../../components/ColorLegend.jsx";
 import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME, STUDENT_DEPUTY_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
-import { fmtDateTime, fmtBoth } from "../../lib/dates";
+import { fmtDateTime, fmtDate, noEra } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import ExamCountdown from "../../components/ExamCountdown.jsx";
@@ -188,7 +188,7 @@ export default function Dashboard() {
       <header>
         <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
         <p className="mt-0.5 text-sm text-muted">
-          العام <span className="num">{d.yearLabel}</span>هـ · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
+          العام <span className="num">{noEra(d.yearLabel)}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
         </p>
       </header>
 
@@ -579,7 +579,7 @@ function MissingStudentsBox({ date }) {
     ]);
     printReport({
       title: g ? `الطلاب المفقودون — ${g.label}` : "الطلاب المفقودون خلال اليوم",
-      subtitle: `${fmtBoth(date + "T12:00:00")} · عدد الطلاب: ${list.length}`,
+      subtitle: `${fmtDate(date + "T12:00:00")} · عدد الطلاب: ${list.length}`,
       headers, rows: body,
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,

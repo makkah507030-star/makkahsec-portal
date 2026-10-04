@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { fmtBoth } from "../lib/dates";
+import { fmtDate } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import NewsCoverCard from "../components/NewsCoverCard.jsx";
@@ -161,7 +161,7 @@ export default function NewsArticle() {
     </div>
     <div class="side"><img src="${logo}" alt=""></div>
   </div>
-  ${item.published_at ? `<p class="date">${escHtml(fmtBoth(item.published_at))}</p>` : ""}
+  ${item.published_at ? `<p class="date">${escHtml(fmtDate(item.published_at))}</p>` : ""}
   <h1>${escHtml(item.title)}</h1>
   ${imagesHtml}
   ${item.excerpt ? `<p class="excerpt">${escHtml(item.excerpt)}</p>` : ""}
@@ -236,7 +236,7 @@ export default function NewsArticle() {
           <article>
             {/* سطر معلومات: التاريخ · الناشر · زمن القراءة */}
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-muted">
-              {item.published_at && <span className="num">{fmtBoth(item.published_at)}</span>}
+              {item.published_at && <span className="num">{fmtDate(item.published_at)}</span>}
               {publisherLabel && (
                 <>
                   <span className="text-faint">•</span>

@@ -2,8 +2,7 @@
 import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
 import slogan from "../assets/national-day-slogan.webp";
-import { fmtGreg, fmtHijri } from "../lib/dates";
-import BidiDate from "./BidiDate.jsx";
+import { fmtDate, noEra, stripBidi } from "../lib/dates";
 
 /* =====================================================================
    شهادة الحدث — ورقة A4 أفقية، شهادة لكل طالب.
@@ -28,10 +27,10 @@ export const nationalDayNo = (iso) => (Number(String(iso ?? "").slice(0, 4)) || 
 
 export const DEFAULT_CERT_TITLE = "شهادة مشاركة";
 
-/** تاريخ الحدث نصًا: 1448/04/17هـ الموافق 28/09/2026م */
+/** تاريخ الحدث نصًا: 17/04/1448 - 28/09/2026 */
 function eventDateText(e) {
   const d = e?.event_date ? `${e.event_date}T12:00:00` : null;
-  return d ? `${fmtHijri(d, false)}هـ الموافق ${fmtGreg(d)}م` : "";
+  return d ? stripBidi(fmtDate(d)) : "";
 }
 
 /* الصيغة الرسمية بقيم الحدث الفعلية — نص عادي بلا متغيرات.
@@ -82,21 +81,10 @@ export function readCert(e) {
   return { intro: pick("intro"), body: pick("body"), closing: pick("closing") };
 }
 
-/* التواريخ داخل النص الحر (1448/04/17هـ أو 28/09/2026م) تُعرض عبر BidiDate
-   حتى لا يختلّ ترتيبها بجانب العربي */
-const DATE_RE = /(\d{1,4}\/\d{1,2}\/\d{1,4})\s*(هـ|م)(?![\u0621-\u064A])/g;
+/* النصوص المحفوظة قبل توحيد التاريخ قد تحوي «1448/04/17هـ الموافق 28/09/2026م»:
+   تُعرض بالصيغة المعتمدة بلا هـ ولا م (الهجري يوم/شهر/سنة) */
 function withDates(text) {
-  const out = [];
-  let last = 0, m, i = 0;
-  const t = String(text ?? "");
-  DATE_RE.lastIndex = 0;
-  while ((m = DATE_RE.exec(t))) {
-    if (m.index > last) out.push(<span key={i++}>{t.slice(last, m.index)}</span>);
-    out.push(<BidiDate key={i++} value={m[1]} suffix={m[2]} />);
-    last = m.index + m[0].length;
-  }
-  if (last < t.length) out.push(<span key={i++}>{t.slice(last)}</span>);
-  return out;
+  return noEra(String(text ?? "")).replace(/(\d{2}\/\d{2}\/1[34]\d\d) الموافق (\d{2}\/\d{2}\/(?:19|20)\d\d)/g, "$1 - $2");
 }
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };

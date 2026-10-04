@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
-import { fmtGreg, fmtTime12 } from "../../lib/dates";
+import { fmtDate, fmtTime12 } from "../../lib/dates";
 import { printReport } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { loadRangeStart, WARNING_STAGES, OFFICIAL_LABEL } from "../../lib/officialAttendance";
@@ -121,12 +121,12 @@ function FileBody({ s, from, to }) {
     const kv = (k, v) => `<tr><th style="width:40%">${k}</th><td>${v}</td></tr>`;
     const html = `
       <table>${kv("اسم الطالب", s.full_name)}${kv("رقم الهوية", data.nid)}${kv("الصف / الفصل", `${GRADE_NAMES[s.grade] ?? s.grade} / ${s.class_no}`)}
-      ${kv("الفترة", `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")}`)}</table>
+      ${kv("الفترة", `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")}`)}</table>
       <table style="margin-top:10px">${kv("أيام الغياب الرسمي بدون عذر", absent.length)}${kv("أيام الغياب بعذر", excused.length)}
       ${kv("أيام التأخر الصباحي", late.length)}${kv("حصص الغياب", pAbsent.length)}${kv("حصص التأخر", pLate.length)}
-      ${kv("الإنذارات الصادرة", data.warns.map((w) => `${STAGE[w.stage]?.label} (${fmtGreg(w.issued_on + "T12:00:00")})`).join("، ") || "—")}</table>
+      ${kv("الإنذارات الصادرة", data.warns.map((w) => `${STAGE[w.stage]?.label} (${fmtDate(w.issued_on + "T12:00:00")})`).join("، ") || "—")}</table>
       ${absent.length ? `<table style="margin-top:10px"><thead><tr><th>م</th><th>أيام الغياب الرسمي</th></tr></thead><tbody>
-        ${absent.map((m, i) => `<tr><td>${i + 1}</td><td>${weekdayOf(m.attend_date)} ${fmtGreg(m.attend_date + "T12:00:00")}</td></tr>`).join("")}</tbody></table>` : ""}`;
+        ${absent.map((m, i) => `<tr><td>${i + 1}</td><td>${weekdayOf(m.attend_date)} ${fmtDate(m.attend_date + "T12:00:00")}</td></tr>`).join("")}</tbody></table>` : ""}`;
     printReport({ title: "ملف متابعة الطالب — الحضور والغياب", sections: [{ title: "ملف متابعة الطالب — الحضور والغياب", html }], ...logos(), signatures: SIGNS });
   };
 
@@ -149,7 +149,7 @@ function FileBody({ s, from, to }) {
       <Section title="الإنذارات">
         {data.warns.length === 0 ? <p className="text-sm text-muted">لا إنذارات.</p> : data.warns.map((w) => (
           <p key={w.stage} className="text-sm text-ink">
-            {STAGE[w.stage]?.label} · <span className="num">{fmtGreg(w.issued_on + "T12:00:00")}</span>
+            {STAGE[w.stage]?.label} · <span className="num">{fmtDate(w.issued_on + "T12:00:00")}</span>
             {w.source === "paper" && <span className="text-xs text-muted"> (ورقي)</span>}
           </p>
         ))}
@@ -161,7 +161,7 @@ function FileBody({ s, from, to }) {
             {[...absent, ...excused].sort((a, b) => a.attend_date.localeCompare(b.attend_date)).map((m) => (
               <span key={m.attend_date} className={`rounded-sm2 px-2 py-1 text-xs ${
                 m.status === "absent" ? "bg-absent/10 text-absent" : "bg-excused/10 text-excused"}`}>
-                {weekdayOf(m.attend_date)} {fmtGreg(m.attend_date + "T12:00:00")} · {OFFICIAL_LABEL[m.status]}
+                {weekdayOf(m.attend_date)} {fmtDate(m.attend_date + "T12:00:00")} · {OFFICIAL_LABEL[m.status]}
                 {m.punched ? " · بصم ولم يحضر" : ""}
               </span>
             ))}
@@ -174,7 +174,7 @@ function FileBody({ s, from, to }) {
           <div className="flex flex-wrap gap-1.5">
             {late.map((m) => (
               <span key={m.attend_date} className="rounded-sm2 bg-late/10 px-2 py-1 text-xs text-late">
-                {fmtGreg(m.attend_date + "T12:00:00")} · {fmtTime12(m.punch_time)} · {m.late_minutes} د
+                {fmtDate(m.attend_date + "T12:00:00")} · {fmtTime12(m.punch_time)} · {m.late_minutes} د
               </span>
             ))}
           </div>
@@ -222,7 +222,7 @@ function PeriodEdit({ periods, uid, onSaved }) {
       .eq("id", p.id);
     setBusy(null);
     if (error) { setMsg({ ok: false, text: `تعذّر الحفظ: ${error.message}` }); return; }
-    setMsg({ ok: true, text: `عُدّلت حصة ${p.schedule?.period_no ?? ""} يوم ${fmtGreg(p.attend_date + "T12:00:00")} إلى «${P_STATUS[next].t}».` });
+    setMsg({ ok: true, text: `عُدّلت حصة ${p.schedule?.period_no ?? ""} يوم ${fmtDate(p.attend_date + "T12:00:00")} إلى «${P_STATUS[next].t}».` });
     setDraft((d) => { const n = { ...d }; delete n[p.id]; return n; });
     onSaved();
   };
@@ -241,7 +241,7 @@ function PeriodEdit({ periods, uid, onSaved }) {
             return (
               <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <div className="min-w-0 text-sm">
-                  <span className="text-ink">{weekdayOf(p.attend_date)} <span className="num">{fmtGreg(p.attend_date + "T12:00:00")}</span></span>
+                  <span className="text-ink">{weekdayOf(p.attend_date)} <span className="num">{fmtDate(p.attend_date + "T12:00:00")}</span></span>
                   <span className="text-muted"> · الحصة <span className="num">{p.schedule?.period_no ?? "—"}</span> · {p.schedule?.subjects?.name ?? "—"}</span>
                   {p.updated_at && <span className="text-[11px] text-faint"> · مُعدَّلة</span>}
                 </div>

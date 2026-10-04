@@ -5,6 +5,7 @@ import { cleanIdentity, cleanMobile, cleanText, guessIdentityType } from "../../
 import { ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { noEra } from "../../lib/dates";
 
 const TRACK_LABEL = { common_year: "السنة المشتركة", general_track: "المسار العام" };
 const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
@@ -29,7 +30,7 @@ export default function Records() {
       .then(({ data }) => {
         const m = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
         setYear(m.active_year ?? null);
-        setYearLabel(m.active_year_label ?? m.active_year ?? null);
+        setYearLabel(noEra(m.active_year_label) ?? m.active_year ?? null);
       });
   }, []);
 

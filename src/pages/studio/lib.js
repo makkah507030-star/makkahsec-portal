@@ -1,5 +1,6 @@
 // src/pages/studio/lib.js
 import { useEffect, useState } from "react";
+import { fmtDate, stripBidi } from "../../lib/dates";
 
 /* =====================================================================
    أدوات استوديو البوابة المشتركة.
@@ -67,7 +68,7 @@ export function useFontsReady() {
 }
 
 /* العام الدراسي الهجري: يبدأ في أغسطس، فيُؤخذ العام الهجري لتاريخ 20 أغسطس
-   من سنة بداية العام الدراسي — مثل «1448 – 1449 هـ». */
+   من سنة بداية العام الدراسي — مثل «1448 – 1449». */
 export function academicYearLabel(now = new Date()) {
   const startYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
   let h;
@@ -76,7 +77,7 @@ export function academicYearLabel(now = new Date()) {
       .format(new Date(startYear, 7, 20));
     h = parseInt(String(s).replace(/\D/g, ""), 10);
   } catch { h = startYear - 578; }
-  return `${h} – ${h + 1} هـ`;
+  return `${h} – ${h + 1}`;
 }
 
 export const TERM_LABEL = { 1: "الفصل الدراسي الأول", 2: "الفصل الدراسي الثاني", 3: "الفصل الدراسي الثالث" };
@@ -118,14 +119,9 @@ export function classRange(nums) {
   return a.join("، ");
 }
 
-/* تاريخ اليوم الهجري بأرقام إنجليزية — مثل «1448/04/08 هـ» */
+/* تاريخ اليوم بالصيغة المعتمدة — مثل «08/04/1448 - 29/09/2026» (نص قابل للتعديل بلا علامات عزل) */
 export function hijriToday(now = new Date()) {
-  try {
-    const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn",
-      { day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(now);
-    const p = Object.fromEntries(parts.map((x) => [x.type, x.value]));
-    return `${String(p.year).replace(/\D/g, "")}/${p.month}/${p.day} هـ`;
-  } catch { return ""; }
+  return stripBidi(fmtDate(now));
 }
 
 /* حجم نص المتن بحسب طوله، ليبقى في صفحة واحدة دون أن يصغر أكثر من اللازم */

@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import { loadPeriodTimes, lateInfo } from "../../lib/periodTimes";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
-import { fmtGreg, fmtTime12, fmtDateTime } from "../../lib/dates";
+import { fmtDate, fmtTime12, fmtDateTime } from "../../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import ColorLegend from "../../components/ColorLegend.jsx";
 import logoIcon from "../../assets/icon-mint.png";
@@ -96,7 +96,7 @@ function OfficialTab() {
 
   const printIt = () => printReport({
     title: "كشف الطلاب الغائبين رسميًا",
-    subtitle: `${fmtGreg(date)} · الغياب الرسمي المعتمد`,
+    subtitle: `${fmtDate(date)} · الغياب الرسمي المعتمد`,
     headers, rows: table(),
     logoUrl: new URL(logoIcon, window.location.origin).href,
     moeLogoUrl: new URL(moeLogo, window.location.origin).href,
@@ -108,7 +108,7 @@ function OfficialTab() {
 
   const excelIt = () => exportStyledExcel({
     title: "كشف الطلاب الغائبين رسميًا",
-    subtitle: `${fmtGreg(date)} · الغياب الرسمي المعتمد`,
+    subtitle: `${fmtDate(date)} · الغياب الرسمي المعتمد`,
     headers, rows: table(),
     fileName: `الغياب-الرسمي-${date}`,
     sheetName: "الغياب",
@@ -249,7 +249,7 @@ export function MissingTab() {
 
   const printIt = () => printReport({
     title: "تقرير الطلاب المفقودين خلال اليوم",
-    subtitle: fmtGreg(date),
+    subtitle: fmtDate(date),
     headers, rows: table(),
     logoUrl: new URL(logoIcon, window.location.origin).href,
     moeLogoUrl: new URL(moeLogo, window.location.origin).href,
@@ -261,7 +261,7 @@ export function MissingTab() {
 
   const excelIt = () => exportStyledExcel({
     title: "تقرير الطلاب المفقودين خلال اليوم",
-    subtitle: fmtGreg(date),
+    subtitle: fmtDate(date),
     headers, rows: table(),
     fileName: `الطلاب-المفقودون-${date}`,
     sheetName: "المفقودون",
@@ -430,7 +430,7 @@ function LateTab() {
 
   const printIt = () => printReport({
     title: "تقرير التأخر الصباحي",
-    subtitle: fmtGreg(date),
+    subtitle: fmtDate(date),
     headers, rows: table(),
     logoUrl: new URL(logoIcon, window.location.origin).href,
     moeLogoUrl: new URL(moeLogo, window.location.origin).href,
@@ -442,7 +442,7 @@ function LateTab() {
 
   const excelIt = () => exportStyledExcel({
     title: "تقرير التأخر الصباحي",
-    subtitle: fmtGreg(date),
+    subtitle: fmtDate(date),
     headers, rows: table(),
     fileName: `التأخر-الصباحي-${date}`,
     sheetName: "التأخر",

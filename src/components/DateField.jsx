@@ -36,14 +36,16 @@ export function fromHijri(hy, hm, hd) {
   return null;
 }
 
+// القيمة المحفوظة بالصيغة المعتمدة: 03/03/1448 - 14/09/2026 (بلا هـ ولا م)
 export function formatBoth(date) {
   if (!date) return "";
   const h = toHijri(date);
-  return `${pad(h.d)}/${pad(h.m)}/${h.y}هـ (${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}م)`;
+  return `${pad(h.d)}/${pad(h.m)}/${h.y} - ${pad(date.getUTCDate())}/${pad(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
 }
 
+// يقرأ الميلادي من القيمة المحفوظة — الجديدة، والقديمة «…هـ (14/09/2026م)»
 function parseStored(value) {
-  const m = String(value ?? "").match(/(\d{2})\/(\d{2})\/(\d{4})م/);
+  const m = String(value ?? "").match(/(\d{2})\/(\d{2})\/((?:19|20)\d{2})/);
   if (!m) return null;
   return new Date(Date.UTC(Number(m[3]), Number(m[2]) - 1, Number(m[1])));
 }
@@ -95,7 +97,7 @@ function OneDate({ value, onChange, label }) {
                     if (h.d && h.m) applyHijri(h.d, h.m, e.target.value);
                   }}>
             {Array.from({ length: 12 }, (_, i) => today.y - 5 + i).map((y) => (
-              <option key={y} value={y}>{y}هـ</option>
+              <option key={y} value={y}>{y}</option>
             ))}
           </select>
         </div>

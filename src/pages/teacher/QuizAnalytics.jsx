@@ -8,8 +8,7 @@ import PrintPortal from "../../components/PrintPortal.jsx";
 import { printThen } from "../../lib/print.js";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
-import BidiDate from "../../components/BidiDate.jsx";
-import { fmtHijri } from "../../lib/dates";
+import { fmtDate } from "../../lib/dates";
 
 /* =====================================================================
    تحليل النتائج — للمعلم وحده، لاختباراته المنفّذة عبر البوابة فقط
@@ -425,7 +424,7 @@ function Signature({ teacher }) {
         <p className="text-[12px] text-muted">تاريخ التقرير</p>
         <div className="h-16" />
         <div className="mx-auto h-px w-48" style={{ background: "#C3C3C3" }} />
-        <p className="mt-1.5 text-[13px] font-bold"><BidiDate value={fmtHijri(new Date(), false)} suffix="هـ" /></p>
+        <p className="mt-1.5 text-[13px] font-bold">{fmtDate(new Date())}</p>
       </div>
     </div>
   );

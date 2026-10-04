@@ -9,7 +9,7 @@
 //
 // الاستخدام:
 //   <BidiDate value={fmtHijri(date, false)} suffix="هـ" />
-//   <BidiDate value={fmtGreg(date)} suffix="م" />
+//   <BidiDate value={fmtDate(date)} suffix="م" />
 export default function BidiDate({ value, suffix }) {
   return (
     <span className="inline-flex" style={{ direction: "ltr" }}>

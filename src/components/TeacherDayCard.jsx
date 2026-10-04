@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSession } from "../lib/session.jsx";
 import { isTeacherDay, showTeacherDayCard } from "../lib/teacherDay.js";
 import iconWhite from "../assets/icon-white.png";
+import { fmtDate } from "../lib/dates";
 
 /* بطاقة شكر باسم المعلم في يوم المعلم، بهوية اليوم الرسمية (الكحلي والأصفر وخط حرير).
    تظهر في رئيسية كل حساب له سجل معلم، ويحفظها صورة بمقاس منشور (1080 × 1350). */
@@ -79,7 +80,7 @@ export function TeacherDayArt({ name, nodeRef }) {
       <div style={{ position: "absolute", top: 290, right: 72, left: 72, textAlign: "center" }}>
         <p style={{ margin: 0, display: "inline-flex", alignItems: "center", gap: 14, fontSize: 22, color: C.yellow }}>
           <i style={{ display: "inline-block", width: 56, height: 2, background: `linear-gradient(90deg,transparent,${C.yellow})` }} />
-          يوم المعلم ١٤٤٨هـ
+          يوم المعلم ١٤٤٨
           <i style={{ display: "inline-block", width: 56, height: 2, background: `linear-gradient(90deg,${C.yellow},transparent)` }} />
         </p>
         <p style={{ margin: "40px 0 0", fontSize: 34, color: "#C9D6E8" }}>إلى المعلم المُلهِم</p>
@@ -100,7 +101,7 @@ export function TeacherDayArt({ name, nodeRef }) {
       <div style={{ position: "absolute", bottom: 40, right: 72, left: 72, display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: 20, color: "#DDE6F2", textShadow: "0 2px 10px rgba(0,0,0,.35)" }}>
         <span>مع خالص التقدير والامتنان<b style={{ display: "block", fontSize: 24, color: "#fff" }}>إدارة مدرسة مكة الثانوية</b></span>
         <span style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: 18, fontWeight: 600, border: "1.5px solid rgba(255,255,255,.55)", borderRadius: 999, padding: "7px 18px", background: "rgba(0,35,78,.45)" }}>
-          الاثنين ٥ أكتوبر ٢٠٢٦
+          الاثنين {fmtDate("2026-10-05T12:00:00")}
         </span>
       </div>
     </div>
@@ -214,7 +215,7 @@ function TeacherDayHero({ name, firstName }) {
       <div className="relative flex flex-col gap-4 px-6 pb-28 pt-6 sm:min-h-[15rem] sm:pb-8 sm:pt-8 sm:pl-[32%] lg:px-10">
         <div className="flex items-center gap-3">
           <img src="/teacher-day/logo-white.png" alt="يوم المعلم" className="h-12 sm:h-14" />
-          <span className="text-sm" style={{ color: C.yellow }}>الاثنين ٥ أكتوبر ٢٠٢٦</span>
+          <span className="text-sm" style={{ color: C.yellow }}>الاثنين {fmtDate("2026-10-05T12:00:00")}</span>
         </div>
         <div>
           <p className="text-lg sm:text-xl" style={{ color: "#C9D6E8" }}>شكرًا لك أ. {firstName}</p>

@@ -1,5 +1,6 @@
 // src/components/FormSheet.jsx
 import logoIcon from "../assets/icon-mint.png";
+import { noEra } from "../lib/dates";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
 
@@ -606,6 +607,11 @@ export default function FormSheet({
 }) {
   if (!template) return null;
   const landscape = template.orientation === "landscape";
+  // المستندات المحفوظة قبل توحيد التاريخ: «03/03/1448هـ (14/09/2026م)» تُعرض «03/03/1448 - 14/09/2026»
+  const v = Object.fromEntries(Object.entries(values ?? {}).map(([k, x]) => [k,
+    typeof x === "string"
+      ? noEra(x).replace(/(\d{2}\/\d{2}\/1[34]\d\d)\s*\((\d{2}\/\d{2}\/(?:19|20)\d\d)\)/g, "$1 - $2")
+      : x]));
   const Body = template.key === "student_admission" ? StudentAdmission
              : template.category === "certificate" ? Certificate
              : template.category === "official"    ? Official
@@ -623,7 +629,7 @@ export default function FormSheet({
         fontFamily: "'IBM Plex Sans Arabic', sans-serif",
       }}
     >
-      <Body template={template} v={values ?? {}} doc={doc}
+      <Body template={template} v={v} doc={doc}
             sigUrl={sigUrl} stampUrl={stampUrl}
             principalSigUrl={principalSigUrl} principalName={principalName}
             replySigUrl={replySigUrl} replySigName={replySigName} />

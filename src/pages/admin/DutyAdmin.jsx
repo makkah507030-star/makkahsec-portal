@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { DAY_NAMES } from "../../lib/schoolTime";
+import { fmtDate } from "../../lib/dates";
 import DutyReport, { DutyPrintArea } from "../../components/DutyReport.jsx";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
@@ -19,12 +20,7 @@ import { confirmDanger } from "../../lib/danger";
 const iso = (d) => d.toISOString().slice(0, 10);
 const todayISO = () => iso(new Date());
 
-const fmtG = (s) => {
-  if (!s) return "";
-  const d = new Date(s + "T00:00:00");
-  const p = (n) => String(n).padStart(2, "0");
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
-};
+const fmtG = (s) => (s ? fmtDate(s + "T12:00:00") : "");
 
 const hijriOf = (s) => {
   if (!s) return "";
@@ -83,8 +79,7 @@ export default function DutyAdmin() {
       deputy: nameOf("deputy_academic"),
       principal: nameOf("principal"),
       term: duty?.length
-        ? `من ${new Date(duty[0].duty_date + "T00:00:00").toLocaleDateString("ar-SA-u-ca-gregory")}` +
-          ` إلى ${new Date(duty[duty.length - 1].duty_date + "T00:00:00").toLocaleDateString("ar-SA-u-ca-gregory")}`
+        ? `من ${fmtG(duty[0].duty_date)} إلى ${fmtG(duty[duty.length - 1].duty_date)}`
         : "",
     });
   };
@@ -275,8 +270,8 @@ function DutyTab({ staff }) {
               <input type="date" className="field num mt-1 w-full" value={nf.date}
                      onChange={(e) => setNf((f) => ({ ...f, date: e.target.value }))} />
               {nf.date && (
-                <p className="num mt-1 text-[11px] text-mint-deep">
-                  {DAY_NAMES[dowOf(nf.date)] ?? "نهاية أسبوع"} · {hijriOf(nf.date)}هـ
+                <p className="mt-1 text-[11px] text-mint-deep">
+                  {DAY_NAMES[dowOf(nf.date)] ?? "نهاية أسبوع"} · {fmtG(nf.date)}
                 </p>
               )}
             </div>
@@ -357,12 +352,11 @@ function DutyTab({ staff }) {
             <div key={r.id}
                  className={`card p-3 ${isToday ? "border-mint-deep bg-mint-tint/40" : past ? "opacity-70" : ""}`}>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="num shrink-0 rounded-sm2 bg-mint-tint px-2.5 py-1 text-xs font-bold text-mint-deep">
+                <span className="shrink-0 rounded-sm2 bg-mint-tint px-2.5 py-1 text-xs font-bold text-mint-deep">
                   {fmtG(r.duty_date)}
                 </span>
                 <span className="text-xs text-muted">
                   {r.day_label}
-                  {r.hijri_label && <span className="num"> · {r.hijri_label}هـ</span>}
                   {r.week_label && <span> · الأسبوع {r.week_label}</span>}
                 </span>
                 {isToday && <span className="chip bg-mint-deep text-white">اليوم</span>}

@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
-import { fmtGreg, fmtBoth } from "../../lib/dates";
+import { fmtDate } from "../../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { WARNING_STAGES, loadRangeStart, loadActiveTerm, isMissingTable } from "../../lib/officialAttendance";
@@ -124,9 +124,9 @@ export default function Warnings() {
   const table = () => list.map((s, i) => [
     i + 1, s.full_name, s.grade, s.class_no, s.days,
     s.due.map((k) => STAGE[k].label).join("، ") || "—",
-    Object.values(s.done).map((w) => `${STAGE[w.stage].label} (${fmtGreg(w.issued_on)})`).join("، ") || "—",
+    Object.values(s.done).map((w) => `${STAGE[w.stage].label} (${fmtDate(w.issued_on)})`).join("، ") || "—",
   ]);
-  const range = () => `${fmtGreg(from + "T00:00:00")} — ${fmtGreg(to + "T00:00:00")}`;
+  const range = () => `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")}`;
 
   if (!from || !term) return <Loading />;
 
@@ -225,7 +225,7 @@ function StudentActions({ s, onIssue, onPaper, onReprint }) {
         <div className="flex flex-wrap gap-1">
           {s.dates.map((d) => (
             <span key={d} className="rounded-sm2 bg-white px-2 py-0.5 text-[11px] text-ink">
-              {weekdayOf(d)} {fmtGreg(d + "T00:00:00")}
+              {weekdayOf(d)} {fmtDate(d + "T00:00:00")}
             </span>
           ))}
         </div>
@@ -272,15 +272,15 @@ async function printMinutes(s, stage, { from, to, done, issuedOn }) {
   const { data: st } = await supabase.from("students").select("national_id").eq("id", s.student_id).maybeSingle();
   const nid = st?.national_id ?? "..................";
   const gradeName = GRADE_NAMES[s.grade] ?? `الصف ${s.grade}`;
-  const when = `${weekdayOf(issuedOn)} ${fmtBoth(issuedOn + "T12:00:00")}`;
+  const when = `${weekdayOf(issuedOn)} ${fmtDate(issuedOn + "T12:00:00")}`;
   const who = `الطالب / <b>${s.full_name}</b> — رقم الهوية (<span class="num">${nid}</span>) — ${gradeName} فصل (<span class="num">${s.class_no}</span>)`;
   const days = `<b>(<span class="num">${s.days}</span>) ${s.days >= 3 && s.days <= 10 ? "أيام" : "يومًا"}</b>`;
-  const period = `خلال الفترة من ${fmtGreg(from + "T00:00:00")} إلى ${fmtGreg(to + "T00:00:00")}`;
-  const prev = (k) => done?.[k] ? `بتاريخ ${fmtGreg(done[k].issued_on + "T12:00:00")}` : "";
+  const period = `خلال الفترة من ${fmtDate(from + "T00:00:00")} إلى ${fmtDate(to + "T00:00:00")}`;
+  const prev = (k) => done?.[k] ? `بتاريخ ${fmtDate(done[k].issued_on + "T12:00:00")}` : "";
 
   const dates = `
     <table style="margin-top:10px"><thead><tr><th>م</th><th>اليوم</th><th>التاريخ</th></tr></thead><tbody>
-      ${s.dates.map((d, i) => `<tr><td>${i + 1}</td><td>${weekdayOf(d)}</td><td>${fmtBoth(d + "T12:00:00")}</td></tr>`).join("")}
+      ${s.dates.map((d, i) => `<tr><td>${i + 1}</td><td>${weekdayOf(d)}</td><td>${fmtDate(d + "T12:00:00")}</td></tr>`).join("")}
     </tbody></table>`;
 
   const P = (t) => `<p style="font-size:14px;line-height:2.1;margin:8px 0;text-align:justify">${t}</p>`;
@@ -324,8 +324,8 @@ async function printMinutes(s, stage, { from, to, done, issuedOn }) {
   const doc = DOCS[stage];
   await printReport({
     title: doc.title,
-    subtitle: `العام الدراسي — ${fmtBoth(issuedOn + "T12:00:00")}`,
-    sections: [{ title: doc.title, subtitle: `تاريخ المحضر: ${fmtBoth(issuedOn + "T12:00:00")}`, html: doc.body }],
+    subtitle: `العام الدراسي — ${fmtDate(issuedOn + "T12:00:00")}`,
+    sections: [{ title: doc.title, subtitle: `تاريخ المحضر: ${fmtDate(issuedOn + "T12:00:00")}`, html: doc.body }],
     ...logos(),
     signatures: doc.signs,
   });

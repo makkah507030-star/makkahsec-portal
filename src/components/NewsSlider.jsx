@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { fmtBoth } from "../lib/dates";
+import { fmtDate } from "../lib/dates";
 import NewsCoverCard from "./NewsCoverCard.jsx";
 
 
@@ -78,7 +78,7 @@ export default function NewsSlider() {
             <div className="flex flex-col justify-center p-6 md:p-8">
               {current.published_at && (
                 <p className="text-xs text-muted">
-                  {fmtBoth(current.published_at)}
+                  {fmtDate(current.published_at)}
                 </p>
               )}
               <h3 className="mt-2 text-lg font-bold leading-snug text-ink group-hover:text-mint-deep md:text-xl">

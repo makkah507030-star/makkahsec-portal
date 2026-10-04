@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { todayISO, todayDow, DAY_NAMES } from "../lib/schoolTime";
+import { fmtDate } from "../lib/dates";
 
 /* =====================================================================
    صندوق المناوبة والإشراف في اللوحة الرئيسية.
@@ -158,7 +159,7 @@ export default function DutyCard({ personal = false }) {
             <p className="text-sm font-bold">المناوبة والإشراف</p>
             <p className="text-[11px] text-white/75">
               {dow ? `يوم ${DAY_NAMES[dow]}` : "لا دوام اليوم"}
-              {data.today?.hijri_label && <> · <bdi className="num">{data.today.hijri_label}</bdi>هـ</>}
+              {data.today?.duty_date && <> · {fmtDate(data.today.duty_date + "T12:00:00")}</>}
             </p>
           </div>
         </div>

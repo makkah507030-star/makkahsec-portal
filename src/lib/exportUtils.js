@@ -1,4 +1,4 @@
-import { fmtBoth, fmtTime12 } from "./dates";
+import { fmtDate, fmtTime12, stripBidi } from "./dates";
 import { isMobileDevice } from "./print";
 import { loadPrincipalSignature } from "./principalSignature";
 // أسماء الموقّعين — من إعدادات البوابة (lib/signers.js)
@@ -33,7 +33,9 @@ export async function exportToExcel(rows, fileName = "تقرير", sheetName = "
   if (!rows?.length) return;
   const XLSX = await loadXLSX();
 
-  const ws = XLSX.utils.json_to_sheet(rows);
+  // علامات عزل اتجاه التاريخ تُحذف من خلايا Excel
+  const clean = rows.map((r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, typeof v === "string" ? stripBidi(v) : v])));
+  const ws = XLSX.utils.json_to_sheet(clean);
 
   const keys = Object.keys(rows[0]);
   ws["!cols"] = keys.map((k) => {
@@ -94,7 +96,7 @@ export async function exportStyledExcel({
   // العنوان
   aoa.push([title]);
   if (subtitle) aoa.push([subtitle]);
-  aoa.push([`تاريخ الإصدار: ${fmtBoth(new Date())}`]);
+  aoa.push([`تاريخ الإصدار: ${fmtDate(new Date())}`]);
   aoa.push([]);
 
   const headRow = aoa.length;       // فهرس صف رأس الجدول
@@ -115,7 +117,8 @@ export async function exportStyledExcel({
   aoa.push(signList.map((s) => s.name));
   aoa.push(signList.map(() => "التوقيع: ....................."));
 
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // علامات عزل اتجاه التاريخ تُحذف من خلايا Excel
+  const ws = XLSX.utils.aoa_to_sheet(aoa.map((r) => r.map((v) => (typeof v === "string" ? stripBidi(v) : v))));
 
   // عرض الأعمدة
   ws["!cols"] = headers.map((h, i) => {
@@ -282,7 +285,7 @@ export async function printReport(opts) {
   }
 
   const now = new Date();
-  const stampText = `${fmtBoth(now)} · ${fmtTime12(now)}`;
+  const stampText = `${fmtDate(now)} · ${fmtTime12(now)}`;
 
   /* ---------- التوقيعات ---------- */
   const signList = signatures?.length

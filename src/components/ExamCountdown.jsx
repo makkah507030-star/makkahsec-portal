@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { fmtGreg, fmtHijri } from "../lib/dates";
-import BidiDate from "./BidiDate.jsx";
+import { fmtDate } from "../lib/dates";
 
 // موعد الاختبارات النهائية للفصل الدراسي الأول
-// الأحد 1448/07/25هـ = الأحد 2027/01/03م (تم التحقق من التطابق)
+// الأحد 25/07/1448 = الأحد 03/01/2027 (تم التحقق من التطابق)
 const EXAM_DATE = new Date("2027-01-03T00:00:00+03:00");
 
 function diffParts(target) {
@@ -41,11 +40,7 @@ export default function ExamCountdown() {
             العد التنازلي لموعد الاختبارات النهائية للفصل الدراسي الأول
           </p>
           <p className="mt-1 text-sm font-bold text-ink">
-            الأحد الموافق{" "}
-            <BidiDate value={fmtHijri(EXAM_DATE, false)} suffix="هـ" />
-          </p>
-          <p className="text-sm font-bold text-ink">
-            <BidiDate value={fmtGreg(EXAM_DATE)} suffix="م" />
+            الأحد {fmtDate(EXAM_DATE)}
           </p>
         </div>
 

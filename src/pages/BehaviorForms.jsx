@@ -4,7 +4,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { todayISO } from "../lib/schoolTime";
-import { fmtGreg } from "../lib/dates";
+import { fmtDate } from "../lib/dates";
 import { useNotice } from "../lib/useNotice.js";
 import { notifyUsers } from "../lib/referrals";
 import { degreeName, typeLabel } from "../lib/behavior";
@@ -17,7 +17,7 @@ import UsageBadge from "../components/UsageBadge.jsx";
 import { ReferralPrintArea } from "../components/ReferralSheet.jsx";
 
 /* =====================================================================
-   نماذج السلوك والمواظبة — على صيغ دليل السلوك والمواظبة 1447هـ:
+   نماذج السلوك والمواظبة — على صيغ دليل السلوك والمواظبة 1447:
    • تعهد سلوكي: يُرسل للطالب فيتعهد، ولولي أمره فيقرّ بالاطّلاع.
    • خطاب دعوة ولي الأمر: يرد ولي الأمر بالحضور أو بطلب تغيير الموعد.
    • سري: محضر ضبط واقعة: داخلي للإدارة، يُطبع للتوقيع.
@@ -86,7 +86,7 @@ export default function BehaviorForms() {
       <div>
         <h1 className="text-lg font-bold text-ink">نماذج السلوك والمواظبة</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          على صيغ دليل السلوك والمواظبة (الإجراءات الخاصة) 1447هـ — تُرسل للطالب وولي أمره عبر البوابة،
+          على صيغ دليل السلوك والمواظبة (الإجراءات الخاصة) 1447 — تُرسل للطالب وولي أمره عبر البوابة،
           وتُطبع بالختم وتوقيع المدير.
         </p>
       </div>
@@ -438,7 +438,7 @@ const STATEMENT_TEMPLATES = [
 
 function StatementFields({ text, setText, date, setDate, time, setTime, student }) {
   const name = student?.full_name ?? "........................";
-  const dayText = date ? `${weekday(date)} ${fmtGreg(date)}` : "........";
+  const dayText = date ? `${weekday(date)} ${fmtDate(date)}` : "........";
   return (
     <>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -538,7 +538,7 @@ function Log({ rows, onOpen }) {
             {reply && (
               <p className="mt-1.5 text-xs font-medium text-present">
                 رد ولي الأمر: {r.guardian_reply.choice === "attend" ? "سيحضر في الموعد المحدد"
-                  : `يطلب تغيير الموعد${r.guardian_reply.date ? ` إلى يوم ${weekday(r.guardian_reply.date)} ${fmtGreg(r.guardian_reply.date)}` : ""}`}
+                  : `يطلب تغيير الموعد${r.guardian_reply.date ? ` إلى يوم ${weekday(r.guardian_reply.date)} ${fmtDate(r.guardian_reply.date)}` : ""}`}
               </p>
             )}
             {r.guardian_note && <p className="mt-1 text-xs text-muted">ملاحظة ولي الأمر: {r.guardian_note}</p>}

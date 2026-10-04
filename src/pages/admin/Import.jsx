@@ -5,6 +5,7 @@ import { IMPORT_TYPES, readSheet, validateRows } from "../../lib/importer";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import { noEra } from "../../lib/dates";
 
 const BATCH = 400;
 
@@ -31,7 +32,7 @@ export default function Import() {
       .then(({ data }) => {
         const m = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
         setYear(m.active_year ?? null);
-        setYearLabel(m.active_year_label ?? m.active_year ?? null);
+        setYearLabel(noEra(m.active_year_label) ?? m.active_year ?? null);
         setTerm(m.active_term ? Number(m.active_term) : null);
       });
   }, []);

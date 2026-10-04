@@ -5,6 +5,7 @@ import PrintPortal from "./PrintPortal.jsx";
 import PrincipalSign from "./PrincipalSign.jsx";
 import { PRINCIPAL_NAME, STUDENT_DEPUTY_NAME } from "../lib/exportUtils.js";
 import { degreeName, violationPhrase, BEHAVIOR_SOURCE } from "../lib/behavior.js";
+import { fmtDate } from "../lib/dates";
 
 /* =====================================================================
    ورقة إحالة الطالب — ملف واحد يوثّق المسار كاملًا:
@@ -24,16 +25,7 @@ export const SHEET_W = 794;   // A4 عمودي بدقة الشاشة
 
 const fmt = (ts) => {
   if (!ts) return "—";
-  const d = new Date(ts);
-  const p = (n) => String(n).padStart(2, "0");
-  let h = "";
-  try {
-    const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura",
-      { day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(d);
-    const g = (t) => parts.find((x) => x.type === t)?.value ?? "";
-    h = `${g("day")}/${g("month")}/${String(g("year")).replace(/\D/g, "")}هـ`;
-  } catch { /* تجاهل */ }
-  return `${h} (${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()})`;
+  return fmtDate(ts);
 };
 
 // الطباعة عبر PrintPortal: صفحة A4 عمودية ثابتة، بلا إزاحة ولا صفحات زائدة
@@ -197,7 +189,7 @@ export default function ReferralSheet({ r, stampUrl, guardianView = false }) {
 }
 
 /* =====================================================================
-   إحالة مخالفة سلوكية — على نماذج دليل السلوك والمواظبة 1447هـ:
+   إحالة مخالفة سلوكية — على نماذج دليل السلوك والمواظبة 1447:
    • نموذج (7) «سري: إحالة طالب» من وكيل شؤون الطلاب للموجه الطلابي،
      ومعه إجراء الموجه واعتماد الوكيل.
    • نموذج (9) «سري: إشعار ولي أمر الطالب بمشكلة سلوكية» بعد الاعتماد،

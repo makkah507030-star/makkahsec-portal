@@ -9,6 +9,7 @@ import GradeSheetEditor from "../../components/GradeSheetEditor.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import { noEra } from "../../lib/dates";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
 
@@ -58,7 +59,7 @@ export default function TeacherRecords() {
         .from("settings").select("key, value").in("key", ["active_year", "active_term", "active_year_label"]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const y = m.active_year ?? "";
-      setYearLabel(m.active_year_label ?? y);
+      setYearLabel(noEra(m.active_year_label) ?? y);
       const t = Number(m.active_term ?? 1);
       setYear(y);
       setTerm(t);

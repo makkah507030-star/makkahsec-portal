@@ -28,9 +28,9 @@ const dates = (s) => {
     const parts = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura",
       { day: "2-digit", month: "2-digit", year: "numeric" }).formatToParts(d);
     const g = (t) => parts.find((x) => x.type === t)?.value ?? "";
-    h = `${g("day")}/${g("month")}/${String(g("year")).replace(/\D/g, "")}هـ`;
+    h = `${g("day")}/${g("month")}/${String(g("year")).replace(/\D/g, "")}`;
   } catch { /* تجاهل */ }
-  return { h, g: `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}م` };
+  return { h, g: `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}` };
 };
 
 function DateCell({ value }) {

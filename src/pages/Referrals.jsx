@@ -11,7 +11,7 @@ import StudentPicker from "../components/StudentPicker.jsx";
 import { degreeName, typeLabel } from "../lib/behavior";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
-import { fmtGreg } from "../lib/dates";
+import { fmtDate } from "../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
@@ -565,11 +565,11 @@ function reportRows(list) {
       late,
       cells: [
         i + 1, r.serial ?? "", r.student_name ?? "", r.class_label ?? "", r.reason ?? "",
-        r.teacher_name ?? "", fmtGreg(r.teacher_at ?? r.created_at),
+        r.teacher_name ?? "", fmtDate(r.teacher_at ?? r.created_at),
         STATUS[r.status]?.t ?? r.status,
         open ? `${s.who} — ${s.what}` : "—",
         open ? daysLabel(daysSince(s.since)) + (late ? " (متأخرة)" : "")
-             : r.closed_at ? `أُقفلت ${fmtGreg(r.closed_at)}` : "—",
+             : r.closed_at ? `أُقفلت ${fmtDate(r.closed_at)}` : "—",
       ],
     };
   });
@@ -580,7 +580,7 @@ function ReportBar({ list, title }) {
     const open = list.filter((r) => OPEN_STATUSES.includes(r.status)).length;
     const late = list.filter(isLate).length;
     return `عدد الإحالات ${list.length} · قيد المتابعة ${open} · متأخرة ${late}` +
-           ` · منتهية ${list.length - open} — حتى ${fmtGreg(new Date())}`;
+           ` · منتهية ${list.length - open} — حتى ${fmtDate(new Date())}`;
   };
   const note = `تُعدّ الإحالة متأخرة إن بقيت في مرحلتها أكثر من ${LATE_DAYS} أيام.`;
   const signatures = [
@@ -860,7 +860,7 @@ function Timeline({ r }) {
                     : current ? "bg-warning/10 font-semibold text-warning"
                     : "bg-canvas text-faint"}`}>
               {x.t}
-              {done && <span className="num"> {fmtGreg(x.at)}</span>}
+              {done && <span className="num"> {fmtDate(x.at)}</span>}
             </span>
           </li>
         );

@@ -5,6 +5,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import { printReport, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import { noEra } from "../../lib/dates";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
 const PERIODS = ["الفترة الأولى", "الفترة الثانية"];
@@ -72,7 +73,7 @@ export default function FollowUpLog() {
 
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
       const y = m.active_year ?? "";
-      setYearLabel(m.active_year_label ?? y);
+      setYearLabel(noEra(m.active_year_label) ?? y);
       const t = Number(m.active_term ?? 1);
       setYear(y);
       setTerm(t);
