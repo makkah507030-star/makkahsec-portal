@@ -18,8 +18,9 @@ const GOV = [
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
-const fmt = (s) => {
-  if (!s) return "—";
+// التاريخ سطران: الهجري فوق والميلادي تحته، فلا يلتبس على الطالب
+const dates = (s) => {
+  if (!s) return null;
   const d = new Date(s + "T00:00:00");
   const p = (n) => String(n).padStart(2, "0");
   let h = "";
@@ -29,8 +30,19 @@ const fmt = (s) => {
     const g = (t) => parts.find((x) => x.type === t)?.value ?? "";
     h = `${g("day")}/${g("month")}/${String(g("year")).replace(/\D/g, "")}هـ`;
   } catch { /* تجاهل */ }
-  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}${h ? ` (${h})` : ""}`;
+  return { h, g: `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}م` };
 };
+
+function DateCell({ value }) {
+  const d = dates(value);
+  if (!d) return "—";
+  return (
+    <>
+      {d.h && <span className="block text-[12px] font-semibold text-ink">{d.h}</span>}
+      <span className="block text-[10.5px] text-muted">{d.g}</span>
+    </>
+  );
+}
 
 // الطباعة عبر PrintPortal: صفحة A4 عمودية ثابتة، بلا إزاحة ولا صفحات زائدة
 export function ExamPrintArea({ children }) {
@@ -101,11 +113,12 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
             </tr>
           </thead>
           {/* كل يوم في tbody مستقل لا ينقسم بين صفحتين */}
-          {days.map((d) => {
+          {days.map((d, di) => {
             const head = d.items[0];
             const span = d.items.length;
+            // الأيام بالتناوب أبيض ورمادي فاتح، ليميز الطالب كل يوم بمواده
             return (
-              <tbody key={d.key} style={{ breakInside: "avoid" }}>
+              <tbody key={d.key} style={{ breakInside: "avoid", ...(di % 2 ? { background: "#F1F3F2", ...INK } : {}) }}>
                 {d.items.map((r, i) => (
                   <tr key={r.id ?? i}>
                     {i === 0 && (
@@ -114,7 +127,7 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
                           <td rowSpan={span} className={cell}>{(head.exam_week ?? 1) === 2 ? "الثاني" : "الأول"}</td>
                         )}
                         <td rowSpan={span} className={`${cell} font-semibold`}>{DAY_NAMES[head.day_of_week] ?? "—"}</td>
-                        <td rowSpan={span} className={`${cell} num text-[11px]`}>{fmt(head.exam_date)}</td>
+                        <td rowSpan={span} className={`${cell} num leading-[1.5]`}><DateCell value={head.exam_date} /></td>
                       </>
                     )}
                     <td className="border border-line px-2 py-2 font-medium">{r.subject_name || "—"}</td>
