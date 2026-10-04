@@ -89,6 +89,7 @@ import { useMaintenance } from "./lib/useMaintenance.js";
 import { useHolidays } from "./lib/useHolidays.js";
 const ExamCountdown = lazy(() => import("./components/ExamCountdown.jsx"));
 import HolidayBanner from "./components/HolidayBanner.jsx";
+import TeacherDayCard from "./components/TeacherDayCard.jsx";
 import Loader from "./components/Loader.jsx";
 
 // الصفحات تُحمَّل عند فتحها فقط (lazy) لتخفيف التحميل الأول، وهذا ما يظهر لحظة جلبها
@@ -266,6 +267,8 @@ export default function App() {
                 <EnableNotifications />
                 {/* واجهة المعلم فقط — لوحة الإدارة وصفحتا الطالب وولي الأمر تعرضها بنفسها */}
                 {effectiveRole === "teacher" && <HolidayBanner />}
+                {/* بطاقة يوم المعلم لكل حساب له سجل معلم — تظهر في أسبوع المناسبة فقط */}
+                <TeacherDayCard />
                 {home}
               </div>
             }
