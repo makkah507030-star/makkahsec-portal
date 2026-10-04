@@ -58,6 +58,7 @@ const AnnouncementsAdmin = lazy(() => import("./pages/admin/AnnouncementsAdmin.j
 const CalendarAdmin = lazy(() => import("./pages/admin/CalendarAdmin.jsx"));
 const SiteMetrics = lazy(() => import("./pages/admin/SiteMetrics.jsx"));
 const UsageReport = lazy(() => import("./pages/admin/UsageReport.jsx"));
+const AuditLog = lazy(() => import("./pages/admin/AuditLog.jsx"));
 const Forms = lazy(() => import("./pages/admin/Forms.jsx"));
 const FormsAdmin = lazy(() => import("./pages/admin/FormsAdmin.jsx"));
 const Studio = lazy(() => import("./pages/studio/Studio.jsx"));
@@ -305,6 +306,7 @@ export default function App() {
               {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
               {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
               {isTechSupport && <Route path="/usage-report" element={<UsageReport />} />}
+              {isTechSupport && <Route path="/audit-log" element={<AuditLog />} />}
               {/* النماذج والشهادات — ما يظهر لكل مستخدم تحدّده سياسات قاعدة البيانات */}
               {/* key مختلف: الانتقال بين الصفحتين يبدأ مكوّنًا جديدًا فلا يبقى تبويب الأخرى مفتوحًا */}
               <Route path="/forms" element={<Forms key="issue" />} />

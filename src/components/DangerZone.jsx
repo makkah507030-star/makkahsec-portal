@@ -1,7 +1,6 @@
 // src/components/DangerZone.jsx
 // منطقة حمراء حول الأزرار التي تغيّر بيانات البوابة المشتركة أو إحصائياتها،
-// حتى يعرف المستخدم حجم الأثر قبل أن يجرّب. التأكيد نفسه في confirmDanger.
-import { IS_STAGING } from "./StagingBadge.jsx";
+// حتى يعرف المستخدم حجم الأثر قبل أن ينفّذ. التأكيد نفسه في confirmDanger.
 
 export default function DangerZone({ children, note, className = "" }) {
   return (
@@ -11,9 +10,6 @@ export default function DangerZone({ children, note, className = "" }) {
         <span>{note ?? "إجراء يؤثر على بيانات البوابة لكل المستخدمين"}</span>
       </p>
       {children}
-      {!IS_STAGING && (
-        <p className="mt-2 text-[11px] text-faint">للتجربة استخدم النسخة التجريبية، لا البوابة الحقيقية.</p>
-      )}
     </div>
   );
 }
