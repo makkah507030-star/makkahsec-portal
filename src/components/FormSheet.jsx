@@ -496,7 +496,7 @@ function StudentAdmission(p) {
 
       {v.from_school && (
         <p className="mt-4 flex justify-between text-[15px] font-semibold text-ink">
-          <span>المكرم قائد {v.from_school}</span>
+          <span>المكرم مدير {v.from_school}</span>
           <span>المحترم</span>
         </p>
       )}
