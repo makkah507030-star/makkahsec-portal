@@ -49,6 +49,7 @@ const weeksOf = (start, end) => {
 
 export default function ExamsAdmin() {
   const [deputy, setDeputy] = useState("");
+  const [deputySig, setDeputySig] = useState(null);   // رابط صورة توقيع الوكيل المحفوظ في البوابة
   const [kind, setKind] = useState("period1");
   const [term, setTerm] = useState(null);
   const [classes, setClasses] = useState([]);
@@ -62,8 +63,17 @@ export default function ExamsAdmin() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("admin_roles")
-        .select("users(full_name)").eq("role_type", "deputy_students").maybeSingle();
+        .select("user_id, users(full_name)").eq("role_type", "deputy_students").limit(1).maybeSingle();
       setDeputy(data?.users?.full_name ?? "");
+      // توقيعه من «توقيعي»: يقرؤه الوكيل نفسه والمدير والدعم الفني، وإلا يبقى مكانه للتوقيع اليدوي
+      if (!data?.user_id) return;
+      const { data: sig } = await supabase.from("user_signatures")
+        .select("path").eq("user_id", data.user_id).maybeSingle();
+      if (!sig?.path) return;
+      const { data: u } = await supabase.storage.from("form-assets").createSignedUrl(sig.path, 3600);
+      // تُحمَّل الصورة مسبقًا: الطباعة تبدأ بعد لحظة من رسم الجدول
+      if (u?.signedUrl) new Image().src = u.signedUrl;
+      setDeputySig(u?.signedUrl ?? null);
     })();
   }, []);
 
@@ -229,7 +239,7 @@ export default function ExamsAdmin() {
       {printing && (
         <div className="hidden print:block">
           <ExamPrintArea>
-            <ExamTable {...printing} deputy={deputy} />
+            <ExamTable {...printing} deputy={deputy} deputySig={deputySig} />
           </ExamPrintArea>
         </div>
       )}
