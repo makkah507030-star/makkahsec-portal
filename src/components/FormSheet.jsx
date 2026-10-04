@@ -466,6 +466,98 @@ function DutyScheduleBlock({ field, value }) {
   );
 }
 
+/* ---------------------------- قبول طالب ----------------------------
+   خطاب إلى المدرسة المنقول منها الطالب: بياناته في جدول، ثم الموافقة على قبوله
+   وما يُطلب في ملفه. المتطلبات الأساسية ثابتة، وتُضاف إليها «متطلبات إضافية». */
+const ADMISSION_NEEDS = [
+  "المقررات الدراسية (الكتب).",
+  "نقل ملفه في نظام نور إلى مدرستنا.",
+];
+
+function StudentAdmission(p) {
+  const { v, doc, template } = p;
+  const needs = [
+    ...ADMISSION_NEEDS,
+    ...String(v.extra ?? "").split("\n").map((x) => x.trim()).filter(Boolean),
+  ];
+  const cell = "border border-line px-3 py-2";
+  const head = `${cell} bg-[#EDFAF2] text-center text-[12.5px] font-semibold text-mint-deep`;
+  return (
+    <div className="flex h-full flex-col p-[16mm]">
+      <Head />
+      <div className="mt-3"><Rule color="#3E6350" thick /></div>
+
+      <div className="flex flex-wrap justify-between gap-6 pt-3 text-[12.5px] text-muted">
+        <span>الرقم: <b className="num text-ink">{doc?.serial || "…"}</b></span>
+        {v.date && <span>التاريخ: <b className="num text-ink">{v.date}</b></span>}
+      </div>
+
+      <h1 className="mt-4 text-center text-[24px] font-bold text-mint-deep">{template.title}</h1>
+
+      {v.from_school && (
+        <p className="mt-4 flex justify-between text-[15px] font-semibold text-ink">
+          <span>المكرم مدير {v.from_school}</span>
+          <span>المحترم</span>
+        </p>
+      )}
+
+      <table className="mt-4 w-full border-collapse text-[13.5px]" style={INK}>
+        <thead>
+          <tr>
+            <th className={head}>اسم الطالب</th>
+            <th className={head}>رقم الهوية / الإقامة</th>
+            <th className={head}>الصف الدراسي</th>
+            <th className={head}>العام الدراسي</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr className="text-center text-ink">
+            <td className={`${cell} font-semibold`}>{v.recipient || "…"}</td>
+            <td className={`${cell} num`}>{v.national_id || "…"}</td>
+            <td className={cell}>{v.grade || "…"}</td>
+            <td className={`${cell} num`}>{v.academic_year || "…"}</td>
+          </tr>
+          {v.notes && (
+            <tr>
+              <td className={head}>ملاحظات</td>
+              <td colSpan={3} className={`${cell} whitespace-pre-line text-ink`}>{v.notes}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      <div className="mt-6 flex-1 text-[15px] leading-[2.1] text-ink">
+        <p>السلام عليكم ورحمة الله وبركاته، وبعد:</p>
+        <p className="mt-1">
+          لا مانع لدينا من قبول الطالب المشار إليه أعلاه
+          {v.grade ? <> في الصف <b>{v.grade}</b></> : null}
+          {v.academic_year ? <> للعام الدراسي <b className="num">{v.academic_year}</b></> : null}،
+          لذا نأمل التكرم بإرسال ملفه إلينا بالطريقة الرسمية المتبعة، على أن يشمل ما يلي:
+        </p>
+        <ol className="mt-1 space-y-0.5 pr-6">
+          {needs.map((t, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="num font-semibold text-mint-deep">{i + 1}.</span>
+              <span>{t}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="mt-5 text-center text-[16px] font-bold">وتقبلوا فائق التحية والتقدير،،،</p>
+      </div>
+
+      <div className="mt-4">
+        <Signatures
+          source={template.signature_source}
+          issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}
+          principalUrl={p.principalSigUrl} principalName={p.principalName}
+          stampUrl={p.stampUrl}
+        />
+      </div>
+      <div className="mt-7"><Foot serial={doc?.serial} /></div>
+    </div>
+  );
+}
+
 /* --------------------------- نموذج إداري --------------------------- */
 function Administrative(p) {
   const { v, doc, template } = p;
@@ -511,7 +603,8 @@ export default function FormSheet({
 }) {
   if (!template) return null;
   const landscape = template.orientation === "landscape";
-  const Body = template.category === "certificate" ? Certificate
+  const Body = template.key === "student_admission" ? StudentAdmission
+             : template.category === "certificate" ? Certificate
              : template.category === "official"    ? Official
              : Administrative;
 

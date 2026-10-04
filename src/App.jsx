@@ -311,6 +311,9 @@ export default function App() {
               {/* key مختلف: الانتقال بين الصفحتين يبدأ مكوّنًا جديدًا فلا يبقى تبويب الأخرى مفتوحًا */}
               <Route path="/forms" element={<Forms key="issue" />} />
               <Route path="/forms-review" element={<Forms key="review" view="review" />} />
+              {/* قبول طالب — نموذج يُصدره مدير المدرسة، بمدخل مباشر من «شؤون الطلاب» */}
+              {(isTechSupport || adminRoles.includes("principal")) &&
+                <Route path="/student-admission" element={<Forms key="admission" openKey="student_admission" />} />}
               <Route path="/my-signature" element={<MySignature />} />
               {/* استوديو البوابة — قوالب الهوية البصرية للطباعة والتصدير */}
               <Route path="/studio" element={<Studio />} />
