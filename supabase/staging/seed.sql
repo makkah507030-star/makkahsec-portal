@@ -106,15 +106,15 @@ cross join lateral (values
 where c.academic_year = '1448' and c.id::text like '00000000-0000-4000-d000-%'
 on conflict do nothing;
 
--- الكيمياء والفيزياء للصفين الثاني والثالث، في الحصتين الأولى والسابعة الخاليتين:
--- الثاني فيزياء أولى وكيمياء سابعة، والثالث كيمياء أولى وفيزياء سابعة
+-- الكيمياء والفيزياء للصفين الثاني والثالث في حصص خالية ضمن الست (الثلاثاء إلى
+-- الخميس ست حصص فقط): الثاني كيمياء أولى وفيزياء ثالثة، والثالث فيزياء أولى وكيمياء ثانية
 insert into public.schedule (teacher_id, subject_id, class_id, day_of_week, period_no, academic_year, term)
 select t.teacher_id::uuid, t.subject_id::uuid, c.id, d.dow, t.period_no, '1448', 1
 from public.classes c
 cross join generate_series(1, 5) as d(dow)
 cross join lateral (values
-  ('00000000-0000-4000-b000-000000000013', '00000000-0000-4000-c000-00000000030' || c.grade, case c.grade when 2 then 7 else 1 end),
-  ('00000000-0000-4000-b000-000000000014', '00000000-0000-4000-c000-00000000040' || c.grade, case c.grade when 2 then 1 else 7 end)
+  ('00000000-0000-4000-b000-000000000013', '00000000-0000-4000-c000-00000000030' || c.grade, case c.grade when 2 then 1 else 2 end),
+  ('00000000-0000-4000-b000-000000000014', '00000000-0000-4000-c000-00000000040' || c.grade, case c.grade when 2 then 3 else 1 end)
 ) as t(teacher_id, subject_id, period_no)
 where c.academic_year = '1448' and c.grade in (2, 3) and c.id::text like '00000000-0000-4000-d000-%'
 on conflict do nothing;
