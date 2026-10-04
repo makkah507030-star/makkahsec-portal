@@ -568,7 +568,10 @@ function Administrative(p) {
       <h1 className="mt-5 text-center text-[21px] font-bold text-ink">{template.title}</h1>
 
       <div className="mt-5 flex-1 space-y-2">
-        {(template.fields ?? []).map((f) =>
+        {(template.fields ?? [])
+          // حقل قديم أو اختياري الظهور: يُطبع حين تكون له قيمة فقط (مستندات صدرت قبل تعديل النموذج)
+          .filter((f) => !(f.legacy || f.hide_empty) || String(v[f.name] ?? "").trim())
+          .map((f) =>
           f.type === "table" ? (
             <BlankTable key={f.name} field={f} value={v[f.name]} />
           ) : f.type === "duty_schedule" ? (

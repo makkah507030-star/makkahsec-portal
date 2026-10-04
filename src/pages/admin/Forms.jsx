@@ -124,6 +124,20 @@ const isSelfTarget = (target, recipient, uid, myName) =>
   (target && (target.uid ?? target.user_id) === uid) ||
   (normName(myName) !== "" && normName(recipient) === normName(myName));
 
+// صيغة جاهزة: تستبدل النص، أو تُضاف سطرًا جديدًا في الحقول المعلَّمة presets_append
+const pickPreset = (field, current, t) => {
+  if (!field.presets_append) return t;
+  const cur = String(current ?? "").trim();
+  if (cur.split("\n").some((l) => l.replace(/^•\s*/, "").trim() === t)) return cur;
+  return cur ? `${cur}\n• ${t}` : `• ${t}`;
+};
+
+// حقول الحصة المزارة: تُعبَّأ قوائمها من جدول المعلم المختار
+const LESSON_TYPES = ["lesson_class", "lesson_subject", "lesson_period"];
+const PERIOD_WORDS = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
+const DAY_WORDS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
+const periodText = (n) => `الحصة ${PERIOD_WORDS[n - 1] ?? n}`;
+
 const signedUrl = async (path) => {
   if (!path) return null;
   const { data } = await supabase.storage.from("form-assets").createSignedUrl(path, 600);
@@ -136,6 +150,9 @@ function FieldPresets({ field, onPick }) {
   if (!list.length) return null;
   return (
     <div className="mt-1.5 flex flex-wrap gap-1.5">
+      {field.presets_append && (
+        <span className="w-full text-[11px] text-faint">اضغط البطاقة لإضافتها، ويمكن الجمع بين أكثر من بطاقة والتعديل بعدها.</span>
+      )}
       {list.map((t, i) => (
         <button key={i} type="button" onClick={() => onPick(t)} title={t}
                 className="max-w-full truncate rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
@@ -143,6 +160,95 @@ function FieldPresets({ field, onPick }) {
         </button>
       ))}
     </div>
+  );
+}
+
+/* الفصل والمادة والحصة في استمارات الزيارة — ثلاث قوائم من جدول المعلم المختار.
+   اختيار الفصل يملأ المادة إن كانت واحدة، والحصة إن كان للمعلم حصة فيه اليوم.
+   بلا جدول للمعلم تبقى الحقول نصًا يُكتب يدويًا. */
+function LessonSelect({ field, fields, values, lessons, hasTeacher, onChange }) {
+  const nameOf = (t) => (fields ?? []).find((x) => x.type === t)?.name;
+  const [kClass, kSubject, kPeriod] = LESSON_TYPES.map(nameOf);
+  const cls = kClass ? values[kClass] ?? "" : "";
+  const subj = kSubject ? values[kSubject] ?? "" : "";
+  const uniq = (arr) => [...new Set(arr.filter(Boolean))];
+
+  if (!hasTeacher) {
+    return <select className="field mt-1 w-full" disabled><option>اختر المعلم أولًا</option></select>;
+  }
+  if (lessons == null) {
+    return <select className="field mt-1 w-full" disabled><option>جارٍ تحميل جدول المعلم…</option></select>;
+  }
+  if (!lessons.length) {
+    return (
+      <>
+        <input className="field mt-1 w-full" value={values[field.name] ?? ""}
+               onChange={(e) => onChange({ [field.name]: e.target.value })} />
+        <p className="mt-1 text-[11px] text-faint">لا جدول مسجّل لهذا المعلم — اكتبها يدويًا.</p>
+      </>
+    );
+  }
+
+  const today = new Date().getDay() + 1;   // الأحد = 1 كما في الجدول الدراسي
+  const inClass = lessons.filter((l) => !cls || l.classLabel === cls);
+  const inSubject = inClass.filter((l) => !subj || l.subject === subj);
+
+  // حصة اليوم في الفصل (والمادة) المختارة، أو الحصة الوحيدة إن لم تتعدد
+  const guessPeriod = (list) => {
+    const t = list.filter((l) => l.dow === today);
+    const ps = uniq((t.length ? t : list).map((l) => l.period));
+    return ps.length === 1 ? periodText(ps[0]) : "";
+  };
+
+  if (field.type === "lesson_class") {
+    return (
+      <select className="field mt-1 w-full" value={cls}
+              onChange={(e) => {
+                const c = e.target.value;
+                const list = lessons.filter((l) => l.classLabel === c);
+                const subs = uniq(list.map((l) => l.subject));
+                const s1 = subs.length === 1 ? subs[0] : "";
+                const patch = { [field.name]: c };
+                if (kSubject) patch[kSubject] = s1;
+                if (kPeriod) patch[kPeriod] = guessPeriod(s1 ? list.filter((l) => l.subject === s1) : list);
+                onChange(patch);
+              }}>
+        <option value="">اختر الفصل…</option>
+        {uniq(lessons.map((l) => l.classLabel))
+          .sort((a, b) => (parseInt(a.split("— ")[1], 10) || 0) - (parseInt(b.split("— ")[1], 10) || 0))
+          .map((c) => <option key={c} value={c}>{c}</option>)}
+      </select>
+    );
+  }
+
+  if (field.type === "lesson_subject") {
+    const subs = uniq(inClass.map((l) => l.subject));
+    return (
+      <select className="field mt-1 w-full" value={subj}
+              onChange={(e) => {
+                const s1 = e.target.value;
+                const patch = { [field.name]: s1 };
+                if (kPeriod) patch[kPeriod] = guessPeriod(inClass.filter((l) => !s1 || l.subject === s1));
+                onChange(patch);
+              }}>
+        <option value="">اختر المادة…</option>
+        {subs.map((x) => <option key={x} value={x}>{x}</option>)}
+      </select>
+    );
+  }
+
+  // الحصة: حصص المعلم في الفصل والمادة بأيامها، وإلا الحصص السبع
+  const periods = uniq(inSubject.map((l) => l.period)).sort((a, b) => a - b);
+  const opts = (periods.length ? periods : [1, 2, 3, 4, 5, 6, 7]).map((n) => {
+    const days = uniq(inSubject.filter((l) => l.period === n).sort((a, b) => a.dow - b.dow).map((l) => DAY_WORDS[l.dow - 1]));
+    return { value: periodText(n), label: days.length ? `${periodText(n)} (${days.join("، ")})` : periodText(n) };
+  });
+  return (
+    <select className="field mt-1 w-full" value={values[field.name] ?? ""}
+            onChange={(e) => onChange({ [field.name]: e.target.value })}>
+      <option value="">اختر الحصة…</option>
+      {opts.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
   );
 }
 
@@ -204,6 +310,7 @@ export default function Forms({ view = "issue", openKey = null }) {
   const [staff, setStaff] = useState([]);        // موظفو المدرسة: معلمون وإداريون
   const [staffQ, setStaffQ] = useState("");
   const [batch, setBatch] = useState([]);        // مستندات صدرت دفعة واحدة للطباعة
+  const [lessons, setLessons] = useState(null);  // حصص المعلم المختار: [{ classLabel, subject, dow, period }]
 
   useEffect(() => {
     (async () => {
@@ -389,7 +496,7 @@ export default function Forms({ view = "issue", openKey = null }) {
   const start = (t) => {
     setPicked(t);
     setEditing(null);
-    setIssued(null); setMsg(null); setClassId(""); setChosen([]); setBatch([]);
+    setIssued(null); setMsg(null); setClassId(""); setChosen([]); setBatch([]); setLessons(null);
     const init = {};
     (t.fields ?? []).forEach((f) => {
       if (f.type === "date") init[f.name] = hijriToday();
@@ -415,13 +522,40 @@ export default function Forms({ view = "issue", openKey = null }) {
     });
   }, [picked, values, chosen]);
 
+  // حصص المعلم في الفصل الدراسي الحالي: فصوله ومواده وحصصه
+  const loadLessons = async (head) => {
+    setLessons(null);
+    ["lesson_class", "lesson_subject", "lesson_period"].forEach((t) => {
+      const f = (picked?.fields ?? []).find((x) => x.type === t);
+      if (f) setValues((v) => ({ ...v, [f.name]: "" }));
+    });
+    let tid = head.id?.startsWith("t-") ? head.id.slice(2) : null;
+    if (!tid && head.uid) {
+      const { data } = await supabase.from("teachers").select("id").eq("user_id", head.uid).maybeSingle();
+      tid = data?.id ?? null;
+    }
+    if (!tid) { setLessons([]); return; }
+    const { data: st } = await supabase.from("settings")
+      .select("key, value").in("key", ["active_year", "active_term"]);
+    const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
+    const { data } = await supabase.from("schedule")
+      .select("day_of_week, period_no, classes(class_no, grade), subjects(name)")
+      .eq("teacher_id", tid).eq("academic_year", m.active_year ?? "").eq("term", Number(m.active_term ?? 1));
+    setLessons((data ?? []).filter((r) => r.classes).map((r) => ({
+      classLabel: `${GRADE_NAMES[r.classes.grade] ?? ""} — ${r.classes.class_no}`,
+      subject: r.subjects?.name ?? "",
+      dow: r.day_of_week,
+      period: r.period_no,
+    })));
+  };
+
   const toggleStaff = async (m) => {
     const already = chosen.some((x) => x.id === m.id);
     const next = already ? chosen.filter((x) => x.id !== m.id) : [...chosen, m];
     setChosen(next);
 
     const head = next[0];
-    if (!head) { setValues((v) => ({ ...v, recipient: "", job: "" })); return; }
+    if (!head) { setValues((v) => ({ ...v, recipient: "", job: "" })); setLessons(null); return; }
 
     // المسمّى الوظيفي المطبوع: «معلم» لمن يحمل وظيفة التدريس،
     // والصفة الإدارية لمن هو إداري خالص. والتخصص له حقله المستقل.
@@ -437,6 +571,18 @@ export default function Forms({ view = "issue", openKey = null }) {
       autoFill(picked?.fields, info,
                { ...v, recipient: head.full_name, job: jobValue },
                { overwrite: true }));
+
+    // استمارات الزيارة: قوائم الفصل والمادة والحصة من جدول المعلم، ورقم الزيارة
+    const fields = picked?.fields ?? [];
+    if (fields.some((f) => LESSON_TYPES.includes(f.type))) loadLessons(head);
+    const visitField = fields.find((f) => f.type === "visit_no");
+    if (visitField) {
+      const { count } = await supabase.from("form_documents")
+        .select("id", { count: "exact", head: true })
+        .eq("template_id", picked.id).eq("recipient", head.full_name)
+        .eq("hijri_year", hijriYear()).neq("status", "rejected");
+      setValues((v) => ({ ...v, [visitField.name]: String((count ?? 0) + 1) }));
+    }
 
     // نموذج التكليف: يُملأ جدول الموظف في المناوبة والإشراف تلقائيًا
     const dutyField = (picked?.fields ?? []).find((f) => f.type === "duty_schedule");
@@ -934,13 +1080,25 @@ export default function Forms({ view = "issue", openKey = null }) {
               </div>
             )}
 
-            {(picked.fields ?? []).filter((f) => !f.by_recipient && !f.after_reply && !f.auto).map((f) => (
+            {(picked.fields ?? []).filter((f) => !f.by_recipient && !f.after_reply && !f.auto && !f.legacy).map((f) => (
               <div key={f.name}>
                 <label className="text-xs text-muted">
                   {f.label}{f.required && <span className="text-absent"> *</span>}
                 </label>
 
-                {f.type === "theme" ? (
+                {LESSON_TYPES.includes(f.type) ? (
+                  <LessonSelect field={f} fields={picked.fields} values={values} lessons={lessons}
+                                hasTeacher={chosen.length > 0}
+                                onChange={(patch) => setValues((v) => ({ ...v, ...patch }))} />
+                ) : f.type === "visit_no" ? (
+                  <div className="mt-1 flex items-center gap-2">
+                    <input className="field num w-24" inputMode="numeric" value={values[f.name] ?? ""}
+                           onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value.replace(/\D/g, "") }))} />
+                    <span className="text-[11px] text-faint">
+                      {chosen.length ? "محسوب من زيارات المعلم هذا العام، ويمكن تعديله" : "يُحسب بعد اختيار المعلم"}
+                    </span>
+                  </div>
+                ) : f.type === "theme" ? (
                   <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                     {CERT_THEMES.map((t) => {
                       const on = (values.theme || "classic") === t.key;
@@ -1081,14 +1239,14 @@ export default function Forms({ view = "issue", openKey = null }) {
                 ) : f.type === "textarea" ? (
                   <>
                     <FieldPresets field={f}
-                                  onPick={(t) => setValues((v) => ({ ...v, [f.name]: t }))} />
+                                  onPick={(t) => setValues((v) => ({ ...v, [f.name]: pickPreset(f, v[f.name], t) }))} />
                     <textarea rows={4} className="field mt-1 w-full" value={values[f.name] ?? ""}
                               onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
                   </>
                 ) : (
                   <>
                     <FieldPresets field={f}
-                                  onPick={(t) => setValues((v) => ({ ...v, [f.name]: t }))} />
+                                  onPick={(t) => setValues((v) => ({ ...v, [f.name]: pickPreset(f, v[f.name], t) }))} />
                     <input className="field mt-1 w-full" value={values[f.name] ?? ""}
                            onChange={(e) => setValues((v) => ({ ...v, [f.name]: e.target.value }))} />
                   </>
