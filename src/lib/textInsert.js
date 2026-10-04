@@ -8,12 +8,10 @@ function nativeValueSetter(el) {
   return Object.getOwnPropertyDescriptor(proto, "value")?.set;
 }
 
-/** يُدرج نصًا في موضع المؤشر داخل حقل إدخال أو textarea محكوم من React. */
-export function insertAtCursor(el, text) {
+/** يستبدل المدى [start, end) في حقل إدخال أو textarea محكوم من React بنص، ويضع المؤشر بعده. */
+export function replaceRange(el, start, end, text) {
   if (!el || typeof el.value !== "string") return false;
 
-  const start = el.selectionStart ?? el.value.length;
-  const end = el.selectionEnd ?? el.value.length;
   const next = el.value.slice(0, start) + text + el.value.slice(end);
 
   const setter = nativeValueSetter(el);
@@ -27,4 +25,10 @@ export function insertAtCursor(el, text) {
     try { el.setSelectionRange(pos, pos); } catch { /* حقول بعض الأنواع لا تدعم التحديد */ }
   });
   return true;
+}
+
+/** يُدرج نصًا في موضع المؤشر داخل حقل إدخال أو textarea محكوم من React. */
+export function insertAtCursor(el, text) {
+  if (!el || typeof el.value !== "string") return false;
+  return replaceRange(el, el.selectionStart ?? el.value.length, el.selectionEnd ?? el.value.length, text);
 }

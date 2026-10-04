@@ -11,8 +11,8 @@ import { shrinkImage } from "../../lib/imageResize.js";
 import { printThen } from "../../lib/print.js";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
-import MathSymbolsToolbar from "../../components/MathSymbolsToolbar.jsx";
-import { isMathSubject } from "../../lib/mathSymbols.js";
+import SymbolsToolbar from "../../components/SymbolsToolbar.jsx";
+import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
 
 /* =====================================================================
    اختباراتي — اختبارات المعلم.
@@ -456,7 +456,7 @@ function QuizEditor({ quiz, uid, onBack }) {
   const [tab, setTab] = useState("questions");
   const [msg, setMsg] = useNotice(null);
   const questionsRef = useRef(null);
-  const isMath = isMathSubject(q.subject_name);
+  const symbolLib = symbolLibraryFor(q.subject_name);
   // الاختبار الورقي: عدد صفحاته وأين تبدأ كل صفحة، وما يُطبع الآن
   const paper = q.mode === "paper";
   const online = q.mode === "online";
@@ -778,7 +778,7 @@ function QuizEditor({ quiz, uid, onBack }) {
             )}
           </div>
 
-          {isMath && <MathSymbolsToolbar containerRef={questionsRef} />}
+          {symbolLib && <SymbolsToolbar key={symbolLib.key} library={symbolLib} containerRef={questionsRef} />}
 
           <div ref={questionsRef} className="space-y-3">
             {paper
