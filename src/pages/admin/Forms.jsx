@@ -148,7 +148,7 @@ function FieldPresets({ field, onPick }) {
 
 /* view: "issue" صفحة النماذج والشهادات (الإصدار والأرشيف والتقارير)،
    و"review" صفحة «الاعتماد والمتابعة» (متابعة الإفادات واعتماد النماذج). */
-export default function Forms({ view = "issue" }) {
+export default function Forms({ view = "issue", openKey = null }) {
   const review = view === "review";
   const navigate = useNavigate();
   const { session, profile, adminRoles, isTeacher } = useSession();
@@ -807,6 +807,16 @@ export default function Forms({ view = "issue" }) {
   };
 
   const printNow = () => window.print();
+
+  // مدخل مباشر لنموذج بعينه (مثل «قبول طالب» من القائمة الجانبية): يُفتح عند التحميل
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!openKey || opened.current || loading) return;
+    opened.current = true;
+    const t = usable.find((x) => x.key === openKey);
+    if (t) start(t);
+    else setMsg({ ok: false, text: "النموذج غير متاح بعد: يحتاج تنفيذ ملفه في قاعدة البيانات مرة واحدة." });
+  }, [openKey, loading, usable]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <Loader />;
 
