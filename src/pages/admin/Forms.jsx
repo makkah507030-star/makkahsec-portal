@@ -393,6 +393,8 @@ export default function Forms({ view = "issue" }) {
     const init = {};
     (t.fields ?? []).forEach((f) => {
       if (f.type === "date") init[f.name] = hijriToday();
+      // «@hijri_year»: العام الهجري الحالي، فلا يتقادم الافتراضي المحفوظ مع النموذج
+      else if (f.default === "@hijri_year") init[f.name] = `${hijriYear()} هـ`;
       else if (f.default) init[f.name] = f.default;
     });
     setValues(init);
