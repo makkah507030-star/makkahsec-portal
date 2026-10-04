@@ -4,6 +4,8 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 import SignatureCleaner from "../../components/SignatureCleaner.jsx";
 import {
   ALWAYS_ROLES, GENERAL_ROLES, SPECIFIC_ROLES, roleLabel, suggestRoles,
@@ -235,6 +237,11 @@ export default function FormsAdmin() {
   };
 
   const savePrincipalName = async () => {
+    if (!(await confirmDanger({
+      title: "اسم المدير تحت توقيعه",
+      impact: [`يُطبع «${principalName.trim()}» تحت توقيع المدير في كل المستندات المعتمدة من الآن.`],
+      confirmLabel: "حفظ الاسم",
+    }))) return;
     const { error } = await supabase.from("school_assets")
       .update({ label: principalName, updated_at: new Date().toISOString() })
       .eq("key", "principal_signature");
@@ -315,8 +322,15 @@ export default function FormsAdmin() {
   };
 
   // توقيع المدير يمرّ أولًا بنافذة التحسين (أسود عريض بخلفية شفافة)
-  const pickAsset = (key, file) => {
+  const pickAsset = async (key, file) => {
     if (!file) return;
+    const label = key === "stamp" ? "ختم المدرسة" : "توقيع المدير";
+    const ok = await confirmDanger({
+      title: `${assets[key] ? "استبدال" : "رفع"} ${label}`,
+      impact: [`يظهر ${label} الجديد على كل مستند معتمد يُطبع من البوابة من الآن، ومنها الشهادات والنماذج الرسمية.`],
+      confirmLabel: assets[key] ? "استبدال" : "رفع",
+    });
+    if (!ok) return;
     if (key !== "principal_signature") { uploadAsset(key, file); return; }
     if (!/^image\/(png|jpeg|webp)$/.test(file.type)) {
       setMsg({ ok: false, text: "الصيغ المقبولة: PNG أو JPG أو WEBP." }); return;
@@ -513,7 +527,8 @@ export default function FormsAdmin() {
         <p className="mt-1 text-xs text-muted">
           يُدرجان تلقائيًا في النماذج التي تطلبهما، ولا يظهران على مستند غير معتمد.
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <DangerZone className="mt-3" note="الختم والتوقيع والاسم تظهر على كل مستند معتمد يُطبع من البوابة">
+        <div className="grid gap-3 sm:grid-cols-2">
           {[["stamp", "ختم المدرسة", stampRef], ["principal_signature", "توقيع المدير", signRef]].map(
             ([key, label, ref]) => (
               <div key={key} className="rounded-card border border-line p-3">
@@ -549,6 +564,7 @@ export default function FormsAdmin() {
             <button className="btn-primary" onClick={savePrincipalName}>حفظ</button>
           </div>
         </div>
+        </DangerZone>
       </section>
 
       {msg && (
@@ -571,7 +587,17 @@ export default function FormsAdmin() {
                 <span className="chip bg-mint-tint text-mint-deep">{CAT[r.category]}</span>
                 <label className="flex items-center gap-1.5 text-xs text-muted">
                   <input type="checkbox" checked={r.is_active}
-                         onChange={(e) => patch(r, { is_active: e.target.checked })} />
+                         onChange={async (e) => {
+                           const on = e.target.checked;
+                           const ok = await confirmDanger({
+                             title: `${on ? "تفعيل" : "إيقاف"} نموذج «${r.title}»`,
+                             impact: [on
+                               ? "يظهر النموذج لكل من يملك صلاحية إصداره، ويستطيعون إصداره فورًا."
+                               : "يختفي النموذج من صفحة الإصدار عند كل المستخدمين. المستندات الصادرة سابقًا تبقى."],
+                             confirmLabel: on ? "تفعيل" : "إيقاف",
+                           });
+                           if (ok) patch(r, { is_active: on });
+                         }} />
                   مفعّل
                 </label>
                 <button onClick={() => removeTemplate(r)}

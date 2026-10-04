@@ -12,6 +12,8 @@ import {
   SetupNotice, useDay, pctText,
 } from "./shared.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const TONE = {
   present: "bg-present/10 text-present",
@@ -117,9 +119,17 @@ export default function OfficialAbsence({ initialDate }) {
     finally { setBusy(false); }
   };
 
-  const approve = () => {
-    if (liveSum.pending > 0 &&
-        !window.confirm(`لم يُحضَّر بعد ${liveSum.pending} طالبًا في الحصة الأولى أو الثانية. اعتماد اليوم الآن؟ (يمكن إعادة الاعتماد لاحقًا)`)) return;
+  const approve = async () => {
+    const ok = await confirmDanger({
+      title: day ? "إعادة اعتماد الغياب الرسمي لليوم" : "اعتماد الغياب الرسمي لليوم",
+      impact: [
+        "تُثبَّت نسبة الغياب الرسمي لهذا اليوم في إحصاءات المدرسة وتقاريرها.",
+        liveSum.pending > 0 && `لم يُحضَّر بعد ${liveSum.pending} طالبًا في الحصة الأولى أو الثانية، فالأرقام ناقصة.`,
+        "يمكن إعادة الاعتماد لاحقًا إن تغيّر التحضير.",
+      ],
+      confirmLabel: day ? "إعادة الاعتماد" : "اعتماد اليوم",
+    });
+    if (!ok) return;
     run(() => approveDay(date, live.rows), day ? "أُعيد اعتماد الغياب الرسمي." : "اعتُمد الغياب الرسمي لليوم.");
   };
 
@@ -181,10 +191,12 @@ export default function OfficialAbsence({ initialDate }) {
                   </p>
                 </div>
                 {changed > 0 && (
-                  <button onClick={approve} disabled={busy}
-                    className="rounded-sm2 bg-warning px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                    تغيّرت <span className="num">{changed}</span> حالة في التحضير — إعادة الاعتماد
-                  </button>
+                  <DangerZone className="p-2" note="يغيّر الإحصاءات المعتمدة لهذا اليوم">
+                    <button onClick={approve} disabled={busy}
+                      className="rounded-sm2 bg-warning px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                      تغيّرت <span className="num">{changed}</span> حالة في التحضير — إعادة الاعتماد
+                    </button>
+                  </DangerZone>
                 )}
               </div>
             ) : (
@@ -199,10 +211,12 @@ export default function OfficialAbsence({ initialDate }) {
                   </p>
                 </div>
                 {!approval?.missingTables && (
-                  <button onClick={approve} disabled={busy || !live.hasData}
-                    className="rounded-sm2 bg-mint-deep px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
-                    اعتماد الغياب الرسمي
-                  </button>
+                  <DangerZone className="p-2" note="يثبّت نسبة اليوم في إحصاءات المدرسة">
+                    <button onClick={approve} disabled={busy || !live.hasData}
+                      className="rounded-sm2 bg-mint-deep px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                      اعتماد الغياب الرسمي
+                    </button>
+                  </DangerZone>
                 )}
               </div>
             )}
@@ -336,11 +350,20 @@ export default function OfficialAbsence({ initialDate }) {
                    hint={day?.final_at ? fmtDateTime(day.final_at) : "لم تُحفظ بعد"} />
             </div>
             {day && (
-              <button onClick={() => run(() => saveFinal(date, live.rows), "حُفظت النسبة المكتملة.")}
+              <DangerZone className="p-2" note="يثبّت النسبة المكتملة لهذا اليوم في إحصاءات المدرسة">
+              <button onClick={async () => {
+                  const ok = await confirmDanger({
+                    title: "حفظ النسبة المكتملة لليوم",
+                    impact: [`تُحفظ النسبة ${pctText(finalSum.pct)} في إحصاءات المدرسة وتقاريرها بدل النسبة المحفوظة.`],
+                    confirmLabel: "حفظ النسبة",
+                  });
+                  if (ok) run(() => saveFinal(date, live.rows), "حُفظت النسبة المكتملة.");
+                }}
                 disabled={busy}
                 className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint disabled:opacity-50">
                 حفظ النسبة المكتملة
               </button>
+              </DangerZone>
             )}
           </section>
         </>

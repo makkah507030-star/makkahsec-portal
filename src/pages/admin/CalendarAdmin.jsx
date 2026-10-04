@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { fmtGreg } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 // أنواع محطات التقويم — «إجازة» فقط هي التي تُعطّل الدراسة في البوابة،
 // والبقية للعرض في شريط «التقويم الدراسي» العام.
@@ -83,7 +85,16 @@ export default function CalendarAdmin() {
 
   const reset = () => { setForm(EMPTY); setMsg(null); };
 
+  // الإجازة وحدها تمسّ الإحصاءات؛ المناسبات والمحطات للعرض فقط
   const save = async () => {
+    if (form.kind === "holiday" && form.is_active) {
+      const ok = await confirmDanger({
+        title: `${editing ? "تعديل" : "إضافة"} إجازة «${form.title.trim()}»`,
+        impact: ["الأيام التي تقع في الإجازة لا تُحتسب أيام دراسة: لا تحضير فيها، وتُستبعد من الغياب والإحصاءات، ويظهر شريط الإجازة للجميع."],
+        confirmLabel: editing ? "حفظ التعديل" : "إضافة الإجازة",
+      });
+      if (!ok) return;
+    }
     setSaving(true); setMsg(null);
     const payload = {
       title: form.title.trim(),
@@ -124,6 +135,16 @@ export default function CalendarAdmin() {
   };
 
   const toggleActive = async (r) => {
+    if (r.kind === "holiday") {
+      const ok = await confirmDanger({
+        title: `${r.is_active ? "إيقاف" : "تفعيل"} إجازة «${r.title}»`,
+        impact: [r.is_active
+          ? "تعود أيام هذه الإجازة أيام دراسة: يُنتظر فيها التحضير وتدخل في الغياب والإحصاءات."
+          : "الأيام التي تقع في الإجازة لا تُحتسب أيام دراسة: لا تحضير فيها، وتُستبعد من الغياب والإحصاءات، ويظهر شريط الإجازة للجميع."],
+        confirmLabel: r.is_active ? "إيقاف الإجازة" : "تفعيل الإجازة",
+      });
+      if (!ok) return;
+    }
     await supabase.from("academic_calendar")
       .update({ is_active: !r.is_active }).eq("id", r.id);
     load();
@@ -216,15 +237,22 @@ export default function CalendarAdmin() {
           </p>
         )}
 
-        <div className="flex gap-2">
-          <button className="btn-primary" onClick={save} disabled={!canSave || saving}>
-            {saving ? "جارٍ الحفظ…" : editing ? "حفظ التعديل" : "إضافة"}
-          </button>
-          {editing && (
-            <button className="rounded-pill border border-line px-4 py-2 text-sm text-muted hover:bg-canvas"
-                    onClick={reset}>إلغاء</button>
-          )}
-        </div>
+        {(() => {
+          const row = (
+            <div className="flex gap-2">
+              <button className="btn-primary" onClick={save} disabled={!canSave || saving}>
+                {saving ? "جارٍ الحفظ…" : editing ? "حفظ التعديل" : "إضافة"}
+              </button>
+              {editing && (
+                <button className="rounded-pill border border-line px-4 py-2 text-sm text-muted hover:bg-canvas"
+                        onClick={reset}>إلغاء</button>
+              )}
+            </div>
+          );
+          return isHoliday
+            ? <DangerZone note="الإجازة تغيّر أيام الدراسة وتُستبعد أيامها من الغياب والإحصاءات للمدرسة كلها">{row}</DangerZone>
+            : row;
+        })()}
       </section>
 
       {/* القائمة */}
@@ -256,7 +284,9 @@ export default function CalendarAdmin() {
               </div>
               <div className="flex shrink-0 gap-1.5">
                 <button onClick={() => toggleActive(r)}
-                        className="rounded-pill border border-line px-2.5 py-1 text-xs text-muted hover:bg-canvas">
+                        title={r.kind === "holiday" ? "يغيّر أيام الدراسة والإحصاءات" : undefined}
+                        className={`rounded-pill border px-2.5 py-1 text-xs hover:bg-canvas ${
+                          r.kind === "holiday" ? "border-absent/40 text-absent" : "border-line text-muted"}`}>
                   {r.is_active ? "إيقاف" : "تفعيل"}
                 </button>
                 <button onClick={() => edit(r)}

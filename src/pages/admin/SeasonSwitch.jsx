@@ -3,6 +3,8 @@ import { supabase } from "../../lib/supabase";
 import { clearPeriodTimesCache, fmtRange } from "../../lib/periodTimes";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const SEASONS = [
   { key: "summer", label: "التوقيت الصيفي" },
@@ -60,6 +62,16 @@ export default function SeasonSwitch() {
       });
       return;
     }
+    if (s === season) return;
+    const ok = await confirmDanger({
+      title: `تفعيل «${SEASONS.find((x) => x.key === s)?.label}»`,
+      impact: [
+        "تتغيّر أوقات الحصص فورًا في كل الشاشات: التحضير والجداول وحصص الانتظار.",
+        "يتغيّر احتساب التأخر الصباحي من هذه اللحظة.",
+      ],
+      confirmLabel: "تفعيل التوقيت",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("settings").upsert({ key: "active_season", value: s }, { onConflict: "key" });
     if (error) { setMsg({ ok: false, text: error.message }); return; }
@@ -70,6 +82,12 @@ export default function SeasonSwitch() {
 
   const saveGrace = async () => {
     const v = String(Math.max(0, Number(grace) || 0));
+    const ok = await confirmDanger({
+      title: `مهلة السماح للتأخر: ${v} دقيقة`,
+      impact: ["يتغيّر احتساب التأخر الصباحي لكل الطلاب من هذه اللحظة."],
+      confirmLabel: "حفظ المهلة",
+    });
+    if (!ok) return;
     const { error } = await supabase
       .from("settings").upsert({ key: "late_grace_minutes", value: v }, { onConflict: "key" });
     if (error) { setMsg({ ok: false, text: error.message }); return; }
@@ -89,6 +107,7 @@ export default function SeasonSwitch() {
       </div>
 
       <section className="card space-y-4 p-4">
+        <DangerZone className="space-y-4" note="التوقيت والمهلة يغيّران أوقات الحصص واحتساب التأخر للمدرسة كلها">
         <div>
           <p className="text-xs text-muted">التوقيت الفعّال</p>
           <div className="mt-1.5 flex flex-wrap gap-2">
@@ -121,6 +140,7 @@ export default function SeasonSwitch() {
             من يبصم بعد بداية الحصة الأولى زائد هذه المهلة يُحتسب متأخرًا.
           </p>
         </div>
+        </DangerZone>
 
         {msg && (
           <p className={`rounded-sm2 px-3 py-2 text-sm ${

@@ -5,6 +5,8 @@ import { fmtDateTime } from "../../lib/dates";
 import { ANNOUNCEMENT_COLORS, colorMeta } from "../../components/AnnouncementModal.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { confirmDanger } from "../../lib/danger";
+import DangerZone from "../../components/DangerZone.jsx";
 
 const ROLES = [
   { key: "admin",    label: "الإدارة" },
@@ -74,6 +76,12 @@ function ComposeForm({ onSent }) {
   }, [title, roles, startsAt, endsAt]);
 
   const send = async () => {
+    const ok = await confirmDanger({
+      title: `نشر الرسالة «${title.trim()}»`,
+      impact: [`تظهر نافذة الرسالة عند الدخول لـ: ${ROLES.filter((r) => roles.has(r.key)).map((r) => r.label).join(" و")}، طوال مدة عرضها.`],
+      confirmLabel: "نشر الرسالة",
+    });
+    if (!ok) return;
     setSending(true);
     setMsg(null);
 
@@ -163,9 +171,11 @@ function ComposeForm({ onSent }) {
         </p>
       )}
 
-      <button className="btn-primary" onClick={send} disabled={!canSend || sending}>
-        {sending ? "جارٍ النشر…" : "نشر الرسالة"}
-      </button>
+      <DangerZone note="الرسالة تظهر لكل المستخدمين المحددين عند دخولهم البوابة">
+        <button className="btn-primary" onClick={send} disabled={!canSend || sending}>
+          {sending ? "جارٍ النشر…" : "نشر الرسالة"}
+        </button>
+      </DangerZone>
     </div>
   );
 }
