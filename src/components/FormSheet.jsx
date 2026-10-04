@@ -529,7 +529,7 @@ function StudentAdmission(p) {
       <div className="mt-6 flex-1 text-[15px] leading-[2.1] text-ink">
         <p>السلام عليكم ورحمة الله وبركاته، وبعد:</p>
         <p className="mt-1">
-          فلا مانع لدينا من قبول الطالب المشار إليه أعلاه
+          لا مانع لدينا من قبول الطالب المشار إليه أعلاه
           {v.grade ? <> في الصف <b>{v.grade}</b></> : null}
           {v.academic_year ? <> للعام الدراسي <b className="num">{v.academic_year}</b></> : null}،
           لذا نأمل التكرم بإرسال ملفه إلينا بالطريقة الرسمية المتبعة، على أن يشمل ما يلي:
@@ -542,7 +542,7 @@ function StudentAdmission(p) {
             </li>
           ))}
         </ol>
-        <p className="mt-4">وتقبلوا فائق التحية والتقدير،،،</p>
+        <p className="mt-5 text-center text-[16px] font-bold">وتقبلوا فائق التحية والتقدير،،،</p>
       </div>
 
       <div className="mt-4">
