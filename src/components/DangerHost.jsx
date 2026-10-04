@@ -2,7 +2,6 @@
 // نافذة تأكيد الإجراءات الحساسة (confirmDanger) — تُركَّب مرة واحدة في جذر التطبيق.
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { CONFIRM_WORD, getDanger, isConfirmWord, subscribeDanger } from "../lib/danger";
-import { IS_STAGING } from "./StagingBadge.jsx";
 
 export default function DangerHost() {
   const d = useSyncExternalStore(subscribeDanger, getDanger);
@@ -46,11 +45,7 @@ export default function DangerHost() {
                      onKeyDown={(e) => { if (e.key === "Enter" && ok) d.resolve(true); }} />
             </label>
           )}
-          {!IS_STAGING && (
-            <p className="text-[11px] leading-relaxed text-faint">
-              للتجربة والتدريب استخدم النسخة التجريبية ببيانات وهمية: <span dir="ltr">makkahsec-staging.netlify.app</span>
-            </p>
-          )}
+          <p className="text-[11px] leading-relaxed text-faint">يُسجَّل هذا الإجراء باسم حسابك في سجل العمليات.</p>
         </div>
 
         <div className="flex gap-2 border-t border-line px-5 py-3">

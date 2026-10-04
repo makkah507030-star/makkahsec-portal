@@ -4,6 +4,10 @@
 //
 // level "high": إجراء على المدرسة كلها لا يُتراجع عنه بالكامل، فيلزم كتابة كلمة التأكيد «مكة».
 // level "medium": يؤثر على الجميع ويمكن التراجع عنه، فيكفي زر التأكيد بعد قراءة الأثر.
+// كل تأكيد يُسجَّل في سجل العمليات (supabase/audit_log.sql) باسم الحساب الذي نفّذه.
+
+import { supabase } from "./supabase";
+import { quietly } from "./notice";
 
 export const CONFIRM_WORD = "مكة";
 
@@ -29,8 +33,23 @@ export function confirmDanger({ title, impact = [], level = "medium", confirmLab
     current = {
       title, level, confirmLabel,
       impact: (Array.isArray(impact) ? impact : [impact]).filter(Boolean),
-      resolve: (v) => { current = null; emit(); resolve(v); },
+      resolve: (v) => {
+        current = null; emit();
+        if (v) logOperation({ title, impact, level });
+        resolve(v);
+      },
     };
     emit();
   });
+}
+
+// لا يعطّل الإجراء لو فشل التسجيل (الجدول غير منشأ بعد مثلًا)
+// وبهدوء: لا يُظهر «جاري التنفيذ» خاصًا به فوق الإجراء نفسه
+function logOperation({ title, impact, level }) {
+  quietly(() => supabase.from("audit_log").insert({
+    action: String(title ?? ""),
+    details: (Array.isArray(impact) ? impact : [impact]).filter(Boolean).map(String),
+    level,
+    path: typeof window !== "undefined" ? window.location.pathname : null,
+  })).then(() => {}, () => {});
 }

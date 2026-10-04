@@ -104,6 +104,7 @@ const ADMIN_GROUPS = [
       { to: "/login-log", label: "سجل الدخول والخروج", perm: "login_log", icon: "key" },
       { to: "/site-metrics", label: "مؤشرات الموقع", techOnly: true, icon: "chart" },
       { to: "/usage-report", label: "إحصائية الاستخدام", techOnly: true, icon: "trend" },
+      { to: "/audit-log", label: "سجل العمليات", techOnly: true, icon: "shield" },
       { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
     ],
   },
