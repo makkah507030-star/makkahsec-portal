@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import ColorLegend from "../../components/ColorLegend.jsx";
 import NewsCoverCard from "../../components/NewsCoverCard.jsx";
-import { normalizeImage, shrinkImage } from "../../lib/imageResize.js";
+import { normalizeImage } from "../../lib/imageResize.js";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 
@@ -143,14 +143,15 @@ export default function NewsAdmin() {
     setUploading(true);
     setMsg(null);
     try {
-      // تصغير بلا قصّ — تبقى نسبة الصورة كاملة (بطاقة طويلة أو صورة عريضة)
-      const processed = await shrinkImage(file);
-      const ext = processed.type === "image/png" ? "png" : "jpg";
+      // الملف يُرفع كما هو بلا أي قصّ أو إعادة ضغط — تبقى الصورة بأبعادها ونسبتها ووضوحها الأصلي
+      const TYPES = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };
+      const ext = TYPES[file.type];
+      if (!ext) throw new Error("الصيغة غير مدعومة — استخدم PNG أو JPG أو WebP.");
       const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from("news").upload(path, processed, {
+      const { error } = await supabase.storage.from("news").upload(path, file, {
         cacheControl: "3600",
         upsert: false,
-        contentType: processed.type || "image/jpeg",
+        contentType: file.type,
       });
       if (error) throw error;
       const { data } = supabase.storage.from("news").getPublicUrl(path);
