@@ -118,8 +118,9 @@ function TopBand({ serial }) {
         <Brand />
         <div>
           <div style={{ fontSize: "10pt", fontWeight: 600, color: "#A9BCB1", letterSpacing: "0.4mm" }}>شهادة</div>
-          <div style={{ fontSize: "56pt", fontWeight: 700, lineHeight: 1, color: C.mint }}>شكر</div>
-          <div style={{ fontSize: "34pt", fontWeight: 700, lineHeight: 1.3, color: "#fff" }}>وتقدير</div>
+          <div style={{ marginTop: "1mm", fontSize: "42pt", fontWeight: 700, lineHeight: 1.15, whiteSpace: "nowrap" }}>
+            <span style={{ color: C.mint }}>شكر</span> <span style={{ color: "#fff" }}>وتقدير</span>
+          </div>
         </div>
         <div style={{ alignSelf: "flex-start" }}><Serial serial={serial} /></div>
       </div>
