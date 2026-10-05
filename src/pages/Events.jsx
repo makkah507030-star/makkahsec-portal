@@ -11,6 +11,8 @@ import { normalizeImage } from "../lib/imageResize.js";
 import EventCertificate, {
   CERT_TEMPLATES, DEFAULT_CERT_TITLE, certPresets, isNationalDay, officialCert, readCert,
 } from "../components/EventCertificate.jsx";
+import GuestCertificate, { forTask } from "../components/GuestCertificate.jsx";
+import { fmtDate, stripBidi } from "../lib/dates";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes.js";
@@ -1609,6 +1611,8 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
         </div>
       </section>
 
+      <GuestCertificates e={e} patch={patch} sigUrl={sigUrl} school={school} />
+
       <button className="btn-primary w-full" onClick={async () => { await save(); onNext(); }}>
         المتابعة للتقرير
       </button>
@@ -1622,6 +1626,150 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
         </PrintPortal>
       )}
     </div>
+  );
+}
+
+/* شهادات الضيوف والمتعاونين — اختيارية: للمحاضرين والمدربين ومنفّذي الفعاليات
+   من خارج المدرسة، بتصميم مستقل عن شهادات الطلاب. تُحفظ قائمتهم مع الحدث. */
+const newGuest = () => ({ id: Math.random().toString(36).slice(2, 10), name: "", entity: "", task: "" });
+
+function guestCertProps(e, g, i, sigUrl, school) {
+  return {
+    name: g.name, entity: g.entity,
+    text: `وذلك تقديرًا ${forTask(g.task)}، وما بذله من جهد وعطاء أسهم في نجاح البرنامج.`,
+    activity: e.title,
+    dateText: e.event_date ? stripBidi(fmtDate(`${e.event_date}T12:00:00`)) : "",
+    closing: "سائلين الله له دوام التوفيق والسداد",
+    serial: `${e.serial}-G${String(i + 1).padStart(2, "0")}`,
+    issuer: { url: sigUrl, name: e.organizer_name, role: e.organizer_role || "منفّذ البرنامج" },
+    principal: { url: school.principalUrl, name: school.principalName },
+    stampUrl: school.stampUrl,
+  };
+}
+
+function GuestCertificates({ e, patch, sigUrl, school }) {
+  const [list, setList] = useState(() => (Array.isArray(e.guests) ? e.guests : []));
+  const [open, setOpen] = useState(list.length > 0);
+  const [saveErr, setSaveErr] = useState(false);
+  const [printing, setPrinting] = useState(null);
+  usePrintWhenReady("ev-guest", printing, () => setPrinting(null));
+
+  const ready = list.filter((g) => g.name.trim());
+  const set = (id, k, val) => setList((l) => l.map((g) => (g.id === id ? { ...g, [k]: val } : g)));
+
+  const save = async () => {
+    const ok = await patch({ guests: ready }, "حُفظت قائمة الضيوف.");
+    setSaveErr(!ok);
+    return ok;
+  };
+  const printList = async (gs) => {
+    if (!gs.length) return;
+    if (await save()) setPrinting(gs);
+  };
+
+  if (!open) {
+    return (
+      <section className="card flex flex-wrap items-center justify-between gap-3 p-4">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">شهادات الضيوف والمتعاونين <span className="font-normal text-faint">— اختياري</span></h2>
+          <p className="mt-0.5 text-xs text-muted">لمن شارك من خارج المدرسة: محاضر أو مدرب أو منفّذ فعالية.</p>
+        </div>
+        <button className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
+                onClick={() => { setOpen(true); if (!list.length) setList([newGuest()]); }}>
+          إضافة ضيف
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card space-y-4 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-ink">شهادات الضيوف والمتعاونين <span className="font-normal text-faint">— اختياري</span></h2>
+        <p className="mt-0.5 text-xs text-muted">
+          شهادة شكر بتصميم خاص لكل ضيف، تحمل عنوان الحدث وتاريخه، بتوقيع منظّم الحدث وختم المدرسة وتوقيع المدير.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {list.map((g, i) => (
+          <div key={g.id} className="space-y-2 rounded-sm2 border border-line p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-mint-deep">الضيف <span className="num">{i + 1}</span></span>
+              <button type="button" className="text-[11px] text-absent hover:underline"
+                      onClick={() => setList((l) => l.filter((x) => x.id !== g.id))}>
+                حذف
+              </button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <label className="text-[11px] text-faint">الاسم مع اللقب</label>
+                <input className="field mt-1 w-full" value={g.name} placeholder="مثال: الدكتور/ خالد بن سعيد الغامدي"
+                       onChange={(x) => set(g.id, "name", x.target.value)} />
+              </div>
+              <div>
+                <label className="text-[11px] text-faint">الجهة (اختياري)</label>
+                <input className="field mt-1 w-full" value={g.entity} placeholder="مثال: جامعة أم القرى"
+                       onChange={(x) => set(g.id, "entity", x.target.value)} />
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] text-faint">المهمة التي نفّذها (اختياري)</label>
+              <input className="field mt-1 w-full" value={g.task} placeholder="مثال: تقديم محاضرة توعوية عن السلامة المرورية"
+                     onChange={(x) => set(g.id, "task", x.target.value)} />
+              <p className="mt-1 text-[11px] leading-relaxed text-faint">
+                يُكتب في الشهادة: «وذلك تقديرًا {forTask(g.task)}، وما بذله من جهد وعطاء أسهم في نجاح البرنامج.»
+              </p>
+            </div>
+            {g.name.trim() && (
+              <button type="button" onClick={() => printList([g])}
+                      className="rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
+                طباعة شهادته
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button type="button" className="text-sm font-medium text-mint-deep hover:underline"
+              onClick={() => setList((l) => [...l, newGuest()])}>
+        + إضافة ضيف آخر
+      </button>
+
+      {ready.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-ink">معاينة</p>
+          <CertPreview>
+            <GuestCertificate {...guestCertProps(e, ready[0], 0, sigUrl, school)} />
+          </CertPreview>
+        </div>
+      )}
+
+      {saveErr && (
+        <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-[11px] text-absent">
+          تعذّر حفظ قائمة الضيوف — نفّذ ملف supabase/guest_certificates.sql في قاعدة البيانات مرة واحدة.
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <button className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
+                onClick={save}>
+          حفظ قائمة الضيوف
+        </button>
+        <button className="btn-primary" disabled={!ready.length} onClick={() => printList(ready)}>
+          طباعة شهادات الضيوف ({ready.length})
+        </button>
+      </div>
+
+      {printing && (
+        <PrintPortal id="ev-guest" landscape margin="0"
+                     extraCss="#ev-guest .sheet { page-break-after: always; } #ev-guest .sheet:last-child { page-break-after: auto; }">
+          {printing.map((g) => (
+            <GuestCertificate key={g.id} {...guestCertProps(e, g, ready.indexOf(g), sigUrl, school)} />
+          ))}
+        </PrintPortal>
+      )}
+    </section>
   );
 }
 
