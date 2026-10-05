@@ -6,6 +6,7 @@ import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
 import { RATING_LEVELS, itemPoints, overallLabel, ratingLabel, rubricScore } from "../lib/rubric.js";
 import { PRINCIPAL_NAME } from "../lib/signers.js";
+import { GuestCertificateBody } from "./GuestCertificate.jsx";
 
 /* =====================================================================
    ورقة النموذج القابلة للطباعة — هوية مدرسة مكة الثانوية.
@@ -296,6 +297,30 @@ function Certificate(p) {
         </div>
       </div>
     </div>
+  );
+}
+
+/* شهادة شكر الضيوف والمتعاونين — تصميمها المستقل في GuestCertificate.
+   تُعرف بالمفتاح، أو بحقل «صفة الضيف» إن اختلف المفتاح في قاعدة البيانات. */
+export const isGuestCert = (template) =>
+  template?.key === "guest_appreciation" ||
+  (template?.fields ?? []).some((f) => f.name === "guest_role");
+
+function GuestCert(p) {
+  const { v, doc, template } = p;
+  const src = template.signature_source;
+  return (
+    <GuestCertificateBody
+      name={v.recipient} role={v.guest_role} entity={v.entity}
+      text={v.reason} activity={v.activity} dateText={v.date} closing={v.closing}
+      serial={doc?.serial}
+      issuer={src === "issuer" || src === "both"
+        ? { url: p.sigUrl, name: doc?.signature_name, role: doc?.signature_role } : null}
+      principal={src === "principal" || src === "both"
+        ? { url: p.principalSigUrl, name: p.principalName } : null}
+      stampUrl={p.stampUrl}
+      patternId={`gc-${doc?.serial ?? "new"}`}
+    />
   );
 }
 
@@ -935,6 +960,7 @@ export default function FormSheet({
       ? noEra(x).replace(/(\d{2}\/\d{2}\/1[34]\d\d)\s*\((\d{2}\/\d{2}\/(?:19|20)\d\d)\)/g, "$1 - $2")
       : x]));
   const Body = template.key === "student_admission" ? StudentAdmission
+             : isGuestCert(template) ? GuestCert
              : template.category === "certificate" ? Certificate
              : template.category === "official"    ? Official
              : Administrative;
