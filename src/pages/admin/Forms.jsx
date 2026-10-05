@@ -141,6 +141,10 @@ const pickPreset = (field, current, t) => {
   return cur ? `${cur}\n• ${t}` : `• ${t}`;
 };
 
+// نماذج تقييم المعلمين: قائمة الموظفين تعرض المعلمين فقط (ومن يجمع التدريس
+// مع عمل إداري معلمٌ أيضًا)، لا الإداريين الخالصين
+const teachersOnly = (f, tpl) => !!f?.teachers_only || tpl?.key === "teacher_support_visit";
+
 // حقول الحصة المزارة: تُعبَّأ قوائمها من جدول المعلم المختار
 const LESSON_TYPES = ["lesson_class", "lesson_subject", "lesson_period"];
 const PERIOD_WORDS = ["الأولى", "الثانية", "الثالثة", "الرابعة", "الخامسة", "السادسة", "السابعة", "الثامنة"];
@@ -1236,8 +1240,12 @@ export default function Forms({ view = "issue", openKey = null }) {
                   <div className="mt-1 space-y-2">
                     <input className="field w-full" value={staffQ} placeholder="ابحث بالاسم…"
                            onChange={(e) => setStaffQ(e.target.value)} />
+                    {teachersOnly(f, picked) && (
+                      <p className="text-[11px] text-faint">هذا النموذج لتقييم المعلمين — تظهر أسماء المعلمين فقط.</p>
+                    )}
                     <div className="max-h-56 overflow-y-auto rounded-sm2 border border-line">
                       {staff
+                        .filter((m) => !teachersOnly(f, picked) || m.job === "معلم")
                         .filter((m) => !staffQ.trim() || m.full_name.includes(staffQ.trim()))
                         .map((m) => {
                           const on = chosen.some((x) => x.id === m.id);
