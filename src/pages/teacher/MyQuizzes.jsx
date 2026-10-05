@@ -22,12 +22,12 @@ import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
      بأسماء طلاب الفصل أو نموذجًا واحدًا، ويُرصد يدويًا.
    ===================================================================== */
 
-// حدود التصميم: الورقة العرضية تتّسع لهذا العدد فقط، ليبقى شكلها
-// موحّدًا وبطاقتها قابلة للقراءة الآلية.
+// أنماط التصحيح الآلي والإلكتروني — بلا حدّ لعدد الأسئلة؛ ورقة التصحيح الآلي
+// تتوزّع على صفحات إن زادت عن صفحة، وبطاقة الإجابة كاملة في آخرها.
 const KINDS = [
-  { key: "mcq",       label: "اختيار متعدد", max: 5 },
-  { key: "truefalse", label: "صح وخطأ",      max: 5 },
-  { key: "match",     label: "مزاوجة",       max: 1 },
+  { key: "mcq",       label: "اختيار متعدد" },
+  { key: "truefalse", label: "صح وخطأ" },
+  { key: "match",     label: "مزاوجة" },
 ];
 const MATCH_MAX_ITEMS = 5;
 const PAPER_MATCH_MAX = 8;
@@ -38,7 +38,7 @@ const MODES = [
   { key: "paper", title: "اختبار ورقي", short: "ورقي", icon: "✎", chip: "bg-excused/10 text-excused",
     desc: "ورقة تقليدية بستة أنماط منها المقالي وأكمل الفراغ. تتوزّع على أكثر من صفحة، وتُطبع بأسماء الطلاب، ويُرصد مجموعها يدويًا." },
   { key: "omr", title: "اختبار ورقي (تصحيح آلي)", short: "تصحيح آلي", icon: "◉", chip: "bg-mint-tint text-mint-deep",
-    desc: "ورقة من صفحة واحدة ببطاقة تظليل، تُصحَّح بالكاميرا أو برصد الإجابات. ثلاثة أنماط: اختيار من متعدد، وصح وخطأ، ومزاوجة." },
+    desc: "ورقة ببطاقة تظليل، تُصحَّح بالكاميرا أو برصد الإجابات. ثلاثة أنماط: اختيار من متعدد، وصح وخطأ، ومزاوجة، بلا حدّ لعدد الأسئلة." },
   { key: "online", title: "اختبار إلكتروني", short: "إلكتروني", icon: "⌁", chip: "bg-warning/10 text-warning",
     desc: "يؤديه الطالب من جواله في وقت تحدّده، ويُصحَّح آليًا فور تسليمه. ثلاثة أنماط: اختيار من متعدد، وصح وخطأ، ومزاوجة." },
 ];
@@ -464,9 +464,7 @@ function QuizEditor({ quiz, uid, onBack }) {
   const omr = !paper && !online;
   const [layout, setLayout] = useState(null);
   const [paperPrint, setPaperPrint] = useState(null);   // { copies, answerKey }
-  // الإلكتروني بلا حدود الورقة الواحدة
-  const kinds = paper ? PAPER_KINDS.filter((k) => !k.hidden).map((k) => ({ ...k, max: Infinity }))
-              : online ? KINDS.map((k) => ({ ...k, max: Infinity })) : KINDS;
+  const kinds = paper ? PAPER_KINDS.filter((k) => !k.hidden) : KINDS;
 
   // اختبار «تصحيح آلي» قديم سبق نشره إلكترونيًا يبقى تبويبه، فلا تضيع نتائجه
   const [legacyOnline, setLegacyOnline] = useState(false);
@@ -515,19 +513,23 @@ function QuizEditor({ quiz, uid, onBack }) {
     })();
   }, [uid, q.subject_id, q.grade]);
 
+  // تنبيه المعلم كلما زادت صفحات ورقة التصحيح الآلي مع الإضافة
+  const prevPages = useRef(null);
+  useEffect(() => {
+    if (!omr || !fit?.pages) return;
+    const prev = prevPages.current;
+    prevPages.current = fit.pages;
+    if (prev != null && fit.pages > prev) {
+      setMsg({ ok: true, text: `تنبيه: أصبح الاختبار حتى الآن على ${pagesWord(fit.pages)}.` });
+    }
+  }, [fit?.pages, omr]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const marksUsed = useMemo(
     () => (questions ?? []).reduce((a, x) => a + Number(x.marks || 0), 0), [questions]);
 
   const countOf = (kind) => (questions ?? []).filter((x) => x.kind === kind).length;
 
   const addQuestion = async (kind) => {
-    const k = kinds.find((x) => x.key === kind);
-    if (k && countOf(kind) >= k.max) {
-      setMsg({ ok: false,
-               text: `الحد الأعلى لأسئلة «${k.label}» ${k.max}. التصميم يتّسع لهذا العدد فقط.` });
-      return;
-    }
-
     const base = {
       quiz_id: q.id,
       sort_order: (questions?.length ?? 0) + 1,
@@ -633,8 +635,8 @@ function QuizEditor({ quiz, uid, onBack }) {
   // طباعة ورقة «التصحيح الآلي»: «blank:فصل» نسخة واحدة، و«names:فصل» ورقة باسم كل طالب
   const printOmr = async (value) => {
     if (!value) return;
-    if (fit && !fit.fits &&
-        !window.confirm("الاختبار أطول من صفحة واحدة: سيُقتطع جزء من الأسئلة عند الطباعة.\nيُفضَّل تقليل عدد الفقرات أو اختصار نصوصها.\n\nهل تريد الطباعة رغم ذلك؟")) return;
+    if (fit && fit.cardFits === false &&
+        !window.confirm("بطاقة الإجابة أطول من صفحة واحدة، فلن تُقرأ بالكاميرا (يبقى الرصد اليدوي).\nيُفضَّل تقليل عدد الفقرات.\n\nهل تريد الطباعة رغم ذلك؟")) return;
     const [kind, id] = value.split(":");
     let copies;
     if (kind === "names") {
@@ -723,18 +725,7 @@ function QuizEditor({ quiz, uid, onBack }) {
         </QuizPrintArea>
       )}
 
-      {omr && (questions?.length ?? 0) > 0 && fit && (
-        <p className={`rounded-card px-3 py-2 text-xs ${
-          !fit.fits ? "bg-absent/10 text-absent"
-          : fit.zoom < 0.85 ? "bg-warning/10 text-warning"
-          : "bg-present/10 text-present"}`}>
-          {!fit.fits
-            ? "الاختبار أطول من صفحة واحدة — سيُقتطع جزء منه عند الطباعة. قلّل عدد الفقرات أو اختصر نصوصها."
-            : fit.zoom < 0.85
-            ? `الاختبار كامل مع بطاقة الإجابة في صفحة واحدة، بخطّ مصغَّر (${Math.round(fit.zoom * 100)}٪).`
-            : "الاختبار كامل مع بطاقة الإجابة في صفحة واحدة."}
-        </p>
-      )}
+      {omr && (questions?.length ?? 0) > 0 && fit && <OmrPagesNote fit={fit} />}
       {omr && (questions?.length ?? 0) > 0 && (
         <div aria-hidden="true"
              style={{ position: "fixed", top: 0, left: -10000, visibility: "hidden", pointerEvents: "none" }}>
@@ -827,14 +818,11 @@ function QuizEditor({ quiz, uid, onBack }) {
             <div className="mt-2 flex flex-wrap gap-1.5">
               {kinds.map((k) => {
                 const n = countOf(k.key);
-                const full = n >= k.max;
                 return (
-                  <button key={k.key} onClick={() => addQuestion(k.key)} disabled={full} title={k.hint}
-                    className={`rounded-pill border px-4 py-1.5 text-sm font-medium transition-colors ${
-                      full ? "border-line bg-canvas text-faint"
-                           : "border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>
+                  <button key={k.key} onClick={() => addQuestion(k.key)} title={k.hint}
+                    className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-4 py-1.5 text-sm font-medium text-mint-deep transition-colors hover:bg-[#CCF2DB]">
                     {paper ? "+ " : ""}{k.label}{" "}
-                    <span className="num opacity-75">{omr ? `(${n}/${k.max})` : (n ? `(${n})` : "")}</span>
+                    <span className="num opacity-75">{n ? `(${n})` : ""}</span>
                   </button>
                 );
               })}
@@ -844,8 +832,9 @@ function QuizEditor({ quiz, uid, onBack }) {
                 ? "تُرتَّب الأسئلة في الورقة بحسب نوعها، ويُرقَّم كل نوع سؤالًا مستقلًا. لا حدّ للعدد: إذا امتلأت الصفحة الأولى انتقل الباقي إلى صفحة ثانية."
                 : online
                 ? "لا حدّ لعدد الأسئلة في الاختبار الإلكتروني، ويُصحَّح آليًا فور تسليم الطالب."
-                : "الحدود ثابتة ليبقى تصميم الورقة موحّدًا وبطاقتها قابلة للقراءة الآلية."}
+                : "لا حدّ لعدد الأسئلة: إذا امتلأت الصفحة الأولى انتقل الباقي إلى صفحة ثانية، وتأتي بطاقة الإجابة كاملة في آخر صفحة."}
             </p>
+            {omr && (questions?.length ?? 0) > 0 && fit && <OmrPagesNote fit={fit} className="mt-2" />}
           </div>
 
           {q.status === "draft" && (questions?.length ?? 0) > 0 && (
@@ -1306,6 +1295,25 @@ function WrittenEditor({ local, setLocal, save, ltr = false, kind }) {
 /* ------------------------ الورقة والطباعة ------------------------ */
 
 /** توجيه المعلم: كم صفحة، وأين تبدأ الصفحة الثانية */
+const pagesWord = (n) =>
+  n === 1 ? "صفحة واحدة" : n === 2 ? "صفحتين" : n <= 10 ? `${n} صفحات` : `${n} صفحة`;
+
+/* عدد صفحات ورقة التصحيح الآلي حتى اللحظة — يتحدّث مع كل إضافة أو تعديل */
+function OmrPagesNote({ fit, className = "" }) {
+  const n = fit.pages ?? 1;
+  const tone = fit.cardFits === false ? "bg-absent/10 text-absent"
+             : n > 1 || fit.zoom < 0.85 ? "bg-warning/10 text-warning"
+             : "bg-present/10 text-present";
+  const text = fit.cardFits === false
+    ? `الاختبار حتى الآن على ${pagesWord(n)}، وبطاقة الإجابة أطول من صفحة فلن تُقرأ بالكاميرا — قلّل عدد الفقرات.`
+    : n > 1
+    ? `الاختبار حتى الآن على ${pagesWord(n)}، وبطاقة الإجابة كاملة في الصفحة الأخيرة.${n === 2 ? " يمكن طباعته على وجهَي ورقة واحدة." : ""}`
+    : fit.zoom < 0.85
+    ? `الاختبار حتى الآن في صفحة واحدة مع بطاقة الإجابة، بخطّ مصغَّر (${Math.round(fit.zoom * 100)}٪).`
+    : "الاختبار حتى الآن في صفحة واحدة مع بطاقة الإجابة.";
+  return <p className={`rounded-card px-3 py-2 text-xs ${tone} ${className}`}>{text}</p>;
+}
+
 function PagesNote({ layout, onOpen }) {
   const one = layout.pages === 1;
   return (
