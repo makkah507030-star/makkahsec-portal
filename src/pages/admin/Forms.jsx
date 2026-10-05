@@ -1098,7 +1098,10 @@ export default function Forms({ view = "issue", openKey = null }) {
 
   /* ---------------- تعبئة نموذج ---------------- */
   if (picked) {
-    const d = issued ?? { serial: null, signature_name: profile?.full_name, signature_source: picked.signature_source };
+    // المعاينة قبل الإصدار: اسم المُصدِر وصفته كما سيُطبعان
+    const previewRoles = (adminRoles ?? []).filter((r) => r !== "admin");
+    const d = issued ?? { serial: null, signature_name: profile?.full_name, signature_source: picked.signature_source,
+                          signature_role: previewRoles.length ? previewRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و") : "المعلم" };
     const selfNow = !issued && !editing && (chosen.length
       ? chosen.some((c) => isSelfTarget(c, c.full_name, session.user.id, profile?.full_name))
       : isSelfTarget(null, values.recipient, session.user.id, profile?.full_name));

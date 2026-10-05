@@ -5,6 +5,7 @@ import { noEra } from "../lib/dates";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
 import { RATING_LEVELS, itemPoints, overallLabel, ratingLabel, rubricScore } from "../lib/rubric.js";
+import { PRINCIPAL_NAME } from "../lib/signers.js";
 
 /* =====================================================================
    ورقة النموذج القابلة للطباعة — هوية مدرسة مكة الثانوية.
@@ -607,7 +608,7 @@ function VisitFoot({ serial, page, total }) {
 }
 
 /* ١) بيانات الزيارة، وطريقة تقييم كل قسم، وملخّص النتيجة */
-function VisitInfoPage({ template, v, rubrics }) {
+function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
   const byType = (t) => (template.fields ?? []).find((f) => f.type === t);
   const val = (f) => (f ? String(v[f.name] ?? "").trim() : "");
   const spec = (template.fields ?? []).find((f) => /التخصص/.test(f.label ?? ""));
@@ -619,12 +620,17 @@ function VisitInfoPage({ template, v, rubrics }) {
     [["اسم المعلم", v.recipient], ["التخصص", val(spec)], ["رقم الزيارة", val(byType("visit_no"))]],
     [["اليوم", weekdayOf(date)], ["التاريخ", date], ["الحصة", val(byType("lesson_period"))]],
     [["الصف", grade], ["الفصل", classNo], ["المادة", val(byType("lesson_subject"))]],
+    // الزائر هو مُصدِر التقرير: لكل وكيل معلموه الذين يزورهم
+    [["الزائر (مُصدِر التقرير)", doc?.signature_name], ["صفته", doc?.signature_role], ["مدير المدرسة", principalName]],
   ];
 
   const scores = rubrics.map((f) => ({ f, ...rubricScore(f, v[f.name]) }));
   const got = scores.reduce((a, x) => a + x.points, 0);
   const max = scores.reduce((a, x) => a + x.max, 0);
   const anyRated = scores.some((x) => x.rated);
+  // التقدير العام بعد تقدير العناصر كلها فقط — الدرجة الجزئية لا تُوصف
+  const allRated = scores.length > 0 && scores.every((x) => x.rated === x.count);
+  const rated = scores.reduce((a, x) => a + x.rated, 0), count = scores.reduce((a, x) => a + x.count, 0);
   const pct = anyRated && max ? Math.round((got / max) * 1000) / 10 : null;
 
   return (
@@ -686,7 +692,7 @@ function VisitInfoPage({ template, v, rubrics }) {
               {pct != null ? `${Math.round(got * 10) / 10}%` : ""}
             </td>
             <td className={`${cellB} px-2 py-1.5 text-center font-bold text-mint-deep`} style={TH}>
-              {pct != null ? overallLabel(pct) : ""}
+              {allRated ? overallLabel(pct) : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
             </td>
           </tr>
         </tbody>
@@ -696,7 +702,7 @@ function VisitInfoPage({ template, v, rubrics }) {
         {RATING_LEVELS.map((l, i) => (
           <span key={l.v}><span className="num">{l.v}</span> {l.label}{i < RATING_LEVELS.length - 1 ? "، " : ""}</span>
         ))}
-        ، ودرجة العنصر = وزنه × تقديره ÷ <N>5</N>.
+        ؛ ودرجة العنصر = وزنه × تقديره ÷ <N>5</N>
       </p>
     </>
   );
@@ -804,7 +810,7 @@ function supportVisitPages(p) {
   const pages = [];
   pages.push(<>
     <VisitHead title={template.title} sub="وفق بنود الأداء الوظيفي" />
-    <VisitInfoPage template={template} v={v} rubrics={rubrics} />
+    <VisitInfoPage template={template} v={v} rubrics={rubrics} doc={doc} principalName={p.principalName} />
   </>);
   rubrics.forEach((f) => pages.push(<>
     <VisitHead title={template.title} sub={v.recipient ? `المعلم: ${v.recipient}` : ""} />
@@ -899,7 +905,9 @@ export default function FormSheet({
     fontFamily: "'IBM Plex Sans Arabic', sans-serif",
   };
   const sheetCls = "sheet mx-auto bg-white text-ink shadow-[0_18px_50px_-28px_rgba(16,16,16,.5)]";
-  const props = { template, v, doc, sigUrl, stampUrl, principalSigUrl, principalName, replySigUrl, replySigName };
+  // اسم المدير: المحفوظ تحت توقيعه، وإلا اسمه في «أسماء الموقّعين»
+  const props = { template, v, doc, sigUrl, stampUrl, principalSigUrl,
+                  principalName: principalName || PRINCIPAL_NAME, replySigUrl, replySigName };
 
   // استمارة الزيارة بالبنود: عدة صفحات، كل صفحة ورقة مستقلة في الطباعة
   if (template.key === "teacher_support_visit" && isRubricDoc(template, v)) {
