@@ -59,7 +59,7 @@ export default function NewsSlider() {
           className="group mt-6 block overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-[#CCF2DB]"
         >
           <div className="grid md:grid-cols-[1.3fr_1fr]">
-            <div className="relative aspect-[16/9] bg-mint-tint md:aspect-auto md:min-h-[19rem]">
+            <div className="relative aspect-[16/9] bg-mint-tint">
               {current.cover_url ? (
                 <img
                   src={current.cover_url}
