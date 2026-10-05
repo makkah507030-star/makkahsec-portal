@@ -21,6 +21,6 @@ if not exist "bridge.js" (
   exit /b 1
 )
 
-echo Starting the bridge on port 8090 ... keep this window open.
+echo Starting the bridge on port 8080 ... keep this window open.
 node bridge.js
 pause
