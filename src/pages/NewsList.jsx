@@ -58,10 +58,10 @@ export default function NewsList() {
               className="group overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-[#CCF2DB]"
             >
               <div className="aspect-[16/9] bg-mint-tint">
-                {n.cover_theme ? (
-                  <NewsCoverCard role={n.cover_theme} className="h-full w-full" />
-                ) : n.cover_url ? (
+                {n.cover_url ? (
                   <img src={n.cover_url} alt="" className="h-full w-full object-cover" />
+                ) : n.cover_theme ? (
+                  <NewsCoverCard role={n.cover_theme} className="h-full w-full" />
                 ) : null}
               </div>
               <div className="p-4">
