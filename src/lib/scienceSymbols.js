@@ -189,6 +189,8 @@ export const PHYSICS_SYMBOL_GROUPS = [
     title: "الوحدات",
     items: [
       { sym: "m", label: "متر" },
+      { sym: "m²", label: "متر مربع (m2) — المساحة" },
+      { sym: "m³", label: "متر مكعب (m3) — الحجم" },
       { sym: "kg", label: "كيلوجرام" },
       { sym: "s", label: "ثانية" },
       { sym: "A", label: "أمبير" },
