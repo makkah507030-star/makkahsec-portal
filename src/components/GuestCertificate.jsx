@@ -6,7 +6,8 @@ import iconWhite from "../assets/icon-white.png";
    شهادة شكر الضيوف والمتعاونين — للمحاضرين والمدربين ومنفّذي الأحداث
    الذين يفدون إلى المدرسة بمهام محددة.
 
-   بروح هوية البوابة (كقوالب الاستوديو): لوح جانبي بأخضر الهوية الداكن،
+   ورقة A4 عمودية — تتميّز عن بقية الشهادات الأفقية، وتوافق حاملها العمودي.
+   بروح هوية البوابة (كقوالب الاستوديو): شريط علوي بأخضر الهوية الداكن،
    عليه الخطوط القطرية ومكعبات الشعار المائلة، وشعار البوابة الأبيض،
    و«شكر وتقدير» بالنعناعي. والمتن على ورقة فاتحة
    بتوهّج نعناعي، وبطاقة بيانات بأيقونات، وشريط التقدّم أسفلها.
@@ -63,7 +64,7 @@ function Sign({ url, name, role }) {
 }
 
 /**
- * متن الشهادة — يملأ الورقة التي يوضع فيها (297×210 مم).
+ * متن الشهادة — يملأ الورقة التي يوضع فيها: A4 عمودية (210×297 مم).
  * name: اسم الضيف · entity: جهته · text: نص الشكر
  * activity: البرنامج أو الحدث · dateText: تاريخه · closing: الخاتمة
  * issuer: {url,name,role} يمينًا · principal: {url,name} يسارًا · stampUrl وسطًا
@@ -77,51 +78,48 @@ export function GuestCertificateBody({
                   fontFamily: "'IBM Plex Sans Arabic', sans-serif", color: C.ink, ...INK }}>
       {/* الورقة الفاتحة داخل هامش آمن ٨ مم: توهّج نعناعي وخطوط قطرية خفيفة */}
       <div style={{ position: "absolute", inset: "8mm", borderRadius: "5mm", overflow: "hidden", ...INK,
-                    background: "radial-gradient(ellipse 70% 60% at 0% 100%, #DDF3E6 0%, transparent 60%), linear-gradient(160deg, #FFFFFF 0%, #FAFDFB 55%, #F2FAF5 100%)" }}>
+                    background: "radial-gradient(ellipse 80% 45% at 0% 100%, #DDF3E6 0%, transparent 60%), linear-gradient(170deg, #FFFFFF 0%, #FAFDFB 55%, #F2FAF5 100%)" }}>
         <div style={{ position: "absolute", inset: 0, ...INK,
                       background: "repeating-linear-gradient(135deg, rgba(62,99,80,.035) 0 0.4mm, transparent 0.4mm 6mm)" }} />
-        <div style={cube({ left: "-62mm", bottom: "-48mm", background: "rgba(62,99,80,.06)" })} />
-        <div style={cube({ left: "-50mm", bottom: "-84mm", background: "rgba(62,99,80,.045)" })} />
+        <div style={cube({ left: "-70mm", bottom: "-40mm", background: "rgba(62,99,80,.06)" })} />
+        <div style={cube({ left: "-55mm", bottom: "-80mm", background: "rgba(62,99,80,.045)" })} />
         {/* شريط التقدّم أسفل الورقة */}
         <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "1.6mm", background: "rgba(137,215,173,.3)", ...INK }}>
           <div style={{ position: "absolute", top: 0, bottom: 0, right: 0, left: "22%", background: C.mint, ...INK }} />
         </div>
       </div>
 
-      {/* اللوح الجانبي الداكن (يمين الورقة) */}
-      <div style={{ position: "absolute", top: "8mm", bottom: "8mm", right: "8mm", width: "76mm",
+      {/* الشريط العلوي الداكن */}
+      <div style={{ position: "absolute", top: "8mm", left: "8mm", right: "8mm", height: "96mm",
                     borderRadius: "5mm", overflow: "hidden", ...INK,
-                    background: "radial-gradient(ellipse 90% 55% at 95% 0%, #2f5240 0%, transparent 60%), linear-gradient(160deg, #284836 0%, #193326 42%, #12261c 72%, #0e1f17 100%)" }}>
+                    background: "radial-gradient(ellipse 70% 90% at 100% 0%, #2f5240 0%, transparent 60%), linear-gradient(160deg, #284836 0%, #193326 42%, #12261c 72%, #0e1f17 100%)" }}>
         <div style={{ position: "absolute", inset: 0, ...INK,
                       background: "repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 0.4mm, transparent 0.4mm 6mm)" }} />
-        <div style={{ position: "absolute", width: "80mm", height: "80mm", borderRadius: "50%", left: "-20mm", top: "70mm",
-                      background: "rgba(96,150,118,.35)", filter: "blur(18mm)" }} />
-        <div style={cube({ left: "-58mm", bottom: "-58mm", background: "rgba(120,170,140,.14)" })} />
-        <div style={cube({ left: "-48mm", bottom: "-92mm", background: "rgba(120,170,140,.1)" })} />
+        <div style={cube({ left: "-48mm", top: "-30mm", background: "rgba(120,170,140,.14)" })} />
+        <div style={cube({ left: "-20mm", top: "10mm", background: "rgba(120,170,140,.08)" })} />
 
-        <div style={{ position: "absolute", inset: "12mm 9mm 11mm", display: "flex", flexDirection: "column",
+        <div style={{ position: "absolute", inset: "10mm 11mm 9mm", display: "flex", flexDirection: "column",
                       justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "3mm" }}>
             <img src={iconWhite} alt="" style={{ width: "11mm", height: "11mm", objectFit: "contain" }} />
             <div style={{ lineHeight: 1.35 }}>
-              <div style={{ fontSize: "10pt", fontWeight: 700, color: "#fff" }}>بوابة مكة الثانوية الرقمية</div>
+              <div style={{ fontSize: "10.5pt", fontWeight: 700, color: "#fff" }}>بوابة مكة الثانوية الرقمية</div>
               <div style={{ fontSize: "8.5pt", color: "#A9BCB1" }}>مدرسة مكة الثانوية</div>
             </div>
           </div>
 
-          <div>
-            <div style={{ fontSize: "54pt", fontWeight: 700, lineHeight: 0.95, color: C.mint }}>شكر</div>
-            <div style={{ fontSize: "30pt", fontWeight: 700, lineHeight: 1.25, color: "#fff" }}>وتقدير</div>
-            <div style={{ marginTop: "4mm", width: "34mm", height: "1.2mm", borderRadius: "1mm",
-                          background: "rgba(137,215,173,.25)", position: "relative", ...INK }}>
-              <div style={{ position: "absolute", top: 0, bottom: 0, right: 0, width: "70%", borderRadius: "1mm", background: C.mint, ...INK }} />
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: "6mm" }}>
+            <div>
+              <div style={{ fontSize: "60pt", fontWeight: 700, lineHeight: 0.95, color: C.mint }}>شكر</div>
+              <div style={{ fontSize: "32pt", fontWeight: 700, lineHeight: 1.25, color: "#fff" }}>وتقدير</div>
+              <div style={{ marginTop: "3.5mm", width: "44mm", height: "1.2mm", borderRadius: "1mm",
+                            background: "rgba(137,215,173,.25)", position: "relative", ...INK }}>
+                <div style={{ position: "absolute", top: 0, bottom: 0, right: 0, width: "70%", borderRadius: "1mm", background: C.mint, ...INK }} />
+              </div>
             </div>
-          </div>
-
-          <div>
             {serial && (
-              <div style={{ display: "inline-block", border: "0.35mm dashed rgba(255,255,255,.3)", borderRadius: "2.5mm",
-                            padding: "1.2mm 3.5mm", fontSize: "8.5pt", color: "#A9BCB1" }}>
+              <div style={{ border: "0.35mm dashed rgba(255,255,255,.3)", borderRadius: "2.5mm",
+                            padding: "1.2mm 3.5mm", fontSize: "8.5pt", color: "#A9BCB1", whiteSpace: "nowrap" }}>
                 رقم الشهادة{" "}
                 <bdi dir="ltr" className="num" style={{ color: C.mint, fontWeight: 700, letterSpacing: "0.2mm" }}>{serial}</bdi>
               </div>
@@ -131,67 +129,68 @@ export function GuestCertificateBody({
       </div>
 
       {/* المتن */}
-      <div style={{ position: "absolute", top: "15mm", bottom: "13mm", left: "18mm", right: "96mm",
+      <div style={{ position: "absolute", top: "112mm", bottom: "13mm", left: "19mm", right: "19mm",
                     display: "flex", flexDirection: "column" }}>
         {/* الترويسة الحكومية */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-          <div style={{ fontSize: "9pt", lineHeight: 1.75, fontWeight: 500, color: C.text2 }}>
-            <div>المملكة العربية السعودية</div>
-            <div>وزارة التعليم</div>
+          <div style={{ fontSize: "8.5pt", lineHeight: 1.7, fontWeight: 500, color: C.text2 }}>
+            <div>المملكة العربية السعودية · وزارة التعليم</div>
             <div>الإدارة العامة للتعليم بمنطقة مكة المكرمة</div>
             <div style={{ color: C.deep, fontWeight: 700 }}>مدرسة مكة الثانوية</div>
           </div>
-          <img src={moeLogo} alt="وزارة التعليم" style={{ height: "12mm", width: "auto" }} />
+          <img src={moeLogo} alt="وزارة التعليم" style={{ height: "11mm", width: "auto" }} />
         </div>
         <div style={{ marginTop: "3mm", height: "0.35mm", ...INK,
                       background: `linear-gradient(90deg, transparent, ${C.deep}22 12%, ${C.deep} 50%, ${C.deep}22 88%, transparent)` }} />
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-          <p style={{ fontSize: "12.5pt", color: C.text2 }}>
+          <p style={{ fontSize: "12pt", color: C.text2 }}>
             تتقدّم مدرسة مكة الثانوية بخالص الشكر وعظيم الامتنان إلى
           </p>
-          <p style={{ marginTop: "2.5mm", fontSize: "29pt", fontWeight: 700, lineHeight: 1.25, color: C.ink }}>
+          <p style={{ marginTop: "2.5mm", fontSize: "25pt", fontWeight: 700, lineHeight: 1.3, color: C.ink }}>
             {name || "…"}
           </p>
           {entity && (
-            <p style={{ marginTop: "1.5mm", fontSize: "12.5pt", fontWeight: 600, color: C.accent }}>{entity}</p>
+            <p style={{ marginTop: "1mm", fontSize: "12pt", fontWeight: 600, color: C.accent }}>{entity}</p>
           )}
 
           {text && (
-            <p style={{ marginTop: "4.5mm", maxWidth: "172mm", fontSize: "13pt", lineHeight: 2, whiteSpace: "pre-line" }}>
+            <p style={{ marginTop: "4.5mm", fontSize: "12.5pt", lineHeight: 2, whiteSpace: "pre-line" }}>
               {text}
             </p>
           )}
 
           {(activity || dateText) && (
-            <div style={{ marginTop: "4.5mm", alignSelf: "flex-start", display: "flex", maxWidth: "172mm",
+            <div style={{ marginTop: "4.5mm", alignSelf: "stretch", display: "flex",
                           border: `0.35mm solid ${C.card}`, background: "rgba(255,255,255,.85)", borderRadius: "4mm",
                           overflow: "hidden", ...INK }}>
               {[activity && ["program", "البرنامج", activity], dateText && ["calendar", "التاريخ", dateText]]
                 .filter(Boolean).map(([ic, k, val], i) => (
-                  <div key={k} style={{ display: "flex", alignItems: "center", gap: "2.8mm", padding: "2.4mm 4.5mm",
+                  <div key={k} style={{ display: "flex", alignItems: "center", gap: "2.8mm", padding: "2.4mm 4mm",
+                                        flex: ic === "program" ? 1 : "0 0 auto", minWidth: 0,
                                         borderRight: i ? `0.3mm solid ${C.div}` : "none" }}>
                     <span style={{ width: "9mm", height: "9mm", borderRadius: "2.5mm", background: C.mint, color: C.onMint,
                                    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, ...INK }}>
                       {ICON[ic]}
                     </span>
-                    <span>
+                    <span style={{ minWidth: 0 }}>
                       <span style={{ display: "block", fontSize: "8.5pt", color: C.text2 }}>{k}</span>
                       <span className={ic === "calendar" ? "num" : undefined}
-                            style={{ display: "block", fontSize: "11.5pt", fontWeight: 700, whiteSpace: "nowrap" }}>{val}</span>
+                            style={{ display: "block", fontSize: "11pt", fontWeight: 700,
+                                     whiteSpace: ic === "calendar" ? "nowrap" : "normal" }}>{val}</span>
                     </span>
                   </div>
                 ))}
             </div>
           )}
 
-          <p style={{ marginTop: "4.5mm", fontSize: "12.5pt", fontWeight: 600, color: C.deep }}>
+          <p style={{ marginTop: "4.5mm", fontSize: "12pt", fontWeight: 600, color: C.deep }}>
             {closing || "سائلين الله له دوام التوفيق والسداد"}
           </p>
         </div>
 
         {/* التواقيع: المُصدِر يمينًا، والختم وسطًا، والمدير يسارًا */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "end", gap: "4mm" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "end", gap: "2mm" }}>
           <div style={{ justifySelf: "start" }}>
             {issuer && <Sign url={issuer.url} name={issuer.name} role={issuer.role || "منفّذ البرنامج"} />}
           </div>
@@ -203,7 +202,7 @@ export function GuestCertificateBody({
           </div>
         </div>
 
-        <div style={{ marginTop: "3mm", display: "flex", justifyContent: "flex-end", fontSize: "9pt" }}>
+        <div style={{ marginTop: "3mm", display: "flex", justifyContent: "center", fontSize: "9pt" }}>
           <span dir="ltr" style={{ fontWeight: 700, color: C.accent }}>makkahsec.com</span>
         </div>
       </div>
@@ -211,11 +210,11 @@ export function GuestCertificateBody({
   );
 }
 
-/** ورقة كاملة A4 أفقية — للطباعة المتتابعة في الحدث */
+/** ورقة كاملة A4 عمودية — للطباعة المتتابعة في الحدث */
 export default function GuestCertificate(props) {
   return (
     <div className="sheet relative bg-white"
-         style={{ width: "297mm", height: "210mm", breakAfter: "page", ...INK }}>
+         style={{ width: "210mm", height: "297mm", breakAfter: "page", ...INK }}>
       <GuestCertificateBody {...props} />
     </div>
   );

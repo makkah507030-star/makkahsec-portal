@@ -3,7 +3,7 @@
 -- الذين يفدون إلى المدرسة بمهام محددة.
 --
 -- ١) نموذج «شهادة شكر وتقدير — ضيف أو متعاون» في النماذج والشهادات،
---    بتصميم مستقل في GuestCertificate (المفتاح guest_appreciation).
+--    بتصميم مستقل في GuestCertificate (المفتاح guest_appreciation)، على ورقة A4 عمودية.
 --    يُصدره المدير والوكلاء ورائد النشاط، بتوقيع المُصدِر والمدير والختم.
 -- ٢) عمود guests في الأحداث: قائمة الضيوف الاختيارية في مرحلة «الشهادات»،
 --    تُطبع لهم الشهادة نفسها بتوقيع منظّم الحدث والمدير والختم.
@@ -22,7 +22,7 @@ select
   'certificate',
   'school_admin',
   'للمحاضرين والمدربين ومنفّذي الأحداث من خارج المدرسة، في نهاية مهامهم.',
-  'landscape',
+  'portrait',
   '[]'::jsonb,
   array['deputy_academic', 'deputy_school', 'deputy_students', 'activity_leader'],
   false,
@@ -51,6 +51,7 @@ set fields = '[
    "presets": ["سائلين الله له دوام التوفيق والسداد", "شاكرين له حسن تعاونه، متمنين له مزيدًا من التميّز"]},
   {"name": "date", "label": "التاريخ", "type": "date", "required": true}
 ]'::jsonb,
+    orientation = 'portrait',
     updated_at = now()
 where key = 'guest_appreciation';
 
