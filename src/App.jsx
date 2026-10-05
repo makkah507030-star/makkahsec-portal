@@ -21,6 +21,7 @@ const TeacherPermissions = lazy(() => import("./pages/admin/TeacherPermissions.j
 const NotificationsReview = lazy(() => import("./pages/admin/NotificationsReview.jsx"));
 const TeacherNotify = lazy(() => import("./pages/teacher/TeacherNotify.jsx"));
 const MySchedule = lazy(() => import("./pages/teacher/MySchedule.jsx"));
+const SubjectAbsenceReport = lazy(() => import("./pages/teacher/SubjectAbsenceReport.jsx"));
 const StudentHome = lazy(() => import("./pages/StudentHome.jsx"));
 const GuardianHome = lazy(() => import("./pages/GuardianHome.jsx"));
 const PermissionRequestPage = lazy(() => import("./pages/PermissionRequestPage.jsx"));
@@ -373,6 +374,7 @@ export default function App() {
               {!hiddenTabs.has("schedule") && (
                 <Route path="/schedule" element={<MySchedule />} />
               )}
+              <Route path="/my-absence" element={<SubjectAbsenceReport />} />
               {/* النماذج والشهادات — النماذج المتاحة للمعلم تحدّدها سياسات القاعدة */}
               {/* key مختلف: الانتقال بين الصفحتين يبدأ مكوّنًا جديدًا فلا يبقى تبويب الأخرى مفتوحًا */}
               <Route path="/forms" element={<Forms key="issue" />} />

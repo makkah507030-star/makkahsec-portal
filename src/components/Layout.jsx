@@ -118,6 +118,7 @@ const OTHER_NAV = {
     { to: "/",           label: "الحضور والغياب اليومي", tabKey: "attendance", icon: "home" },
     { to: "/substitute", label: "حصص الانتظار",          tabKey: "substitute", icon: "clock" },
     { to: "/schedule",   label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
+    { to: "/my-absence", label: "تقرير غياب مادتي",      icon: "trend" },
     { to: "/permissions", label: "الاستئذان",            extraTabKey: "permissions", icon: "ticket" },
 
     { group: "الطلاب" },
