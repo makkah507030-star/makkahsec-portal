@@ -300,18 +300,15 @@ function Certificate(p) {
   );
 }
 
-/* شهادة شكر الضيوف والمتعاونين — تصميمها المستقل في GuestCertificate.
-   تُعرف بالمفتاح، أو بحقل «صفة الضيف» إن اختلف المفتاح في قاعدة البيانات. */
-export const isGuestCert = (template) =>
-  template?.key === "guest_appreciation" ||
-  (template?.fields ?? []).some((f) => f.name === "guest_role");
+/* شهادة شكر الضيوف والمتعاونين — تصميمها المستقل في GuestCertificate */
+export const isGuestCert = (template) => template?.key === "guest_appreciation";
 
 function GuestCert(p) {
   const { v, doc, template } = p;
   const src = template.signature_source;
   return (
     <GuestCertificateBody
-      name={v.recipient} role={v.guest_role} entity={v.entity}
+      name={v.recipient} entity={v.entity}
       text={v.reason} activity={v.activity} dateText={v.date} closing={v.closing}
       serial={doc?.serial}
       issuer={src === "issuer" || src === "both"

@@ -36,8 +36,6 @@ update public.form_templates
 set fields = '[
   {"name": "recipient", "label": "اسم الضيف (مع لقبه)", "type": "text", "required": true,
    "presets": ["الأستاذ/ ", "الدكتور/ ", "المهندس/ ", "الشيخ/ "]},
-  {"name": "guest_role", "label": "صفته", "type": "text", "required": true,
-   "presets": ["محاضر ضيف", "مدرب", "منفّذ فعالية", "متحدث", "مقدّم ورشة عمل", "شريك مجتمعي"]},
   {"name": "entity", "label": "جهته (اختياري)", "type": "text", "required": false},
   {"name": "activity", "label": "البرنامج أو الحدث (اختياري)", "type": "text", "required": false},
   {"name": "reason", "label": "نص الشكر", "type": "textarea", "required": true,
@@ -56,7 +54,7 @@ set fields = '[
     updated_at = now()
 where key = 'guest_appreciation';
 
--- ٢) ضيوف الحدث: [{id, name, role, entity, task}]
+-- ٢) ضيوف الحدث: [{id, name, entity, task}]
 alter table public.school_events add column if not exists guests jsonb not null default '[]'::jsonb;
 
 -- للتحقق بعد التنفيذ

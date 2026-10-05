@@ -11,7 +11,7 @@ import { normalizeImage } from "../lib/imageResize.js";
 import EventCertificate, {
   CERT_TEMPLATES, DEFAULT_CERT_TITLE, certPresets, isNationalDay, officialCert, readCert,
 } from "../components/EventCertificate.jsx";
-import GuestCertificate, { GUEST_ROLES, forTask } from "../components/GuestCertificate.jsx";
+import GuestCertificate, { forTask } from "../components/GuestCertificate.jsx";
 import { fmtDate, stripBidi } from "../lib/dates";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
@@ -1631,11 +1631,11 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
 
 /* شهادات الضيوف والمتعاونين — اختيارية: للمحاضرين والمدربين ومنفّذي الفعاليات
    من خارج المدرسة، بتصميم مستقل عن شهادات الطلاب. تُحفظ قائمتهم مع الحدث. */
-const newGuest = () => ({ id: Math.random().toString(36).slice(2, 10), name: "", role: GUEST_ROLES[0], entity: "", task: "" });
+const newGuest = () => ({ id: Math.random().toString(36).slice(2, 10), name: "", entity: "", task: "" });
 
 function guestCertProps(e, g, i, sigUrl, school) {
   return {
-    name: g.name, role: g.role, entity: g.entity,
+    name: g.name, entity: g.entity,
     text: `وذلك تقديرًا ${forTask(g.task)}، وما بذله من جهد وعطاء أسهم في نجاح البرنامج.`,
     activity: e.title,
     dateText: e.event_date ? stripBidi(fmtDate(`${e.event_date}T12:00:00`)) : "",
@@ -1711,18 +1711,6 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
                 <label className="text-[11px] text-faint">الجهة (اختياري)</label>
                 <input className="field mt-1 w-full" value={g.entity} placeholder="مثال: جامعة أم القرى"
                        onChange={(x) => set(g.id, "entity", x.target.value)} />
-              </div>
-            </div>
-            <div>
-              <label className="text-[11px] text-faint">الصفة</label>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {GUEST_ROLES.map((r) => (
-                  <button key={r} type="button" onClick={() => set(g.id, "role", r)}
-                    className={`rounded-pill px-3 py-1 text-[11.5px] font-medium transition-colors ${
-                      g.role === r ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-                    {r}
-                  </button>
-                ))}
               </div>
             </div>
             <div>

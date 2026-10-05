@@ -8,7 +8,7 @@ import iconWhite from "../assets/icon-white.png";
 
    بروح هوية البوابة (كقوالب الاستوديو): لوح جانبي بأخضر الهوية الداكن،
    عليه الخطوط القطرية ومكعبات الشعار المائلة، وشعار البوابة الأبيض،
-   و«شكر وتقدير» بالنعناعي، وصفة الضيف شارة نعناعية. والمتن على ورقة فاتحة
+   و«شكر وتقدير» بالنعناعي. والمتن على ورقة فاتحة
    بتوهّج نعناعي، وبطاقة بيانات بأيقونات، وشريط التقدّم أسفلها.
 
    تُستعمل في النماذج (قالب guest_appreciation) وفي مرحلة الشهادات بالحدث.
@@ -28,9 +28,6 @@ const C = {
   text2: "#5E7268",
   onMint: "#16301F",
 };
-
-/** صفات الضيوف الجاهزة — تظهر بطاقات في النماذج والحدث */
-export const GUEST_ROLES = ["محاضر ضيف", "مدرب", "منفّذ فعالية", "متحدث", "مقدّم ورشة عمل", "شريك مجتمعي"];
 
 /** «لـ» قبل المهمة: «لتقديم…»، ومع «ال»: «للإشراف…» */
 export const forTask = (task) => {
@@ -67,12 +64,12 @@ function Sign({ url, name, role }) {
 
 /**
  * متن الشهادة — يملأ الورقة التي يوضع فيها (297×210 مم).
- * name: اسم الضيف · role: صفته · entity: جهته · text: نص الشكر
+ * name: اسم الضيف · entity: جهته · text: نص الشكر
  * activity: البرنامج أو الحدث · dateText: تاريخه · closing: الخاتمة
  * issuer: {url,name,role} يمينًا · principal: {url,name} يسارًا · stampUrl وسطًا
  */
 export function GuestCertificateBody({
-  name, role, entity, text, activity, dateText, closing, serial,
+  name, entity, text, activity, dateText, closing, serial,
   issuer, principal, stampUrl,
 }) {
   return (
@@ -119,12 +116,6 @@ export function GuestCertificateBody({
                           background: "rgba(137,215,173,.25)", position: "relative", ...INK }}>
               <div style={{ position: "absolute", top: 0, bottom: 0, right: 0, width: "70%", borderRadius: "1mm", background: C.mint, ...INK }} />
             </div>
-            {role && (
-              <div style={{ marginTop: "7mm", display: "inline-block", padding: "1.8mm 5.5mm", borderRadius: "10mm",
-                            background: C.mint, color: C.onMint, fontSize: "12.5pt", fontWeight: 700, ...INK }}>
-                {role}
-              </div>
-            )}
           </div>
 
           <div>
