@@ -500,9 +500,9 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
   );
 }
 
-/* ① بيانات الحدث — تُعدَّل كلها بعد الإنشاء: العنوان والتصنيف والتاريخ والوقت والمكان
-   والنبذة والأهداف. تُقفل بعد رفع التقرير للاعتماد. وإن تغيّر الموعد بعد إرسال
-   الموافقات أو رفع الاستئذان نُنبّه المنظّم، فهي صدرت بالموعد القديم. */
+/* ① بيانات الحدث — تُعدَّل كلها في أي مرحلة: العنوان والتصنيف والتاريخ والوقت والمكان
+   والنبذة والأهداف. وإن تغيّر الموعد بعد إرسال الموافقات أو رفع الاستئذان نُنبّه
+   المنظّم، فهي صدرت بالموعد القديم. */
 function StageInfo({ e, parts, patch, onNext }) {
   const [cats, setCats] = useState([]);
   const init = () => ({
@@ -521,7 +521,8 @@ function StageInfo({ e, parts, patch, onNext }) {
     })();
   }, []);
 
-  const locked = e.stage === "approved" || !!e.report_submitted_at;
+  // الحدث المرفوع للاعتماد أو المعتمد يبقى قابلًا للتعديل، مع تنبيه
+  const submitted = e.stage === "approved" || !!e.report_submitted_at;
   const sentConsents = (parts ?? []).filter((p) => p.consent_sent_at).length;
   const raised = (parts ?? []).some((p) => p.permission_id);
   const was = init();
@@ -561,30 +562,15 @@ function StageInfo({ e, parts, patch, onNext }) {
     if (ok && next) onNext();
   };
 
-  if (locked) {
-    return (
-      <section className="card space-y-3 p-4">
-        <p className="rounded-sm2 bg-canvas px-3 py-2 text-xs leading-relaxed text-muted">
-          {e.stage === "approved"
-            ? "اعتُمد الحدث، فلا تُعدَّل بياناته."
-            : "رُفع التقرير لمدير المدرسة، فلا تُعدَّل بيانات الحدث إلا إن أُعيد إليك."}
-        </p>
-        {[
-          ["عنوان الحدث", e.title], ["التصنيف", e.category], ["تاريخ التنفيذ", fmtG(e.event_date)],
-          ["الوقت", [String(e.start_time ?? "").slice(0, 5), String(e.end_time ?? "").slice(0, 5)].filter(Boolean).join(" - ")],
-          ["مكان التنفيذ", e.venue], ["نبذة عن الحدث", e.description], ["أهدافه", e.goals],
-        ].map(([k, v]) => (
-          <div key={k} className="flex gap-3 border-b border-line pb-2 text-sm last:border-0">
-            <span className="w-28 shrink-0 text-xs text-muted">{k}</span>
-            <span className="whitespace-pre-line text-ink">{v || "—"}</span>
-          </div>
-        ))}
-      </section>
-    );
-  }
-
   return (
     <section className="card space-y-4 p-4">
+      {submitted && (
+        <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+          {e.stage === "approved"
+            ? "الحدث معتمد. أي تعديل هنا يظهر في تقريره وشهاداته المطبوعة لاحقًا."
+            : "التقرير مرفوع لمدير المدرسة. أي تعديل هنا يظهر له عند مراجعته."}
+        </p>
+      )}
       <div>
         <label className="text-xs text-muted">عنوان الحدث</label>
         <input className="field mt-1 w-full" value={f.title}
