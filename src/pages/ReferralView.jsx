@@ -6,6 +6,8 @@ import { useSession } from "../lib/session.jsx";
 import ReferralSheet, { ReferralPrintArea, sheetPages } from "../components/ReferralSheet.jsx";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
+import PresetChips from "../components/PresetChips.jsx";
+import { PRESETS_GUARDIAN } from "../lib/referrals";
 
 /* =====================================================================
    عرض ملف الإحالة لصاحبه: الطالب للاطّلاع، وولي الأمر للاطّلاع
@@ -121,6 +123,7 @@ export default function ReferralView() {
               اطّلع على الإحالة أدناه، ثم أكّد استلامك واكتب ردّك إن رغبت.
             </p>
           </div>
+          <PresetChips items={PRESETS_GUARDIAN} value={note} onChange={setNote} />
           <textarea rows={4} className="field w-full" value={note}
                     placeholder="ردّك أو ملاحظتك (اختياري)"
                     onChange={(e) => setNote(e.target.value)} />
