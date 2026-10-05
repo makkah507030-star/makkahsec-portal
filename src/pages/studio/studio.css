@@ -251,6 +251,19 @@
 .stu-official .stu-scards i { background: #3E6350; color: #fff; }
 .stu-social.story .stu-slead { font-size: 36px; }
 .stu-social.story .stu-scards div { font-size: 34px; padding: 28px 32px; }
+/* التحذير: بطاقة حمراء في آخر المنشور — حمراء مصمتة على الغامق، وفاتحة على الفاتح والرسمي */
+.stu-swarn { margin-top: 26px; display: flex; align-items: center; gap: 22px; border-radius: 26px; padding: 22px 28px;
+             font-size: 30px; font-weight: 700; line-height: 1.55;
+             border: 2px solid #F0565B; background: linear-gradient(135deg, #7A2328 0%, #561A1E 100%); color: #fff; }
+.stu-swarn i { flex: none; width: 58px; height: 58px; border-radius: 16px; background: #E5484D; color: #fff;
+               font-style: normal; font-weight: 700; font-size: 34px; display: flex; align-items: center; justify-content: center; }
+.stu-light .stu-swarn, .stu-official .stu-swarn { background: #FBEBEB; border-color: #E5484D; color: #8E2A2E; }
+.stu-social.story .stu-swarn { font-size: 32px; padding: 26px 32px; }
+.stu-social.square .stu-swarn { margin-top: 18px; gap: 18px; font-size: 25px; padding: 14px 22px; border-radius: 22px; }
+.stu-social.square .stu-swarn i { width: 46px; height: 46px; font-size: 28px; border-radius: 13px; }
+/* المربع مع التحذير: نقاط أقرب لتتّسع */
+.stu-social.square .stu-scards:has(+ .stu-swarn) { margin-top: 30px; gap: 14px; }
+.stu-social.square .stu-scards:has(+ .stu-swarn) div { padding: 16px 26px; }
 .stu-sfoot { display: flex; justify-content: space-between; align-items: center; font-size: 22px; color: var(--stu-text2); font-weight: 500; }
 .stu-sfoot .site { direction: ltr; font-size: 28px; font-weight: 700; color: var(--stu-accent); }
 .stu-dark .stu-sfoot .site { color: #89D7AD; }
