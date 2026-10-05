@@ -70,6 +70,7 @@ const Help = lazy(() => import("./pages/Help.jsx"));
 const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
 const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
+const StudentNotes = lazy(() => import("./pages/StudentNotes.jsx"));
 const ExamSchedules = lazy(() => import("./pages/ExamSchedules.jsx"));
 const Events = lazy(() => import("./pages/Events.jsx"));
 const EventsReports = lazy(() => import("./pages/EventsReports.jsx"));
@@ -407,6 +408,8 @@ export default function App() {
           <Route path="/my-documents" element={<MyDocuments />} />
           {/* إحالة الطالب — الشاشة للمعلم والإدارة، والملف لصاحبه وولي أمره */}
           <Route path="/referrals" element={<Referrals />} />
+          {/* ملاحظات الطلاب — الصفحة تتحقق من الدور، والقاعدة تفرض من يكتب كل نوع */}
+          <Route path="/student-notes" element={<StudentNotes />} />
           {/* جداول الاختبارات: العرض للجميع، والإدارة بصلاحية */}
           <Route path="/exams" element={<ExamSchedules />} />
           {/* الأحداث والمناسبات — لكل معلم وإداري */}

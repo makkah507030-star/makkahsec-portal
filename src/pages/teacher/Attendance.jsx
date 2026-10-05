@@ -9,6 +9,7 @@ import {
 } from "../../lib/periodTimes";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import StudentNoteChips, { ClassNotesButton } from "../../components/StudentNoteChips.jsx";
 
 const ORDER = ["present", "absent", "late", "excused"];        // للعدادات والعرض
 const TEACHER_ORDER = ["present", "absent", "late"];           // ما يختاره المعلم
@@ -59,6 +60,7 @@ export default function Attendance() {
   const [mySchedIds, setMySchedIds] = useState([]);
   const [ptimes, setPtimes] = useState([]);
   const [absStats, setAbsStats] = useState({}); // student_id -> { absent, total }
+  const [notesBy, setNotesBy] = useState({});   // student_id -> ملاحظاته الصحية والسلوكية والنفسية
   const [nowPeriod, setNowPeriod] = useState(null);
   const [clock, setClock] = useState(() => new Date());   // يتحدّث كل دقيقة لفتح الحصة حين يحين وقتها
   const date = todayISO();
@@ -129,6 +131,12 @@ export default function Attendance() {
       const { data: enr } = await supabase.from("student_enrollment")
         .select("student_id, students(id, full_name, national_id)")
         .eq("class_id", active.class_id).eq("status", "active");
+      // ملاحظات طلاب الفصل — إن لم يُنفَّذ student_notes.sql بعد يبقى الكشف كما هو
+      supabase.rpc("class_student_notes", { p_class: active.class_id }).then(({ data: ns }) => {
+        const by = {};
+        (ns ?? []).forEach((n) => { (by[n.student_id] ??= []).push(n); });
+        setNotesBy(by);
+      });
       const list = (enr ?? []).map((e) => e.students).filter(Boolean)
         .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"));
       setStudents(list);
@@ -315,6 +323,7 @@ export default function Attendance() {
             {grade ? ` · ${GRADE_NAMES[grade]}` : ""} ·{" "}
             <span className="num">{students.length}</span> طالبًا
           </p>
+          <ClassNotesButton students={students} notesBy={notesBy} />
         </div>
         <div className="mt-4 grid grid-cols-4 border-t border-[#CCF2DB] bg-white/50">
           {ORDER.map((k) => (
@@ -399,6 +408,7 @@ export default function Attendance() {
                     {s.national_id && (
                       <p className="num mt-0.5 text-xs leading-none text-faint">{s.national_id}</p>
                     )}
+                    <StudentNoteChips name={s.full_name} notes={notesBy[s.id]} />
                   </div>
                   {!punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
                   {punched.has(s.id) && cur === "absent" && (
