@@ -45,6 +45,7 @@ const STATUS_CHIP = {
   rejected: { t: "مُعاد للتعديل",    c: "bg-absent/10 text-absent" },
   awaiting_reply: { t: "بانتظار رد المستفيد", c: "bg-warning/10 text-warning" },
   replied:  { t: "وصل الرد",         c: "bg-mint-tint text-mint-deep" },
+  draft:    { t: "مسودة",            c: "bg-canvas text-muted" },
 };
 
 const hijriYear = () => {
@@ -381,6 +382,8 @@ export default function Forms({ view = "issue", openKey = null }) {
   const [docs, setDocs] = useState([]);
   const [editing, setEditing] = useState(null);     // مستند مُعاد يجري تصحيحه
   const [returned, setReturned] = useState([]);     // ما أعاده المدير إليّ
+  const [drafts, setDrafts] = useState([]);         // مسوداتي: نماذج حُفظت لتُكمَل لاحقًا
+  const [draftDoc, setDraftDoc] = useState(null);   // المسودة المفتوحة الآن
   const [rejectFor, setRejectFor] = useState(null); // مستند بانتظار سبب الإعادة
   const [rejectNote, setRejectNote] = useState("");
   const [viewing, setViewing] = useState(null);    // { doc, template, urls }
@@ -420,8 +423,18 @@ export default function Forms({ view = "issue", openKey = null }) {
       });
       setLoading(false);
       loadReturned();
+      loadDrafts();
     })();
   }, [session]);
+
+  // مسوداتي: ما حفظه المستخدم ليكمله لاحقًا (كاستمارة زيارة قُيّم جزء الصف منها)
+  const loadDrafts = async () => {
+    const { data } = await supabase.from("form_documents")
+      .select("*, form_templates(title, category, orientation, fields, key, signature_source)")
+      .eq("created_by", session.user.id).eq("status", "draft")
+      .order("created_at", { ascending: false });
+    setDrafts(data ?? []);
+  };
 
   // ما أعاده المدير لهذا المستخدم للتعديل
   const loadReturned = async () => {
@@ -553,6 +566,7 @@ export default function Forms({ view = "issue", openKey = null }) {
   const loadDocs = async () => {
     const { data } = await supabase.from("form_documents")
       .select("*, form_templates(title, category, orientation, fields, key, signature_source)")
+      .neq("status", "draft")
       .order("created_at", { ascending: false }).limit(200);
     setDocs(data ?? []);
   };
@@ -575,6 +589,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     const t = templates.find((x) => x.id === d.template_id) ?? d.form_templates;
     if (!t) { setMsg({ ok: false, text: "النموذج لم يعد متاحًا." }); return; }
     setEditing(d);
+    setDraftDoc(null);
     setChosen([]); setBatch([]);
     setPicked({ ...t, id: d.template_id });
     setValues(d.data ?? {});
@@ -584,6 +599,7 @@ export default function Forms({ view = "issue", openKey = null }) {
   const start = (t) => {
     setPicked(t);
     setEditing(null);
+    setDraftDoc(null);
     setIssued(null); setMsg(null); setClassId(""); setChosen([]); setBatch([]); setLessons(null);
     const init = {};
     (t.fields ?? []).forEach((f) => {
@@ -613,10 +629,11 @@ export default function Forms({ view = "issue", openKey = null }) {
   }, [picked, values, chosen]);
 
   // حصص المعلم في الفصل الدراسي الحالي: فصوله ومواده وحصصه
-  const loadLessons = async (head) => {
+  const loadLessons = async (head, { keep = false, tpl = picked } = {}) => {
     setLessons(null);
-    ["lesson_class", "lesson_subject", "lesson_period"].forEach((t) => {
-      const f = (picked?.fields ?? []).find((x) => x.type === t);
+    // عند فتح مسودة تبقى الحصة المختارة كما حُفظت
+    if (!keep) ["lesson_class", "lesson_subject", "lesson_period"].forEach((t) => {
+      const f = (tpl?.fields ?? []).find((x) => x.type === t);
       if (f) setValues((v) => ({ ...v, [f.name]: "" }));
     });
     let tid = head.id?.startsWith("t-") ? head.id.slice(2) : null;
@@ -737,11 +754,86 @@ export default function Forms({ view = "issue", openKey = null }) {
     } catch { /* تبقى الحقول للإدخال اليدوي */ }
   };
 
+  /* المسودة: يُحجز رقمها التسلسلي عند أول حفظ، ولا تُربط بحساب المستفيد حتى
+     الإصدار — فلا يراها ولا يصله إشعار بها قبل اكتمالها. تُكمَل من «مسوداتي». */
+  const saveDraft = async () => {
+    if (!picked) return;
+    if (chosen.length > 1) { setMsg({ ok: false, text: "المسودة لمستفيد واحد — اختر شخصًا واحدًا." }); return; }
+    const head = chosen[0] ?? null;
+    if (!head && !String(values.recipient ?? "").trim()) {
+      setMsg({ ok: false, text: "اختر المستفيد أولًا ثم احفظ المسودة." });
+      return;
+    }
+    setSaving(true); setMsg(null);
+    const data = {
+      ...values,
+      ...(head ? { draft_target: { id: head.id, uid: head.uid ?? head.user_id ?? null, full_name: head.full_name,
+                                   job: head.job ?? "", specialization: head.specialization ?? "",
+                                   national_id: head.national_id ?? "" } } : {}),
+    };
+    const patch = { data, recipient: (head?.full_name ?? values.recipient) || null, student_id: values.student_id ?? null };
+    let res;
+    if (draftDoc) {
+      res = await supabase.from("form_documents").update(patch).eq("id", draftDoc.id).select().single();
+    } else {
+      const year = hijriYear();
+      const { data: serial, error: se } = await supabase
+        .rpc("next_form_serial", { p_category: picked.category, p_hijri_year: year });
+      if (se) { setSaving(false); setMsg({ ok: false, text: `تعذّر حجز الرقم: ${se.message}` }); return; }
+      res = await supabase.from("form_documents").insert({
+        ...patch, template_id: picked.id, serial, title: picked.title, status: "draft",
+        hijri_year: year, created_by: session.user.id,
+      }).select().single();
+    }
+    setSaving(false);
+    if (res.error) { setMsg({ ok: false, text: `تعذّر حفظ المسودة: ${res.error.message}` }); return; }
+    setDraftDoc(res.data);
+    loadDrafts();
+    setMsg({ ok: true, text: `حُفظت المسودة برقم ${res.data.serial} — أكملها لاحقًا من «مسوداتي» ثم أصدرها.` });
+  };
+
+  // فتح مسودة لإكمالها: بياناتها والمستفيد المختار وجدوله كما حُفظت
+  const resumeDraft = (d) => {
+    const t = templates.find((x) => x.id === d.template_id)
+           ?? (d.form_templates ? { ...d.form_templates, id: d.template_id } : null);
+    if (!t) { setMsg({ ok: false, text: "النموذج لم يعد متاحًا." }); return; }
+    const { draft_target: target, ...rest } = d.data ?? {};
+    setPicked(t);
+    setEditing(null);
+    setDraftDoc(d);
+    setIssued(null); setMsg(null); setClassId(""); setBatch([]); setLessons(null);
+    setValues(rest);
+    setChosen(target ? [target] : []);
+    if (target && (t.fields ?? []).some((f) => LESSON_TYPES.includes(f.type))) {
+      loadLessons(target, { keep: true, tpl: t });
+    }
+  };
+
+  const deleteDraft = async (d) => {
+    if (!window.confirm(`حذف المسودة ${d.serial}${d.recipient ? ` (${d.recipient})` : ""}؟ لا يمكن التراجع.`)) return;
+    const { error } = await supabase.from("form_documents").delete().eq("id", d.id);
+    if (error) { setMsg({ ok: false, text: `تعذّر الحذف: ${error.message}` }); return; }
+    if (draftDoc?.id === d.id) setDraftDoc(null);
+    loadDrafts();
+    setMsg({ ok: true, text: `حُذفت المسودة ${d.serial}.` });
+  };
+
   const issue = async () => {
     if (!picked || missing.length) {
       setMsg({ ok: false, text: `أكمل الحقول المطلوبة: ${missing.map((f) => f.label).join("، ")}` });
       return;
     }
+    if (draftDoc && chosen.length > 1) {
+      setMsg({ ok: false, text: "المسودة لمستفيد واحد — أبقِ شخصًا واحدًا." });
+      return;
+    }
+
+    // جدول بنود لم تُقدَّر كل عناصره: تنبيه قبل الإصدار (والمسودة بديل)
+    const unrated = (picked.fields ?? []).filter((f) => f.type === "rubric")
+      .reduce((a, f) => { const sc = rubricScore(f, values[f.name]); return a + (sc.count - sc.rated); }, 0);
+    if (unrated && !window.confirm(
+      `لم تُقدَّر ${unrated} من عناصر البنود.\nهل تصدر الاستمارة رغم ذلك؟\n\nيمكنك بدلًا من ذلك «حفظ مسودة» وإكمالها لاحقًا.`)) return;
+
     setSaving(true); setMsg(null);
 
     // تصحيح مستند مُعاد: نحتفظ برقمه التسلسلي ونعيده لقائمة الاعتماد
@@ -766,9 +858,11 @@ export default function Forms({ view = "issue", openKey = null }) {
       return;
     }
 
-    const year = hijriYear();
-    const { data: serial, error: se } = await supabase
-      .rpc("next_form_serial", { p_category: picked.category, p_hijri_year: year });
+    // إصدار مسودة: برقمها المحجوز وعامها، ويُحدَّث صفّها بدل إنشاء مستند جديد
+    const year = draftDoc?.hijri_year ?? hijriYear();
+    const { data: serial, error: se } = draftDoc
+      ? { data: draftDoc.serial, error: null }
+      : await supabase.rpc("next_form_serial", { p_category: picked.category, p_hijri_year: year });
     if (se) { setSaving(false); setMsg({ ok: false, text: `تعذّر إصدار الرقم: ${se.message}` }); return; }
 
     const usesIssuer = picked.signature_source === "issuer" || picked.signature_source === "both";
@@ -824,9 +918,12 @@ export default function Forms({ view = "issue", openKey = null }) {
       });
     }
 
-    const { data, error } = await supabase.from("form_documents").insert(rows).select();
+    const { data, error } = draftDoc
+      ? await supabase.from("form_documents").update(rows[0]).eq("id", draftDoc.id).select()
+      : await supabase.from("form_documents").insert(rows).select();
     setSaving(false);
     if (error) { setMsg({ ok: false, text: `تعذّر الحفظ: ${error.message}` }); return; }
+    if (draftDoc) { setDraftDoc(null); loadDrafts(); }
 
     setIssued(data[0]);
     setBatch(data);
@@ -990,7 +1087,7 @@ export default function Forms({ view = "issue", openKey = null }) {
 
     let q = supabase.from("form_documents")
       .select("id, serial, recipient, status, created_at, created_by")
-      .eq("template_id", tpl.id)
+      .eq("template_id", tpl.id).neq("status", "draft")
       .order("created_at", { ascending: true });
     if (rFrom) q = q.gte("created_at", `${rFrom}T00:00:00`);
     if (rTo)   q = q.lte("created_at", `${rTo}T23:59:59`);
@@ -1370,12 +1467,26 @@ export default function Forms({ view = "issue", openKey = null }) {
               </p>
             )}
 
+            {draftDoc && !issued && (
+              <p className="rounded-sm2 bg-canvas px-3 py-2 text-xs leading-relaxed text-muted">
+                مسودة برقم <b className="num text-ink">{draftDoc.serial}</b> — لا تصل المستفيد ولا تُطبع حتى تُصدرها.
+              </p>
+            )}
+
             <button className="btn-primary w-full" onClick={issue} disabled={saving || !!issued}>
               {saving ? "جارٍ الحفظ…"
                 : issued ? "تم"
                 : editing ? "إعادة الإرسال للاعتماد"
                 : needsApproval ? "إرسال للاعتماد" : "إصدار وحفظ"}
             </button>
+
+            {/* المسودة: لما يُكمَل على مراحل، كاستمارة زيارة يُقيَّم جزء الصف منها أولًا */}
+            {!issued && !editing && chosen.length <= 1 && (
+              <button className="w-full rounded-sm2 border border-line py-2 text-sm text-mint-deep hover:bg-canvas"
+                      onClick={saveDraft} disabled={saving}>
+                {draftDoc ? "حفظ المسودة" : "حفظ مسودة وإكمالها لاحقًا"}
+              </button>
+            )}
 
             {selfNow && !picked.requires_approval && (
               <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
@@ -1588,6 +1699,50 @@ export default function Forms({ view = "issue", openKey = null }) {
           </div>
         ) : (
           <>
+          {/* مسوداتي: نماذج حُفظت لتُكمَل ثم تُصدر */}
+          {drafts.length > 0 && (
+            <div className="card mb-3 overflow-hidden">
+              <p className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">
+                مسوداتي <span className="num text-muted">({drafts.length})</span>
+                <span className="mr-2 text-xs font-normal text-faint">أكملها ثم أصدرها</span>
+              </p>
+              <div className="divide-y divide-line">
+                {drafts.map((d) => {
+                  const rubrics = (d.form_templates?.fields ?? []).filter((f) => f.type === "rubric");
+                  return (
+                    <div key={d.id} className="flex items-center gap-2 px-2 py-1 hover:bg-canvas">
+                      <button onClick={() => resumeDraft(d)}
+                              className="flex min-w-0 flex-1 items-center justify-between gap-3 px-2 py-2 text-right">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-ink">{d.title}</p>
+                          <p className="mt-0.5 text-xs text-faint">
+                            <span className="num">{d.serial}</span>{d.recipient ? ` · ${d.recipient}` : ""}
+                          </p>
+                        </div>
+                        <span className="flex shrink-0 flex-wrap justify-end gap-1">
+                          {rubrics.map((f) => {
+                            const sc = rubricScore(f, d.data?.[f.name]);
+                            const done = sc.rated === sc.count;
+                            return (
+                              <span key={f.name} className={`chip ${done ? "bg-present/10 text-present" : "bg-warning/10 text-warning"}`}>
+                                {f.label}: {done ? "✓" : <><span className="num">{sc.rated}</span> من <span className="num">{sc.count}</span></>}
+                              </span>
+                            );
+                          })}
+                          <span className="chip bg-mint-tint text-mint-deep">إكمال</span>
+                        </span>
+                      </button>
+                      <button onClick={() => deleteDraft(d)} title="حذف المسودة"
+                              className="shrink-0 rounded-pill border border-absent/40 px-2.5 py-1 text-xs text-absent hover:bg-absent/5">
+                        حذف
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* أقسام المدرسة — تظهر الأقسام التي لها نماذج متاحة لهذا الحساب */}
           {(() => {
             const used = DEPARTMENTS.filter((dp) =>
