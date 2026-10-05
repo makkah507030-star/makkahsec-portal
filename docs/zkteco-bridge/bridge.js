@@ -38,7 +38,7 @@ const TARGET_PORT = 443;
 // السجل — لمتابعة ما يحدث لحظيًا في نافذة الطرفية
 // ---------------------------------------------------------
 function log(...args) {
-  const stamp = new Date().toLocaleString("ar-SA", { hour12: true });
+  const stamp = new Date().toLocaleString("en-GB", { hour12: true });
   console.log(`[${stamp}]`, ...args);
 }
 
@@ -53,7 +53,7 @@ const server = http.createServer((req, res) => {
   req.on("end", () => {
     const body = Buffer.concat(chunks);
 
-    log(`استقبال ${req.method} ${req.url} من ${req.socket.remoteAddress} (${body.length} بايت)`);
+    log(`Received ${req.method} ${req.url} from ${req.socket.remoteAddress} (${body.length} bytes)`);
 
     // تمرير الطلب كما هو إلى makkahsec.com عبر HTTPS
     const forwardHeaders = { ...req.headers };
@@ -72,7 +72,7 @@ const server = http.createServer((req, res) => {
         forwardRes.on("data", (c) => respChunks.push(c));
         forwardRes.on("end", () => {
           const respBody = Buffer.concat(respChunks);
-          log(`رد من الخادم: ${forwardRes.statusCode} — ${respBody.toString("utf8").slice(0, 120)}`);
+          log(`Server replied: ${forwardRes.statusCode} - ${respBody.toString("utf8").slice(0, 120)}`);
 
           res.writeHead(forwardRes.statusCode, forwardRes.headers);
           res.end(respBody);
@@ -81,7 +81,7 @@ const server = http.createServer((req, res) => {
     );
 
     forwardReq.on("error", (err) => {
-      log("⚠ تعذّر الاتصال بالخادم:", err.message);
+      log("WARNING: could not reach the server:", err.message);
       res.writeHead(502, { "Content-Type": "text/plain; charset=utf-8" });
       res.end("ERROR: bridge could not reach makkahsec.com");
     });
@@ -93,19 +93,19 @@ const server = http.createServer((req, res) => {
 
 server.listen(LOCAL_PORT, "0.0.0.0", () => {
   log("=".repeat(60));
-  log("وسيط بصمة ZKTeco يعمل الآن ✅");
-  log(`يستمع على المنفذ: ${LOCAL_PORT}`);
-  log(`يمرّر البيانات إلى: https://${TARGET_HOST}`);
-  log("اضبط كل جهاز بصمة على عنوان IP هذا الحاسوب + المنفذ أعلاه");
-  log("لا تغلق هذه النافذة أثناء فترة البصمة الصباحية");
+  log("ZKTeco fingerprint bridge is RUNNING");
+  log(`Listening on port: ${LOCAL_PORT}`);
+  log(`Forwarding data to: https://${TARGET_HOST}`);
+  log("Set every fingerprint device to this computer IP address + the port above");
+  log("Do NOT close this window during the morning fingerprint period");
   log("=".repeat(60));
 });
 
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    log(`⚠ المنفذ ${LOCAL_PORT} مستخدم من برنامج آخر. أغلقه أو غيّر LOCAL_PORT أعلى الملف.`);
+    log(`WARNING: port ${LOCAL_PORT} is used by another program. Close it or change LOCAL_PORT at the top of the file.`);
   } else {
-    log("⚠ خطأ في تشغيل الوسيط:", err.message);
+    log("WARNING: bridge failed to start:", err.message);
   }
   process.exit(1);
 });

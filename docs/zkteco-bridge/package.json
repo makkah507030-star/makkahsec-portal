@@ -1,0 +1,6 @@
+{
+  "name": "zkteco-bridge",
+  "private": true,
+  "type": "commonjs",
+  "scripts": { "start": "node bridge.js" }
+}
