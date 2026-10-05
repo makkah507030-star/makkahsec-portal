@@ -26,6 +26,7 @@
 
 const http = require("http");
 const https = require("https");
+const os = require("os");
 
 // ---------------------------------------------------------
 // الإعدادات — لا حاجة لتعديل شيء عادةً
@@ -91,12 +92,31 @@ const server = http.createServer((req, res) => {
   });
 });
 
+// عناوين هذا الحاسوب على الشبكة — هي ما يُكتب في إعدادات الجهاز كعنوان للخادم
+function localAddresses() {
+  const out = [];
+  for (const [name, list] of Object.entries(os.networkInterfaces())) {
+    for (const i of list || []) {
+      if (i.family === "IPv4" && !i.internal) out.push(`${i.address}  (${name})`);
+    }
+  }
+  return out;
+}
+
+// أي اتصال يصل، حتى لو لم يكتمل طلب HTTP — لتشخيص وصول الأجهزة
+server.on("connection", (socket) => {
+  log(`Connection opened from ${socket.remoteAddress}`);
+});
+
 server.listen(LOCAL_PORT, "0.0.0.0", () => {
   log("=".repeat(60));
   log("ZKTeco fingerprint bridge is RUNNING");
   log(`Listening on port: ${LOCAL_PORT}`);
   log(`Forwarding data to: https://${TARGET_HOST}`);
-  log("Set every fingerprint device to this computer IP address + the port above");
+  const addrs = localAddresses();
+  log("THIS COMPUTER IP ADDRESS(ES) - use one of these as the server address in the device:");
+  (addrs.length ? addrs : ["(none found - check the network cable / Wi-Fi)"]).forEach((a) => log("   " + a));
+  log("Set every fingerprint device to the IP address above + the port above");
   log("Do NOT close this window during the morning fingerprint period");
   log("=".repeat(60));
 });
