@@ -1739,7 +1739,7 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
       {ready.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-semibold text-ink">معاينة</p>
-          <CertPreview>
+          <CertPreview portrait>
             <GuestCertificate {...guestCertProps(e, ready[0], 0, sigUrl, school)} />
           </CertPreview>
         </div>
@@ -1762,7 +1762,7 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
       </div>
 
       {printing && (
-        <PrintPortal id="ev-guest" landscape margin="0"
+        <PrintPortal id="ev-guest" margin="0"
                      extraCss="#ev-guest .sheet { page-break-after: always; } #ev-guest .sheet:last-child { page-break-after: auto; }">
           {printing.map((g) => (
             <GuestCertificate key={g.id} {...guestCertProps(e, g, ready.indexOf(g), sigUrl, school)} />
@@ -2088,22 +2088,24 @@ function StageApproval({ e, patch, onMsg, isPrincipal, byName, goReport }) {
 }
 
 /* معاينة مصغّرة للشهادة بعرض البطاقة */
-function CertPreview({ children }) {
+function CertPreview({ portrait = false, children }) {
   const ref = useRef(null);
   const [scale, setScale] = useState(0.5);
+  // 297mm ≈ 1122.5px و210mm ≈ 793.7px — العمودية تُعرض بنصف عرض البطاقة تقريبًا
+  const [w, h] = portrait ? [793.7, 1122.5] : [1122.5, 793.7];
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const fit = () => setScale(el.clientWidth / 1122.5);   // 297mm ≈ 1122.5px
+    const fit = () => setScale(el.clientWidth / w);
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [w]);
   return (
-    <div ref={ref} className="overflow-hidden rounded-sm2 border border-line"
-         style={{ height: 793.7 * scale }}>
-      <div style={{ width: "297mm", transform: `scale(${scale})`, transformOrigin: "top right" }}>
+    <div ref={ref} className={`overflow-hidden rounded-sm2 border border-line ${portrait ? "mx-auto max-w-[360px]" : ""}`}
+         style={{ height: h * scale }}>
+      <div style={{ width: portrait ? "210mm" : "297mm", transform: `scale(${scale})`, transformOrigin: "top right" }}>
         {children}
       </div>
     </div>

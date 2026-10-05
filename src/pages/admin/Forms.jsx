@@ -6,7 +6,7 @@ import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
-import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
+import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES, sheetLandscape, isGuestCert } from "../../components/FormSheet.jsx";
 import { RATING_LEVELS, itemPoints, rubricScore } from "../../lib/rubric.js";
 import Loader from "../../components/Loader.jsx";
 import { ReplyFilesList } from "../../components/ReplyFiles.jsx";
@@ -1173,7 +1173,7 @@ export default function Forms({ view = "issue", openKey = null }) {
           </div>
         </div>
         <div className="no-print">
-          <SheetPreview landscape={viewing.template.orientation === "landscape"}>
+          <SheetPreview landscape={sheetLandscape(viewing.template)}>
             <FormSheet template={viewing.template} values={d.data} doc={d}
                        sigUrl={printable ? viewing.sig : null}
                        stampUrl={printable ? viewing.stamp : null}
@@ -1186,7 +1186,7 @@ export default function Forms({ view = "issue", openKey = null }) {
 
         {printable && (
           <div className="hidden print:block">
-            <PrintArea landscape={viewing.template.orientation === "landscape"}>
+            <PrintArea landscape={sheetLandscape(viewing.template)}>
               <FormSheet template={viewing.template} values={d.data} doc={d}
                          sigUrl={viewing.sig} stampUrl={viewing.stamp}
                          principalSigUrl={viewing.principal}
@@ -1227,7 +1227,7 @@ export default function Forms({ view = "issue", openKey = null }) {
         {/* منطقة الطباعة: مخفية على الشاشة، تظهر عند الطباعة فقط */}
         {printable.length > 0 && (
           <div className="hidden print:block">
-            <PrintArea landscape={picked.orientation === "landscape"}>
+            <PrintArea landscape={sheetLandscape(picked)}>
               {printable.map((b) => (
                 <FormSheet key={b.id} template={picked} values={b.data} doc={b}
                            sigUrl={urls.sig}
@@ -1494,9 +1494,9 @@ export default function Forms({ view = "issue", openKey = null }) {
               </p>
             )}
 
-            {issued && issued.status === "issued" && picked.orientation === "landscape" && (
+            {issued && issued.status === "issued" && (sheetLandscape(picked) || isGuestCert(picked)) && (
               <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs leading-relaxed text-mint-deep">
-                في نافذة الطباعة: اجعل الاتجاه <b>أفقيًا</b> والهوامش <b>بلا هوامش</b>،
+                في نافذة الطباعة: اجعل الاتجاه <b>{sheetLandscape(picked) ? "أفقيًا" : "عموديًا"}</b> والهوامش <b>بلا هوامش</b>،
                 وفعّل <b>طباعة الخلفيات</b> ليظهر الشعاران بلونيهما.
               </p>
             )}
@@ -1526,7 +1526,7 @@ export default function Forms({ view = "issue", openKey = null }) {
             <p className="mb-1.5 text-xs text-muted">
               معاينة {batch.length > 1 ? `الشهادة الأولى من ${batch.length}` : "مصغّرة"} — الطباعة بالمقاس الأصلي
             </p>
-            <SheetPreview landscape={picked.orientation === "landscape"}>
+            <SheetPreview landscape={sheetLandscape(picked)}>
               <FormSheet
                 template={picked} values={values} doc={d}
                 sigUrl={showSign ? urls.sig : null}

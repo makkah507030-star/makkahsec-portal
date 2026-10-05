@@ -303,6 +303,9 @@ function Certificate(p) {
 /* شهادة شكر الضيوف والمتعاونين — تصميمها المستقل في GuestCertificate */
 export const isGuestCert = (template) => template?.key === "guest_appreciation";
 
+/* اتجاه الورقة: شهادة الضيوف عمودية دائمًا أيًّا كان المحفوظ في القالب */
+export const sheetLandscape = (template) => !isGuestCert(template) && template?.orientation === "landscape";
+
 function GuestCert(p) {
   const { v, doc, template } = p;
   const src = template.signature_source;
@@ -949,7 +952,7 @@ export default function FormSheet({
   replySigUrl, replySigName, scale = 1,
 }) {
   if (!template) return null;
-  const landscape = template.orientation === "landscape";
+  const landscape = sheetLandscape(template);
   // المستندات المحفوظة قبل توحيد التاريخ: «03/03/1448هـ (14/09/2026م)» تُعرض «03/03/1448 - 14/09/2026»
   const v = Object.fromEntries(Object.entries(values ?? {}).map(([k, x]) => [k,
     typeof x === "string"

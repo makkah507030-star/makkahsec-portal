@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import FormSheet, { PrintArea, SHEET_PX } from "../components/FormSheet.jsx";
+import FormSheet, { PrintArea, SHEET_PX, sheetLandscape } from "../components/FormSheet.jsx";
 import DateField, { TimeField } from "../components/DateField.jsx";
 import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
@@ -210,7 +210,7 @@ export default function DocumentView() {
     setAssets((a) => ({ ...a, reply_signature: withSig ? mySigUrl : null, reply_signature_name: name }));
     setMsg({ ok: true, text: "سُجّل اطلاعك على الاستمارة، ووصل الإشعار لمُصدِرها." });
   };
-  const landscape = template.orientation === "landscape";
+  const landscape = sheetLandscape(template);
 
   return (
     <div className="space-y-4">
