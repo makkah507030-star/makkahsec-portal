@@ -198,7 +198,8 @@ export default function DocumentView() {
   const acknowledge = async () => {
     if (!ackChecked) { setMsg({ ok: false, text: "ضع علامة على الإقرار أولًا." }); return; }
     setSending(true);
-    const withSig = !!(signIt && mySig);
+    // من له توقيع محفوظ في البوابة يُدرج توقيعه تلقائيًا
+    const withSig = !!mySig;
     const { data: at, error } = await supabase.rpc("acknowledge_form_document", { p_doc: doc.id, p_sign: withSig });
     setSending(false);
     if (error) { setMsg({ ok: false, text: `تعذّر تسجيل الإقرار: ${error.message}` }); return; }
@@ -243,16 +244,13 @@ export default function DocumentView() {
           </label>
           <div className="rounded-sm2 border border-line p-3">
             <p className="text-xs font-semibold text-ink">التوقيع</p>
-            {mySigUrl ? (
+            {mySig ? (
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <label className="flex items-center gap-1.5 text-sm text-muted">
-                  <input type="checkbox" checked={signIt} onChange={(e) => setSignIt(e.target.checked)} />
-                  أرفق توقيعي
-                </label>
-                {signIt && (
+                {mySigUrl && (
                   <img src={mySigUrl} alt="توقيعي"
                        className="h-12 w-auto rounded-sm2 border border-line bg-white object-contain px-2" />
                 )}
+                <span className="text-xs text-muted">يُدرج توقيعك المحفوظ في البوابة تلقائيًا.</span>
               </div>
             ) : (
               <p className="mt-1.5 text-xs leading-relaxed text-warning">
