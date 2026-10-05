@@ -143,7 +143,8 @@ const pickPreset = (field, current, t) => {
 
 // نماذج تقييم المعلمين: قائمة الموظفين تعرض المعلمين فقط (ومن يجمع التدريس
 // مع عمل إداري معلمٌ أيضًا)، لا الإداريين الخالصين
-const teachersOnly = (f, tpl) => !!f?.teachers_only || tpl?.key === "teacher_support_visit";
+const teachersOnly = (f, tpl) => !!f?.teachers_only || tpl?.key === "teacher_support_visit" ||
+  (tpl?.fields ?? []).some((x) => x.type === "rubric");
 
 // حقول الحصة المزارة: تُعبَّأ قوائمها من جدول المعلم المختار
 const LESSON_TYPES = ["lesson_class", "lesson_subject", "lesson_period"];

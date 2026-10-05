@@ -574,6 +574,9 @@ const cellB = "border border-[#9DB5A6]";
 // الرقم وحده داخل num (اتجاهه من اليسار) — حتى لا تنقلب «٨ من ١٠» في السطر العربي
 const N = ({ children }) => <span className="num">{children}</span>;
 
+// القيمة نصًّا للطباعة — الكائنات (كجدول البنود) لا تُعرض نصًا فتنهار الصفحة
+const asText = (x) => (x == null || typeof x === "object" ? "" : x);
+
 const rubricFields = (template) => (template.fields ?? []).filter((f) => f.type === "rubric");
 export const isRubricDoc = (template, v) =>
   rubricFields(template).some((f) => v && Object.prototype.hasOwnProperty.call(v, f.name));
@@ -796,7 +799,7 @@ function SupportPage({ template, v }) {
       {list.map((f) => (
         <div key={f.name} className={`${cellB} rounded-[4px]`}>
           <p className="border-b border-[#9DB5A6] px-3 py-1.5 text-[12.5px] font-bold text-mint-deep" style={TH}>{f.label}</p>
-          <p className="min-h-[18mm] whitespace-pre-line px-3 py-2 text-[12.5px] leading-[1.8] text-ink">{v[f.name] || ""}</p>
+          <p className="min-h-[18mm] whitespace-pre-line px-3 py-2 text-[12.5px] leading-[1.8] text-ink">{asText(v[f.name])}</p>
         </div>
       ))}
     </div>
@@ -859,7 +862,7 @@ function Administrative(p) {
           ) : (
             <div key={f.name} className="flex gap-3 border-b border-line py-2">
               <span className="w-44 shrink-0 text-[13px] text-muted">{f.label}</span>
-              <span className="whitespace-pre-line text-[14px] text-ink">{v[f.name] || "—"}</span>
+              <span className="whitespace-pre-line text-[14px] text-ink">{asText(v[f.name]) || "—"}</span>
             </div>
           ),
         )}
@@ -910,7 +913,8 @@ export default function FormSheet({
                   principalName: principalName || PRINCIPAL_NAME, replySigUrl, replySigName };
 
   // استمارة الزيارة بالبنود: عدة صفحات، كل صفحة ورقة مستقلة في الطباعة
-  if (template.key === "teacher_support_visit" && isRubricDoc(template, v)) {
+  // تُعرف بوجود جدول بنود في حقولها، لا بمفتاح القالب (قد يختلف في قاعدة البيانات)
+  if (isRubricDoc(template, v)) {
     return (
       <div className="space-y-4 print:space-y-0">
         {supportVisitPages(props).map((page, i) => (
