@@ -18,17 +18,26 @@ export function useNotifications(session) {
       return;
     }
 
-    const { data } = await supabase
-      .from("notification_recipients")
-      .select("read_at, notifications(id, title, body, kind, link, created_at)")
-      .eq("user_id", session.user.id)
-      .order("read_at", { ascending: true, nullsFirst: true })
-      .limit(50);
+    // الدالة my_notifications تجلب إشعارات المستخدم مباشرة دون أن يمرّ كل إشعار
+    // بقواعد الصلاحية (كان الاستعلام المضمَّن يستغرق ثوانيَ). وإن لم تُنفَّذ
+    // بعد في قاعدة البيانات نعود للاستعلام القديم.
+    let list;
+    const rpc = await supabase.rpc("my_notifications", { p_limit: 50 });
+    if (!rpc.error) {
+      list = rpc.data ?? [];
+    } else {
+      const { data } = await supabase
+        .from("notification_recipients")
+        .select("read_at, notifications(id, title, body, kind, link, created_at)")
+        .eq("user_id", session.user.id)
+        .order("read_at", { ascending: true, nullsFirst: true })
+        .limit(50);
 
-    const list = (data ?? [])
-      .filter((r) => r.notifications)
-      .map((r) => ({ ...r.notifications, read_at: r.read_at }))
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      list = (data ?? [])
+        .filter((r) => r.notifications)
+        .map((r) => ({ ...r.notifications, read_at: r.read_at }))
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
 
     setItems(list);
     setUnread(list.filter((n) => !n.read_at).length);
