@@ -14,7 +14,7 @@ export default function ArticleImageSlider({ images }) {
         <img
           src={images[idx]}
           alt=""
-          className="aspect-[16/9] w-full object-cover"
+          className="mx-auto max-h-[70vh] w-full object-contain"
         />
 
         {images.length > 1 && (

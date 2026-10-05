@@ -143,8 +143,8 @@ export default function NewsArticle() {
   .by-name{font-weight:700;font-size:13px}
   .by-role{font-size:11.5px;color:#6B6B6B}
   .excerpt{font-size:15px;font-weight:600;color:#33463E;background:#E9F7F0;border:1px solid #CCF2DB;border-radius:10px;padding:10px 14px;margin-bottom:14px}
-  .imgs{margin:10px 0 16px;display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;justify-content:center;align-items:stretch}
-  .imgs img{flex:1 1 0;min-width:0;max-width:230px;aspect-ratio:16/9;object-fit:cover;border:1px solid #DDE6E1;border-radius:8px;background:#fff;page-break-inside:avoid}
+  .imgs{margin:10px 0 16px;display:flex;flex-direction:row;flex-wrap:nowrap;gap:8px;justify-content:center;align-items:center}
+  .imgs img{flex:1 1 0;min-width:0;max-width:230px;height:auto;object-fit:contain;border:1px solid #DDE6E1;border-radius:8px;background:#fff;page-break-inside:avoid}
   .body p{font-size:14.5px;margin-bottom:10px;text-align:justify}
   .video{margin-top:14px;border:1px dashed #0F7B55;background:#F4FBF8;border-radius:10px;padding:10px 14px;font-size:13px;word-break:break-all}
   .video .lbl{font-weight:700;color:#0F7B55;display:block;margin-bottom:4px}

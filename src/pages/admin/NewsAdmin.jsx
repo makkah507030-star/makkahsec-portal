@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import ColorLegend from "../../components/ColorLegend.jsx";
 import NewsCoverCard from "../../components/NewsCoverCard.jsx";
-import { normalizeImage } from "../../lib/imageResize.js";
+import { normalizeImage, shrinkImage } from "../../lib/imageResize.js";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 
@@ -103,14 +103,14 @@ export default function NewsAdmin() {
     setUploading(true);
     setMsg(null);
     try {
-      // إعادة ضبط الأبعاد لإطار 16:9 موحّد قبل الرفع — لتظهر بمقاس متناسق
-      // في الشريط والطباعة مهما كان مقاس الأصل
-      const processed = await normalizeImage(file);
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+      // تصغير بلا قصّ — تبقى نسبة الصورة كاملة (بطاقة طويلة أو صورة عريضة)
+      const processed = await shrinkImage(file);
+      const ext = processed.type === "image/png" ? "png" : "jpg";
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error } = await supabase.storage.from("news").upload(path, processed, {
         cacheControl: "3600",
         upsert: false,
-        contentType: "image/jpeg",
+        contentType: processed.type || "image/jpeg",
       });
       if (error) throw error;
       const { data } = supabase.storage.from("news").getPublicUrl(path);
