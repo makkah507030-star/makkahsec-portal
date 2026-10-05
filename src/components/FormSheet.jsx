@@ -806,6 +806,45 @@ function SupportPage({ template, v }) {
   );
 }
 
+/* إقرار المعلم بالاطلاع: بعد إقراره في البوابة يظهر اسمه وتوقيعه وتاريخه،
+   وقبله يبقى فارغًا ليوقَّع بخط اليد إن طُبعت الورقة */
+function AckBox({ v, doc, sigUrl, name }) {
+  const at = v.ack_at ?? doc?.reply_at ?? null;
+  const date = at ? new Date(at) : null;
+  const dateText = date
+    ? `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`
+    : "";
+  return (
+    <div className={`${cellB} mt-4 rounded-[4px]`}>
+      <p className="border-b border-[#9DB5A6] px-3 py-1.5 text-[12.5px] font-bold text-mint-deep" style={TH}>
+        إقرار المعلم بالاطلاع
+      </p>
+      <div className="flex items-center justify-between gap-4 px-3 py-2.5">
+        <p className="text-[12.5px] leading-[1.8] text-ink">
+          اطلعت على ما ورد في هذه الاستمارة من تقييم وجوانب دعم وتطوير.
+          {at && <span className="mr-2 inline-block rounded-pill px-2 text-[11px] font-semibold text-mint-deep" style={TH}>✓ أُقِرّ إلكترونيًا</span>}
+        </p>
+        <div className="grid shrink-0 grid-cols-3 gap-3 text-center text-[11px] text-muted">
+          <div>
+            <p>الاسم</p>
+            <p className="mt-1 min-h-[16px] text-[12px] font-semibold text-ink">{at ? (name || doc?.recipient || v.recipient || "") : ""}</p>
+          </div>
+          <div>
+            <p>التوقيع</p>
+            <div className="mt-0.5 grid h-10 w-24 place-items-center">
+              {at && sigUrl && <img src={sigUrl} alt="" className="max-h-10 w-auto object-contain" />}
+            </div>
+          </div>
+          <div>
+            <p>التاريخ</p>
+            <p className="num mt-1 min-h-[16px] text-[12px] font-semibold text-ink">{dateText}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function supportVisitPages(p) {
   const { template, v, doc } = p;
   const rubrics = rubricFields(template);
@@ -822,14 +861,15 @@ function supportVisitPages(p) {
   pages.push(<>
     <VisitHead title={template.title} sub="جوانب الدعم والتطوير" />
     <SupportPage template={template} v={v} />
+    <AckBox v={v} doc={doc} sigUrl={p.replySigUrl} name={p.replySigName} />
     <div className="mt-5">
       <ReplyFilesNote v={v} />
+      {/* الوكيل الزائر يمينًا والمدير يسارًا؛ توقيع المعلم في مربع إقراره */}
       <Signatures
         source={template.signature_source}
         issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}
         principalUrl={p.principalSigUrl} principalName={p.principalName}
         stampUrl={p.stampUrl}
-        replyUrl={p.replySigUrl} replyName={p.replySigName}
       />
     </div>
   </>);

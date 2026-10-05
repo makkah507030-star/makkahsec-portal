@@ -957,6 +957,8 @@ export default function Forms({ view = "issue", openKey = null }) {
       p_title: d.title,
       p_body: d.status === "awaiting_reply"
         ? `وصلك ${d.title} برقم ${d.serial} ويحتاج ردّك. افتحه من البوابة واكتب إفادتك ثم أرسلها.`
+        : (d.form_templates?.fields ?? []).some((f) => f.type === "rubric" || f.ack)
+        ? `وصلك ${d.title} برقم ${d.serial}. افتحه من البوابة واطّلع عليه، ثم أكّد اطلاعك ووقّع.`
         : `صدر لك ${d.title}${d.recipient ? ` باسم ${d.recipient}` : ""} برقم ${d.serial}. يمكنك عرضه وطباعته من البوابة.`,
       p_kind: "general",
       p_link: `/doc/${d.id}`,
@@ -1889,7 +1891,16 @@ export default function Forms({ view = "issue", openKey = null }) {
                       {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
                     </p>
                   </div>
-                  <span className={`chip shrink-0 ${STATUS_CHIP[d.status].c}`}>{STATUS_CHIP[d.status].t}</span>
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    {/* إقرار المستفيد بالاطلاع — في نماذج البنود */}
+                    {["issued", "approved"].includes(d.status) &&
+                     (d.form_templates?.fields ?? []).some((f) => f.type === "rubric" || f.ack) && (
+                      d.data?.ack_at
+                        ? <span className="chip bg-present/10 text-present">✓ اطّلع المعلم</span>
+                        : d.sent_at ? <span className="chip bg-warning/10 text-warning">بانتظار اطلاعه</span> : null
+                    )}
+                    <span className={`chip ${STATUS_CHIP[d.status].c}`}>{STATUS_CHIP[d.status].t}</span>
+                  </span>
                 </button>
                 {d.recipient_user_id && ["issued", "approved", "awaiting_reply"].includes(d.status) && (
                   <button onClick={() => sendToRecipient(d)}
