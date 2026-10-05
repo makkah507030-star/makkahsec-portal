@@ -30,12 +30,23 @@ function SheetPreview({ landscape, children }) {
     return () => window.removeEventListener("resize", fit);
   }, [landscape]);
 
-  const h = (landscape ? SHEET_PX.portrait : 1123) * scale + 16;
+  // ارتفاع المحتوى الفعلي — النموذج قد يكون أكثر من صفحة
+  const inner = useRef(null);
+  const [contentH, setContentH] = useState(landscape ? SHEET_PX.portrait : 1123);
+  useLayoutEffect(() => {
+    const el = inner.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => setContentH(el.offsetHeight || (landscape ? SHEET_PX.portrait : 1123)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [landscape]);
+
+  const h = contentH * scale + 16;
   return (
     <div ref={box} className="w-full min-w-0 max-w-full overflow-hidden">
       <div className="min-w-0" style={{ height: h }}>
         <div className="w-0 min-w-0" style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>
-          <div style={{ width: landscape ? SHEET_PX.landscape : SHEET_PX.portrait }}>
+          <div ref={inner} style={{ width: landscape ? SHEET_PX.landscape : SHEET_PX.portrait }}>
             {children}
           </div>
         </div>

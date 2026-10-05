@@ -7,6 +7,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES } from "../../components/FormSheet.jsx";
+import { RATING_LEVELS, itemPoints, rubricScore } from "../../lib/rubric.js";
 import Loader from "../../components/Loader.jsx";
 import { ReplyFilesList } from "../../components/ReplyFiles.jsx";
 import { useNotice } from "../../lib/useNotice.js";
@@ -74,12 +75,23 @@ function SheetPreview({ landscape, children }) {
     return () => window.removeEventListener("resize", fit);
   }, [landscape]);
 
-  const h = (landscape ? SHEET_PX.portrait : 1123) * scale + 16;
+  // ارتفاع المحتوى الفعلي — النموذج قد يكون أكثر من صفحة
+  const inner = useRef(null);
+  const [contentH, setContentH] = useState(landscape ? SHEET_PX.portrait : 1123);
+  useLayoutEffect(() => {
+    const el = inner.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => setContentH(el.offsetHeight || (landscape ? SHEET_PX.portrait : 1123)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [landscape]);
+
+  const h = contentH * scale + 16;
   return (
     <div ref={box} className="w-full min-w-0 max-w-full overflow-hidden">
       <div className="min-w-0" style={{ height: h }}>
         <div className="w-0 min-w-0" style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>
-          <div style={{ width: landscape ? SHEET_PX.landscape : SHEET_PX.portrait }}>
+          <div ref={inner} style={{ width: landscape ? SHEET_PX.landscape : SHEET_PX.portrait }}>
             {children}
           </div>
         </div>
@@ -103,7 +115,7 @@ const AUTO_MAP = [
 function autoFill(fields, info, current, { overwrite = false } = {}) {
   const out = { ...current };
   (fields ?? []).forEach((f) => {
-    if (["student", "staff", "theme", "table"].includes(f.type)) return;
+    if (["student", "staff", "theme", "table", "rubric"].includes(f.type)) return;
     // عند تبديل الشخص تُحدَّث بياناته المعروفة، وفيما عدا ذلك لا يُطمس ما كُتب
     if (!overwrite && String(out[f.name] ?? "").trim()) return;
     const label = f.label ?? "";
@@ -140,6 +152,80 @@ const signedUrl = async (path) => {
   const { data } = await supabase.storage.from("form-assets").createSignedUrl(path, 600);
   return data?.signedUrl ?? null;
 };
+
+/* جدول بنود الأداء (rubric): لكل عنصر تقدير من ٥ وتحقق الشواهد وملاحظة،
+   ودرجة القسم الموزونة تظهر فورًا. التعريف في src/lib/rubric.js */
+function RubricInput({ field, value, onChange }) {
+  const v = value ?? {};
+  const sc = rubricScore(field, v);
+  const set = (i, patch) => onChange({ ...v, [i]: { ...(v[i] ?? {}), ...patch } });
+  return (
+    <div className="mt-1 space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">
+        <span>{field.note}</span>
+        <span className="font-bold">
+          {sc.rated ? <><span className="num">{sc.points}%</span> من </> : "من "}<span className="num">{sc.max}%</span>
+          {" · "}قُدِّر <span className="num">{sc.rated}</span> من <span className="num">{sc.count}</span>
+        </span>
+      </div>
+      {(field.items ?? []).map((it, i) => {
+        const e = v[i] ?? {};
+        const pts = itemPoints(it, e);
+        return (
+          <div key={i} className="rounded-sm2 border border-line p-3">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-ink">
+                <span className="num text-mint-deep">{i + 1}.</span> {it.title}
+              </p>
+              <span className="shrink-0 text-xs text-muted">
+                {pts != null ? <b className="num text-mint-deep">{pts}</b> : "—"} من <span className="num">{it.weight}%</span>
+              </span>
+            </div>
+            {it.examples?.length > 0 && (
+              <p className="mt-1 text-[11px] leading-relaxed text-faint">أمثلة: {it.examples.join("، ")}</p>
+            )}
+
+            <div className="mt-2 flex flex-wrap gap-1">
+              {RATING_LEVELS.map((l) => {
+                const on = Number(e.score) === l.v;
+                return (
+                  <button key={l.v} type="button" onClick={() => set(i, { score: on ? null : l.v })}
+                    className={`rounded-pill border px-2.5 py-1 text-[11.5px] transition-colors ${
+                      on ? "border-mint-deep bg-mint-deep text-white" : "border-line text-muted hover:bg-canvas"}`}>
+                    <span className="num font-bold">{l.v}</span> {l.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {it.evidence?.length > 0 && (
+              <div className="mt-2 space-y-1">
+                <p className="text-[11px] text-muted">{field.evidence_label || "الشواهد"} — ضع علامة على ما تحقّق:</p>
+                {it.evidence.map((ev, r) => {
+                  const on = !!e.check?.[r];
+                  return (
+                    <label key={r} className="flex cursor-pointer items-center gap-2 text-xs text-ink">
+                      <input type="checkbox" className="accent-[#3E6350]" checked={on}
+                             onChange={() => {
+                               const check = [...(e.check ?? [])];
+                               check[r] = !on;
+                               set(i, { check });
+                             }} />
+                      {ev}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            <input className="field mt-2 w-full text-xs" placeholder="ملاحظات (اختياري)" value={e.note ?? ""}
+                   onChange={(ev) => set(i, { note: ev.target.value })} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 /* صيغ جاهزة لحقل بعينه — تُدار من «إدارة النماذج» وتُحفظ مع الحقل */
 function FieldPresets({ field, onPick }) {
@@ -497,6 +583,8 @@ export default function Forms({ view = "issue", openKey = null }) {
     const init = {};
     (t.fields ?? []).forEach((f) => {
       if (f.type === "date") init[f.name] = todayBoth();
+      // جدول البنود: قيمة فارغة تميّز المستند الجديد عن الصادر قبل إضافة البنود
+      else if (f.type === "rubric") init[f.name] = {};
       // «@hijri_year»: العام الهجري الحالي، فلا يتقادم الافتراضي المحفوظ مع النموذج
       else if (f.default === "@hijri_year") init[f.name] = `${hijriYear()}`;
       else if (f.default) init[f.name] = f.default;
@@ -513,7 +601,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     if (!picked) return [];
     return (picked.fields ?? []).filter((f) => {
       if (f.by_recipient || f.after_reply) return false;
-      if (f.type === "table" || f.type === "duty_schedule") return false;
+      if (f.type === "table" || f.type === "duty_schedule" || f.type === "rubric") return false;
       if (f.type === "student" || f.type === "staff") return f.required && chosen.length === 0;
       return f.required && !String(values[f.name] ?? "").trim();
     });
@@ -1083,7 +1171,10 @@ export default function Forms({ view = "issue", openKey = null }) {
                   {f.label}{f.required && <span className="text-absent"> *</span>}
                 </label>
 
-                {LESSON_TYPES.includes(f.type) ? (
+                {f.type === "rubric" ? (
+                  <RubricInput field={f} value={values[f.name]}
+                               onChange={(val) => setValues((v) => ({ ...v, [f.name]: val }))} />
+                ) : LESSON_TYPES.includes(f.type) ? (
                   <LessonSelect field={f} fields={picked.fields} values={values} lessons={lessons}
                                 hasTeacher={chosen.length > 0}
                                 onChange={(patch) => setValues((v) => ({ ...v, ...patch }))} />
