@@ -60,14 +60,14 @@ export default function NewsSlider() {
         >
           <div className="grid md:grid-cols-[1.3fr_1fr]">
             <div className="relative aspect-[16/9] bg-mint-tint md:aspect-auto md:min-h-[19rem]">
-              {current.cover_theme ? (
-                <NewsCoverCard role={current.cover_theme} className="absolute inset-0 h-full w-full" />
-              ) : current.cover_url ? (
+              {current.cover_url ? (
                 <img
                   src={current.cover_url}
                   alt=""
                   className="absolute inset-0 h-full w-full object-cover"
                 />
+              ) : current.cover_theme ? (
+                <NewsCoverCard role={current.cover_theme} className="absolute inset-0 h-full w-full" />
               ) : (
                 <div className="absolute inset-0 grid place-items-center text-sm text-muted">
                   بلا صورة
