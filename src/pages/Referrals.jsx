@@ -19,7 +19,9 @@ import { useUsageCounts } from "../lib/usage.js";
 import UsageBadge from "../components/UsageBadge.jsx";
 import {
   STATUS, OPEN_STATUSES, LATE_DAYS, stageOf, daysSince, daysLabel, isLate, timelineOf, notifyUsers,
+  PRESETS_TEACHER_DONE, PRESETS_BEHAVIOR_NOTE, PRESETS_DEPUTY_TRANSFER, PRESETS_COUNSELOR, PRESETS_DEPUTY_REVIEW,
 } from "../lib/referrals";
+import PresetChips from "../components/PresetChips.jsx";
 
 /* =====================================================================
    إحالة الطالب — شاشة واحدة تخدم المسار كاملًا بحسب دور المستخدم:
@@ -271,6 +273,7 @@ function NewBehaviorReferral({ uid, profile, onDone }) {
 
       <div>
         <label className="text-xs text-muted">ملاحظات الوكيل (اختياري)</label>
+        <PresetChips items={PRESETS_BEHAVIOR_NOTE} value={note} onChange={setNote} />
         <textarea rows={2} className="field mt-1 w-full" value={note} onChange={(e) => setNote(e.target.value)}
                   placeholder="ما اتُّخذ من إجراء أو تفاصيل الواقعة" />
       </div>
@@ -439,6 +442,7 @@ function NewReferral({ uid, profile, onDone }) {
 
       <div>
         <label className="text-xs text-muted">ما تم عمله بخصوص المشكلة</label>
+        <PresetChips items={PRESETS_TEACHER_DONE} value={done} onChange={setDone} />
         <textarea rows={3} className="field mt-1 w-full" value={done}
                   onChange={(e) => setDone(e.target.value)} />
       </div>
@@ -775,6 +779,12 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
 
       {open && (
         <div className="mt-3 space-y-2 rounded-sm2 bg-mint-tint/50 p-3">
+          {/* بطاقات بحسب المرحلة: الموجه، أو الوكيل محوِّلًا، أو مراجعًا لإجراء الموجه */}
+          <PresetChips value={note} onChange={setNote}
+                       items={counselorTurn ? PRESETS_COUNSELOR
+                              : isDeputy && r.status === "with_deputy" && !r.counselor_id ? PRESETS_DEPUTY_TRANSFER
+                              : isDeputy && r.status === "with_deputy" && r.counselor_id ? PRESETS_DEPUTY_REVIEW
+                              : []} />
           <textarea rows={3} className="field w-full" value={note}
                     placeholder={counselorTurn
                       ? (r.kind === "behavior" ? "دراسة الحالة والإجراءات التربوية والعلاجية — كل إجراء في سطر (تظهر في إشعار ولي الأمر)"
