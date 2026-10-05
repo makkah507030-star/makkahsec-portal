@@ -84,13 +84,37 @@ export async function quietly(fn) {
   try { return await fn(); } finally { quiet--; }
 }
 
+// سجل أزمنة طلبات Supabase الفعلية (آخر ٦٠ طلبًا، في الذاكرة فقط) — تعرضه
+// صفحة «مؤشرات الموقع» لمعرفة هل البطء من قاعدة البيانات أم من الشبكة
+const LATENCY_MAX = 60;
+const latency = [];
+export const getLatencySamples = () => latency.slice();
+
+function recordLatency(input, init, ms, status) {
+  const url = typeof input === "string" ? input : input?.url ?? "";
+  const m = url.match(/\/(rest|auth|storage|functions)\/v1\/([^?]*)/);
+  latency.push({
+    ms: Math.round(ms),
+    at: Date.now(),
+    status,
+    method: String(init?.method ?? input?.method ?? "GET").toUpperCase(),
+    path: m ? `${m[1]}/${m[2].split("/").slice(0, 2).join("/")}` : url.slice(0, 60),
+  });
+  if (latency.length > LATENCY_MAX) latency.shift();
+}
+
 export async function trackedFetch(input, init) {
   let k = kindOf(input, init);
   if (k === "writes" && (quiet > 0 || Date.now() > interactUntil)) k = "reads";
   if (k) { active = { ...active, [k]: active[k] + 1 }; emit(); }
+  const t0 = performance.now();
+  let status = 0;
   try {
-    return await fetch(input, init);
+    const res = await fetch(input, init);
+    status = res.status;
+    return res;
   } finally {
+    recordLatency(input, init, performance.now() - t0, status);
     if (k === "writes") interactUntil = Math.max(interactUntil, Date.now() + 1500);
     if (k) { active = { ...active, [k]: Math.max(0, active[k] - 1) }; emit(); }
   }
