@@ -561,6 +561,21 @@ export function DevicesTab() {
     })();
   }, []);
 
+  // تفعيل/تعطيل جهاز (مدير المدرسة فقط حسب صلاحيات قاعدة البيانات)
+  const [busySn, setBusySn] = useState(null);
+  async function toggleDevice(v) {
+    const next = v.is_active === false;
+    setBusySn(v.serial_no);
+    const { error } = await supabase.from("devices")
+      .update({ is_active: next }).eq("serial_no", v.serial_no);
+    setBusySn(null);
+    if (error) { window.alert("تعذّر تغيير حالة الجهاز: " + error.message); return; }
+    setData((d) => ({
+      ...d,
+      devices: d.devices.map((x) => x.serial_no === v.serial_no ? { ...x, is_active: next } : x),
+    }));
+  }
+
   const view = useMemo(() => {
     if (!data) return null;
     const { today, punches, enr, unmatched } = data;
@@ -636,15 +651,21 @@ export function DevicesTab() {
                     {v.serial_no}{v.last_seen ? ` · بصمات اليوم: ${n}` : ""}
                   </p>
                 </div>
-                <span className={`chip shrink-0 ${
-                  v.is_active === false ? "bg-absent/10 text-absent"
-                  : online ? "bg-present/10 text-present"
-                  : "bg-warning-light text-warning"}`}>
-                  {v.is_active === false ? "معطّل"
-                    : !v.last_seen ? "لم يتصل بعد"
-                    : online ? "متصل الآن"
-                    : `انقطع · آخر اتصال ${fmtDateTime(v.last_seen)}`}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className={`chip ${
+                    v.is_active === false ? "bg-absent/10 text-absent"
+                    : online ? "bg-present/10 text-present"
+                    : "bg-warning-light text-warning"}`}>
+                    {v.is_active === false ? "معطّل"
+                      : !v.last_seen ? "لم يتصل بعد"
+                      : online ? "متصل الآن"
+                      : `انقطع · آخر اتصال ${fmtDateTime(v.last_seen)}`}
+                  </span>
+                  <button onClick={() => toggleDevice(v)} disabled={busySn === v.serial_no}
+                          className="rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas disabled:opacity-50">
+                    {v.is_active === false ? "تفعيل" : "تعطيل"}
+                  </button>
+                </div>
               </div>
             );
           })
