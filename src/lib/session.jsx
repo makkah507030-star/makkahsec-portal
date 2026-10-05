@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { supabase, isConfigured } from "./supabase";
 import { setHolidayRanges, todayISO } from "./schoolTime";
 
@@ -33,6 +33,7 @@ async function loadHolidays() {
 
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(null);
+  const sessionRef = useRef(null);
   const [profile, setProfile] = useState(null);
   const [adminRoles, setAdminRoles] = useState([]);
   const [permissions, setPermissions] = useState([]);
@@ -112,14 +113,31 @@ export function SessionProvider({ children }) {
 
     supabase.auth.getSession().then(async ({ data }) => {
       if (!alive) return;
-      setSession(data.session ?? null);
+      // قد يسبقه حدث المصادقة الأول بالجلسة نفسها — فلا نستبدل الكائن
+      if (sessionRef.current?.user?.id === data.session?.user?.id && sessionRef.current) {
+        Object.assign(sessionRef.current, data.session);
+      } else {
+        sessionRef.current = data.session ?? null;
+        setSession(data.session ?? null);
+      }
       await loadProfile(data.session?.user?.id);
       await loadHolidays();            // قبل عرض الصفحات حتى تكون حالة العطلة صحيحة من أول عرض
       if (alive) setLoading(false);
     });
 
+    // أحداث المصادقة تتكرر للمستخدم نفسه (تجديد الرمز كل ساعة، العودة للتبويب).
+    // كان كل حدث يضع كائن جلسة جديدًا فتعيد كل صفحة تعتمد على [session] جلب
+    // بياناتها، ويُعاد تحميل الملف الشخصي — حمل متكرر بلا داعٍ على قاعدة البيانات.
+    // للمستخدم نفسه: نحدّث الرمز داخل الكائن نفسه (فيبقى access_token صالحًا لمن
+    // يقرؤه) دون تغيير هويته، ولا نعيد تحميل الملف الشخصي.
     const { data: sub } = supabase.auth.onAuthStateChange(async (_e, s) => {
       if (!alive) return;
+      const prev = sessionRef.current;
+      if (prev && s && prev.user?.id === s.user?.id) {
+        Object.assign(prev, s);
+        return;
+      }
+      sessionRef.current = s ?? null;
       setSession(s ?? null);
       await loadProfile(s?.user?.id);
     });
@@ -141,6 +159,7 @@ export function SessionProvider({ children }) {
     }
 
     await supabase.auth.signOut();
+    sessionRef.current = null;
     setSession(null);
     setProfile(null);
     setAdminRoles([]);
