@@ -377,7 +377,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
       )}
 
       {/* الحدث الملغى يُعرض ببياناته فقط، بلا إجراءات */}
-      {!cancelled && step === 0 && <StageInfo e={e} patch={patch}
+      {!cancelled && step === 0 && <StageInfo key={e.id} e={e} parts={parts} patch={patch}
                                 onNext={() => advance("participants")} />}
       {!cancelled && step === 1 && <StageParticipants e={e} parts={parts} reload={loadParts}
                                         onNext={() => advance("consent", "انتقلنا لإرسال الموافقات.")} />}
@@ -500,16 +500,119 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
   );
 }
 
-/* ① بيانات الحدث */
-function StageInfo({ e, patch, onNext }) {
-  const [f, setF] = useState({
+/* ① بيانات الحدث — تُعدَّل كلها بعد الإنشاء: العنوان والتصنيف والتاريخ والوقت والمكان
+   والنبذة والأهداف. تُقفل بعد رفع التقرير للاعتماد. وإن تغيّر الموعد بعد إرسال
+   الموافقات أو رفع الاستئذان نُنبّه المنظّم، فهي صدرت بالموعد القديم. */
+function StageInfo({ e, parts, patch, onNext }) {
+  const [cats, setCats] = useState([]);
+  const init = () => ({
+    title: e.title ?? "", category: e.category ?? "", event_date: e.event_date ?? "",
     description: e.description ?? "", goals: e.goals ?? "", venue: e.venue ?? "",
     start_time: String(e.start_time ?? "").slice(0, 5), end_time: String(e.end_time ?? "").slice(0, 5),
   });
+  const [f, setF] = useState(init);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("settings")
+        .select("value").eq("key", "event_categories").maybeSingle();
+      setCats((data?.value ?? "").split("|").filter(Boolean));
+    })();
+  }, []);
+
+  const locked = e.stage === "approved" || !!e.report_submitted_at;
+  const sentConsents = (parts ?? []).filter((p) => p.consent_sent_at).length;
+  const raised = (parts ?? []).some((p) => p.permission_id);
+  const was = init();
+  const timingChanged = f.event_date !== was.event_date || f.start_time !== was.start_time || f.end_time !== was.end_time;
+  const changed = JSON.stringify(f) !== JSON.stringify(was);
+  const badTime = !!(f.start_time && f.end_time && f.start_time >= f.end_time);
+  const valid = f.title.trim().length >= 3 && !!f.event_date && !badTime;
+
+  const save = async (next) => {
+    if (!valid) return;
+    if (!changed) { if (next) onNext(); return; }
+    if (timingChanged && (sentConsents || raised)) {
+      const lines = [
+        "غيّرت موعد الحدث بعد أن:",
+        sentConsents ? `• أُرسلت موافقات ${sentConsents} من أولياء الأمور بالموعد السابق.` : null,
+        raised ? "• رُفع الاستئذان بالموعد السابق." : null,
+        "",
+        raised ? "بعد الحفظ أعد رفع الاستئذان من مرحلة «الاستئذان» بالموعد الجديد." : null,
+        sentConsents ? "ويُستحسن إبلاغ أولياء الأمور بالموعد الجديد." : null,
+        "",
+        "هل تحفظ الموعد الجديد؟",
+      ].filter((x) => x !== null);
+      if (!window.confirm(lines.join("\n"))) return;
+    }
+    setBusy(true);
+    const ok = await patch({
+      title: f.title.trim(),
+      category: f.category || null,
+      event_date: f.event_date,
+      start_time: f.start_time || null,
+      end_time: f.end_time || null,
+      venue: f.venue.trim() || null,
+      description: f.description.trim() || null,
+      goals: f.goals.trim() || null,
+    }, "حُفظت بيانات الحدث.");
+    setBusy(false);
+    if (ok && next) onNext();
+  };
+
+  if (locked) {
+    return (
+      <section className="card space-y-3 p-4">
+        <p className="rounded-sm2 bg-canvas px-3 py-2 text-xs leading-relaxed text-muted">
+          {e.stage === "approved"
+            ? "اعتُمد الحدث، فلا تُعدَّل بياناته."
+            : "رُفع التقرير لمدير المدرسة، فلا تُعدَّل بيانات الحدث إلا إن أُعيد إليك."}
+        </p>
+        {[
+          ["عنوان الحدث", e.title], ["التصنيف", e.category], ["تاريخ التنفيذ", fmtG(e.event_date)],
+          ["الوقت", [String(e.start_time ?? "").slice(0, 5), String(e.end_time ?? "").slice(0, 5)].filter(Boolean).join(" - ")],
+          ["مكان التنفيذ", e.venue], ["نبذة عن الحدث", e.description], ["أهدافه", e.goals],
+        ].map(([k, v]) => (
+          <div key={k} className="flex gap-3 border-b border-line pb-2 text-sm last:border-0">
+            <span className="w-28 shrink-0 text-xs text-muted">{k}</span>
+            <span className="whitespace-pre-line text-ink">{v || "—"}</span>
+          </div>
+        ))}
+      </section>
+    );
+  }
 
   return (
     <section className="card space-y-4 p-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div>
+        <label className="text-xs text-muted">عنوان الحدث</label>
+        <input className="field mt-1 w-full" value={f.title}
+               onChange={(x) => setF((v) => ({ ...v, title: x.target.value }))} />
+      </div>
+
+      {cats.length > 0 && (
+        <div>
+          <label className="text-xs text-muted">التصنيف</label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {cats.map((c) => (
+              <button key={c} type="button" onClick={() => setF((v) => ({ ...v, category: c }))}
+                className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                  f.category === c ? "bg-mint-deep text-white"
+                                   : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label className="text-xs text-muted">تاريخ التنفيذ</label>
+          <input type="date" className="field num mt-1 w-full" value={f.event_date}
+                 onChange={(x) => setF((v) => ({ ...v, event_date: x.target.value }))} />
+        </div>
         <div>
           <label className="text-xs text-muted">من الساعة</label>
           <input type="time" className="field num mt-1 w-full" value={f.start_time}
@@ -522,6 +625,17 @@ function StageInfo({ e, patch, onNext }) {
         </div>
       </div>
       <p className="-mt-2 text-[11px] text-faint">من وقت الحدث تُحسب حصص الاستئذان، ويعود الطلاب لفصولهم تلقائيًا بعده.</p>
+      {badTime && <p className="-mt-2 text-xs text-absent">وقت النهاية يجب أن يكون بعد وقت البداية.</p>}
+
+      {timingChanged && (sentConsents > 0 || raised) && (
+        <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+          تنبيه: {sentConsents > 0 && <>أُرسلت موافقات <span className="num">{sentConsents}</span> من أولياء الأمور</>}
+          {sentConsents > 0 && raised && " و"}
+          {raised && "رُفع الاستئذان"} بالموعد السابق.
+          {raised && " أعد رفع الاستئذان بعد الحفظ."}
+        </p>
+      )}
+
       <div>
         <label className="text-xs text-muted">مكان التنفيذ</label>
         <input className="field mt-1 w-full" value={f.venue}
@@ -539,14 +653,17 @@ function StageInfo({ e, patch, onNext }) {
       </div>
       <p className="text-[11px] text-faint">عنوان الشهادة وقالبها ونصّها تُضبط في مرحلة «الشهادات».</p>
 
-      <button className="btn-primary w-full"
-              onClick={async () => {
-                await patch({ ...f, start_time: f.start_time || null, end_time: f.end_time || null },
-                            "حُفظت البيانات.");
-                onNext();
-              }}>
-        حفظ والمتابعة
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-primary flex-1" disabled={busy || !valid} onClick={() => save(true)}>
+          {busy ? "جارٍ الحفظ…" : changed ? "حفظ التعديلات والمتابعة" : "المتابعة"}
+        </button>
+        {changed && (
+          <button className="rounded-pill border border-line px-4 py-2 text-sm text-mint-deep hover:bg-canvas disabled:opacity-50"
+                  disabled={busy || !valid} onClick={() => save(false)}>
+            حفظ فقط
+          </button>
+        )}
+      </div>
     </section>
   );
 }
