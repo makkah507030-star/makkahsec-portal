@@ -1644,7 +1644,6 @@ function guestCertProps(e, g, i, sigUrl, school) {
     issuer: { url: sigUrl, name: e.organizer_name, role: e.organizer_role || "منفّذ البرنامج" },
     principal: { url: school.principalUrl, name: school.principalName },
     stampUrl: school.stampUrl,
-    patternId: `gc-${e.id}-${i}`,
   };
 }
 
@@ -1753,7 +1752,7 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
         <div className="space-y-2">
           <p className="text-xs font-semibold text-ink">معاينة</p>
           <CertPreview>
-            <GuestCertificate {...guestCertProps(e, ready[0], 0, sigUrl, school)} patternId="gc-preview" />
+            <GuestCertificate {...guestCertProps(e, ready[0], 0, sigUrl, school)} />
           </CertPreview>
         </div>
       )}

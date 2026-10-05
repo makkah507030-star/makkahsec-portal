@@ -319,7 +319,6 @@ function GuestCert(p) {
       principal={src === "principal" || src === "both"
         ? { url: p.principalSigUrl, name: p.principalName } : null}
       stampUrl={p.stampUrl}
-      patternId={`gc-${doc?.serial ?? "new"}`}
     />
   );
 }
