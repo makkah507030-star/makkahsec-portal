@@ -126,6 +126,7 @@ const OTHER_NAV = {
     { group: "الطلاب" },
     { to: "/records",    label: "السجلات",               tabKey: "records",    icon: "users" },
     { to: "/follow-up",  label: "سجل المتابعة الإلكتروني", icon: "chalk" },
+    { to: "/follow-up-2", label: "سجل المتابعة الإلكتروني 2", icon: "chalk" },
     { to: "/referrals",  label: "إحالة طالب",            icon: "shield" },
     { to: "/reports",    label: "التقارير",              tabKey: "reports",    icon: "chart" },
 

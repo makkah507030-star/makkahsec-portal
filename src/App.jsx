@@ -17,6 +17,7 @@ const Attendance = lazy(() => import("./pages/teacher/Attendance.jsx"));
 const SubstitutePeriod = lazy(() => import("./pages/teacher/SubstitutePeriod.jsx"));
 const TeacherRecords = lazy(() => import("./pages/teacher/TeacherRecords.jsx"));
 const FollowUpLog = lazy(() => import("./pages/teacher/FollowUpLog.jsx"));
+const FollowUpLog2 = lazy(() => import("./pages/teacher/FollowUpLog2.jsx"));
 const TeacherPermissions = lazy(() => import("./pages/admin/TeacherPermissions.jsx"));
 const NotificationsReview = lazy(() => import("./pages/admin/NotificationsReview.jsx"));
 const TeacherNotify = lazy(() => import("./pages/teacher/TeacherNotify.jsx"));
@@ -369,6 +370,7 @@ export default function App() {
                 <Route path="/records" element={<TeacherRecords />} />
               )}
               <Route path="/follow-up" element={<FollowUpLog />} />
+              <Route path="/follow-up-2" element={<FollowUpLog2 />} />
               {!hiddenTabs.has("notify") && (
                 <Route path="/notify" element={<TeacherNotify />} />
               )}

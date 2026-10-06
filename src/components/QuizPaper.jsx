@@ -13,8 +13,9 @@ import moeLogo from "../assets/moe-logo.png";
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
-// أدنى تصغير للأسئلة (٦٥٪) حتى تبقى مقروءة — بعده يُنبَّه المعلم لتقليل الفقرات
-const MIN_ZOOM = 0.65;
+// أدنى تصغير للأسئلة (٨٥٪) حتى يبقى الخط مقروءًا — إن لم تتّسع الصفحة الواحدة بعده
+// توزّعت الأسئلة بحجمها الطبيعي على صفحات، والبطاقة كاملة في آخرها
+const MIN_ZOOM = 0.85;
 
 const AR = {
   gov: ["المملكة العربية السعودية", "وزارة التعليم",
@@ -137,6 +138,14 @@ function AnswerCard({ questions = [], t, ltr, quiz, className, studentName }) {
           );
         });
       })()}
+
+      {/* عنوان كل سؤال فوق عموده: كل سؤال يبدأ عمودًا جديدًا */}
+      {L.heads.map((h) => (
+        <div key={h.gi} className="flex items-center justify-center text-[9.5px] font-bold"
+             style={abs(h.x, h.y, h.w, h.h, { background: "#EDEDED", borderRadius: "1mm" })}>
+          {t.question} {t.ordinals[h.gi] ?? h.gi + 1}
+        </div>
+      ))}
 
       {/* الصفوف: رقم الفقرة ودوائرها */}
       {L.rows.map((r) => {
@@ -395,7 +404,7 @@ function Block({ b, t, first }) {
 const PAGE_H = 296, PAD_T = 8, PAD_B = 5, PAD_X = 9;
 
 /**
- * الورقة: إن اتّسعت الأسئلة مع البطاقة في صفحة واحدة (ولو بخطّ مصغَّر حتى ٦٥٪)
+ * الورقة: إن اتّسعت الأسئلة مع البطاقة في صفحة واحدة (ولو بخطّ مصغَّر حتى ٨٥٪)
  * بقيت صفحة واحدة كما كانت. وإلا توزّعت الأسئلة بحجمها الطبيعي على صفحات،
  * وجاءت بطاقة الإجابة كاملة في آخرها (أو في صفحة مستقلة) لتبقى صالحة للكاميرا.
  * onFit({ zoom, fits, pages, cardFits })
@@ -543,10 +552,12 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
             <div className="shrink-0">
               {pi === 0 ? <FirstHead {...headProps} /> : <RunHead {...headProps} page={pi + 1} total={total} />}
             </div>
+            {/* البطاقة في صفحة وحدها: في أعلاها مباشرة تحت الترويسة */}
+            {last && !idx.length && <div className="shrink-0">{card}</div>}
             <div className="mt-1.5 min-h-0 flex-1 overflow-hidden">
               {idx.map((i, k) => <Block key={blocks[i].key} b={blocks[i]} t={t} first={k === 0} />)}
             </div>
-            {last && <div className="shrink-0">{card}</div>}
+            {last && idx.length > 0 && <div className="shrink-0">{card}</div>}
             <Foot t={t} teacherName={teacherName} page={pi + 1} total={total} />
           </div>
         );
