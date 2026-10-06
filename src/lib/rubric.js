@@ -40,6 +40,12 @@ export function rubricScore(field, value) {
   return { points: round1(points), max, rated, count: items.length };
 }
 
+/* درجة التقدير العام (1–5) من النسبة المئوية — «آلية الاحتساب» في نماذج تقييم الأداء المعتمدة */
+export function overallGrade(pct) {
+  if (pct == null) return null;
+  return pct >= 90 ? 5 : pct >= 80 ? 4 : pct >= 70 ? 3 : pct >= 60 ? 2 : 1;
+}
+
 /* التقدير العام من النسبة المئوية */
 export function overallLabel(pct) {
   if (pct == null) return "";

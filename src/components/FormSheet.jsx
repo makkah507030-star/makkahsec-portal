@@ -4,7 +4,7 @@ import logoIcon from "../assets/icon-mint.png";
 import { noEra } from "../lib/dates";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
-import { RATING_LEVELS, itemPoints, overallLabel, ratingLabel, rubricScore } from "../lib/rubric.js";
+import { RATING_LEVELS, itemPoints, overallGrade, overallLabel, ratingLabel, rubricScore } from "../lib/rubric.js";
 import { PRINCIPAL_NAME } from "../lib/signers.js";
 import { GuestCertificateBody } from "./GuestCertificate.jsx";
 
@@ -683,6 +683,7 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
   const allRated = scores.length > 0 && scores.every((x) => x.rated === x.count);
   const rated = scores.reduce((a, x) => a + x.rated, 0), count = scores.reduce((a, x) => a + x.count, 0);
   const pct = anyRated && max ? Math.round((got / max) * 1000) / 10 : null;
+  const official = rubrics.some((f) => f.style === "official");
 
   return (
     <>
@@ -741,7 +742,7 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
             <td className={`num ${cellB} px-2 py-1.5 text-center font-bold`} style={TH}>{max}%</td>
             <td className={`num ${cellB} px-2 py-1.5 text-center text-[14px] font-bold text-mint-deep`} style={TH}>
               {pct == null ? "" : max === 100 ? `${Math.round(got * 10) / 10}%` : (
-                // مجموع الأوزان ليس 100 (النموذج المعتمد 85): الدرجة من المجموع ونسبتها المئوية
+                // مجموع الأوزان ليس 100: الدرجة من المجموع ونسبتها المئوية
                 <span dir="rtl" className="block">
                   <N>{Math.round(got * 10) / 10}</N> من <N>{max}</N>
                   <span className="block text-[10.5px] font-semibold"><N>{pct}</N>٪</span>
@@ -749,16 +750,38 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
               )}
             </td>
             <td className={`${cellB} px-2 py-1.5 text-center font-bold text-mint-deep`} style={TH}>
-              {allRated ? overallLabel(pct) : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
+              {allRated ? (official
+                ? <span className="block"><N>{overallGrade(pct)}</N> — {overallLabel(pct)}</span>
+                : overallLabel(pct)) : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
             </td>
           </tr>
         </tbody>
       </table>
-      {rubrics.some((f) => f.style === "official") ? (
+      {official ? (
         <p className="mt-2 text-[11px] leading-relaxed text-muted">
           يُختار لكل عنصر أحد مستويات سلّم التقدير الخمسة (<N>1</N>–<N>5</N>) الموصوفة في النموذج المعتمد؛
-          ودرجة العنصر = وزنه × المستوى ÷ <N>5</N>. مجموع أوزان العناصر <N>{max}</N>٪.
+          ودرجة العنصر = وزنه × المستوى ÷ <N>5</N>.
         </p>
+      ) : null}
+      {official ? (
+        // «مستويات التقدير العام للأداء» كما في آلية الاحتساب بالنموذج المعتمد
+        <table className="mt-3 w-full table-fixed border-collapse text-[11.5px]">
+          <tbody>
+            <tr>
+              <th className={`${cellB} w-[22%] px-2 py-1 text-center font-semibold text-mint-deep`} style={TH}>درجة التقدير</th>
+              {[5, 4, 3, 2, 1].map((g) => (
+                <td key={g} className={`${cellB} px-2 py-1 text-center font-bold`}><N>{g}</N> — {ratingLabel(g)}</td>
+              ))}
+            </tr>
+            <tr>
+              <th className={`${cellB} px-2 py-1 text-center font-semibold text-mint-deep`} style={TH}>الدرجة النسبية</th>
+              {["90–100", "80–89", "70–79", "60–69"].map((r) => (
+                <td key={r} className={`num ${cellB} px-2 py-1 text-center`}>{r}%</td>
+              ))}
+              <td className={`${cellB} px-2 py-1 text-center`}>أقل من <N>60</N>٪</td>
+            </tr>
+          </tbody>
+        </table>
       ) : (
       <p className="mt-2 text-[11px] leading-relaxed text-muted">
         يُقدَّر كل عنصر من <N>5</N>:{" "}
@@ -849,7 +872,7 @@ function RubricPage({ field, value }) {
   );
 }
 
-/* ٢-٤) عناصر «نموذج تقييم أداء معلم» المعتمد: لكل عنصر تفسيره وسلّم تقديره
+/* ٢-٤) عناصر «نموذج تقييم أداء المعلم» المعتمد: لكل عنصر تفسيره وسلّم تقديره
    الخمسة الموصوف، وعلامة على المستوى المختار، ومجالات التطوير */
 const OFF = { green: "#3E6350", mint: "#CCF2DB", tint: "#EDFAF2" };
 const vert = { writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" };
@@ -919,7 +942,7 @@ function OfficialItem({ it, e }) {
 function OfficialRubricPage({ entries }) {
   return (
     <>
-      <p className="mt-3 text-[13px] font-bold text-ink">عناصر تقييم أداء معلم</p>
+      <p className="mt-3 text-[13px] font-bold text-ink">عناصر تقييم أداء المعلم</p>
       <div className="mt-1.5 space-y-[2.5mm]">
         {entries.map(({ it, e }) => <OfficialItem key={it.no} it={it} e={e} />)}
       </div>
