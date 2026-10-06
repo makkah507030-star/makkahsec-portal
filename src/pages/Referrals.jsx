@@ -307,6 +307,14 @@ function NewReferral({ uid, profile, onDone }) {
   const [done, setDone] = useState("");
   const [sig, setSig] = useState(null);
   const [busy, setBusy] = useState(false);
+  // إحالة من خارج فصوله: حصة انتظار أو إشراف أو مناوبة — تفتح له كل فصول المدرسة وطلابها
+  const [outside, setOutside] = useState(false);
+  const [cap, setCap] = useState("");
+  const [allClasses, setAllClasses] = useState(null);
+  const [gradeSel, setGradeSel] = useState(null);
+  const [outErr, setOutErr] = useState("");
+  const [nowPeriod, setNowPeriod] = useState(null);
+  const ownAuto = useRef(null);
 
   // فصول المعلم اليوم مع مادته وحصته
   useEffect(() => {
@@ -341,6 +349,8 @@ function NewReferral({ uid, profile, onDone }) {
       const { rows: pt } = await loadPeriodTimes();
       const now = currentPeriodNo(pt);
       const auto = today.find((x) => x.period_no === now) ?? today[0] ?? list[0];
+      setNowPeriod(now ?? null);
+      ownAuto.current = auto ?? null;
       if (auto) pickClass(auto, list);
 
       const { data: s } = await supabase.from("user_signatures")
@@ -364,8 +374,46 @@ function NewReferral({ uid, profile, onDone }) {
     setStudentId("");
   };
 
+  const CAPACITIES = ["حصة انتظار", "إشراف", "مناوبة"];
+
+  const openOutside = async () => {
+    setOutside(true); setOutErr("");
+    setClassId(null); setStudents([]); setStudentId("");
+    setCtx({ subject: cap, period: nowPeriod, className: "", grade: null });
+    if (allClasses) return;
+    const { data, error } = await supabase.rpc("referral_all_classes");
+    if (error) {
+      setOutErr("تعذّر فتح طلاب المدرسة — لم يُفعَّل هذا الإجراء بعد في قاعدة البيانات.");
+      setAllClasses([]);
+      return;
+    }
+    setAllClasses(data ?? []);
+  };
+
+  const closeOutside = () => {
+    setOutside(false); setOutErr(""); setCap(""); setGradeSel(null);
+    setClassId(null); setStudents([]); setStudentId("");
+    if (ownAuto.current) pickClass(ownAuto.current, classes);
+  };
+
+  const pickCap = (c) => {
+    setCap(c);
+    setCtx((x) => ({ ...x, subject: c }));
+  };
+
+  const pickOutsideClass = async (c) => {
+    setClassId(c.class_id);
+    setCtx({ subject: cap, period: nowPeriod, className: c.class_no, grade: c.grade });
+    setStudentId("");
+    const { data, error } = await supabase.rpc("referral_class_students", { p_class: c.class_id });
+    if (error) { setOutErr("تعذّر تحميل طلاب الفصل."); setStudents([]); return; }
+    setOutErr("");
+    setStudents(data ?? []);
+  };
+
   const submit = async () => {
     if (!studentId || !reason.trim()) return;
+    if (outside && !cap) return;
     setBusy(true);
     const student = students.find((s) => s.id === studentId);
     const { data: serial } = await supabase.rpc("next_referral_serial");
@@ -385,6 +433,7 @@ function NewReferral({ uid, profile, onDone }) {
       done_in_class: done.trim() || null,
       teacher_sig: sig,
       status: "with_deputy",
+      ...(outside ? { outside_class: true } : {}),
     });
     setBusy(false);
     onDone(error ? { ok: false, text: error.message }
@@ -393,25 +442,94 @@ function NewReferral({ uid, profile, onDone }) {
 
   return (
     <section className="card space-y-4 p-4">
-      <div>
-        <label className="text-xs text-muted">الفصل</label>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {classes.map((c) => (
-            <button key={c.class_id} type="button" onClick={() => pickClass(c, classes)}
-              className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                classId === c.class_id ? "bg-mint-deep text-white"
-                                       : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-              فصل {c.classes?.class_no}
-              <span className="text-[11px] opacity-75"> · {c.subjects?.name}</span>
-            </button>
-          ))}
-          {classes.length === 0 && <p className="text-sm text-muted">لا فصول مسندة إليك.</p>}
+      {!outside ? (
+        <div>
+          <label className="text-xs text-muted">الفصل</label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {classes.map((c) => (
+              <button key={c.class_id} type="button" onClick={() => pickClass(c, classes)}
+                className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                  classId === c.class_id ? "bg-mint-deep text-white"
+                                         : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                فصل {c.classes?.class_no}
+                <span className="text-[11px] opacity-75"> · {c.subjects?.name}</span>
+              </button>
+            ))}
+            {classes.length === 0 && <p className="text-sm text-muted">لا فصول مسندة إليك.</p>}
+          </div>
+          <button type="button" onClick={openOutside}
+            className="mt-3 rounded-sm2 border border-dashed border-mint-deep/50 bg-mint-tint px-3.5 py-2 text-xs font-semibold text-mint-deep hover:bg-[#CCF2DB]">
+            طالب من خارج فصولي — حصة انتظار أو إشراف أو مناوبة
+          </button>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-3 rounded-sm2 border border-mint-deep/30 bg-mint-tint/50 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xs font-semibold text-mint-deep">
+              إحالة من خارج فصولك: فُتح لك طلاب المدرسة كلهم، وتُوثَّق الإحالة بصفتك.
+            </p>
+            <button type="button" onClick={closeOutside}
+                    className="shrink-0 text-xs font-medium text-muted underline hover:text-ink">
+              العودة لفصولي
+            </button>
+          </div>
+
+          <div>
+            <label className="text-xs text-muted">بأي صفة تحيل؟</label>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {CAPACITIES.map((c) => (
+                <button key={c} type="button" onClick={() => pickCap(c)}
+                  className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                    cap === c ? "bg-mint-deep text-white"
+                              : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {outErr && <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs text-warning">{outErr}</p>}
+
+          {allClasses === null ? (
+            <p className="text-xs text-muted">جارٍ تحميل الفصول…</p>
+          ) : (
+            <>
+              <div>
+                <label className="text-xs text-muted">الصف</label>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {[...new Set(allClasses.map((c) => c.grade))].map((g) => (
+                    <button key={g} type="button" onClick={() => { setGradeSel(g); setClassId(null); setStudents([]); setStudentId(""); }}
+                      className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                        gradeSel === g ? "bg-mint-deep text-white"
+                                       : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                      {GRADE_NAMES[g] ?? `صف ${g}`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {gradeSel != null && (
+                <div>
+                  <label className="text-xs text-muted">الفصل</label>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {allClasses.filter((c) => c.grade === gradeSel).map((c) => (
+                      <button key={c.class_id} type="button" onClick={() => pickOutsideClass(c)}
+                        className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                          classId === c.class_id ? "bg-mint-deep text-white"
+                                                 : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                        فصل {c.class_no}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {classId && (
         <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">
-          {ctx.subject} · الحصة <span className="num">{ctx.period ?? "—"}</span> ·{" "}
+          {ctx.subject || (outside ? "اختر الصفة" : "")} · الحصة <span className="num">{ctx.period ?? "—"}</span> ·{" "}
           {GRADE_NAMES[ctx.grade] ?? ""} فصل <span className="num">{ctx.className}</span>
         </p>
       )}
@@ -453,7 +571,7 @@ function NewReferral({ uid, profile, onDone }) {
         </p>
       )}
 
-      <button className="btn-primary w-full" disabled={!studentId || !reason.trim() || busy}
+      <button className="btn-primary w-full" disabled={!studentId || !reason.trim() || busy || (outside && !cap)}
               onClick={submit}>
         {busy ? "جارٍ الإرسال…" : "رفع الإحالة"}
       </button>
