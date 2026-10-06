@@ -13,9 +13,9 @@ import moeLogo from "../assets/moe-logo.png";
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
-// أدنى تصغير للأسئلة (٨٥٪) حتى يبقى الخط مقروءًا — إن لم تتّسع الصفحة الواحدة بعده
-// توزّعت الأسئلة بحجمها الطبيعي على صفحات، والبطاقة كاملة في آخرها
-const MIN_ZOOM = 0.85;
+// لا تصغير للخط: وضوح الاختبار أولًا. إن لم تتّسع الأسئلة مع البطاقة في صفحة واحدة
+// بحجمها الطبيعي توزّعت على صفحات، والبطاقة كاملة في آخرها
+const MIN_ZOOM = 1;
 
 const AR = {
   gov: ["المملكة العربية السعودية", "وزارة التعليم",
@@ -449,7 +449,7 @@ function TfRow({ q, n, t, pageTop }) {
 const PAGE_H = 296, PAD_T = 8, PAD_B = 5, PAD_X = 9;
 
 /**
- * الورقة: إن اتّسعت الأسئلة مع البطاقة في صفحة واحدة (ولو بخطّ مصغَّر حتى ٨٥٪)
+ * الورقة: إن اتّسعت الأسئلة مع البطاقة في صفحة واحدة بحجمها الطبيعي
  * بقيت صفحة واحدة كما كانت. وإلا توزّعت الأسئلة بحجمها الطبيعي على صفحات،
  * وجاءت بطاقة الإجابة كاملة في آخرها (أو في صفحة مستقلة) لتبقى صالحة للكاميرا.
  * onFit({ zoom, fits, pages, cardFits })
@@ -497,14 +497,25 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
         return;
       }
 
+      // السؤال لا يُقطع: إن لم يتّسع كاملًا (رأسه وكل فقراته) في باقي الصفحة انتقل
+      // كله للصفحة التالية. ولا يُقسَّم إلا إن كان أطول من صفحة كاملة، فقرةً فقرة.
       const out = [[]];
+      const fresh = () => inner - runHead - gap - foot;
       let room = inner - head - gap - foot;
-      heights.forEach((bh, i) => {
-        // رأس السؤال لا يبقى وحده أسفل الصفحة: يلزم أن تتّسع معه فقرته الأولى
-        const need = blocks[i].head ? bh + (heights[i + 1] ?? 0) : bh;
-        if (need > room && out[out.length - 1].length) { out.push([]); room = inner - runHead - gap - foot; }
-        out[out.length - 1].push(i);
-        room -= bh;
+      const newPage = () => { out.push([]); room = fresh(); };
+      const runs = [];
+      blocks.forEach((b, i) => { if (b.head || !runs.length) runs.push([]); runs[runs.length - 1].push(i); });
+      runs.forEach((run) => {
+        const gh = run.reduce((a, i) => a + heights[i], 0);
+        if (gh > room && out[out.length - 1].length && gh <= fresh()) newPage();
+        if (gh <= room) { run.forEach((i) => out[out.length - 1].push(i)); room -= gh; return; }
+        run.forEach((i) => {
+          // رأس السؤال لا يبقى وحده أسفل الصفحة: يلزم أن تتّسع معه فقرته الأولى
+          const need = blocks[i].head ? heights[i] + (heights[i + 1] ?? 0) : heights[i];
+          if (need > room && out[out.length - 1].length) newPage();
+          out[out.length - 1].push(i);
+          room -= heights[i];
+        });
       });
       const cardAlone = card > room;
       setPlan({ pages: out, cardAlone, cardFits });
