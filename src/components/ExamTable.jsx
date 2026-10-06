@@ -5,6 +5,7 @@ import { DAY_NAMES } from "../lib/schoolTime";
 import PrintPortal from "./PrintPortal.jsx";
 import PrincipalSign from "./PrincipalSign.jsx";
 import { PRINCIPAL_NAME } from "../lib/exportUtils.js";
+import { useSchoolStamp } from "../lib/principalSignature";
 
 /* =====================================================================
    جدول اختبارات قابل للطباعة — بهوية المدرسة، مقاس A4 عمودي.
@@ -73,6 +74,7 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
     if (last?.key === k) last.items.push(r); else days.push({ key: k, items: [r] });
   });
   const cell = "border border-line px-2 py-2 text-center";
+  const stamp = useSchoolStamp();
 
   return (
     <div className="sheet mx-auto flex bg-white text-ink"
@@ -156,7 +158,8 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
         )}
 
         <div className="mt-auto">
-          <div className="grid grid-cols-2 gap-8 pt-8 text-center">
+          {/* التوقيعان على الجانبين، والختم بينهما */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-6 pt-8 text-center">
             <div>
               <p className="text-[12px] text-muted">وكيل شؤون الطلاب</p>
               <div className="flex h-14 items-end justify-center">
@@ -164,6 +167,9 @@ export default function ExamTable({ title, subtitle, rows = [], note, final = fa
               </div>
               <div className="mx-auto h-px w-44 bg-line" />
               <p className="mt-1.5 text-[12.5px] font-semibold">{deputy || "…"}</p>
+            </div>
+            <div className="flex w-[32mm] items-center justify-center self-center">
+              {stamp && <img src={stamp} alt="" className="h-[28mm] w-auto object-contain opacity-90" style={INK} />}
             </div>
             <div>
               <p className="text-[12px] text-muted">مدير المدرسة</p>
