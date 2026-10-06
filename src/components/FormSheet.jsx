@@ -658,7 +658,7 @@ function VisitFoot({ serial, page, total }) {
   );
 }
 
-/* خلفية الدرجة ولونها (1–2 أحمر، 3–4 ذهبي، 5 أخضر)؛ soft: الخلفية وحدها والنص كما هو */
+/* خلفية الدرجة ولونها (لكل درجة لونها: 1 أحمر، 2 برتقالي، 3 ذهبي، 4 أزرق، 5 أخضر)؛ soft: الخلفية وحدها والنص كما هو */
 function toneStyle(g, soft = false) {
   const t = gradeTone(g);
   if (!t) return undefined;
