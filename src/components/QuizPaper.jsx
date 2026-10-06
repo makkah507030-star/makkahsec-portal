@@ -198,21 +198,21 @@ const QNUM = { fontVariantNumeric: "tabular-nums" };
 function QItem({ q, n, t, maxOpts, pageTop = false }) {
   if (q.kind === "truefalse") return <TfRow q={q} n={n} t={t} pageTop={pageTop} />;
   if (q.kind === "mcq") return <McqTable q={q} n={n} t={t} maxOpts={maxOpts} />;
+  // المزاوجة: كل صف في الجدول فقرة مستقلة في بطاقة الإجابة («س3: ف1، ف2…»)، فلا رقم
+  // للجدول كله — الصفوف نفسها مرقّمة ف1، ف2… لتطابق البطاقة. ونص السؤال إن وُجد فوقه.
+  const left = q.options?.left ?? [], right = q.options?.right ?? [];
+  const rows = Math.max(left.length, right.length);
   return (
     <div className="qbox text-[13.5px] leading-[1.65]" style={{ color: "#000" }}>
-      <div className="flex items-start gap-1.5">
-        {/* dir=auto: «ف13)» بترتيب العربية، و«P13)» بترتيب الإنجليزية — لا num (يجعله ltr فيظهر «(ف13») */}
-        <span dir="auto" className="w-[10mm] shrink-0 font-bold" style={QNUM}>{t.fShort}{n})</span>
-        <p className="min-w-0 flex-1 font-semibold">{q.text}</p>
-      </div>
+      {q.text?.trim() && <p className="mb-1 font-semibold">{q.text}</p>}
 
       {q.kind === "match" && (
-        <div className="mt-1" style={{ paddingInlineStart: "7mm" }}>
+        <div>
           <table className="w-full border-collapse text-[12.5px] font-medium">
             <thead>
               <tr style={{ background: "#EFEFEF", ...INK }}>
                 <th className="border px-1 py-1 text-center font-bold"
-                    style={{ borderColor: "#000", width: "8mm" }}>م</th>
+                    style={{ borderColor: "#000", width: "10mm" }}>م</th>
                 <th className="border px-2 py-1 text-center font-bold"
                     style={{ borderColor: "#000" }}>
                   {t.colA} ({t.ltrs[0]})
@@ -230,24 +230,24 @@ function QItem({ q, n, t, maxOpts, pageTop = false }) {
               </tr>
             </thead>
             <tbody>
-              {(q.options?.left ?? []).map((l, k) => (
+              {Array.from({ length: rows }, (_, k) => (
                 <tr key={k}>
-                  <td className="num border px-1 py-1 text-center font-bold"
-                      style={{ borderColor: "#000", background: "#F5F5F5", ...INK }}>
-                    {k + 1}
+                  <td dir="auto" className="border px-1 py-1 text-center font-bold"
+                      style={{ borderColor: "#000", background: "#F5F5F5", ...QNUM, ...INK }}>
+                    {k < left.length ? `${t.fShort}${k + 1}` : ""}
                   </td>
                   <td className="border px-2 py-[3px]" style={{ borderColor: "#000" }}>
-                    {l}
+                    {left[k] ?? ""}
                   </td>
                   <td className="border px-1 py-[3px]" style={{ borderColor: "#000" }}>
                     &nbsp;
                   </td>
                   <td className="num border px-1 py-1 text-center font-bold"
                       style={{ borderColor: "#000", background: "#F5F5F5", ...INK }}>
-                    {t.ltrs[k] ?? k + 1}
+                    {k < right.length ? (t.ltrs[k] ?? k + 1) : ""}
                   </td>
                   <td className="border px-2 py-[3px]" style={{ borderColor: "#000" }}>
-                    {(q.options?.right ?? [])[k] ?? ""}
+                    {right[k] ?? ""}
                   </td>
                 </tr>
               ))}
