@@ -2,7 +2,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import FormSheet, { PrintArea, SHEET_PX } from "../components/FormSheet.jsx";
+import FormSheet, { PrintArea, SHEET_PX, sheetLandscape } from "../components/FormSheet.jsx";
 import DateField, { TimeField } from "../components/DateField.jsx";
 import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
@@ -30,12 +30,23 @@ function SheetPreview({ landscape, children }) {
     return () => window.removeEventListener("resize", fit);
   }, [landscape]);
 
-  const h = (landscape ? SHEET_PX.portrait : 1123) * scale + 16;
+  // ارتفاع المحتوى الفعلي — النموذج قد يكون أكثر من صفحة
+  const inner = useRef(null);
+  const [contentH, setContentH] = useState(landscape ? SHEET_PX.portrait : 1123);
+  useLayoutEffect(() => {
+    const el = inner.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => setContentH(el.offsetHeight || (landscape ? SHEET_PX.portrait : 1123)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [landscape]);
+
+  const h = contentH * scale + 16;
   return (
     <div ref={box} className="w-full min-w-0 max-w-full overflow-hidden">
       <div className="min-w-0" style={{ height: h }}>
         <div className="w-0 min-w-0" style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>
-          <div style={{ width: landscape ? SHEET_PX.landscape : SHEET_PX.portrait }}>
+          <div ref={inner} style={{ width: landscape ? SHEET_PX.landscape : SHEET_PX.portrait }}>
             {children}
           </div>
         </div>
@@ -54,6 +65,7 @@ export default function DocumentView() {
   const [mySig, setMySig] = useState(null);      // مسار توقيعي المحفوظ
   const [mySigUrl, setMySigUrl] = useState(null);
   const [signIt, setSignIt] = useState(true);
+  const [ackChecked, setAckChecked] = useState(false);
 
   // ولي الأمر يقرّ بلا توقيع إلكتروني — الإقرار باسمه وتاريخه يكفي
   const isGuardianReply = profile?.role === "guardian";
@@ -174,7 +186,31 @@ export default function DocumentView() {
     setMsg({ ok: true, text: "أُرسلت إفادتك. ستصلك النتيجة بعد مراجعتها." });
   };
   const printable = doc.status === "issued" || doc.status === "approved";
-  const landscape = template.orientation === "landscape";
+
+  // إقرار المستفيد بالاطلاع (نماذج البنود كاستمارة دعم وتطوير الهيئة التعليمية)
+  const needsAck = template.fields.some((f) => f.type === "rubric" || f.ack);
+  const ackAt = doc.data?.ack_at ?? null;
+  const isRecipient = doc.recipient_user_id === session?.user?.id;
+  const ackTurn = needsAck && printable && isRecipient && !ackAt;
+  const ackDate = (t) => new Date(t).toLocaleDateString("ar-SA-u-ca-gregory-nu-latn",
+    { year: "numeric", month: "2-digit", day: "2-digit" });
+
+  const acknowledge = async () => {
+    if (!ackChecked) { setMsg({ ok: false, text: "ضع علامة على الإقرار أولًا." }); return; }
+    setSending(true);
+    // من له توقيع محفوظ في البوابة يُدرج توقيعه تلقائيًا
+    const withSig = !!mySig;
+    const { data: at, error } = await supabase.rpc("acknowledge_form_document", { p_doc: doc.id, p_sign: withSig });
+    setSending(false);
+    if (error) { setMsg({ ok: false, text: `تعذّر تسجيل الإقرار: ${error.message}` }); return; }
+    const name = doc.recipient || profile?.full_name || "";
+    setDoc((d) => ({ ...d, reply_at: at, reply_signature_name: name,
+                     reply_signature_path: withSig ? mySig : null,
+                     data: { ...d.data, ack_at: at } }));
+    setAssets((a) => ({ ...a, reply_signature: withSig ? mySigUrl : null, reply_signature_name: name }));
+    setMsg({ ok: true, text: "سُجّل اطلاعك على الاستمارة، ووصل الإشعار لمُصدِرها." });
+  };
+  const landscape = sheetLandscape(template);
 
   return (
     <div className="space-y-4">
@@ -192,6 +228,55 @@ export default function DocumentView() {
           <span className="chip bg-warning/10 text-warning">بانتظار الاعتماد</span>
         )}
       </div>
+
+      {ackTurn && (
+        <section className="no-print card space-y-3 border-mint-deep/30 p-4">
+          <div>
+            <p className="text-sm font-semibold text-ink">إقرار بالاطلاع على الاستمارة</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              راجع الاستمارة أدناه، ثم أكّد اطلاعك عليها. يُسجَّل إقرارك وتوقيعك فيها، ويصل مُصدِرَها إشعار بذلك.
+            </p>
+          </div>
+          <label className="flex cursor-pointer items-start gap-2 text-sm text-ink">
+            <input type="checkbox" className="mt-1 accent-[#3E6350]" checked={ackChecked}
+                   onChange={(e) => setAckChecked(e.target.checked)} />
+            أقرّ بأني اطلعت على ما ورد في هذه الاستمارة من تقييم وجوانب دعم وتطوير.
+          </label>
+          <div className="rounded-sm2 border border-line p-3">
+            <p className="text-xs font-semibold text-ink">التوقيع</p>
+            {mySig ? (
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                {mySigUrl && (
+                  <img src={mySigUrl} alt="توقيعي"
+                       className="h-12 w-auto rounded-sm2 border border-line bg-white object-contain px-2" />
+                )}
+                <span className="text-xs text-muted">يُدرج توقيعك المحفوظ في البوابة تلقائيًا.</span>
+              </div>
+            ) : (
+              <p className="mt-1.5 text-xs leading-relaxed text-warning">
+                لم ترفع توقيعك بعد. يمكنك الإقرار بلا توقيع (يُسجَّل باسمك وتاريخه)، أو رفع توقيعك من صفحة «توقيعي» ثم العودة.
+              </p>
+            )}
+          </div>
+          <button className="btn-primary w-full" onClick={acknowledge} disabled={sending || !ackChecked}>
+            {sending ? "جارٍ التسجيل…" : "تأكيد الاطلاع والتوقيع"}
+          </button>
+        </section>
+      )}
+
+      {needsAck && printable && ackAt && (
+        <p className="no-print rounded-card bg-present/10 px-4 py-3 text-sm text-present">
+          ✓ {isRecipient ? "اطلعت على الاستمارة" : `اطلع ${doc.recipient || "المستفيد"} على الاستمارة`}
+          {" "}بتاريخ <span className="num">{ackDate(ackAt)}</span>
+          {doc.reply_signature_path ? " ووقّعها." : "."}
+        </p>
+      )}
+      {needsAck && printable && !ackAt && !isRecipient && (
+        <p className="no-print rounded-card bg-warning/10 px-4 py-3 text-sm text-warning">
+          لم يطّلع {doc.recipient || "المستفيد"} على الاستمارة بعد.
+          {doc.sent_at ? "" : " أرسلها له من الأرشيف ليصله إشعار بها."}
+        </p>
+      )}
 
       {doc.decision_note && myTurn && (
         <div className="no-print rounded-card border border-warning/40 bg-warning/5 px-4 py-3">

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { getLatencySamples } from "../../lib/notice";
 import { fmtDateTime, fmtDate } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 
@@ -90,6 +91,117 @@ function LoginsChart({ rows }) {
         ))}
       </div>
     </div>
+  );
+}
+
+/* ---------- قياس سرعة الاتصال: قاعدة البيانات أم الشبكة؟ ---------- */
+const SLOW_MS = 800;
+const median = (a) => {
+  if (!a.length) return null;
+  const s = [...a].sort((x, y) => x - y);
+  return s[Math.floor(s.length / 2)];
+};
+
+async function timeIt(fn) {
+  const t0 = performance.now();
+  try { await fn(); return Math.round(performance.now() - t0); } catch { return null; }
+}
+
+// ٥ محاولات متتالية؛ الأولى تُهمل لأنها تشمل فتح الاتصال (TLS)
+async function probe(fn, n = 5) {
+  const all = [];
+  for (let i = 0; i < n; i++) all.push(await timeIt(fn));
+  const ok = all.slice(1).filter((v) => v != null);
+  return { first: all[0], ok, fail: all.length - 1 - ok.length };
+}
+
+function LatencyTest() {
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState(null);
+  const [real, setReal] = useState(() => getLatencySamples());
+
+  const run = async () => {
+    setBusy(true);
+    const host = await probe(() => fetch(`/favicon.ico?t=${Date.now()}`, { cache: "no-store" }));
+    const dbp = await probe(async () => {
+      const { error } = await supabase.from("users").select("id", { head: true, count: "exact" }).limit(1);
+      if (error) throw error;
+    });
+    setRes({ host, db: dbp, at: new Date() });
+    setReal(getLatencySamples());
+    setBusy(false);
+  };
+
+  const mh = res ? median(res.host.ok) : null;
+  const md = res ? median(res.db.ok) : null;
+  let verdict = null;
+  if (res) {
+    if (md == null || mh == null) verdict = { tone: "crit", t: "تعذّر إكمال القياس — الاتصال منقطع أو متعثّر." };
+    else if (mh > SLOW_MS && md > SLOW_MS) verdict = { tone: "warn", t: "الاستضافة وقاعدة البيانات كلاهما بطيء → الغالب أن السبب من الإنترنت (شبكتك)." };
+    else if (md > SLOW_MS) verdict = { tone: "warn", t: "الاستضافة سريعة وقاعدة البيانات بطيئة → السبب من Supabase أو من الاستعلامات." };
+    else if (mh > SLOW_MS) verdict = { tone: "warn", t: "قاعدة البيانات سريعة والاستضافة بطيئة → السبب من Netlify أو من مسار الشبكة إليه." };
+    else verdict = { tone: "ok", t: "الاتصال سريع الآن. إن تكرر البطء فجرّب القياس وقت حدوثه." };
+  }
+
+  const dbReal = real.filter((s) => /^(rest|storage)\//.test(s.path)).map((s) => s.ms);
+  const slowest = [...real].sort((a, b) => b.ms - a.ms).slice(0, 5);
+  const p95 = (() => {
+    if (!dbReal.length) return null;
+    const s = [...dbReal].sort((a, b) => a - b);
+    return s[Math.min(s.length - 1, Math.floor(s.length * 0.95))];
+  })();
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-sm font-semibold text-ink">سرعة الاتصال — من هنا إلى قاعدة البيانات</h2>
+        <button onClick={run} disabled={busy}
+                className="shrink-0 rounded-pill border border-line px-4 py-1.5 text-sm text-mint-deep hover:bg-canvas disabled:opacity-50">
+          {busy ? "جارٍ القياس…" : "قياس الآن"}
+        </button>
+      </div>
+      <div className="card space-y-3 p-4">
+        {!res ? (
+          <p className="text-sm text-muted">اضغط «قياس الآن» لقياس زمن الاستجابة من جهازك إلى الاستضافة (Netlify) وإلى قاعدة البيانات (Supabase).</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <Stat label="الاستضافة Netlify (الوسيط)" value={mh == null ? "—" : `${mh} ms`}
+                    sub={`أول اتصال: ${res.host.first ?? "—"} ms${res.host.fail ? ` · فشل ${res.host.fail}` : ""}`} />
+              <Stat label="قاعدة البيانات Supabase (الوسيط)" value={md == null ? "—" : `${md} ms`}
+                    sub={`أول اتصال: ${res.db.first ?? "—"} ms${res.db.fail ? ` · فشل ${res.db.fail}` : ""}`} />
+            </div>
+            <p className={`rounded-card px-3 py-2 text-sm ${verdict.tone === "ok" ? "bg-present/10 text-present" : verdict.tone === "crit" ? "bg-absent/10 text-absent" : "bg-warning/10 text-warning"}`}>
+              {verdict.t}
+            </p>
+          </>
+        )}
+        <div className="border-t border-line pt-3">
+          <p className="text-xs font-semibold text-muted">طلبات هذه الجلسة الفعلية (آخر {real.length})</p>
+          {real.length === 0 ? (
+            <p className="mt-1 text-xs text-faint">لا طلبات مسجّلة بعد.</p>
+          ) : (
+            <>
+              <p className="mt-1 text-xs text-muted">
+                وسيط الجداول والتخزين: <span className="num">{median(dbReal) ?? "—"} ms</span>
+                {" · "}الأبطأ ٥٪: <span className="num">{p95 ?? "—"} ms</span>
+              </p>
+              <div className="mt-2 space-y-1">
+                {slowest.map((s, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 text-xs">
+                    <span className="truncate text-ink" dir="ltr">{s.method} {s.path}</span>
+                    <span className={`num shrink-0 ${s.ms > SLOW_MS ? "text-warning" : "text-muted"}`}>{s.ms} ms</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          <p className="mt-2 text-[11px] text-faint">
+            الطلب البطيء وحده يدل على استعلام ثقيل؛ وإن بطؤت كل الطلبات معًا فالسبب الشبكة أو الخادم.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -458,6 +570,8 @@ export default function SiteMetrics() {
             ind={plat?.status?.supabase?.indicator ?? "unknown"} desc={plat?.status?.supabase?.description} />
         </div>
       </section>
+
+      <LatencyTest />
 
       {/* استخدام التطبيق */}
       <section className="space-y-2">

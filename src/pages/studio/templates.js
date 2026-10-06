@@ -258,6 +258,7 @@ export const TEMPLATES = [
       { name: "accent", label: "السطر الملوّن", max: 40 },
       { name: "sub", label: "النص (اختياري)", type: "textarea", rows: 3, max: 170 },
       { name: "points", label: "نقاط (اختياري)", type: "list", rows: 4, max: 60 },
+      { name: "warn", label: "تحذير (اختياري) — بطاقة حمراء في آخر المنشور", type: "textarea", rows: 2, max: 110 },
       { name: "date", label: "التاريخ أو الموعد (اختياري)", max: 34 },
     ],
     sample: {
@@ -265,7 +266,7 @@ export const TEMPLATES = [
       points: ["الجدول متاح في البوابة", "الحضور قبل الاختبار بعشر دقائق"],
     },
     defaults: () => ({
-      format: "square", tag: "إعلان", title: "", accent: "", sub: "", points: [], date: hijriToday(),
+      format: "square", tag: "إعلان", title: "", accent: "", sub: "", points: [], warn: "", date: hijriToday(),
     }),
   },
   /* ============================ المرحلة الثالثة ============================ */

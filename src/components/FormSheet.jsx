@@ -1,8 +1,12 @@
 // src/components/FormSheet.jsx
+import { Fragment } from "react";
 import logoIcon from "../assets/icon-mint.png";
 import { noEra } from "../lib/dates";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
+import { RATING_LEVELS, itemPoints, overallLabel, ratingLabel, rubricScore } from "../lib/rubric.js";
+import { PRINCIPAL_NAME } from "../lib/signers.js";
+import { GuestCertificateBody } from "./GuestCertificate.jsx";
 
 /* =====================================================================
    ورقة النموذج القابلة للطباعة — هوية مدرسة مكة الثانوية.
@@ -296,6 +300,29 @@ function Certificate(p) {
   );
 }
 
+/* شهادة شكر الضيوف والمتعاونين — تصميمها المستقل في GuestCertificate */
+export const isGuestCert = (template) => template?.key === "guest_appreciation";
+
+/* اتجاه الورقة: شهادة الضيوف عمودية دائمًا أيًّا كان المحفوظ في القالب */
+export const sheetLandscape = (template) => !isGuestCert(template) && template?.orientation === "landscape";
+
+function GuestCert(p) {
+  const { v, doc, template } = p;
+  const src = template.signature_source;
+  return (
+    <GuestCertificateBody
+      name={v.recipient} entity={v.entity}
+      text={v.reason} activity={v.activity} dateText={v.date} closing={v.closing}
+      serial={doc?.serial}
+      issuer={src === "issuer" || src === "both"
+        ? { url: p.sigUrl, name: doc?.signature_name, role: doc?.signature_role } : null}
+      principal={src === "principal" || src === "both"
+        ? { url: p.principalSigUrl, name: p.principalName } : null}
+      stampUrl={p.stampUrl}
+    />
+  );
+}
+
 /* ------------------------ تعميم أو خطاب رسمي ------------------------ */
 function Official(p) {
   const { v, doc, template } = p;
@@ -559,6 +586,325 @@ function StudentAdmission(p) {
   );
 }
 
+/* ------------------ استمارة دعم وتطوير الهيئة التعليمية ------------------
+   على نمط «الملاحظة الصفية وفق بنود الأداء الوظيفي»، أربع صفحات:
+   ١) بيانات الزيارة وطريقة التقييم وملخّص النتيجة
+   ٢-٣) جدول بنود كل قسم (rubric): العنصر ووزنه وأمثلته وشواهده، والتحقق والتقدير
+   ٤) جوانب الدعم والتطوير والتواقيع
+   المستند الذي صدر قبل إضافة البنود يبقى بشكله القديم (Administrative). */
+const WEEKDAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+const TH = { background: "#EDFAF2", ...INK };
+const cellB = "border border-[#9DB5A6]";
+// الرقم وحده داخل num (اتجاهه من اليسار) — حتى لا تنقلب «٨ من ١٠» في السطر العربي
+const N = ({ children }) => <span className="num">{children}</span>;
+
+// القيمة نصًّا للطباعة — الكائنات (كجدول البنود) لا تُعرض نصًا فتنهار الصفحة
+const asText = (x) => (x == null || typeof x === "object" ? "" : x);
+
+const rubricFields = (template) => (template.fields ?? []).filter((f) => f.type === "rubric");
+export const isRubricDoc = (template, v) =>
+  rubricFields(template).some((f) => v && Object.prototype.hasOwnProperty.call(v, f.name));
+
+// اليوم من الجزء الميلادي للتاريخ المحفوظ «03/03/1448 - 14/09/2026»
+function weekdayOf(dateStr) {
+  const m = String(dateStr ?? "").match(/(\d{2})\/(\d{2})\/((?:19|20)\d{2})/);
+  if (!m) return "";
+  return WEEKDAYS[new Date(Date.UTC(+m[3], +m[2] - 1, +m[1])).getUTCDay()] ?? "";
+}
+
+function VisitHead({ title, sub }) {
+  return (
+    <>
+      <Head small />
+      <div className="mt-2.5"><Rule color="#3E6350" thick /></div>
+      <div className="mt-3 flex items-baseline justify-between gap-3">
+        <h1 className="text-[17px] font-bold text-ink">{title}</h1>
+        {sub && <span className="text-[12px] font-semibold text-mint-deep">{sub}</span>}
+      </div>
+    </>
+  );
+}
+
+function VisitFoot({ serial, page, total }) {
+  return (
+    <div className="mt-auto pt-3">
+      <Foot serial={serial} />
+      <p className="num mt-1 text-center text-[10px] text-faint">صفحة {page} من {total}</p>
+    </div>
+  );
+}
+
+/* ١) بيانات الزيارة، وطريقة تقييم كل قسم، وملخّص النتيجة */
+function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
+  const byType = (t) => (template.fields ?? []).find((f) => f.type === t);
+  const val = (f) => (f ? String(v[f.name] ?? "").trim() : "");
+  const spec = (template.fields ?? []).find((f) => /التخصص/.test(f.label ?? ""));
+  const date = val(byType("date"));
+  const cls = val(byType("lesson_class"));
+  const [grade, classNo] = cls.includes("—") ? cls.split("—").map((x) => x.trim()) : [cls, ""];
+
+  const rows = [
+    [["اسم المعلم", v.recipient], ["التخصص", val(spec)], ["رقم الزيارة", val(byType("visit_no"))]],
+    [["اليوم", weekdayOf(date)], ["التاريخ", date], ["الحصة", val(byType("lesson_period"))]],
+    [["الصف", grade], ["الفصل", classNo], ["المادة", val(byType("lesson_subject"))]],
+    // الزائر هو مُصدِر التقرير: لكل وكيل معلموه الذين يزورهم
+    [["الزائر (مُصدِر التقرير)", doc?.signature_name], ["صفته", doc?.signature_role], ["مدير المدرسة", principalName]],
+  ];
+
+  const scores = rubrics.map((f) => ({ f, ...rubricScore(f, v[f.name]) }));
+  const got = scores.reduce((a, x) => a + x.points, 0);
+  const max = scores.reduce((a, x) => a + x.max, 0);
+  const anyRated = scores.some((x) => x.rated);
+  // التقدير العام بعد تقدير العناصر كلها فقط — الدرجة الجزئية لا تُوصف
+  const allRated = scores.length > 0 && scores.every((x) => x.rated === x.count);
+  const rated = scores.reduce((a, x) => a + x.rated, 0), count = scores.reduce((a, x) => a + x.count, 0);
+  const pct = anyRated && max ? Math.round((got / max) * 1000) / 10 : null;
+
+  return (
+    <>
+      <table className="mt-4 w-full table-fixed border-collapse text-[12px]">
+        <tbody>
+          {rows.map((r, i) => (
+            <Fragment key={i}>
+              <tr>
+                {r.map(([h]) => (
+                  <th key={h} className={`${cellB} px-2 py-1.5 text-center font-semibold text-mint-deep`} style={TH}>{h}</th>
+                ))}
+              </tr>
+              <tr>
+                {r.map(([h, x]) => (
+                  <td key={h} className={`${cellB} h-9 px-2 text-center text-[13px] font-semibold text-ink`}>{x || ""}</td>
+                ))}
+              </tr>
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
+
+      {/* طريقة التقييم — كما في الاستمارة الورقية */}
+      <div className="mt-5 space-y-3">
+        {rubrics.map((f) => (
+          <div key={f.name} className={`${cellB} rounded-[4px] px-4 pb-4 pt-0`}>
+            <p className="-mx-4 mb-3 inline-block rounded-bl-[4px] px-4 py-1 text-[13px] font-bold text-ink" style={TH}>
+              {f.label}
+            </p>
+            <p className="text-center text-[13px] font-semibold text-ink">{f.note}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ملخّص النتيجة */}
+      <p className="mt-5 text-[13px] font-semibold text-mint-deep">نتيجة التقييم</p>
+      <table className="mt-1.5 w-full table-fixed border-collapse text-[12px]">
+        <thead>
+          <tr>
+            {["القسم", "الوزن النسبي", "الدرجة المحققة", "العناصر المقدَّرة"].map((h) => (
+              <th key={h} className={`${cellB} px-2 py-1.5 text-center font-semibold text-mint-deep`} style={TH}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {scores.map((x) => (
+            <tr key={x.f.name}>
+              <td className={`${cellB} px-2 py-1.5 text-center font-semibold`}>{x.f.label}</td>
+              <td className={`num ${cellB} px-2 py-1.5 text-center`}>{x.max}%</td>
+              <td className={`num ${cellB} px-2 py-1.5 text-center font-bold`}>{x.rated ? `${x.points}%` : ""}</td>
+              <td className={`${cellB} px-2 py-1.5 text-center text-muted`}><N>{x.rated}</N> من <N>{x.count}</N></td>
+            </tr>
+          ))}
+          <tr>
+            <td className={`${cellB} px-2 py-1.5 text-center font-bold`} style={TH}>المجموع</td>
+            <td className={`num ${cellB} px-2 py-1.5 text-center font-bold`} style={TH}>{max}%</td>
+            <td className={`num ${cellB} px-2 py-1.5 text-center text-[14px] font-bold text-mint-deep`} style={TH}>
+              {pct != null ? `${Math.round(got * 10) / 10}%` : ""}
+            </td>
+            <td className={`${cellB} px-2 py-1.5 text-center font-bold text-mint-deep`} style={TH}>
+              {allRated ? overallLabel(pct) : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p className="mt-2 text-[11px] leading-relaxed text-muted">
+        يُقدَّر كل عنصر من <N>5</N>:{" "}
+        {RATING_LEVELS.map((l, i) => (
+          <span key={l.v}><span className="num">{l.v}</span> {l.label}{i < RATING_LEVELS.length - 1 ? "، " : ""}</span>
+        ))}
+        ؛ ودرجة العنصر = وزنه × تقديره ÷ <N>5</N>
+      </p>
+    </>
+  );
+}
+
+/* ٢-٣) جدول بنود القسم */
+function RubricPage({ field, value }) {
+  const items = field.items ?? [];
+  const sc = rubricScore(field, value);
+  const W = ["6mm", "27mm", "12mm", "37mm", "5mm", "40mm", "11mm", "20mm", "28mm"];
+  const H = ["م", "العنصر", "الوزن النسبي", "أمثلة", "", field.evidence_label || "الشواهد", "التحقق", "التقييم", "ملاحظات"];
+  const td = `${cellB} px-1.5 py-[3px] align-middle`;
+  return (
+    <>
+      <p className="mt-4 text-[14px] font-bold text-ink">
+        <span className="text-mint-deep">×</span> {field.label}
+      </p>
+      <table className="mt-2 w-full table-fixed border-collapse text-[10px] leading-[1.35]">
+        <colgroup>{W.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
+        <thead>
+          <tr>
+            {H.map((h, i) => (
+              <th key={i} className={`${cellB} px-1 py-1.5 text-center text-[10.5px] font-semibold text-mint-deep`} style={TH}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        {items.map((it, i) => {
+          const e = value?.[i] ?? {};
+          const n = Math.max(1, it.examples?.length ?? 0, it.evidence?.length ?? 0);
+          const pts = itemPoints(it, e);
+          return (
+            <tbody key={i}>
+              {/* فاصل بين العناصر كما في الاستمارة الورقية */}
+              <tr><td colSpan={9} className="h-[2.5mm] p-0" /></tr>
+              {Array.from({ length: n }).map((_, r) => (
+                <tr key={r}>
+                  {r === 0 && (
+                    <>
+                      <td rowSpan={n} className={`num ${td} text-center font-bold`}>{i + 1}</td>
+                      <td rowSpan={n} className={`${td} text-center text-[10.5px] font-semibold`}>{it.title}</td>
+                      <td rowSpan={n} className={`num ${td} text-center text-[11px] font-bold`}>{it.weight}%</td>
+                    </>
+                  )}
+                  <td className={`${td} text-center`}>{it.examples?.[r] ?? ""}</td>
+                  <td className={`num ${td} text-center font-bold`}>{r + 1}</td>
+                  <td className={`${td} text-center`}>{it.evidence?.[r] ?? ""}</td>
+                  <td className={`${td} text-center text-[12px] font-bold text-mint-deep`}>
+                    {it.evidence?.[r] && e.check?.[r] ? "✓" : ""}
+                  </td>
+                  {r === 0 && (
+                    <>
+                      <td rowSpan={n} className={`${td} text-center`}>
+                        {pts != null && (
+                          <>
+                            <div className="num text-[13px] font-bold text-ink">{e.score}<span className="text-[9px] font-normal text-muted"> / 5</span></div>
+                            <div className="text-[9px] text-muted">{ratingLabel(e.score)}</div>
+                            <div className="text-[9px] font-semibold text-mint-deep"><N>{pts}</N> من <N>{it.weight}</N></div>
+                          </>
+                        )}
+                      </td>
+                      <td rowSpan={n} className={`${td} whitespace-pre-line text-[9.5px]`}>{e.note ?? ""}</td>
+                    </>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          );
+        })}
+        <tbody>
+          <tr><td colSpan={9} className="h-[2.5mm] p-0" /></tr>
+          <tr>
+            <td colSpan={7} className={`${td} py-1.5 text-left text-[11px] font-bold`} style={TH}>مجموع القسم</td>
+            <td colSpan={2} className={`${td} py-1.5 text-center text-[12px] font-bold text-mint-deep`} style={TH}>
+              {sc.rated ? <N>{sc.points}%</N> : "—"} من <N>{sc.max}%</N>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+/* ٤) جوانب الدعم والتطوير: الحقول النصية الباقية */
+const HEAD_TYPES = ["staff", "visit_no", "lesson_class", "lesson_subject", "lesson_period", "date", "rubric"];
+function SupportPage({ template, v }) {
+  const list = (template.fields ?? []).filter((f) =>
+    !HEAD_TYPES.includes(f.type) && !f.legacy && !/التخصص/.test(f.label ?? "") &&
+    !(f.hide_empty && !String(v[f.name] ?? "").trim()));
+  return (
+    <div className="mt-4 space-y-3">
+      {list.map((f) => (
+        <div key={f.name} className={`${cellB} rounded-[4px]`}>
+          <p className="border-b border-[#9DB5A6] px-3 py-1.5 text-[12.5px] font-bold text-mint-deep" style={TH}>{f.label}</p>
+          <p className="min-h-[18mm] whitespace-pre-line px-3 py-2 text-[12.5px] leading-[1.8] text-ink">{asText(v[f.name])}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* إقرار المعلم بالاطلاع: بعد إقراره في البوابة يظهر اسمه وتوقيعه وتاريخه،
+   وقبله يبقى فارغًا ليوقَّع بخط اليد إن طُبعت الورقة */
+function AckBox({ v, doc, sigUrl, name }) {
+  const at = v.ack_at ?? doc?.reply_at ?? null;
+  const date = at ? new Date(at) : null;
+  const dateText = date
+    ? `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`
+    : "";
+  return (
+    <div className={`${cellB} mt-4 rounded-[4px]`}>
+      <p className="border-b border-[#9DB5A6] px-3 py-1.5 text-[12.5px] font-bold text-mint-deep" style={TH}>
+        إقرار المعلم بالاطلاع
+      </p>
+      <div className="flex items-center justify-between gap-4 px-3 py-2.5">
+        <p className="text-[12.5px] leading-[1.8] text-ink">
+          اطلعت على ما ورد في هذه الاستمارة من تقييم وجوانب دعم وتطوير.
+          {at && <span className="mr-2 inline-block rounded-pill px-2 text-[11px] font-semibold text-mint-deep" style={TH}>✓ أُقِرّ إلكترونيًا</span>}
+        </p>
+        <div className="grid shrink-0 grid-cols-3 gap-3 text-center text-[11px] text-muted">
+          <div>
+            <p>الاسم</p>
+            <p className="mt-1 min-h-[16px] text-[12px] font-semibold text-ink">{at ? (name || doc?.recipient || v.recipient || "") : ""}</p>
+          </div>
+          <div>
+            <p>التوقيع</p>
+            <div className="mt-0.5 grid h-10 w-24 place-items-center">
+              {at && sigUrl && <img src={sigUrl} alt="" className="max-h-10 w-auto object-contain" />}
+            </div>
+          </div>
+          <div>
+            <p>التاريخ</p>
+            <p className="num mt-1 min-h-[16px] text-[12px] font-semibold text-ink">{dateText}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function supportVisitPages(p) {
+  const { template, v, doc } = p;
+  const rubrics = rubricFields(template);
+  const total = 2 + rubrics.length;
+  const pages = [];
+  pages.push(<>
+    <VisitHead title={template.title} sub="وفق بنود الأداء الوظيفي" />
+    <VisitInfoPage template={template} v={v} rubrics={rubrics} doc={doc} principalName={p.principalName} />
+  </>);
+  rubrics.forEach((f) => pages.push(<>
+    <VisitHead title={template.title} sub={v.recipient ? `المعلم: ${v.recipient}` : ""} />
+    <RubricPage field={f} value={v[f.name]} />
+  </>));
+  pages.push(<>
+    <VisitHead title={template.title} sub="جوانب الدعم والتطوير" />
+    <SupportPage template={template} v={v} />
+    <AckBox v={v} doc={doc} sigUrl={p.replySigUrl} name={p.replySigName} />
+    <div className="mt-5">
+      <ReplyFilesNote v={v} />
+      {/* الوكيل الزائر يمينًا والمدير يسارًا؛ توقيع المعلم في مربع إقراره */}
+      <Signatures
+        source={template.signature_source}
+        issuerUrl={p.sigUrl} issuerName={doc?.signature_name} issuerRole={doc?.signature_role}
+        principalUrl={p.principalSigUrl} principalName={p.principalName}
+        stampUrl={p.stampUrl}
+      />
+    </div>
+  </>);
+  return pages.map((content, i) => (
+    <div key={i} className="flex h-full flex-col px-[12mm] pb-[8mm] pt-[11mm]">
+      {content}
+      <VisitFoot serial={doc?.serial} page={i + 1} total={total} />
+    </div>
+  ));
+}
+
 /* --------------------------- نموذج إداري --------------------------- */
 function Administrative(p) {
   const { v, doc, template } = p;
@@ -580,7 +926,7 @@ function Administrative(p) {
           ) : (
             <div key={f.name} className="flex gap-3 border-b border-line py-2">
               <span className="w-44 shrink-0 text-[13px] text-muted">{f.label}</span>
-              <span className="whitespace-pre-line text-[14px] text-ink">{v[f.name] || "—"}</span>
+              <span className="whitespace-pre-line text-[14px] text-ink">{asText(v[f.name]) || "—"}</span>
             </div>
           ),
         )}
@@ -606,33 +952,46 @@ export default function FormSheet({
   replySigUrl, replySigName, scale = 1,
 }) {
   if (!template) return null;
-  const landscape = template.orientation === "landscape";
+  const landscape = sheetLandscape(template);
   // المستندات المحفوظة قبل توحيد التاريخ: «03/03/1448هـ (14/09/2026م)» تُعرض «03/03/1448 - 14/09/2026»
   const v = Object.fromEntries(Object.entries(values ?? {}).map(([k, x]) => [k,
     typeof x === "string"
       ? noEra(x).replace(/(\d{2}\/\d{2}\/1[34]\d\d)\s*\((\d{2}\/\d{2}\/(?:19|20)\d\d)\)/g, "$1 - $2")
       : x]));
   const Body = template.key === "student_admission" ? StudentAdmission
+             : isGuestCert(template) ? GuestCert
              : template.category === "certificate" ? Certificate
              : template.category === "official"    ? Official
              : Administrative;
 
+  const sheetStyle = {
+    width: landscape ? "297mm" : "210mm",
+    height: landscape ? "210mm" : "297mm",
+    flex: "0 0 auto",
+    transform: scale !== 1 ? `scale(${scale})` : undefined,
+    transformOrigin: "top center",
+    fontFamily: "'IBM Plex Sans Arabic', sans-serif",
+  };
+  const sheetCls = "sheet mx-auto bg-white text-ink shadow-[0_18px_50px_-28px_rgba(16,16,16,.5)]";
+  // اسم المدير: المحفوظ تحت توقيعه، وإلا اسمه في «أسماء الموقّعين»
+  const props = { template, v, doc, sigUrl, stampUrl, principalSigUrl,
+                  principalName: principalName || PRINCIPAL_NAME, replySigUrl, replySigName };
+
+  // استمارة الزيارة بالبنود: عدة صفحات، كل صفحة ورقة مستقلة في الطباعة
+  // تُعرف بوجود جدول بنود في حقولها، لا بمفتاح القالب (قد يختلف في قاعدة البيانات)
+  if (isRubricDoc(template, v)) {
+    return (
+      <div className="space-y-4 print:space-y-0">
+        {supportVisitPages(props).map((page, i) => (
+          <div key={i} className={sheetCls} style={sheetStyle}>{page}</div>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="sheet mx-auto bg-white text-ink shadow-[0_18px_50px_-28px_rgba(16,16,16,.5)]"
-      style={{
-        width: landscape ? "297mm" : "210mm",
-        height: landscape ? "210mm" : "297mm",
-        flex: "0 0 auto",
-        transform: scale !== 1 ? `scale(${scale})` : undefined,
-        transformOrigin: "top center",
-        fontFamily: "'IBM Plex Sans Arabic', sans-serif",
-      }}
-    >
-      <Body template={template} v={v} doc={doc}
-            sigUrl={sigUrl} stampUrl={stampUrl}
-            principalSigUrl={principalSigUrl} principalName={principalName}
-            replySigUrl={replySigUrl} replySigName={replySigName} />
+    <div className={sheetCls} style={sheetStyle}>
+      <Body {...props} />
     </div>
   );
 }

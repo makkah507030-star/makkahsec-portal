@@ -36,6 +36,8 @@ const ADMIN_GROUPS = [
       // السلوك والمواظبة: لوكيل شؤون الطلاب والموجهين والمدير والدعم الفني
       { to: "/referrals", label: "إحالة طالب", perm: null, icon: "shield", roles: ["principal", "tech_support", "deputy_students", "counselor_1", "counselor_2", "counselor_3"] },
       { to: "/behavior", label: "نماذج السلوك والمواظبة", perm: null, icon: "edit", roles: ["principal", "tech_support", "deputy_students", "counselor_1", "counselor_2", "counselor_3"] },
+      // ملاحظات الطلاب الصحية والسلوكية والنفسية: الموجه الصحي والموجهون الطلابيون ومعهم الإدارة
+      { to: "/student-notes", label: "ملاحظات الطلاب", perm: null, icon: "heart", roles: ["principal", "tech_support", "deputy_students", "health_counselor", "counselor_1", "counselor_2", "counselor_3"] },
       { to: "/exams-admin", label: "جداول الاختبارات", perm: "students", icon: "calendar" },
     ],
   },
@@ -192,6 +194,7 @@ function Icon({ name, className = "h-[18px] w-[18px]" }) {
     calendar: "M3 5h18v16H3zM3 10h18M8 3v4M16 3v4",
     certificate: "M6 3h12v13l-6 5-6-5zM9 8h6M9 11h6",
     palette: "M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.9 1.4-1.8-.4-1.1.4-2.2 1.6-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10ZM7.5 11.5h.01M10 7.5h.01M14 7.5h.01M16.5 11h.01",
+    heart:  "M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z",
   }[name];
 
   return (

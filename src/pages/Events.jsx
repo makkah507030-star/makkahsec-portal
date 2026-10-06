@@ -11,6 +11,8 @@ import { normalizeImage } from "../lib/imageResize.js";
 import EventCertificate, {
   CERT_TEMPLATES, DEFAULT_CERT_TITLE, certPresets, isNationalDay, officialCert, readCert,
 } from "../components/EventCertificate.jsx";
+import GuestCertificate, { forTask } from "../components/GuestCertificate.jsx";
+import { fmtDate, stripBidi } from "../lib/dates";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes.js";
@@ -377,7 +379,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
       )}
 
       {/* الحدث الملغى يُعرض ببياناته فقط، بلا إجراءات */}
-      {!cancelled && step === 0 && <StageInfo e={e} patch={patch}
+      {!cancelled && step === 0 && <StageInfo key={e.id} e={e} parts={parts} patch={patch}
                                 onNext={() => advance("participants")} />}
       {!cancelled && step === 1 && <StageParticipants e={e} parts={parts} reload={loadParts}
                                         onNext={() => advance("consent", "انتقلنا لإرسال الموافقات.")} />}
@@ -500,16 +502,105 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
   );
 }
 
-/* ① بيانات الحدث */
-function StageInfo({ e, patch, onNext }) {
-  const [f, setF] = useState({
+/* ① بيانات الحدث — تُعدَّل كلها في أي مرحلة: العنوان والتصنيف والتاريخ والوقت والمكان
+   والنبذة والأهداف. وإن تغيّر الموعد بعد إرسال الموافقات أو رفع الاستئذان نُنبّه
+   المنظّم، فهي صدرت بالموعد القديم. */
+function StageInfo({ e, parts, patch, onNext }) {
+  const [cats, setCats] = useState([]);
+  const init = () => ({
+    title: e.title ?? "", category: e.category ?? "", event_date: e.event_date ?? "",
     description: e.description ?? "", goals: e.goals ?? "", venue: e.venue ?? "",
     start_time: String(e.start_time ?? "").slice(0, 5), end_time: String(e.end_time ?? "").slice(0, 5),
   });
+  const [f, setF] = useState(init);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("settings")
+        .select("value").eq("key", "event_categories").maybeSingle();
+      setCats((data?.value ?? "").split("|").filter(Boolean));
+    })();
+  }, []);
+
+  // الحدث المرفوع للاعتماد أو المعتمد يبقى قابلًا للتعديل، مع تنبيه
+  const submitted = e.stage === "approved" || !!e.report_submitted_at;
+  const sentConsents = (parts ?? []).filter((p) => p.consent_sent_at).length;
+  const raised = (parts ?? []).some((p) => p.permission_id);
+  const was = init();
+  const timingChanged = f.event_date !== was.event_date || f.start_time !== was.start_time || f.end_time !== was.end_time;
+  const changed = JSON.stringify(f) !== JSON.stringify(was);
+  const badTime = !!(f.start_time && f.end_time && f.start_time >= f.end_time);
+  const valid = f.title.trim().length >= 3 && !!f.event_date && !badTime;
+
+  const save = async (next) => {
+    if (!valid) return;
+    if (!changed) { if (next) onNext(); return; }
+    if (timingChanged && (sentConsents || raised)) {
+      const lines = [
+        "غيّرت موعد الحدث بعد أن:",
+        sentConsents ? `• أُرسلت موافقات ${sentConsents} من أولياء الأمور بالموعد السابق.` : null,
+        raised ? "• رُفع الاستئذان بالموعد السابق." : null,
+        "",
+        raised ? "بعد الحفظ أعد رفع الاستئذان من مرحلة «الاستئذان» بالموعد الجديد." : null,
+        sentConsents ? "ويُستحسن إبلاغ أولياء الأمور بالموعد الجديد." : null,
+        "",
+        "هل تحفظ الموعد الجديد؟",
+      ].filter((x) => x !== null);
+      if (!window.confirm(lines.join("\n"))) return;
+    }
+    setBusy(true);
+    const ok = await patch({
+      title: f.title.trim(),
+      category: f.category || null,
+      event_date: f.event_date,
+      start_time: f.start_time || null,
+      end_time: f.end_time || null,
+      venue: f.venue.trim() || null,
+      description: f.description.trim() || null,
+      goals: f.goals.trim() || null,
+    }, "حُفظت بيانات الحدث.");
+    setBusy(false);
+    if (ok && next) onNext();
+  };
 
   return (
     <section className="card space-y-4 p-4">
-      <div className="grid grid-cols-2 gap-3">
+      {submitted && (
+        <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+          {e.stage === "approved"
+            ? "الحدث معتمد. أي تعديل هنا يظهر في تقريره وشهاداته المطبوعة لاحقًا."
+            : "التقرير مرفوع لمدير المدرسة. أي تعديل هنا يظهر له عند مراجعته."}
+        </p>
+      )}
+      <div>
+        <label className="text-xs text-muted">عنوان الحدث</label>
+        <input className="field mt-1 w-full" value={f.title}
+               onChange={(x) => setF((v) => ({ ...v, title: x.target.value }))} />
+      </div>
+
+      {cats.length > 0 && (
+        <div>
+          <label className="text-xs text-muted">التصنيف</label>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {cats.map((c) => (
+              <button key={c} type="button" onClick={() => setF((v) => ({ ...v, category: c }))}
+                className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+                  f.category === c ? "bg-mint-deep text-white"
+                                   : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <label className="text-xs text-muted">تاريخ التنفيذ</label>
+          <input type="date" className="field num mt-1 w-full" value={f.event_date}
+                 onChange={(x) => setF((v) => ({ ...v, event_date: x.target.value }))} />
+        </div>
         <div>
           <label className="text-xs text-muted">من الساعة</label>
           <input type="time" className="field num mt-1 w-full" value={f.start_time}
@@ -522,6 +613,17 @@ function StageInfo({ e, patch, onNext }) {
         </div>
       </div>
       <p className="-mt-2 text-[11px] text-faint">من وقت الحدث تُحسب حصص الاستئذان، ويعود الطلاب لفصولهم تلقائيًا بعده.</p>
+      {badTime && <p className="-mt-2 text-xs text-absent">وقت النهاية يجب أن يكون بعد وقت البداية.</p>}
+
+      {timingChanged && (sentConsents > 0 || raised) && (
+        <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs leading-relaxed text-warning">
+          تنبيه: {sentConsents > 0 && <>أُرسلت موافقات <span className="num">{sentConsents}</span> من أولياء الأمور</>}
+          {sentConsents > 0 && raised && " و"}
+          {raised && "رُفع الاستئذان"} بالموعد السابق.
+          {raised && " أعد رفع الاستئذان بعد الحفظ."}
+        </p>
+      )}
+
       <div>
         <label className="text-xs text-muted">مكان التنفيذ</label>
         <input className="field mt-1 w-full" value={f.venue}
@@ -539,14 +641,17 @@ function StageInfo({ e, patch, onNext }) {
       </div>
       <p className="text-[11px] text-faint">عنوان الشهادة وقالبها ونصّها تُضبط في مرحلة «الشهادات».</p>
 
-      <button className="btn-primary w-full"
-              onClick={async () => {
-                await patch({ ...f, start_time: f.start_time || null, end_time: f.end_time || null },
-                            "حُفظت البيانات.");
-                onNext();
-              }}>
-        حفظ والمتابعة
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-primary flex-1" disabled={busy || !valid} onClick={() => save(true)}>
+          {busy ? "جارٍ الحفظ…" : changed ? "حفظ التعديلات والمتابعة" : "المتابعة"}
+        </button>
+        {changed && (
+          <button className="rounded-pill border border-line px-4 py-2 text-sm text-mint-deep hover:bg-canvas disabled:opacity-50"
+                  disabled={busy || !valid} onClick={() => save(false)}>
+            حفظ فقط
+          </button>
+        )}
+      </div>
     </section>
   );
 }
@@ -1506,6 +1611,8 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
         </div>
       </section>
 
+      <GuestCertificates e={e} patch={patch} sigUrl={sigUrl} school={school} />
+
       <button className="btn-primary w-full" onClick={async () => { await save(); onNext(); }}>
         المتابعة للتقرير
       </button>
@@ -1519,6 +1626,150 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
         </PrintPortal>
       )}
     </div>
+  );
+}
+
+/* شهادات الضيوف والمتعاونين — اختيارية: للمحاضرين والمدربين ومنفّذي الفعاليات
+   من خارج المدرسة، بتصميم مستقل عن شهادات الطلاب. تُحفظ قائمتهم مع الحدث. */
+const newGuest = () => ({ id: Math.random().toString(36).slice(2, 10), name: "", entity: "", task: "" });
+
+function guestCertProps(e, g, i, sigUrl, school) {
+  return {
+    name: g.name, entity: g.entity,
+    text: `وذلك تقديرًا ${forTask(g.task)}، وما بذله من جهد وعطاء أسهم في نجاح البرنامج.`,
+    activity: e.title,
+    dateText: e.event_date ? stripBidi(fmtDate(`${e.event_date}T12:00:00`)) : "",
+    closing: "سائلين الله له دوام التوفيق والسداد",
+    serial: `${e.serial}-G${String(i + 1).padStart(2, "0")}`,
+    issuer: { url: sigUrl, name: e.organizer_name, role: e.organizer_role || "منفّذ البرنامج" },
+    principal: { url: school.principalUrl, name: school.principalName },
+    stampUrl: school.stampUrl,
+  };
+}
+
+function GuestCertificates({ e, patch, sigUrl, school }) {
+  const [list, setList] = useState(() => (Array.isArray(e.guests) ? e.guests : []));
+  const [open, setOpen] = useState(list.length > 0);
+  const [saveErr, setSaveErr] = useState(false);
+  const [printing, setPrinting] = useState(null);
+  usePrintWhenReady("ev-guest", printing, () => setPrinting(null));
+
+  const ready = list.filter((g) => g.name.trim());
+  const set = (id, k, val) => setList((l) => l.map((g) => (g.id === id ? { ...g, [k]: val } : g)));
+
+  const save = async () => {
+    const ok = await patch({ guests: ready }, "حُفظت قائمة الضيوف.");
+    setSaveErr(!ok);
+    return ok;
+  };
+  const printList = async (gs) => {
+    if (!gs.length) return;
+    if (await save()) setPrinting(gs);
+  };
+
+  if (!open) {
+    return (
+      <section className="card flex flex-wrap items-center justify-between gap-3 p-4">
+        <div>
+          <h2 className="text-sm font-semibold text-ink">شهادات الضيوف والمتعاونين <span className="font-normal text-faint">— اختياري</span></h2>
+          <p className="mt-0.5 text-xs text-muted">لمن شارك من خارج المدرسة: محاضر أو مدرب أو منفّذ فعالية.</p>
+        </div>
+        <button className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
+                onClick={() => { setOpen(true); if (!list.length) setList([newGuest()]); }}>
+          إضافة ضيف
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card space-y-4 p-4">
+      <div>
+        <h2 className="text-sm font-semibold text-ink">شهادات الضيوف والمتعاونين <span className="font-normal text-faint">— اختياري</span></h2>
+        <p className="mt-0.5 text-xs text-muted">
+          شهادة شكر بتصميم خاص لكل ضيف، تحمل عنوان الحدث وتاريخه، بتوقيع منظّم الحدث وختم المدرسة وتوقيع المدير.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {list.map((g, i) => (
+          <div key={g.id} className="space-y-2 rounded-sm2 border border-line p-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-mint-deep">الضيف <span className="num">{i + 1}</span></span>
+              <button type="button" className="text-[11px] text-absent hover:underline"
+                      onClick={() => setList((l) => l.filter((x) => x.id !== g.id))}>
+                حذف
+              </button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <label className="text-[11px] text-faint">الاسم مع اللقب</label>
+                <input className="field mt-1 w-full" value={g.name} placeholder="مثال: الدكتور/ خالد بن سعيد الغامدي"
+                       onChange={(x) => set(g.id, "name", x.target.value)} />
+              </div>
+              <div>
+                <label className="text-[11px] text-faint">الجهة (اختياري)</label>
+                <input className="field mt-1 w-full" value={g.entity} placeholder="مثال: جامعة أم القرى"
+                       onChange={(x) => set(g.id, "entity", x.target.value)} />
+              </div>
+            </div>
+            <div>
+              <label className="text-[11px] text-faint">المهمة التي نفّذها (اختياري)</label>
+              <input className="field mt-1 w-full" value={g.task} placeholder="مثال: تقديم محاضرة توعوية عن السلامة المرورية"
+                     onChange={(x) => set(g.id, "task", x.target.value)} />
+              <p className="mt-1 text-[11px] leading-relaxed text-faint">
+                يُكتب في الشهادة: «وذلك تقديرًا {forTask(g.task)}، وما بذله من جهد وعطاء أسهم في نجاح البرنامج.»
+              </p>
+            </div>
+            {g.name.trim() && (
+              <button type="button" onClick={() => printList([g])}
+                      className="rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
+                طباعة شهادته
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button type="button" className="text-sm font-medium text-mint-deep hover:underline"
+              onClick={() => setList((l) => [...l, newGuest()])}>
+        + إضافة ضيف آخر
+      </button>
+
+      {ready.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-ink">معاينة</p>
+          <CertPreview portrait>
+            <GuestCertificate {...guestCertProps(e, ready[0], 0, sigUrl, school)} />
+          </CertPreview>
+        </div>
+      )}
+
+      {saveErr && (
+        <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-[11px] text-absent">
+          تعذّر حفظ قائمة الضيوف — نفّذ ملف supabase/guest_certificates.sql في قاعدة البيانات مرة واحدة.
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <button className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
+                onClick={save}>
+          حفظ قائمة الضيوف
+        </button>
+        <button className="btn-primary" disabled={!ready.length} onClick={() => printList(ready)}>
+          طباعة شهادات الضيوف ({ready.length})
+        </button>
+      </div>
+
+      {printing && (
+        <PrintPortal id="ev-guest" margin="0"
+                     extraCss="#ev-guest .sheet { page-break-after: always; } #ev-guest .sheet:last-child { page-break-after: auto; }">
+          {printing.map((g) => (
+            <GuestCertificate key={g.id} {...guestCertProps(e, g, ready.indexOf(g), sigUrl, school)} />
+          ))}
+        </PrintPortal>
+      )}
+    </section>
   );
 }
 
@@ -1837,22 +2088,24 @@ function StageApproval({ e, patch, onMsg, isPrincipal, byName, goReport }) {
 }
 
 /* معاينة مصغّرة للشهادة بعرض البطاقة */
-function CertPreview({ children }) {
+function CertPreview({ portrait = false, children }) {
   const ref = useRef(null);
   const [scale, setScale] = useState(0.5);
+  // 297mm ≈ 1122.5px و210mm ≈ 793.7px — العمودية تُعرض بنصف عرض البطاقة تقريبًا
+  const [w, h] = portrait ? [793.7, 1122.5] : [1122.5, 793.7];
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const fit = () => setScale(el.clientWidth / 1122.5);   // 297mm ≈ 1122.5px
+    const fit = () => setScale(el.clientWidth / w);
     fit();
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [w]);
   return (
-    <div ref={ref} className="overflow-hidden rounded-sm2 border border-line"
-         style={{ height: 793.7 * scale }}>
-      <div style={{ width: "297mm", transform: `scale(${scale})`, transformOrigin: "top right" }}>
+    <div ref={ref} className={`overflow-hidden rounded-sm2 border border-line ${portrait ? "mx-auto max-w-[360px]" : ""}`}
+         style={{ height: h * scale }}>
+      <div style={{ width: portrait ? "210mm" : "297mm", transform: `scale(${scale})`, transformOrigin: "top right" }}>
         {children}
       </div>
     </div>

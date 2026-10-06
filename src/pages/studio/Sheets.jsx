@@ -341,6 +341,10 @@ export function Social({ theme = "dark", d }) {
               {points.map((x, i) => <div key={i}><i className="num">{i + 1}</i><span>{x}</span></div>)}
             </div>
           )}
+          {/* التحذير: بطاقة حمراء في آخر المنشور */}
+          {d.warn?.trim() && (
+            <div className="stu-swarn"><i>!</i><span>{d.warn}</span></div>
+          )}
         </div>
         <div className="stu-sfoot">
           <span>مدرسة مكة الثانوية</span>
