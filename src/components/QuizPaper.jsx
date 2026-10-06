@@ -186,7 +186,8 @@ function QItem({ q, n, t, maxOpts }) {
   return (
     <div className="qbox text-[10.5px] leading-[1.5]">
       <div className="flex items-start gap-1.5">
-        <span className="num w-[9mm] shrink-0 font-bold">{t.fShort}{n})</span>
+        {/* dir=auto: «ف13)» بترتيب العربية، و«P13)» بترتيب الإنجليزية — لا num (يجعله ltr فيظهر «(ف13») */}
+        <span dir="auto" className="w-[9mm] shrink-0 font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>{t.fShort}{n})</span>
         <p className="min-w-0 flex-1">{q.text}</p>
         {q.kind === "truefalse" && (
           <span className="flex shrink-0 border-collapse">
