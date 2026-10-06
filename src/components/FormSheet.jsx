@@ -706,8 +706,8 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
         </tbody>
       </table>
 
-      {/* طريقة التقييم — كما في الاستمارة الورقية */}
-      <div className="mt-5 space-y-3">
+      {/* طريقة التقييم — كما في الاستمارة الورقية القديمة؛ النموذج المعتمد بلا هذه الملاحظة */}
+      {!official && <div className="mt-5 space-y-3">
         {rubrics.map((f) => (
           <div key={f.name} className={`${cellB} rounded-[4px] px-4 pb-4 pt-0`}>
             <p className="-mx-4 mb-3 inline-block rounded-bl-[4px] px-4 py-1 text-[13px] font-bold text-ink" style={TH}>
@@ -716,7 +716,7 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
             <p className="text-center text-[13px] font-semibold text-ink">{f.note}</p>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* ملخّص النتيجة */}
       <p className="mt-5 text-[13px] font-semibold text-mint-deep">نتيجة التقييم</p>
