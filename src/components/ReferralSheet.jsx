@@ -125,7 +125,7 @@ export default function ReferralSheet({ r, stampUrl, guardianView = false }) {
       {/* ① المعلم */}
       <Stage n="١" title="إحالة المعلم" who={r.teacher_name} at={r.teacher_at} sig={r.teacher_sig}>
         <div className="grid grid-cols-2 gap-x-4">
-          <Field label="المادة" value={r.subject} />
+          <Field label={r.outside_class ? "الصفة" : "المادة"} value={r.subject} />
           <Field label="الحصة" value={r.period_no ? `الحصة ${r.period_no}` : ""} />
         </div>
         <Field label="سبب التحويل" value={r.reason} />
