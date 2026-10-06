@@ -197,6 +197,7 @@ const QNUM = { fontVariantNumeric: "tabular-nums" };
 
 function QItem({ q, n, t, maxOpts, pageTop = false }) {
   if (q.kind === "truefalse") return <TfRow q={q} n={n} t={t} pageTop={pageTop} />;
+  if (q.kind === "mcq") return <McqTable q={q} n={n} t={t} maxOpts={maxOpts} />;
   return (
     <div className="qbox text-[13.5px] leading-[1.65]" style={{ color: "#000" }}>
       <div className="flex items-start gap-1.5">
@@ -204,39 +205,6 @@ function QItem({ q, n, t, maxOpts, pageTop = false }) {
         <span dir="auto" className="w-[10mm] shrink-0 font-bold" style={QNUM}>{t.fShort}{n})</span>
         <p className="min-w-0 flex-1 font-semibold">{q.text}</p>
       </div>
-
-      {q.kind === "mcq" && (
-        // جدول ثابت التخطيط: خانات الخيارات متساوية العرض، وأعمدتها
-        // متحاذية في كل فقرات السؤال (حتى لو اختلف عدد الخيارات)
-        <table className="mt-[3px] border-collapse text-[12.5px] font-medium"
-               style={{ marginInlineStart: "6mm", width: "calc(100% - 6mm)",
-                        tableLayout: "fixed" }}>
-          <colgroup>
-            {Array.from({ length: maxOpts }).map((_, k) => (
-              <Fragment key={k}>
-                <col style={{ width: "6mm" }} />
-                <col />
-              </Fragment>
-            ))}
-          </colgroup>
-          <tbody>
-            <tr>
-              {(q.options ?? []).map((o, k) => (
-                <Fragment key={k}>
-                  <td className="num border px-1 py-[4px] text-center font-bold"
-                      style={{ borderColor: "#000", width: "6mm",
-                               background: "#F5F5F5", ...INK }}>
-                    {t.ltrs[k]}
-                  </td>
-                  <td className="border px-1.5 py-[4px]" style={{ borderColor: "#000" }}>
-                    {o}
-                  </td>
-                </Fragment>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      )}
 
       {q.kind === "match" && (
         <div className="mt-1" style={{ paddingInlineStart: "7mm" }}>
@@ -391,7 +359,51 @@ function Block({ b, t, first }) {
   // padding لا margin: حتى يدخل الفراغ في قياس ارتفاع الجزء
   return b.head
     ? <div style={{ display: "flow-root", paddingTop: first ? 0 : "4px" }}><GroupHead g={b.g} gi={b.gi} t={t} /></div>
-    : <div style={{ display: "flow-root", paddingTop: b.q.kind === "truefalse" && b.n > 1 && !first ? 0 : "3px" }}><QItem q={b.q} n={b.n} t={t} maxOpts={b.maxOpts} pageTop={first} /></div>;
+    : <div style={{ display: "flow-root", paddingTop: b.q.kind === "truefalse" && b.n > 1 && !first ? 0 : b.q.kind === "mcq" ? "5px" : "3px" }}><QItem q={b.q} n={b.n} t={t} maxOpts={b.maxOpts} pageTop={first} /></div>;
+}
+
+/* الاختيار من متعدد في جدول: رقم الفقرة يمينًا بطول الجدول، ونص السؤال في
+   الصف الأول على عرضه بخلفية خفيفة، والخيارات تحته. جدول ثابت التخطيط فتتحاذى
+   خانات الخيارات في كل فقرات السؤال حتى لو اختلف عددها. */
+function McqTable({ q, n, t, maxOpts }) {
+  const b = { borderColor: "#000" };
+  const shade = { background: "#F5F5F5", ...INK };
+  return (
+    <div className="qbox text-[13.5px] leading-[1.6]" style={{ color: "#000" }}>
+      <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+        <colgroup>
+          <col style={{ width: "10mm" }} />
+          {Array.from({ length: maxOpts }).map((_, k) => (
+            <Fragment key={k}><col style={{ width: "6mm" }} /><col /></Fragment>
+          ))}
+        </colgroup>
+        <tbody>
+          <tr>
+            <td rowSpan={2} dir="auto" className="border px-1 text-center font-bold" style={{ ...b, ...shade, ...QNUM }}>
+              {t.fShort}{n}
+            </td>
+            <td colSpan={maxOpts * 2} className="border px-2 py-[5px] font-semibold"
+                style={{ ...b, background: "#FAFAFA", ...INK }}>
+              {q.text}
+            </td>
+          </tr>
+          <tr className="text-[12.5px] font-medium">
+            {Array.from({ length: maxOpts }).map((_, k) => {
+              const o = (q.options ?? [])[k];
+              return (
+                <Fragment key={k}>
+                  <td className="num border px-1 py-[4px] text-center font-bold" style={{ ...b, ...shade }}>
+                    {o != null ? t.ltrs[k] : ""}
+                  </td>
+                  <td className="border px-1.5 py-[4px]" style={b}>{o ?? ""}</td>
+                </Fragment>
+              );
+            })}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 /* الصح والخطأ في جدول: كل فقرة صفّ مستقل (لتتوزّع على الصفحات فقرةً فقرة)،
