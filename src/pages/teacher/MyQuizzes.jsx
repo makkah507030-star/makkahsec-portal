@@ -29,8 +29,6 @@ const KINDS = [
   { key: "truefalse", label: "صح وخطأ" },
   { key: "match",     label: "مزاوجة" },
 ];
-const MATCH_MAX_ITEMS = 5;
-const PAPER_MATCH_MAX = 8;
 const ORDER_MAX = 8;
 
 // ثلاثة أنواع منفصلة — ولكل نوع قسمه في قائمة الاختبارات
@@ -69,7 +67,7 @@ const STATUS = {
 const statusLabel = (q) =>
   q.status === "ready" && q.mode === "online" ? "جاهز للإطلاق" : (STATUS[q.status] ?? STATUS.draft).t;
 
-const LETTERS = ["أ", "ب", "ج", "د", "هـ"];
+const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"];
 const ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن"];
 
 export default function MyQuizzes() {
@@ -800,7 +798,6 @@ function QuizEditor({ quiz, uid, onBack }) {
                     </p>
                     {g.list.map((row, qi) => (
                       <QuestionCard key={row.id} row={row} index={qi + 1} lang={q.lang ?? "ar"} paper
-                                    matchMax={PAPER_MATCH_MAX}
                                     image={{ url: images[row.image_path], onUpload: uploadImage, onRemove: removeImage }}
                                     onPatch={patchQ} onRemove={removeQ} />
                     ))}
@@ -808,7 +805,6 @@ function QuizEditor({ quiz, uid, onBack }) {
                 ))
               : (questions ?? []).map((row, i) => (
                   <QuestionCard key={row.id} row={row} index={i + 1} lang={q.lang ?? "ar"}
-                                matchMax={online ? PAPER_MATCH_MAX : MATCH_MAX_ITEMS}
                                 onPatch={patchQ} onRemove={removeQ} />
                 ))}
           </div>
@@ -1004,7 +1000,7 @@ function QuizDetails({ q, onSaved }) {
   );
 }
 
-function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false, matchMax = MATCH_MAX_ITEMS, image = null }) {
+function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false, image = null }) {
   const ltr = lang === "en";
   const [local, setLocal] = useState(row);
 
@@ -1064,8 +1060,7 @@ function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = fals
       )}
 
       {row.kind === "match" && (
-        <MatchEditor local={local} setLocal={setLocal} save={save} ltr={ltr}
-                     max={matchMax} />
+        <MatchEditor local={local} setLocal={setLocal} save={save} ltr={ltr} />
       )}
 
       {row.kind === "order" && (
@@ -1082,7 +1077,7 @@ function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = fals
 }
 
 function McqEditor({ local, setLocal, save, ltr = false }) {
-  const LTRS = ltr ? ["A", "B", "C", "D", "E"] : LETTERS;
+  const LTRS = ltr ? ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"] : LETTERS;
   const opts = Array.isArray(local.options) ? local.options : ["", "", ""];
   const answer = String(local.answer ?? "0").replace(/"/g, "");
 
@@ -1128,8 +1123,8 @@ function McqEditor({ local, setLocal, save, ltr = false }) {
   );
 }
 
-function MatchEditor({ local, setLocal, save, ltr = false, max = MATCH_MAX_ITEMS }) {
-  const LTRS = ltr ? ["A", "B", "C", "D", "E"] : LETTERS;
+function MatchEditor({ local, setLocal, save, ltr = false }) {
+  const LTRS = ltr ? ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"] : LETTERS;
   const o = local.options ?? { left: ["", ""], right: ["", ""] };
   const left = o.left ?? [];
   const right = o.right ?? [];
@@ -1168,12 +1163,10 @@ function MatchEditor({ local, setLocal, save, ltr = false, max = MATCH_MAX_ITEMS
         </div>
       ))}
       <div className="flex gap-2">
-        {left.length < max && (
-          <button onClick={() => save({ options: { left: [...left, ""], right: [...right, ""] } })}
-                  className="text-xs font-medium text-mint-deep hover:underline">
-            + زوج آخر
-          </button>
-        )}
+        <button onClick={() => save({ options: { left: [...left, ""], right: [...right, ""] } })}
+                className="text-xs font-medium text-mint-deep hover:underline">
+          + زوج آخر
+        </button>
         {left.length > 2 && (
           <button onClick={() => save({
                     options: { left: left.slice(0, -1), right: right.slice(0, -1) } })}

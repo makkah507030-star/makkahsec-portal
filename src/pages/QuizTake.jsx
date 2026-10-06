@@ -15,9 +15,9 @@ import Loader from "../components/Loader.jsx";
    • الأسئلة تصل بلا إجاباتها الصحيحة، والتصحيح يتم في الخادم.
    ===================================================================== */
 
-const AR = { ltrs: ["أ", "ب", "ج", "د", "هـ"], tf: [["true", "صح"], ["false", "خطأ"]], q: "س", f: "ف",
+const AR = { ltrs: ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"], tf: [["true", "صح"], ["false", "خطأ"]], q: "س", f: "ف",
   kinds: { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أم خطأ", match: "زاوج بين العمودين" } };
-const EN = { ltrs: ["A", "B", "C", "D", "E"], tf: [["true", "True"], ["false", "False"]], q: "Q", f: "P",
+const EN = { ltrs: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"], tf: [["true", "True"], ["false", "False"]], q: "Q", f: "P",
   kinds: { mcq: "Choose the correct answer", truefalse: "True or False", match: "Match column A with column B" } };
 
 const lsKey = (id) => `online-quiz:${id}`;

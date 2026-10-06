@@ -103,7 +103,7 @@ export const MODEL_LABEL = { A: "أ", B: "ب" };
 
 /** نص الإجابة النموذجية لفقرة (لنموذج الإجابة) */
 export function modelAnswer(q, ltr = false) {
-  const L = ltr ? ["A", "B", "C", "D", "E"] : ["أ", "ب", "ج", "د", "هـ"];
+  const L = ltr ? ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"] : ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"];
   const a = typeof q.answer === "string" ? q.answer.replace(/^"|"$/g, "") : q.answer;
   switch (q.kind) {
     case "mcq": return L[Number(a)] ?? "";
