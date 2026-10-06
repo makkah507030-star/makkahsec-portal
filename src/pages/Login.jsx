@@ -65,7 +65,7 @@ export default function Login() {
     });
 
     if (error) {
-      setError("رقم الهوية أو كلمة المرور غير صحيحة.");
+      setError("رقم الهوية أو كلمة المرور غير صحيحة. ولي الأمر: اكتب الجوال المسجّل في نور بصيغة 9665xxxxxxxx.");
       logAttempt(false, "بيانات دخول غير صحيحة");
       setBusy(false);
     } else {
@@ -144,7 +144,7 @@ export default function Login() {
                 className="rounded-[20px] border border-[#DCEFE5] bg-white/85 p-6 shadow-[0_24px_60px_-34px_rgba(62,99,80,.55)] backdrop-blur-xl">
 
             <div className="mb-4">
-              <label className="label" htmlFor="nid">رقم الهوية</label>
+              <label className="label" htmlFor="nid">رقم الهوية — أو رقم الجوال لولي الأمر</label>
               <input
                 id="nid"
                 className={`${FIELD} num mt-1 w-full`}
@@ -155,7 +155,8 @@ export default function Login() {
                 required
               />
               <p className="mt-1 text-[11px] text-faint">
-                ولي الأمر يدخل برقم جواله المسجّل بصيغة 9665xxxxxxx
+                ولي الأمر: اكتب رقم جوالك المسجّل في نظام نور بصيغة 9665xxxxxxxx
+                (بدون صفر في أوله وبدون +)
               </p>
             </div>
 
