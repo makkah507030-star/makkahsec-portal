@@ -720,6 +720,45 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
 
       {/* ملخّص النتيجة */}
       <p className="mt-5 text-[13px] font-semibold text-mint-deep">نتيجة التقييم</p>
+      {official ? (
+        // كجدول «نموذج تقييم أداء المعلم» المعتمد: العنصر ووزنه ودرجة تقديره (1–5) ودرجته الموزونة
+        <table className="mt-1.5 w-full table-fixed border-collapse text-[11.5px]">
+          <thead>
+            <tr>
+              {[["عناصر التقييم", "w-[52%]"], ["الوزن النسبي", ""], ["درجة التقدير", ""], ["الدرجة المحققة", ""]].map(([h, w]) => (
+                <th key={h} className={`${cellB} ${w} px-2 py-1.5 text-center font-semibold text-mint-deep`} style={TH}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rubrics.flatMap((f) => (f.items ?? []).map((it, i) => {
+              const e = v[f.name]?.[i];
+              const pts = itemPoints(it, e);
+              return (
+                <tr key={`${f.name}-${i}`}>
+                  <td className={`${cellB} px-2 py-1 font-semibold`}>
+                    <span className="num ml-1.5 text-mint-deep">{it.no ?? i + 1}</span>{it.title}
+                  </td>
+                  <td className={`num ${cellB} px-2 py-1 text-center`}>{it.weight}%</td>
+                  <td className={`${cellB} px-2 py-1 text-center font-bold`}>{pts != null ? <N>{e.score}</N> : ""}</td>
+                  <td className={`num ${cellB} px-2 py-1 text-center font-bold`}>{pts != null ? `${pts}%` : ""}</td>
+                </tr>
+              );
+            }))}
+            <tr>
+              <td className={`${cellB} px-2 py-1.5 font-bold`} style={TH}>التقدير العام للأداء</td>
+              <td className={`num ${cellB} px-2 py-1.5 text-center font-bold`} style={TH}>{max}%</td>
+              <td className={`${cellB} px-2 py-1.5 text-center font-bold text-mint-deep`} style={TH}>
+                {allRated ? <><N>{overallGrade(pct)}</N> — {overallLabel(pct)}</>
+                  : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
+              </td>
+              <td className={`num ${cellB} px-2 py-1.5 text-center text-[13.5px] font-bold text-mint-deep`} style={TH}>
+                {pct == null ? "" : max === 100 ? `${Math.round(got * 10) / 10}%` : `${pct}%`}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      ) : (
       <table className="mt-1.5 w-full table-fixed border-collapse text-[12px]">
         <thead>
           <tr>
@@ -750,13 +789,12 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
               )}
             </td>
             <td className={`${cellB} px-2 py-1.5 text-center font-bold text-mint-deep`} style={TH}>
-              {allRated ? (official
-                ? <span className="block"><N>{overallGrade(pct)}</N> — {overallLabel(pct)}</span>
-                : overallLabel(pct)) : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
+              {allRated ? overallLabel(pct) : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
             </td>
           </tr>
         </tbody>
       </table>
+      )}
       {official ? (
         <p className="mt-2 text-[11px] leading-relaxed text-muted">
           يُختار لكل عنصر أحد مستويات سلّم التقدير الخمسة (<N>1</N>–<N>5</N>) الموصوفة في النموذج المعتمد؛
