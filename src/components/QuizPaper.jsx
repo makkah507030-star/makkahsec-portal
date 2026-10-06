@@ -186,7 +186,8 @@ function QItem({ q, n, t, maxOpts }) {
   return (
     <div className="qbox text-[10.5px] leading-[1.5]">
       <div className="flex items-start gap-1.5">
-        <span className="num w-[9mm] shrink-0 font-bold">{t.fShort}{n})</span>
+        {/* dir=auto: «ف13)» بترتيب العربية، و«P13)» بترتيب الإنجليزية — لا num (يجعله ltr فيظهر «(ف13») */}
+        <span dir="auto" className="w-[9mm] shrink-0 font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>{t.fShort}{n})</span>
         <p className="min-w-0 flex-1">{q.text}</p>
         {q.kind === "truefalse" && (
           <span className="flex shrink-0 border-collapse">
@@ -427,7 +428,8 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
         return el.getBoundingClientRect().height + parseFloat(cs.marginTop) + parseFloat(cs.marginBottom);
       };
       const h = (sel) => outer(root.querySelector(sel)?.firstElementChild);
-      const inner = (PAGE_H - PAD_T - PAD_B) * mm - 2;   // هامش أمان
+      // هامش أمان 8 مم: الطباعة تقيس الخط أطول قليلًا من الشاشة، فتفيض الفقرة الأخيرة تحت البطاقة
+      const inner = (PAGE_H - PAD_T - PAD_B - 8) * mm;
       const gap = 1.5 * 4;                                // mt-1.5 فوق منطقة الأسئلة
       const head = h("[data-head]"), runHead = h("[data-runhead]");
       const foot = h("[data-foot]"), card = h("[data-card]");
@@ -469,8 +471,10 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
     if (!area || !inner) return;
     let z = 1;
     inner.style.zoom = "1";
+    // هامش أمان للطباعة (~4 مم) — ما يتّسع على الشاشة بالكاد قد يفيض عند الطباعة
+    const mm4 = area.getBoundingClientRect().width / (210 - 2 * PAD_X) * 4;
     for (let i = 0; i < 12; i++) {
-      const avail = area.getBoundingClientRect().height;
+      const avail = area.getBoundingClientRect().height - mm4;
       const need = inner.getBoundingClientRect().height;
       if (!avail || need <= avail) break;
       z = Math.max(MIN_ZOOM, z * Math.min(0.97, avail / need));
@@ -479,7 +483,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
     }
     inner.dataset.zoom = z.toFixed(2);
     // هل اتّسع كل شيء فعلًا؟ إن لم يتّسع بعد أدنى تصغير نوزّع على صفحات
-    const fits = inner.getBoundingClientRect().height <= area.getBoundingClientRect().height + 1;
+    const fits = inner.getBoundingClientRect().height <= area.getBoundingClientRect().height - mm4 + 1;
     if (!fits) { setOverflowFor(questions); return; }
     onFit?.({ zoom: z, fits: true, pages: 1, cardFits: true });
   }, [plan, quiz, questions, className, studentName]); // eslint-disable-line react-hooks/exhaustive-deps
