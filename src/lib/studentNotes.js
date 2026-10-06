@@ -1,14 +1,17 @@
 // src/lib/studentNotes.js
 /* =====================================================================
    ملاحظات الطلاب — صحية وسلوكية ونفسية (جدول student_notes).
-   كل موجه يكتب نوعه: الموجه الصحي للصحية والسلوكية، والموجهون الطلابيون
-   للسلوكية والنفسية، ومعهم في كل الأنواع المدير ووكيل شؤون الطلاب والدعم الفني.
+   يكتب كل الأنواع: الموجه الصحي والموجهون الطلابيون، والمدير ووكيل شؤون
+   الطلاب والدعم الفني.
    ===================================================================== */
+
+// كل الأنواع لكل الموجهين: الموجه الصحي والموجهون الطلابيون
+const COUNSELORS = ["counselor", "counselor_1", "counselor_2", "counselor_3", "health_counselor"];
 
 export const NOTE_KINDS = {
   health: {
     label: "صحية", chip: "bg-absent/10 text-absent border-absent/20",
-    writers: ["health_counselor"],
+    writers: COUNSELORS,
     presets: [
       "ربو: يُسمح له بالخروج فورًا عند ضيق التنفس، وبخّاخه معه.",
       "سكري: يُسمح له بتناول وجبة خفيفة أو الخروج للعيادة عند الشعور بالدوخة أو التعب.",
@@ -21,7 +24,7 @@ export const NOTE_KINDS = {
   },
   behavior: {
     label: "سلوكية", chip: "bg-warning-light text-warning border-warning/20",
-    writers: ["counselor", "counselor_1", "counselor_2", "counselor_3", "health_counselor"],
+    writers: COUNSELORS,
     presets: [
       "فرط حركة وتشتت انتباه: يُجلس في الصفوف الأمامية بعيدًا عن النوافذ، وتُقسَّم له المهام.",
       "يحتاج تعزيزًا إيجابيًا مستمرًا، ويُتجنَّب توبيخه أمام زملائه.",
@@ -31,7 +34,7 @@ export const NOTE_KINDS = {
   },
   psych: {
     label: "نفسية", chip: "bg-excused/10 text-excused border-excused/20",
-    writers: ["counselor", "counselor_1", "counselor_2", "counselor_3"],
+    writers: COUNSELORS,
     presets: [
       "يمرّ بظرف أسري: يُراعى في المتابعة والواجبات، دون الإشارة لذلك أمام زملائه.",
       "قلق الاختبارات: يُطمأن قبل الاختبار، ويُتاح له وقت إضافي عند الحاجة.",
