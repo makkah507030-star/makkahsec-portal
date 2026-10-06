@@ -13,9 +13,9 @@ import moeLogo from "../assets/moe-logo.png";
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
-// أدنى تصغير للأسئلة (٨٥٪) حتى يبقى الخط مقروءًا — إن لم تتّسع الصفحة الواحدة بعده
-// توزّعت الأسئلة بحجمها الطبيعي على صفحات، والبطاقة كاملة في آخرها
-const MIN_ZOOM = 0.85;
+// لا تصغير للخط: وضوح الاختبار أولًا. إن لم تتّسع الأسئلة مع البطاقة في صفحة واحدة
+// بحجمها الطبيعي توزّعت على صفحات، والبطاقة كاملة في آخرها
+const MIN_ZOOM = 1;
 
 const AR = {
   gov: ["المملكة العربية السعودية", "وزارة التعليم",
@@ -28,7 +28,7 @@ const AR = {
   kinds: { mcq: "اختر الإجابة الصحيحة", truefalse: "ضع علامة صح أو خطأ",
            match: "زاوج بين العمودين" },
   teacher: "معلم المادة", good: "مع تمنياتي لكم بالتوفيق",
-  colA: "العمود الأول", colB: "العمود الثاني", answerCol: "الإجابة",
+  colA: "العمود الأول", colB: "العمود الثاني", answerCol: "الإجابة", statement: "العبارة",
   matchHint: "اكتب في خانة الإجابة حرف العنصر المقابل من العمود الثاني.",
   qShort: "س", fShort: "ف", item: "الفقرة", question: "السؤال", page: "صفحة", of: "من",
   bubbleHint: "ظلّل الدائرة كاملة بقلم رصاص، وامحُ محوًا تامًا عند التغيير",
@@ -47,7 +47,7 @@ const EN = {
   kinds: { mcq: "Choose the correct answer", truefalse: "Write True or False",
            match: "Match column A with column B" },
   teacher: "Subject Teacher", good: "Good luck",
-  colA: "Column A", colB: "Column B", answerCol: "Answer",
+  colA: "Column A", colB: "Column B", answerCol: "Answer", statement: "Statement",
   matchHint: "Write the letter of the matching item from column B.",
   qShort: "Q", fShort: "P", item: "Item", question: "Question", page: "Page", of: "of",
   bubbleHint: "Fill the circle completely with a pencil; erase fully to change",
@@ -176,10 +176,10 @@ function AnswerCard({ questions = [], t, ltr, quiz, className, studentName }) {
 function GroupHead({ g, gi, t }) {
   const marks = Math.round(g.list.reduce((a, x) => a + Number(x.marks || 0), 0) * 100) / 100;
   return (
-    <div className="flex items-center justify-between gap-2 rounded-[3px] px-2 py-[3px] text-[11px] font-bold"
+    <div className="flex items-center justify-between gap-2 rounded-[3px] px-2 py-[3px] text-[12.5px] font-bold"
          style={{ background: "#EFEFEF", color: "#000", ...INK }}>
       <span>{t.question} {t.ordinals[gi] ?? gi + 1}: {t.kinds[g.kind]}</span>
-      <span className="num shrink-0 rounded-[3px] border bg-white px-2 py-[1px] text-[10px]"
+      <span className="num shrink-0 rounded-[3px] border bg-white px-2 py-[1px] text-[11px]"
             style={{ borderColor: "#000", ...INK }}>
         {t.markWord(marks)}
       </span>
@@ -190,67 +190,29 @@ function GroupHead({ g, gi, t }) {
 // أكبر عدد خيارات في السؤال — لتوحيد عرض خانات الاختيار من متعدد
 const maxOptsOf = (g) => Math.max(1, ...g.list.map((x) => (Array.isArray(x.options) ? x.options.length : 0)));
 
-/* فقرة واحدة، والترقيم يبدأ من جديد في كل سؤال */
-function QItem({ q, n, t, maxOpts }) {
-  return (
-    <div className="qbox text-[10.5px] leading-[1.5]">
-      <div className="flex items-start gap-1.5">
-        {/* dir=auto: «ف13)» بترتيب العربية، و«P13)» بترتيب الإنجليزية — لا num (يجعله ltr فيظهر «(ف13») */}
-        <span dir="auto" className="w-[9mm] shrink-0 font-bold" style={{ fontVariantNumeric: "tabular-nums" }}>{t.fShort}{n})</span>
-        <p className="min-w-0 flex-1">{q.text}</p>
-        {q.kind === "truefalse" && (
-          <span className="flex shrink-0 border-collapse">
-            {t.tf.map((x, k) => (
-              <span key={k} className="border px-3 py-[1px] text-center text-[10px] font-semibold"
-                    style={{ borderColor: "#000", minWidth: "14mm",
-                             marginInlineStart: k ? "-1px" : 0 }}>
-                {x}
-              </span>
-            ))}
-          </span>
-        )}
-      </div>
+/* فقرة واحدة، والترقيم يبدأ من جديد في كل سؤال.
+   الخط مكبَّر لضعاف النظر: نص الفقرة 13.5px شبه عريض، والخيارات 12.5px متوسطة
+   الوزن بحبر أسود ومسافات أوسع، فيتصدّر السؤال وتبقى الخيارات واضحة. */
+const QNUM = { fontVariantNumeric: "tabular-nums" };
 
-      {q.kind === "mcq" && (
-        // جدول ثابت التخطيط: خانات الخيارات متساوية العرض، وأعمدتها
-        // متحاذية في كل فقرات السؤال (حتى لو اختلف عدد الخيارات)
-        <table className="mt-[2px] border-collapse text-[10px]"
-               style={{ marginInlineStart: "6mm", width: "calc(100% - 6mm)",
-                        tableLayout: "fixed" }}>
-          <colgroup>
-            {Array.from({ length: maxOpts }).map((_, k) => (
-              <Fragment key={k}>
-                <col style={{ width: "6mm" }} />
-                <col />
-              </Fragment>
-            ))}
-          </colgroup>
-          <tbody>
-            <tr>
-              {(q.options ?? []).map((o, k) => (
-                <Fragment key={k}>
-                  <td className="num border px-1 py-[2px] text-center font-bold"
-                      style={{ borderColor: "#000", width: "6mm",
-                               background: "#F5F5F5", ...INK }}>
-                    {t.ltrs[k]}
-                  </td>
-                  <td className="border px-1.5 py-[2px]" style={{ borderColor: "#000" }}>
-                    {o}
-                  </td>
-                </Fragment>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      )}
+function QItem({ q, n, t, maxOpts, pageTop = false }) {
+  if (q.kind === "truefalse") return <TfRow q={q} n={n} t={t} pageTop={pageTop} />;
+  if (q.kind === "mcq") return <McqTable q={q} n={n} t={t} maxOpts={maxOpts} />;
+  // المزاوجة: كل صف في الجدول فقرة مستقلة في بطاقة الإجابة («س3: ف1، ف2…»)، فلا رقم
+  // للجدول كله — الصفوف نفسها مرقّمة ف1، ف2… لتطابق البطاقة. ونص السؤال إن وُجد فوقه.
+  const left = q.options?.left ?? [], right = q.options?.right ?? [];
+  const rows = Math.max(left.length, right.length);
+  return (
+    <div className="qbox text-[13.5px] leading-[1.65]" style={{ color: "#000" }}>
+      {q.text?.trim() && <p className="mb-1 font-semibold">{q.text}</p>}
 
       {q.kind === "match" && (
-        <div className="mt-1" style={{ paddingInlineStart: "7mm" }}>
-          <table className="w-full border-collapse text-[11px]">
+        <div>
+          <table className="w-full border-collapse text-[12.5px] font-medium">
             <thead>
               <tr style={{ background: "#EFEFEF", ...INK }}>
                 <th className="border px-1 py-1 text-center font-bold"
-                    style={{ borderColor: "#000", width: "8mm" }}>م</th>
+                    style={{ borderColor: "#000", width: "10mm" }}>م</th>
                 <th className="border px-2 py-1 text-center font-bold"
                     style={{ borderColor: "#000" }}>
                   {t.colA} ({t.ltrs[0]})
@@ -268,30 +230,30 @@ function QItem({ q, n, t, maxOpts }) {
               </tr>
             </thead>
             <tbody>
-              {(q.options?.left ?? []).map((l, k) => (
+              {Array.from({ length: rows }, (_, k) => (
                 <tr key={k}>
-                  <td className="num border px-1 py-1 text-center font-bold"
-                      style={{ borderColor: "#000", background: "#F5F5F5", ...INK }}>
-                    {k + 1}
+                  <td dir="auto" className="border px-1 py-1 text-center font-bold"
+                      style={{ borderColor: "#000", background: "#F5F5F5", ...QNUM, ...INK }}>
+                    {k < left.length ? `${t.fShort}${k + 1}` : ""}
                   </td>
                   <td className="border px-2 py-[3px]" style={{ borderColor: "#000" }}>
-                    {l}
+                    {left[k] ?? ""}
                   </td>
                   <td className="border px-1 py-[3px]" style={{ borderColor: "#000" }}>
                     &nbsp;
                   </td>
                   <td className="num border px-1 py-1 text-center font-bold"
                       style={{ borderColor: "#000", background: "#F5F5F5", ...INK }}>
-                    {t.ltrs[k] ?? k + 1}
+                    {k < right.length ? (t.ltrs[k] ?? k + 1) : ""}
                   </td>
                   <td className="border px-2 py-[3px]" style={{ borderColor: "#000" }}>
-                    {(q.options?.right ?? [])[k] ?? ""}
+                    {right[k] ?? ""}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="mt-1 text-[10px]" style={{ color: "#555" }}>
+          <p className="mt-1 text-[11px]" style={{ color: "#444" }}>
             {t.matchHint}
           </p>
         </div>
@@ -397,14 +359,97 @@ function Block({ b, t, first }) {
   // padding لا margin: حتى يدخل الفراغ في قياس ارتفاع الجزء
   return b.head
     ? <div style={{ display: "flow-root", paddingTop: first ? 0 : "4px" }}><GroupHead g={b.g} gi={b.gi} t={t} /></div>
-    : <div style={{ display: "flow-root", paddingTop: "3px" }}><QItem q={b.q} n={b.n} t={t} maxOpts={b.maxOpts} /></div>;
+    : <div style={{ display: "flow-root", paddingTop: b.q.kind === "truefalse" && b.n > 1 && !first ? 0 : b.q.kind === "mcq" ? "5px" : "3px" }}><QItem q={b.q} n={b.n} t={t} maxOpts={b.maxOpts} pageTop={first} /></div>;
+}
+
+/* الاختيار من متعدد في جدول: رقم الفقرة يمينًا بطول الجدول، ونص السؤال في
+   الصف الأول على عرضه بخلفية خفيفة، والخيارات تحته. جدول ثابت التخطيط فتتحاذى
+   خانات الخيارات في كل فقرات السؤال حتى لو اختلف عددها. */
+function McqTable({ q, n, t, maxOpts }) {
+  const b = { borderColor: "#000" };
+  const shade = { background: "#F5F5F5", ...INK };
+  return (
+    <div className="qbox text-[13.5px] leading-[1.6]" style={{ color: "#000" }}>
+      <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+        <colgroup>
+          <col style={{ width: "10mm" }} />
+          {Array.from({ length: maxOpts }).map((_, k) => (
+            <Fragment key={k}><col style={{ width: "6mm" }} /><col /></Fragment>
+          ))}
+        </colgroup>
+        <tbody>
+          <tr>
+            <td rowSpan={2} dir="auto" className="border px-1 text-center font-bold" style={{ ...b, ...shade, ...QNUM }}>
+              {t.fShort}{n}
+            </td>
+            <td colSpan={maxOpts * 2} className="border px-2 py-[5px] font-semibold"
+                style={{ ...b, background: "#FAFAFA", ...INK }}>
+              {q.text}
+            </td>
+          </tr>
+          <tr className="text-[12.5px] font-medium">
+            {Array.from({ length: maxOpts }).map((_, k) => {
+              const o = (q.options ?? [])[k];
+              return (
+                <Fragment key={k}>
+                  <td className="num border px-1 py-[4px] text-center font-bold" style={{ ...b, ...shade }}>
+                    {o != null ? t.ltrs[k] : ""}
+                  </td>
+                  <td className="border px-1.5 py-[4px]" style={b}>{o ?? ""}</td>
+                </Fragment>
+              );
+            })}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* الصح والخطأ في جدول: كل فقرة صفّ مستقل (لتتوزّع على الصفحات فقرةً فقرة)،
+   والصفوف متلاصقة فتبدو جدولًا واحدًا، ورأسه في الفقرة الأولى. */
+const TF_COLS = (
+  <colgroup>
+    <col style={{ width: "10mm" }} /><col /><col style={{ width: "15mm" }} /><col style={{ width: "15mm" }} />
+  </colgroup>
+);
+function TfRow({ q, n, t, pageTop }) {
+  // الصف المتصل بما قبله بلا حدّ علوي، إلا إن بدأ صفحة جديدة
+  const cell = { borderColor: "#000", borderStyle: "solid", borderWidth: "1px", ...(n > 1 && !pageTop ? { borderTopWidth: 0 } : {}) };
+  const shade = { background: "#F5F5F5", ...INK };
+  return (
+    <div className="qbox text-[13.5px] leading-[1.6]" style={{ color: "#000" }}>
+      <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+        {TF_COLS}
+        <tbody>
+          {n === 1 && (
+            <tr style={{ background: "#EFEFEF", ...INK }}>
+              <th className="px-1 py-1 text-center text-[12px] font-bold" style={{ ...cell, borderTopWidth: "1px" }}>م</th>
+              <th className="px-2 py-1 text-center text-[12px] font-bold" style={{ ...cell, borderTopWidth: "1px" }}>{t.statement}</th>
+              <th colSpan={2} className="px-1 py-1 text-center text-[12px] font-bold" style={{ ...cell, borderTopWidth: "1px" }}>{t.answerCol}</th>
+            </tr>
+          )}
+          <tr>
+            <td dir="auto" className="px-1 py-[5px] text-center font-bold" style={{ ...cell, ...shade, ...QNUM, ...(n === 1 ? { borderTopWidth: 0 } : {}) }}>
+              {t.fShort}{n}
+            </td>
+            <td className="px-2 py-[5px] font-semibold" style={{ ...cell, ...(n === 1 ? { borderTopWidth: 0 } : {}) }}>{q.text}</td>
+            {t.tf.map((x) => (
+              <td key={x} className="px-1 py-[5px] text-center text-[12.5px] font-medium"
+                  style={{ ...cell, ...(n === 1 ? { borderTopWidth: 0 } : {}) }}>{x}</td>
+            ))}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 // أبعاد الورقة بالمليمتر (A4)
 const PAGE_H = 296, PAD_T = 8, PAD_B = 5, PAD_X = 9;
 
 /**
- * الورقة: إن اتّسعت الأسئلة مع البطاقة في صفحة واحدة (ولو بخطّ مصغَّر حتى ٨٥٪)
+ * الورقة: إن اتّسعت الأسئلة مع البطاقة في صفحة واحدة بحجمها الطبيعي
  * بقيت صفحة واحدة كما كانت. وإلا توزّعت الأسئلة بحجمها الطبيعي على صفحات،
  * وجاءت بطاقة الإجابة كاملة في آخرها (أو في صفحة مستقلة) لتبقى صالحة للكاميرا.
  * onFit({ zoom, fits, pages, cardFits })
@@ -452,14 +497,25 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
         return;
       }
 
+      // السؤال لا يُقطع: إن لم يتّسع كاملًا (رأسه وكل فقراته) في باقي الصفحة انتقل
+      // كله للصفحة التالية. ولا يُقسَّم إلا إن كان أطول من صفحة كاملة، فقرةً فقرة.
       const out = [[]];
+      const fresh = () => inner - runHead - gap - foot;
       let room = inner - head - gap - foot;
-      heights.forEach((bh, i) => {
-        // رأس السؤال لا يبقى وحده أسفل الصفحة: يلزم أن تتّسع معه فقرته الأولى
-        const need = blocks[i].head ? bh + (heights[i + 1] ?? 0) : bh;
-        if (need > room && out[out.length - 1].length) { out.push([]); room = inner - runHead - gap - foot; }
-        out[out.length - 1].push(i);
-        room -= bh;
+      const newPage = () => { out.push([]); room = fresh(); };
+      const runs = [];
+      blocks.forEach((b, i) => { if (b.head || !runs.length) runs.push([]); runs[runs.length - 1].push(i); });
+      runs.forEach((run) => {
+        const gh = run.reduce((a, i) => a + heights[i], 0);
+        if (gh > room && out[out.length - 1].length && gh <= fresh()) newPage();
+        if (gh <= room) { run.forEach((i) => out[out.length - 1].push(i)); room -= gh; return; }
+        run.forEach((i) => {
+          // رأس السؤال لا يبقى وحده أسفل الصفحة: يلزم أن تتّسع معه فقرته الأولى
+          const need = blocks[i].head ? heights[i] + (heights[i + 1] ?? 0) : heights[i];
+          if (need > room && out[out.length - 1].length) newPage();
+          out[out.length - 1].push(i);
+          room -= heights[i];
+        });
       });
       const cardAlone = card > room;
       setPlan({ pages: out, cardAlone, cardFits });
