@@ -114,6 +114,34 @@ export default function ExamsAdmin() {
     setMsg({ ok: true, text: "حُفظ." });
   };
 
+  // طباعة كل جداول المدرسة للفترة المختارة دفعة واحدة: كل فصل (أو كل صف في النهائية) في ورقة
+  const [printingAll, setPrintingAll] = useState(false);
+  const printAll = async () => {
+    if (!term) return;
+    setPrintingAll(true);
+    let q = supabase.from("exam_slots").select("*").eq("exam_term_id", term.id);
+    q = kind === "final" ? q.is("class_id", null) : q.not("class_id", "is", null);
+    const { data, error } = await q.order("exam_date").order("period_no");
+    setPrintingAll(false);
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+
+    const rows = data ?? [];
+    const sheets = kind === "final"
+      ? [1, 2, 3].map((g) => ({
+          title: term.title, subtitle: GRADE_NAMES[g], note: term.note, final: true,
+          rows: rows.filter((r) => r.grade === g),
+        }))
+      : classes.map((c) => ({
+          title: term.title, subtitle: `${GRADE_NAMES[c.grade]} — فصل ${c.class_no}`, note: term.note,
+          rows: rows.filter((r) => r.class_id === c.id),
+        }));
+    const list = sheets.filter((x) => x.rows.length);
+    if (!list.length) { setMsg({ ok: false, text: "لا جداول محدّدة لهذه الفترة بعد." }); return; }
+    setPrinting(list);
+    // مهلة أطول قليلًا: عدة صفحات بصورها تُرسم قبل فتح نافذة الطباعة
+    setTimeout(() => window.print(), 300);
+  };
+
   const pill = (on) =>
     `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
       on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
@@ -174,6 +202,11 @@ export default function ExamsAdmin() {
               منشور — يظهر للمعلمين والطلاب وأولياء الأمور
             </label>
           </DangerZone>
+
+          <button className="btn-primary w-full sm:w-auto" disabled={printingAll} onClick={printAll}>
+            {printingAll ? "جارٍ التجهيز…"
+              : kind === "final" ? "طباعة جداول كل الصفوف" : "طباعة جداول كل الفصول"}
+          </button>
 
           {msg && (
             <p className={`rounded-sm2 px-3 py-2 text-sm ${
@@ -239,7 +272,12 @@ export default function ExamsAdmin() {
       {printing && (
         <div className="hidden print:block">
           <ExamPrintArea>
-            <ExamTable {...printing} deputy={deputy} deputySig={deputySig} />
+            {/* جدول واحد أو عدة جداول، كل جدول في ورقة مستقلة */}
+            {[].concat(printing).map((p, i, all) => (
+              <div key={i} style={i < all.length - 1 ? { breakAfter: "page" } : undefined}>
+                <ExamTable {...p} deputy={deputy} deputySig={deputySig} />
+              </div>
+            ))}
           </ExamPrintArea>
         </div>
       )}
