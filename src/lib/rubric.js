@@ -40,23 +40,31 @@ export function rubricScore(field, value) {
   return { points: round1(points), max, rated, count: items.length };
 }
 
-/* درجة التقدير العام (1–5) من النسبة المئوية — «آلية الاحتساب» في نماذج تقييم الأداء المعتمدة */
-export function overallGrade(pct) {
-  if (pct == null) return null;
-  return pct >= 90 ? 5 : pct >= 80 ? 4 : pct >= 70 ? 3 : pct >= 60 ? 2 : 1;
-}
+/* أوصاف مستويات التقدير في النموذج المعتمد — الدليل الإرشادي لإدارة الأداء الوظيفي (النسخة الثانية) */
+export const OFFICIAL_LEVELS = [
+  { v: 5, label: "مثالي" },
+  { v: 4, label: "تخطى التوقعات" },
+  { v: 3, label: "وافق التوقعات" },
+  { v: 2, label: "بحاجة إلى تطوير" },
+  { v: 1, label: "غير مرضٍ" },
+];
+export const officialLabel = (v) => OFFICIAL_LEVELS.find((l) => l.v === Number(v))?.label ?? "";
 
-/* لون الدرجة (1–5): 1–2 أحمر هادئ (يحتاج دعمًا)، 3–4 ذهبي، 5 أخضر — خلفية فاتحة ونص داكن للطباعة */
-const TONES = {
-  low:  { bg: "#FCE4E1", fg: "#A3352B", bd: "#E9A79F" },
-  mid:  { bg: "#FFF1D1", fg: "#8A5A00", bd: "#EBC979" },
-  high: { bg: "#DDF3E6", fg: "#1F6B45", bd: "#89D7AD" },
+/* التقدير الموزون في النموذج المعتمد: تقدير العنصر (1–5) × وزنه النسبي، ومجموعها التقدير العام من 5 */
+export const weightedRating = (item, entry) => {
+  const s = Number(entry?.score);
+  return s >= 1 && s <= 5 ? Math.round(s * (Number(item.weight) || 0)) / 100 : null;
 };
-export function gradeTone(g) {
-  const n = Number(g);
-  if (!(n >= 1 && n <= 5)) return null;
-  return n <= 2 ? TONES.low : n <= 4 ? TONES.mid : TONES.high;
-}
+
+/* لون كل درجة (1–5): أحمر، برتقالي، ذهبي، أزرق، أخضر — خلفية فاتحة ونص داكن للطباعة */
+const TONES = {
+  1: { bg: "#FCE4E1", fg: "#A3352B", bd: "#E9A79F" },
+  2: { bg: "#FDEBDD", fg: "#A2541A", bd: "#F0B88C" },
+  3: { bg: "#FFF4CC", fg: "#7A5C00", bd: "#E8CF6E" },
+  4: { bg: "#E3EFFA", fg: "#24548A", bd: "#9CC3E3" },
+  5: { bg: "#DDF3E6", fg: "#1F6B45", bd: "#89D7AD" },
+};
+export const gradeTone = (g) => TONES[Number(g)] ?? null;
 
 /* التقدير العام من النسبة المئوية */
 export function overallLabel(pct) {

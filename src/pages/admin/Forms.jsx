@@ -7,7 +7,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES, sheetLandscape, isGuestCert } from "../../components/FormSheet.jsx";
-import { RATING_LEVELS, gradeTone, itemPoints, rubricScore } from "../../lib/rubric.js";
+import { RATING_LEVELS, gradeTone, itemPoints, officialLabel, rubricScore, weightedRating } from "../../lib/rubric.js";
 import Loader from "../../components/Loader.jsx";
 import { ReplyFilesList } from "../../components/ReplyFiles.jsx";
 import { useNotice } from "../../lib/useNotice.js";
@@ -165,12 +165,17 @@ function RubricInput({ field, value, onChange }) {
   const v = value ?? {};
   const sc = rubricScore(field, v);
   const set = (i, patch) => onChange({ ...v, [i]: { ...(v[i] ?? {}), ...patch } });
+  const official = field.style === "official";
+  const overall = (field.items ?? []).reduce((a, it, i) => a + (weightedRating(it, v[i]) ?? 0), 0);
   return (
     <div className="mt-1 space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">
         <span>{field.note}</span>
         <span className="font-bold">
-          {sc.rated ? <><span className="num">{sc.points}%</span> من </> : "من "}<span className="num">{sc.max}%</span>
+          {official
+            // النموذج المعتمد: مجموع التقديرات الموزونة من 5
+            ? <>{sc.rated ? <>التقدير العام <span className="num">{overall.toFixed(2)}</span> من <span className="num">5</span></> : "التقدير العام من 5"}</>
+            : <>{sc.rated ? <><span className="num">{sc.points}%</span> من </> : "من "}<span className="num">{sc.max}%</span></>}
           {" · "}قُدِّر <span className="num">{sc.rated}</span> من <span className="num">{sc.count}</span>
         </span>
       </div>
@@ -184,7 +189,10 @@ function RubricInput({ field, value, onChange }) {
                 <span className="num text-mint-deep">{it.no ?? i + 1}.</span> {it.title}
               </p>
               <span className="shrink-0 text-xs text-muted">
-                {pts != null ? <b className="num text-mint-deep">{pts}</b> : "—"} من <span className="num">{it.weight}%</span>
+                {official
+                  ? <>{pts != null ? <b style={{ color: gradeTone(e.score).fg }}>{officialLabel(e.score)} · <span className="num">{weightedRating(it, e).toFixed(2)}</span></b> : "—"}
+                      {" · "}الوزن <span className="num">{it.weight}%</span></>
+                  : <>{pts != null ? <b className="num text-mint-deep">{pts}</b> : "—"} من <span className="num">{it.weight}%</span></>}
               </span>
             </div>
             <details className="mt-1">
@@ -208,7 +216,7 @@ function RubricInput({ field, value, onChange }) {
                     <span style={on ? { background: gradeTone(lv).fg } : undefined}
                       className={`num mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
                       on ? "text-white" : "border border-line"}`}>{lv}</span>
-                    <span>{txt}</span>
+                    <span className="whitespace-pre-line">{txt}</span>
                   </button>
                 );
               })}
@@ -224,7 +232,10 @@ function RubricInput({ field, value, onChange }) {
                 <span className="num text-mint-deep">{i + 1}.</span> {it.title}
               </p>
               <span className="shrink-0 text-xs text-muted">
-                {pts != null ? <b className="num text-mint-deep">{pts}</b> : "—"} من <span className="num">{it.weight}%</span>
+                {official
+                  ? <>{pts != null ? <b style={{ color: gradeTone(e.score).fg }}>{officialLabel(e.score)} · <span className="num">{weightedRating(it, e).toFixed(2)}</span></b> : "—"}
+                      {" · "}الوزن <span className="num">{it.weight}%</span></>
+                  : <>{pts != null ? <b className="num text-mint-deep">{pts}</b> : "—"} من <span className="num">{it.weight}%</span></>}
               </span>
             </div>
             {it.examples?.length > 0 && (
