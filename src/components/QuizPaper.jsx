@@ -458,7 +458,8 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
   const ltr = quiz?.lang === "en";
   const t = ltr ? EN : AR;
   const dir = ltr ? "ltr" : "rtl";
-  const font = ltr ? "'IBM Plex Sans', system-ui, sans-serif" : "'IBM Plex Sans Arabic', sans-serif";
+  // خط البوابة للغتين: IBM Plex Sans Arabic يحوي حروفًا لاتينية بتصميم Plex (src/fonts.css)
+  const font = "'IBM Plex Sans Arabic', sans-serif";
 
   // نفس تجميع بطاقة الإجابة (omrLayout) حتى يتطابق ترتيب الفقرات في الورقة والبطاقة
   const groups = groupQuestions(questions);
