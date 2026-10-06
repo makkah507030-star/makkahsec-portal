@@ -7,7 +7,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES, sheetLandscape, isGuestCert } from "../../components/FormSheet.jsx";
-import { RATING_LEVELS, itemPoints, rubricScore } from "../../lib/rubric.js";
+import { RATING_LEVELS, gradeTone, itemPoints, rubricScore } from "../../lib/rubric.js";
 import Loader from "../../components/Loader.jsx";
 import { ReplyFilesList } from "../../components/ReplyFiles.jsx";
 import { useNotice } from "../../lib/useNotice.js";
@@ -202,10 +202,12 @@ function RubricInput({ field, value, onChange }) {
                 const lv = k + 1, on = Number(e.score) === lv;
                 return (
                   <button key={k} type="button" onClick={() => set(i, { score: on ? null : lv })}
+                    style={on ? { background: gradeTone(lv).bg, borderColor: gradeTone(lv).bd } : undefined}
                     className={`flex w-full items-start gap-2 rounded-sm2 border px-2.5 py-1.5 text-right text-[11.5px] leading-relaxed transition-colors ${
-                      on ? "border-mint-deep bg-mint-tint text-ink" : "border-line text-muted hover:bg-canvas"}`}>
-                    <span className={`num mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
-                      on ? "bg-mint-deep text-white" : "border border-line"}`}>{lv}</span>
+                      on ? "text-ink" : "border-line text-muted hover:bg-canvas"}`}>
+                    <span style={on ? { background: gradeTone(lv).fg } : undefined}
+                      className={`num mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
+                      on ? "text-white" : "border border-line"}`}>{lv}</span>
                     <span>{txt}</span>
                   </button>
                 );

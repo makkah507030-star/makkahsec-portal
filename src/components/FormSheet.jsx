@@ -4,7 +4,7 @@ import logoIcon from "../assets/icon-mint.png";
 import { noEra } from "../lib/dates";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
-import { RATING_LEVELS, itemPoints, overallGrade, overallLabel, ratingLabel, rubricScore } from "../lib/rubric.js";
+import { RATING_LEVELS, gradeTone, itemPoints, overallGrade, overallLabel, ratingLabel, rubricScore } from "../lib/rubric.js";
 import { PRINCIPAL_NAME } from "../lib/signers.js";
 import { GuestCertificateBody } from "./GuestCertificate.jsx";
 
@@ -658,6 +658,13 @@ function VisitFoot({ serial, page, total }) {
   );
 }
 
+/* خلفية الدرجة ولونها (1–2 أحمر، 3–4 ذهبي، 5 أخضر)؛ soft: الخلفية وحدها والنص كما هو */
+function toneStyle(g, soft = false) {
+  const t = gradeTone(g);
+  if (!t) return undefined;
+  return soft ? { background: t.bg, ...INK } : { background: t.bg, color: t.fg, ...INK };
+}
+
 /* ١) بيانات الزيارة، وطريقة تقييم كل قسم، وملخّص النتيجة */
 function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
   const byType = (t) => (template.fields ?? []).find((f) => f.type === t);
@@ -740,19 +747,19 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
                     <span className="num ml-1.5 text-mint-deep">{it.no ?? i + 1}</span>{it.title}
                   </td>
                   <td className={`num ${cellB} px-2 py-1 text-center`}>{it.weight}%</td>
-                  <td className={`${cellB} px-2 py-1 text-center font-bold`}>{pts != null ? <N>{e.score}</N> : ""}</td>
-                  <td className={`num ${cellB} px-2 py-1 text-center font-bold`}>{pts != null ? `${pts}%` : ""}</td>
+                  <td className={`${cellB} px-2 py-1 text-center font-bold`} style={toneStyle(pts != null && e.score)}>{pts != null ? <N>{e.score}</N> : ""}</td>
+                  <td className={`num ${cellB} px-2 py-1 text-center font-bold`} style={toneStyle(pts != null && e.score)}>{pts != null ? `${pts}%` : ""}</td>
                 </tr>
               );
             }))}
             <tr>
               <td className={`${cellB} px-2 py-1.5 font-bold`} style={TH}>التقدير العام للأداء</td>
               <td className={`num ${cellB} px-2 py-1.5 text-center font-bold`} style={TH}>{max}%</td>
-              <td className={`${cellB} px-2 py-1.5 text-center font-bold text-mint-deep`} style={TH}>
+              <td className={`${cellB} px-2 py-1.5 text-center font-bold text-mint-deep`} style={allRated ? toneStyle(overallGrade(pct)) : TH}>
                 {allRated ? <><N>{overallGrade(pct)}</N> — {overallLabel(pct)}</>
                   : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
               </td>
-              <td className={`num ${cellB} px-2 py-1.5 text-center text-[13.5px] font-bold text-mint-deep`} style={TH}>
+              <td className={`num ${cellB} px-2 py-1.5 text-center text-[13.5px] font-bold text-mint-deep`} style={allRated ? toneStyle(overallGrade(pct)) : TH}>
                 {pct == null ? "" : max === 100 ? `${Math.round(got * 10) / 10}%` : `${pct}%`}
               </td>
             </tr>
@@ -808,15 +815,15 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
             <tr>
               <th className={`${cellB} w-[22%] px-2 py-1 text-center font-semibold text-mint-deep`} style={TH}>درجة التقدير</th>
               {[5, 4, 3, 2, 1].map((g) => (
-                <td key={g} className={`${cellB} px-2 py-1 text-center font-bold`}><N>{g}</N> — {ratingLabel(g)}</td>
+                <td key={g} className={`${cellB} px-2 py-1 text-center font-bold`} style={toneStyle(g)}><N>{g}</N> — {ratingLabel(g)}</td>
               ))}
             </tr>
             <tr>
               <th className={`${cellB} px-2 py-1 text-center font-semibold text-mint-deep`} style={TH}>الدرجة النسبية</th>
-              {["90–100", "80–89", "70–79", "60–69"].map((r) => (
-                <td key={r} className={`num ${cellB} px-2 py-1 text-center`}>{r}%</td>
+              {["90–100", "80–89", "70–79", "60–69"].map((r, k) => (
+                <td key={r} className={`num ${cellB} px-2 py-1 text-center`} style={toneStyle(5 - k, true)}>{r}%</td>
               ))}
-              <td className={`${cellB} px-2 py-1 text-center`}>أقل من <N>60</N>٪</td>
+              <td className={`${cellB} px-2 py-1 text-center`} style={toneStyle(1, true)}>أقل من <N>60</N>٪</td>
             </tr>
           </tbody>
         </table>
@@ -954,15 +961,15 @@ function OfficialItem({ it, e }) {
                   <div className="mx-auto" style={vert}>سلالم التقدير</div>
                 </td>
               )}
-              <td className={`${td} ${on ? "font-bold text-ink" : "text-ink"}`} style={on ? { background: OFF.tint, ...INK } : undefined}>{txt}</td>
-              <td className={`${td} text-center`} style={on ? { background: OFF.tint, ...INK } : undefined}>
+              <td className={`${td} ${on ? "font-bold text-ink" : "text-ink"}`} style={on ? toneStyle(lv, true) : undefined}>{txt}</td>
+              <td className={`${td} text-center`} style={on ? toneStyle(lv) : undefined}>
                 <span className="num text-[10px] font-bold">{lv}</span>{" "}
-                <span className={`text-[11px] ${on ? "text-mint-deep" : "text-faint"}`}>{on ? "☑" : "☐"}</span>
+                <span className={`text-[11px] ${on ? "" : "text-faint"}`}>{on ? "☑" : "☐"}</span>
               </td>
               {k === 0 && (
                 <td rowSpan={5} className={`${td} align-top whitespace-pre-line text-[9px]`} style={{ background: "#F7F7F7", ...INK }}>
                   {pts != null && (
-                    <p className="mb-1 text-[9px] font-bold text-mint-deep">
+                    <p className="mb-1 text-[9px] font-bold" style={{ color: gradeTone(score)?.fg }}>
                       الدرجة: <N>{pts}</N> من <N>{it.weight}</N>
                     </p>
                   )}
