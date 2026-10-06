@@ -57,11 +57,15 @@ export function cardLayout(questions = [], { ltr = false, labels } = {}) {
   const { W, PAD, MARK, GRID_TOP, SIDE } = CARD;
 
   const dense = rows.length > 15;               // الاختبارات الطويلة: ٤ أعمدة ودوائر أصغر
-  const nCols = dense ? 4 : 3;
   const D = dense ? 5 : 6;                      // قطر الدائرة
   const STEP = dense ? 6.2 : 7.6;               // المسافة بين مراكز الدوائر
   const PITCH = dense ? 6.6 : 8;                // المسافة بين الصفوف
   const LBL = dense ? 11.5 : 13;                // عرض خانة رقم الفقرة
+  // المزاوجة بلا حدّ لعناصرها: إن طال أطول صف عن عرض العمود قلّت الأعمدة حتى يتّسع
+  const maxCount = Math.max(1, ...rows.map((r) => r.count));
+  const rowW = LBL + 1.5 + D + (maxCount - 1) * STEP + 1.5;
+  let nCols = dense ? 4 : 3;
+  while (nCols > 1 && (W - 2 * SIDE) / nCols < rowW) nCols--;
   const perCol = Math.max(1, Math.ceil(rows.length / nCols));
   const colW = (W - 2 * SIDE) / nCols;
 

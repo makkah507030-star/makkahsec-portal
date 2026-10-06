@@ -7,7 +7,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES, sheetLandscape, isGuestCert } from "../../components/FormSheet.jsx";
-import { RATING_LEVELS, itemPoints, rubricScore } from "../../lib/rubric.js";
+import { RATING_LEVELS, gradeTone, itemPoints, officialLabel, rubricScore, weightedRating } from "../../lib/rubric.js";
 import Loader from "../../components/Loader.jsx";
 import { ReplyFilesList } from "../../components/ReplyFiles.jsx";
 import { useNotice } from "../../lib/useNotice.js";
@@ -165,18 +165,66 @@ function RubricInput({ field, value, onChange }) {
   const v = value ?? {};
   const sc = rubricScore(field, v);
   const set = (i, patch) => onChange({ ...v, [i]: { ...(v[i] ?? {}), ...patch } });
+  const official = field.style === "official";
+  const overall = (field.items ?? []).reduce((a, it, i) => a + (weightedRating(it, v[i]) ?? 0), 0);
   return (
     <div className="mt-1 space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">
         <span>{field.note}</span>
         <span className="font-bold">
-          {sc.rated ? <><span className="num">{sc.points}%</span> من </> : "من "}<span className="num">{sc.max}%</span>
+          {official
+            // النموذج المعتمد: مجموع التقديرات الموزونة من 5
+            ? <>{sc.rated ? <>التقدير العام <span className="num">{overall.toFixed(2)}</span> من <span className="num">5</span></> : "التقدير العام من 5"}</>
+            : <>{sc.rated ? <><span className="num">{sc.points}%</span> من </> : "من "}<span className="num">{sc.max}%</span></>}
           {" · "}قُدِّر <span className="num">{sc.rated}</span> من <span className="num">{sc.count}</span>
         </span>
       </div>
       {(field.items ?? []).map((it, i) => {
         const e = v[i] ?? {};
         const pts = itemPoints(it, e);
+        if (it.levels) return (
+          <div key={i} className="rounded-sm2 border border-line p-3">
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-ink">
+                <span className="num text-mint-deep">{it.no ?? i + 1}.</span> {it.title}
+              </p>
+              <span className="shrink-0 text-xs text-muted">
+                {official
+                  ? <>{pts != null ? <b style={{ color: gradeTone(e.score).fg }}>{officialLabel(e.score)} · <span className="num">{weightedRating(it, e).toFixed(2)}</span></b> : "—"}
+                      {" · "}الوزن <span className="num">{it.weight}%</span></>
+                  : <>{pts != null ? <b className="num text-mint-deep">{pts}</b> : "—"} من <span className="num">{it.weight}%</span></>}
+              </span>
+            </div>
+            <details className="mt-1">
+              <summary className="cursor-pointer text-[11px] font-semibold text-mint-deep">التفسير</summary>
+              <p className="mt-1 text-[11px] leading-relaxed text-muted">{it.text}</p>
+              {it.bullets?.length > 0 && (
+                <ul className="mt-1 list-inside list-disc space-y-0.5 text-[11px] leading-relaxed text-muted">
+                  {it.bullets.map((b, k) => <li key={k}>{b}</li>)}
+                </ul>
+              )}
+            </details>
+            <p className="mt-2 text-[11px] text-muted">سلالم التقدير — اختر المستوى الذي ينطبق:</p>
+            <div className="mt-1 space-y-1">
+              {it.levels.map((txt, k) => {
+                const lv = k + 1, on = Number(e.score) === lv;
+                return (
+                  <button key={k} type="button" onClick={() => set(i, { score: on ? null : lv })}
+                    style={on ? { background: gradeTone(lv).bg, borderColor: gradeTone(lv).bd } : undefined}
+                    className={`flex w-full items-start gap-2 rounded-sm2 border px-2.5 py-1.5 text-right text-[11.5px] leading-relaxed transition-colors ${
+                      on ? "text-ink" : "border-line text-muted hover:bg-canvas"}`}>
+                    <span style={on ? { background: gradeTone(lv).fg } : undefined}
+                      className={`num mt-px grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold ${
+                      on ? "text-white" : "border border-line"}`}>{lv}</span>
+                    <span className="whitespace-pre-line">{txt}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <textarea rows={2} className="field mt-2 w-full text-xs" placeholder="مجالات التطوير (اختياري)" value={e.note ?? ""}
+                      onChange={(ev) => set(i, { note: ev.target.value })} />
+          </div>
+        );
         return (
           <div key={i} className="rounded-sm2 border border-line p-3">
             <div className="flex items-start justify-between gap-2">
@@ -184,7 +232,10 @@ function RubricInput({ field, value, onChange }) {
                 <span className="num text-mint-deep">{i + 1}.</span> {it.title}
               </p>
               <span className="shrink-0 text-xs text-muted">
-                {pts != null ? <b className="num text-mint-deep">{pts}</b> : "—"} من <span className="num">{it.weight}%</span>
+                {official
+                  ? <>{pts != null ? <b style={{ color: gradeTone(e.score).fg }}>{officialLabel(e.score)} · <span className="num">{weightedRating(it, e).toFixed(2)}</span></b> : "—"}
+                      {" · "}الوزن <span className="num">{it.weight}%</span></>
+                  : <>{pts != null ? <b className="num text-mint-deep">{pts}</b> : "—"} من <span className="num">{it.weight}%</span></>}
               </span>
             </div>
             {it.examples?.length > 0 && (
@@ -605,7 +656,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     (t.fields ?? []).forEach((f) => {
       if (f.type === "date") init[f.name] = todayBoth();
       // جدول البنود: قيمة فارغة تميّز المستند الجديد عن الصادر قبل إضافة البنود
-      else if (f.type === "rubric") init[f.name] = {};
+      else if (f.type === "rubric" && !f.legacy) init[f.name] = {};
       // «@hijri_year»: العام الهجري الحالي، فلا يتقادم الافتراضي المحفوظ مع النموذج
       else if (f.default === "@hijri_year") init[f.name] = `${hijriYear()}`;
       else if (f.default) init[f.name] = f.default;
@@ -829,7 +880,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     }
 
     // جدول بنود لم تُقدَّر كل عناصره: تنبيه قبل الإصدار (والمسودة بديل)
-    const unrated = (picked.fields ?? []).filter((f) => f.type === "rubric")
+    const unrated = (picked.fields ?? []).filter((f) => f.type === "rubric" && !f.legacy)
       .reduce((a, f) => { const sc = rubricScore(f, values[f.name]); return a + (sc.count - sc.rated); }, 0);
     if (unrated && !window.confirm(
       `لم تُقدَّر ${unrated} من عناصر البنود.\nهل تصدر الاستمارة رغم ذلك؟\n\nيمكنك بدلًا من ذلك «حفظ مسودة» وإكمالها لاحقًا.`)) return;
@@ -1708,7 +1759,7 @@ export default function Forms({ view = "issue", openKey = null }) {
               </p>
               <div className="divide-y divide-line">
                 {drafts.map((d) => {
-                  const rubrics = (d.form_templates?.fields ?? []).filter((f) => f.type === "rubric");
+                  const rubrics = (d.form_templates?.fields ?? []).filter((f) => f.type === "rubric" && !f.legacy);
                   return (
                     <div key={d.id} className="flex items-center gap-2 px-2 py-1 hover:bg-canvas">
                       <button onClick={() => resumeDraft(d)}
