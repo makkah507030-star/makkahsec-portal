@@ -285,9 +285,10 @@ export default function NewsArticle() {
             )}
 
             {item.body && (
-              <div className="mt-8 space-y-5 text-[16.5px] leading-[2.05] text-ink/90">
+              // فقرات مضبوطة الطرفين، مع الحفاظ على الأسطر المفردة داخل الفقرة
+              <div className="mt-8 space-y-5 text-justify text-[16.5px] leading-[2.05] text-ink/90 [text-justify:inter-word]">
                 {item.body.split(/\n{2,}/).filter(Boolean).map((p, i) => (
-                  <p key={i} className={i === 0 ? "text-[18px] font-medium text-ink" : ""}>
+                  <p key={i} className={`whitespace-pre-line ${i === 0 ? "text-[18px] font-medium text-ink" : ""}`}>
                     {p}
                   </p>
                 ))}
