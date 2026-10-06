@@ -35,12 +35,12 @@ export function cardRows(questions = [], { qShort = "س", fShort = "ف" } = {}) 
       if (q.kind === "match") {
         const n = (q.options?.right ?? []).length || 4;
         (q.options?.left ?? []).forEach((_, k) => {
-          rows.push({ key: `${q.id}-${k}`, qid: q.id, kind: "match", sub: k,
+          rows.push({ key: `${q.id}-${k}`, qid: q.id, kind: "match", sub: k, gi,
                       label: `${qShort}${gi + 1}: ${fShort}${k + 1}`, count: n });
         });
       } else {
         rows.push({
-          key: q.id, qid: q.id, kind: q.kind, sub: null,
+          key: q.id, qid: q.id, kind: q.kind, sub: null, gi,
           label: `${qShort}${gi + 1}: ${fShort}${qi + 1}`,
           count: q.kind === "truefalse" ? 2 : (q.options?.length ?? 4),
         });
@@ -51,10 +51,16 @@ export function cardRows(questions = [], { qShort = "س", fShort = "ف" } = {}) 
 }
 
 /* التخطيط الكامل بالمليمتر. الإحداثيات فيزيائية (x من يسار البطاقة، y من
-   أعلاها) بغضّ النظر عن اتجاه اللغة، حتى تطابق الصورة الملتقطة مباشرة. */
-export function cardLayout(questions = [], { ltr = false, labels } = {}) {
+   أعلاها) بغضّ النظر عن اتجاه اللغة، حتى تطابق الصورة الملتقطة مباشرة.
+
+   كل سؤال يبدأ عمودًا جديدًا وفوقه عنوانه («السؤال الأول»…)، فإن طالت فقراته
+   عن ارتفاع العمود أكملت في العمود التالي. ارتفاع العمود أقل ما يتّسع به كل
+   سؤال في الأعمدة المتاحة، حتى تبقى البطاقة قصيرة. وإن زادت الأسئلة عن
+   الأعمدة (مزاوجة بعناصر كثيرة جدًا) تتابعت الفقرات بلا عناوين كما كانت.
+   legacy: الشكل السابق (تتابع بلا عناوين) — لقراءة أوراق طُبعت قبل التحديث. */
+export function cardLayout(questions = [], { ltr = false, labels, legacy = false } = {}) {
   const rows = cardRows(questions, labels);
-  const { W, PAD, MARK, GRID_TOP, SIDE } = CARD;
+  const { W, PAD, MARK, SIDE } = CARD;
 
   const dense = rows.length > 15;               // الاختبارات الطويلة: ٤ أعمدة ودوائر أصغر
   const D = dense ? 5 : 6;                      // قطر الدائرة
@@ -66,8 +72,34 @@ export function cardLayout(questions = [], { ltr = false, labels } = {}) {
   const rowW = LBL + 1.5 + D + (maxCount - 1) * STEP + 1.5;
   let nCols = dense ? 4 : 3;
   while (nCols > 1 && (W - 2 * SIDE) / nCols < rowW) nCols--;
-  const perCol = Math.max(1, Math.ceil(rows.length / nCols));
-  const colW = (W - 2 * SIDE) / nCols;
+
+  // فقرات كل سؤال
+  const lens = [];
+  rows.forEach((r) => { lens[r.gi] = (lens[r.gi] ?? 0) + 1; });
+  const groupLens = lens.filter(Boolean);
+  const byQuestion = !legacy && groupLens.length > 1 && groupLens.length <= nCols;
+
+  // موضع كل صف: { col, row }
+  let perCol, usedCols, slots;
+  if (byQuestion) {
+    perCol = 1;
+    const colsFor = (p) => groupLens.reduce((a, n) => a + Math.ceil(n / p), 0);
+    while (colsFor(perCol) > nCols) perCol++;
+    usedCols = colsFor(perCol);
+    slots = [];
+    let col = 0, prevGi = null, row = 0;
+    rows.forEach((r) => {
+      if (prevGi !== null && (r.gi !== prevGi || row === perCol)) { col++; row = 0; }
+      slots.push({ col, row });
+      prevGi = r.gi; row++;
+    });
+  } else {
+    perCol = Math.max(1, Math.ceil(rows.length / nCols));
+    usedCols = nCols;
+    slots = rows.map((_, i) => ({ col: Math.floor(i / perCol), row: i % perCol }));
+  }
+  const colW = (W - 2 * SIDE) / usedCols;
+  const GRID_TOP = byQuestion ? 27 : CARD.GRID_TOP;   // مكان عناوين الأسئلة فوق الأعمدة
 
   const gridBottom = GRID_TOP + PITCH * perCol;
   const H = gridBottom + 2 + MARK + PAD;        // فراغ ثم صف العلامات السفلية
@@ -76,11 +108,14 @@ export function cardLayout(questions = [], { ltr = false, labels } = {}) {
   const marks = { tl: { x: m, y: m }, tr: { x: W - m, y: m },
                   bl: { x: m, y: H - m }, br: { x: W - m, y: H - m } };
 
+  // العربية: العمود الأول يمينًا
+  const colLeftOf = (col) => (ltr ? SIDE + col * colW : W - SIDE - (col + 1) * colW);
+
   const placed = rows.map((r, i) => {
-    const col = Math.floor(i / perCol), row = i % perCol;
+    const { col, row } = slots[i];
     const cy = GRID_TOP + PITCH * (row + 0.5);
-    // العربية: العمود الأول يمينًا، ورقم الفقرة يمين الدوائر، و«أ» الأقرب إليه
-    const colLeft = ltr ? SIDE + col * colW : W - SIDE - (col + 1) * colW;
+    // رقم الفقرة بجانب الدوائر، و«أ» الأقرب إليه
+    const colLeft = colLeftOf(col);
     const colRight = colLeft + colW;
     const bubbles = Array.from({ length: r.count }, (_, k) => ({
       x: ltr ? colLeft + LBL + 1.5 + D / 2 + k * STEP
@@ -88,10 +123,28 @@ export function cardLayout(questions = [], { ltr = false, labels } = {}) {
       y: cy,
     }));
     const labelX = ltr ? colLeft : colRight - LBL;
-    return { ...r, cy, bubbles, labelX, labelW: LBL };
+    return { ...r, col, cy, bubbles, labelX, labelW: LBL };
   });
 
-  return { W, H, D, dense, nCols, marks, markSize: MARK, rows: placed, gridTop: GRID_TOP, gridBottom };
+  // عنوان كل سؤال فوق عموده (أو أعمدته إن امتدّ)
+  const heads = [];
+  if (byQuestion) {
+    placed.forEach((r) => {
+      const h = heads.find((x) => x.gi === r.gi);
+      if (h) { h.c0 = Math.min(h.c0, r.col); h.c1 = Math.max(h.c1, r.col); }
+      else heads.push({ gi: r.gi, c0: r.col, c1: r.col });
+    });
+    heads.forEach((h) => {
+      const xs = [colLeftOf(h.c0), colLeftOf(h.c1)];
+      h.x = Math.min(...xs) + 1;
+      h.w = (h.c1 - h.c0 + 1) * colW - 2;
+      h.y = 20.5;
+      h.h = 5;
+    });
+  }
+
+  return { W, H, D, dense, nCols: usedCols, marks, markSize: MARK, rows: placed, heads,
+           gridTop: GRID_TOP, gridBottom };
 }
 
 /* تحويل ما قُرئ (فهرس الدائرة المظلَّلة لكل صف) إلى صيغة الإجابات المحفوظة:

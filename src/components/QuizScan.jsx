@@ -1,5 +1,5 @@
 // src/components/QuizScan.jsx
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cardLayout, rowsToAnswers } from "../lib/omrLayout.js";
 import { imageFromFile, readCard } from "../lib/omrReader.js";
 
@@ -20,7 +20,14 @@ const STATUS = {
 
 export default function QuizScan({ quiz, questions, students, subs, startId, onSave, onAbsent, onClose }) {
   const ltr = quiz?.lang === "en";
-  const layout = useMemo(() => cardLayout(questions, { ltr }), [questions, ltr]);
+  const current = useMemo(() => cardLayout(questions, { ltr }), [questions, ltr]);
+  // شكل البطاقة السابق (قبل عمود لكل سؤال): أوراق طُبعت قبل التحديث تُقرأ به
+  const legacy = useMemo(() => {
+    const l = cardLayout(questions, { ltr, legacy: true });
+    return l.heads.length || current.heads.length ? l : null;
+  }, [questions, ltr, current]);
+  const [layout, setLayout] = useState(current);
+  useEffect(() => { setLayout(current); }, [current]);
 
   const [idx, setIdx] = useState(() => Math.max(0, students.findIndex((s) => s.id === startId)));
   const student = students[idx];
@@ -52,9 +59,15 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
       const img = await imageFromFile(file);
       // نترك للمتصفح فرصة لعرض «جارٍ القراءة» قبل المعالجة
       await new Promise((r) => setTimeout(r, 30));
-      const r = readCard(img, layout);
-      if (!r.ok) { setError(r.error); setStage("capture"); return; }
-      setResult(r); setPicks(r.picks); setStage("review");
+      // نقرأ بالشكل الحالي، وبالسابق إن اختلف، ونأخذ الأوضح: أكثر صفوف مقروءة بثقة
+      const tries = [current, legacy].filter(Boolean)
+        .map((l) => ({ l, r: readCard(img, l) }))
+        .filter((x) => x.r.ok);
+      if (!tries.length) { setError(readCard(img, current, { preview: false }).error); setStage("capture"); return; }
+      const clarity = ({ r }) => r.rows.reduce((a, x) => a + (x.status === "ok" ? 1 : 0)
+        + (x.pick != null ? x.scores[x.pick] : 0) / 100, 0);
+      const best = tries.reduce((a, x) => (clarity(x) > clarity(a) ? x : a));
+      setLayout(best.l); setResult(best.r); setPicks(best.r.picks); setStage("review");
     } catch (e) {
       setError(e?.message || "تعذّرت قراءة الصورة."); setStage("capture");
     }
