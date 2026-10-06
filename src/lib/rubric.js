@@ -40,6 +40,24 @@ export function rubricScore(field, value) {
   return { points: round1(points), max, rated, count: items.length };
 }
 
+/* درجة التقدير العام (1–5) من النسبة المئوية — «آلية الاحتساب» في نماذج تقييم الأداء المعتمدة */
+export function overallGrade(pct) {
+  if (pct == null) return null;
+  return pct >= 90 ? 5 : pct >= 80 ? 4 : pct >= 70 ? 3 : pct >= 60 ? 2 : 1;
+}
+
+/* لون الدرجة (1–5): 1–2 أحمر هادئ (يحتاج دعمًا)، 3–4 ذهبي، 5 أخضر — خلفية فاتحة ونص داكن للطباعة */
+const TONES = {
+  low:  { bg: "#FCE4E1", fg: "#A3352B", bd: "#E9A79F" },
+  mid:  { bg: "#FFF1D1", fg: "#8A5A00", bd: "#EBC979" },
+  high: { bg: "#DDF3E6", fg: "#1F6B45", bd: "#89D7AD" },
+};
+export function gradeTone(g) {
+  const n = Number(g);
+  if (!(n >= 1 && n <= 5)) return null;
+  return n <= 2 ? TONES.low : n <= 4 ? TONES.mid : TONES.high;
+}
+
 /* التقدير العام من النسبة المئوية */
 export function overallLabel(pct) {
   if (pct == null) return "";
