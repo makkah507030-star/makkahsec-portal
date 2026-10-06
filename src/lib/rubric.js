@@ -40,11 +40,21 @@ export function rubricScore(field, value) {
   return { points: round1(points), max, rated, count: items.length };
 }
 
-/* درجة التقدير العام (1–5) من النسبة المئوية — «آلية الاحتساب» في نماذج تقييم الأداء المعتمدة */
-export function overallGrade(pct) {
-  if (pct == null) return null;
-  return pct >= 90 ? 5 : pct >= 80 ? 4 : pct >= 70 ? 3 : pct >= 60 ? 2 : 1;
-}
+/* أوصاف مستويات التقدير في النموذج المعتمد — الدليل الإرشادي لإدارة الأداء الوظيفي (النسخة الثانية) */
+export const OFFICIAL_LEVELS = [
+  { v: 5, label: "مثالي" },
+  { v: 4, label: "تخطى التوقعات" },
+  { v: 3, label: "وافق التوقعات" },
+  { v: 2, label: "بحاجة إلى تطوير" },
+  { v: 1, label: "غير مرضٍ" },
+];
+export const officialLabel = (v) => OFFICIAL_LEVELS.find((l) => l.v === Number(v))?.label ?? "";
+
+/* التقدير الموزون في النموذج المعتمد: تقدير العنصر (1–5) × وزنه النسبي، ومجموعها التقدير العام من 5 */
+export const weightedRating = (item, entry) => {
+  const s = Number(entry?.score);
+  return s >= 1 && s <= 5 ? Math.round(s * (Number(item.weight) || 0)) / 100 : null;
+};
 
 /* لون الدرجة (1–5): 1–2 أحمر هادئ (يحتاج دعمًا)، 3–4 ذهبي، 5 أخضر — خلفية فاتحة ونص داكن للطباعة */
 const TONES = {

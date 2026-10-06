@@ -4,7 +4,7 @@ import logoIcon from "../assets/icon-mint.png";
 import { noEra } from "../lib/dates";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
-import { RATING_LEVELS, gradeTone, itemPoints, overallGrade, overallLabel, ratingLabel, rubricScore } from "../lib/rubric.js";
+import { OFFICIAL_LEVELS, RATING_LEVELS, gradeTone, itemPoints, officialLabel, overallLabel, ratingLabel, rubricScore, weightedRating } from "../lib/rubric.js";
 import { PRINCIPAL_NAME } from "../lib/signers.js";
 import { GuestCertificateBody } from "./GuestCertificate.jsx";
 
@@ -691,6 +691,10 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
   const rated = scores.reduce((a, x) => a + x.rated, 0), count = scores.reduce((a, x) => a + x.count, 0);
   const pct = anyRated && max ? Math.round((got / max) * 1000) / 10 : null;
   const official = rubrics.some((f) => f.style === "official");
+  // النموذج المعتمد: مجموع التقديرات الموزونة (تقدير العنصر × وزنه) من 5، ومستواه بالتقريب لأقرب درجة
+  const overall = Math.round(rubrics.reduce((a, f) => a + (f.items ?? [])
+    .reduce((b, it, i) => b + (weightedRating(it, v[f.name]?.[i]) ?? 0), 0), 0) * 100) / 100;
+  const overallLevel = Math.min(5, Math.max(1, Math.round(overall)));
 
   return (
     <>
@@ -732,7 +736,7 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
         <table className="mt-1.5 w-full table-fixed border-collapse text-[11.5px]">
           <thead>
             <tr>
-              {[["عناصر التقييم", "w-[52%]"], ["الوزن النسبي", ""], ["درجة التقدير", ""], ["الدرجة المحققة", ""]].map(([h, w]) => (
+              {[["عناصر التقييم", "w-[46%]"], ["الوزن النسبي", ""], ["درجة التقدير", "w-[24%]"], ["التقدير الموزون", ""]].map(([h, w]) => (
                 <th key={h} className={`${cellB} ${w} px-2 py-1.5 text-center font-semibold text-mint-deep`} style={TH}>{h}</th>
               ))}
             </tr>
@@ -740,27 +744,30 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
           <tbody>
             {rubrics.flatMap((f) => (f.items ?? []).map((it, i) => {
               const e = v[f.name]?.[i];
-              const pts = itemPoints(it, e);
+              const wr = weightedRating(it, e);
+              const tone = toneStyle(wr != null && e.score);
               return (
                 <tr key={`${f.name}-${i}`}>
                   <td className={`${cellB} px-2 py-1 font-semibold`}>
                     <span className="num ml-1.5 text-mint-deep">{it.no ?? i + 1}</span>{it.title}
                   </td>
                   <td className={`num ${cellB} px-2 py-1 text-center`}>{it.weight}%</td>
-                  <td className={`${cellB} px-2 py-1 text-center font-bold`} style={toneStyle(pts != null && e.score)}>{pts != null ? <N>{e.score}</N> : ""}</td>
-                  <td className={`num ${cellB} px-2 py-1 text-center font-bold`} style={toneStyle(pts != null && e.score)}>{pts != null ? `${pts}%` : ""}</td>
+                  <td className={`${cellB} px-2 py-1 text-center font-bold`} style={tone}>
+                    {wr != null ? <><N>{e.score}</N> — {officialLabel(e.score)}</> : ""}
+                  </td>
+                  <td className={`num ${cellB} px-2 py-1 text-center font-bold`} style={tone}>{wr != null ? wr.toFixed(2) : ""}</td>
                 </tr>
               );
             }))}
             <tr>
               <td className={`${cellB} px-2 py-1.5 font-bold`} style={TH}>التقدير العام للأداء</td>
               <td className={`num ${cellB} px-2 py-1.5 text-center font-bold`} style={TH}>{max}%</td>
-              <td className={`${cellB} px-2 py-1.5 text-center font-bold text-mint-deep`} style={allRated ? toneStyle(overallGrade(pct)) : TH}>
-                {allRated ? <><N>{overallGrade(pct)}</N> — {overallLabel(pct)}</>
+              <td className={`${cellB} px-2 py-1.5 text-center font-bold`} style={allRated ? toneStyle(overallLevel) : TH}>
+                {allRated ? <><N>{overallLevel}</N> — {officialLabel(overallLevel)}</>
                   : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
               </td>
-              <td className={`num ${cellB} px-2 py-1.5 text-center text-[13.5px] font-bold text-mint-deep`} style={allRated ? toneStyle(overallGrade(pct)) : TH}>
-                {pct == null ? "" : max === 100 ? `${Math.round(got * 10) / 10}%` : `${pct}%`}
+              <td className={`num ${cellB} px-2 py-1.5 text-center text-[13.5px] font-bold`} style={allRated ? toneStyle(overallLevel) : TH}>
+                {allRated ? <span dir="rtl"><N>{overall.toFixed(2)}</N> من <N>5</N></span> : ""}
               </td>
             </tr>
           </tbody>
@@ -804,26 +811,25 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
       )}
       {official ? (
         <p className="mt-2 text-[11px] leading-relaxed text-muted">
-          يُختار لكل عنصر أحد مستويات سلّم التقدير الخمسة (<N>1</N>–<N>5</N>) الموصوفة في النموذج المعتمد؛
-          ودرجة العنصر = وزنه × المستوى ÷ <N>5</N>.
+          يُقدَّر كل عنصر بأحد مستويات سلّم التقدير الخمسة (<N>1</N>–<N>5</N>) الموصوفة في النموذج المعتمد، ويُضرب في وزنه النسبي
+          فينتج التقدير الموزون؛ ومجموع التقديرات الموزونة هو التقدير العام للأداء من <N>5</N>، ومستواه بتقريبه لأقرب درجة.
         </p>
       ) : null}
       {official ? (
-        // «مستويات التقدير العام للأداء» كما في آلية الاحتساب بالنموذج المعتمد
+        // «مستويات التقدير العام للأداء» كما في آلية الاحتساب بالدليل الإرشادي (النسخة الثانية)
         <table className="mt-3 w-full table-fixed border-collapse text-[11.5px]">
           <tbody>
             <tr>
-              <th className={`${cellB} w-[22%] px-2 py-1 text-center font-semibold text-mint-deep`} style={TH}>درجة التقدير</th>
-              {[5, 4, 3, 2, 1].map((g) => (
-                <td key={g} className={`${cellB} px-2 py-1 text-center font-bold`} style={toneStyle(g)}><N>{g}</N> — {ratingLabel(g)}</td>
+              <th className={`${cellB} w-[20%] px-2 py-1 text-center font-semibold text-mint-deep`} style={TH}>درجة التقدير</th>
+              {OFFICIAL_LEVELS.map((l) => (
+                <td key={l.v} className={`num ${cellB} px-2 py-1 text-center font-bold`} style={toneStyle(l.v)}>{l.v}</td>
               ))}
             </tr>
             <tr>
-              <th className={`${cellB} px-2 py-1 text-center font-semibold text-mint-deep`} style={TH}>الدرجة النسبية</th>
-              {["90–100", "80–89", "70–79", "60–69"].map((r, k) => (
-                <td key={r} className={`num ${cellB} px-2 py-1 text-center`} style={toneStyle(5 - k, true)}>{r}%</td>
+              <th className={`${cellB} px-2 py-1 text-center font-semibold text-mint-deep`} style={TH}>وصف التقدير</th>
+              {OFFICIAL_LEVELS.map((l) => (
+                <td key={l.v} className={`${cellB} px-1 py-1 text-center font-semibold`} style={toneStyle(l.v, true)}>{l.label}</td>
               ))}
-              <td className={`${cellB} px-2 py-1 text-center`} style={toneStyle(1, true)}>أقل من <N>60</N>٪</td>
             </tr>
           </tbody>
         </table>
@@ -924,7 +930,7 @@ const vert = { writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpa
 
 function OfficialItem({ it, e }) {
   const score = Number(e?.score) || null;
-  const pts = itemPoints(it, e);
+  const wr = weightedRating(it, e);
   const td = `${cellB} px-1.5 py-[2px] align-middle`;
   return (
     <table className="w-full table-fixed border-collapse text-[8.6px] leading-[1.45]" style={{ breakInside: "avoid" }}>
@@ -961,16 +967,17 @@ function OfficialItem({ it, e }) {
                   <div className="mx-auto" style={vert}>سلالم التقدير</div>
                 </td>
               )}
-              <td className={`${td} ${on ? "font-bold text-ink" : "text-ink"}`} style={on ? toneStyle(lv, true) : undefined}>{txt}</td>
+              <td className={`${td} whitespace-pre-line ${on ? "font-bold text-ink" : "text-ink"}`} style={on ? toneStyle(lv, true) : undefined}>{txt}</td>
               <td className={`${td} text-center`} style={on ? toneStyle(lv) : undefined}>
                 <span className="num text-[10px] font-bold">{lv}</span>{" "}
                 <span className={`text-[11px] ${on ? "" : "text-faint"}`}>{on ? "☑" : "☐"}</span>
               </td>
               {k === 0 && (
                 <td rowSpan={5} className={`${td} align-top whitespace-pre-line text-[9px]`} style={{ background: "#F7F7F7", ...INK }}>
-                  {pts != null && (
+                  {wr != null && (
                     <p className="mb-1 text-[9px] font-bold" style={{ color: gradeTone(score)?.fg }}>
-                      الدرجة: <N>{pts}</N> من <N>{it.weight}</N>
+                      <N>{score}</N> — {officialLabel(score)}
+                      <span className="block font-semibold">التقدير الموزون: <N>{wr.toFixed(2)}</N></span>
                     </p>
                   )}
                   {e?.note ?? ""}
@@ -1052,8 +1059,8 @@ function AckBox({ v, doc, sigUrl, name }) {
   );
 }
 
-// عناصر النموذج المعتمد بترقيمه (1–11) من القسمين، أربعة في كل صفحة كالنموذج الورقي
-const OFFICIAL_PAGES = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11]];
+// عناصر النموذج المعتمد بترقيمه (1–11)، موزعة على الصفحات بحسب طول سلالم تقديرها
+const OFFICIAL_PAGES = [[1, 2, 3], [4, 5], [6, 7], [8, 9], [10, 11]];
 function officialChunks(rubrics, v) {
   const entries = rubrics.flatMap((f) => (f.items ?? []).map((it, i) => ({ it, e: v[f.name]?.[i] ?? {} })))
     .sort((a, b) => (a.it.no ?? 0) - (b.it.no ?? 0));
@@ -1067,6 +1074,10 @@ function supportVisitPages(p) {
   const { template, v, doc } = p;
   const rubrics = rubricFields(template, v);
   const official = rubrics.some((f) => f.style === "official");
+  // النموذج المعتمد: مجموع التقديرات الموزونة (تقدير العنصر × وزنه) من 5، ومستواه بالتقريب لأقرب درجة
+  const overall = Math.round(rubrics.reduce((a, f) => a + (f.items ?? [])
+    .reduce((b, it, i) => b + (weightedRating(it, v[f.name]?.[i]) ?? 0), 0), 0) * 100) / 100;
+  const overallLevel = Math.min(5, Math.max(1, Math.round(overall)));
   const chunks = official ? officialChunks(rubrics, v) : rubrics;
   const total = 2 + chunks.length;
   const pages = [];
