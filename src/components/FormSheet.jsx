@@ -601,9 +601,17 @@ const N = ({ children }) => <span className="num">{children}</span>;
 // القيمة نصًّا للطباعة — الكائنات (كجدول البنود) لا تُعرض نصًا فتنهار الصفحة
 const asText = (x) => (x == null || typeof x === "object" ? "" : x);
 
-const rubricFields = (template) => (template.fields ?? []).filter((f) => f.type === "rubric");
+const allRubrics = (template) => (template.fields ?? []).filter((f) => f.type === "rubric");
+const filled = (x) => !!x && typeof x === "object" && Object.keys(x).length > 0;
+// المستند السابق يُطبع بجداوله القديمة (legacy) إن كانت فيه قيمها، والجديد بالجداول الحالية
+const rubricFields = (template, v) => {
+  const all = allRubrics(template);
+  const legacy = all.filter((f) => f.legacy), current = all.filter((f) => !f.legacy);
+  const oldDoc = legacy.some((f) => filled(v?.[f.name])) && !current.some((f) => filled(v?.[f.name]));
+  return oldDoc ? legacy : current;
+};
 export const isRubricDoc = (template, v) =>
-  rubricFields(template).some((f) => v && Object.prototype.hasOwnProperty.call(v, f.name));
+  allRubrics(template).some((f) => v && Object.prototype.hasOwnProperty.call(v, f.name));
 
 // اليوم من الجزء الميلادي للتاريخ المحفوظ «03/03/1448 - 14/09/2026»
 function weekdayOf(dateStr) {
@@ -612,7 +620,23 @@ function weekdayOf(dateStr) {
   return WEEKDAYS[new Date(Date.UTC(+m[3], +m[2] - 1, +m[1])).getUTCDay()] ?? "";
 }
 
-function VisitHead({ title, sub }) {
+function VisitHead({ title, sub, compact = false }) {
+  // صفحات العناصر: ترويسة مختصرة بسطر واحد لتتسع العناصر الأربعة كالنموذج الورقي
+  if (compact) return (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-[14px] font-bold text-ink">{title}</h1>
+          {sub && <span className="text-[11px] font-semibold text-mint-deep">{sub}</span>}
+        </div>
+        <div className="flex items-center gap-3">
+          <img src={moeLogo} alt="وزارة التعليم" className="h-7 w-auto" />
+          <img src={logoIcon} alt="مدرسة مكة الثانوية" className="h-7 w-auto" />
+        </div>
+      </div>
+      <div className="mt-1.5"><Rule color="#3E6350" thick /></div>
+    </>
+  );
   return (
     <>
       <Head small />
@@ -716,7 +740,13 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
             <td className={`${cellB} px-2 py-1.5 text-center font-bold`} style={TH}>المجموع</td>
             <td className={`num ${cellB} px-2 py-1.5 text-center font-bold`} style={TH}>{max}%</td>
             <td className={`num ${cellB} px-2 py-1.5 text-center text-[14px] font-bold text-mint-deep`} style={TH}>
-              {pct != null ? `${Math.round(got * 10) / 10}%` : ""}
+              {pct == null ? "" : max === 100 ? `${Math.round(got * 10) / 10}%` : (
+                // مجموع الأوزان ليس 100 (النموذج المعتمد 85): الدرجة من المجموع ونسبتها المئوية
+                <span dir="rtl" className="block">
+                  <N>{Math.round(got * 10) / 10}</N> من <N>{max}</N>
+                  <span className="block text-[10.5px] font-semibold"><N>{pct}</N>٪</span>
+                </span>
+              )}
             </td>
             <td className={`${cellB} px-2 py-1.5 text-center font-bold text-mint-deep`} style={TH}>
               {allRated ? overallLabel(pct) : anyRated ? <span className="text-[10.5px] font-normal text-muted">قُدِّر <N>{rated}</N> من <N>{count}</N></span> : ""}
@@ -724,6 +754,12 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
           </tr>
         </tbody>
       </table>
+      {rubrics.some((f) => f.style === "official") ? (
+        <p className="mt-2 text-[11px] leading-relaxed text-muted">
+          يُختار لكل عنصر أحد مستويات سلّم التقدير الخمسة (<N>1</N>–<N>5</N>) الموصوفة في النموذج المعتمد؛
+          ودرجة العنصر = وزنه × المستوى ÷ <N>5</N>. مجموع أوزان العناصر <N>{max}</N>٪.
+        </p>
+      ) : (
       <p className="mt-2 text-[11px] leading-relaxed text-muted">
         يُقدَّر كل عنصر من <N>5</N>:{" "}
         {RATING_LEVELS.map((l, i) => (
@@ -731,6 +767,7 @@ function VisitInfoPage({ template, v, rubrics, doc, principalName }) {
         ))}
         ؛ ودرجة العنصر = وزنه × تقديره ÷ <N>5</N>
       </p>
+      )}
     </>
   );
 }
@@ -812,6 +849,84 @@ function RubricPage({ field, value }) {
   );
 }
 
+/* ٢-٤) عناصر «نموذج تقييم أداء معلم» المعتمد: لكل عنصر تفسيره وسلّم تقديره
+   الخمسة الموصوف، وعلامة على المستوى المختار، ومجالات التطوير */
+const OFF = { green: "#3E6350", mint: "#CCF2DB", tint: "#EDFAF2" };
+const vert = { writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" };
+
+function OfficialItem({ it, e }) {
+  const score = Number(e?.score) || null;
+  const pts = itemPoints(it, e);
+  const td = `${cellB} px-1.5 py-[2px] align-middle`;
+  return (
+    <table className="w-full table-fixed border-collapse text-[8.6px] leading-[1.45]" style={{ breakInside: "avoid" }}>
+      <colgroup>
+        <col style={{ width: "9mm" }} /><col style={{ width: "6.5mm" }} /><col />
+        <col style={{ width: "13mm" }} /><col style={{ width: "34mm" }} />
+      </colgroup>
+      <tbody>
+        <tr>
+          <td rowSpan={6} className={`${cellB} p-0 text-center text-[10px] font-bold text-white`}
+              style={{ background: OFF.green, ...INK }}>
+            <div className="mx-auto" style={vert}>{it.title} (<span className="num">{it.weight}</span>٪)</div>
+          </td>
+          <td className={`${cellB} p-0 text-center text-[9px] font-bold text-mint-deep`} style={{ background: OFF.mint, ...INK }}>
+            <div className="mx-auto" style={vert}>التفسير</div>
+          </td>
+          <td className={`${td} py-[3px] text-ink`} style={{ background: "#FAFCFB", ...INK }}>
+            <p className="font-semibold">{it.text}</p>
+            {it.bullets?.length > 0 && (
+              <ul className="mt-[1px] space-y-0 pr-1">
+                {it.bullets.map((b, k) => <li key={k} className="font-semibold">❖ {b}</li>)}
+              </ul>
+            )}
+          </td>
+          <th className={`${cellB} text-center text-[10px] font-bold text-white`} style={{ background: OFF.green, ...INK }}>الدرجة</th>
+          <th className={`${cellB} text-center text-[10px] font-bold text-white`} style={{ background: OFF.green, ...INK }}>مجالات التطوير</th>
+        </tr>
+        {it.levels.map((txt, k) => {
+          const lv = k + 1, on = score === lv;
+          return (
+            <tr key={k}>
+              {k === 0 && (
+                <td rowSpan={5} className={`${cellB} p-0 text-center text-[9px] font-bold text-mint-deep`} style={{ background: OFF.mint, ...INK }}>
+                  <div className="mx-auto" style={vert}>سلالم التقدير</div>
+                </td>
+              )}
+              <td className={`${td} ${on ? "font-bold text-ink" : "text-ink"}`} style={on ? { background: OFF.tint, ...INK } : undefined}>{txt}</td>
+              <td className={`${td} text-center`} style={on ? { background: OFF.tint, ...INK } : undefined}>
+                <span className="num text-[10px] font-bold">{lv}</span>{" "}
+                <span className={`text-[11px] ${on ? "text-mint-deep" : "text-faint"}`}>{on ? "☑" : "☐"}</span>
+              </td>
+              {k === 0 && (
+                <td rowSpan={5} className={`${td} align-top whitespace-pre-line text-[9px]`} style={{ background: "#F7F7F7", ...INK }}>
+                  {pts != null && (
+                    <p className="mb-1 text-[9px] font-bold text-mint-deep">
+                      الدرجة: <N>{pts}</N> من <N>{it.weight}</N>
+                    </p>
+                  )}
+                  {e?.note ?? ""}
+                </td>
+              )}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function OfficialRubricPage({ entries }) {
+  return (
+    <>
+      <p className="mt-3 text-[13px] font-bold text-ink">عناصر تقييم أداء معلم</p>
+      <div className="mt-1.5 space-y-[2.5mm]">
+        {entries.map(({ it, e }) => <OfficialItem key={it.no} it={it} e={e} />)}
+      </div>
+    </>
+  );
+}
+
 /* ٤) جوانب الدعم والتطوير: الحقول النصية الباقية */
 const HEAD_TYPES = ["staff", "visit_no", "lesson_class", "lesson_subject", "lesson_period", "date", "rubric"];
 function SupportPage({ template, v }) {
@@ -869,18 +984,31 @@ function AckBox({ v, doc, sigUrl, name }) {
   );
 }
 
+// عناصر النموذج المعتمد بترقيمه (1–11) من القسمين، أربعة في كل صفحة كالنموذج الورقي
+const OFFICIAL_PAGES = [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11]];
+function officialChunks(rubrics, v) {
+  const entries = rubrics.flatMap((f) => (f.items ?? []).map((it, i) => ({ it, e: v[f.name]?.[i] ?? {} })))
+    .sort((a, b) => (a.it.no ?? 0) - (b.it.no ?? 0));
+  const used = new Set();
+  const pages = OFFICIAL_PAGES.map((nos) => entries.filter((x) => nos.includes(x.it.no) && used.add(x)));
+  const rest = entries.filter((x) => !used.has(x));          // عناصر بلا ترقيم معروف
+  return [...pages, rest].filter((pg) => pg.length);
+}
+
 function supportVisitPages(p) {
   const { template, v, doc } = p;
-  const rubrics = rubricFields(template);
-  const total = 2 + rubrics.length;
+  const rubrics = rubricFields(template, v);
+  const official = rubrics.some((f) => f.style === "official");
+  const chunks = official ? officialChunks(rubrics, v) : rubrics;
+  const total = 2 + chunks.length;
   const pages = [];
   pages.push(<>
-    <VisitHead title={template.title} sub="وفق بنود الأداء الوظيفي" />
+    <VisitHead title={template.title} sub={official ? "وفق نموذج تقييم أداء المعلم" : "وفق بنود الأداء الوظيفي"} />
     <VisitInfoPage template={template} v={v} rubrics={rubrics} doc={doc} principalName={p.principalName} />
   </>);
-  rubrics.forEach((f) => pages.push(<>
-    <VisitHead title={template.title} sub={v.recipient ? `المعلم: ${v.recipient}` : ""} />
-    <RubricPage field={f} value={v[f.name]} />
+  chunks.forEach((c) => pages.push(<>
+    <VisitHead title={template.title} sub={v.recipient ? `المعلم: ${v.recipient}` : ""} compact={official} />
+    {official ? <OfficialRubricPage entries={c} /> : <RubricPage field={c} value={v[c.name]} />}
   </>));
   pages.push(<>
     <VisitHead title={template.title} sub="جوانب الدعم والتطوير" />
