@@ -4,7 +4,7 @@ import { useSession } from "../lib/session.jsx";
 import { useNavBadges } from "../lib/navBadges.js";
 
 /* =====================================================================
-   «ما ينتظرك» — تنبيهات سريعة في الصفحة الرئيسية، من عدادات القائمة نفسها
+   «بانتظار إجرائك» — تنبيهات سريعة في الصفحة الرئيسية، من عدادات القائمة نفسها
    (lib/navBadges.js) فلا استعلامات إضافية. تختفي حين لا شيء ينتظر.
    ===================================================================== */
 
@@ -25,7 +25,7 @@ export default function PendingAlertsCard() {
 
   return (
     <section className="overflow-hidden rounded-card border border-line bg-white">
-      <p className="border-b border-line px-4 py-2.5 text-sm font-bold text-ink">ما ينتظرك</p>
+      <p className="border-b border-line px-4 py-2.5 text-sm font-bold text-ink">بانتظار إجرائك</p>
       <ul className="divide-y divide-line">
         {items.map((x) => (
           <li key={x.text}>

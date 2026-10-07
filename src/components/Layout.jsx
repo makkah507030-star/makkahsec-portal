@@ -293,7 +293,7 @@ export default function Layout({ children }) {
   // تحميل توقيع المدير المعتمد وأسماء الموقّعين مسبقًا — لتظهر في التقارير المطبوعة فورًا
   useEffect(() => { if (session) { loadPrincipalSignature(); loadSigners(); } }, [session]);
 
-  // عدادات «ما ينتظرك» على روابط القائمة (lib/navBadges.js) — أدوار الإدارة تُحتسب في واجهتها فقط
+  // عدادات «بانتظار إجرائك» على روابط القائمة (lib/navBadges.js) — أدوار الإدارة تُحتسب في واجهتها فقط
   const badges = useNavBadges(session?.user?.id, effectiveRole === "admin" ? adminRoles : []);
   useEffect(() => { refreshNavBadges(); }, [path]);
   const badgeOf = (to) => (to.startsWith("_") ? 0 : badges[to] ?? 0);
