@@ -1252,8 +1252,10 @@ function AbsenceForm(p) {
   const meta = ABS_META[template.key];
   const name = v.recipient ?? doc?.recipient ?? "";
   const spec = v.emp_spec ?? (template.key === "frm_late_notice" ? v.f4 : "");
-  // «رقم الوظيفة والمرتبة» في المستندات السابقة حقل واحد يُعرض في خانة رقم الوظيفة
-  const jobNo = v.emp_job_no || (template.key !== "frm_late_notice" ? v.f4 : "") || "";
+  // «رقم الوظيفة والمرتبة» في المستندات السابقة حقل واحد (f4) في قراري الحسم 19 و21 فقط —
+  // وفي غيرهما f4 حقل آخر (التخصص في 18، ومدة الغياب في 20)
+  const combinedF4 = template.key === "frm_hours_deduction" || template.key === "frm_absence_deduction";
+  const jobNo = v.emp_job_no || (combinedF4 ? v.f4 : "") || "";
   const replied = Boolean(doc?.reply_at);
   const replyName = replied ? (p.replySigName || name) : "";
   const P = (props) => <p className="text-[13px] leading-[1.95] text-ink" {...props} />;
