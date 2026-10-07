@@ -49,8 +49,9 @@ export const handler = async (event) => {
       .maybeSingle();
     if (!doc) return json({ error: "المستند غير موجود" }, 404);
 
-    // المستند غير المعتمد لا توقيع عليه ولا ختم
-    if (!(doc.status === "issued" || doc.status === "approved")) {
+    // المستند غير المعتمد لا توقيع عليه ولا ختم — إلا توقيع المستفيد على إفادته (يُعاد بعد التحقق من الصلاحية)
+    const approved = doc.status === "issued" || doc.status === "approved";
+    if (!approved && !doc.reply_signature_path) {
       return json({ ok: true, signature: null, stamp: null, principal: null });
     }
 
@@ -85,6 +86,14 @@ export const handler = async (event) => {
       const { data } = await admin.storage.from("form-assets").createSignedUrl(path, 600);
       return data?.signedUrl ?? null;
     };
+
+    if (!approved) {
+      return json({
+        ok: true, signature: null, stamp: null, principal: null,
+        reply_signature: await sign(doc.reply_signature_path),
+        reply_signature_name: doc.reply_signature_name ?? "",
+      });
+    }
 
     const { data: assets } = await admin
       .from("school_assets").select("key, path, label");

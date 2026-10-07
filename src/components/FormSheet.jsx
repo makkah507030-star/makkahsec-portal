@@ -1217,8 +1217,8 @@ const Fill = ({ children, w = "w-40" }) => (children
   ? <b className="mx-1 font-semibold text-ink">{children}</b>
   : <span className={`mx-1 inline-block ${w} border-b border-dotted border-ink/60 align-baseline`}>&nbsp;</span>);
 const HDate = ({ d }) => (d
-  ? <b className="mx-1 font-semibold text-ink"><span className="num">{d}</span>هـ</b>
-  : <span className="mx-1 text-ink">&nbsp;/&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;١٤هـ</span>);
+  ? <b className="mx-1 font-semibold text-ink"><span className="num">{d}</span></b>
+  : <span className="mx-1 text-ink">&nbsp;/&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;١٤</span>);
 
 /* سطر توقيع: الصفة والاسم، والتوقيع (صورته إن وُجدت)، والتاريخ */
 function SigLine({ label, name, url, date }) {
@@ -1252,8 +1252,10 @@ function AbsenceForm(p) {
   const meta = ABS_META[template.key];
   const name = v.recipient ?? doc?.recipient ?? "";
   const spec = v.emp_spec ?? (template.key === "frm_late_notice" ? v.f4 : "");
-  // «رقم الوظيفة والمرتبة» في المستندات السابقة حقل واحد يُعرض في خانة رقم الوظيفة
-  const jobNo = v.emp_job_no || (template.key !== "frm_late_notice" ? v.f4 : "") || "";
+  // «رقم الوظيفة والمرتبة» في المستندات السابقة حقل واحد (f4) في قراري الحسم 19 و21 فقط —
+  // وفي غيرهما f4 حقل آخر (التخصص في 18، ومدة الغياب في 20)
+  const combinedF4 = template.key === "frm_hours_deduction" || template.key === "frm_absence_deduction";
+  const jobNo = v.emp_job_no || (combinedF4 ? v.f4 : "") || "";
   const replied = Boolean(doc?.reply_at);
   const replyName = replied ? (p.replySigName || name) : "";
   const P = (props) => <p className="text-[13px] leading-[1.95] text-ink" {...props} />;
@@ -1307,7 +1309,7 @@ function AbsenceForm(p) {
         <EmpTable cols={[["الاسم", name], ["التخصص", spec], ["المستوى / المرتبة", v.emp_rank], ["رقم الوظيفة", jobNo], ["العمل الحالي", v.job]]} />
         <div className="mt-3 space-y-0.5 text-justify">
           <P>إن مدير المدرسة<Fill w="w-56">{p.principalName}</Fill></P>
-          <P>بناء على صلاحياته ، وبناء على المادة ( <span className="num">21</span> ) من نظام الخدمة المدنية وبناءً على موافقة معالي الوزير على إعطاء بعض الصلاحيات لمديري المدارس بالقرار رقم <span className="num">1/1139</span> وتاريخ <span className="num">1431/3/17</span>هـ ، ولبلوغ ساعات التأخر عن العمل والخروج المبكر من العمل (<Fill w="w-16">{v.f5}</Fill>) ساعة ، وحيث إن عذره غير مقبول ، وبمقتضى النظام .</P>
+          <P>بناء على صلاحياته ، وبناء على المادة ( <span className="num">21</span> ) من نظام الخدمة المدنية وبناءً على موافقة معالي الوزير على إعطاء بعض الصلاحيات لمديري المدارس بالقرار رقم <span className="num">1/1139</span> وتاريخ <span className="num">1431/3/17</span> ، ولبلوغ ساعات التأخر عن العمل والخروج المبكر من العمل (<Fill w="w-16">{v.f5}</Fill>) ساعة ، وحيث إن عذره غير مقبول ، وبمقتضى النظام .</P>
           <P>يقرر ما يلي</P>
           <P>( <span className="num">1</span> ) حسم مدة الغياب الموضحة بعاليه وعددها (<Fill w="w-12">{v.f6}</Fill>) يوماً من راتبه .</P>
           <P>( <span className="num">2</span> ) على إدارة شؤون الموظفين ( تنفيذ الأنظمة ) تنفيذ إجراء الحسم واستبعادها من خدماته واصل القرار للملف بالإدارة مع الأساس لملفه .</P>
@@ -1385,7 +1387,7 @@ function AbsenceForm(p) {
             </tr>} />
         <div className="mt-3 space-y-0.5 text-justify">
           <P>إن مدير المدرسة<Fill w="w-56">{p.principalName}</Fill></P>
-          <P>بناء على صلاحياته ، وبناء على المادة ( <span className="num">21</span> ) من نظام الخدمة المدنية ، وبناء على موافقة معالي الوزير على إعطاء بعض الصلاحيات لمديري المدارس بالقرار رقم <span className="num">1/1139</span> وتاريخ <span className="num">1421/3/17</span>هـ ولغياب المعلم الموضح أسمه أعلاه ، حيث إن عذره غير مقبول ، وبمقتضى النظام .</P>
+          <P>بناء على صلاحياته ، وبناء على المادة ( <span className="num">21</span> ) من نظام الخدمة المدنية ، وبناء على موافقة معالي الوزير على إعطاء بعض الصلاحيات لمديري المدارس بالقرار رقم <span className="num">1/1139</span> وتاريخ <span className="num">1421/3/17</span> ولغياب المعلم الموضح أسمه أعلاه ، حيث إن عذره غير مقبول ، وبمقتضى النظام .</P>
           <P>يقرر ما يلي :</P>
           <P>( <span className="num">1</span> ) حسم مدة الغياب الموضحة بعاليه وعددها (<Fill w="w-12">{v.f5}</Fill>) يوماً من راتبه .</P>
           <P>( <span className="num">2</span> ) على إدارة شؤون الموظفين تنفيذ إجراء الحسم واستبعادها من خدماته وأصل القرار لملفه بالإدارة مع الأساس لملفه (<Fill w="w-24" />)</P>

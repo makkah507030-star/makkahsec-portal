@@ -1232,7 +1232,8 @@ export default function Forms({ view = "issue", openKey = null }) {
                        stampUrl={printable ? viewing.stamp : null}
                        principalSigUrl={printable ? viewing.principal : null}
                        principalName={assets.principal_name}
-                       replySigUrl={printable ? viewing.replySig : null}
+                       // توقيع المستفيد على إفادته يظهر متى وقّع، قبل الاعتماد أيضًا
+                       replySigUrl={viewing.replySig}
                        replySigName={d.reply_signature_name} />
           </SheetPreview>
         </div>
