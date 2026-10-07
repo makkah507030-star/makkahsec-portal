@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { DAY_NAMES, todayISO } from "../lib/schoolTime";
 import { loadExamContext, loadScopeSlots, daysPhrase } from "../lib/examScope.js";
+import { STUDENT_DEPUTY_NAME } from "../lib/signers.js";
 import ExamTable, { ExamPrintArea } from "../components/ExamTable.jsx";
 import Loader from "../components/Loader.jsx";
 
@@ -41,14 +42,27 @@ export default function ExamSchedules() {
   const [kind, setKind] = useState("period1");
   const [printing, setPrinting] = useState(null);
   const [deputy, setDeputy] = useState("");
+  const [deputySig, setDeputySig] = useState(null);
 
   // تحديد النطاق: الطالب فصله، وولي الأمر أبناؤه، والمعلم فصوله المسندة وموادّه فيها، والإدارة كل الفصول
   useEffect(() => {
     if (!uid) return;
     (async () => {
-      const { data: dep } = await supabase.from("admin_roles")
-        .select("users(full_name)").eq("role_type", "deputy_students").maybeSingle();
-      setDeputy(dep?.users?.full_name ?? "");
+      // اسم الوكيل وتوقيعه: جدول الأدوار ومخزن التواقيع لا يقرؤهما الطالب والمعلم وولي الأمر،
+      // فيُطلبان من الدالة deputy-signature، والاسم الاحتياطي من إعدادات الموقّعين
+      setDeputy(STUDENT_DEPUTY_NAME);
+      try {
+        const { data: { session: ss } } = await supabase.auth.getSession();
+        const res = await fetch("/.netlify/functions/deputy-signature", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${ss?.access_token ?? ""}`, "Content-Type": "application/json" },
+        });
+        const j = await res.json();
+        if (res.ok) {
+          if (j.name) setDeputy(j.name);
+          if (j.signature) { new Image().src = j.signature; setDeputySig(j.signature); }
+        }
+      } catch { /* يبقى مكان التوقيع للتوقيع اليدوي */ }
 
       const ctx = await loadExamContext(uid, effectiveRole);
       setTerms(ctx.terms);
@@ -190,7 +204,7 @@ export default function ExamSchedules() {
       {printing && (
         <div className="hidden print:block">
           <ExamPrintArea>
-            <ExamTable {...printing} deputy={deputy} />
+            <ExamTable {...printing} deputy={deputy} deputySig={deputySig} />
           </ExamPrintArea>
         </div>
       )}
