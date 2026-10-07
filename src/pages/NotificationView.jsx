@@ -82,7 +82,10 @@ export default function NotificationView() {
 
         {/* صورة الإشعار (اختيارية) */}
         {n.image_url && (
-          <img src={n.image_url} alt="" className="max-h-80 w-full object-cover" />
+          // الصورة كاملة بارتفاعها الطبيعي — كثيرًا ما تحمل نص الإشعار نفسه فلا تُقصّ؛ وبالضغط تُفتح بحجمها الأصلي
+          <a href={n.image_url} target="_blank" rel="noreferrer" title="فتح الصورة بحجمها الأصلي" className="block bg-canvas">
+            <img src={n.image_url} alt="" className="block h-auto w-full" />
+          </a>
         )}
 
         <div className="px-5 py-5">

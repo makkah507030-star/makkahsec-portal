@@ -50,9 +50,9 @@ export function normalizeImage(file, targetW = 1280, targetH = 720, quality = 0.
 
 /**
  * تصغير صورة مع الحفاظ على نسبتها كاملة (بلا قصّ) — لصور الأسئلة والرسوم.
- * لا تُكبَّر الصورة الصغيرة. PNG يبقى PNG (للرسوم الحادة)، وغيره JPEG.
+ * لا تُكبَّر الصورة الصغيرة. PNG يبقى PNG (للرسوم الحادة)، وغيره JPEG — إلا مع jpeg: true.
  */
-export function shrinkImage(file, maxSide = 1600, quality = 0.88) {
+export function shrinkImage(file, maxSide = 1600, quality = 0.88, { jpeg = false } = {}) {
   return new Promise((resolve) => {
     if (!file || !(file.type || "").startsWith("image/")) { resolve(file); return; }
     const url = URL.createObjectURL(file);
@@ -64,7 +64,7 @@ export function shrinkImage(file, maxSide = 1600, quality = 0.88) {
         const canvas = document.createElement("canvas");
         canvas.width = w; canvas.height = h;
         const ctx = canvas.getContext("2d");
-        const png = file.type === "image/png";
+        const png = !jpeg && file.type === "image/png";
         if (!png) { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, w, h); }
         ctx.drawImage(img, 0, 0, w, h);
         URL.revokeObjectURL(url);

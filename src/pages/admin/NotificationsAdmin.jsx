@@ -5,7 +5,7 @@ import { useSession } from "../../lib/session.jsx";
 import { KIND_META } from "../../lib/useNotifications";
 import { fmtDateTime } from "../../lib/dates";
 import { GRADE_NAMES } from "../../lib/schoolTime";
-import { normalizeImage } from "../../lib/imageResize";
+import { shrinkImage } from "../../lib/imageResize";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { sendPush } from "../../lib/pushSend.js";
@@ -163,7 +163,8 @@ function SendForm() {
     let imageUrl = null;
     if (imageFile) {
       try {
-        const blob = await normalizeImage(imageFile, 1280, 720, 0.85);
+        // تصغير مع الحفاظ على الصورة كاملة بنسبتها — صور الإعلانات تحمل نصًا فلا تُقصّ
+        const blob = await shrinkImage(imageFile, 1600, 0.88, { jpeg: true });
         const path = `notifications/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
         const { error: upErr } = await supabase.storage
           .from("notification-images")
@@ -294,7 +295,7 @@ function SendForm() {
           {imageFile ? (
             <div className="mt-1.5 flex items-center gap-3">
               <img src={URL.createObjectURL(imageFile)} alt=""
-                   className="h-16 w-28 rounded-sm2 border border-line object-cover" />
+                   className="h-24 w-auto max-w-[10rem] rounded-sm2 border border-line bg-canvas object-contain" />
               <button type="button" onClick={() => setImageFile(null)}
                 className="text-xs font-medium text-absent hover:underline">إزالة الصورة</button>
             </div>
