@@ -263,7 +263,8 @@ function QItem({ q, n, t, maxOpts, pageTop = false }) {
 }
 
 /* ترويسة الصفحة الأولى: الجهة والشعارات والعنوان وخانات الطالب والتعليمات */
-function FirstHead({ quiz, t, className, studentName }) {
+// compact: الاختبار كله في ورقة واحدة — خانات الطالب في بطاقة الإجابة على الصفحة نفسها، فلا تتكرر هنا
+function FirstHead({ quiz, t, className, studentName, compact = false }) {
   return (
     <div>
       {/* الترويسة */}
@@ -290,7 +291,7 @@ function FirstHead({ quiz, t, className, studentName }) {
       </div>
 
       {/* خانات الطالب */}
-      <div className="mt-1.5 grid shrink-0 grid-cols-3 gap-2 text-[10px]">
+      {!compact && <div className="mt-1.5 grid shrink-0 grid-cols-3 gap-2 text-[10px]">
         <div className="truncate rounded-[6px] border px-2 py-1.5" style={{ borderColor: "#999" }}>
           {t.name}: {studentName ? <b>{studentName}</b> : "________________________"}
         </div>
@@ -300,7 +301,7 @@ function FirstHead({ quiz, t, className, studentName }) {
         <div className="rounded-[6px] border px-2 py-1.5 text-center" style={{ borderColor: "#999" }}>
           {t.marks}: ______ / <span className="num">{quiz?.total_marks}</span>
         </div>
-      </div>
+      </div>}
 
       {quiz?.instructions && (
         <p className="mt-2 rounded-[6px] border px-2.5 py-1.5 text-[10.5px]"
@@ -458,7 +459,8 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
   const ltr = quiz?.lang === "en";
   const t = ltr ? EN : AR;
   const dir = ltr ? "ltr" : "rtl";
-  const font = ltr ? "'IBM Plex Sans', system-ui, sans-serif" : "'IBM Plex Sans Arabic', sans-serif";
+  // خط البوابة للغتين: IBM Plex Sans Arabic يحوي حروفًا لاتينية بتصميم Plex (src/fonts.css)
+  const font = "'IBM Plex Sans Arabic', sans-serif";
 
   // نفس تجميع بطاقة الإجابة (omrLayout) حتى يتطابق ترتيب الفقرات في الورقة والبطاقة
   const groups = groupQuestions(questions);
@@ -485,12 +487,13 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
       // هامش أمان 8 مم: الطباعة تقيس الخط أطول قليلًا من الشاشة، فتفيض الفقرة الأخيرة تحت البطاقة
       const inner = (PAGE_H - PAD_T - PAD_B - 8) * mm;
       const gap = 1.5 * 4;                                // mt-1.5 فوق منطقة الأسئلة
-      const head = h("[data-head]"), runHead = h("[data-runhead]");
+      const head = h("[data-head]"), headCompact = h("[data-head-compact]"), runHead = h("[data-runhead]");
       const foot = h("[data-foot]"), card = h("[data-card]");
       const heights = [...root.querySelectorAll("[data-block]")].map((el) => el.getBoundingClientRect().height);
       const total = heights.reduce((a, x) => a + x, 0);
 
-      const single = inner - head - gap - card - foot;
+      // الورقة الواحدة بترويسة مختصرة (خانات الطالب في البطاقة على الصفحة نفسها)
+      const single = inner - headCompact - gap - card - foot;
       const cardFits = card <= inner - runHead - gap - foot;
       if (overflowFor !== questions && total * MIN_ZOOM <= single) {
         setPlan({ pages: null, cardAlone: false, cardFits: true });
@@ -568,6 +571,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
                   width: `${210 - 2 * PAD_X}mm`, fontFamily: font }}>
       <div data-mm style={{ height: "100mm" }} />
       <div data-head style={{ display: "flow-root" }}><FirstHead {...headProps} /></div>
+      <div data-head-compact style={{ display: "flow-root" }}><FirstHead {...headProps} compact /></div>
       <div data-runhead style={{ display: "flow-root" }}><RunHead {...headProps} page={2} total={2} /></div>
       <div data-foot style={{ display: "flow-root" }}><Foot t={t} teacherName={teacherName} page={1} total={2} /></div>
       <div data-card style={{ display: "flow-root" }}><div style={{ display: "flow-root" }}>{card}</div></div>
@@ -580,7 +584,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
       <>
         {measure}
         <div className="sheet mx-auto bg-white text-ink" dir={dir} style={sheetStyle}>
-          <div className="shrink-0"><FirstHead {...headProps} /></div>
+          <div className="shrink-0"><FirstHead {...headProps} compact /></div>
 
           {/* الأسئلة في الأعلى، والبطاقة في الأسفل — تُصغَّر الأسئلة لتتّسع */}
           <div ref={areaRef} className="mt-1.5 min-h-0 flex-1 overflow-hidden">

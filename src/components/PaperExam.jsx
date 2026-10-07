@@ -144,7 +144,8 @@ export default function PaperExam({ quiz, questions: base = [], teacherName = ""
   }, [quiz, base, answerKey, model, images]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const style = {
-    fontFamily: ltr ? "'IBM Plex Sans', system-ui, sans-serif" : "'IBM Plex Sans Arabic', sans-serif",
+    // خط البوابة للغتين: IBM Plex Sans Arabic يحوي حروفًا لاتينية بتصميم Plex (src/fonts.css)
+    fontFamily: "'IBM Plex Sans Arabic', sans-serif",
     fontSize: opts.compact ? "11.5px" : "12.5px",
     lineHeight: opts.compact ? 1.55 : 1.75,
   };
