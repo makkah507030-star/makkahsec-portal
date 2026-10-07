@@ -5,6 +5,7 @@ import { useSession } from "./lib/session.jsx";
 import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
 import Layout from "./components/Layout.jsx";
+import FollowUpTabs from "./components/FollowUpTabs.jsx";
 import Login from "./pages/Login.jsx";
 const ChangePassword = lazy(() => import("./pages/ChangePassword.jsx"));
 const Dashboard = lazy(() => import("./pages/admin/Dashboard.jsx"));
@@ -369,8 +370,8 @@ export default function App() {
               {!hiddenTabs.has("records") && (
                 <Route path="/records" element={<TeacherRecords />} />
               )}
-              <Route path="/follow-up" element={<FollowUpLog />} />
-              <Route path="/follow-up-2" element={<FollowUpLog2 />} />
+              <Route path="/follow-up" element={<><FollowUpTabs /><FollowUpLog /></>} />
+              <Route path="/follow-up-2" element={<><FollowUpTabs /><FollowUpLog2 /></>} />
               {!hiddenTabs.has("notify") && (
                 <Route path="/notify" element={<TeacherNotify />} />
               )}
