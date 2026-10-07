@@ -509,13 +509,13 @@ function MissingStudentsBox({ date }) {
     const { data: serial } = await supabase.rpc("next_referral_serial");
     const { data: sig } = await supabase.from("user_signatures").select("path").eq("user_id", profile.id).maybeSingle();
     const classLabel = `${GRADE_NAMES[r.grade] ?? ""} — فصل ${r.class_no ?? ""}`.trim();
-    // مسار الطالب اليوم حتى حصة الفقدان — يُحفظ في الإحالة ليدرسه الموجه
+    // مسار الطالب اليوم كما رُصد حتى لحظة التحويل — يُحفظ في الإحالة، وورقة الإحالة تكمله حيًّا لآخر حصة
     const { data: tl } = await supabase.rpc("student_day_timeline", { p_date: date, p_student_id: r.student_id });
     const dayTimeline = {
       punch_time: tl?.[0]?.punch_time ?? null,
       missing_period: r.missing_period ?? null,
       periods: (tl ?? [])
-        .filter((x) => x.period_no != null && (r.missing_period == null || x.period_no <= r.missing_period))
+        .filter((x) => x.period_no != null)
         .map((x) => ({ period_no: x.period_no, subject: x.subject, teacher: x.teacher, status: x.status })),
     };
     const { error } = await supabase.from("student_referrals").insert({
@@ -877,6 +877,8 @@ function StudentTimeline({ rows, missingPeriod }) {
               ? "border-late/40 bg-late/10 text-late"
               : p.status === "excused"
               ? "border-excused/40 bg-excused/10 text-excused"
+              : !p.status
+              ? "border-dashed border-line bg-white text-faint"   // حصة لم يحضّرها معلمها
               : "border-present/40 bg-present/10 text-present";
           return (
             <span key={p.period_no}
@@ -884,6 +886,7 @@ function StudentTimeline({ rows, missingPeriod }) {
               <span className="num font-semibold">ح{p.period_no}</span>
               <span className="mx-1 text-faint">·</span>
               {p.subject ?? "—"}
+              {!p.status && <span className="mr-1">(لم يُحضَّر)</span>}
               {isMissing && <span className="mr-1 font-bold">◀ هنا</span>}
             </span>
           );

@@ -336,6 +336,7 @@ export function MissingTab() {
                             p.status === "absent" ? "border-absent/40 bg-absent/10 text-absent"
                             : p.status === "late" ? "border-late/40 bg-late/10 text-late"
                             : p.status === "excused" ? "border-excused/40 bg-excused/10 text-excused"
+                            : !p.status ? "border-dashed border-line bg-white text-faint"
                             : "border-present/40 bg-present/10 text-present";
                           return (
                             <span key={p.period_no}
@@ -343,6 +344,7 @@ export function MissingTab() {
                               <span className="num font-semibold">ح{p.period_no}</span>
                               <span className="mx-1 text-faint">·</span>
                               {p.subject ?? "—"}
+                              {!p.status && <span className="mr-1">(لم يُحضَّر)</span>}
                             </span>
                           );
                         })}

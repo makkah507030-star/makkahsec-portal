@@ -1243,6 +1243,19 @@ function Dotted({ text, lines = 3 }) {
     </div>
   );
 }
+// خطوة من خطوات النموذج في إطار مستقل: شريط عنوان برقمها، ثم نصها وتوقيع صاحبها — فلا تتداخل المراحل
+function Step({ n, title, children }) {
+  return (
+    <section className="mt-1.5 overflow-hidden rounded-[8px] border border-[#BFD9C9]" style={INK}>
+      <div className="flex items-center gap-2 px-3 py-[1px]" style={{ background: "#E9F4ED", ...INK }}>
+        <span className="num grid h-[18px] w-[18px] place-items-center rounded-full text-[10.5px] font-bold leading-none text-white"
+              style={{ background: "#3E6350", ...INK }}>{n}</span>
+        <span className="text-[13px] font-bold text-[#3E6350]">{title}</span>
+      </div>
+      <div className="px-3 pb-0 pt-0">{children}</div>
+    </section>
+  );
+}
 const Copies = ({ list }) => (
   <div className="mt-3 space-y-0.5 text-[11.5px] text-ink">{list.map((l) => <p key={l}>{l}</p>)}</div>
 );
@@ -1272,7 +1285,8 @@ function AbsenceForm(p) {
         <SchoolRow />
         <CivilRow value={v.f3} />
         <EmpTable cols={[["الاسم", name], ["التخصص", spec], ["المستوى / المرتبة", v.emp_rank], ["رقم الوظيفة", jobNo], ["العمل الحالي", v.job]]} />
-        <div className="mt-3 space-y-0.5">
+        <div className="mt-1">
+          <Step n="1" title="التنبيه">
           <P>المكرم المعلم /<Fill w="w-72">{name}</Fill> وفقه الله</P>
           <P>السلام عليكم ورحمة الله وبركاته <span className="mr-10">وبعد :</span></P>
           <P>إنه في يوم<Fill w="w-28">{weekdayOf(day)}</Fill> الموافق<HDate d={hijriPart(day)} /> اتضح ما يلي :</P>
@@ -1282,11 +1296,15 @@ function AbsenceForm(p) {
           {other && <P><Box on />{other}</P>}
           <P>عليه نأمل توضيح أسباب ذلك مع إرفاق ما يؤيد عذركم ،،، ولكم تحياتي</P>
           <SigLine label="مدير المدرسة" name={p.principalName} url={p.principalSigUrl} date={hijriTs(doc?.created_at)} />
+          </Step>
+          <Step n="2" title="الإفادة">
           <P>المكرم / مدير مدرسة<Fill w="w-56">مكة الثانوية</Fill> وفقه الله</P>
           <P>السلام عليكم ورحمة الله وبركاته</P>
           <P>أفيدكم أن أسباب ذلك ما يلي</P>
           <Dotted text={v.f9} lines={3} />
           <SigLine label="الاسم" name={replyName} url={replied ? p.replySigUrl : null} date={hijriTs(doc?.reply_at)} />
+          </Step>
+          <Step n="3" title="قرار مدير المدرسة">
           <P>رأي مدير المدرسة
             <span className="mr-8"><Box on={sameTxt("عذره مقبول", v.f10)} />عذره مقبول</span>
             <span className="mr-8"><Box on={sameTxt("عذره غير مقبول ويحسم عليه", v.f10)} />عذره غير مقبول ويحسم عليه</span>
@@ -1295,6 +1313,7 @@ function AbsenceForm(p) {
           {String(v.action_taken ?? "").trim() && <P>{v.action_taken}</P>}
           <SigLine label="مدير المدرسة" name={decided ? p.principalName : ""} url={decided ? p.principalSigUrl : null}
                    date={decided ? hijriTs(doc?.approved_at) : ""} />
+          </Step>
         </div>
         <p className="mt-2 text-[11.5px] leading-[1.8] text-ink">
           ملاحظة : ترفق بطاقة المساءلة مع أصل القرار في حالة عدم قبول العذر لحفظها بملفه بالإدارة ، أصله الملف بالمدرسة.
@@ -1337,22 +1356,24 @@ function AbsenceForm(p) {
             <tr><td colSpan={7} className={`${absCell} py-2 text-[12.5px] text-ink`} style={{ background: ABS_PALE, ...INK }}>
               إنه في يوم<Fill w="w-20">{weekdayOf(a)}</Fill> الموافق<HDate d={hijriPart(a)} /> تغيبت عن العمل إلى يوم<Fill w="w-20">{weekdayOf(b)}</Fill> الموافق<HDate d={hijriPart(b)} />
             </td></tr>} />
-        <div className="mt-2.5 space-y-0">
-          <p className="text-[13px] font-bold text-[#3E6350]">( <span className="num">1</span> ) طلب الإفادة</p>
+        <div className="mt-1">
+          <Step n="1" title="طلب الإفادة">
           <P>المكرم /<Fill w="w-72">{name}</Fill> وفقه الله</P>
           <P>السلام عليكم ورحمة الله وبركاته وبعد ،،،</P>
           <P className="text-justify text-[13px] leading-[1.95] text-ink">من خلال متابعة سجل العمل تبين غيابكم خلال الفترة الموضحة بعاليه ، آمل الإفادة عن أسباب ذلك وعليكم تقديم ما يؤيد عذركم خلال أسبوع من تاريخه ، علماً بأنه في حالة عدم الالتزام سيتم اتخاذ اللازم حسب التعليمات .</P>
           <SigLine label="اسم الرئيس المباشر" name={p.principalName} url={p.principalSigUrl} date={hijriPart(v.f7) || hijriTs(doc?.created_at)} />
+          </Step>
 
-          <p className="mt-1 text-[13px] font-bold text-[#3E6350]">( <span className="num">2</span> ) الإفادة</p>
+          <Step n="2" title="الإفادة">
           <P>المكرم / مدير المدرسة <span className="mr-24">وفقه الله</span></P>
           <P>السلام عليكم ورحمة الله وبركاته وبعد:</P>
           <P>أفيدكم أن غيابي كان للأسباب التالية :</P>
           <Dotted text={v.f5} lines={2} />
           <P>وسأقوم بتقديم ما يثبت ذلك خلال أسبوع من تاريخه</P>
           <SigLine label="اسم المعلم" name={replyName} url={replied ? p.replySigUrl : null} date={hijriTs(doc?.reply_at)} />
+          </Step>
 
-          <p className="mt-1 text-[13px] font-bold text-[#3E6350]">( <span className="num">3</span> ) مدير المدرسة :</p>
+          <Step n="3" title="مدير المدرسة :">
           {/* الخيارات: الحرف في دائرة، ثم مربع الاختيار، ثم النص بمحاذاة واحدة حتى لو التف */}
           <div className="space-y-1 py-0.5">
             {opts.map((o, i) => (
@@ -1372,6 +1393,7 @@ function AbsenceForm(p) {
           {String(v.f6 ?? "").trim() && <P>{v.f6}</P>}
           <SigLine label="اسم الرئيس المباشر" name={decided ? p.principalName : ""} url={decided ? p.principalSigUrl : null}
                    date={decided ? hijriTs(doc?.approved_at) : ""} />
+          </Step>
         </div>
         <div className="mt-1.5 text-[11.5px] leading-[1.75] text-ink">
           <p className="font-bold text-[#3E6350]">ملحوظات هامة</p>
