@@ -1234,11 +1234,11 @@ function SigLine({ label, name, url, date }) {
     </div>
   );
 }
+// نص الإفادة في بطاقة بإطار (بدل أسطر الكتابة اليدوية)، ويبقى بارتفاعه فارغًا للكتابة باليد
 function Dotted({ text, lines = 3 }) {
   return (
-    <div className="mt-1 text-[13px] leading-[2.1] text-ink"
-         style={{ backgroundImage: "linear-gradient(to bottom, transparent calc(100% - 1px), #9a9a9a calc(100% - 1px))",
-                  backgroundSize: "100% 2.1em", minHeight: `${lines * 2.1}em`, ...INK }}>
+    <div className="mt-1.5 rounded-[8px] border-[1.5px] border-[#9FC2AE] bg-[#F5FAF7] px-4 py-2 text-[13px] leading-[1.9] text-ink"
+         style={{ minHeight: `${lines * 1.9 + 1}em`, ...INK }}>
       <span className="whitespace-pre-line font-semibold">{text || ""}</span>
     </div>
   );
