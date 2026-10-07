@@ -1182,7 +1182,9 @@ function CivilRow({ value, boxes }) {
                 {/* الرقم يُقرأ من اليسار: الخانة الأولى من اليمين لآخر رقم */}
                 {digits[9 - i] ?? ""}
               </td>))
-          : <td className={`${absCell} num py-1 font-semibold text-ink`} style={{ background: ABS_PALE, ...INK }}>{value || ""}</td>}
+          : <td className={`${absCell} py-1 text-right font-semibold text-ink`} style={{ background: ABS_PALE, ...INK }}>
+              <span className="num">{value || ""}</span>
+            </td>}
       </tr></tbody>
     </table>
   );
