@@ -1,6 +1,6 @@
 // src/components/QuizScan.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { cardLayout, rowsToAnswers } from "../lib/omrLayout.js";
+import { CARD_VERSIONS, cardLayout, rowsToAnswers } from "../lib/omrLayout.js";
 import { imageFromFile, readCard } from "../lib/omrReader.js";
 
 /* =====================================================================
@@ -21,10 +21,12 @@ const STATUS = {
 export default function QuizScan({ quiz, questions, students, subs, startId, onSave, onAbsent, onClose }) {
   const ltr = quiz?.lang === "en";
   const current = useMemo(() => cardLayout(questions, { ltr }), [questions, ltr]);
-  // شكل البطاقة السابق (قبل عمود لكل سؤال): أوراق طُبعت قبل التحديث تُقرأ به
-  const legacy = useMemo(() => {
-    const l = cardLayout(questions, { ltr, legacy: true });
-    return l.heads.length || current.heads.length ? l : null;
+  // أشكال البطاقة السابقة: أوراق طُبعت قبل آخر تحديث تُقرأ بشكلها (المكرَّر يُستبعد)
+  const older = useMemo(() => {
+    const sig = (l) => JSON.stringify(l.rows.map((r) => r.bubbles[0])) + l.H;
+    const seen = new Set([sig(current)]);
+    return CARD_VERSIONS.slice(1).map((version) => cardLayout(questions, { ltr, version }))
+      .filter((l) => !seen.has(sig(l)) && seen.add(sig(l)));
   }, [questions, ltr, current]);
   const [layout, setLayout] = useState(current);
   useEffect(() => { setLayout(current); }, [current]);
@@ -60,7 +62,7 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
       // نترك للمتصفح فرصة لعرض «جارٍ القراءة» قبل المعالجة
       await new Promise((r) => setTimeout(r, 30));
       // نقرأ بالشكل الحالي، وبالسابق إن اختلف، ونأخذ الأوضح: أكثر صفوف مقروءة بثقة
-      const tries = [current, legacy].filter(Boolean)
+      const tries = [current, ...older]
         .map((l) => ({ l, r: readCard(img, l) }))
         .filter((x) => x.r.ok);
       if (!tries.length) { setError(readCard(img, current, { preview: false }).error); setStage("capture"); return; }

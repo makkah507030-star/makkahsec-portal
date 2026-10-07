@@ -57,8 +57,12 @@ export function cardRows(questions = [], { qShort = "س", fShort = "ف" } = {}) 
    عن ارتفاع العمود أكملت في العمود التالي. ارتفاع العمود أقل ما يتّسع به كل
    سؤال في الأعمدة المتاحة، حتى تبقى البطاقة قصيرة. وإن زادت الأسئلة عن
    الأعمدة (مزاوجة بعناصر كثيرة جدًا) تتابعت الفقرات بلا عناوين كما كانت.
-   legacy: الشكل السابق (تتابع بلا عناوين) — لقراءة أوراق طُبعت قبل التحديث. */
-export function cardLayout(questions = [], { ltr = false, labels, legacy = false } = {}) {
+   version: إصدار الشكل — يقرأ به الماسح أوراقًا طُبعت قبل آخر تحديث:
+     1 تتابع بلا عناوين، 2 عمود لكل سؤال حتى 3 أعمدة، 3 (الحالي) حتى 4 أعمدة
+     فتقصر البطاقة في الاختبارات القصيرة ويتّسع الاختبار في ورقة واحدة. */
+export const CARD_VERSIONS = [3, 2, 1];
+export function cardLayout(questions = [], { ltr = false, labels, version = 3, legacy = false } = {}) {
+  if (legacy) version = 1;
   const rows = cardRows(questions, labels);
   const { W, PAD, MARK, SIDE } = CARD;
 
@@ -70,14 +74,14 @@ export function cardLayout(questions = [], { ltr = false, labels, legacy = false
   // المزاوجة بلا حدّ لعناصرها: إن طال أطول صف عن عرض العمود قلّت الأعمدة حتى يتّسع
   const maxCount = Math.max(1, ...rows.map((r) => r.count));
   const rowW = LBL + 1.5 + D + (maxCount - 1) * STEP + 1.5;
-  let nCols = dense ? 4 : 3;
+  let nCols = dense || version >= 3 ? 4 : 3;
   while (nCols > 1 && (W - 2 * SIDE) / nCols < rowW) nCols--;
 
   // فقرات كل سؤال
   const lens = [];
   rows.forEach((r) => { lens[r.gi] = (lens[r.gi] ?? 0) + 1; });
   const groupLens = lens.filter(Boolean);
-  const byQuestion = !legacy && groupLens.length > 1 && groupLens.length <= nCols;
+  const byQuestion = version >= 2 && groupLens.length > 1 && groupLens.length <= nCols;
 
   // موضع كل صف: { col, row }
   let perCol, usedCols, slots;
