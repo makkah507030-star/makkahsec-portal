@@ -666,13 +666,16 @@ export default function Layout({ children }) {
 
       {/* شريط علوي للجوال */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-white/95 px-4 py-3 backdrop-blur lg:hidden print:hidden">
-        <button onClick={() => setOpen(true)} aria-label="القائمة"
-                className="rounded-sm2 border border-line p-2 text-muted hover:bg-canvas">
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
-               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </svg>
-        </button>
+        {/* زر القائمة العلوي يُستغنى عنه بزر «المزيد» في الشريط السفلي — يبقى فقط إن لم يظهر الشريط */}
+        {bottomItems.length === 0 && (
+          <button onClick={() => setOpen(true)} aria-label="القائمة"
+                  className="rounded-sm2 border border-line p-2 text-muted hover:bg-canvas">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+        )}
         <UserInline />
         <Actions />
       </header>
