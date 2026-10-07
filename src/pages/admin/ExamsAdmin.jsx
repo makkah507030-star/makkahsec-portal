@@ -110,8 +110,28 @@ export default function ExamsAdmin() {
     if (!term) return;
     const { error } = await supabase.from("exam_terms").update(fields).eq("id", term.id);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
+
+    // تغيّر بداية الفترة: تواريخ الاختبارات المختارة تُحسب عند اختيار الخانة،
+    // فتُعاد حسابها هنا من البداية الجديدة (يوم الأسبوع ورقم الأسبوع ثابتان)
+    let moved = 0;
+    if ("start_date" in fields && fields.start_date && fields.start_date !== term.start_date && kind !== "final") {
+      const { data: sl } = await supabase.from("exam_slots")
+        .select("day_of_week, exam_week").eq("exam_term_id", term.id).not("class_id", "is", null);
+      const combos = [...new Set((sl ?? []).filter((x) => x.day_of_week)
+        .map((x) => `${x.day_of_week}|${x.exam_week ?? 1}`))];
+      for (const c of combos) {
+        const [dow, wk] = c.split("|").map(Number);
+        const { error: e2, count } = await supabase.from("exam_slots")
+          .update({ exam_date: dateOfDay(fields.start_date, dow, wk) }, { count: "exact" })
+          .eq("exam_term_id", term.id).not("class_id", "is", null)
+          .eq("day_of_week", dow).eq("exam_week", wk);
+        if (e2) { setMsg({ ok: false, text: e2.message }); return; }
+        moved += count ?? 0;
+      }
+    }
+
     setTerm((t) => ({ ...t, ...fields }));
-    setMsg({ ok: true, text: "حُفظ." });
+    setMsg({ ok: true, text: moved ? `حُفظ، وأُعيد حساب تواريخ ${moved} اختبارًا من البداية الجديدة.` : "حُفظ." });
   };
 
   // طباعة كل جداول المدرسة للفترة المختارة دفعة واحدة: كل فصل (أو كل صف في النهائية) في ورقة
@@ -313,7 +333,7 @@ function ClassExamEditor({ term, cls, onPrint }) {
     setSlots(Object.fromEntries((sl ?? []).map((x) => [`${x.schedule_id}|${x.exam_week ?? 1}`, x])));
   };
 
-  useEffect(() => { load(); }, [term.id, cls.id]);
+  useEffect(() => { load(); }, [term.id, cls.id, term.start_date]);
 
   const key = (row) => `${row.id}|${week}`;
 
@@ -425,18 +445,23 @@ function ClassExamEditor({ term, cls, onPrint }) {
                 {periods.map((p) => {
                   const row = grid[d]?.[p];
                   const on = row && slots[key(row)];
+                  // تاريخ خارج فترة الاختبارات (مثل خانة اختيرت قبل تعديل البداية)
+                  const ed = on ? slots[key(row)].exam_date : null;
+                  const outside = !!ed && ((term.start_date && ed < term.start_date) || (term.end_date && ed > term.end_date));
                   return (
                     <td key={p} className="border border-line p-0">
                       {row ? (
                         <button onClick={() => toggle(row)} disabled={busy}
                           className={`h-full w-full px-2 py-2.5 transition-colors ${
-                            on ? "bg-mint-deep text-white" : "hover:bg-mint-tint"}`}>
+                            outside ? "bg-absent text-white" : on ? "bg-mint-deep text-white" : "hover:bg-mint-tint"}`}
+                          title={outside ? "تاريخ هذا الاختبار خارج فترة الاختبارات — أعد اختيار الخانة" : undefined}>
                           <span className="block text-[11.5px] font-medium">
                             {row.subjects?.name ?? "—"}
                           </span>
                           {on && slots[key(row)].exam_date && (
                             <span className="num mt-0.5 block text-[10px] opacity-90">
                               {fmtG(slots[key(row)].exam_date)}
+                              {outside && " · خارج الفترة"}
                             </span>
                           )}
                         </button>
