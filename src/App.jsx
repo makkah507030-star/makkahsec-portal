@@ -93,6 +93,7 @@ import { useMaintenance } from "./lib/useMaintenance.js";
 import { useHolidays } from "./lib/useHolidays.js";
 const ExamCountdown = lazy(() => import("./components/ExamCountdown.jsx"));
 const ExamDayCard = lazy(() => import("./components/ExamDayCard.jsx"));
+const TeacherTodayCard = lazy(() => import("./components/TeacherTodayCard.jsx"));
 import HolidayBanner from "./components/HolidayBanner.jsx";
 import TeacherDayCard from "./components/TeacherDayCard.jsx";
 import Loader from "./components/Loader.jsx";
@@ -227,21 +228,13 @@ export default function App() {
     );
   }
 
-  const teacherHome = hiddenTabs.has("attendance") ? (
+  // الرئيسية للمعلم ملخص يومه، والتحضير صفحة مستقلة (/attendance) تفتحها بطاقة «يومي» بضغطة
+  const teacherHome = (
     <div className="space-y-5">
-      <DutyCard personal />
-      <ExamDayCard />
-      <div className="card px-6 py-12 text-center">
-        <p className="font-semibold text-ink">تبويب الحضور والغياب اليومي غير متاح لحسابك</p>
-        <p className="mt-1.5 text-sm text-muted">اختر تبويبًا آخر من القائمة الجانبية.</p>
-      </div>
-    </div>
-  ) : (
-    <div className="space-y-5">
+      {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
       <DutyCard personal />
       <ExamDayCard />
       <ExamCountdown />
-      <Attendance />
     </div>
   );
 

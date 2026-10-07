@@ -113,9 +113,15 @@ const ADMIN_GROUPS = [
 
 const TEACHER_GROUPS = [
   {
+    title: null,
+    items: [
+      { to: "/", label: "الرئيسية", icon: "home", kw: "يومي" },
+    ],
+  },
+  {
     title: "المهام اليومية",
     items: [
-      { to: "/",            label: "الحضور والغياب اليومي", tabKey: "attendance", icon: "userCheck", kw: "الرئيسية" },
+      { to: "/attendance",  label: "الحضور والغياب اليومي", tabKey: "attendance", icon: "userCheck", kw: "تحضير" },
       { to: "/substitute",  label: "حصص الانتظار",          tabKey: "substitute", icon: "swap" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
@@ -180,13 +186,13 @@ const FOOTER = [
 // الشريط السفلي في الجوال: أهم أربع صفحات بحسب الدور (ما يظهر منها فقط)، ثم «المزيد»
 const BOTTOM = {
   admin:    ["/", "/students", "/permissions", "/forms", "/forms-review", "/my-documents"],
-  teacher:  ["/", "/records", "/quizzes", "/forms", "/my-documents"],
+  teacher:  ["/", "/attendance", "/records", "/forms", "/quizzes", "/my-documents"],
   student:  ["/", "/exams", "/my-documents"],
   guardian: ["/", "/exams", "/my-documents"],
 };
 const BOTTOM_LABEL = {
   "/students": "الطلاب", "/permissions": "الاستئذان", "/forms": "النماذج", "/forms-review": "الاعتماد",
-  "/records": "السجلات", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي",
+  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي",
 };
 
 /* البحث: توحيد الهمزات والتاء المربوطة والألف المقصورة وحذف التشكيل */
@@ -744,7 +750,7 @@ export default function Layout({ children }) {
                     <Badge n={badgeOf(i.to)} dot />
                   </span>
                   <span className="max-w-full truncate px-1">
-                    {i.to === "/" ? (effectiveRole === "teacher" ? "اليوم" : "الرئيسية") : BOTTOM_LABEL[i.to] ?? i.label}
+                    {i.to === "/" ? "الرئيسية" : BOTTOM_LABEL[i.to] ?? i.label}
                   </span>
                 </NavLink>
               );
