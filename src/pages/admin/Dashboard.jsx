@@ -877,6 +877,8 @@ function StudentTimeline({ rows, missingPeriod }) {
               ? "border-late/40 bg-late/10 text-late"
               : p.status === "excused"
               ? "border-excused/40 bg-excused/10 text-excused"
+              : !p.status
+              ? "border-dashed border-line bg-white text-faint"   // حصة لم يحضّرها معلمها
               : "border-present/40 bg-present/10 text-present";
           return (
             <span key={p.period_no}
@@ -884,6 +886,7 @@ function StudentTimeline({ rows, missingPeriod }) {
               <span className="num font-semibold">ح{p.period_no}</span>
               <span className="mx-1 text-faint">·</span>
               {p.subject ?? "—"}
+              {!p.status && <span className="mr-1">(لم يُحضَّر)</span>}
               {isMissing && <span className="mr-1 font-bold">◀ هنا</span>}
             </span>
           );

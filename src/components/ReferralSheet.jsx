@@ -134,7 +134,7 @@ function DayTimeline({ t: saved, studentId, date }) {
                 <td className="border border-[#CFE3D7] px-2 py-1" colSpan={3}>لم يُرصد حضوره</td>
               </tr>
             );
-            const [label, color] = ST[p.status] ?? [p.status ?? "—", "#555"];
+            const [label, color] = !p.status ? ["لم يُحضَّر", "#8A8A8A"] : ST[p.status] ?? [p.status, "#555"];
             return (
               <tr key={p.period_no} style={lost ? { background: "#FBECEC", ...INK } : undefined}>
                 <td className="border border-[#CFE3D7] px-2 py-1">{label0}</td>
