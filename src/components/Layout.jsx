@@ -11,6 +11,7 @@ import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
 import { loadPrincipalSignature } from "../lib/principalSignature.js";
 import { loadSigners } from "../lib/signers.js";
+import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 
 /* =====================================================================
    القائمة الجانبية — مرتبة من العمل اليومي إلى الإعدادات، وفي أسفلها
@@ -292,44 +293,10 @@ export default function Layout({ children }) {
   // تحميل توقيع المدير المعتمد وأسماء الموقّعين مسبقًا — لتظهر في التقارير المطبوعة فورًا
   useEffect(() => { if (session) { loadPrincipalSignature(); loadSigners(); } }, [session]);
 
-  // عدّاد الإشعارات المعلّقة بانتظار الاعتماد — للدعم الفني فقط
-  const [pendingReview, setPendingReview] = useState(0);
-  const isTech = (adminRoles ?? []).includes("tech_support");
-  useEffect(() => {
-    if (!isTech) return;
-    let alive = true;
-    const load = async () => {
-      const { count } = await supabase
-        .from("notification_drafts")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "pending");
-      if (alive) setPendingReview(count ?? 0);
-    };
-    load();
-    const t = setInterval(load, 60000);
-    return () => { alive = false; clearInterval(t); };
-  }, [isTech, path]);
-
-  // النماذج التي أعادها المدير لهذا المستخدم للتعديل
-  const [returnedForms, setReturnedForms] = useState(0);
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { count } = await supabase
-        .from("form_documents")
-        .select("id", { count: "exact", head: true })
-        .eq("created_by", user.id)
-        .eq("status", "rejected");
-      if (alive) setReturnedForms(count ?? 0);
-    };
-    load();
-    const t = setInterval(load, 60000);
-    return () => { alive = false; clearInterval(t); };
-  }, [path]);
-
-  const badgeOf = (to) => (to === "/forms" ? returnedForms : to === "/notifications-review" ? pendingReview : 0);
+  // عدادات «بانتظار إجرائك» على روابط القائمة (lib/navBadges.js) — أدوار الإدارة تُحتسب في واجهتها فقط
+  const badges = useNavBadges(session?.user?.id, effectiveRole === "admin" ? adminRoles : []);
+  useEffect(() => { refreshNavBadges(); }, [path]);
+  const badgeOf = (to) => (to.startsWith("_") ? 0 : badges[to] ?? 0);
 
   const isAdmin = effectiveRole === "admin";
   const isStaff = isAdmin || effectiveRole === "teacher";
@@ -758,7 +725,11 @@ export default function Layout({ children }) {
             <button type="button" onClick={() => setOpen(true)}
                     className={`flex min-w-0 flex-1 flex-col items-center gap-1 py-2 text-[10.5px] ${
                       open ? "font-bold text-mint-deep" : "font-medium text-muted"}`}>
-              <Icon name="more" className="h-[22px] w-[22px]" />
+              <span className="relative">
+                <Icon name="more" className="h-[22px] w-[22px]" />
+                {/* تنبيه على صفحة داخل القائمة لا تظهر في الشريط */}
+                <Badge n={allVisible.filter((i) => !bottomItems.includes(i)).reduce((a, i) => a + badgeOf(i.to), 0)} dot />
+              </span>
               <span>المزيد</span>
             </button>
           </div>
