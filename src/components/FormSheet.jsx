@@ -1277,19 +1277,19 @@ function AbsenceForm(p) {
           <P><Box on={sameTxt(kinds[2], v.f6)} />انصرافكم مبكراً قبل نهاية العمل من الساعة (<Fill w="w-20">{sameTxt(kinds[2], v.f6) ? t1 : ""}</Fill>)</P>
           {other && <P><Box on />{other}</P>}
           <P>عليه نأمل توضيح أسباب ذلك مع إرفاق ما يؤيد عذركم ،،، ولكم تحياتي</P>
-          <SigLine label="قائد المدرسة" name={p.principalName} url={p.principalSigUrl} date={hijriTs(doc?.created_at)} />
+          <SigLine label="مدير المدرسة" name={p.principalName} url={p.principalSigUrl} date={hijriTs(doc?.created_at)} />
           <P>المكرم / مدير مدرسة<Fill w="w-56">مكة الثانوية</Fill> وفقه الله</P>
           <P>السلام عليكم ورحمة الله وبركاته</P>
           <P>أفيدكم أن أسباب ذلك ما يلي</P>
           <Dotted text={v.f9} lines={3} />
           <SigLine label="الاسم" name={replyName} url={replied ? p.replySigUrl : null} date={hijriTs(doc?.reply_at)} />
-          <P>رأي قائد المدرسة
+          <P>رأي مدير المدرسة
             <span className="mr-8"><Box on={sameTxt("عذره مقبول", v.f10)} />عذره مقبول</span>
             <span className="mr-8"><Box on={sameTxt("عذره غير مقبول ويحسم عليه", v.f10)} />عذره غير مقبول ويحسم عليه</span>
           </P>
           {decided && !["عذره مقبول", "عذره غير مقبول ويحسم عليه"].some((k) => sameTxt(k, v.f10)) && <P className="text-[13px] font-semibold text-ink">{v.f10}</P>}
           {String(v.action_taken ?? "").trim() && <P>{v.action_taken}</P>}
-          <SigLine label="قائد المدرسة" name={decided ? p.principalName : ""} url={decided ? p.principalSigUrl : null}
+          <SigLine label="مدير المدرسة" name={decided ? p.principalName : ""} url={decided ? p.principalSigUrl : null}
                    date={decided ? hijriTs(doc?.approved_at) : ""} />
         </div>
         <p className="mt-2 text-[11.5px] leading-[1.8] text-ink">
@@ -1341,7 +1341,7 @@ function AbsenceForm(p) {
           <SigLine label="اسم الرئيس المباشر" name={p.principalName} url={p.principalSigUrl} date={hijriPart(v.f7) || hijriTs(doc?.created_at)} />
 
           <p className="mt-1 text-[13px] font-bold text-[#3E6350]">( <span className="num">2</span> ) الإفادة</p>
-          <P>المكرم / قائد المدرسة <span className="mr-24">وفقه الله</span></P>
+          <P>المكرم / مدير المدرسة <span className="mr-24">وفقه الله</span></P>
           <P>السلام عليكم ورحمة الله وبركاته وبعد:</P>
           <P>أفيدكم أن غيابي كان للأسباب التالية :</P>
           <Dotted text={v.f5} lines={2} />
@@ -1382,7 +1382,7 @@ function AbsenceForm(p) {
               <td colSpan={4} className={`${absCell} py-1.5 text-center font-semibold text-ink`} style={{ background: ABS_PALE, ...INK }}>{days}</td>
             </tr>} />
         <div className="mt-3 space-y-0.5 text-justify">
-          <P>إن قائد المدرسة<Fill w="w-56">{p.principalName}</Fill></P>
+          <P>إن مدير المدرسة<Fill w="w-56">{p.principalName}</Fill></P>
           <P>بناء على صلاحياته ، وبناء على المادة ( <span className="num">21</span> ) من نظام الخدمة المدنية ، وبناء على موافقة معالي الوزير على إعطاء بعض الصلاحيات لمديري المدارس بالقرار رقم <span className="num">1/1139</span> وتاريخ <span className="num">1421/3/17</span>هـ ولغياب المعلم الموضح أسمه أعلاه ، حيث إن عذره غير مقبول ، وبمقتضى النظام .</P>
           <P>يقرر ما يلي :</P>
           <P>( <span className="num">1</span> ) حسم مدة الغياب الموضحة بعاليه وعددها (<Fill w="w-12">{v.f5}</Fill>) يوماً من راتبه .</P>
