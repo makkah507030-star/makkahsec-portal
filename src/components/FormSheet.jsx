@@ -1234,10 +1234,10 @@ function SigLine({ label, name, url, date }) {
     </div>
   );
 }
-// نص الإفادة في بطاقة بإطار (بدل أسطر الكتابة اليدوية)، ويبقى بارتفاعه فارغًا للكتابة باليد
+// نص الإفادة في بطاقة بإطار (بدل أسطر الكتابة اليدوية)، في منتصفها رأسيًا وعلى اليمين، ويبقى بارتفاعه فارغًا للكتابة باليد
 function Dotted({ text, lines = 3 }) {
   return (
-    <div className="mt-1.5 rounded-[8px] border-[1.5px] border-[#9FC2AE] bg-[#F5FAF7] px-4 py-2 text-[13px] leading-[1.9] text-ink"
+    <div className="mt-1.5 flex items-center rounded-[8px] border-[1.5px] border-[#9FC2AE] bg-[#F5FAF7] px-4 py-2 text-right text-[13px] leading-[1.9] text-ink"
          style={{ minHeight: `${lines * 1.9 + 1}em`, ...INK }}>
       <span className="whitespace-pre-line font-semibold">{text || ""}</span>
     </div>
@@ -1353,9 +1353,21 @@ function AbsenceForm(p) {
           <SigLine label="اسم المعلم" name={replyName} url={replied ? p.replySigUrl : null} date={hijriTs(doc?.reply_at)} />
 
           <p className="mt-1 text-[13px] font-bold text-[#3E6350]">( <span className="num">3</span> ) مدير المدرسة :</p>
-          {opts.map((o, i) => (
-            <P key={i}><span className="ml-1">{["أ.", "ب.", "ج."][i]}</span><Box on={sameTxt(o, v.action_taken)} />{o}</P>
-          ))}
+          {/* الخيارات: الحرف في دائرة، ثم مربع الاختيار، ثم النص بمحاذاة واحدة حتى لو التف */}
+          <div className="space-y-1 py-0.5">
+            {opts.map((o, i) => (
+              <div key={i} className="flex items-start gap-2 text-[13px] leading-[1.95] text-ink">
+                <span className="flex h-[1.95em] shrink-0 items-center">
+                  <span className="grid h-[17px] w-[17px] place-items-center rounded-full border border-[#3E6350] text-[10.5px] font-bold leading-none text-[#3E6350]"
+                        style={INK}>{["أ", "ب", "ج"][i]}</span>
+                </span>
+                <span className="flex h-[1.95em] shrink-0 items-center [&>span]:ml-0 [&>span]:align-middle">
+                  <Box on={sameTxt(o, v.action_taken)} />
+                </span>
+                <span className="min-w-0 flex-1">{o}</span>
+              </div>
+            ))}
+          </div>
           {other && <P className="text-[13px] font-semibold leading-[1.95] text-ink">{other}</P>}
           {String(v.f6 ?? "").trim() && <P>{v.f6}</P>}
           <SigLine label="اسم الرئيس المباشر" name={decided ? p.principalName : ""} url={decided ? p.principalSigUrl : null}

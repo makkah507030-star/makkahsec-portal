@@ -76,6 +76,13 @@ export const daysLabel = (n) =>
 /* مسار الإحالة خطوة خطوة: ما تمّ بتاريخه، وما بقي */
 export function timelineOf(r) {
   // إحالة المخالفة السلوكية يصدرها الوكيل مباشرة (بلا مرحلة المعلم)
+  // إحالة الطالب المفقود يصدرها الوكيل من صندوق المفقودين في لوحة التحكم
+  if (r.kind === "missing") return [
+    { t: "رصدها الوكيل وأحالها", who: r.deputy_name,    at: r.deputy_at },
+    { t: "إجراء الموجه",        who: r.counselor_name, at: r.counselor_at },
+    { t: "أُقفلت وأُشعر ولي الأمر", who: "",           at: r.closed_at },
+    { t: "رد ولي الأمر",        who: "",               at: r.guardian_ack_at },
+  ];
   if (r.kind === "behavior") return [
     { t: "أحالها الوكيل",  who: r.deputy_name,    at: r.deputy_at },
     { t: "إجراء الموجه",   who: r.counselor_name, at: r.counselor_at },
