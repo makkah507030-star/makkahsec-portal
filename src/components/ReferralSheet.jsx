@@ -76,6 +76,55 @@ function Stage({ n, title, who, at, sig, children, tone = "mint" }) {
   );
 }
 
+/* مسار الطالب في يوم الفقد حتى حصة الفقدان — محفوظ في الإحالة لحظة التحويل */
+const ST = { present: ["حاضر", "#2E7D5B"], absent: ["غائب", "#A23B3B"], late: ["متأخر", "#9A6B12"], excused: ["مستأذن", "#3B6EA2"] };
+function DayTimeline({ t }) {
+  const punch = t.punch_time
+    ? new Date(t.punch_time).toLocaleTimeString("ar-SA-u-nu-latn", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Riyadh" })
+    : null;
+  const rows = t.periods ?? [];
+  const hasMissing = rows.some((p) => p.period_no === t.missing_period);
+  return (
+    <div className="my-1.5">
+      <p className="mb-1 text-[11.5px] font-semibold text-[#3E6350]">مسار الطالب في اليوم حتى وقت الفقد</p>
+      <table className="w-full border-collapse text-[11px]" style={INK}>
+        <thead>
+          <tr style={{ background: "#EDF6F0", ...INK }}>
+            {["الحصة", "المادة", "المعلم", "الحالة"].map((h) => (
+              <th key={h} className="border border-[#CFE3D7] px-2 py-1 text-right font-semibold">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="border border-[#CFE3D7] px-2 py-1">دخول المدرسة</td>
+            <td className="border border-[#CFE3D7] px-2 py-1" colSpan={2}>البصمة</td>
+            <td className="border border-[#CFE3D7] px-2 py-1">{punch ? <span dir="rtl" className="inline-block">{punch}</span> : "لم يبصم"}</td>
+          </tr>
+          {rows.map((p) => {
+            const lost = p.period_no === t.missing_period;
+            const [label, color] = ST[p.status] ?? [p.status ?? "—", "#555"];
+            return (
+              <tr key={p.period_no} style={lost ? { background: "#FBECEC", ...INK } : undefined}>
+                <td className="border border-[#CFE3D7] px-2 py-1">الحصة <span className="num">{p.period_no}</span>{lost && " — حصة الفقدان"}</td>
+                <td className="border border-[#CFE3D7] px-2 py-1">{p.subject ?? "—"}</td>
+                <td className="border border-[#CFE3D7] px-2 py-1">{p.teacher ?? "—"}</td>
+                <td className="border border-[#CFE3D7] px-2 py-1 font-semibold" style={{ color, ...INK }}>{label}</td>
+              </tr>
+            );
+          })}
+          {!hasMissing && t.missing_period != null && (
+            <tr style={{ background: "#FBECEC", ...INK }}>
+              <td className="border border-[#CFE3D7] px-2 py-1">الحصة <span className="num">{t.missing_period}</span> — حصة الفقدان</td>
+              <td className="border border-[#CFE3D7] px-2 py-1" colSpan={3}>لم يُرصد حضوره</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 const Field = ({ label, value }) => (
   <p className="text-[12px] leading-[1.9]">
     <span className="text-muted">{label}: </span>
@@ -134,6 +183,7 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
             <Field label="حصة الفقدان" value={r.period_no ? `الحصة ${r.period_no}` : ""} />
           </div>
           <Field label="سبب التحويل" value={r.reason} />
+          {r.day_timeline && <DayTimeline t={r.day_timeline} />}
           <Field label="ما تم عمله والملاحظات" value={r.deputy_note} />
           {r.counselor_name && <Field label="أُحيل إلى" value={r.counselor_name} />}
         </Stage>

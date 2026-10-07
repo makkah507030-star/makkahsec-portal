@@ -509,7 +509,17 @@ function MissingStudentsBox({ date }) {
     const { data: serial } = await supabase.rpc("next_referral_serial");
     const { data: sig } = await supabase.from("user_signatures").select("path").eq("user_id", profile.id).maybeSingle();
     const classLabel = `${GRADE_NAMES[r.grade] ?? ""} — فصل ${r.class_no ?? ""}`.trim();
+    // مسار الطالب اليوم حتى حصة الفقدان — يُحفظ في الإحالة ليدرسه الموجه
+    const { data: tl } = await supabase.rpc("student_day_timeline", { p_date: date, p_student_id: r.student_id });
+    const dayTimeline = {
+      punch_time: tl?.[0]?.punch_time ?? null,
+      missing_period: r.missing_period ?? null,
+      periods: (tl ?? [])
+        .filter((x) => x.period_no != null && (r.missing_period == null || x.period_no <= r.missing_period))
+        .map((x) => ({ period_no: x.period_no, subject: x.subject, teacher: x.teacher, status: x.status })),
+    };
     const { error } = await supabase.from("student_referrals").insert({
+      day_timeline: dayTimeline,
       serial, kind: "missing",
       student_id: r.student_id, student_name: r.full_name, class_label: classLabel, grade: r.grade ?? null,
       referral_date: date, subject: r.subject ?? null, period_no: r.missing_period ?? null,
@@ -521,7 +531,7 @@ function MissingStudentsBox({ date }) {
       status: "with_counselor",
     });
     if (error) {
-      return /kind|check|policy|row-level/i.test(error.message)
+      return /kind|check|policy|row-level|day_timeline/i.test(error.message)
         ? "نفّذ ملف supabase/missing_to_counselor.sql أولًا من Supabase ← SQL Editor."
         : error.message;
     }
