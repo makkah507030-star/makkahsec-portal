@@ -7,6 +7,8 @@ import { PRINCIPAL_NAME, STUDENT_DEPUTY_NAME } from "../lib/exportUtils.js";
 import { degreeName, violationPhrase, BEHAVIOR_SOURCE } from "../lib/behavior.js";
 import { fmtDate } from "../lib/dates";
 import { useReferralSigs } from "../lib/referralSigs.js";
+import { useEffect, useState } from "react";
+import { supabase } from "../lib/supabase";
 
 /* =====================================================================
    ورقة إحالة الطالب — ملف واحد يوثّق المسار كاملًا:
@@ -78,15 +80,36 @@ function Stage({ n, title, who, at, sig, children, tone = "mint" }) {
 
 /* مسار الطالب في يوم الفقد حتى حصة الفقدان — محفوظ في الإحالة لحظة التحويل */
 const ST = { present: ["حاضر", "#2E7D5B"], absent: ["غائب", "#A23B3B"], late: ["متأخر", "#9A6B12"], excused: ["مستأذن", "#3B6EA2"] };
-function DayTimeline({ t }) {
+// المسار كاملًا حتى آخر حصة: يُقرأ حيًّا من تحضير ذلك اليوم عند فتح الإحالة،
+// وإن تعذّر يُعرض المحفوظ لحظة التحويل (حتى حصة الفقدان)
+function DayTimeline({ t: saved, studentId, date }) {
+  const [live, setLive] = useState(null);
+  useEffect(() => {
+    if (!studentId || !date) return;
+    let alive = true;
+    supabase.rpc("student_day_timeline", { p_date: date, p_student_id: studentId })
+      .then(({ data, error }) => { if (alive && !error && data?.length) setLive(data); });
+    return () => { alive = false; };
+  }, [studentId, date]);
+  const t = live
+    ? { punch_time: live[0]?.punch_time ?? saved.punch_time, missing_period: saved.missing_period,
+        periods: live.filter((x) => x.period_no != null)
+          .map((x) => ({ period_no: x.period_no, subject: x.subject, teacher: x.teacher, status: x.status })) }
+    : saved;
   const punch = t.punch_time
     ? new Date(t.punch_time).toLocaleTimeString("ar-SA-u-nu-latn", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Riyadh" })
     : null;
-  const rows = t.periods ?? [];
-  const hasMissing = rows.some((p) => p.period_no === t.missing_period);
+  // حصة الفقدان بلا رصد تُضاف في موضعها بين الحصص
+  const rows = [...(t.periods ?? [])];
+  if (t.missing_period != null && !rows.some((p) => p.period_no === t.missing_period)) {
+    rows.push({ period_no: t.missing_period, unrecorded: true });
+  }
+  rows.sort((x, y) => x.period_no - y.period_no);
   return (
     <div className="my-1.5">
-      <p className="mb-1 text-[11.5px] font-semibold text-[#3E6350]">مسار الطالب في اليوم حتى وقت الفقد</p>
+      <p className="mb-1 text-[11.5px] font-semibold text-[#3E6350]">
+        {live ? "مسار الطالب في يوم الفقد حتى آخر حصة" : "مسار الطالب في اليوم حتى وقت الفقد"}
+      </p>
       <table className="w-full border-collapse text-[11px]" style={INK}>
         <thead>
           <tr style={{ background: "#EDF6F0", ...INK }}>
@@ -103,22 +126,24 @@ function DayTimeline({ t }) {
           </tr>
           {rows.map((p) => {
             const lost = p.period_no === t.missing_period;
+            const after = t.missing_period != null && p.period_no > t.missing_period;
+            const label0 = `الحصة ${p.period_no}${lost ? " — حصة الفقدان" : after ? " — بعد الفقد" : ""}`;
+            if (p.unrecorded) return (
+              <tr key={p.period_no} style={{ background: "#FBECEC", ...INK }}>
+                <td className="border border-[#CFE3D7] px-2 py-1">{label0}</td>
+                <td className="border border-[#CFE3D7] px-2 py-1" colSpan={3}>لم يُرصد حضوره</td>
+              </tr>
+            );
             const [label, color] = ST[p.status] ?? [p.status ?? "—", "#555"];
             return (
               <tr key={p.period_no} style={lost ? { background: "#FBECEC", ...INK } : undefined}>
-                <td className="border border-[#CFE3D7] px-2 py-1">الحصة <span className="num">{p.period_no}</span>{lost && " — حصة الفقدان"}</td>
+                <td className="border border-[#CFE3D7] px-2 py-1">{label0}</td>
                 <td className="border border-[#CFE3D7] px-2 py-1">{p.subject ?? "—"}</td>
                 <td className="border border-[#CFE3D7] px-2 py-1">{p.teacher ?? "—"}</td>
                 <td className="border border-[#CFE3D7] px-2 py-1 font-semibold" style={{ color, ...INK }}>{label}</td>
               </tr>
             );
           })}
-          {!hasMissing && t.missing_period != null && (
-            <tr style={{ background: "#FBECEC", ...INK }}>
-              <td className="border border-[#CFE3D7] px-2 py-1">الحصة <span className="num">{t.missing_period}</span> — حصة الفقدان</td>
-              <td className="border border-[#CFE3D7] px-2 py-1" colSpan={3}>لم يُرصد حضوره</td>
-            </tr>
-          )}
         </tbody>
       </table>
     </div>
@@ -183,7 +208,7 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
             <Field label="حصة الفقدان" value={r.period_no ? `الحصة ${r.period_no}` : ""} />
           </div>
           <Field label="سبب التحويل" value={r.reason} />
-          {r.day_timeline && <DayTimeline t={r.day_timeline} />}
+          {r.day_timeline && <DayTimeline t={r.day_timeline} studentId={r.student_id} date={r.referral_date} />}
           <Field label="ما تم عمله والملاحظات" value={r.deputy_note} />
           {r.counselor_name && <Field label="أُحيل إلى" value={r.counselor_name} />}
         </Stage>
