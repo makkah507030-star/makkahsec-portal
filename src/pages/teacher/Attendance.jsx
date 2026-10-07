@@ -310,7 +310,7 @@ export default function Attendance() {
             <p className="text-xs font-medium text-[#6AA786]">
               {todayLabel()} · الحصة <span className="num">{active?.period_no}</span>
               {ptimeOf(active?.period_no) && (
-                 · <span dir="rtl" className="inline-block">{fmtRange(ptimeOf(active?.period_no))}</span>
+                <> · <span dir="rtl" className="inline-block">{fmtRange(ptimeOf(active?.period_no))}</span></>
               )}
             </p>
             {nowPeriod === active?.period_no && (
