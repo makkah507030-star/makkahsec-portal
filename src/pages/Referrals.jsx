@@ -867,6 +867,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
             {r.serial} · {r.class_label}{r.subject ? ` · ${r.subject}` : ""}
             {r.period_no ? ` · الحصة ${r.period_no}` : ""}
             {r.kind === "behavior" && ` · مخالفة سلوكية — الدرجة ${degreeName(r.violation_degree)}`}
+            {r.kind === "missing" && " · طالب مفقود"}
           </p>
         </div>
         <span className={`chip shrink-0 ${st.c}`}>{st.t}</span>

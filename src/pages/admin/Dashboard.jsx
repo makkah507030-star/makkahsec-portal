@@ -30,6 +30,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import { fmtDateTime, fmtDate, noEra } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
+import { notifyUsers } from "../../lib/referrals";
 import ExamCountdown from "../../components/ExamCountdown.jsx";
 import DutyCard from "../../components/DutyCard.jsx";
 import ReferralsInbox from "../../components/ReferralsInbox.jsx";
@@ -422,6 +423,7 @@ const MISSING_ACTIONS = [
   { key: "escaped", label: "هروب من المدرسة", tone: "bg-absent text-white" },
   { key: "parent_permission", label: "استئذان ولي الأمر", tone: "bg-excused text-white" },
   { key: "no_entry", label: "عدم الدخول للحصة", tone: "bg-late text-white" },
+  { key: "to_counselor", label: "التحويل للموجه الطلابي", tone: "bg-mint-deep text-white" },
 ];
 const ACTION_LABEL = Object.fromEntries(MISSING_ACTIONS.map((a) => [a.key, a.label]));
 
@@ -498,9 +500,45 @@ function MissingStudentsBox({ date }) {
     setTimeline(data ?? []);
   };
 
-  const recordAction = async (studentId, action) => {
+  // التحويل للموجه الطلابي: إحالة (kind = missing) لموجه صف الطالب، تسير في مسار الإحالة المعتاد
+  const referToCounselor = async (r) => {
+    const { data: cs } = await supabase.from("admin_roles")
+      .select("user_id, role_type, users(full_name)").eq("role_type", `counselor_${r.grade}`).limit(1);
+    const c = cs?.[0];
+    if (!c) return `لا يوجد موجه طلابي مسند للصف ${GRADE_NAMES[r.grade] ?? ""} — أسنده من «الإدارة» أولًا.`;
+    const { data: serial } = await supabase.rpc("next_referral_serial");
+    const { data: sig } = await supabase.from("user_signatures").select("path").eq("user_id", profile.id).maybeSingle();
+    const classLabel = `${GRADE_NAMES[r.grade] ?? ""} — فصل ${r.class_no ?? ""}`.trim();
+    const { error } = await supabase.from("student_referrals").insert({
+      serial, kind: "missing",
+      student_id: r.student_id, student_name: r.full_name, class_label: classLabel, grade: r.grade ?? null,
+      referral_date: date, subject: r.subject ?? null, period_no: r.missing_period ?? null,
+      reason: `فُقد الطالب من الحصة ${r.missing_period ?? "—"}${r.subject ? ` (${r.subject})` : ""} بعد حضوره الحصة ${r.last_seen_period ?? "—"}.`,
+      teacher_at: null,
+      deputy_id: profile.id, deputy_name: profile.full_name ?? "", deputy_sig: sig?.path ?? null,
+      deputy_at: new Date().toISOString(),
+      counselor_id: c.user_id, counselor_name: c.users?.full_name ?? "",
+      status: "with_counselor",
+    });
+    if (error) {
+      return /kind|check|policy|row-level/i.test(error.message)
+        ? "نفّذ ملف supabase/missing_to_counselor.sql أولًا من Supabase ← SQL Editor."
+        : error.message;
+    }
+    await notifyUsers([c.user_id], "إحالة طالب مفقود",
+      `أحال إليك وكيل شؤون الطلاب الطالب ${r.full_name} (${classLabel}) لفقدانه من الحصة ${r.missing_period ?? ""} (${serial}).`,
+      "/referrals");
+    return null;
+  };
+
+  const recordAction = async (studentId, action, row) => {
     if (!profile?.id) return;
     setBusyId(studentId);
+
+    if (action === "to_counselor") {
+      const err = await referToCounselor(row);
+      if (err) { setBusyId(null); alert(err); return; }
+    }
 
     // سجل الإجراء دائمًا (للأرشيف والعرض عند المعلم)
     const { error: noteErr } = await supabase.from("admin_missing_notes").insert({
@@ -746,7 +784,7 @@ function MissingStudentsBox({ date }) {
                                 {MISSING_ACTIONS.map((a) => (
                                   <button key={a.key}
                                     disabled={busyId === r.student_id}
-                                    onClick={() => recordAction(r.student_id, a.key)}
+                                    onClick={() => recordAction(r.student_id, a.key, r)}
                                     className={`rounded-sm2 px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${a.tone}`}>
                                     {a.label}
                                   </button>

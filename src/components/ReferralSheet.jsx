@@ -88,6 +88,7 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
   const r = useReferralSigs(raw);
   if (!r) return null;
   if (r.kind === "behavior") return <BehaviorSheets r={r} stampUrl={stampUrl} guardianView={guardianView} />;
+  const missing = r.kind === "missing";
 
   return (
     <div className="sheet mx-auto bg-white text-ink"
@@ -125,26 +126,41 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
         <Field label="تاريخ الإحالة" value={fmt(r.referral_date)} />
       </div>
 
-      {/* ① المعلم */}
-      <Stage n="١" title="إحالة المعلم" who={r.teacher_name} at={r.teacher_at} sig={r.teacher_sig}>
-        <div className="grid grid-cols-2 gap-x-4">
-          <Field label={r.outside_class ? "الصفة" : "المادة"} value={r.subject} />
-          <Field label="الحصة" value={r.period_no ? `الحصة ${r.period_no}` : ""} />
-        </div>
-        <Field label="سبب التحويل" value={r.reason} />
-        <Field label="ما تم عمله بخصوص المشكلة" value={r.done_in_class} />
-      </Stage>
+      {missing ? (
+        /* ① إحالة الطالب المفقود: يرصدها الوكيل ويحيلها مباشرة (بلا مرحلة المعلم) */
+        <Stage n="١" title="رصد وكيل شؤون الطلاب — طالب مفقود" who={r.deputy_name} at={r.deputy_at} sig={r.deputy_sig}>
+          <div className="grid grid-cols-2 gap-x-4">
+            <Field label="مادة حصة الفقدان" value={r.subject} />
+            <Field label="حصة الفقدان" value={r.period_no ? `الحصة ${r.period_no}` : ""} />
+          </div>
+          <Field label="سبب التحويل" value={r.reason} />
+          <Field label="ما تم عمله والملاحظات" value={r.deputy_note} />
+          {r.counselor_name && <Field label="أُحيل إلى" value={r.counselor_name} />}
+        </Stage>
+      ) : (
+        <>
+          {/* ① المعلم */}
+          <Stage n="١" title="إحالة المعلم" who={r.teacher_name} at={r.teacher_at} sig={r.teacher_sig}>
+            <div className="grid grid-cols-2 gap-x-4">
+              <Field label={r.outside_class ? "الصفة" : "المادة"} value={r.subject} />
+              <Field label="الحصة" value={r.period_no ? `الحصة ${r.period_no}` : ""} />
+            </div>
+            <Field label="سبب التحويل" value={r.reason} />
+            <Field label="ما تم عمله بخصوص المشكلة" value={r.done_in_class} />
+          </Stage>
 
-      {/* ② وكيل شؤون الطلاب */}
-      <Stage n="٢" title="وكيل شؤون الطلاب" who={r.deputy_name} at={r.deputy_at} sig={r.deputy_sig}>
-        <Field label="ما تم عمله والملاحظات" value={r.deputy_note} />
-        {r.counselor_name && (
-          <Field label="أُحيل إلى" value={r.counselor_name} />
-        )}
-      </Stage>
+          {/* ② وكيل شؤون الطلاب */}
+          <Stage n="٢" title="وكيل شؤون الطلاب" who={r.deputy_name} at={r.deputy_at} sig={r.deputy_sig}>
+            <Field label="ما تم عمله والملاحظات" value={r.deputy_note} />
+            {r.counselor_name && (
+              <Field label="أُحيل إلى" value={r.counselor_name} />
+            )}
+          </Stage>
+        </>
+      )}
 
       {/* ③ الموجه الطلابي */}
-      <Stage n="٣" title="الموجه الطلابي" who={r.counselor_name} at={r.counselor_at} sig={r.counselor_sig}>
+      <Stage n={missing ? "٢" : "٣"} title="الموجه الطلابي" who={r.counselor_name} at={r.counselor_at} sig={r.counselor_sig}>
         <Field label="الإجراء المتخذ والملاحظات" value={r.counselor_note} />
         {r.return_note && (
           <p className="mt-1.5 rounded-sm2 px-2.5 py-1.5 text-[11px]"
@@ -156,7 +172,7 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
 
       {/* ④ الإقفال */}
       {r.closed_at && (
-        <Stage n="٤" title="اعتماد وإقفال الإحالة" who={r.deputy_name}
+        <Stage n={missing ? "٣" : "٤"} title="اعتماد وإقفال الإحالة" who={r.deputy_name}
                at={r.closed_at} sig={r.deputy_sig}>
           <Field label="قرار الإقفال" value={r.close_note} />
         </Stage>
@@ -164,7 +180,7 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
 
       {/* ⑤ ولي الأمر */}
       {(r.guardian_ack_at || r.status === "with_guardian") && (
-        <Stage n="٥" title="إقرار ولي الأمر" tone="gold"
+        <Stage n={missing ? "٤" : "٥"} title="إقرار ولي الأمر" tone="gold"
                who={r.guardian_ack_at ? "ولي أمر الطالب" : ""}
                at={r.guardian_ack_at} sig={null}>
           <Field label="تأكيد الاستلام"
