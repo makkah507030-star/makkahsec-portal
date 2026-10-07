@@ -2,14 +2,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
-import { DAY_NAMES, GRADE_NAMES, todayISO } from "../lib/schoolTime";
+import { DAY_NAMES, todayISO } from "../lib/schoolTime";
+import { loadExamContext, loadScopeSlots, daysPhrase } from "../lib/examScope.js";
 import ExamTable, { ExamPrintArea } from "../components/ExamTable.jsx";
 import Loader from "../components/Loader.jsx";
 
 /* =====================================================================
    جداول الاختبارات — للطالب وولي الأمر والمعلم.
-   يعرض الجدول المنشور الذي يخصّ فصل الطالب أو صفّه،
-   وللمعلم كل الجداول المنشورة، وكلها قابلة للطباعة.
+   الطالب يرى فصله، وولي الأمر أبناءه، والمعلم فصوله المسندة وموادّه فيها،
+   والإدارة كل الفصول (النطاق في lib/examScope.js)، وكلها قابلة للطباعة.
    ===================================================================== */
 
 const fmtG = (s) => {
@@ -18,6 +19,11 @@ const fmtG = (s) => {
   const p = (n) => String(n).padStart(2, "0");
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
+
+// اسم اليوم من التاريخ نفسه (لا من حقل اليوم المخزّن، فقد يخالف التاريخ)
+const dayName = (slot) => slot.exam_date
+  ? new Date(slot.exam_date + "T12:00:00").toLocaleDateString("ar-SA", { weekday: "long", timeZone: "Asia/Riyadh" })
+  : DAY_NAMES[slot.day_of_week] ?? "";
 
 const daysTo = (s) => {
   if (!s) return null;
@@ -36,74 +42,27 @@ export default function ExamSchedules() {
   const [printing, setPrinting] = useState(null);
   const [deputy, setDeputy] = useState("");
 
-  // تحديد النطاق: الطالب فصله، وولي الأمر أبناؤه، والمعلم كل الفصول
+  // تحديد النطاق: الطالب فصله، وولي الأمر أبناؤه، والمعلم فصوله المسندة وموادّه فيها، والإدارة كل الفصول
   useEffect(() => {
     if (!uid) return;
     (async () => {
-      const { data: st } = await supabase.from("settings")
-        .select("key, value").in("key", ["active_year"]);
-      const year = (st ?? []).find((r) => r.key === "active_year")?.value ?? "";
-
       const { data: dep } = await supabase.from("admin_roles")
         .select("users(full_name)").eq("role_type", "deputy_students").maybeSingle();
       setDeputy(dep?.users?.full_name ?? "");
 
-      const { data: t } = await supabase.from("exam_terms")
-        .select("*").eq("is_published", true).eq("academic_year", year);
-      setTerms(t ?? []);
-      if (t?.length) setKind(t[0].kind);
-
-      if (effectiveRole === "student") {
-        const { data: s } = await supabase.from("students")
-          .select("id, class_id, classes(class_no, grade)").eq("user_id", uid).maybeSingle();
-        if (s) {
-          const one = { classId: s.class_id, grade: s.classes?.grade,
-                        label: `${GRADE_NAMES[s.classes?.grade] ?? ""} — فصل ${s.classes?.class_no}` };
-          setScopes([one]); setScope(one);
-        }
-        return;
-      }
-
-      if (effectiveRole === "guardian") {
-        const { data: g } = await supabase.from("guardians")
-          .select("id").eq("user_id", uid).maybeSingle();
-        if (!g) return;
-        const { data: kids } = await supabase.from("guardian_student")
-          .select("students(id, full_name, class_id, classes(class_no, grade))")
-          .eq("guardian_id", g.id);
-        const list = (kids ?? []).map((k) => k.students).filter(Boolean).map((s) => ({
-          classId: s.class_id, grade: s.classes?.grade,
-          label: `${s.full_name} — فصل ${s.classes?.class_no}`,
-        }));
-        setScopes(list); setScope(list[0] ?? null);
-        return;
-      }
-
-      // المعلم والإدارة: كل الفصول
-      const { data: cs } = await supabase.from("classes")
-        .select("id, class_no, grade").eq("academic_year", year)
-        .order("grade").order("class_no");
-      const list = (cs ?? []).map((c) => ({
-        classId: c.id, grade: c.grade,
-        label: `${GRADE_NAMES[c.grade] ?? ""} — فصل ${c.class_no}`,
-      }));
-      setScopes(list); setScope(list[0] ?? null);
+      const ctx = await loadExamContext(uid, effectiveRole);
+      setTerms(ctx.terms);
+      if (ctx.terms.length) setKind(ctx.terms[0].kind);
+      setScopes(ctx.scopes); setScope(ctx.scopes[0] ?? null);
     })();
   }, [uid, effectiveRole]);
 
-  // حصص الاختبار للنطاق المختار
+  // حصص الاختبار للنطاق المختار (للمعلم: موادّه فقط)
   useEffect(() => {
     if (!terms || !scope) return;
     const term = terms.find((t) => t.kind === kind);
     if (!term) { setSlots([]); return; }
-    (async () => {
-      let q = supabase.from("exam_slots").select("*").eq("exam_term_id", term.id);
-      q = kind === "final"
-        ? q.eq("grade", scope.grade).is("class_id", null)
-        : q.eq("class_id", scope.classId);
-      const { data } = await q.order("exam_date").order("period_no");
-      setSlots(data ?? []);
-    })();
+    (async () => setSlots(await loadScopeSlots(term, scope)))();
   }, [terms, scope, kind]);
 
   const term = useMemo(() => (terms ?? []).find((t) => t.kind === kind), [terms, kind]);
@@ -119,6 +78,17 @@ export default function ExamSchedules() {
       <div className="card px-6 py-12 text-center">
         <p className="font-semibold text-ink">لا جداول اختبارات منشورة</p>
         <p className="mt-1.5 text-sm text-muted">ستظهر هنا فور اعتمادها من الإدارة.</p>
+      </div>
+    );
+  }
+
+  if (!scopes.length && effectiveRole !== "admin") {
+    return (
+      <div className="card px-6 py-12 text-center">
+        <p className="font-semibold text-ink">لا جداول اختبارات تخصّك</p>
+        <p className="mt-1.5 text-sm text-muted">
+          {effectiveRole === "teacher" ? "لا فصول مسندة إليك في هذا الفصل الدراسي." : "لم يُربط الحساب بفصل دراسي بعد."}
+        </p>
       </div>
     );
   }
@@ -144,13 +114,19 @@ export default function ExamSchedules() {
       {scopes.length > 1 && (
         <div className="no-print -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
           {scopes.map((s) => (
-            <button key={s.classId}
-                    className={`${pill(scope?.classId === s.classId)} shrink-0`}
+            <button key={s.key}
+                    className={`${pill(scope?.key === s.key)} shrink-0`}
                     onClick={() => setScope(s)}>
               {s.label}
             </button>
           ))}
         </div>
+      )}
+
+      {scope?.subjects?.length > 0 && (
+        <p className="no-print text-xs text-muted">
+          موادك في هذا الفصل: <b className="text-ink">{scope.subjects.map((x) => x.name).filter(Boolean).join("، ")}</b>
+        </p>
       )}
 
       {term?.start_date && (
@@ -160,9 +136,7 @@ export default function ExamSchedules() {
           </p>
           {nearest !== null && (
             <p className="mt-0.5 text-xs text-mint-deep/85">
-              {nearest === 0 ? "أول اختبار اليوم"
-                : nearest === 1 ? "أول اختبار غدًا"
-                : <>يبدأ أول اختبار بعد <span className="num">{nearest}</span> يومًا</>}
+              {nearest <= 1 ? `أول اختبار ${daysPhrase(nearest)}` : <>يبدأ أول اختبار <span className="num">{daysPhrase(nearest)}</span></>}
             </p>
           )}
         </div>
@@ -171,7 +145,7 @@ export default function ExamSchedules() {
       <div className="no-print space-y-2">
         {slots.length === 0 ? (
           <p className="card px-4 py-6 text-center text-sm text-muted">
-            لم تُحدَّد اختبارات لهذا النطاق بعد.
+            {scope?.subjects ? "لا اختبارات لموادك في هذا الفصل." : "لم تُحدَّد اختبارات لهذا النطاق بعد."}
           </p>
         ) : slots.map((s) => {
           const n = daysTo(s.exam_date);
@@ -187,7 +161,7 @@ export default function ExamSchedules() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">{s.subject_name}</p>
                 <p className="num mt-0.5 text-xs text-muted">
-                  {DAY_NAMES[s.day_of_week] ?? ""} · {fmtG(s.exam_date)}
+                  {dayName(s)} · {fmtG(s.exam_date)}
                   {kind === "final"
                     ? ` · الفترة ${s.period_no === 2 ? "الثانية" : "الأولى"}`
                     : ` · الحصة ${s.period_no}`}
@@ -195,7 +169,7 @@ export default function ExamSchedules() {
               </div>
               {!done && n !== null && n <= 3 && (
                 <span className="chip shrink-0 bg-warning/15 text-warning">
-                  {n === 0 ? "اليوم" : n === 1 ? "غدًا" : `بعد ${n} أيام`}
+                  {daysPhrase(n)}
                 </span>
               )}
             </div>

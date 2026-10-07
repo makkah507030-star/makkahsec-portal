@@ -7,6 +7,7 @@ import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from "../lib/periodTimes";
 import { loadFingerprintPublic, morningLate, dayStartMinutes } from "../lib/officialAttendance";
 import ExamCountdown from "../components/ExamCountdown.jsx";
+import ExamDayCard from "../components/ExamDayCard.jsx";
 import HolidayBanner from "../components/HolidayBanner.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AbsenceHistory from "../components/AbsenceHistory.jsx";
@@ -197,6 +198,8 @@ export default function GuardianHome() {
       </header>
 
       <HolidayBanner />
+
+      <ExamDayCard />
 
       <ExamCountdown />
 
