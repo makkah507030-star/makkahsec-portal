@@ -104,6 +104,8 @@ function SheetPreview({ landscape, children }) {
 /* التعبئة التلقائية: يطابق حقول النموذج بما هو معروف في قاعدة البيانات
    اعتمادًا على تسمية الحقل، فيقلّ الإدخال اليدوي قدر الإمكان. */
 const AUTO_MAP = [
+  // بيانات وظيفية لا تُعرف من قاعدة البيانات — تُستثنى أولًا حتى لا تطابق «الوظيفة» فتُملأ بالمسمّى
+  { keys: ["رقم الوظيفة", "المرتبة", "المستوى"], from: null },
   { keys: ["اسم الطالب", "اسم الموظف", "اسم المنسوب", "الاسم رباعي", "اسم المعلم", "الاسم"], from: "name" },
   { keys: ["السجل المدني", "رقم الهوية", "الإقامة", "رقم السجل"], from: "national_id" },
   { keys: ["الصف", "الفصل", "المرحلة"], from: "class_label" },
@@ -1941,10 +1943,10 @@ export default function Forms({ view = "issue", openKey = null }) {
                 <div className="space-y-2">
                 {/* قرار الإدارة وإغلاق المساءلة — يظهر بعد وصول الرد */}
                 {d.status === "replied" &&
-                 (d.form_templates?.fields ?? []).filter((f) => f.after_reply).length > 0 && (
+                 (d.form_templates?.fields ?? []).filter((f) => f.after_reply && !f.legacy).length > 0 && (
                   <div className="space-y-2 rounded-sm2 border border-[#CCF2DB] bg-mint-tint/40 p-3">
                     <p className="text-xs font-semibold text-mint-deep">قرار الإدارة</p>
-                    {(d.form_templates?.fields ?? []).filter((f) => f.after_reply).map((f) => (
+                    {(d.form_templates?.fields ?? []).filter((f) => f.after_reply && !f.legacy).map((f) => (
                       <div key={f.name}>
                         <label className="text-[11px] text-muted">{f.label}</label>
                         {f.type === "textarea" ? (

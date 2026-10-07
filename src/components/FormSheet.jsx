@@ -7,6 +7,7 @@ import PrintPortal from "./PrintPortal.jsx";
 import { OFFICIAL_LEVELS, RATING_LEVELS, gradeTone, itemPoints, officialLabel, overallLabel, ratingLabel, rubricScore, weightedRating } from "../lib/rubric.js";
 import { PRINCIPAL_NAME } from "../lib/signers.js";
 import { GuestCertificateBody } from "./GuestCertificate.jsx";
+import { toHijri } from "./DateField.jsx";
 
 /* =====================================================================
    ورقة النموذج القابلة للطباعة — هوية مدرسة مكة الثانوية.
@@ -1113,6 +1114,327 @@ function supportVisitPages(p) {
 }
 
 /* --------------------------- نموذج إداري --------------------------- */
+/* =====================================================================
+   نماذج الغياب والتأخر — نصّها وترتيبها حرفيًا كما في «الدليل الإجرائي لمدارس
+   التعليم العام» (الإصدار الثالث، النماذج 18–21)، لحساسيتها النظامية. القيم من
+   حقول المستند، وما لا قيمة له يبقى فراغًا يُكمل بخط اليد.
+   ===================================================================== */
+const ABS_META = {
+  frm_late_notice:       { no: 18, name: "تنبيه على تأخر / انصراف",               code: "02-02" },
+  frm_hours_deduction:   { no: 19, name: "قرار حسم مجموع ساعات تأخر وخروج مبكر", code: "02-03" },
+  frm_absence_inquiry:   { no: 20, name: "مساءلة غياب",                           code: "02-04" },
+  frm_absence_deduction: { no: 21, name: "قرار حسم غياب",                         code: "02-05" },
+};
+export const isAbsenceForm = (template) => Boolean(ABS_META[template?.key]);
+
+const ABS_GREEN = "#5B8A6C", ABS_PALE = "#DFE7E1";
+const hijriPart = (v) => String(v ?? "").match(/\d{2}\/\d{2}\/1[34]\d\d/)?.[0] ?? "";
+const rangeOf = (v) => {
+  const [a, b] = String(v ?? "").split(" إلى ");
+  return [(a ?? "").replace(/^من\s*/, "").trim(), (b ?? "").trim()];
+};
+const hijriTs = (ts) => {
+  if (!ts) return "";
+  const h = toHijri(new Date(ts));
+  return h.y ? `${String(h.d).padStart(2, "0")}/${String(h.m).padStart(2, "0")}/${h.y}` : "";
+};
+// مطابقة الصيغة بالنص المعتمد مع تجاهل المسافات وعلامات الترقيم
+const normTxt = (t) => String(t ?? "").replace(/[\s.,،:؛]/g, "");
+const sameTxt = (a, b) => normTxt(a) !== "" && normTxt(a) === normTxt(b);
+
+function AbsHead({ meta }) {
+  return (
+    <>
+      <Head small />
+      <div className="mt-2"><Rule color="#3E6350" thick /></div>
+      <div className="mt-2.5 rounded-[3px] px-3 py-1.5 text-[13px] font-bold text-white" style={{ background: ABS_GREEN, ...INK }}>
+        نموذج رقم ( <span className="num">{meta.no}</span> )
+      </div>
+      <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-6 text-[13px] font-bold text-ink">
+        <span>اسم النموذج : {meta.name}</span>
+        <span>رمز النموذج : ( و.م.ع.ن.-<span className="num" dir="ltr">{meta.code}</span> )</span>
+      </div>
+    </>
+  );
+}
+
+const absCell = "border border-[#7FA08B] px-2 align-middle";
+function SchoolRow() {
+  return (
+    <table className="mt-2.5 w-full border-collapse text-[12.5px]">
+      <tbody><tr>
+        <th className={`${absCell} w-[24%] py-1 text-right font-semibold text-white`} style={{ background: ABS_GREEN, ...INK }}>المدرسة</th>
+        <td className={`${absCell} py-1 font-semibold text-ink`} style={{ background: ABS_PALE, ...INK }}>مدرسة مكة الثانوية</td>
+      </tr></tbody>
+    </table>
+  );
+}
+// السجل المدني: خانة لكل رقم (النماذج 19–21)، أو خانة واحدة (النموذج 18)
+function CivilRow({ value, boxes }) {
+  const digits = String(value ?? "").replace(/\D/g, "").slice(0, 10).split("");
+  return (
+    <table className="mt-1.5 w-full border-collapse text-[12.5px]" style={{ tableLayout: "fixed" }}>
+      <tbody><tr>
+        <th className={`${absCell} w-[24%] py-1 text-right font-semibold text-white`} style={{ background: ABS_GREEN, ...INK }}>السجل المدني</th>
+        {boxes
+          ? Array.from({ length: 10 }, (_, i) => (
+              <td key={i} dir="ltr" className={`${absCell} num py-1 text-center font-semibold text-ink`} style={{ background: ABS_PALE, ...INK }}>
+                {/* الرقم يُقرأ من اليسار: الخانة الأولى من اليمين لآخر رقم */}
+                {digits[9 - i] ?? ""}
+              </td>))
+          : <td className={`${absCell} py-1 text-right font-semibold text-ink`} style={{ background: ABS_PALE, ...INK }}>
+              <span className="num">{value || ""}</span>
+            </td>}
+      </tr></tbody>
+    </table>
+  );
+}
+function EmpTable({ cols, extra }) {
+  return (
+    <table className="mt-1.5 w-full border-collapse text-[12px]">
+      <thead><tr>
+        {cols.map(([h]) => (
+          <th key={h} className={`${absCell} py-1 text-center font-semibold text-white`} style={{ background: ABS_GREEN, ...INK }}>{h}</th>
+        ))}
+      </tr></thead>
+      <tbody>
+        <tr>
+          {cols.map(([h, x]) => (
+            <td key={h} className={`${absCell} h-8 text-center font-semibold text-ink`} style={{ background: ABS_PALE, ...INK }}>{x || ""}</td>
+          ))}
+        </tr>
+        {extra}
+      </tbody>
+    </table>
+  );
+}
+
+const Box = ({ on }) => (
+  <span className="ml-1.5 inline-grid h-[13px] w-[13px] place-items-center border border-ink align-[-2px] text-[10px] font-bold leading-none">{on ? "✓" : ""}</span>
+);
+// قيمة داخل السطر، وإن خلت بقيت نقاطًا للكتابة باليد
+const Fill = ({ children, w = "w-40" }) => (children
+  ? <b className="mx-1 font-semibold text-ink">{children}</b>
+  : <span className={`mx-1 inline-block ${w} border-b border-dotted border-ink/60 align-baseline`}>&nbsp;</span>);
+const HDate = ({ d }) => (d
+  ? <b className="mx-1 font-semibold text-ink"><span className="num">{d}</span>هـ</b>
+  : <span className="mx-1 text-ink">&nbsp;/&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;١٤هـ</span>);
+
+/* سطر توقيع: الصفة والاسم، والتوقيع (صورته إن وُجدت)، والتاريخ */
+function SigLine({ label, name, url, date }) {
+  return (
+    <div className="flex items-end justify-between gap-3 py-1 text-[13px] text-ink">
+      <span className="min-w-0 flex-1">{label} :<Fill w="w-44">{name}</Fill></span>
+      <span className="flex items-end">التوقيع
+        <span className="mx-1 inline-grid h-10 w-32 place-items-end justify-items-center border-b border-dotted border-ink/60">
+          {url && <img src={url} alt="" className="max-h-10 w-auto object-contain" />}
+        </span>
+      </span>
+      <span>التاريخ :<HDate d={date} /></span>
+    </div>
+  );
+}
+function Dotted({ text, lines = 3 }) {
+  return (
+    <div className="mt-1 text-[13px] leading-[2.1] text-ink"
+         style={{ backgroundImage: "linear-gradient(to bottom, transparent calc(100% - 1px), #9a9a9a calc(100% - 1px))",
+                  backgroundSize: "100% 2.1em", minHeight: `${lines * 2.1}em`, ...INK }}>
+      <span className="whitespace-pre-line font-semibold">{text || ""}</span>
+    </div>
+  );
+}
+const Copies = ({ list }) => (
+  <div className="mt-3 space-y-0.5 text-[11.5px] text-ink">{list.map((l) => <p key={l}>{l}</p>)}</div>
+);
+
+function AbsenceForm(p) {
+  const { v, doc, template } = p;
+  const meta = ABS_META[template.key];
+  const name = v.recipient ?? doc?.recipient ?? "";
+  const spec = v.emp_spec ?? (template.key === "frm_late_notice" ? v.f4 : "");
+  // «رقم الوظيفة والمرتبة» في المستندات السابقة حقل واحد يُعرض في خانة رقم الوظيفة
+  const jobNo = v.emp_job_no || (template.key !== "frm_late_notice" ? v.f4 : "") || "";
+  const replied = Boolean(doc?.reply_at);
+  const replyName = replied ? (p.replySigName || name) : "";
+  const P = (props) => <p className="text-[13px] leading-[1.95] text-ink" {...props} />;
+  let body;
+
+  if (template.key === "frm_late_notice") {
+    const day = rangeOf(v.f5)[0];
+    const [t1, t2] = rangeOf(v.f7);
+    const kinds = ["تأخر عن الدوام", "عدم التواجد في مقر العمل", "انصراف مبكر قبل نهاية الدوام"];
+    const other = v.f6 && !kinds.some((k) => sameTxt(k, v.f6)) ? v.f6 : "";
+    const decided = Boolean(String(v.f10 ?? "").trim());
+    body = (
+      <>
+        <SchoolRow />
+        <CivilRow value={v.f3} />
+        <EmpTable cols={[["الاسم", name], ["التخصص", spec], ["المستوى / المرتبة", v.emp_rank], ["رقم الوظيفة", jobNo], ["العمل الحالي", v.job]]} />
+        <div className="mt-3 space-y-0.5">
+          <P>المكرم المعلم /<Fill w="w-72">{name}</Fill> وفقه الله</P>
+          <P>السلام عليكم ورحمة الله وبركاته <span className="mr-10">وبعد :</span></P>
+          <P>إنه في يوم<Fill w="w-28">{weekdayOf(day)}</Fill> الموافق<HDate d={hijriPart(day)} /> اتضح ما يلي :</P>
+          <P><Box on={sameTxt(kinds[0], v.f6)} />تأخركم من بداية العمل ، وحضوركم الساعة (<Fill w="w-20">{sameTxt(kinds[0], v.f6) ? t1 : ""}</Fill>)</P>
+          <P><Box on={sameTxt(kinds[1], v.f6)} />عدم تواجدكم أثناء العمل من الساعة (<Fill w="w-20">{sameTxt(kinds[1], v.f6) ? t1 : ""}</Fill>) إلى الساعة (<Fill w="w-20">{sameTxt(kinds[1], v.f6) ? t2 : ""}</Fill>)</P>
+          <P><Box on={sameTxt(kinds[2], v.f6)} />انصرافكم مبكراً قبل نهاية العمل من الساعة (<Fill w="w-20">{sameTxt(kinds[2], v.f6) ? t1 : ""}</Fill>)</P>
+          {other && <P><Box on />{other}</P>}
+          <P>عليه نأمل توضيح أسباب ذلك مع إرفاق ما يؤيد عذركم ،،، ولكم تحياتي</P>
+          <SigLine label="مدير المدرسة" name={p.principalName} url={p.principalSigUrl} date={hijriTs(doc?.created_at)} />
+          <P>المكرم / مدير مدرسة<Fill w="w-56">مكة الثانوية</Fill> وفقه الله</P>
+          <P>السلام عليكم ورحمة الله وبركاته</P>
+          <P>أفيدكم أن أسباب ذلك ما يلي</P>
+          <Dotted text={v.f9} lines={3} />
+          <SigLine label="الاسم" name={replyName} url={replied ? p.replySigUrl : null} date={hijriTs(doc?.reply_at)} />
+          <P>رأي مدير المدرسة
+            <span className="mr-8"><Box on={sameTxt("عذره مقبول", v.f10)} />عذره مقبول</span>
+            <span className="mr-8"><Box on={sameTxt("عذره غير مقبول ويحسم عليه", v.f10)} />عذره غير مقبول ويحسم عليه</span>
+          </P>
+          {decided && !["عذره مقبول", "عذره غير مقبول ويحسم عليه"].some((k) => sameTxt(k, v.f10)) && <P className="text-[13px] font-semibold text-ink">{v.f10}</P>}
+          {String(v.action_taken ?? "").trim() && <P>{v.action_taken}</P>}
+          <SigLine label="مدير المدرسة" name={decided ? p.principalName : ""} url={decided ? p.principalSigUrl : null}
+                   date={decided ? hijriTs(doc?.approved_at) : ""} />
+        </div>
+        <p className="mt-2 text-[11.5px] leading-[1.8] text-ink">
+          ملاحظة : ترفق بطاقة المساءلة مع أصل القرار في حالة عدم قبول العذر لحفظها بملفه بالإدارة ، أصله الملف بالمدرسة.
+        </p>
+      </>
+    );
+  } else if (template.key === "frm_hours_deduction") {
+    body = (
+      <>
+        <SchoolRow />
+        <CivilRow value={v.f3} boxes />
+        <EmpTable cols={[["الاسم", name], ["التخصص", spec], ["المستوى / المرتبة", v.emp_rank], ["رقم الوظيفة", jobNo], ["العمل الحالي", v.job]]} />
+        <div className="mt-3 space-y-0.5 text-justify">
+          <P>إن مدير المدرسة<Fill w="w-56">{p.principalName}</Fill></P>
+          <P>بناء على صلاحياته ، وبناء على المادة ( <span className="num">21</span> ) من نظام الخدمة المدنية وبناءً على موافقة معالي الوزير على إعطاء بعض الصلاحيات لمديري المدارس بالقرار رقم <span className="num">1/1139</span> وتاريخ <span className="num">1431/3/17</span>هـ ، ولبلوغ ساعات التأخر عن العمل والخروج المبكر من العمل (<Fill w="w-16">{v.f5}</Fill>) ساعة ، وحيث إن عذره غير مقبول ، وبمقتضى النظام .</P>
+          <P>يقرر ما يلي</P>
+          <P>( <span className="num">1</span> ) حسم مدة الغياب الموضحة بعاليه وعددها (<Fill w="w-12">{v.f6}</Fill>) يوماً من راتبه .</P>
+          <P>( <span className="num">2</span> ) على إدارة شؤون الموظفين ( تنفيذ الأنظمة ) تنفيذ إجراء الحسم واستبعادها من خدماته واصل القرار للملف بالإدارة مع الأساس لملفه .</P>
+          <P className="text-center text-[13px] leading-[1.95] text-ink">والله الموفق</P>
+        </div>
+        <DecisionSign p={p} date={hijriPart(v.f8)} />
+        <Copies list={["صورة / للموظفين لمتابعة تنفيذ الحسم ( تنفيذ الأنظمة )", "صورة / لمكتب التعليم", "صورة/ للملف بالمدرسة"]} />
+      </>
+    );
+  } else if (template.key === "frm_absence_inquiry") {
+    const [a, b] = rangeOf(v.f4);
+    const opts = ["تحتسب له إجازة مرضية بعد التأكد من نظامية التقرير",
+                  "يحتسب غيابه من رصيده للإجازات الاضطرارية لقبول عذره إذا كان رصيده يسمح وإلا يحسم عليه.",
+                  "يعتمد الحسم لعدم قبول عذره"];
+    const decided = Boolean(String(v.action_taken ?? "").trim());
+    const other = decided && !opts.some((o) => sameTxt(o, v.action_taken)) ? v.action_taken : "";
+    body = (
+      <>
+        <SchoolRow />
+        <CivilRow value={v.f3} boxes />
+        <EmpTable
+          cols={[["الاسم", name], ["التخصص", spec], ["المستوى / المرتبة", v.emp_rank], ["الدرجة", v.emp_grade],
+                 ["رقم الوظيفة", jobNo], ["العمل الحالي", v.job], ["عدد أيام الغياب", v.days_count]]}
+          extra={
+            <tr><td colSpan={7} className={`${absCell} py-2 text-[12.5px] text-ink`} style={{ background: ABS_PALE, ...INK }}>
+              إنه في يوم<Fill w="w-20">{weekdayOf(a)}</Fill> الموافق<HDate d={hijriPart(a)} /> تغيبت عن العمل إلى يوم<Fill w="w-20">{weekdayOf(b)}</Fill> الموافق<HDate d={hijriPart(b)} />
+            </td></tr>} />
+        <div className="mt-2.5 space-y-0">
+          <p className="text-[13px] font-bold text-[#3E6350]">( <span className="num">1</span> ) طلب الإفادة</p>
+          <P>المكرم /<Fill w="w-72">{name}</Fill> وفقه الله</P>
+          <P>السلام عليكم ورحمة الله وبركاته وبعد ،،،</P>
+          <P className="text-justify text-[13px] leading-[1.95] text-ink">من خلال متابعة سجل العمل تبين غيابكم خلال الفترة الموضحة بعاليه ، آمل الإفادة عن أسباب ذلك وعليكم تقديم ما يؤيد عذركم خلال أسبوع من تاريخه ، علماً بأنه في حالة عدم الالتزام سيتم اتخاذ اللازم حسب التعليمات .</P>
+          <SigLine label="اسم الرئيس المباشر" name={p.principalName} url={p.principalSigUrl} date={hijriPart(v.f7) || hijriTs(doc?.created_at)} />
+
+          <p className="mt-1 text-[13px] font-bold text-[#3E6350]">( <span className="num">2</span> ) الإفادة</p>
+          <P>المكرم / مدير المدرسة <span className="mr-24">وفقه الله</span></P>
+          <P>السلام عليكم ورحمة الله وبركاته وبعد:</P>
+          <P>أفيدكم أن غيابي كان للأسباب التالية :</P>
+          <Dotted text={v.f5} lines={2} />
+          <P>وسأقوم بتقديم ما يثبت ذلك خلال أسبوع من تاريخه</P>
+          <SigLine label="اسم المعلم" name={replyName} url={replied ? p.replySigUrl : null} date={hijriTs(doc?.reply_at)} />
+
+          <p className="mt-1 text-[13px] font-bold text-[#3E6350]">( <span className="num">3</span> ) مدير المدرسة :</p>
+          {opts.map((o, i) => (
+            <P key={i}><span className="ml-1">{["أ.", "ب.", "ج."][i]}</span><Box on={sameTxt(o, v.action_taken)} />{o}</P>
+          ))}
+          {other && <P className="text-[13px] font-semibold leading-[1.95] text-ink">{other}</P>}
+          {String(v.f6 ?? "").trim() && <P>{v.f6}</P>}
+          <SigLine label="اسم الرئيس المباشر" name={decided ? p.principalName : ""} url={decided ? p.principalSigUrl : null}
+                   date={decided ? hijriTs(doc?.approved_at) : ""} />
+        </div>
+        <div className="mt-1.5 text-[11.5px] leading-[1.75] text-ink">
+          <p className="font-bold text-[#3E6350]">ملحوظات هامة</p>
+          <p><span className="num">1</span> - تستكمل الاستمارة من المدير المباشر وإصدار القرار بموجبه.</p>
+          <p><span className="num">2</span> - إذا سبق إجازة نهاية الأسبوع غياب وألحقها غياب تحتسب مدة الغياب كاملة.</p>
+          <p><span className="num">3</span> - يجب أن يوضح المتغيب أسباب غيابه فور تسلمه الاستمارة ويعيدها لمديره المباشر.</p>
+          <p><span className="num">4</span> - يعطي المتغيب مدة أسبوع لتقديم ما يؤيد عذره فإذا انقضت المدة الزمنية تستكمل الاستمارة ويتم الحسم.</p>
+        </div>
+      </>
+    );
+  } else {
+    const [a, b] = rangeOf(v.f6);
+    const days = a ? <>من<HDate d={hijriPart(a)} />إلى<HDate d={hijriPart(b)} /></> : "";
+    body = (
+      <>
+        <SchoolRow />
+        <CivilRow value={v.f3} boxes />
+        <EmpTable
+          cols={[["الاسم", name], ["التخصص", spec], ["المستوى / المرتبة", v.emp_rank], ["الدرجة", v.emp_grade],
+                 ["رقم الوظيفة", jobNo], ["عدد أيام الغياب", v.f5]]}
+          extra={
+            <tr>
+              <th colSpan={2} className={`${absCell} py-1.5 text-right font-semibold text-white`} style={{ background: ABS_GREEN, ...INK }}>الأيام الواجب حسمها ليحدد التاريخ</th>
+              <td colSpan={4} className={`${absCell} py-1.5 text-center font-semibold text-ink`} style={{ background: ABS_PALE, ...INK }}>{days}</td>
+            </tr>} />
+        <div className="mt-3 space-y-0.5 text-justify">
+          <P>إن مدير المدرسة<Fill w="w-56">{p.principalName}</Fill></P>
+          <P>بناء على صلاحياته ، وبناء على المادة ( <span className="num">21</span> ) من نظام الخدمة المدنية ، وبناء على موافقة معالي الوزير على إعطاء بعض الصلاحيات لمديري المدارس بالقرار رقم <span className="num">1/1139</span> وتاريخ <span className="num">1421/3/17</span>هـ ولغياب المعلم الموضح أسمه أعلاه ، حيث إن عذره غير مقبول ، وبمقتضى النظام .</P>
+          <P>يقرر ما يلي :</P>
+          <P>( <span className="num">1</span> ) حسم مدة الغياب الموضحة بعاليه وعددها (<Fill w="w-12">{v.f5}</Fill>) يوماً من راتبه .</P>
+          <P>( <span className="num">2</span> ) على إدارة شؤون الموظفين تنفيذ إجراء الحسم واستبعادها من خدماته وأصل القرار لملفه بالإدارة مع الأساس لملفه (<Fill w="w-24" />)</P>
+          <P>والله الموفق ،،،،،</P>
+        </div>
+        <DecisionSign p={p} date={hijriPart(v.f7)} />
+        <div className="mt-3 text-[11.5px] leading-[1.8] text-ink">
+          <p>ملاحظة / لن يتم استلام قرار الحسم بدون المساءلة</p>
+          <p>صورة/ لشؤون الموظفين لمتابعة تنفيذ الحسم ( تنفيذ الأنظمة ) .</p>
+          <p>صورة / لمكتب التعليم .</p>
+          <p>صورة / لملفه بالمدرسة .</p>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col px-[14mm] pb-[10mm] pt-[11mm]">
+      <AbsHead meta={meta} />
+      <div className="flex-1">{body}</div>
+      <ReplyFilesNote v={v} />
+      <div className="mt-3"><Foot serial={doc?.serial} /></div>
+    </div>
+  );
+}
+
+/* «الرئيس المباشر» في قراري الحسم: الاسم والختم والتوقيع والتاريخ */
+function DecisionSign({ p, date }) {
+  return (
+    <div className="mt-3 flex items-end justify-between gap-4 text-[13px] text-ink">
+      <div className="space-y-1">
+        <p className="font-semibold">الرئيس المباشر</p>
+        <p>الاسم :<Fill w="w-48">{p.principalName}</Fill></p>
+        <p>التاريخ :<HDate d={date} /></p>
+      </div>
+      <div className="flex items-end gap-8">
+        <div className="text-center">
+          <p>الختم</p>
+          <div className="grid h-20 w-28 place-items-center">{p.stampUrl && <img src={p.stampUrl} alt="" className="max-h-20 w-auto object-contain opacity-90" />}</div>
+        </div>
+        <div className="text-center">
+          <p>التوقيع</p>
+          <div className="grid h-14 w-36 place-items-center border-b border-dotted border-ink/60">{p.principalSigUrl && <img src={p.principalSigUrl} alt="" className="max-h-14 w-auto object-contain" />}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Administrative(p) {
   const { v, doc, template } = p;
   return (
@@ -1166,6 +1488,7 @@ export default function FormSheet({
       ? noEra(x).replace(/(\d{2}\/\d{2}\/1[34]\d\d)\s*\((\d{2}\/\d{2}\/(?:19|20)\d\d)\)/g, "$1 - $2")
       : x]));
   const Body = template.key === "student_admission" ? StudentAdmission
+             : isAbsenceForm(template) ? AbsenceForm
              : isGuestCert(template) ? GuestCert
              : template.category === "certificate" ? Certificate
              : template.category === "official"    ? Official
