@@ -6,6 +6,7 @@ import PrincipalSign from "./PrincipalSign.jsx";
 import { PRINCIPAL_NAME, STUDENT_DEPUTY_NAME } from "../lib/exportUtils.js";
 import { degreeName, violationPhrase, BEHAVIOR_SOURCE } from "../lib/behavior.js";
 import { fmtDate } from "../lib/dates";
+import { useReferralSigs } from "../lib/referralSigs.js";
 
 /* =====================================================================
    ورقة إحالة الطالب — ملف واحد يوثّق المسار كاملًا:
@@ -82,7 +83,9 @@ const Field = ({ label, value }) => (
   </p>
 );
 
-export default function ReferralSheet({ r, stampUrl, guardianView = false }) {
+export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }) {
+  // التواقيع محفوظة مسارات في التخزين — تُحوَّل لروابط موقّتة قبل العرض
+  const r = useReferralSigs(raw);
   if (!r) return null;
   if (r.kind === "behavior") return <BehaviorSheets r={r} stampUrl={stampUrl} guardianView={guardianView} />;
 
