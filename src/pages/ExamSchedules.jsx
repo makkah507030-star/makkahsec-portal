@@ -26,6 +26,9 @@ const dayName = (slot) => slot.exam_date
   ? new Date(slot.exam_date + "T12:00:00").toLocaleDateString("ar-SA", { weekday: "long", timeZone: "Asia/Riyadh" })
   : DAY_NAMES[slot.day_of_week] ?? "";
 
+const monthName = (iso) =>
+  new Date(iso + "T12:00:00").toLocaleDateString("ar-SA-u-ca-gregory", { month: "long", timeZone: "Asia/Riyadh" });
+
 const daysTo = (s) => {
   if (!s) return null;
   return Math.round((new Date(s + "T00:00:00") - new Date(todayISO() + "T00:00:00")) / 86400000);
@@ -167,9 +170,16 @@ export default function ExamSchedules() {
           return (
             <div key={s.id}
                  className={`card flex items-center gap-3 p-3.5 ${done ? "opacity-60" : ""}`}>
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-sm2 bg-mint-tint text-center">
-                <span className="num text-[15px] font-bold leading-none text-mint-deep">
+              {/* ورقة تقويم: اليوم، ورقم اليوم، والشهر الميلادي */}
+              <span className="flex w-14 shrink-0 flex-col items-center overflow-hidden rounded-sm2 border border-[#CCF2DB] bg-white text-center">
+                <span className="w-full bg-mint-deep py-0.5 text-[9.5px] font-semibold leading-tight text-white">
+                  {s.exam_date ? dayName(s) : "—"}
+                </span>
+                <span className="num pt-1 text-[17px] font-bold leading-none text-mint-deep">
                   {s.exam_date ? new Date(s.exam_date + "T00:00:00").getDate() : "—"}
+                </span>
+                <span className="pb-1 pt-0.5 text-[9.5px] leading-tight text-muted">
+                  {s.exam_date ? monthName(s.exam_date) : ""}
                 </span>
               </span>
               <div className="min-w-0 flex-1">
