@@ -113,9 +113,15 @@ const ADMIN_GROUPS = [
 
 const TEACHER_GROUPS = [
   {
+    title: null,
+    items: [
+      { to: "/", label: "الرئيسية", icon: "home", kw: "يومي" },
+    ],
+  },
+  {
     title: "المهام اليومية",
     items: [
-      { to: "/",            label: "الحضور والغياب اليومي", tabKey: "attendance", icon: "userCheck", kw: "الرئيسية" },
+      { to: "/attendance",  label: "الحضور والغياب اليومي", tabKey: "attendance", icon: "userCheck", kw: "تحضير" },
       { to: "/substitute",  label: "حصص الانتظار",          tabKey: "substitute", icon: "swap" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
@@ -180,13 +186,13 @@ const FOOTER = [
 // الشريط السفلي في الجوال: أهم أربع صفحات بحسب الدور (ما يظهر منها فقط)، ثم «المزيد»
 const BOTTOM = {
   admin:    ["/", "/students", "/permissions", "/forms", "/forms-review", "/my-documents"],
-  teacher:  ["/", "/records", "/quizzes", "/forms", "/my-documents"],
+  teacher:  ["/", "/attendance", "/records", "/forms", "/quizzes", "/my-documents"],
   student:  ["/", "/exams", "/my-documents"],
   guardian: ["/", "/exams", "/my-documents"],
 };
 const BOTTOM_LABEL = {
   "/students": "الطلاب", "/permissions": "الاستئذان", "/forms": "النماذج", "/forms-review": "الاعتماد",
-  "/records": "السجلات", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي",
+  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي",
 };
 
 /* البحث: توحيد الهمزات والتاء المربوطة والألف المقصورة وحذف التشكيل */
@@ -666,13 +672,16 @@ export default function Layout({ children }) {
 
       {/* شريط علوي للجوال */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-white/95 px-4 py-3 backdrop-blur lg:hidden print:hidden">
-        <button onClick={() => setOpen(true)} aria-label="القائمة"
-                className="rounded-sm2 border border-line p-2 text-muted hover:bg-canvas">
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
-               stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </svg>
-        </button>
+        {/* زر القائمة العلوي يُستغنى عنه بزر «المزيد» في الشريط السفلي — يبقى فقط إن لم يظهر الشريط */}
+        {bottomItems.length === 0 && (
+          <button onClick={() => setOpen(true)} aria-label="القائمة"
+                  className="rounded-sm2 border border-line p-2 text-muted hover:bg-canvas">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
+                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+        )}
         <UserInline />
         <Actions />
       </header>
@@ -741,7 +750,7 @@ export default function Layout({ children }) {
                     <Badge n={badgeOf(i.to)} dot />
                   </span>
                   <span className="max-w-full truncate px-1">
-                    {i.to === "/" ? (effectiveRole === "teacher" ? "اليوم" : "الرئيسية") : BOTTOM_LABEL[i.to] ?? i.label}
+                    {i.to === "/" ? "الرئيسية" : BOTTOM_LABEL[i.to] ?? i.label}
                   </span>
                 </NavLink>
               );

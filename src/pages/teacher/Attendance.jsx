@@ -1,5 +1,6 @@
 // src/pages/teacher/Attendance.jsx
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { todayDow, todayISO, todayLabel, todayOff, GRADE_NAMES, STATUS } from "../../lib/schoolTime";
@@ -43,6 +44,9 @@ const EDGE = {
 
 export default function Attendance() {
   const { session } = useSession();
+  // ?s=<schedule_id> يفتح حصة بعينها (من بطاقة «يومي» في الرئيسية أو من تذكير التحضير)
+  const [params] = useSearchParams();
+  const wanted = params.get("s");
   const [periods, setPeriods] = useState([]);
   const [marked, setMarked] = useState(new Set());
   const [active, setActive] = useState(null);
@@ -115,14 +119,15 @@ export default function Attendance() {
         const { rows: pt } = await loadPeriodTimes();
         const last = lastStartedPeriodNo(pt);
         const started = last == null ? [] : list.filter((p) => p.period_no <= last);
-        setActive(list.find((p) => p.period_no === last)
+        setActive(list.find((p) => p.id === wanted && (last != null && p.period_no <= last))
+          ?? list.find((p) => p.period_no === last)
           ?? started.find((p) => !doneSet.has(p.id))
           ?? started[started.length - 1]
           ?? list[0]);
       }
       setLoading(false);
     })();
-  }, [session, dow, date]);
+  }, [session, dow, date, wanted]);
 
   useEffect(() => {
     if (!active) return;
@@ -305,7 +310,7 @@ export default function Attendance() {
             <p className="text-xs font-medium text-[#6AA786]">
               {todayLabel()} · الحصة <span className="num">{active?.period_no}</span>
               {ptimeOf(active?.period_no) && (
-                <span className="num"> · {fmtRange(ptimeOf(active?.period_no))}</span>
+                <> · <span dir="rtl" className="inline-block">{fmtRange(ptimeOf(active?.period_no))}</span></>
               )}
             </p>
             {nowPeriod === active?.period_no && (

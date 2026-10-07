@@ -7,7 +7,7 @@
 //    schedule = "*/5 4-11 * * 0-4"   (بتوقيت UTC = 7ص–2م بتوقيت السعودية، الأحد–الخميس)
 //
 //  المنطق: يقرأ أوقات الحصص للتوقيت الفعّال، فيحدّد الحصة الجارية،
-//  وبعد مرور مهلة (افتراضيًا ١٠ دقائق) من بدايتها يرسل تذكيرًا لمن لم يحضّر،
+//  وبعد مرور مهلة (افتراضيًا ربع ساعة) من بدايتها يرسل تذكيرًا لمن لم يحضّر فقط،
 //  مرة واحدة فقط لكل حصة في اليوم.
 // =====================================================================
 
@@ -51,7 +51,7 @@ export const handler = async () => {
       return { statusCode: 200, body: "reminder disabled" };
     }
 
-    const delay = Number(s.attendance_reminder_minutes ?? 10);
+    const delay = Number(s.attendance_reminder_minutes ?? 15);
     const dow = ksaDow();
     if (!dow) return { statusCode: 200, body: "weekend" };
 
@@ -115,7 +115,7 @@ export const handler = async () => {
         p_title: "تذكير برصد التحضير",
         p_body: body,
         p_kind: "general",
-        p_link: "/",
+        p_link: `/attendance?s=${row.id}`,   // يفتح صفحة التحضير على هذه الحصة
         p_roles: null,
         p_user_ids: [row.teachers.user_id],
         p_grade: null,
