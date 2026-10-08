@@ -71,7 +71,12 @@ const ADMIN_GROUPS = [
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "sliders" },
-      { to: "/performance",  label: "ملفات الأداء الوظيفي", roles: ["principal", "tech_support"], icon: "award" },
+    ],
+  },
+  {
+    title: "الأداء الوظيفي",
+    items: [
+      { to: "/performance",  label: "ملفات المعلمين", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء" },
     ],
   },
   {
@@ -154,7 +159,12 @@ const TEACHER_GROUPS = [
       { to: "/forms",        label: "النماذج والشهادات",  icon: "certificate" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
-      { to: "/my-performance", label: "ملف الأداء الوظيفي", icon: "award", kw: "شواهد تقييم" },
+    ],
+  },
+  {
+    title: "الأداء الوظيفي",
+    items: [
+      { to: "/my-performance", label: "ملف شواهدي", icon: "award", kw: "شواهد تقييم أداء" },
     ],
   },
   {
