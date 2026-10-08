@@ -71,6 +71,7 @@ const ADMIN_GROUPS = [
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "sliders" },
+      { to: "/performance",  label: "ملفات الأداء الوظيفي", roles: ["principal"], icon: "award" },
     ],
   },
   {
@@ -153,6 +154,7 @@ const TEACHER_GROUPS = [
       { to: "/forms",        label: "النماذج والشهادات",  icon: "certificate" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
+      { to: "/my-performance", label: "ملف الأداء الوظيفي", icon: "award", kw: "شواهد تقييم" },
     ],
   },
   {

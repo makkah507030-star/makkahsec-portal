@@ -7,6 +7,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import EvidenceBox from "../../components/EvidenceBox.jsx";
+import SendToFile from "../../components/SendToFile.jsx";
 import { useEvidence } from "../../lib/evidence.js";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES, sheetLandscape, isGuestCert } from "../../components/FormSheet.jsx";
 import { RATING_LEVELS, gradeTone, itemPoints, officialLabel, rubricScore, weightedRating } from "../../lib/rubric.js";
@@ -1230,6 +1231,7 @@ export default function Forms({ view = "issue", openKey = null }) {
               : <span className="text-xs text-muted">لا يُطبع قبل الاعتماد</span>}
           </div>
         </div>
+        <div className="no-print max-w-md"><SendToFile doc={d} /></div>
         <div className="no-print">
           <SheetPreview landscape={sheetLandscape(viewing.template)}>
             <FormSheet template={viewing.template} values={d.data} doc={d}
@@ -1564,6 +1566,8 @@ export default function Forms({ view = "issue", openKey = null }) {
                 وفعّل <b>طباعة الخلفيات</b> ليظهر الشعاران بلونيهما.
               </p>
             )}
+
+            {issued && <SendToFile doc={issued} />}
 
             {issued && printable.length > 0 && (
               <button className="w-full rounded-sm2 border border-line py-2 text-sm text-mint-deep hover:bg-canvas"
