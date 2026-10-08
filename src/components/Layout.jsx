@@ -76,7 +76,7 @@ const ADMIN_GROUPS = [
   {
     title: "الأداء الوظيفي",
     items: [
-      { to: "/performance",  label: "ملفات المعلمين", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء" },
+      { to: "/performance",  label: "تقييم الأداء الوظيفي", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء" },
     ],
   },
   {
@@ -164,7 +164,7 @@ const TEACHER_GROUPS = [
   {
     title: "الأداء الوظيفي",
     items: [
-      { to: "/my-performance", label: "ملف شواهدي", icon: "award", kw: "شواهد تقييم أداء" },
+      { to: "/my-performance", label: "شواهد الأداء الوظيفي", icon: "award", kw: "شواهد تقييم أداء" },
     ],
   },
   {

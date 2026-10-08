@@ -57,7 +57,7 @@ export default function PerformanceAdmin() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-bold text-ink">ملفات الأداء الوظيفي</h1>
+        <h1 className="text-lg font-bold text-ink">تقييم الأداء الوظيفي</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           شواهد كل معلم لعناصر التقييم. الملف للاطلاع فقط، والتقدير لمدير المدرسة. لا يراه إلا المعلم صاحبه ومدير المدرسة والدعم الفني.
         </p>

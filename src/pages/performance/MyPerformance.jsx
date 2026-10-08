@@ -7,7 +7,7 @@ export default function MyPerformance() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-bold text-ink">ملف الأداء الوظيفي</h1>
+        <h1 className="text-lg font-bold text-ink">شواهد الأداء الوظيفي</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           شواهدك لعناصر نموذج تقييم أداء المعلم. لكل بند شاهد واحد وعداد، ودورات التطوير المهني تُرفق كلها.
           لا يرى الملف غيرك إلا مدير المدرسة، والدعم الفني لمعالجة الأعطال.
