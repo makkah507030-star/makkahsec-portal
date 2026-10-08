@@ -9,6 +9,7 @@ import {
   loadPeriodTimes, byPeriodNo, currentPeriodNo, lastStartedPeriodNo, periodStarted, fmtRange, fmtTime,
 } from "../../lib/periodTimes";
 import Loader from "../../components/Loader.jsx";
+import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { useNotice } from "../../lib/useNotice.js";
 import StudentNoteChips, { ClassNotesButton } from "../../components/StudentNoteChips.jsx";
 import { countAr } from "../../lib/arabicCount.js";
@@ -111,7 +112,12 @@ export default function Attendance() {
 
       const list = data ?? [];
       setPeriods(list);
-      setMySchedIds(list.map((p) => p.id));
+
+      // كل حصص المعلم في الفصل الدراسي (كل الأيام) — لصندوق الغياب. كان يأخذ حصص
+      // اليوم وحدها، فلا يعدّ إلا ما سُجّل في هذا اليوم من الأسبوع.
+      const { data: all } = await supabase.from("schedule")
+        .select("id").eq("teacher_id", t0.id).eq("academic_year", y).eq("term", t);
+      setMySchedIds((all ?? []).map((p) => p.id));
       if (list.length) {
         const { data: done } = await supabase.from("class_attendance")
           .select("schedule_id").eq("attend_date", date)
@@ -234,14 +240,16 @@ export default function Attendance() {
 
       // إحصاء غياب كل طالب عن حصص هذا المعلم خلال الفصل الحالي
       if (mySchedIds.length) {
-        const { data: hist } = await supabase
+        // على دفعات: حصص الفصل كله تتجاوز حد الألف صف للطلب الواحد
+        const hist = await fetchAllPaged(() => supabase
           .from("class_attendance")
-          .select("student_id, status")
+          .select("id, student_id, status")
           .in("student_id", ids)
-          .in("schedule_id", mySchedIds);
+          .in("schedule_id", mySchedIds)
+          .order("id", { ascending: true })).catch(() => []);
 
         const stats = {};
-        (hist ?? []).forEach((r) => {
+        hist.forEach((r) => {
           const st = (stats[r.student_id] ??= { absent: 0, total: 0 });
           st.total += 1;
           if (r.status === "absent") st.absent += 1;
