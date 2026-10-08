@@ -8,7 +8,7 @@ import { useSession } from "../lib/session.jsx";
    تظهر بعد أن يبدأ المعلم التصحيح، ولا تظهر قبله.
    ===================================================================== */
 
-const PERIODS = { period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي" };
+const PERIODS = { diagnostic: "تشخيصي", period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي" };
 
 const fmtG = (s) => {
   if (!s) return "";

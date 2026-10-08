@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { activeYear, loadPerfReference } from "../../lib/performance";
+import { activeYear, loadAutoCounts, loadPerfReference } from "../../lib/performance";
 import PerformanceFile from "../../components/PerformanceFile.jsx";
 import Loader from "../../components/Loader.jsx";
 
@@ -32,6 +32,10 @@ export default function PerformanceAdmin() {
         // عدد البنود المتوفرة لكل معلم (بند السجل يُعدّ مرة واحدة مهما تعددت مشاركاته)
         const m = {};
         for (const r of ev ?? []) (m[r.teacher_user_id] ??= new Set()).add(r.item_key);
+        // والشواهد الآلية من عمل المعلم في البوابة
+        const auto = await loadAutoCounts(null, year);
+        for (const [uid, items] of Object.entries(auto))
+          for (const [k, v] of Object.entries(items)) if (v.cnt > 0) (m[uid] ??= new Set()).add(k);
         setCounts(Object.fromEntries(Object.entries(m).map(([k, s]) => [k, s.size])));
         setTeachers(ts ?? []);
       } catch (e) {

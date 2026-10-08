@@ -25,7 +25,7 @@ export const elementColor = (key) => ELEMENT_COLOR[key] ?? "#3e6350";
 
 /* حالة البند في البوابة (perf_items.portal — supabase/teacher_performance_portal.sql) */
 export const PORTAL_TAG = {
-  auto:    { t: "تنتجه البوابة · الربط التلقائي بملفك سيكون متاحًا قريبًا", c: "bg-mint-light text-mint-deep" },
+  auto:    { t: "يصل تلقائيًا من عملك في البوابة", c: "bg-mint-light text-mint-deep" },
   partial: { t: "متوفر جزئيًا في البوابة · أكمله برفع شاهد", c: "bg-canvas text-muted" },
   manual:  { t: "يُرفع يدويًا الآن · سيكون متاحًا في البوابة قريبًا", c: "bg-warning-light text-warning" },
   record:  { t: "سجل التطوير المهني: كل مشاركة بشاهدها", c: "bg-mint-tint text-mint-deep" },
@@ -88,17 +88,52 @@ export async function loadTeacherInfo(uid) {
   return { ...t, classes, subjects, periods: rows.length };
 }
 
+/* الشواهد الآلية: مصدرها في البوابة، ووحدة عدّها */
+export const AUTO_SOURCE = {
+  e11_01: { label: "اختبارات تشخيصية طُبّقت", to: "/quizzes" },
+  e11_05: { label: "اختبارات فترات طُبّقت", to: "/quizzes" },
+  e11_07: { label: "اختبارات بُنيت وطُبّقت", to: "/quizzes" },
+  e07_06: { label: "اختبارات إلكترونية", to: "/quizzes" },
+  e05_02: { label: "اختبارات صُحّحت وظهرت نتيجتها", to: "/quiz-marks" },
+  e03_02: { label: "اختبارات وصلت نتيجتها للطالب وولي الأمر", to: "/quiz-marks" },
+  e10_03: { label: "اختبارات اطّلع الطلاب على نتائجها", to: "/quiz-marks" },
+  e11_04: { label: "اختبارات بتغذية راجعة فورية", to: "/quiz-marks" },
+  e10_01: { label: "تحليلات اختبار معتمدة", to: "/quiz-analytics" },
+  e10_02: { label: "تحليلات اختبار معتمدة", to: "/quiz-analytics" },
+  e05_05: { label: "خطط علاجية حدّدت المهارات", to: "/quizzes" },
+  e05_06: { label: "خطط علاجية", to: "/quizzes" },
+  e05_07: { label: "خطط إثرائية", to: "/quizzes" },
+  e06_04: { label: "خطط علاجية نُفّذت", to: "/quizzes" },
+  e06_05: { label: "خطط إثرائية نُفّذت", to: "/quizzes" },
+  e03_01: { label: "إشعارات لفصولك وأولياء أمورهم", to: "/notify" },
+  e05_04: { label: "إشعارات لفصولك وأولياء أمورهم", to: "/notify" },
+  e03_06: { label: "أيام رصد في سجل المتابعة", to: "/follow-up" },
+  e11_02: { label: "أنواع تقويم مستخدمة في سجل المتابعة", to: "/follow-up" },
+  e11_03: { label: "أنواع تقويم مستخدمة في سجل المتابعة", to: "/follow-up" },
+  e05_10: { label: "شهادات أصدرتها لطلابك", to: "/forms" },
+};
+
+/** الشواهد الآلية للمعلم (uid) أو لكل المعلمين (null): { [uid]: { [item]: { cnt, last } } } */
+export async function loadAutoCounts(uid, year) {
+  const { data, error } = await supabase.rpc("perf_auto_counts", { p_uid: uid, p_year: year });
+  if (error) return {};   // قبل تشغيل ملف المرحلة الثانية: لا شواهد آلية
+  const m = {};
+  for (const r of data ?? []) (m[r.teacher_user_id] ??= {})[r.item_key] = { cnt: Number(r.cnt), last: r.last_at };
+  return m;
+}
+
 /** حالة كل بند: شواهده وعددها. العدد في البند العادي هو العداد،
-    وفي بند السجل عدد المشاركات المرفقة. */
-export function itemStatus(item, evidence) {
+    وفي بند السجل عدد المشاركات المرفقة. auto: الشاهد الآلي إن وُجد. */
+export function itemStatus(item, evidence, autoMap = {}) {
   const list = evidence.filter((e) => e.item_key === item.key);
   const count = item.is_record ? list.length : (list[0]?.use_count ?? 0);
-  return { list, count, ok: list.length > 0 };
+  const auto = autoMap[item.key]?.cnt > 0 ? autoMap[item.key] : null;
+  return { list, count, auto, ok: list.length > 0 || !!auto };
 }
 
 /** ملخص عنصر: البنود ذات الشاهد المتوفر وغير المتوفر */
-export function elementSummary(el, evidence) {
-  const done = el.items.filter((i) => evidence.some((e) => e.item_key === i.key)).length;
+export function elementSummary(el, evidence, autoMap = {}) {
+  const done = el.items.filter((i) => itemStatus(i, evidence, autoMap).ok).length;
   return { available: done, missing: el.items.length - done };
 }
 

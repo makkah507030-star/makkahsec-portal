@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
 import {
-  ACCEPT, PORTAL_TAG, SOURCE_LABEL, activeYear, elementColor, elementSummary, itemStatus, loadEvidence,
+  ACCEPT, AUTO_SOURCE, PORTAL_TAG, SOURCE_LABEL, activeYear, loadAutoCounts, elementColor, elementSummary, itemStatus, loadEvidence,
   loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile,
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
@@ -187,9 +187,9 @@ function EvidenceRow({ ev, item, readOnly, onEdit, onDelete }) {
   );
 }
 
-function ElementView({ el, evidence, uid, year, readOnly, onBack, onChanged }) {
+function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChanged }) {
   const [open, setOpen] = useState(null);   // { key, mode: "add" | "edit", ev }
-  const sum = elementSummary(el, evidence);
+  const sum = elementSummary(el, evidence, auto);
 
   const del = async (ev) => {
     if (!window.confirm("حذف هذا الشاهد من الملف؟")) return;
@@ -223,7 +223,7 @@ function ElementView({ el, evidence, uid, year, readOnly, onBack, onChanged }) {
 
       <div className="space-y-3">
         {el.items.map((it, n) => {
-          const st = itemStatus(it, evidence);
+          const st = itemStatus(it, evidence, auto);
           const isOpen = open?.key === it.key;
           return (
             <section key={it.key} className={`card p-4 ${!el.evaluator_only && !st.ok ? "border-warning/40" : ""}`}>
@@ -247,6 +247,19 @@ function ElementView({ el, evidence, uid, year, readOnly, onBack, onChanged }) {
 
               {!el.evaluator_only && (
                 <div className="mt-3 space-y-2">
+                  {st.auto && (
+                    <div className="flex flex-wrap items-center gap-2 rounded-sm2 border border-mint-light bg-mint-tint px-3 py-2">
+                      <span className="chip w-20 justify-center bg-mint-deep text-white">آلي</span>
+                      <p className="min-w-0 flex-1 text-sm text-ink">
+                        {AUTO_SOURCE[it.key]?.label ?? "من عملك في البوابة"}
+                        <span className="text-muted"> · العداد <span className="num font-semibold text-ink">{st.auto.cnt}</span>
+                          {st.auto.last ? ` · آخرها ${fmtDate(st.auto.last)}` : ""}</span>
+                      </p>
+                      {!readOnly && AUTO_SOURCE[it.key]?.to && (
+                        <Link className="text-sm text-mint-deep underline" to={AUTO_SOURCE[it.key].to}>فتح</Link>
+                      )}
+                    </div>
+                  )}
                   {st.list.map((ev) => (
                     <EvidenceRow key={ev.id} ev={ev} item={it} readOnly={readOnly}
                                  onEdit={() => setOpen({ key: it.key, mode: "edit", ev })}
@@ -279,10 +292,10 @@ function ElementView({ el, evidence, uid, year, readOnly, onBack, onChanged }) {
   );
 }
 
-function TrackView({ elements, evidence, info, name, readOnly }) {
+function TrackView({ elements, evidence, auto, info, name, readOnly }) {
   const [filter, setFilter] = useState("all");
   const rows = useMemo(() => elements.filter((e) => !e.evaluator_only).flatMap((el) =>
-    el.items.map((it) => ({ el, it, st: itemStatus(it, evidence) }))), [elements, evidence]);
+    el.items.map((it) => ({ el, it, st: itemStatus(it, evidence, auto) }))), [elements, evidence, auto]);
   const shown = rows.filter((r) => filter === "all" || (filter === "ok" ? r.st.ok : !r.st.ok));
   const ok = rows.filter((r) => r.st.ok).length;
   const [openEls, setOpenEls] = useState(() => new Set());
@@ -297,9 +310,12 @@ function TrackView({ elements, evidence, info, name, readOnly }) {
     return { el, list, okN: list.filter((r) => r.st.ok).length };
   }).filter((g) => g.list.length);
 
-  const evText = (r) => r.st.ok
-    ? (r.it.is_record ? `المشاركات: ${r.st.count}` : `العداد ${r.st.count} · ${r.st.list[0].title}`)
-    : "—";
+  const evText = (r) => {
+    if (!r.st.ok) return "—";
+    if (r.it.is_record) return `المشاركات: ${r.st.count}`;
+    if (r.st.list.length) return `العداد ${r.st.count} · ${r.st.list[0].title}`;
+    return `آلي · العداد ${r.st.auto.cnt}`;
+  };
 
   const print = () => {
     const teacher = info?.full_name ?? name ?? "";
@@ -381,6 +397,7 @@ function TrackView({ elements, evidence, info, name, readOnly }) {
 export default function PerformanceFile({ uid, name, readOnly = false }) {
   const [elements, setElements] = useState(null);
   const [evidence, setEvidence] = useState([]);
+  const [auto, setAuto] = useState({});      // الشواهد الآلية: { [بند]: { cnt, last } }
   const [visits, setVisits] = useState([]);
   const [info, setInfo] = useState(null);
   const [year, setYear] = useState("");
@@ -391,10 +408,10 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
   const reload = useCallback(async () => {
     try {
       const y = await activeYear();
-      const [els, ev, vs, inf] = await Promise.all([
-        loadPerfReference(), loadEvidence(uid, y), loadSupportVisits(uid), loadTeacherInfo(uid),
+      const [els, ev, vs, inf, au] = await Promise.all([
+        loadPerfReference(), loadEvidence(uid, y), loadSupportVisits(uid), loadTeacherInfo(uid), loadAutoCounts(uid, y),
       ]);
-      setYear(y); setElements(els); setEvidence(ev); setVisits(vs); setInfo(inf);
+      setYear(y); setElements(els); setEvidence(ev); setVisits(vs); setInfo(inf); setAuto(au[uid] ?? {});
     } catch (e) {
       setErr(e.message?.includes("perf_") ? "ملف الأداء غير مفعّل بعد في قاعدة البيانات." : (e.message ?? "تعذّر التحميل."));
       setElements([]);
@@ -409,7 +426,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
   if (current) {
     const el = elements.find((e) => e.key === current);
     return (
-      <ElementView el={el} evidence={evidence} uid={uid} year={year} readOnly={readOnly}
+      <ElementView el={el} evidence={evidence} auto={auto} uid={uid} year={year} readOnly={readOnly}
                    onBack={() => setCurrent(null)} onChanged={reload} />
     );
   }
@@ -428,7 +445,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
       </div>
 
       {view === "track" ? (
-        <TrackView elements={elements} evidence={evidence} info={info} name={name} readOnly={readOnly} />
+        <TrackView elements={elements} evidence={evidence} auto={auto} info={info} name={name} readOnly={readOnly} />
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -449,7 +466,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
                 {el.evaluator_only ? (
                   <p className="text-sm leading-relaxed text-muted">يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد.</p>
                 ) : (
-                  <CountBoxes {...elementSummary(el, evidence)} />
+                  <CountBoxes {...elementSummary(el, evidence, auto)} />
                 )}
               </button>
             ))}
