@@ -12,6 +12,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import StudentNoteChips, { ClassNotesButton } from "../../components/StudentNoteChips.jsx";
 import { countAr } from "../../lib/arabicCount.js";
+import { loadFingerprintEnabled } from "../../lib/officialAttendance.js";
 
 const ORDER = ["present", "absent", "late", "excused"];        // للعدادات والعرض
 const TEACHER_ORDER = ["present", "absent", "late"];           // ما يختاره المعلم
@@ -55,6 +56,9 @@ export default function Attendance() {
   const [marks, setMarks] = useState({});
   const [excused, setExcused] = useState(new Set());
   const [punched, setPunched] = useState(new Set());
+  // البصمة المقفلة (مرحلة التجربة) لا تظهر في الكشف: لا وسوم بصمة، ويبقى رقم الهوية
+  const [fpOn, setFpOn] = useState(false);
+  useEffect(() => { loadFingerprintEnabled().then(setFpOn, () => setFpOn(false)); }, []);
   const [permits, setPermits] = useState({}); // student_id -> { by, note }
   const [returns, setReturns] = useState({}); // student_id -> { from_period }
   const [saving, setSaving] = useState(false);
@@ -412,16 +416,16 @@ export default function Attendance() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium leading-tight text-ink">{s.full_name}</p>
                     {/* من بصم يكفيه وسم «تم التبصيم» بدل رقم هويته */}
-                    {s.national_id && !punched.has(s.id) && (
+                    {s.national_id && !(fpOn && punched.has(s.id)) && (
                       <p className="num mt-0.5 text-xs leading-none text-faint">{s.national_id}</p>
                     )}
                     <StudentNoteChips name={s.full_name} notes={notesBy[s.id]} />
                   </div>
-                  {!punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
-                  {punched.has(s.id) && cur !== "absent" && (
+                  {fpOn && !punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
+                  {fpOn && punched.has(s.id) && cur !== "absent" && (
                     <span className="chip shrink-0 bg-present/10 font-semibold text-present">تم التبصيم</span>
                   )}
-                  {punched.has(s.id) && cur === "absent" && (
+                  {fpOn && punched.has(s.id) && cur === "absent" && (
                     <span className="chip shrink-0 bg-absent/10 font-semibold text-absent">
                       بصم ولم يحضر
                     </span>
@@ -484,16 +488,20 @@ export default function Attendance() {
           {
             title: "شارات بجانب اسم الطالب",
             items: [
-              { chip: "bg-present/10 text-present", sample: "تم التبصيم",
-                label: "له بصمة دخول صباحية" },
-              { chip: "bg-warning-light text-warning", sample: "لم يبصم",
-                label: "لا بصمة دخول صباحية", note: "غالبًا غائب عن المدرسة" },
+              ...(fpOn ? [
+                { chip: "bg-present/10 text-present", sample: "تم التبصيم",
+                  label: "له بصمة دخول صباحية" },
+                { chip: "bg-warning-light text-warning", sample: "لم يبصم",
+                  label: "لا بصمة دخول صباحية", note: "غالبًا غائب عن المدرسة" },
+              ] : []),
               { chip: "bg-excused/15 text-excused", sample: "مستأذن",
                 label: "استئذان من الإدارة", note: "لا يعدّله المعلم" },
               { chip: "bg-present/10 text-present", sample: "عاد للفصل",
                 label: "أنهت الإدارة استئذانه" },
-              { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر",
-                label: "دخل المدرسة وغاب عن الحصة", note: "تأكّد قبل الحفظ" },
+              ...(fpOn ? [
+                { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر",
+                  label: "دخل المدرسة وغاب عن الحصة", note: "تأكّد قبل الحفظ" },
+              ] : []),
             ],
           },
           {
