@@ -33,7 +33,7 @@ const ADMIN_GROUPS = [
     ],
   },
   {
-    title: "الطلاب",
+    title: "شؤون الطلاب",
     items: [
       { to: "/students",    label: "كشوف الطلاب",    perm: "students",    icon: "users" },
       { to: "/student-admission", label: "قبول طالب", roles: ["principal", "tech_support"], icon: "userPlus" },
