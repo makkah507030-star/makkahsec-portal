@@ -33,7 +33,7 @@ const ADMIN_GROUPS = [
     ],
   },
   {
-    title: "الطلاب",
+    title: "شؤون الطلاب",
     items: [
       { to: "/students",    label: "كشوف الطلاب",    perm: "students",    icon: "users" },
       { to: "/student-admission", label: "قبول طالب", roles: ["principal", "tech_support"], icon: "userPlus" },
@@ -45,7 +45,7 @@ const ADMIN_GROUPS = [
     ],
   },
   {
-    title: "السلوك والتوجيه",
+    title: "السلوك والمواظبة",
     items: [
       { to: "/referrals", label: "إحالة طالب", roles: COUNSEL, icon: "send", kw: "موجه" },
       { to: "/behavior", label: "نماذج السلوك والمواظبة", roles: COUNSEL, icon: "flag", kw: "مخالفات غياب" },
@@ -53,7 +53,7 @@ const ADMIN_GROUPS = [
     ],
   },
   {
-    title: "الجداول والمعلمون",
+    title: "الشؤون التعليمية",
     items: [
       { to: "/general-schedule",  label: "الجدول العام",          anyPerm: ["import", "schedules"], icon: "table" }, // جدول شامل بالفصول والمعلمين معًا
       { to: "/teacher-schedules", label: "جداول المعلمين",        anyPerm: ["import", "schedules"], icon: "chalk" },
