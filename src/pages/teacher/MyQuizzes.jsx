@@ -10,6 +10,7 @@ import { PAPER_KINDS, BLANK, BLANK_RE, LINES, MODEL_LABEL, groupPaper, paperOpts
 import { shrinkImage } from "../../lib/imageResize.js";
 import { printThen } from "../../lib/print.js";
 import Loader from "../../components/Loader.jsx";
+import QuizCycle, { CYCLE_PERIODS } from "../../components/QuizCycle.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import SymbolsToolbar from "../../components/SymbolsToolbar.jsx";
 import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
@@ -48,13 +49,15 @@ const setupHint = (e) =>
     ? "أنواع الاختبارات الجديدة تحتاج تنفيذ ملف supabase/quiz_paper_mode.sql في قاعدة البيانات مرة واحدة."
     : e?.message;
 
-// الفترات المتاحة عند إنشاء اختبار: الأولى والثانية فقط
+// أنواع الاختبار عند إنشائه: التشخيصي (لا يُرصد في كشف الدرجات) والفترتان.
+// النهائي خارجها، وله نظام مستقل.
 const PERIODS = [
+  { key: "diagnostic", label: "تشخيصي" },
   { key: "period1", label: "الفترة الأولى" },
   { key: "period2", label: "الفترة الثانية" },
 ];
 // أسماء الفترات للعرض — يبقى «النهائي» لاختبارات سابقة أُنشئت به
-const PERIOD_LABEL = { period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي" };
+const PERIOD_LABEL = { diagnostic: "تشخيصي", period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي" };
 
 const STATUS = {
   draft:   { t: "مسودة",        c: "bg-canvas text-muted" },
@@ -160,6 +163,11 @@ export default function MyQuizzes() {
                       <span className="chip bg-mint-tint text-mint-deep" dir="ltr">EN</span>
                     )}
                     <span className={`chip ${st.c}`}>{statusLabel(q)}</span>
+                    {CYCLE_PERIODS.includes(q.period) && (
+                      <span className={`chip ${q.cycle_closed_at ? "bg-mint-light text-mint-deep" : "bg-canvas text-muted"}`}>
+                        {q.cycle_closed_at ? "الدورة مكتملة" : "الدورة مفتوحة"}
+                      </span>
+                    )}
                   </div>
                   <button onClick={async () => {
                             if (!window.confirm(
@@ -389,7 +397,7 @@ function NewQuiz({ uid, onDone }) {
       </div>
 
       <div>
-        <label className="text-xs text-muted">الفترة</label>
+        <label className="text-xs text-muted">نوع الاختبار</label>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {PERIODS.map((p) => (
             <button key={p.key} type="button"
@@ -401,6 +409,11 @@ function NewQuiz({ uid, onDone }) {
             </button>
           ))}
         </div>
+        {f.period === "diagnostic" && (
+          <p className="mt-1 text-[11px] leading-relaxed text-faint">
+            التشخيصي لا يُرصد في كشف الدرجات: يحدد المهارات المفقودة، وتتبعه خطة علاجية في دورة الاختبار.
+          </p>
+        )}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
@@ -742,6 +755,12 @@ function QuizEditor({ quiz, uid, onBack }) {
       )}
 
       <QuizDetails q={q} onSaved={(fields) => { setQ((x) => ({ ...x, ...fields })); setMsg({ ok: true, text: "حُفظت بيانات الاختبار." }); }} />
+
+      {/* دورة الاختبار: التشخيصي والفترتان فقط، والنهائي له نظامه */}
+      {CYCLE_PERIODS.includes(q.period) && (
+        <QuizCycle q={q} questionsCount={questions?.length ?? 0} teacherName={profile?.full_name}
+                   onChange={(fields) => setQ((x) => ({ ...x, ...fields }))} />
+      )}
 
       <div className="no-print flex flex-wrap gap-1.5">
         <button className={pill(tab === "questions")} onClick={() => setTab("questions")}>

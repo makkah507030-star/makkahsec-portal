@@ -1,12 +1,14 @@
 // src/pages/admin/Forms.jsx
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import EvidenceBox from "../../components/EvidenceBox.jsx";
+import SendToFile from "../../components/SendToFile.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 import { useEvidence } from "../../lib/evidence.js";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES, sheetLandscape, isGuestCert } from "../../components/FormSheet.jsx";
 import { RATING_LEVELS, gradeTone, itemPoints, officialLabel, rubricScore, weightedRating } from "../../lib/rubric.js";
@@ -401,6 +403,9 @@ function LessonSelect({ field, fields, values, lessons, hasTeacher, onChange }) 
 export default function Forms({ view = "issue", openKey = null }) {
   const review = view === "review";
   const navigate = useNavigate();
+  // تكريم المتفوقين من دورة الاختبار: { students: [{ id, full_name }], reason, quiz }
+  const location = useLocation();
+  const [honor, setHonor] = useState(() => location.state?.honor ?? null);
   const { session, profile, adminRoles, isTeacher } = useSession();
   const isManager = (adminRoles ?? []).some((r) => r === "tech_support" || r === "principal");
   const isApprover = (adminRoles ?? []).includes("principal");
@@ -670,6 +675,27 @@ export default function Forms({ view = "issue", openKey = null }) {
     });
     setValues(init);
   };
+
+  useEffect(() => {
+    if (!honor || !picked || editing || draftDoc || chosen.length) return;
+    if (!(picked.fields ?? []).some((f) => f.type === "student")) return;
+    (async () => {
+      const { data } = await supabase.from("students").select("id, full_name, user_id, national_id")
+        .in("id", honor.students.map((x) => x.id));
+      const list = data ?? [];
+      if (!list.length) return;
+      const head = list[0];
+      setChosen(list);
+      const reasonField = (picked.fields ?? []).find((f) => f.name === (picked.preset_field || "reason"));
+      const base = { student_id: head.id, recipient: head.full_name,
+                     ...(reasonField && honor.reason ? { [reasonField.name]: honor.reason } : {}) };
+      setValues((v) => ({ ...v, ...base }));
+      try {
+        const info = await studentInfo(head);
+        setValues((v) => autoFill(picked?.fields, info, { ...v, ...base }, { overwrite: true }));
+      } catch { /* تبقى الحقول للإدخال اليدوي */ }
+    })();
+  }, [honor, picked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const multi = chosen.length > 1;
 
@@ -1230,6 +1256,7 @@ export default function Forms({ view = "issue", openKey = null }) {
               : <span className="text-xs text-muted">لا يُطبع قبل الاعتماد</span>}
           </div>
         </div>
+        <div className="no-print max-w-md"><SendToFile doc={d} /></div>
         <div className="no-print">
           <SheetPreview landscape={sheetLandscape(viewing.template)}>
             <FormSheet template={viewing.template} values={d.data} doc={d}
@@ -1565,6 +1592,8 @@ export default function Forms({ view = "issue", openKey = null }) {
               </p>
             )}
 
+            {issued && <SendToFile doc={issued} />}
+
             {issued && printable.length > 0 && (
               <button className="w-full rounded-sm2 border border-line py-2 text-sm text-mint-deep hover:bg-canvas"
                       onClick={printNow}>
@@ -1764,6 +1793,15 @@ export default function Forms({ view = "issue", openKey = null }) {
           </div>
         ) : (
           <>
+          {honor && (
+            <div className="mb-3 flex flex-wrap items-center gap-3 rounded-card border border-mint/40 bg-mint-tint px-4 py-3 text-sm">
+              <p className="flex-1 text-mint-deep">
+                <b>تكريم المتفوقين</b> في «{honor.quiz}»: {countAr(honor.students.length, "student")}.
+                اختر نموذج الشهادة، وسيُختار الطلاب تلقائيًا فتصدر شهادة لكل واحد.
+              </p>
+              <button className="text-sm text-muted underline" onClick={() => setHonor(null)}>إلغاء التكريم</button>
+            </div>
+          )}
           {/* مسوداتي: نماذج حُفظت لتُكمَل ثم تُصدر */}
           {drafts.length > 0 && (
             <div className="card mb-3 overflow-hidden">

@@ -74,6 +74,12 @@ const ADMIN_GROUPS = [
     ],
   },
   {
+    title: "الأداء الوظيفي",
+    items: [
+      { to: "/performance",  label: "تقييم الأداء الوظيفي", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء" },
+    ],
+  },
+  {
     title: "التواصل والمحتوى",
     items: [
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell", kw: "رسائل" },
@@ -153,6 +159,12 @@ const TEACHER_GROUPS = [
       { to: "/forms",        label: "النماذج والشهادات",  icon: "certificate" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
+    ],
+  },
+  {
+    title: "الأداء الوظيفي",
+    items: [
+      { to: "/my-performance", label: "شواهد الأداء الوظيفي", icon: "award", kw: "شواهد تقييم أداء" },
     ],
   },
   {
