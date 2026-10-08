@@ -26,21 +26,37 @@ export async function loadExamContext(uid, role) {
   const { data: terms } = await supabase.from("exam_terms")
     .select("*").eq("is_published", true).eq("academic_year", year);
 
+  // الفصل من تسجيل الطالب النشط (جدول الطلاب نفسه لا يحمل الفصل)
+  const enrollments = async (ids) => {
+    if (!ids.length) return new Map();
+    const { data } = await supabase.from("student_enrollment")
+      .select("student_id, class_id, academic_year, classes(class_no, grade)")
+      .in("student_id", ids).eq("status", "active");
+    const map = new Map();
+    (data ?? []).forEach((e) => {
+      if (!map.has(e.student_id) || e.academic_year === year) map.set(e.student_id, e);
+    });
+    return map;
+  };
+
   let scopes = [];
   if (role === "student") {
-    const { data: s } = await supabase.from("students")
-      .select("id, class_id, classes(class_no, grade)").eq("user_id", uid).maybeSingle();
-    if (s) scopes = [{ key: s.class_id, classId: s.class_id, grade: s.classes?.grade,
-                       label: classLabel(s.classes?.grade, s.classes?.class_no) }];
+    const { data: s } = await supabase.from("students").select("id").eq("user_id", uid).maybeSingle();
+    const e = s && (await enrollments([s.id])).get(s.id);
+    if (e) scopes = [{ key: e.class_id, classId: e.class_id, grade: e.classes?.grade,
+                       label: classLabel(e.classes?.grade, e.classes?.class_no) }];
   } else if (role === "guardian") {
     const { data: g } = await supabase.from("guardians").select("id").eq("user_id", uid).maybeSingle();
     if (g) {
       const { data: kids } = await supabase.from("guardian_student")
-        .select("students(id, full_name, class_id, classes(class_no, grade))").eq("guardian_id", g.id);
-      scopes = (kids ?? []).map((k) => k.students).filter(Boolean).map((s) => ({
-        key: s.id, classId: s.class_id, grade: s.classes?.grade,
-        label: `${s.full_name} — فصل ${s.classes?.class_no}`,
-      }));
+        .select("students(id, full_name)").eq("guardian_id", g.id);
+      const list = (kids ?? []).map((k) => k.students).filter(Boolean);
+      const enr = await enrollments(list.map((s) => s.id));
+      scopes = list.filter((s) => enr.has(s.id)).map((s) => {
+        const e = enr.get(s.id);
+        return { key: s.id, classId: e.class_id, grade: e.classes?.grade,
+                 label: `${s.full_name} — فصل ${e.classes?.class_no}` };
+      });
     }
   } else if (role === "teacher") {
     const { data: t } = await supabase.from("teachers").select("id").eq("user_id", uid).maybeSingle();
