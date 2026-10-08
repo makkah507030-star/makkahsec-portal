@@ -1,5 +1,6 @@
 import { useSession } from "../../lib/session.jsx";
 import PerformanceFile from "../../components/PerformanceFile.jsx";
+import { TeacherReviews } from "../../components/PerformanceReview.jsx";
 
 /* ملف الأداء الوظيفي — المعلم يتابع شواهده ويرفعها. يطّلع عليه مدير المدرسة، والدعم الفني للمتابعة الفنية. */
 export default function MyPerformance() {
@@ -20,6 +21,7 @@ export default function MyPerformance() {
           الدرجة الكاملة في التقييم، وإنما هو خطوة متقدمة نحو تقدير عالٍ.
         </p>
       </div>
+      <TeacherReviews uid={session.user.id} name={profile?.full_name} />
       <PerformanceFile uid={session.user.id} name={profile?.full_name} />
     </div>
   );

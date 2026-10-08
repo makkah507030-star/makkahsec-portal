@@ -187,6 +187,30 @@ function EvidenceRow({ ev, item, readOnly, onEdit, onDelete }) {
   );
 }
 
+/* مؤشرات مساندة لأداء الواجبات الوظيفية — للمدير وحده، ولا تُصدر حكمًا */
+function DutyIndicators({ uid, year }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    supabase.rpc("perf_duty_indicators", { p_uid: uid, p_year: year })
+      .then(({ data, error }) => setRows(error ? [] : data ?? []));
+  }, [uid, year]);
+  if (!rows?.length) return null;
+  return (
+    <div className="mt-3 space-y-2">
+      <p className="text-sm font-semibold text-ink">مؤشرات مساندة من البوابة</p>
+      <div className="grid gap-2 sm:grid-cols-3">
+        {rows.map((r) => (
+          <div key={r.key} className="rounded-sm2 bg-canvas px-3 py-2 text-center">
+            <p className="num text-lg font-bold text-ink">{r.value}</p>
+            <p className="text-xs text-muted">{r.label}</p>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-muted">أرقام من سجلات البوابة في العام الدراسي، تعين على التقدير ولا تُصدره.</p>
+    </div>
+  );
+}
+
 function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChanged }) {
   const [open, setOpen] = useState(null);   // { key, mode: "add" | "edit", ev }
   const sum = elementSummary(el, evidence, auto);
@@ -219,6 +243,7 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
             هذا العنصر يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد في ملف المعلم.
           </p>
         )}
+        {el.evaluator_only && readOnly && <DutyIndicators uid={uid} year={year} />}
       </section>
 
       <div className="space-y-3">
