@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
 import {
-  ACCEPT, SOURCE_LABEL, activeYear, elementSummary, itemStatus, loadEvidence,
+  ACCEPT, SOURCE_LABEL, activeYear, elementColor, elementSummary, itemStatus, loadEvidence,
   loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile,
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
@@ -202,10 +202,10 @@ function ElementView({ el, evidence, uid, year, readOnly, onBack, onChanged }) {
   return (
     <div className="space-y-4">
       <button className="btn-ghost" onClick={onBack}>رجوع للبطاقات</button>
-      <section className="card p-4">
+      <section className="card p-4" style={{ borderTop: `5px solid ${elementColor(el.key)}` }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-ink">{el.title}</h2>
+            <h2 className="text-base font-bold" style={{ color: elementColor(el.key) }}>{el.title}</h2>
             <p className="mt-0.5 flex gap-2 text-sm text-muted">
               <span>الوزن <span className="num">{el.weight}%</span></span>
               <span>·</span>
@@ -228,7 +228,8 @@ function ElementView({ el, evidence, uid, year, readOnly, onBack, onChanged }) {
           return (
             <section key={it.key} className={`card p-4 ${!el.evaluator_only && !st.ok ? "border-warning/40" : ""}`}>
               <div className="flex flex-wrap items-start gap-3">
-                <span className="num grid h-7 w-7 shrink-0 place-items-center rounded-full bg-canvas text-xs font-bold text-muted">{n + 1}</span>
+                <span className="num grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold text-white"
+                      style={{ background: elementColor(el.key) }}>{n + 1}</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium leading-relaxed text-ink">{it.title}</p>
                   {it.is_record && <p className="mt-0.5 text-xs text-muted">سجل التطوير المهني: كل مشاركة بشاهدها</p>}
@@ -334,7 +335,12 @@ function TrackView({ elements, evidence, info, name, readOnly }) {
           <tbody className="divide-y divide-line/60">
             {shown.map((r) => (
               <tr key={r.it.key} className={r.st.ok ? "" : "bg-warning-light/40"}>
-                <td className="px-3 py-2 text-muted">{r.el.title}</td>
+                <td className="px-3 py-2">
+                  <span className="flex items-center gap-2" style={{ color: elementColor(r.el.key) }}>
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: elementColor(r.el.key) }} />
+                    {r.el.title}
+                  </span>
+                </td>
                 <td className="px-3 py-2 text-ink">{r.it.title}</td>
                 <td className={`px-3 py-2 text-center font-semibold ${r.st.ok ? "text-mint-deep" : "text-warning"}`}>
                   {r.st.ok ? "متوفر" : "غير متوفر"}
@@ -409,11 +415,14 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
               <button key={el.key} type="button"
                       disabled={el.evaluator_only && !readOnly}
                       onClick={() => setCurrent(el.key)}
-                      className={`card flex flex-col gap-2 p-4 text-right transition-colors ${
-                        el.evaluator_only ? "border-dashed bg-canvas" : "hover:border-mint"}`}>
+                      style={{ borderTop: `5px solid ${elementColor(el.key)}`,
+                               background: el.evaluator_only ? undefined : `linear-gradient(180deg, ${elementColor(el.key)}14 0%, #ffffff 55%)` }}
+                      className={`card flex flex-col gap-2 p-4 text-right transition-shadow ${
+                        el.evaluator_only ? "border-dashed bg-canvas" : "hover:shadow-md"}`}>
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-bold leading-snug text-ink">{el.title}</p>
-                  <span className="num shrink-0 text-xs text-muted">{el.weight}%</span>
+                  <p className="font-bold leading-snug" style={{ color: elementColor(el.key) }}>{el.title}</p>
+                  <span className="num shrink-0 rounded-pill px-2 py-0.5 text-xs font-semibold text-white"
+                        style={{ background: elementColor(el.key) }}>{el.weight}%</span>
                 </div>
                 {el.evaluator_only ? (
                   <p className="text-sm leading-relaxed text-muted">يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد.</p>

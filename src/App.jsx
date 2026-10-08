@@ -327,8 +327,8 @@ export default function App() {
               {(isTechSupport || adminRoles.includes("principal")) && (
                 <Route path="/forms-admin" element={<FormsAdmin />} />
               )}
-              {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة وحده */}
-              {adminRoles.includes("principal") && <Route path="/performance" element={<PerformanceAdmin />} />}
+              {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة، وللدعم الفني للمتابعة الفنية */}
+              {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<PerformanceAdmin />} />}
               {can("reports") && <Route path="/student-affairs" element={<StudentAffairs />} />}
               {/* الصفحتان السابقتان باقيتان بروابطهما — محتواهما صار داخل مركز تقارير شؤون الطلاب */}
               {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}

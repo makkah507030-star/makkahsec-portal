@@ -6,7 +6,7 @@
 --   «أداء الواجبات الوظيفية» للمقيِّم فقط: لا شواهد له في ملف المعلم.
 -- • perf_evidence: شواهد المعلم. البند العادي له شاهد واحد مع عداد،
 --   وبنود «سجل التطوير المهني» (is_record) يُرفق فيها كل مشاركة بشاهدها.
--- • لا يرى الشواهد إلا المعلم صاحبها ومدير المدرسة.
+-- • لا يرى الشواهد إلا المعلم صاحبها ومدير المدرسة، والدعم الفني للمتابعة الفنية (اطلاع فقط).
 -- • المرفقات في مخزن خاص perf-evidence، المسار: <معرّف المعلم>/<اسم الملف>.
 --
 -- يُنفَّذ مرة واحدة في Supabase ← SQL Editor، وتكرار التنفيذ آمن.
@@ -228,7 +228,7 @@ alter table public.perf_evidence enable row level security;
 
 drop policy if exists perf_evidence_read on public.perf_evidence;
 create policy perf_evidence_read on public.perf_evidence for select to authenticated
-  using (teacher_user_id = auth.uid() or public.has_admin_role(array['principal']));
+  using (teacher_user_id = auth.uid() or public.has_admin_role(array['principal', 'tech_support']));
 
 -- الرفع المباشر للمعلم نفسه فقط، وشواهد النماذج عبر الدالة perf_send_form
 drop policy if exists perf_evidence_insert on public.perf_evidence;
@@ -321,7 +321,7 @@ drop policy if exists "perf evidence read" on storage.objects;
 create policy "perf evidence read" on storage.objects for select to authenticated
   using (bucket_id = 'perf-evidence'
          and ((storage.foldername(name))[1] = auth.uid()::text
-              or public.has_admin_role(array['principal'])));
+              or public.has_admin_role(array['principal', 'tech_support'])));
 
 drop policy if exists "perf evidence write" on storage.objects;
 create policy "perf evidence write" on storage.objects for insert to authenticated

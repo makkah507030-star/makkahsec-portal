@@ -15,6 +15,14 @@ export const MAX_BYTES = 5 * 1024 * 1024;
 export const ACCEPT = "application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif";
 export const SOURCE_LABEL = { upload: "مرفوع", form: "نموذج", visit: "زيارة دعم" };
 
+/* لون مميّز لكل عنصر — درجات هادئة تنسجم مع أخضر الهوية، بإضاءة متقاربة
+   فيبقى النص الأبيض والعناوين مقروءة. عنصر المقيِّم رمادي محايد. */
+export const ELEMENT_COLOR = {
+  e01: "#6b6b6b", e02: "#3e6350", e03: "#2f7f7a", e04: "#3f6b99", e05: "#5a5f9e", e06: "#7a5c99",
+  e07: "#9a4f6e", e08: "#a5523f", e09: "#b07a2a", e10: "#7d7f2a", e11: "#5f8a3a",
+};
+export const elementColor = (key) => ELEMENT_COLOR[key] ?? "#3e6350";
+
 let refCache = null;
 /** العناصر وبنودها مرتبة، مع بنود كل عنصر في elements[i].items */
 export function loadPerfReference() {
