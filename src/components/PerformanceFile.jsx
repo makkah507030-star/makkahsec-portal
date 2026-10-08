@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
 import {
-  ACCEPT, SOURCE_LABEL, activeYear, elementColor, elementSummary, itemStatus, loadEvidence,
+  ACCEPT, PORTAL_TAG, SOURCE_LABEL, activeYear, elementColor, elementSummary, itemStatus, loadEvidence,
   loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile,
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
@@ -232,7 +232,11 @@ function ElementView({ el, evidence, uid, year, readOnly, onBack, onChanged }) {
                       style={{ background: elementColor(el.key) }}>{n + 1}</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium leading-relaxed text-ink">{it.title}</p>
-                  {it.is_record && <p className="mt-0.5 text-xs text-muted">سجل التطوير المهني: كل مشاركة بشاهدها</p>}
+                  {(PORTAL_TAG[it.portal] ?? (it.is_record ? PORTAL_TAG.record : null)) && (
+                    <span className={`mt-1 inline-block rounded-pill px-2.5 py-0.5 text-xs ${(PORTAL_TAG[it.portal] ?? PORTAL_TAG.record).c}`}>
+                      {(PORTAL_TAG[it.portal] ?? PORTAL_TAG.record).t}
+                    </span>
+                  )}
                 </div>
                 {!el.evaluator_only && (
                   <span className={`chip w-28 justify-center ${st.ok ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>

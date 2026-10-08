@@ -23,6 +23,15 @@ export const ELEMENT_COLOR = {
 };
 export const elementColor = (key) => ELEMENT_COLOR[key] ?? "#3e6350";
 
+/* حالة البند في البوابة (perf_items.portal — supabase/teacher_performance_portal.sql) */
+export const PORTAL_TAG = {
+  auto:    { t: "تنتجه البوابة · الربط التلقائي بملفك سيكون متاحًا قريبًا", c: "bg-mint-light text-mint-deep" },
+  partial: { t: "متوفر جزئيًا في البوابة · أكمله برفع شاهد", c: "bg-canvas text-muted" },
+  manual:  { t: "يُرفع يدويًا الآن · سيكون متاحًا في البوابة قريبًا", c: "bg-warning-light text-warning" },
+  record:  { t: "سجل التطوير المهني: كل مشاركة بشاهدها", c: "bg-mint-tint text-mint-deep" },
+  judge:   { t: "يقدّره المقيِّم بالملاحظة، ويمكنك رفع شاهد", c: "bg-canvas text-muted" },
+};
+
 let refCache = null;
 /** العناصر وبنودها مرتبة، مع بنود كل عنصر في elements[i].items */
 export function loadPerfReference() {
