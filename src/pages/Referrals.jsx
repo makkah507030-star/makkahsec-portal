@@ -479,7 +479,6 @@ function NewReferral({ uid, profile, onDone }) {
 
   return (
     <section className="card space-y-4 p-4">
-      <ReferralGuide />
       {!outside ? (
         <div>
           <label className="text-xs text-muted">الفصل</label>
@@ -594,6 +593,8 @@ function NewReferral({ uid, profile, onDone }) {
           ))}
         </div>
       </div>
+
+      <ReferralGuide type={refType} />
 
       {refType === "behavior" && (
         <div>

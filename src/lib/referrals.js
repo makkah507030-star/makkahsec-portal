@@ -189,7 +189,7 @@ export const PRESETS_GUARDIAN = [
 export const REF_TYPES = [
   { key: "behavior",    label: "سلوكية" },
   { key: "academic",    label: "تأخر دراسي" },
-  { key: "performance", label: "أعمال أدائية" },
+  { key: "performance", label: "مهام أدائية" },
 ];
 export const refTypeLabel = (k) => REF_TYPES.find((t) => t.key === k)?.label ?? "";
 
