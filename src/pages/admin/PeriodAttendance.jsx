@@ -33,7 +33,19 @@ export default function PeriodAttendance() {
         markedScheduleIds(date),
       ]);
 
-      const sched = (schedRes.data ?? []).sort((a, b) => a.period_no - b.period_no);
+      // حصص غطّاها معلم انتظار اليوم: اسم البديل يظهر مع الحصة المحضّرة
+      const { data: subs } = await supabase.from("substitute_periods")
+        .select("schedule_id, cover_teacher_id").eq("attend_date", date);
+      const coverIds = [...new Set((subs ?? []).map((x) => x.cover_teacher_id).filter(Boolean))];
+      const { data: covers } = coverIds.length
+        ? await supabase.from("teachers").select("id, full_name").in("id", coverIds)
+        : { data: [] };
+      const coverName = Object.fromEntries((covers ?? []).map((t) => [t.id, t.full_name]));
+      const coverBy = Object.fromEntries((subs ?? []).map((x) => [x.schedule_id, coverName[x.cover_teacher_id] ?? "معلم انتظار"]));
+
+      const sched = (schedRes.data ?? [])
+        .map((x) => ({ ...x, cover: coverBy[x.id] ?? null }))
+        .sort((a, b) => a.period_no - b.period_no);
       const done = sched.filter((s) => doneSet.has(s.id));
       const left = sched.filter((s) => !doneSet.has(s.id));
 
@@ -90,7 +102,7 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
         i + 1,
         s.classes?.class_no ?? "",
         s.subjects?.name ?? "",
-        s.teachers?.full_name ?? "—",
+        s.cover ? `${s.teachers?.full_name ?? "—"} (حضّرها بديلًا: ${s.cover})` : s.teachers?.full_name ?? "—",
       ]);
 
     printReport({
@@ -178,6 +190,9 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-ink">{s.teachers?.full_name ?? "—"}</p>
                       <p className="truncate text-xs text-muted">{s.subjects?.name ?? "—"}</p>
+                      {s.cover && (
+                        <p className="mt-0.5 truncate text-[11px] font-semibold text-excused">حضّرها بديلًا: {s.cover}</p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -198,7 +213,8 @@ function ReportButtons({ d }) {
       .slice()
       .sort((a, b) => a.period_no - b.period_no || (a.classes?.class_no ?? 0) - (b.classes?.class_no ?? 0))
       .map((s, i) => [
-        i + 1, s.period_no, s.classes?.class_no ?? "", s.subjects?.name ?? "", s.teachers?.full_name ?? "",
+        i + 1, s.period_no, s.classes?.class_no ?? "", s.subjects?.name ?? "",
+        s.cover ? `${s.teachers?.full_name ?? ""} (حضّرها بديلًا: ${s.cover})` : s.teachers?.full_name ?? "",
       ]);
 
   const headers = ["م", "الحصة", "الفصل", "المادة", "المعلم"];
