@@ -53,7 +53,7 @@ const ADMIN_GROUPS = [
     ],
   },
   {
-    title: "الجداول والمعلمون",
+    title: "الشؤون التعليمية",
     items: [
       { to: "/general-schedule",  label: "الجدول العام",          anyPerm: ["import", "schedules"], icon: "table" }, // جدول شامل بالفصول والمعلمين معًا
       { to: "/teacher-schedules", label: "جداول المعلمين",        anyPerm: ["import", "schedules"], icon: "chalk" },
