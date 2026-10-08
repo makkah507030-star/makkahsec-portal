@@ -17,6 +17,7 @@ import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes.js";
 import { sendPush } from "../lib/pushSend.js";
+import { countAr } from "../lib/arabicCount.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -1149,7 +1150,7 @@ function StagePermission({ e, parts, uid, reload, onNext }) {
     await supabase.from("event_participants")
       .update({ permission_id: newReq.id }).in("id", approved.map((p) => p.id));
     setBusy(false);
-    setDoneMsg({ ok: true, text: `رُفع الاستئذان لـ ${rows.length} طالبًا، ويظهر عند معلميهم.` });
+    setDoneMsg({ ok: true, text: `رُفع الاستئذان لـ ${countAr(rows.length, "student", { acc: true })}، ويظهر عند معلميهم.` });
     await reload?.();
   };
 

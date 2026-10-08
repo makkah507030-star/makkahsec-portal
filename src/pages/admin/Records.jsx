@@ -6,6 +6,7 @@ import { ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { noEra } from "../../lib/dates";
+import { countAr } from "../../lib/arabicCount.js";
 
 const TRACK_LABEL = { common_year: "السنة المشتركة", general_track: "المسار العام" };
 const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
@@ -423,7 +424,7 @@ function StudentsTab({ year, yearLabel }) {
               className="card flex flex-col items-center gap-1 px-3 py-4 hover:bg-canvas"
             >
               <span className="num text-lg font-bold text-ink">{c.class_no}</span>
-              <span className="num text-xs text-muted">{countByClass.get(c.id) ?? 0} طالب</span>
+              <span className="num text-xs text-muted">{countAr(countByClass.get(c.id) ?? 0, "student")}</span>
             </button>
           ))}
         </div>

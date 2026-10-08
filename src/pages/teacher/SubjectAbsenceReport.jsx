@@ -11,6 +11,7 @@ import { printReport, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exp
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 const STATUS_LABEL = { present: "حاضر", absent: "غائب", late: "متأخر", excused: "مستأذن" };
 const STATUS_CHIP = {
@@ -338,7 +339,7 @@ export default function SubjectAbsenceReport() {
             <Stat label="تأخر" value={data.tot.late} tone="text-late" />
             <Stat label="استئذان" value={data.tot.excused} tone="text-excused" />
             <Stat label="نسبة الغياب" value={`${rate}%`} tone={rateTone(rate)} hint="غياب ÷ كل السجلات" />
-            <Stat label="طلاب غابوا" value={repeated.length} hint={`من ${data.students.length} طالبًا`} />
+            <Stat label="طلاب غابوا" value={repeated.length} hint={`من ${countAr(data.students.length, "student", { acc: true })}`} />
           </section>
 
           {/* غياب اليوم */}

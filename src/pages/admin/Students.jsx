@@ -5,6 +5,7 @@ import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } f
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 const TRACK_LABEL = {
   common_year: "السنة المشتركة",
@@ -262,7 +263,7 @@ export default function Students() {
             <button key={c} onClick={() => setCls(c)}
               className="card flex flex-col items-center gap-1 px-3 py-4 hover:bg-canvas">
               <span className="num text-lg font-bold text-ink">{c}</span>
-              <span className="num text-xs text-muted">{countByClass.get(c) ?? 0} طالب</span>
+              <span className="num text-xs text-muted">{countAr(countByClass.get(c) ?? 0, "student")}</span>
             </button>
           ))}
         </div>

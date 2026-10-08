@@ -6,6 +6,7 @@ import { printReport, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { noEra } from "../../lib/dates";
+import { countAr } from "../../lib/arabicCount.js";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
 const PERIODS = ["الفترة الأولى", "الفترة الثانية"];
@@ -384,7 +385,7 @@ export default function FollowUpLog() {
       sections: [
         {
           title: `سجل متابعة مادة ${group.subject} — ${period}`,
-          subtitle: `${GRADE_NAMES[group.grade] ?? ""} · فصل ${group.class_no} · ${group.students.length} طالبًا`,
+          subtitle: `${GRADE_NAMES[group.grade] ?? ""} · فصل ${group.class_no} · ${countAr(group.students.length, "student")}`,
           headerRows: [row1, row2, row3, row4, row5],
           tableClass: "follow",
           colWidths,

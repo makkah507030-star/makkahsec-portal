@@ -8,6 +8,7 @@ import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { loadRangeStart, WARNING_STAGES, OFFICIAL_LABEL } from "../../lib/officialAttendance";
 import { SIGNS, logos, Fig, DateInput, Note, Loading, weekdayOf, useFingerprint } from "./shared.jsx";
 import { useSession } from "../../lib/session.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 // من يعدّل حضور الحصص (supabase/class_attendance_staff_edit.sql)
 const EDIT_ROLES = ["principal", "tech_support", "deputy_students"];
@@ -138,7 +139,7 @@ function FileBody({ s, from, to }) {
         <Fig value={excused.length} label="غياب بعذر" tone="text-excused" />
         {fp ? <Fig value={late.length} label="تأخر صباحي" tone="text-late" />
             : <Fig value="—" label="تأخر صباحي" hint="البصمة مقفلة" />}
-        <Fig value={pAbsent.length} label="حصص غياب" tone="text-absent" hint={`تأخر عن ${pLate.length} حصة`} />
+        <Fig value={pAbsent.length} label="حصص غياب" tone="text-absent" hint={`تأخر عن ${countAr(pLate.length, "period", { acc: true })}`} />
       </div>
 
       <button onClick={print}

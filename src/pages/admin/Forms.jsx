@@ -6,6 +6,8 @@ import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
+import EvidenceBox from "../../components/EvidenceBox.jsx";
+import { useEvidence } from "../../lib/evidence.js";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES, sheetLandscape, isGuestCert } from "../../components/FormSheet.jsx";
 import { RATING_LEVELS, gradeTone, itemPoints, officialLabel, rubricScore, weightedRating } from "../../lib/rubric.js";
 import Loader from "../../components/Loader.jsx";
@@ -440,6 +442,9 @@ export default function Forms({ view = "issue", openKey = null }) {
   const [rejectFor, setRejectFor] = useState(null); // مستند بانتظار سبب الإعادة
   const [rejectNote, setRejectNote] = useState("");
   const [viewing, setViewing] = useState(null);    // { doc, template, urls }
+  // شواهد الأداء الوظيفي للنموذج المفتوح للإصدار أو للعرض
+  const evPicked = useEvidence(picked?.key);
+  const evViewing = useEvidence(viewing?.template?.key);
 
   // أصول التوقيع والختم
   const [mySig, setMySig] = useState(null);
@@ -1234,7 +1239,8 @@ export default function Forms({ view = "issue", openKey = null }) {
                        principalName={assets.principal_name}
                        // توقيع المستفيد على إفادته يظهر متى وقّع، قبل الاعتماد أيضًا
                        replySigUrl={viewing.replySig}
-                       replySigName={d.reply_signature_name} />
+                       replySigName={d.reply_signature_name}
+                       evidence={evViewing} />
           </SheetPreview>
         </div>
 
@@ -1246,7 +1252,8 @@ export default function Forms({ view = "issue", openKey = null }) {
                          principalSigUrl={viewing.principal}
                          principalName={assets.principal_name}
                          replySigUrl={viewing.replySig}
-                         replySigName={d.reply_signature_name} />
+                         replySigName={d.reply_signature_name}
+                         evidence={evViewing} />
             </PrintArea>
           </div>
         )}
@@ -1287,7 +1294,8 @@ export default function Forms({ view = "issue", openKey = null }) {
                            sigUrl={urls.sig}
                            stampUrl={picked.show_stamp ? urls.stamp : null}
                            principalSigUrl={urls.principal}
-                           principalName={assets.principal_name} />
+                           principalName={assets.principal_name}
+                           evidence={evPicked} />
               ))}
             </PrintArea>
           </div>
@@ -1527,6 +1535,8 @@ export default function Forms({ view = "issue", openKey = null }) {
               </p>
             )}
 
+            <EvidenceBox items={evPicked} />
+
             <button className="btn-primary w-full" onClick={issue} disabled={saving || !!issued}>
               {saving ? "جارٍ الحفظ…"
                 : issued ? "تم"
@@ -1587,6 +1597,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                 stampUrl={showSign && picked.show_stamp ? urls.stamp : null}
                 principalSigUrl={showSign ? urls.principal : null}
                 principalName={assets.principal_name}
+                evidence={evPicked}
               />
             </SheetPreview>
           </section>

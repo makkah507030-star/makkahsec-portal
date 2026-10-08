@@ -5,6 +5,7 @@ import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } 
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 // بداية الشهر الحالي — نطاق افتراضي معقول للتقرير
 function monthStartISO() {
@@ -72,8 +73,8 @@ export default function SubstituteReport() {
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       sections: [
-        { title: "إحصائية حصص الانتظار لكل معلم", subtitle: `${stats.length} معلم`, headers: statsHeaders, rows: statsRows },
-        { title: "سجل حصص الانتظار", subtitle: `${rows?.length ?? 0} حصة`, headers, rows: listRows },
+        { title: "إحصائية حصص الانتظار لكل معلم", subtitle: `${countAr(stats.length, "teacher")}`, headers: statsHeaders, rows: statsRows },
+        { title: "سجل حصص الانتظار", subtitle: `${countAr(rows?.length ?? 0, "period")}`, headers, rows: listRows },
       ],
       signatures: [
         { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME },

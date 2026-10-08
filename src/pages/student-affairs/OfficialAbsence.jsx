@@ -14,6 +14,7 @@ import {
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 const TONE = {
   present: "bg-present/10 text-present",
@@ -94,7 +95,7 @@ export default function OfficialAbsence({ initialDate }) {
   const bulk = async (list, status) => {
     if (!list.length) return;
     const word = status === "excused" ? "بعذر" : "بدون عذر";
-    if (!window.confirm(`تحويل غياب ${list.length} طالبًا إلى «${word}»؟`)) return;
+    if (!window.confirm(`تحويل غياب ${countAr(list.length, "student", { acc: true })} إلى «${word}»؟`)) return;
     setBusy(true); setMsg(null);
     let done = 0;
     try {
@@ -102,7 +103,7 @@ export default function OfficialAbsence({ initialDate }) {
         await overrideMark(date, r, status, status === "excused" ? "غياب بعذر" : "غياب بدون عذر");
         done++;
       }
-      setMsg({ ok: true, text: `حُوّل غياب ${done} طالبًا إلى «${word}».` });
+      setMsg({ ok: true, text: `حُوّل غياب ${countAr(done, "student", { acc: true })} إلى «${word}».` });
     } catch (e) {
       setMsg({ ok: false, text: `حُوّل ${done} من ${list.length}، ثم تعذّر الباقي: ${e.message ?? e}` });
     } finally {
@@ -124,7 +125,7 @@ export default function OfficialAbsence({ initialDate }) {
       title: day ? "إعادة اعتماد الغياب الرسمي لليوم" : "اعتماد الغياب الرسمي لليوم",
       impact: [
         "تُثبَّت نسبة الغياب الرسمي لهذا اليوم في إحصاءات المدرسة وتقاريرها.",
-        liveSum.pending > 0 && `لم يُحضَّر بعد ${liveSum.pending} طالبًا في الحصة الأولى أو الثانية، فالأرقام ناقصة.`,
+        liveSum.pending > 0 && `لم يُحضَّر بعد ${countAr(liveSum.pending, "student", { acc: true })} في الحصة الأولى أو الثانية، فالأرقام ناقصة.`,
         "يمكن إعادة الاعتماد لاحقًا إن تغيّر التحضير.",
       ],
       confirmLabel: day ? "إعادة الاعتماد" : "اعتماد اليوم",

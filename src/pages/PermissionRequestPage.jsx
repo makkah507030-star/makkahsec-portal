@@ -5,6 +5,7 @@ import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import PermissionLog from "../components/PermissionLog.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes";
+import { countAr } from "../lib/arabicCount.js";
 
 const GRADES = [1, 2, 3];
 const MAX_PERIODS = 7; // أقصى عدد حصص باليوم (الأحد/الاثنين = 7)
@@ -184,7 +185,7 @@ export default function PermissionRequestPage() {
       return;
     }
 
-    setResult({ ok: true, message: `تم رفع الاستئذان لـ ${rows.length} طالب.` });
+    setResult({ ok: true, message: `تم رفع الاستئذان لـ ${countAr(rows.length, "student", { acc: true })}.` });
     setSelectedIds(new Set());
     setNote("");
     setSelectedPeriods(new Set());

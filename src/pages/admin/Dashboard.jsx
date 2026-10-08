@@ -36,6 +36,7 @@ import DutyCard from "../../components/DutyCard.jsx";
 import ReferralsInbox from "../../components/ReferralsInbox.jsx";
 import PendingAlertsCard from "../../components/PendingAlertsCard.jsx";
 import Loader from "../../components/Loader.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 
 export default function Dashboard() {
@@ -242,7 +243,7 @@ export default function Dashboard() {
               <p className="mt-2 text-xs text-muted">
                 {d.unmarked.length === 0
                   ? "اكتمل تحضير جميع الحصص."
-                  : `بقيت ${d.unmarked.length} حصة بلا تحضير.`}
+                  : `بقيت ${countAr(d.unmarked.length, "period")} بلا تحضير.`}
               </p>
             </div>
             <p className="num text-4xl font-bold leading-none text-mint-deep">{pct}%</p>
