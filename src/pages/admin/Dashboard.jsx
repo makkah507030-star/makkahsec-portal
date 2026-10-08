@@ -109,21 +109,12 @@ export default function Dashboard() {
           markedScheduleIds(date),
         ]);
 
-        // حالات "بصم ولم يحضر" اليوم
+        // حالات "بصم ولم يحضر" اليوم — بتعريف صفحة المتابعة نفسه: بصم صباحًا وغاب
+        // رسميًا. والبصمة المقفلة (مرحلة التجربة) لا تُحتسب، فلا تظهر البطاقة.
         let escapeCount = 0;
         try {
-          const { data: punches } = await supabase
-            .from("daily_attendance").select("student_id").eq("attend_date", date);
-          const ids = (punches ?? []).map((p) => p.student_id);
-          if (ids.length) {
-            const { data: abs } = await supabase
-              .from("class_attendance")
-              .select("student_id")
-              .eq("attend_date", date)
-              .eq("status", "absent")
-              .in("student_id", ids);
-            escapeCount = new Set((abs ?? []).map((r) => r.student_id)).size;
-          }
+          const { rows } = await loadDay(date);
+          escapeCount = rows.filter((r) => r.official === "absent" && r.punched).length;
         } catch (_) { /* تجاهل */ }
 
         const doneSet = markedSet;

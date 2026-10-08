@@ -12,6 +12,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { quietly } from "../../lib/notice.js";
 import PrincipalSign from "../../components/PrincipalSign.jsx";
 import { PRINCIPAL_NAME } from "../../lib/exportUtils.js";
+import EvidenceTags from "../../components/EvidenceTags.jsx";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -319,6 +320,9 @@ export default function QuizMarks() {
               طباعة كشف الدرجات
             </button>
           </div>
+          {["diagnostic", "period1", "period2"].includes(quiz?.period) && (
+            <EvidenceTags items={["e05_02", "e03_02", "e10_03", "e11_04"]} />
+          )}
         </>
       )}
 

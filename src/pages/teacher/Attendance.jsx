@@ -9,9 +9,11 @@ import {
   loadPeriodTimes, byPeriodNo, currentPeriodNo, lastStartedPeriodNo, periodStarted, fmtRange, fmtTime,
 } from "../../lib/periodTimes";
 import Loader from "../../components/Loader.jsx";
+import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { useNotice } from "../../lib/useNotice.js";
 import StudentNoteChips, { ClassNotesButton } from "../../components/StudentNoteChips.jsx";
 import { countAr } from "../../lib/arabicCount.js";
+import { loadFingerprintEnabled } from "../../lib/officialAttendance.js";
 
 const ORDER = ["present", "absent", "late", "excused"];        // للعدادات والعرض
 const TEACHER_ORDER = ["present", "absent", "late"];           // ما يختاره المعلم
@@ -55,6 +57,9 @@ export default function Attendance() {
   const [marks, setMarks] = useState({});
   const [excused, setExcused] = useState(new Set());
   const [punched, setPunched] = useState(new Set());
+  // البصمة المقفلة (مرحلة التجربة) لا تظهر في الكشف: لا وسوم بصمة، ويبقى رقم الهوية
+  const [fpOn, setFpOn] = useState(false);
+  useEffect(() => { loadFingerprintEnabled().then(setFpOn, () => setFpOn(false)); }, []);
   const [permits, setPermits] = useState({}); // student_id -> { by, note }
   const [returns, setReturns] = useState({}); // student_id -> { from_period }
   const [saving, setSaving] = useState(false);
@@ -107,7 +112,12 @@ export default function Attendance() {
 
       const list = data ?? [];
       setPeriods(list);
-      setMySchedIds(list.map((p) => p.id));
+
+      // كل حصص المعلم في الفصل الدراسي (كل الأيام) — لصندوق الغياب. كان يأخذ حصص
+      // اليوم وحدها، فلا يعدّ إلا ما سُجّل في هذا اليوم من الأسبوع.
+      const { data: all } = await supabase.from("schedule")
+        .select("id").eq("teacher_id", t0.id).eq("academic_year", y).eq("term", t);
+      setMySchedIds((all ?? []).map((p) => p.id));
       if (list.length) {
         const { data: done } = await supabase.from("class_attendance")
           .select("schedule_id").eq("attend_date", date)
@@ -230,14 +240,16 @@ export default function Attendance() {
 
       // إحصاء غياب كل طالب عن حصص هذا المعلم خلال الفصل الحالي
       if (mySchedIds.length) {
-        const { data: hist } = await supabase
+        // على دفعات: حصص الفصل كله تتجاوز حد الألف صف للطلب الواحد
+        const hist = await fetchAllPaged(() => supabase
           .from("class_attendance")
-          .select("student_id, status")
+          .select("id, student_id, status")
           .in("student_id", ids)
-          .in("schedule_id", mySchedIds);
+          .in("schedule_id", mySchedIds)
+          .order("id", { ascending: true })).catch(() => []);
 
         const stats = {};
-        (hist ?? []).forEach((r) => {
+        hist.forEach((r) => {
           const st = (stats[r.student_id] ??= { absent: 0, total: 0 });
           st.total += 1;
           if (r.status === "absent") st.absent += 1;
@@ -412,16 +424,16 @@ export default function Attendance() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium leading-tight text-ink">{s.full_name}</p>
                     {/* من بصم يكفيه وسم «تم التبصيم» بدل رقم هويته */}
-                    {s.national_id && !punched.has(s.id) && (
+                    {s.national_id && !(fpOn && punched.has(s.id)) && (
                       <p className="num mt-0.5 text-xs leading-none text-faint">{s.national_id}</p>
                     )}
                     <StudentNoteChips name={s.full_name} notes={notesBy[s.id]} />
                   </div>
-                  {!punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
-                  {punched.has(s.id) && cur !== "absent" && (
+                  {fpOn && !punched.has(s.id) && <span className="chip shrink-0 bg-warning-light text-warning">لم يبصم</span>}
+                  {fpOn && punched.has(s.id) && cur !== "absent" && (
                     <span className="chip shrink-0 bg-present/10 font-semibold text-present">تم التبصيم</span>
                   )}
-                  {punched.has(s.id) && cur === "absent" && (
+                  {fpOn && punched.has(s.id) && cur === "absent" && (
                     <span className="chip shrink-0 bg-absent/10 font-semibold text-absent">
                       بصم ولم يحضر
                     </span>
@@ -484,16 +496,20 @@ export default function Attendance() {
           {
             title: "شارات بجانب اسم الطالب",
             items: [
-              { chip: "bg-present/10 text-present", sample: "تم التبصيم",
-                label: "له بصمة دخول صباحية" },
-              { chip: "bg-warning-light text-warning", sample: "لم يبصم",
-                label: "لا بصمة دخول صباحية", note: "غالبًا غائب عن المدرسة" },
+              ...(fpOn ? [
+                { chip: "bg-present/10 text-present", sample: "تم التبصيم",
+                  label: "له بصمة دخول صباحية" },
+                { chip: "bg-warning-light text-warning", sample: "لم يبصم",
+                  label: "لا بصمة دخول صباحية", note: "غالبًا غائب عن المدرسة" },
+              ] : []),
               { chip: "bg-excused/15 text-excused", sample: "مستأذن",
                 label: "استئذان من الإدارة", note: "لا يعدّله المعلم" },
               { chip: "bg-present/10 text-present", sample: "عاد للفصل",
                 label: "أنهت الإدارة استئذانه" },
-              { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر",
-                label: "دخل المدرسة وغاب عن الحصة", note: "تأكّد قبل الحفظ" },
+              ...(fpOn ? [
+                { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر",
+                  label: "دخل المدرسة وغاب عن الحصة", note: "تأكّد قبل الحفظ" },
+              ] : []),
             ],
           },
           {

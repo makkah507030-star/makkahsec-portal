@@ -7,6 +7,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
+import EvidenceTags from "../../components/EvidenceTags.jsx";
 
 /* =====================================================================
    سجل المتابعة الإلكتروني 2 — بفكرة السجل الأول نفسها، مع فرق واحد:
@@ -428,6 +429,7 @@ export default function FollowUpLog2() {
           ضغطة واحدة <b className="text-mint-deep">✓</b> تُحتسب درجة، وضغطتان <b className="text-danger">✗</b>، والثالثة تمسح الخانة.
           يُحفظ كل شيء تلقائيًا، وهو مستقل عن السجل الأول.
         </p>
+        <EvidenceTags className="mt-2" items={["e03_06", "e11_02", "e11_03"]} />
       </div>
 
       {/* المادة والفصل والفترة */}

@@ -7,6 +7,7 @@ import { countAr } from "../lib/arabicCount";
 import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import EvidenceTags from "./EvidenceTags.jsx";
 
 /* =====================================================================
    دورة الاختبار المتتابعة (التشخيصي واختبارا الفترتين) — مثل مراحل الأحداث:
@@ -105,6 +106,7 @@ function PlanForm({ q, kind, plan, suggested, onSaved, onCancel }) {
         <button className="btn-primary" onClick={save} disabled={busy}>{busy ? "جارٍ الحفظ…" : "حفظ الخطة"}</button>
         <button className="btn-ghost" onClick={onCancel} disabled={busy}>إلغاء</button>
       </div>
+      <EvidenceTags items={kind === "remedial" ? ["e05_06", "e05_05"] : ["e05_07"]} />
     </div>
   );
 }
@@ -166,6 +168,7 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
             <button className="btn-primary" onClick={markDone}>تأكيد التنفيذ</button>
             <button className="btn-ghost" onClick={() => setAsking(false)}>إلغاء</button>
           </div>
+          <EvidenceTags items={[plan.kind === "remedial" ? "e06_04" : "e06_05"]} />
         </div>
       )}
     </div>
@@ -307,6 +310,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
             <Link className="btn-ghost" to="/quiz-analytics">فتح تحليل النتائج</Link>
             <button className="btn-primary" onClick={approveAnalysis} disabled={busy}>اعتماد التحليل</button>
           </div>
+          <EvidenceTags items={["e10_01", "e10_02"]} />
         </div>
       )}
 
@@ -361,6 +365,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
               <button className="text-sm text-muted underline" onClick={honorOther}>كُرّموا بطريقة أخرى</button>
             </div>
           )}
+          {!honored && <EvidenceTags items={["e05_10"]} />}
         </div>
       )}
 

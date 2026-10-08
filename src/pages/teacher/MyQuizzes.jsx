@@ -14,6 +14,7 @@ import QuizCycle, { CYCLE_PERIODS } from "../../components/QuizCycle.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import SymbolsToolbar from "../../components/SymbolsToolbar.jsx";
 import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
+import EvidenceTags from "../../components/EvidenceTags.jsx";
 
 /* =====================================================================
    اختباراتي — اختبارات المعلم.
@@ -856,6 +857,11 @@ function QuizEditor({ quiz, uid, onBack }) {
             <button className="btn-primary w-full" onClick={() => setStatus("ready")}>
               {online ? "اعتماد الاختبار — ثم أطلقه من «الإطلاق والمتابعة»" : "اعتماد الاختبار وجعله جاهزًا"}
             </button>
+          )}
+          {q.status === "draft" && (questions?.length ?? 0) > 0 && CYCLE_PERIODS.includes(q.period) && (
+            <EvidenceTags className="mt-2" items={[
+              q.period === "diagnostic" ? "e11_01" : "e11_05", "e11_07", ...(online ? ["e07_06"] : []),
+            ]} />
           )}
         </div>
       )}
