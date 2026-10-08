@@ -7,6 +7,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import EvidenceBox from "../../components/EvidenceBox.jsx";
+import EvidenceTags from "../../components/EvidenceTags.jsx";
 import SendToFile from "../../components/SendToFile.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 import { useEvidence } from "../../lib/evidence.js";
@@ -1563,6 +1564,8 @@ export default function Forms({ view = "issue", openKey = null }) {
             )}
 
             <EvidenceBox items={evPicked} />
+            {/* الشهادة لطالب تُحتسب آليًا في ملف أداء المعلم (البند 5-10) */}
+            {picked?.category === "certificate" && <EvidenceTags items={["e05_10"]} />}
 
             <button className="btn-primary w-full" onClick={issue} disabled={saving || !!issued}>
               {saving ? "جارٍ الحفظ…"
