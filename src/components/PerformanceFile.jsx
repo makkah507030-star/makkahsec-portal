@@ -211,9 +211,40 @@ function DutyIndicators({ uid, year }) {
   );
 }
 
+/* الشواهد التي حُسب منها عدّاد البند الآلي: للمعلم في ملفه، وللمدير ليقيّمها */
+function AutoDetails({ uid, year, itemKey }) {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.rpc("perf_auto_details", { p_uid: uid, p_year: year, p_item: itemKey });
+      if (error) setErr(error.message?.includes("perf_auto_details") ? "عرض التفاصيل غير مفعّل بعد في قاعدة البيانات." : "تعذّر تحميل التفاصيل.");
+      setRows(data ?? []);
+    })();
+  }, [uid, year, itemKey]);
+  if (rows === null) return <p className="px-1 py-2 text-xs text-muted">جارٍ التحميل…</p>;
+  if (err) return <p className="px-1 py-2 text-xs text-danger">{err}</p>;
+  if (!rows.length) return <p className="px-1 py-2 text-xs text-muted">لا تفاصيل.</p>;
+  return (
+    <div className="divide-y divide-mint-light/70 rounded-sm2 border border-mint-light bg-paper">
+      {rows.map((r, i) => (
+        <div key={i} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-3 py-2 text-sm">
+          <span className="num w-5 shrink-0 text-xs text-muted">{i + 1}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-medium text-ink">{r.r_title || "—"}</span>
+            {r.r_detail && <span className="block text-xs leading-relaxed text-muted">{r.r_detail}</span>}
+          </span>
+          {r.r_at && <span className="num shrink-0 text-xs text-muted">{fmtDate(r.r_at)}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChanged }) {
   const [open, setOpen] = useState(null);   // { key, mode: "add" | "edit", ev }
   const sum = elementSummary(el, evidence, auto);
+  const [shown, setShown] = useState(null);   // البند الآلي المفتوحة تفاصيله
 
   const del = async (ev) => {
     if (!window.confirm("حذف هذا الشاهد من الملف؟")) return;
@@ -280,11 +311,15 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                         <span className="text-muted"> · العداد <span className="num font-semibold text-ink">{st.auto.cnt}</span>
                           {st.auto.last ? ` · آخرها ${fmtDate(st.auto.last)}` : ""}</span>
                       </p>
+                      <button className="text-sm text-mint-deep underline" onClick={() => setShown(shown === it.key ? null : it.key)}>
+                        {shown === it.key ? "إخفاء الشواهد" : "عرض الشواهد"}
+                      </button>
                       {!readOnly && AUTO_SOURCE[it.key]?.to && (
-                        <Link className="text-sm text-mint-deep underline" to={AUTO_SOURCE[it.key].to}>فتح</Link>
+                        <Link className="text-sm text-mint-deep underline" to={AUTO_SOURCE[it.key].to}>فتح الصفحة</Link>
                       )}
                     </div>
                   )}
+                  {st.auto && shown === it.key && <AutoDetails uid={uid} year={year} itemKey={it.key} />}
                   {st.list.map((ev) => (
                     <EvidenceRow key={ev.id} ev={ev} item={it} readOnly={readOnly}
                                  onEdit={() => setOpen({ key: it.key, mode: "edit", ev })}
