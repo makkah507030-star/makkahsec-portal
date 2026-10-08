@@ -1553,8 +1553,8 @@ export default function FormSheet({
     fontFamily: "'IBM Plex Sans Arabic', sans-serif",
     position: "relative",
   };
-  // الشهادات لا تحمل الشريط
-  const ev = template.category === "certificate" || isGuestCert(template) ? null : evidence;
+  // الشهادات ونماذج الغياب والتأخر الرسمية (نصها حرفي من الدليل الإجرائي) لا تحمل الشريط في الطباعة
+  const ev = template.category === "certificate" || isGuestCert(template) || isAbsenceForm(template) ? null : evidence;
   const sheetCls = "sheet mx-auto bg-white text-ink shadow-[0_18px_50px_-28px_rgba(16,16,16,.5)]";
   // اسم المدير: المحفوظ تحت توقيعه، وإلا اسمه في «أسماء الموقّعين»
   const props = { template, v, doc, sigUrl, stampUrl, principalSigUrl,
