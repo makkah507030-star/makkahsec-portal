@@ -11,6 +11,7 @@ export const STATUS = {
   with_deputy:           { t: "لدى وكيل شؤون الطلاب", c: "bg-warning/10 text-warning" },
   with_counselor:        { t: "لدى الموجه الطلابي",   c: "bg-mint-tint text-mint-deep" },
   returned_to_counselor: { t: "مُعادة للموجه",         c: "bg-absent/10 text-absent" },
+  returned_to_teacher:   { t: "مُعادة للمعلم لاستكمال التوثيق", c: "bg-absent/10 text-absent" },
   closed:                { t: "مُقفلة",                c: "bg-present/10 text-present" },
   with_guardian:         { t: "لدى ولي الأمر",         c: "bg-warning/10 text-warning" },
   guardian_replied:      { t: "وصل رد ولي الأمر",      c: "bg-present/10 text-present" },
@@ -19,13 +20,14 @@ export const STATUS = {
 
 // ما زالت قيد المتابعة (لم تنتهِ)
 export const OPEN_STATUSES = [
-  "with_deputy", "with_counselor", "returned_to_counselor", "with_guardian", "guardian_replied",
+  "with_deputy", "with_counselor", "returned_to_counselor", "returned_to_teacher",
+  "with_guardian", "guardian_replied",
 ];
 
 // الأعمدة اللازمة لحساب المرحلة
 export const STAGE_COLS =
   "id, serial, kind, student_name, class_label, reason, status, teacher_name, created_at, teacher_at, " +
-  "deputy_at, counselor_id, counselor_name, counselor_at, closed_at, guardian_ack_at";
+  "deputy_at, counselor_id, counselor_name, counselor_at, closed_at, guardian_ack_at, teacher_id";
 
 // تُعدّ الإحالة متأخرة إن بقيت في مرحلتها أكثر من هذا
 export const LATE_DAYS = 3;
@@ -48,6 +50,9 @@ export function stageOf(r) {
     case "returned_to_counselor":
       return { group: "counselor", who: r.counselor_name || "الموجه الطلابي",
                since: r.counselor_at ?? r.deputy_at ?? r.created_at, what: "أُعيدت بملاحظة الوكيل" };
+    case "returned_to_teacher":
+      return { group: "teacher", who: r.teacher_name || "المعلم", since: r.deputy_at ?? r.created_at,
+               what: "لاستكمال التوثيق" };
     case "with_guardian":
       return { group: "guardian", who: "ولي الأمر", since: r.closed_at ?? r.created_at,
                what: "لتأكيد الاستلام" };
@@ -124,7 +129,6 @@ export const PRESETS_TEACHER_DONE = [
   "تغيير مكان جلوس الطالب.",
   "تكليف الطالب بمهمة إيجابية داخل الفصل.",
   "تعزيز السلوك الإيجابي عند ظهوره.",
-  "التواصل مع ولي الأمر هاتفيًا.",
   "تدوين الملاحظة في سجل متابعة الطالب.",
 ];
 
@@ -177,3 +181,51 @@ export const PRESETS_GUARDIAN = [
   "أرغب في مقابلة الموجه الطلابي لمناقشة الحالة.",
   "أرغب في التواصل الهاتفي مع المدرسة.",
 ];
+
+/* =====================================================================
+   إجراءات المعلم قبل الإحالة (supabase/referral_procedures_*.sql)
+   ===================================================================== */
+
+export const REF_TYPES = [
+  { key: "behavior",    label: "سلوكية" },
+  { key: "academic",    label: "تأخر دراسي" },
+  { key: "performance", label: "مهام أدائية" },
+];
+export const refTypeLabel = (k) => REF_TYPES.find((t) => t.key === k)?.label ?? "";
+
+/* السلوكية: المخالفة من الدرجتين الأولى والثانية تُعالج بالتدرج قبل الإحالة،
+   كل خطوة في موقف (يوم) مستقل. والثالثة فما فوق تُحال مباشرة. */
+export const BEHAVIOR_STEPS = [
+  { key: "verbal",   t: "التنبيه الشفهي بأسلوب تربوي" },
+  { key: "record",   t: "تدوين المشكلة وتوقيع الطالب عليها" },
+  { key: "guardian", t: "إشعار ولي الأمر عبر البوابة" },
+];
+export const DIRECT_DEGREE = 3;
+
+/* الدراسية: شروط الموجه الطلابي قبل الإحالة */
+export const ACADEMIC_ITEMS = [
+  { key: "problem",  t: "توثيق المشكلة وتاريخ رصدها" },
+  { key: "guidance", t: "إجراءات التنبيه والتوجيه" },
+  { key: "support",  t: "الدعم والإجراءات العلاجية المقدمة للطالب" },
+  { key: "followup", t: "نتائج المتابعة وقياس مدى التحسن" },
+  { key: "evidence", t: "الأدلة والسجلات ذات العلاقة" },
+  { key: "persist",  t: "استمرار الحالة وعدم تحقق التحسن المطلوب" },
+];
+
+/** هل اكتمل بند دراسي: نص مكتوب، والأدلة تكفيها المرفقات */
+export const academicItemDone = (docs, key) =>
+  !!docs?.items?.[key]?.trim() || (key === "evidence" && (docs?.files?.length ?? 0) > 0);
+
+/** نص التوثيق للطباعة في خانة «ما تم عمله» */
+export function docsSummary(refType, docs) {
+  if (!docs) return "";
+  if (refType === "behavior") {
+    const lines = (docs.steps ?? []).map((x) => `${x.t} (${x.date})`);
+    if (docs.urgent) lines.push(`إحالة عاجلة: ${docs.urgent}`);
+    return lines.join("\n");
+  }
+  return ACADEMIC_ITEMS.filter((i) => docs.items?.[i.key]?.trim())
+    .map((i) => `${i.t}: ${docs.items[i.key].trim()}`)
+    .concat((docs.files ?? []).length ? [`المرفقات: ${docs.files.map((f) => f.name).join("، ")}`] : [])
+    .join("\n");
+}

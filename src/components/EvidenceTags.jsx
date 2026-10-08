@@ -57,13 +57,19 @@ export default function EvidenceTags({ items, className = "" }) {
   const [counts, setCounts] = useState(null);
   const uid = session?.user?.id;
 
+  // تأثيران منفصلان: لو اجتمعا لألغى وصولُ المرجع جلبَ الرصيد فيبقى «…»
   useEffect(() => {
     if (!open || ref) return undefined;
     let live = true;
     loadPerfReference().then((els) => { if (live) setRef(els); }, () => {});
-    if (uid) loadMyCounts(uid).then((m) => { if (live) setCounts(m); });
     return () => { live = false; };
-  }, [open, ref, uid]);
+  }, [open, ref]);
+  useEffect(() => {
+    if (!open || counts || !uid) return undefined;
+    let live = true;
+    loadMyCounts(uid).then((m) => { if (live) setCounts(m); });
+    return () => { live = false; };
+  }, [open, counts, uid]);
 
   const keys = (items ?? []).filter((k) => SHORT[k]);
   if (!isTeacher || keys.length === 0) return null;
@@ -74,7 +80,8 @@ export default function EvidenceTags({ items, className = "" }) {
   const color = open && elementColor(open.slice(0, 3));
 
   return (
-    <div className={`no-print ${className}`}>
+    <div className={`no-print rounded-card border border-line bg-canvas/60 px-3 py-2.5 ${className}`}>
+      <p className="mb-2 text-xs font-semibold text-muted">الشواهد التي تحصل عليها بعد التنفيذ</p>
       <div className="flex flex-wrap gap-1.5">
         {keys.map((k) => {
           const p = parts(k);
@@ -92,7 +99,7 @@ export default function EvidenceTags({ items, className = "" }) {
       </div>
 
       {open && (
-        <div className="mt-2 rounded-sm2 border border-line bg-paper px-3 py-2.5 text-[12.5px] leading-relaxed">
+        <div className="mt-2 rounded-sm2 border border-line bg-white px-3 py-2.5 text-[12.5px] leading-relaxed">
           <p className="font-bold" style={{ color }}>يُحتسب شاهدًا تلقائيًا في ملف أدائك</p>
           <p className="text-ink">العنصر <span className="num">{parts(open).el}</span>: {el?.title ?? "…"}</p>
           <p className="text-ink">البند <span className="num">{parts(open).no}</span>: {it?.title ?? SHORT[open]}</p>

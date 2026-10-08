@@ -92,6 +92,10 @@ begin
       from public.notifications n
      where p_item in ('e03_01', 'e05_04') and tid is not null
        and n.created_by = p_uid and not n.is_auto and n.created_at >= y_start
+       -- التواصل مع أولياء الأمور (3-1): ما وصل ولي أمر واحدًا على الأقل
+       and (p_item = 'e05_04' or exists (select 1 from public.notification_recipients nr
+                                          join public.users u on u.id = nr.user_id
+                                         where nr.notification_id = n.id and u.role = 'guardian'))
     union all
     -- سجل المتابعة: يوم لكل تاريخ رصد، وما رُصد فيه
     select to_char(fu.updated_at::date, 'YYYY/MM/DD')::text, ('رصد: ' || string_agg(distinct fu.klabel, '، '))::text, max(fu.updated_at)

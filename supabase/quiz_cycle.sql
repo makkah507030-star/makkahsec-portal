@@ -111,10 +111,13 @@ begin
     union all select uid, 'e05_07', created_at from pl where kind = 'enrichment'
     union all select uid, 'e06_04', done_at from pl where kind = 'remedial' and status = 'done'
     union all select uid, 'e06_05', done_at from pl where kind = 'enrichment' and status = 'done'
-    -- إشعارات المعلم لفصوله وأولياء أمورهم
+    -- إشعارات المعلم لفصوله وأولياء أمورهم. التواصل مع أولياء الأمور (3-1): ما وصل ولي أمر واحدًا على الأقل
     union all select n.created_by, 'e03_01', n.created_at from public.notifications n
                where not n.is_auto and n.created_at >= y_start and (p_uid is null or n.created_by = p_uid)
                  and n.created_by in (select uid from t)
+                 and exists (select 1 from public.notification_recipients nr
+                                  join public.users u on u.id = nr.user_id
+                                 where nr.notification_id = n.id and u.role = 'guardian')
     union all select n.created_by, 'e05_04', n.created_at from public.notifications n
                where not n.is_auto and n.created_at >= y_start and (p_uid is null or n.created_by = p_uid)
                  and n.created_by in (select uid from t)

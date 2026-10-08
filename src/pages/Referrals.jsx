@@ -20,7 +20,9 @@ import UsageBadge from "../components/UsageBadge.jsx";
 import {
   STATUS, OPEN_STATUSES, LATE_DAYS, stageOf, daysSince, daysLabel, isLate, timelineOf, notifyUsers,
   PRESETS_TEACHER_DONE, PRESETS_BEHAVIOR_NOTE, PRESETS_DEPUTY_TRANSFER, PRESETS_COUNSELOR, PRESETS_DEPUTY_REVIEW,
+  REF_TYPES, ACADEMIC_ITEMS, academicItemDone, docsSummary, refTypeLabel,
 } from "../lib/referrals";
+import { ReferralGuide, BehaviorSteps, AcademicDocs, DocsView } from "../components/ReferralProcedures.jsx";
 import PresetChips from "../components/PresetChips.jsx";
 
 /* =====================================================================
@@ -315,6 +317,12 @@ function NewReferral({ uid, profile, onDone }) {
   const [outErr, setOutErr] = useState("");
   const [nowPeriod, setNowPeriod] = useState(null);
   const ownAuto = useRef(null);
+  // نوع الإحالة وإجراءات المعلم قبلها (supabase/referral_procedures_*.sql)
+  const [refType, setRefType] = useState("behavior");
+  const [violation, setViolation] = useState(null);
+  const [steps, setSteps] = useState({ ready: false, steps: [] });
+  const [docs, setDocs] = useState({ items: {}, files: [] });
+  const [urgent, setUrgent] = useState(null);   // null = غير عاجلة، نص = سبب الإحالة العاجلة
 
   // فصول المعلم اليوم مع مادته وحصته
   useEffect(() => {
@@ -411,12 +419,35 @@ function NewReferral({ uid, profile, onDone }) {
     setStudents(data ?? []);
   };
 
+  const student = students.find((s) => s.id === studentId) ?? null;
+  const direct = (violation?.degree ?? 0) >= 3;
+  const urgentOk = !!urgent?.trim();
+  const fullReason = refType === "behavior"
+    ? (violation ? `مخالفة سلوكية من الدرجة ${degreeName(violation.degree)}: ${violation.text}` +
+                   (reason.trim() ? ` — ${reason.trim()}` : "") : "")
+    : `${refTypeLabel(refType)}${ctx.subject && !outside ? ` في مادة ${ctx.subject}` : ""}` +
+      (reason.trim() ? `: ${reason.trim()}` : "");
+  const academicMissing = ACADEMIC_ITEMS.filter((i) => !academicItemDone(docs, i.key)).length;
+
+  // ما يمنع الرفع، بالترتيب
+  const blocker = !studentId ? "اختر الطالب."
+    : outside && !cap ? "اختر الصفة التي تحيل بها."
+    : refType === "behavior" && !violation ? "اختر المخالفة من دليل السلوك والمواظبة."
+    : refType === "behavior" && !outside && !direct && !urgentOk && urgent !== null ? "اكتب سبب الإحالة العاجلة."
+    : refType === "behavior" && !outside && !direct && !urgentOk && !steps.ready
+      ? "تُرفع الإحالة بعد استكمال الإجراءات الثلاثة، كل منها في موقف مستقل. المخالفات من الدرجة الثالثة فما فوق تُحال مباشرة."
+    : refType !== "behavior" && academicMissing > 0 ? `أكمل التوثيق: بقي ${academicMissing} من ${ACADEMIC_ITEMS.length}.`
+    : refType !== "behavior" && !reason.trim() ? "اكتب سبب التحويل."
+    : "";
+
   const submit = async () => {
-    if (!studentId || !reason.trim()) return;
-    if (outside && !cap) return;
+    if (blocker) return;
     setBusy(true);
-    const student = students.find((s) => s.id === studentId);
     const { data: serial } = await supabase.rpc("next_referral_serial");
+    const refDocs = refType === "behavior"
+      ? { steps: urgentOk || direct || outside ? [] : steps.steps, direct, urgent: urgentOk ? urgent.trim() : null }
+      : docs;
+    const summary = docsSummary(refType, refDocs);
 
     const { error } = await supabase.from("student_referrals").insert({
       serial,
@@ -429,14 +460,20 @@ function NewReferral({ uid, profile, onDone }) {
       subject: ctx.subject,
       period_no: ctx.period,
       referral_date: todayISO(),
-      reason: reason.trim(),
-      done_in_class: done.trim() || null,
+      reason: fullReason,
+      done_in_class: [summary, done.trim()].filter(Boolean).join("\n") || null,
       teacher_sig: sig,
       status: "with_deputy",
+      ref_type: refType,
+      docs: refDocs,
+      urgent_reason: urgentOk ? urgent.trim() : null,
+      ...(refType === "behavior" ? { violation_degree: violation.degree, violation_type: violation.type ?? null,
+                                     violation_text: violation.text } : {}),
       ...(outside ? { outside_class: true } : {}),
     });
     setBusy(false);
-    onDone(error ? { ok: false, text: error.message }
+    onDone(error ? { ok: false, text: /ref_type|docs|urgent_reason|schema cache/i.test(error.message)
+                       ? "لم تُفعَّل إجراءات الإحالة الجديدة بعد في قاعدة البيانات." : error.message }
                  : { ok: true, text: `أُرسلت الإحالة ${serial} لوكيل شؤون الطلاب.` });
   };
 
@@ -543,8 +580,63 @@ function NewReferral({ uid, profile, onDone }) {
         </select>
       </div>
 
+      {/* نوع الإحالة: السلوكية بالتدرج، والدراسية بشروط الموجه الطلابي */}
       <div>
-        <label className="text-xs text-muted">سبب التحويل</label>
+        <label className="text-xs text-muted">نوع الإحالة</label>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {REF_TYPES.map((t) => (
+            <button key={t.key} type="button" onClick={() => setRefType(t.key)}
+              className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                refType === t.key ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <ReferralGuide type={refType} />
+
+      {refType === "behavior" && (
+        <div>
+          <label className="text-xs text-muted">المخالفة من دليل السلوك والمواظبة</label>
+          <div className="mt-1.5"><ViolationPicker value={violation} onChange={setViolation} /></div>
+        </div>
+      )}
+
+      {student && !outside && refType === "behavior" && violation && urgent === null && (
+        <BehaviorSteps key={student.id} uid={uid} student={student} violation={violation}
+                       subject={ctx.subject} onState={setSteps} />
+      )}
+      {student && outside && refType === "behavior" && violation && (
+        <p className="rounded-sm2 bg-canvas px-3 py-2 text-xs text-muted">
+          الطالب من خارج فصولك: تُرفع الإحالة مباشرة، وتدرّج الإجراءات على معلمه.
+        </p>
+      )}
+
+      {student && refType !== "behavior" && (
+        <AcademicDocs key={student.id} uid={uid} student={student} docs={docs} onChange={setDocs} />
+      )}
+
+      {refType === "behavior" && violation && !outside && !direct && (
+        urgent === null ? (
+          <button type="button" onClick={() => setUrgent("")}
+                  className="text-xs text-muted underline hover:text-ink">
+            حالة عاجلة تمس السلامة؟ أحِل مباشرة مع ذكر السبب
+          </button>
+        ) : (
+          <div className="space-y-1.5 rounded-sm2 border border-absent/30 bg-absent/5 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-xs font-semibold text-absent">سبب الإحالة العاجلة</label>
+              <button type="button" onClick={() => setUrgent(null)} className="text-xs text-muted underline">إلغاء</button>
+            </div>
+            <textarea rows={2} className="field w-full" value={urgent} onChange={(e) => setUrgent(e.target.value)}
+                      placeholder="مثل: خطر على سلامة الطالب أو زملائه" />
+          </div>
+        )
+      )}
+
+      <div>
+        <label className="text-xs text-muted">{refType === "behavior" ? "تفاصيل الموقف (اختياري)" : "سبب التحويل"}</label>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {reasons.map((t) => (
             <button key={t} type="button" onClick={() => setReason(t)}
@@ -558,12 +650,16 @@ function NewReferral({ uid, profile, onDone }) {
                   onChange={(e) => setReason(e.target.value)} />
       </div>
 
-      <div>
-        <label className="text-xs text-muted">ما تم عمله بخصوص المشكلة</label>
-        <PresetChips items={PRESETS_TEACHER_DONE} value={done} onChange={setDone} />
-        <textarea rows={3} className="field mt-1 w-full" value={done}
-                  onChange={(e) => setDone(e.target.value)} />
-      </div>
+      {refType === "behavior" && (
+        <div>
+          <label className="text-xs text-muted">ما تم عمله أيضًا (اختياري)</label>
+          <PresetChips items={PRESETS_TEACHER_DONE} value={done} onChange={setDone} />
+          <textarea rows={2} className="field mt-1 w-full" value={done}
+                    onChange={(e) => setDone(e.target.value)} />
+        </div>
+      )}
+
+      {blocker && <p className="rounded-sm2 bg-warning-light px-3 py-2 text-xs text-warning">{blocker}</p>}
 
       {!sig && (
         <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs text-warning">
@@ -571,9 +667,9 @@ function NewReferral({ uid, profile, onDone }) {
         </p>
       )}
 
-      <button className="btn-primary w-full" disabled={!studentId || !reason.trim() || busy || (outside && !cap)}
+      <button className="btn-primary w-full" disabled={!!blocker || busy}
               onClick={submit}>
-        {busy ? "جارٍ الإرسال…" : "رفع الإحالة"}
+        {busy ? "جارٍ الإرسال…" : "رفع الإحالة لوكيل شؤون الطلاب"}
       </button>
     </section>
   );
@@ -585,6 +681,7 @@ const GROUPS = [
   { k: "late",      t: "المتأخرة" },
   { k: "deputy",    t: "عند الوكيل" },
   { k: "counselor", t: "عند الموجهين" },
+  { k: "teacher",   t: "عند المعلم" },
   { k: "guardian",  t: "عند ولي الأمر" },
 ];
 
@@ -845,6 +942,29 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
         `أعاد وكيل شؤون الطلاب إحالة ${r.student_name} (${r.serial}) بملاحظة.`, "/referrals"));
   };
 
+  // ②ب الوكيل يعيدها للمعلم لاستكمال التوثيق قبل التحويل
+  const returnToTeacher = async () => {
+    if (!note.trim()) return;
+    act({ teacher_return_note: note.trim(), status: "returned_to_teacher" },
+      "أُعيدت للمعلم لاستكمال التوثيق.",
+      () => notifyUsers([r.teacher_id], "إحالة مُعادة لاستكمال التوثيق",
+        `أعاد وكيل شؤون الطلاب إحالة ${r.student_name} (${r.serial}): ${note.trim()}`, "/referrals?tab=inbox"));
+  };
+
+  // ①ب المعلم يستكمل التوثيق ويعيد رفعها
+  const [docs, setDocs] = useState(r.docs ?? { items: {}, files: [] });
+  const resubmit = async () => {
+    const extra = note.trim() ? `استكمال: ${note.trim()}` : "";
+    if (r.ref_type === "behavior" ? !extra
+        : ACADEMIC_ITEMS.some((i) => !academicItemDone(docs, i.key))) return;
+    const newDocs = r.ref_type === "behavior" ? { ...(r.docs ?? {}), completion: note.trim() } : docs;
+    act({
+      docs: newDocs,
+      done_in_class: [docsSummary(r.ref_type, newDocs), extra].filter(Boolean).join("\n") || null,
+      status: "with_deputy", teacher_at: new Date().toISOString(),
+    }, "أُعيد رفع الإحالة لوكيل شؤون الطلاب.");
+  };
+
   // ⑤ بعد رد ولي الأمر: تنتهي المتابعة وتُحفظ في السجل
   const archive = async () => {
     act({ status: "archived" }, "انتهت متابعة الإحالة وحُفظت في السجل.");
@@ -854,6 +974,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
   const counselorTurn = isCounselor && r.counselor_id === uid &&
     ["with_counselor", "returned_to_counselor"].includes(r.status);
   const deputyTurn = isDeputy && ["with_deputy", "guardian_replied"].includes(r.status);
+  const teacherTurn = r.teacher_id === uid && r.status === "returned_to_teacher";
   const stage = stageOf(r);
   const days = daysSince(stage.since);
   const late = isLate(r);
@@ -875,17 +996,26 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
                 className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
           الملف
         </button>
-        {(deputyTurn || counselorTurn) && (
+        {(deputyTurn || counselorTurn || teacherTurn) && (
           <button onClick={() => { setOpen((v) => !v); setNote(""); }}
                   className="shrink-0 rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white">
-            {open ? "إغلاق" : "إجراء"}
+            {open ? "إغلاق" : teacherTurn ? "استكمال التوثيق" : "إجراء"}
           </button>
         )}
       </div>
 
       <p className="mt-1.5 text-xs leading-relaxed text-muted">
         <span className="text-faint">السبب: </span>{r.reason}
+        {r.ref_type && <span className="chip mr-1.5 bg-canvas text-muted">{refTypeLabel(r.ref_type)}</span>}
       </p>
+
+      {r.status === "returned_to_teacher" && r.teacher_return_note && (
+        <p className="mt-1.5 rounded-sm2 bg-absent/5 px-3 py-2 text-xs text-absent">
+          <span className="font-semibold">ملاحظة الوكيل: </span>{r.teacher_return_note}
+        </p>
+      )}
+
+      <DocsView r={r} />
 
       {stage.group !== "done" && (
         <p className={`mt-1.5 text-xs ${late ? "font-semibold text-absent" : "text-muted"}`}>
@@ -896,7 +1026,24 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
 
       <Timeline r={r} />
 
-      {open && (
+      {open && teacherTurn && (
+        <div className="mt-3 space-y-2 rounded-sm2 bg-mint-tint/50 p-3">
+          {r.ref_type && r.ref_type !== "behavior" && (
+            <AcademicDocs uid={uid} student={{ id: r.student_id, full_name: r.student_name }}
+                          docs={docs} onChange={setDocs} />
+          )}
+          <textarea rows={2} className="field w-full" value={note}
+                    placeholder={r.ref_type === "behavior" ? "ما استكملته من إجراءات وتوثيق" : "ملاحظة للوكيل (اختياري)"}
+                    onChange={(e) => setNote(e.target.value)} />
+          <button className="btn-primary w-full" onClick={resubmit}
+                  disabled={busy || (r.ref_type === "behavior" ? !note.trim()
+                    : ACADEMIC_ITEMS.some((i) => !academicItemDone(docs, i.key)))}>
+            إعادة الرفع لوكيل شؤون الطلاب
+          </button>
+        </div>
+      )}
+
+      {open && !teacherTurn && (
         <div className="mt-3 space-y-2 rounded-sm2 bg-mint-tint/50 p-3">
           {/* بطاقات بحسب المرحلة: الموجه، أو الوكيل محوِّلًا، أو مراجعًا لإجراء الموجه */}
           <PresetChips value={note} onChange={setNote}
@@ -932,6 +1079,12 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
                       onClick={toCounselor}>
                 تحويل للموجه الطلابي
               </button>
+              {r.kind === "teacher" && r.teacher_id && (
+                <button disabled={busy || !note.trim()} onClick={returnToTeacher}
+                        className="w-full rounded-pill border border-absent/40 py-2 text-sm font-semibold text-absent hover:bg-absent/5">
+                  إعادة للمعلم لاستكمال التوثيق
+                </button>
+              )}
             </>
           )}
 

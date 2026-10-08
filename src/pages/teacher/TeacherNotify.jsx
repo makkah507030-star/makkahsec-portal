@@ -183,7 +183,8 @@ export default function TeacherNotify() {
             <button className="btn-primary" onClick={send} disabled={!canSend || sending}>
               {sending ? "جارٍ الإرسال…" : "إرسال الإشعار"}
             </button>
-            <EvidenceTags items={["e03_01", "e05_04"]} />
+            {/* 3-1 لا يُحتسب إلا إذا وصل الإشعار أولياء الأمور */}
+            <EvidenceTags items={includeGuardians ? ["e03_01", "e05_04"] : ["e05_04"]} />
           </section>
 
           <section className="card overflow-hidden">
