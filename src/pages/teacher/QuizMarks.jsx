@@ -1,5 +1,6 @@
 // src/pages/teacher/QuizMarks.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
@@ -28,7 +29,9 @@ export default function QuizMarks() {
   const uid = session?.user?.id;
 
   const [quizzes, setQuizzes] = useState(null);
-  const [quizId, setQuizId] = useState("");
+  // ?q=<quiz_id> يفتح اختبارًا بعينه (من زر «دورة الاختبار»)
+  const [params] = useSearchParams();
+  const [quizId, setQuizId] = useState(() => params.get("q") ?? "");
   const [classes, setClasses] = useState([]);
   const [classId, setClassId] = useState("");
   const [questions, setQuestions] = useState([]);

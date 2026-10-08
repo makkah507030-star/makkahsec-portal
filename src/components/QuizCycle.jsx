@@ -279,24 +279,36 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
         <span className="text-xs text-muted">كل مرحلة منجزة تصل شاهدًا إلى «شواهد الأداء الوظيفي»</span>
       </div>
 
-      <ol className="flex gap-1 overflow-x-auto pb-1">
+      {/* شريط المراحل — بأسلوب شريط مراحل الأحداث والمناسبات */}
+      <ol className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
         {STAGES.map((s, i) => {
           const ok = done[s.key];
           const now = i === current;
           return (
-            <li key={s.key} className="flex min-w-[88px] flex-1 flex-col items-center gap-1 text-center">
-              <span className={`num grid h-8 w-8 place-items-center rounded-full text-sm font-bold ${
-                ok ? "bg-mint-deep text-white" : now ? "border-2 border-mint-deep bg-paper text-mint-deep" : "bg-canvas text-faint"}`}>
+            <li key={s.key}
+              className={`flex shrink-0 items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium ${
+                now ? "bg-mint-deep text-white"
+                : ok ? "border border-[#CCF2DB] bg-mint-tint text-mint-deep"
+                : "border border-line bg-white text-faint"}`}>
+              <span className={`num grid h-4 w-4 place-items-center rounded-full text-[10px] ${
+                now ? "bg-white/25" : ok ? "bg-white" : "bg-canvas"}`}>
                 {ok ? "✓" : i + 1}
               </span>
-              <span className={`text-[11px] leading-tight ${now ? "font-semibold text-ink" : "text-muted"}`}>{s.label}</span>
+              {s.label}
             </li>
           );
         })}
       </ol>
 
       {current >= 0 && stageNote[STAGES[current].key] && (
-        <p className="rounded-sm2 bg-canvas px-3 py-2 text-sm text-muted">{stageNote[STAGES[current].key]}</p>
+        <div className="flex flex-wrap items-center gap-2 rounded-sm2 bg-canvas px-3 py-2 text-sm text-muted">
+          <p className="flex-1">{stageNote[STAGES[current].key]}</p>
+          {STAGES[current].key === "mark" && (
+            <Link className="btn-primary shrink-0 px-4 py-1.5 text-xs" to={`/quiz-marks?q=${q.id}`}>
+              الذهاب إلى التصحيح والدرجات
+            </Link>
+          )}
+        </div>
       )}
 
       {done.mark && !done.analysis && (
