@@ -7,6 +7,7 @@ import PrintPortal from "./PrintPortal.jsx";
 import { OFFICIAL_LEVELS, RATING_LEVELS, gradeTone, itemPoints, officialLabel, overallLabel, ratingLabel, rubricScore, weightedRating } from "../lib/rubric.js";
 import { PRINCIPAL_NAME } from "../lib/signers.js";
 import { GuestCertificateBody } from "./GuestCertificate.jsx";
+import { EVIDENCE_LEAD, EVIDENCE_NOTE, LEVEL_LABEL } from "../lib/evidence.js";
 import { toHijri } from "./DateField.jsx";
 
 /* =====================================================================
@@ -1512,9 +1513,22 @@ function Administrative(p) {
   );
 }
 
+/* شريط شواهد الأداء الوظيفي: في الهامش السفلي تحت التذييل، سطران بخط صغير فلا يزاحم محتوى الورقة */
+function EvidenceStrip({ items }) {
+  if (!items?.length) return null;
+  return (
+    <div className="absolute inset-x-[12mm] bottom-[1.5mm] text-center text-[8px] leading-[1.35] text-muted"
+         style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}>
+      <span className="font-semibold text-mint-deep">{EVIDENCE_LEAD}: </span>
+      {items.map((it) => `${it.element} (${LEVEL_LABEL[it.level]})`).join(" · ")}
+      {" — "}{EVIDENCE_NOTE}
+    </div>
+  );
+}
+
 export default function FormSheet({
   template, values, doc, sigUrl, stampUrl, principalSigUrl, principalName,
-  replySigUrl, replySigName, scale = 1,
+  replySigUrl, replySigName, scale = 1, evidence,
 }) {
   if (!template) return null;
   const landscape = sheetLandscape(template);
@@ -1537,7 +1551,10 @@ export default function FormSheet({
     transform: scale !== 1 ? `scale(${scale})` : undefined,
     transformOrigin: "top center",
     fontFamily: "'IBM Plex Sans Arabic', sans-serif",
+    position: "relative",
   };
+  // الشهادات لا تحمل الشريط
+  const ev = template.category === "certificate" || isGuestCert(template) ? null : evidence;
   const sheetCls = "sheet mx-auto bg-white text-ink shadow-[0_18px_50px_-28px_rgba(16,16,16,.5)]";
   // اسم المدير: المحفوظ تحت توقيعه، وإلا اسمه في «أسماء الموقّعين»
   const props = { template, v, doc, sigUrl, stampUrl, principalSigUrl,
@@ -1548,9 +1565,15 @@ export default function FormSheet({
   if (isRubricDoc(template, v)) {
     return (
       <div className="space-y-4 print:space-y-0">
-        {supportVisitPages(props).map((page, i) => (
-          <div key={i} className={sheetCls} style={sheetStyle}>{page}</div>
-        ))}
+        {(() => {
+          const pages = supportVisitPages(props);
+          return pages.map((page, i) => (
+            <div key={i} className={sheetCls} style={sheetStyle}>
+              {page}
+              {i === pages.length - 1 && <EvidenceStrip items={ev} />}
+            </div>
+          ));
+        })()}
       </div>
     );
   }
@@ -1558,6 +1581,7 @@ export default function FormSheet({
   return (
     <div className={sheetCls} style={sheetStyle}>
       <Body {...props} />
+      <EvidenceStrip items={ev} />
     </div>
   );
 }
