@@ -62,7 +62,7 @@ export default function TeacherTodayCard() {
   if (!periods.length) {
     return (
       <section className="rounded-card border border-line bg-white px-4 py-4">
-        <p className="text-sm font-bold text-ink">يومي</p>
+        <p className="text-sm font-bold text-ink">مهام اليوم</p>
         <p className="mt-1 text-sm text-muted">لا حصص لك اليوم.</p>
       </section>
     );
@@ -103,7 +103,7 @@ export default function TeacherTodayCard() {
       ) : (
         <div className="flex flex-wrap items-center gap-3 px-4 py-4">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-ink">يومي</p>
+            <p className="text-sm font-bold text-ink">مهام اليوم</p>
             <p className="mt-0.5 text-sm text-muted">
               {next
                 ? <>حصتك القادمة: الحصة <span className="num">{next.period_no}</span> — {next.subjects?.name ?? ""} · {clsName(next)}</>
