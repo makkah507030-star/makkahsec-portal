@@ -11,6 +11,7 @@ import {
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import StudentNoteChips, { ClassNotesButton } from "../../components/StudentNoteChips.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 const ORDER = ["present", "absent", "late", "excused"];        // للعدادات والعرض
 const TEACHER_ORDER = ["present", "absent", "late"];           // ما يختاره المعلم
@@ -534,7 +535,7 @@ function AbsenceBox({ stat }) {
 
   return (
     <span
-      title={`غاب ${stat.absent} من ${stat.total} حصة عندك`}
+      title={`غاب ${stat.absent} من ${countAr(stat.total, "period", { acc: true })} عندك`}
       className={`flex shrink-0 flex-col items-center justify-center rounded-sm2 border px-2 py-0.5 leading-none ${tone}`}
     >
       <span className="num text-sm font-bold">{stat.absent}</span>
@@ -577,7 +578,7 @@ function MyDayBox({ periods, marked }) {
           <p className="mt-2 text-xs text-muted">
             {pending.length === 0
               ? "أحسنت — حضّرت كل حصصك اليوم."
-              : `بقيت ${pending.length} حصة بلا تحضير.`}
+              : `بقيت ${countAr(pending.length, "period")} بلا تحضير.`}
           </p>
         </div>
         <p className="num text-4xl font-bold leading-none text-mint-deep">{pct}%</p>

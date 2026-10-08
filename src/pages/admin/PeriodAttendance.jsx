@@ -6,6 +6,7 @@ import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 export default function PeriodAttendance() {
   const [d, setD] = useState(null);
@@ -111,7 +112,7 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
       sections: [
         {
           title: `المعلمون الذين ${kindLabel} — الحصة ${n}`,
-          subtitle: `${list.length} معلم`,
+          subtitle: `${countAr(list.length, "teacher")}`,
           headers: ["م", "الفصل", "المادة", "المعلم"],
           rows: rowsOf,
           tableClass: tone === "warning" ? "danger" : "success",
@@ -224,8 +225,8 @@ function ReportButtons({ d }) {
       title: "تقرير تحضير الحصص اليومية",
       subtitle: todayLabel(),
       sections: [
-        { title: "الحصص التي حُضِّرت", subtitle: `${d.done.length} حصة`, headers, rows: rowsOf(d.done), tableClass: "success" },
-        { title: "الحصص التي لم تُحضَّر", subtitle: `${d.left.length} حصة`, headers, rows: rowsOf(d.left), tableClass: "danger" },
+        { title: "الحصص التي حُضِّرت", subtitle: `${countAr(d.done.length, "period")}`, headers, rows: rowsOf(d.done), tableClass: "success" },
+        { title: "الحصص التي لم تُحضَّر", subtitle: `${countAr(d.left.length, "period")}`, headers, rows: rowsOf(d.left), tableClass: "danger" },
       ],
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,

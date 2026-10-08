@@ -10,6 +10,7 @@ import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, GradePills, Note, Loading, Empty, useDay,
   weekdayOf, daysWord,
 } from "./shared.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 const VIEWS = [
   { key: "class", label: "بالفصل" },
@@ -164,7 +165,7 @@ function ByClass() {
       const list = studentsOf(c); const s = statsOf(list);
       return {
         title: `تقرير الحضور المفصل — فصل ${c.code}`,
-        subtitle: `${weekdayOf(date)} ${fmtDate(date)} · ${GRADE_NAMES[c.grade] ?? ""} · ${list.length} طالبًا`,
+        subtitle: `${weekdayOf(date)} ${fmtDate(date)} · ${GRADE_NAMES[c.grade] ?? ""} · ${countAr(list.length, "student")}`,
         headers: head, tableClass: "compact",
         rows: [...list.map(rowCells),
           [{ text: "غياب الحصة", colspan: 2, cls: "total" }, ...periods.map((p) => ({ text: s.perPeriod[p], cls: "total" })),

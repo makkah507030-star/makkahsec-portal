@@ -6,6 +6,7 @@ import { printReport, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { noEra } from "../../lib/dates";
+import { countAr } from "../../lib/arabicCount.js";
 
 /* =====================================================================
    سجل المتابعة الإلكتروني 2 — بفكرة السجل الأول نفسها، مع فرق واحد:
@@ -361,7 +362,7 @@ export default function FollowUpLog2() {
       landscape: true,
       sections: [{
         title: `سجل متابعة مادة ${group.subject} — ${period}`,
-        subtitle: `${GRADE_NAMES[group.grade] ?? ""} · فصل ${group.class_no} · ${group.students.length} طالبًا · ✓ تُحتسب درجة، ✗ لا تُحتسب`,
+        subtitle: `${GRADE_NAMES[group.grade] ?? ""} · فصل ${group.class_no} · ${countAr(group.students.length, "student")} · ✓ تُحتسب درجة، ✗ لا تُحتسب`,
         headerRows: [row1, row2, row3],
         tableClass: "follow",
         colWidths,

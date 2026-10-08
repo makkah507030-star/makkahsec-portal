@@ -7,6 +7,7 @@ import { exportStyledExcel, printReport, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } f
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import Loader from "./Loader.jsx";
+import { countAr } from "../lib/arabicCount.js";
 
 const daysAgo = (n) =>
   new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
@@ -238,7 +239,7 @@ export default function PermissionLog() {
                 <span className="num chip bg-mint-tint text-mint-deep">{fmtDate(r.request_date + "T00:00:00")}</span>
                 <span className="chip bg-gray-tint text-muted">{scopeText(r)}</span>
                 <span className="num chip bg-gray-tint text-muted">
-                  {students.length} طالب
+                  {countAr(students.length, "student")}
                 </span>
                 <span className="ms-auto text-xs text-faint">
                   {names[r.created_by] ?? "—"}

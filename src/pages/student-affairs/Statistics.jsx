@@ -14,6 +14,7 @@ import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, Note, Loading, Empty, SetupNotice,
   pctText, weekdayOf, WEEKDAY, daysWord, useFingerprint,
 } from "./shared.jsx";
+import { countAr } from "../../lib/arabicCount.js";
 
 // يوم ناقص: أكثر من خُمس الطلاب لم يُحضَّروا في الحصتين الأولى والثانية
 const PARTIAL_AT = 0.2;
@@ -438,14 +439,14 @@ function Backfill({ from, to, approved, onDone }) {
         <div className="flex flex-wrap gap-2">
           {pendingDays.length > 0 && (
             <button onClick={start(pendingDays,
-                `سيُحسب ${pendingDays.length} يومًا فاته الاعتماد من السجلات المحفوظة. السجلات الأصلية لا تتغير. متابعة؟`)}
+                `سيُحسب ${countAr(pendingDays.length, "day")} فاته الاعتماد من السجلات المحفوظة. السجلات الأصلية لا تتغير. متابعة؟`)}
               className="rounded-sm2 bg-mint-deep px-4 py-2 text-sm font-semibold text-white">
               اعتماد <span className="num">{pendingDays.length}</span> يومًا فاته الاعتماد
             </button>
           )}
           {partialDays.length > 0 && (
             <button onClick={start(partialDays,
-                `سيُعاد احتساب ${partialDays.length} يومًا ناقص التحضير من السجلات الحالية. تصحيحات الوكيل اليدوية تبقى كما هي. متابعة؟`)}
+                `سيُعاد احتساب ${countAr(partialDays.length, "day")} ناقص التحضير من السجلات الحالية. تصحيحات الوكيل اليدوية تبقى كما هي. متابعة؟`)}
               className="rounded-sm2 border border-warning px-4 py-2 text-sm font-semibold text-warning hover:bg-warning-light">
               إعادة احتساب <span className="num">{partialDays.length}</span> يومًا ناقصًا بعد استكمال الرصد
             </button>

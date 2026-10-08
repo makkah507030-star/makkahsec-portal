@@ -9,6 +9,7 @@ import { fmtDate, fmtTime12 } from "../lib/dates";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import Loader from "../components/Loader.jsx";
+import { countAr } from "../lib/arabicCount.js";
 
 const TAB_GROUPS = [
   {
@@ -1252,7 +1253,7 @@ export function TeacherSheetsReport() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={`ابحث عن معلم… (${teachers.length} معلمًا)`}
+            placeholder={`ابحث عن معلم… (${countAr(teachers.length, "teacher")})`}
             className="w-full rounded-sm2 border border-line px-3 py-2 text-sm"
           />
 

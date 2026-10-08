@@ -10,6 +10,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { noEra } from "../../lib/dates";
+import { countAr } from "../../lib/arabicCount.js";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
 
@@ -187,7 +188,7 @@ export default function TeacherRecords() {
       return {
         colWidths,
         title: `كشف رصد درجات مادة ${g.subject}`,
-        subtitle: `${GRADE_NAMES[g.grade] ?? ""} · فصل ${g.class_no} · ${g.students.length} طالبًا${src}`,
+        subtitle: `${GRADE_NAMES[g.grade] ?? ""} · فصل ${g.class_no} · ${countAr(g.students.length, "student")}${src}`,
         headerRows,
         tableClass: "compact",
         rows: g.students.map((s, i) => [
@@ -286,7 +287,7 @@ export default function TeacherRecords() {
       chosen.forEach((g) => {
         sections.push({
           title: `سجل متابعة مادة ${g.subject} — ${period}`,
-          subtitle: `${GRADE_NAMES[g.grade] ?? ""} · فصل ${g.class_no} · ${g.students.length} طالبًا`,
+          subtitle: `${GRADE_NAMES[g.grade] ?? ""} · فصل ${g.class_no} · ${countAr(g.students.length, "student")}`,
           headerRows: [row1, row2, row3, row4, row5],
           tableClass: "follow",
           colWidths,
@@ -406,7 +407,7 @@ export default function TeacherRecords() {
                   </span>
                 </span>
                 <span className="num chip shrink-0 bg-mint-tint text-mint-deep">
-                  {g.students.length} طالبًا
+                  {countAr(g.students.length, "student")}
                 </span>
                 {!isKnownSubject(g.subject, g.grade) && (
                   <span className="chip shrink-0 bg-warning-light text-warning">

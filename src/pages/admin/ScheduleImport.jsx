@@ -6,6 +6,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { noEra } from "../../lib/dates";
+import { countAr } from "../../lib/arabicCount.js";
 
 const BATCH = 400;
 
@@ -69,7 +70,7 @@ export default function ScheduleImport() {
       level: "high",
       title: "استيراد الجدول الدراسي للفصل كاملًا",
       impact: [
-        `سيُكتب ${report.valid.length} حصة في جدول المدرسة للفصل الدراسي الحالي، وتُستبدل الحصص المطابقة.`,
+        `سيُكتب ${countAr(report.valid.length, "period")} في جدول المدرسة للفصل الدراسي الحالي، وتُستبدل الحصص المطابقة.`,
         "تحضير الحصص المرصود سابقًا قد ينفصل عن الحصص الجديدة، فيظهر خلل في الغياب الرسمي والتقارير.",
         "يظهر الجدول الجديد فورًا عند كل المعلمين والطلاب.",
       ],
@@ -220,7 +221,7 @@ export default function ScheduleImport() {
           <DangerZone note="استيراد الجدول يستبدل حصص الفصل الدراسي ويؤثر على التحضير والغياب الرسمي">
             <div className="flex flex-wrap gap-2">
               <button className="btn-primary" onClick={run} disabled={report.valid.length === 0}>
-                تنفيذ الاستيراد ({report.valid.length} حصة)
+                تنفيذ الاستيراد ({countAr(report.valid.length, "period")})
               </button>
               <button className="btn-ghost" onClick={reset}>إلغاء</button>
             </div>
