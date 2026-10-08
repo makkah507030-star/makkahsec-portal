@@ -7,6 +7,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
+import EvidenceTags from "../../components/EvidenceTags.jsx";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
 const PERIODS = ["الفترة الأولى", "الفترة الثانية"];
@@ -473,6 +474,7 @@ export default function FollowUpLog() {
           حدّد البند الذي تعمل عليه الآن فقط — مثل المشاركة أثناء الحصة —
           بتأشير الطلاب من القائمة، وارجع لبقية البنود لاحقًا. يُحفظ كل شيء تلقائيًا.
         </p>
+        <EvidenceTags className="mt-2" items={["e03_06", "e11_02", "e11_03"]} />
       </div>
 
       <div className="flex gap-2.5 rounded-card border border-line bg-mint-tint/50 px-3.5 py-3">

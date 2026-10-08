@@ -6,6 +6,7 @@ import { fmtDateTime } from "../../lib/dates";
 import { KIND_META } from "../../lib/useNotifications";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import EvidenceTags from "../../components/EvidenceTags.jsx";
 
 export default function TeacherNotify() {
   const { session } = useSession();
@@ -182,6 +183,7 @@ export default function TeacherNotify() {
             <button className="btn-primary" onClick={send} disabled={!canSend || sending}>
               {sending ? "جارٍ الإرسال…" : "إرسال الإشعار"}
             </button>
+            <EvidenceTags items={["e03_01", "e05_04"]} />
           </section>
 
           <section className="card overflow-hidden">
