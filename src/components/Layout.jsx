@@ -45,7 +45,7 @@ const ADMIN_GROUPS = [
     ],
   },
   {
-    title: "السلوك والتوجيه",
+    title: "السلوك والمواظبة",
     items: [
       { to: "/referrals", label: "إحالة طالب", roles: COUNSEL, icon: "send", kw: "موجه" },
       { to: "/behavior", label: "نماذج السلوك والمواظبة", roles: COUNSEL, icon: "flag", kw: "مخالفات غياب" },
