@@ -285,6 +285,17 @@ function TrackView({ elements, evidence, info, name, readOnly }) {
     el.items.map((it) => ({ el, it, st: itemStatus(it, evidence) }))), [elements, evidence]);
   const shown = rows.filter((r) => filter === "all" || (filter === "ok" ? r.st.ok : !r.st.ok));
   const ok = rows.filter((r) => r.st.ok).length;
+  const [openEls, setOpenEls] = useState(() => new Set());
+  const toggle = (k) => setOpenEls((prev) => {
+    const next = new Set(prev);
+    if (next.has(k)) next.delete(k); else next.add(k);
+    return next;
+  });
+  // بنود كل عنصر بعد التصفية؛ العنصر الذي لا بنود له في التصفية لا يظهر
+  const groups = elements.filter((e) => !e.evaluator_only).map((el) => {
+    const list = shown.filter((r) => r.el.key === el.key);
+    return { el, list, okN: list.filter((r) => r.st.ok).length };
+  }).filter((g) => g.list.length);
 
   const evText = (r) => r.st.ok
     ? (r.it.is_record ? `المشاركات: ${r.st.count}` : `العداد ${r.st.count} · ${r.st.list[0].title}`)
@@ -326,34 +337,41 @@ function TrackView({ elements, evidence, info, name, readOnly }) {
         {tab("all", "الكل")}{tab("ok", "المتوفر")}{tab("missing", "غير المتوفر")}
         <button className="btn-primary" onClick={print}>طباعة</button>
       </div>
-      <div className="card overflow-x-auto">
-        <table className="w-full min-w-[640px] text-sm">
-          <thead className="bg-mint-tint text-right text-muted">
-            <tr>
-              <th className="px-3 py-2 font-semibold">العنصر</th>
-              <th className="px-3 py-2 font-semibold">البند</th>
-              <th className="w-28 px-3 py-2 text-center font-semibold">الحالة</th>
-              <th className="px-3 py-2 font-semibold">الشاهد والعدد</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line/60">
-            {shown.map((r) => (
-              <tr key={r.it.key} className={r.st.ok ? "" : "bg-warning-light/40"}>
-                <td className="px-3 py-2">
-                  <span className="flex items-center gap-2" style={{ color: elementColor(r.el.key) }}>
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: elementColor(r.el.key) }} />
-                    {r.el.title}
-                  </span>
-                </td>
-                <td className="px-3 py-2 text-ink">{r.it.title}</td>
-                <td className={`px-3 py-2 text-center font-semibold ${r.st.ok ? "text-mint-deep" : "text-warning"}`}>
-                  {r.st.ok ? "متوفر" : "غير متوفر"}
-                </td>
-                <td className="px-3 py-2 text-muted">{evText(r)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* القائمة مطوية: سطر لكل عنصر بعدّاديه، ويُفتح بالضغط لتظهر بنوده */}
+      <div className="flex justify-end gap-3 text-sm">
+        <button className="text-mint-deep underline" onClick={() => setOpenEls(new Set(groups.map((g) => g.el.key)))}>فتح الكل</button>
+        <button className="text-mint-deep underline" onClick={() => setOpenEls(new Set())}>طي الكل</button>
+      </div>
+      <div className="space-y-2">
+        {groups.map(({ el, list, okN }) => {
+          const c = elementColor(el.key);
+          const isOpen = openEls.has(el.key);
+          return (
+            <section key={el.key} className="card overflow-hidden" style={{ borderRight: `5px solid ${c}` }}>
+              <button type="button" onClick={() => toggle(el.key)} aria-expanded={isOpen}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-right hover:bg-canvas">
+                <span className="min-w-0 flex-1 font-bold" style={{ color: c }}>{el.title}</span>
+                <span className="chip w-24 justify-center bg-mint-light text-mint-deep">متوفر <span className="num mr-1">{okN}</span></span>
+                <span className="chip w-28 justify-center bg-warning-light text-warning">غير متوفر <span className="num mr-1">{list.length - okN}</span></span>
+                <span className={`text-muted transition-transform ${isOpen ? "rotate-180" : ""}`} aria-hidden="true">▾</span>
+              </button>
+              {isOpen && (
+                <div className="divide-y divide-line/60 border-t border-line/60">
+                  {list.map((r) => (
+                    <div key={r.it.key} className={`flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 text-sm ${r.st.ok ? "" : "bg-warning-light/40"}`}>
+                      <span className="min-w-0 flex-1 text-ink">{r.it.title}</span>
+                      <span className="text-muted">{evText(r)}</span>
+                      <span className={`w-24 text-center font-semibold ${r.st.ok ? "text-mint-deep" : "text-warning"}`}>
+                        {r.st.ok ? "متوفر" : "غير متوفر"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+        {groups.length === 0 && <p className="card px-4 py-3 text-sm text-faint">لا بنود في هذه التصفية.</p>}
       </div>
       {readOnly && <p className="text-xs text-muted">{REVIEW_NOTE.replace("للمقيِّم أن يطلب", "يمكنك طلب")}</p>}
     </div>
