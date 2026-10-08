@@ -13,6 +13,13 @@ export default function MyPerformance() {
           لا يرى الملف غيرك إلا مدير المدرسة، والدعم الفني لمعالجة الأعطال.
         </p>
       </div>
+      <div role="note" className="flex gap-3 rounded-card border-2 border-danger/50 bg-danger-light px-4 py-3">
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-danger text-sm font-bold text-white">!</span>
+        <p className="text-sm leading-relaxed text-danger">
+          <b>تنبيه مهم:</b> تخضع الشواهد لتقييم مدير المدرسة وتدقيقه. واكتمالها لا يعني الحصول على
+          الدرجة الكاملة في التقييم، وإنما هو خطوة متقدمة نحو تقدير عالٍ.
+        </p>
+      </div>
       <PerformanceFile uid={session.user.id} name={profile?.full_name} />
     </div>
   );

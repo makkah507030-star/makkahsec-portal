@@ -16,6 +16,7 @@
 alter table public.quizzes add column if not exists analyzed_at timestamptz;   -- اعتماد التحليل
 alter table public.quizzes add column if not exists analysis jsonb;            -- لقطة: { avg, support:[...], top:[...] }
 alter table public.quizzes add column if not exists cycle_closed_at timestamptz;
+alter table public.quizzes add column if not exists honored_at timestamptz;      -- تكريم المتفوقين بغير شهادات البوابة
 
 -- 2) الخطط
 create table if not exists public.quiz_plans (

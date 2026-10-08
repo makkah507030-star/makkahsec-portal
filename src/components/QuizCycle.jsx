@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { GRADE_NAMES } from "../lib/schoolTime";
+import { countAr } from "../lib/arabicCount";
 import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
@@ -12,6 +13,7 @@ import moeLogo from "../assets/moe-logo.png";
    بيانات ونوع ← أسئلة ← تطبيق ← تصحيح ← تحليل ← خطة ← تنفيذ ← إغلاق.
    • الخطة العلاجية إلزامية في التشخيصي، وفي اختبار الفترة إن وُجد من يحتاج
      دعمًا (أقل من 60٪). الإثرائية اختيارية للمتفوقين (90٪ فأكثر).
+   • تكريم المتفوقين بشهادات البوابة شرط لإغلاق الدورة متى وُجدوا.
    • كل مرحلة منجزة تصل شاهدًا آليًا إلى «شواهد الأداء الوظيفي»
      (perf_auto_counts في supabase/quiz_cycle.sql).
    ===================================================================== */
@@ -28,7 +30,7 @@ const STAGES = [
   { key: "mark", label: "التصحيح والرصد" },
   { key: "analysis", label: "التحليل" },
   { key: "plan", label: "الخطة" },
-  { key: "execute", label: "التنفيذ" },
+  { key: "execute", label: "التنفيذ والتكريم" },
   { key: "close", label: "الإغلاق" },
 ];
 
@@ -148,7 +150,7 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
         </span>
       </div>
       <p className="mt-1 text-sm text-muted">
-        <span className="num">{plan.students?.length ?? 0}</span> طلاب · {plan.skills}
+        {countAr(plan.students?.length ?? 0, "student")} · {plan.skills}
       </p>
       {done && plan.done_note && <p className="mt-1 text-sm text-muted">ملاحظة التنفيذ: {plan.done_note}</p>}
       <div className="mt-2 flex flex-wrap gap-3 text-sm">
@@ -175,6 +177,8 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
   const [plans, setPlans] = useState([]);
   const [editing, setEditing] = useState(null);   // remedial | enrichment
   const [busy, setBusy] = useState(false);
+  const [certified, setCertified] = useState(new Set());   // المتفوقون الذين صدرت لهم شهادة
+  const navigate = useNavigate();
 
   const load = useCallback(async () => {
     const [{ data: s }, { data: p }] = await Promise.all([
@@ -187,7 +191,17 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
     const cm = Object.fromEntries((cls ?? []).map((c) => [c.id, `${GRADE_NAMES[c.grade] ?? ""} ${c.class_no}`.trim()]));
     setSubs(rows.map((r) => ({ ...r, cls: cm[r.class_id] ?? "" })));
     setPlans(p ?? []);
-  }, [q.id]);
+    // شهادات أصدرها المعلم لطلاب هذا الاختبار بعد التحليل
+    const studentIds = rows.map((r) => r.student_id);
+    if (studentIds.length && q.analyzed_at) {
+      const { data: certs } = await supabase.from("form_documents")
+        .select("student_id, form_templates!inner(category)")
+        .eq("created_by", q.teacher_id).eq("form_templates.category", "certificate")
+        .in("student_id", studentIds).gte("created_at", q.analyzed_at)
+        .not("status", "in", "(draft,pending,rejected)");
+      setCertified(new Set((certs ?? []).map((c) => c.student_id)));
+    }
+  }, [q.id, q.analyzed_at, q.teacher_id]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -208,6 +222,8 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
 
   const plan = (k) => plans.find((p) => p.kind === k);
   const needPlan = q.period === "diagnostic" || (snap.support?.length ?? 0) > 0;
+  const topList = snap.top ?? [];
+  const honored = topList.length === 0 || !!q.honored_at || topList.every((s) => certified.has(s.id));
   const done = {
     data: true,
     questions: questionsCount > 0,
@@ -215,7 +231,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
     mark: graded.length > 0,
     analysis: !!q.analyzed_at,
     plan: !!q.analyzed_at && (!needPlan || !!plan("remedial")),
-    execute: !!q.analyzed_at && plans.every((p) => p.status === "done") && (!needPlan || !!plan("remedial")),
+    execute: !!q.analyzed_at && plans.every((p) => p.status === "done") && (!needPlan || !!plan("remedial")) && honored,
     close: !!q.cycle_closed_at,
   };
   const current = STAGES.findIndex((s) => !done[s.key]);
@@ -228,6 +244,14 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
     setBusy(false);
     if (error) { alert(error.message); return; }
     onChange({ analyzed_at: at, analysis });
+  };
+
+  const honorOther = async () => {
+    if (!window.confirm("تأكيد تكريم المتفوقين بطريقة أخرى غير شهادات البوابة؟")) return;
+    const at = new Date().toISOString();
+    const { error } = await supabase.from("quizzes").update({ honored_at: at }).eq("id", q.id);
+    if (error) { alert(error.message); return; }
+    onChange({ honored_at: at });
   };
 
   const closeCycle = async () => {
@@ -305,10 +329,38 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
             return (
               <button key={k} className={required ? "btn-primary" : "btn-ghost"} onClick={() => setEditing(k)}>
                 {k === "remedial" ? "إعداد الخطة العلاجية" : "إعداد خطة إثرائية (اختياري)"}
-                {k === "remedial" && required && <span className="num mr-1">({snap.support?.length ?? 0} طلاب)</span>}
+                {k === "remedial" && required && <span className="mr-1">({countAr(snap.support?.length ?? 0, "student")})</span>}
               </button>
             );
           })}
+        </div>
+      )}
+
+      {done.analysis && topList.length > 0 && (
+        <div className="space-y-2 rounded-sm2 border border-line/60 bg-paper p-3 text-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="flex-1 font-semibold text-ink">تكريم المتفوقين</p>
+            <span className={`chip w-28 justify-center ${honored ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>
+              {honored ? "تمّ التكريم" : "بانتظار التكريم"}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {topList.map((s) => (
+              <span key={s.id} className={`chip ${certified.has(s.id) ? "bg-mint-light text-mint-deep" : "bg-canvas text-muted"}`}>
+                {certified.has(s.id) ? "✓ " : ""}{s.name} <span className="num mr-1">{s.avg}%</span>
+              </span>
+            ))}
+          </div>
+          {!honored && (
+            <div className="flex flex-wrap items-center gap-3">
+              <button className="btn-primary" onClick={() => navigate("/forms", { state: { honor: {
+                quiz: q.title, reason: `لتفوقه في ${q.title}`,
+                students: topList.filter((s) => !certified.has(s.id)).map((s) => ({ id: s.id, full_name: s.name })) } } })}>
+                إصدار شهادات التكريم
+              </button>
+              <button className="text-sm text-muted underline" onClick={honorOther}>كُرّموا بطريقة أخرى</button>
+            </div>
+          )}
         </div>
       )}
 
