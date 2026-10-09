@@ -22,8 +22,20 @@ import Loader from "./Loader.jsx";
 
 const REVIEW_NOTE = "للمقيِّم أن يطلب مشاهدة أكثر من الشاهد المرفوع.";
 
-function CountBoxes({ available, missing }) {
+// شريط نسبة الإنجاز: يمتلئ من اليمين
+function ProgressBar({ pct, color, className = "h-2" }) {
   return (
+    <div className={`overflow-hidden rounded-pill bg-line/40 ${className}`}>
+      <div className="h-full rounded-pill transition-all" style={{ width: `${pct}%`, background: color }} />
+    </div>
+  );
+}
+const pctOf = (a, t) => (t ? Math.round((100 * a) / t) : 0);
+
+function CountBoxes({ available, missing, color }) {
+  const pct = pctOf(available, available + missing);
+  return (
+    <>
     <div className="grid grid-cols-2 gap-2">
       <div className="rounded-sm2 bg-mint-light px-1 py-1.5 text-center text-mint-deep">
         <span className="num block text-lg font-bold leading-tight">{available}</span>
@@ -34,6 +46,33 @@ function CountBoxes({ available, missing }) {
         <span className="block text-xs">غير متوفر</span>
       </div>
     </div>
+    <div className="mt-1 flex items-center gap-2">
+      <ProgressBar pct={pct} color={color} className="h-2 flex-1" />
+      <span className="num w-10 shrink-0 text-left text-xs font-semibold" style={{ color }}>{pct}%</span>
+    </div>
+    </>
+  );
+}
+
+// نسبة الإنجاز الكلية: البنود المتوفرة من بنود كل العناصر (عدا عنصر المقيِّم)
+function OverallProgress({ elements, evidence, auto }) {
+  const sums = elements.filter((e) => !e.evaluator_only).map((e) => elementSummary(e, evidence, auto));
+  const ok = sums.reduce((a, x) => a + x.available, 0);
+  const total = sums.reduce((a, x) => a + x.available + x.missing, 0);
+  const pct = pctOf(ok, total);
+  return (
+    <section className="card p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="font-bold text-ink">نسبة الإنجاز الكلية</h2>
+        <p className="text-sm text-muted">
+          متوفر <span className="num font-semibold text-mint-deep">{ok}</span> من <span className="num">{total}</span> بندًا
+        </p>
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <ProgressBar pct={pct} color="#3E6350" className="h-3 flex-1" />
+        <span className="num w-14 shrink-0 text-left text-xl font-bold text-mint-deep">{pct}%</span>
+      </div>
+    </section>
   );
 }
 
@@ -517,6 +556,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
         <TrackView elements={elements} evidence={evidence} auto={auto} info={info} name={name} readOnly={readOnly} />
       ) : (
         <>
+          <OverallProgress elements={elements} evidence={evidence} auto={auto} />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {elements.map((el) => (
               // عنصر المقيِّم يُفتح للمدير فقط (يرى بنوده)، وللمعلم بطاقة مقفلة
@@ -535,7 +575,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
                 {el.evaluator_only ? (
                   <p className="text-sm leading-relaxed text-muted">يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد.</p>
                 ) : (
-                  <CountBoxes {...elementSummary(el, evidence, auto)} />
+                  <CountBoxes {...elementSummary(el, evidence, auto)} color={elementColor(el.key)} />
                 )}
               </button>
             ))}

@@ -2,12 +2,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CARD_VERSIONS, cardLayout, rowsToAnswers } from "../lib/omrLayout.js";
 import { imageFromFile, readCard } from "../lib/omrReader.js";
+import { saveQuizCard } from "../lib/quizCards.js";
 
 /* =====================================================================
    التصحيح بكاميرا الجوال.
-   المعلم يصوّر بطاقة إجابة كل طالب، فتُقرأ الدوائر المظلَّلة داخل الجهاز
-   (لا تُرفع الصورة لأي خادم)، ثم يراجع القراءة ويصحّح أي صف مُعلَّم،
-   ويحفظ — فتُصحَّح الإجابات بنفس مسار الرصد اليدوي، وينتقل للطالب التالي.
+   المعلم يصوّر بطاقة إجابة كل طالب، فتُقرأ الدوائر المظلَّلة داخل الجهاز،
+   ثم يراجع القراءة ويصحّح أي صف مُعلَّم، ويحفظ — فتُصحَّح الإجابات بنفس مسار
+   الرصد اليدوي، وينتقل للطالب التالي. تُحفظ البطاقة المعدولة المصغّرة للرجوع
+   إليها (lib/quizCards.js)، لا صورة الجوال، وتُحذف بنهاية الفصل.
    ===================================================================== */
 
 const AR_LTRS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"];
@@ -84,10 +86,11 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
     setBusy(true);
     const answers = rowsToAnswers(layout.rows, picks);
     const fresh = await onSave(student, answers);
+    const cardErr = await saveQuizCard(quiz.id, fresh, result?.preview);
     setBusy(false);
-    setSaved(fresh?.score != null
+    setSaved((fresh?.score != null
       ? `حُفظ ${student.full_name}: ${fresh.score} / ${quiz?.total_marks}`
-      : `حُفظ ${student.full_name}.`);
+      : `حُفظ ${student.full_name}.`) + (cardErr ? ` ${cardErr}` : ""));
     goNext();
   };
 

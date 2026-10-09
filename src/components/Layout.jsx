@@ -54,6 +54,13 @@ const ADMIN_GROUPS = [
     ],
   },
   {
+    // كل صف لموجهه؛ والوكيل والمدير والدعم الفني يرون الصفوف كلها (supabase/guidance_1.sql)
+    title: "التوجيه الطلابي",
+    items: [
+      { to: "/guidance", label: "الإنذار المبكر والحالات", roles: ["principal", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], icon: "heart", kw: "موجه حالة إرشادية جلسة" },
+    ],
+  },
+  {
     title: "الشؤون التعليمية",
     items: [
       { to: "/general-schedule",  label: "الجدول العام",          anyPerm: ["import", "schedules"], icon: "table" }, // جدول شامل بالفصول والمعلمين معًا
@@ -62,7 +69,7 @@ const ADMIN_GROUPS = [
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "swap" },
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
-      { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
+      { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
     ],
   },
   {
@@ -71,7 +78,7 @@ const ADMIN_GROUPS = [
       { to: "/forms",        label: "إصدار النماذج", icon: "certificate", kw: "شهادات" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
-      { to: "/plc",          label: "التطوير المهني", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "مجتمع التعلم رؤساء الأقسام" },
+      { to: "/plc",          label: "التطوير المهني", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "مجتمع التعلم" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "sliders" },
     ],
   },
@@ -99,6 +106,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
       { to: "/staff",          label: "الإدارة",             perm: "staff",          icon: "briefcase", kw: "منسوبين" },
+      { to: "/teacher-permissions", label: "صلاحيات المعلمين", perm: "staff",       icon: "shield" },
       { to: "/calendar-admin", label: "التقويم والإجازات",   perm: "calendar",       icon: "calendar" },
       { to: "/season",         label: "التوقيت الزمني",       perm: "import",         icon: "clock", kw: "حصص" },
       { to: "/import",         label: "الاستيراد",           perm: "import",         icon: "database", kw: "نور" },

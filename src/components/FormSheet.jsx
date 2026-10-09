@@ -1472,6 +1472,115 @@ function DecisionSign({ p, date }) {
   );
 }
 
+/* ------------------------ محضر اجتماع (meeting_minutes) ------------------------
+   بالصيغة الرسمية: بيانات الاجتماع في جدول، ثم جدول الأعمال، وما نوقش، وجدول
+   القرارات والتوصيات (التوصية | الجهة المنفذة | مدة التنفيذ)، وجدول الحاضرين
+   للتوقيع باليد، ثم توقيع مقرر الاجتماع ورئيسه واعتماد مدير المدرسة. */
+// محضر لجنة التوجيه الطلابي بالصيغة نفسها
+export const isMeetingMinutes = (template) => ["meeting_minutes", "guidance_committee"].includes(template?.key);
+
+// سطور الحقل بلا علامة البداية «•» ولا الترقيم
+const linesOf = (x) => String(asText(x)).split("\n").map((l) => l.replace(/^\s*(•|-|\d+[.)-])\s*/, "").trim()).filter(Boolean);
+
+function MeetingMinutes(p) {
+  const { v, doc, template } = p;
+  const day = weekdayOf(v.date);
+  const info = [
+    ["رقم الاجتماع", v.number], ["اليوم", day], ["التاريخ", v.date],
+    ["الوقت", v.time], ["المكان", v.place], ["رئيس الاجتماع", v.chair],
+  ];
+  const decisions = linesOf(v.decisions).map((l) => l.split("|").map((x) => x.trim()));
+  const attendees = (template.fields ?? []).find((f) => f.name === "attendees");
+  const H = ({ children }) => <p className="mb-1 mt-3 text-[13px] font-bold text-mint-deep">{children}</p>;
+  return (
+    <div className="flex h-full flex-col px-[14mm] py-[11mm]">
+      <Head small />
+      <div className="mt-2.5"><Rule color="#3E6350" thick /></div>
+      <h1 className="mt-2 text-center text-[20px] font-bold text-ink">{template.key === "meeting_minutes" ? "محضر اجتماع" : template.title}</h1>
+      {v.committee && !template.title.includes(v.committee) && <p className="mt-0.5 text-center text-[14px] font-semibold text-mint-deep">{v.committee}</p>}
+
+      <table className="mt-2 w-full border-collapse text-[12px]">
+        <tbody>
+          {[0, 2, 4].map((i) => (
+            <tr key={i}>
+              {info.slice(i, i + 2).map(([k, val]) => (
+                <Fragment key={k}>
+                  <th className={`${cellB} w-[16%] px-2 py-1 text-right font-semibold text-mint-deep`} style={TH}>{k}</th>
+                  <td className={`${cellB} w-[34%] px-2 py-1`}><span className="num">{val || ""}</span></td>
+                </Fragment>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div className="flex-1">
+        <H>جدول الأعمال</H>
+        <ol className="space-y-0.5 pr-5 text-[12.5px] leading-relaxed" style={{ listStyle: "arabic-indic" }}>
+          {linesOf(v.agenda).map((l, i) => <li key={i}>{l}</li>)}
+        </ol>
+        {asText(v.discussion) && (
+          <>
+            <H>ما نوقش في الاجتماع</H>
+            <p className="whitespace-pre-line text-[12.5px] leading-relaxed">{v.discussion}</p>
+          </>
+        )}
+
+        <H>القرارات والتوصيات</H>
+        <table className="w-full border-collapse text-[12px]">
+          <thead>
+            <tr>
+              {["م", "القرار أو التوصية", "الجهة المنفذة", "مدة التنفيذ"].map((c, i) => (
+                <th key={c} className={`${cellB} px-2 py-1 font-semibold text-mint-deep ${i === 0 ? "w-8" : i === 1 ? "" : "w-[22%]"}`} style={TH}>{c}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(decisions.length ? decisions : [[""], [""], [""]]).map((d, i) => (
+              <tr key={i}>
+                <td className={`${cellB} px-2 py-1 text-center`}><span className="num">{i + 1}</span></td>
+                <td className={`${cellB} px-2 py-1`}>{d[0]}</td>
+                <td className={`${cellB} px-2 py-1 text-center`}>{d[1] ?? ""}</td>
+                <td className={`${cellB} px-2 py-1 text-center`}>{d[2] ?? ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {attendees && (
+          <>
+            <H>الحاضرون</H>
+            <table className="w-full border-collapse text-[12px]">
+              <thead>
+                <tr>
+                  {["م", "الاسم", "الصفة", "التوقيع"].map((c, i) => (
+                    <th key={c} className={`${cellB} px-2 py-1 font-semibold text-mint-deep ${i === 0 ? "w-8" : i === 1 ? "w-[40%]" : ""}`} style={TH}>{c}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: Math.max(1, Number(v.attendees?.rows ?? attendees.rows ?? 10)) }).map((_, r) => (
+                  <tr key={r}>
+                    <td className={`${cellB} h-[6mm] px-2 text-center`}><span className="num text-faint">{r + 1}</span></td>
+                    <td className={cellB} /><td className={cellB} /><td className={cellB} />
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 items-end gap-4">
+        <Sign name={v.secretary} role="مقرر الاجتماع" />
+        <Sign name={v.chair} role="رئيس الاجتماع" />
+        <Sign url={p.principalSigUrl} name={p.principalName} role="يُعتمد · مدير المدرسة" />
+      </div>
+      <div className="mt-3"><Foot serial={doc?.serial} /></div>
+    </div>
+  );
+}
+
 function Administrative(p) {
   const { v, doc, template } = p;
   return (
@@ -1487,6 +1596,17 @@ function Administrative(p) {
           .map((f) =>
           f.type === "table" ? (
             <BlankTable key={f.name} field={f} value={v[f.name]} />
+          ) : f.type === "sign_lines" ? (
+            // خانات توقيع فارغة تُملأ باليد (الطالب، ولي الأمر…)
+            <div key={f.name} className="grid gap-4 pt-4" style={{ gridTemplateColumns: `repeat(${(f.labels ?? []).length || 1}, 1fr)` }}>
+              {(f.labels ?? []).map((l) => (
+                <div key={l} className="text-[12.5px]">
+                  <p className="text-muted">{l}</p>
+                  <p className="mt-6 border-b border-dotted border-faint" />
+                  <p className="mt-1 text-[11px] text-faint">الاسم والتوقيع والتاريخ</p>
+                </div>
+              ))}
+            </div>
           ) : f.type === "duty_schedule" ? (
             <DutyScheduleBlock key={f.name} field={f} value={v[f.name]} />
           ) : (
@@ -1538,6 +1658,7 @@ export default function FormSheet({
       ? noEra(x).replace(/(\d{2}\/\d{2}\/1[34]\d\d)\s*\((\d{2}\/\d{2}\/(?:19|20)\d\d)\)/g, "$1 - $2")
       : x]));
   const Body = template.key === "student_admission" ? StudentAdmission
+             : isMeetingMinutes(template) ? MeetingMinutes
              : isAbsenceForm(template) ? AbsenceForm
              : isGuestCert(template) ? GuestCert
              : template.category === "certificate" ? Certificate

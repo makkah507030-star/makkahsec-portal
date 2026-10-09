@@ -11,6 +11,7 @@ import ExamCountdown from "../components/ExamCountdown.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
+import { GuidanceRequestCard } from "./GuidanceMore.jsx";
 import Loader from "../components/Loader.jsx";
 
 export default function StudentHome() {
@@ -200,6 +201,8 @@ export default function StudentHome() {
       </section>
 
       <AttendanceLog key={me.id} studentId={me.id} fp={fp} />
+
+      <GuidanceRequestCard studentId={me.id} requester="student" />
 
       <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
     </div>

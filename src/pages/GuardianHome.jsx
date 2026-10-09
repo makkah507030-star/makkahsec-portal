@@ -10,6 +10,7 @@ import ExamDayCard from "../components/ExamDayCard.jsx";
 import HolidayBanner from "../components/HolidayBanner.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
+import { GuidanceRequestCard } from "./GuidanceMore.jsx";
 import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
 
@@ -241,6 +242,8 @@ export default function GuardianHome() {
           </section>
 
           <AttendanceLog key={active?.id} studentId={active?.id} fp={fp} />
+
+          <GuidanceRequestCard key={`g-${active?.id}`} studentId={active?.id} requester="guardian" />
 
           <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
         </>

@@ -14,6 +14,8 @@ import Loader from "../../components/Loader.jsx";
 import QuizCycle, { CYCLE_PERIODS } from "../../components/QuizCycle.jsx";
 import QuizPublish from "../../components/QuizPublish.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { purgeOldQuizCards, removeQuizCards } from "../../lib/quizCards.js";
+import { loadActiveTerm } from "../../lib/officialAttendance";
 import SymbolsToolbar from "../../components/SymbolsToolbar.jsx";
 import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
@@ -92,6 +94,8 @@ export default function MyQuizzes() {
     const { data } = await supabase.from("quizzes")
       .select("*").eq("teacher_id", uid).order("created_at", { ascending: false });
     setList(data ?? []);
+    // صور بطاقات الإجابة تُحذف بنهاية الفصل
+    loadActiveTerm().then(({ year, term }) => year && purgeOldQuizCards(data, year, term));
   };
 
   useEffect(() => { if (uid) load(); }, [uid]);
@@ -178,6 +182,7 @@ export default function MyQuizzes() {
                   <button onClick={async () => {
                             if (!window.confirm(
                               `حذف «${q.title}» نهائيًا؟\n\nسيُحذف معه كل أسئلته ودرجات الطلاب.`)) return;
+                            await removeQuizCards(q.id);
                             await supabase.from("quizzes").delete().eq("id", q.id);
                             load();
                           }}
@@ -637,6 +642,7 @@ function QuizEditor({ quiz, uid, onBack }) {
   const removeQuiz = async () => {
     if (!window.confirm(
       `حذف «${q.title}» نهائيًا؟\n\nسيُحذف معه ${questions?.length ?? 0} سؤالًا وكل درجات الطلاب.`)) return;
+    await removeQuizCards(q.id);
     const { error } = await supabase.from("quizzes").delete().eq("id", q.id);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
     onBack();

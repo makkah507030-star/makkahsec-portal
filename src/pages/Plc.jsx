@@ -6,7 +6,8 @@ import { loadActiveTerm } from "../lib/officialAttendance";
 import { shrinkImage } from "../lib/imageResize.js";
 import { fmtDate, fmtHijri } from "../lib/dates";
 import { printThen } from "../lib/print.js";
-import { PRINCIPAL_NAME } from "../lib/exportUtils";
+import { ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME, printReport } from "../lib/exportUtils";
+import logoIcon from "../assets/icon-mint.png";
 import Loader from "../components/Loader.jsx";
 import PrintPortal from "../components/PrintPortal.jsx";
 import moeLogo from "../assets/moe-logo.png";
@@ -115,7 +116,6 @@ function SessionList() {
         <Link className="btn-ghost" to="/xvisits">الزيارات التبادلية</Link>
         <Link className="btn-ghost" to="/pd">نماذج سجل التطوير المهني</Link>
         {(dept?.is_head || roles.seesAll) && <Link className="btn-ghost" to="/plc-file">ملف التطوير المهني للقسم</Link>}
-        {roles.seesAll && <Link className="btn-ghost" to="/plc-departments">الأقسام وأعضاؤها</Link>}
       </div>
 
       {!rows ? <Loader compact /> : list.length === 0 ? (
@@ -670,7 +670,7 @@ export function PlcDepartments() {
   const load = async () => {
     const [d, t, m] = await Promise.all([
       supabase.from("departments").select("id, name").order("sort_order"),
-      supabase.from("teachers").select("id, full_name").order("full_name"),
+      supabase.from("teachers").select("id, full_name, specialization").order("full_name"),
       supabase.from("department_members").select("department_id, teacher_id, is_head"),
     ]);
     if (d.error) setErr(d.error.message);
@@ -691,12 +691,49 @@ export function PlcDepartments() {
   if (!depts) return <Loader />;
   const name = (id) => teachers.find((t) => t.id === id)?.full_name ?? "—";
   const free = teachers.filter((t) => !members.some((m) => m.teacher_id === t.id));
+  const listOf = (deptId) => members.filter((m) => m.department_id === deptId)
+    .sort((a, b) => (b.is_head - a.is_head) || name(a.teacher_id).localeCompare(name(b.teacher_id), "ar"));
+
+  // الطباعة: بيان رؤساء الأقسام، أو رئيس قسم واحد وأعضاؤه
+  const logos = { logoUrl: new URL(logoIcon, window.location.origin).href, moeLogoUrl: new URL(moeLogo, window.location.origin).href };
+  const printHeads = () => printReport({
+    title: "بيان رؤساء الأقسام",
+    subtitle: `عدد الأقسام ${depts.length}`,
+    headers: ["م", "القسم", "رئيس القسم", "عدد الأعضاء"],
+    rows: depts.map((d, i) => {
+      const head = members.find((m) => m.department_id === d.id && m.is_head);
+      return [i + 1, d.name, head ? name(head.teacher_id) : "لم يُعيَّن", listOf(d.id).length];
+    }),
+    signatures: [{ title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
+    ...logos,
+  });
+  const printDept = (d) => {
+    const list = listOf(d.id);
+    const head = list.find((m) => m.is_head);
+    printReport({
+      title: `قسم ${d.name}`,
+      subtitle: `رئيس القسم: ${head ? name(head.teacher_id) : "لم يُعيَّن"} · عدد الأعضاء ${list.length}`,
+      headers: ["م", "اسم المعلم", "التخصص", "الصفة"],
+      rows: list.map((m, i) => [i + 1, name(m.teacher_id),
+        teachers.find((t) => t.id === m.teacher_id)?.specialization || "—", m.is_head ? "رئيس القسم" : "عضو"]),
+      signatures: [{ title: `رئيس قسم ${d.name}`, name: head ? name(head.teacher_id) : "" }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
+      ...logos,
+    });
+  };
 
   return (
     <div className="space-y-4">
       <div>
-        <Link to="/plc" className="text-xs text-muted hover:underline">التطوير المهني</Link>
-        <h1 className="mt-0.5 text-lg font-bold text-ink">الأقسام وأعضاؤها</h1>
+        <p className="text-xs text-muted">الشؤون التعليمية</p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-2">
+          <h1 className="flex-1 text-lg font-bold text-ink">رؤساء الأقسام وأعضاؤها</h1>
+          <button className="btn-primary px-4 py-1.5 text-xs" onClick={printHeads}>طباعة بيان رؤساء الأقسام</button>
+          <select className="field py-1.5 text-xs" value=""
+                  onChange={(e) => { const d = depts.find((x) => x.id === e.target.value); if (d) printDept(d); }}>
+            <option value="">طباعة قسم: رئيسه وأعضاؤه…</option>
+            {depts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        </div>
         <p className="mt-1 text-sm text-muted">
           الأسماء من سجل المعلمين في البوابة. المعلم في قسم واحد، ولكل قسم رئيس واحد يصدر تقارير الجلسات.
           غير المرتبطين: <b className="num text-ink">{free.length}</b>
@@ -705,11 +742,13 @@ export function PlcDepartments() {
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       <div className="grid gap-3 md:grid-cols-2">
         {depts.map((d) => {
-          const list = members.filter((m) => m.department_id === d.id)
-            .sort((a, b) => (b.is_head - a.is_head) || name(a.teacher_id).localeCompare(name(b.teacher_id), "ar"));
+          const list = listOf(d.id);
           return (
             <section key={d.id} className="card p-3">
-              <p className="font-semibold text-ink">{d.name} <span className="num text-xs font-normal text-muted">({list.length})</span></p>
+              <div className="flex items-center gap-2">
+                <p className="flex-1 font-semibold text-ink">{d.name} <span className="num text-xs font-normal text-muted">({list.length})</span></p>
+                <button className="text-xs text-mint-deep underline" onClick={() => printDept(d)}>طباعة</button>
+              </div>
               <ul className="mt-2 space-y-1">
                 {list.map((m) => (
                   <li key={m.teacher_id} className="flex flex-wrap items-center gap-2 text-sm">
