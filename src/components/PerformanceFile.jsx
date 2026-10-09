@@ -157,7 +157,7 @@ function EvidenceForm({ uid, year, item, existing, onDone, onCancel }) {
 function EvidenceRow({ ev, item, readOnly, onEdit, onDelete }) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-sm2 border border-line/60 bg-paper px-3 py-2">
-      <span className={`chip w-20 justify-center ${ev.source === "form" ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>
+      <span className={`chip w-20 justify-center ${ev.source !== "upload" ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>
         {SOURCE_LABEL[ev.source]}
       </span>
       <div className="min-w-0 flex-1">
@@ -176,6 +176,15 @@ function EvidenceRow({ ev, item, readOnly, onEdit, onDelete }) {
       )}
       {ev.form_document_id && (
         <Link className="text-sm text-mint-deep underline" to={`/doc/${ev.form_document_id}`}>عرض النموذج</Link>
+      )}
+      {ev.pd_report_id && (
+        <Link className="text-sm text-mint-deep underline" to={`/pd/${ev.pd_report_id}`}>عرض النموذج</Link>
+      )}
+      {ev.xvisit_id && (
+        <Link className="text-sm text-mint-deep underline" to={`/xvisits/${ev.xvisit_id}`}>عرض الاستمارة</Link>
+      )}
+      {ev.plc_session_id && (
+        <Link className="text-sm text-mint-deep underline" to={`/plc/${ev.plc_session_id}`}>عرض التقرير</Link>
       )}
       {!readOnly && (
         <>

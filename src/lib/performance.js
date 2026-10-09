@@ -13,7 +13,7 @@ import { loadActiveTerm } from "./officialAttendance.js";
 export const PERF_BUCKET = "perf-evidence";
 export const MAX_BYTES = 5 * 1024 * 1024;
 export const ACCEPT = "application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif";
-export const SOURCE_LABEL = { upload: "مرفوع", form: "نموذج", visit: "زيارة دعم" };
+export const SOURCE_LABEL = { upload: "مرفوع", form: "نموذج", visit: "زيارة دعم", plc: "مجتمع تعلم", xvisit: "زيارة تبادلية", pd: "نموذج تطوير" };
 
 /* لون مميّز لكل عنصر — درجات هادئة تنسجم مع أخضر الهوية، بإضاءة متقاربة
    فيبقى النص الأبيض والعناوين مقروءة. عنصر المقيِّم رمادي محايد. */

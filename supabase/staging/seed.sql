@@ -151,3 +151,13 @@ on conflict do nothing;
 insert into public.guardian_student (guardian_id, student_id, relation, is_primary) values
   ('00000000-0000-4000-f000-000000000201', '00000000-0000-4000-e000-000000000101', 'الأب', true)
 on conflict (guardian_id, student_id) do nothing;
+
+-- التطوير المهني: قسمان للتجربة، لكل منهما رئيس وعضو (supabase/plc_1_departments.sql)
+insert into public.department_members (department_id, teacher_id, is_head)
+select d.id, v.tid::uuid, v.head
+  from (values ('الرياضيات', '00000000-0000-4000-b000-000000000011', true),
+               ('الرياضيات', '00000000-0000-4000-b000-000000000014', false),
+               ('اللغة العربية ومصادر البحث والمعلومات', '00000000-0000-4000-b000-000000000012', true),
+               ('اللغة العربية ومصادر البحث والمعلومات', '00000000-0000-4000-b000-000000000013', false)) v(dept, tid, head)
+  join public.departments d on d.name = v.dept
+on conflict (teacher_id) do nothing;
