@@ -345,27 +345,30 @@ export default function Layout({ children }) {
       ? path === "/"
       : [i.to, ...(i.also ?? [])].some((t) => path === t || path.startsWith(t + "/"));
 
-  /* ---------- أقسام القائمة: يمكن فتح أكثر من قسم، ويُتذكّر اختيار المستخدم ---------- */
+  /* ---------- أقسام القائمة: قسم واحد مفتوح في كل مرة ----------
+     الانتقال إلى صفحة في قسم آخر يفتح قسمها ويطوي الباقي تلقائيًا، وفتح قسم
+     باليد يطوي غيره. ويُتذكّر القسم المفتوح. */
   const groupsKey = `nav.groups.${effectiveRole}`;
   const activeGroupTitle = groups.find((g) => g.title && g.items.some(isActive))?.title ?? null;
-  const [openGroups, setOpenGroups] = useState(() => new Set(store.get(groupsKey, [])));
-  useEffect(() => { setOpenGroups(new Set(store.get(groupsKey, []))); }, [groupsKey]);
-  // القسم الذي فيه الصفحة الحالية يُفتح تلقائيًا
+  const [openGroups, setOpenGroups] = useState(() => new Set(store.get(groupsKey, []).slice(0, 1)));
+  const saveGroups = (n) => { store.set(groupsKey, [...n]); return n; };
+  useEffect(() => { setOpenGroups(new Set(store.get(groupsKey, []).slice(0, 1))); }, [groupsKey]);
   useEffect(() => {
-    if (!activeGroupTitle) return;
-    setOpenGroups((s) => {
-      if (s.has(activeGroupTitle)) return s;
-      const n = new Set(s).add(activeGroupTitle);
-      store.set(groupsKey, [...n]);
-      return n;
-    });
+    if (activeGroupTitle) setOpenGroups(saveGroups(new Set([activeGroupTitle])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeGroupTitle, groupsKey]);
-  const toggleGroup = (title) => setOpenGroups((s) => {
-    const n = new Set(s);
-    n.has(title) ? n.delete(title) : n.add(title);
-    store.set(groupsKey, [...n]);
-    return n;
-  });
+  const toggleGroup = (title) => setOpenGroups((s) => saveGroups(s.has(title) ? new Set() : new Set([title])));
+
+  /* ---------- الضغط على صفحة القسم وأنت فيها يعيدها إلى بدايتها ----------
+     بعض الصفحات تفتح تفاصيلها داخلها (اختبار، نموذج…) دون تغيّر الرابط، فيعيد
+     الضغط على اسمها في القائمة بناءها من جديد بدل زر الرجوع أعلى الصفحة. */
+  const [pageKey, setPageKey] = useState(0);
+  const reopenPage = (i) => {
+    if (path !== i.to) return;
+    setPageKey((k) => k + 1);
+    setOpen(false);
+    window.scrollTo({ top: 0 });
+  };
 
   /* ---------- طيّ القائمة إلى أيقونات (سطح المكتب) ---------- */
   const [collapsed, setCollapsed] = useState(() => store.get("nav.collapsed", false));
@@ -529,6 +532,7 @@ export default function Layout({ children }) {
         key={i.to}
         to={i.to}
         end={i.to === "/"}
+        onClick={() => reopenPage(i)}
         title={iconOnly ? i.label : undefined}
         aria-current={active ? "page" : undefined}
         className={`relative flex items-center gap-3 rounded-sm2 text-[13.5px] transition-colors ${
@@ -719,7 +723,7 @@ export default function Layout({ children }) {
           </header>
 
           <main className="min-w-0 flex-1 px-4 pb-24 pt-5 sm:px-6 lg:pb-5">
-            <div className="mx-auto max-w-5xl">{children}</div>
+            <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
           </main>
         </div>
       </div>
