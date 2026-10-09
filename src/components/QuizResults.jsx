@@ -2,10 +2,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
+import QuizFeedback from "./QuizFeedback.jsx";
 
 /* =====================================================================
    نتائج الاختبارات القصيرة — للطالب وولي أمره.
-   تظهر بعد أن يبدأ المعلم التصحيح، ولا تظهر قبله.
+   تظهر حين ينشرها المعلم (supabase/quiz_publish_1.sql)، ومعها «التغذية
+   الراجعة» إن أتاحها: إحصائيات الاختبار في بطاقات مبسطة.
    ===================================================================== */
 
 const PERIODS = { diagnostic: "تشخيصي", period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي" };
@@ -24,6 +26,7 @@ export default function QuizResults({ studentId = null, compact = false }) {
   const [kids, setKids] = useState([]);       // لولي الأمر
   const [current, setCurrent] = useState(studentId);
   const [rows, setRows] = useState(null);
+  const [open, setOpen] = useState(null);     // الاختبار المفتوحة تغذيته الراجعة
 
   useEffect(() => {
     if (!uid) return;
@@ -55,6 +58,7 @@ export default function QuizResults({ studentId = null, compact = false }) {
     (async () => {
       const { data } = await supabase.rpc("my_quiz_results", { p_student: current });
       setRows(data ?? []);
+      setOpen(null);
     })();
   }, [current]);
 
@@ -101,8 +105,8 @@ export default function QuizResults({ studentId = null, compact = false }) {
           const tone = pct == null ? "text-muted"
             : pct >= 80 ? "text-present" : pct >= 50 ? "text-mint-deep" : "text-warning";
           return (
-            <div key={r.quiz_id}
-                 className="flex items-center gap-3 rounded-sm2 border border-line px-3 py-2.5">
+            <div key={r.quiz_id} className="rounded-sm2 border border-line">
+            <div className="flex items-center gap-3 px-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-ink">{r.title}</p>
                 <p className="num mt-0.5 text-[11px] text-faint">
@@ -120,6 +124,22 @@ export default function QuizResults({ studentId = null, compact = false }) {
                   {pct != null && <p className={`num text-[11px] ${tone}`}>{pct}%</p>}
                 </div>
               )}
+            </div>
+            {r.feedback && !r.absent && (
+              <>
+                <button onClick={() => setOpen(open === r.quiz_id ? null : r.quiz_id)}
+                  className={`flex w-full items-center justify-between border-t border-line px-3 py-2 text-xs font-semibold transition-colors ${
+                    open === r.quiz_id ? "bg-mint-tint text-mint-deep" : "text-mint-deep hover:bg-canvas"}`}>
+                  <span>التغذية الراجعة</span>
+                  <span aria-hidden="true">{open === r.quiz_id ? "▴" : "▾"}</span>
+                </button>
+                {open === r.quiz_id && (
+                  <div className="border-t border-line bg-canvas/50 p-3">
+                    <QuizFeedback studentId={current} quizId={r.quiz_id} />
+                  </div>
+                )}
+              </>
+            )}
             </div>
           );
         })}

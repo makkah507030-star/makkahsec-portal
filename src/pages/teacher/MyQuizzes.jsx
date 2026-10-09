@@ -11,6 +11,7 @@ import { shrinkImage } from "../../lib/imageResize.js";
 import { printThen } from "../../lib/print.js";
 import Loader from "../../components/Loader.jsx";
 import QuizCycle, { CYCLE_PERIODS } from "../../components/QuizCycle.jsx";
+import QuizPublish from "../../components/QuizPublish.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import SymbolsToolbar from "../../components/SymbolsToolbar.jsx";
 import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
@@ -638,7 +639,7 @@ function QuizEditor({ quiz, uid, onBack }) {
     await supabase.from("quizzes").update({ status }).eq("id", q.id);
     setQ((x) => ({ ...x, status }));
     setMsg({ ok: true, text: status === "ready" ? (online ? "الاختبار جاهز — أطلقه من «الإطلاق والمتابعة»." : "الاختبار جاهز للطباعة.")
-                             : status === "marking" ? "أصبحت النتائج ظاهرة للطلاب." : "حُفظ." });
+                             : "حُفظ." });
   };
 
   const classLabel = (l) => `${GRADE_NAMES[l.classes?.grade] ?? ""} — فصل ${l.classes?.class_no}`;
@@ -761,6 +762,11 @@ function QuizEditor({ quiz, uid, onBack }) {
       {CYCLE_PERIODS.includes(q.period) && (
         <QuizCycle q={q} questionsCount={questions?.length ?? 0} teacherName={profile?.full_name}
                    onChange={(fields) => setQ((x) => ({ ...x, ...fields }))} />
+      )}
+
+      {/* نشر النتيجة والتغذية الراجعة: بعد بدء الرصد، أو بعد إطلاق الإلكتروني */}
+      {(["marking", "closed"].includes(q.status) || (online && q.status === "ready")) && (
+        <QuizPublish q={q} onChange={(fields) => setQ((x) => ({ ...x, ...fields }))} />
       )}
 
       <div className="no-print flex flex-wrap gap-1.5">
