@@ -1,5 +1,5 @@
 -- شواهد سجل المتابعة الإلكتروني الثاني — الجزء 2 من 2: perf_auto_details.
--- أسماء بنود السجل الثاني (r2_homework…) بالعربية، وشاهد واحد لتنوع أساليب التقويم. تكرار التنفيذ آمن.
+-- أسماء بنود السجل الثاني (r2_homework…) بالعربية، وشاهد واحد لكلٍّ من بندي سجل المتابعة. تكرار التنفيذ آمن.
 create or replace function public.perf_auto_details(p_uid uuid, p_year text, p_item text)
 returns table (r_title text, r_detail text, r_at timestamptz)
 language plpgsql stable security definer set search_path = public as $$
@@ -73,8 +73,11 @@ begin
                                           join public.users u on u.id = nr.user_id
                                          where nr.notification_id = n.id and u.role = 'guardian'))
     union all
-    select to_char(fu.updated_at::date, 'YYYY/MM/DD')::text, ('رصد: ' || string_agg(distinct fu.klabel, '، '))::text, max(fu.updated_at)
-      from fu where p_item = 'e03_06' group by fu.updated_at::date
+    select 'سجل المتابعة الإلكتروني'::text,   -- شاهد واحد: عدد أيام الرصد ومدّتها
+           ('عدد أيام الرصد ' || count(distinct fu.updated_at::date) || ' · من '
+             || to_char(min(fu.updated_at), 'YYYY/MM/DD') || ' إلى ' || to_char(max(fu.updated_at), 'YYYY/MM/DD'))::text,
+           max(fu.updated_at)
+      from fu where p_item = 'e03_06' having count(*) > 0
     union all
     select 'سجل المتابعة الإلكتروني'::text,   -- شاهد واحد يكفي: أنواع التقويم المستخدمة
            ('أنواع التقويم المستخدمة: ' || string_agg(distinct fu.klabel, '، '))::text, max(fu.updated_at)
