@@ -62,7 +62,6 @@ const ADMIN_GROUPS = [
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "swap" },
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
-      { to: "/teacher-permissions", label: "صلاحيات المعلمين",   perm: "staff",  icon: "shield" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
     ],
   },
@@ -100,6 +99,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
       { to: "/staff",          label: "الإدارة",             perm: "staff",          icon: "briefcase", kw: "منسوبين" },
+      { to: "/teacher-permissions", label: "صلاحيات المعلمين", perm: "staff",       icon: "shield" },
       { to: "/calendar-admin", label: "التقويم والإجازات",   perm: "calendar",       icon: "calendar" },
       { to: "/season",         label: "التوقيت الزمني",       perm: "import",         icon: "clock", kw: "حصص" },
       { to: "/import",         label: "الاستيراد",           perm: "import",         icon: "database", kw: "نور" },
