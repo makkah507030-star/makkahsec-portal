@@ -6,7 +6,8 @@ import { supabase } from "../lib/supabase";
    • نشر النتيجة: تظهر الدرجة للطالب وولي أمره في «نتائج الاختبارات القصيرة».
    • التغذية الراجعة: إحصائيات الاختبار في بطاقات مبسطة (درجته، ومتوسط فصله،
      وحال كل فقرة). لا تُتاح إلا مع نشر النتيجة.
-   يقرّر المعلم كلًّا منهما، ويستطيع إخفاءه في أي وقت.
+   • صورة بطاقة الإجابة (للتصحيح الآلي): يرى الطالب بطاقته المصحّحة (quiz_cards.sql).
+   يقرّر المعلم كلًّا منها، ويستطيع إخفاءه في أي وقت.
    ===================================================================== */
 
 function Switch({ on, disabled, onClick, label }) {
@@ -30,13 +31,15 @@ export default function QuizPublish({ q, onChange }) {
   }, [q.id, q.mode]);
   const pub = !!q.results_published;
   const fb = !!q.feedback_enabled;
+  const card = !!q.card_visible;
 
   const save = async (fields) => {
     setBusy(true); setErr("");
     const { error } = await supabase.from("quizzes").update(fields).eq("id", q.id);
     setBusy(false);
     if (error) {
-      setErr(/results_published|feedback_enabled|schema cache/i.test(error.message)
+      setErr(/card_visible/i.test(error.message) ? "لم تُفعَّل صور البطاقات بعد: يلزم تشغيل ملف supabase/quiz_cards.sql."
+        : /results_published|feedback_enabled|schema cache/i.test(error.message)
         ? "لم يُفعَّل نشر النتائج بعد في قاعدة البيانات." : error.message);
       return;
     }
@@ -44,7 +47,7 @@ export default function QuizPublish({ q, onChange }) {
   };
 
   const togglePub = () => save(pub
-    ? { results_published: false, feedback_enabled: false }
+    ? { results_published: false, feedback_enabled: false, ...(card ? { card_visible: false } : {}) }
     : { results_published: true, results_published_at: new Date().toISOString(),
         ...(q.status === "ready" ? { status: "marking" } : {}) });
 
@@ -59,6 +62,12 @@ export default function QuizPublish({ q, onChange }) {
         ? "يرى الطالب درجته مقارنة بمتوسط فصله، وحال كل فقرة، دون مفتاح الإجابة."
         : "إحصائيات الاختبار في بطاقات مبسطة: درجته، ومتوسط فصله، وحال كل فقرة.",
       click: () => save({ feedback_enabled: !fb }), disabled: !pub },
+    // البطاقات تُصوَّر في «التصحيح الآلي» وحده
+    ...(q.mode === "omr" ? [{ k: "card", on: card, t: "إتاحة صورة بطاقة الإجابة",
+      d: !pub ? "تُتاح بعد نشر النتيجة." : card
+        ? "يرى الطالب وولي أمره صورة بطاقته المصحّحة حتى نهاية الفصل."
+        : "صورة البطاقة التي صحّحتها بالكاميرا، وتُحذف بنهاية الفصل.",
+      click: () => save({ card_visible: !card }), disabled: !pub }] : []),
   ];
 
   return (

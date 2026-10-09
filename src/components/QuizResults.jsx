@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import QuizFeedback from "./QuizFeedback.jsx";
+import { openQuizCard } from "../lib/quizCards.js";
 
 /* =====================================================================
    نتائج الاختبارات القصيرة — للطالب وولي أمره.
@@ -125,6 +126,13 @@ export default function QuizResults({ studentId = null, compact = false }) {
                 </div>
               )}
             </div>
+            {r.card_path && !r.absent && (
+              <button onClick={() => openQuizCard(r.card_path)}
+                className="flex w-full items-center justify-between border-t border-line px-3 py-2 text-xs font-semibold text-mint-deep hover:bg-canvas">
+                <span>صورة بطاقة الإجابة</span>
+                <span aria-hidden="true">↗</span>
+              </button>
+            )}
             {r.feedback && !r.absent && (
               <>
                 <button onClick={() => setOpen(open === r.quiz_id ? null : r.quiz_id)}

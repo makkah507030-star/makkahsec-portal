@@ -7,6 +7,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import QuizScan from "../../components/QuizScan.jsx";
+import { openQuizCard } from "../../lib/quizCards.js";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import { groupQuestions } from "../../lib/omrLayout.js";
 import { useNotice } from "../../lib/useNotice.js";
@@ -277,6 +278,12 @@ export default function QuizMarks() {
                       </span>
                     ) : (
                       <span className="chip bg-canvas text-muted">لم يُرصد</span>
+                    )}
+                    {sub?.card_path && (
+                      <button onClick={() => openQuizCard(sub.card_path)} title="صورة بطاقة الإجابة"
+                              className="shrink-0 rounded-pill border border-line px-2.5 py-1 text-xs font-semibold text-muted hover:bg-canvas">
+                        البطاقة
+                      </button>
                     )}
                     {!isOnline && (
                       <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
