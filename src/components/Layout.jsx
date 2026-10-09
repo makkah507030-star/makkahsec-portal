@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
+import { useMyDepartment, headLabel } from "../lib/plc";
 import { useTeacherHiddenTabs } from "../lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import logoIcon from "../assets/icon-mint.png";
@@ -70,6 +71,7 @@ const ADMIN_GROUPS = [
       { to: "/forms",        label: "إصدار النماذج", icon: "certificate", kw: "شهادات" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
+      { to: "/plc",          label: "التطوير المهني", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "مجتمع التعلم رؤساء الأقسام" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "sliders" },
     ],
   },
@@ -159,6 +161,7 @@ const TEACHER_GROUPS = [
       { to: "/forms",        label: "النماذج والشهادات",  icon: "certificate" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
+      { to: "/plc",          label: "التطوير المهني",     icon: "users", kw: "مجتمع التعلم المهني" },
     ],
   },
   {
@@ -415,6 +418,9 @@ export default function Layout({ children }) {
     })();
   }, [effectiveRole, session]);
 
+  // وسم «رئيس قسم …» بجانب الاسم (supabase/plc_1_departments.sql)
+  const dept = useMyDepartment();
+
   const subtitle =
     isAdmin && adminRoles.length
       ? adminRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" · ")
@@ -496,6 +502,11 @@ export default function Layout({ children }) {
           {profile?.full_name ?? profile?.username ?? "—"}
         </p>
         <p className="truncate text-[11px] leading-tight text-muted">{subtitle}</p>
+        {dept?.is_head && (
+          <span className="mt-0.5 inline-block rounded-pill bg-mint-light px-2 py-px text-[10.5px] font-semibold text-mint-deep">
+            {headLabel(dept)}
+          </span>
+        )}
       </div>
     </div>
   );

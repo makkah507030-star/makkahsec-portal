@@ -77,6 +77,8 @@ const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const StudentNotes = lazy(() => import("./pages/StudentNotes.jsx"));
 const ExamSchedules = lazy(() => import("./pages/ExamSchedules.jsx"));
 const Events = lazy(() => import("./pages/Events.jsx"));
+const Plc = lazy(() => import("./pages/Plc.jsx"));
+const PlcDepartments = lazy(() => import("./pages/Plc.jsx").then((m) => ({ default: m.PlcDepartments })));
 const EventsReports = lazy(() => import("./pages/EventsReports.jsx"));
 const MyQuizzes = lazy(() => import("./pages/teacher/MyQuizzes.jsx"));
 const QuizMarks = lazy(() => import("./pages/teacher/QuizMarks.jsx"));
@@ -422,6 +424,10 @@ export default function App() {
           {/* الأحداث والمناسبات — لكل معلم وإداري */}
           <Route path="/events" element={<Events />} />
           <Route path="/events-reports" element={<EventsReports />} />
+          {/* التطوير المهني: تقارير جلسات مجتمع التعلم المهني — الصفحة والقاعدة تتحققان من الدور */}
+          <Route path="/plc" element={<Plc />} />
+          <Route path="/plc/:id" element={<Plc />} />
+          <Route path="/plc-departments" element={<PlcDepartments />} />
           {/* اختباراتي — للمعلم */}
           <Route path="/quizzes" element={<MyQuizzes />} />
           <Route path="/quiz-marks" element={<QuizMarks />} />
