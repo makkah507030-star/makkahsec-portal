@@ -325,10 +325,6 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
                     disabled={busy} onClick={closeNow}>إغلاق الآن</button>
           </>
         )}
-        {!online.show_result && !["marking", "closed"].includes(quiz.status) && done > 0 && (
-          <button className="rounded-pill bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white"
-                  onClick={() => onStatus?.("marking")}>إظهار النتائج للطلاب</button>
-        )}
       </div>
 
       <div className="overflow-x-auto">
