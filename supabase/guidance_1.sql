@@ -1,14 +1,14 @@
 -- =====================================================================
 -- التوجيه الطلابي — الجزء 1 من 2: سجل الحالات الإرشادية (سري).
 -- كل صف مرتبط بموجهه: counselor_1 للصف الأول، counselor_2 للثاني، counselor_3
--- للثالث. يرى الموجه حالات صفه وحده، ويرى وكيل شؤون الطلاب ومدير المدرسة الجميع.
+-- للثالث. يرى الموجه حالات صفه وحده، ويرى وكيل شؤون الطلاب ومدير المدرسة والدعم الفني الجميع.
 -- تكرار التنفيذ آمن.
 -- =====================================================================
 
 -- هل يطّلع المستخدم على عمل التوجيه لهذا الصف؟
 create or replace function public.guidance_can(p_grade int)
 returns boolean language sql stable security definer set search_path = public as $$
-  select public.has_admin_role(array['principal', 'deputy_students'])
+  select public.has_admin_role(array['principal', 'deputy_students', 'tech_support'])
       or public.has_admin_role(array['counselor_' || p_grade]);
 $$;
 revoke execute on function public.guidance_can(int) from public, anon;

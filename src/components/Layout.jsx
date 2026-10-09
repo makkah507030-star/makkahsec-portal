@@ -54,10 +54,10 @@ const ADMIN_GROUPS = [
     ],
   },
   {
-    // كل صف لموجهه؛ والوكيل والمدير يريان الصفوف كلها (supabase/guidance_1.sql)
+    // كل صف لموجهه؛ والوكيل والمدير والدعم الفني يرون الصفوف كلها (supabase/guidance_1.sql)
     title: "التوجيه الطلابي",
     items: [
-      { to: "/guidance", label: "الإنذار المبكر والحالات", roles: ["principal", "deputy_students", "counselor_1", "counselor_2", "counselor_3"], icon: "heart", kw: "موجه حالة إرشادية جلسة" },
+      { to: "/guidance", label: "الإنذار المبكر والحالات", roles: ["principal", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], icon: "heart", kw: "موجه حالة إرشادية جلسة" },
     ],
   },
   {

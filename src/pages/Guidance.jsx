@@ -13,7 +13,7 @@ import moeLogo from "../assets/moe-logo.png";
 /* =====================================================================
    التوجيه الطلابي (supabase/guidance_1.sql و guidance_2.sql).
    كل صف مرتبط بموجهه (counselor_1..3): يرى طلاب صفه وحالاتهم وحده،
-   ويرى وكيل شؤون الطلاب ومدير المدرسة الصفوف كلها.
+   ويرى وكيل شؤون الطلاب ومدير المدرسة والدعم الفني الصفوف كلها.
    • الإنذار المبكر: طلاب الصف الذين يحتاجون تدخلًا، بحدود البوابة نفسها:
      الغياب الرسمي بمراحل الإنذارات (5 متابعة، 10، 15، 20)، والتأخر الصباحي
      ثلاث مرات فأكثر (المواقف الثلاثة في الإجراءات)، ومتوسط الاختبارات القصيرة
@@ -47,7 +47,7 @@ function reasonsOf(r) {
 
 export default function Guidance() {
   const { adminRoles, profile } = useSession();
-  const seesAll = adminRoles.some((r) => ["principal", "deputy_students"].includes(r));
+  const seesAll = adminRoles.some((r) => ["principal", "deputy_students", "tech_support"].includes(r));
   const myGrades = [1, 2, 3].filter((g) => seesAll || adminRoles.includes(`counselor_${g}`));
   const [grade, setGrade] = useState(myGrades[0] ?? null);
   const [tab, setTab] = useState("warn");
@@ -57,7 +57,7 @@ export default function Guidance() {
 
   useEffect(() => { if (!grade && myGrades[0]) setGrade(myGrades[0]); }, [myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!myGrades.length) return <p className="card px-4 py-6 text-sm text-muted">هذه الصفحة لموجهي الصفوف ووكيل شؤون الطلاب ومدير المدرسة.</p>;
+  if (!myGrades.length) return <p className="card px-4 py-6 text-sm text-muted">هذه الصفحة لموجهي الصفوف ووكيل شؤون الطلاب ومدير المدرسة والدعم الفني.</p>;
 
   if (openCase) return <CaseView id={openCase} me={profile?.full_name} onBack={() => { setOpenCase(null); setTick((t) => t + 1); }} />;
 
@@ -66,7 +66,7 @@ export default function Guidance() {
       <div>
         <h1 className="text-lg font-bold text-ink">التوجيه الطلابي</h1>
         <p className="mt-1 text-sm text-muted">
-          {seesAll ? "حالات الصفوف كلها، كل صف لموجهه." : `صفك: ${GRADE_NAMES[grade] ?? ""}. ما تكتبه هنا سري، لا يطّلع عليه إلا أنت ووكيل شؤون الطلاب ومدير المدرسة.`}
+          {seesAll ? "حالات الصفوف كلها، كل صف لموجهه." : `صفك: ${GRADE_NAMES[grade] ?? ""}. ما تكتبه هنا سري، لا يطّلع عليه إلا أنت ووكيل شؤون الطلاب ومدير المدرسة والدعم الفني.`}
         </p>
       </div>
 
