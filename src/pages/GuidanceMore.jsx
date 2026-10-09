@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSession } from "../lib/session.jsx";
 import { supabase } from "../lib/supabase";
 import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
 import { fmtDate, fmtDateTime } from "../lib/dates";
@@ -10,7 +12,9 @@ import moeLogo from "../assets/moe-logo.png";
 
 /* =====================================================================
    التوجيه الطلابي — بقية الصفحة (supabase/guidance_3.sql و guidance_4.sql):
-   • الخطة والبرامج: برامج الصف بموعدها، وتوثيق تنفيذها بالمستفيدين والأثر والصور.
+   • الخطة والبرامج: برامج الصف بموعدها. يُنفَّذ البرنامج حدثًا في «الأحداث
+     والمناسبات» أو يُربط بحدث نُفّذ (guidance_5.sql)، فيُعدّ منفَّذًا حين يُعتمد
+     حدثه ومستفيدوه طلابه؛ أو يوثَّق تنفيذه يدويًا بالمستفيدين والأثر والصور.
    • طلبات المقابلة: من الطالب أو ولي أمره، يحدد الموجه موعدها أو يرد.
    • التقرير الشهري: أرقام عمل الموجه في الشهر، مطبوعًا بتوقيعه وتوقيع المدير.
    ===================================================================== */
@@ -37,6 +41,32 @@ const logos = () => ({ logoUrl: new URL(logoIcon, window.location.origin).href, 
 const setupErr = (e, file) => (/guidance_|schema cache|relation/i.test(e?.message ?? "")
   ? `لم يُفعَّل هذا القسم بعد: يلزم تشغيل ملف supabase/${file}.` : e?.message);
 
+// مراحل الحدث (pages/Events.jsx) بأسمائها المختصرة
+const EV_STAGE = { draft: "بيانات الحدث", participants: "المشاركون", consent: "موافقة أولياء الأمور", permission: "الاستئذان",
+  attendance: "كشف الحضور", certificates: "الشهادات", report: "التقرير", approved: "معتمد" };
+const EV_SELECT = "*, school_events(id, serial, title, stage, event_date, cancelled_at, event_participants(count))";
+
+/** البرامج مع أحداثها، وقبل تشغيل guidance_5.sql بلا أحداث */
+async function loadPrograms(grade) {
+  let r = await supabase.from("guidance_programs").select(EV_SELECT).eq("grade", grade)
+    .order("planned_date", { ascending: true, nullsFirst: false });
+  if (r.error && /event|relationship|school_events/i.test(r.error.message)) {
+    r = await supabase.from("guidance_programs").select("*").eq("grade", grade)
+      .order("planned_date", { ascending: true, nullsFirst: false });
+  }
+  return r;
+}
+/** حال البرنامج: منفَّذ يدويًا أو باعتماد حدثه، ومستفيدوه */
+export function programState(p) {
+  const ev = p.school_events;
+  const evDone = ev?.stage === "approved";
+  return {
+    ev, done: p.status === "done" || evDone,
+    date: p.status === "done" ? p.done_date : evDone ? ev.event_date : null,
+    beneficiaries: p.beneficiaries ?? (evDone ? ev.event_participants?.[0]?.count ?? null : null),
+  };
+}
+
 async function activeTerm() {
   const { data } = await supabase.from("settings").select("key, value").in("key", ["active_year", "active_term"]);
   const m = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
@@ -51,10 +81,45 @@ export function Programs({ grade, me }) {
   const [doneFor, setDoneFor] = useState(null);   // توثيق تنفيذ
   const [busy, setBusy] = useState(false);
 
-  const load = () => supabase.from("guidance_programs").select("*").eq("grade", grade)
-    .order("planned_date", { ascending: true, nullsFirst: false })
+  const [linkFor, setLinkFor] = useState(null);   // { p, events }
+  const navigate = useNavigate();
+  const { session, profile, adminRoles } = useSession();
+
+  const load = () => loadPrograms(grade)
     .then(({ data, error }) => { if (error) setErr(setupErr(error, "guidance_3.sql")); setRows(data ?? []); });
   useEffect(() => { load(); }, [grade]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // تنفيذ البرنامج حدثًا: يُنشأ الحدث ببيانات البرنامج ويُربط به، ثم يُفتح في «الأحداث»
+  const runAsEvent = async (p) => {
+    setBusy(true); setErr("");
+    const { data: serial } = await supabase.rpc("next_event_serial");
+    const { data: ev, error } = await supabase.from("school_events").insert({
+      serial, title: p.title, category: "التوجيه الطلابي",
+      event_date: p.planned_date || todayISO(),
+      description: `برنامج ${PROGRAM_KIND[p.kind]} من الخطة الإرشادية — ${GRADE_NAMES[grade] ?? ""}`,
+      goals: p.target ? `الفئة المستهدفة: ${p.target}` : null,
+      organizer_id: session?.user?.id, organizer_name: profile?.full_name ?? me ?? "",
+      organizer_role: adminRoles.some((r) => r.startsWith("counselor")) ? "الموجه الطلابي" : "",
+      cert_template: "classic", stage: "participants",
+    }).select("id").single();
+    if (error) { setBusy(false); setErr(error.message); return; }
+    const { error: e2 } = await supabase.from("guidance_programs").update({ event_id: ev.id }).eq("id", p.id);
+    setBusy(false);
+    if (e2) { setErr(setupErr(e2, "guidance_5.sql")); return; }
+    navigate(`/events?open=${ev.id}`);
+  };
+
+  // ربط البرنامج بحدث نُفّذ: الأحداث التي يراها المستخدم، غير الملغاة
+  const openLink = async (p) => {
+    const { data } = await supabase.from("school_events").select("id, serial, title, event_date, stage")
+      .is("cancelled_at", null).order("event_date", { ascending: false }).limit(60);
+    setLinkFor({ p, events: data ?? [] });
+  };
+  const link = async (eventId) => {
+    const { error } = await supabase.from("guidance_programs").update({ event_id: eventId }).eq("id", linkFor.p.id);
+    if (error) { setErr(setupErr(error, "guidance_5.sql")); return; }
+    setLinkFor(null); load();
+  };
 
   const add = async () => {
     if (!nf.title.trim()) return;
@@ -105,11 +170,12 @@ export function Programs({ grade, me }) {
 
   const printPlan = () => printReport({
     title: "الخطة الإرشادية",
-    subtitle: `${GRADE_NAMES[grade] ?? ""} · ${rows.length} برنامجًا · نُفّذ ${rows.filter((r) => r.status === "done").length}`,
+    subtitle: `${GRADE_NAMES[grade] ?? ""} · ${rows.length} برنامجًا · نُفّذ ${rows.filter((r) => programState(r).done).length}`,
     headers: ["م", "البرنامج", "نوعه", "الفئة المستهدفة", "الموعد", "التنفيذ", "المستفيدون"],
-    rows: rows.map((r, i) => [i + 1, r.title, PROGRAM_KIND[r.kind], r.target ?? "—",
+    rows: rows.map((r, i) => { const st = programState(r); return [i + 1, r.title, PROGRAM_KIND[r.kind], r.target ?? "—",
       r.planned_date ? fmtDate(r.planned_date + "T00:00:00") : "—",
-      r.status === "done" ? `نُفّذ ${r.done_date ? fmtDate(r.done_date + "T00:00:00") : ""}` : "لم يُنفَّذ", r.beneficiaries ?? "—"]),
+      st.done ? `نُفّذ ${st.date ? fmtDate(st.date + "T00:00:00") : ""}${st.ev ? ` · حدث ${st.ev.serial}` : ""}`
+        : st.ev ? `حدث ${st.ev.serial} · ${EV_STAGE[st.ev.stage] ?? ""}` : "لم يُنفَّذ", st.beneficiaries ?? "—"]; }),
     signatures: [{ title: "الموجه الطلابي", name: me ?? "" }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
     ...logos(),
   });
@@ -146,7 +212,7 @@ export function Programs({ grade, me }) {
 
       {rows.length === 0 && !nf ? <p className="card px-4 py-6 text-center text-sm text-muted">لا برامج في خطة الصف بعد.</p> : (
         <div className="card divide-y divide-line overflow-hidden">
-          {rows.map((p) => (
+          {rows.map((p) => { const st = programState(p); return (
             <div key={p.id} className="px-4 py-3">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="min-w-0 flex-1">
@@ -154,12 +220,43 @@ export function Programs({ grade, me }) {
                   <p className="text-xs text-muted">{PROGRAM_KIND[p.kind]}{p.target ? ` · ${p.target}` : ""}
                     {p.planned_date ? <> · <span className="num">{fmtDate(p.planned_date + "T00:00:00")}</span></> : ""}</p>
                 </div>
-                {p.status === "done"
-                  ? <span className="chip gap-1 whitespace-nowrap bg-present/10 text-present">نُفّذ{p.beneficiaries ? <><span>·</span><span className="num">{p.beneficiaries}</span><span>مستفيدًا</span></> : ""}</span>
-                  : <button className="rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white"
-                            onClick={() => setDoneFor({ p, done_date: todayISO(), beneficiaries: "", outcome: "", files: [] })}>توثيق التنفيذ</button>}
+                {st.done && <span className="chip gap-1 whitespace-nowrap bg-present/10 text-present">نُفّذ{st.beneficiaries ? <><span>·</span><span className="num">{st.beneficiaries}</span><span>مستفيدًا</span></> : ""}</span>}
+                {st.ev ? (
+                  <>
+                    {!st.done && <span className="chip bg-excused/10 text-excused">الحدث: {EV_STAGE[st.ev.stage] ?? st.ev.stage}</span>}
+                    <button className="text-xs font-semibold text-mint-deep underline" onClick={() => navigate(`/events?open=${st.ev.id}`)}>
+                      فتح الحدث <span className="num">{st.ev.serial}</span></button>
+                    {!st.done && <button className="text-xs text-muted underline"
+                            onClick={async () => { await supabase.from("guidance_programs").update({ event_id: null }).eq("id", p.id); load(); }}>إلغاء الربط</button>}
+                  </>
+                ) : !st.done && (
+                  <>
+                    <button className="rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white" disabled={busy}
+                            onClick={() => runAsEvent(p)}>تنفيذه حدثًا</button>
+                    <button className="rounded-pill border border-mint-deep px-3 py-1 text-xs font-semibold text-mint-deep"
+                            onClick={() => openLink(p)}>ربط بحدث نُفّذ</button>
+                    <button className="text-xs text-muted underline"
+                            onClick={() => setDoneFor({ p, done_date: todayISO(), beneficiaries: "", outcome: "", files: [] })}>توثيق يدوي</button>
+                  </>
+                )}
                 <button className="text-xs text-absent underline" onClick={() => remove(p)}>حذف</button>
               </div>
+              {linkFor?.p.id === p.id && (
+                <div className="mt-2 space-y-1.5 rounded-sm2 bg-canvas p-3">
+                  <p className="text-xs font-semibold text-ink">اختر الحدث الذي نُفّذ فيه البرنامج</p>
+                  {linkFor.events.length === 0 && <p className="text-xs text-muted">لا أحداث تراها.</p>}
+                  <div className="max-h-56 divide-y divide-line overflow-y-auto rounded-sm2 border border-line bg-white">
+                    {linkFor.events.map((e) => (
+                      <button key={e.id} onClick={() => link(e.id)} className="flex w-full items-center gap-2 px-3 py-2 text-right text-sm hover:bg-canvas">
+                        <span className="min-w-0 flex-1 truncate text-ink">{e.title}</span>
+                        <span className="num shrink-0 text-[11px] text-muted">{e.serial} · {fmtDate(e.event_date + "T00:00:00")}</span>
+                        <span className="chip shrink-0 bg-canvas text-muted">{EV_STAGE[e.stage] ?? e.stage}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <button className="btn-ghost px-4 py-1.5 text-xs" onClick={() => setLinkFor(null)}>إلغاء</button>
+                </div>
+              )}
               {p.status === "done" && (p.outcome || p.photos?.length > 0) && (
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                   {p.outcome && <span className="flex-1">{p.outcome}</span>}
@@ -186,7 +283,7 @@ export function Programs({ grade, me }) {
                 </div>
               )}
             </div>
-          ))}
+          ); })}
         </div>
       )}
     </div>
@@ -280,14 +377,14 @@ export function MonthlyReport({ grade, me }) {
       supabase.from("guidance_cases").select("id, status, outcome, opened_at, closed_at, source").eq("grade", grade),
       supabase.from("guidance_sessions").select("id, kind, session_date, guidance_cases!inner(grade)").eq("guidance_cases.grade", grade)
         .gte("session_date", from).lt("session_date", to),
-      supabase.from("guidance_programs").select("id, title, kind, status, done_date, beneficiaries").eq("grade", grade),
+      loadPrograms(grade),
       supabase.from("guidance_requests").select("id, status, created_at").eq("grade", grade).gte("created_at", from).lt("created_at", to),
     ]).then(([c, s, p, r]) => {
       const e = c.error || s.error || p.error || r.error;
       if (e) setErr(setupErr(e, "guidance_3.sql وguidance_4.sql"));
       const inM = (t) => t && t.slice(0, 10) >= from && t.slice(0, 10) < to;
       const cases = c.data ?? [];
-      const prog = (p.data ?? []).filter((x) => x.status === "done" && inM(x.done_date));
+      const prog = (p.data ?? []).map((x) => ({ ...x, st: programState(x) })).filter((x) => x.st.done && inM(x.st.date));
       setD({
         opened: cases.filter((x) => inM(x.opened_at)).length,
         closed: cases.filter((x) => inM(x.closed_at)).length,
@@ -295,7 +392,7 @@ export function MonthlyReport({ grade, me }) {
         openNow: cases.filter((x) => x.status === "open").length,
         sessions: s.data ?? [],
         programs: prog,
-        beneficiaries: prog.reduce((a, x) => a + (x.beneficiaries ?? 0), 0),
+        beneficiaries: prog.reduce((a, x) => a + (x.st.beneficiaries ?? 0), 0),
         requests: r.data ?? [],
       });
     });
@@ -324,7 +421,7 @@ export function MonthlyReport({ grade, me }) {
       { title: "الجلسات بحسب النوع", headers: ["فردية", "جماعية", "مع ولي الأمر", "مع المعلم"],
         rows: [[kinds.individual, kinds.group, kinds.guardian, kinds.teacher]] },
       ...(d.programs.length ? [{ title: "البرامج المنفذة", headers: ["م", "البرنامج", "نوعه", "التاريخ", "المستفيدون"],
-        rows: d.programs.map((x, i) => [i + 1, x.title, PROGRAM_KIND[x.kind], fmtDate(x.done_date + "T00:00:00"), x.beneficiaries ?? "—"]) }] : []),
+        rows: d.programs.map((x, i) => [i + 1, x.title, PROGRAM_KIND[x.kind], fmtDate(x.st.date + "T00:00:00"), x.st.beneficiaries ?? "—"]) }] : []),
     ],
     signatures: [{ title: "الموجه الطلابي", name: me ?? "" }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
     signOnLastPageOnly: true,
