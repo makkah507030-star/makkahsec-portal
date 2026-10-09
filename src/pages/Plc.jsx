@@ -112,6 +112,7 @@ function SessionList() {
           </button>
         ))}
         {dept?.is_head && <button className="btn-primary mr-auto" onClick={create}>جلسة جديدة</button>}
+        {(dept?.is_head || roles.seesAll) && <Link className="btn-ghost" to="/plc-file">ملف التطوير المهني للقسم</Link>}
         {roles.seesAll && <Link className="btn-ghost" to="/plc-departments">الأقسام وأعضاؤها</Link>}
       </div>
 
@@ -726,5 +727,228 @@ export function PlcDepartments() {
         })}
       </div>
     </div>
+  );
+}
+
+/* ----------------------- ملف التطوير المهني للقسم -----------------------
+   لرئيس القسم (ولإدارة المدرسة على أي قسم): شواهد عنصر «التفاعل مع المجتمع
+   المهني» لمعلمي القسم من البوابة، في تقرير واحد بغلاف وإحصائيات ونواقص. */
+const MISSING_TEXT = { e02_09: "لم يرفع الرخصة المهنية أو لا توجد لديه" };
+
+export function PlcFile() {
+  const roles = useRoles();
+  const dept = useMyDepartment();
+  const [depts, setDepts] = useState([]);
+  const [deptId, setDeptId] = useState("");
+  const [items, setItems] = useState([]);
+  const [rows, setRows] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [year, setYear] = useState("");
+  const [err, setErr] = useState("");
+  const [printing, setPrinting] = useState(false);
+
+  useEffect(() => {
+    loadActiveTerm().then(({ year: y }) => setYear(y));
+    supabase.from("perf_items").select("key, sort_order, title, is_record").eq("element_key", "e02")
+      .eq("is_active", true).order("sort_order").then(({ data }) => setItems(data ?? []));
+    if (roles.seesAll) supabase.from("departments").select("id, name").order("sort_order").then(({ data }) => setDepts(data ?? []));
+  }, [roles.seesAll]);
+  useEffect(() => { if (!deptId && dept?.is_head) setDeptId(dept.department_id); }, [dept, deptId]);
+
+  useEffect(() => {
+    if (!deptId || !year) return;
+    setRows(null); setErr("");
+    supabase.rpc("dept_pd_file", { p_dept: deptId, p_year: year }).then(({ data, error }) => {
+      if (error) setErr(/dept_pd_file|schema cache/i.test(error.message) ? "لم يُفعَّل ملف القسم بعد في قاعدة البيانات." : error.message);
+      setRows(data ?? []);
+    });
+    supabase.from("plc_sessions").select("serial, data, status, decided_at").eq("department_id", deptId)
+      .eq("status", "approved").order("decided_at").then(({ data }) => setSessions(data ?? []));
+  }, [deptId, year]);
+
+  if (!roles.seesAll && dept === undefined) return <Loader />;
+  if (!roles.seesAll && !dept?.is_head) return <p className="card px-4 py-6 text-sm text-muted">هذا الملف لرؤساء الأقسام.</p>;
+
+  const deptName = roles.seesAll && deptId ? depts.find((d) => d.id === deptId)?.name ?? dept?.department_name : dept?.department_name;
+  const print = () => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 80); };
+  const file = rows && <DeptFile rows={rows} items={items} sessions={sessions} deptName={deptName} year={year} />;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <Link to="/plc" className="text-xs text-muted hover:underline">التطوير المهني</Link>
+        <div className="mt-0.5 flex flex-wrap items-center gap-2">
+          <h1 className="text-lg font-bold text-ink">ملف التطوير المهني للقسم</h1>
+          <HeadTag d={dept} />
+        </div>
+        <p className="mt-1 text-sm text-muted">
+          يجمع شواهد عنصر «التفاعل مع المجتمع المهني» لمعلمي القسم من البوابة، مع الإحصائيات والنواقص، جاهزًا للطباعة.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {roles.seesAll && (
+          <select className="field w-auto" value={deptId} onChange={(e) => setDeptId(e.target.value)}>
+            <option value="">اختر القسم…</option>
+            {depts.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        )}
+        {rows && <button className="btn-primary mr-auto" onClick={print}>طباعة / حفظ PDF</button>}
+      </div>
+      {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
+      {!deptId ? null : !rows ? <Loader compact /> : (
+        <div className="overflow-x-auto rounded-card border border-line bg-canvas p-3">
+          <div style={{ width: 794, margin: "0 auto" }} className="space-y-3">{file}</div>
+        </div>
+      )}
+      {printing && <PrintPortal id="plc-file"><div id="plc-file">{file}</div></PrintPortal>}
+    </div>
+  );
+}
+
+const page = { width: "210mm", minHeight: "297mm", background: "#fff", padding: "13mm 13mm", boxSizing: "border-box",
+  color: "#1f2a24", fontSize: 12, pageBreakAfter: "always" };
+const th = { background: C.green, color: "#fff", padding: "5px 6px", fontWeight: 600 };
+const td = { border: "1px solid #d8e4dc", padding: "4px 6px" };
+
+function SheetHead({ t, deptName }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `2px solid ${C.green}`, paddingBottom: 8, marginBottom: 12 }}>
+      <p style={{ fontSize: 16, fontWeight: 700, color: C.green }}>{t}</p>
+      <p style={{ fontSize: 11, color: C.soft }}>ملف التطوير المهني · قسم {deptName}</p>
+    </div>
+  );
+}
+
+export function DeptFile({ rows, items, sessions, deptName, year }) {
+  // المعلمون وشواهدهم مجمّعة
+  const teachers = [];
+  for (const r of rows) {
+    let t = teachers.find((x) => x.id === r.teacher_id);
+    if (!t) teachers.push(t = { id: r.teacher_id, name: r.full_name, head: r.is_head, ev: [] });
+    if (r.item_key) t.ev.push(r);
+  }
+  const of = (t, k) => t.ev.filter((e) => e.item_key === k);
+  const N = teachers.length || 1;
+  const total = rows.filter((r) => r.item_key).length;
+  const hours = rows.reduce((a, r) => a + (Number(r.hours) || 0), 0);
+  const cells = teachers.length * items.length;
+  const filled = teachers.reduce((a, t) => a + items.filter((i) => of(t, i.key).length).length, 0);
+  const coverage = cells ? Math.round((filled / cells) * 100) : 0;
+  const head = teachers.find((t) => t.head)?.name ?? "";
+  const stat = (v, l) => (
+    <div style={{ border: `1.5px solid ${C.line}`, borderRadius: 12, padding: "10px 6px", textAlign: "center" }}>
+      <p style={{ fontSize: 24, fontWeight: 700, color: C.green }}>{v}</p><p style={{ fontSize: 11, color: C.soft }}>{l}</p>
+    </div>
+  );
+
+  return (
+    <>
+      {/* الغلاف */}
+      <div className="sheet" dir="rtl" style={{ ...page, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
+        background: "linear-gradient(180deg, #eef6f1 0%, #ffffff 45%)" }}>
+        <div style={{ fontSize: 12, lineHeight: 1.8, fontWeight: 600, alignSelf: "stretch", display: "flex", justifyContent: "space-between" }}>
+          <span style={{ textAlign: "right" }}>المملكة العربية السعودية<br />وزارة التعليم<br />الإدارة العامة للتعليم بمنطقة مكة المكرمة<br />مدرسة مكة الثانوية</span>
+          <img src={moeLogo} alt="" style={{ height: 64 }} />
+        </div>
+        <div style={{ marginTop: "38mm" }}>
+          <p style={{ fontSize: 15, color: C.soft }}>عنصر «التفاعل مع المجتمع المهني»</p>
+          <p style={{ fontSize: 40, fontWeight: 700, color: C.green, marginTop: 8 }}>ملف التطوير المهني</p>
+          <p style={{ fontSize: 24, fontWeight: 700, marginTop: 6 }}>قسم {deptName}</p>
+          <p style={{ fontSize: 14, color: C.soft, marginTop: 10 }}>العام الدراسي {year}هـ</p>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, alignSelf: "stretch", marginTop: "30mm" }}>
+          {stat(teachers.length, "معلمو القسم")}{stat(total, "شاهدًا ومشاركة")}{stat(hours, "ساعة تدريبية")}{stat(`${coverage}%`, "استيفاء البنود")}
+        </div>
+        <div style={{ marginTop: "auto", fontSize: 13, lineHeight: 1.9 }}>
+          رئيس القسم<br /><b>{head}</b>
+          <p style={{ fontSize: 10, color: "#8a978f", marginTop: 10 }}>صدر من بوابة مكة الثانوية الرقمية · makkahsec.com · {fmtDate(new Date())}</p>
+        </div>
+      </div>
+
+      {/* الإحصائيات */}
+      <div className="sheet" dir="rtl" style={page}>
+        <SheetHead t="إحصائيات القسم" deptName={deptName} />
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5 }}>
+          <thead><tr><th style={th}>م</th><th style={{ ...th, textAlign: "right" }}>البند</th><th style={th}>المستوفون</th><th style={{ ...th, width: "26%" }}>النسبة</th><th style={th}>الشواهد</th></tr></thead>
+          <tbody>
+            {items.map((i) => {
+              const done = teachers.filter((t) => of(t, i.key).length).length;
+              const p = Math.round((done / N) * 100);
+              return (
+                <tr key={i.key}>
+                  <td style={{ ...td, textAlign: "center" }}>{i.sort_order}</td><td style={td}>{i.title}</td>
+                  <td style={{ ...td, textAlign: "center" }}>{done} / {teachers.length}</td>
+                  <td style={td}><div style={{ background: "#edf3ef", borderRadius: 6, height: 10 }}>
+                    <div style={{ width: `${p}%`, height: 10, borderRadius: 6, background: p >= 75 ? "#3e8a62" : p >= 40 ? "#b8912f" : "#b02a2a" }} /></div>
+                    <span style={{ fontSize: 10, color: C.soft }}>{p}%</span></td>
+                  <td style={{ ...td, textAlign: "center" }}>{rows.filter((r) => r.item_key === i.key).length}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p style={{ marginTop: 14, fontWeight: 700, color: C.green }}>جلسات مجتمع التعلم المهني المعتمدة للقسم ({sessions.length})</p>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5, marginTop: 6 }}>
+          <thead><tr><th style={th}>الرقم</th><th style={{ ...th, textAlign: "right" }}>الموضوع</th><th style={th}>التاريخ</th></tr></thead>
+          <tbody>{sessions.length ? sessions.map((x) => (
+            <tr key={x.serial}><td style={{ ...td, textAlign: "center" }}>{x.serial}</td><td style={td}>{x.data?.topic}</td>
+              <td style={{ ...td, textAlign: "center" }}>{x.data?.date ? fmtHijri(x.data.date) : ""}</td></tr>
+          )) : <tr><td style={{ ...td, textAlign: "center", color: C.soft }} colSpan={3}>لا جلسات معتمدة بعد</td></tr>}</tbody>
+        </table>
+
+        <p style={{ marginTop: 14, fontWeight: 700, color: C.green }}>مصفوفة الاستيفاء (عدد الشواهد لكل بند)</p>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10.5, marginTop: 6 }}>
+          <thead><tr><th style={{ ...th, textAlign: "right" }}>المعلم</th>{items.map((i) => <th key={i.key} style={th} title={i.title}>{i.sort_order}</th>)}</tr></thead>
+          <tbody>{teachers.map((t) => (
+            <tr key={t.id}><td style={td}>{t.name}{t.head ? " (الرئيس)" : ""}</td>
+              {items.map((i) => { const n = of(t, i.key).length; return (
+                <td key={i.key} style={{ ...td, textAlign: "center", background: n ? "#eaf7ef" : "#fdf1ee", color: n ? "#2f6b4a" : "#b02a2a", fontWeight: 600 }}>{n || "✗"}</td>); })}
+            </tr>
+          ))}</tbody>
+        </table>
+        <p style={{ fontSize: 10, color: C.soft, marginTop: 4 }}>أرقام الأعمدة هي أرقام البنود في جدول الإحصائيات أعلاه.</p>
+      </div>
+
+      {/* النواقص */}
+      <div className="sheet" dir="rtl" style={page}>
+        <SheetHead t="النواقص" deptName={deptName} />
+        {teachers.map((t) => {
+          const miss = items.filter((i) => !of(t, i.key).length);
+          return (
+            <div key={t.id} style={{ border: `1.3px solid ${miss.length ? "#f1d3cc" : C.line}`, borderRadius: 8, padding: "6px 10px", marginBottom: 6 }}>
+              <p style={{ fontWeight: 700 }}>{t.name} <span style={{ fontWeight: 400, color: miss.length ? "#b02a2a" : "#2f6b4a", fontSize: 11 }}>
+                — {miss.length ? `ينقصه ${miss.length} من ${items.length}` : "مستوفٍ لكل البنود"}</span></p>
+              {miss.some((i) => MISSING_TEXT[i.key]) && (
+                <p style={{ fontSize: 11.5, color: "#b02a2a", fontWeight: 700 }}>
+                  ⚠ {miss.filter((i) => MISSING_TEXT[i.key]).map((i) => MISSING_TEXT[i.key]).join(" · ")}</p>
+              )}
+              {miss.some((i) => !MISSING_TEXT[i.key]) && <p style={{ fontSize: 11, color: "#5d6b64", lineHeight: 1.8 }}>
+                {miss.filter((i) => !MISSING_TEXT[i.key]).map((i) => `${i.sort_order}. ${i.title}`).join(" · ")}</p>}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* التفاصيل */}
+      <div className="sheet" dir="rtl" style={{ ...page, pageBreakAfter: "auto" }}>
+        <SheetHead t="سجل مشاركات المعلمين" deptName={deptName} />
+        {teachers.map((t) => (
+          <div key={t.id} style={{ marginBottom: 10, breakInside: "avoid" }}>
+            <p style={{ fontWeight: 700, color: C.green }}>{t.name}</p>
+            {t.ev.length === 0 ? <p style={{ fontSize: 11, color: C.soft }}>لا شواهد مسجلة في البوابة.</p> : (
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 10.5, marginTop: 3 }}>
+                <thead><tr><th style={th}>البند</th><th style={{ ...th, textAlign: "right" }}>المشاركة</th><th style={th}>الجهة</th><th style={th}>التاريخ</th><th style={th}>الساعات</th></tr></thead>
+                <tbody>{t.ev.map((e, i) => (
+                  <tr key={i}><td style={{ ...td, textAlign: "center" }}>{items.find((x) => x.key === e.item_key)?.sort_order}</td>
+                    <td style={td}>{e.title}</td><td style={td}>{e.provider ?? ""}</td>
+                    <td style={{ ...td, textAlign: "center" }}>{e.event_date ? fmtHijri(e.event_date) : ""}</td>
+                    <td style={{ ...td, textAlign: "center" }}>{e.hours ?? ""}</td></tr>
+                ))}</tbody>
+              </table>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
