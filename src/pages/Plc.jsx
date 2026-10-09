@@ -116,7 +116,6 @@ function SessionList() {
         <Link className="btn-ghost" to="/xvisits">الزيارات التبادلية</Link>
         <Link className="btn-ghost" to="/pd">نماذج سجل التطوير المهني</Link>
         {(dept?.is_head || roles.seesAll) && <Link className="btn-ghost" to="/plc-file">ملف التطوير المهني للقسم</Link>}
-        {roles.seesAll && <Link className="btn-ghost" to="/plc-departments">الأقسام وأعضاؤها</Link>}
       </div>
 
       {!rows ? <Loader compact /> : list.length === 0 ? (

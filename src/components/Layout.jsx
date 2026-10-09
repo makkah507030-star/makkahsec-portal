@@ -71,7 +71,7 @@ const ADMIN_GROUPS = [
       { to: "/forms",        label: "إصدار النماذج", icon: "certificate", kw: "شهادات" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
-      { to: "/plc",          label: "التطوير المهني", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "مجتمع التعلم رؤساء الأقسام" },
+      { to: "/plc",          label: "التطوير المهني", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "مجتمع التعلم" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "sliders" },
     ],
   },
