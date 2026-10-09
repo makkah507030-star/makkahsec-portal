@@ -144,7 +144,7 @@ export default function AttendanceLog({ studentId, fp }) {
           </div>
         )}
         <p className="border-t border-line bg-canvas/60 px-4 py-2.5 text-[11.5px] leading-relaxed text-muted">
-          <b className="text-ink">الغياب الرسمي</b> يُحسب يومًا، ويُعتمد من تحضير الحصتين الأولى والثانية.{" "}
+          <b className="text-ink">الغياب الرسمي</b> يُحسب فيه الطالب غائبًا يومًا كاملًا، ويُرصد في نظام نور.{" "}
           <b className="text-ink">غياب الحصص</b> يُعدّ بالحصة: كل حصة سُجّل فيها غائبًا، ومنها حصص أيام الغياب الرسمي.
           {showMorning && <> <b className="text-ink">التأخر الصباحي</b> من البصمة بعد بداية الاصطفاف بخمس دقائق.</>}
         </p>
