@@ -29,7 +29,7 @@ const EXCEL_PCT = 90;         // التفوق: 90٪ فأكثر
 const SUPPORT_PCT = 60;       // يحتاج دعمًا: متوسطه أقل من 60٪
 // فئات التوزيع بتدرّج لونٍ واحد من الفاتح إلى الداكن (الأعلى أدكن)
 
-const MODE_LABEL = { paper: "ورقي", omr: "ورقي (تصحيح آلي)", online: "إلكتروني" };
+const MODE_LABEL = { paper: "ورقي", omr: "ورقي (تصحيح آلي)", online: "إلكتروني", external: "من خارج البوابة" };
 const PERIOD_LABEL = { period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي" };
 const BANDS = [
   { k: "f", t: "أقل من 50", min: 0, max: 50, c: "#CCF2DB" },
