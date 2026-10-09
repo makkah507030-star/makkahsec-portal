@@ -1,5 +1,6 @@
 // src/pages/teacher/MyQuizzes.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
@@ -34,7 +35,7 @@ const KINDS = [
 ];
 const ORDER_MAX = 8;
 
-// ثلاثة أنواع منفصلة — ولكل نوع قسمه في قائمة الاختبارات
+// أربعة أنواع منفصلة — ولكل نوع قسمه في قائمة الاختبارات
 const MODES = [
   { key: "paper", title: "اختبار ورقي", short: "ورقي", icon: "✎", chip: "bg-excused/10 text-excused",
     desc: "ورقة تقليدية بستة أنماط منها المقالي وأكمل الفراغ. تتوزّع على أكثر من صفحة، وتُطبع بأسماء الطلاب، ويُرصد مجموعها يدويًا." },
@@ -42,6 +43,8 @@ const MODES = [
     desc: "ورقة ببطاقة تظليل، تُصحَّح بالكاميرا أو برصد الإجابات. ثلاثة أنماط: اختيار من متعدد، وصح وخطأ، ومزاوجة، بلا حدّ لعدد الأسئلة." },
   { key: "online", title: "اختبار إلكتروني", short: "إلكتروني", icon: "⌁", chip: "bg-warning/10 text-warning",
     desc: "يؤديه الطالب من جواله في وقت تحدّده، ويُصحَّح آليًا فور تسليمه. ثلاثة أنماط: اختيار من متعدد، وصح وخطأ، ومزاوجة." },
+  { key: "external", title: "اختبار من خارج البوابة", short: "من خارج البوابة", icon: "⇪", chip: "bg-canvas text-ink",
+    desc: "اختبار أعددته وطبّقته خارج البوابة. أدخل بياناته ودرجته الكلية، ثم ارصد مجموع كل طالب، فيدخل في التحليل والخطط والشواهد." },
 ];
 const modeOf = (q) => MODES.find((m) => m.key === (q?.mode ?? "omr")) ?? MODES[1];
 
@@ -70,7 +73,8 @@ const STATUS = {
 
 // الإلكتروني لا يُطبع: «جاهز» بدل «جاهز للطباعة»
 const statusLabel = (q) =>
-  q.status === "ready" && q.mode === "online" ? "جاهز للإطلاق" : (STATUS[q.status] ?? STATUS.draft).t;
+  q.status === "ready" && q.mode === "online" ? "جاهز للإطلاق"
+  : q.status === "ready" && q.mode === "external" ? "جاهز للرصد" : (STATUS[q.status] ?? STATUS.draft).t;
 
 const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"];
 const ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن"];
@@ -104,7 +108,7 @@ export default function MyQuizzes() {
         <div>
           <h1 className="text-lg font-bold text-ink">اختباراتي</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            ثلاثة أنواع: ورقي، وورقي بتصحيح آلي، وإلكتروني. تُرصد درجاتها في كشف المادة،
+            أربعة أنواع: ورقي، وورقي بتصحيح آلي، وإلكتروني، ومن خارج البوابة. تُرصد درجاتها في كشف المادة،
             والنموذج الواحد يُسند لأكثر من فصل.
           </p>
         </div>
@@ -281,6 +285,7 @@ function NewQuiz({ uid, onDone }) {
       duration_min: Number(f.duration_min) || null,
       instructions: f.instructions.trim() || null,
       lang: f.lang,
+      ...(f.mode === "external" ? { status: "ready" } : {}),   // لا أسئلة: جاهز للرصد مباشرة
       academic_year: m.active_year ?? null,
       term: Number(m.active_term ?? 1),
     }).select("id").single();
@@ -294,16 +299,17 @@ function NewQuiz({ uid, onDone }) {
         ids.map((class_id) => ({ quiz_id: data.id, class_id, exam_date: f.exam_date || null })));
     }
     setBusy(false);
+    const next = f.mode === "external" ? "ارصد درجات الطلاب الآن." : "أضف أسئلته الآن.";
     onDone(data.id, { ok: true, text: ids.length
-      ? `أُنشئ الاختبار وأُسند إلى ${ids.length} ${ids.length === 1 ? "فصل" : "فصول"}. أضف أسئلته الآن.`
-      : "أُنشئ الاختبار. أضف أسئلته الآن." });
+      ? `أُنشئ الاختبار وأُسند إلى ${ids.length} ${ids.length === 1 ? "فصل" : "فصول"}. ${next}`
+      : `أُنشئ الاختبار. ${next}` });
   };
 
   return (
     <section className="card space-y-4 p-4">
       <div>
         <label className="text-xs text-muted">نوع الاختبار</label>
-        <div className="mt-1.5 grid gap-2 sm:grid-cols-3">
+        <div className="mt-1.5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {MODES.map((m) => {
             const on = f.mode === m.key;
             return (
@@ -375,7 +381,7 @@ function NewQuiz({ uid, onDone }) {
         </div>
       )}
 
-      <div>
+      {f.mode !== "external" && <div>
         <label className="text-xs text-muted">لغة ورقة الاختبار</label>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {[["ar", "عربية — من اليمين"], ["en", "English — left to right"]].map(([v, t]) => (
@@ -396,7 +402,7 @@ function NewQuiz({ uid, onDone }) {
         <p className="mt-1 text-[11px] text-faint">
           الإنجليزية تقلب اتجاه الورقة وترويستها وتعليماتها.
         </p>
-      </div>
+      </div>}
 
       <div>
         <label className="text-xs text-muted">نوع الاختبار</label>
@@ -430,14 +436,14 @@ function NewQuiz({ uid, onDone }) {
           <input type="date" className="field num mt-1 w-full" value={f.exam_date}
                  onChange={(e) => setF((x) => ({ ...x, exam_date: e.target.value }))} />
         </div>
-        <div>
+        {f.mode !== "external" && <div>
           <label className="text-xs text-muted">المدة (دقيقة)</label>
           <input className="field num mt-1 w-full" inputMode="numeric" value={f.duration_min}
                  onChange={(e) => setF((x) => ({ ...x, duration_min: e.target.value.replace(/\D/g, "") }))} />
-        </div>
+        </div>}
       </div>
 
-      <div>
+      {f.mode !== "external" && <div>
         <label className="text-xs text-muted">
           {f.lang === "en" ? "Instructions shown on the paper" : "تعليمات تظهر أعلى الورقة"}
         </label>
@@ -447,7 +453,7 @@ function NewQuiz({ uid, onDone }) {
                  ? "e.g. Read each question carefully before answering."
                  : "مثال: اقرأ السؤال جيدًا قبل الإجابة"}
                onChange={(e) => setF((x) => ({ ...x, instructions: e.target.value }))} />
-      </div>
+      </div>}
 
       <button className="btn-primary w-full" onClick={save}
               disabled={busy || f.title.trim().length < 3}>
@@ -467,14 +473,15 @@ function QuizEditor({ quiz, uid, onBack }) {
   const [questions, setQuestions] = useState(null);
   const [classes, setClasses] = useState([]);
   const [linked, setLinked] = useState([]);
-  const [tab, setTab] = useState("questions");
+  const [tab, setTab] = useState(quiz.mode === "external" ? "classes" : "questions");
   const [msg, setMsg] = useNotice(null);
   const questionsRef = useRef(null);
   const symbolLib = symbolLibraryFor(q.subject_name);
   // الاختبار الورقي: عدد صفحاته وأين تبدأ كل صفحة، وما يُطبع الآن
   const paper = q.mode === "paper";
   const online = q.mode === "online";
-  const omr = !paper && !online;
+  const external = q.mode === "external";   // من خارج البوابة: بلا أسئلة، يُرصد مجموعه فقط
+  const omr = !paper && !online && !external;
   const [layout, setLayout] = useState(null);
   const [paperPrint, setPaperPrint] = useState(null);   // { copies, answerKey }
   const kinds = paper ? PAPER_KINDS.filter((k) => !k.hidden) : KINDS;
@@ -769,10 +776,24 @@ function QuizEditor({ quiz, uid, onBack }) {
         <QuizPublish q={q} onChange={(fields) => setQ((x) => ({ ...x, ...fields }))} />
       )}
 
+      {external && (
+        <div className="no-print flex flex-wrap items-center gap-3 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+          <p className="min-w-0 flex-1 text-sm leading-relaxed text-mint-deep">
+            اختبار من خارج البوابة: أسند فصوله، ثم ارصد مجموع كل طالب من الدرجة الكلية
+            (<span className="num">{q.total_marks}</span>). بعدها تكمل دورة الاختبار: التحليل والخطة والتكريم.
+          </p>
+          {!CYCLE_PERIODS.includes(q.period) && (
+            <Link className="btn-primary shrink-0 px-4 py-1.5 text-xs" to={`/quiz-marks?q=${q.id}`}>رصد الدرجات</Link>
+          )}
+        </div>
+      )}
+
       <div className="no-print flex flex-wrap gap-1.5">
-        <button className={pill(tab === "questions")} onClick={() => setTab("questions")}>
-          الأسئلة {questions && <span className="num">({questions.length})</span>}
-        </button>
+        {!external && (
+          <button className={pill(tab === "questions")} onClick={() => setTab("questions")}>
+            الأسئلة {questions && <span className="num">({questions.length})</span>}
+          </button>
+        )}
         <button className={pill(tab === "classes")} onClick={() => setTab("classes")}>
           الفصول {linked.length > 0 && <span className="num">({linked.length})</span>}
         </button>

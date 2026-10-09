@@ -174,7 +174,7 @@ export default function QuizFeedback({ studentId, quizId }) {
 
       {!showItems && (
         <p className="rounded-sm2 bg-canvas px-3 py-2 text-[11.5px] text-muted">
-          صُحّح هذا الاختبار ورقيًا بالمجموع، فلا تفصيل لفقراته.
+          رُصدت درجة هذا الاختبار بالمجموع، فلا تفصيل لفقراته.
         </p>
       )}
       {showItems && manual > 0 && (

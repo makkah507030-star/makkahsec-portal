@@ -62,7 +62,8 @@ export default function QuizMarks() {
 
   // الأسئلة بترتيب الورقة المطبوعة (اختيار من متعدد ← صح وخطأ ← مزاوجة) وترقيمها
   // «س١: ف٢» — حتى يطابق الرصدُ اليدوي ما بيد المعلم تمامًا، لا ترتيبَ الإضافة
-  const isPaper = quiz?.mode === "paper";
+  // الورقي ومن خارج البوابة: يُرصد مجموع الطالب مباشرة
+  const isPaper = quiz?.mode === "paper" || quiz?.mode === "external";
   const isOnline = quiz?.mode === "online";   // لا بطاقة تظليل، فلا تصحيح بالكاميرا
   const ordered = useMemo(() => {
     const KIND = { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أو خطأ", match: "المزاوجة" };
@@ -191,7 +192,7 @@ export default function QuizMarks() {
             <option value="">اختر الاختبار…</option>
             {(quizzes ?? []).map((q) => (
               <option key={q.id} value={q.id}>
-                {q.mode === "paper" ? "📝 " : q.mode === "online" ? "📱 " : ""}{q.title} — {q.subject_name ?? ""} ({q.total_marks} درجة)
+                {q.mode === "paper" ? "📝 " : q.mode === "online" ? "📱 " : q.mode === "external" ? "⇪ " : ""}{q.title} — {q.subject_name ?? ""} ({q.total_marks} درجة)
               </option>
             ))}
           </select>

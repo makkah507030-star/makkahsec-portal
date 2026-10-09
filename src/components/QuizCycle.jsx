@@ -229,7 +229,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
   const honored = topList.length === 0 || !!q.honored_at || topList.every((s) => certified.has(s.id));
   const done = {
     data: true,
-    questions: questionsCount > 0,
+    questions: questionsCount > 0 || q.mode === "external",   // من خارج البوابة: أسئلته خارجها
     apply: q.status !== "draft",
     mark: graded.length > 0,
     analysis: !!q.analyzed_at,
