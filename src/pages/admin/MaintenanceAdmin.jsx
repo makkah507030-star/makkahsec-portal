@@ -6,6 +6,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import QuizCardsCleanup from "../../components/QuizCardsCleanup.jsx";
 
 export default function MaintenanceAdmin() {
   const { profile, adminRoles } = useSession();
@@ -140,6 +141,8 @@ export default function MaintenanceAdmin() {
           حفظ نص الرسالة
         </button>
       </section>
+
+      <QuizCardsCleanup />
 
       {msg && (
         <p className={`rounded-card px-4 py-3 text-sm ${
