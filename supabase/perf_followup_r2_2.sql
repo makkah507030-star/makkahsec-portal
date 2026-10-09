@@ -1,5 +1,5 @@
 -- شواهد سجل المتابعة الإلكتروني الثاني — الجزء 2 من 2: perf_auto_details.
--- أسماء بنود السجل الثاني (r2_homework…) بالعربية كالسجل الأول. تكرار التنفيذ آمن.
+-- أسماء بنود السجل الثاني (r2_homework…) بالعربية، وشاهد واحد لتنوع أساليب التقويم. تكرار التنفيذ آمن.
 create or replace function public.perf_auto_details(p_uid uuid, p_year text, p_item text)
 returns table (r_title text, r_detail text, r_at timestamptz)
 language plpgsql stable security definer set search_path = public as $$
@@ -76,8 +76,9 @@ begin
     select to_char(fu.updated_at::date, 'YYYY/MM/DD')::text, ('رصد: ' || string_agg(distinct fu.klabel, '، '))::text, max(fu.updated_at)
       from fu where p_item = 'e03_06' group by fu.updated_at::date
     union all
-    select fu.klabel::text, ('عدد مرات الرصد ' || count(*))::text, max(fu.updated_at)
-      from fu where p_item in ('e11_02', 'e11_03') group by fu.klabel
+    select 'سجل المتابعة الإلكتروني'::text,   -- شاهد واحد يكفي: أنواع التقويم المستخدمة
+           ('أنواع التقويم المستخدمة: ' || string_agg(distinct fu.klabel, '، '))::text, max(fu.updated_at)
+      from fu where p_item in ('e11_02', 'e11_03') having count(*) > 0
     union all
     select coalesce(ft.title, d.title, 'شهادة')::text, coalesce(st.full_name, '')::text, d.created_at
       from public.form_documents d
