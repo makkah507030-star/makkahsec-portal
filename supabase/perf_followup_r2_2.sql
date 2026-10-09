@@ -6,10 +6,8 @@ language plpgsql stable security definer set search_path = public as $$
 declare y_start timestamptz; tid uuid;
 begin
   if not public.has_admin_role(array['principal', 'tech_support']) and p_uid is distinct from auth.uid() then
-    raise exception 'غير مصرّح';
-  end if;
-  select min(start_date)::timestamptz into y_start
-    from public.academic_calendar where academic_year = p_year;
+    raise exception 'غير مصرّح'; end if;
+  select min(start_date)::timestamptz into y_start from public.academic_calendar where academic_year = p_year;
   y_start := coalesce(y_start, now() - interval '1 year');
   select id into tid from public.teachers where user_id = p_uid;
   return query
@@ -49,8 +47,7 @@ begin
            (q.plabel || ' · يحتاجون دعمًا ' || jsonb_array_length(coalesce(q.analysis->'support', '[]'::jsonb))
              || ' · متفوقون ' || jsonb_array_length(coalesce(q.analysis->'top', '[]'::jsonb)))::text,
            q.analyzed_at
-      from q
-     where q.analyzed_at is not null and p_item in ('e10_01', 'e10_02')
+      from q where q.analyzed_at is not null and p_item in ('e10_01', 'e10_02')
     union all
     select q.title::text,
            ((case p.kind when 'remedial' then 'خطة علاجية' else 'خطة إثرائية' end)
@@ -93,8 +90,7 @@ begin
        and d.created_by = p_uid
   )
   select * from res order by 3 desc nulls last limit 200;
-end;
-$$;
+end $$;
 revoke execute on function public.perf_auto_details(uuid, text, text) from public, anon;
 grant  execute on function public.perf_auto_details(uuid, text, text) to authenticated;
 -- نهاية الجزء 2
