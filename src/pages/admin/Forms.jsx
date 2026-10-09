@@ -35,7 +35,7 @@ export const DEPARTMENTS = [
   { key: "academic",        label: "الشؤون التعليمية" },
   { key: "school_affairs",  label: "الشؤون المدرسية" },
   { key: "student_affairs", label: "شؤون الطلاب" },
-  { key: "guidance",        label: "التوجيه والإرشاد" },
+  { key: "guidance",        label: "التوجيه الطلابي" },
   { key: "activity",        label: "النشاط الطلابي" },
   { key: "health",          label: "الموجه الصحي" },
   { key: "gifted",          label: "الموهوبين" },
