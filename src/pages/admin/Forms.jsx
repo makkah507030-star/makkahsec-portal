@@ -123,7 +123,7 @@ const AUTO_MAP = [
 function autoFill(fields, info, current, { overwrite = false } = {}) {
   const out = { ...current };
   (fields ?? []).forEach((f) => {
-    if (["student", "staff", "theme", "table", "rubric"].includes(f.type)) return;
+    if (["student", "staff", "theme", "table", "rubric", "sign_lines"].includes(f.type)) return;
     // عند تبديل الشخص تُحدَّث بياناته المعروفة، وفيما عدا ذلك لا يُطمس ما كُتب
     if (!overwrite && String(out[f.name] ?? "").trim()) return;
     const label = f.label ?? "";
@@ -707,7 +707,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     if (!picked) return [];
     return (picked.fields ?? []).filter((f) => {
       if (f.by_recipient || f.after_reply) return false;
-      if (f.type === "table" || f.type === "duty_schedule" || f.type === "rubric") return false;
+      if (f.type === "table" || f.type === "duty_schedule" || f.type === "rubric" || f.type === "sign_lines") return false;
       if (f.type === "student" || f.type === "staff") return f.required && chosen.length === 0;
       return f.required && !String(values[f.name] ?? "").trim();
     });
@@ -1407,6 +1407,10 @@ export default function Forms({ view = "issue", openKey = null }) {
                       );
                     })}
                   </div>
+                ) : f.type === "sign_lines" ? (
+                  <p className="mt-1 rounded-sm2 bg-canvas px-3 py-2 text-xs text-muted">
+                    تُطبع خانات فارغة للتوقيع باليد: {(f.labels ?? []).join("، ")}.
+                  </p>
                 ) : f.type === "duty_schedule" ? (
                   <p className="mt-1 rounded-sm2 bg-mint-tint px-3 py-2 text-xs leading-relaxed text-mint-deep">
                     يُدرج جدول الموظف في المناوبة والإشراف تلقائيًا بعد اختيار اسمه.

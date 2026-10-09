@@ -1476,7 +1476,8 @@ function DecisionSign({ p, date }) {
    بالصيغة الرسمية: بيانات الاجتماع في جدول، ثم جدول الأعمال، وما نوقش، وجدول
    القرارات والتوصيات (التوصية | الجهة المنفذة | مدة التنفيذ)، وجدول الحاضرين
    للتوقيع باليد، ثم توقيع مقرر الاجتماع ورئيسه واعتماد مدير المدرسة. */
-export const isMeetingMinutes = (template) => template?.key === "meeting_minutes";
+// محضر لجنة التوجيه الطلابي بالصيغة نفسها
+export const isMeetingMinutes = (template) => ["meeting_minutes", "guidance_committee"].includes(template?.key);
 
 // سطور الحقل بلا علامة البداية «•» ولا الترقيم
 const linesOf = (x) => String(asText(x)).split("\n").map((l) => l.replace(/^\s*(•|-|\d+[.)-])\s*/, "").trim()).filter(Boolean);
@@ -1495,8 +1496,8 @@ function MeetingMinutes(p) {
     <div className="flex h-full flex-col px-[14mm] py-[11mm]">
       <Head small />
       <div className="mt-2.5"><Rule color="#3E6350" thick /></div>
-      <h1 className="mt-2 text-center text-[20px] font-bold text-ink">محضر اجتماع</h1>
-      {v.committee && <p className="mt-0.5 text-center text-[14px] font-semibold text-mint-deep">{v.committee}</p>}
+      <h1 className="mt-2 text-center text-[20px] font-bold text-ink">{template.key === "meeting_minutes" ? "محضر اجتماع" : template.title}</h1>
+      {v.committee && !template.title.includes(v.committee) && <p className="mt-0.5 text-center text-[14px] font-semibold text-mint-deep">{v.committee}</p>}
 
       <table className="mt-2 w-full border-collapse text-[12px]">
         <tbody>
@@ -1595,6 +1596,17 @@ function Administrative(p) {
           .map((f) =>
           f.type === "table" ? (
             <BlankTable key={f.name} field={f} value={v[f.name]} />
+          ) : f.type === "sign_lines" ? (
+            // خانات توقيع فارغة تُملأ باليد (الطالب، ولي الأمر…)
+            <div key={f.name} className="grid gap-4 pt-4" style={{ gridTemplateColumns: `repeat(${(f.labels ?? []).length || 1}, 1fr)` }}>
+              {(f.labels ?? []).map((l) => (
+                <div key={l} className="text-[12.5px]">
+                  <p className="text-muted">{l}</p>
+                  <p className="mt-6 border-b border-dotted border-faint" />
+                  <p className="mt-1 text-[11px] text-faint">الاسم والتوقيع والتاريخ</p>
+                </div>
+              ))}
+            </div>
           ) : f.type === "duty_schedule" ? (
             <DutyScheduleBlock key={f.name} field={f} value={v[f.name]} />
           ) : (
