@@ -23,10 +23,10 @@ import {
 const pill = (on) => `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
-const HeadTag = ({ d }) => headLabel(d)
+export const HeadTag = ({ d }) => headLabel(d)
   ? <span className="chip bg-mint-light font-semibold text-mint-deep">{headLabel(d)}</span> : null;
 
-function useRoles() {
+export function useRoles() {
   const { adminRoles = [] } = useSession();
   const has = (...r) => r.some((x) => adminRoles.includes(x));
   return { isDeputy: has("deputy_academic", "tech_support"), isPrincipal: has("principal", "tech_support"),
@@ -112,6 +112,7 @@ function SessionList() {
           </button>
         ))}
         {dept?.is_head && <button className="btn-primary mr-auto" onClick={create}>جلسة جديدة</button>}
+        <Link className="btn-ghost" to="/xvisits">الزيارات التبادلية</Link>
         {(dept?.is_head || roles.seesAll) && <Link className="btn-ghost" to="/plc-file">ملف التطوير المهني للقسم</Link>}
         {roles.seesAll && <Link className="btn-ghost" to="/plc-departments">الأقسام وأعضاؤها</Link>}
       </div>
@@ -175,7 +176,7 @@ function Session({ id }) {
 }
 
 /* بطاقات: تُضيف سطرًا (متعدد) أو تضع القيمة (حقل واحد) */
-function Chips({ items, onPick }) {
+export function Chips({ items, onPick }) {
   if (!items?.length) return null;
   return (
     <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -189,10 +190,10 @@ function Chips({ items, onPick }) {
   );
 }
 
-function StageBar({ stage, reached, onPick }) {
+export function StageBar({ stage, reached, onPick, stages = PLC_STAGES }) {
   return (
     <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
-      {PLC_STAGES.map((st, i) => {
+      {stages.map((st, i) => {
         const ok = i < reached;
         const active = i === stage;
         return (
@@ -558,7 +559,7 @@ function SheetPreview({ s, sigs }) {
   );
 }
 
-const C = { green: "#3e6350", line: "#cfe0d6", soft: "#6b7a72" };
+export const C = { green: "#3e6350", line: "#cfe0d6", soft: "#6b7a72" };
 const box = { border: `1.3px solid ${C.line}`, borderRadius: 8, padding: "6px 10px" };
 const lbl = { display: "block", color: C.green, fontSize: 10.5, fontWeight: 700 };
 

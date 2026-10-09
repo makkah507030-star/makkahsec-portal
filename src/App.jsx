@@ -79,6 +79,7 @@ const ExamSchedules = lazy(() => import("./pages/ExamSchedules.jsx"));
 const Events = lazy(() => import("./pages/Events.jsx"));
 const Plc = lazy(() => import("./pages/Plc.jsx"));
 const PlcDepartments = lazy(() => import("./pages/Plc.jsx").then((m) => ({ default: m.PlcDepartments })));
+const ExchangeVisits = lazy(() => import("./pages/ExchangeVisits.jsx"));
 const PlcFile = lazy(() => import("./pages/Plc.jsx").then((m) => ({ default: m.PlcFile })));
 const EventsReports = lazy(() => import("./pages/EventsReports.jsx"));
 const MyQuizzes = lazy(() => import("./pages/teacher/MyQuizzes.jsx"));
@@ -430,6 +431,8 @@ export default function App() {
           <Route path="/plc/:id" element={<Plc />} />
           <Route path="/plc-departments" element={<PlcDepartments />} />
           <Route path="/plc-file" element={<PlcFile />} />
+          <Route path="/xvisits" element={<ExchangeVisits />} />
+          <Route path="/xvisits/:id" element={<ExchangeVisits />} />
           {/* اختباراتي — للمعلم */}
           <Route path="/quizzes" element={<MyQuizzes />} />
           <Route path="/quiz-marks" element={<QuizMarks />} />
