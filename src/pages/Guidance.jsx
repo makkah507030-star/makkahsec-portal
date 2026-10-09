@@ -9,6 +9,7 @@ import Loader from "../components/Loader.jsx";
 import StudentPicker from "../components/StudentPicker.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import { Programs, Requests, MonthlyReport } from "./GuidanceMore.jsx";
 
 /* =====================================================================
    التوجيه الطلابي (supabase/guidance_1.sql و guidance_2.sql).
@@ -19,6 +20,7 @@ import moeLogo from "../assets/moe-logo.png";
      ثلاث مرات فأكثر (المواقف الثلاثة في الإجراءات)، ومتوسط الاختبارات القصيرة
      أقل من 60٪ («يحتاج دعمًا» في دورة الاختبار) في مادتين فأكثر، والإحالات.
    • الحالات: سجل سري لكل حالة وجلساتها، وإغلاقها بنتيجتها، وطباعتها.
+   • الخطة والبرامج، وطلبات المقابلة، والتقرير الشهري: GuidanceMore.jsx.
    ===================================================================== */
 
 const WATCH_AT = 5;          // متابعة الغياب كما في «الإنذارات والمحاضر»
@@ -79,6 +81,9 @@ export default function Guidance() {
       <div className="flex flex-wrap gap-1.5">
         <button className={pill(tab === "warn")} onClick={() => setTab("warn")}>الإنذار المبكر</button>
         <button className={pill(tab === "cases")} onClick={() => setTab("cases")}>الحالات</button>
+        <button className={pill(tab === "programs")} onClick={() => setTab("programs")}>الخطة والبرامج</button>
+        <button className={pill(tab === "requests")} onClick={() => setTab("requests")}>طلبات المقابلة</button>
+        <button className={pill(tab === "report")} onClick={() => setTab("report")}>التقرير الشهري</button>
         <button className="btn-primary mr-auto px-4 py-1.5 text-xs" onClick={() => setNewCase({ source: "other" })}>+ حالة جديدة</button>
       </div>
 
@@ -96,7 +101,10 @@ export default function Guidance() {
                           title: reasonsOf(r).map((x) => x.t.split(" · ")[0].split(":")[0]).join("، "),
                           details: reasonsOf(r).map((x) => `• ${x.t}`).join("\n"),
                         })} />
-        : <CasesList key={`${grade}-${tick}`} grade={grade} onOpen={setOpenCase} />}
+        : tab === "cases" ? <CasesList key={`${grade}-${tick}`} grade={grade} onOpen={setOpenCase} />
+        : tab === "programs" ? <Programs key={grade} grade={grade} me={profile?.full_name} />
+        : tab === "requests" ? <Requests key={grade} grade={grade} />
+        : <MonthlyReport key={grade} grade={grade} me={profile?.full_name} />}
     </div>
   );
 }
