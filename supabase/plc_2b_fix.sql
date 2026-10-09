@@ -11,6 +11,7 @@ select d.id, v.teacher_id::uuid, v.is_head
     ('التقنية الرقمية والعلوم الإدارية والنفسية', '000e37c0-f49a-4201-ba4d-9f286b96c552', false)   -- ابوبكر عبدالرحيم ابوبكر باقيس
   ) as v(dept, teacher_id, is_head)
   join public.departments d on d.name = v.dept
+  join public.teachers t on t.id = v.teacher_id::uuid   -- يتخطى من لا يوجد (كالنسخة التجريبية)
 on conflict (teacher_id) do update
   set department_id = excluded.department_id, is_head = excluded.is_head;
 
