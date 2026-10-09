@@ -177,6 +177,9 @@ function EvidenceRow({ ev, item, readOnly, onEdit, onDelete }) {
       {ev.form_document_id && (
         <Link className="text-sm text-mint-deep underline" to={`/doc/${ev.form_document_id}`}>عرض النموذج</Link>
       )}
+      {ev.pd_report_id && (
+        <Link className="text-sm text-mint-deep underline" to={`/pd/${ev.pd_report_id}`}>عرض النموذج</Link>
+      )}
       {ev.xvisit_id && (
         <Link className="text-sm text-mint-deep underline" to={`/xvisits/${ev.xvisit_id}`}>عرض الاستمارة</Link>
       )}
