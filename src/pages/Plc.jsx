@@ -725,9 +725,9 @@ export function PlcDepartments() {
   return (
     <div className="space-y-4">
       <div>
-        <Link to="/plc" className="text-xs text-muted hover:underline">التطوير المهني</Link>
+        <p className="text-xs text-muted">الشؤون التعليمية</p>
         <div className="mt-0.5 flex flex-wrap items-center gap-2">
-          <h1 className="flex-1 text-lg font-bold text-ink">الأقسام وأعضاؤها</h1>
+          <h1 className="flex-1 text-lg font-bold text-ink">رؤساء الأقسام وأعضاؤها</h1>
           <button className="btn-primary px-4 py-1.5 text-xs" onClick={printHeads}>طباعة بيان رؤساء الأقسام</button>
           <select className="field py-1.5 text-xs" value=""
                   onChange={(e) => { const d = depts.find((x) => x.id === e.target.value); if (d) printDept(d); }}>
