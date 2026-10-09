@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { fmtDate, fmtTime12 } from "../lib/dates";
 import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
 import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from "../lib/periodTimes";
-import { loadFingerprintPublic, morningLate, dayStartMinutes } from "../lib/officialAttendance";
+import { loadFingerprintPublic } from "../lib/officialAttendance";
 import ExamCountdown from "../components/ExamCountdown.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
 import HolidayBanner from "../components/HolidayBanner.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
-import AbsenceHistory from "../components/AbsenceHistory.jsx";
+import AttendanceLog from "../components/AttendanceLog.jsx";
 import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
-
-const LABEL = { absent: "غائب", late: "متأخر", excused: "مستأذن" };
 
 export default function GuardianHome() {
   const { session } = useSession();
@@ -24,14 +21,10 @@ export default function GuardianHome() {
   const [schedule, setSchedule] = useState([]);
   const [weekSchedule, setWeekSchedule] = useState(null);
   const [showWeek, setShowWeek] = useState(false);
-  const [records, setRecords] = useState([]);
-  const [punches, setPunches] = useState([]);
   // البصمة المقفلة (مرحلة تجربة) لا تُعرض للطالب ولا لولي الأمر، وبعد فتحها
   // تُعرض بصمات ما بعد تاريخ الفتح فقط — لا بصمات أيام التجربة
   const [fp, setFp] = useState({ on: false, since: null });
   useEffect(() => { loadFingerprintPublic().then(setFp).catch(() => setFp({ on: false, since: null })); }, []);
-  const fpOn = fp.on;
-  const shownPunches = punches.filter((d) => !fp.since || d.attend_date >= fp.since);
   const [ptimes, setPtimes] = useState([]);
   const [nowPeriod, setNowPeriod] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -122,36 +115,10 @@ export default function GuardianHome() {
         setWeekSchedule([]);
       }
 
-      const [{ data: rec }, { data: d }] = await Promise.all([
-        supabase.from("class_attendance")
-          .select("attend_date, status, schedule(period_no, subjects(name))")
-          .eq("student_id", active.id)
-          .neq("status", "present")
-          .order("attend_date", { ascending: false })
-          .limit(40),
-        supabase.from("daily_attendance")
-          .select("attend_date, punch_time")
-          .eq("student_id", active.id)
-          .order("attend_date", { ascending: false })
-          .limit(15),
-      ]);
-
-      setRecords(rec ?? []);
-      setPunches(d ?? []);
       setLoading(false);
     })();
   }, [active, dow]);
 
-  // عدد الأيام (وليس الحصص) التي فيها حالة غياب/تأخر/استئذان على الأقل
-  const totals = useMemo(() => {
-    const days = { absent: new Set(), late: new Set(), excused: new Set() };
-    records.forEach((r) => { days[r.status]?.add(r.attend_date); });
-    return {
-      absent: days.absent.size,
-      late: days.late.size,
-      excused: days.excused.size,
-    };
-  }, [records]);
 
   const ptMap = byPeriodNo(ptimes);
 
@@ -209,14 +176,6 @@ export default function GuardianHome() {
         <Loader />
       ) : (
         <>
-          <section className="grid grid-cols-3 gap-3">
-            {["absent", "late", "excused"].map((k) => (
-              <div key={k} className="rounded-card border border-line bg-white px-4 py-4 text-center">
-                <p className="num text-2xl font-bold leading-none text-mint-deep">{totals[k]}</p>
-                <p className="mt-1.5 text-xs text-muted">{LABEL[k]}</p>
-              </div>
-            ))}
-          </section>
 
           {/* جدول اليوم — لا يظهر إطلاقًا في أيام العطلة الأسبوعية */}
           {Boolean(dow) && (
@@ -281,38 +240,7 @@ export default function GuardianHome() {
             )}
           </section>
 
-          <AbsenceHistory records={records} />
-
-          {fpOn && (
-          <section className="card overflow-hidden">
-            <h2 className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">
-              الحضور الصباحي
-            </h2>
-            {shownPunches.length === 0 ? (
-              <p className="px-4 py-5 text-sm text-muted">لا توجد سجلات بعد.</p>
-            ) : (
-              shownPunches.map((d, i) => (
-                <div key={i} className="flex items-center justify-between border-b border-line px-4 py-2.5 last:border-0">
-                  <span className="num text-sm text-ink">{fmtDate(d.attend_date + "T00:00:00")}</span>
-                  <span className="flex items-center gap-2">
-                    {(() => {
-                      // قاعدة مركز التقارير نفسها: بعد بداية الاصطفاف بخمس دقائق
-                      const li = morningLate(d.punch_time, dayStartMinutes(ptimes));
-                      return li?.isLate ? (
-                        <span className="chip bg-late/10 text-late">
-                          متأخر <span className="num">{li.minutes}</span> د
-                        </span>
-                      ) : null;
-                    })()}
-                    <span className="num text-xs text-muted">
-{fmtTime12(d.punch_time)}
-                    </span>
-                  </span>
-                </div>
-              ))
-            )}
-          </section>
-          )}
+          <AttendanceLog key={active?.id} studentId={active?.id} fp={fp} />
 
           <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
         </>
