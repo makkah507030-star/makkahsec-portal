@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
 import {
-  ACCEPT, AUTO_SOURCE, PORTAL_TAG, SOURCE_LABEL, activeYear, loadAutoCounts, elementColor, elementSummary, itemStatus, loadEvidence,
+  ACCEPT, AUTO_SOURCE, ITEM_HINT, PORTAL_TAG, SOURCE_LABEL, activeYear, loadAutoCounts, elementColor, elementSummary, itemStatus, loadEvidence,
   loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile,
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
@@ -370,6 +370,11 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                       {(PORTAL_TAG[it.portal] ?? PORTAL_TAG.record).t}
                     </span>
                   )}
+                  {!readOnly && !el.evaluator_only && ITEM_HINT[it.key] && (
+                    <p className="mt-1.5 text-xs leading-relaxed text-muted">
+                      <span className="font-semibold text-mint-deep">كيف أجمعه؟ </span>{ITEM_HINT[it.key]}
+                    </p>
+                  )}
                 </div>
                 {!el.evaluator_only && (
                   <span className={`chip w-28 justify-center ${st.ok ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>
@@ -402,7 +407,7 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                                  onEdit={() => setOpen({ key: it.key, mode: "edit", ev })}
                                  onDelete={() => del(ev)} />
                   ))}
-                  {!st.ok && (
+                  {!st.ok && (readOnly || !ITEM_HINT[it.key]) && (
                     <p className="text-xs leading-relaxed text-muted">
                       {readOnly ? "لم يُرفق شاهد لهذا البند بعد."
                         : "كيف أجمعه؟ ارفع صورة أو ملف PDF يثبت تنفيذ البند، أو أرسل نموذجًا صادرًا من صفحة «النماذج والشهادات»."}
