@@ -2,6 +2,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { stageOf, isLate, STAGE_COLS } from "./referrals.js";
+import { fmtHijri } from "./dates.js";
+import { GRADE_NAMES, todayISO } from "./schoolTime.js";
+import { countAr } from "./arabicCount.js";
 
 /* =====================================================================
    «بانتظار إجرائك» — مصدر واحد لكل ما ينتظر إجراء المستخدم: عدادات القائمة الجانبية
@@ -13,6 +16,7 @@ import { stageOf, isLate, STAGE_COLS } from "./referrals.js";
      to     الصفحة التي يُنجز فيها الإجراء (مع التبويب المناسب)
      items  [{ id, to, title }] حين تكون عناصرها معروفة — فتُفتح مباشرة
             إن كانت واحدة، وتُعرض قائمتها إن تعددت
+            وبلا to يبقى العنصر للاطلاع فقط في القائمة (لا رابط له)
    تُحتسب بحسب الدور: الإدارة بأدوارها، والمعلم والطالب وولي الأمر بحسابه.
    يُحدَّث كل دقيقتين ما دامت الصفحة ظاهرة، وعند الانتقال بين الصفحات
    (refreshNavBadges). كلها عبر صلاحيات المستخدم نفسه (RLS).
@@ -40,6 +44,31 @@ const mine = (uid) => JSON.stringify([{ user_id: uid }]);   // attendees @> [{us
 
 const BEHAVIOR_KIND = { pledge: "تعهد سلوكي", invite: "دعوة ولي أمر", notice: "إشعار سلوكي" };
 
+/* تذكير رصد درجات الفترات في نور: لون المهلة منذ أقدم اختبار لم يُرصد
+   (حتى يومين أخضر، ومن 3 إلى 5 برتقالي، وبعدها أحمر)، والعدّاد إلى آخر يوم */
+const dayNo = (iso) => { const [y, m, d] = String(iso).slice(0, 10).split("-").map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
+const weekday = (iso) => new Intl.DateTimeFormat("ar-SA", { weekday: "long", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
+function noorTask(rows) {
+  const today = todayISO();
+  const ago = (r) => dayNo(today) - dayNo(r.exam_date);
+  const max = Math.max(0, ...rows.map(ago));
+  const end = rows.find((r) => r.deadline)?.deadline;
+  const left = end ? dayNo(end) - dayNo(today) : null;
+  return {
+    key: "noorGrades", n: rows.length, to: "/", icon: "clipboard",
+    tone: max > 5 ? "absent" : max > 2 ? "warning" : "mint",
+    label: "درجات فترات لم تُرصد في نور",
+    sub: end ? `آخر يوم ${weekday(end)} ${fmtHijri(end)} · ${left < 0 ? "انتهت المهلة" : left === 0 ? "اليوم آخر يوم"
+      : `باقي ${countAr(left, "day")}`}` : "",
+    items: rows.map((r) => {
+      const d = ago(r);
+      return { id: r.slot_id,
+        title: `${r.subject_name} · ${GRADE_NAMES[r.grade] ?? ""} ${r.class_no} · ${d === 0 ? "اليوم" : `منذ ${countAr(d, "day", { acc: true })}`}`
+          + (r.status === "partial" ? " · رصد جزئي" : "") + (d > 5 ? " · متأخر" : "") };
+    }),
+  };
+}
+
 async function load() {
   if (!ctx?.uid) return;
   const { uid, roles, role } = ctx;
@@ -63,7 +92,7 @@ async function load() {
     returned, toApprove, replies, events, toReply, refDeputy, refCounselor, notif,
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
     plcBack, pdBack, xvBack, perfAck, guidance,
-    behaviorGuardian, refGuardian, pledges, refAway,
+    behaviorGuardian, refGuardian, pledges, refAway, noorDue,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? count(fd().eq("status", "pending")) : none,
@@ -104,6 +133,9 @@ async function load() {
     // متابعة الوكيل: إحالات عند الموجهين أو ولي الأمر لم تنتهِ بعد
     isDeputy ? rowsOf(supabase.from("student_referrals").select(STAGE_COLS)
       .in("status", ["with_counselor", "returned_to_counselor", "with_guardian"]).limit(300)) : noRows,
+
+    // المعلم: اختبارات فترات حلّ موعدها ولم يسجّل الوكيل رصدها في نور (للاطلاع)
+    role === "teacher" ? rowsOf(supabase.rpc("my_noor_grade_due")) : noRows,
   ]);
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
@@ -112,6 +144,7 @@ async function load() {
   const awayC = refAway.filter((r) => stageOf(r).group === "counselor").length;
   const awayG = refAway.filter((r) => stageOf(r).group === "guardian").length;
   const awayLate = refAway.filter(isLate).length;
+  const noor = noorTask(noorDue);
   const items = (rows, path, title) => rows.map((r) => ({ id: r.id, to: `${path}/${r.id}`, title: title?.(r) ?? "" }));
 
   const tasks = [
@@ -170,6 +203,8 @@ async function load() {
       label: "إحالات قيد المتابعة", tone: awayLate ? "absent" : "mint", icon: "clipboard", follow: true,
       sub: [awayC && `عند الموجهين ${awayC}`, awayG && `عند ولي الأمر ${awayG}`, awayLate && `متأخرة ${awayLate}`]
         .filter(Boolean).join(" · ") },
+
+    noor,
 
     // للعلم
     { key: "replies", n: replies, to: "/forms-review", label: "إفادات وصلت على نماذجك", tone: "mint", icon: "inbox" },

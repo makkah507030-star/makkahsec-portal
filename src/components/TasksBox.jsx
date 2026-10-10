@@ -92,10 +92,15 @@ export default function TasksBox() {
         <ul className="divide-y divide-line border-t border-line">
           {expanded.items.map((x) => (
             <li key={x.id}>
-              <Link to={x.to} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-canvas">
-                <span className="min-w-0 flex-1 truncate text-ink">{x.title || expanded.label}</span>
-                <span className="shrink-0 text-xs font-semibold text-mint-deep">افتح ←</span>
-              </Link>
+              {x.to ? (
+                <Link to={x.to} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-canvas">
+                  <span className="min-w-0 flex-1 truncate text-ink">{x.title || expanded.label}</span>
+                  <span className="shrink-0 text-xs font-semibold text-mint-deep">افتح ←</span>
+                </Link>
+              ) : (
+                // عنصر للاطلاع فقط، لا صفحة له
+                <p className="px-4 py-2.5 text-sm text-ink">{x.title || expanded.label}</p>
+              )}
             </li>
           ))}
         </ul>
@@ -111,9 +116,9 @@ export default function TasksBox() {
 
 function TaskCard({ t, active, onExpand }) {
   const tone = TONE[t.tone] ?? TONE.warning;
-  const one = t.items?.length === 1 ? t.items[0] : null;
-  // تتعدد العناصر ولا صفحة قائمة لها ← تُعرض قائمتها تحت البطاقات
-  const expands = !one && t.items?.length > 1 && t.to === "/";
+  const one = t.items?.length === 1 && t.items[0].to ? t.items[0] : null;
+  // تتعدد العناصر (أو هي للاطلاع بلا صفحة) ولا صفحة قائمة لها ← تُعرض قائمتها تحت البطاقات
+  const expands = !one && t.items?.length > 0 && t.to === "/";
   const body = (
     <>
       <div className="flex items-start justify-between gap-2">
