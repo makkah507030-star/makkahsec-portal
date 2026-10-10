@@ -443,7 +443,7 @@ export default function NoorGrades() {
                       <p className="text-sm">نسبة رصد المادة <span className="num font-bold">{subject.pct === null ? "—" : `${subject.pct}%`}</span>
                         {subject.open ? <> · غير مكتمل <span className="num font-bold">{subject.open}</span></> : null}</p>
                     </div>
-                    <div className="overflow-x-auto">
+                    <div className="hidden overflow-x-auto sm:block">
                       <table className="w-full border-collapse text-sm">
                         <thead>
                           <tr className="bg-canvas text-xs text-muted">
@@ -483,6 +483,31 @@ export default function NoorGrades() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+                    {/* الجوال: بطاقة لكل صف، وفصولها خانات كبيرة تلتف بلا سحب أفقي */}
+                    <div className="divide-y divide-line sm:hidden">
+                      {subject.grades.map((g) => (
+                        <div key={g.grade} className="space-y-2 px-3 py-3">
+                          <div className="flex items-start gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-ink">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</p>
+                              <p className="text-[11px] leading-snug text-muted">{g.teachers.join("، ")}</p>
+                            </div>
+                            <span className="num text-sm font-bold text-mint-deep">{g.pct === null ? "—" : `${g.pct}%`}</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {[...g.cells.values()].sort((a, b) => a.class_no - b.class_no).map((r) => (
+                              <div key={r.slot_id} className="overflow-hidden rounded-sm2 border border-line/60">{cellBtn(r, true)}</div>
+                            ))}
+                          </div>
+                          {brush !== "detail" && (
+                            <button disabled={busy === "bulk" || !g.due.length} onClick={() => applyStatus(g.due, brush)}
+                                    className={`w-full rounded-sm2 py-1.5 text-xs ${STATUS[brush].on} disabled:opacity-40`}>
+                              «{STATUS[brush].t}» لكل فصول {GRADE_NAMES[g.grade] ?? "الصف"}
+                            </button>
+                          )}
+                        </div>
+                      ))}
                     </div>
                     {selRow && baseSubject(selRow.subject_name) === subject.key && detail}
                   </section>
