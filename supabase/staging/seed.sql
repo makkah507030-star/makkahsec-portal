@@ -161,3 +161,10 @@ select d.id, v.tid::uuid, v.head
                ('اللغة العربية ومصادر البحث والمعلومات', '00000000-0000-4000-b000-000000000013', false)) v(dept, tid, head)
   join public.departments d on d.name = v.dept
 on conflict (teacher_id) do nothing;
+
+-- إجازة تجريبية قادمة لتجربة شارة «الإجازة القادمة» — تُضاف بعد 12 يومًا من التشغيل
+-- ما لم توجد إجازة قادمة مفعّلة
+insert into public.academic_calendar (title, kind, start_date, end_date, is_active)
+select 'إجازة تجريبية', 'holiday', current_date + 12, current_date + 15, true
+ where not exists (select 1 from public.academic_calendar
+                    where kind = 'holiday' and is_active and start_date > current_date);

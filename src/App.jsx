@@ -87,8 +87,6 @@ const EventsReports = lazy(() => import("./pages/EventsReports.jsx"));
 const MyQuizzes = lazy(() => import("./pages/teacher/MyQuizzes.jsx"));
 const QuizMarks = lazy(() => import("./pages/teacher/QuizMarks.jsx"));
 const QuizAnalytics = lazy(() => import("./pages/teacher/QuizAnalytics.jsx"));
-const QuizResults = lazy(() => import("./components/QuizResults.jsx"));
-const OnlineQuizzesCard = lazy(() => import("./components/OnlineQuizzesCard.jsx"));
 const QuizTake = lazy(() => import("./pages/QuizTake.jsx"));
 const ExamsAdmin = lazy(() => import("./pages/admin/ExamsAdmin.jsx"));
 const ReferralView = lazy(() => import("./pages/ReferralView.jsx"));
@@ -99,7 +97,7 @@ const MaintenanceAdmin = lazy(() => import("./pages/admin/MaintenanceAdmin.jsx")
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
 import { useHolidays } from "./lib/useHolidays.js";
-const ExamCountdown = lazy(() => import("./components/ExamCountdown.jsx"));
+const HeaderChips = lazy(() => import("./components/HeaderChips.jsx"));
 const ExamDayCard = lazy(() => import("./components/ExamDayCard.jsx"));
 const TeacherTodayCard = lazy(() => import("./components/TeacherTodayCard.jsx"));
 const TasksBox = lazy(() => import("./components/TasksBox.jsx"));
@@ -240,7 +238,7 @@ export default function App() {
   // الرئيسية للمعلم ملخص يومه، والتحضير صفحة مستقلة (/attendance) تفتحها بطاقة «يومي» بضغطة
   const teacherHome = (
     <div className="space-y-5">
-      <ExamCountdown />
+      <HeaderChips />
       {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
       <TasksBox />
       <DutyCard personal />
@@ -251,21 +249,8 @@ export default function App() {
   const home = {
     admin: <Dashboard />,
     teacher: teacherHome,
-    student: (
-      <div className="space-y-5">
-        <TasksBox />
-        <OnlineQuizzesCard />
-        <StudentHome />
-        <QuizResults compact />
-      </div>
-    ),
-    guardian: (
-      <div className="space-y-5">
-        <TasksBox />
-        <GuardianHome />
-        <QuizResults compact />
-      </div>
-    ),
+    student: <StudentHome />,
+    guardian: <GuardianHome />,
   }[effectiveRole] ?? <p>دور غير معروف</p>;
 
   return (

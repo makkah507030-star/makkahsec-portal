@@ -9,6 +9,7 @@ const NOUNS = {
   student: { one: "طالب واحد", two: ["طالبان", "طالبين"], few: "طلاب", many: "طالبًا" },
   period: { one: "حصة واحدة", two: ["حصتان", "حصتين"], few: "حصص", many: "حصة" },
   day: { one: "يوم واحد", two: ["يومان", "يومين"], few: "أيام", many: "يومًا" },
+  quiz: { one: "اختبار واحد", two: ["اختباران", "اختبارين"], few: "اختبارات", many: "اختبارًا" },
 };
 
 export function countAr(n, noun, { acc = false } = {}) {
