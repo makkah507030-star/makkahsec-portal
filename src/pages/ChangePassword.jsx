@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, initialPassword } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
 
@@ -13,7 +13,8 @@ export default function ChangePassword() {
   const [busy, setBusy] = useState(false);
 
   const sameAsUsername =
-    pw1.length > 0 && profile?.username && pw1.trim() === profile.username;
+    pw1.length > 0 && profile?.username &&
+    [profile.username, initialPassword(profile.username)].includes(pw1.trim());
 
   const submit = async (e) => {
     e.preventDefault();
