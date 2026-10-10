@@ -12,24 +12,41 @@ import { countAr } from "../../lib/arabicCount.js";
 /* =====================================================================
    متابعة رصد درجات الفترات في نظام نور — لوكيل الشؤون التعليمية والدعم الفني
    والمدير (supabase/noor_grades_1.sql و noor_grades_2.sql).
-   • الاختبارات من «جداول الاختبارات» لكل فصل ومادة (الفترتان، دون النهائي).
+   • الاختبارات من «جداول الاختبارات» لكل فصل ومادة (الفترتان، دون النهائي)،
+     في جدول لكل صف كما في كشف متابعة نور: المواد ومعلموها (من الجدول الدراسي)
+     في الصفوف، والفصول في الأعمدة، ونسبة الرصد لكل مادة وللصف (الجزئي نصف).
+   • عرضان: «حسب المادة» (الأساس، يطابق كشف نور: المادة ← صفوفها ← فصولها) و«حسب الصف».
+     إدخال سريع: تُختار حالة ثم تُضغط الخانات، أو تُطبَّق على كل فصول الصف.
    • الحالة لكل فصل: تم الرصد، أو رصد جزئي (لم يكتمل الفصل)، أو لم يرصد.
      يدخلها الوكيل أو الدعم الفني يدويًا بعد مراجعة نور، ولا إجراء على المعلم.
-   • لون المهلة لما لم يكتمل: حتى يومين من الاختبار أخضر، ومن 3 إلى 5 برتقالي،
-     وبعدها أحمر متأخر. الأيام كلها تُحسب.
+   • لون الخانة للحالة (أخضر تم، أزرق جزئي، وردي لم يرصد)، ورقمها الأيام منذ
+     الاختبار بلون المهلة: حتى يومين أخضر، ومن 3 إلى 5 برتقالي، وبعدها أحمر متأخر.
    ===================================================================== */
 
+// ألوان الحالة كما في كشف المتابعة المعتاد: أخضر تم، وأزرق جزئي، ووردي لم يرصد
 const STATUS = {
-  done:    { t: "تم الرصد", on: "bg-mint-deep text-white" },
-  partial: { t: "رصد جزئي", on: "bg-warning text-white" },
-  none:    { t: "لم يرصد",  on: "bg-danger text-white" },
+  done:    { t: "تم الرصد", on: "bg-mint-deep text-white",  cell: "bg-mint-light", hex: "#CCF2DB" },
+  partial: { t: "رصد جزئي", on: "bg-excused text-white",    cell: "bg-[#D6E4F5]", hex: "#D6E4F5" },
+  none:    { t: "لم يرصد",  on: "bg-danger text-white",     cell: "bg-danger-light", hex: "#FBEBEB" },
 };
+// لون بطاقة المادة بحسب نسبة رصدها: 90% فأكثر أخضر، ومن 60% برتقالي، وأقل أحمر
+function pctTone(p) {
+  if (p === null) return { card: "border-line bg-canvas", bar: "bg-faint", text: "text-muted" };
+  if (p >= 90) return { card: "border-mint-deep/30 bg-mint-light", bar: "bg-mint-deep", text: "text-mint-deep" };
+  if (p >= 60) return { card: "border-warning/30 bg-warning-light", bar: "bg-warning", text: "text-warning" };
+  return { card: "border-danger/30 bg-danger-light", bar: "bg-danger", text: "text-danger" };
+}
+// اسم المادة دون رقم المستوى («الكيمياء 2» و«الرياضيات 1-1» ← الاسم وحده) لتجميعها عبر الصفوف
+const baseSubject = (n) => String(n ?? "—").replace(/[\s\d\-–_/()]+$/u, "").trim() || String(n ?? "—");
+// رمز الفصل الكامل كما في نور: الصف × 100 + رقم الفصل (101، 205…)
+const classCode = (grade, no) => (Number(no) >= 100 ? Number(no) : (Number(grade) || 0) * 100 + (Number(no) || 0));
+// لون رقم الأيام داخل الخانة غير المكتملة بحسب المهلة
+const DAYS_TONE = { green: "text-mint-deep", orange: "text-warning", late: "text-danger" };
 
 // الفرق بالأيام بين تاريخين بصيغة YYYY-MM-DD
 const dayNo = (iso) => { const [y, m, d] = iso.split("-").map(Number); return Date.UTC(y, m - 1, d) / 864e5; };
 const daysBetween = (a, b) => dayNo(b) - dayNo(a);
 const weekday = (iso) => new Intl.DateTimeFormat("ar-SA", { weekday: "long", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
-const classLabel = (r) => `${GRADE_NAMES[r.grade] ?? ""} ${r.class_no}`.trim();
 
 /** مهلة الصف: أيام منذ الاختبار ولونها (لما لم يكتمل رصده) */
 function timing(r, today) {
@@ -42,11 +59,6 @@ function timing(r, today) {
   return { key: "late", d, t: `متأخر · ${since}`, c: "bg-danger-light text-danger" };
 }
 
-const FILTERS = [
-  { k: "all", t: "الكل" }, { k: "none", t: "لم يرصد" }, { k: "partial", t: "رصد جزئي" },
-  { k: "late", t: "متأخر" }, { k: "done", t: "تم الرصد" },
-];
-
 export default function NoorGrades() {
   const { profile } = useSession();
   const [terms, setTerms] = useState(null);
@@ -55,7 +67,12 @@ export default function NoorGrades() {
   const [err, setErr] = useState("");
   const [filter, setFilter] = useState("all");
   const [q, setQ] = useState("");
+  const [gradeF, setGradeF] = useState(0);   // 0 = كل الصفوف
   const [busy, setBusy] = useState(null);
+  const [sel, setSel] = useState(null);      // الخانة المفتوحة تفاصيلها (slot_id)
+  const [view, setView] = useState("subject");   // subject: كما في كشف نور، grade: نظرة عامة بالصف
+  const [brush, setBrush] = useState("detail");  // detail أو حالة تُطبَّق بالضغط على الخانة
+  const [subKey, setSubKey] = useState(null);    // المادة المفتوحة في العرض حسب المادة
   const today = todayISO();
 
   useEffect(() => {
@@ -88,91 +105,245 @@ export default function NoorGrades() {
     setTerms((ts) => ts.map((t) => (t.id === termId ? { ...t, grading_deadline: v || null } : t)));
   };
 
-  const setStatus = async (r, status) => {
-    if ((r.status ?? "none") === status) return;
-    let note = null;
-    if (status === "partial") {
-      note = window.prompt("ما الناقص في رصد هذا الفصل؟ (اختياري)", r.note ?? "");
-      if (note === null) return;
-    }
-    setBusy(r.slot_id);
+  // يسجّل حالة فصل أو عدة فصول دفعة واحدة. «لم يرصد» = حذف السجل.
+  const applyStatus = async (list, status, note = null) => {
+    const todo = list.filter((r) => r.st !== status || (status === "partial" && note !== null));
+    if (!todo.length) return;
+    const ids = todo.map((r) => r.slot_id);
+    const stamp = new Date().toISOString();
+    setBusy(ids.length === 1 ? ids[0] : "bulk");
     const { error } = status === "none"
-      ? await supabase.from("noor_grade_entries").delete().eq("exam_slot_id", r.slot_id)
-      : await supabase.from("noor_grade_entries").upsert({
-          exam_slot_id: r.slot_id, status, note: note?.trim() || null,
-          updated_name: profile?.full_name ?? null, updated_at: new Date().toISOString(),
-        });
+      ? await supabase.from("noor_grade_entries").delete().in("exam_slot_id", ids)
+      : await supabase.from("noor_grade_entries").upsert(ids.map((id) => ({
+          exam_slot_id: id, status, note: status === "partial" ? note?.trim() || null : null,
+          updated_name: profile?.full_name ?? null, updated_at: stamp,
+        })));
     setBusy(null);
     if (error) { alert(error.message); return; }
-    setRows((rs) => rs.map((x) => (x.slot_id === r.slot_id
+    const set = new Set(ids);
+    setRows((rs) => rs.map((x) => (set.has(x.slot_id)
       ? { ...x, status: status === "none" ? null : status, note: status === "partial" ? note?.trim() || null : null,
-          updated_name: profile?.full_name ?? null, updated_at: new Date().toISOString() }
+          updated_name: status === "none" ? null : profile?.full_name ?? null, updated_at: stamp }
       : x)));
   };
 
-  // الصفوف مع مهلتها، والملخص، والتجميع بالمعلم
+  // من لوحة التفاصيل: الجزئي يُسأل فيه عن الناقص
+  const setStatus = (r, status) => {
+    if (status !== "partial") return applyStatus([r], status);
+    const note = window.prompt("ما الناقص في رصد هذا الفصل؟ (اختياري)", r.note ?? "");
+    if (note !== null) applyStatus([r], status, note);
+  };
+
+  // الضغط على خانة: يفتح تفاصيلها، أو يلوّنها بالحالة المختارة في «الإدخال السريع»
+  const onCell = (r) => {
+    if (brush === "detail") setSel(sel === r.slot_id ? null : r.slot_id);
+    else applyStatus([r], brush);
+  };
+
+  // الصفوف مع مهلتها، والملخص، والتجميع: الصف ← المادة × الفصول
   const all = useMemo(() => (rows ?? []).map((r) => ({ ...r, st: r.status ?? "none", tm: timing(r, today) })), [rows, today]);
   const due = all.filter((r) => r.tm.key !== "soon");   // ما حلّ موعد اختباره
+  const pct = (list) => {
+    const d = list.filter((r) => r.tm.key !== "soon");
+    if (!d.length) return null;
+    return Math.round((100 * d.reduce((a, r) => a + (r.st === "done" ? 1 : r.st === "partial" ? 0.5 : 0), 0)) / d.length);
+  };
   const sum = {
     done: due.filter((r) => r.st === "done").length,
     partial: due.filter((r) => r.st === "partial").length,
     none: due.filter((r) => r.st === "none").length,
     late: due.filter((r) => r.st !== "done" && r.tm.key === "late").length,
   };
-  const shown = all.filter((r) => {
-    if (q.trim() && !(r.teacher_name ?? "").includes(q.trim()) && !(r.subject_name ?? "").includes(q.trim())) return false;
-    if (filter === "all") return true;
-    if (filter === "late") return r.st !== "done" && r.tm.key === "late";
-    return r.st === filter && r.tm.key !== "soon";
-  });
-  const groups = useMemo(() => {
+  // تصفية الحالة تُبهت ما لا يطابقها في الجدول ولا تحذفه
+  const match = (r) => filter === "all" ? true
+    : filter === "late" ? r.st !== "done" && r.tm.key === "late"
+    : r.st === filter && r.tm.key !== "soon";
+
+  const grades = useMemo(() => {
+    const qq = q.trim();
+    const byGrade = new Map();
+    for (const r of all) {
+      if (gradeF && r.grade !== gradeF) continue;
+      const g = byGrade.get(r.grade) ?? { grade: r.grade, classes: new Set(), subjects: new Map() };
+      g.classes.add(r.class_no);
+      const sub = g.subjects.get(r.subject_name) ?? { name: r.subject_name ?? "—", cells: new Map(), list: [] };
+      // اختباران للمادة في الفصل نفسه (أسبوعان): يُعرض الأقدم
+      if (!sub.cells.has(r.class_no)) sub.cells.set(r.class_no, r);
+      sub.list.push(r);
+      g.subjects.set(r.subject_name, sub);
+      byGrade.set(r.grade, g);
+    }
+    return [...byGrade.values()].sort((a, b) => a.grade - b.grade).map((g) => {
+      const subjects = [...g.subjects.values()]
+        .filter((sub) => !qq || sub.name.includes(qq) || sub.list.some((r) => (r.teacher_name ?? "").includes(qq)))
+        .sort((a, b) => a.name.localeCompare(b.name, "ar"))
+        .map((sub) => ({
+          ...sub, pct: pct(sub.list),
+          teachers: [...new Set(sub.list.map((r) => r.teacher_name ?? "غير محدد"))],
+        }));
+      return { grade: g.grade, classes: [...g.classes].sort((a, b) => a - b), subjects,
+               pct: pct(subjects.flatMap((s) => s.list)) };
+    }).filter((g) => g.subjects.length);
+  }, [all, gradeF, q]);
+
+  // العرض حسب المادة: كل مادة وفيها صفوفها، وكل صف بفصوله
+  const subjects = useMemo(() => {
+    const qq = q.trim();
     const m = new Map();
-    for (const r of shown) {
-      const k = r.teacher_id ?? "—";
-      const g = m.get(k) ?? { id: k, name: r.teacher_name ?? "معلم غير محدد في الجدول", list: [] };
+    for (const r of all) {
+      if (gradeF && r.grade !== gradeF) continue;
+      const k = baseSubject(r.subject_name);
+      const sub = m.get(k) ?? { key: k, list: [], grades: new Map() };
+      sub.list.push(r);
+      const g = sub.grades.get(r.grade) ?? { grade: r.grade, cells: new Map(), list: [] };
+      if (!g.cells.has(r.class_no)) g.cells.set(r.class_no, r);
       g.list.push(r);
-      m.set(k, g);
+      sub.grades.set(r.grade, g);
+      m.set(k, sub);
     }
-    const order = { late: 0, orange: 1, green: 2, nodate: 3, soon: 4 };
-    for (const g of m.values()) {
-      g.list.sort((a, b) => (a.subject_name ?? "").localeCompare(b.subject_name ?? "", "ar")
-        || a.grade - b.grade || a.class_no - b.class_no);
-      g.open = g.list.filter((r) => r.st !== "done" && r.tm.key !== "soon");
-      g.rank = Math.min(...g.open.map((r) => order[r.tm.key] ?? 9), 9);
-    }
-    return [...m.values()].sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name, "ar"));
-  }, [shown]);
+    return [...m.values()]
+      .filter((sub) => !qq || sub.key.includes(qq) || sub.list.some((r) => (r.teacher_name ?? "").includes(qq)))
+      .map((sub) => {
+        const grades = [...sub.grades.values()].sort((a, b) => a.grade - b.grade).map((g) => ({
+          ...g, pct: pct(g.list), names: [...new Set(g.list.map((r) => r.subject_name))],
+          teachers: [...new Set(g.list.map((r) => r.teacher_name ?? "غير محدد"))],
+          due: g.list.filter((r) => r.tm.key !== "soon"),
+        }));
+        const open = sub.list.filter((r) => r.st !== "done" && r.tm.key !== "soon");
+        return { ...sub, grades, pct: pct(sub.list), open: open.length,
+                 late: open.filter((r) => r.tm.key === "late").length,
+                 maxClass: Math.max(...sub.list.map((r) => r.class_no)) };
+      })
+      .sort((a, b) => a.key.localeCompare(b.key, "ar"));
+  }, [all, gradeF, q]);
+  const subject = subjects.find((s) => s.key === subKey) ?? subjects[0];
 
+  const selRow = all.find((r) => r.slot_id === sel);
   const left = term?.grading_deadline ? daysBetween(today, term.grading_deadline) : null;
+  const now = new Date();
+  const stamp = `${weekday(today)} ${fmtHijri(today)} الساعة ${new Intl.DateTimeFormat("ar-SA", { hour: "numeric", minute: "2-digit", numberingSystem: "latn" }).format(now)}`;
 
+  // الطباعة: جدول ملوّن لكل صف كما في الكشف المعتاد
   const print = () => {
-    const late = groups.map((g) => ({ g, list: g.list.filter((r) => r.st !== "done" && r.tm.key !== "soon") }))
-      .filter((x) => x.list.length);
+    const td = "border:1px solid #bbb;padding:3px 4px;text-align:center;font-size:11px";
+    const html = grades.map((g) => `
+      <table style="width:100%;border-collapse:collapse;margin:0 0 6px">
+        <thead>
+          <tr><th colspan="${g.classes.length + 3}" style="${td};background:#1f3a2c;color:#fff;font-size:13px">${GRADE_NAMES[g.grade] ?? ""}</th></tr>
+          <tr><th style="${td}">م</th><th style="${td};text-align:right">المادة والمعلمون</th>
+            ${g.classes.map((c) => `<th style="${td};width:30px">${classCode(g.grade, c)}</th>`).join("")}<th style="${td}">نسبة الرصد</th></tr>
+        </thead>
+        <tbody>
+          ${g.subjects.map((sub, i) => `<tr><td style="${td}">${i + 1}</td>
+            <td style="${td};text-align:right"><b>${sub.name}</b><br><span style="color:#666;font-size:9px">${sub.teachers.join("، ")}</span></td>
+            ${g.classes.map((c) => {
+              const r = sub.cells.get(c);
+              if (!r) return `<td style="${td}"></td>`;
+              if (r.tm.key === "soon") return `<td style="${td};background:#f1f1f1;color:#999">—</td>`;
+              return `<td style="${td};background:${STATUS[r.st].hex}">${r.st === "done" ? "" : r.tm.d ?? ""}</td>`;
+            }).join("")}
+            <td style="${td};font-weight:bold;color:#3E6350">${sub.pct ?? "—"}${sub.pct === null ? "" : "%"}</td></tr>`).join("")}
+          <tr><td colspan="${g.classes.length + 2}" style="${td};background:#eee">النسبة الإجمالية للرصد حتى ${stamp}</td>
+            <td style="${td};font-weight:bold">${g.pct ?? "—"}${g.pct === null ? "" : "%"}</td></tr>
+        </tbody>
+      </table>`).join("")
+      + `<p style="font-size:11px;margin:4px 0">
+          <span style="display:inline-block;width:14px;height:10px;background:${STATUS.none.hex};border:1px solid #bbb"></span> لم يتم الرصد &nbsp;
+          <span style="display:inline-block;width:14px;height:10px;background:${STATUS.done.hex};border:1px solid #bbb"></span> تم الرصد &nbsp;
+          <span style="display:inline-block;width:14px;height:10px;background:${STATUS.partial.hex};border:1px solid #bbb"></span> رصد جزئي &nbsp;
+          · الرقم في الخانة: الأيام منذ الاختبار</p>`;
     printReport({
       title: `متابعة رصد درجات ${term?.title ?? ""} في نظام نور`,
       subtitle: `تم ${sum.done} · جزئي ${sum.partial} · لم يرصد ${sum.none} · متأخر ${sum.late}`
         + (term?.grading_deadline ? ` · نهاية الرصد ${weekday(term.grading_deadline)} ${fmtHijri(term.grading_deadline)}` : ""),
-      sections: late.map(({ g, list }) => ({
-        title: g.name,
-        headers: ["م", "المادة", "الفصل", "تاريخ الاختبار", "الحالة", "المهلة"],
-        rows: list.map((r, i) => [i + 1, r.subject_name, classLabel(r), r.exam_date ? fmtHijri(r.exam_date) : "—",
-          STATUS[r.st].t + (r.note ? ` (${r.note})` : ""), r.tm.t]),
-      })),
+      sections: [{ html }],
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       signatures: [{ title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
-      signOnLastPageOnly: true,
     });
   };
 
   if (!terms) return <Loader />;
+
+  // withCode: رمز الفصل داخل الخانة (العرض حسب المادة، حيث تختلف الفصول بين الصفوف)
+  const cellBtn = (r, withCode = false) => {
+    const soon = r.tm.key === "soon";
+    const mark = soon ? (r.st === "none" ? "—" : "") : r.st === "done" ? "" : r.tm.d;
+    return (
+      <button onClick={() => onCell(r)} disabled={busy === "bulk" || busy === r.slot_id}
+              title={`فصل ${classCode(r.grade, r.class_no)} · ${r.teacher_name ?? "معلم غير محدد"} · ${STATUS[r.st].t}${soon ? " · لم يحن" : ""}`}
+              className={`num flex w-full flex-col items-center justify-center text-[11px] font-bold leading-tight transition ${withCode ? "h-11" : "h-9"}
+                ${soon && r.st === "none" ? "bg-canvas text-faint" : `${STATUS[r.st].cell} ${DAYS_TONE[r.tm.key] ?? "text-muted"}`}
+                ${sel === r.slot_id ? "ring-2 ring-inset ring-ink" : ""} ${brush !== "detail" ? "hover:brightness-95" : ""}
+                ${match(r) ? "" : "opacity-25"}`}>
+        {withCode ? <><span className="text-[11px] font-semibold text-ink">{classCode(r.grade, r.class_no)}</span>
+          <span className="min-h-[12px] text-[10px]">{mark}</span></> : mark}
+      </button>
+    );
+  };
+
+  const detail = selRow && (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-mint-tint px-4 py-3 text-sm">
+      <div className="min-w-0 flex-1">
+        <p className="font-bold text-ink">
+          {selRow.subject_name} · {GRADE_NAMES[selRow.grade] ?? ""} · فصل <span className="num">{classCode(selRow.grade, selRow.class_no)}</span>
+        </p>
+        <p className="text-xs text-muted">
+          <span className={selRow.teacher_name ? "text-ink" : "text-warning"}>{selRow.teacher_name ?? "معلم غير محدد في الجدول"}</span>
+          {" · "}{selRow.exam_date ? <>اختبار {weekday(selRow.exam_date)} <span className="num">{fmtHijri(selRow.exam_date)}</span></> : "بلا تاريخ"}
+          {selRow.note && <> · <span className="text-warning">{selRow.note}</span></>}
+          {selRow.updated_name && <> · سجّله {selRow.updated_name}</>}
+        </p>
+      </div>
+      {selRow.st !== "done" && <span className={`chip ${selRow.tm.c}`}>{selRow.tm.t}</span>}
+      <div className="flex overflow-hidden rounded-sm2 border border-line">
+        {["none", "partial", "done"].map((k) => (
+          <button key={k} disabled={busy === selRow.slot_id} onClick={() => setStatus(selRow, k)}
+                  className={`px-2.5 py-1 text-xs ${selRow.st !== k ? "bg-paper text-muted hover:bg-canvas" : k === "none" && selRow.tm.key === "soon" ? "bg-canvas text-ink" : STATUS[k].on}`}>
+            {STATUS[k].t}
+          </button>
+        ))}
+      </div>
+      <button className="text-xs text-muted underline" onClick={() => setSel(null)}>إغلاق</button>
+    </div>
+  );
+
+  // شريط الإدخال: فتح التفاصيل، أو تلوين الخانات مباشرة بحالة
+  const BRUSH = [
+    ["detail", "عرض التفاصيل", "bg-paper text-ink"],
+    ["done", "تم الرصد", STATUS.done.on], ["partial", "رصد جزئي", STATUS.partial.on], ["none", "لم يرصد", STATUS.none.on],
+  ];
+  const brushBar = (
+    <div className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-paper px-3 py-2">
+      <span className="text-xs font-semibold text-ink">الضغط على الخانة:</span>
+      {BRUSH.map(([k, t, on]) => (
+        <button key={k} onClick={() => { setBrush(k); setSel(null); }}
+                className={`rounded-sm2 px-3 py-1 text-xs ${brush === k ? `${on} ring-2 ring-ink/30` : "border border-line bg-paper text-muted"}`}>
+          {k === "detail" ? t : `يسجّل «${t}»`}
+        </button>
+      ))}
+      {brush !== "detail" && <span className="text-[11px] text-muted">إدخال سريع: كل خانة تضغطها تُحفظ فورًا.</span>}
+    </div>
+  );
+
+  const legend = (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
+      {["none", "done", "partial"].map((k) => (
+        <span key={k} className="flex items-center gap-1.5">
+          <span className={`inline-block h-3 w-5 rounded-sm border border-line ${STATUS[k].cell}`} />{k === "none" ? "لم يتم الرصد" : STATUS[k].t}
+        </span>
+      ))}
+      <span>· الرقم في الخانة: الأيام منذ الاختبار (<span className="text-mint-deep">حتى يومين</span>،{" "}
+        <span className="text-warning">3–5</span>، <span className="text-danger">متأخر بعد 5</span>)</span>
+    </div>
+  );
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">متابعة رصد الدرجات في نظام نور</h1>
         <p className="mt-0.5 text-sm text-muted">
-          اختبارات الفترتين من «جداول الاختبارات». راجع نور ثم سجّل حالة كل فصل: تم الرصد، أو رصد جزئي إن لم يكتمل الفصل.
+          افتح المادة كما في كشف متابعة نور، وسجّل حالة كل فصل في صفوفها. للإدخال السريع اختر الحالة ثم اضغط الخانات، أو طبّقها على الصف كله.
         </p>
       </div>
 
@@ -182,7 +353,7 @@ export default function NoorGrades() {
         <>
           <div className="flex flex-wrap gap-2">
             {terms.map((t) => (
-              <button key={t.id} onClick={() => setTermId(t.id)}
+              <button key={t.id} onClick={() => { setTermId(t.id); setSel(null); }}
                       className={`rounded-sm2 px-4 py-1.5 text-sm ${t.id === termId ? "bg-mint-deep text-white" : "border border-line bg-paper text-ink"}`}>
                 {t.title}
               </button>
@@ -219,68 +390,196 @@ export default function NoorGrades() {
           {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}
           {!rows ? <Loader /> : !err && (
             <>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {[["done", "تم الرصد", "bg-mint-light text-mint-deep"], ["partial", "رصد جزئي", "bg-warning-light text-warning"],
-                  ["none", "لم يرصد", "bg-canvas text-ink"], ["late", "متأخر", "bg-danger-light text-danger"]].map(([k, t, c]) => (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                <div className="col-span-2 rounded-card bg-mint-deep px-3 py-2 text-center text-white sm:col-span-1">
+                  <span className="num block text-2xl font-bold leading-tight">{pct(all) ?? "—"}{pct(all) === null ? "" : "%"}</span>
+                  <span className="block text-xs">النسبة الإجمالية</span>
+                </div>
+                {[["done", "تم الرصد", "bg-mint-light text-mint-deep"], ["partial", "رصد جزئي", "bg-[#D6E4F5] text-excused"],
+                  ["none", "لم يرصد", "bg-danger-light text-danger"], ["late", "متأخر", "bg-danger text-white"]].map(([k, t, c]) => (
                   <button key={k} onClick={() => setFilter(filter === k ? "all" : k)}
-                          className={`rounded-card px-3 py-2 text-center ${c} ${filter === k ? "ring-2 ring-mint-deep/50" : ""}`}>
+                          className={`rounded-card px-3 py-2 text-center ${c} ${filter === k ? "ring-2 ring-ink/40" : ""}`}>
                     <span className="num block text-2xl font-bold leading-tight">{sum[k]}</span>
                     <span className="block text-xs">{t}</span>
                   </button>
                 ))}
               </div>
               <p className="text-xs text-muted">
-                العدد بالفصول التي حلّ موعد اختبارها. المهلة: <span className="text-mint-deep">حتى يومين</span> ·{" "}
-                <span className="text-warning">من 3 إلى 5 أيام</span> · <span className="text-danger">بعد 5 أيام متأخر</span>.
+                الأعداد بالفصول التي حلّ موعد اختبارها، والنسبة تحسب الرصد الجزئي نصفًا. اضغط عددًا لإبراز خاناته في الجداول.
               </p>
 
               <div className="flex flex-wrap items-center gap-2">
-                {FILTERS.map((f) => (
-                  <button key={f.k} onClick={() => setFilter(f.k)}
-                          className={`rounded-sm2 px-3 py-1 text-sm ${filter === f.k ? "bg-mint-deep text-white" : "border border-line bg-paper text-ink"}`}>
-                    {f.t}
-                  </button>
-                ))}
-                <input className="field w-48 py-1 text-sm" placeholder="بحث بالمعلم أو المادة" value={q}
+                <select className="field w-36 py-1 text-sm" value={gradeF} onChange={(e) => setGradeF(Number(e.target.value))}>
+                  <option value={0}>كل الصفوف</option>
+                  {[1, 2, 3].map((g) => <option key={g} value={g}>{GRADE_NAMES[g]}</option>)}
+                </select>
+                <input className="field w-48 py-1 text-sm" placeholder="بحث بالمادة أو المعلم" value={q}
                        onChange={(e) => setQ(e.target.value)} />
+                <div className="flex overflow-hidden rounded-sm2 border border-line">
+                  {[["subject", "حسب المادة"], ["grade", "حسب الصف"]].map(([k, t]) => (
+                    <button key={k} onClick={() => { setView(k); setSel(null); }}
+                            className={`px-3 py-1 text-sm ${view === k ? "bg-mint-deep text-white" : "bg-paper text-ink"}`}>{t}</button>
+                  ))}
+                </div>
                 <div className="flex-1" />
-                <button className="btn-ghost" onClick={print}>طباعة كشف غير المكتمل</button>
+                <button className="btn-ghost" onClick={print}>طباعة الكشف</button>
               </div>
+              {legend}
+              {brushBar}
 
-              {!groups.length && <p className="card p-4 text-sm text-muted">لا نتائج.</p>}
-              {groups.map((g) => (
-                <section key={g.id} className="card p-4">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <h2 className="font-bold text-ink">{g.name}</h2>
-                    <p className="text-xs text-muted">
-                      {g.open.length ? <>غير مكتمل <span className="num font-semibold text-ink">{g.open.length}</span> من <span className="num">{g.list.length}</span></>
-                        : <span className="text-mint-deep">مكتمل</span>}
-                    </p>
+              {view === "subject" && (!subject ? <p className="card p-4 text-sm text-muted">لا نتائج.</p> : (
+                <>
+                  {/* المواد: اختر المادة التي تراجع كشفها في نور */}
+                  {/* بطاقات بمقاس واحد: الاسم، وتحته النسبة وشريطها وعدد المتأخر */}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                    {subjects.map((sub) => {
+                      const on = sub.key === subject.key;
+                      const tone = pctTone(sub.pct);
+                      return (
+                        <button key={sub.key} onClick={() => { setSubKey(sub.key); setSel(null); }}
+                                className={`flex h-[4.5rem] flex-col justify-between rounded-card border px-3 py-2 text-right transition
+                                  ${tone.card} ${on ? "ring-2 ring-ink/60 ring-offset-1" : "hover:brightness-[.97]"}`}>
+                          <span className="flex items-center gap-1">
+                            <span className="block min-w-0 flex-1 truncate text-sm font-semibold text-ink" title={sub.key}>{sub.key}</span>
+                            {on && <span className="text-[10px] font-semibold text-ink/70">مفتوحة</span>}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <span className="h-1.5 flex-1 overflow-hidden rounded-pill bg-white/70">
+                              <span className={`block h-full rounded-pill ${tone.bar}`} style={{ width: `${sub.pct ?? 0}%` }} />
+                            </span>
+                            <span className={`num w-9 text-left text-xs font-bold ${tone.text}`}>
+                              {sub.pct === null ? "—" : `${sub.pct}%`}
+                            </span>
+                            {sub.late > 0 && (
+                              <span className="num grid h-5 min-w-[1.25rem] place-items-center rounded-pill bg-danger px-1 text-[11px] text-white"
+                                    title="فصول متأخرة">{sub.late}</span>
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="mt-3 divide-y divide-line/60 rounded-sm2 border border-line/60">
-                    {g.list.map((r) => (
-                      <div key={r.slot_id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 text-sm">
-                        <div className="w-full min-w-0 sm:w-auto sm:flex-1">
-                          <p className="font-medium text-ink">{r.subject_name} · {classLabel(r)}</p>
-                          <p className="text-xs text-muted">
-                            {r.exam_date ? <>اختبار {weekday(r.exam_date)} <span className="num">{fmtHijri(r.exam_date)}</span></> : "بلا تاريخ"}
-                            {r.note && <> · <span className="text-warning">{r.note}</span></>}
-                            {r.updated_name && <> · سجّله {r.updated_name}</>}
-                          </p>
-                        </div>
-                        {r.st !== "done" && <span className={`chip ${r.tm.c}`}>{r.tm.t}</span>}
-                        <div className="flex-1 sm:hidden" />
-                        <div className="flex overflow-hidden rounded-sm2 border border-line">
-                          {["none", "partial", "done"].map((k) => (
-                            <button key={k} disabled={busy === r.slot_id} onClick={() => setStatus(r, k)}
-                                    className={`px-2.5 py-1 text-xs ${r.st !== k ? "bg-paper text-muted hover:bg-canvas" : k === "none" && r.tm.key === "soon" ? "bg-canvas text-ink" : STATUS[k].on}`}>
-                              {STATUS[k].t}
-                            </button>
+
+                  <section className="card overflow-hidden">
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-mint-deep px-4 py-2 text-white">
+                      <h2 className="font-bold">{subject.key}</h2>
+                      <p className="text-sm">نسبة رصد المادة <span className="num font-bold">{subject.pct === null ? "—" : `${subject.pct}%`}</span>
+                        {subject.open ? <> · غير مكتمل <span className="num font-bold">{subject.open}</span></> : null}</p>
+                    </div>
+                    <div className="hidden overflow-x-auto sm:block">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-canvas text-xs text-muted">
+                            <th className="min-w-[11rem] border border-line/60 px-2 py-1.5 text-right">الصف والمعلمون</th>
+                            <th colSpan={subject.maxClass} className="border border-line/60 px-1 py-1.5">الفصول</th>
+                            <th className="w-16 border border-line/60 px-1 py-1.5">نسبة الرصد</th>
+                            {brush !== "detail" && <th className="w-20 border border-line/60 px-1 py-1.5">الصف كله</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {subject.grades.map((g) => (
+                            <tr key={g.grade}>
+                              <td className="border border-line/60 px-2 py-1.5">
+                                <p className="font-semibold text-ink">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</p>
+                                <p className="text-[11px] leading-snug text-muted">{g.teachers.join("، ")}</p>
+                                {g.names.some((n) => n !== subject.key) && (
+                                  <p className="text-[10px] text-faint">{g.names.join("، ")}</p>
+                                )}
+                              </td>
+                              {Array.from({ length: subject.maxClass }, (_, i) => {
+                                const r = g.cells.get(i + 1);
+                                return r ? <td key={i} className="min-w-[2.75rem] border border-line/60 p-0">{cellBtn(r, true)}</td>
+                                  : <td key={i} className="border border-line/60 bg-paper" />;
+                              })}
+                              <td className="num border border-line/60 text-center font-bold text-mint-deep">{g.pct === null ? "—" : `${g.pct}%`}</td>
+                              {brush !== "detail" && (
+                                <td className="border border-line/60 p-1 text-center">
+                                  <button disabled={busy === "bulk" || !g.due.length}
+                                          onClick={() => applyStatus(g.due, brush)}
+                                          title="يطبّق الحالة على كل فصول الصف التي حلّ موعد اختبارها"
+                                          className={`w-full rounded-sm2 px-1 py-1 text-[11px] ${STATUS[brush].on} disabled:opacity-40`}>
+                                    {STATUS[brush].t}
+                                  </button>
+                                </td>
+                              )}
+                            </tr>
                           ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* الجوال: بطاقة لكل صف، وفصولها خانات كبيرة تلتف بلا سحب أفقي */}
+                    <div className="divide-y divide-line sm:hidden">
+                      {subject.grades.map((g) => (
+                        <div key={g.grade} className="space-y-2 px-3 py-3">
+                          <div className="flex items-start gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-ink">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</p>
+                              <p className="text-[11px] leading-snug text-muted">{g.teachers.join("، ")}</p>
+                            </div>
+                            <span className="num text-sm font-bold text-mint-deep">{g.pct === null ? "—" : `${g.pct}%`}</span>
+                          </div>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {[...g.cells.values()].sort((a, b) => a.class_no - b.class_no).map((r) => (
+                              <div key={r.slot_id} className="overflow-hidden rounded-sm2 border border-line/60">{cellBtn(r, true)}</div>
+                            ))}
+                          </div>
+                          {brush !== "detail" && (
+                            <button disabled={busy === "bulk" || !g.due.length} onClick={() => applyStatus(g.due, brush)}
+                                    className={`w-full rounded-sm2 py-1.5 text-xs ${STATUS[brush].on} disabled:opacity-40`}>
+                              «{STATUS[brush].t}» لكل فصول {GRADE_NAMES[g.grade] ?? "الصف"}
+                            </button>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    {selRow && baseSubject(selRow.subject_name) === subject.key && detail}
+                  </section>
+                </>
+              ))}
+
+              {view === "grade" && !grades.length && <p className="card p-4 text-sm text-muted">لا نتائج.</p>}
+              {view === "grade" && grades.map((g) => (
+                <section key={g.grade} className="card overflow-hidden">
+                  <h2 className="bg-mint-deep px-4 py-2 text-center font-bold text-white">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</h2>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-canvas text-xs text-muted">
+                          <th className="w-8 border border-line/60 px-1 py-1.5">م</th>
+                          <th className="min-w-[11rem] border border-line/60 px-2 py-1.5 text-right">المادة والمعلمون</th>
+                          {g.classes.map((c) => <th key={c} className="num w-11 border border-line/60 px-1 py-1.5">{classCode(g.grade, c)}</th>)}
+                          <th className="w-16 border border-line/60 px-1 py-1.5">نسبة الرصد</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {g.subjects.map((sub, i) => (
+                          <tr key={sub.name}>
+                            <td className="num border border-line/60 text-center text-xs text-muted">{i + 1}</td>
+                            <td className="border border-line/60 px-2 py-1.5">
+                              <p className="font-semibold text-ink">{sub.name}</p>
+                              <p className="text-[11px] leading-snug text-muted">{sub.teachers.join("، ")}</p>
+                            </td>
+                            {g.classes.map((c) => {
+                              const r = sub.cells.get(c);
+                              if (!r) return <td key={c} className="border border-line/60" />;
+                              return <td key={c} className="border border-line/60 p-0">{cellBtn(r)}</td>;
+                            })}
+                            <td className="num border border-line/60 text-center font-bold text-mint-deep">
+                              {sub.pct === null ? "—" : `${sub.pct}%`}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="bg-canvas text-xs">
+                          <td colSpan={g.classes.length + 2} className="border border-line/60 px-2 py-1.5 text-center text-muted">
+                            النسبة الإجمالية للرصد حتى {stamp}
+                          </td>
+                          <td className="num border border-line/60 text-center font-bold text-ink">{g.pct === null ? "—" : `${g.pct}%`}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
+
+                  {selRow && selRow.grade === g.grade && detail}
                 </section>
               ))}
             </>
