@@ -68,6 +68,7 @@ const ADMIN_GROUPS = [
       { to: "/student-schedules", label: "جداول الطلاب",          anyPerm: ["import", "schedules"], icon: "grid" },
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "swap" },
+      { to: "/noor-grades",       label: "متابعة رصد الدرجات", roles: ["principal", "deputy_academic", "tech_support"], icon: "clipboard", kw: "نور الفترات" },
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
     ],

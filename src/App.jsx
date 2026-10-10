@@ -44,6 +44,7 @@ const AttendanceOverview = lazy(() => import("./pages/admin/AttendanceOverview.j
 const StudentAffairs = lazy(() => import("./pages/student-affairs/index.jsx"));
 const PeriodAttendance = lazy(() => import("./pages/admin/PeriodAttendance.jsx"));
 const SubstituteReport = lazy(() => import("./pages/admin/SubstituteReport.jsx"));
+const NoorGrades = lazy(() => import("./pages/admin/NoorGrades.jsx"));
 const ResultsAdmin = lazy(() => import("./pages/admin/ResultsAdmin.jsx"));
 const GeneralScheduleMaster = lazy(() => import("./pages/admin/GeneralScheduleMaster.jsx"));
 const TeacherSchedules = lazy(() => import("./pages/admin/TeacherSchedules.jsx"));
@@ -328,6 +329,8 @@ export default function App() {
               {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
               {can("reports") && <Route path="/period-attendance" element={<PeriodAttendance />} />}
               {(can("import") || can("reports")) && <Route path="/substitute-report" element={<SubstituteReport />} />}
+              {(isTechSupport || adminRoles.includes("principal") || adminRoles.includes("deputy_academic")) &&
+                <Route path="/noor-grades" element={<NoorGrades />} />}
               {can("results") && (
                 <Route
                   path="/results-admin"
