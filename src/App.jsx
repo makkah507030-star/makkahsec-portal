@@ -239,10 +239,11 @@ export default function App() {
   const teacherHome = (
     <div className="space-y-5">
       <HeaderChips />
+      {/* بطاقة يوم الاختبار تظهر في أيامه فقط، فتتقدّم على غيرها */}
+      <ExamDayCard />
       {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
       <TasksBox />
       <DutyCard personal />
-      <ExamDayCard />
     </div>
   );
 
