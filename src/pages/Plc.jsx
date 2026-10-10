@@ -68,7 +68,7 @@ function SessionList() {
     if (roles.seesAll) t.push({ k: "all", t: "كل الجلسات" });
     return t;
   }, [dept, roles.isDeputy, roles.seesAll]);
-  // ?tab= من صندوق «مهامي» يفتح التبويب المطلوب إن كان متاحًا لصاحب الحساب
+  // ?tab= من صندوق «بانتظار إجرائك» يفتح التبويب المطلوب إن كان متاحًا لصاحب الحساب
   const [params] = useSearchParams();
   const linked = tabs.some((x) => x.k === params.get("tab")) ? params.get("tab") : null;
   const cur = tab ?? linked ?? (roles.isDeputy ? "pending" : roles.seesAll ? "all" : tabs[0]?.k);

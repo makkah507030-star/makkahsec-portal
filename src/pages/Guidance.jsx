@@ -52,7 +52,7 @@ export default function Guidance() {
   const { adminRoles, profile } = useSession();
   const seesAll = adminRoles.some((r) => ["principal", "deputy_students", "tech_support"].includes(r));
   const myGrades = [1, 2, 3].filter((g) => seesAll || adminRoles.includes(`counselor_${g}`));
-  // ?tab=requests&grade=2 من صندوق «مهامي»
+  // ?tab=requests&grade=2 من صندوق «بانتظار إجرائك»
   const [params] = useSearchParams();
   const linkedGrade = Number(params.get("grade"));
   const [grade, setGrade] = useState(myGrades.includes(linkedGrade) ? linkedGrade : myGrades[0] ?? null);

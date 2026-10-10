@@ -6,7 +6,7 @@ import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 import { Icon } from "./Layout.jsx";
 
 /* =====================================================================
-   «مهامي» — صندوق المهام المعلقة في الرئيسية لكل الحسابات: بطاقة لكل نوع
+   «بانتظار إجرائك» — صندوق المهام المعلقة في الرئيسية لكل الحسابات: بطاقة لكل نوع
    إجراء ينتظر صاحب الحساب وعددها، والضغط يفتح مكان الإجراء مباشرة.
    المصدر lib/navBadges.js (العدادات نفسها في القائمة الجانبية).
    حين تُنجَز مهمة تظهر بطاقتها «✓ تمت» لحظات ثم تختفي.
@@ -59,7 +59,7 @@ export default function TasksBox() {
   return (
     <section className="overflow-hidden rounded-card border border-line bg-white">
       <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
-        <p className="text-sm font-bold text-ink">مهامي</p>
+        <p className="text-sm font-bold text-ink">بانتظار إجرائك</p>
         {total > 0 ? (
           <span className="num rounded-full bg-warning-light px-2 py-0.5 text-xs font-bold text-warning">{total}</span>
         ) : null}
