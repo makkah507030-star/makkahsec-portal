@@ -208,11 +208,13 @@ export default function NoorGrades() {
           ...g, pct: pct(g.list), names: [...new Set(g.list.map((r) => r.subject_name))],
           teachers: [...new Set(g.list.map((r) => r.teacher_name ?? "غير محدد"))],
           due: g.list.filter((r) => r.tm.key !== "soon"),
+          // فصول الصف مرتبة متتالية؛ رقم الفصل قد يُخزَّن 3 أو 303، فلا يُتخذ فهرسًا للأعمدة
+          cellList: [...g.cells.values()].sort((a, b) => a.class_no - b.class_no),
         }));
         const open = sub.list.filter((r) => r.st !== "done" && r.tm.key !== "soon");
         return { ...sub, grades, pct: pct(sub.list), open: open.length,
                  late: open.filter((r) => r.tm.key === "late").length,
-                 maxClass: Math.max(...sub.list.map((r) => r.class_no)) };
+                 maxClass: Math.max(...grades.map((g) => g.cellList.length)) };
       })
       .sort((a, b) => a.key.localeCompare(b.key, "ar"));
   }, [all, gradeF, q]);
@@ -487,7 +489,7 @@ export default function NoorGrades() {
                                 )}
                               </td>
                               {Array.from({ length: subject.maxClass }, (_, i) => {
-                                const r = g.cells.get(i + 1);
+                                const r = g.cellList[i];
                                 return r ? <td key={i} className="min-w-[2.75rem] border border-line/60 p-0">{cellBtn(r, true)}</td>
                                   : <td key={i} className="border border-line/60 bg-paper" />;
                               })}
@@ -519,7 +521,7 @@ export default function NoorGrades() {
                             <span className="num text-sm font-bold text-mint-deep">{g.pct === null ? "—" : `${g.pct}%`}</span>
                           </div>
                           <div className="grid grid-cols-4 gap-1.5">
-                            {[...g.cells.values()].sort((a, b) => a.class_no - b.class_no).map((r) => (
+                            {g.cellList.map((r) => (
                               <div key={r.slot_id} className="overflow-hidden rounded-sm2 border border-line/60">{cellBtn(r, true)}</div>
                             ))}
                           </div>
