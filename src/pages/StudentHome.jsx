@@ -121,18 +121,19 @@ export default function StudentHome() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-xl font-bold text-ink">{me.full_name}</h1>
-        <p className="mt-0.5 text-sm text-muted">
-          {GRADE_NAMES[me.grade] ?? ""} · فصل <span className="num">{me.class_no}</span>
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+        <div>
+          <h1 className="text-xl font-bold text-ink">{me.full_name}</h1>
+          <p className="mt-0.5 text-sm text-muted">
+            {GRADE_NAMES[me.grade] ?? ""} · فصل <span className="num">{me.class_no}</span>
+          </p>
+        </div>
+        <ExamCountdown />
       </header>
 
       <HolidayBanner />
 
       <ExamDayCard />
-
-      <ExamCountdown />
 
       <ResultsCard studentId={me.id} />
 

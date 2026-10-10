@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
-import { OPEN_STATUSES, STAGE_COLS, stageOf, isLate } from "../lib/referrals";
+import { OPEN_STATUSES, STAGE_COLS } from "../lib/referrals";
 
 /* =====================================================================
    صندوق الإحالات الواردة — يظهر في لوحة التحكم فوق الطلاب المفقودين.
    • وكيل شؤون الطلاب: إحالات المعلمين الجديدة وردود أولياء الأمور.
    • الموجه الطلابي: ما أُحيل إليه.
-   • وللوكيل سطر متابعة: ما عند الموجهين وولي الأمر، وكم تأخر منه.
+   • متابعة ما عند الموجهين وولي الأمر صارت بطاقة في صندوق «بانتظار إجرائك» (lib/navBadges.js).
    ولا يظهر لمن لا إحالة تخصّه.
    ===================================================================== */
 
@@ -23,7 +23,6 @@ export default function ReferralsInbox() {
   const isCounselor = roles.some((r) => r.startsWith("counselor"));
 
   const [rows, setRows] = useState(null);
-  const [away, setAway] = useState([]);   // قيد المتابعة عند غير الوكيل
 
   useEffect(() => {
     if (!uid || (!isDeputy && !isCounselor)) { setRows([]); return; }
@@ -40,32 +39,10 @@ export default function ReferralsInbox() {
         (isDeputy && ["with_deputy", "guardian_replied"].includes(r.status)) ||
         (isCounselor && ["with_counselor", "returned_to_counselor"].includes(r.status) &&
          r.counselor_id === uid)));
-      if (isDeputy) setAway(all.filter((r) => ["counselor", "guardian"].includes(stageOf(r).group)));
     })();
   }, [uid, isDeputy, isCounselor]);
 
-  if (!rows) return null;
-
-  const atCounselor = away.filter((r) => stageOf(r).group === "counselor");
-  const atGuardian = away.filter((r) => stageOf(r).group === "guardian");
-  const lateAway = away.filter(isLate).length;
-
-  const follow = isDeputy && away.length > 0 && (
-    <Link to="/referrals?tab=follow"
-          className={`flex flex-wrap items-center justify-between gap-2 px-5 py-2.5 text-xs transition-colors hover:bg-canvas ${
-            lateAway ? "text-absent" : "text-muted"}`}>
-      <span>
-        قيد المتابعة: عند الموجهين <span className="num font-bold">{atCounselor.length}</span>
-        {" "}· عند ولي الأمر <span className="num font-bold">{atGuardian.length}</span>
-        {lateAway > 0 && <> · متأخرة <span className="num font-bold">{lateAway}</span></>}
-      </span>
-      <span className="font-semibold">متابعة ←</span>
-    </Link>
-  );
-
-  if (rows.length === 0) {
-    return follow ? <section className="card overflow-hidden">{follow}</section> : null;
-  }
+  if (!rows?.length) return null;
 
   const fresh = rows.filter((r) => r.status === "with_deputy" ||
                                    r.status === "with_counselor").length;
@@ -110,7 +87,6 @@ export default function ReferralsInbox() {
         </p>
       )}
 
-      {follow && <div className="border-t border-warning/15">{follow}</div>}
     </section>
   );
 }

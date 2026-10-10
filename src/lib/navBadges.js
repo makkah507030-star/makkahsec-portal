@@ -1,12 +1,15 @@
 // src/lib/navBadges.js
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
+import { stageOf, isLate, STAGE_COLS } from "./referrals.js";
 
 /* =====================================================================
-   «مهامي» — مصدر واحد لكل ما ينتظر إجراء المستخدم: عدادات القائمة الجانبية
+   «بانتظار إجرائك» — مصدر واحد لكل ما ينتظر إجراء المستخدم: عدادات القائمة الجانبية
    وبطاقات صندوق المهام في الرئيسية (components/TasksBox.jsx).
 
-   كل مهمة: { key, n, to, label, tone, icon, items? }
+   كل مهمة: { key, n, to, label, tone, icon, sub?, follow?, items? }
+     sub    سطر تفصيل تحت العنوان
+     follow متابعة لما عند غيرك — لا تُحسب في عدد «بانتظار إجرائك»
      to     الصفحة التي يُنجز فيها الإجراء (مع التبويب المناسب)
      items  [{ id, to, title }] حين تكون عناصرها معروفة — فتُفتح مباشرة
             إن كانت واحدة، وتُعرض قائمتها إن تعددت
@@ -60,7 +63,7 @@ async function load() {
     returned, toApprove, replies, events, toReply, refDeputy, refCounselor, notif,
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
     plcBack, pdBack, xvBack, perfAck, guidance,
-    behaviorGuardian, refGuardian, pledges,
+    behaviorGuardian, refGuardian, pledges, refAway,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? count(fd().eq("status", "pending")) : none,
@@ -97,11 +100,18 @@ async function load() {
       .eq("status", "with_guardian").is("guardian_ack_at", null).order("created_at").limit(50)) : noRows,
     isStudent ? rowsOf(supabase.from("behavior_forms").select("id, kind")
       .eq("kind", "pledge").is("student_ack_at", null).neq("status", "closed").order("created_at").limit(50)) : noRows,
+
+    // متابعة الوكيل: إحالات عند الموجهين أو ولي الأمر لم تنتهِ بعد
+    isDeputy ? rowsOf(supabase.from("student_referrals").select(STAGE_COLS)
+      .in("status", ["with_counselor", "returned_to_counselor", "with_guardian"]).limit(300)) : noRows,
   ]);
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
   const plcToSign = unsigned(plcSign, "plc_signatures");
   const pdToSign = unsigned(pdSign, "pd_signatures");
+  const awayC = refAway.filter((r) => stageOf(r).group === "counselor").length;
+  const awayG = refAway.filter((r) => stageOf(r).group === "guardian").length;
+  const awayLate = refAway.filter(isLate).length;
   const items = (rows, path, title) => rows.map((r) => ({ id: r.id, to: `${path}/${r.id}`, title: title?.(r) ?? "" }));
 
   const tasks = [
@@ -154,6 +164,12 @@ async function load() {
       items: items(xvPending, "/xvisits", (r) => `زيارة ${r.visitor_name ?? ""}`),
       label: "زيارات تبادلية تنتظر اعتمادك", tone: "warning", icon: "eye" },
     { key: "notif", n: notif, to: "/notifications-review", label: "إشعارات تنتظر الاعتماد", tone: "warning", icon: "bell" },
+
+    // المتابعة: ما عند غيرك ولم ينتهِ
+    { key: "refFollow", n: refAway.length, to: "/referrals?tab=follow",
+      label: "إحالات قيد المتابعة", tone: awayLate ? "absent" : "mint", icon: "clipboard", follow: true,
+      sub: [awayC && `عند الموجهين ${awayC}`, awayG && `عند ولي الأمر ${awayG}`, awayLate && `متأخرة ${awayLate}`]
+        .filter(Boolean).join(" · ") },
 
     // للعلم
     { key: "replies", n: replies, to: "/forms-review", label: "إفادات وصلت على نماذجك", tone: "mint", icon: "inbox" },

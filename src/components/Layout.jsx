@@ -231,7 +231,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* لا شيء */ } },
 };
 
-/* أيقونات خطّية بسيطة — يستعملها صندوق «مهامي» أيضًا */
+/* أيقونات خطّية بسيطة — يستعملها صندوق «بانتظار إجرائك» أيضًا */
 export function Icon({ name, className = "h-[18px] w-[18px]" }) {
   const p = {
     home:   "M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5",

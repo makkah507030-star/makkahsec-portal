@@ -6,8 +6,10 @@ import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { noEra } from "../../lib/dates";
+import { GRADE_NAMES } from "../../lib/schoolTime";
 
 const BATCH = 400;
+const STATUS_AR = { transferred: "منقول", withdrawn: "منقطع" };
 
 export default function Import() {
   const { session } = useSession();
@@ -222,6 +224,21 @@ export default function Import() {
                 لن يُحذف أي منها. راجعها يدويًا بعد الاستيراد وعطّل ما يلزم — قد يكونون
                 طلابًا نُقلوا، وقد يكون الملف ناقصًا.
               </p>
+              <ol className="mt-3 max-h-72 divide-y divide-late/15 overflow-auto rounded-sm2 border border-late/20 bg-white">
+                {report.missing.map((m, i) => (
+                  <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2 text-sm">
+                    <span className="num w-6 shrink-0 text-xs text-faint">{i + 1}</span>
+                    <span className="min-w-0 flex-1 font-medium text-ink">{m.full_name || "—"}</span>
+                    {m.national_id && <span className="num text-xs text-muted">{m.national_id}</span>}
+                    {m.class_no != null && (
+                      <span className="text-xs text-muted">{GRADE_NAMES[m.grade] ?? ""} — فصل <span className="num">{m.class_no}</span></span>
+                    )}
+                    {m.status && m.status !== "active" && (
+                      <span className="chip bg-late/10 text-late">{STATUS_AR[m.status] ?? m.status}</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
             </div>
           )}
 
@@ -326,23 +343,54 @@ async function compareWithDb(type, valid, year, term) {
       .eq("academic_year", year);
     const existing = new Set((data ?? []).map((r) => r.class_no));
     const incoming = new Set(valid.map((r) => r.class_no));
+    const missing = [...existing].filter((c) => !incoming.has(c)).sort((a, b) => a - b)
+      .map((c) => ({ id: c, full_name: `فصل ${c}` }));
     return {
       newCount: valid.filter((r) => !existing.has(r.class_no)).length,
       updateCount: valid.filter((r) => existing.has(r.class_no)).length,
-      missingCount: [...existing].filter((c) => !incoming.has(c)).length,
+      missingCount: missing.length,
+      missing,
     };
   }
 
+  // الجديد والتحديث يُقارنان بكل السجلات، والمفقود بالنشطة فقط (المعطّل لا إجراء عليه)
   const table = type === "teachers" ? "teachers" : "students";
-  const { data } = await supabase.from(table).select("national_id");
-  const existing = new Set((data ?? []).map((r) => r.national_id));
+  const all = await fetchAll(table, "id, national_id, full_name, is_active");
+  const existing = new Set(all.map((r) => r.national_id));
   const incoming = new Set(valid.map((r) => r.national_id));
+  const missing = all.filter((r) => r.is_active && !incoming.has(r.national_id))
+    .map((r) => ({ id: r.id, national_id: r.national_id, full_name: r.full_name }));
+
+  // فصل الطالب المفقود وحالة قيده في العام النشط
+  if (type === "students" && missing.length) {
+    const ids = missing.map((m) => m.id);
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data } = await supabase.from("v_active_students")
+        .select("student_id, grade, class_no, status").in("student_id", ids.slice(i, i + 200));
+      const by = new Map((data ?? []).map((v) => [v.student_id, v]));
+      missing.forEach((m) => { if (by.has(m.id)) Object.assign(m, by.get(m.id)); });
+    }
+  }
+  missing.sort((a, b) => (a.grade ?? 9) - (b.grade ?? 9) || (a.class_no ?? 99) - (b.class_no ?? 99)
+    || (a.full_name ?? "").localeCompare(b.full_name ?? "", "ar"));
 
   return {
     newCount: valid.filter((r) => !existing.has(r.national_id)).length,
     updateCount: valid.filter((r) => existing.has(r.national_id)).length,
-    missingCount: [...existing].filter((n) => !incoming.has(n)).length,
+    missingCount: missing.length,
+    missing,
   };
+}
+
+// كل صفوف الجدول — Supabase يعيد 1000 صف على الأكثر في الطلب الواحد
+async function fetchAll(table, cols) {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from(table).select(cols).order("id").range(from, from + 999);
+    if (error) throw new Error(`${table}: ${error.message}`);
+    out.push(...(data ?? []));
+    if ((data ?? []).length < 1000) return out;
+  }
 }
 
 /* ================================================================== */

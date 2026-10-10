@@ -59,7 +59,7 @@ function ReportList() {
     roles.isDeputy && { k: "pending", t: "بانتظار الاعتماد" },
     roles.seesAll && { k: "all", t: "كل النماذج" },
   ].filter(Boolean);
-  // ?tab= من صندوق «مهامي» يفتح التبويب المطلوب إن كان متاحًا لصاحب الحساب
+  // ?tab= من صندوق «بانتظار إجرائك» يفتح التبويب المطلوب إن كان متاحًا لصاحب الحساب
   const [params] = useSearchParams();
   const linked = tabs.some((x) => x.k === params.get("tab")) ? params.get("tab") : null;
   const cur = tab ?? linked ?? (roles.isDeputy ? "pending" : roles.seesAll ? "all" : tabs[0]?.k);

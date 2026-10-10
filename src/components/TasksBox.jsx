@@ -6,7 +6,7 @@ import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 import { Icon } from "./Layout.jsx";
 
 /* =====================================================================
-   «مهامي» — صندوق المهام المعلقة في الرئيسية لكل الحسابات: بطاقة لكل نوع
+   «بانتظار إجرائك» — صندوق المهام المعلقة في الرئيسية لكل الحسابات: بطاقة لكل نوع
    إجراء ينتظر صاحب الحساب وعددها، والضغط يفتح مكان الإجراء مباشرة.
    المصدر lib/navBadges.js (العدادات نفسها في القائمة الجانبية).
    حين تُنجَز مهمة تظهر بطاقتها «✓ تمت» لحظات ثم تختفي.
@@ -52,14 +52,14 @@ export default function TasksBox() {
 
   if (!b._ready) return null;
 
-  const total = tasks.reduce((a, t) => a + t.n, 0);
+  const total = tasks.filter((t) => !t.follow).reduce((a, t) => a + t.n, 0);
   const shownDone = done.filter((d) => !tasks.some((t) => t.key === d.key));
   const expanded = tasks.find((t) => t.key === open);
 
   return (
     <section className="overflow-hidden rounded-card border border-line bg-white">
       <div className="flex items-center gap-2 border-b border-line px-4 py-2.5">
-        <p className="text-sm font-bold text-ink">مهامي</p>
+        <p className="text-sm font-bold text-ink">بانتظار إجرائك</p>
         {total > 0 ? (
           <span className="num rounded-full bg-warning-light px-2 py-0.5 text-xs font-bold text-warning">{total}</span>
         ) : null}
@@ -123,6 +123,7 @@ function TaskCard({ t, active, onExpand }) {
         <span className={`num text-2xl font-bold leading-none ${tone.num}`}>{t.n}</span>
       </div>
       <p className="mt-2 text-[12.5px] font-semibold leading-snug text-ink">{t.label}</p>
+      {t.sub && <p className="num mt-0.5 text-[11px] leading-snug text-muted">{t.sub}</p>}
       <p className="mt-auto pt-1.5 text-[11px] font-semibold text-mint-deep">
         {expands ? (active ? "إخفاء القائمة ↑" : "عرض القائمة ↓") : one ? "افتح الإجراء ←" : "انتقل للإجراء ←"}
       </p>
