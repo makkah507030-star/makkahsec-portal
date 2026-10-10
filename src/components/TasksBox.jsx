@@ -52,7 +52,7 @@ export default function TasksBox() {
 
   if (!b._ready) return null;
 
-  const total = tasks.reduce((a, t) => a + t.n, 0);
+  const total = tasks.filter((t) => !t.follow).reduce((a, t) => a + t.n, 0);
   const shownDone = done.filter((d) => !tasks.some((t) => t.key === d.key));
   const expanded = tasks.find((t) => t.key === open);
 
@@ -123,6 +123,7 @@ function TaskCard({ t, active, onExpand }) {
         <span className={`num text-2xl font-bold leading-none ${tone.num}`}>{t.n}</span>
       </div>
       <p className="mt-2 text-[12.5px] font-semibold leading-snug text-ink">{t.label}</p>
+      {t.sub && <p className="num mt-0.5 text-[11px] leading-snug text-muted">{t.sub}</p>}
       <p className="mt-auto pt-1.5 text-[11px] font-semibold text-mint-deep">
         {expands ? (active ? "إخفاء القائمة ↑" : "عرض القائمة ↓") : one ? "افتح الإجراء ←" : "انتقل للإجراء ←"}
       </p>
