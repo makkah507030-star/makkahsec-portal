@@ -15,6 +15,8 @@ import { countAr } from "../../lib/arabicCount.js";
    • الاختبارات من «جداول الاختبارات» لكل فصل ومادة (الفترتان، دون النهائي)،
      في جدول لكل صف كما في كشف متابعة نور: المواد ومعلموها (من الجدول الدراسي)
      في الصفوف، والفصول في الأعمدة، ونسبة الرصد لكل مادة وللصف (الجزئي نصف).
+   • عرضان: «حسب المادة» (الأساس، يطابق كشف نور: المادة ← صفوفها ← فصولها) و«حسب الصف».
+     إدخال سريع: تُختار حالة ثم تُضغط الخانات، أو تُطبَّق على كل فصول الصف.
    • الحالة لكل فصل: تم الرصد، أو رصد جزئي (لم يكتمل الفصل)، أو لم يرصد.
      يدخلها الوكيل أو الدعم الفني يدويًا بعد مراجعة نور، ولا إجراء على المعلم.
    • لون الخانة للحالة (أخضر تم، أزرق جزئي، وردي لم يرصد)، ورقمها الأيام منذ
@@ -27,6 +29,8 @@ const STATUS = {
   partial: { t: "رصد جزئي", on: "bg-excused text-white",    cell: "bg-[#D6E4F5]", hex: "#D6E4F5" },
   none:    { t: "لم يرصد",  on: "bg-danger text-white",     cell: "bg-danger-light", hex: "#FBEBEB" },
 };
+// اسم المادة دون رقم المستوى («الكيمياء 2» و«الرياضيات 1-1» ← الاسم وحده) لتجميعها عبر الصفوف
+const baseSubject = (n) => String(n ?? "—").replace(/[\s\d\-–_/()]+$/u, "").trim() || String(n ?? "—");
 // لون رقم الأيام داخل الخانة غير المكتملة بحسب المهلة
 const DAYS_TONE = { green: "text-mint-deep", orange: "text-warning", late: "text-danger" };
 
@@ -57,6 +61,9 @@ export default function NoorGrades() {
   const [gradeF, setGradeF] = useState(0);   // 0 = كل الصفوف
   const [busy, setBusy] = useState(null);
   const [sel, setSel] = useState(null);      // الخانة المفتوحة تفاصيلها (slot_id)
+  const [view, setView] = useState("subject");   // subject: كما في كشف نور، grade: نظرة عامة بالصف
+  const [brush, setBrush] = useState("detail");  // detail أو حالة تُطبَّق بالضغط على الخانة
+  const [subKey, setSubKey] = useState(null);    // المادة المفتوحة في العرض حسب المادة
   const today = todayISO();
 
   useEffect(() => {
@@ -89,26 +96,39 @@ export default function NoorGrades() {
     setTerms((ts) => ts.map((t) => (t.id === termId ? { ...t, grading_deadline: v || null } : t)));
   };
 
-  const setStatus = async (r, status) => {
-    if ((r.status ?? "none") === status) return;
-    let note = null;
-    if (status === "partial") {
-      note = window.prompt("ما الناقص في رصد هذا الفصل؟ (اختياري)", r.note ?? "");
-      if (note === null) return;
-    }
-    setBusy(r.slot_id);
+  // يسجّل حالة فصل أو عدة فصول دفعة واحدة. «لم يرصد» = حذف السجل.
+  const applyStatus = async (list, status, note = null) => {
+    const todo = list.filter((r) => r.st !== status || (status === "partial" && note !== null));
+    if (!todo.length) return;
+    const ids = todo.map((r) => r.slot_id);
+    const stamp = new Date().toISOString();
+    setBusy(ids.length === 1 ? ids[0] : "bulk");
     const { error } = status === "none"
-      ? await supabase.from("noor_grade_entries").delete().eq("exam_slot_id", r.slot_id)
-      : await supabase.from("noor_grade_entries").upsert({
-          exam_slot_id: r.slot_id, status, note: note?.trim() || null,
-          updated_name: profile?.full_name ?? null, updated_at: new Date().toISOString(),
-        });
+      ? await supabase.from("noor_grade_entries").delete().in("exam_slot_id", ids)
+      : await supabase.from("noor_grade_entries").upsert(ids.map((id) => ({
+          exam_slot_id: id, status, note: status === "partial" ? note?.trim() || null : null,
+          updated_name: profile?.full_name ?? null, updated_at: stamp,
+        })));
     setBusy(null);
     if (error) { alert(error.message); return; }
-    setRows((rs) => rs.map((x) => (x.slot_id === r.slot_id
+    const set = new Set(ids);
+    setRows((rs) => rs.map((x) => (set.has(x.slot_id)
       ? { ...x, status: status === "none" ? null : status, note: status === "partial" ? note?.trim() || null : null,
-          updated_name: profile?.full_name ?? null, updated_at: new Date().toISOString() }
+          updated_name: status === "none" ? null : profile?.full_name ?? null, updated_at: stamp }
       : x)));
+  };
+
+  // من لوحة التفاصيل: الجزئي يُسأل فيه عن الناقص
+  const setStatus = (r, status) => {
+    if (status !== "partial") return applyStatus([r], status);
+    const note = window.prompt("ما الناقص في رصد هذا الفصل؟ (اختياري)", r.note ?? "");
+    if (note !== null) applyStatus([r], status, note);
+  };
+
+  // الضغط على خانة: يفتح تفاصيلها، أو يلوّنها بالحالة المختارة في «الإدخال السريع»
+  const onCell = (r) => {
+    if (brush === "detail") setSel(sel === r.slot_id ? null : r.slot_id);
+    else applyStatus([r], brush);
   };
 
   // الصفوف مع مهلتها، والملخص، والتجميع: الصف ← المادة × الفصول
@@ -157,6 +177,38 @@ export default function NoorGrades() {
     }).filter((g) => g.subjects.length);
   }, [all, gradeF, q]);
 
+  // العرض حسب المادة: كل مادة وفيها صفوفها، وكل صف بفصوله
+  const subjects = useMemo(() => {
+    const qq = q.trim();
+    const m = new Map();
+    for (const r of all) {
+      if (gradeF && r.grade !== gradeF) continue;
+      const k = baseSubject(r.subject_name);
+      const sub = m.get(k) ?? { key: k, list: [], grades: new Map() };
+      sub.list.push(r);
+      const g = sub.grades.get(r.grade) ?? { grade: r.grade, cells: new Map(), list: [] };
+      if (!g.cells.has(r.class_no)) g.cells.set(r.class_no, r);
+      g.list.push(r);
+      sub.grades.set(r.grade, g);
+      m.set(k, sub);
+    }
+    return [...m.values()]
+      .filter((sub) => !qq || sub.key.includes(qq) || sub.list.some((r) => (r.teacher_name ?? "").includes(qq)))
+      .map((sub) => {
+        const grades = [...sub.grades.values()].sort((a, b) => a.grade - b.grade).map((g) => ({
+          ...g, pct: pct(g.list), names: [...new Set(g.list.map((r) => r.subject_name))],
+          teachers: [...new Set(g.list.map((r) => r.teacher_name ?? "غير محدد"))],
+          due: g.list.filter((r) => r.tm.key !== "soon"),
+        }));
+        const open = sub.list.filter((r) => r.st !== "done" && r.tm.key !== "soon");
+        return { ...sub, grades, pct: pct(sub.list), open: open.length,
+                 late: open.filter((r) => r.tm.key === "late").length,
+                 maxClass: Math.max(...sub.list.map((r) => r.class_no)) };
+      })
+      .sort((a, b) => a.key.localeCompare(b.key, "ar"));
+  }, [all, gradeF, q]);
+  const subject = subjects.find((s) => s.key === subKey) ?? subjects[0];
+
   const selRow = all.find((r) => r.slot_id === sel);
   const left = term?.grading_deadline ? daysBetween(today, term.grading_deadline) : null;
   const now = new Date();
@@ -204,6 +256,64 @@ export default function NoorGrades() {
 
   if (!terms) return <Loader />;
 
+  const cellBtn = (r) => {
+    const soon = r.tm.key === "soon";
+    return (
+      <button onClick={() => onCell(r)} disabled={busy === "bulk" || busy === r.slot_id}
+              title={`فصل ${r.class_no} · ${r.teacher_name ?? "معلم غير محدد"} · ${STATUS[r.st].t}${soon ? " · لم يحن" : ""}`}
+              className={`num grid h-9 w-full place-items-center text-[11px] font-bold transition
+                ${soon && r.st === "none" ? "bg-canvas text-faint" : `${STATUS[r.st].cell} ${DAYS_TONE[r.tm.key] ?? "text-muted"}`}
+                ${sel === r.slot_id ? "ring-2 ring-inset ring-ink" : ""} ${brush !== "detail" ? "hover:brightness-95" : ""}
+                ${match(r) ? "" : "opacity-25"}`}>
+        {soon ? (r.st === "none" ? "—" : "") : r.st === "done" ? "" : r.tm.d}
+      </button>
+    );
+  };
+
+  const detail = selRow && (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-mint-tint px-4 py-3 text-sm">
+      <div className="min-w-0 flex-1">
+        <p className="font-bold text-ink">
+          {selRow.subject_name} · {GRADE_NAMES[selRow.grade] ?? ""} · فصل <span className="num">{selRow.class_no}</span>
+        </p>
+        <p className="text-xs text-muted">
+          <span className={selRow.teacher_name ? "text-ink" : "text-warning"}>{selRow.teacher_name ?? "معلم غير محدد في الجدول"}</span>
+          {" · "}{selRow.exam_date ? <>اختبار {weekday(selRow.exam_date)} <span className="num">{fmtHijri(selRow.exam_date)}</span></> : "بلا تاريخ"}
+          {selRow.note && <> · <span className="text-warning">{selRow.note}</span></>}
+          {selRow.updated_name && <> · سجّله {selRow.updated_name}</>}
+        </p>
+      </div>
+      {selRow.st !== "done" && <span className={`chip ${selRow.tm.c}`}>{selRow.tm.t}</span>}
+      <div className="flex overflow-hidden rounded-sm2 border border-line">
+        {["none", "partial", "done"].map((k) => (
+          <button key={k} disabled={busy === selRow.slot_id} onClick={() => setStatus(selRow, k)}
+                  className={`px-2.5 py-1 text-xs ${selRow.st !== k ? "bg-paper text-muted hover:bg-canvas" : k === "none" && selRow.tm.key === "soon" ? "bg-canvas text-ink" : STATUS[k].on}`}>
+            {STATUS[k].t}
+          </button>
+        ))}
+      </div>
+      <button className="text-xs text-muted underline" onClick={() => setSel(null)}>إغلاق</button>
+    </div>
+  );
+
+  // شريط الإدخال: فتح التفاصيل، أو تلوين الخانات مباشرة بحالة
+  const BRUSH = [
+    ["detail", "عرض التفاصيل", "bg-paper text-ink"],
+    ["done", "تم الرصد", STATUS.done.on], ["partial", "رصد جزئي", STATUS.partial.on], ["none", "لم يرصد", STATUS.none.on],
+  ];
+  const brushBar = (
+    <div className="flex flex-wrap items-center gap-2 rounded-card border border-line bg-paper px-3 py-2">
+      <span className="text-xs font-semibold text-ink">الضغط على الخانة:</span>
+      {BRUSH.map(([k, t, on]) => (
+        <button key={k} onClick={() => { setBrush(k); setSel(null); }}
+                className={`rounded-sm2 px-3 py-1 text-xs ${brush === k ? `${on} ring-2 ring-ink/30` : "border border-line bg-paper text-muted"}`}>
+          {k === "detail" ? t : `يسجّل «${t}»`}
+        </button>
+      ))}
+      {brush !== "detail" && <span className="text-[11px] text-muted">إدخال سريع: كل خانة تضغطها تُحفظ فورًا.</span>}
+    </div>
+  );
+
   const legend = (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
       {["none", "done", "partial"].map((k) => (
@@ -221,7 +331,7 @@ export default function NoorGrades() {
       <div>
         <h1 className="text-lg font-bold text-ink">متابعة رصد الدرجات في نظام نور</h1>
         <p className="mt-0.5 text-sm text-muted">
-          لكل صف جدول: المواد ومعلموها في الصفوف، والفصول في الأعمدة. اضغط خانة الفصل لتسجيل حالته بعد مراجعة نور.
+          افتح المادة كما في كشف متابعة نور، وسجّل حالة كل فصل في صفوفها. للإدخال السريع اختر الحالة ثم اضغط الخانات، أو طبّقها على الصف كله.
         </p>
       </div>
 
@@ -293,13 +403,91 @@ export default function NoorGrades() {
                 </select>
                 <input className="field w-48 py-1 text-sm" placeholder="بحث بالمادة أو المعلم" value={q}
                        onChange={(e) => setQ(e.target.value)} />
+                <div className="flex overflow-hidden rounded-sm2 border border-line">
+                  {[["subject", "حسب المادة"], ["grade", "حسب الصف"]].map(([k, t]) => (
+                    <button key={k} onClick={() => { setView(k); setSel(null); }}
+                            className={`px-3 py-1 text-sm ${view === k ? "bg-mint-deep text-white" : "bg-paper text-ink"}`}>{t}</button>
+                  ))}
+                </div>
                 <div className="flex-1" />
                 <button className="btn-ghost" onClick={print}>طباعة الكشف</button>
               </div>
               {legend}
+              {brushBar}
 
-              {!grades.length && <p className="card p-4 text-sm text-muted">لا نتائج.</p>}
-              {grades.map((g) => (
+              {view === "subject" && (!subject ? <p className="card p-4 text-sm text-muted">لا نتائج.</p> : (
+                <>
+                  {/* المواد: اختر المادة التي تراجع كشفها في نور */}
+                  <div className="flex flex-wrap gap-2">
+                    {subjects.map((sub) => (
+                      <button key={sub.key} onClick={() => { setSubKey(sub.key); setSel(null); }}
+                              className={`rounded-card border px-3 py-1.5 text-right text-sm ${sub.key === subject.key
+                                ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-paper text-ink hover:bg-canvas"}`}>
+                        <span className="font-semibold">{sub.key}</span>
+                        <span className={`num mr-2 text-xs ${sub.key === subject.key ? "text-white/80" : "text-muted"}`}>
+                          {sub.pct === null ? "—" : `${sub.pct}%`}
+                        </span>
+                        {sub.late > 0 && <span className="num mr-1 rounded-pill bg-danger px-1.5 text-[11px] text-white">{sub.late}</span>}
+                      </button>
+                    ))}
+                  </div>
+
+                  <section className="card overflow-hidden">
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-mint-deep px-4 py-2 text-white">
+                      <h2 className="font-bold">{subject.key}</h2>
+                      <p className="text-sm">نسبة رصد المادة <span className="num font-bold">{subject.pct === null ? "—" : `${subject.pct}%`}</span>
+                        {subject.open ? <> · غير مكتمل <span className="num font-bold">{subject.open}</span></> : null}</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="bg-canvas text-xs text-muted">
+                            <th className="min-w-[11rem] border border-line/60 px-2 py-1.5 text-right">الصف والمعلمون</th>
+                            {Array.from({ length: subject.maxClass }, (_, i) => (
+                              <th key={i} className="num w-9 border border-line/60 px-1 py-1.5">{i + 1}</th>
+                            ))}
+                            <th className="w-16 border border-line/60 px-1 py-1.5">نسبة الرصد</th>
+                            {brush !== "detail" && <th className="w-20 border border-line/60 px-1 py-1.5">الصف كله</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {subject.grades.map((g) => (
+                            <tr key={g.grade}>
+                              <td className="border border-line/60 px-2 py-1.5">
+                                <p className="font-semibold text-ink">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</p>
+                                <p className="text-[11px] leading-snug text-muted">{g.teachers.join("، ")}</p>
+                                {g.names.some((n) => n !== subject.key) && (
+                                  <p className="text-[10px] text-faint">{g.names.join("، ")}</p>
+                                )}
+                              </td>
+                              {Array.from({ length: subject.maxClass }, (_, i) => {
+                                const r = g.cells.get(i + 1);
+                                return r ? <td key={i} className="border border-line/60 p-0">{cellBtn(r)}</td>
+                                  : <td key={i} className="border border-line/60 bg-paper" />;
+                              })}
+                              <td className="num border border-line/60 text-center font-bold text-mint-deep">{g.pct === null ? "—" : `${g.pct}%`}</td>
+                              {brush !== "detail" && (
+                                <td className="border border-line/60 p-1 text-center">
+                                  <button disabled={busy === "bulk" || !g.due.length}
+                                          onClick={() => applyStatus(g.due, brush)}
+                                          title="يطبّق الحالة على كل فصول الصف التي حلّ موعد اختبارها"
+                                          className={`w-full rounded-sm2 px-1 py-1 text-[11px] ${STATUS[brush].on} disabled:opacity-40`}>
+                                    {STATUS[brush].t}
+                                  </button>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {selRow && baseSubject(selRow.subject_name) === subject.key && detail}
+                  </section>
+                </>
+              ))}
+
+              {view === "grade" && !grades.length && <p className="card p-4 text-sm text-muted">لا نتائج.</p>}
+              {view === "grade" && grades.map((g) => (
                 <section key={g.grade} className="card overflow-hidden">
                   <h2 className="bg-mint-deep px-4 py-2 text-center font-bold text-white">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</h2>
                   <div className="overflow-x-auto">
@@ -323,19 +511,7 @@ export default function NoorGrades() {
                             {g.classes.map((c) => {
                               const r = sub.cells.get(c);
                               if (!r) return <td key={c} className="border border-line/60" />;
-                              const soon = r.tm.key === "soon";
-                              return (
-                                <td key={c} className="border border-line/60 p-0">
-                                  <button onClick={() => setSel(sel === r.slot_id ? null : r.slot_id)}
-                                          title={`${r.teacher_name ?? "معلم غير محدد"} · ${STATUS[r.st].t}${soon ? " · لم يحن" : ""}`}
-                                          className={`num grid h-9 w-full place-items-center text-[11px] font-bold
-                                            ${soon ? "bg-canvas text-faint" : `${STATUS[r.st].cell} ${DAYS_TONE[r.tm.key] ?? "text-muted"}`}
-                                            ${sel === r.slot_id ? "ring-2 ring-inset ring-ink" : ""}
-                                            ${match(r) ? "" : "opacity-25"}`}>
-                                    {soon ? "—" : r.st === "done" ? "" : r.tm.d}
-                                  </button>
-                                </td>
-                              );
+                              return <td key={c} className="border border-line/60 p-0">{cellBtn(r)}</td>;
                             })}
                             <td className="num border border-line/60 text-center font-bold text-mint-deep">
                               {sub.pct === null ? "—" : `${sub.pct}%`}
@@ -352,29 +528,7 @@ export default function NoorGrades() {
                     </table>
                   </div>
 
-                  {selRow && selRow.grade === g.grade && (
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-mint-tint px-4 py-3 text-sm">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-bold text-ink">{selRow.subject_name} · فصل <span className="num">{selRow.class_no}</span></p>
-                        <p className="text-xs text-muted">
-                          <span className={selRow.teacher_name ? "text-ink" : "text-warning"}>{selRow.teacher_name ?? "معلم غير محدد في الجدول"}</span>
-                          {" · "}{selRow.exam_date ? <>اختبار {weekday(selRow.exam_date)} <span className="num">{fmtHijri(selRow.exam_date)}</span></> : "بلا تاريخ"}
-                          {selRow.note && <> · <span className="text-warning">{selRow.note}</span></>}
-                          {selRow.updated_name && <> · سجّله {selRow.updated_name}</>}
-                        </p>
-                      </div>
-                      {selRow.st !== "done" && <span className={`chip ${selRow.tm.c}`}>{selRow.tm.t}</span>}
-                      <div className="flex overflow-hidden rounded-sm2 border border-line">
-                        {["none", "partial", "done"].map((k) => (
-                          <button key={k} disabled={busy === selRow.slot_id} onClick={() => setStatus(selRow, k)}
-                                  className={`px-2.5 py-1 text-xs ${selRow.st !== k ? "bg-paper text-muted hover:bg-canvas" : k === "none" && selRow.tm.key === "soon" ? "bg-canvas text-ink" : STATUS[k].on}`}>
-                            {STATUS[k].t}
-                          </button>
-                        ))}
-                      </div>
-                      <button className="text-xs text-muted underline" onClick={() => setSel(null)}>إغلاق</button>
-                    </div>
-                  )}
+                  {selRow && selRow.grade === g.grade && detail}
                 </section>
               ))}
             </>
