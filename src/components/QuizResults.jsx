@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import QuizFeedback from "./QuizFeedback.jsx";
 import { openQuizCard } from "../lib/quizCards.js";
+import { countAr } from "../lib/arabicCount.js";
 
 /* =====================================================================
    نتائج الاختبارات القصيرة — للطالب وولي أمره.
@@ -79,8 +80,8 @@ export default function QuizResults({ studentId = null, compact = false }) {
           <p className="text-sm font-bold text-ink">نتائج الاختبارات القصيرة</p>
           {avg !== null && (
             <p className="num mt-0.5 text-xs text-muted">
-              المتوسط العام: <span className="font-semibold text-mint-deep">{avg}%</span>
-              {" · "}{graded.length} اختبارًا
+              المتوسط العام: <span className="num font-semibold text-mint-deep">{avg}%</span>
+              {" · "}{countAr(graded.length, "quiz")}
             </p>
           )}
         </div>
