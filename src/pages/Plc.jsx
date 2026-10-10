@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { loadActiveTerm } from "../lib/officialAttendance";
@@ -68,7 +68,10 @@ function SessionList() {
     if (roles.seesAll) t.push({ k: "all", t: "كل الجلسات" });
     return t;
   }, [dept, roles.isDeputy, roles.seesAll]);
-  const cur = tab ?? (roles.isDeputy ? "pending" : roles.seesAll ? "all" : tabs[0]?.k);
+  // ?tab= من صندوق «مهامي» يفتح التبويب المطلوب إن كان متاحًا لصاحب الحساب
+  const [params] = useSearchParams();
+  const linked = tabs.some((x) => x.k === params.get("tab")) ? params.get("tab") : null;
+  const cur = tab ?? linked ?? (roles.isDeputy ? "pending" : roles.seesAll ? "all" : tabs[0]?.k);
 
   const attended = (r) => (r.attendees ?? []).some((a) => a.user_id === uid);
   const signed = (r) => (r.plc_signatures ?? []).some((g) => g.user_id === uid);

@@ -1,7 +1,7 @@
 // src/pages/Login.jsx
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { supabase, idToEmail, isConfigured } from "../lib/supabase";
+import { supabase, idToEmail, isConfigured, normalizeLogin } from "../lib/supabase";
 import logoIcon from "../assets/icon-mint.png";
 import { useNotice } from "../lib/useNotice.js";
 import TrialBanner from "../components/TrialBanner.jsx";
@@ -46,7 +46,7 @@ export default function Login() {
   // تسجيل محاولة الدخول (ناجحة أو فاشلة) في سجل الدخول والخروج — بلا
   // انتظار ولا تعطيل لتجربة الدخول لو فشل التسجيل نفسه لأي سبب
   const logAttempt = (success, reason) => {
-    const nid = nationalId.trim();
+    const nid = normalizeLogin(nationalId);
     if (!nid) return;
     supabase
       .from("login_log")
@@ -60,7 +60,7 @@ export default function Login() {
     setBusy(true);
 
     const { error } = await supabase.auth.signInWithPassword({
-      email: idToEmail(nationalId),
+      email: idToEmail(normalizeLogin(nationalId)),
       password,
     });
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
@@ -51,8 +52,11 @@ export default function Guidance() {
   const { adminRoles, profile } = useSession();
   const seesAll = adminRoles.some((r) => ["principal", "deputy_students", "tech_support"].includes(r));
   const myGrades = [1, 2, 3].filter((g) => seesAll || adminRoles.includes(`counselor_${g}`));
-  const [grade, setGrade] = useState(myGrades[0] ?? null);
-  const [tab, setTab] = useState("warn");
+  // ?tab=requests&grade=2 من صندوق «مهامي»
+  const [params] = useSearchParams();
+  const linkedGrade = Number(params.get("grade"));
+  const [grade, setGrade] = useState(myGrades.includes(linkedGrade) ? linkedGrade : myGrades[0] ?? null);
+  const [tab, setTab] = useState(["warn", "cases", "programs", "requests", "report"].includes(params.get("tab")) ? params.get("tab") : "warn");
   const [newCase, setNewCase] = useState(null);   // { student, title, details, source }
   const [openCase, setOpenCase] = useState(null); // معرّف الحالة
   const [tick, setTick] = useState(0);

@@ -34,7 +34,7 @@ import { notifyUsers } from "../../lib/referrals";
 import ExamCountdown from "../../components/ExamCountdown.jsx";
 import DutyCard from "../../components/DutyCard.jsx";
 import ReferralsInbox from "../../components/ReferralsInbox.jsx";
-import PendingAlertsCard from "../../components/PendingAlertsCard.jsx";
+import TasksBox from "../../components/TasksBox.jsx";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 
@@ -188,7 +188,7 @@ export default function Dashboard() {
 
       <HolidayBanner />
 
-      <PendingAlertsCard />
+      <TasksBox />
 
       <DutyCard />
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { supabase, initialPassword } from "../../lib/supabase";
 import { ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDateTime } from "../../lib/dates";
@@ -57,7 +57,7 @@ export default function PasswordReset() {
 
       setMsg({
         ok: true,
-        text: `أُعيدت كلمة مرور ${data.full_name} إلى: ${data.username} — سيُطلب تغييرها عند أول دخول.`,
+        text: `أُعيدت كلمة مرور ${data.full_name} إلى: ${data.password ?? initialPassword(data.username)} — سيُطلب تغييرها عند أول دخول.`,
       });
       setConfirming(null);
       await search();
@@ -73,8 +73,8 @@ export default function PasswordReset() {
       <div>
         <h1 className="text-lg font-bold text-ink">استعادة كلمة المرور</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          تُعاد كلمة المرور إلى اسم المستخدم نفسه (رقم الهوية أو الجوال)،
-          ويُطلب من المستخدم تغييرها عند أول دخول.
+          تُعاد كلمة المرور إلى اسم المستخدم نفسه (رقم الهوية أو الجوال)، والرقم الأقصر من 6 خانات
+          يُكمَّل بأصفار من اليسار حتى 10 خانات، ويُطلب من المستخدم تغييرها عند أول دخول.
         </p>
       </div>
 
@@ -151,7 +151,7 @@ export default function PasswordReset() {
                     <div className="mt-3 rounded-sm2 bg-warning-light/60 p-3">
                       <p className="text-sm leading-relaxed text-ink">
                         ستُعاد كلمة مرور <b>{u.full_name ?? u.username}</b> إلى{" "}
-                        <b className="num">{u.username}</b>. هل تريد المتابعة؟
+                        <b className="num">{initialPassword(u.username)}</b>. هل تريد المتابعة؟
                       </p>
                       <div className="mt-3 flex gap-2">
                         <button className="btn-primary" onClick={() => reset(u)} disabled={busy}>

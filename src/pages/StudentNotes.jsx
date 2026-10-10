@@ -9,6 +9,10 @@ import { NOTE_KINDS, isExpired, writableKinds } from "../lib/studentNotes.js";
 import { fmtDate } from "../lib/dates";
 import { useNotice } from "../lib/useNotice.js";
 import Loader from "../components/Loader.jsx";
+import PrintPortal from "../components/PrintPortal.jsx";
+import { printThen } from "../lib/print.js";
+import moeLogo from "../assets/moe-logo.png";
+import logoIcon from "../assets/icon-mint.png";
 
 /* =====================================================================
    ملاحظات الطلاب — يكتب كل أنواعها الموجه الصحي والموجهون الطلابيون،
@@ -29,6 +33,7 @@ export default function StudentNotes() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useNotice(null);
   const [missing, setMissing] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const myName = profile?.full_name ?? "";
 
   const load = async () => {
@@ -104,6 +109,10 @@ export default function StudentNotes() {
   const shown = (list ?? []).filter((n) =>
     (filter === "all" || n.kind === filter) &&
     (!q.trim() || (n.students?.full_name ?? "").includes(q.trim())));
+
+  // الطباعة تأخذ القائمة الظاهرة بتصفيتها وبحثها الحاليين
+  const print = () => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 80); };
+  const filterLabel = filter === "all" ? "كل الأنواع" : NOTE_KINDS[filter].label;
 
   return (
     <div className="space-y-4">
@@ -207,6 +216,9 @@ export default function StudentNotes() {
           ))}
           <input className="field mr-auto w-44 py-1.5 text-sm" placeholder="بحث باسم الطالب" value={q}
                  onChange={(e) => setQ(e.target.value)} />
+          <button type="button" className="btn-ghost px-3 py-1.5 text-xs" disabled={!shown.length} onClick={print}>
+            طباعة / حفظ PDF
+          </button>
         </div>
 
         {list == null ? <div className="p-6"><Loader /></div> : (
@@ -245,6 +257,83 @@ export default function StudentNotes() {
           </div>
         )}
       </section>
+
+      {printing && <NotesPrint notes={shown} classes={classes} filterLabel={filterLabel} q={q.trim()} />}
     </div>
+  );
+}
+
+/* ---------------- نسخة الطباعة: جدول رسمي يتوزع على صفحات A4 ---------------- */
+
+const GOV = ["المملكة العربية السعودية", "وزارة التعليم", "الإدارة العامة للتعليم بمنطقة مكة المكرمة"];
+const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
+
+function NotesPrint({ notes, classes, filterLabel, q }) {
+  // مرتبة بالصف ثم الفصل ثم الاسم ليسهل الرجوع إليها ورقيًا
+  const rows = [...notes].sort((a, b) => {
+    const ca = classes[a.student_id] ?? {}, cb = classes[b.student_id] ?? {};
+    return (ca.grade ?? 9) - (cb.grade ?? 9) || (ca.class_no ?? 99) - (cb.class_no ?? 99)
+      || (a.students?.full_name ?? "").localeCompare(b.students?.full_name ?? "", "ar");
+  });
+  const cell = { border: "1px solid #d8e4dc", padding: "5px 7px", verticalAlign: "top" };
+  const state = (n) => [
+    n.confidential && "سرية",
+    !n.is_active && "موقوفة",
+    isExpired(n) && "انتهت مراجعتها",
+    n.guardian_informed && "أُبلغ ولي الأمر",
+  ].filter(Boolean).join("، ");
+
+  return (
+    <PrintPortal id="notes-print" margin="12mm 12mm"
+                 extraCss="#notes-print thead { display: table-header-group; } #notes-print tr { break-inside: avoid; }">
+      <div dir="rtl" className="text-ink" style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: 12 }}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="text-[11px] font-medium leading-[1.9]">
+            {GOV.map((l) => <div key={l}>{l}</div>)}
+            <div className="font-bold text-mint-deep">مدرسة مكة الثانوية</div>
+          </div>
+          <div className="flex items-center gap-4">
+            <img src={moeLogo} alt="" className="h-10 w-auto" />
+            <img src={logoIcon} alt="" className="h-10 w-auto" />
+          </div>
+        </div>
+        <div className="mt-2.5 h-px w-full" style={{ background: "#3E6350", ...INK }} />
+
+        <h1 className="mt-4 text-center text-[18px] font-bold text-mint-deep">ملاحظات الطلاب</h1>
+        <p className="mt-1 text-center text-[11.5px] text-muted">
+          {filterLabel}{q && <> · بحث: {q}</>} · عدد الملاحظات <span className="num">{rows.length}</span>
+          {" "}· تاريخ الطباعة {fmtDate(new Date())}
+        </p>
+
+        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 10, fontSize: 11.5 }}>
+          <thead>
+            <tr>
+              {["م", "الطالب", "الصف", "النوع", "الملاحظة وما يفعله المعلم", "الحالة"].map((h) => (
+                <th key={h} style={{ background: "#3E6350", color: "#fff", padding: 5, fontWeight: 600, ...INK }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((n, i) => (
+              <tr key={n.id}>
+                <td style={{ ...cell, textAlign: "center" }} className="num">{i + 1}</td>
+                <td style={{ ...cell, fontWeight: 600, width: "22%" }}>{n.students?.full_name}</td>
+                <td style={{ ...cell, whiteSpace: "nowrap" }}>{studentClassLabel(classes[n.student_id])}</td>
+                <td style={{ ...cell, whiteSpace: "nowrap" }}>{NOTE_KINDS[n.kind]?.label}</td>
+                <td style={{ ...cell, whiteSpace: "pre-line", lineHeight: 1.7 }}>
+                  {n.body}
+                  {n.review_until && <div className="text-[10px] text-muted">تُراجع في <span className="num">{n.review_until}</span></div>}
+                </td>
+                <td style={{ ...cell, fontSize: 10.5 }}>{state(n) || "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <p className="mt-4 text-center text-[10px] text-faint">
+          وثيقة داخلية — قد تتضمن ملاحظات سرية · صدر من بوابة مكة الثانوية الرقمية · makkahsec.com
+        </p>
+      </div>
+    </PrintPortal>
   );
 }
