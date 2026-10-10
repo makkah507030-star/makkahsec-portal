@@ -59,6 +59,15 @@ function timing(r, today) {
   return { key: "late", d, t: `متأخر · ${since}`, c: "bg-danger-light text-danger" };
 }
 
+/** صف الكشف مع موعده ومهلته وحالته. مادة التقويم المستمر (بلا اختبار في الجدول)
+    يُحسب موعدها من آخر يوم في فترة الاختبارات، بالمهلة نفسها. */
+function enrich(r, lastExamDay, examSubjects, today) {
+  // تقويم مستمر: المادة كلها بلا اختبارات. أما فصل ناقص من مادة لها اختبارات فيبقى «بلا موعد»
+  const cont = !r.exam_date && !examSubjects.has(r.subject_id);
+  const due_date = r.exam_date ?? (cont ? lastExamDay : null);
+  return { ...r, cont, due_date, st: r.status ?? "none", tm: timing({ exam_date: due_date }, today) };
+}
+
 export default function NoorGrades() {
   const { profile } = useSession();
   const [terms, setTerms] = useState(null);
@@ -139,7 +148,15 @@ export default function NoorGrades() {
   };
 
   // الصفوف مع مهلتها، والملخص، والتجميع: الصف ← المادة × الفصول
-  const all = useMemo(() => (rows ?? []).map((r) => ({ ...r, st: r.status ?? "none", tm: timing(r, today) })), [rows, today]);
+  // آخر يوم اختبارات في الفترة: نهايتها في «جداول الاختبارات»، وإلا آخر موعد اختبار مسجّل.
+  // منه تُحسب مهلة مواد التقويم المستمر (بلا موعد في جداول الاختبارات).
+  const termEnd = terms?.find((t) => t.id === termId)?.end_date ?? null;
+  const lastExamDay = useMemo(() => termEnd
+    ?? (rows ?? []).reduce((a, r) => (r.exam_date && (!a || r.exam_date > a) ? r.exam_date : a), null), [rows, termEnd]);
+  const all = useMemo(() => {
+    const examSubjects = new Set((rows ?? []).filter((r) => r.exam_date).map((r) => r.subject_id));
+    return (rows ?? []).map((r) => enrich(r, lastExamDay, examSubjects, today));
+  }, [rows, lastExamDay, today]);
   // الصف المختار وحده؛ قبل اختياره لا يظهر شيء
   const scoped = useMemo(() => (gradeF ? all.filter((r) => r.grade === gradeF) : []), [all, gradeF]);
   const due = scoped.filter((r) => r.tm.key !== "soon");   // ما حلّ موعد اختباره
@@ -217,7 +234,7 @@ export default function NoorGrades() {
 
   // كشف الطباعة: مواد الصف المختار ومعلموها الذين حلّ موعد اختبارهم ولم يكتمل رصدهم
   const print = () => {
-    const pend = scoped.filter((r) => r.st !== "done" && r.exam_date && r.tm.key !== "soon");
+    const pend = scoped.filter((r) => r.st !== "done" && r.due_date && r.tm.key !== "soon");
     if (!pend.length) { alert(`لا فصول حلّ موعد اختبارها ولم تُرصد في ${GRADE_NAMES[gradeF] ?? "الصف"}.`); return; }
     const m = new Map();
     for (const r of pend) {
@@ -229,13 +246,15 @@ export default function NoorGrades() {
     const groups = [...m.values()].sort((a, b) => a.subject.localeCompare(b.subject, "ar") || a.teacher.localeCompare(b.teacher, "ar"));
     const rows = groups.map((g, i) => {
       g.list.sort((a, b) => a.class_no - b.class_no);
-      const oldest = g.list.reduce((a, r) => (r.exam_date < a ? r.exam_date : a), g.list[0].exam_date);
+      const oldest = g.list.reduce((a, r) => (r.due_date < a ? r.due_date : a), g.list[0].due_date);
+      const allCont = g.list.every((r) => r.cont);
       const days = Math.max(...g.list.map((r) => r.tm.d ?? 0));
+      const late = days > 5;
       return [
         i + 1, g.subject, g.teacher,
         g.list.map((r) => `${classCode(r.grade, r.class_no)}${r.st === "partial" ? " (جزئي)" : ""}`).join("، "),
-        fmtHijri(oldest),
-        days > 5 ? `<b style="color:#A23B3B">${days} · متأخر</b>` : days,
+        allCont ? `${fmtHijri(oldest)} (تقويم مستمر)` : fmtHijri(oldest),
+        late ? `<b style="color:#A23B3B">${days} · متأخر</b>` : days,
       ];
     });
     printReport({
@@ -244,7 +263,7 @@ export default function NoorGrades() {
         + (term?.grading_deadline ? ` · نهاية الرصد ${weekday(term.grading_deadline)} ${fmtHijri(term.grading_deadline)}` : ""),
       headers: ["م", "المادة", "المعلم", "الفصول غير المرصودة", "تاريخ الاختبار", "الأيام منذ الاختبار"],
       rows,
-      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. «جزئي»: رُصد بعض الفصل. الأيام لأقدم اختبار في الصف.`,
+      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. «جزئي»: رُصد بعض الفصل. الأيام لأقدم اختبار في الصف، ومواد التقويم المستمر من آخر يوم اختبارات.`,
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       signatures: [{ title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
@@ -278,7 +297,9 @@ export default function NoorGrades() {
         </p>
         <p className="text-xs text-muted">
           <span className={selRow.teacher_name ? "text-ink" : "text-warning"}>{selRow.teacher_name ?? "معلم غير محدد في الجدول"}</span>
-          {" · "}{selRow.exam_date ? <>اختبار {weekday(selRow.exam_date)} <span className="num">{fmtHijri(selRow.exam_date)}</span></> : "بلا تاريخ"}
+          {" · "}{selRow.exam_date ? <>اختبار {weekday(selRow.exam_date)} <span className="num">{fmtHijri(selRow.exam_date)}</span></>
+            : selRow.due_date ? <>تقويم مستمر · يُحسب من آخر يوم اختبارات <span className="num">{weekday(selRow.due_date)} {fmtHijri(selRow.due_date)}</span></>
+            : "بلا موعد اختبار في «جداول الاختبارات» مع أن لمادته اختبارات"}
           {selRow.note && <> · <span className="text-warning">{selRow.note}</span></>}
           {selRow.updated_name && <> · سجّله {selRow.updated_name}</>}
         </p>
@@ -357,6 +378,11 @@ export default function NoorGrades() {
                     {weekday(term.grading_deadline)} <span className="num">{fmtDate(term.grading_deadline)}</span>
                   </p>
                 ) : <p className="mt-0.5 text-sm text-warning">لم يُحدَّد آخر يوم للرصد بعد.</p>}
+                <p className="mt-1 text-xs text-muted">
+                  {lastExamDay ? <>مواد التقويم المستمر (بلا موعد في «جداول الاختبارات») تُحسب مهلتها من آخر يوم اختبارات{" "}
+                    <span className="num">{weekday(lastExamDay)} {fmtHijri(lastExamDay)}</span>.</>
+                    : <span className="text-warning">لا مواعيد في «جداول الاختبارات» بعد، فلا تُحسب مهلة لمواد التقويم المستمر.</span>}
+                </p>
                 <label className="mt-2 flex items-center gap-2 text-xs text-muted">
                   تعديل:
                   <input type="date" className="field num w-44 py-1 text-sm" value={term.grading_deadline ?? ""}
