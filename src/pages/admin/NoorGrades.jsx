@@ -11,10 +11,10 @@ import { countAr } from "../../lib/arabicCount.js";
 
 /* =====================================================================
    متابعة رصد درجات الفترات في نظام نور — لوكيل الشؤون التعليمية والدعم الفني
-   والمدير (supabase/noor_grades_1.sql و noor_grades_2.sql).
-   • الاختبارات من «جداول الاختبارات» لكل فصل ومادة (الفترتان، دون النهائي)،
-     في جدول لكل صف كما في كشف متابعة نور: المواد ومعلموها (من الجدول الدراسي)
-     في الصفوف، والفصول في الأعمدة، ونسبة الرصد لكل مادة وللصف (الجزئي نصف).
+   والمدير (supabase/noor_grades_1.sql … noor_grades_5.sql).
+   • الكشف من الجدول الدراسي: كل مادة بكل فصولها ومعلميها كما في كشف نور،
+     وموعد الاختبار من «جداول الاختبارات» إن وُجد (وإلا «بلا تاريخ» دون لون مهلة).
+   • نسبة الرصد لكل مادة وصف وفترة (الجزئي نصف)، ولا يُحسب ما لم يحن اختباره.
    • عرضان: «حسب المادة» (الأساس، يطابق كشف نور: المادة ← صفوفها ← فصولها) و«حسب الصف».
      إدخال سريع: تُختار حالة ثم تُضغط الخانات، أو تُطبَّق على كل فصول الصف.
    • الحالة لكل فصل: تم الرصد، أو رصد جزئي (لم يكتمل الفصل)، أو لم يرصد.
@@ -89,9 +89,9 @@ export default function NoorGrades() {
 
   const load = async (id) => {
     setRows(null); setErr("");
-    const { data, error } = await supabase.rpc("noor_grade_board", { p_term: id });
-    if (error) setErr(error.message?.includes("noor_grade_board")
-      ? "المتابعة غير مفعّلة بعد في قاعدة البيانات: شغّل ملفي noor_grades_1.sql و noor_grades_2.sql."
+    const { data, error } = await supabase.rpc("noor_grade_matrix", { p_term: id });
+    if (error) setErr(error.message?.includes("noor_grade_matrix")
+      ? "المتابعة غير مفعّلة بعد في قاعدة البيانات: شغّل ملفي noor_grades_4.sql و noor_grades_5.sql."
       : error.message);
     setRows(data ?? []);
   };
@@ -112,12 +112,11 @@ export default function NoorGrades() {
     const ids = todo.map((r) => r.slot_id);
     const stamp = new Date().toISOString();
     setBusy(ids.length === 1 ? ids[0] : "bulk");
-    const { error } = status === "none"
-      ? await supabase.from("noor_grade_entries").delete().in("exam_slot_id", ids)
-      : await supabase.from("noor_grade_entries").upsert(ids.map((id) => ({
-          exam_slot_id: id, status, note: status === "partial" ? note?.trim() || null : null,
-          updated_name: profile?.full_name ?? null, updated_at: stamp,
-        })));
+    const { error } = await supabase.rpc("noor_grade_set", {
+      p_term: termId, p_status: status, p_note: status === "partial" ? note : null,
+      p_name: profile?.full_name ?? null,
+      p_items: todo.map((r) => ({ class_id: r.class_id, subject_id: r.subject_id })),
+    });
     setBusy(null);
     if (error) { alert(error.message); return; }
     const set = new Set(ids);
