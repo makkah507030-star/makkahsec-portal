@@ -12,6 +12,9 @@ import ExamDayCard from "../components/ExamDayCard.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
+import TasksBox from "../components/TasksBox.jsx";
+import OnlineQuizzesCard from "../components/OnlineQuizzesCard.jsx";
+import QuizResults from "../components/QuizResults.jsx";
 import Loader from "../components/Loader.jsx";
 
 export default function StudentHome() {
@@ -135,7 +138,10 @@ export default function StudentHome() {
 
       <ExamDayCard />
 
-      <ResultsCard studentId={me.id} />
+      {/* الترتيب بالأولوية: ما ينتظر الطالب، ثم يومه، ثم حضوره، ثم نتائجه، ثم المرجع */}
+      <TasksBox />
+
+      <OnlineQuizzesCard />
 
       {/* جدول اليوم — لا يظهر إطلاقًا في أيام العطلة الأسبوعية */}
       {Boolean(dow) && (
@@ -171,6 +177,14 @@ export default function StudentHome() {
         </section>
       )}
 
+      <AttendanceLog key={me.id} studentId={me.id} fp={fp} />
+
+      <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
+
+      <ResultsCard studentId={me.id} />
+
+      <QuizResults studentId={me.id} compact />
+
       {/* الجدول الأسبوعي الكامل */}
       <section className="card overflow-hidden">
         <button onClick={() => setShowWeek((v) => !v)}
@@ -201,11 +215,7 @@ export default function StudentHome() {
         )}
       </section>
 
-      <AttendanceLog key={me.id} studentId={me.id} fp={fp} />
-
       <GuidanceRequestCard studentId={me.id} requester="student" />
-
-      <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
     </div>
   );
 }

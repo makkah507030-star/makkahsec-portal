@@ -11,6 +11,8 @@ import HolidayBanner from "../components/HolidayBanner.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
+import TasksBox from "../components/TasksBox.jsx";
+import QuizResults from "../components/QuizResults.jsx";
 import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
 
@@ -172,12 +174,21 @@ export default function GuardianHome() {
 
       <ExamDayCard />
 
-      <ResultsCard key={active?.id} studentId={active?.id} />
+      {/* الترتيب بالأولوية: ما ينتظر ولي الأمر، ثم حضور ابنه، ثم نتائجه، ثم يومه، ثم المرجع */}
+      <TasksBox />
 
       {loading ? (
         <Loader />
       ) : (
         <>
+
+          <AttendanceLog key={active?.id} studentId={active?.id} fp={fp} />
+
+          <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
+
+          <ResultsCard key={active?.id} studentId={active?.id} />
+
+          <QuizResults key={`q-${active?.id}`} studentId={active?.id} compact />
 
           {/* جدول اليوم — لا يظهر إطلاقًا في أيام العطلة الأسبوعية */}
           {Boolean(dow) && (
@@ -242,11 +253,7 @@ export default function GuardianHome() {
             )}
           </section>
 
-          <AttendanceLog key={active?.id} studentId={active?.id} fp={fp} />
-
           <GuidanceRequestCard key={`g-${active?.id}`} studentId={active?.id} requester="guardian" />
-
-          <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
         </>
       )}
     </div>
