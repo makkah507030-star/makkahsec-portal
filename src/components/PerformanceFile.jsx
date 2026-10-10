@@ -259,10 +259,12 @@ function DutyIndicators({ uid, year }) {
   );
 }
 
-/* الشواهد التي حُسب منها عدّاد البند الآلي: للمعلم في ملفه، وللمدير ليقيّمها */
+/* الشواهد التي حُسب منها عدّاد البند الآلي: للمعلم في ملفه، وللمدير ليقيّمها.
+   تُجمع حسب نوعها (العنوان) مع عدد مراته وآخرها، وتُفتح المجموعة لرؤية تفاصيلها. */
 function AutoDetails({ uid, year, itemKey }) {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
+  const [openG, setOpenG] = useState(null);   // المجموعة المفتوحة تفاصيلها
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.rpc("perf_auto_details", { p_uid: uid, p_year: year, p_item: itemKey });
@@ -270,19 +272,46 @@ function AutoDetails({ uid, year, itemKey }) {
       setRows(data ?? []);
     })();
   }, [uid, year, itemKey]);
+  const groups = useMemo(() => {
+    const m = new Map();
+    for (const r of rows ?? []) {
+      const t = r.r_title || "—";
+      const g = m.get(t) ?? { title: t, list: [], last: null };
+      g.list.push(r);
+      if (r.r_at && (!g.last || new Date(r.r_at) > new Date(g.last))) g.last = r.r_at;
+      m.set(t, g);
+    }
+    return [...m.values()].sort((a, b) => b.list.length - a.list.length);
+  }, [rows]);
   if (rows === null) return <p className="px-1 py-2 text-xs text-muted">جارٍ التحميل…</p>;
   if (err) return <p className="px-1 py-2 text-xs text-danger">{err}</p>;
   if (!rows.length) return <p className="px-1 py-2 text-xs text-muted">لا تفاصيل.</p>;
   return (
     <div className="divide-y divide-mint-light/70 rounded-sm2 border border-mint-light bg-paper">
-      {rows.map((r, i) => (
-        <div key={i} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 px-3 py-2 text-sm">
-          <span className="num w-5 shrink-0 text-xs text-muted">{i + 1}</span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-medium text-ink">{r.r_title || "—"}</span>
-            {r.r_detail && <span className="block text-xs leading-relaxed text-muted">{r.r_detail}</span>}
-          </span>
-          {r.r_at && <span className="num shrink-0 text-xs text-muted">{fmtDate(r.r_at)}</span>}
+      {groups.map((g, i) => (
+        <div key={g.title} className="px-3 py-2 text-sm">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="num w-5 shrink-0 text-xs text-muted">{i + 1}</span>
+            <span className="min-w-0 flex-1 font-medium text-ink">{g.title}</span>
+            <span className="chip bg-mint-light text-mint-deep">
+              <span className="num ml-1 font-bold">{g.list.length}</span>{g.list.length === 1 ? "مرة" : "مرات"}
+            </span>
+            {g.last && <span className="num shrink-0 text-xs text-muted">آخرها {fmtDate(g.last)}</span>}
+            <button className="text-xs text-mint-deep underline" onClick={() => setOpenG(openG === g.title ? null : g.title)}>
+              {openG === g.title ? "إخفاء التفاصيل" : "التفاصيل"}
+            </button>
+          </div>
+          {openG === g.title && (
+            <ol className="mt-2 space-y-1 border-r-2 border-mint-light pr-3">
+              {g.list.map((r, j) => (
+                <li key={j} className="flex flex-wrap items-baseline gap-x-3 text-xs">
+                  <span className="num w-5 shrink-0 text-muted">{j + 1}</span>
+                  <span className="min-w-0 flex-1 leading-relaxed text-muted">{r.r_detail || "—"}</span>
+                  {r.r_at && <span className="num shrink-0 text-muted">{fmtDate(r.r_at)}</span>}
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
       ))}
     </div>
