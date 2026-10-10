@@ -238,7 +238,7 @@ export default function App() {
   // الرئيسية للمعلم ملخص يومه، والتحضير صفحة مستقلة (/attendance) تفتحها بطاقة «يومي» بضغطة
   const teacherHome = (
     <div className="space-y-5">
-      <HeaderChips align="start" />
+      <HeaderChips />
       {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
       <TasksBox />
       <DutyCard personal />

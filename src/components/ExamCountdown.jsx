@@ -36,7 +36,7 @@ export default function ExamCountdown({ variant = "chip" }) {
   const when = days === 1 ? "غدًا" : `بعد ${countAr(days, "day", { acc: true })}`;
 
   return (
-    <p className={`inline-flex max-w-full flex-wrap items-center gap-x-1.5 rounded-pill border px-3 py-1 text-xs ${tone}`}
+    <p className={`flex flex-wrap items-center gap-x-1.5 rounded-pill border px-3 py-1 text-xs ${tone}`}
        title={`الأحد ${fmtDate(EXAM_DATE)}`}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"
            strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0"><path d="M3 5h18v16H3zM3 10h18M8 3v4M16 3v4" /></svg>
