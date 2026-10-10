@@ -66,8 +66,7 @@ export default function NoorGrades() {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [filter, setFilter] = useState("all");
-  const [q, setQ] = useState("");
-  const [gradeF, setGradeF] = useState(0);   // 0 = كل الصفوف
+  const [gradeF, setGradeF] = useState(0);   // 0 = لم يُختر صف بعد، فلا تظهر المواد
   const [busy, setBusy] = useState(null);
   const [sel, setSel] = useState(null);      // الخانة المفتوحة تفاصيلها (slot_id)
   const [view, setView] = useState("subject");   // subject: كما في كشف نور، grade: نظرة عامة بالصف
@@ -141,7 +140,9 @@ export default function NoorGrades() {
 
   // الصفوف مع مهلتها، والملخص، والتجميع: الصف ← المادة × الفصول
   const all = useMemo(() => (rows ?? []).map((r) => ({ ...r, st: r.status ?? "none", tm: timing(r, today) })), [rows, today]);
-  const due = all.filter((r) => r.tm.key !== "soon");   // ما حلّ موعد اختباره
+  // الصف المختار وحده؛ قبل اختياره لا يظهر شيء
+  const scoped = useMemo(() => (gradeF ? all.filter((r) => r.grade === gradeF) : []), [all, gradeF]);
+  const due = scoped.filter((r) => r.tm.key !== "soon");   // ما حلّ موعد اختباره
   const pct = (list) => {
     const d = list.filter((r) => r.tm.key !== "soon");
     if (!d.length) return null;
@@ -159,10 +160,8 @@ export default function NoorGrades() {
     : r.st === filter && r.tm.key !== "soon";
 
   const grades = useMemo(() => {
-    const qq = q.trim();
     const byGrade = new Map();
-    for (const r of all) {
-      if (gradeF && r.grade !== gradeF) continue;
+    for (const r of scoped) {
       const g = byGrade.get(r.grade) ?? { grade: r.grade, classes: new Set(), subjects: new Map() };
       g.classes.add(r.class_no);
       const sub = g.subjects.get(r.subject_name) ?? { name: r.subject_name ?? "—", cells: new Map(), list: [] };
@@ -174,7 +173,6 @@ export default function NoorGrades() {
     }
     return [...byGrade.values()].sort((a, b) => a.grade - b.grade).map((g) => {
       const subjects = [...g.subjects.values()]
-        .filter((sub) => !qq || sub.name.includes(qq) || sub.list.some((r) => (r.teacher_name ?? "").includes(qq)))
         .sort((a, b) => a.name.localeCompare(b.name, "ar"))
         .map((sub) => ({
           ...sub, pct: pct(sub.list),
@@ -184,14 +182,12 @@ export default function NoorGrades() {
       return { grade: g.grade, classes: [...g.classes].sort((a, b) => a - b), subjects,
                pct: pct(subjects.flatMap((s) => s.list)) };
     }).filter((g) => g.subjects.length);
-  }, [all, gradeF, q]);
+  }, [scoped]);
 
   // العرض حسب المادة: كل مادة وفيها صفوفها، وكل صف بفصوله
   const subjects = useMemo(() => {
-    const qq = q.trim();
     const m = new Map();
-    for (const r of all) {
-      if (gradeF && r.grade !== gradeF) continue;
+    for (const r of scoped) {
       const k = baseSubject(r.subject_name);
       const sub = m.get(k) ?? { key: k, list: [], grades: new Map() };
       sub.list.push(r);
@@ -202,7 +198,6 @@ export default function NoorGrades() {
       m.set(k, sub);
     }
     return [...m.values()]
-      .filter((sub) => !qq || sub.key.includes(qq) || sub.list.some((r) => (r.teacher_name ?? "").includes(qq)))
       .map((sub) => {
         const grades = [...sub.grades.values()].sort((a, b) => a.grade - b.grade).map((g) => ({
           ...g, pct: pct(g.list), names: [...new Set(g.list.map((r) => r.subject_name))],
@@ -216,7 +211,7 @@ export default function NoorGrades() {
                  maxClass: Math.max(...grades.map((g) => g.cellList.length)) };
       })
       .sort((a, b) => a.key.localeCompare(b.key, "ar"));
-  }, [all, gradeF, q]);
+  }, [scoped]);
   const subject = subjects.find((s) => s.key === subKey) ?? subjects[0];
 
   const selRow = all.find((r) => r.slot_id === sel);
@@ -254,7 +249,7 @@ export default function NoorGrades() {
           <span style="display:inline-block;width:14px;height:10px;background:${STATUS.partial.hex};border:1px solid #bbb"></span> رصد جزئي &nbsp;
           · الرقم في الخانة: الأيام منذ الاختبار</p>`;
     printReport({
-      title: `متابعة رصد درجات ${term?.title ?? ""} في نظام نور`,
+      title: `متابعة رصد درجات ${term?.title ?? ""} في نظام نور · ${GRADE_NAMES[gradeF] ?? ""}`,
       subtitle: `تم ${sum.done} · جزئي ${sum.partial} · لم يرصد ${sum.none} · متأخر ${sum.late}`
         + (term?.grading_deadline ? ` · نهاية الرصد ${weekday(term.grading_deadline)} ${fmtHijri(term.grading_deadline)}` : ""),
       sections: [{ html }],
@@ -344,7 +339,7 @@ export default function NoorGrades() {
       <div>
         <h1 className="text-lg font-bold text-ink">متابعة رصد الدرجات في نظام نور</h1>
         <p className="mt-0.5 text-sm text-muted">
-          افتح المادة كما في كشف متابعة نور، وسجّل حالة كل فصل في صفوفها. للإدخال السريع اختر الحالة ثم اضغط الخانات، أو طبّقها على الصف كله.
+          اختر الصف ثم المادة كما في كشف متابعة نور، وسجّل حالة كل فصل في صفوفها. للإدخال السريع اختر الحالة ثم اضغط الخانات، أو طبّقها على الصف كله.
         </p>
       </div>
 
@@ -391,10 +386,29 @@ export default function NoorGrades() {
           {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}
           {!rows ? <Loader /> : !err && (
             <>
+              {/* اختيار الصف أولًا: الصفحة فارغة حتى يُختار */}
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((g) => {
+                  const p = pct(all.filter((r) => r.grade === g));
+                  const on = gradeF === g;
+                  return (
+                    <button key={g} onClick={() => { setGradeF(g); setSubKey(null); setSel(null); }}
+                            className={`rounded-card border px-3 py-3 text-center ${on ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-paper text-ink hover:bg-canvas"}`}>
+                      <span className="block font-bold">{GRADE_NAMES[g]}</span>
+                      <span className={`block text-xs ${on ? "text-white/80" : "text-muted"}`}>
+                        {p === null ? "—" : <>نسبة الرصد <span className="num">{p}%</span></>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {!gradeF ? (
+                <p className="card p-6 text-center text-sm text-muted">اختر الصف لعرض مواده وفصوله.</p>
+              ) : (<>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 <div className="col-span-2 rounded-card bg-mint-deep px-3 py-2 text-center text-white sm:col-span-1">
-                  <span className="num block text-2xl font-bold leading-tight">{pct(all) ?? "—"}{pct(all) === null ? "" : "%"}</span>
-                  <span className="block text-xs">النسبة الإجمالية</span>
+                  <span className="num block text-2xl font-bold leading-tight">{pct(scoped) ?? "—"}{pct(scoped) === null ? "" : "%"}</span>
+                  <span className="block text-xs">نسبة {GRADE_NAMES[gradeF]}</span>
                 </div>
                 {[["done", "تم الرصد", "bg-mint-light text-mint-deep"], ["partial", "رصد جزئي", "bg-[#D6E4F5] text-excused"],
                   ["none", "لم يرصد", "bg-danger-light text-danger"], ["late", "متأخر", "bg-danger text-white"]].map(([k, t, c]) => (
@@ -410,12 +424,6 @@ export default function NoorGrades() {
               </p>
 
               <div className="flex flex-wrap items-center gap-2">
-                <select className="field w-36 py-1 text-sm" value={gradeF} onChange={(e) => setGradeF(Number(e.target.value))}>
-                  <option value={0}>كل الصفوف</option>
-                  {[1, 2, 3].map((g) => <option key={g} value={g}>{GRADE_NAMES[g]}</option>)}
-                </select>
-                <input className="field w-48 py-1 text-sm" placeholder="بحث بالمادة أو المعلم" value={q}
-                       onChange={(e) => setQ(e.target.value)} />
                 <div className="flex overflow-hidden rounded-sm2 border border-line">
                   {[["subject", "حسب المادة"], ["grade", "حسب الصف"]].map(([k, t]) => (
                     <button key={k} onClick={() => { setView(k); setSel(null); }}
@@ -580,6 +588,7 @@ export default function NoorGrades() {
                   {selRow && selRow.grade === g.grade && detail}
                 </section>
               ))}
+              </>)}
             </>
           )}
         </>
