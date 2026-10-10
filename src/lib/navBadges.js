@@ -16,6 +16,7 @@ import { countAr } from "./arabicCount.js";
      to     الصفحة التي يُنجز فيها الإجراء (مع التبويب المناسب)
      items  [{ id, to, title }] حين تكون عناصرها معروفة — فتُفتح مباشرة
             إن كانت واحدة، وتُعرض قائمتها إن تعددت
+            وبلا to يبقى العنصر للاطلاع فقط في القائمة (لا رابط له)
    تُحتسب بحسب الدور: الإدارة بأدوارها، والمعلم والطالب وولي الأمر بحسابه.
    يُحدَّث كل دقيقتين ما دامت الصفحة ظاهرة، وعند الانتقال بين الصفحات
    (refreshNavBadges). كلها عبر صلاحيات المستخدم نفسه (RLS).
@@ -61,7 +62,7 @@ function noorTask(rows) {
       : `باقي ${countAr(left, "day")}`}` : "",
     items: rows.map((r) => {
       const d = ago(r);
-      return { id: r.slot_id, to: "/exams",
+      return { id: r.slot_id,
         title: `${r.subject_name} · ${GRADE_NAMES[r.grade] ?? ""} ${r.class_no} · ${d === 0 ? "اليوم" : `منذ ${countAr(d, "day", { acc: true })}`}`
           + (r.status === "partial" ? " · رصد جزئي" : "") + (d > 5 ? " · متأخر" : "") };
     }),
