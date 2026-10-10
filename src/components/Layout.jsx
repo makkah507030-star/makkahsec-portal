@@ -231,8 +231,8 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* لا شيء */ } },
 };
 
-/* أيقونات خطّية بسيطة */
-function Icon({ name, className = "h-[18px] w-[18px]" }) {
+/* أيقونات خطّية بسيطة — يستعملها صندوق «مهامي» أيضًا */
+export function Icon({ name, className = "h-[18px] w-[18px]" }) {
   const p = {
     home:   "M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5",
     users:  "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9",
@@ -317,7 +317,7 @@ export default function Layout({ children }) {
   useEffect(() => { if (session) { loadPrincipalSignature(); loadSigners(); } }, [session]);
 
   // عدادات «بانتظار إجرائك» على روابط القائمة (lib/navBadges.js) — أدوار الإدارة تُحتسب في واجهتها فقط
-  const badges = useNavBadges(session?.user?.id, effectiveRole === "admin" ? adminRoles : []);
+  const badges = useNavBadges(session?.user?.id, effectiveRole === "admin" ? adminRoles : [], effectiveRole);
   useEffect(() => { refreshNavBadges(); }, [path]);
   const badgeOf = (to) => (to.startsWith("_") ? 0 : badges[to] ?? 0);
 

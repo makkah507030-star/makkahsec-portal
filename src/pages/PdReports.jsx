@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { loadActiveTerm } from "../lib/officialAttendance";
@@ -59,7 +59,10 @@ function ReportList() {
     roles.isDeputy && { k: "pending", t: "بانتظار الاعتماد" },
     roles.seesAll && { k: "all", t: "كل النماذج" },
   ].filter(Boolean);
-  const cur = tab ?? (roles.isDeputy ? "pending" : roles.seesAll ? "all" : tabs[0]?.k);
+  // ?tab= من صندوق «مهامي» يفتح التبويب المطلوب إن كان متاحًا لصاحب الحساب
+  const [params] = useSearchParams();
+  const linked = tabs.some((x) => x.k === params.get("tab")) ? params.get("tab") : null;
+  const cur = tab ?? linked ?? (roles.isDeputy ? "pending" : roles.seesAll ? "all" : tabs[0]?.k);
   const list = (rows ?? []).filter((r) => cur === "mine" ? r.owner_user_id === uid || attended(r)
     : cur === "sign" ? toSign(r) : cur === "dept" ? r.department_id === dept?.department_id
     : cur === "pending" ? r.status === "pending" : true);

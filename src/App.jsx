@@ -102,7 +102,7 @@ import { useHolidays } from "./lib/useHolidays.js";
 const ExamCountdown = lazy(() => import("./components/ExamCountdown.jsx"));
 const ExamDayCard = lazy(() => import("./components/ExamDayCard.jsx"));
 const TeacherTodayCard = lazy(() => import("./components/TeacherTodayCard.jsx"));
-const PendingAlertsCard = lazy(() => import("./components/PendingAlertsCard.jsx"));
+const TasksBox = lazy(() => import("./components/TasksBox.jsx"));
 import HolidayBanner from "./components/HolidayBanner.jsx";
 import TeacherDayCard from "./components/TeacherDayCard.jsx";
 import Loader from "./components/Loader.jsx";
@@ -241,7 +241,7 @@ export default function App() {
   const teacherHome = (
     <div className="space-y-5">
       {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
-      <PendingAlertsCard />
+      <TasksBox />
       <DutyCard personal />
       <ExamDayCard />
       <ExamCountdown />
@@ -253,6 +253,7 @@ export default function App() {
     teacher: teacherHome,
     student: (
       <div className="space-y-5">
+        <TasksBox />
         <OnlineQuizzesCard />
         <StudentHome />
         <QuizResults compact />
@@ -260,6 +261,7 @@ export default function App() {
     ),
     guardian: (
       <div className="space-y-5">
+        <TasksBox />
         <GuardianHome />
         <QuizResults compact />
       </div>
