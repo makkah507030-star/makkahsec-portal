@@ -423,18 +423,30 @@ export default function NoorGrades() {
               {view === "subject" && (!subject ? <p className="card p-4 text-sm text-muted">لا نتائج.</p> : (
                 <>
                   {/* المواد: اختر المادة التي تراجع كشفها في نور */}
-                  <div className="flex flex-wrap gap-2">
-                    {subjects.map((sub) => (
-                      <button key={sub.key} onClick={() => { setSubKey(sub.key); setSel(null); }}
-                              className={`rounded-card border px-3 py-1.5 text-right text-sm ${sub.key === subject.key
-                                ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-paper text-ink hover:bg-canvas"}`}>
-                        <span className="font-semibold">{sub.key}</span>
-                        <span className={`num mr-2 text-xs ${sub.key === subject.key ? "text-white/80" : "text-muted"}`}>
-                          {sub.pct === null ? "—" : `${sub.pct}%`}
-                        </span>
-                        {sub.late > 0 && <span className="num mr-1 rounded-pill bg-danger px-1.5 text-[11px] text-white">{sub.late}</span>}
-                      </button>
-                    ))}
+                  {/* بطاقات بمقاس واحد: الاسم، وتحته النسبة وشريطها وعدد المتأخر */}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                    {subjects.map((sub) => {
+                      const on = sub.key === subject.key;
+                      return (
+                        <button key={sub.key} onClick={() => { setSubKey(sub.key); setSel(null); }}
+                                className={`flex h-[4.5rem] flex-col justify-between rounded-card border px-3 py-2 text-right ${on
+                                  ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-paper text-ink hover:bg-canvas"}`}>
+                          <span className="block truncate text-sm font-semibold" title={sub.key}>{sub.key}</span>
+                          <span className="flex items-center gap-2">
+                            <span className={`h-1.5 flex-1 overflow-hidden rounded-pill ${on ? "bg-white/25" : "bg-line/50"}`}>
+                              <span className={`block h-full rounded-pill ${on ? "bg-white" : "bg-mint-deep"}`} style={{ width: `${sub.pct ?? 0}%` }} />
+                            </span>
+                            <span className={`num w-9 text-left text-xs font-bold ${on ? "text-white" : "text-mint-deep"}`}>
+                              {sub.pct === null ? "—" : `${sub.pct}%`}
+                            </span>
+                            {sub.late > 0 && (
+                              <span className="num grid h-5 min-w-[1.25rem] place-items-center rounded-pill bg-danger px-1 text-[11px] text-white"
+                                    title="فصول متأخرة">{sub.late}</span>
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <section className="card overflow-hidden">
