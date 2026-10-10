@@ -25,9 +25,9 @@ import { countAr } from "../../lib/arabicCount.js";
 
 // ألوان الحالة كما في كشف المتابعة المعتاد: أخضر تم، وأزرق جزئي، ووردي لم يرصد
 const STATUS = {
-  done:    { t: "تم الرصد", on: "bg-mint-deep text-white",  cell: "bg-mint-light", hex: "#CCF2DB" },
-  partial: { t: "رصد جزئي", on: "bg-excused text-white",    cell: "bg-[#D6E4F5]", hex: "#D6E4F5" },
-  none:    { t: "لم يرصد",  on: "bg-danger text-white",     cell: "bg-danger-light", hex: "#FBEBEB" },
+  done:    { t: "تم الرصد", on: "bg-mint-deep text-white",  cell: "bg-mint-light" },
+  partial: { t: "رصد جزئي", on: "bg-excused text-white",    cell: "bg-[#D6E4F5]" },
+  none:    { t: "لم يرصد",  on: "bg-danger text-white",     cell: "bg-danger-light" },
 };
 // لون بطاقة المادة بحسب نسبة رصدها: 90% فأكثر أخضر، ومن 60% برتقالي، وأقل أحمر
 function pctTone(p) {
@@ -174,11 +174,7 @@ export default function NoorGrades() {
     return [...byGrade.values()].sort((a, b) => a.grade - b.grade).map((g) => {
       const subjects = [...g.subjects.values()]
         .sort((a, b) => a.name.localeCompare(b.name, "ar"))
-        .map((sub) => ({
-          ...sub, pct: pct(sub.list),
-          // أسماء المعلمين تظهر في الكشف المطبوع وحده
-          teachers: [...new Set(sub.list.map((r) => r.teacher_name ?? "غير محدد"))],
-        }));
+        .map((sub) => ({ ...sub, pct: pct(sub.list) }));
       return { grade: g.grade, classes: [...g.classes].sort((a, b) => a - b), subjects,
                pct: pct(subjects.flatMap((s) => s.list)) };
     }).filter((g) => g.subjects.length);
@@ -219,40 +215,36 @@ export default function NoorGrades() {
   const now = new Date();
   const stamp = `${weekday(today)} ${fmtHijri(today)} الساعة ${new Intl.DateTimeFormat("ar-SA", { hour: "numeric", minute: "2-digit", numberingSystem: "latn" }).format(now)}`;
 
-  // الطباعة: جدول ملوّن لكل صف كما في الكشف المعتاد
+  // كشف الطباعة: مواد الصف المختار ومعلموها الذين حلّ موعد اختبارهم ولم يكتمل رصدهم
   const print = () => {
-    const td = "border:1px solid #bbb;padding:3px 4px;text-align:center;font-size:11px";
-    const html = grades.map((g) => `
-      <table style="width:100%;border-collapse:collapse;margin:0 0 6px">
-        <thead>
-          <tr><th colspan="${g.classes.length + 3}" style="${td};background:#1f3a2c;color:#fff;font-size:13px">${GRADE_NAMES[g.grade] ?? ""}</th></tr>
-          <tr><th style="${td}">م</th><th style="${td};text-align:right">المادة والمعلمون</th>
-            ${g.classes.map((c) => `<th style="${td};width:30px">${classCode(g.grade, c)}</th>`).join("")}<th style="${td}">نسبة الرصد</th></tr>
-        </thead>
-        <tbody>
-          ${g.subjects.map((sub, i) => `<tr><td style="${td}">${i + 1}</td>
-            <td style="${td};text-align:right"><b>${sub.name}</b><br><span style="color:#666;font-size:9px">${sub.teachers.join("، ")}</span></td>
-            ${g.classes.map((c) => {
-              const r = sub.cells.get(c);
-              if (!r) return `<td style="${td}"></td>`;
-              if (r.tm.key === "soon") return `<td style="${td};background:#f1f1f1;color:#999">—</td>`;
-              return `<td style="${td};background:${STATUS[r.st].hex}">${r.st === "done" ? "" : r.tm.d ?? ""}</td>`;
-            }).join("")}
-            <td style="${td};font-weight:bold;color:#3E6350">${sub.pct ?? "—"}${sub.pct === null ? "" : "%"}</td></tr>`).join("")}
-          <tr><td colspan="${g.classes.length + 2}" style="${td};background:#eee">النسبة الإجمالية للرصد حتى ${stamp}</td>
-            <td style="${td};font-weight:bold">${g.pct ?? "—"}${g.pct === null ? "" : "%"}</td></tr>
-        </tbody>
-      </table>`).join("")
-      + `<p style="font-size:11px;margin:4px 0">
-          <span style="display:inline-block;width:14px;height:10px;background:${STATUS.none.hex};border:1px solid #bbb"></span> لم يتم الرصد &nbsp;
-          <span style="display:inline-block;width:14px;height:10px;background:${STATUS.done.hex};border:1px solid #bbb"></span> تم الرصد &nbsp;
-          <span style="display:inline-block;width:14px;height:10px;background:${STATUS.partial.hex};border:1px solid #bbb"></span> رصد جزئي &nbsp;
-          · الرقم في الخانة: الأيام منذ الاختبار</p>`;
+    const pend = scoped.filter((r) => r.st !== "done" && r.exam_date && r.tm.key !== "soon");
+    if (!pend.length) { alert(`لا فصول حلّ موعد اختبارها ولم تُرصد في ${GRADE_NAMES[gradeF] ?? "الصف"}.`); return; }
+    const m = new Map();
+    for (const r of pend) {
+      const k = `${r.subject_name}|${r.teacher_name ?? ""}`;
+      const g = m.get(k) ?? { subject: r.subject_name, teacher: r.teacher_name ?? "غير محدد في الجدول", list: [] };
+      g.list.push(r);
+      m.set(k, g);
+    }
+    const groups = [...m.values()].sort((a, b) => a.subject.localeCompare(b.subject, "ar") || a.teacher.localeCompare(b.teacher, "ar"));
+    const rows = groups.map((g, i) => {
+      g.list.sort((a, b) => a.class_no - b.class_no);
+      const oldest = g.list.reduce((a, r) => (r.exam_date < a ? r.exam_date : a), g.list[0].exam_date);
+      const days = Math.max(...g.list.map((r) => r.tm.d ?? 0));
+      return [
+        i + 1, g.subject, g.teacher,
+        g.list.map((r) => `${classCode(r.grade, r.class_no)}${r.st === "partial" ? " (جزئي)" : ""}`).join("، "),
+        fmtHijri(oldest),
+        days > 5 ? `<b style="color:#A23B3B">${days} · متأخر</b>` : days,
+      ];
+    });
     printReport({
-      title: `متابعة رصد درجات ${term?.title ?? ""} في نظام نور · ${GRADE_NAMES[gradeF] ?? ""}`,
-      subtitle: `تم ${sum.done} · جزئي ${sum.partial} · لم يرصد ${sum.none} · متأخر ${sum.late}`
+      title: `كشف المتابعة: درجات لم تُرصد في نور · ${GRADE_NAMES[gradeF] ?? ""}`,
+      subtitle: `${term?.title ?? ""} · حتى ${stamp}`
         + (term?.grading_deadline ? ` · نهاية الرصد ${weekday(term.grading_deadline)} ${fmtHijri(term.grading_deadline)}` : ""),
-      sections: [{ html }],
+      headers: ["م", "المادة", "المعلم", "الفصول غير المرصودة", "تاريخ الاختبار", "الأيام منذ الاختبار"],
+      rows,
+      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. «جزئي»: رُصد بعض الفصل. الأيام لأقدم اختبار في الصف.`,
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       signatures: [{ title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
@@ -431,7 +423,7 @@ export default function NoorGrades() {
                   ))}
                 </div>
                 <div className="flex-1" />
-                <button className="btn-ghost" onClick={print}>طباعة الكشف</button>
+                <button className="btn-ghost" onClick={print}>طباعة كشف غير المرصود</button>
               </div>
               {legend}
               {brushBar}
