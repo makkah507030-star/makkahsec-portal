@@ -116,7 +116,7 @@ export default function Landing() {
 
       {/* العد التنازلي للاختبارات النهائية */}
       <div className="mx-auto max-w-6xl px-5 pt-10">
-        <ExamCountdown />
+        <ExamCountdown variant="card" />
       </div>
 
       {/* أخبار المدرسة */}

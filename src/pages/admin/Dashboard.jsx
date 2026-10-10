@@ -179,11 +179,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
-        <p className="mt-0.5 text-sm text-muted">
-          العام <span className="num">{noEra(d.yearLabel)}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+        <div>
+          <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
+          <p className="mt-0.5 text-sm text-muted">
+            العام <span className="num">{noEra(d.yearLabel)}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
+          </p>
+        </div>
+        <ExamCountdown />
       </header>
 
       <HolidayBanner />
@@ -191,8 +194,6 @@ export default function Dashboard() {
       <TasksBox />
 
       <DutyCard />
-
-      <ExamCountdown />
 
       {/* حساب إداري محدود الصلاحيات: ترحيب وتوجيه للقائمة الجانبية */}
       {barren && (
