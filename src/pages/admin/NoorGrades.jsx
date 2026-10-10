@@ -62,12 +62,13 @@ function timing(r, today) {
 /** حلّ موعد رصده: ما لم يحن اختباره أو لا موعد له لا يدخل في النسب والأعداد والكشف */
 const isDue = (r) => r.tm.key !== "soon" && r.tm.key !== "nodate";
 
-/** صف الكشف مع موعده ومهلته وحالته. مادة التقويم المستمر (بلا اختبار في الجدول)
-    يُحسب موعدها من آخر يوم في فترة الاختبارات، بالمهلة نفسها. */
-function enrich(r, lastExamDay, examSubjects, today) {
-  // تقويم مستمر: المادة كلها بلا اختبارات. أما فصل ناقص من مادة لها اختبارات فيبقى «بلا موعد»
-  const cont = !r.exam_date && !examSubjects.has(r.subject_id);
-  const due_date = r.exam_date ?? (cont ? lastExamDay : null);
+/** صف الكشف مع موعده ومهلته وحالته. مادة التقويم المستمر يُحسب موعدها من آخر يوم
+    في فترة الاختبارات بالمهلة نفسها، وهي: ما علّمه الوكيل تقويمًا مستمرًا (ويُتجاهل ما
+    سُجّل لها خطأً في جداول الاختبارات)، أو مادة لا اختبار لها لأي فصل. أما فصل ناقص من
+    مادة لها اختبارات فيبقى «بلا موعد». */
+function enrich(r, lastExamDay, examSubjects, contSet, today) {
+  const cont = contSet.has(r.subject_id) || (!r.exam_date && !examSubjects.has(r.subject_id));
+  const due_date = cont ? lastExamDay : r.exam_date ?? null;
   return { ...r, cont, due_date, st: r.status ?? "none", tm: timing({ exam_date: due_date }, today) };
 }
 
@@ -80,6 +81,7 @@ export default function NoorGrades() {
   const [filter, setFilter] = useState("all");
   const [gradeF, setGradeF] = useState(0);   // 0 = لم يُختر صف بعد، فلا تظهر المواد
   const [busy, setBusy] = useState(null);
+  const [contSet, setContSet] = useState(() => new Set());   // مواد علّمها الوكيل تقويمًا مستمرًا
   const [sel, setSel] = useState(null);      // الخانة المفتوحة تفاصيلها (slot_id)
   const [view, setView] = useState("subject");   // subject: كما في كشف نور، grade: نظرة عامة بالصف
   const [brush, setBrush] = useState("detail");  // detail أو حالة تُطبَّق بالضغط على الخانة
@@ -100,7 +102,11 @@ export default function NoorGrades() {
 
   const load = async (id) => {
     setRows(null); setErr("");
-    const { data, error } = await supabase.rpc("noor_grade_matrix", { p_term: id });
+    const [{ data, error }, { data: cs }] = await Promise.all([
+      supabase.rpc("noor_grade_matrix", { p_term: id }),
+      supabase.from("noor_cont_subjects").select("subject_id"),   // قبل تشغيل الجزء 6: لا شيء
+    ]);
+    setContSet(new Set((cs ?? []).map((x) => x.subject_id)));
     if (error) setErr(error.message?.includes("noor_grade_matrix")
       ? "المتابعة غير مفعّلة بعد في قاعدة البيانات: شغّل ملفي noor_grades_4.sql و noor_grades_5.sql."
       : error.message);
@@ -144,6 +150,22 @@ export default function NoorGrades() {
     if (note !== null) applyStatus([r], status, note);
   };
 
+  // تعليم المادة تقويمًا مستمرًا أو إلغاؤه (لكل معرّفاتها في الصف)
+  const toggleCont = async (sub) => {
+    const { error } = sub.marked
+      ? await supabase.from("noor_cont_subjects").delete().in("subject_id", sub.ids)
+      : await supabase.from("noor_cont_subjects").upsert(sub.ids.map((id) => ({ subject_id: id })));
+    if (error) {
+      alert(error.message?.includes("noor_cont_subjects") ? "شغّل ملف noor_grades_6.sql في Supabase أولًا." : error.message);
+      return;
+    }
+    setContSet((cs) => {
+      const n = new Set(cs);
+      for (const id of sub.ids) { if (sub.marked) n.delete(id); else n.add(id); }
+      return n;
+    });
+  };
+
   // الضغط على خانة: يفتح تفاصيلها، أو يلوّنها بالحالة المختارة في «الإدخال السريع»
   const onCell = (r) => {
     if (brush === "detail") setSel(sel === r.slot_id ? null : r.slot_id);
@@ -158,8 +180,8 @@ export default function NoorGrades() {
     ?? (rows ?? []).reduce((a, r) => (r.exam_date && (!a || r.exam_date > a) ? r.exam_date : a), null), [rows, termEnd]);
   const all = useMemo(() => {
     const examSubjects = new Set((rows ?? []).filter((r) => r.exam_date).map((r) => r.subject_id));
-    return (rows ?? []).map((r) => enrich(r, lastExamDay, examSubjects, today));
-  }, [rows, lastExamDay, today]);
+    return (rows ?? []).map((r) => enrich(r, lastExamDay, examSubjects, contSet, today));
+  }, [rows, lastExamDay, contSet, today]);
   // الصف المختار وحده؛ قبل اختياره لا يظهر شيء
   const scoped = useMemo(() => (gradeF ? all.filter((r) => r.grade === gradeF) : []), [all, gradeF]);
   const due = scoped.filter(isDue);   // ما حلّ موعد اختباره
@@ -222,12 +244,14 @@ export default function NoorGrades() {
           cellList: [...g.cells.values()].sort((a, b) => a.class_no - b.class_no),
         }));
         const open = sub.list.filter((r) => r.st !== "done" && isDue(r));
-        return { ...sub, grades, pct: pct(sub.list), open: open.length,
+        const ids = [...new Set(sub.list.map((r) => r.subject_id))];
+        return { ...sub, grades, pct: pct(sub.list), open: open.length, ids,
+                 marked: ids.every((id) => contSet.has(id)), cont: sub.list.every((r) => r.cont),
                  late: open.filter((r) => r.tm.key === "late").length,
                  maxClass: Math.max(...grades.map((g) => g.cellList.length)) };
       })
       .sort((a, b) => a.key.localeCompare(b.key, "ar"));
-  }, [scoped]);
+  }, [scoped, contSet]);
   const subject = subjects.find((s) => s.key === subKey) ?? subjects[0];
 
   const selRow = all.find((r) => r.slot_id === sel);
@@ -474,6 +498,7 @@ export default function NoorGrades() {
                                   ${tone.card} ${on ? "ring-2 ring-ink/60 ring-offset-1" : "hover:brightness-[.97]"}`}>
                           <span className="flex items-center gap-1">
                             <span className="block min-w-0 flex-1 truncate text-sm font-semibold text-ink" title={sub.key}>{sub.key}</span>
+                            {sub.cont && <span className="rounded-pill bg-white/70 px-1.5 text-[10px] text-ink/70">تقويم مستمر</span>}
                             {on && <span className="text-[10px] font-semibold text-ink/70">مفتوحة</span>}
                           </span>
                           <span className="flex items-center gap-2">
@@ -496,6 +521,11 @@ export default function NoorGrades() {
                   <section className="card overflow-hidden">
                     <div className="flex flex-wrap items-center justify-between gap-2 bg-mint-deep px-4 py-2 text-white">
                       <h2 className="font-bold">{subject.key}</h2>
+                      <label className="flex items-center gap-1.5 rounded-sm2 bg-white/15 px-2 py-1 text-xs">
+                        <input type="checkbox" checked={subject.marked} onChange={() => toggleCont(subject)} />
+                        مادة تقويم مستمر (بلا اختبار)
+                      </label>
+                      <div className="flex-1" />
                       <p className="text-sm">نسبة رصد المادة <span className="num font-bold">{subject.pct === null ? "—" : `${subject.pct}%`}</span>
                         {subject.open ? <> · غير مكتمل <span className="num font-bold">{subject.open}</span></> : null}</p>
                     </div>
