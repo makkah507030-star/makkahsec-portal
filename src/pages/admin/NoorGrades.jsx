@@ -11,10 +11,10 @@ import { countAr } from "../../lib/arabicCount.js";
 
 /* =====================================================================
    متابعة رصد درجات الفترات في نظام نور — لوكيل الشؤون التعليمية والدعم الفني
-   والمدير (supabase/noor_grades_1.sql و noor_grades_2.sql).
-   • الاختبارات من «جداول الاختبارات» لكل فصل ومادة (الفترتان، دون النهائي)،
-     في جدول لكل صف كما في كشف متابعة نور: المواد ومعلموها (من الجدول الدراسي)
-     في الصفوف، والفصول في الأعمدة، ونسبة الرصد لكل مادة وللصف (الجزئي نصف).
+   والمدير (supabase/noor_grades_1.sql … noor_grades_5.sql).
+   • الكشف من الجدول الدراسي: كل مادة بكل فصولها ومعلميها كما في كشف نور،
+     وموعد الاختبار من «جداول الاختبارات» إن وُجد (وإلا «بلا تاريخ» دون لون مهلة).
+   • نسبة الرصد لكل مادة وصف وفترة (الجزئي نصف)، ولا يُحسب ما لم يحن اختباره.
    • عرضان: «حسب المادة» (الأساس، يطابق كشف نور: المادة ← صفوفها ← فصولها) و«حسب الصف».
      إدخال سريع: تُختار حالة ثم تُضغط الخانات، أو تُطبَّق على كل فصول الصف.
    • الحالة لكل فصل: تم الرصد، أو رصد جزئي (لم يكتمل الفصل)، أو لم يرصد.
@@ -25,9 +25,9 @@ import { countAr } from "../../lib/arabicCount.js";
 
 // ألوان الحالة كما في كشف المتابعة المعتاد: أخضر تم، وأزرق جزئي، ووردي لم يرصد
 const STATUS = {
-  done:    { t: "تم الرصد", on: "bg-mint-deep text-white",  cell: "bg-mint-light", hex: "#CCF2DB" },
-  partial: { t: "رصد جزئي", on: "bg-excused text-white",    cell: "bg-[#D6E4F5]", hex: "#D6E4F5" },
-  none:    { t: "لم يرصد",  on: "bg-danger text-white",     cell: "bg-danger-light", hex: "#FBEBEB" },
+  done:    { t: "تم الرصد", on: "bg-mint-deep text-white",  cell: "bg-mint-light" },
+  partial: { t: "رصد جزئي", on: "bg-excused text-white",    cell: "bg-[#D6E4F5]" },
+  none:    { t: "لم يرصد",  on: "bg-danger text-white",     cell: "bg-danger-light" },
 };
 // لون بطاقة المادة بحسب نسبة رصدها: 90% فأكثر أخضر، ومن 60% برتقالي، وأقل أحمر
 function pctTone(p) {
@@ -59,6 +59,15 @@ function timing(r, today) {
   return { key: "late", d, t: `متأخر · ${since}`, c: "bg-danger-light text-danger" };
 }
 
+/** صف الكشف مع موعده ومهلته وحالته. مادة التقويم المستمر (بلا اختبار في الجدول)
+    يُحسب موعدها من آخر يوم في فترة الاختبارات، بالمهلة نفسها. */
+function enrich(r, lastExamDay, examSubjects, today) {
+  // تقويم مستمر: المادة كلها بلا اختبارات. أما فصل ناقص من مادة لها اختبارات فيبقى «بلا موعد»
+  const cont = !r.exam_date && !examSubjects.has(r.subject_id);
+  const due_date = r.exam_date ?? (cont ? lastExamDay : null);
+  return { ...r, cont, due_date, st: r.status ?? "none", tm: timing({ exam_date: due_date }, today) };
+}
+
 export default function NoorGrades() {
   const { profile } = useSession();
   const [terms, setTerms] = useState(null);
@@ -66,8 +75,7 @@ export default function NoorGrades() {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [filter, setFilter] = useState("all");
-  const [q, setQ] = useState("");
-  const [gradeF, setGradeF] = useState(0);   // 0 = كل الصفوف
+  const [gradeF, setGradeF] = useState(0);   // 0 = لم يُختر صف بعد، فلا تظهر المواد
   const [busy, setBusy] = useState(null);
   const [sel, setSel] = useState(null);      // الخانة المفتوحة تفاصيلها (slot_id)
   const [view, setView] = useState("subject");   // subject: كما في كشف نور، grade: نظرة عامة بالصف
@@ -89,9 +97,9 @@ export default function NoorGrades() {
 
   const load = async (id) => {
     setRows(null); setErr("");
-    const { data, error } = await supabase.rpc("noor_grade_board", { p_term: id });
-    if (error) setErr(error.message?.includes("noor_grade_board")
-      ? "المتابعة غير مفعّلة بعد في قاعدة البيانات: شغّل ملفي noor_grades_1.sql و noor_grades_2.sql."
+    const { data, error } = await supabase.rpc("noor_grade_matrix", { p_term: id });
+    if (error) setErr(error.message?.includes("noor_grade_matrix")
+      ? "المتابعة غير مفعّلة بعد في قاعدة البيانات: شغّل ملفي noor_grades_4.sql و noor_grades_5.sql."
       : error.message);
     setRows(data ?? []);
   };
@@ -112,12 +120,11 @@ export default function NoorGrades() {
     const ids = todo.map((r) => r.slot_id);
     const stamp = new Date().toISOString();
     setBusy(ids.length === 1 ? ids[0] : "bulk");
-    const { error } = status === "none"
-      ? await supabase.from("noor_grade_entries").delete().in("exam_slot_id", ids)
-      : await supabase.from("noor_grade_entries").upsert(ids.map((id) => ({
-          exam_slot_id: id, status, note: status === "partial" ? note?.trim() || null : null,
-          updated_name: profile?.full_name ?? null, updated_at: stamp,
-        })));
+    const { error } = await supabase.rpc("noor_grade_set", {
+      p_term: termId, p_status: status, p_note: status === "partial" ? note : null,
+      p_name: profile?.full_name ?? null,
+      p_items: todo.map((r) => ({ class_id: r.class_id, subject_id: r.subject_id })),
+    });
     setBusy(null);
     if (error) { alert(error.message); return; }
     const set = new Set(ids);
@@ -141,8 +148,18 @@ export default function NoorGrades() {
   };
 
   // الصفوف مع مهلتها، والملخص، والتجميع: الصف ← المادة × الفصول
-  const all = useMemo(() => (rows ?? []).map((r) => ({ ...r, st: r.status ?? "none", tm: timing(r, today) })), [rows, today]);
-  const due = all.filter((r) => r.tm.key !== "soon");   // ما حلّ موعد اختباره
+  // آخر يوم اختبارات في الفترة: نهايتها في «جداول الاختبارات»، وإلا آخر موعد اختبار مسجّل.
+  // منه تُحسب مهلة مواد التقويم المستمر (بلا موعد في جداول الاختبارات).
+  const termEnd = terms?.find((t) => t.id === termId)?.end_date ?? null;
+  const lastExamDay = useMemo(() => termEnd
+    ?? (rows ?? []).reduce((a, r) => (r.exam_date && (!a || r.exam_date > a) ? r.exam_date : a), null), [rows, termEnd]);
+  const all = useMemo(() => {
+    const examSubjects = new Set((rows ?? []).filter((r) => r.exam_date).map((r) => r.subject_id));
+    return (rows ?? []).map((r) => enrich(r, lastExamDay, examSubjects, today));
+  }, [rows, lastExamDay, today]);
+  // الصف المختار وحده؛ قبل اختياره لا يظهر شيء
+  const scoped = useMemo(() => (gradeF ? all.filter((r) => r.grade === gradeF) : []), [all, gradeF]);
+  const due = scoped.filter((r) => r.tm.key !== "soon");   // ما حلّ موعد اختباره
   const pct = (list) => {
     const d = list.filter((r) => r.tm.key !== "soon");
     if (!d.length) return null;
@@ -160,10 +177,8 @@ export default function NoorGrades() {
     : r.st === filter && r.tm.key !== "soon";
 
   const grades = useMemo(() => {
-    const qq = q.trim();
     const byGrade = new Map();
-    for (const r of all) {
-      if (gradeF && r.grade !== gradeF) continue;
+    for (const r of scoped) {
       const g = byGrade.get(r.grade) ?? { grade: r.grade, classes: new Set(), subjects: new Map() };
       g.classes.add(r.class_no);
       const sub = g.subjects.get(r.subject_name) ?? { name: r.subject_name ?? "—", cells: new Map(), list: [] };
@@ -175,23 +190,17 @@ export default function NoorGrades() {
     }
     return [...byGrade.values()].sort((a, b) => a.grade - b.grade).map((g) => {
       const subjects = [...g.subjects.values()]
-        .filter((sub) => !qq || sub.name.includes(qq) || sub.list.some((r) => (r.teacher_name ?? "").includes(qq)))
         .sort((a, b) => a.name.localeCompare(b.name, "ar"))
-        .map((sub) => ({
-          ...sub, pct: pct(sub.list),
-          teachers: [...new Set(sub.list.map((r) => r.teacher_name ?? "غير محدد"))],
-        }));
+        .map((sub) => ({ ...sub, pct: pct(sub.list) }));
       return { grade: g.grade, classes: [...g.classes].sort((a, b) => a - b), subjects,
                pct: pct(subjects.flatMap((s) => s.list)) };
     }).filter((g) => g.subjects.length);
-  }, [all, gradeF, q]);
+  }, [scoped]);
 
   // العرض حسب المادة: كل مادة وفيها صفوفها، وكل صف بفصوله
   const subjects = useMemo(() => {
-    const qq = q.trim();
     const m = new Map();
-    for (const r of all) {
-      if (gradeF && r.grade !== gradeF) continue;
+    for (const r of scoped) {
       const k = baseSubject(r.subject_name);
       const sub = m.get(k) ?? { key: k, list: [], grades: new Map() };
       sub.list.push(r);
@@ -202,11 +211,9 @@ export default function NoorGrades() {
       m.set(k, sub);
     }
     return [...m.values()]
-      .filter((sub) => !qq || sub.key.includes(qq) || sub.list.some((r) => (r.teacher_name ?? "").includes(qq)))
       .map((sub) => {
         const grades = [...sub.grades.values()].sort((a, b) => a.grade - b.grade).map((g) => ({
           ...g, pct: pct(g.list), names: [...new Set(g.list.map((r) => r.subject_name))],
-          teachers: [...new Set(g.list.map((r) => r.teacher_name ?? "غير محدد"))],
           due: g.list.filter((r) => r.tm.key !== "soon"),
           // فصول الصف مرتبة متتالية؛ رقم الفصل قد يُخزَّن 3 أو 303، فلا يُتخذ فهرسًا للأعمدة
           cellList: [...g.cells.values()].sort((a, b) => a.class_no - b.class_no),
@@ -217,7 +224,7 @@ export default function NoorGrades() {
                  maxClass: Math.max(...grades.map((g) => g.cellList.length)) };
       })
       .sort((a, b) => a.key.localeCompare(b.key, "ar"));
-  }, [all, gradeF, q]);
+  }, [scoped]);
   const subject = subjects.find((s) => s.key === subKey) ?? subjects[0];
 
   const selRow = all.find((r) => r.slot_id === sel);
@@ -225,40 +232,38 @@ export default function NoorGrades() {
   const now = new Date();
   const stamp = `${weekday(today)} ${fmtHijri(today)} الساعة ${new Intl.DateTimeFormat("ar-SA", { hour: "numeric", minute: "2-digit", numberingSystem: "latn" }).format(now)}`;
 
-  // الطباعة: جدول ملوّن لكل صف كما في الكشف المعتاد
+  // كشف الطباعة: مواد الصف المختار ومعلموها الذين حلّ موعد اختبارهم ولم يكتمل رصدهم
   const print = () => {
-    const td = "border:1px solid #bbb;padding:3px 4px;text-align:center;font-size:11px";
-    const html = grades.map((g) => `
-      <table style="width:100%;border-collapse:collapse;margin:0 0 6px">
-        <thead>
-          <tr><th colspan="${g.classes.length + 3}" style="${td};background:#1f3a2c;color:#fff;font-size:13px">${GRADE_NAMES[g.grade] ?? ""}</th></tr>
-          <tr><th style="${td}">م</th><th style="${td};text-align:right">المادة والمعلمون</th>
-            ${g.classes.map((c) => `<th style="${td};width:30px">${classCode(g.grade, c)}</th>`).join("")}<th style="${td}">نسبة الرصد</th></tr>
-        </thead>
-        <tbody>
-          ${g.subjects.map((sub, i) => `<tr><td style="${td}">${i + 1}</td>
-            <td style="${td};text-align:right"><b>${sub.name}</b><br><span style="color:#666;font-size:9px">${sub.teachers.join("، ")}</span></td>
-            ${g.classes.map((c) => {
-              const r = sub.cells.get(c);
-              if (!r) return `<td style="${td}"></td>`;
-              if (r.tm.key === "soon") return `<td style="${td};background:#f1f1f1;color:#999">—</td>`;
-              return `<td style="${td};background:${STATUS[r.st].hex}">${r.st === "done" ? "" : r.tm.d ?? ""}</td>`;
-            }).join("")}
-            <td style="${td};font-weight:bold;color:#3E6350">${sub.pct ?? "—"}${sub.pct === null ? "" : "%"}</td></tr>`).join("")}
-          <tr><td colspan="${g.classes.length + 2}" style="${td};background:#eee">النسبة الإجمالية للرصد حتى ${stamp}</td>
-            <td style="${td};font-weight:bold">${g.pct ?? "—"}${g.pct === null ? "" : "%"}</td></tr>
-        </tbody>
-      </table>`).join("")
-      + `<p style="font-size:11px;margin:4px 0">
-          <span style="display:inline-block;width:14px;height:10px;background:${STATUS.none.hex};border:1px solid #bbb"></span> لم يتم الرصد &nbsp;
-          <span style="display:inline-block;width:14px;height:10px;background:${STATUS.done.hex};border:1px solid #bbb"></span> تم الرصد &nbsp;
-          <span style="display:inline-block;width:14px;height:10px;background:${STATUS.partial.hex};border:1px solid #bbb"></span> رصد جزئي &nbsp;
-          · الرقم في الخانة: الأيام منذ الاختبار</p>`;
+    const pend = scoped.filter((r) => r.st !== "done" && r.due_date && r.tm.key !== "soon");
+    if (!pend.length) { alert(`لا فصول حلّ موعد اختبارها ولم تُرصد في ${GRADE_NAMES[gradeF] ?? "الصف"}.`); return; }
+    const m = new Map();
+    for (const r of pend) {
+      const k = `${r.subject_name}|${r.teacher_name ?? ""}`;
+      const g = m.get(k) ?? { subject: r.subject_name, teacher: r.teacher_name ?? "غير محدد في الجدول", list: [] };
+      g.list.push(r);
+      m.set(k, g);
+    }
+    const groups = [...m.values()].sort((a, b) => a.subject.localeCompare(b.subject, "ar") || a.teacher.localeCompare(b.teacher, "ar"));
+    const rows = groups.map((g, i) => {
+      g.list.sort((a, b) => a.class_no - b.class_no);
+      const oldest = g.list.reduce((a, r) => (r.due_date < a ? r.due_date : a), g.list[0].due_date);
+      const allCont = g.list.every((r) => r.cont);
+      const days = Math.max(...g.list.map((r) => r.tm.d ?? 0));
+      const late = days > 5;
+      return [
+        i + 1, g.subject, g.teacher,
+        g.list.map((r) => `${classCode(r.grade, r.class_no)}${r.st === "partial" ? " (جزئي)" : ""}`).join("، "),
+        allCont ? `${fmtHijri(oldest)} (تقويم مستمر)` : fmtHijri(oldest),
+        late ? `<b style="color:#A23B3B">${days} · متأخر</b>` : days,
+      ];
+    });
     printReport({
-      title: `متابعة رصد درجات ${term?.title ?? ""} في نظام نور`,
-      subtitle: `تم ${sum.done} · جزئي ${sum.partial} · لم يرصد ${sum.none} · متأخر ${sum.late}`
+      title: `كشف المتابعة: درجات لم تُرصد في نور · ${GRADE_NAMES[gradeF] ?? ""}`,
+      subtitle: `${term?.title ?? ""} · حتى ${stamp}`
         + (term?.grading_deadline ? ` · نهاية الرصد ${weekday(term.grading_deadline)} ${fmtHijri(term.grading_deadline)}` : ""),
-      sections: [{ html }],
+      headers: ["م", "المادة", "المعلم", "الفصول غير المرصودة", "تاريخ الاختبار", "الأيام منذ الاختبار"],
+      rows,
+      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. «جزئي»: رُصد بعض الفصل. الأيام لأقدم اختبار في الصف، ومواد التقويم المستمر من آخر يوم اختبارات.`,
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       signatures: [{ title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
@@ -292,7 +297,9 @@ export default function NoorGrades() {
         </p>
         <p className="text-xs text-muted">
           <span className={selRow.teacher_name ? "text-ink" : "text-warning"}>{selRow.teacher_name ?? "معلم غير محدد في الجدول"}</span>
-          {" · "}{selRow.exam_date ? <>اختبار {weekday(selRow.exam_date)} <span className="num">{fmtHijri(selRow.exam_date)}</span></> : "بلا تاريخ"}
+          {" · "}{selRow.exam_date ? <>اختبار {weekday(selRow.exam_date)} <span className="num">{fmtHijri(selRow.exam_date)}</span></>
+            : selRow.due_date ? <>تقويم مستمر · يُحسب من آخر يوم اختبارات <span className="num">{weekday(selRow.due_date)} {fmtHijri(selRow.due_date)}</span></>
+            : "بلا موعد اختبار في «جداول الاختبارات» مع أن لمادته اختبارات"}
           {selRow.note && <> · <span className="text-warning">{selRow.note}</span></>}
           {selRow.updated_name && <> · سجّله {selRow.updated_name}</>}
         </p>
@@ -345,7 +352,7 @@ export default function NoorGrades() {
       <div>
         <h1 className="text-lg font-bold text-ink">متابعة رصد الدرجات في نظام نور</h1>
         <p className="mt-0.5 text-sm text-muted">
-          افتح المادة كما في كشف متابعة نور، وسجّل حالة كل فصل في صفوفها. للإدخال السريع اختر الحالة ثم اضغط الخانات، أو طبّقها على الصف كله.
+          اختر الصف ثم المادة كما في كشف متابعة نور، وسجّل حالة كل فصل في صفوفها. للإدخال السريع اختر الحالة ثم اضغط الخانات، أو طبّقها على الصف كله.
         </p>
       </div>
 
@@ -371,6 +378,11 @@ export default function NoorGrades() {
                     {weekday(term.grading_deadline)} <span className="num">{fmtDate(term.grading_deadline)}</span>
                   </p>
                 ) : <p className="mt-0.5 text-sm text-warning">لم يُحدَّد آخر يوم للرصد بعد.</p>}
+                <p className="mt-1 text-xs text-muted">
+                  {lastExamDay ? <>مواد التقويم المستمر (بلا موعد في «جداول الاختبارات») تُحسب مهلتها من آخر يوم اختبارات{" "}
+                    <span className="num">{weekday(lastExamDay)} {fmtHijri(lastExamDay)}</span>.</>
+                    : <span className="text-warning">لا مواعيد في «جداول الاختبارات» بعد، فلا تُحسب مهلة لمواد التقويم المستمر.</span>}
+                </p>
                 <label className="mt-2 flex items-center gap-2 text-xs text-muted">
                   تعديل:
                   <input type="date" className="field num w-44 py-1 text-sm" value={term.grading_deadline ?? ""}
@@ -392,10 +404,29 @@ export default function NoorGrades() {
           {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}
           {!rows ? <Loader /> : !err && (
             <>
+              {/* اختيار الصف أولًا: الصفحة فارغة حتى يُختار */}
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((g) => {
+                  const p = pct(all.filter((r) => r.grade === g));
+                  const on = gradeF === g;
+                  return (
+                    <button key={g} onClick={() => { setGradeF(g); setSubKey(null); setSel(null); }}
+                            className={`rounded-card border px-3 py-3 text-center ${on ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-paper text-ink hover:bg-canvas"}`}>
+                      <span className="block font-bold">{GRADE_NAMES[g]}</span>
+                      <span className={`block text-xs ${on ? "text-white/80" : "text-muted"}`}>
+                        {p === null ? "—" : <>نسبة الرصد <span className="num">{p}%</span></>}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {!gradeF ? (
+                <p className="card p-6 text-center text-sm text-muted">اختر الصف لعرض مواده وفصوله.</p>
+              ) : (<>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 <div className="col-span-2 rounded-card bg-mint-deep px-3 py-2 text-center text-white sm:col-span-1">
-                  <span className="num block text-2xl font-bold leading-tight">{pct(all) ?? "—"}{pct(all) === null ? "" : "%"}</span>
-                  <span className="block text-xs">النسبة الإجمالية</span>
+                  <span className="num block text-2xl font-bold leading-tight">{pct(scoped) ?? "—"}{pct(scoped) === null ? "" : "%"}</span>
+                  <span className="block text-xs">نسبة {GRADE_NAMES[gradeF]}</span>
                 </div>
                 {[["done", "تم الرصد", "bg-mint-light text-mint-deep"], ["partial", "رصد جزئي", "bg-[#D6E4F5] text-excused"],
                   ["none", "لم يرصد", "bg-danger-light text-danger"], ["late", "متأخر", "bg-danger text-white"]].map(([k, t, c]) => (
@@ -411,12 +442,6 @@ export default function NoorGrades() {
               </p>
 
               <div className="flex flex-wrap items-center gap-2">
-                <select className="field w-36 py-1 text-sm" value={gradeF} onChange={(e) => setGradeF(Number(e.target.value))}>
-                  <option value={0}>كل الصفوف</option>
-                  {[1, 2, 3].map((g) => <option key={g} value={g}>{GRADE_NAMES[g]}</option>)}
-                </select>
-                <input className="field w-48 py-1 text-sm" placeholder="بحث بالمادة أو المعلم" value={q}
-                       onChange={(e) => setQ(e.target.value)} />
                 <div className="flex overflow-hidden rounded-sm2 border border-line">
                   {[["subject", "حسب المادة"], ["grade", "حسب الصف"]].map(([k, t]) => (
                     <button key={k} onClick={() => { setView(k); setSel(null); }}
@@ -424,7 +449,7 @@ export default function NoorGrades() {
                   ))}
                 </div>
                 <div className="flex-1" />
-                <button className="btn-ghost" onClick={print}>طباعة الكشف</button>
+                <button className="btn-ghost" onClick={print}>طباعة كشف غير المرصود</button>
               </div>
               {legend}
               {brushBar}
@@ -472,7 +497,7 @@ export default function NoorGrades() {
                       <table className="w-full border-collapse text-sm">
                         <thead>
                           <tr className="bg-canvas text-xs text-muted">
-                            <th className="min-w-[11rem] border border-line/60 px-2 py-1.5 text-right">الصف والمعلمون</th>
+                            <th className="min-w-[8rem] border border-line/60 px-2 py-1.5 text-right">الصف</th>
                             <th colSpan={subject.maxClass} className="border border-line/60 px-1 py-1.5">الفصول</th>
                             <th className="w-16 border border-line/60 px-1 py-1.5">نسبة الرصد</th>
                             {brush !== "detail" && <th className="w-20 border border-line/60 px-1 py-1.5">الصف كله</th>}
@@ -483,7 +508,6 @@ export default function NoorGrades() {
                             <tr key={g.grade}>
                               <td className="border border-line/60 px-2 py-1.5">
                                 <p className="font-semibold text-ink">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</p>
-                                <p className="text-[11px] leading-snug text-muted">{g.teachers.join("، ")}</p>
                                 {g.names.some((n) => n !== subject.key) && (
                                   <p className="text-[10px] text-faint">{g.names.join("، ")}</p>
                                 )}
@@ -516,7 +540,6 @@ export default function NoorGrades() {
                           <div className="flex items-start gap-2">
                             <div className="min-w-0 flex-1">
                               <p className="font-semibold text-ink">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</p>
-                              <p className="text-[11px] leading-snug text-muted">{g.teachers.join("، ")}</p>
                             </div>
                             <span className="num text-sm font-bold text-mint-deep">{g.pct === null ? "—" : `${g.pct}%`}</span>
                           </div>
@@ -548,7 +571,7 @@ export default function NoorGrades() {
                       <thead>
                         <tr className="bg-canvas text-xs text-muted">
                           <th className="w-8 border border-line/60 px-1 py-1.5">م</th>
-                          <th className="min-w-[11rem] border border-line/60 px-2 py-1.5 text-right">المادة والمعلمون</th>
+                          <th className="min-w-[9rem] border border-line/60 px-2 py-1.5 text-right">المادة</th>
                           {g.classes.map((c) => <th key={c} className="num w-11 border border-line/60 px-1 py-1.5">{classCode(g.grade, c)}</th>)}
                           <th className="w-16 border border-line/60 px-1 py-1.5">نسبة الرصد</th>
                         </tr>
@@ -559,7 +582,6 @@ export default function NoorGrades() {
                             <td className="num border border-line/60 text-center text-xs text-muted">{i + 1}</td>
                             <td className="border border-line/60 px-2 py-1.5">
                               <p className="font-semibold text-ink">{sub.name}</p>
-                              <p className="text-[11px] leading-snug text-muted">{sub.teachers.join("، ")}</p>
                             </td>
                             {g.classes.map((c) => {
                               const r = sub.cells.get(c);
@@ -584,6 +606,7 @@ export default function NoorGrades() {
                   {selRow && selRow.grade === g.grade && detail}
                 </section>
               ))}
+              </>)}
             </>
           )}
         </>

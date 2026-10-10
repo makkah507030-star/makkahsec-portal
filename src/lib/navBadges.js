@@ -64,7 +64,7 @@ function noorTask(rows) {
       const d = ago(r);
       return { id: r.slot_id,
         title: `${r.subject_name} · فصل ${Number(r.class_no) >= 100 ? r.class_no : (Number(r.grade) || 0) * 100 + Number(r.class_no)} · ${d === 0 ? "اليوم" : `منذ ${countAr(d, "day", { acc: true })}`}`
-          + (r.status === "partial" ? " · رصد جزئي" : "") + (d > 5 ? " · متأخر" : "") };
+          + (r.cont ? " · تقويم مستمر" : "") + (r.status === "partial" ? " · رصد جزئي" : "") + (d > 5 ? " · متأخر" : "") };
     }),
   };
 }
