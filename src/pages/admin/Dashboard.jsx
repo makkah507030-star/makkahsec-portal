@@ -31,7 +31,7 @@ import { fmtDateTime, fmtDate, noEra } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import { notifyUsers } from "../../lib/referrals";
-import ExamCountdown from "../../components/ExamCountdown.jsx";
+import HeaderChips from "../../components/HeaderChips.jsx";
 import DutyCard from "../../components/DutyCard.jsx";
 import ReferralsInbox from "../../components/ReferralsInbox.jsx";
 import TasksBox from "../../components/TasksBox.jsx";
@@ -186,7 +186,7 @@ export default function Dashboard() {
             العام <span className="num">{noEra(d.yearLabel)}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
           </p>
         </div>
-        <ExamCountdown />
+        <HeaderChips />
       </header>
 
       <HolidayBanner />

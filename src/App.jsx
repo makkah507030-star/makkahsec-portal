@@ -97,7 +97,7 @@ const MaintenanceAdmin = lazy(() => import("./pages/admin/MaintenanceAdmin.jsx")
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
 import { useHolidays } from "./lib/useHolidays.js";
-const ExamCountdown = lazy(() => import("./components/ExamCountdown.jsx"));
+const HeaderChips = lazy(() => import("./components/HeaderChips.jsx"));
 const ExamDayCard = lazy(() => import("./components/ExamDayCard.jsx"));
 const TeacherTodayCard = lazy(() => import("./components/TeacherTodayCard.jsx"));
 const TasksBox = lazy(() => import("./components/TasksBox.jsx"));
@@ -238,7 +238,7 @@ export default function App() {
   // الرئيسية للمعلم ملخص يومه، والتحضير صفحة مستقلة (/attendance) تفتحها بطاقة «يومي» بضغطة
   const teacherHome = (
     <div className="space-y-5">
-      <ExamCountdown />
+      <HeaderChips align="start" />
       {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
       <TasksBox />
       <DutyCard personal />

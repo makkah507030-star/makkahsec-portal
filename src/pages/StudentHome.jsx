@@ -7,7 +7,7 @@ import WeeklyGrid from "../components/WeeklyGrid.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from "../lib/periodTimes";
 import { loadFingerprintPublic } from "../lib/officialAttendance";
-import ExamCountdown from "../components/ExamCountdown.jsx";
+import HeaderChips from "../components/HeaderChips.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
@@ -131,7 +131,7 @@ export default function StudentHome() {
             {GRADE_NAMES[me.grade] ?? ""} · فصل <span className="num">{me.class_no}</span>
           </p>
         </div>
-        <ExamCountdown />
+        <HeaderChips />
       </header>
 
       <HolidayBanner />

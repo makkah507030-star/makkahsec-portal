@@ -39,6 +39,16 @@ export function holidayToday() {
   return h ? { name: h.name } : null;
 }
 
+/** أقرب إجازة رسمية لم تبدأ بعد { name, start, end, days } — days: الأيام حتى بدايتها */
+export function nextHoliday() {
+  const t = todayISO();
+  const h = HOLIDAY_RANGES.filter((r) => r.start && r.start > t)
+    .sort((a, b) => (a.start < b.start ? -1 : 1))[0];
+  if (!h) return null;
+  const day = (iso) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+  return { ...h, days: Math.round((day(h.start) - day(t)) / 86400000) };
+}
+
 /** يوم اليوم بترقيم النظام، و0 يعني يوم عطلة (نهاية أسبوع أو إجازة رسمية) */
 export function todayDow() {
   if (holidayToday()) return 0;        // إجازة رسمية → يوم عطلة كامل
