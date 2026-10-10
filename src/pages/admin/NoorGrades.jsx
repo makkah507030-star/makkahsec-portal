@@ -31,6 +31,8 @@ const STATUS = {
 };
 // اسم المادة دون رقم المستوى («الكيمياء 2» و«الرياضيات 1-1» ← الاسم وحده) لتجميعها عبر الصفوف
 const baseSubject = (n) => String(n ?? "—").replace(/[\s\d\-–_/()]+$/u, "").trim() || String(n ?? "—");
+// رمز الفصل الكامل كما في نور: الصف × 100 + رقم الفصل (101، 205…)
+const classCode = (grade, no) => (Number(no) >= 100 ? Number(no) : (Number(grade) || 0) * 100 + (Number(no) || 0));
 // لون رقم الأيام داخل الخانة غير المكتملة بحسب المهلة
 const DAYS_TONE = { green: "text-mint-deep", orange: "text-warning", late: "text-danger" };
 
@@ -222,7 +224,7 @@ export default function NoorGrades() {
         <thead>
           <tr><th colspan="${g.classes.length + 3}" style="${td};background:#1f3a2c;color:#fff;font-size:13px">${GRADE_NAMES[g.grade] ?? ""}</th></tr>
           <tr><th style="${td}">م</th><th style="${td};text-align:right">المادة والمعلمون</th>
-            ${g.classes.map((c) => `<th style="${td};width:26px">${c}</th>`).join("")}<th style="${td}">نسبة الرصد</th></tr>
+            ${g.classes.map((c) => `<th style="${td};width:30px">${classCode(g.grade, c)}</th>`).join("")}<th style="${td}">نسبة الرصد</th></tr>
         </thead>
         <tbody>
           ${g.subjects.map((sub, i) => `<tr><td style="${td}">${i + 1}</td>
@@ -256,16 +258,19 @@ export default function NoorGrades() {
 
   if (!terms) return <Loader />;
 
-  const cellBtn = (r) => {
+  // withCode: رمز الفصل داخل الخانة (العرض حسب المادة، حيث تختلف الفصول بين الصفوف)
+  const cellBtn = (r, withCode = false) => {
     const soon = r.tm.key === "soon";
+    const mark = soon ? (r.st === "none" ? "—" : "") : r.st === "done" ? "" : r.tm.d;
     return (
       <button onClick={() => onCell(r)} disabled={busy === "bulk" || busy === r.slot_id}
-              title={`فصل ${r.class_no} · ${r.teacher_name ?? "معلم غير محدد"} · ${STATUS[r.st].t}${soon ? " · لم يحن" : ""}`}
-              className={`num grid h-9 w-full place-items-center text-[11px] font-bold transition
+              title={`فصل ${classCode(r.grade, r.class_no)} · ${r.teacher_name ?? "معلم غير محدد"} · ${STATUS[r.st].t}${soon ? " · لم يحن" : ""}`}
+              className={`num flex w-full flex-col items-center justify-center text-[11px] font-bold leading-tight transition ${withCode ? "h-11" : "h-9"}
                 ${soon && r.st === "none" ? "bg-canvas text-faint" : `${STATUS[r.st].cell} ${DAYS_TONE[r.tm.key] ?? "text-muted"}`}
                 ${sel === r.slot_id ? "ring-2 ring-inset ring-ink" : ""} ${brush !== "detail" ? "hover:brightness-95" : ""}
                 ${match(r) ? "" : "opacity-25"}`}>
-        {soon ? (r.st === "none" ? "—" : "") : r.st === "done" ? "" : r.tm.d}
+        {withCode ? <><span className="text-[11px] font-semibold text-ink">{classCode(r.grade, r.class_no)}</span>
+          <span className="min-h-[12px] text-[10px]">{mark}</span></> : mark}
       </button>
     );
   };
@@ -274,7 +279,7 @@ export default function NoorGrades() {
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-line bg-mint-tint px-4 py-3 text-sm">
       <div className="min-w-0 flex-1">
         <p className="font-bold text-ink">
-          {selRow.subject_name} · {GRADE_NAMES[selRow.grade] ?? ""} · فصل <span className="num">{selRow.class_no}</span>
+          {selRow.subject_name} · {GRADE_NAMES[selRow.grade] ?? ""} · فصل <span className="num">{classCode(selRow.grade, selRow.class_no)}</span>
         </p>
         <p className="text-xs text-muted">
           <span className={selRow.teacher_name ? "text-ink" : "text-warning"}>{selRow.teacher_name ?? "معلم غير محدد في الجدول"}</span>
@@ -443,9 +448,7 @@ export default function NoorGrades() {
                         <thead>
                           <tr className="bg-canvas text-xs text-muted">
                             <th className="min-w-[11rem] border border-line/60 px-2 py-1.5 text-right">الصف والمعلمون</th>
-                            {Array.from({ length: subject.maxClass }, (_, i) => (
-                              <th key={i} className="num w-9 border border-line/60 px-1 py-1.5">{i + 1}</th>
-                            ))}
+                            <th colSpan={subject.maxClass} className="border border-line/60 px-1 py-1.5">الفصول</th>
                             <th className="w-16 border border-line/60 px-1 py-1.5">نسبة الرصد</th>
                             {brush !== "detail" && <th className="w-20 border border-line/60 px-1 py-1.5">الصف كله</th>}
                           </tr>
@@ -462,7 +465,7 @@ export default function NoorGrades() {
                               </td>
                               {Array.from({ length: subject.maxClass }, (_, i) => {
                                 const r = g.cells.get(i + 1);
-                                return r ? <td key={i} className="border border-line/60 p-0">{cellBtn(r)}</td>
+                                return r ? <td key={i} className="min-w-[2.75rem] border border-line/60 p-0">{cellBtn(r, true)}</td>
                                   : <td key={i} className="border border-line/60 bg-paper" />;
                               })}
                               <td className="num border border-line/60 text-center font-bold text-mint-deep">{g.pct === null ? "—" : `${g.pct}%`}</td>
@@ -496,7 +499,7 @@ export default function NoorGrades() {
                         <tr className="bg-canvas text-xs text-muted">
                           <th className="w-8 border border-line/60 px-1 py-1.5">م</th>
                           <th className="min-w-[11rem] border border-line/60 px-2 py-1.5 text-right">المادة والمعلمون</th>
-                          {g.classes.map((c) => <th key={c} className="num w-9 border border-line/60 px-1 py-1.5">{c}</th>)}
+                          {g.classes.map((c) => <th key={c} className="num w-11 border border-line/60 px-1 py-1.5">{classCode(g.grade, c)}</th>)}
                           <th className="w-16 border border-line/60 px-1 py-1.5">نسبة الرصد</th>
                         </tr>
                       </thead>

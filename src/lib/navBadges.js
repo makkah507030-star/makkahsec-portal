@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { stageOf, isLate, STAGE_COLS } from "./referrals.js";
 import { fmtHijri } from "./dates.js";
-import { GRADE_NAMES, todayISO } from "./schoolTime.js";
+import { todayISO } from "./schoolTime.js";
 import { countAr } from "./arabicCount.js";
 
 /* =====================================================================
@@ -63,7 +63,7 @@ function noorTask(rows) {
     items: rows.map((r) => {
       const d = ago(r);
       return { id: r.slot_id,
-        title: `${r.subject_name} · ${GRADE_NAMES[r.grade] ?? ""} ${r.class_no} · ${d === 0 ? "اليوم" : `منذ ${countAr(d, "day", { acc: true })}`}`
+        title: `${r.subject_name} · فصل ${Number(r.class_no) >= 100 ? r.class_no : (Number(r.grade) || 0) * 100 + Number(r.class_no)} · ${d === 0 ? "اليوم" : `منذ ${countAr(d, "day", { acc: true })}`}`
           + (r.status === "partial" ? " · رصد جزئي" : "") + (d > 5 ? " · متأخر" : "") };
     }),
   };
