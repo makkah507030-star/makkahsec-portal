@@ -29,6 +29,13 @@ const STATUS = {
   partial: { t: "رصد جزئي", on: "bg-excused text-white",    cell: "bg-[#D6E4F5]", hex: "#D6E4F5" },
   none:    { t: "لم يرصد",  on: "bg-danger text-white",     cell: "bg-danger-light", hex: "#FBEBEB" },
 };
+// لون بطاقة المادة بحسب نسبة رصدها: 90% فأكثر أخضر، ومن 60% برتقالي، وأقل أحمر
+function pctTone(p) {
+  if (p === null) return { card: "border-line bg-canvas", bar: "bg-faint", text: "text-muted" };
+  if (p >= 90) return { card: "border-mint-deep/30 bg-mint-light", bar: "bg-mint-deep", text: "text-mint-deep" };
+  if (p >= 60) return { card: "border-warning/30 bg-warning-light", bar: "bg-warning", text: "text-warning" };
+  return { card: "border-danger/30 bg-danger-light", bar: "bg-danger", text: "text-danger" };
+}
 // اسم المادة دون رقم المستوى («الكيمياء 2» و«الرياضيات 1-1» ← الاسم وحده) لتجميعها عبر الصفوف
 const baseSubject = (n) => String(n ?? "—").replace(/[\s\d\-–_/()]+$/u, "").trim() || String(n ?? "—");
 // رمز الفصل الكامل كما في نور: الصف × 100 + رقم الفصل (101، 205…)
@@ -427,16 +434,20 @@ export default function NoorGrades() {
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                     {subjects.map((sub) => {
                       const on = sub.key === subject.key;
+                      const tone = pctTone(sub.pct);
                       return (
                         <button key={sub.key} onClick={() => { setSubKey(sub.key); setSel(null); }}
-                                className={`flex h-[4.5rem] flex-col justify-between rounded-card border px-3 py-2 text-right ${on
-                                  ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-paper text-ink hover:bg-canvas"}`}>
-                          <span className="block truncate text-sm font-semibold" title={sub.key}>{sub.key}</span>
+                                className={`flex h-[4.5rem] flex-col justify-between rounded-card border px-3 py-2 text-right transition
+                                  ${tone.card} ${on ? "ring-2 ring-ink/60 ring-offset-1" : "hover:brightness-[.97]"}`}>
+                          <span className="flex items-center gap-1">
+                            <span className="block min-w-0 flex-1 truncate text-sm font-semibold text-ink" title={sub.key}>{sub.key}</span>
+                            {on && <span className="text-[10px] font-semibold text-ink/70">مفتوحة</span>}
+                          </span>
                           <span className="flex items-center gap-2">
-                            <span className={`h-1.5 flex-1 overflow-hidden rounded-pill ${on ? "bg-white/25" : "bg-line/50"}`}>
-                              <span className={`block h-full rounded-pill ${on ? "bg-white" : "bg-mint-deep"}`} style={{ width: `${sub.pct ?? 0}%` }} />
+                            <span className="h-1.5 flex-1 overflow-hidden rounded-pill bg-white/70">
+                              <span className={`block h-full rounded-pill ${tone.bar}`} style={{ width: `${sub.pct ?? 0}%` }} />
                             </span>
-                            <span className={`num w-9 text-left text-xs font-bold ${on ? "text-white" : "text-mint-deep"}`}>
+                            <span className={`num w-9 text-left text-xs font-bold ${tone.text}`}>
                               {sub.pct === null ? "—" : `${sub.pct}%`}
                             </span>
                             {sub.late > 0 && (
