@@ -176,7 +176,11 @@ export default function NoorGrades() {
       const subjects = [...g.subjects.values()]
         .filter((sub) => !qq || sub.name.includes(qq) || sub.list.some((r) => (r.teacher_name ?? "").includes(qq)))
         .sort((a, b) => a.name.localeCompare(b.name, "ar"))
-        .map((sub) => ({ ...sub, pct: pct(sub.list) }));
+        .map((sub) => ({
+          ...sub, pct: pct(sub.list),
+          // أسماء المعلمين تظهر في الكشف المطبوع وحده
+          teachers: [...new Set(sub.list.map((r) => r.teacher_name ?? "غير محدد"))],
+        }));
       return { grade: g.grade, classes: [...g.classes].sort((a, b) => a - b), subjects,
                pct: pct(subjects.flatMap((s) => s.list)) };
     }).filter((g) => g.subjects.length);
@@ -227,12 +231,12 @@ export default function NoorGrades() {
       <table style="width:100%;border-collapse:collapse;margin:0 0 6px">
         <thead>
           <tr><th colspan="${g.classes.length + 3}" style="${td};background:#1f3a2c;color:#fff;font-size:13px">${GRADE_NAMES[g.grade] ?? ""}</th></tr>
-          <tr><th style="${td}">م</th><th style="${td};text-align:right">المادة</th>
+          <tr><th style="${td}">م</th><th style="${td};text-align:right">المادة والمعلمون</th>
             ${g.classes.map((c) => `<th style="${td};width:30px">${classCode(g.grade, c)}</th>`).join("")}<th style="${td}">نسبة الرصد</th></tr>
         </thead>
         <tbody>
           ${g.subjects.map((sub, i) => `<tr><td style="${td}">${i + 1}</td>
-            <td style="${td};text-align:right"><b>${sub.name}</b></td>
+            <td style="${td};text-align:right"><b>${sub.name}</b><br><span style="color:#666;font-size:9px">${sub.teachers.join("، ")}</span></td>
             ${g.classes.map((c) => {
               const r = sub.cells.get(c);
               if (!r) return `<td style="${td}"></td>`;
