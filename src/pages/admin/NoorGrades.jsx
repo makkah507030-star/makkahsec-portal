@@ -176,10 +176,7 @@ export default function NoorGrades() {
       const subjects = [...g.subjects.values()]
         .filter((sub) => !qq || sub.name.includes(qq) || sub.list.some((r) => (r.teacher_name ?? "").includes(qq)))
         .sort((a, b) => a.name.localeCompare(b.name, "ar"))
-        .map((sub) => ({
-          ...sub, pct: pct(sub.list),
-          teachers: [...new Set(sub.list.map((r) => r.teacher_name ?? "غير محدد"))],
-        }));
+        .map((sub) => ({ ...sub, pct: pct(sub.list) }));
       return { grade: g.grade, classes: [...g.classes].sort((a, b) => a - b), subjects,
                pct: pct(subjects.flatMap((s) => s.list)) };
     }).filter((g) => g.subjects.length);
@@ -205,7 +202,6 @@ export default function NoorGrades() {
       .map((sub) => {
         const grades = [...sub.grades.values()].sort((a, b) => a.grade - b.grade).map((g) => ({
           ...g, pct: pct(g.list), names: [...new Set(g.list.map((r) => r.subject_name))],
-          teachers: [...new Set(g.list.map((r) => r.teacher_name ?? "غير محدد"))],
           due: g.list.filter((r) => r.tm.key !== "soon"),
           // فصول الصف مرتبة متتالية؛ رقم الفصل قد يُخزَّن 3 أو 303، فلا يُتخذ فهرسًا للأعمدة
           cellList: [...g.cells.values()].sort((a, b) => a.class_no - b.class_no),
@@ -231,12 +227,12 @@ export default function NoorGrades() {
       <table style="width:100%;border-collapse:collapse;margin:0 0 6px">
         <thead>
           <tr><th colspan="${g.classes.length + 3}" style="${td};background:#1f3a2c;color:#fff;font-size:13px">${GRADE_NAMES[g.grade] ?? ""}</th></tr>
-          <tr><th style="${td}">م</th><th style="${td};text-align:right">المادة والمعلمون</th>
+          <tr><th style="${td}">م</th><th style="${td};text-align:right">المادة</th>
             ${g.classes.map((c) => `<th style="${td};width:30px">${classCode(g.grade, c)}</th>`).join("")}<th style="${td}">نسبة الرصد</th></tr>
         </thead>
         <tbody>
           ${g.subjects.map((sub, i) => `<tr><td style="${td}">${i + 1}</td>
-            <td style="${td};text-align:right"><b>${sub.name}</b><br><span style="color:#666;font-size:9px">${sub.teachers.join("، ")}</span></td>
+            <td style="${td};text-align:right"><b>${sub.name}</b></td>
             ${g.classes.map((c) => {
               const r = sub.cells.get(c);
               if (!r) return `<td style="${td}"></td>`;
@@ -471,7 +467,7 @@ export default function NoorGrades() {
                       <table className="w-full border-collapse text-sm">
                         <thead>
                           <tr className="bg-canvas text-xs text-muted">
-                            <th className="min-w-[11rem] border border-line/60 px-2 py-1.5 text-right">الصف والمعلمون</th>
+                            <th className="min-w-[8rem] border border-line/60 px-2 py-1.5 text-right">الصف</th>
                             <th colSpan={subject.maxClass} className="border border-line/60 px-1 py-1.5">الفصول</th>
                             <th className="w-16 border border-line/60 px-1 py-1.5">نسبة الرصد</th>
                             {brush !== "detail" && <th className="w-20 border border-line/60 px-1 py-1.5">الصف كله</th>}
@@ -482,7 +478,6 @@ export default function NoorGrades() {
                             <tr key={g.grade}>
                               <td className="border border-line/60 px-2 py-1.5">
                                 <p className="font-semibold text-ink">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</p>
-                                <p className="text-[11px] leading-snug text-muted">{g.teachers.join("، ")}</p>
                                 {g.names.some((n) => n !== subject.key) && (
                                   <p className="text-[10px] text-faint">{g.names.join("، ")}</p>
                                 )}
@@ -515,7 +510,6 @@ export default function NoorGrades() {
                           <div className="flex items-start gap-2">
                             <div className="min-w-0 flex-1">
                               <p className="font-semibold text-ink">{GRADE_NAMES[g.grade] ?? `الصف ${g.grade}`}</p>
-                              <p className="text-[11px] leading-snug text-muted">{g.teachers.join("، ")}</p>
                             </div>
                             <span className="num text-sm font-bold text-mint-deep">{g.pct === null ? "—" : `${g.pct}%`}</span>
                           </div>
@@ -547,7 +541,7 @@ export default function NoorGrades() {
                       <thead>
                         <tr className="bg-canvas text-xs text-muted">
                           <th className="w-8 border border-line/60 px-1 py-1.5">م</th>
-                          <th className="min-w-[11rem] border border-line/60 px-2 py-1.5 text-right">المادة والمعلمون</th>
+                          <th className="min-w-[9rem] border border-line/60 px-2 py-1.5 text-right">المادة</th>
                           {g.classes.map((c) => <th key={c} className="num w-11 border border-line/60 px-1 py-1.5">{classCode(g.grade, c)}</th>)}
                           <th className="w-16 border border-line/60 px-1 py-1.5">نسبة الرصد</th>
                         </tr>
@@ -558,7 +552,6 @@ export default function NoorGrades() {
                             <td className="num border border-line/60 text-center text-xs text-muted">{i + 1}</td>
                             <td className="border border-line/60 px-2 py-1.5">
                               <p className="font-semibold text-ink">{sub.name}</p>
-                              <p className="text-[11px] leading-snug text-muted">{sub.teachers.join("، ")}</p>
                             </td>
                             {g.classes.map((c) => {
                               const r = sub.cells.get(c);
