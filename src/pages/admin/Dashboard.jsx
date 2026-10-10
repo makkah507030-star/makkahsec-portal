@@ -38,7 +38,6 @@ import TasksBox from "../../components/TasksBox.jsx";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 
-
 export default function Dashboard() {
   const { can, profile, adminRoles } = useSession();
   // الحساب المساند: كل أدواره ضمن قائمة الحسابات المساندة — يُحجب عنه كل
@@ -150,10 +149,12 @@ export default function Dashboard() {
       .join(" · ");
     return (
       <div className="space-y-5">
-        <header>
+        <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
           <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
+          <HeaderChips />
         </header>
         <HolidayBanner />
+        <TasksBox />
         <DutyCard />
         <section className="card px-6 py-12 text-center">
           <p className="text-lg font-bold text-ink">
@@ -193,8 +194,6 @@ export default function Dashboard() {
 
       <TasksBox />
 
-      <DutyCard />
-
       {/* حساب إداري محدود الصلاحيات: ترحيب وتوجيه للقائمة الجانبية */}
       {barren && (
         <section className="card px-6 py-10 text-center">
@@ -207,20 +206,23 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* أرقام المدرسة */}
-      {canFigures && (
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Fig label="طالب"    value={d.students}  to={canStudents ? "/students" : undefined} />
-          <Fig label="ولي أمر" value={d.guardians} />
-          <Fig label="معلم"    value={d.teachers} />
-          <Fig label="فصل"     value={d.classes} />
-        </section>
-      )}
-
       <ReferralsInbox />
 
+      {/* سلامة الطلاب اليوم أولًا، ثم سير اليوم، ثم المرجع */}
+      {canReports && d.escapeCount > 0 && (
+        <Link to="/student-affairs?tab=follow"
+          className="flex items-center justify-between gap-3 rounded-card border border-absent/30 bg-absent/5 px-5 py-4 transition-colors hover:bg-absent/10">
+          <div>
+            <p className="text-sm font-bold text-absent">بصم ولم يحضر</p>
+            <p className="mt-0.5 text-xs text-muted">
+              طلاب دخلوا المدرسة وغابوا عن حصصهم اليوم.
+            </p>
+          </div>
+          <span className="num text-2xl font-bold text-absent">{d.escapeCount}</span>
+        </Link>
+      )}
+
       {canReports && dow > 0 && <MissingStudentsBox date={date} />}
-      {canReports && dow > 0 && <OfficialStatusBox date={date} />}
 
       {/* تحضير اليوم — لا يُعرض إلا بعد اكتمال تحميل البيانات (d.unmarked) */}
       {canReports && d.unmarked && (dow ? (
@@ -254,18 +256,9 @@ export default function Dashboard() {
         </section>
       ))}
 
-      {canReports && d.escapeCount > 0 && (
-        <Link to="/student-affairs?tab=follow"
-          className="flex items-center justify-between gap-3 rounded-card border border-absent/30 bg-absent/5 px-5 py-4 transition-colors hover:bg-absent/10">
-          <div>
-            <p className="text-sm font-bold text-absent">بصم ولم يحضر</p>
-            <p className="mt-0.5 text-xs text-muted">
-              طلاب دخلوا المدرسة وغابوا عن حصصهم اليوم.
-            </p>
-          </div>
-          <span className="num text-2xl font-bold text-absent">{d.escapeCount}</span>
-        </Link>
-      )}
+      {canReports && dow > 0 && <OfficialStatusBox date={date} />}
+
+      <DutyCard />
 
       {canReports && (
         <ColorLegend
@@ -288,6 +281,16 @@ export default function Dashboard() {
             },
           ]}
         />
+      )}
+
+      {/* أرقام المدرسة */}
+      {canFigures && (
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Fig label="طالب"    value={d.students}  to={canStudents ? "/students" : undefined} />
+          <Fig label="ولي أمر" value={d.guardians} />
+          <Fig label="معلم"    value={d.teachers} />
+          <Fig label="فصل"     value={d.classes} />
+        </section>
       )}
 
       {canImport && (
