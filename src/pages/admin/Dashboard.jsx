@@ -33,7 +33,6 @@ import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import { notifyUsers } from "../../lib/referrals";
 import HeaderChips from "../../components/HeaderChips.jsx";
 import DutyCard from "../../components/DutyCard.jsx";
-import ReferralsInbox from "../../components/ReferralsInbox.jsx";
 import TasksBox from "../../components/TasksBox.jsx";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
@@ -205,8 +204,6 @@ export default function Dashboard() {
           </p>
         </section>
       )}
-
-      <ReferralsInbox />
 
       {/* سلامة الطلاب اليوم أولًا، ثم سير اليوم، ثم المرجع */}
       {canReports && d.escapeCount > 0 && (
