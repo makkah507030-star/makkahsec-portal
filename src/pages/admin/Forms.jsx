@@ -130,6 +130,9 @@ function autoFill(fields, info, current, { overwrite = false } = {}) {
     const hit = AUTO_MAP.find((m) => m.keys.some((k) => label.includes(k)));
     const val = hit ? info[hit.from] : null;
     if (val) out[f.name] = val;
+    // عند تبديل الشخص يُمسح ما عُرف عن السابق إن لم يكن للجديد قيمة،
+    // كي لا يبقى رقم هوية الشخص السابق (مثلًا) مع اسم الجديد
+    else if (overwrite && hit?.from && hit.from in info) out[f.name] = "";
   });
   return out;
 }
@@ -575,7 +578,8 @@ export default function Forms({ view = "issue", openKey = null }) {
         const extra = (m.uid && byUid[m.uid]) || byName[(m.full_name ?? "").trim()];
         if (extra) {
           if (!m.specialization && extra.specialization) m.specialization = extra.specialization;
-          if (!m.national_id && extra.national_id) m.national_id = extra.national_id;
+          // رقم الهوية من سجل المعلم (المستورد من نور) مقدَّم على اسم الدخول
+          if (extra.national_id) m.national_id = extra.national_id;
         }
       });
 
@@ -805,7 +809,9 @@ export default function Forms({ view = "issue", openKey = null }) {
 
   // بيانات الطالب المعروفة في القاعدة — لتعبئة الحقول تلقائيًا
   const studentInfo = async (st) => {
-    const info = { name: st.full_name, national_id: st.national_id ?? null };
+    // كل المفاتيح حاضرة ولو فارغة، فيُمسح عند التبديل ما كان للطالب السابق
+    const info = { name: st.full_name, national_id: st.national_id ?? null,
+                   class_label: "", guardian_name: "", guardian_mobile: "" };
     const [{ data: v }, { data: gs }] = await Promise.all([
       supabase.from("v_active_students").select("class_no, grade").eq("student_id", st.id).maybeSingle(),
       supabase.from("guardian_student").select("guardians(full_name, mobile)").eq("student_id", st.id),
@@ -987,6 +993,16 @@ export default function Forms({ view = "issue", openKey = null }) {
       }
       const self = isSelfTarget(st, st ? st.full_name : row.recipient,
                                 session.user.id, profile?.full_name);
+      // القيم مُعبّأة من أول مختار؛ فلكل من بعده تُعاد تعبئة بياناته هو
+      // (السجل المدني والتخصص...) وإلا طُبعت بيانات الأول في مستنده
+      const isStaff = st && /^[tu]-/.test(String(st.id));
+      let own = values;
+      if (st && i > 0) {
+        const info = isStaff
+          ? { name: st.full_name, job: st.job ?? "", specialization: st.specialization ?? "", national_id: st.national_id ?? "" }
+          : await studentInfo(st).catch(() => null);
+        if (info) own = autoFill(picked.fields, info, values, { overwrite: true });
+      }
       rows.push({
         ...row,
         ...(self ? { status: "pending" } : {}),
@@ -995,7 +1011,7 @@ export default function Forms({ view = "issue", openKey = null }) {
         recipient: st ? st.full_name : row.recipient,
         student_id: st && !/^[tu]-/.test(String(st.id)) ? st.id : row.student_id,
         data: { ...(st
-          ? { ...values,
+          ? { ...own,
               recipient: st.full_name,
               ...(st.job ? { job: st.job } : {}),
               ...(/^[tu]-/.test(String(st.id)) ? {} : { student_id: st.id }) }
