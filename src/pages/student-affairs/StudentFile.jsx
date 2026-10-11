@@ -175,7 +175,8 @@ function FileBody({ s, from, to }) {
           <div className="flex flex-wrap gap-1.5">
             {late.map((m) => (
               <span key={m.attend_date} className="rounded-sm2 bg-late/10 px-2 py-1 text-xs text-late">
-                {fmtDate(m.attend_date + "T12:00:00")} · {fmtTime12(m.punch_time)} · {m.late_minutes} د
+                {fmtDate(m.attend_date + "T12:00:00")} ·{" "}
+                {m.punch_time ? <>{fmtTime12(m.punch_time)} · {m.late_minutes} د</> : "لم يبصم · بلا وقت"}
               </span>
             ))}
           </div>

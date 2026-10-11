@@ -68,8 +68,8 @@ function followNote(r, fp) {
     const gone = ps.find(([p, s]) => p > firstIn[0] && s === "absent");
     if (gone) notes.push(`غاب من الحصة ${gone[0]} بعد حضوره`);
   }
-  if (fp && r.isLate) notes.push(`تأخر صباحي ${r.lateMinutes} د`);
-  if (fp && r.noPunch) notes.push("حضر بلا بصمة");
+  if (fp && r.isLate) notes.push(r.lateNoTime ? "تأخر صباحي بلا وقت (لم يبصم)" : `تأخر صباحي ${r.lateMinutes} د`);
+  if (fp && r.noPunch && !r.lateNoTime) notes.push("حضر بلا بصمة");
   return notes.join(" · ");
 }
 
