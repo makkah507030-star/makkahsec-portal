@@ -11,6 +11,7 @@ import StudentPicker from "../components/StudentPicker.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import { Programs, Requests, MonthlyReport } from "./GuidanceMore.jsx";
+import GuidanceInquiries from "../components/GuidanceInquiries.jsx";
 
 /* =====================================================================
    التوجيه الطلابي (supabase/guidance_1.sql و guidance_2.sql).
@@ -22,6 +23,7 @@ import { Programs, Requests, MonthlyReport } from "./GuidanceMore.jsx";
      أقل من 60٪ («يحتاج دعمًا» في دورة الاختبار) في مادتين فأكثر، والإحالات.
    • الحالات: سجل سري لكل حالة وجلساتها، وإغلاقها بنتيجتها، وطباعتها.
    • الخطة والبرامج، وطلبات المقابلة، والتقرير الشهري: GuidanceMore.jsx.
+   • استمارات المستوى (توضيح مستوى الطالب من معلميه): components/GuidanceInquiries.jsx.
    ===================================================================== */
 
 const WATCH_AT = 5;          // متابعة الغياب كما في «الإنذارات والمحاضر»
@@ -56,7 +58,7 @@ export default function Guidance() {
   const [params] = useSearchParams();
   const linkedGrade = Number(params.get("grade"));
   const [grade, setGrade] = useState(myGrades.includes(linkedGrade) ? linkedGrade : myGrades[0] ?? null);
-  const [tab, setTab] = useState(["warn", "cases", "programs", "requests", "report"].includes(params.get("tab")) ? params.get("tab") : "warn");
+  const [tab, setTab] = useState(["warn", "cases", "inquiry", "programs", "requests", "report"].includes(params.get("tab")) ? params.get("tab") : "warn");
   const [newCase, setNewCase] = useState(null);   // { student, title, details, source }
   const [openCase, setOpenCase] = useState(null); // معرّف الحالة
   const [tick, setTick] = useState(0);
@@ -85,6 +87,7 @@ export default function Guidance() {
       <div className="flex flex-wrap gap-1.5">
         <button className={pill(tab === "warn")} onClick={() => setTab("warn")}>الإنذار المبكر</button>
         <button className={pill(tab === "cases")} onClick={() => setTab("cases")}>الحالات</button>
+        <button className={pill(tab === "inquiry")} onClick={() => setTab("inquiry")}>استمارات المستوى</button>
         <button className={pill(tab === "programs")} onClick={() => setTab("programs")}>الخطة والبرامج</button>
         <button className={pill(tab === "requests")} onClick={() => setTab("requests")}>طلبات المقابلة</button>
         <button className={pill(tab === "report")} onClick={() => setTab("report")}>التقرير الشهري</button>
@@ -106,6 +109,7 @@ export default function Guidance() {
                           details: reasonsOf(r).map((x) => `• ${x.t}`).join("\n"),
                         })} />
         : tab === "cases" ? <CasesList key={`${grade}-${tick}`} grade={grade} onOpen={setOpenCase} />
+        : tab === "inquiry" ? <GuidanceInquiries key={grade} grade={grade} />
         : tab === "programs" ? <Programs key={grade} grade={grade} me={profile?.full_name} />
         : tab === "requests" ? <Requests key={grade} grade={grade} />
         : <MonthlyReport key={grade} grade={grade} me={profile?.full_name} />}

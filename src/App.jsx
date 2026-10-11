@@ -91,6 +91,7 @@ const QuizAnalytics = lazy(() => import("./pages/teacher/QuizAnalytics.jsx"));
 const QuizTake = lazy(() => import("./pages/QuizTake.jsx"));
 const ExamsAdmin = lazy(() => import("./pages/admin/ExamsAdmin.jsx"));
 const ReferralView = lazy(() => import("./pages/ReferralView.jsx"));
+const GuidanceInquiry = lazy(() => import("./pages/GuidanceInquiry.jsx"));
 const BehaviorForms = lazy(() => import("./pages/BehaviorForms.jsx"));
 const StudentCertificate = lazy(() => import("./pages/StudentCertificate.jsx"));
 const BehaviorFormView = lazy(() => import("./pages/BehaviorFormView.jsx"));
@@ -413,6 +414,8 @@ export default function App() {
           {/* إحالة الطالب — الشاشة للمعلم والإدارة، والملف لصاحبه وولي أمره */}
           <Route path="/referrals" element={<Referrals />} />
           <Route path="/guidance" element={<Guidance />} />
+          {/* استمارة توضيح مستوى الطالب — للمعلم سطره، وللتوجيه والوكيل، ولولي الأمر نسخته */}
+          <Route path="/inquiry/:id" element={<GuidanceInquiry />} />
           {/* ملاحظات الطلاب — الصفحة تتحقق من الدور، والقاعدة تفرض من يكتب كل نوع */}
           <Route path="/student-notes" element={<StudentNotes />} />
           {/* جداول الاختبارات: العرض للجميع، والإدارة بصلاحية */}

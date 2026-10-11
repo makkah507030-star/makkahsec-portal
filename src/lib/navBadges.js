@@ -5,6 +5,7 @@ import { stageOf, isLate, STAGE_COLS } from "./referrals.js";
 import { fmtHijri } from "./dates.js";
 import { todayISO } from "./schoolTime.js";
 import { countAr } from "./arabicCount.js";
+import { FLAG_ORDER } from "./guidanceInquiry.js";
 
 /* =====================================================================
    «بانتظار إجرائك» — مصدر واحد لكل ما ينتظر إجراء المستخدم: عدادات القائمة الجانبية
@@ -14,9 +15,10 @@ import { countAr } from "./arabicCount.js";
      sub    سطر تفصيل تحت العنوان
      follow متابعة لما عند غيرك — لا تُحسب في عدد «بانتظار إجرائك»
      to     الصفحة التي يُنجز فيها الإجراء (مع التبويب المناسب)
-     items  [{ id, to, title }] حين تكون عناصرها معروفة — فتُفتح مباشرة
+     items  [{ id, to, title, flag? }] حين تكون عناصرها معروفة — فتُفتح مباشرة
             إن كانت واحدة، وتُعرض قائمتها إن تعددت
             وبلا to يبقى العنصر للاطلاع فقط في القائمة (لا رابط له)
+     flag   ملصق يحدده مرسل النموذج (عاجل/سري/للاطلاع والتوجيه) — الأشد بين عناصرها
    تُحتسب بحسب الدور: الإدارة بأدوارها، والمعلم والطالب وولي الأمر بحسابه.
    يُحدَّث كل دقيقتين ما دامت الصفحة ظاهرة، وعند الانتقال بين الصفحات
    (refreshNavBadges). كلها عبر صلاحيات المستخدم نفسه (RLS).
@@ -93,6 +95,7 @@ async function load() {
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
     plcBack, pdBack, xvBack, perfAck, guidance,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
+    giTeacher, giDeputy, giCounselor, giGuardian,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? count(fd().eq("status", "pending")) : none,
@@ -136,6 +139,18 @@ async function load() {
 
     // المعلم: اختبارات فترات حلّ موعدها ولم يسجّل الوكيل رصدها في نور (للاطلاع)
     role === "teacher" ? rowsOf(supabase.rpc("my_noor_grade_due")) : noRows,
+
+    // استمارة توضيح مستوى الطالب: سطر المعلم، ورأي الوكيل، وما ينتظر الموجه، ونسخة ولي الأمر
+    staff ? rowsOf(supabase.from("guidance_inquiry_items")
+      .select("id, inquiry_id, subject, guidance_inquiries!inner(student_name, flag, status)")
+      .eq("teacher_user_id", uid).is("filled_at", null).eq("guidance_inquiries.status", "teachers").limit(50)) : noRows,
+    isDeputy ? rowsOf(supabase.from("guidance_inquiries").select("id, student_name, flag")
+      .eq("status", "deputy").order("created_at").limit(50)) : noRows,
+    myGrades.length ? rowsOf(supabase.from("guidance_inquiries")
+      .select("id, student_name, flag, status, guidance_inquiry_items(filled_at, teacher_user_id)")
+      .in("status", ["teachers", "counselor"]).in("grade", myGrades).order("created_at").limit(100)) : noRows,
+    isGuardian ? rowsOf(supabase.from("guidance_inquiries").select("id, student_name, flag")
+      .eq("status", "sent").is("guardian_seen_at", null).order("created_at").limit(50)) : noRows,
   ]);
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
@@ -145,7 +160,29 @@ async function load() {
   const awayG = refAway.filter((r) => stageOf(r).group === "guardian").length;
   const awayLate = refAway.filter(isLate).length;
   const noor = noorTask(noorDue);
-  const items = (rows, path, title) => rows.map((r) => ({ id: r.id, to: `${path}/${r.id}`, title: title?.(r) ?? "" }));
+  const items = (rows, path, title) => rows.map((r) => ({ id: r.id, to: `${path}/${r.id}`, title: title?.(r) ?? "", flag: r.flag ?? null }));
+  // الموجه: ما عاد إليه من الوكيل، وما اكتملت تعبئة معلميه ولم يُرسَل للوكيل
+  const giReady = giCounselor.filter((r) => {
+    if (r.status === "counselor") return true;
+    const acc = (r.guidance_inquiry_items ?? []).filter((x) => x.teacher_user_id);
+    return acc.length > 0 && acc.every((x) => x.filled_at);
+  });
+  const giTasks = [
+    { key: "giTeacher", label: "استمارات مستوى طالب تنتظر تعبئتك", icon: "clipboard",
+      items: giTeacher.map((x) => ({ id: x.id, to: `/inquiry/${x.inquiry_id}`, flag: x.guidance_inquiries?.flag ?? null,
+                                     title: `${x.guidance_inquiries?.student_name ?? ""} · ${x.subject}` })) },
+    { key: "giDeputy", label: "استمارات مستوى طالب تنتظر رأيك", icon: "clipboard",
+      items: items(giDeputy, "/inquiry", (r) => r.student_name) },
+    { key: "giCounselor", label: "استمارات مستوى جاهزة لإجرائك", icon: "heart",
+      items: items(giReady, "/inquiry", (r) => `${r.student_name} · ${r.status === "counselor" ? "عادت من الوكيل" : "اكتملت التعبئة"}`) },
+    { key: "giGuardian", label: "استمارة مستوى ابنك من التوجيه الطلابي", icon: "heart",
+      items: items(giGuardian, "/inquiry", (r) => r.student_name) },
+  ].map((t) => {
+    const flag = FLAG_ORDER.find((f) => t.items.some((x) => x.flag === f)) ?? null;
+    const rank = (x) => { const i = FLAG_ORDER.indexOf(x.flag); return i < 0 ? 9 : i; };
+    return { ...t, items: [...t.items].sort((x, y) => rank(x) - rank(y)), n: t.items.length, to: "/", flag,
+             tone: flag === "urgent" ? "absent" : "warning" };
+  });
 
   const tasks = [
     // ما أُعيد إليك أولًا: عمل بدأته ينتظر تعديلك
@@ -179,6 +216,7 @@ async function load() {
     { key: "xvHost", n: xvHost.length, to: "/xvisits?tab=host",
       items: items(xvHost, "/xvisits", (r) => `زيارة ${r.visitor_name ?? ""}`),
       label: "زيارات تبادلية تنتظر توقيعك", tone: "warning", icon: "signature" },
+    ...giTasks,
     { key: "perfAck", n: perfAck, to: "/my-performance", label: "تقييم أداء ينتظر اطلاعك", tone: "warning", icon: "award" },
     { key: "referrals", n: refDeputy + refCounselor, to: "/referrals", label: "إحالات تنتظر إجراءك", tone: "warning", icon: "send" },
     { key: "guidance", n: guidance, to: `/guidance?tab=requests${myGrades.length === 1 ? `&grade=${myGrades[0]}` : ""}`,
@@ -220,8 +258,8 @@ async function load() {
       + pdToSign.length + pdPending.length + pdBack.length
       + xvHost.length + xvPending.length + xvBack.length,
     "/my-performance": perfAck,
-    "/guidance": guidance,
-    "/": behaviorGuardian.length + refGuardian.length + pledges.length,
+    "/guidance": guidance + giDeputy.length + giReady.length,
+    "/": behaviorGuardian.length + refGuardian.length + pledges.length + giGuardian.length,
     _tasks: tasks,
     _ready: true,
   };
