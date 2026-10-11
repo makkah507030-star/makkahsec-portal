@@ -18,6 +18,7 @@ import { useNotice } from "../lib/useNotice.js";
 import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes.js";
 import { sendPush } from "../lib/pushSend.js";
 import { countAr } from "../lib/arabicCount.js";
+import { cmpAr } from "../lib/sortAr.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -275,7 +276,10 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
   const loadParts = async () => {
     const { data } = await supabase.from("event_participants")
       .select("*").eq("event_id", e.id).order("class_label").order("student_name");
-    setParts(data ?? []);
+    // الفصول بترتيبها، والأسماء أبجدية داخل كل فصل
+    const rank = new Map();
+    (data ?? []).forEach((p) => { if (!rank.has(p.class_label)) rank.set(p.class_label, rank.size); });
+    setParts((data ?? []).sort((a, b) => rank.get(a.class_label) - rank.get(b.class_label) || cmpAr(a.student_name, b.student_name)));
   };
 
   useEffect(() => { loadParts(); }, [e.id]);

@@ -9,6 +9,7 @@ import { loadRangeStart, WARNING_STAGES, OFFICIAL_LABEL } from "../../lib/offici
 import { SIGNS, logos, Fig, DateInput, Note, Loading, weekdayOf, useFingerprint } from "./shared.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { countAr } from "../../lib/arabicCount.js";
+import { byName } from "../../lib/sortAr.js";
 
 // من يعدّل حضور الحصص (supabase/class_attendance_staff_edit.sql)
 const EDIT_ROLES = ["principal", "tech_support", "deputy_students"];
@@ -33,7 +34,7 @@ export default function StudentFile() {
     loadRangeStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
     fetchAllPaged(() => supabase.from("v_active_students")
       .select("student_id, full_name, class_no, grade").order("student_id", { ascending: true }))
-      .then(setAll).catch(() => setAll([]));
+      .then((r) => setAll(r.sort(byName()))).catch(() => setAll([]));
   }, []);
 
   const matches = useMemo(() => {

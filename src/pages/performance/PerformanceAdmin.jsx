@@ -6,6 +6,7 @@ import { fmtDate } from "../../lib/dates";
 import PerformanceFile from "../../components/PerformanceFile.jsx";
 import { ReviewEditor } from "../../components/PerformanceReview.jsx";
 import Loader from "../../components/Loader.jsx";
+import { byName } from "../../lib/sortAr.js";
 
 /* =====================================================================
    تقييم الأداء الوظيفي — لمدير المدرسة، وللدعم الفني للمتابعة الفنية:
@@ -85,7 +86,7 @@ export default function PerformanceAdmin() {
         for (const [uid, items] of Object.entries(auto))
           for (const [k, v] of Object.entries(items)) if (v.cnt > 0) (m[uid] ??= new Set()).add(k);
         setCounts(Object.fromEntries(Object.entries(m).map(([k, s]) => [k, s.size])));
-        setTeachers(ts ?? []);
+        setTeachers((ts ?? []).sort(byName()));
       } catch (e) {
         setErr(e.message?.includes("perf_") ? "ملف الأداء غير مفعّل بعد في قاعدة البيانات." : (e.message ?? "تعذّر التحميل."));
         setTeachers([]);

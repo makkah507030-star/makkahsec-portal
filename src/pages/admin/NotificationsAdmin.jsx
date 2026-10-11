@@ -11,6 +11,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { sendPush } from "../../lib/pushSend.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import { byName } from "../../lib/sortAr.js";
 
 const ROLES = [
   { key: "teacher",  label: "المعلمون" },
@@ -96,7 +97,7 @@ function SendForm() {
       .or(`full_name.ilike.%${term}%,username.ilike.%${term}%`)
       .eq("is_active", true)
       .limit(20);
-    setFound(data ?? []);
+    setFound((data ?? []).sort(byName((u) => u.full_name ?? u.username)));
   };
 
   const addPerson = (u) => {

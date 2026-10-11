@@ -1,6 +1,7 @@
 // src/pages/studio/data.js
 import { supabase } from "../../lib/supabase";
 import { loadPeriodTimes } from "../../lib/periodTimes";
+import { byClassName, byName } from "../../lib/sortAr.js";
 
 /* =====================================================================
    بيانات قوالب المرحلة الثالثة — تُحمَّل عند فتح القالب فقط.
@@ -48,14 +49,14 @@ export async function loadSchedule(c) {
 export async function loadStudents() {
   const { data } = await supabase.from("v_active_students")
     .select("student_id, full_name, class_no, grade").order("class_no").order("full_name");
-  return { students: data ?? [] };
+  return { students: (data ?? []).sort(byClassName()) };
 }
 
 /* المعلمون النشطون — لطباعة بطاقات التعريف دفعة واحدة */
 export async function loadStaff() {
   const { data } = await supabase.from("teachers")
     .select("full_name, specialization").eq("is_active", true).order("full_name");
-  return { staff: data ?? [] };
+  return { staff: (data ?? []).sort(byName()) };
 }
 
 /* ختم المدرسة المعتمد (school_assets.stamp في مخزن form-assets) — يُحوَّل صورةً

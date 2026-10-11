@@ -8,6 +8,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { byName } from "../../lib/sortAr.js";
 
 const ROLES = ["admin", "teacher", "student", "guardian"];
 
@@ -40,7 +41,7 @@ export default function PasswordReset() {
       setMsg({ ok: false, text: error.message });
       return;
     }
-    setResults(data ?? []);
+    setResults((data ?? []).sort(byName((u) => u.full_name ?? u.username)));
   };
 
   const reset = async (u) => {
@@ -217,7 +218,7 @@ function UnactivatedBoxes() {
       .eq("is_active", true)
       .order("full_name");
     if (error) { console.error(error); setList([]); return; }
-    setList(data ?? []);
+    setList((data ?? []).sort(byName()));
   };
 
   /* ---------- تصدير عادي (إدارة / معلمون) ---------- */
@@ -230,7 +231,7 @@ function UnactivatedBoxes() {
       .order("full_name");
 
     const headers = ["م", "الاسم", "اسم المستخدم"];
-    const rows = (data ?? []).map((u, i) => [i + 1, u.full_name ?? "", u.username]);
+    const rows = (data ?? []).sort(byName()).map((u, i) => [i + 1, u.full_name ?? "", u.username]);
     const label = ROLE_META[role]?.label ?? role;
 
     if (kind === "pdf") {

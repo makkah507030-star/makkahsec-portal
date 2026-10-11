@@ -7,6 +7,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 import { useSession } from "../../lib/session.jsx";
+import { byClassName } from "../../lib/sortAr.js";
 
 const TRACK_LABEL = {
   common_year: "السنة المشتركة",
@@ -59,7 +60,7 @@ export default function Students() {
   useEffect(() => {
     (async () => {
       const { data } = await supabase.from("v_active_students").select("*").order("class_no");
-      setRows(data ?? []);
+      setRows((data ?? []).sort(byClassName()));
       const { data: gs } = await supabase.from("guardian_student")
         .select("student_id, guardians(full_name, mobile)");
       // بعض الروابط قد تعود بمصفوفة فارغة أو ولي أمر محذوف (رابط يتيم) —

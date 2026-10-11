@@ -6,6 +6,7 @@ import PermissionLog from "../components/PermissionLog.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes";
 import { countAr } from "../lib/arabicCount.js";
+import { byName } from "../lib/sortAr.js";
 
 const GRADES = [1, 2, 3];
 const MAX_PERIODS = 7; // أقصى عدد حصص باليوم (الأحد/الاثنين = 7)
@@ -105,7 +106,7 @@ export default function PermissionRequestPage() {
         .eq("grade", grade)
         .eq("class_no", classNo)
         .order("full_name");
-      setStudents(data ?? []);
+      setStudents((data ?? []).sort(byName()));
     })();
   }, [grade, classNo]);
 

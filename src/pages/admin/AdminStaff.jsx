@@ -8,6 +8,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { SIGNERS, loadSigners } from "../../lib/signers.js";
+import { byName } from "../../lib/sortAr.js";
 
 // يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
 // (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
@@ -82,7 +83,7 @@ function Members() {
         .in("user_id", ids);
       (rs ?? []).forEach((r) => { (roleMap[r.user_id] ??= []).push(r.role_type); });
     }
-    setList((admins ?? []).map((a) => ({ ...a, roles: roleMap[a.id] ?? [] })));
+    setList((admins ?? []).map((a) => ({ ...a, roles: roleMap[a.id] ?? [] })).sort(byName()));
   };
 
   useEffect(() => { load(); }, []);

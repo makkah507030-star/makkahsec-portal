@@ -10,6 +10,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { useSession } from "../../lib/session.jsx";
+import { byClassName } from "../../lib/sortAr.js";
 
 const TABS = [
   { key: "official", label: "الحضور والغياب الرسمي" },
@@ -227,7 +228,7 @@ export function MissingTab() {
       setRows(null);
       const { data, error } = await supabase.rpc("missing_students", { p_date: date });
       if (error) { console.error(error); setRows([]); return; }
-      setRows(data ?? []);
+      setRows((data ?? []).sort(byClassName()));
     })();
   }, [date]);
 
