@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import { traced, bootSummary } from "./bootTrace.js";
 import { supabase, isConfigured } from "./supabase";
 import { setHolidayRanges, todayISO } from "./schoolTime";
 
@@ -51,18 +52,21 @@ export function SessionProvider({ children }) {
       setViewState(null);
       return;
     }
-    const { data: u } = await supabase
-      .from("users")
-      .select("id, username, full_name, role, is_active, must_change_pw")
-      .eq("id", userId)
-      .maybeSingle();
+    // بيانات الحساب وسجل المعلم والأدوار معًا بدل التتابع — أقل انتظارًا عند فتح البوابة
+    const [{ data: u }, { data: tRow }, { data: roleRows }] = await Promise.all([
+      traced("بيانات الحساب", supabase
+        .from("users")
+        .select("id, username, full_name, role, is_active, must_change_pw")
+        .eq("id", userId)
+        .maybeSingle()),
+      traced("سجل المعلم", supabase.from("teachers").select("id").eq("user_id", userId).maybeSingle()),
+      traced("الأدوار الإدارية", supabase.from("admin_roles").select("role_type").eq("user_id", userId)),
+    ]);
 
     setProfile(u ?? null);
 
     // هل هذا المستخدم معلّم أيضًا؟ (سجل في جدول المعلمين مرتبط به) — لدعم
     // الشخص الذي يجمع بين مهمة إدارية ومهمة تدريس، فينتقل بين الواجهتين.
-    const { data: tRow } = await supabase
-      .from("teachers").select("id").eq("user_id", userId).maybeSingle();
     const teacherRec = !!tRow;
     setIsTeacher(teacherRec);
 
@@ -78,22 +82,17 @@ export function SessionProvider({ children }) {
     }
 
     if (u?.role === "admin") {
-      const { data: roles } = await supabase
-        .from("admin_roles")
-        .select("role_type")
-        .eq("user_id", userId);
-
-      const list = (roles ?? []).map((r) => r.role_type);
+      const list = (roleRows ?? []).map((r) => r.role_type);
       setAdminRoles(list);
 
       // صلاحية كاملة للمدير والدعم الفني
       if (list.some((r) => SUPER_ROLES.includes(r))) {
         setPermissions(["*"]);
       } else if (list.length) {
-        const { data: perms } = await supabase
+        const { data: perms } = await traced("الصلاحيات", supabase
           .from("role_permissions")
           .select("permission")
-          .in("role_type", list);
+          .in("role_type", list));
         setPermissions([...new Set((perms ?? []).map((p) => p.permission))]);
       } else {
         setPermissions([]);
@@ -111,7 +110,7 @@ export function SessionProvider({ children }) {
     }
     let alive = true;
 
-    supabase.auth.getSession().then(async ({ data }) => {
+    traced("استعادة الجلسة", supabase.auth.getSession()).then(async ({ data }) => {
       if (!alive) return;
       // قد يسبقه حدث المصادقة الأول بالجلسة نفسها — فلا نستبدل الكائن
       if (sessionRef.current?.user?.id === data.session?.user?.id && sessionRef.current) {
@@ -121,8 +120,9 @@ export function SessionProvider({ children }) {
         setSession(data.session ?? null);
       }
       await loadProfile(data.session?.user?.id);
-      await loadHolidays();            // قبل عرض الصفحات حتى تكون حالة العطلة صحيحة من أول عرض
+      await traced("التقويم والإجازات", loadHolidays());   // قبل عرض الصفحات حتى تكون حالة العطلة صحيحة من أول عرض
       if (alive) setLoading(false);
+      console.info("[فتح البوابة]", bootSummary());
     });
 
     // أحداث المصادقة تتكرر للمستخدم نفسه (تجديد الرمز كل ساعة، العودة للتبويب).
