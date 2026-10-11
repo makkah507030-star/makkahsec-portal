@@ -4,7 +4,10 @@ import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "./PrintPortal.jsx";
 import { fmtHijri } from "../lib/dates";
 import { LEVELS } from "../lib/guidanceInquiry";
-import { PRINCIPAL_NAME } from "../lib/signers.js";
+import { PRINCIPAL_NAME, STUDENT_DEPUTY_NAME } from "../lib/signers.js";
+import { usePrincipalSignature } from "../lib/principalSignature";
+import { useSignatureByName } from "../lib/userSignatures.js";
+import { levelBand } from "../lib/gradeBands.js";
 
 /* =====================================================================
    ورقة «استمارة توضيح مستوى الطالب التحصيلي والسلوكي» — على نمط النموذج
@@ -31,10 +34,24 @@ export function InquiryPrintArea({ children }) {
 }
 
 function Mark({ on }) {
-  return <span className="text-[13px] font-bold text-ink">{on ? "✓" : ""}</span>;
+  return <span className="text-[13px] font-bold">{on ? "✓" : ""}</span>;
 }
 
-function Sign({ role, name, url }) {
+// لون المستوى (ممتاز أخضر، جيد فيروزي، ضعيف أحمر): عنوان العمود، والخانة المختارة
+const levelStyle = (t, on = true) => {
+  const b = on ? levelBand(t) : null;
+  return b ? { background: b.bg, color: b.text, fontWeight: 700, ...INK } : undefined;
+};
+
+/* توقيع معلم المادة: المحفوظ مع تعبئته، وإلا توقيعه من «توقيعي» بعد أن يعبّئ */
+function TeacherSig({ url, name, filled }) {
+  const u = useSignatureByName(filled ? name : "", url);
+  return u ? <img src={u} alt="" className="mx-auto max-h-[8mm] w-auto object-contain" /> : null;
+}
+
+function Sign({ role, name, url, signed = true }) {
+  // صورة التوقيع بعد أن يوقّع صاحبه فقط: المحفوظة، وإلا من «توقيعي» باسمه
+  url = useSignatureByName(signed ? name : "", url);
   return (
     <div className="min-w-[170px] text-center">
       <p className="text-[12px] text-muted">{role}</p>
@@ -49,6 +66,7 @@ function Sign({ role, name, url }) {
 
 export default function InquirySheet({ inq, items, sigs = {}, scale = 1 }) {
   const date = inq.created_at;
+  const principal = usePrincipalSignature();
   return (
     <div className="sheet mx-auto bg-white text-ink shadow-[0_18px_50px_-28px_rgba(16,16,16,.5)]"
          style={{ width: "210mm", height: "297mm", flex: "0 0 auto", position: "relative",
@@ -94,18 +112,18 @@ export default function InquirySheet({ inq, items, sigs = {}, scale = 1 }) {
               <th rowSpan={2} className={`${cell} w-[22mm]`} style={TH}>التوقيع</th>
             </tr>
             <tr>
-              {[...LEVELS, ...LEVELS].map((l, i) => <th key={i} className={`${cell} w-[13mm] font-medium`} style={TH}>{l.t}</th>)}
+              {[...LEVELS, ...LEVELS].map((l, i) => <th key={i} className={`${cell} w-[13mm] font-medium`} style={levelStyle(l.t) ?? TH}>{l.t}</th>)}
             </tr>
           </thead>
           <tbody>
             {items.map((x) => (
               <tr key={x.id}>
                 <td className={`${cell} text-right font-semibold`}>{x.subject}</td>
-                {LEVELS.map((l) => <td key={`a${l.k}`} className={cell}><Mark on={x.academic === l.k} /></td>)}
-                {LEVELS.map((l) => <td key={`b${l.k}`} className={cell}><Mark on={x.behavior === l.k} /></td>)}
+                {LEVELS.map((l) => <td key={`a${l.k}`} className={cell} style={levelStyle(l.t, x.academic === l.k)}><Mark on={x.academic === l.k} /></td>)}
+                {LEVELS.map((l) => <td key={`b${l.k}`} className={cell} style={levelStyle(l.t, x.behavior === l.k)}><Mark on={x.behavior === l.k} /></td>)}
                 <td className={`${cell} text-[11.5px]`}>{x.teacher_name ?? ""}</td>
                 <td className={`${cell} h-[9mm]`}>
-                  {x.sig && sigs[x.sig] && <img src={sigs[x.sig]} alt="" className="mx-auto max-h-[8mm] w-auto object-contain" />}
+                  <TeacherSig url={x.sig ? sigs[x.sig] : null} name={x.teacher_name} filled={!!x.filled_at} />
                 </td>
               </tr>
             ))}
@@ -134,9 +152,10 @@ export default function InquirySheet({ inq, items, sigs = {}, scale = 1 }) {
         </table>
 
         <div className="mt-auto flex items-end justify-between pt-4">
-          <Sign role="الموجه الطلابي" name={inq.counselor_name} url={sigs[inq.counselor_sig]} />
-          <Sign role="وكيل شؤون الطلاب" name={inq.deputy_name} url={sigs[inq.deputy_sig]} />
-          <Sign role="مدير المدرسة" name={PRINCIPAL_NAME} />
+          <Sign role="الموجه الطلابي" name={inq.counselor_name} url={sigs[inq.counselor_sig]} signed={!!inq.counselor_at} />
+          {/* اسم الوكيل من «أسماء الموقّعين» حتى يبدي رأيه، وتوقيعه بعدها */}
+          <Sign role="وكيل شؤون الطلاب" name={inq.deputy_name || STUDENT_DEPUTY_NAME} url={sigs[inq.deputy_sig]} signed={!!inq.deputy_at} />
+          <Sign role="مدير المدرسة" name={principal.name || PRINCIPAL_NAME} url={principal.url} />
         </div>
         <div className="mt-3 flex items-center justify-between border-t border-line pt-2 text-[10.5px] text-faint">
           <span>بوابة مكة الثانوية الرقمية</span>

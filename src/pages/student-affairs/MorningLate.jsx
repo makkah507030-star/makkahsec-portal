@@ -11,6 +11,7 @@ import {
   SIGNS, logos, Pill, Fig, DateInput, ExportBar, GradePills, Note, Loading, Empty, SetupNotice, useDay, daysWord,
   useFingerprint, FingerprintLockedNote,
 } from "./shared.jsx";
+import { cmpAr } from "../../lib/sortAr.js";
 
 export default function MorningLate() {
   const [mode, setMode] = useState("day");
@@ -157,7 +158,7 @@ function RangeLate() {
     let list = [...by.values()];
     if (grade) list = list.filter((s) => s.grade === grade);
     return list.filter((s) => s.days >= min)
-      .sort((a, b) => b.days - a.days || b.minutes - a.minutes);
+      .sort((a, b) => b.days - a.days || b.minutes - a.minutes || cmpAr(a.full_name, b.full_name));
   }, [rows, grade, min]);
 
   const headers = ["م", "اسم الطالب", "الصف", "الفصل", "أيام التأخر", "مجموع الدقائق", "منها بلا وقت", "آخر تأخر"];

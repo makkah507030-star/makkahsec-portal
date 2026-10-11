@@ -5,6 +5,7 @@ import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import SignatureCleaner from "../components/SignatureCleaner.jsx";
+import { clearSignatureCache } from "../lib/userSignatures.js";
 
 /* =====================================================================
    توقيعي — يرفع كل مستخدم توقيعه ويستبدله أو يحذفه.
@@ -72,6 +73,7 @@ export default function MySignature() {
     // التوقيع القديم بصيغة أخرى لم يعد مستخدمًا
     if (path && path !== key) await supabase.storage.from("form-assets").remove([path]);
     setMsg({ ok: true, text: "حُفظ توقيعك." });
+    clearSignatureCache();
     load();
   };
 

@@ -27,13 +27,12 @@ import ColorLegend from "../../components/ColorLegend.jsx";
 import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME, STUDENT_DEPUTY_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
-import { fmtDateTime, fmtDate, noEra } from "../../lib/dates";
+import { fmtDate, noEra } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import { notifyUsers } from "../../lib/referrals";
 import HeaderChips from "../../components/HeaderChips.jsx";
 import DutyCard from "../../components/DutyCard.jsx";
-import ReferralsInbox from "../../components/ReferralsInbox.jsx";
 import TasksBox from "../../components/TasksBox.jsx";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
@@ -49,12 +48,9 @@ export default function Dashboard() {
   // لوحة التحكم الرئيسية تعرض بيانات حسّاسة (حضور، حصص، طلاب مفقودون).
   // نُظهر كل قسم بحسب صلاحية الحساب فقط.
   const canReports = !isSupportOnly && can("reports");
-  const canStudents = !isSupportOnly && can("students");
-  const canImport = !isSupportOnly && can("import");
-  // إحصائيات الرئيسية (أرقام المدرسة) صارت صلاحية مستقلة يُتحكَّم بها لكل دور
-  const canFigures = !isSupportOnly && can("home_stats");
 
   const [d, setD] = useState(null);
+  const [legend, setLegend] = useState(false);
   const date = todayISO();
   const dow = todayDow();
 
@@ -69,30 +65,6 @@ export default function Dashboard() {
       const term = Number(m.active_term ?? 1);
 
       const base = { year, term, yearLabel };
-
-      // أرقام المدرسة — لمن يملك صلاحية الطلاب أو التقارير
-      if (canFigures) {
-        const [students, classes, teachers, guardians] = await Promise.all([
-          supabase.from("students").select("id", { count: "exact", head: true }).eq("is_active", true),
-          supabase.from("classes").select("id", { count: "exact", head: true }).eq("academic_year", year),
-          supabase.from("teachers").select("id", { count: "exact", head: true }).eq("is_active", true),
-          supabase.from("guardians").select("id", { count: "exact", head: true }).eq("is_active", true),
-        ]);
-        Object.assign(base, {
-          students: students.count ?? 0,
-          classes: classes.count ?? 0,
-          teachers: teachers.count ?? 0,
-          guardians: guardians.count ?? 0,
-        });
-      }
-
-      // آخر استيراد — لمن يملك صلاحية الاستيراد
-      if (canImport) {
-        const { data: li } = await supabase.from("import_logs")
-          .select("import_type, status, started_at")
-          .order("started_at", { ascending: false }).limit(1);
-        base.lastImport = li?.[0] ?? null;
-      }
 
       // بيانات الحضور والحصص — لمن يملك صلاحية التقارير فقط
       if (canReports) {
@@ -138,7 +110,7 @@ export default function Dashboard() {
 
       setD(base);
     })();
-  }, [date, dow, canFigures, canReports, canImport, isSupportOnly]);
+  }, [date, dow, canReports, isSupportOnly]);
 
   if (!d) return <Loader />;
 
@@ -176,7 +148,8 @@ export default function Dashboard() {
   const marked = canReports && d.unmarked ? d.schedCount - d.unmarked.length : 0;
   const pct = canReports && d.schedCount ? Math.round((marked / d.schedCount) * 100) : 0;
   // حساب محدود الصلاحيات لا يملك أيًّا من أقسام اللوحة
-  const barren = !canFigures && !canReports && !canImport;
+  // (أرقام المدرسة صارت في صفحة الطلاب، وآخر استيراد في صفحة الاستيراد)
+  const barren = !canReports;
 
   return (
     <div className="space-y-5">
@@ -206,8 +179,6 @@ export default function Dashboard() {
         </section>
       )}
 
-      <ReferralsInbox />
-
       {/* سلامة الطلاب اليوم أولًا، ثم سير اليوم، ثم المرجع */}
       {canReports && d.escapeCount > 0 && (
         <Link to="/student-affairs?tab=follow"
@@ -225,7 +196,7 @@ export default function Dashboard() {
       {canReports && dow > 0 && <MissingStudentsBox date={date} />}
 
       {/* تحضير اليوم — لا يُعرض إلا بعد اكتمال تحميل البيانات (d.unmarked) */}
-      {canReports && d.unmarked && (dow ? (
+      {canReports && d.unmarked && dow > 0 && (
         <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-5">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -240,8 +211,27 @@ export default function Dashboard() {
                   : `بقيت ${countAr(d.unmarked.length, "period")} بلا تحضير.`}
               </p>
             </div>
-            <p className="num text-4xl font-bold leading-none text-mint-deep">{pct}%</p>
+            <div className="flex items-start gap-2">
+              <p className="num text-4xl font-bold leading-none text-mint-deep">{pct}%</p>
+              <button onClick={() => setLegend((v) => !v)} aria-label="دلالة الألوان" title="دلالة الألوان"
+                className={`grid h-6 w-6 place-items-center rounded-full border text-xs font-bold transition-colors ${
+                  legend ? "border-mint-deep bg-mint-deep text-white" : "border-[#CCF2DB] bg-white text-mint-deep hover:bg-canvas"}`}>؟</button>
+            </div>
           </div>
+          {legend && (
+            <div className="mt-3">
+              <ColorLegend defaultOpen groups={[
+                { title: "حصص اليوم", items: [
+                  { color: "bg-late", label: "عدّاد أحمر", note: "عدد الفصول التي لم تُحضَّر في تلك الحصة" },
+                  { chip: "bg-present/10 text-present", sample: "أخضر", label: "اكتمل تحضير الحصة" },
+                ] },
+                { title: "تنبيهات ومتابعة", items: [
+                  { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر", label: "طلاب دخلوا المدرسة وغابوا عن حصصهم" },
+                  { chip: "bg-late/10 text-late", sample: "بلا ربط", label: "طلاب بلا رقم في جهاز البصمة" },
+                ] },
+              ]} />
+            </div>
+          )}
           <div className="mt-4 h-2 overflow-hidden rounded-pill bg-white">
             <div className="h-full rounded-pill bg-[#6AA786] transition-all" style={{ width: `${pct}%` }} />
           </div>
@@ -250,59 +240,11 @@ export default function Dashboard() {
             التفاصيل والإجراءات ←
           </Link>
         </section>
-      ) : (
-        <section className="rounded-card border border-line bg-white px-5 py-4">
-          <p className="text-sm text-muted">لا حصص اليوم — الأسبوع الدراسي من الأحد إلى الخميس.</p>
-        </section>
-      ))}
+      )}
 
       {canReports && dow > 0 && <OfficialStatusBox date={date} />}
 
       <DutyCard />
-
-      {canReports && (
-        <ColorLegend
-          groups={[
-            {
-              title: "حصص اليوم",
-              items: [
-                { color: "bg-late", label: "عدّاد أحمر", note: "عدد الفصول التي لم تُحضَّر في تلك الحصة" },
-                { chip: "bg-present/10 text-present", sample: "أخضر", label: "اكتمل تحضير الحصة" },
-              ],
-            },
-            {
-              title: "تنبيهات ومتابعة",
-              items: [
-                { chip: "bg-absent/10 text-absent", sample: "بصم ولم يحضر",
-                  label: "طلاب دخلوا المدرسة وغابوا عن حصصهم" },
-                { chip: "bg-late/10 text-late", sample: "بلا ربط",
-                  label: "طلاب بلا رقم في جهاز البصمة" },
-              ],
-            },
-          ]}
-        />
-      )}
-
-      {/* أرقام المدرسة */}
-      {canFigures && (
-        <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Fig label="طالب"    value={d.students}  to={canStudents ? "/students" : undefined} />
-          <Fig label="ولي أمر" value={d.guardians} />
-          <Fig label="معلم"    value={d.teachers} />
-          <Fig label="فصل"     value={d.classes} />
-        </section>
-      )}
-
-      {canImport && (
-        <section className="card px-4 py-3">
-          <h2 className="text-sm font-semibold text-ink">آخر استيراد</h2>
-          <p className="mt-1 text-sm text-muted">
-            {d.lastImport
-              ? `${d.lastImport.import_type} — ${fmtDateTime(d.lastImport.started_at)}`
-              : "لم يُنفَّذ استيراد بعد."}
-          </p>
-        </section>
-      )}
     </div>
   );
 }
@@ -892,14 +834,3 @@ function StudentTimeline({ rows, missingPeriod }) {
   );
 }
 
-function Fig({ label, value, to }) {
-  const body = (
-    <div className="rounded-card border border-line bg-white px-4 py-4">
-      <p className="num text-2xl font-bold leading-none text-mint-deep">{value}</p>
-      <p className="mt-1.5 text-xs text-muted">{label}</p>
-    </div>
-  );
-  return to
-    ? <Link to={to} className="block transition-colors hover:opacity-80">{body}</Link>
-    : body;
-}

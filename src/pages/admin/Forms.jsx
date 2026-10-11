@@ -21,6 +21,7 @@ import { sendPush } from "../../lib/pushSend.js";
 import { useUsageCounts } from "../../lib/usage.js";
 import UsageBadge from "../../components/UsageBadge.jsx";
 import { fmtDate } from "../../lib/dates";
+import { cmpAr } from "../../lib/sortAr.js";
 import Sticker, { FlagPicker } from "../../components/Sticker.jsx";
 import { flagRank, urgentPrefix } from "../../lib/flags.js";
 
@@ -591,7 +592,7 @@ export default function Forms({ view = "issue", openKey = null }) {
         const k = (x.full_name ?? "").trim();
         if (!k || seen.has(k)) return false;
         seen.add(k); return true;
-      }));
+      }).sort((a, b) => cmpAr(a.full_name, b.full_name)));
     })();
   }, [picked, staff.length]);
 

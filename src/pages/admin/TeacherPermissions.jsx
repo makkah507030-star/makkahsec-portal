@@ -4,6 +4,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import { byName } from "../../lib/sortAr.js";
 
 const CORE_TABS = [
   { key: "attendance", label: "الحضور والغياب اليومي" },
@@ -30,7 +31,7 @@ export default function TeacherPermissions() {
 
   useEffect(() => {
     supabase.from("teachers").select("id, full_name, specialization").order("full_name")
-      .then(({ data }) => setTeachers(data ?? []));
+      .then(({ data }) => setTeachers((data ?? []).sort(byName())));
   }, []);
 
   const filtered = useMemo(() => {

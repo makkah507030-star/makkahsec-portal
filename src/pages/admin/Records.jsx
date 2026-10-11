@@ -7,6 +7,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
+import { byName } from "../../lib/sortAr.js";
 
 const TRACK_LABEL = { common_year: "السنة المشتركة", general_track: "المسار العام" };
 const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
@@ -135,7 +136,7 @@ function StudentsTab({ year, yearLabel }) {
       .from("students")
       .select("id, national_id, full_name, identity_type, user_id")
       .order("full_name");
-    setRows(s ?? []);
+    setRows((s ?? []).sort(byName()));
 
     if (year) {
       const { data: cls } = await supabase
@@ -639,7 +640,7 @@ function TeachersTab() {
       supabase.rpc("teacher_mobiles"),
     ]);
     const mobileBy = Object.fromEntries((mobs ?? []).map((m) => [m.id, m.mobile]));
-    setRows((data ?? []).map((t) => ({ ...t, mobile: mobileBy[t.id] ?? null })));
+    setRows((data ?? []).map((t) => ({ ...t, mobile: mobileBy[t.id] ?? null })).sort(byName()));
   };
 
   useEffect(() => {
@@ -841,7 +842,7 @@ function GuardiansTab() {
       supabase.from("guardians").select("id, national_id, full_name, mobile, user_id").order("full_name"),
       supabase.from("guardian_student").select("guardian_id"),
     ]);
-    setRows(data ?? []);
+    setRows((data ?? []).sort(byName()));
     const m = new Map();
     (links ?? []).forEach((r) => m.set(r.guardian_id, (m.get(r.guardian_id) ?? 0) + 1));
     setLinkCount(m);
@@ -1057,7 +1058,7 @@ function AdminAccountsTab() {
         .in("user_id", ids);
       (rs ?? []).forEach((r) => { (roleMap[r.user_id] ??= []).push(r.role_type); });
     }
-    setRows((admins ?? []).map((a) => ({ ...a, roles: roleMap[a.id] ?? [] })));
+    setRows((admins ?? []).map((a) => ({ ...a, roles: roleMap[a.id] ?? [] })).sort(byName()));
   };
 
   useEffect(() => { load(); }, []);

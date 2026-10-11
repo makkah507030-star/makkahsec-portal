@@ -13,6 +13,7 @@ import moeLogo from "../assets/moe-logo.png";
 import { useMyDepartment, loadDeptTeachers, plcNotify } from "../lib/plc";
 import { PD_KINDS, PD_KIND_KEYS, PD_STATUS, PD_BUCKET, PD_MAX_FILES, pdStages, pdMissing } from "../lib/pd";
 import { HeadTag, useRoles, Chips, StageBar, C } from "./Plc.jsx";
+import { byName } from "../lib/sortAr.js";
 
 /* =====================================================================
    التطوير المهني ← نماذج سجل التطوير المهني (src/lib/pd.js).
@@ -205,7 +206,7 @@ function Editor({ r, setR, sigs, reload }) {
   useEffect(() => {
     if (!k.attendees) return;
     supabase.from("teachers").select("id, user_id, full_name").not("user_id", "is", null).order("full_name")
-      .then(({ data }) => setTeachers((data ?? []).filter((t) => t.user_id !== r.owner_user_id)));
+      .then(({ data }) => setTeachers((data ?? []).filter((t) => t.user_id !== r.owner_user_id).sort(byName())));
     if (r.department_id) loadDeptTeachers(r.department_id).then((l) => setDeptIds(l.map((t) => t.user_id)));
   }, [r.kind, r.department_id]);
   useEffect(() => {

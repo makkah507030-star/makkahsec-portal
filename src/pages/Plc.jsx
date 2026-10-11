@@ -15,6 +15,7 @@ import {
   PLC_STAGES, PLC_STATUS, PLC_INFO, PLC_CONTENT, MAX_PHOTOS, PLC_BUCKET, stageMissing, lines,
   useMyDepartment, headLabel, loadDeptTeachers, photoUrl, plcNotify,
 } from "../lib/plc";
+import { byName, cmpAr } from "../lib/sortAr.js";
 
 /* =====================================================================
    التطوير المهني ← تقرير جلسة مجتمع التعلم المهني (src/lib/plc.js).
@@ -677,7 +678,7 @@ export function PlcDepartments() {
       supabase.from("department_members").select("department_id, teacher_id, is_head"),
     ]);
     if (d.error) setErr(d.error.message);
-    setDepts(d.data ?? []); setTeachers(t.data ?? []); setMembers(m.data ?? []);
+    setDepts(d.data ?? []); setTeachers((t.data ?? []).sort(byName())); setMembers(m.data ?? []);
   };
   useEffect(() => { load(); }, []);
 
@@ -871,6 +872,8 @@ export function DeptFile({ rows, items, sessions, deptName, year }) {
     if (!t) teachers.push(t = { id: r.teacher_id, name: r.full_name, head: r.is_head, ev: [] });
     if (r.item_key) t.ev.push(r);
   }
+  // رئيس القسم أولًا، ثم المعلمون أبجديًا
+  teachers.sort((a, b) => (b.head - a.head) || cmpAr(a.name, b.name));
   const of = (t, k) => t.ev.filter((e) => e.item_key === k);
   const N = teachers.length || 1;
   const total = rows.filter((r) => r.item_key).length;

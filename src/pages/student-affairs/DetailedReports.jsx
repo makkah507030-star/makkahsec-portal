@@ -11,6 +11,7 @@ import {
   weekdayOf, daysWord,
 } from "./shared.jsx";
 import { countAr } from "../../lib/arabicCount.js";
+import { byName } from "../../lib/sortAr.js";
 
 const VIEWS = [
   { key: "class", label: "بالفصل" },
@@ -366,7 +367,7 @@ function ByStudent() {
     const { data } = await supabase.from("v_active_students")
       .select("student_id, full_name, class_no, grade")
       .ilike("full_name", `%${term}%`).order("full_name").limit(25);
-    setOptions(data ?? []);
+    setOptions((data ?? []).sort(byName()));
   };
 
   useEffect(() => {

@@ -7,6 +7,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { noEra } from "../../lib/dates";
+import { byName } from "../../lib/sortAr.js";
 
 export default function TeacherSchedules() {
   const [q, setQ] = useState("");
@@ -31,6 +32,7 @@ export default function TeacherSchedules() {
       const { data } = await supabase
         .from("teachers").select("id, full_name, specialization")
         .order("full_name");
+      data?.sort(byName());
       setTeachers(data ?? []);
 
       // اختيار أول معلم تلقائيًا حتى تظهر الشاشة معبّأة من أول لحظة

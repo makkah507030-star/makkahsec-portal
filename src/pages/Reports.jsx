@@ -10,6 +10,7 @@ import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import Loader from "../components/Loader.jsx";
 import { countAr } from "../lib/arabicCount.js";
+import { byName } from "../lib/sortAr.js";
 
 const TAB_GROUPS = [
   {
@@ -331,7 +332,7 @@ export function StudentReport({ scopeIds }) {
       .select("student_id, full_name, national_id, class_no, grade")
       .or(`full_name.ilike.%${term}%,national_id.ilike.%${term}%`)
       .limit(20);
-    setOptions(data ?? []);
+    setOptions((data ?? []).sort(byName()));
   };
 
   useEffect(() => {

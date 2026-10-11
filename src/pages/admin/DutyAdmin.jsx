@@ -8,6 +8,7 @@ import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
+import { byName } from "../../lib/sortAr.js";
 
 /* =====================================================================
    إدارة المناوبة والإشراف.
@@ -52,7 +53,7 @@ export default function DutyAdmin() {
         .in("role", ["teacher", "admin"])
         .eq("is_active", true)
         .order("full_name");
-      setStaff(data ?? []);
+      setStaff((data ?? []).sort(byName()));
     })();
   }, []);
 

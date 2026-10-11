@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 import { GRADE_NAMES } from "../lib/schoolTime";
+import { byName } from "../lib/sortAr.js";
 
 /* بحث عن طالب نشط بالاسم واختياره — value: { student_id, full_name, class_no, grade } */
 export const studentClassLabel = (s) => (s ? `${GRADE_NAMES[s.grade] ?? ""} — فصل ${s.class_no}` : "");
@@ -16,7 +17,7 @@ export default function StudentPicker({ value, onChange }) {
     const { data } = await supabase.from("v_active_students")
       .select("student_id, full_name, class_no, grade")
       .ilike("full_name", `%${term}%`).order("full_name").limit(25);
-    setFound(data ?? []);
+    setFound((data ?? []).sort(byName()));
   };
 
   if (value) return (

@@ -1,6 +1,7 @@
 import { fmtDate, fmtTime12, stripBidi } from "./dates";
 import { isMobileDevice } from "./print";
 import { loadPrincipalSignature } from "./principalSignature";
+import { signatureByName } from "./userSignatures";
 // أسماء الموقّعين — من إعدادات البوابة (lib/signers.js)
 import {
   PRINCIPAL_NAME, STUDENT_DEPUTY_NAME, ACADEMIC_DEPUTY_NAME, TECH_SUPPORT_NAME,
@@ -300,17 +301,22 @@ export async function printReport(opts) {
   const principalSig = !hideSignatures && signList.some(isPrincipal)
     ? await loadPrincipalSignature()
     : null;
+  // بقية الموقّعين (الموجه، الوكيل، رئيس القسم…): توقيع صاحب الاسم من «توقيعي» إن أمكن
+  const otherSigs = hideSignatures ? [] : await Promise.all(signList.map((sg) =>
+    sg.url ? sg.url : isPrincipal(sg) ? null : signatureByName(sg.name).catch(() => null)));
 
   const signBlock = hideSignatures ? "" : `
   <div class="sign ${signList.length === 1 ? "one" : signList.length >= 3 ? "three" : ""}">
     ${signList
       .map(
-        (sg) => `
+        (sg, i) => `
     <div class="sign-box">
       <p class="sign-title">${sg.title}</p>
       <p class="sign-name">${sg.name}</p>
       ${isPrincipal(sg) && principalSig?.url
         ? `<img class="sign-img" src="${principalSig.url}" alt="" />`
+        : otherSigs[i]
+        ? `<img class="sign-img" src="${otherSigs[i]}" alt="" />`
         : hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..........................</p>`}
     </div>`
       )
@@ -559,6 +565,23 @@ export async function printReport(opts) {
   table.success thead th {
     background: #DFF3E6; color: #3E6350; border-color: #B9E6C9;
   }
+
+  /* جدول بيانات (عنوان | قيمة) — العنوان في عمود ملوّن بهوية البوابة */
+  table.kv tbody th {
+    width: 30%; background: ${TINT}; color: ${DEEP}; font-weight: 700;
+    border: 1px solid ${LIGHT}; padding: 6px 8px; text-align: right;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  table.kv tbody td { text-align: right; padding: 6px 8px; font-weight: 600; }
+  table.kv tbody tr:nth-child(even) { background: #fff; }
+
+  /* عنوان قسم داخل التقرير المطبوع */
+  .sec-h {
+    margin: 14px 0 6px; padding-right: 8px; font-size: 12px; font-weight: 700;
+    color: ${DEEP}; border-right: 4px solid ${MINT};
+  }
+  .sec-h .c { color: ${GRAY}; font-weight: 400; font-size: 10.5px; }
+  .empty { font-size: 10.5px; color: ${GRAY}; margin: 2px 0 6px; padding-right: 12px; }
 
   /* بطاقات إحصائية داخل التقرير المطبوع */
   .stat-tiles { display: flex; gap: 8px; margin-bottom: 14px; }

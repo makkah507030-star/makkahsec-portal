@@ -8,6 +8,8 @@ import { OFFICIAL_LEVELS, RATING_LEVELS, gradeTone, itemPoints, officialLabel, o
 import { PRINCIPAL_NAME } from "../lib/signers.js";
 import { GuestCertificateBody } from "./GuestCertificate.jsx";
 import { EVIDENCE_LEAD, EVIDENCE_NOTE, LEVEL_LABEL } from "../lib/evidence.js";
+import { levelBand } from "../lib/gradeBands.js";
+import { useSignatureByName } from "../lib/userSignatures.js";
 import { toHijri } from "./DateField.jsx";
 
 /* =====================================================================
@@ -92,6 +94,8 @@ function Foot({ serial, hairline = true, color = "#3E6350" }) {
 
 /* توقيع واحد: الصفة، ثم صورة التوقيع، ثم الاسم تحت خط رفيع */
 function Sign({ url, name, role }) {
+  // بلا صورة محفوظة: توقيع صاحب الاسم من «توقيعي» إن كان مرفوعًا ويحق للمستخدم رؤيته
+  url = useSignatureByName(name, url);
   return (
     <div className="min-w-[180px] text-center">
       <p className="text-[12px] text-muted">{role}</p>
@@ -400,6 +404,19 @@ function Official(p) {
 }
 
 /* جدول حصر: أعمدة معرَّفة وصفوف فارغة تُملأ بخط اليد بعد الطباعة */
+/* تلوين المستوى (ممتاز، جيد جدًا، جيد، مقبول، ضعيف) في الاستمارات — يُطبع بألوانه */
+function levelCell(value) {
+  const b = levelBand(value);
+  return b ? { background: b.bg, color: b.text, fontWeight: 700, textAlign: "center", ...INK } : undefined;
+}
+function LevelChip({ value }) {
+  const b = levelBand(value);
+  return (
+    <span className="rounded-[4px] px-3 py-0.5 text-[14px] font-bold"
+          style={{ background: b.bg, color: b.text, border: `1px solid ${b.solid}`, ...INK }}>{value}</span>
+  );
+}
+
 function BlankTable({ field, value }) {
   const cols = field.columns ?? [];
   const rows = Math.max(1, Number(value?.rows ?? field.rows ?? 10));
@@ -413,7 +430,7 @@ function BlankTable({ field, value }) {
             {cols.map((c, i) => (
               <th key={i}
                   className="border border-line bg-[#EDFAF2] px-2 py-1.5 text-center font-semibold text-mint-deep"
-                  style={INK}>
+                  style={levelCell(c) ?? INK}>
                 {c}
               </th>
             ))}
@@ -423,7 +440,9 @@ function BlankTable({ field, value }) {
           {Array.from({ length: rows }).map((_, r) => (
             <tr key={r}>
               {cols.map((_, c) => (
-                <td key={c} className="h-7 border border-line px-2 align-middle text-ink">
+                <td key={c} className="h-7 border border-line px-2 align-middle text-ink"
+                    // المستوى مكتوبًا في الخانة، أو علامة تحت عمود عنوانه مستوى (ممتاز، جيد جدًا…)
+                    style={levelCell(data[r]?.[c]) ?? (String(data[r]?.[c] ?? "").trim() ? levelCell(cols[c]) : undefined)}>
                   {c === 0 && !data[r]?.[c] ? <span className="num text-faint">{r + 1}</span> : (data[r]?.[c] ?? "")}
                 </td>
               ))}
@@ -1624,7 +1643,9 @@ function Administrative(p) {
           ) : (
             <div key={f.name} className="flex gap-3 border-b border-line py-2">
               <span className="w-44 shrink-0 text-[13px] text-muted">{f.label}</span>
-              <span className="whitespace-pre-line text-[14px] text-ink">{asText(v[f.name]) || "—"}</span>
+              {levelBand(asText(v[f.name]))
+                ? <LevelChip value={asText(v[f.name])} />
+                : <span className="whitespace-pre-line text-[14px] text-ink">{asText(v[f.name]) || "—"}</span>}
             </div>
           ),
         )}
