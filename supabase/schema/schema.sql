@@ -203,6 +203,20 @@ create table if not exists public.devices (
   time_synced_at timestamp with time zone
 );
 
+-- device_requests (سجل تشخيصي لاتصالات أجهزة البصمة)
+create table if not exists public.device_requests (
+  id bigint generated always as identity primary key,
+  at timestamp with time zone not null default now(),
+  serial_no text,
+  method text,
+  path text,
+  query text,
+  body_lines integer,
+  body_head text,
+  status integer,
+  reply text
+);
+
 -- duty_roster
 create table if not exists public.duty_roster (
   id uuid not null default gen_random_uuid(),

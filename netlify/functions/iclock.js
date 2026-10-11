@@ -63,9 +63,8 @@ function setClockCommand() {
  * سبب هذا القرار: جهاز البصمة الحالي بلا بطارية داخلية (RTC)، فتُعاد
  * ساعته تلقائيًا لتاريخ افتراضي خاطئ (غالبًا سنة 2000) عند كل انقطاع
  * كهرباء — وهذا يحدث يوميًا في هذه المدرسة (الجهاز يُطفأ آخر اليوم).
- * فبدل رفض كل البصمات بسبب "فترة زمنية غير صالحة"، نتجاهل الطابع
- * الزمني الذي يرسله الجهاز تمامًا، ونعتمد فقط على لحظة وصول الطلب
- * لخادمنا — وهي دقيقة دائمًا بغض النظر عن حالة الجهاز.
+ * فبدل رفض كل البصمات بسبب "فترة زمنية غير صالحة"، نعتمد لحظة وصول
+ * الطلب لخادمنا، إلا إذا كان تاريخ الجهاز هو اليوم (ساعته مضبوطة من الخادم).
  */
 function riyadhNow() {
   const fmt = new Intl.DateTimeFormat("en-CA", {
@@ -83,10 +82,47 @@ function riyadhNow() {
   return { attendDate, punchTime, minutes };
 }
 
+/**
+ * سجل تشخيصي لاتصالات الأجهزة في جدول device_requests — يُقرأ من Supabase
+ * بلا حاجة لسجلات Netlify. لا يُسجَّل الاستعلام الدوري عن الأوامر حين لا
+ * يوجد أمر (كل دقيقة لكل جهاز)، ويُحذف ما مضى عليه أسبوع عند كل مصافحة.
+ * أي خطأ في التسجيل يُتجاهل كي لا يتعطل استقبال البصمات.
+ */
 export const handler = async (event) => {
   const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+  const res = await handle(event, admin);
+  try {
+    const params = event.queryStringParameters || {};
+    const path = (event.path || "").toLowerCase();
+    const quiet = path.includes("/getrequest") && res.body === "OK";
+    if (!quiet) {
+      const raw = event.isBase64Encoded
+        ? Buffer.from(event.body || "", "base64").toString("utf-8")
+        : (event.body || "");
+      await admin.from("device_requests").insert({
+        serial_no: (params.SN || params.sn || "").trim() || null,
+        method: event.httpMethod,
+        path,
+        query: new URLSearchParams(params).toString().slice(0, 500),
+        body_lines: raw ? raw.split("\n").filter((l) => l.trim()).length : 0,
+        body_head: raw.slice(0, 500) || null,
+        status: res.statusCode,
+        reply: String(res.body).slice(0, 300),
+      });
+      if (path.includes("/cdata") && event.httpMethod === "GET") {
+        await admin.from("device_requests").delete()
+          .lt("at", new Date(Date.now() - 7 * 86400000).toISOString());
+      }
+    }
+  } catch (e) {
+    console.error("iclock: request log failed:", e);
+  }
+  return res;
+};
+
+async function handle(event, admin) {
 
   const params = event.queryStringParameters || {};
   const sn = (params.SN || params.sn || "").trim();
@@ -183,21 +219,35 @@ export const handler = async (event) => {
       // ==========================================================
 
       // صيغة السطر: PIN <tab> DateTime <tab> Status <tab> Verify ...
-      // نقرأ العمود الأول (رقم المستخدم) فقط؛ طابع الجهاز الزمني يُتجاهل
-      // (ساعته غير موثوقة) ونعتمد وقت استلام الخادم.
+      // وقت البصمة: وقت الجهاز إن كان تاريخه اليوم ووقته معقولًا (ساعته
+      // مضبوطة من الخادم)، وإلا وقت استلام الخادم. هذا يحفظ الوقت الصحيح
+      // حين يرسل الجهاز بصمات متأخرة (انقطاع اتصال أو إعادة إرسال سجله).
+      const { attendDate, punchTime } = riyadhNow();
+      const serverMs = punchTime.getTime();
       const rawUids = [];
+      const timeByUid = new Map(); // رقم المستخدم → أبكر وقت بصمة (ms)
       for (const line of lines) {
         const parts = line.split("\t");
         if (parts.length < 2) continue;
         const uid = String(parts[0]).trim();
-        if (uid) rawUids.push(uid);
+        if (!uid) continue;
+        rawUids.push(uid);
+        let ms = serverMs;
+        const dt = String(parts[1]).trim();
+        if (dt.startsWith(attendDate)) {
+          const dev = new Date(dt.replace(" ", "T") + TZ_OFFSET).getTime();
+          if (!isNaN(dev) && dev <= serverMs + 2 * 60000 && dev >= serverMs - 12 * 3600000) ms = dev;
+        }
+        if (!timeByUid.has(uid) || ms < timeByUid.get(uid)) timeByUid.set(uid, ms);
       }
 
       // لا بصمات صالحة — نؤكّد الاستلام فورًا كي لا يعيد الجهاز الإرسال
       if (!rawUids.length) return text("OK: 0");
 
-      const { attendDate, punchTime, minutes: nowMin } = riyadhNow();
-      const punchIso = punchTime.toISOString();
+      const riyadhMin = (ms) => {
+        const d = new Date(ms + 3 * 3600000);
+        return d.getUTCHours() * 60 + d.getUTCMinutes();
+      };
 
       // إعدادات العام الدراسي والتوقيت المفعّل (استعلام واحد)
       const { data: setRows } = await admin
@@ -212,9 +262,12 @@ export const handler = async (event) => {
         .from("period_times").select("start_time")
         .eq("season", setting.active_season ?? "summer").eq("kind", "period").eq("period_no", 1)
         .maybeSingle();
+      // الإغلاق يُقاس بوقت البصمة نفسها، فالبصمة الصباحية التي تصل متأخرة تُقبل
       if (p1?.start_time) {
         const [h, m] = String(p1.start_time).split(":").map(Number);
-        if (nowMin >= h * 60 + (m || 0)) {
+        const closeMin = h * 60 + (m || 0);
+        for (const [uid, ms] of timeByUid) if (riyadhMin(ms) >= closeMin) timeByUid.delete(uid);
+        if (!timeByUid.size) {
           console.log(`iclock: ${rawUids.length} punches ignored after period 1 start (${p1.start_time})`);
           return text(`OK: ${rawUids.length}`);
         }
@@ -228,7 +281,7 @@ export const handler = async (event) => {
         return [...s];
       };
 
-      const uniqUids = [...new Set(rawUids)];
+      const uniqUids = [...timeByUid.keys()];
       const allVariants = [...new Set(uniqUids.flatMap(variantsOf))];
 
       const chunk = (arr, n) => {
@@ -262,11 +315,15 @@ export const handler = async (event) => {
       };
 
       const studentIds = new Set();
+      const timeBySid = new Map();
       const unmatchedUids = [];
       for (const uid of uniqUids) {
         const sid = resolve(uid);
-        if (sid) studentIds.add(sid);
-        else unmatchedUids.push(uid);
+        if (sid) {
+          studentIds.add(sid);
+          const ms = timeByUid.get(uid);
+          if (!timeBySid.has(sid) || ms < timeBySid.get(sid)) timeBySid.set(sid, ms);
+        } else unmatchedUids.push(uid);
       }
 
       // (2) البصمات الموجودة اليوم لهؤلاء الطلاب (أول بصمة هي المعتمدة)
@@ -286,7 +343,7 @@ export const handler = async (event) => {
         .map((id) => ({
           student_id: id,
           attend_date: attendDate,
-          punch_time: punchIso,
+          punch_time: new Date(timeBySid.get(id)).toISOString(),
           source: "device",
           device_serial: sn,
           academic_year: academicYear,
@@ -300,7 +357,7 @@ export const handler = async (event) => {
       if (unmatchedUids.length) {
         const rows = [...new Set(unmatchedUids)].map((u) => ({
           device_uid: u,
-          punch_time: punchIso,
+          punch_time: new Date(timeByUid.get(u)).toISOString(),
           device_serial: sn,
           resolved: false,
         }));
@@ -358,4 +415,4 @@ export const handler = async (event) => {
     console.error("iclock error:", e);
     return text("ERROR: " + String(e), 500);
   }
-};
+}
