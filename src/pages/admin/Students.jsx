@@ -6,6 +6,7 @@ import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
+import { useSession } from "../../lib/session.jsx";
 
 const TRACK_LABEL = {
   common_year: "السنة المشتركة",
@@ -13,7 +14,37 @@ const TRACK_LABEL = {
 };
 const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
 
+/* أرقام المدرسة (كانت في الرئيسية): طالب، ولي أمر، معلم، فصل — لمن يملك صلاحية «home_stats» */
+function SchoolFigures() {
+  const [f, setF] = useState(null);
+  useEffect(() => {
+    (async () => {
+      const { data: st } = await supabase.from("settings").select("value").eq("key", "active_year").maybeSingle();
+      const head = (t) => supabase.from(t).select("id", { count: "exact", head: true });
+      const [students, guardians, teachers, classes] = await Promise.all([
+        head("students").eq("is_active", true),
+        head("guardians").eq("is_active", true),
+        head("teachers").eq("is_active", true),
+        head("classes").eq("academic_year", st?.value ?? ""),
+      ]);
+      setF([[students.count, "طالب"], [guardians.count, "ولي أمر"], [teachers.count, "معلم"], [classes.count, "فصل"]]);
+    })();
+  }, []);
+  if (!f) return null;
+  return (
+    <section className="grid grid-cols-4 gap-2">
+      {f.map(([v, l]) => (
+        <div key={l} className="rounded-card border border-line bg-white px-3 py-2.5 text-center">
+          <p className="num text-xl font-bold leading-none text-mint-deep">{v ?? 0}</p>
+          <p className="mt-1 text-xs text-muted">{l}</p>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export default function Students() {
+  const { can } = useSession();
   const [rows, setRows] = useState(null);
   const [guardians, setGuardians] = useState(new Map());
   const [q, setQ] = useState("");
@@ -187,6 +218,8 @@ export default function Students() {
           <span className="num">{rows.length}</span>
         </p>
       </header>
+
+      {can("home_stats") && <SchoolFigures />}
 
       <input className="field" placeholder="بحث بالاسم أو رقم الهوية"
              value={q} onChange={(e) => setQ(e.target.value)} />

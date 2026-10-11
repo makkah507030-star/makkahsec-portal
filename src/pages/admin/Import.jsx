@@ -5,7 +5,7 @@ import { IMPORT_TYPES, readSheet, validateRows } from "../../lib/importer";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
-import { noEra } from "../../lib/dates";
+import { noEra, fmtDateTime } from "../../lib/dates";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 
 const BATCH = 400;
@@ -22,6 +22,7 @@ export default function Import() {
   const [year, setYear] = useState(null);
   const [yearLabel, setYearLabel] = useState(null);
   const [term, setTerm] = useState(null);
+  const [lastImport, setLastImport] = useState(undefined); // undefined = جارٍ التحميل
 
   const def = IMPORT_TYPES[type] ?? { label: "الجدول الذكي", required: [] };
 
@@ -38,6 +39,14 @@ export default function Import() {
         setTerm(m.active_term ? Number(m.active_term) : null);
       });
   }, []);
+
+  // آخر استيراد (كان في الرئيسية) — يُحدَّث بعد كل استيراد
+  useEffect(() => {
+    if (stage !== "pick" && stage !== "done") return;
+    supabase.from("import_logs").select("import_type, status, started_at")
+      .order("started_at", { ascending: false }).limit(1)
+      .then(({ data }) => setLastImport(data?.[0] ?? null));
+  }, [stage]);
 
   /* ---------------- المرحلة 1: القراءة والمقارنة ---------------- */
   const analyze = async () => {
@@ -149,6 +158,12 @@ export default function Import() {
           <span className="text-muted"> · الفصل </span>
           <span className="num font-semibold text-mint-deep">{term ?? "…"}</span>
           <span className="text-muted"> — تُؤخذ من إعدادات النظام، لا من الملف.</span>
+        </p>
+        <p className="mt-1 text-sm text-muted">
+          آخر استيراد:{" "}
+          {lastImport === undefined ? "…" : lastImport
+            ? <span className="text-ink">{lastImport.import_type} — <span className="num">{fmtDateTime(lastImport.started_at)}</span></span>
+            : "لم يُنفَّذ استيراد بعد."}
         </p>
       </div>
 
