@@ -130,6 +130,9 @@ function autoFill(fields, info, current, { overwrite = false } = {}) {
     const hit = AUTO_MAP.find((m) => m.keys.some((k) => label.includes(k)));
     const val = hit ? info[hit.from] : null;
     if (val) out[f.name] = val;
+    // عند تبديل الشخص يُمسح ما عُرف عن السابق إن لم يكن للجديد قيمة،
+    // كي لا يبقى رقم هوية الشخص السابق (مثلًا) مع اسم الجديد
+    else if (overwrite && hit?.from && hit.from in info) out[f.name] = "";
   });
   return out;
 }
@@ -575,7 +578,8 @@ export default function Forms({ view = "issue", openKey = null }) {
         const extra = (m.uid && byUid[m.uid]) || byName[(m.full_name ?? "").trim()];
         if (extra) {
           if (!m.specialization && extra.specialization) m.specialization = extra.specialization;
-          if (!m.national_id && extra.national_id) m.national_id = extra.national_id;
+          // رقم الهوية من سجل المعلم (المستورد من نور) مقدَّم على اسم الدخول
+          if (extra.national_id) m.national_id = extra.national_id;
         }
       });
 
