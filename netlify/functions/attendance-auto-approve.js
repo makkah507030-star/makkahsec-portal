@@ -15,6 +15,7 @@
 //
 //  يُعطَّل بإعداد: settings.attendance_auto_approve = "false"
 //  البصمات تُتجاهل ما لم يكن settings.fingerprint_enabled = "true" (قفل البصمة)
+//  ومن لم يبصم وحضر الحصتين الأوليين متأخر بلا وقت (من fingerprint_enabled_since)
 // =====================================================================
 
 import { createClient } from "@supabase/supabase-js";
@@ -102,7 +103,7 @@ async function fetchAll(makeQuery) {
   return all;
 }
 
-async function computeToday(db, date, sched, pt, fingerprint) {
+async function computeToday(db, date, sched, pt, fingerprint, fpSince) {
   const [students, attendance, allPunches, exc] = await Promise.all([
     fetchAll(() => db.from("v_active_students")
       .select("student_id, full_name, class_no, grade").order("student_id", { ascending: true })),
@@ -136,6 +137,8 @@ async function computeToday(db, date, sched, pt, fingerprint) {
   const punchBy = new Map(punches.map((p) => [p.student_id, p.punch_time]));
   const excused = new Set((exc.data || []).map((r) => r.student_id));
   const dayStart = dayStartMinutes(pt);
+  // يوم بلا أي بصمة (عطل الجهاز) أو قبل فتح البصمة: لا يُحسب أحد متأخرًا بلا وقت
+  const noPunchLate = fingerprint && punches.length > 0 && (!fpSince || date >= fpSince);
 
   const rows = students.map((s) => {
     const periods = periodsBy.get(s.student_id) || {};
@@ -151,9 +154,12 @@ async function computeToday(db, date, sched, pt, fingerprint) {
     if (punch && dayStart != null) {
       lateMinutes = Math.max(0, punchMinutes(punch) - (dayStart + LATE_GRACE_MINUTES));
     }
+    // لم يبصم وحضر الحصة الأولى أو الثانية: متأخر بلا وقت (البصمة أُغلقت مع
+    // بداية الحصة الأولى). من غاب عنهما غائب رسميًا فلا يُضاف له تأخر.
+    const lateNoTime = noPunchLate && !punch && official === "present";
     return {
       ...s, official, final: finalStatus(periods, official),
-      punched: !!punch, punch, isLate: lateMinutes > 0, lateMinutes,
+      punched: !!punch, punch, isLate: lateMinutes > 0 || lateNoTime, lateMinutes,
     };
   });
   return { rows, hasData: attendance.length > 0 || punches.length > 0 };
@@ -166,7 +172,8 @@ async function approve(db, date, rows, s) {
     .map((r) => ({
       student_id: r.student_id, status: r.official, punched: r.punched,
       full_name: r.full_name, class_no: r.class_no, grade: r.grade,
-      punch_time: r.punch, late_minutes: r.isLate ? r.lateMinutes : 0,
+      // المتأخر بلا وقت يُحفظ بدقيقة رمزية (شرط الحفظ) وبلا وقت بصمة، فيُعرف بها
+      punch_time: r.punch, late_minutes: r.isLate ? r.lateMinutes || 1 : 0,
     }));
   const { error } = await db.rpc("sa_save_official_day", {
     p_date: date,
@@ -228,7 +235,7 @@ export const handler = async () => {
 
   try {
     const { data: st } = await db.from("settings").select("key, value")
-      .in("key", ["attendance_auto_approve", "fingerprint_enabled", "active_year", "active_term", "active_season"]);
+      .in("key", ["attendance_auto_approve", "fingerprint_enabled", "fingerprint_enabled_since", "active_year", "active_term", "active_season"]);
     const s = Object.fromEntries((st || []).map((r) => [r.key, r.value]));
     if (s.attendance_auto_approve === "false") return { statusCode: 200, body: "disabled" };
 
@@ -263,7 +270,8 @@ export const handler = async () => {
     const finalDue = lastEnd != null && now >= lastEnd + BUFFER_MIN && !(day && day.final_at);
     if (!officialDue && !finalDue) return { statusCode: 200, body: "nothing due" };
 
-    const { rows, hasData } = await computeToday(db, date, sched, pt || [], s.fingerprint_enabled === "true");
+    const { rows, hasData } = await computeToday(db, date, sched, pt || [], s.fingerprint_enabled === "true",
+      s.fingerprint_enabled_since || null);
     if (!hasData) return { statusCode: 200, body: "no attendance data yet" };
 
     // 1) الاعتماد الرسمي بعد الحصة الثانية
