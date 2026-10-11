@@ -5,7 +5,7 @@
   vo/*.mp3        التسجيلات الجديدة بأسماء VOICEOVER-update.txt (اختياري: بدونها تُستعمل أطوال تقديرية وصمت)
   out/            المشاهد والفيديو النهائي makkahsec-portal-2026.mp4
 
-الترتيب: الفيديو الأول حتى نهاية 06 ← الاستخدام الفعلي (جديد) ← 07 التقويم المدرسي (الأصل)
+الترتيب: المقدمة (جديدة بعنوان «ماذا لو اجتمعت في مكان واحد؟» وبأصوات الأصل) ← الفيديو الأول حتى نهاية 06 ← الاستخدام الفعلي (جديد) ← 07 التقويم المدرسي (الأصل)
          ← 08 الجديد في البوابة ← 09 إنجازات المدرسة ← الخاتمة (الأصل).
 نقاط القطع على لحظات الخلفية الفارغة بين المشاهد، والصوت يُقطع في الصمت قبل أول كلمة
 (الصوت في الأصل يسبق ظهور المشهد بنحو نصف ثانية، فيُمسك أول إطار فارغ حتى يلحق).
@@ -15,8 +15,8 @@ import json, os, subprocess, sys
 FPS, XF = 30, 0.35
 LEAD, GAP = 0.7, 0.55                 # نفس قيم scenes.html
 SRC = "in/src.mov"
-DEF = {"usage": [8.5], "new": [3.6, 6.2, 9.6, 6.4, 6.4, 8.8], "ach": [2.6, 9.4, 6.4, 6.0, 6.8]}
-VO = {"usage": ["usage-1"], "new": [f"new-{i}" for i in range(6)], "ach": [f"ach-{i}" for i in range(5)]}
+DEF = {"intro": [], "usage": [8.5], "new": [3.6, 6.2, 9.6, 6.4, 6.4, 8.8], "ach": [2.6, 9.4, 6.4, 6.0, 6.8]}
+VO = {"intro": [], "usage": ["usage-1"], "new": [f"new-{i}" for i in range(6)], "ach": [f"ach-{i}" for i in range(5)]}
 
 def run(*a):
     subprocess.run(a, check=True)
@@ -30,21 +30,23 @@ os.makedirs("out", exist_ok=True)
 
 # 1) المشاهد الجديدة بأطوال الصوت الفعلية
 scenes = {}
-for s in ("usage", "new", "ach"):
+for s in ("intro", "usage", "new", "ach"):
     files = [f"vo/{n}.mp3" for n in VO[s]]
-    have = all(os.path.exists(f) for f in files)
+    have = bool(files) and all(os.path.exists(f) for f in files)
     d = [round(dur(f), 2) for f in files] if have else DEF[s]
     starts, t = [], LEAD
     for x in d:
         starts.append(t); t += x + GAP
     scenes[s] = {"files": files if have else [], "starts": starts}
     if "--skip-render" not in sys.argv:
-        run("node", "rec.mjs", s, f"out/{s}.mp4", ",".join(map(str, d)))
+        run("node", "rec.mjs", s, f"out/{s}.mp4", ",".join(map(str, d)) or "0")
     print(s, "صوت" if have else "تقديري", d)
 
 # 2) المقاطع: (فيديو: ملف، من، إلى، إمساك أول إطار) (صوت: من، إلى) أو صوت جديد
+# xf: طول الانتقال قبل المقطع (0 = قطع مباشر؛ المقدمة تنتهي بإطار الأصل 7.6 نفسه)
 segs = [
-    {"v": (SRC, 0.0, 79.30, 0),       "a": (0.0, 79.30)},
+    {"v": ("out/intro.mp4", None, None, 0), "a": (0.0, 7.60)},
+    {"v": (SRC, 7.60, 79.30, 0),      "a": (7.60, 79.30), "xf": 0},
     {"v": ("out/usage.mp4", None, None, 0), "scene": "usage"},
     {"v": (SRC, 93.25, 104.90, 0.55), "a": (92.70, 104.90)},
     {"v": ("out/new.mp4", None, None, 0),   "scene": "new"},
@@ -69,13 +71,16 @@ for i, g in enumerate(segs):
         chain = (f"[{k}:v]trim={a}:{b},setpts=PTS-STARTPTS,tpad=start_duration={hold}:start_mode=clone,"
                  f"split[s{i}a][s{i}b];[s{i}b]crop=1920:6:0:1068[s{i}c];[s{i}a][s{i}c]overlay=0:1074")
     fc.append(f"{chain},fps={FPS},format=yuv420p,settb=AVTB[v{i}]")
-    offs.append(t); lens.append(L); t += L - XF
+    if i: t -= g.get("xf", XF)
+    offs.append(t); lens.append(L); t += L
 TOTAL = offs[-1] + lens[-1]
 
 # انتقالات ناعمة بين المقاطع
 cur = "v0"
 for i in range(1, len(segs)):
-    fc.append(f"[{cur}][v{i}]xfade=transition=fade:duration={XF}:offset={offs[i]:.3f}[x{i}]")
+    xf = segs[i].get("xf", XF)
+    fc.append(f"[{cur}][v{i}]xfade=transition=fade:duration={xf}:offset={offs[i]:.3f}[x{i}]" if xf
+              else f"[{cur}][v{i}]concat=n=2:v=1:a=0[x{i}]")
     cur = f"x{i}"
 # شريط التقدم الجديد (يمتد من اليمين كالأصل)
 fc.append(f"color=c=0x89D7AD:s=1920x6:r={FPS}[bar]")
