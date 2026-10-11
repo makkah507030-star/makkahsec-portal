@@ -4,6 +4,9 @@
 //  لكل الأرقام حتى لا تختلف نسبتان لليوم نفسه في البوابة.
 //
 //  • التأخر الصباحي: بصمة بعد بداية الاصطفاف الصباحي + 5 دقائق.
+//    والبصمة تتوقف عن التسجيل مع بداية الحصة الأولى، فمن لم يبصم وحضر أي
+//    من الحصتين الأولى والثانية يُحسب متأخرًا بلا وقت (lateNoTime)، ومن غاب
+//    عنهما يبقى غائبًا رسميًا بلا تأخر.
 //  • الغياب الرسمي: غائب عن الحصتين الأولى والثانية معًا (بعد الحصة الثانية).
 //    من بصم وغاب عن الحصتين ليس حاضرًا — غائب، ويظهر للمتابعة (دخل ولم يحضر).
 //  • النسبة الرسمية: تُعتمد بعد الحصة الثانية، ويحق للوكيل تصحيحها لاحقًا.
@@ -110,7 +113,7 @@ export function finalStatus({ periods, official }) {
  *  { student_id, full_name, class_no, grade, periods, punch, punched,
  *    official, final, conflict, noPunch, isLate, lateMinutes }
  */
-export function computeDay({ students, attendance, punches, excusedIds, scheduleByClass, dayStart }) {
+export function computeDay({ students, attendance, punches, excusedIds, scheduleByClass, dayStart, noPunchLate = false }) {
   const periodsBy = new Map();
   (attendance ?? []).forEach((r) => {
     const no = r.schedule?.period_no;
@@ -134,6 +137,9 @@ export function computeDay({ students, attendance, punches, excusedIds, schedule
     const final = finalStatus({ periods, official });
     const punch = punchBy.get(s.student_id) ?? null;
     const late = morningLate(punch, dayStart);
+    // لم يبصم وحضر الحصة الأولى أو الثانية: متأخر بلا وقت (البصمة أُغلقت مع
+    // بداية الحصة الأولى). من غاب عنهما غائب رسميًا فلا يُضاف له تأخر.
+    const lateNoTime = noPunchLate && !punch && official === "present";
     return {
       ...s,
       periods,
@@ -143,8 +149,9 @@ export function computeDay({ students, attendance, punches, excusedIds, schedule
       final,
       conflict: official === "absent" && !!punch,     // بصم ولم يحضر الحصتين
       noPunch: official === "present" && !punch,      // حضر الحصص بلا بصمة
-      isLate: late.isLate,
+      isLate: late.isLate || lateNoTime,
       lateMinutes: late.minutes,
+      lateNoTime,
     };
   });
 }
@@ -271,7 +278,7 @@ export async function loadDay(date) {
   const dow = dowOf(date);
   const { year, term } = await loadActiveTerm();
 
-  const [students, attendance, allPunches, excRes, { rows: ptimes }, schedRes, fingerprint] = await Promise.all([
+  const [students, attendance, allPunches, excRes, { rows: ptimes }, schedRes, fingerprint, fpSince] = await Promise.all([
     activeStudents(),
     fetchAllPaged(() =>
       supabase.from("class_attendance")
@@ -291,6 +298,7 @@ export async function loadDay(date) {
           .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
       : Promise.resolve({ data: [] }),
     loadFingerprintEnabled(),
+    loadFingerprintSince(),
   ]);
   // البصمة المقفلة (مرحلة تجربة) لا تدخل في أي حساب
   const punches = fingerprint ? allPunches : [];
@@ -312,6 +320,8 @@ export async function loadDay(date) {
     excusedIds: new Set((excRes.data ?? []).map((r) => r.student_id)),
     scheduleByClass,
     dayStart,
+    // يوم بلا أي بصمة (عطل الجهاز) أو قبل فتح البصمة: لا يُحسب أحد متأخرًا بلا وقت
+    noPunchLate: fingerprint && punches.length > 0 && (!fpSince || date >= fpSince),
   });
 
   // سجلات تحضير لم يعد جدولها موجودًا (مثلًا بعد إعادة استيراد الجدول) — لا تُحتسب
@@ -370,6 +380,7 @@ export async function approveDay(date, rows, { retroactive = false } = {}) {
       class_no: r.class_no,
       grade: r.grade,
       punch_time: r.punch,
+      // المتأخر بلا وقت يُحفظ بدقيقة رمزية (شرط الحفظ) وبلا وقت بصمة، فيُعرف بها
       late_minutes: r.isLate ? r.lateMinutes || 1 : 0,
     }));
   const { error } = await supabase.rpc("sa_save_official_day", {

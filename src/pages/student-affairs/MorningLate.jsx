@@ -1,4 +1,5 @@
-// التأخر الصباحي: من البصمة، بعد بداية الاصطفاف + 5 دقائق
+// التأخر الصباحي: من البصمة، بعد بداية الاصطفاف + 5 دقائق.
+// البصمة تُغلق مع بداية الحصة الأولى، فمن لم يبصم وحضر الحصة الأولى أو الثانية «متأخر بلا وقت».
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { todayISO } from "../../lib/schoolTime";
@@ -52,7 +53,8 @@ function DayLate() {
   const deadline = lateDeadlineLabel(live?.dayStart);
   const headers = ["م", "اسم الطالب", "الصف", "الفصل", "وقت البصمة", "دقائق التأخر"];
   const table = () => lateList.map((r, i) => [
-    i + 1, r.full_name, r.grade, r.class_no, fmtTime12(r.punch), r.lateMinutes,
+    i + 1, r.full_name, r.grade, r.class_no,
+    r.lateNoTime ? "لم يبصم" : fmtTime12(r.punch), r.lateNoTime ? "بلا وقت" : r.lateMinutes,
   ]);
   const subtitle = () => `${fmtDate(date)} · يُحتسب التأخر بعد ${deadline}`;
 
@@ -62,6 +64,8 @@ function DayLate() {
       <Note>
         يبدأ احتساب التأخر الصباحي بعد مرور {LATE_GRACE_MINUTES} دقائق من بداية
         الاصطفاف الصباحي{deadline ? ` (بعد ${deadline})` : ""}، وتُحسب الدقائق بعد انتهاء المهلة.
+        وتتوقف البصمة عن التسجيل مع بداية الحصة الأولى، فمن لم يبصم وحضر الحصة الأولى أو الثانية يُحسب
+        متأخرًا بلا وقت، ومن غاب عن الحصص يبقى غائبًا.
       </Note>
       {error && <Empty>تعذّر التحميل: {error}</Empty>}
       {!live && !error && <Loading />}
@@ -91,11 +95,13 @@ function DayLate() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-ink">{r.full_name}</p>
                     <p className="text-xs text-muted">
-                      صف <span className="num">{r.grade}</span> · فصل <span className="num">{r.class_no}</span> · بصم{" "}
-                      <span className="num">{fmtTime12(r.punch)}</span>
+                      صف <span className="num">{r.grade}</span> · فصل <span className="num">{r.class_no}</span> ·{" "}
+                      {r.lateNoTime ? "لم يبصم، وحضر الحصص" : <>بصم <span className="num">{fmtTime12(r.punch)}</span></>}
                     </p>
                   </div>
-                  <span className="chip shrink-0 bg-late/10 text-late"><span className="num">{r.lateMinutes}</span> د</span>
+                  {r.lateNoTime
+                    ? <span className="chip shrink-0 bg-late/10 text-late">بلا وقت</span>
+                    : <span className="chip shrink-0 bg-late/10 text-late"><span className="num">{r.lateMinutes}</span> د</span>}
                 </div>
               ))}
             </div>
@@ -126,7 +132,7 @@ function RangeLate() {
       try {
         const data = await fetchAllPaged(() =>
           supabase.from("official_day_marks")
-            .select("student_id, attend_date, full_name, grade, class_no, late_minutes")
+            .select("student_id, attend_date, full_name, grade, class_no, late_minutes, punch_time")
             .gte("attend_date", from).lte("attend_date", to).gt("late_minutes", 0)
             .order("attend_date", { ascending: true }).order("student_id", { ascending: true }));
         setRows(data);
@@ -140,8 +146,10 @@ function RangeLate() {
   const students = useMemo(() => {
     const by = new Map();
     (rows ?? []).forEach((r) => {
-      const s = by.get(r.student_id) ?? { ...r, days: 0, minutes: 0, dates: [] };
-      s.days += 1; s.minutes += r.late_minutes; s.dates.push(r.attend_date);
+      const s = by.get(r.student_id) ?? { ...r, days: 0, minutes: 0, noTime: 0, dates: [] };
+      // المتأخر بلا وقت (لم يبصم) دقيقته رمزية فلا تدخل في مجموع الدقائق
+      s.days += 1; s.dates.push(r.attend_date);
+      if (r.punch_time) s.minutes += r.late_minutes; else s.noTime += 1;
       by.set(r.student_id, s);
     });
     let list = [...by.values()];
@@ -150,9 +158,9 @@ function RangeLate() {
       .sort((a, b) => b.days - a.days || b.minutes - a.minutes);
   }, [rows, grade, min]);
 
-  const headers = ["م", "اسم الطالب", "الصف", "الفصل", "أيام التأخر", "مجموع الدقائق", "آخر تأخر"];
+  const headers = ["م", "اسم الطالب", "الصف", "الفصل", "أيام التأخر", "مجموع الدقائق", "منها بلا وقت", "آخر تأخر"];
   const table = () => students.map((s, i) => [
-    i + 1, s.full_name, s.grade, s.class_no, s.days, s.minutes, fmtDate(s.dates[s.dates.length - 1] + "T00:00:00"),
+    i + 1, s.full_name, s.grade, s.class_no, s.days, s.minutes, s.noTime, fmtDate(s.dates[s.dates.length - 1] + "T00:00:00"),
   ]);
   const subtitle = () => `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")} · ${min} أيام فأكثر`;
 
@@ -188,6 +196,7 @@ function RangeLate() {
                 <p className="text-xs text-muted">
                   صف <span className="num">{s.grade}</span> · فصل <span className="num">{s.class_no}</span> · مجموع{" "}
                   <span className="num">{s.minutes}</span> دقيقة
+                  {s.noTime > 0 && <> · بلا وقت <span className="num">{s.noTime}</span></>}
                 </p>
               </div>
               <span className="chip shrink-0 bg-late/10 text-late">{daysWord(s.days)}</span>

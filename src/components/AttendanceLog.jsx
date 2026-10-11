@@ -119,9 +119,11 @@ export default function AttendanceLog({ studentId, fp }) {
                       </td>
                       {showMorning && (
                         <td className="px-3 py-2.5">
-                          {morningOk(r.attend_date) && r.late_minutes > 0
-                            ? <span className="chip gap-1 whitespace-nowrap bg-late/10 text-late">متأخر <span className="num">{r.late_minutes}</span> د</span>
-                            : <span className="text-xs text-faint">—</span>}
+                          {!(morningOk(r.attend_date) && r.late_minutes > 0)
+                            ? <span className="text-xs text-faint">—</span>
+                            : r.late_no_time // لم يبصم وحضر الحصص (البصمة تُغلق مع الحصة الأولى)
+                              ? <span className="chip whitespace-nowrap bg-late/10 text-late">متأخر (بلا وقت)</span>
+                              : <span className="chip gap-1 whitespace-nowrap bg-late/10 text-late">متأخر <span className="num">{r.late_minutes}</span> د</span>}
                         </td>
                       )}
                       <td className="px-3 py-2.5">

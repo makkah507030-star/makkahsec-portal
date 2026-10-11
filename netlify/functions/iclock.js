@@ -78,7 +78,8 @@ function riyadhNow() {
   const punchTime = new Date(
     `${attendDate}T${parts.hour}:${parts.minute}:${parts.second}${TZ_OFFSET}`
   );
-  return { attendDate, punchTime };
+  const minutes = (Number(parts.hour) % 24) * 60 + Number(parts.minute);
+  return { attendDate, punchTime, minutes };
 }
 
 export const handler = async (event) => {
@@ -194,8 +195,29 @@ export const handler = async (event) => {
       // لا بصمات صالحة — نؤكّد الاستلام فورًا كي لا يعيد الجهاز الإرسال
       if (!rawUids.length) return text("OK: 0");
 
-      const { attendDate, punchTime } = riyadhNow();
+      const { attendDate, punchTime, minutes: nowMin } = riyadhNow();
       const punchIso = punchTime.toISOString();
+
+      // إعدادات العام الدراسي والتوقيت المفعّل (استعلام واحد)
+      const { data: setRows } = await admin
+        .from("settings").select("key, value").in("key", ["active_year", "active_season"]);
+      const setting = Object.fromEntries((setRows || []).map((r) => [r.key, r.value]));
+      const academicYear = setting.active_year ?? null;
+
+      // البصمة تتوقف عن التسجيل مع بداية الحصة الأولى: ما بعدها لا يُسجَّل،
+      // ومن لم يبصم وحضر الحصص يُحسب في التقارير متأخرًا بلا وقت.
+      // نردّ OK كي لا يعيد الجهاز إرسال الدفعة.
+      const { data: p1 } = await admin
+        .from("period_times").select("start_time")
+        .eq("season", setting.active_season ?? "summer").eq("kind", "period").eq("period_no", 1)
+        .maybeSingle();
+      if (p1?.start_time) {
+        const [h, m] = String(p1.start_time).split(":").map(Number);
+        if (nowMin >= h * 60 + (m || 0)) {
+          console.log(`iclock: ${rawUids.length} punches ignored after period 1 start (${p1.start_time})`);
+          return text(`OK: ${rawUids.length}`);
+        }
+      }
 
       // صور الرقم الآمنة (الأصفار البادئة / الهوية الكاملة)
       const variantsOf = (uid) => {
@@ -213,11 +235,6 @@ export const handler = async (event) => {
         for (let i = 0; i < arr.length; i += n) out.push(arr.slice(i, i + n));
         return out;
       };
-
-      // إعدادات العام الدراسي (استعلام واحد)
-      const setRes = await admin
-        .from("settings").select("value").eq("key", "active_year").maybeSingle();
-      const academicYear = setRes.data ? setRes.data.value : null;
 
       // (1) جلب كل الطلاب المطابقين دفعةً واحدة — مقسّم لدُفَع آمنة الطول
       const byKey = new Map(); // كل صورة رقم → معرّف الطالب
