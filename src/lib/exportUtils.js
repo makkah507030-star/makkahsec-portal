@@ -560,6 +560,23 @@ export async function printReport(opts) {
     background: #DFF3E6; color: #3E6350; border-color: #B9E6C9;
   }
 
+  /* جدول بيانات (عنوان | قيمة) — العنوان في عمود ملوّن بهوية البوابة */
+  table.kv tbody th {
+    width: 30%; background: ${TINT}; color: ${DEEP}; font-weight: 700;
+    border: 1px solid ${LIGHT}; padding: 6px 8px; text-align: right;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  table.kv tbody td { text-align: right; padding: 6px 8px; font-weight: 600; }
+  table.kv tbody tr:nth-child(even) { background: #fff; }
+
+  /* عنوان قسم داخل التقرير المطبوع */
+  .sec-h {
+    margin: 14px 0 6px; padding-right: 8px; font-size: 12px; font-weight: 700;
+    color: ${DEEP}; border-right: 4px solid ${MINT};
+  }
+  .sec-h .c { color: ${GRAY}; font-weight: 400; font-size: 10.5px; }
+  .empty { font-size: 10.5px; color: ${GRAY}; margin: 2px 0 6px; padding-right: 12px; }
+
   /* بطاقات إحصائية داخل التقرير المطبوع */
   .stat-tiles { display: flex; gap: 8px; margin-bottom: 14px; }
   .stat-tile {

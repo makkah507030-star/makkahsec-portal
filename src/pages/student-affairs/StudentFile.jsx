@@ -118,18 +118,15 @@ function FileBody({ s, from, to }) {
     bySubject[n] = (bySubject[n] ?? 0) + 1;
   });
 
-  const print = () => {
-    const kv = (k, v) => `<tr><th style="width:40%">${k}</th><td>${v}</td></tr>`;
-    const html = `
-      <table>${kv("اسم الطالب", s.full_name)}${kv("رقم الهوية", data.nid)}${kv("الصف / الفصل", `${GRADE_NAMES[s.grade] ?? s.grade} / ${s.class_no}`)}
-      ${kv("الفترة", `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")}`)}</table>
-      <table style="margin-top:10px">${kv("أيام الغياب الرسمي بدون عذر", absent.length)}${kv("أيام الغياب بعذر", excused.length)}
-      ${kv("أيام التأخر الصباحي", late.length)}${kv("حصص الغياب", pAbsent.length)}${kv("حصص التأخر", pLate.length)}
-      ${kv("الإنذارات الصادرة", data.warns.map((w) => `${STAGE[w.stage]?.label} (${fmtDate(w.issued_on + "T12:00:00")})`).join("، ") || "—")}</table>
-      ${absent.length ? `<table style="margin-top:10px"><thead><tr><th>م</th><th>أيام الغياب الرسمي</th></tr></thead><tbody>
-        ${absent.map((m, i) => `<tr><td>${i + 1}</td><td>${weekdayOf(m.attend_date)} ${fmtDate(m.attend_date + "T12:00:00")}</td></tr>`).join("")}</tbody></table>` : ""}`;
-    printReport({ title: "ملف متابعة الطالب — الحضور والغياب", sections: [{ title: "ملف متابعة الطالب — الحضور والغياب", html }], ...logos(), signatures: SIGNS });
-  };
+  const print = () => printReport({
+    title: "ملف متابعة الطالب — الحضور والغياب",
+    sections: [{
+      title: "ملف متابعة الطالب — الحضور والغياب",
+      subtitle: `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")}`,
+      html: studentFileHtml({ s, nid: data.nid, from, to, fp, absent, excused, late, pAbsent, pLate, warns: data.warns, bySubject }),
+    }],
+    ...logos(), signatures: SIGNS,
+  });
 
   return (
     <div className="space-y-4">
@@ -198,6 +195,57 @@ function FileBody({ s, from, to }) {
       </Section>
     </div>
   );
+}
+
+/* محتوى ملف الطالب المطبوع بهوية البوابة: بطاقة الطالب، ثم بطاقات الأرقام،
+   ثم جدول لكل قسم (الإنذارات، الغياب الرسمي، التأخر الصباحي، غياب الحصص). */
+function studentFileHtml({ s, nid, from, to, fp, absent, excused, late, pAbsent, pLate, warns, bySubject }) {
+  const day = (d) => `${weekdayOf(d)} ${fmtDate(d + "T12:00:00")}`;
+  const kv = (k, v) => `<tr><th>${k}</th><td>${v ?? "—"}</td></tr>`;
+  const tile = (v, l, color) =>
+    `<div class="stat-tile"><div class="v"${color ? ` style="color:${color}"` : ""}>${v}</div><div class="l">${l}</div></div>`;
+  const head = (t, n) => `<p class="sec-h">${t}${n != null ? ` <span class="c">(${n})</span>` : ""}</p>`;
+  const table = (cls, hs, rows) => `<table class="${cls}"><thead><tr>${hs.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  const empty = (t) => `<p class="empty">${t}</p>`;
+
+  const official = [...absent, ...excused].sort((a, b) => a.attend_date.localeCompare(b.attend_date));
+  const periods = [...pAbsent, ...pLate].sort((a, b) =>
+    a.attend_date.localeCompare(b.attend_date) || (a.schedule?.period_no ?? 0) - (b.schedule?.period_no ?? 0));
+  const subjects = Object.entries(bySubject).sort((a, b) => b[1] - a[1]);
+
+  return `
+    <table class="kv">
+      ${kv("اسم الطالب", s.full_name)}${kv("رقم الهوية", nid)}
+      ${kv("الصف / الفصل", `${GRADE_NAMES[s.grade] ?? s.grade} / ${s.class_no}`)}
+      ${kv("الفترة", `${fmtDate(from + "T00:00:00")} — ${fmtDate(to + "T00:00:00")}`)}
+    </table>
+    <div class="stat-tiles" style="margin-top:12px">
+      ${tile(absent.length, "غياب رسمي بدون عذر", "#B02A2A")}${tile(excused.length, "غياب بعذر", "#544CC0")}
+      ${fp ? tile(late.length, "تأخر صباحي", "#9A6B12") : ""}
+      ${tile(pAbsent.length, "حصص غياب", "#B02A2A")}${tile(pLate.length, "حصص تأخر", "#9A6B12")}
+      ${tile(warns.length, "إنذارات")}
+    </div>
+    ${head("الإنذارات", warns.length)}
+    ${warns.length ? table("danger", ["م", "الإنذار", "تاريخ الإصدار", "النوع"], warns.map((w, i) =>
+      [i + 1, STAGE[w.stage]?.label ?? w.stage, fmtDate(w.issued_on + "T12:00:00"), w.source === "paper" ? "ورقي" : "من البوابة"]))
+      : empty("لا إنذارات.")}
+    ${head("الغياب الرسمي", official.length)}
+    ${official.length ? table("", ["م", "اليوم والتاريخ", "الحالة", "ملاحظة"], official.map((m, i) =>
+      [i + 1, day(m.attend_date),
+       `<span style="color:${m.status === "absent" ? "#B02A2A" : "#544CC0"};font-weight:700">${OFFICIAL_LABEL[m.status]}</span>`,
+       m.punched ? "بصم ولم يحضر الحصص" : m.note ?? ""]))
+      : empty("لا غياب رسمي في الفترة.")}
+    ${fp ? head("التأخر الصباحي", late.length) + (late.length ? table("", ["م", "اليوم والتاريخ", "وقت البصمة", "دقائق التأخر"], late.map((m, i) =>
+      [i + 1, day(m.attend_date), m.punch_time ? fmtTime12(m.punch_time) : "لم يبصم", m.punch_time ? m.late_minutes : "بلا وقت"]))
+      : empty("لا تأخر في الفترة.")) : ""}
+    ${head("غياب الحصص حسب المادة", subjects.length)}
+    ${subjects.length ? table("", ["م", "المادة", "عدد حصص الغياب"], subjects.map(([n, c], i) => [i + 1, n, c]))
+      : empty("لا غياب حصص.")}
+    ${periods.length ? head("تفصيل غياب الحصص وتأخرها", periods.length) + table("", ["م", "اليوم والتاريخ", "الحصة", "المادة", "الحالة"], periods.map((p, i) =>
+      [i + 1, day(p.attend_date), p.schedule?.period_no ?? "—", p.schedule?.subjects?.name ?? "—",
+       `<span style="color:${p.status === "absent" ? "#B02A2A" : "#9A6B12"};font-weight:700">${P_STATUS[p.status]?.t ?? p.status}</span>`]))
+      : ""}`;
 }
 
 /* تعديل حضور الحصص — للإدارة: إلغاء غياب حصة أو تغيير نوعه بعد انتهاء وقتها
