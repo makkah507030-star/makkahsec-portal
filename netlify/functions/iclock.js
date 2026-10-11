@@ -19,11 +19,42 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // فرق التوقيت: أجهزة ZKTeco ترسل وقتًا محليًا بلا منطقة زمنية
 const TZ_OFFSET = "+03:00"; // توقيت السعودية
 
+// ترويسة Date تُرسل مع كل رد: بعض إصدارات ZKTeco تضبط ساعتها منها مباشرة
 const text = (body, status = 200) => ({
   statusCode: status,
-  headers: { "Content-Type": "text/plain; charset=utf-8" },
+  headers: {
+    "Content-Type": "text/plain; charset=utf-8",
+    Date: new Date().toUTCString(),
+  },
   body: String(body),
 });
+
+// كل كم دقيقة تُعاد مزامنة ساعة الجهاز حتى لو لم يُعد تشغيله
+const RESYNC_MINUTES = 60;
+
+/**
+ * أمر ضبط ساعة الجهاز بتوقيت الرياض (بروتوكول ZKTeco ADMS).
+ *
+ * الجهاز بلا بطارية ساعة، فيعود لتاريخ خاطئ بعد كل انقطاع كهرباء ويرفض
+ * البصمات على شاشته برسالة خطأ في التوقيت. لذا يرسل الخادم ساعته الصحيحة
+ * للجهاز بعد كل تشغيل، ثم كل ساعة.
+ * صيغة القيمة المعتمدة عند ZKTeco: ثوانٍ مرمّزة منذ 2000 بشهور من 31 يومًا.
+ */
+function setClockCommand() {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Riyadh",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  });
+  const p = Object.fromEntries(fmt.formatToParts(new Date()).map((x) => [x.type, Number(x.value)]));
+  const hour = p.hour % 24; // بعض المتصفحات تعيد 24 لمنتصف الليل
+  const encoded =
+    ((p.year - 2000) * 12 * 31 + (p.month - 1) * 31 + (p.day - 1)) * 86400 +
+    (hour * 60 + p.minute) * 60 + p.second;
+  const id = Math.floor(Date.now() / 1000) % 100000000;
+  return `C:${id}:SET OPTIONS DateTime=${encoded}`;
+}
 
 /**
  * وقت استلام الخادم بتوقيت الرياض — لا نعتمد على ساعة الجهاز نفسه.
@@ -69,7 +100,7 @@ export const handler = async (event) => {
     // ---------- التحقق أن الجهاز مسجّل ومفعّل ----------
     const devRes = await admin
       .from("devices")
-      .select("serial_no, is_active")
+      .select("*") // «*» كي لا يتعطل الجهاز إن لم يُضف عمود time_synced_at بعد
       .eq("serial_no", sn)
       .maybeSingle();
 
@@ -105,6 +136,9 @@ export const handler = async (event) => {
 
     // ---------- 1) المصافحة ----------
     if (path.includes("/cdata") && event.httpMethod === "GET") {
+      // المصافحة تعني أن الجهاز شُغّل للتو (وساعته غالبًا خاطئة):
+      // نمسح وقت آخر مزامنة ليُضبط وقته في أول استعلام عن الأوامر
+      await admin.from("devices").update({ time_synced_at: null }).eq("serial_no", sn);
       // الجهاز يتوقع إعداداته في الرد
       const reply = [
         `GET OPTION FROM: ${sn}`,
@@ -261,11 +295,31 @@ export const handler = async (event) => {
 
     // ---------- 3) استعلام الجهاز عن الأوامر ----------
     if (path.includes("/getrequest")) {
+      let needSync;
+      if ("time_synced_at" in device) {
+        const last = device.time_synced_at ? new Date(device.time_synced_at).getTime() : 0;
+        needSync = Date.now() - last > RESYNC_MINUTES * 60 * 1000;
+      } else {
+        // العمود غير موجود بعد: نضبط الساعة كل عشر دقائق تقريبًا
+        needSync = new Date().getUTCMinutes() % 10 === 0;
+      }
+      if (needSync) {
+        await admin.from("devices")
+          .update({ time_synced_at: new Date().toISOString() })
+          .eq("serial_no", sn);
+        const cmd = setClockCommand();
+        console.log(`iclock: clock sync sent to ${sn} → ${cmd}`);
+        return text(cmd);
+      }
       return text("OK");
     }
 
     // ---------- 4) نتيجة تنفيذ أمر ----------
     if (path.includes("/devicecmd")) {
+      const raw = event.isBase64Encoded
+        ? Buffer.from(event.body || "", "base64").toString("utf-8")
+        : (event.body || "");
+      console.log(`iclock: devicecmd result from ${sn}: ${raw.slice(0, 200)}`);
       return text("OK");
     }
 
