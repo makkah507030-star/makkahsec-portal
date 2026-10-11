@@ -1,6 +1,7 @@
 import { fmtDate, fmtTime12, stripBidi } from "./dates";
 import { isMobileDevice } from "./print";
 import { loadPrincipalSignature } from "./principalSignature";
+import { signatureByName } from "./userSignatures";
 // أسماء الموقّعين — من إعدادات البوابة (lib/signers.js)
 import {
   PRINCIPAL_NAME, STUDENT_DEPUTY_NAME, ACADEMIC_DEPUTY_NAME, TECH_SUPPORT_NAME,
@@ -300,17 +301,22 @@ export async function printReport(opts) {
   const principalSig = !hideSignatures && signList.some(isPrincipal)
     ? await loadPrincipalSignature()
     : null;
+  // بقية الموقّعين (الموجه، الوكيل، رئيس القسم…): توقيع صاحب الاسم من «توقيعي» إن أمكن
+  const otherSigs = hideSignatures ? [] : await Promise.all(signList.map((sg) =>
+    sg.url ? sg.url : isPrincipal(sg) ? null : signatureByName(sg.name).catch(() => null)));
 
   const signBlock = hideSignatures ? "" : `
   <div class="sign ${signList.length === 1 ? "one" : signList.length >= 3 ? "three" : ""}">
     ${signList
       .map(
-        (sg) => `
+        (sg, i) => `
     <div class="sign-box">
       <p class="sign-title">${sg.title}</p>
       <p class="sign-name">${sg.name}</p>
       ${isPrincipal(sg) && principalSig?.url
         ? `<img class="sign-img" src="${principalSig.url}" alt="" />`
+        : otherSigs[i]
+        ? `<img class="sign-img" src="${otherSigs[i]}" alt="" />`
         : hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..........................</p>`}
     </div>`
       )

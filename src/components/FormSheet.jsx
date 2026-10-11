@@ -9,6 +9,7 @@ import { PRINCIPAL_NAME } from "../lib/signers.js";
 import { GuestCertificateBody } from "./GuestCertificate.jsx";
 import { EVIDENCE_LEAD, EVIDENCE_NOTE, LEVEL_LABEL } from "../lib/evidence.js";
 import { levelBand } from "../lib/gradeBands.js";
+import { useSignatureByName } from "../lib/userSignatures.js";
 import { toHijri } from "./DateField.jsx";
 
 /* =====================================================================
@@ -81,6 +82,8 @@ function Foot({ serial, hairline = true, color = "#3E6350" }) {
 
 /* توقيع واحد: الصفة، ثم صورة التوقيع، ثم الاسم تحت خط رفيع */
 function Sign({ url, name, role }) {
+  // بلا صورة محفوظة: توقيع صاحب الاسم من «توقيعي» إن كان مرفوعًا ويحق للمستخدم رؤيته
+  url = useSignatureByName(name, url);
   return (
     <div className="min-w-[180px] text-center">
       <p className="text-[12px] text-muted">{role}</p>
