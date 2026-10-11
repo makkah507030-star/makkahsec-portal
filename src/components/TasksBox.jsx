@@ -4,12 +4,14 @@ import { Link } from "react-router-dom";
 import { useSession } from "../lib/session.jsx";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 import { Icon } from "./Layout.jsx";
+import Sticker from "./Sticker.jsx";
 
 /* =====================================================================
    «بانتظار إجرائك» — صندوق المهام المعلقة في الرئيسية لكل الحسابات: بطاقة لكل نوع
    إجراء ينتظر صاحب الحساب وعددها، والضغط يفتح مكان الإجراء مباشرة.
    المصدر lib/navBadges.js (العدادات نفسها في القائمة الجانبية).
    حين تُنجَز مهمة تظهر بطاقتها «✓ تمت» لحظات ثم تختفي.
+   والملصق (عاجل/سري/للاطلاع والتوجيه) يحدده مرسل النموذج، فيظهر على البطاقة وعناصرها.
    ===================================================================== */
 
 const TONE = {
@@ -95,6 +97,7 @@ export default function TasksBox() {
               {x.to ? (
                 <Link to={x.to} className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-canvas">
                   <span className="min-w-0 flex-1 truncate text-ink">{x.title || expanded.label}</span>
+                  <Sticker flag={x.flag} />
                   <span className="shrink-0 text-xs font-semibold text-mint-deep">افتح ←</span>
                 </Link>
               ) : (
@@ -125,7 +128,10 @@ function TaskCard({ t, active, onExpand }) {
         <span className={`flex h-8 w-8 items-center justify-center rounded-full ${tone.icon}`}>
           <Icon name={t.icon} className="h-4 w-4" />
         </span>
-        <span className={`num text-2xl font-bold leading-none ${tone.num}`}>{t.n}</span>
+        <span className="flex items-center gap-1.5">
+          <Sticker flag={t.flag} />
+          <span className={`num text-2xl font-bold leading-none ${tone.num}`}>{t.n}</span>
+        </span>
       </div>
       <p className="mt-2 text-[12.5px] font-semibold leading-snug text-ink">{t.label}</p>
       {t.sub && <p className="num mt-0.5 text-[11px] leading-snug text-muted">{t.sub}</p>}
@@ -139,3 +145,4 @@ function TaskCard({ t, active, onExpand }) {
     ? <button type="button" className={cls} onClick={onExpand} aria-expanded={active}>{body}</button>
     : <Link to={one ? one.to : t.to} className={cls}>{body}</Link>;
 }
+

@@ -5,6 +5,7 @@ import { stageOf, isLate, STAGE_COLS } from "./referrals.js";
 import { fmtHijri } from "./dates.js";
 import { todayISO } from "./schoolTime.js";
 import { countAr } from "./arabicCount.js";
+import { FLAG_ORDER, flagRank } from "./flags.js";
 
 /* =====================================================================
    «بانتظار إجرائك» — مصدر واحد لكل ما ينتظر إجراء المستخدم: عدادات القائمة الجانبية
@@ -14,9 +15,10 @@ import { countAr } from "./arabicCount.js";
      sub    سطر تفصيل تحت العنوان
      follow متابعة لما عند غيرك — لا تُحسب في عدد «بانتظار إجرائك»
      to     الصفحة التي يُنجز فيها الإجراء (مع التبويب المناسب)
-     items  [{ id, to, title }] حين تكون عناصرها معروفة — فتُفتح مباشرة
+     items  [{ id, to, title, flag? }] حين تكون عناصرها معروفة — فتُفتح مباشرة
             إن كانت واحدة، وتُعرض قائمتها إن تعددت
             وبلا to يبقى العنصر للاطلاع فقط في القائمة (لا رابط له)
+     flag   ملصق يحدده مرسل النموذج (عاجل/سري/للاطلاع والتوجيه) — الأشد بين عناصرها
    تُحتسب بحسب الدور: الإدارة بأدوارها، والمعلم والطالب وولي الأمر بحسابه.
    يُحدَّث كل دقيقتين ما دامت الصفحة ظاهرة، وعند الانتقال بين الصفحات
    (refreshNavBadges). كلها عبر صلاحيات المستخدم نفسه (RLS).
@@ -38,6 +40,12 @@ const count = async (q) => {
 const rowsOf = async (q) => {
   const { data, error } = await q;
   return error ? [] : data ?? [];
+};
+// استعلام بعمود الملصق، وإن لم يُضف العمود بعد (supabase/flags.sql) يُعاد بدونه فلا تختفي المهام
+const rowsFlag = async (make) => {
+  const { data, error } = await make(", flag");
+  if (!error) return data ?? [];
+  return /flag/.test(error.message ?? "") ? rowsOf(make("")) : [];
 };
 const head = (t) => supabase.from(t).select("id", { count: "exact", head: true });
 const mine = (uid) => JSON.stringify([{ user_id: uid }]);   // attendees @> [{user_id}]
@@ -86,23 +94,27 @@ async function load() {
   const noRows = Promise.resolve([]);
 
   const fd = () => head("form_documents");
-  const ref = () => head("student_referrals");
 
   const [
     returned, toApprove, replies, events, toReply, refDeputy, refCounselor, notif,
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
     plcBack, pdBack, xvBack, perfAck, guidance,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
+    giTeacher, giDeputy, giCounselor, giGuardian,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
-    has("principal") ? count(fd().eq("status", "pending")) : none,
+    has("principal") ? rowsFlag((f) => supabase.from("form_documents").select(`id, title, recipient${f}`)
+      .eq("status", "pending").order("created_at").limit(100)) : noRows,
     staff ? count(fd().eq("created_by", uid).eq("status", "replied")) : none,
     isManager
       ? count(head("school_events").not("report_submitted_at", "is", null).neq("stage", "approved").is("cancelled_at", null))
       : none,
-    count(fd().eq("recipient_user_id", uid).eq("status", "awaiting_reply")),
-    isDeputy ? count(ref().in("status", ["with_deputy", "guardian_replied"])) : none,
-    isCounselor ? count(ref().eq("counselor_id", uid).in("status", ["with_counselor", "returned_to_counselor"])) : none,
+    rowsFlag((f) => supabase.from("form_documents").select(`id, title, serial${f}`)
+      .eq("recipient_user_id", uid).eq("status", "awaiting_reply").order("created_at").limit(50)),
+    isDeputy ? rowsFlag((f) => supabase.from("student_referrals").select(`id, student_name${f}`)
+      .in("status", ["with_deputy", "guardian_replied"]).order("created_at").limit(100)) : noRows,
+    isCounselor ? rowsFlag((f) => supabase.from("student_referrals").select(`id, student_name${f}`).eq("counselor_id", uid)
+      .in("status", ["with_counselor", "returned_to_counselor"]).order("created_at").limit(100)) : noRows,
     has("tech_support") ? count(head("notification_drafts").eq("status", "pending")) : none,
 
     // التطوير المهني: التوقيع للحاضرين، والاعتماد للوكيل، والمعاد لصاحبه
@@ -122,12 +134,12 @@ async function load() {
     myGrades.length ? count(head("guidance_requests").eq("status", "new").in("grade", myGrades)) : none,
 
     // ولي الأمر: نماذج السلوك والإحالات التي تنتظر إقراره، والطالب: تعهداته
-    isGuardian ? rowsOf(supabase.from("behavior_forms").select("id, kind, student_name")
+    isGuardian ? rowsFlag((f) => supabase.from("behavior_forms").select(`id, kind, student_name${f}`)
       .in("kind", ["pledge", "invite", "notice"]).is("guardian_ack_at", null).neq("status", "closed")
       .order("created_at").limit(50)) : noRows,
-    isGuardian ? rowsOf(supabase.from("student_referrals").select("id, students(full_name)")
+    isGuardian ? rowsFlag((f) => supabase.from("student_referrals").select(`id${f}, students(full_name)`)
       .eq("status", "with_guardian").is("guardian_ack_at", null).order("created_at").limit(50)) : noRows,
-    isStudent ? rowsOf(supabase.from("behavior_forms").select("id, kind")
+    isStudent ? rowsFlag((f) => supabase.from("behavior_forms").select(`id, kind${f}`)
       .eq("kind", "pledge").is("student_ack_at", null).neq("status", "closed").order("created_at").limit(50)) : noRows,
 
     // متابعة الوكيل: إحالات عند الموجهين أو ولي الأمر لم تنتهِ بعد
@@ -136,6 +148,18 @@ async function load() {
 
     // المعلم: اختبارات فترات حلّ موعدها ولم يسجّل الوكيل رصدها في نور (للاطلاع)
     role === "teacher" ? rowsOf(supabase.rpc("my_noor_grade_due")) : noRows,
+
+    // استمارة توضيح مستوى الطالب: سطر المعلم، ورأي الوكيل، وما ينتظر الموجه، ونسخة ولي الأمر
+    staff ? rowsOf(supabase.from("guidance_inquiry_items")
+      .select("id, inquiry_id, subject, guidance_inquiries!inner(student_name, flag, status)")
+      .eq("teacher_user_id", uid).is("filled_at", null).eq("guidance_inquiries.status", "teachers").limit(50)) : noRows,
+    isDeputy ? rowsOf(supabase.from("guidance_inquiries").select("id, student_name, flag")
+      .eq("status", "deputy").order("created_at").limit(50)) : noRows,
+    myGrades.length ? rowsOf(supabase.from("guidance_inquiries")
+      .select("id, student_name, flag, status, guidance_inquiry_items(filled_at, teacher_user_id)")
+      .in("status", ["teachers", "counselor"]).in("grade", myGrades).order("created_at").limit(100)) : noRows,
+    isGuardian ? rowsOf(supabase.from("guidance_inquiries").select("id, student_name, flag")
+      .eq("status", "sent").is("guardian_seen_at", null).order("created_at").limit(50)) : noRows,
   ]);
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
@@ -145,7 +169,24 @@ async function load() {
   const awayG = refAway.filter((r) => stageOf(r).group === "guardian").length;
   const awayLate = refAway.filter(isLate).length;
   const noor = noorTask(noorDue);
-  const items = (rows, path, title) => rows.map((r) => ({ id: r.id, to: `${path}/${r.id}`, title: title?.(r) ?? "" }));
+  const items = (rows, path, title) => rows.map((r) => ({ id: r.id, to: `${path}/${r.id}`, title: title?.(r) ?? "", flag: r.flag ?? null }));
+  // الموجه: ما عاد إليه من الوكيل، وما اكتملت تعبئة معلميه ولم يُرسَل للوكيل
+  const giReady = giCounselor.filter((r) => {
+    if (r.status === "counselor") return true;
+    const acc = (r.guidance_inquiry_items ?? []).filter((x) => x.teacher_user_id);
+    return acc.length > 0 && acc.every((x) => x.filled_at);
+  });
+  const giTasks = [
+    { key: "giTeacher", label: "استمارات مستوى طالب تنتظر تعبئتك", icon: "clipboard",
+      items: giTeacher.map((x) => ({ id: x.id, to: `/inquiry/${x.inquiry_id}`, flag: x.guidance_inquiries?.flag ?? null,
+                                     title: `${x.guidance_inquiries?.student_name ?? ""} · ${x.subject}` })) },
+    { key: "giDeputy", label: "استمارات مستوى طالب تنتظر رأيك", icon: "clipboard",
+      items: items(giDeputy, "/inquiry", (r) => r.student_name) },
+    { key: "giCounselor", label: "استمارات مستوى جاهزة لإجرائك", icon: "heart",
+      items: items(giReady, "/inquiry", (r) => `${r.student_name} · ${r.status === "counselor" ? "عادت من الوكيل" : "اكتملت التعبئة"}`) },
+    { key: "giGuardian", label: "استمارة مستوى ابنك من التوجيه الطلابي", icon: "heart",
+      items: items(giGuardian, "/inquiry", (r) => r.student_name) },
+  ].map((t) => ({ ...t, n: t.items.length, to: "/", tone: "warning" }));
 
   const tasks = [
     // ما أُعيد إليك أولًا: عمل بدأته ينتظر تعديلك
@@ -168,7 +209,8 @@ async function load() {
       label: "تعهدات تنتظر توقيعك", tone: "absent", icon: "shield" },
 
     // ما ينتظر ردك أو توقيعك أو اطلاعك
-    { key: "toReply", n: toReply, to: "/my-documents",
+    { key: "toReply", n: toReply.length, to: "/my-documents",
+      items: toReply.map((d) => ({ id: d.id, to: `/doc/${d.id}`, title: `${d.title} · ${d.serial}`, flag: d.flag ?? null })),
       label: staff ? "نماذج وصلتك تنتظر إفادتك" : "نماذج وصلتك تنتظر ردك", tone: "warning", icon: "folder" },
     { key: "plcSign", n: plcToSign.length, to: "/plc?tab=sign",
       items: items(plcToSign, "/plc", (r) => `جلسة ${r.head_name ?? ""}`),
@@ -179,13 +221,16 @@ async function load() {
     { key: "xvHost", n: xvHost.length, to: "/xvisits?tab=host",
       items: items(xvHost, "/xvisits", (r) => `زيارة ${r.visitor_name ?? ""}`),
       label: "زيارات تبادلية تنتظر توقيعك", tone: "warning", icon: "signature" },
+    ...giTasks,
     { key: "perfAck", n: perfAck, to: "/my-performance", label: "تقييم أداء ينتظر اطلاعك", tone: "warning", icon: "award" },
-    { key: "referrals", n: refDeputy + refCounselor, to: "/referrals", label: "إحالات تنتظر إجراءك", tone: "warning", icon: "send" },
+    { key: "referrals", n: refDeputy.length + refCounselor.length, to: "/referrals", label: "إحالات تنتظر إجراءك", tone: "warning", icon: "send",
+      items: [...refDeputy, ...refCounselor].map((r) => ({ id: r.id, to: "/referrals", title: r.student_name ?? "", flag: r.flag ?? null })) },
     { key: "guidance", n: guidance, to: `/guidance?tab=requests${myGrades.length === 1 ? `&grade=${myGrades[0]}` : ""}`,
       label: "طلبات مقابلة جديدة", tone: "warning", icon: "heart" },
 
     // الاعتماد
-    { key: "toApprove", n: toApprove, to: "/forms-review", label: "نماذج تنتظر اعتمادك", tone: "warning", icon: "inbox" },
+    { key: "toApprove", n: toApprove.length, to: "/forms-review", label: "نماذج تنتظر اعتمادك", tone: "warning", icon: "inbox",
+      items: toApprove.map((d) => ({ id: d.id, to: "/forms-review", title: [d.title, d.recipient].filter(Boolean).join(" · "), flag: d.flag ?? null })) },
     { key: "events", n: events, to: "/forms-review", label: "تقارير أحداث تنتظر الاعتماد", tone: "warning", icon: "sparkles" },
     { key: "plcPending", n: plcPending.length, to: "/plc?tab=pending",
       items: items(plcPending, "/plc", (r) => `جلسة ${r.head_name ?? ""}`),
@@ -208,20 +253,27 @@ async function load() {
 
     // للعلم
     { key: "replies", n: replies, to: "/forms-review", label: "إفادات وصلت على نماذجك", tone: "mint", icon: "inbox" },
-  ].filter((t) => t.n > 0);
+  ].filter((t) => t.n > 0).map((t) => {
+    // الملصق: الأشد بين عناصر المهمة يظهر على بطاقتها، والعاجل أول قائمتها وبطاقته حمراء،
+    // وتُعرض قائمتها في الصندوق (to: "/") ليظهر ملصق كل عنصر
+    if (!t.items?.some((x) => x.flag)) return t;
+    const flag = FLAG_ORDER.find((f) => t.items.some((x) => x.flag === f));
+    return { ...t, flag, to: "/", items: [...t.items].sort((a, b) => flagRank(a.flag) - flagRank(b.flag)),
+             tone: flag === "urgent" ? "absent" : t.tone };
+  });
 
   state = {
     "/forms": returned,
-    "/forms-review": toApprove + replies + events,
-    "/my-documents": toReply,
-    "/referrals": refDeputy + refCounselor,
+    "/forms-review": toApprove.length + replies + events,
+    "/my-documents": toReply.length,
+    "/referrals": refDeputy.length + refCounselor.length,
     "/notifications-review": notif,
     "/plc": plcToSign.length + plcPending.length + plcBack.length
       + pdToSign.length + pdPending.length + pdBack.length
       + xvHost.length + xvPending.length + xvBack.length,
     "/my-performance": perfAck,
-    "/guidance": guidance,
-    "/": behaviorGuardian.length + refGuardian.length + pledges.length,
+    "/guidance": guidance + giDeputy.length + giReady.length,
+    "/": behaviorGuardian.length + refGuardian.length + pledges.length + giGuardian.length,
     _tasks: tasks,
     _ready: true,
   };

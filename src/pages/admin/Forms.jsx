@@ -22,6 +22,8 @@ import { useUsageCounts } from "../../lib/usage.js";
 import UsageBadge from "../../components/UsageBadge.jsx";
 import { fmtDate } from "../../lib/dates";
 import { cmpAr } from "../../lib/sortAr.js";
+import Sticker, { FlagPicker } from "../../components/Sticker.jsx";
+import { flagRank, urgentPrefix } from "../../lib/flags.js";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -443,6 +445,7 @@ export default function Forms({ view = "issue", openKey = null }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useNotice(null);
   const [issued, setIssued] = useState(null);      // المستند بعد الحفظ
+  const [flag, setFlag] = useState(null);          // ملصق المستند: عاجل/سري/للاطلاع والتوجيه (lib/flags.js)
 
   const [docs, setDocs] = useState([]);
   const [editing, setEditing] = useState(null);     // مستند مُعاد يجري تصحيحه
@@ -662,11 +665,13 @@ export default function Forms({ view = "issue", openKey = null }) {
     setChosen([]); setBatch([]);
     setPicked({ ...t, id: d.template_id });
     setValues(d.data ?? {});
+    setFlag(d.flag ?? null);
     setIssued(null); setMsg(null); setClassId("");
   };
 
   const start = (t) => {
     setPicked(t);
+    setFlag(null);
     setEditing(null);
     setDraftDoc(null);
     setIssued(null); setMsg(null); setClassId(""); setChosen([]); setBatch([]); setLessons(null);
@@ -863,7 +868,8 @@ export default function Forms({ view = "issue", openKey = null }) {
                                    job: head.job ?? "", specialization: head.specialization ?? "",
                                    national_id: head.national_id ?? "" } } : {}),
     };
-    const patch = { data, recipient: (head?.full_name ?? values.recipient) || null, student_id: values.student_id ?? null };
+    const patch = { data, recipient: (head?.full_name ?? values.recipient) || null, student_id: values.student_id ?? null,
+                    ...(flag || draftDoc?.flag ? { flag } : {}) };
     let res;
     if (draftDoc) {
       res = await supabase.from("form_documents").update(patch).eq("id", draftDoc.id).select().single();
@@ -891,6 +897,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     if (!t) { setMsg({ ok: false, text: "النموذج لم يعد متاحًا." }); return; }
     const { draft_target: target, ...rest } = d.data ?? {};
     setPicked(t);
+    setFlag(d.flag ?? null);
     setEditing(null);
     setDraftDoc(d);
     setIssued(null); setMsg(null); setClassId(""); setBatch([]); setLessons(null);
@@ -939,6 +946,7 @@ export default function Forms({ view = "issue", openKey = null }) {
           decision_note: null,
           approved_by: null,
           approved_at: null,
+          ...(flag || editing.flag ? { flag } : {}),
         })
         .eq("id", editing.id).select().single();
       setSaving(false);
@@ -978,6 +986,8 @@ export default function Forms({ view = "issue", openKey = null }) {
       signature_name: usesIssuer ? (profile?.full_name ?? profile?.username ?? "") : null,
       signature_role: usesIssuer ? issuerRole : null,
       stamp_path: picked.show_stamp ? (assets.stamp ?? null) : null,
+      // بلا ملصق لا يُرسل العمود، فيعمل الإصدار قبل تشغيل supabase/flags.sql
+      ...(flag || draftDoc?.flag ? { flag } : {}),
     };
 
     // شهادة لكل طالب مختار، لكل واحدة رقمها التسلسلي
@@ -1153,7 +1163,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     }
 
     const { data: nid, error } = await supabase.rpc("send_notification", {
-      p_title: d.title,
+      p_title: urgentPrefix(d.flag) + d.title,
       p_body: d.status === "awaiting_reply"
         ? `وصلك ${d.title} برقم ${d.serial} ويحتاج ردّك. افتحه من البوابة واكتب إفادتك ثم أرسلها.`
         : (d.form_templates?.fields ?? []).some((f) => f.type === "rubric" || f.ack)
@@ -1584,6 +1594,11 @@ export default function Forms({ view = "issue", openKey = null }) {
               </p>
             )}
 
+            {/* الملصق لما يصل غيرك ليتخذ إجراء: رد المستفيد أو اعتماد المدير أو اطلاع المستفيد */}
+            {!issued && (needsReply || needsApproval || chosen.some((c) => c.uid ?? c.user_id)) && (
+              <FlagPicker value={flag} onChange={setFlag} />
+            )}
+
             <EvidenceBox items={evPicked} />
             {/* الشهادة لطالب تُحتسب آليًا في ملف أداء المعلم (البند 5-10) */}
             {picked?.category === "certificate" && <EvidenceTags items={["e05_10"]} />}
@@ -1675,8 +1690,10 @@ export default function Forms({ view = "issue", openKey = null }) {
     return !q || [d.recipient, d.serial, d.title, d.signature_name]
       .some((v) => String(v ?? "").includes(q));
   };
-  const shownReplies = replies.filter(matchFilter);
-  const shownPending = pending.filter(matchFilter);
+  // العاجل أولًا (الترتيب مستقر فيبقى الأحدث فالأقدم داخل كل ملصق)
+  const byFlag = (a, b) => flagRank(a.flag) - flagRank(b.flag);
+  const shownReplies = replies.filter(matchFilter).sort(byFlag);
+  const shownPending = pending.filter(matchFilter).sort(byFlag);
   // ما يُعتمد جماعيًا: الإفادات الواصلة، والمستندات بانتظار الاعتماد
   const selectable = tab === "replies"
     ? shownReplies.filter((d) => d.status === "replied")
@@ -1925,7 +1942,7 @@ export default function Forms({ view = "issue", openKey = null }) {
             <div key={d.id} className="card p-4">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="font-semibold text-ink">{d.title}</p>
+                  <p className="flex items-center gap-2 font-semibold text-ink"><span>{d.title}</span><Sticker flag={d.flag} /></p>
                   <p className="num mt-0.5 text-xs text-faint">
                     {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
                   </p>
@@ -2168,7 +2185,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                 <button onClick={() => openDoc(d)}
                         className="flex min-w-0 flex-1 items-center justify-between gap-3 px-2 py-2 text-right">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-ink">{d.title}</p>
+                    <p className="flex items-center gap-2 text-sm font-medium text-ink"><span className="truncate">{d.title}</span><Sticker flag={d.flag} /></p>
                     <p className="num mt-0.5 text-xs text-faint">
                       {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
                     </p>
@@ -2279,7 +2296,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                 <input type="checkbox" className="mt-1.5" checked={sel.has(d.id)}
                        onChange={() => toggleSel(d.id)} aria-label="تحديد" />
                 <div>
-                  <p className="font-semibold text-ink">{d.title}</p>
+                  <p className="flex items-center gap-2 font-semibold text-ink"><span>{d.title}</span><Sticker flag={d.flag} /></p>
                   <p className="num mt-0.5 text-xs text-faint">
                     {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
                   </p>

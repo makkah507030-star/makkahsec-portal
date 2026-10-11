@@ -24,6 +24,8 @@ import {
 } from "../lib/referrals";
 import { ReferralGuide, BehaviorSteps, AcademicDocs, DocsView } from "../components/ReferralProcedures.jsx";
 import PresetChips from "../components/PresetChips.jsx";
+import Sticker, { FlagPicker } from "../components/Sticker.jsx";
+import { urgentPrefix } from "../lib/flags.js";
 
 /* =====================================================================
    إحالة الطالب — شاشة واحدة تخدم المسار كاملًا بحسب دور المستخدم:
@@ -172,6 +174,7 @@ export default function Referrals() {
    للموجه الطلابي مباشرة. ثم يسير في المسار نفسه: إجراء الموجه ← اعتماد الوكيل
    ← إشعار ولي الأمر بالنموذج. */
 function NewBehaviorReferral({ uid, profile, onDone }) {
+  const [flag, setFlag] = useState(null);
   const [student, setStudent] = useState(null);
   const [violation, setViolation] = useState(null);
   const [date, setDate] = useState(todayISO());
@@ -224,9 +227,10 @@ function NewBehaviorReferral({ uid, profile, onDone }) {
       deputy_sig: sig?.path ?? null, deputy_at: now,
       counselor_id: c.id, counselor_name: c.name,
       status: "with_counselor",
+      ...(flag ? { flag } : {}),
     });
     if (!error) {
-      await notifyUsers([c.id], "إحالة مخالفة سلوكية",
+      await notifyUsers([c.id], urgentPrefix(flag) + "إحالة مخالفة سلوكية",
         `أحال إليك وكيل شؤون الطلاب الطالب ${student.full_name} لارتكابه مخالفة سلوكية من الدرجة ${degreeName(violation.degree)} (${serial}).`,
         "/referrals");
     }
@@ -290,6 +294,8 @@ function NewBehaviorReferral({ uid, profile, onDone }) {
         </div>
       )}
 
+      <FlagPicker value={flag} onChange={setFlag} hint="يظهر للموجه على المهمة، والعاجل في أول قائمته" />
+
       <button className="btn-primary w-full" disabled={!draft || !c || busy} onClick={submit}>
         {busy ? "جارٍ الإرسال…" : "إصدار الإحالة وإرسالها للموجه"}
       </button>
@@ -323,6 +329,7 @@ function NewReferral({ uid, profile, onDone }) {
   const [steps, setSteps] = useState({ ready: false, steps: [] });
   const [docs, setDocs] = useState({ items: {}, files: [] });
   const [urgent, setUrgent] = useState(null);   // null = غير عاجلة، نص = سبب الإحالة العاجلة
+  const [flag, setFlag] = useState(null);       // الملصق؛ والإحالة العاجلة «عاجل» ما لم يُختر غيره
 
   // فصول المعلم اليوم مع مادته وحصته
   useEffect(() => {
@@ -467,6 +474,7 @@ function NewReferral({ uid, profile, onDone }) {
       ref_type: refType,
       docs: refDocs,
       urgent_reason: urgentOk ? urgent.trim() : null,
+      ...(flag || urgentOk ? { flag: flag ?? "urgent" } : {}),
       ...(refType === "behavior" ? { violation_degree: violation.degree, violation_type: violation.type ?? null,
                                      violation_text: violation.text } : {}),
       ...(outside ? { outside_class: true } : {}),
@@ -659,6 +667,9 @@ function NewReferral({ uid, profile, onDone }) {
         </div>
       )}
 
+      <FlagPicker value={flag ?? (urgentOk ? "urgent" : null)} onChange={setFlag}
+                  hint="يظهر للوكيل على المهمة، والعاجل في أول قائمته" />
+
       {blocker && <p className="rounded-sm2 bg-warning-light px-3 py-2 text-xs text-warning">{blocker}</p>}
 
       {!sig && (
@@ -837,6 +848,7 @@ function ReportBar({ list, title }) {
 
 /* --------------------------- صف الإحالة --------------------------- */
 function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, onChange }) {
+  const [flag, setFlag] = useState(r.flag ?? null);
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [counselor, setCounselor] = useState("");
@@ -888,8 +900,9 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       deputy_note: note.trim(), deputy_sig: await mySig(), deputy_at: new Date().toISOString(),
       counselor_id: c.id, counselor_name: c.name,
       status: "with_counselor", return_note: null,
+      ...(flag || r.flag ? { flag } : {}),
     }, `أُحيلت إلى ${c.name} وأُشعر بها.`,
-    () => notifyUsers([c.id], "إحالة طالب جديدة",
+    () => notifyUsers([c.id], urgentPrefix(flag) + "إحالة طالب جديدة",
       `أحال إليك وكيل شؤون الطلاب إحالة ${r.student_name} برقم ${r.serial}.`, "/referrals"));
   };
 
@@ -991,6 +1004,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
             {r.kind === "missing" && " · طالب مفقود"}
           </p>
         </div>
+        <Sticker flag={r.flag} />
         <span className={`chip shrink-0 ${st.c}`}>{st.t}</span>
         <button onClick={() => onOpen(r)}
                 className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
@@ -1075,6 +1089,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
                   ))}
                 </select>
               </div>
+              <FlagPicker value={flag} onChange={setFlag} hint="يظهر للموجه على المهمة" />
               <button className="btn-primary w-full" disabled={busy || !counselor || !note.trim()}
                       onClick={toCounselor}>
                 تحويل للموجه الطلابي

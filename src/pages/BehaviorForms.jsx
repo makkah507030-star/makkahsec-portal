@@ -15,6 +15,8 @@ import BehaviorSheet, { FORM_KINDS, EVIDENCE, MEET_WITH, STATEMENT_CLOSING, week
 import { useUsageCounts } from "../lib/usage.js";
 import UsageBadge from "../components/UsageBadge.jsx";
 import { ReferralPrintArea } from "../components/ReferralSheet.jsx";
+import Sticker, { FlagPicker } from "../components/Sticker.jsx";
+import { urgentPrefix } from "../lib/flags.js";
 
 /* =====================================================================
    نماذج السلوك والمواظبة — على صيغ دليل السلوك والمواظبة 1447:
@@ -137,6 +139,7 @@ export default function BehaviorForms() {
 
 /* ------------------------------ نموذج جديد ------------------------------ */
 function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
+  const [flag, setFlag] = useState(null);   // ملصق ما يُرسل للطالب وولي أمره (lib/flags.js)
   const k = FORM_KINDS[kind];
   const [student, setStudent] = useState(null);
   const [violation, setViolation] = useState(null);
@@ -189,6 +192,8 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
       issued_role: roles.map((r) => ADMIN_ROLE_LABEL[r]).filter(Boolean)[0] ?? "",
       issued_sig: sig?.path ?? null,
       status: k.internal ? "closed" : "sent",
+      // بلا ملصق لا يُرسل العمود، فيعمل الإصدار قبل تشغيل supabase/flags_behavior.sql
+      ...(flag && !k.internal ? { flag } : {}),
     };
     const { data: saved, error } = await supabase.from("behavior_forms").insert(row).select().single();
     if (!error && !k.internal) {
@@ -200,7 +205,7 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
       }
       const { data: gs } = await supabase.from("guardian_student").select("guardians(user_id)").eq("student_id", student.student_id);
       (gs ?? []).forEach((g) => g.guardians?.user_id && ids.add(g.guardians.user_id));
-      await notifyUsers([...ids], k.title,
+      await notifyUsers([...ids], urgentPrefix(flag) + k.title,
         kind === "pledge"
           ? `صدر تعهد سلوكي بشأن ${student.full_name} (${saved.serial}). افتحه للاطّلاع والإقرار.`
           : kind === "notice"
@@ -371,6 +376,11 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
 
       {preview && <MiniPreview f={preview} />}
 
+      {!k.internal && (
+        <FlagPicker value={flag} onChange={setFlag}
+                    hint={`يظهر ${kind === "pledge" ? "للطالب وولي أمره" : "لولي الأمر"} على المهمة، والعاجل في أول قائمته`} />
+      )}
+
       <button className="btn-primary w-full" disabled={!ready || busy} onClick={submit}>
         {busy ? "جارٍ الحفظ…" : kind === "incident" ? "حفظ المحضر" : kind === "statement" ? "حفظ الإفادة" : `إصدار ${k.title} وإرساله`}
       </button>
@@ -523,6 +533,7 @@ function Log({ rows, onOpen }) {
                   {" · "}{r.issued_name}
                 </p>
               </div>
+              <Sticker flag={r.flag} />
               {!FORM_KINDS[r.kind]?.internal && <span className={`chip shrink-0 ${st.c}`}>{st.t}</span>}
               <button onClick={() => onOpen(r)}
                       className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">الملف</button>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "./supabase";
+import { traced } from "./bootTrace.js";
 
 /**
  * حالة وضع الصيانة — تُحدَّث لحظيًا عبر Realtime،
@@ -9,11 +10,11 @@ export function useMaintenance(session) {
   const [state, setState] = useState({ loading: true, enabled: false, message: null });
 
   const load = useCallback(async () => {
-    const { data } = await supabase
+    const { data } = await traced("حالة الصيانة", supabase
       .from("maintenance_state")
       .select("is_enabled, message")
       .eq("id", 1)
-      .maybeSingle();
+      .maybeSingle());
     setState({ loading: false, enabled: !!data?.is_enabled, message: data?.message ?? null });
   }, []);
 
