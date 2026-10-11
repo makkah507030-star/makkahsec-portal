@@ -8,6 +8,12 @@ import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 
+// جوال المعلم بصيغة دولية لرابط واتساب (05xxxxxxxx ← 9665xxxxxxxx)
+const waNumber = (m) => {
+  const d = String(m ?? "").replace(/\D/g, "");
+  return d.startsWith("05") ? `966${d.slice(1)}` : d.startsWith("5") ? `966${d}` : d;
+};
+
 export default function PeriodAttendance() {
   const [d, setD] = useState(null);
   const [openDone, setOpenDone] = useState(null);
@@ -28,7 +34,7 @@ export default function PeriodAttendance() {
       const [schedRes, doneSet] = await Promise.all([
         dow
           ? supabase.from("schedule")
-              .select("id, period_no, classes(class_no, grade), teachers(full_name), subjects(name)")
+              .select("id, period_no, classes(class_no, grade), teachers(full_name, mobile), subjects(name)")
               .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
           : Promise.resolve({ data: [] }),
         markedScheduleIds(date),
@@ -104,6 +110,7 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
         s.classes?.class_no ?? "",
         s.subjects?.name ?? "",
         s.cover ? `${s.teachers?.full_name ?? "—"} (حضّرها بديلًا: ${s.cover})` : s.teachers?.full_name ?? "—",
+        ...(tone === "warning" ? [s.teachers?.mobile ?? ""] : []),
       ]);
 
     printReport({
@@ -113,7 +120,7 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
         {
           title: `المعلمون الذين ${kindLabel} — الحصة ${n}`,
           subtitle: `${countAr(list.length, "teacher")}`,
-          headers: ["م", "الفصل", "المادة", "المعلم"],
+          headers: ["م", "الفصل", "المادة", "المعلم", ...(tone === "warning" ? ["الجوال"] : [])],
           rows: rowsOf,
           tableClass: tone === "warning" ? "danger" : "success",
         },
@@ -195,6 +202,19 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
                         <p className="mt-0.5 truncate text-[11px] font-semibold text-excused">حضّرها بديلًا: {s.cover}</p>
                       )}
                     </div>
+                    {/* للتواصل مع من لم يحضّر: اتصال مباشر أو واتساب */}
+                    {tone === "warning" && s.teachers?.mobile && (
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <a href={`tel:${s.teachers.mobile}`} dir="ltr"
+                           className="num rounded-sm2 border border-line px-2 py-1 text-xs font-semibold text-ink hover:bg-canvas">
+                          {s.teachers.mobile}
+                        </a>
+                        <a href={`https://wa.me/${waNumber(s.teachers.mobile)}`} target="_blank" rel="noreferrer"
+                           className="rounded-sm2 bg-present px-2 py-1 text-xs font-semibold text-white hover:opacity-90">
+                          واتساب
+                        </a>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
