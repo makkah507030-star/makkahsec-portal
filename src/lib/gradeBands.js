@@ -34,3 +34,22 @@ export const REPORT_TYPE_LABEL = {
   period2: "الفترة الثانية",
   final: "الاختبارات النهائية",
 };
+
+/**
+ * لون مستوى مكتوب نصًّا في النماذج (ممتاز، جيد جدًا، جيد، مقبول، ضعيف):
+ * يعيد { label, bg, text, solid } أو null إن لم يكن النص مستوى.
+ * ألوان أقوى من شرائح المعدل ليتميّز كل مستوى في الاستمارة المطبوعة.
+ */
+const LEVELS = {
+  "ممتاز":   { label: "ممتاز",   bg: "#D4F0DF", text: "#1F5A3A", solid: "#2E7D52" },
+  "جيد جدا": { label: "جيد جدًا", bg: "#DCE8F8", text: "#23466F", solid: "#3F6B99" },
+  "جيد":     { label: "جيد",     bg: "#DDF1F3", text: "#1C5F68", solid: "#2C8792" },
+  "مقبول":   { label: "مقبول",   bg: "#FBEFCF", text: "#7A5A0A", solid: "#B08A1E" },
+  "ضعيف":    { label: "ضعيف",    bg: "#F9D9D9", text: "#8E2424", solid: "#B23A3A" },
+};
+LEVELS["راسب"] = LEVELS["ضعيف"];
+
+export function levelBand(value) {
+  const s = String(value ?? "").replace(/[\u064B-\u0652]/g, "").replace(/\s+/g, " ").trim();
+  return LEVELS[s] ?? null;
+}
