@@ -11,14 +11,8 @@ export const LEVELS = [
 ];
 export const levelLabel = (k) => LEVELS.find((l) => l.k === k)?.t ?? "";
 
-// ملصق الاستمارة يحدده الموجه عند الإرسال، ويظهر في «بانتظار إجرائك» وفي القوائم
-export const FLAGS = {
-  urgent:       { t: "عاجل",               c: "bg-absent text-white" },
-  confidential: { t: "سري",                c: "bg-ink text-white" },
-  info:         { t: "للاطلاع والتوجيه",   c: "bg-excused text-white" },
-};
-// الأشد أولًا: العاجل يتقدّم القوائم
-export const FLAG_ORDER = ["urgent", "confidential", "info"];
+// الملصق مشترك بين النماذج كلها (lib/flags.js)
+export { FLAGS, FLAG_ORDER } from "./flags.js";
 
 export const STATUS = {
   teachers:  { t: "عند المعلمين",       c: "bg-warning-light text-warning" },

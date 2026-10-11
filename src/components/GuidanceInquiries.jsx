@@ -4,7 +4,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { refreshNavBadges } from "../lib/navBadges.js";
-import { FLAGS, FLAG_ORDER, STATUS, isSetupErr, setupMsg } from "../lib/guidanceInquiry";
+import { STATUS, isSetupErr, setupMsg } from "../lib/guidanceInquiry";
+import { flagRank } from "../lib/flags.js";
+import Sticker, { FlagPicker } from "./Sticker.jsx";
 import Loader from "./Loader.jsx";
 
 /* =====================================================================
@@ -34,7 +36,7 @@ export default function GuidanceInquiries({ grade }) {
 
   const open = rows.filter((r) => r.status !== "sent");
   const list = (filter === "open" ? open : rows.filter((r) => r.status === "sent"))
-    .slice().sort((a, b) => rank(a) - rank(b));
+    .slice().sort((a, b) => flagRank(a.flag) - flagRank(b.flag));
 
   return (
     <div className="space-y-3">
@@ -61,7 +63,7 @@ export default function GuidanceInquiries({ grade }) {
                     {r.status === "sent" && (r.guardian_seen_at ? " · اطّلع ولي الأمر" : " · لم يطّلع ولي الأمر")}
                   </p>
                 </div>
-                {FLAGS[r.flag] && <span className={`chip shrink-0 ${FLAGS[r.flag].c}`}>{FLAGS[r.flag].t}</span>}
+                <Sticker flag={r.flag} />
                 <span className={`chip shrink-0 ${STATUS[r.status].c}`}>{STATUS[r.status].t}</span>
               </Link>
             );
@@ -71,8 +73,6 @@ export default function GuidanceInquiries({ grade }) {
     </div>
   );
 }
-
-const rank = (r) => { const i = FLAG_ORDER.indexOf(r.flag); return i < 0 ? 9 : i; };
 
 function NewInquiry({ grade, onClose }) {
   const navigate = useNavigate();
@@ -152,20 +152,7 @@ function NewInquiry({ grade, onClose }) {
         </div>
       )}
 
-      {teachers?.length > 0 && (
-        <div>
-          <p className="mb-1.5 text-xs font-semibold text-muted">الملصق (يظهر للمعلمين والوكيل)</p>
-          <div className="flex flex-wrap gap-1.5">
-            <button type="button" className={pill(!flag)} onClick={() => setFlag(null)}>بلا ملصق</button>
-            {Object.entries(FLAGS).map(([k, f]) => (
-              <button key={k} type="button" onClick={() => setFlag(k)}
-                      className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-semibold ${flag === k ? f.c : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-                {f.t}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {teachers?.length > 0 && <FlagPicker value={flag} onChange={setFlag} hint="يظهر للمعلمين والوكيل" />}
 
       {err && <p className="text-xs text-absent">{err}</p>}
       <div className="flex gap-2">

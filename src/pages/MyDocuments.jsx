@@ -5,6 +5,8 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { fmtDateTime } from "../lib/dates";
 import Loader from "../components/Loader.jsx";
+import Sticker from "../components/Sticker.jsx";
+import { flagRank } from "../lib/flags.js";
 
 /* =====================================================================
    نماذجي — كل مستند صدر باسم المستخدم يظهر هنا.
@@ -55,12 +57,12 @@ export default function MyDocuments() {
       // إليها على الإشعار، فقد يُحذف أو لا يُنتبه له
       const { data: open } = await supabase
         .from("form_documents")
-        .select("id, title, serial, status, decision_note, created_at")
+        .select("*")   // ومعه الملصق (flag) إن وُجد
         .eq("recipient_user_id", uid)
         .in("status", ["awaiting_reply", "replied"])
         .order("created_at", { ascending: false });
 
-      setToReply(open ?? []);
+      setToReply((open ?? []).sort((a, b) => flagRank(a.flag) - flagRank(b.flag)));   // العاجل أولًا
       setDocs(data ?? []);
     })();
   }, [session]);
@@ -92,7 +94,9 @@ export default function MyDocuments() {
                 <Link key={d.id} to={`/doc/${d.id}`}
                       className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/60">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-ink">{d.title}</p>
+                    <p className="flex items-center gap-2 text-sm font-medium text-ink">
+                      <span className="truncate">{d.title}</span><Sticker flag={d.flag} />
+                    </p>
                     <p className="num mt-0.5 text-xs text-faint">
                       {d.serial}
                       {d.created_at ? ` · ${fmtDateTime(d.created_at)}` : ""}
