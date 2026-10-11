@@ -199,7 +199,8 @@ create table if not exists public.devices (
   label text,
   location text,
   is_active boolean not null default true,
-  last_seen timestamp with time zone
+  last_seen timestamp with time zone,
+  time_synced_at timestamp with time zone
 );
 
 -- duty_roster
