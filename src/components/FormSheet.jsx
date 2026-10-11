@@ -28,11 +28,23 @@ export const SHEET_PX = { portrait: 794, landscape: 1123 };
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
-// الطباعة عبر PrintPortal: صفحة A4 بالاتجاه المحدد ثابتة، بلا إزاحة ولا صفحات زائدة
+// الطباعة عبر PrintPortal: صفحة A4 بالاتجاه المحدد ثابتة، بلا إزاحة ولا صفحات زائدة.
+// بعض المتصفحات تتجاهل الهوامش الصفرية وتضيف رأسًا وتذييلًا (الرابط والتاريخ ورقم الصفحة)
+// فتقصر الصفحة، وتفيض الورقة المثبّتة على 297مم فينزل شريطها السفلي إلى صفحة ثانية فارغة.
+// لذلك تُصغَّر الورقة في الطباعة إلى 90% ويأخذ ارتفاعها ارتفاع الصفحة المتاح فعلًا
+// (100vh في الطباعة = مساحة الصفحة بعد الهوامش)، فيبقى الشريط السفلي أسفل الصفحة
+// ويتسع النموذج صفحة واحدة حتى مع هوامش المتصفح المعتادة.
+// iPhone/iPad يبقى على مقاسه الثابت وتصغيره المعرّف في PrintPortal.
 export function PrintArea({ landscape, children }) {
+  const h = landscape ? "210mm" : "297mm";
   return (
     <PrintPortal id="print-root" landscape={landscape}
-                 extraCss="#print-root .sheet { break-after: page; } #print-root .sheet:last-child { break-after: auto; }">
+                 extraCss={`#print-root .sheet { break-after: page; zoom: 0.9; height: calc(100vh / 0.9) !important;
+                                                 margin: 0 auto !important; }
+                   #print-root .sheet:last-child { break-after: auto; }
+                   @supports (-webkit-touch-callout: none) {
+                     #print-root .sheet { zoom: 0.86; height: ${h} !important; }
+                   }`}>
       {children}
     </PrintPortal>
   );
