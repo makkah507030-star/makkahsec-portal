@@ -1,5 +1,6 @@
 // src/lib/useHolidays.js
 import { useEffect, useState } from "react";
+import { traced } from "./bootTrace.js";
 import { supabase } from "./supabase";
 import { setHolidayRanges } from "./schoolTime";
 
@@ -13,11 +14,11 @@ export function useHolidays() {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const { data, error } = await supabase
+      const { data, error } = await traced("الإجازات", supabase
         .from("academic_calendar")
         .select("title, start_date, end_date")
         .eq("kind", "holiday")
-        .eq("is_active", true);
+        .eq("is_active", true));
 
       if (error) console.error("تعذّر تحميل الإجازات:", error.message);
 

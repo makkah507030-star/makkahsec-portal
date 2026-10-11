@@ -2,6 +2,7 @@
 // شعار البوابة المتحرك ومؤشر «جاري التحميل» الموحّد لكل الصفحات.
 import { useEffect, useState } from "react";
 import { loaderMounted } from "../lib/notice";
+import { pendingStep } from "../lib/bootTrace.js";
 
 /** أيقونة البوابة: ثلاث طبقات تتراصّ وتنبض بالتتابع حين animate */
 export function BrandMark({ size = 56, animate = true, className = "" }) {
@@ -56,13 +57,29 @@ export default function Loader({ compact = false, screen = false, label = "جا�
     return () => { clearTimeout(t); release(); };
   }, [slow]);
 
+  // شاشة الفتح: الخطوة التي ينتظرها التحميل ومدتها — للتشخيص
+  const [step, setStep] = useState(null);
+  useEffect(() => {
+    if (!screen || !slow) return undefined;
+    const tick = () => setStep(pendingStep());
+    tick();
+    const t = setInterval(tick, 1000);
+    return () => clearInterval(t);
+  }, [screen, slow]);
+
   const box = screen ? "min-h-screen" : compact ? "min-h-[2.5rem]" : "min-h-[30vh]";
   if (!slow) return <div className={box} aria-hidden="true" />;
 
   return (
     <div role="status" className={`ld-fade flex items-center justify-center gap-2 py-3 text-sm text-muted ${box}`}>
       <BrandMark size={compact ? 22 : 30} />
-      <span>{label}<span className="ld-dots" /> <span className="text-xs text-faint">الاتصال أبطأ من المعتاد</span></span>
+      <span>{label}<span className="ld-dots" /> <span className="text-xs text-faint">الاتصال أبطأ من المعتاد</span>
+        {screen && step && (
+          <span className="mt-1 block text-center text-[11px] text-faint">
+            بانتظار: {step.name} (<span className="num">{step.secs}</span> ث)
+          </span>
+        )}
+      </span>
     </div>
   );
 }
