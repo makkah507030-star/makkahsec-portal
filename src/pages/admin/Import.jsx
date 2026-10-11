@@ -409,12 +409,23 @@ async function writeRows(type, rows, year, term, onProgress) {
   }
 
   if (type === "teachers") {
+    // الجوال يُحفظ بتحديث منفصل: عمود mobile محجوب عن القراءة
+    // (supabase/teachers_mobile_private.sql)، والـ upsert يحتاج قراءته
     await upsertBatched(
       "teachers",
-      rows.map(({ __row, ...r }) => r),
+      rows.map(({ __row, mobile, ...r }) => r),
       "national_id",
-      onProgress
+      (p) => onProgress(Math.round(p * 0.6))
     );
+    const withMobile = rows.filter((r) => r.mobile);
+    for (let i = 0; i < withMobile.length; i += 10) {
+      const res = await Promise.all(withMobile.slice(i, i + 10).map((r) =>
+        supabase.from("teachers").update({ mobile: r.mobile }).eq("national_id", r.national_id)));
+      const bad = res.find((x) => x.error);
+      if (bad) throw new Error(`teachers: ${bad.error.message}`);
+      onProgress(60 + Math.round((Math.min(i + 10, withMobile.length) / withMobile.length) * 40));
+    }
+    onProgress(100);
     return;
   }
 
