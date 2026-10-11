@@ -6,7 +6,8 @@ import { useSession } from "../lib/session.jsx";
 import { refreshNavBadges } from "../lib/navBadges.js";
 import { confirmDanger } from "../lib/danger.js";
 import { fmtDateTime } from "../lib/dates";
-import { FLAGS, LEVELS, STATUS, isSetupErr, setupMsg } from "../lib/guidanceInquiry";
+import { LEVELS, STATUS, isSetupErr, setupMsg } from "../lib/guidanceInquiry";
+import Sticker from "../components/Sticker.jsx";
 import InquirySheet, { InquiryPrintArea } from "../components/InquirySheet.jsx";
 import Loader from "../components/Loader.jsx";
 
@@ -98,7 +99,6 @@ export default function GuidanceInquiry() {
   const teacherOnly = myItem && !counsel;
   const pending = items.filter((x) => x.teacher_user_id && !x.filled_at);
   const st = STATUS[inq.status];
-  const flag = FLAGS[inq.flag];
 
   const toDeputy = async () => {
     if (pending.length && !(await confirmDanger({
@@ -123,7 +123,7 @@ export default function GuidanceInquiry() {
         <div className="min-w-0">
           <h1 className="truncate text-lg font-bold text-ink">استمارة مستوى — {inq.student_name}</h1>
           <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-            {flag && <span className={`chip ${flag.c}`}>{flag.t}</span>}
+            <Sticker flag={inq.flag} />
             {!teacherOnly && effectiveRole !== "guardian" && <span className={`chip ${st.c}`}>{st.t}</span>}
             <span>{inq.class_label}</span>
           </div>

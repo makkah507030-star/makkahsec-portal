@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useSession } from "../lib/session.jsx";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 import { Icon } from "./Layout.jsx";
-import { FLAGS } from "../lib/guidanceInquiry.js";
+import Sticker from "./Sticker.jsx";
 
 /* =====================================================================
    «بانتظار إجرائك» — صندوق المهام المعلقة في الرئيسية لكل الحسابات: بطاقة لكل نوع
@@ -146,9 +146,3 @@ function TaskCard({ t, active, onExpand }) {
     : <Link to={one ? one.to : t.to} className={cls}>{body}</Link>;
 }
 
-// ملصق مائل قليلًا كالملصق الورقي على الملف
-function Sticker({ flag }) {
-  const f = FLAGS[flag];
-  if (!f) return null;
-  return <span className={`shrink-0 -rotate-3 rounded-sm px-1.5 py-0.5 text-[10.5px] font-bold shadow-sm ${f.c}`}>{f.t}</span>;
-}

@@ -8,6 +8,7 @@ import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { ReplyFilesEditor, ReplyFilesList, REPLY_BUCKET } from "../components/ReplyFiles.jsx";
+import Sticker from "../components/Sticker.jsx";
 
 /* =====================================================================
    عرض مستند صادر لصاحبه: الطالب أو المنسوب أو ولي أمر الطالب،
@@ -216,7 +217,9 @@ export default function DocumentView() {
     <div className="space-y-4">
       <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h1 className="truncate text-lg font-bold text-ink">{doc.title}</h1>
+          <h1 className="flex items-center gap-2 text-lg font-bold text-ink">
+            <span className="truncate">{doc.title}</span><Sticker flag={doc.flag} />
+          </h1>
           <p className="num mt-0.5 text-xs text-faint">
             رقم المستند: {doc.serial}
             {doc.recipient ? ` · ${doc.recipient}` : ""}

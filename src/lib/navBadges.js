@@ -5,7 +5,7 @@ import { stageOf, isLate, STAGE_COLS } from "./referrals.js";
 import { fmtHijri } from "./dates.js";
 import { todayISO } from "./schoolTime.js";
 import { countAr } from "./arabicCount.js";
-import { FLAG_ORDER } from "./guidanceInquiry.js";
+import { FLAG_ORDER, flagRank } from "./flags.js";
 
 /* =====================================================================
    «بانتظار إجرائك» — مصدر واحد لكل ما ينتظر إجراء المستخدم: عدادات القائمة الجانبية
@@ -40,6 +40,12 @@ const count = async (q) => {
 const rowsOf = async (q) => {
   const { data, error } = await q;
   return error ? [] : data ?? [];
+};
+// استعلام بعمود الملصق، وإن لم يُضف العمود بعد (supabase/flags.sql) يُعاد بدونه فلا تختفي المهام
+const rowsFlag = async (make) => {
+  const { data, error } = await make(", flag");
+  if (!error) return data ?? [];
+  return /flag/.test(error.message ?? "") ? rowsOf(make("")) : [];
 };
 const head = (t) => supabase.from(t).select("id", { count: "exact", head: true });
 const mine = (uid) => JSON.stringify([{ user_id: uid }]);   // attendees @> [{user_id}]
@@ -88,7 +94,6 @@ async function load() {
   const noRows = Promise.resolve([]);
 
   const fd = () => head("form_documents");
-  const ref = () => head("student_referrals");
 
   const [
     returned, toApprove, replies, events, toReply, refDeputy, refCounselor, notif,
@@ -98,14 +103,18 @@ async function load() {
     giTeacher, giDeputy, giCounselor, giGuardian,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
-    has("principal") ? count(fd().eq("status", "pending")) : none,
+    has("principal") ? rowsFlag((f) => supabase.from("form_documents").select(`id, title, recipient${f}`)
+      .eq("status", "pending").order("created_at").limit(100)) : noRows,
     staff ? count(fd().eq("created_by", uid).eq("status", "replied")) : none,
     isManager
       ? count(head("school_events").not("report_submitted_at", "is", null).neq("stage", "approved").is("cancelled_at", null))
       : none,
-    count(fd().eq("recipient_user_id", uid).eq("status", "awaiting_reply")),
-    isDeputy ? count(ref().in("status", ["with_deputy", "guardian_replied"])) : none,
-    isCounselor ? count(ref().eq("counselor_id", uid).in("status", ["with_counselor", "returned_to_counselor"])) : none,
+    rowsFlag((f) => supabase.from("form_documents").select(`id, title, serial${f}`)
+      .eq("recipient_user_id", uid).eq("status", "awaiting_reply").order("created_at").limit(50)),
+    isDeputy ? rowsFlag((f) => supabase.from("student_referrals").select(`id, student_name${f}`)
+      .in("status", ["with_deputy", "guardian_replied"]).order("created_at").limit(100)) : noRows,
+    isCounselor ? rowsFlag((f) => supabase.from("student_referrals").select(`id, student_name${f}`).eq("counselor_id", uid)
+      .in("status", ["with_counselor", "returned_to_counselor"]).order("created_at").limit(100)) : noRows,
     has("tech_support") ? count(head("notification_drafts").eq("status", "pending")) : none,
 
     // التطوير المهني: التوقيع للحاضرين، والاعتماد للوكيل، والمعاد لصاحبه
@@ -128,7 +137,7 @@ async function load() {
     isGuardian ? rowsOf(supabase.from("behavior_forms").select("id, kind, student_name")
       .in("kind", ["pledge", "invite", "notice"]).is("guardian_ack_at", null).neq("status", "closed")
       .order("created_at").limit(50)) : noRows,
-    isGuardian ? rowsOf(supabase.from("student_referrals").select("id, students(full_name)")
+    isGuardian ? rowsFlag((f) => supabase.from("student_referrals").select(`id${f}, students(full_name)`)
       .eq("status", "with_guardian").is("guardian_ack_at", null).order("created_at").limit(50)) : noRows,
     isStudent ? rowsOf(supabase.from("behavior_forms").select("id, kind")
       .eq("kind", "pledge").is("student_ack_at", null).neq("status", "closed").order("created_at").limit(50)) : noRows,
@@ -177,12 +186,7 @@ async function load() {
       items: items(giReady, "/inquiry", (r) => `${r.student_name} · ${r.status === "counselor" ? "عادت من الوكيل" : "اكتملت التعبئة"}`) },
     { key: "giGuardian", label: "استمارة مستوى ابنك من التوجيه الطلابي", icon: "heart",
       items: items(giGuardian, "/inquiry", (r) => r.student_name) },
-  ].map((t) => {
-    const flag = FLAG_ORDER.find((f) => t.items.some((x) => x.flag === f)) ?? null;
-    const rank = (x) => { const i = FLAG_ORDER.indexOf(x.flag); return i < 0 ? 9 : i; };
-    return { ...t, items: [...t.items].sort((x, y) => rank(x) - rank(y)), n: t.items.length, to: "/", flag,
-             tone: flag === "urgent" ? "absent" : "warning" };
-  });
+  ].map((t) => ({ ...t, n: t.items.length, to: "/", tone: "warning" }));
 
   const tasks = [
     // ما أُعيد إليك أولًا: عمل بدأته ينتظر تعديلك
@@ -205,7 +209,8 @@ async function load() {
       label: "تعهدات تنتظر توقيعك", tone: "absent", icon: "shield" },
 
     // ما ينتظر ردك أو توقيعك أو اطلاعك
-    { key: "toReply", n: toReply, to: "/my-documents",
+    { key: "toReply", n: toReply.length, to: "/my-documents",
+      items: toReply.map((d) => ({ id: d.id, to: `/doc/${d.id}`, title: `${d.title} · ${d.serial}`, flag: d.flag ?? null })),
       label: staff ? "نماذج وصلتك تنتظر إفادتك" : "نماذج وصلتك تنتظر ردك", tone: "warning", icon: "folder" },
     { key: "plcSign", n: plcToSign.length, to: "/plc?tab=sign",
       items: items(plcToSign, "/plc", (r) => `جلسة ${r.head_name ?? ""}`),
@@ -218,12 +223,14 @@ async function load() {
       label: "زيارات تبادلية تنتظر توقيعك", tone: "warning", icon: "signature" },
     ...giTasks,
     { key: "perfAck", n: perfAck, to: "/my-performance", label: "تقييم أداء ينتظر اطلاعك", tone: "warning", icon: "award" },
-    { key: "referrals", n: refDeputy + refCounselor, to: "/referrals", label: "إحالات تنتظر إجراءك", tone: "warning", icon: "send" },
+    { key: "referrals", n: refDeputy.length + refCounselor.length, to: "/referrals", label: "إحالات تنتظر إجراءك", tone: "warning", icon: "send",
+      items: [...refDeputy, ...refCounselor].map((r) => ({ id: r.id, to: "/referrals", title: r.student_name ?? "", flag: r.flag ?? null })) },
     { key: "guidance", n: guidance, to: `/guidance?tab=requests${myGrades.length === 1 ? `&grade=${myGrades[0]}` : ""}`,
       label: "طلبات مقابلة جديدة", tone: "warning", icon: "heart" },
 
     // الاعتماد
-    { key: "toApprove", n: toApprove, to: "/forms-review", label: "نماذج تنتظر اعتمادك", tone: "warning", icon: "inbox" },
+    { key: "toApprove", n: toApprove.length, to: "/forms-review", label: "نماذج تنتظر اعتمادك", tone: "warning", icon: "inbox",
+      items: toApprove.map((d) => ({ id: d.id, to: "/forms-review", title: [d.title, d.recipient].filter(Boolean).join(" · "), flag: d.flag ?? null })) },
     { key: "events", n: events, to: "/forms-review", label: "تقارير أحداث تنتظر الاعتماد", tone: "warning", icon: "sparkles" },
     { key: "plcPending", n: plcPending.length, to: "/plc?tab=pending",
       items: items(plcPending, "/plc", (r) => `جلسة ${r.head_name ?? ""}`),
@@ -246,13 +253,20 @@ async function load() {
 
     // للعلم
     { key: "replies", n: replies, to: "/forms-review", label: "إفادات وصلت على نماذجك", tone: "mint", icon: "inbox" },
-  ].filter((t) => t.n > 0);
+  ].filter((t) => t.n > 0).map((t) => {
+    // الملصق: الأشد بين عناصر المهمة يظهر على بطاقتها، والعاجل أول قائمتها وبطاقته حمراء،
+    // وتُعرض قائمتها في الصندوق (to: "/") ليظهر ملصق كل عنصر
+    if (!t.items?.some((x) => x.flag)) return t;
+    const flag = FLAG_ORDER.find((f) => t.items.some((x) => x.flag === f));
+    return { ...t, flag, to: "/", items: [...t.items].sort((a, b) => flagRank(a.flag) - flagRank(b.flag)),
+             tone: flag === "urgent" ? "absent" : t.tone };
+  });
 
   state = {
     "/forms": returned,
-    "/forms-review": toApprove + replies + events,
-    "/my-documents": toReply,
-    "/referrals": refDeputy + refCounselor,
+    "/forms-review": toApprove.length + replies + events,
+    "/my-documents": toReply.length,
+    "/referrals": refDeputy.length + refCounselor.length,
     "/notifications-review": notif,
     "/plc": plcToSign.length + plcPending.length + plcBack.length
       + pdToSign.length + pdPending.length + pdBack.length
