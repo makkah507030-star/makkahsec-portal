@@ -42,7 +42,9 @@ function DayLate() {
   const stats = useMemo(() => {
     const punched = list.filter((r) => r.punched).length;
     const late = list.filter((r) => r.isLate).length;
-    return { total: list.length, punched, late, noPunch: list.length - punched };
+    // الحاضرون صباحًا: من بصم، ومن لم يبصم وحُسب متأخرًا بلا وقت
+    const arrived = punched + list.filter((r) => r.lateNoTime).length;
+    return { total: list.length, punched, late, arrived, noPunch: list.length - punched };
   }, [list]);
 
   const lateList = useMemo(
@@ -77,7 +79,7 @@ function DayLate() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Fig value={stats.punched} label="بصموا" tone="text-present" />
             <Fig value={stats.late} label="متأخرون صباحًا" tone="text-late" />
-            <Fig value={`${stats.punched ? Math.round((stats.late / stats.punched) * 100) : 0}%`}
+            <Fig value={`${stats.arrived ? Math.round((stats.late / stats.arrived) * 100) : 0}%`}
                  label="نسبة التأخر من الحاضرين" tone="text-late" />
             <Fig value={stats.noPunch} label="لم يبصموا" tone="text-muted"
                  hint="ليست نسبة غياب — الغياب الرسمي من تحضير الحصص" />
