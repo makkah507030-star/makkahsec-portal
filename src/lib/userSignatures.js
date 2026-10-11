@@ -6,9 +6,9 @@ import { supabase } from "./supabase";
    توقيعات الموقّعين بالاسم — للتقارير المطبوعة التي تكتب اسم الموقّع
    (الموجه الطلابي، الوكيل، رئيس القسم…) لا حسابه.
    يُطابَق الاسم مع حسابات المعلمين والإداريين، ثم يُجلب توقيعه المرفوع من
-   «توقيعي» (user_signatures). الصلاحيات كما هي: كل مستخدم يرى توقيعه،
-   ومديرو النماذج (المدير والدعم الفني) يرون الجميع؛ وما لا يُسمح بقراءته
-   يبقى خانة توقيع يدوي.
+   «توقيعي» (user_signatures). توقيعات أصحاب الأدوار الإدارية متاحة لكل
+   منسوبي المدرسة، وتوقيع المعلم لصاحبه ولمديري النماذج؛ وما لا يُسمح
+   بقراءته يبقى خانة توقيع يدوي.
    ===================================================================== */
 
 /** توحيد الاسم للمطابقة: الهمزات والتاء المربوطة والياء، وحذف «بن» والمسافات الزائدة */
@@ -25,12 +25,22 @@ let cache = null; // { at, promise: Map(normName → url) }
 async function loadAll() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Map();
-  // توقيعات يحق لي قراءتها: توقيعي، أو الجميع لمدير النماذج
-  const { data: sigs } = await supabase.from("user_signatures").select("user_id, path");
-  if (!sigs?.length) return new Map();
-  const ids = sigs.map((s) => s.user_id);
-  const { data: users } = await supabase.from("users").select("id, full_name").in("id", ids);
-  const nameBy = new Map((users ?? []).map((u) => [u.id, u.full_name]));
+  // توقيعات يحق لي قراءتها: توقيعي (والجميع لمدير النماذج)، وتوقيعات أصحاب
+  // الأدوار الإدارية لكل منسوبي المدرسة (supabase/staff_signatures_read.sql)
+  const [{ data: own }, { data: staff }] = await Promise.all([
+    supabase.from("user_signatures").select("user_id, path"),
+    supabase.rpc("staff_signatures"),
+  ]);
+  const byUser = new Map();
+  [...(staff ?? []), ...(own ?? [])].forEach((s) => byUser.set(s.user_id, s));
+  const sigs = [...byUser.values()];
+  if (!sigs.length) return new Map();
+  const nameBy = new Map((staff ?? []).map((s) => [s.user_id, s.full_name]));
+  const missing = sigs.map((s) => s.user_id).filter((id) => !nameBy.has(id));
+  if (missing.length) {
+    const { data: users } = await supabase.from("users").select("id, full_name").in("id", missing);
+    (users ?? []).forEach((u) => nameBy.set(u.id, u.full_name));
+  }
   // المستخدم يقرأ صفّه دائمًا؛ وإن حُجب الاسم احتياطًا نأخذه من ملفه
   if (!nameBy.has(user.id)) {
     const { data: me } = await supabase.from("users").select("full_name").eq("id", user.id).maybeSingle();
