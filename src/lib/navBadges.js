@@ -134,12 +134,12 @@ async function load() {
     myGrades.length ? count(head("guidance_requests").eq("status", "new").in("grade", myGrades)) : none,
 
     // ولي الأمر: نماذج السلوك والإحالات التي تنتظر إقراره، والطالب: تعهداته
-    isGuardian ? rowsOf(supabase.from("behavior_forms").select("id, kind, student_name")
+    isGuardian ? rowsFlag((f) => supabase.from("behavior_forms").select(`id, kind, student_name${f}`)
       .in("kind", ["pledge", "invite", "notice"]).is("guardian_ack_at", null).neq("status", "closed")
       .order("created_at").limit(50)) : noRows,
     isGuardian ? rowsFlag((f) => supabase.from("student_referrals").select(`id${f}, students(full_name)`)
       .eq("status", "with_guardian").is("guardian_ack_at", null).order("created_at").limit(50)) : noRows,
-    isStudent ? rowsOf(supabase.from("behavior_forms").select("id, kind")
+    isStudent ? rowsFlag((f) => supabase.from("behavior_forms").select(`id, kind${f}`)
       .eq("kind", "pledge").is("student_ack_at", null).neq("status", "closed").order("created_at").limit(50)) : noRows,
 
     // متابعة الوكيل: إحالات عند الموجهين أو ولي الأمر لم تنتهِ بعد
