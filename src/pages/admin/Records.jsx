@@ -631,11 +631,15 @@ function TeachersTab() {
   const [msg, setMsg] = useNotice("");
 
   const load = async () => {
-    const { data } = await supabase
-      .from("teachers")
-      .select("id, national_id, full_name, mobile, specialization, user_id")
-      .order("full_name");
-    setRows(data ?? []);
+    // الجوال محجوب عن القراءة المباشرة، ويُجلب للإداري عبر teacher_mobiles()
+    const [{ data }, { data: mobs }] = await Promise.all([
+      supabase.from("teachers")
+        .select("id, national_id, full_name, specialization, user_id")
+        .order("full_name"),
+      supabase.rpc("teacher_mobiles"),
+    ]);
+    const mobileBy = Object.fromEntries((mobs ?? []).map((m) => [m.id, m.mobile]));
+    setRows((data ?? []).map((t) => ({ ...t, mobile: mobileBy[t.id] ?? null })));
   };
 
   useEffect(() => {

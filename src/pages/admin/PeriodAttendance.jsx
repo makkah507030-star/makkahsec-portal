@@ -34,11 +34,14 @@ export default function PeriodAttendance() {
       const [schedRes, doneSet] = await Promise.all([
         dow
           ? supabase.from("schedule")
-              .select("id, period_no, classes(class_no, grade), teachers(full_name, mobile), subjects(name)")
+              .select("id, period_no, classes(class_no, grade), teacher_id, teachers(full_name), subjects(name)")
               .eq("academic_year", year).eq("term", term).eq("day_of_week", dow)
           : Promise.resolve({ data: [] }),
         markedScheduleIds(date),
       ]);
+      // جوالات المعلمين للتواصل مع من لم يحضّر (للإداري فقط، عبر الدالة)
+      const { data: mobs } = await supabase.rpc("teacher_mobiles");
+      const mobileBy = Object.fromEntries((mobs ?? []).map((m) => [m.id, m.mobile]));
 
       // حصص غطّاها معلم انتظار اليوم: اسم البديل يظهر مع الحصة المحضّرة
       const { data: subs } = await supabase.from("substitute_periods")
@@ -51,7 +54,7 @@ export default function PeriodAttendance() {
       const coverBy = Object.fromEntries((subs ?? []).map((x) => [x.schedule_id, coverName[x.cover_teacher_id] ?? "معلم انتظار"]));
 
       const sched = (schedRes.data ?? [])
-        .map((x) => ({ ...x, cover: coverBy[x.id] ?? null }))
+        .map((x) => ({ ...x, cover: coverBy[x.id] ?? null, mobile: mobileBy[x.teacher_id] ?? null }))
         .sort((a, b) => a.period_no - b.period_no);
       const done = sched.filter((s) => doneSet.has(s.id));
       const left = sched.filter((s) => !doneSet.has(s.id));
@@ -110,7 +113,7 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
         s.classes?.class_no ?? "",
         s.subjects?.name ?? "",
         s.cover ? `${s.teachers?.full_name ?? "—"} (حضّرها بديلًا: ${s.cover})` : s.teachers?.full_name ?? "—",
-        ...(tone === "warning" ? [s.teachers?.mobile ?? ""] : []),
+        ...(tone === "warning" ? [s.mobile ?? ""] : []),
       ]);
 
     printReport({
@@ -203,13 +206,13 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
                       )}
                     </div>
                     {/* للتواصل مع من لم يحضّر: اتصال مباشر أو واتساب */}
-                    {tone === "warning" && s.teachers?.mobile && (
+                    {tone === "warning" && s.mobile && (
                       <div className="flex shrink-0 items-center gap-1.5">
-                        <a href={`tel:${s.teachers.mobile}`} dir="ltr"
+                        <a href={`tel:${s.mobile}`} dir="ltr"
                            className="num rounded-sm2 border border-line px-2 py-1 text-xs font-semibold text-ink hover:bg-canvas">
-                          {s.teachers.mobile}
+                          {s.mobile}
                         </a>
-                        <a href={`https://wa.me/${waNumber(s.teachers.mobile)}`} target="_blank" rel="noreferrer"
+                        <a href={`https://wa.me/${waNumber(s.mobile)}`} target="_blank" rel="noreferrer"
                            className="rounded-sm2 bg-present px-2 py-1 text-xs font-semibold text-white hover:opacity-90">
                           واتساب
                         </a>
