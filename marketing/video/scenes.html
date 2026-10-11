@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>مشاهد تحديث فيديو البوابة</title>
+<!--
+  مشاهد التحديث لفيديو «خدمات البوابة» الأفقي (1920×1080) بنفس تصميم الفيديو الأول:
+    ?s=usage  الاستخدام الفعلي بالأرقام الجديدة (بدل «في ثلاثة أسابيع فقط»)
+    ?s=new    08 الجديد في البوابة
+    ?s=ach    09 إنجازات المدرسة
+  الحركة كلها دالة في الزمن: window.render(ثانية) — يستدعيها rec.mjs إطارًا بإطار.
+  أطوال مقاطع الصوت تُمرَّر في ?d=… (بالثواني، بترتيب أسطر المشهد) فيتزامن الإبراز معها.
+  الصور (الإنجازات) في assets/ ولا تُرفع إلى المستودع.
+-->
+<style>
+@font-face { font-family: Plex; font-weight: 400; src: url(../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2); }
+@font-face { font-family: Plex; font-weight: 500; src: url(../../public/fonts/ibm-plex-sans-arabic-500-arabic.woff2); }
+@font-face { font-family: Plex; font-weight: 600; src: url(../../public/fonts/ibm-plex-sans-arabic-600-arabic.woff2); }
+@font-face { font-family: Plex; font-weight: 700; src: url(../../public/fonts/ibm-plex-sans-arabic-700-arabic.woff2); }
+@font-face { font-family: Plex; font-weight: 400; src: url(../../public/fonts/ibm-plex-sans-arabic-400-latin.woff2); unicode-range: U+0000-00FF; }
+@font-face { font-family: Plex; font-weight: 600; src: url(../../public/fonts/ibm-plex-sans-arabic-600-latin.woff2); unicode-range: U+0000-00FF; }
+@font-face { font-family: Plex; font-weight: 700; src: url(../../public/fonts/ibm-plex-sans-arabic-700-latin.woff2); unicode-range: U+0000-00FF; }
+
+:root { --mint: #89D7AD; --deep: #3E6350; --tint: #EDFAF2; --light: #CCF2DB; --ink: #101010; --muted: #6B6B6B;
+        --line: #C3C3C3; --warn: #9A7B22; --warnl: #FBF3DE; --abs: #A23B3B; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: #16301F; }
+body { font-family: Plex, sans-serif; color: #fff; position: relative; }
+.num { font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+/* الخلفية: تدرج أخضر داكن، توهج أعلى اليسار، شكل مستدير باهت أسفل اليسار، وخطوط مائلة دقيقة */
+#bg { position: absolute; inset: 0; overflow: hidden;
+  background:
+    radial-gradient(1100px 760px at 4% 96%, rgba(70,120,90,.55), transparent 70%),
+    radial-gradient(900px 600px at 98% 0%, rgba(60,100,78,.55), transparent 70%),
+    radial-gradient(1000px 700px at 0% 0%, rgba(40,72,54,.9), transparent 70%),
+    linear-gradient(135deg, #24443A 0%, #18332A 45%, #0F2219 100%); }
+#bg .shape { position: absolute; width: 1100px; height: 640px; left: -380px; top: 620px; border-radius: 120px;
+  background: linear-gradient(135deg, rgba(255,255,255,.07), rgba(255,255,255,.015)); transform: rotate(35deg); }
+#bg .lines { position: absolute; inset: -20%; opacity: .05;
+  background: repeating-linear-gradient(120deg, #fff 0 1px, transparent 1px 34px); }
+
+header { position: absolute; top: 46px; right: 74px; left: 70px; display: flex; align-items: center; z-index: 5; }
+header .brand { display: flex; align-items: center; gap: 22px; }
+header .brand img { width: 46px; height: 46px; }
+header .brand b { display: block; font-size: 24px; font-weight: 700; }
+header .brand small { display: block; font-size: 15px; color: rgba(255,255,255,.62); margin-top: 2px; }
+header .site { margin-right: auto; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; padding: 9px 22px;
+  font: 600 17px/1 Plex, sans-serif; direction: ltr; color: rgba(255,255,255,.9); }
+
+.stage { position: absolute; inset: 0; }
+[data-in] { will-change: transform, opacity; }
+
+/* عنوان القسم */
+.sec { position: absolute; right: 110px; top: 170px; text-align: right; }
+.badge { display: inline-flex; align-items: center; gap: 18px; flex-direction: row; }
+.badge i { font: 700 26px Plex; color: var(--mint); font-style: normal; }
+.badge span { background: var(--mint); color: #16301F; font: 700 22px/1 Plex; padding: 14px 26px; border-radius: 999px; }
+.title { font: 700 84px/1.18 Plex; margin-top: 14px; letter-spacing: -.5px; }
+.title em { font-style: normal; color: var(--mint); display: block; }
+
+/* قائمة البنود مع مربع الصح */
+.list { margin-top: 38px; display: flex; flex-direction: column; gap: 20px; }
+.item { display: flex; align-items: center; gap: 22px; transition: none; }
+.item .ck { width: 46px; height: 46px; flex: none; border-radius: 10px; border: 2px solid rgba(137,215,173,.55);
+  background: rgba(62,99,80,.55); display: grid; place-items: center; }
+.item .ck svg { width: 26px; height: 26px; stroke: var(--mint); }
+.item b { font: 700 32px Plex; white-space: nowrap; }
+.item small { font: 400 25px Plex; color: rgba(255,255,255,.62); white-space: nowrap; }
+
+/* لوحة العرض يسار */
+.panel { position: absolute; left: 100px; top: 190px; width: 860px; height: 800px; }
+.panel > .slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.card { background: #fff; color: var(--ink); border-radius: 22px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.55); overflow: hidden; }
+.chip { display: inline-block; border-radius: 999px; padding: 6px 16px; font: 600 18px Plex; }
+
+/* ===== مشهد الاستخدام ===== */
+.u-head { position: absolute; top: 150px; left: 0; right: 0; text-align: center; }
+.u-head p { color: var(--mint); font: 600 30px Plex; }
+.u-head h1 { font: 700 92px/1.25 Plex; }
+.u-head small { display: block; font: 400 22px Plex; color: rgba(255,255,255,.6); }
+.ucards { position: absolute; left: 110px; right: 110px; top: 420px; display: grid; gap: 28px; }
+.ubig { grid-template-columns: 1fr 1fr; }
+.ucard { border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.045); border-radius: 26px;
+  display: flex; align-items: center; gap: 34px; padding: 0 44px; }
+.ubig .ucard { height: 200px; }
+.ucard .v { font: 700 128px/1 Plex; color: var(--mint); }
+.ucard b { display: block; font: 700 34px Plex; }
+.ucard small { display: block; font: 400 22px Plex; color: rgba(255,255,255,.6); margin-top: 4px; }
+.usmall { top: 652px; grid-template-columns: repeat(4, 1fr); }
+.usmall2 { top: 818px; grid-template-columns: repeat(3, 1fr); left: 330px; right: 330px; }
+.usmall .ucard, .usmall2 .ucard { height: 138px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; padding: 0 34px; }
+.usmall .v, .usmall2 .v { font-size: 56px; color: #fff; }
+.usmall b, .usmall2 b { font: 500 22px Plex; color: rgba(255,255,255,.78); }
+
+/* ===== صندوق المهام ===== */
+.tasks { width: 820px; zoom: 1.08; }
+.tasks .hd { display: flex; align-items: center; gap: 12px; padding: 22px 28px; border-bottom: 1px solid #e3e3e3; }
+.tasks .hd b { font: 700 28px Plex; }
+.tasks .hd .n { background: var(--warnl); color: var(--warn); font: 700 22px Plex; border-radius: 999px; padding: 2px 14px; }
+.tasks .hd small { margin-right: auto; font: 400 17px Plex; color: #9a9a9a; }
+.tasks .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 22px; }
+.t { border-radius: 16px; border: 1.5px solid; padding: 18px; min-height: 172px; display: flex; flex-direction: column; }
+.t .row { display: flex; justify-content: space-between; align-items: flex-start; }
+.t .ic { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
+.t .ic svg { width: 22px; height: 22px; }
+.t .c { font: 700 40px/1 Plex; }
+.t p { font: 600 19px/1.4 Plex; margin-top: 12px; }
+.t i { font: 600 15px Plex; color: var(--deep); font-style: normal; margin-top: auto; padding-top: 8px; }
+.t.w { border-color: rgba(154,123,34,.3); background: rgba(154,123,34,.05); } .t.w .ic { background: var(--warnl); color: var(--warn); } .t.w .c { color: var(--warn); }
+.t.a { border-color: rgba(162,59,59,.25); background: rgba(162,59,59,.05); } .t.a .ic { background: rgba(162,59,59,.1); color: var(--abs); } .t.a .c { color: var(--abs); }
+.t.m { border-color: var(--light); background: var(--tint); } .t.m .ic { background: #fff; color: var(--deep); } .t.m .c { color: var(--deep); }
+
+/* ===== الطالب المفقود ===== */
+.miss { width: 820px; }
+.miss .hd { background: rgba(162,59,59,.07); padding: 22px 28px; display: flex; align-items: center; gap: 14px; border-bottom: 1px solid #eadada; }
+.miss .hd b { font: 700 28px Plex; color: var(--abs); }
+.miss .hd small { margin-right: auto; font: 400 18px Plex; color: var(--muted); }
+.miss .st { padding: 22px 28px 8px; }
+.miss .st b { font: 700 27px Plex; } .miss .st small { display: block; font: 400 19px Plex; color: var(--muted); margin-top: 2px; }
+.tl { list-style: none; padding: 10px 28px 6px; }
+.tl li { display: flex; align-items: center; gap: 16px; padding: 9px 0; border-bottom: 1px dashed #e5e5e5; font: 500 20px Plex; }
+.tl li .p { width: 92px; color: var(--muted); }
+.tl li .s { flex: 1; }
+.tl li .k { font: 600 17px Plex; border-radius: 999px; padding: 3px 14px; }
+.k.ok { background: var(--tint); color: var(--deep); } .k.no { background: rgba(162,59,59,.1); color: var(--abs); } .k.na { background: #f1f1f1; color: #8a8a8a; }
+.tl li.after { background: linear-gradient(to left, rgba(162,59,59,.06), transparent); }
+.miss .act { display: flex; gap: 12px; padding: 18px 28px 26px; }
+.btn { border-radius: 12px; padding: 13px 24px; font: 700 20px Plex; }
+.btn.pri { background: var(--deep); color: #fff; } .btn.ghost { border: 1.5px solid var(--line); color: var(--muted); }
+
+/* ===== النموذج الرسمي ===== */
+.paper { width: 560px; transform: rotate(-3deg); border-radius: 10px; }
+.paper img { display: block; width: 100%; }
+.stamp { position: absolute; left: 140px; bottom: 120px; background: var(--deep); color: #fff; border-radius: 16px;
+  padding: 16px 24px; font: 700 22px Plex; box-shadow: 0 20px 50px -14px rgba(0,0,0,.6); display: flex; gap: 12px; align-items: center; }
+.stamp2 { left: auto; right: 40px; bottom: auto; top: 110px; background: #fff; color: var(--deep); }
+
+/* ===== اختبارات اليوم ===== */
+.exam { width: 640px; }
+.exam img { display: block; width: 100%; }
+
+/* ===== رصد نور ===== */
+.noor { width: 820px; }
+.noor .hd { padding: 22px 28px 14px; } .noor .hd b { font: 700 28px Plex; } .noor .hd small { display: block; font: 400 18px Plex; color: var(--muted); }
+.gr { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 4px 28px 16px; }
+.gr div { border: 1.5px solid #ddd; border-radius: 14px; text-align: center; padding: 12px 0; font: 700 21px Plex; }
+.gr div small { display: block; font: 400 17px Plex; color: var(--muted); }
+.gr div.on { background: var(--deep); border-color: var(--deep); color: #fff; } .gr div.on small { color: rgba(255,255,255,.8); }
+.cells { padding: 0 28px 24px; display: grid; grid-template-columns: 150px repeat(7, 1fr); gap: 6px; font: 600 17px Plex; }
+.cells span { height: 38px; border-radius: 7px; display: grid; place-items: center; }
+.cells .h { color: var(--muted); font-weight: 500; justify-content: start; }
+.c1 { background: var(--light); color: var(--deep); } .c2 { background: var(--warnl); color: var(--warn); } .c3 { background: #FBEBEB; color: var(--abs); } .c0 { background: #f3f3f3; color: #aaa; }
+.sub { position: absolute; left: 60px; bottom: 30px; width: 600px; padding: 20px 26px; display: flex; align-items: center; gap: 18px; }
+.sub .pn { background: var(--tint); color: var(--deep); border-radius: 12px; padding: 10px 16px; font: 700 20px Plex; text-align: center; }
+.sub b { font: 700 22px Plex; display: block; } .sub small { font: 600 18px Plex; color: var(--warn); }
+
+/* ===== الإنجازات ===== */
+.photo { position: absolute; border-radius: 22px; overflow: hidden; box-shadow: 0 30px 80px -20px rgba(0,0,0,.6); background: #fff; }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo.contain img { object-fit: contain; }
+.cap { position: absolute; background: var(--mint); color: #16301F; border-radius: 999px; padding: 10px 22px; font: 700 21px Plex;
+  box-shadow: 0 14px 30px -10px rgba(0,0,0,.5); white-space: nowrap; }
+.item .medal svg { width: 24px; height: 24px; }
+.item .medal { width: 46px; height: 46px; flex: none; border-radius: 50%; background: rgba(137,215,173,.16); border: 2px solid rgba(137,215,173,.5);
+  display: grid; place-items: center; font: 700 22px Plex; color: var(--mint); }
+
+#wash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 9; }
+</style>
+</head>
+<body>
+<div id="bg"><div class="shape"></div><div class="lines"></div></div>
+<header data-keep>
+  <div class="brand"><img src="../../src/assets/icon-white.png" alt=""><div><b>بوابة مكة الثانوية الرقمية</b><small>مدرسة مكة الثانوية · مكة المكرمة</small></div></div>
+  <div class="site">makkahsec.com</div>
+</header>
+<div class="stage" id="stage"></div>
+<div id="wash"></div>
+
+<script>
+const Q = new URLSearchParams(location.search);
+const SCENE = Q.get("s") || "usage";
+const CK = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const ICON = {
+  folder: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>',
+  send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>',
+  inbox: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 01-2 2H4a2 2 0 01-2-2v-6z"/></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  sign: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17c3-4 5-8 7-8s-1 8 2 8 3-5 5-5 1 4 4 4"/><path d="M3 21h18"/></svg>',
+  medal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="6"/><path d="M8.5 10L6 2h4l2 4 2-4h4l-2.5 8"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 2l3 6.5 7 .8-5.2 4.8 1.5 7L12 17.5 5.7 21l1.5-7L2 9.3l7-.8z"/></svg>',
+  flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V3"/><path d="M4 4h13l-2.5 4.5L17 13H4"/></svg>',
+  ball: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3.5 9.5c5 1 12 1 17 0M3.5 14.5c5-1 12-1 17 0M12 3c-3 5-3 13 0 18"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>',
+};
+
+/* أطوال مقاطع الصوت (ثوانٍ) — تقديرية حتى تصل التسجيلات */
+const DEF = { usage: [8.5], new: [3.6, 6.2, 9.6, 6.4, 6.4, 8.8], ach: [2.6, 9.4, 6.4, 6.0, 6.8] };
+const D = (Q.get("d") ? Q.get("d").split(",").map(Number) : DEF[SCENE]);
+const LEAD = 0.7, GAP = 0.55, TAIL = 1.1;
+const starts = []; { let t = LEAD; for (const d of D) { starts.push(t); t += d + GAP; } }
+const TOTAL = starts.at(-1) + D.at(-1) + TAIL;
+window.TOTAL = TOTAL;
+
+const S = document.getElementById("stage");
+const fmt = (n) => n.toLocaleString("en-US");
+
+/* ------------------------------ المشاهد ------------------------------ */
+if (SCENE === "usage") {
+  const big = [[60406, "سجل حضور", "حصةً بحصة من المعلمين"], [89018, "إشعارًا وصل", "لكل فئات المستخدمين"]];
+  const small = [[1955, "حصة حُضِّرت من الجوال"], [208, "حسابًا مفعّلًا · 53 معلمًا"], [1708, "خانة في سجل المتابعة"], [17, "يوم غياب اعتُمد آليًا"]];
+  const small2 = [[128, "نموذجًا ومستندًا صدر"], [39, "إحالة طالب"], [38, "اختبارًا في البوابة"]];
+  const card = (v, b, s, i, t0) => `<div class="ucard" data-in="${t0 + i * .12}" data-a="up"><span class="v num" data-count="${v}" data-c0="${t0 + i * .12}">0</span><div><b>${b}</b>${s ? `<small>${s}</small>` : ""}</div></div>`;
+  S.innerHTML = `
+    <div class="u-head">
+      <p data-in="0.4" data-a="up">الاستخدام الفعلي</p>
+      <h1 data-in="0.55" data-a="up">منذ بداية العام الدراسي</h1>
+      <small data-in="0.8" data-a="fade">من 03/04/1448 - 14/09/2026 إلى 30/04/1448 - 11/10/2026</small>
+    </div>
+    <div class="ucards ubig">${big.map((x, i) => card(x[0], x[1], x[2], i, 1.2)).join("")}</div>
+    <div class="ucards usmall">${small.map((x, i) => card(x[0], x[1], "", i, 2.4)).join("")}</div>
+    <div class="ucards usmall2">${small2.map((x, i) => card(x[0], x[1], "", i, 3.2)).join("")}</div>`;
+}
+
+if (SCENE === "new") {
+  const items = [
+    ["بانتظار إجرائك", "مهامك كلها في بطاقة واحدة"],
+    ["الطالب المفقود", "مسار يومه وتحويله للموجه"],
+    ["نماذج الغياب الرسمية", "بالتوقيع والختم"],
+    ["اختبارات اليوم", "للطالب وولي الأمر والمعلم"],
+    ["متابعة رصد نور", "والمعلم البديل والتطوير المهني"],
+  ];
+  const T = (cls, ic, n, label, go = "انتقل للإجراء ←") =>
+    `<div class="t ${cls}"><div class="row"><span class="ic">${ICON[ic]}</span><span class="c num">${n}</span></div><p>${label}</p><i>${go}</i></div>`;
+  const slides = [
+    `<div class="card tasks"><div class="hd"><b>بانتظار إجرائك</b><span class="n num">13</span><small>اضغط البطاقة للانتقال إلى الإجراء</small></div>
+      <div class="grid">
+        ${T("a", "shield", 1, "نماذج سلوك تنتظر اطلاعك وإقرارك")}
+        ${T("w", "send", 3, "إحالات تنتظر إجراءك")}
+        ${T("w", "folder", 2, "نماذج وصلتك تنتظر إفادتك")}
+        ${T("w", "inbox", 4, "نماذج تنتظر اعتمادك")}
+        ${T("w", "sign", 1, "جلسات تعلم مهني تنتظر توقيعك")}
+        ${T("m", "inbox", 2, "إفادات وصلت على نماذجك")}
+      </div></div>`,
+    `<div class="card miss"><div class="hd"><b>طلاب مفقودون اليوم</b><small>حضروا أول اليوم ثم غابوا</small></div>
+      <div class="st"><b>عبدالله سعد القحطاني</b><small>الثاني الثانوي — فصل 2 · فُقد من الحصة 4</small></div>
+      <ul class="tl">
+        <li><span class="p">الحصة 1</span><span class="s">الرياضيات</span><span class="k ok">حاضر</span></li>
+        <li><span class="p">الحصة 2</span><span class="s">اللغة العربية</span><span class="k ok">حاضر</span></li>
+        <li><span class="p">الحصة 3</span><span class="s">الفيزياء</span><span class="k ok">حاضر</span></li>
+        <li class="after"><span class="p">الحصة 4</span><span class="s">الكيمياء · بعد الفقد</span><span class="k no">غائب</span></li>
+        <li class="after"><span class="p">الحصة 5</span><span class="s">اللغة الإنجليزية</span><span class="k no">غائب</span></li>
+        <li class="after"><span class="p">الحصة 6</span><span class="s">التربية البدنية</span><span class="k na">لم يُحضَّر</span></li>
+      </ul>
+      <div class="act"><span class="btn pri" data-in="@1+3.6" data-a="pop">التحويل للموجه الطلابي</span><span class="btn ghost">تواصل مع ولي الأمر</span></div></div>`,
+    `<div class="card paper"><img src="assets/form18.png" alt=""></div>
+      <div class="stamp" data-in="@2+1.6" data-a="pop">✓ التنبيه · الإفادة · قرار المدير</div>
+      <div class="stamp stamp2" data-in="@2+3.0" data-a="pop">بالتوقيع والختم</div>`,
+    `<div class="card exam"><img src="assets/exam-today.png" alt=""></div>`,
+    `<div class="card noor" style="transform:translateY(-70px)"><div class="hd"><b>متابعة رصد الدرجات في نظام نور</b><small>نهاية فترة الرصد: الخميس · باقي 4 أيام</small></div>
+      <div class="gr"><div class="on">الأول الثانوي<small>نسبة الرصد 92%</small></div><div>الثاني الثانوي<small>نسبة الرصد 78%</small></div><div>الثالث الثانوي<small>نسبة الرصد 64%</small></div></div>
+      <div class="cells">
+        <span class="h">المادة / الفصل</span>${[1,2,3,4,5,6,7].map(n => `<span class="h" style="justify-content:center">10${n}</span>`).join("")}
+        <span class="h">الرياضيات</span><span class="c1">✓</span><span class="c1">✓</span><span class="c1">✓</span><span class="c2">4</span><span class="c1">✓</span><span class="c1">✓</span><span class="c1">✓</span>
+        <span class="h">الفيزياء</span><span class="c1">✓</span><span class="c1">✓</span><span class="c3">7</span><span class="c1">✓</span><span class="c1">✓</span><span class="c2">3</span><span class="c1">✓</span>
+        <span class="h">اللغة العربية</span><span class="c1">✓</span><span class="c1">✓</span><span class="c1">✓</span><span class="c1">✓</span><span class="c0">—</span><span class="c1">✓</span><span class="c1">✓</span>
+      </div></div>
+      <div class="card sub" data-in="@4+2.6" data-a="up"><span class="pn">الحصة<br><span class="num">3</span></span><div><b>الكيمياء — الأول الثانوي فصل 4</b><small>حضّرها بديلًا: أ. فهد الزهراني</small></div></div>`,
+  ];
+  S.innerHTML = `
+    <div class="sec">
+      <div class="badge" data-in="0.3" data-a="up"><i>08</i><span>الجديد في البوابة</span></div>
+      <div class="title" data-in="0.45" data-a="up">خدمات تصنع<em>الفرق كل يوم</em></div>
+      <div class="list">${items.map((x, i) => `<div class="item" data-in="@${i + 1}-0.2" data-a="right" data-hl="${i + 1}"><span class="ck">${CK}</span><b>${x[0]}</b><small>${x[1]}</small></div>`).join("")}</div>
+    </div>
+    <div class="panel">${slides.map((h, i) => `<div class="slide" data-in="@${i + 1}-0.1" data-a="slide" data-out="${i < 4 ? `@${i + 2}-0.25` : ""}">${h}</div>`).join("")}</div>`;
+}
+
+if (SCENE === "ach") {
+  const items = [
+    [ICON.medal, "وسام الشرف العالمي", "برنامج GLOBE البيئي · ناسا", 1],
+    ["2", "المركز الثاني", "دوري المدارس للرياضات الإلكترونية", 2],
+    ["1", "المركز الأول", "بلايستيشن 5", 2],
+    [ICON.star, "كشافة المدرسة", "في خدمة ضيوف الرحمن · رمضان والحج", 3],
+    [ICON.flag, "اليوم الوطني ويوم التأسيس", "مشاركة في الاحتفالات", 4],
+    [ICON.ball, "منتخب كرة اليد", "في دوري المدارس", 4],
+  ];
+  const P = (src, x, y, w, h, extra = "") => `<div class="photo ${extra}" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px"><img src="assets/${src}" alt=""></div>`;
+  const slides = [
+    `${P("42.jpg", 0, 60, 860, 608, "contain")}<div class="cap" style="right:30px;top:20px">وسام الشرف العالمي · الربع الأول 2026</div>`,
+    `${P("44.jpg", 40, 40, 800, 495)}<div class="cap" data-in="@2+0.8" data-a="pop" style="right:40px;top:500px">المركز الثاني · الرياضات الإلكترونية</div><div class="cap" data-in="@2+2.6" data-a="pop" style="right:120px;top:580px">المركز الأول · بلايستيشن 5</div>`,
+    `${P("46.jpg", 0, 40, 600, 450)}${P("45.jpg", 470, 230, 370, 493)}<div class="cap" style="left:40px;top:510px">في الحرم المكي · رمضان والحج</div>`,
+    `${P("40.jpg", 0, 20, 560, 315)}${P("41.jpg", 260, 330, 600, 342, "contain")}<div class="cap" data-in="@4+0.4" data-a="pop" style="left:20px;top:360px">اليوم الوطني «عزّنا بطبعنا»</div><div class="cap" data-in="@4+2.8" data-a="pop" style="right:20px;top:690px">منتخب كرة اليد · دوري المدارس</div>`,
+  ];
+  S.innerHTML = `
+    <div class="sec">
+      <div class="badge" data-in="0.3" data-a="up"><i>09</i><span>إنجازات المدرسة</span></div>
+      <div class="title" data-in="0.45" data-a="up">مدرسة<em>تصنع الإنجاز</em></div>
+      <div class="list">${items.map((x, i) => `<div class="item" data-in="@${x[3]}-0.2" data-a="right" data-hl="${x[3]}"><span class="medal">${x[0]}</span><b>${x[1]}</b><small>${x[2]}</small></div>`).join("")}</div>
+    </div>
+    <div class="panel" style="top:200px">${slides.map((h, i) => `<div class="slide" style="display:block" data-in="@${i + 1}-0.1" data-a="slide" data-kb="1" data-out="${i < 3 ? `@${i + 2}-0.25` : ""}">${h}</div>`).join("")}</div>`;
+}
+
+/* ------------------------------ المحرّك ------------------------------ */
+// «@k±x» = بداية المقطع الصوتي k (يبدأ العد من 1 بعد المقطع 0 في new/ach) ± ثوانٍ
+const base = SCENE === "usage" ? 0 : 0;
+const at = (v) => {
+  if (v == null || v === "") return null;
+  if (!String(v).startsWith("@")) return Number(v);
+  const m = String(v).match(/^@(\d+)([+-][\d.]+)?$/);
+  return starts[Number(m[1])] + Number(m[2] || 0);
+};
+const ease = (x) => 1 - Math.pow(1 - Math.min(Math.max(x, 0), 1), 3);
+const els = [...document.querySelectorAll("[data-in]")].map((el) => ({ el, a: el.dataset.a || "fade", tin: at(el.dataset.in), tout: at(el.dataset.out) }));
+const counts = [...document.querySelectorAll("[data-count]")].map((el) => ({ el, v: +el.dataset.count, t0: +el.dataset.c0 }));
+const hls = [...document.querySelectorAll("[data-hl]")];
+
+window.render = (t) => {
+  for (const { el, a, tin, tout } of els) {
+    const p = ease((t - tin) / 0.6);
+    let o = Math.min(Math.max((t - tin) / 0.45, 0), 1);
+    let tf = "";
+    if (a === "up") tf = `translateY(${(1 - p) * 34}px)`;
+    if (a === "right") tf = `translateX(${(1 - p) * -40}px)`;
+    if (a === "pop") tf = `scale(${0.85 + 0.15 * p})`;
+    if (a === "slide") tf = `translateY(${(1 - p) * 50}px) scale(${0.96 + 0.04 * p})`;
+    if (el.dataset.kb && t > tin) tf += ` scale(${1 + Math.min(t - tin, 12) * 0.006})`;
+    if (tout != null && t > tout) { const q = Math.min((t - tout) / 0.35, 1); o *= 1 - q; tf += ` translateY(${-q * 30}px)`; }
+    // خروج المشهد كله في آخره
+    const e = Math.min(Math.max((t - (TOTAL - 0.55)) / 0.45, 0), 1);
+    if (!el.closest("[data-keep]")) o *= 1 - e;
+    el.style.opacity = o; el.style.transform = tf;
+  }
+  for (const { el, v, t0 } of counts) {
+    const p = ease((t - t0) / 1.6);
+    el.textContent = fmt(Math.round(v * p));
+  }
+  // إبراز البند الذي يتكلم عنه الصوت
+  for (const el of hls) {
+    const k = +el.dataset.hl, s0 = starts[k], s1 = starts[k + 1] ?? TOTAL;
+    const on = t >= s0 - 0.2 && t < s1 - 0.2;
+    const any = t >= starts[1] - 0.2;
+    if (t >= at(el.dataset.in)) el.style.opacity = String(Math.min(+el.style.opacity, on || !any ? 1 : 0.42));
+    el.querySelector("b").style.color = on ? "var(--mint)" : "#fff";
+  }
+};
+window.render(0);
+</script>
+</body>
+</html>
