@@ -6,6 +6,7 @@
 //    GET  /iclock/cdata?SN=...&options=all      → المصافحة وإعدادات الجهاز
 //    POST /iclock/cdata?SN=...&table=ATTLOG     → سجلات البصمات
 //    GET  /iclock/getrequest?SN=...             → استعلام عن أوامر
+//    GET  /iclock/rtdata?SN=...&type=time       → طلب الوقت (الإصدارات الأحدث)
 //    POST /iclock/devicecmd?SN=...              → نتيجة تنفيذ أمر
 //
 //  الردود نص عادي (text/plain) بصيغة يفهمها الجهاز.
@@ -308,6 +309,18 @@ export const handler = async (event) => {
 
       // الجهاز يتوقع OK متبوعًا بعدد السجلات المستلمة — نردّه فورًا
       return text(`OK: ${rawUids.length}`);
+    }
+
+    // ---------- طلب الوقت من الخادم (بروتوكول ADMS الأحدث) ----------
+    // بعض الطرازات لا تنفّذ أمر SET OPTIONS DateTime، وتطلب الوقت بنفسها هنا
+    // بالثواني منذ 1970 (UTC) مع فرق التوقيت
+    if (path.includes("/rtdata") && String(params.type || "").toLowerCase() === "time") {
+      await admin.from("devices")
+        .update({ time_synced_at: new Date().toISOString() })
+        .eq("serial_no", sn);
+      const reply = `DateTime=${Math.floor(Date.now() / 1000)},ServerTZ=+0300`;
+      console.log(`iclock: rtdata time sent to ${sn} → ${reply}`);
+      return text(reply);
     }
 
     // ---------- 3) استعلام الجهاز عن الأوامر ----------
