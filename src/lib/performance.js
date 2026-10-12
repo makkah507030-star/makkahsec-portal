@@ -11,6 +11,12 @@ import { loadActiveTerm } from "./officialAttendance.js";
    ===================================================================== */
 
 export const PERF_BUCKET = "perf-evidence";
+
+/* ساعات التطوير في التقارير: ساعات الحضور وحدها — حضور البرامج التدريبية (2-2) وحضور
+   المؤتمرات (2-5) — دون ساعات تنفيذ المعلم برنامجًا لزملائه (2-1) */
+export const ATTEND_HOUR_ITEMS = ["e02_02", "e02_05"];
+export const attendHours = (rows) => (rows ?? [])
+  .filter((r) => ATTEND_HOUR_ITEMS.includes(r.item_key)).reduce((a, r) => a + (Number(r.hours) || 0), 0);
 export const MAX_BYTES = 5 * 1024 * 1024;
 export const ACCEPT = "application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif";
 export const SOURCE_LABEL = { upload: "مرفوع", form: "نموذج", visit: "زيارة دعم", plc: "مجتمع تعلم", xvisit: "زيارة تبادلية", pd: "نموذج تطوير" };

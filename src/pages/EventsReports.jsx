@@ -40,6 +40,7 @@ export default function EventsReports() {
   const [theme, setTheme] = useState("light");
   const [photos, setPhotos] = useState({});
   const [sigs, setSigs] = useState({});
+  const [news, setNews] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -92,6 +93,14 @@ export default function EventsReports() {
       .then(({ data }) => setPhotos((p) => ({ ...p, ...Object.fromEntries(withPhoto.map((e, i) => [e.id, data?.[i]?.signedUrl ?? null])) })));
   }, [view, shown]);   // eslint-disable-line react-hooks/exhaustive-deps
   const organizer = scope === "mine" ? profile?.full_name ?? "" : null;
+  // أخبار البوابة المنشورة في الفترة — لتقرير كل الأحداث وحده (الأخبار للمدرسة لا لمنظّم بعينه)
+  useEffect(() => {
+    if (view !== "report" || organizer) { setNews([]); return; }
+    let q = supabase.from("news").select("id, title, excerpt, cover_url, published_at, created_at").eq("is_published", true);
+    if (from) q = q.gte("published_at", from);
+    if (to) q = q.lt("published_at", `${to}T23:59:59`);
+    q.order("published_at", { ascending: false }).limit(6).then(({ data }) => setNews(data ?? []));
+  }, [view, organizer, from, to]);
   useEffect(() => {
     if (view !== "report") return;
     let live = true;
@@ -100,9 +109,9 @@ export default function EventsReports() {
     return () => { live = false; };
   }, [view, organizer]);
   const pages = useMemo(() => (view === "report" && rows ? eventsReportPages({
-    events: shown, counts, photos, organizer, from, to, theme, sigs, year: academicYearLabel(),
+    events: shown, counts, photos, news, organizer, from, to, theme, sigs, year: academicYearLabel(),
     scopeLabel: organizer ? "ما نفّذته" : "كل الأحداث",
-  }) : null), [view, rows, shown, counts, photos, organizer, from, to, theme, sigs]);
+  }) : null), [view, rows, shown, counts, photos, news, organizer, from, to, theme, sigs]);
 
   const pill = (on) =>
     `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${

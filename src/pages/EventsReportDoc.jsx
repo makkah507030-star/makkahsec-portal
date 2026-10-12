@@ -98,21 +98,43 @@ function EventCard({ e, c, photo }) {
   );
 }
 
-/** أوراق التقرير بالترتيب — كل ورقة عنصر مستقل */
-export function eventsReportPages({ events, counts, photos = {}, scopeLabel, organizer, from, to, year, theme = "light", sigs = {} }) {
+/* بطاقة خبر من قسم الأخبار: صورة الغلاف والعنوان والمقتطف وتاريخ النشر */
+function NewsCard({ x }) {
+  return (
+    <div className="mr-prog compact">
+      <div className="ph">
+        {x.cover_url ? <img src={x.cover_url} alt="" crossOrigin="anonymous" /> : IC.megaphone}
+        <span className="kind" style={{ "--c": "var(--s2)" }}>خبر</span>
+      </div>
+      <div className="bd">
+        <h4>{x.title}</h4>
+        <div className="mt"><span>نُشر <b className="num">{dmy(String(x.published_at ?? x.created_at).slice(0, 10))}</b></span></div>
+        {x.excerpt && <p>{x.excerpt}</p>}
+      </div>
+    </div>
+  );
+}
+
+/** أوراق التقرير بالترتيب — كل ورقة عنصر مستقل
+ *  news: أخبار البوابة المنشورة في الفترة (لتقرير كل الأحداث) — تتصدّر «أبرز الأحداث» بصورها */
+export function eventsReportPages({ events, counts, photos = {}, news = [], scopeLabel, organizer, from, to, year, theme = "light", sigs = {} }) {
   const m = eventsModel(events, counts);
   const period = from || to ? `${from ? dmy(from) : "من البداية"} – ${to ? dmy(to) : "حتى اليوم"}` : "كل الفترات";
   const doc = { title: "تقرير الأحداث والمناسبات", meta: [scopeLabel, period], foot: "الأحداث والمناسبات" };
 
-  // أبرز الأحداث: المعتمدة بالأكثر حضورًا، والمصوّرة أولًا
-  const feat = [...m.live].filter((e) => e.stage === "approved")
-    .sort((a, b) => (!!photos[b.id] - !!photos[a.id]) || m.c(b).attended - m.c(a).attended).slice(0, 6);
+  // أبرز الأحداث: أخبار البوابة في الفترة أولًا، ثم المعتمدة بالأكثر حضورًا والمصوّرة أولًا
+  // (حتى ست بطاقات، ولا يتكرر حدث له خبر بالعنوان نفسه)
+  const newsFeat = news.slice(0, 6);
+  const titled = new Set(newsFeat.map((x) => x.title.trim()));
+  const feat = [...m.live].filter((e) => e.stage === "approved" && !titled.has(e.title.trim()))
+    .sort((a, b) => (!!photos[b.id] - !!photos[a.id]) || m.c(b).attended - m.c(a).attended).slice(0, 6 - newsFeat.length);
+  const featN = newsFeat.length + feat.length;
   const rows = events;
   const rowH = (e) => (e.title.length > 38 ? 40 : 26);
   const tablePages = paginate(rows, rowH, CAP - 40);
   const lastUsed = tablePages[tablePages.length - 1].reduce((a, e) => a + rowH(e), 40);
   const signsApart = lastUsed + 160 > CAP;
-  const total = 2 + (feat.length ? 1 : 0) + tablePages.length + (signsApart ? 1 : 0);
+  const total = 2 + (featN ? 1 : 0) + tablePages.length + (signsApart ? 1 : 0);
   let pg = 2;
   const common = { theme, doc, total };
   // تقرير المنظّم يوقّعه هو والمدير، وتقرير كل الأحداث يوقّعه المدير
@@ -161,9 +183,12 @@ export function eventsReportPages({ events, counts, photos = {}, scopeLabel, org
       <Highlights title="خلاصة الفترة" items={highlights(m)} />
     </Page>,
 
-    ...(feat.length ? [
-      <Page key="feat" {...common} page={++pg} sec={{ no: 2, title: "أبرز الأحداث", sub: "المعتمدة بالأكثر حضورًا، بصور تقاريرها" }}>
-        <div className="mr-progs">{feat.map((e) => <EventCard key={e.id} e={e} c={m.c(e)} photo={photos[e.id]} />)}</div>
+    ...(featN ? [
+      <Page key="feat" {...common} page={++pg} sec={{ no: 2, title: "أبرز الأحداث", sub: newsFeat.length ? "من أخبار البوابة في الفترة، والأحداث المعتمدة بصور تقاريرها" : "المعتمدة بالأكثر حضورًا، بصور تقاريرها" }}>
+        <div className="mr-progs">
+          {newsFeat.map((x) => <NewsCard key={`n${x.id}`} x={x} />)}
+          {feat.map((e) => <EventCard key={e.id} e={e} c={m.c(e)} photo={photos[e.id]} />)}
+        </div>
         {!organizer && m.orgs.length > 1 && (
           <Box icon="users" title="المنظّمون" aside="عدد الأحداث" style={{ marginTop: "auto" }}>
             <Bars wide items={m.orgs.slice(0, 5).map(([t, v]) => ({ t, v, c: S[1] }))} />
@@ -176,7 +201,7 @@ export function eventsReportPages({ events, counts, photos = {}, scopeLabel, org
       const last = i === tablePages.length - 1;
       const start = tablePages.slice(0, i).reduce((a, p) => a + p.length, 0);
       return (
-        <Page key={`t${i}`} {...common} page={++pg} sec={i ? null : { no: feat.length ? 3 : 2, title: "سجل الأحداث", sub: "كل الأحداث في الفترة بأرقامها وحالتها" }}>
+        <Page key={`t${i}`} {...common} page={++pg} sec={i ? null : { no: featN ? 3 : 2, title: "سجل الأحداث", sub: "كل الأحداث في الفترة بأرقامها وحالتها" }}>
           {rows.length ? (
             <table className="mr-table">
               <thead><tr><th className="c" style={{ width: 28 }}>م</th><th>الحدث</th><th className="c" style={{ width: 78 }}>التاريخ</th>

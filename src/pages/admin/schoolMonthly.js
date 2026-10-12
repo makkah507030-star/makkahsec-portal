@@ -19,7 +19,7 @@ export async function loadSchoolMonthly(month) {
   const recent = new Date(Date.UTC(b.y, b.m - 5, 1)).toISOString().slice(0, 10);
   // تاريخ نشاط التطوير المهني: تاريخه المكتوب، وإلا تاريخ إنشائه
   const actIn = (r) => { const d = String(r.data?.date || r.created_at || "").slice(0, 10); return d >= b.from && d < b.to; };
-  const [affairs, cases, closed, sessions, programs, requests, events, pd, plc, visits, evidence, quizzes, forms] = await Promise.all([
+  const [affairs, cases, closed, sessions, programs, requests, events, pd, plc, visits, evidence, quizzes, forms, news] = await Promise.all([
     loadAffairsMonthly(month),
     quiet(inM(supabase.from("guidance_cases").select("id, grade"), "opened_at")),
     quiet(inM(supabase.from("guidance_cases").select("id, outcome"), "closed_at")),
@@ -29,7 +29,7 @@ export async function loadSchoolMonthly(month) {
     quiet(inM(supabase.from("school_events").select("id, title, category, event_date, stage, cancelled_at, event_participants(attended)").is("cancelled_at", null), "event_date")),
     // التطوير المهني: كل ما تجاوز المسودة، ويُؤرَّخ بتاريخ النشاط نفسه (data.date) لا باعتماده —
     // فيُجلب ما أُنشئ في الأشهر الأربعة السابقة ويُصفّى بتاريخه في الشهر
-    quiet(supabase.from("pd_reports").select("id, kind, status, data, created_at").neq("status", "draft").gte("created_at", recent).lt("created_at", b.to)),
+    quiet(supabase.from("pd_reports").select("id, kind, status, data, attendees, created_at").neq("status", "draft").gte("created_at", recent).lt("created_at", b.to)),
     quiet(supabase.from("plc_sessions").select("id, status, data, created_at").neq("status", "draft").gte("created_at", recent).lt("created_at", b.to)),
     quiet(supabase.from("exchange_visits").select("id, status, data, created_at").neq("status", "draft").gte("created_at", recent).lt("created_at", b.to)),
     quiet(inM(supabase.from("perf_evidence").select("id", { count: "exact", head: true }), "created_at")),
@@ -37,6 +37,8 @@ export async function loadSchoolMonthly(month) {
     quiet(supabase.from("quizzes").select("id, mode, total_marks, status")
       .or(`and(exam_date.gte.${b.from},exam_date.lt.${b.to}),and(exam_date.is.null,created_at.gte.${b.from},created_at.lt.${b.to})`)),
     quiet(inM(supabase.from("form_documents").select("id, form_templates(title)").neq("status", "draft"), "created_at")),
+    // أخبار البوابة المنشورة في الشهر — تتصدّر «أبرز الأحداث»
+    quiet(inM(supabase.from("news").select("id, title, published_at").eq("is_published", true), "published_at").order("published_at", { ascending: false }).limit(4)),
   ]);
 
   // متوسط أداء الاختبارات المرصودة في الشهر (ما بدأ رصد درجاته أو أُقفل)
@@ -74,6 +76,7 @@ export async function loadSchoolMonthly(month) {
     },
     events: {
       total: E.length, approved: E.filter((e) => e.stage === "approved").length, upcoming: upcomingEvents,
+      news: (news.data ?? []).map((x) => ({ title: x.title, date: String(x.published_at).slice(0, 10) })),
       attended: E.reduce((a, e) => a + (e.event_participants ?? []).filter((p) => p.attended).length, 0),
       top: [...E].sort((a, c) => (c.event_participants ?? []).filter((p) => p.attended).length - (a.event_participants ?? []).filter((p) => p.attended).length)
         .slice(0, 5).map((e) => ({ title: e.title, date: e.event_date, attended: (e.event_participants ?? []).filter((p) => p.attended).length })),
@@ -86,7 +89,12 @@ export async function loadSchoolMonthly(month) {
         approved: all.filter((x) => x.status === "approved").length,
         returned: all.filter((x) => x.status === "returned").length,
         pending: all.filter((x) => !["approved", "returned"].includes(x.status)).length,
-        hours: R.reduce((a, r) => a + (Number(r.data?.hours) || 0), 0),
+        // ساعات الحضور: حاضرو البرامج التدريبية (الساعات × عددهم)، وتقارير حضور برنامج أو مؤتمر —
+        // دون ساعات من نفّذ البرنامج
+        hours: R.reduce((a, r) => {
+          const h = Number(r.data?.hours) || 0;
+          return a + (r.kind === "training" ? h * (r.attendees?.length ?? 0) : ["attend", "conference"].includes(r.kind) ? h : 0);
+        }, 0),
         evidence: evidence.count ?? 0,
       };
     })(),

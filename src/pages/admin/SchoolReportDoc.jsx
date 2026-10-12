@@ -124,10 +124,17 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
             </p>
           )}
         </Box>
-        <Box icon="star" title="أبرز الأحداث" aside={`المنفّذة ${n(d.events.total)}`}>
-          {d.events.top.length ? (
-            <div className="mr-list">{d.events.top.slice(0, 4).map((e) => <div key={e.title + e.date}><span>{e.title}</span><span className="num">{dmy(e.date)} · الحاضرون {e.attended}</span></div>)}</div>
-          ) : <div className="mr-empty">لا أحداث هذا الشهر.</div>}
+        <Box icon="star" title="أبرز الأحداث" aside={`المنفّذة ${n(d.events.total)}${d.events.news.length ? ` · أخبار ${d.events.news.length}` : ""}`}>
+          {d.events.news.length || d.events.top.length ? (
+            <div className="mr-list">
+              {/* أخبار البوابة في الشهر أولًا، ثم الأحداث المنفّذة الأكثر حضورًا (حتى خمسة، بلا تكرار للعنوان) */}
+              {[...d.events.news.map((x) => ({ ...x, news: true })),
+                ...d.events.top.filter((e) => !d.events.news.some((x) => x.title.trim() === e.title.trim()))].slice(0, 5).map((e) => (
+                <div key={e.title + e.date}><span>{e.news && <b style={{ color: "var(--s2)", marginLeft: 5 }}>خبر</b>}{e.title}</span>
+                  <span className="num">{dmy(e.date)}{e.news ? "" : ` · الحاضرون ${e.attended}`}</span></div>
+              ))}
+            </div>
+          ) : <div className="mr-empty">لا أحداث ولا أخبار هذا الشهر.</div>}
         </Box>
       </div>
       <Box icon="award" title="التطوير المهني" aside={`الأنشطة ${n(pdAll)} بتاريخ تنفيذها`}>
@@ -138,7 +145,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
         {pdAll > 0 && (
           <p className="mr-note" style={{ marginTop: 6 }}>
             معتمد {n(d.pd.approved)} · قيد التوقيع أو الاعتماد {n(d.pd.pending)}{d.pd.returned ? ` · معاد للاستكمال ${n(d.pd.returned)}` : ""}
-            {d.pd.hours > 0 && ` · ساعات التدريب في التقارير ${n(d.pd.hours)}`} · شواهد أداء مرفوعة في الشهر {n(d.pd.evidence)}
+            {d.pd.hours > 0 && ` · ساعات حضور التدريب ${n(d.pd.hours)}`} · شواهد أداء مرفوعة في الشهر {n(d.pd.evidence)}
           </p>
         )}
       </Box>

@@ -1,7 +1,7 @@
 // src/components/PerfReportDoc.jsx
 import { GRADE_NAMES } from "../lib/schoolTime";
 import { PRINCIPAL_NAME } from "../lib/exportUtils";
-import { ITEM_HINT, elementColor, itemStatus } from "../lib/performance";
+import { ITEM_HINT, attendHours, elementColor, itemStatus } from "../lib/performance";
 import {
   S, n, pct, countAr, paginate, Ring, Donut, DonutLegend, Kpis, Highlights, Box, Signs, Page, Cover,
 } from "./report/ReportKit.jsx";
@@ -46,7 +46,7 @@ export function perfModel(elements, evidence, auto) {
   src.auto = rows.filter((r) => r.st.auto && !r.st.list.length).length;
   return {
     els, rows, ok, total: rows.length, missing: rows.length - ok, p: pct(ok, rows.length) ?? 0, src,
-    hours: evidence.reduce((a, e) => a + (Number(e.hours) || 0), 0),
+    hours: attendHours(evidence),
   };
 }
 
@@ -58,7 +58,7 @@ function highlights(m, visits) {
   const low = sorted.filter((e) => e.p < 100).slice(-1)[0];
   if (low) out.push(`أكثرها حاجة للاستكمال: «${low.el.title}» (${low.ok} من ${low.total}).`);
   if (m.src.auto) out.push(`بنود تصل شواهدها تلقائيًا من عمل المعلم في البوابة: ${n(m.src.auto)}.`);
-  if (m.hours) out.push(`ساعات التطوير المهني المسجلة: ${countAr(m.hours, "hour")}.`);
+  if (m.hours) out.push(`ساعات حضور التطوير المهني: ${countAr(m.hours, "hour")}.`);
   if (visits.length) out.push(`زيارات الدعم الواردة من الإدارة: ${n(visits.length)}.`);
   return out.slice(0, 6);
 }
@@ -105,7 +105,7 @@ export function perfReportPages({ elements, evidence, auto, visits = [], info, n
         { ic: "check", t: "بنود متوفرة", v: m.ok, s: `من ${countAr(m.total, "item", "g")}`, c: S[0] },
         { ic: "alert", t: "بنود غير متوفرة", v: m.missing, s: "تُستكمل قبل التقييم", c: S[3] },
         { ic: "doc", t: "شواهد في الملف", v: evidence.length, s: `مرفوع ${m.src.upload} · نماذج ${m.src.forms}`, c: S[1] },
-        { ic: "clock", t: "ساعات التطوير", v: m.hours, s: `زيارات الدعم ${visits.length}`, c: S[2] },
+        { ic: "clock", t: "ساعات حضور التدريب", v: m.hours, s: `زيارات الدعم ${visits.length}`, c: S[2] },
       ]} />
       <Box icon="chart" title="اكتمال العناصر" aside="الوزن · البنود المتوفرة">
         <div style={{ display: "flex", gap: 18, alignItems: "center" }}>

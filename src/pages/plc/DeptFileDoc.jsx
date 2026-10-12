@@ -2,6 +2,7 @@
 import { fmtDate, fmtHijri } from "../../lib/dates";
 import { cmpAr } from "../../lib/sortAr.js";
 import { PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { attendHours } from "../../lib/performance";
 import {
   S, n, pct, countAr, paginate, Ring, Bars, Kpis, Highlights, Box, Signs, Page, Cover,
 } from "../../components/report/ReportKit.jsx";
@@ -36,7 +37,7 @@ export function deptModel(rows, items) {
   const perItem = items.map((i) => ({ ...i, done: teachers.filter((t) => of(t, i.key).length).length, count: evidence.filter((r) => r.item_key === i.key).length }));
   return {
     teachers, of, N, perItem, total: evidence.length, filled, cells,
-    hours: rows.reduce((a, r) => a + (Number(r.hours) || 0), 0),
+    hours: attendHours(rows),
     coverage: pct(filled, cells) ?? 0,
     head: teachers.find((t) => t.head)?.name ?? "",
     active: teachers.filter((t) => t.ev.length).length,
@@ -47,7 +48,7 @@ export function deptModel(rows, items) {
 function highlights(m, items, sessions) {
   const out = [];
   if (!m.N) return ["لا معلمين مسجلين في القسم بعد."];
-  out.push(`سجّل معلمو القسم في البوابة ${countAr(m.total, "evidence", "g")}${m.hours ? `، وساعات التدريب ${n(m.hours)}` : ""}.`);
+  out.push(`سجّل معلمو القسم في البوابة ${countAr(m.total, "evidence", "g")}${m.hours ? `، وساعات حضور التدريب ${n(m.hours)}` : ""}.`);
   const best = [...m.perItem].sort((a, b) => b.done - a.done)[0];
   if (best?.done) out.push(`أكثر البنود استيفاءً: «${best.title}» (${best.done} من ${m.N}).`);
   const zero = m.perItem.filter((i) => !i.done);
@@ -110,7 +111,7 @@ export function deptFilePages({ rows, items, sessions, deptName, year, theme = "
       rows: [["user", "رئيس القسم", m.head || "—"], ["users", "معلمو القسم", countAr(m.N, "teacher")],
              ["book", "بنود العنصر", countAr(L, "item")], ["calendar", "تاريخ الإصدار", fmtDate(new Date())]],
       note: ["check", "شواهد المعلمين كما سُجّلت في البوابة، من ملفات الأداء الوظيفي ونماذج التطوير المهني."],
-      strip: [[m.N, "معلمو القسم"], [m.total, "الشواهد والمشاركات"], [m.hours, "الساعات التدريبية"], [`${m.coverage}%`, "استيفاء البنود"]],
+      strip: [[m.N, "معلمو القسم"], [m.total, "الشواهد والمشاركات"], [m.hours, "ساعات حضور التدريب"], [`${m.coverage}%`, "استيفاء البنود"]],
       foot: "التطوير المهني",
     }} />,
 
@@ -118,7 +119,7 @@ export function deptFilePages({ rows, items, sessions, deptName, year, theme = "
       <Kpis items={[
         { ic: "users", t: "معلمو القسم", v: m.N, s: `لهم شواهد ${m.active}`, c: S[0] },
         { ic: "doc", t: "الشواهد والمشاركات", v: m.total, s: `في ${m.perItem.filter((i) => i.count).length} من ${L} بنود`, c: S[1] },
-        { ic: "clock", t: "الساعات التدريبية", v: m.hours, s: "من سجلات حضور البرامج", c: S[2] },
+        { ic: "clock", t: "ساعات حضور التدريب", v: m.hours, s: "حضور البرامج والمؤتمرات", c: S[2] },
         { ic: "chat", t: "جلسات مجتمع التعلم", v: sessions.length, s: "معتمدة للقسم", c: S[3] },
       ]} />
       <Box icon="trophy" title="مؤشرات الإنجاز">
