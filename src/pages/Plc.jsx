@@ -814,8 +814,10 @@ export function PlcFile() {
       if (error) setErr(/dept_pd_file|schema cache/i.test(error.message) ? "لم يُفعَّل ملف القسم بعد في قاعدة البيانات." : error.message);
       setRows(data ?? []);
     });
+    // جلسات العام الدراسي نفسه (وما لم يُسجَّل عامه من الجلسات القديمة)
     supabase.from("plc_sessions").select("serial, data, status, decided_at").eq("department_id", deptId)
-      .eq("status", "approved").order("decided_at").then(({ data }) => setSessions(data ?? []));
+      .eq("status", "approved").or(`academic_year.eq.${year},academic_year.is.null`)
+      .order("decided_at").then(({ data }) => setSessions(data ?? []));
   }, [deptId, year]);
 
   // توقيع رئيس القسم من «توقيعي»، وتوقيع المدير والختم المعتمدان

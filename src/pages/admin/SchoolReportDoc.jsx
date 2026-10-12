@@ -22,8 +22,7 @@ function highlights(d) {
   const a = d.attendance;
   if (a.days) out.push(`نسبة الحضور الرسمية ${pc(a.pct)}، والأيام المعتمدة: ${countAr(a.days, "day")}.`);
   if (d.events.total) out.push(`الأحداث والمناسبات: ${countAr(d.events.total, "event")}، والطلاب الحاضرون ${n(d.events.attended)}.`);
-  const pdAll = d.pd.reports + d.pd.plc + d.pd.visits;
-  if (pdAll) out.push(`أنشطة التطوير المهني المعتمدة: ${n(pdAll)} (تقارير ${n(d.pd.reports)}، مجتمعات تعلم ${n(d.pd.plc)}، زيارات ${n(d.pd.visits)}).`);
+  if (d.pd.total) out.push(`أنشطة التطوير المهني: ${n(d.pd.total)} (تقارير ${n(d.pd.reports)}، مجتمعات تعلم ${n(d.pd.plc)}، زيارات ${n(d.pd.visits)})، اعتُمد منها ${n(d.pd.approved)}.`);
   if (d.quizzes.total) out.push(`الاختبارات في البوابة: ${n(d.quizzes.total)}، رُصدت درجات ${n(d.quizzes.graded)} منها${d.quizzes.avg != null ? ` بمتوسط أداء ${pc(d.quizzes.avg)}` : ""}.`);
   if (d.guidance.sessions) out.push(`الجلسات الإرشادية: ${n(d.guidance.sessions)}، والحالات الجديدة ${n(d.guidance.opened)}.`);
   if (d.referrals.total) out.push(`الإحالات: ${n(d.referrals.total)}، أُقفل منها ${n(d.referrals.closed)}.`);
@@ -37,7 +36,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
   const a = d.attendance, g = d.guidance;
   const doc = { title: "التقرير الشهري للمدرسة", meta: [info.month, info.hijri], foot: "التقرير الشهري" };
   const common = { theme, doc, total: 4 };
-  const pdAll = d.pd.reports + d.pd.plc + d.pd.visits;
+  const pdAll = d.pd.total;
   const trend = [{ k: "pct", t: "نسبة الحضور الرسمية", c: S[0] }];
   return [
     <Cover key="cover" theme={theme} c={{
@@ -56,7 +55,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
         { ic: "arrow", t: "الإحالات", v: d.referrals.total, s: `أُقفلت ${d.referrals.closed}`, c: S[3] },
         { ic: "chat", t: "جلسات إرشادية", v: g.sessions, s: `حالات جديدة ${g.opened}`, c: S[1] },
         { ic: "star", t: "الأحداث", v: d.events.total, s: `الحاضرون ${n(d.events.attended)}`, c: S[2] },
-        { ic: "award", t: "التطوير المهني", v: pdAll, s: `شواهد مرفوعة ${n(d.pd.evidence)}`, c: S[0] },
+        { ic: "award", t: "التطوير المهني", v: pdAll, s: `معتمد ${n(d.pd.approved)} · شواهد ${n(d.pd.evidence)}`, c: S[0] },
         { ic: "doc", t: "الاختبارات", v: d.quizzes.total, s: `رُصدت ${d.quizzes.graded}${d.quizzes.avg != null ? ` · متوسط ${pc(d.quizzes.avg)}` : ""}`, c: S[1] },
         { ic: "clip", t: "نماذج صادرة", v: d.forms.total, s: `${d.forms.by.length} أنواع`, c: S[2] },
         { ic: "exit", t: "بلاغات انقطاع", v: d.dropouts.total, s: `طُوي قيد ${d.dropouts.byStatus.withdrawn ?? 0}`, c: S[3] },
@@ -131,11 +130,17 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
           ) : <div className="mr-empty">لا أحداث هذا الشهر.</div>}
         </Box>
       </div>
-      <Box icon="award" title="التطوير المهني" aside={`الأنشطة المعتمدة ${n(pdAll)}`}>
+      <Box icon="award" title="التطوير المهني" aside={`الأنشطة ${n(pdAll)} بتاريخ تنفيذها`}>
         <Bars full items={[
           ...Object.entries(PD_KINDS).map(([k, v]) => ({ t: v.short ?? v.t, v: d.pd.byKind[k] ?? 0, c: S[0] })),
           { t: "جلسات مجتمعات التعلم المهني", v: d.pd.plc, c: S[2] }, { t: "الزيارات التبادلية", v: d.pd.visits, c: S[2] },
         ]} />
+        {pdAll > 0 && (
+          <p className="mr-note" style={{ marginTop: 6 }}>
+            معتمد {n(d.pd.approved)} · قيد التوقيع أو الاعتماد {n(d.pd.pending)}{d.pd.returned ? ` · معاد للاستكمال ${n(d.pd.returned)}` : ""}
+            {d.pd.hours > 0 && ` · ساعات التدريب في التقارير ${n(d.pd.hours)}`} · شواهد أداء مرفوعة في الشهر {n(d.pd.evidence)}
+          </p>
+        )}
       </Box>
       <Box icon="clip" title="النماذج الأكثر استخدامًا" aside={`النماذج الصادرة ${n(d.forms.total)}`}>
         {d.forms.total ? <Bars full items={d.forms.by.slice(0, 6).map(([t, v]) => ({ t, v, c: S[1] }))} /> : <div className="mr-empty">لا نماذج صادرة.</div>}

@@ -15,6 +15,9 @@ const count = (rows, k) => rows.reduce((o, r) => { o[r[k]] = (o[r[k]] ?? 0) + 1;
 export async function loadSchoolMonthly(month) {
   const b = monthBounds(month);
   const inM = (q, col) => q.gte(col, b.from).lt(col, b.to);
+  const recent = new Date(Date.UTC(b.y, b.m - 5, 1)).toISOString().slice(0, 10);
+  // تاريخ نشاط التطوير المهني: تاريخه المكتوب، وإلا تاريخ إنشائه
+  const actIn = (r) => { const d = String(r.data?.date || r.created_at || "").slice(0, 10); return d >= b.from && d < b.to; };
   const [affairs, cases, closed, sessions, programs, requests, events, pd, plc, visits, evidence, quizzes, forms] = await Promise.all([
     loadAffairsMonthly(month),
     quiet(inM(supabase.from("guidance_cases").select("id, grade"), "opened_at")),
@@ -23,9 +26,11 @@ export async function loadSchoolMonthly(month) {
     quiet(inM(supabase.from("guidance_programs").select("id, beneficiaries").eq("status", "done"), "done_date")),
     quiet(inM(supabase.from("guidance_requests").select("id, status"), "created_at")),
     quiet(inM(supabase.from("school_events").select("id, title, category, event_date, stage, event_participants(attended)").is("cancelled_at", null), "event_date")),
-    quiet(inM(supabase.from("pd_reports").select("id, kind").eq("status", "approved"), "decided_at")),
-    quiet(inM(supabase.from("plc_sessions").select("id").eq("status", "approved"), "decided_at")),
-    quiet(inM(supabase.from("exchange_visits").select("id").eq("status", "approved"), "decided_at")),
+    // التطوير المهني: كل ما تجاوز المسودة، ويُؤرَّخ بتاريخ النشاط نفسه (data.date) لا باعتماده —
+    // فيُجلب ما أُنشئ في الأشهر الأربعة السابقة ويُصفّى بتاريخه في الشهر
+    quiet(supabase.from("pd_reports").select("id, kind, status, data, created_at").neq("status", "draft").gte("created_at", recent).lt("created_at", b.to)),
+    quiet(supabase.from("plc_sessions").select("id, status, data, created_at").neq("status", "draft").gte("created_at", recent).lt("created_at", b.to)),
+    quiet(supabase.from("exchange_visits").select("id, status, data, created_at").neq("status", "draft").gte("created_at", recent).lt("created_at", b.to)),
     quiet(inM(supabase.from("perf_evidence").select("id", { count: "exact", head: true }), "created_at")),
     // الاختبارات بتاريخها، وإن لم يُحدَّد فبتاريخ إنشائها — بكل حالاتها
     quiet(supabase.from("quizzes").select("id, mode, total_marks, status")
@@ -70,10 +75,18 @@ export async function loadSchoolMonthly(month) {
       top: [...E].sort((a, c) => (c.event_participants ?? []).filter((p) => p.attended).length - (a.event_participants ?? []).filter((p) => p.attended).length)
         .slice(0, 5).map((e) => ({ title: e.title, date: e.event_date, attended: (e.event_participants ?? []).filter((p) => p.attended).length })),
     },
-    pd: {
-      reports: (pd.data ?? []).length, byKind: count(pd.data ?? [], "kind"),
-      plc: (plc.data ?? []).length, visits: (visits.data ?? []).length, evidence: evidence.count ?? 0,
-    },
+    pd: (() => {
+      const R = (pd.data ?? []).filter(actIn), P = (plc.data ?? []).filter(actIn), V = (visits.data ?? []).filter(actIn);
+      const all = [...R, ...P, ...V];
+      return {
+        reports: R.length, byKind: count(R, "kind"), plc: P.length, visits: V.length, total: all.length,
+        approved: all.filter((x) => x.status === "approved").length,
+        returned: all.filter((x) => x.status === "returned").length,
+        pending: all.filter((x) => !["approved", "returned"].includes(x.status)).length,
+        hours: R.reduce((a, r) => a + (Number(r.data?.hours) || 0), 0),
+        evidence: evidence.count ?? 0,
+      };
+    })(),
     quizzes: {
       total: all.length, graded: Q.length, ready: all.filter((q) => q.status === "ready").length,
       draft: all.filter((q) => q.status === "draft").length, byMode: count(all, "mode"), avg: quizAvg, sheets,
