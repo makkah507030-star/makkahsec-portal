@@ -100,7 +100,7 @@ async function load() {
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
     plcBack, pdBack, xvBack, perfAck, guidance,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
-    giTeacher, giDeputy, giCounselor, giGuardian, dropouts,
+    giTeacher, giDeputy, giCounselor, giGuardian, dropouts, ethicsAck,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? rowsFlag((f) => supabase.from("form_documents").select(`id, title, recipient${f}`)
@@ -164,6 +164,10 @@ async function load() {
     // بلاغات المعلمين عن طلاب منقطعين تنتظر طي القيد أو ردها (supabase/student_dropouts_1.sql)
     isDeputy ? rowsOf(supabase.from("student_dropouts").select("id, student_name")
       .eq("status", "reported").order("reported_at").limit(100)) : noRows,
+
+    // ميثاق أخلاقيات المهنة: هل أقرّ المعلم بالاطّلاع؟ (null: الجدول غير مفعّل فلا مهمة)
+    role === "teacher" ? supabase.from("doc_acks").select("user_id").eq("doc_key", "ethics_code").eq("user_id", uid)
+      .then(({ data, error }) => (error ? null : data ?? [])) : Promise.resolve(null),
   ]);
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
@@ -192,7 +196,13 @@ async function load() {
       items: items(giGuardian, "/inquiry", (r) => r.student_name) },
   ].map((t) => ({ ...t, n: t.items.length, to: "/", tone: "warning" }));
 
+  const ethicsDue = Array.isArray(ethicsAck) && ethicsAck.length === 0 ? 1 : 0;
+
   const tasks = [
+    // العاجل أولًا: الإقرار بميثاق أخلاقيات المهنة
+    { key: "ethics", n: ethicsDue, to: "/ethics", label: "ميثاق أخلاقيات المهنة ينتظر اطّلاعك وإقرارك", tone: "absent", icon: "shield",
+      items: [{ id: "ethics", to: "/ethics", title: "مدونة قواعد السلوك الوظيفي وأخلاقيات الوظيفة العامة", flag: "urgent" }] },
+
     // ما أُعيد إليك أولًا: عمل بدأته ينتظر تعديلك
     { key: "returned", n: returned, to: "/forms", label: "نماذج أُعيدت إليك للتعديل", tone: "absent", icon: "edit" },
     { key: "plcBack", n: plcBack.length, to: "/plc?tab=mine", items: items(plcBack, "/plc"),
@@ -280,6 +290,7 @@ async function load() {
       + xvHost.length + xvPending.length + xvBack.length,
     "/my-performance": perfAck,
     "/dropouts": dropouts.length,
+    "/ethics": ethicsDue,
     "/guidance": guidance + giDeputy.length + giReady.length,
     "/": behaviorGuardian.length + refGuardian.length + pledges.length + giGuardian.length,
     _tasks: tasks,
