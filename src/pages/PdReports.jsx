@@ -9,6 +9,8 @@ import { printThen } from "../lib/print.js";
 import { PRINCIPAL_NAME } from "../lib/exportUtils";
 import Loader from "../components/Loader.jsx";
 import PrintPortal from "../components/PrintPortal.jsx";
+import { useSignerImages } from "../lib/userSignatures.js";
+import SignedMark from "../components/SignedMark.jsx";
 import moeLogo from "../assets/moe-logo.png";
 import { useMyDepartment, loadDeptTeachers, plcNotify } from "../lib/plc";
 import { PD_KINDS, PD_KIND_KEYS, PD_STATUS, PD_BUCKET, PD_MAX_FILES, pdStages, pdMissing } from "../lib/pd";
@@ -526,7 +528,9 @@ export function PdSheet({ r, sigs, urls = [] }) {
   const val = (f) => f.type === "date" ? (d[f.key] ? fmtHijri(d[f.key]) : "") : d[f.key];
   const people = r.attendees ?? [];
   const half = Math.ceil(people.length / 2);
-  const signedOf = (p) => p ? (sigs.some((g) => g.user_id === p.user_id) ? "✓ وُقّع إلكترونيًا" : "—") : "";
+  // صورة توقيع الموقّع من «توقيعي» إن وُجدت (supabase/pd_signer_signatures.sql)
+  const sigImg = useSignerImages(sigs.map((g) => g.user_id));
+  const signedOf = (p) => p ? (sigs.some((g) => g.user_id === p.user_id) ? <SignedMark url={sigImg.get(p.user_id)} /> : "—") : "";
   const pdfs = (r.files ?? []).filter((f) => f.type === "pdf");
   return (
     <>

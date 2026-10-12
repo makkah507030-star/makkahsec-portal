@@ -10,6 +10,8 @@ import { ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME, printReport } from "../lib/export
 import logoIcon from "../assets/icon-mint.png";
 import Loader from "../components/Loader.jsx";
 import PrintPortal from "../components/PrintPortal.jsx";
+import { useSignerImages } from "../lib/userSignatures.js";
+import SignedMark from "../components/SignedMark.jsx";
 import moeLogo from "../assets/moe-logo.png";
 import {
   PLC_STAGES, PLC_STATUS, PLC_INFO, PLC_CONTENT, MAX_PHOTOS, PLC_BUCKET, stageMissing, lines,
@@ -575,7 +577,9 @@ function PlcSheet({ s, sigs, urls }) {
   const people = [{ user_id: s.head_user_id, name: s.head_name, head: true }, ...(s.attendees ?? [])];
   const half = Math.ceil(people.length / 2);
   const cell = { border: "1px solid #d8e4dc", padding: "5px 7px" };
-  const sigCell = (p) => p ? (p.head || signedAt(p.user_id) ? "✓ وُقّع إلكترونيًا" : "—") : "";
+  // صورة توقيع الموقّع من «توقيعي» إن وُجدت (supabase/pd_signer_signatures.sql)
+  const sigImg = useSignerImages(people.filter((p) => p.head || signedAt(p.user_id)).map((p) => p.user_id));
+  const sigCell = (p) => p ? (p.head || signedAt(p.user_id) ? <SignedMark url={sigImg.get(p.user_id)} /> : "—") : "";
   const Box = ({ t, k }) => (
     <div style={box}>
       <p style={{ color: C.green, fontWeight: 700, fontSize: 12, marginBottom: 3 }}>{t}</p>

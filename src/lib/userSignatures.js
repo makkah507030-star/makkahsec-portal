@@ -81,3 +81,25 @@ export function useSignatureByName(name, url) {
   }, [name, url]);
   return url || found;
 }
+
+/** خطّاف React: صور توقيعات أشخاص بحساباتهم — Map(user_id → رابط) لمن رفع توقيعه
+ *  ويحق للمستخدم رؤيته (supabase/pd_signer_signatures.sql)، ومن لا صورة له لا يُدرج */
+export function useSignerImages(userIds) {
+  const key = [...new Set((userIds ?? []).filter(Boolean))].sort().join(",");
+  const [map, setMap] = useState(() => new Map());
+  useEffect(() => {
+    if (!key) { setMap(new Map()); return; }
+    let alive = true;
+    (async () => {
+      const { data, error } = await supabase.rpc("signer_signatures", { p_users: key.split(",") });
+      if (error || !data?.length) return;
+      const { data: links } = await supabase.storage.from("form-assets").createSignedUrls(data.map((s) => s.path), 3600);
+      const out = new Map();
+      data.forEach((s, i) => { const u = links?.[i]?.signedUrl; if (u) out.set(s.user_id, u); });
+      if (alive) setMap(out);
+    })().catch(() => {});
+    return () => { alive = false; };
+  }, [key]);
+  return map;
+}
+
