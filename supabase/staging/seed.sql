@@ -46,6 +46,7 @@ insert into public.users (id, username, full_name, role, is_active, must_change_
   ('00000000-0000-4000-a000-000000000012', '9000000012', 'معلم اللغة العربية (تجريبي)',   'teacher',  true, false, now()),
   ('00000000-0000-4000-a000-000000000013', '9000000013', 'معلم الكيمياء (تجريبي)',        'teacher',  true, false, now()),
   ('00000000-0000-4000-a000-000000000014', '9000000014', 'معلم الفيزياء (تجريبي)',        'teacher',  true, false, now()),
+  ('00000000-0000-4000-a000-000000000021', '9000000021', 'الموجه الطلابي للصف الأول (تجريبي)', 'admin', true, false, now()),
   ('00000000-0000-4000-a000-000000000101', '9000000101', 'طالب تجريبي الأول',              'student',  true, false, now()),
   ('00000000-0000-4000-a000-000000000201', '9000000201', 'ولي أمر تجريبي',                 'guardian', true, false, now())
 on conflict (id) do nothing;
@@ -54,7 +55,8 @@ insert into public.admin_roles (user_id, role_type)
 select v.user_id::uuid, v.role_type::public.admin_role_type
 from (values
   ('00000000-0000-4000-a000-000000000001', 'tech_support'),
-  ('00000000-0000-4000-a000-000000000002', 'principal')
+  ('00000000-0000-4000-a000-000000000002', 'principal'),
+  ('00000000-0000-4000-a000-000000000021', 'counselor_1')
 ) as v(user_id, role_type)
 where not exists (
   select 1 from public.admin_roles a where a.user_id = v.user_id::uuid and a.role_type = v.role_type::public.admin_role_type
