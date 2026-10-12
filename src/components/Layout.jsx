@@ -32,6 +32,7 @@ const ADMIN_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home" },
+      { to: "/school-report", label: "التقرير الشهري للمدرسة", roles: ["principal", "tech_support"], icon: "chart", kw: "تقرير شهري خلاصة" },
     ],
   },
   {

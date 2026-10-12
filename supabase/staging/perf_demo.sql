@@ -39,3 +39,32 @@ select '00000000-0000-4000-9800-000000000001', d.id, '00000000-0000-4000-a000-00
        'approved', now() - interval '9 days'
   from public.departments d where d.name = 'الرياضيات'
 on conflict (id) do nothing;
+
+-- اختبارات معلم الرياضيات المصحّحة: «تحليل النتائج» والتقرير الشهري للمدرسة
+insert into public.quizzes (id, teacher_id, title, subject_id, subject_name, grade, period, total_marks, exam_date, academic_year, term, status, mode)
+values
+  ('00000000-0000-4000-9b00-000000000001', '00000000-0000-4000-a000-000000000011', 'اختبار قصير: الدوال', '00000000-0000-4000-c000-000000000101', 'الرياضيات', 1, 'period1', 20,
+   least(date_trunc('month', current_date)::date + 3, current_date), '1448', 1, 'closed', 'omr'),
+  ('00000000-0000-4000-9b00-000000000002', '00000000-0000-4000-a000-000000000011', 'اختبار إلكتروني: المتتابعات', '00000000-0000-4000-c000-000000000101', 'الرياضيات', 1, 'period1', 10,
+   least(date_trunc('month', current_date)::date + 8, current_date), '1448', 1, 'closed', 'online'),
+  ('00000000-0000-4000-9b00-000000000003', '00000000-0000-4000-a000-000000000011', 'اختبار الفترة الأولى', '00000000-0000-4000-c000-000000000102', 'الرياضيات', 2, 'period1', 30,
+   least(date_trunc('month', current_date)::date + 6, current_date), '1448', 1, 'marking', 'paper')
+on conflict (id) do update set exam_date = excluded.exam_date;
+
+insert into public.quiz_classes (quiz_id, class_id)
+values ('00000000-0000-4000-9b00-000000000001', '00000000-0000-4000-d000-000000000101'),
+       ('00000000-0000-4000-9b00-000000000002', '00000000-0000-4000-d000-000000000101'),
+       ('00000000-0000-4000-9b00-000000000003', '00000000-0000-4000-d000-000000000201')
+on conflict (quiz_id, class_id) do nothing;
+
+-- درجات الطلاب: نسب ثابتة متنوعة من الدرجة الكلية، وغياب طالب في اختبار
+insert into public.quiz_submissions (quiz_id, class_id, student_id, score, absent)
+select q.id, qc.class_id, e.student_id,
+       case when q.id::text like '%2' and right(e.student_id::text, 1) = '4' then null
+            else round(q.total_marks * (array[0.95, 0.82, 0.68, 0.55])[(right(e.student_id::text, 1)::int - 1) % 4 + 1], 1) end,
+       q.id::text like '%2' and right(e.student_id::text, 1) = '4'
+  from public.quizzes q
+  join public.quiz_classes qc on qc.quiz_id = q.id
+  join public.student_enrollment e on e.class_id = qc.class_id and e.academic_year = '1448'
+ where q.id::text like '00000000-0000-4000-9b00-%'
+on conflict (quiz_id, student_id) do nothing;

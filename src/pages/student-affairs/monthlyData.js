@@ -105,3 +105,17 @@ export async function loadAffairsMonthly(month) {
     trend,
   };
 }
+
+/** تسميات الشهر للتقارير الشهرية: الميلادي والهجري والفترة */
+export function monthLabels(month) {
+  const b = monthBounds(month);
+  const last = new Date(Date.UTC(b.y, b.m, 0, 12)), first = new Date(Date.UTC(b.y, b.m - 1, 1, 12));
+  const hm = (dt) => new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-latn", { month: "long" }).format(dt);
+  const hy = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura-nu-latn", { year: "numeric" }).format(last).replace(/\D/g, "");
+  const dmy = (s) => `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
+  return {
+    month: new Date(`${month}-15T12:00:00`).toLocaleDateString("ar-SA-u-ca-gregory-nu-latn", { month: "long", year: "numeric" }),
+    hijri: `${hm(first) === hm(last) ? hm(first) : `${hm(first)} – ${hm(last)}`} ${hy}هـ`,
+    range: `${dmy(b.from)} – ${dmy(`${b.from.slice(0, 8)}${String(b.days).padStart(2, "0")}`)}`,
+  };
+}

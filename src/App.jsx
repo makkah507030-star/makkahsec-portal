@@ -45,6 +45,7 @@ const StudentAffairs = lazy(() => import("./pages/student-affairs/index.jsx"));
 const PeriodAttendance = lazy(() => import("./pages/admin/PeriodAttendance.jsx"));
 const SubstituteReport = lazy(() => import("./pages/admin/SubstituteReport.jsx"));
 const NoorGrades = lazy(() => import("./pages/admin/NoorGrades.jsx"));
+const SchoolReport = lazy(() => import("./pages/admin/SchoolReport.jsx"));
 const ResultsAdmin = lazy(() => import("./pages/admin/ResultsAdmin.jsx"));
 const GeneralScheduleMaster = lazy(() => import("./pages/admin/GeneralScheduleMaster.jsx"));
 const TeacherSchedules = lazy(() => import("./pages/admin/TeacherSchedules.jsx"));
@@ -328,6 +329,7 @@ export default function App() {
               )}
               {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة، وللدعم الفني للمتابعة الفنية */}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<PerformanceAdmin />} />}
+              {(isTechSupport || adminRoles.includes("principal")) && <Route path="/school-report" element={<SchoolReport />} />}
               {can("reports") && <Route path="/student-affairs" element={<StudentAffairs />} />}
               {/* الصفحتان السابقتان باقيتان بروابطهما — محتواهما صار داخل مركز تقارير شؤون الطلاب */}
               {can("reports") && <Route path="/attendance-overview" element={<AttendanceOverview />} />}
