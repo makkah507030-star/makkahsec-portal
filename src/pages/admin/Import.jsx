@@ -82,7 +82,8 @@ export default function Import() {
       title: `استيراد «${def.label}» إلى البوابة`,
       impact: [
         `سيُكتب ${report.valid.length} سجلًا في بيانات المدرسة: ${report.newCount ?? 0} جديد، و${report.updateCount ?? 0} تُستبدل بياناته الحالية.`,
-        "الأسماء والفصول المسجّلة حاليًا تُستبدل ببيانات الملف، ولا يمكن استرجاعها من البوابة.",
+        "أسماء الطلاب وفصولهم وحالات قيدهم تُستبدل ببيانات الملف، ولا يمكن استرجاعها من البوابة.",
+        "أولياء الأمور المسجّلون بجوالاتهم يبقون كما هم، ويُضاف الجدد فقط.",
         "يظهر الأثر فورًا في التحضير والتقارير والإحصاءات لكل المستخدمين.",
       ],
       confirmLabel: "تنفيذ الاستيراد",
@@ -455,15 +456,19 @@ async function writeRows(type, rows, year, term, onProgress) {
   }));
   await upsertBatched("students", students, "national_id", (p) => onProgress(Math.round(p * 0.4)));
 
-  // 2) أولياء الأمور — الدمج بالجوال لأن نور لا يوفّر الهوية
+  // 2) أولياء الأمور — الدمج بالجوال لأن نور لا يوفّر الهوية. ولي الأمر المسجّل بجواله
+  // يبقى كما هو (اسمه المصحَّح وهويته وحسابه)، ويُضاف الجديد فقط: ملف نور لا يحمل
+  // اسم ولي الأمر، فلا يُكتب فوق الاسم المسجّل «ولي أمر فلان».
+  const known = new Set((await fetchAll("guardians", "id, mobile")).map((g) => g.mobile));
   const gMap = new Map();
-  rows.forEach((r) =>
+  rows.forEach((r) => {
+    if (known.has(r.guardian_mobile)) return;
     gMap.set(r.guardian_mobile, {
       national_id: r.guardian_id || null,
       full_name: r.guardian_name,
       mobile: r.guardian_mobile,
-    })
-  );
+    });
+  });
   await upsertBatched("guardians", [...gMap.values()], "mobile",
     (p) => onProgress(40 + Math.round(p * 0.2)));
 
