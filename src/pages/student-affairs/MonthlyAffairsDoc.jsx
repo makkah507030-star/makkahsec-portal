@@ -14,6 +14,9 @@ import {
 
 const WD = { 0: "الأحد", 1: "الاثنين", 2: "الثلاثاء", 3: "الأربعاء", 4: "الخميس" };
 const DROP = { reported: "بلاغ جديد", withdrawn: "طُوي قيده", dismissed: "رُدّ البلاغ", returned: "عاد للدراسة" };
+// عند من الإحالة الآن (stageOf في lib/referrals)
+const STAGE_PARTS = [["done", "منتهية", S[0]], ["guardian", "لدى ولي الأمر", S[3]], ["counselor", "لدى الموجه", S[1]],
+  ["deputy", "لدى الوكيل", S[2]], ["teacher", "لدى المعلم", "#B9C4BE"]];
 const pc = (v) => (v == null ? "—" : `${v}%`);
 const docOf = (info) => ({ title: "التقرير الشهري لشؤون الطلاب", meta: [info.month, info.hijri], foot: "شؤون الطلاب" });
 
@@ -28,7 +31,7 @@ function highlights(d) {
   if (a.repeat3) out.push(`طلاب تكرر غيابهم 3 أيام فأكثر: ${n(a.repeat3)}.`);
   if (d.fpOn && d.late.incidents) out.push(`حالات التأخر الصباحي: ${n(d.late.incidents)}، والمتأخرون: ${countAr(d.late.students, "student")}.`);
   if (d.warnings.total) out.push(`إنذارات غياب صدرت: ${n(d.warnings.total)}.`);
-  if (d.referrals.total) out.push(`الإحالات: ${n(d.referrals.total)}، أُقفل منها ${n(d.referrals.closed)}.`);
+  if (d.referrals.total) out.push(`الإحالات: ${n(d.referrals.total)}، أُنهي إجراء ${n(d.referrals.closed)} منها.`);
   return out.slice(0, 6);
 }
 
@@ -118,14 +121,15 @@ export function affairsPages({ d, info, theme = "light", notes, sigs = {} }) {
 
     <Page key="refs" {...common} page={4} sec={{ no: 3, title: "الإحالات والمنقطعون", sub: "الإحالات السلوكية وإحالات المعلمين، وبلاغات الانقطاع" }}>
       <Kpis items={[
-        { ic: "arrow", t: "الإحالات", v: d.referrals.total, s: `أُقفلت ${n(d.referrals.closed)}`, c: S[1] },
+        { ic: "arrow", t: "الإحالات", v: d.referrals.total, s: `أُنهي إجراؤها ${n(d.referrals.closed)}`, c: S[1] },
         { ic: "user", t: "إحالات المعلمين", v: d.referrals.byKind.teacher ?? 0, s: "من الحصص", c: S[0] },
-        { ic: "shield", t: "إحالات المخالفات", v: d.referrals.byKind.behavior ?? 0, s: "من الوكيل", c: S[3] },
+        { ic: "shield", t: "إحالات الوكيل", v: (d.referrals.byKind.behavior ?? 0) + (d.referrals.byKind.missing ?? 0),
+          s: `مخالفات ${d.referrals.byKind.behavior ?? 0} · مفقودون ${d.referrals.byKind.missing ?? 0}`, c: S[3] },
         { ic: "exit", t: "بلاغات الانقطاع", v: d.dropouts.total, s: `طُوي قيد ${n(d.dropouts.byStatus.withdrawn ?? 0)}`, c: S[2] },
       ]} />
       <div className="mr-row c2">
         <Box icon="check" title="حالة الإحالات" aside={n(d.referrals.total)}>
-          {d.referrals.total ? <Split parts={[{ t: "مُقفلة", v: d.referrals.closed, c: S[0] }, { t: "قيد المتابعة", v: d.referrals.total - d.referrals.closed, c: S[2] }]} /> : <div className="mr-empty">لا إحالات هذا الشهر.</div>}
+          {d.referrals.total ? <Split parts={STAGE_PARTS.map(([k, t, c]) => ({ t, v: d.referrals.byStage[k] ?? 0, c }))} /> : <div className="mr-empty">لا إحالات هذا الشهر.</div>}
           <div style={{ marginTop: 10 }}><Bars items={[1, 2, 3].map((g) => ({ t: GRADE_NAMES[g], v: d.referrals.byGrade[g] ?? 0, c: S[1] }))} /></div>
         </Box>
         <Box icon="exit" title="بلاغات الانقطاع" aside={n(d.dropouts.total)}>

@@ -65,15 +65,16 @@ on conflict (id) do update set created_at = excluded.created_at, sent_at = exclu
 
 -- إحالتان وصلتا الموجه: واحدة عالجها، وأخرى لديه الآن
 insert into public.student_referrals (id, serial, student_id, student_name, class_label, grade, teacher_name, subject,
-                                      referral_date, reason, status, counselor_id, counselor_name, counselor_at, created_at)
+                                      referral_date, reason, status, counselor_id, counselor_name, counselor_at, created_at, deputy_at, deputy_name)
 values
   ('00000000-0000-4000-9400-000000000001', 'T-DEMO-1', '00000000-0000-4000-e000-000000000101', 'طالب تجريبي الأول', '101', 1,
    'معلم الرياضيات (تجريبي)', 'الرياضيات', pg_temp.d(2), 'كثرة الحديث أثناء الشرح', 'closed',
-   '00000000-0000-4000-a000-000000000021', 'الموجه الطلابي للصف الأول (تجريبي)', pg_temp.d(4), pg_temp.d(2)),
+   '00000000-0000-4000-a000-000000000021', 'الموجه الطلابي للصف الأول (تجريبي)', pg_temp.d(4), pg_temp.d(2), pg_temp.d(3), 'وكيل شؤون الطلاب (تجريبي)'),
   ('00000000-0000-4000-9400-000000000002', 'T-DEMO-2', '00000000-0000-4000-e000-000000000104', 'طالب تجريبي الرابع', '101', 1,
    'معلم اللغة العربية (تجريبي)', 'اللغة العربية', pg_temp.d(9), 'عدم إحضار الكتاب والواجبات', 'with_counselor',
-   null, null, null, pg_temp.d(9))
-on conflict (id) do update set referral_date = excluded.referral_date, counselor_at = excluded.counselor_at, created_at = excluded.created_at;
+   null, null, null, pg_temp.d(9), pg_temp.d(9), 'وكيل شؤون الطلاب (تجريبي)')
+on conflict (id) do update set referral_date = excluded.referral_date, counselor_at = excluded.counselor_at,
+  created_at = excluded.created_at, deputy_at = excluded.deputy_at, deputy_name = excluded.deputy_name;
 
 -- نماذج التوجيه التي أصدرها الموجه (ما وُجد قالبه)
 insert into public.form_documents (id, template_id, serial, title, recipient, student_id, data, status, hijri_year, created_by, created_at)

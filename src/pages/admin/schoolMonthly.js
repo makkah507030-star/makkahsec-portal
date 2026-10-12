@@ -2,6 +2,7 @@
 import { supabase } from "../../lib/supabase";
 import { loadAffairsMonthly, monthBounds } from "../student-affairs/monthlyData";
 import { eventPhase } from "../EventsReportDoc.jsx";
+import { loadPrograms, programState } from "../GuidanceMore.jsx";
 
 /* =====================================================================
    بيانات التقرير الشهري للمدرسة (لمدير المدرسة والدعم الفني): خلاصة الشهر
@@ -24,7 +25,8 @@ export async function loadSchoolMonthly(month) {
     quiet(inM(supabase.from("guidance_cases").select("id, grade"), "opened_at")),
     quiet(inM(supabase.from("guidance_cases").select("id, outcome"), "closed_at")),
     quiet(inM(supabase.from("guidance_sessions").select("id, kind"), "session_date")),
-    quiet(inM(supabase.from("guidance_programs").select("id, beneficiaries").eq("status", "done"), "done_date")),
+    // البرامج الإرشادية للصفوف الثلاثة بأحداثها: المنفَّذ يدويًا أو باعتماد حدثه (programState)
+    Promise.all([1, 2, 3].map((g) => quiet(loadPrograms(g)))).then((rs) => ({ data: rs.flatMap((r) => r.data ?? []) })),
     quiet(inM(supabase.from("guidance_requests").select("id, status"), "created_at")),
     quiet(inM(supabase.from("school_events").select("id, title, category, event_date, stage, cancelled_at, event_participants(attended)").is("cancelled_at", null), "event_date")),
     // التطوير المهني: كل ما تجاوز المسودة، ويُؤرَّخ بتاريخ النشاط نفسه (data.date) لا باعتماده —
@@ -59,6 +61,8 @@ export async function loadSchoolMonthly(month) {
   }
 
   // الأحداث المنفّذة وحدها (eventPhase): القادمة لم يحن موعدها، والمسودة التي مضى موعدها لم تُستكمل
+  const progDone = (programs.data ?? []).map((p) => ({ ...p, st: programState(p) }))
+    .filter((p) => p.st.done && p.st.date && p.st.date >= b.from && p.st.date < b.to);
   const E = (events.data ?? []).filter((e) => ["approved", "done"].includes(eventPhase(e)));
   const upcomingEvents = (events.data ?? []).filter((e) => eventPhase(e) === "upcoming").length;
   const F = forms.data ?? [];
@@ -70,8 +74,8 @@ export async function loadSchoolMonthly(month) {
     guidance: {
       opened: (cases.data ?? []).length, closed: (closed.data ?? []).length,
       improved: (closed.data ?? []).filter((c) => c.outcome === "improved").length,
-      sessions: (sessions.data ?? []).length, programs: (programs.data ?? []).length,
-      beneficiaries: (programs.data ?? []).reduce((a, p) => a + (p.beneficiaries ?? 0), 0),
+      sessions: (sessions.data ?? []).length, programs: progDone.length,
+      beneficiaries: progDone.reduce((a, p) => a + (p.st.beneficiaries ?? 0), 0),
       requests: (requests.data ?? []).length, requestsDone: (requests.data ?? []).filter((r) => r.status === "done").length,
     },
     events: {

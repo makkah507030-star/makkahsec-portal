@@ -25,7 +25,7 @@ function highlights(d) {
   if (d.pd.total) out.push(`أنشطة التطوير المهني: ${n(d.pd.total)} (تقارير ${n(d.pd.reports)}، مجتمعات تعلم ${n(d.pd.plc)}، زيارات ${n(d.pd.visits)})، اعتُمد منها ${n(d.pd.approved)}.`);
   if (d.quizzes.total) out.push(`الاختبارات في البوابة: ${n(d.quizzes.total)}، رُصدت درجات ${n(d.quizzes.graded)} منها${d.quizzes.avg != null ? ` بمتوسط أداء ${pc(d.quizzes.avg)}` : ""}.`);
   if (d.guidance.sessions) out.push(`الجلسات الإرشادية: ${n(d.guidance.sessions)}، والحالات الجديدة ${n(d.guidance.opened)}.`);
-  if (d.referrals.total) out.push(`الإحالات: ${n(d.referrals.total)}، أُقفل منها ${n(d.referrals.closed)}.`);
+  if (d.referrals.total) out.push(`الإحالات: ${n(d.referrals.total)}، أُنهي إجراء ${n(d.referrals.closed)} منها.`);
   if (d.forms.total) out.push(`النماذج الصادرة من البوابة: ${n(d.forms.total)}.`);
   if (!out.length) out.push("لم تُسجَّل أعمال في البوابة لهذا الشهر بعد.");
   return out.slice(0, 6);
@@ -52,7 +52,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
     <Page key="dash" {...common} page={2} sec={{ no: 1, title: "لوحة المدرسة", sub: "أرقام الشهر من أقسام البوابة" }}>
       <Kpis items={[
         { ic: "check", t: "نسبة الحضور", v: pc(a.pct), s: `الأيام المعتمدة ${a.days}`, c: S[0] },
-        { ic: "arrow", t: "الإحالات", v: d.referrals.total, s: `أُقفلت ${d.referrals.closed}`, c: S[3] },
+        { ic: "arrow", t: "الإحالات", v: d.referrals.total, s: `أُنهي إجراؤها ${d.referrals.closed}`, c: S[3] },
         { ic: "chat", t: "جلسات إرشادية", v: g.sessions, s: `حالات جديدة ${g.opened}`, c: S[1] },
         { ic: "star", t: "الأحداث المنفّذة", v: d.events.total, s: `الحاضرون ${n(d.events.attended)}${d.events.upcoming ? ` · قادمة ${d.events.upcoming}` : ""}`, c: S[2] },
         { ic: "award", t: "التطوير المهني", v: pdAll, s: `معتمد ${n(d.pd.approved)} · شواهد ${n(d.pd.evidence)}`, c: S[0] },
@@ -64,7 +64,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
         <div className="mr-rings">
           <Ring value={a.pct == null ? null : Math.round(a.pct)} label="الحضور" sub={`${n(a.present)} حضور`} color={S[0]} />
           <Ring value={pct(d.events.approved, d.events.total)} label="اعتماد الأحداث" sub={`${d.events.approved} من ${d.events.total}`} color={S[1]} />
-          <Ring value={pct(d.referrals.closed, d.referrals.total)} label="إقفال الإحالات" sub={`${d.referrals.closed} من ${d.referrals.total}`} color={S[2]} />
+          <Ring value={pct(d.referrals.closed, d.referrals.total)} label="إنهاء الإحالات" sub={`${d.referrals.closed} من ${d.referrals.total}`} color={S[2]} />
           <Ring value={pct(g.requestsDone, g.requests)} label="مقابلات الموجهين" sub={`${g.requestsDone} من ${g.requests}`} color={S[3]} />
         </div>
       </Box>
@@ -88,7 +88,8 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
         <Box icon="alert" title="الإنذارات والإحالات">
           <Bars wide items={WARNING_STAGES.map((s, i) => ({ t: s.label, v: d.warnings.byStage[s.key] ?? 0, c: [S[2], S[3], S[1]][i] }))} />
           <div style={{ marginTop: 12 }}>
-            {d.referrals.total ? <Split parts={[{ t: "إحالات مُقفلة", v: d.referrals.closed, c: S[0] }, { t: "قيد المتابعة", v: d.referrals.total - d.referrals.closed, c: S[2] }]} /> : <div className="mr-empty">لا إحالات هذا الشهر.</div>}
+            {d.referrals.total ? <Split parts={[["done", "منتهية", S[0]], ["guardian", "لدى ولي الأمر", S[3]], ["counselor", "لدى الموجه", S[1]],
+              ["deputy", "لدى الوكيل", S[2]], ["teacher", "لدى المعلم", "#B9C4BE"]].map(([k, t, c]) => ({ t, v: d.referrals.byStage?.[k] ?? 0, c }))} /> : <div className="mr-empty">لا إحالات هذا الشهر.</div>}
           </div>
         </Box>
       </div>
