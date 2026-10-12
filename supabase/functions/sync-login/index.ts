@@ -65,9 +65,10 @@ Deno.serve(async (req) => {
       return json({ ok: true, created: true, username, password });
     }
 
-    // 2) حساب موجود: يُنقل للرقم الجديد إن تغيّر
+    // 2) حساب موجود: يُنقل للرقم الجديد إن تغيّر — في جدول المستخدمين أو في بريد الدخول نفسه
     const user = (await admin.from("users").select("username, role").eq("id", rec.user_id).maybeSingle()).data as any;
-    if (user && String(user.username ?? "").trim() === username) {
+    const authEmail = String((await admin.auth.admin.getUserById(rec.user_id)).data?.user?.email ?? "").toLowerCase();
+    if (user && String(user.username ?? "").trim() === username && authEmail === email.toLowerCase()) {
       await admin.from("users").update({ full_name: fullName }).eq("id", rec.user_id);
       return json({ ok: true, unchanged: true });
     }
@@ -80,7 +81,7 @@ Deno.serve(async (req) => {
     }
     const u = await admin.from("users").update({ username, full_name: fullName, must_change_pw: true }).eq("id", rec.user_id);
     if (u.error) return json({ error: u.error.message }, 400);
-    return json({ ok: true, moved: true, from: user?.username ?? null, username, password });
+    return json({ ok: true, moved: true, from: authEmail.replace(EMAIL_DOMAIN, "") || user?.username || null, username, password });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }
