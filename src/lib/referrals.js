@@ -78,6 +78,10 @@ export const daysLabel = (n) =>
   n === 0 ? "اليوم" : n === 1 ? "منذ يوم" : n === 2 ? "منذ يومين" :
   n <= 10 ? `منذ ${n} أيام` : `منذ ${n} يومًا`;
 
+/* أرسلها الوكيل لولي الأمر مباشرة دون تحويلها للموجه */
+export const isDirectToGuardian = (r) =>
+  r.kind === "teacher" && !!r.closed_at && !r.counselor_id;
+
 /* مسار الإحالة خطوة خطوة: ما تمّ بتاريخه، وما بقي */
 export function timelineOf(r) {
   // إحالة المخالفة السلوكية يصدرها الوكيل مباشرة (بلا مرحلة المعلم)
@@ -92,6 +96,12 @@ export function timelineOf(r) {
     { t: "أحالها الوكيل",  who: r.deputy_name,    at: r.deputy_at },
     { t: "إجراء الموجه",   who: r.counselor_name, at: r.counselor_at },
     { t: "اعتمدها الوكيل وأُشعر ولي الأمر", who: "", at: r.closed_at },
+    { t: "رد ولي الأمر",   who: "",               at: r.guardian_ack_at },
+  ];
+  // وجّهها الوكيل لولي الأمر مباشرة دون الموجه
+  if (isDirectToGuardian(r)) return [
+    { t: "رفعها المعلم",   who: r.teacher_name,   at: r.teacher_at ?? r.created_at },
+    { t: "وجّهها الوكيل لولي الأمر مباشرة", who: r.deputy_name, at: r.closed_at },
     { t: "رد ولي الأمر",   who: "",               at: r.guardian_ack_at },
   ];
   return [
