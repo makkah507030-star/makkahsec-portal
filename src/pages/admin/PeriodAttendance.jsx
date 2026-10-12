@@ -221,7 +221,7 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
                            className="num rounded-sm2 border border-line px-2 py-1 text-xs font-semibold text-ink hover:bg-canvas">
                           {s.mobile}
                         </a>
-                        <a href={`https://wa.me/${waNumber(s.mobile)}?text=${encodeURIComponent(remindText(s))}`} target="_blank" rel="noreferrer"
+                        <a href={`https://api.whatsapp.com/send?phone=${waNumber(s.mobile)}&text=${encodeURIComponent(remindText(s))}`} target="_blank" rel="noreferrer"
                            className="rounded-sm2 bg-present px-2 py-1 text-xs font-semibold text-white hover:opacity-90">
                           تذكير واتساب
                         </a>
