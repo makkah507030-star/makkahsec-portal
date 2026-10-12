@@ -25,8 +25,7 @@ Deno.serve(async (req) => {
     const admin = createClient(url, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
     const roles = (await admin.from("admin_roles").select("role_type").eq("user_id", actor.id)).data || [];
-    const actorIsPrincipal = roles.some((r) => r.role_type === "principal");
-    const allowed = actorIsPrincipal || roles.some((r) => r.role_type === "tech_support");
+    const allowed = roles.some((r) => ["principal", "tech_support"].includes(r.role_type));
     if (!allowed) return json({ error: "هذه العملية للمدير أو الدعم الفني فقط" }, 403);
 
     const body = await req.json();
@@ -37,11 +36,9 @@ Deno.serve(async (req) => {
       .eq("id", userId).maybeSingle()).data;
     if (!target) return json({ error: "المستخدم غير موجود" }, 404);
 
-    // حساب المدير لا يعيده إلا المدير
-    if (target.role === "admin" && !actorIsPrincipal) {
-      const tr = (await admin.from("admin_roles").select("role_type").eq("user_id", userId)).data || [];
-      if (tr.some((r) => r.role_type === "principal")) return json({ error: "لا يمكن إعادة تعيين حساب المدير" }, 403);
-    }
+    // حساب المدير يعيده المدير والدعم الفني، وتُسجَّل العملية باسم المنفّذ في سجل العمليات
+    const tr = (await admin.from("admin_roles").select("role_type").eq("user_id", userId)).data || [];
+    const targetIsPrincipal = tr.some((r) => r.role_type === "principal");
 
     const password = initialPassword(String(target.username ?? "").trim());
     const pwRes = await admin.auth.admin.updateUserById(userId, { password });
@@ -49,6 +46,14 @@ Deno.serve(async (req) => {
 
     const flagRes = await admin.from("users").update({ must_change_pw: true }).eq("id", userId);
     if (flagRes.error) return json({ error: flagRes.error.message }, 400);
+
+    if (targetIsPrincipal && userId !== actor.id) {
+      // بجلسة المنفّذ: يملأ الخادم اسمه وأدواره (supabase/audit_log.sql)، وفشل التسجيل لا يلغي العملية
+      await userClient.from("audit_log").insert({
+        action: "إعادة كلمة مرور حساب المدير", level: "high", path: "/password-reset",
+        details: [`أُعيدت كلمة مرور ${target.full_name || target.username} إلى كلمة المرور الأولية`],
+      });
+    }
 
     return json({ ok: true, full_name: target.full_name || target.username, username: target.username, password });
   } catch (e) {

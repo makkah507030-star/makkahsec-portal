@@ -1,26 +1,11 @@
 import { useEffect, useState } from "react";
+import { describeEdgeError } from "../../lib/edgeError.js";
 import { supabase } from "../../lib/supabase";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 
-// يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
-// (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
-async function describeEdgeError(e) {
-  if (e?.context && typeof e.context.clone === "function") {
-    try {
-      const body = await e.context.clone().json();
-      if (body?.error || body?.message) return body.error ?? body.message;
-    } catch {
-      try {
-        const text = await e.context.clone().text();
-        if (text) return text;
-      } catch { /* تجاهل */ }
-    }
-  }
-  return e?.message ?? String(e);
-}
 
 const TARGETS = [
   { key: "teachers",  label: "المعلمون",       login: "رقم الهوية" },

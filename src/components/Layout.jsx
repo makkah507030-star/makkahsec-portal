@@ -10,6 +10,7 @@ import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
+import IdleLogout from "./IdleLogout.jsx";
 import { loadPrincipalSignature } from "../lib/principalSignature.js";
 import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
@@ -71,6 +72,7 @@ const ADMIN_GROUPS = [
       { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "swap" },
       { to: "/noor-grades",       label: "متابعة رصد الدرجات", roles: ["principal", "deputy_academic", "tech_support"], icon: "clipboard", kw: "نور الفترات" },
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
+      { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
     ],
   },
@@ -179,6 +181,7 @@ const TEACHER_GROUPS = [
     title: "الأداء الوظيفي",
     items: [
       { to: "/my-performance", label: "شواهد الأداء الوظيفي", icon: "award", kw: "شواهد تقييم أداء" },
+      { to: "/ethics",         label: "ميثاق أخلاقيات المهنة", icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
     ],
   },
   {
@@ -674,6 +677,7 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-gray-tint">
       <AnnouncementModal />
+      <IdleLogout />
       <TrialBanner />
 
       {/* شريط علوي للجوال */}

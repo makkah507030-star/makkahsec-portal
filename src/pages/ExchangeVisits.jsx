@@ -8,6 +8,8 @@ import { fmtDate, fmtHijri } from "../lib/dates";
 import { printThen } from "../lib/print.js";
 import Loader from "../components/Loader.jsx";
 import PrintPortal from "../components/PrintPortal.jsx";
+import { useSignerImages } from "../lib/userSignatures.js";
+import SignedMark from "../components/SignedMark.jsx";
 import moeLogo from "../assets/moe-logo.png";
 import {
   XV_STAGES, XV_STATUS, XV_ELEMENTS, XV_ALL, XV_LEVELS, XV_PRESETS, xvMissing,
@@ -444,7 +446,9 @@ export function VisitSheet({ v }) {
   const td = { border: "1px solid #d8e4dc", padding: "4px 6px" };
   const lvl = (k) => XV_LEVELS.find((l) => l.k === v.ratings?.[k]);
   const sum = XV_LEVELS.map((l) => ({ ...l, n: XV_ALL.filter((i) => v.ratings?.[i.k] === l.k).length }));
-  const signed = (ok) => ok ? <span style={{ color: "#2f7a4f" }}>✓ وُقّع إلكترونيًا</span> : "—";
+  // صورة توقيع الموقّع من «توقيعي» إن وُجدت (supabase/pd_signer_signatures.sql)
+  const sigImg = useSignerImages([v.host_signed_at && v.host_user_id, v.status !== "draft" && v.visitor_user_id]);
+  const signed = (ok, who) => ok ? <SignedMark url={sigImg.get(who)} /> : "—";
   return (
     <div className="sheet" dir="rtl" style={{ width: "210mm", minHeight: "297mm", background: "#fff", padding: "11mm 12mm",
       color: "#1f2a24", fontSize: 12, boxSizing: "border-box" }}>
@@ -491,7 +495,7 @@ export function VisitSheet({ v }) {
         <div style={{ ...box, marginTop: 9, padding: "7px 10px" }}><span style={lbl}>تعقيب المعلم المستضيف</span>{v.host_comment}</div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginTop: 16, textAlign: "center" }}>
-        {[["المعلم المستضيف", v.host_name, signed(!!v.host_signed_at)], ["المعلم الزائر", v.visitor_name, signed(v.status !== "draft")],
+        {[["المعلم المستضيف", v.host_name, signed(!!v.host_signed_at, v.host_user_id)], ["المعلم الزائر", v.visitor_name, signed(v.status !== "draft", v.visitor_user_id)],
           ["وكيل الشؤون التعليمية", v.status === "approved" ? v.decided_name : "", v.status === "approved" ? <span style={{ color: "#2f7a4f" }}>✓ اعتمد</span> : ""]]
           .map(([t, n, s]) => (
             <div key={t} style={{ borderTop: "1.3px dashed #b8cbbf", paddingTop: 6, fontSize: 11, lineHeight: 1.7 }}>{t}<br /><b>{n}</b><br />{s}</div>

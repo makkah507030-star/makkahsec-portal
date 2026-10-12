@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { describeEdgeError } from "../../lib/edgeError.js";
 import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { cleanIdentity, cleanMobile, cleanText, guessIdentityType } from "../../lib/importer";
@@ -74,22 +75,6 @@ export default function Records() {
 /* أدوات مشتركة                                                   */
 /* ============================================================= */
 
-// يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
-// (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
-async function describeEdgeError(e) {
-  if (e?.context && typeof e.context.json === "function") {
-    try {
-      const body = await e.context.clone().json();
-      if (body?.error || body?.message) return body.error ?? body.message;
-    } catch {
-      try {
-        const text = await e.context.clone().text();
-        if (text) return text;
-      } catch { /* تجاهل */ }
-    }
-  }
-  return e?.message ?? String(e);
-}
 
 function Banner({ err, msg }) {
   if (!err && !msg) return null;
