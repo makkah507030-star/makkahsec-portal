@@ -2,26 +2,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
-import logoIcon from "../assets/icon-mint.png";
-import moeLogo from "../assets/moe-logo.png";
-import PrintPortal from "../components/PrintPortal.jsx";
 import Loader from "../components/Loader.jsx";
-import PrincipalSign from "../components/PrincipalSign.jsx";
-import { PRINCIPAL_NAME } from "../lib/exportUtils.js";
+import ReportViewer from "../components/report/ReportViewer.jsx";
+import { signatureByName } from "../lib/userSignatures";
+import { loadPrincipalSignature, loadSchoolStamp } from "../lib/principalSignature";
+import { academicYearLabel } from "./studio/lib";
+import { eventsReportPages, STAGE_AR } from "./EventsReportDoc.jsx";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
    • المنظّم يرى ما نفّذه، والإدارة ترى كل الأحداث.
-   • تقرير حصر بالأحداث ومشاركيها، جاهز للطباعة بهوية المدرسة.
+   • تقرير مصمّم بهوية استوديو البوابة (EventsReportDoc.jsx): غلاف وملخص
+     بالمؤشرات والرسوم، وأبرز الأحداث بصورها، وسجل الأحداث والتوقيعات.
    ===================================================================== */
-
-const GOV = [
-  "المملكة العربية السعودية",
-  "وزارة التعليم",
-  "الإدارة العامة للتعليم بمنطقة مكة المكرمة",
-];
-
-const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
 const fmtG = (s) => {
   if (!s) return "—";
@@ -30,11 +23,6 @@ const fmtG = (s) => {
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
 
-const STAGE_AR = {
-  draft: "مسودة", participants: "اختيار الطلاب", consent: "الموافقات",
-  permission: "الاستئذان", attendance: "الحضور", certificates: "الشهادات",
-  report: "التقرير", approved: "معتمد",
-};
 
 export default function EventsReports() {
   const { session, profile, adminRoles } = useSession();
@@ -48,7 +36,10 @@ export default function EventsReports() {
   const [scope, setScope] = useState(isManager ? "all" : "mine");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [printing, setPrinting] = useState(false);
+  const [view, setView] = useState("list");
+  const [theme, setTheme] = useState("light");
+  const [photos, setPhotos] = useState({});
+  const [sigs, setSigs] = useState({});
 
   useEffect(() => {
     (async () => {
@@ -59,13 +50,14 @@ export default function EventsReports() {
       const ids = (data ?? []).map((e) => e.id);
       if (!ids.length) return;
       const { data: ps } = await supabase.from("event_participants")
-        .select("event_id, attended, cert_issued_at").in("event_id", ids);
+        .select("event_id, attended, cert_issued_at, consent_at").in("event_id", ids);
       const c = {};
       (ps ?? []).forEach((p) => {
-        const x = (c[p.event_id] ??= { total: 0, attended: 0, certs: 0 });
+        const x = (c[p.event_id] ??= { total: 0, attended: 0, certs: 0, consent: 0 });
         x.total++;
         if (p.attended) x.attended++;
         if (p.cert_issued_at) x.certs++;
+        if (p.consent_at) x.consent++;
       });
       setCounts(c);
     })();
@@ -90,6 +82,27 @@ export default function EventsReports() {
     });
     return t;
   }, [shown, counts]);
+
+  // التقرير المصمّم: صورة أولى لكل حدث معتمد، والتوقيعات والختم
+  useEffect(() => {
+    if (view !== "report") return;
+    const withPhoto = shown.filter((e) => !e.cancelled_at && e.stage === "approved" && e.report_photos?.length && !(e.id in photos)).slice(0, 12);
+    if (!withPhoto.length) return;
+    supabase.storage.from("event-reports").createSignedUrls(withPhoto.map((e) => e.report_photos[0]), 3600)
+      .then(({ data }) => setPhotos((p) => ({ ...p, ...Object.fromEntries(withPhoto.map((e, i) => [e.id, data?.[i]?.signedUrl ?? null])) })));
+  }, [view, shown]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const organizer = scope === "mine" ? profile?.full_name ?? "" : null;
+  useEffect(() => {
+    if (view !== "report") return;
+    let live = true;
+    Promise.all([organizer ? signatureByName(organizer) : null, loadPrincipalSignature(), loadSchoolStamp()])
+      .then(([o, p, st]) => { if (live) setSigs({ organizer: o, principal: p?.url ?? null, stamp: st }); });
+    return () => { live = false; };
+  }, [view, organizer]);
+  const pages = useMemo(() => (view === "report" && rows ? eventsReportPages({
+    events: shown, counts, photos, organizer, from, to, theme, sigs, year: academicYearLabel(),
+    scopeLabel: organizer ? "ما نفّذته" : "كل الأحداث",
+  }) : null), [view, rows, shown, counts, photos, organizer, from, to, theme, sigs]);
 
   const pill = (on) =>
     `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -123,12 +136,17 @@ export default function EventsReports() {
           <input type="date" className="field num mt-1" value={to}
                  onChange={(e) => setTo(e.target.value)} />
         </div>
-        <button className="btn-primary mr-auto" disabled={shown.length === 0}
-                onClick={() => { setPrinting(true); setTimeout(() => window.print(), 60); }}>
-          طباعة / حفظ PDF
-        </button>
+        <div className="mr-auto flex gap-1.5">
+          <button className={pill(view === "list")} onClick={() => setView("list")}>القائمة</button>
+          <button className={pill(view === "report")} onClick={() => setView("report")}>التقرير المصمّم</button>
+        </div>
       </div>
 
+      {view === "report" ? (
+        <ReportViewer id="ev-report" pages={pages} theme={theme} setTheme={setTheme}
+          fileTitle={`تقرير الأحداث والمناسبات${organizer ? ` - ${organizer}` : ""}`} />
+      ) : (
+        <>
       <div className="no-print grid grid-cols-2 gap-2 sm:grid-cols-4">
         {[["الأحداث", totals.events], ["الطلاب المشاركون", totals.students],
           ["الشهادات الصادرة", totals.certs], ["المعتمدة", totals.approved]].map(([t, v]) => (
@@ -168,109 +186,6 @@ export default function EventsReports() {
         })}
       </div>
 
-      {printing && (
-        <>
-          <PrintPortal id="ev-report" extraCss="#ev-report tr { break-inside: avoid; }">
-            <div className="mx-auto bg-white text-ink"
-                 style={{ width: "210mm", minHeight: "297mm", padding: "13mm 14mm",
-                          fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
-              <div className="flex items-start justify-between gap-4">
-                <div className="text-[11px] font-medium leading-[1.9]">
-                  {GOV.map((l) => <div key={l}>{l}</div>)}
-                  <div className="font-bold text-mint-deep">مدرسة مكة الثانوية</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <img src={moeLogo} alt="" className="h-10 w-auto" />
-                  <img src={logoIcon} alt="" className="h-10 w-auto" />
-                </div>
-              </div>
-              <div className="mt-2.5 h-px w-full" style={{
-                background: "linear-gradient(90deg,transparent,#3E635022 12%,#3E6350 50%,#3E635022 88%,transparent)",
-                ...INK }} />
-
-              <div className="mt-5 text-center">
-                <span className="rounded-pill px-5 py-1.5 text-[12.5px] font-semibold"
-                      style={{ background: "#EDFAF2", color: "#3E6350", ...INK }}>
-                  تقرير الأحداث والمناسبات
-                </span>
-                {scope === "mine" && (
-                  <p className="mt-2 text-[13px] text-muted">
-                    ما نفّذه: {profile?.full_name ?? ""}
-                  </p>
-                )}
-                {(from || to) && (
-                  <p className="num mt-1 text-[12px] text-muted">
-                    {from ? fmtG(from) : "من البداية"} — {to ? fmtG(to) : "حتى اليوم"}
-                  </p>
-                )}
-              </div>
-
-              <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-                {[["الأحداث", totals.events], ["الطلاب المشاركون", totals.students],
-                  ["الشهادات", totals.certs], ["المعتمدة", totals.approved]].map(([t, v]) => (
-                  <div key={t} className="rounded-[10px] border border-line py-2.5">
-                    <p className="num text-[20px] font-bold text-mint-deep">{v}</p>
-                    <p className="mt-0.5 text-[10.5px] text-muted">{t}</p>
-                  </div>
-                ))}
-              </div>
-
-              <table className="mt-5 w-full border-collapse text-[11.5px]">
-                <thead>
-                  <tr>
-                    {["م", "الحدث", "التاريخ", "المكان", "المنظّم", "الحاضرون", "الشهادات", "الحالة"]
-                      .map((h) => (
-                      <th key={h} className="border border-line px-1.5 py-2 text-center font-semibold text-mint-deep"
-                          style={{ background: "#EDFAF2", ...INK }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {shown.map((e, i) => {
-                    const c = counts[e.id] ?? { attended: 0, certs: 0 };
-                    return (
-                      <tr key={e.id}>
-                        <td className="num border border-line px-1.5 py-1.5 text-center">{i + 1}</td>
-                        <td className="border border-line px-1.5 py-1.5">{e.title}</td>
-                        <td className="num border border-line px-1.5 py-1.5 text-center">
-                          {fmtG(e.event_date)}
-                        </td>
-                        <td className="border border-line px-1.5 py-1.5">{e.venue || "—"}</td>
-                        <td className="border border-line px-1.5 py-1.5">{e.organizer_name || "—"}</td>
-                        <td className="num border border-line px-1.5 py-1.5 text-center">{c.attended}</td>
-                        <td className="num border border-line px-1.5 py-1.5 text-center">{c.certs}</td>
-                        <td className="border border-line px-1.5 py-1.5 text-center text-[10.5px]">
-                          {e.cancelled_at ? "ملغى" : STAGE_AR[e.stage] ?? e.stage}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-
-              <div className="mt-10 grid grid-cols-2 gap-8 text-center">
-                <div>
-                  <p className="text-[12px] text-muted">المنظّم</p>
-                  <div className="h-8" />
-                  <div className="mx-auto h-px w-44 bg-line" />
-                  <p className="mt-1.5 text-[12.5px] font-semibold">
-                    {scope === "mine" ? (profile?.full_name ?? "…") : "…"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[12px] text-muted">مدير المدرسة</p>
-                  <PrincipalSign height="h-8" />
-                  <div className="mx-auto h-px w-44 bg-line" />
-                  <p className="mt-1.5 text-[12.5px] font-semibold">{PRINCIPAL_NAME}</p>
-                </div>
-              </div>
-
-              <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-2.5 text-[10px] text-faint">
-                <span>بوابة مكة الثانوية الرقمية</span>
-                <span className="font-semibold text-mint-deep" dir="ltr">makkahsec.com</span>
-              </div>
-            </div>
-          </PrintPortal>
         </>
       )}
     </div>

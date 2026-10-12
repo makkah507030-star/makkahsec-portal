@@ -156,9 +156,10 @@ function Axis({ Wd, left, y, ymax, step }) {
   ));
 }
 
-/* أعمدة مكدّسة: cols = [{ label, sub?, values: {مفتاح: عدد} }]، والعمود الأول يمين الرسم كاتجاه القراءة */
-export function StackedColumns({ cols, series, height = 138 }) {
-  const Wd = 640, H = height, top = 18, bottom = cols.some((c) => c.sub) ? 34 : 22, left = 26;
+/* أعمدة مكدّسة: cols = [{ label, sub?, values: {مفتاح: عدد} }]، والعمود الأول يمين الرسم كاتجاه القراءة.
+   width: عرض الرسم بوحدات الخط — 640 لصندوق كامل العرض، و320 لنصفه فيبقى الخط مقروءًا */
+export function StackedColumns({ cols, series, height = 138, width = 640 }) {
+  const Wd = width, H = height, top = 18, bottom = cols.some((c) => c.sub) ? 34 : 22, left = 26;
   const tot = (c) => series.reduce((a, s) => a + (c.values[s.k] ?? 0), 0);
   const max = Math.max(1, ...cols.map(tot));
   const step = niceStep(max);
@@ -194,8 +195,8 @@ export function StackedColumns({ cols, series, height = 138 }) {
 }
 
 /* أعمدة متجاورة لسلسلتين أو أكثر على محور واحد: cols = [{ key, label, values }]، current يُبرز عمودًا */
-export function GroupedColumns({ cols, series, current, height = 150 }) {
-  const Wd = 640, H = height, top = 16, bottom = 22, left = 26;
+export function GroupedColumns({ cols, series, current, height = 150, width = 640 }) {
+  const Wd = width, H = height, top = 16, bottom = 22, left = 26;
   const max = Math.max(1, ...cols.flatMap((c) => series.map((s) => c.values[s.k] ?? 0)));
   const step = niceStep(max);
   const ymax = Math.ceil(max / step) * step;
