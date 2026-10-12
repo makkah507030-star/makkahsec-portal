@@ -10,6 +10,7 @@ import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
+import IdleLogout from "./IdleLogout.jsx";
 import { loadPrincipalSignature } from "../lib/principalSignature.js";
 import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
@@ -674,6 +675,7 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-gray-tint">
       <AnnouncementModal />
+      <IdleLogout />
       <TrialBanner />
 
       {/* شريط علوي للجوال */}

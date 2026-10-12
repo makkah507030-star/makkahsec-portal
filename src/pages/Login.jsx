@@ -1,9 +1,10 @@
 // src/pages/Login.jsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase, idToEmail, isConfigured, normalizeLogin } from "../lib/supabase";
 import logoIcon from "../assets/icon-mint.png";
 import { useNotice } from "../lib/useNotice.js";
+import { startActive, wasIdleOut, clearIdleOut } from "../lib/idle.js";
 import TrialBanner from "../components/TrialBanner.jsx";
 
 /* =====================================================================
@@ -42,6 +43,9 @@ export default function Login() {
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useNotice("", "error");
   const [busy, setBusy] = useState(false);
+  // من خرج تلقائيًا لعدم النشاط (components/IdleLogout.jsx) يعرف السبب
+  const [idleOut] = useState(wasIdleOut);
+  useEffect(() => { clearIdleOut(); }, []);
 
   // تسجيل محاولة الدخول (ناجحة أو فاشلة) في سجل الدخول والخروج — بلا
   // انتظار ولا تعطيل لتجربة الدخول لو فشل التسجيل نفسه لأي سبب
@@ -58,6 +62,7 @@ export default function Login() {
     e.preventDefault();
     setError("");
     setBusy(true);
+    startActive();
 
     const { error } = await supabase.auth.signInWithPassword({
       email: idToEmail(normalizeLogin(nationalId)),
@@ -192,6 +197,11 @@ export default function Login() {
               </div>
             </div>
 
+            {idleOut && !error && (
+              <p className="mb-4 rounded-sm2 bg-warning-light px-3 py-2.5 text-sm text-warning">
+                سُجّل خروجك تلقائيًا لعدم النشاط، حمايةً لحسابك. ادخل من جديد للمتابعة.
+              </p>
+            )}
             {error && (
               <p className="mb-4 flex items-start gap-2 rounded-sm2 bg-absent/10 px-3 py-2.5 text-sm text-absent">
                 <svg viewBox="0 0 24 24" fill="none" className="mt-0.5 h-4 w-4 shrink-0"
