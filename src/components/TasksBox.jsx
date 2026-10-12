@@ -134,7 +134,7 @@ function TaskCard({ t, active, onExpand }) {
         </span>
       </div>
       <p className="mt-2 text-[12.5px] font-semibold leading-snug text-ink">{t.label}</p>
-      {t.sub && <p className="num mt-0.5 text-[11px] leading-snug text-muted">{t.sub}</p>}
+      {t.sub && <p className="mt-0.5 text-[11px] leading-snug text-muted tabular-nums">{t.sub}</p>}
       <p className="mt-auto pt-1.5 text-[11px] font-semibold text-mint-deep">
         {expands ? (active ? "إخفاء القائمة ↑" : "عرض القائمة ↓") : one ? "افتح الإجراء ←" : "انتقل للإجراء ←"}
       </p>
