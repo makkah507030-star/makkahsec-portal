@@ -100,7 +100,7 @@ async function load() {
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
     plcBack, pdBack, xvBack, perfAck, guidance,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
-    giTeacher, giDeputy, giCounselor, giGuardian,
+    giTeacher, giDeputy, giCounselor, giGuardian, dropouts,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? rowsFlag((f) => supabase.from("form_documents").select(`id, title, recipient${f}`)
@@ -160,6 +160,10 @@ async function load() {
       .in("status", ["teachers", "counselor"]).in("grade", myGrades).order("created_at").limit(100)) : noRows,
     isGuardian ? rowsOf(supabase.from("guidance_inquiries").select("id, student_name, flag")
       .eq("status", "sent").is("guardian_seen_at", null).order("created_at").limit(50)) : noRows,
+
+    // بلاغات المعلمين عن طلاب منقطعين تنتظر طي القيد أو ردها (supabase/student_dropouts_1.sql)
+    isDeputy ? rowsOf(supabase.from("student_dropouts").select("id, student_name")
+      .eq("status", "reported").order("reported_at").limit(100)) : noRows,
   ]);
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
@@ -225,6 +229,9 @@ async function load() {
     { key: "perfAck", n: perfAck, to: "/my-performance", label: "تقييم أداء ينتظر اطلاعك", tone: "warning", icon: "award" },
     { key: "referrals", n: refDeputy.length + refCounselor.length, to: "/referrals", label: "إحالات تنتظر إجراءك", tone: "warning", icon: "send",
       items: [...refDeputy, ...refCounselor].map((r) => ({ id: r.id, to: "/referrals", title: r.student_name ?? "", flag: r.flag ?? null })) },
+    { key: "dropouts", n: dropouts.length, to: "/dropouts?tab=new", label: "بلاغات طلاب منقطعين تنتظر إجراءك",
+      tone: "warning", icon: "userX",
+      items: dropouts.map((r) => ({ id: r.id, to: "/dropouts?tab=new", title: r.student_name ?? "" })) },
     { key: "guidance", n: guidance, to: `/guidance?tab=requests${myGrades.length === 1 ? `&grade=${myGrades[0]}` : ""}`,
       label: "طلبات مقابلة جديدة", tone: "warning", icon: "heart" },
 
@@ -272,6 +279,7 @@ async function load() {
       + pdToSign.length + pdPending.length + pdBack.length
       + xvHost.length + xvPending.length + xvBack.length,
     "/my-performance": perfAck,
+    "/dropouts": dropouts.length,
     "/guidance": guidance + giDeputy.length + giReady.length,
     "/": behaviorGuardian.length + refGuardian.length + pledges.length + giGuardian.length,
     _tasks: tasks,
