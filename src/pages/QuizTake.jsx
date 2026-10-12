@@ -16,9 +16,11 @@ import Loader from "../components/Loader.jsx";
    ===================================================================== */
 
 const AR = { ltrs: ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"], tf: [["true", "صح"], ["false", "خطأ"]], q: "س", f: "ف",
-  kinds: { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أم خطأ", match: "زاوج بين العمودين" } };
+  kinds: { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أم خطأ", match: "زاوج بين العمودين" },
+  listen: "الاستماع — استمع للمقطع ثم أجب", noAudio: "تعذّر تحميل المقطع الصوتي — حدّث الصفحة." };
 const EN = { ltrs: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"], tf: [["true", "True"], ["false", "False"]], q: "Q", f: "P",
-  kinds: { mcq: "Choose the correct answer", truefalse: "True or False", match: "Match column A with column B" } };
+  kinds: { mcq: "Choose the correct answer", truefalse: "True or False", match: "Match column A with column B" },
+  listen: "Listening — listen to the audio, then answer", noAudio: "The audio could not be loaded — refresh the page." };
 
 const lsKey = (id) => `online-quiz:${id}`;
 const lsGet = (id) => { try { return JSON.parse(localStorage.getItem(lsKey(id)) || "null"); } catch { return null; } };
@@ -141,7 +143,16 @@ export default function QuizTake() {
   };
 
   const qs = useMemo(() => data?.questions ?? [], [data]);
-  const groups = useMemo(() => groupQuestions(qs), [qs]);
+  // أسئلة الاستماع قسم مستقل أولًا مع المقطع الصوتي، ثم بقية الأسئلة بحسب نوعها
+  const listenGroups = useMemo(() => groupQuestions(qs.filter((q) => q.listening)), [qs]);
+  const groups = useMemo(() => groupQuestions(qs.filter((q) => !q.listening)), [qs]);
+  const audioPath = data?.quiz?.listening_audio;
+  const [audioUrl, setAudioUrl] = useState(undefined);   // undefined = تحميل، null = تعذّر
+  useEffect(() => {
+    if (state !== "in_progress" || !audioPath) return;
+    supabase.storage.from("quiz-audio").createSignedUrl(audioPath, 3 * 3600)
+      .then(({ data: d }) => setAudioUrl(d?.signedUrl ?? null));
+  }, [state, audioPath]);
   const pending = qs.filter((q) => !answered(q, answers[q.id])).length;
   const ltr = data?.quiz?.lang === "en";
   const t = ltr ? EN : AR;
@@ -235,6 +246,71 @@ export default function QuizTake() {
 
   // ——— المحاولة الجارية ———
   const urgent = left != null && left <= 60000;
+  const renderQ = (q, qi) => (
+    <div key={q.id} className="rounded-card border border-line/70 p-3">
+      <div className="flex items-start gap-2">
+        <span className="num shrink-0 rounded-pill bg-canvas px-2 py-0.5 text-[11px] font-semibold text-muted">
+          {t.f}{qi + 1}
+        </span>
+        <p className="flex-1 whitespace-pre-line text-sm font-medium leading-relaxed text-ink">{q.text}</p>
+        <span className="num shrink-0 text-[11px] text-faint">({Number(q.marks)})</span>
+      </div>
+
+      {q.kind === "mcq" && (
+        <div className="mt-2 grid gap-1.5">
+          {(q.options ?? []).map((o, k) => {
+            const on = answers[q.id] === String(k);
+            return (
+              <button key={k} type="button" onClick={() => setAnswer(q.id, String(k))}
+                className={`flex items-center gap-2 rounded-card border px-3 py-2 text-start text-sm transition-colors ${
+                  on ? "border-mint-deep bg-mint-tint text-ink" : "border-line bg-white text-ink hover:bg-canvas"}`}>
+                <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-bold ${
+                  on ? "border-mint-deep bg-mint-deep text-white" : "border-line text-muted"}`}>{t.ltrs[k]}</span>
+                <span className="flex-1">{o}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {q.kind === "truefalse" && (
+        <div className="mt-2 flex gap-2">
+          {t.tf.map(([v, label]) => {
+            const on = answers[q.id] === v;
+            return (
+              <button key={v} type="button" onClick={() => setAnswer(q.id, v)}
+                className={`flex-1 rounded-card border px-3 py-2 text-sm font-semibold transition-colors ${
+                  on ? (v === "true" ? "border-present bg-present text-white" : "border-absent bg-absent text-white")
+                     : "border-line bg-white text-muted hover:bg-canvas"}`}>
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {q.kind === "match" && (
+        <div className="mt-2 space-y-1.5">
+          {(q.options?.left ?? []).map((l, k) => {
+            const cur = (answers[q.id] ?? {})[String(k)] ?? "";
+            return (
+              <div key={k} className="flex items-center gap-2">
+                <span className="num w-5 shrink-0 text-center text-xs font-bold text-muted">{k + 1}</span>
+                <span className="flex-1 rounded-card bg-canvas px-2.5 py-1.5 text-sm text-ink">{l}</span>
+                <select className="field w-auto max-w-[55%] py-1.5 text-sm" value={cur}
+                        onChange={(e) => setAnswer(q.id, { ...(answers[q.id] ?? {}), [String(k)]: e.target.value })}>
+                  <option value="">{ltr ? "Choose…" : "يقابله…"}</option>
+                  {(q.options?.right ?? []).map((r, ri) => (
+                    <option key={ri} value={String(ri)}>{t.ltrs[ri] ?? ri + 1}) {r}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
   return (
     <div className="mx-auto max-w-2xl space-y-4 pb-24" dir={ltr ? "ltr" : "rtl"}>
       <div className="sticky top-0 z-20 -mx-1 flex items-center gap-3 rounded-card border border-line bg-white/95 px-3 py-2 shadow-card backdrop-blur" dir="rtl">
@@ -251,76 +327,31 @@ export default function QuizTake() {
         </span>
       </div>
 
+      {listenGroups.length > 0 && (
+        <section className="card space-y-3 p-4">
+          <p className="text-sm font-bold text-ink">
+            {t.q}<bdi className="num">1</bdi>: {t.listen}
+          </p>
+          <div className="sticky top-16 z-10 rounded-card border border-[#CCF2DB] bg-mint-tint p-2">
+            {audioUrl ? <audio controls preload="auto" src={audioUrl} className="w-full" controlsList="nodownload" />
+              : audioUrl === null || !audioPath ? <p className="px-1 text-xs text-absent">{t.noAudio}</p>
+              : <Loader compact />}
+          </div>
+          {listenGroups.map((g) => (
+            <div key={g.kind} className="space-y-3">
+              {listenGroups.length > 1 && <p className="text-xs font-semibold text-muted">{t.kinds[g.kind]}</p>}
+              {g.list.map((q, qi) => renderQ(q, qi))}
+            </div>
+          ))}
+        </section>
+      )}
+
       {groups.map((g, gi) => (
         <section key={g.kind} className="card space-y-3 p-4">
           <p className="text-sm font-bold text-ink">
-            {t.q}<bdi className="num">{gi + 1}</bdi>: {t.kinds[g.kind]}
+            {t.q}<bdi className="num">{gi + 1 + (listenGroups.length ? 1 : 0)}</bdi>: {t.kinds[g.kind]}
           </p>
-          {g.list.map((q, qi) => (
-            <div key={q.id} className="rounded-card border border-line/70 p-3">
-              <div className="flex items-start gap-2">
-                <span className="num shrink-0 rounded-pill bg-canvas px-2 py-0.5 text-[11px] font-semibold text-muted">
-                  {t.f}{qi + 1}
-                </span>
-                <p className="flex-1 whitespace-pre-line text-sm font-medium leading-relaxed text-ink">{q.text}</p>
-                <span className="num shrink-0 text-[11px] text-faint">({Number(q.marks)})</span>
-              </div>
-
-              {q.kind === "mcq" && (
-                <div className="mt-2 grid gap-1.5">
-                  {(q.options ?? []).map((o, k) => {
-                    const on = answers[q.id] === String(k);
-                    return (
-                      <button key={k} type="button" onClick={() => setAnswer(q.id, String(k))}
-                        className={`flex items-center gap-2 rounded-card border px-3 py-2 text-start text-sm transition-colors ${
-                          on ? "border-mint-deep bg-mint-tint text-ink" : "border-line bg-white text-ink hover:bg-canvas"}`}>
-                        <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-bold ${
-                          on ? "border-mint-deep bg-mint-deep text-white" : "border-line text-muted"}`}>{t.ltrs[k]}</span>
-                        <span className="flex-1">{o}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {q.kind === "truefalse" && (
-                <div className="mt-2 flex gap-2">
-                  {t.tf.map(([v, label]) => {
-                    const on = answers[q.id] === v;
-                    return (
-                      <button key={v} type="button" onClick={() => setAnswer(q.id, v)}
-                        className={`flex-1 rounded-card border px-3 py-2 text-sm font-semibold transition-colors ${
-                          on ? (v === "true" ? "border-present bg-present text-white" : "border-absent bg-absent text-white")
-                             : "border-line bg-white text-muted hover:bg-canvas"}`}>
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              {q.kind === "match" && (
-                <div className="mt-2 space-y-1.5">
-                  {(q.options?.left ?? []).map((l, k) => {
-                    const cur = (answers[q.id] ?? {})[String(k)] ?? "";
-                    return (
-                      <div key={k} className="flex items-center gap-2">
-                        <span className="num w-5 shrink-0 text-center text-xs font-bold text-muted">{k + 1}</span>
-                        <span className="flex-1 rounded-card bg-canvas px-2.5 py-1.5 text-sm text-ink">{l}</span>
-                        <select className="field w-auto max-w-[55%] py-1.5 text-sm" value={cur}
-                                onChange={(e) => setAnswer(q.id, { ...(answers[q.id] ?? {}), [String(k)]: e.target.value })}>
-                          <option value="">{ltr ? "Choose…" : "يقابله…"}</option>
-                          {(q.options?.right ?? []).map((r, ri) => (
-                            <option key={ri} value={String(ri)}>{t.ltrs[ri] ?? ri + 1}) {r}</option>
-                          ))}
-                        </select>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
+          {g.list.map((q, qi) => renderQ(q, qi))}
         </section>
       ))}
 

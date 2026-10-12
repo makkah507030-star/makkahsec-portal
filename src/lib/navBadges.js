@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { stageOf, isLate, STAGE_COLS } from "./referrals.js";
-import { fmtHijri } from "./dates.js";
+import { fmtHijri, fmtDateTime } from "./dates.js";
 import { todayISO } from "./schoolTime.js";
 import { countAr } from "./arabicCount.js";
 import { FLAG_ORDER, flagRank } from "./flags.js";
@@ -100,7 +100,7 @@ async function load() {
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
     plcBack, pdBack, xvBack, perfAck, guidance,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
-    giTeacher, giDeputy, giCounselor, giGuardian, dropouts, ethicsAck,
+    giTeacher, giDeputy, giCounselor, giGuardian, dropouts, ethicsAck, onlineQuizzes,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? rowsFlag((f) => supabase.from("form_documents").select(`id, title, recipient${f}`)
@@ -168,6 +168,9 @@ async function load() {
     // ميثاق أخلاقيات المهنة: هل أقرّ المعلم بالاطّلاع؟ (null: الجدول غير مفعّل فلا مهمة)
     role === "teacher" ? supabase.from("doc_acks").select("user_id").eq("doc_key", "ethics_code").eq("user_id", uid)
       .then(({ data, error }) => (error ? null : data ?? [])) : Promise.resolve(null),
+
+    // الطالب: اختبارات إلكترونية مفتوحة الآن لم يسلّمها، والقادم يبقى في بطاقة «الاختبارات الإلكترونية»
+    isStudent ? rowsOf(supabase.rpc("my_online_quizzes")) : noRows,
   ]);
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
@@ -196,6 +199,10 @@ async function load() {
       items: items(giGuardian, "/inquiry", (r) => r.student_name) },
   ].map((t) => ({ ...t, n: t.items.length, to: "/", tone: "warning" }));
 
+  // المتاح الآن أو الجاري، لا القادم ولا ما انتهى أو سُلِّم
+  const quizzesDue = onlineQuizzes.filter((r) => !r.submitted_at && new Date(r.closes_at) > Date.now()
+    && (r.started_at || new Date(r.opens_at) <= Date.now()));
+
   const ethicsDue = Array.isArray(ethicsAck) && ethicsAck.length === 0 ? 1 : 0;
 
   const tasks = [
@@ -219,6 +226,11 @@ async function load() {
     { key: "refGuardian", n: refGuardian.length, to: "/",
       items: items(refGuardian, "/referral", (r) => `إحالة — ${r.students?.full_name ?? ""}`),
       label: "إحالات تنتظر اطلاعك وردك", tone: "absent", icon: "send" },
+    { key: "onlineQuizzes", n: quizzesDue.length, to: "/", label: "اختبارات إلكترونية بانتظارك",
+      tone: quizzesDue.some((r) => r.started_at) ? "absent" : "warning", icon: "quiz",
+      sub: quizzesDue.length === 1 ? `يُغلق ${fmtDateTime(quizzesDue[0].closes_at)}` : "",
+      items: quizzesDue.map((r) => ({ id: r.quiz_id, to: `/quiz/${r.quiz_id}`,
+        title: `${r.title}${r.subject_name ? ` · ${r.subject_name}` : ""}${r.started_at ? " · جارٍ — أكمل" : ""}` })) },
     { key: "pledges", n: pledges.length, to: "/", items: items(pledges, "/behavior", () => "تعهد سلوكي"),
       label: "تعهدات تنتظر توقيعك", tone: "absent", icon: "shield" },
 
@@ -292,7 +304,7 @@ async function load() {
     "/dropouts": dropouts.length,
     "/ethics": ethicsDue,
     "/guidance": guidance + giDeputy.length + giReady.length,
-    "/": behaviorGuardian.length + refGuardian.length + pledges.length + giGuardian.length,
+    "/": behaviorGuardian.length + refGuardian.length + pledges.length + giGuardian.length + quizzesDue.length,
     _tasks: tasks,
     _ready: true,
   };
