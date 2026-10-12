@@ -1175,7 +1175,9 @@ export default function Forms({ view = "issue", openKey = null }) {
       p_user_ids: Array.from(ids),
       p_grade: null,
       p_class_no: null,
-      p_is_auto: false,
+      // إشعار آلي بمستند صدر (كإشعارات التطوير المهني والإحالات): يرسله المعلم أيضًا،
+      // فالإرسال اليدوي في send_notification مقصور على حسابات الإدارة
+      p_is_auto: true,
     });
 
     if (error) return { ok: false, text: `تعذّر الإرسال: ${error.message}` };

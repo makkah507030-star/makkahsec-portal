@@ -103,14 +103,16 @@ export function timelineOf(r) {
   ];
 }
 
-/* إشعار داخل البوابة ثم دفع للجوال — لا يعطّل الإجراء إن فشل */
+/* إشعار داخل البوابة ثم دفع للجوال — لا يعطّل الإجراء إن فشل.
+   آلي (p_is_auto) لأنه إشعار بإجراء على إحالة أو نموذج، يرسله المعلم أيضًا؛
+   والإرسال اليدوي في send_notification مقصور على حسابات الإدارة */
 export async function notifyUsers(userIds, title, body, link) {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (!ids.length) return;
   try {
     const { data: nid } = await supabase.rpc("send_notification", {
       p_title: title, p_body: body, p_kind: "general", p_link: link,
-      p_roles: null, p_user_ids: ids, p_grade: null, p_class_no: null, p_is_auto: false,
+      p_roles: null, p_user_ids: ids, p_grade: null, p_class_no: null, p_is_auto: true,
     });
     if (nid) {
       await sendPush(nid);
