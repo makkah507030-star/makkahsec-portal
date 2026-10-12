@@ -14,7 +14,8 @@ import {
    ===================================================================== */
 
 const pc = (v) => (v == null ? "—" : `${v}%`);
-const MODE = { paper: "ورقي", omr: "تصحيح آلي", online: "إلكتروني", external: "خارج البوابة" };
+// أسماء الأنماط كما في «اختباراتي»: الورقي برصد يدوي، والورقي بتصحيح آلي، والإلكتروني
+const MODE = { paper: "ورقي (رصد يدوي)", omr: "ورقي (تصحيح آلي)", online: "إلكتروني", external: "من خارج البوابة" };
 
 function highlights(d) {
   const out = [];
@@ -23,7 +24,7 @@ function highlights(d) {
   if (d.events.total) out.push(`الأحداث والمناسبات: ${countAr(d.events.total, "event")}، والطلاب الحاضرون ${n(d.events.attended)}.`);
   const pdAll = d.pd.reports + d.pd.plc + d.pd.visits;
   if (pdAll) out.push(`أنشطة التطوير المهني المعتمدة: ${n(pdAll)} (تقارير ${n(d.pd.reports)}، مجتمعات تعلم ${n(d.pd.plc)}، زيارات ${n(d.pd.visits)}).`);
-  if (d.quizzes.total) out.push(`اختبارات منفّذة عبر البوابة: ${n(d.quizzes.total)}${d.quizzes.avg != null ? ` بمتوسط أداء ${pc(d.quizzes.avg)}` : ""}.`);
+  if (d.quizzes.total) out.push(`الاختبارات في البوابة: ${n(d.quizzes.total)}، رُصدت درجات ${n(d.quizzes.graded)} منها${d.quizzes.avg != null ? ` بمتوسط أداء ${pc(d.quizzes.avg)}` : ""}.`);
   if (d.guidance.sessions) out.push(`الجلسات الإرشادية: ${n(d.guidance.sessions)}، والحالات الجديدة ${n(d.guidance.opened)}.`);
   if (d.referrals.total) out.push(`الإحالات: ${n(d.referrals.total)}، أُقفل منها ${n(d.referrals.closed)}.`);
   if (d.forms.total) out.push(`النماذج الصادرة من البوابة: ${n(d.forms.total)}.`);
@@ -56,7 +57,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
         { ic: "chat", t: "جلسات إرشادية", v: g.sessions, s: `حالات جديدة ${g.opened}`, c: S[1] },
         { ic: "star", t: "الأحداث", v: d.events.total, s: `الحاضرون ${n(d.events.attended)}`, c: S[2] },
         { ic: "award", t: "التطوير المهني", v: pdAll, s: `شواهد مرفوعة ${n(d.pd.evidence)}`, c: S[0] },
-        { ic: "doc", t: "اختبارات منفّذة", v: d.quizzes.total, s: d.quizzes.avg != null ? `متوسط ${pc(d.quizzes.avg)}` : "—", c: S[1] },
+        { ic: "doc", t: "الاختبارات", v: d.quizzes.total, s: `رُصدت ${d.quizzes.graded}${d.quizzes.avg != null ? ` · متوسط ${pc(d.quizzes.avg)}` : ""}`, c: S[1] },
         { ic: "clip", t: "نماذج صادرة", v: d.forms.total, s: `${d.forms.by.length} أنواع`, c: S[2] },
         { ic: "exit", t: "بلاغات انقطاع", v: d.dropouts.total, s: `طُوي قيد ${d.dropouts.byStatus.withdrawn ?? 0}`, c: S[3] },
       ]} />
@@ -116,8 +117,13 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
     <Page key="edu" {...common} page={4} sec={{ no: 3, title: "التعليم والتطوير المهني والأنشطة", sub: "الاختبارات، والتطوير المهني، والأحداث، والنماذج" }}>
       <div className="mr-row c2">
         <Box icon="doc" title="الاختبارات" aside={d.quizzes.avg != null ? `متوسط ${pc(d.quizzes.avg)}` : n(d.quizzes.total)}>
-          {d.quizzes.total ? <Bars items={Object.entries(MODE).map(([k, t]) => ({ t, v: d.quizzes.byMode[k] ?? 0, c: S[1] }))} /> : <div className="mr-empty">لا اختبارات منفّذة.</div>}
-          {d.quizzes.sheets > 0 && <p className="mr-note" style={{ marginTop: 6 }}>أوراق مصحّحة: {n(d.quizzes.sheets)}.</p>}
+          {d.quizzes.total ? <Bars wide items={Object.entries(MODE).map(([k, t]) => ({ t, v: d.quizzes.byMode[k] ?? 0, c: S[1] }))} /> : <div className="mr-empty">لا اختبارات في هذا الشهر.</div>}
+          {d.quizzes.total > 0 && (
+            <p className="mr-note" style={{ marginTop: 6 }}>
+              رُصدت درجاتها {n(d.quizzes.graded)} · جاهزة بانتظار الرصد {n(d.quizzes.ready)} · قيد الإعداد {n(d.quizzes.draft)}
+              {d.quizzes.sheets > 0 && ` · أوراق مصحّحة ${n(d.quizzes.sheets)}`}
+            </p>
+          )}
         </Box>
         <Box icon="award" title="التطوير المهني" aside={n(pdAll)}>
           <Bars items={[

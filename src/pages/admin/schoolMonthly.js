@@ -27,12 +27,15 @@ export async function loadSchoolMonthly(month) {
     quiet(inM(supabase.from("plc_sessions").select("id").eq("status", "approved"), "decided_at")),
     quiet(inM(supabase.from("exchange_visits").select("id").eq("status", "approved"), "decided_at")),
     quiet(inM(supabase.from("perf_evidence").select("id", { count: "exact", head: true }), "created_at")),
-    quiet(inM(supabase.from("quizzes").select("id, mode, total_marks").in("status", ["marking", "closed"]), "exam_date")),
+    // الاختبارات بتاريخها، وإن لم يُحدَّد فبتاريخ إنشائها — بكل حالاتها
+    quiet(supabase.from("quizzes").select("id, mode, total_marks, status")
+      .or(`and(exam_date.gte.${b.from},exam_date.lt.${b.to}),and(exam_date.is.null,created_at.gte.${b.from},created_at.lt.${b.to})`)),
     quiet(inM(supabase.from("form_documents").select("id, form_templates(title)").neq("status", "draft"), "created_at")),
   ]);
 
-  // متوسط أداء الاختبارات المنفّذة في الشهر
-  const Q = quizzes.data ?? [];
+  // متوسط أداء الاختبارات المرصودة في الشهر (ما بدأ رصد درجاته أو أُقفل)
+  const all = quizzes.data ?? [];
+  const Q = all.filter((q) => ["marking", "closed"].includes(q.status));
   let quizAvg = null, sheets = 0;
   if (Q.length) {
     const total = Object.fromEntries(Q.map((q) => [q.id, Number(q.total_marks) || 0]));
@@ -71,7 +74,10 @@ export async function loadSchoolMonthly(month) {
       reports: (pd.data ?? []).length, byKind: count(pd.data ?? [], "kind"),
       plc: (plc.data ?? []).length, visits: (visits.data ?? []).length, evidence: evidence.count ?? 0,
     },
-    quizzes: { total: Q.length, byMode: count(Q, "mode"), avg: quizAvg, sheets },
+    quizzes: {
+      total: all.length, graded: Q.length, ready: all.filter((q) => q.status === "ready").length,
+      draft: all.filter((q) => q.status === "draft").length, byMode: count(all, "mode"), avg: quizAvg, sheets,
+    },
     forms: { total: F.length, by: Object.entries(formsBy).sort((a, c) => c[1] - a[1]) },
   };
 }
