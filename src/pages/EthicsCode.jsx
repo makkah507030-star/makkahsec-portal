@@ -114,11 +114,17 @@ const remindText = (name) => [
   "makkahsec.com",
 ].join("\n");
 
+// خانة التوقيع في التقرير المطبوع (خانات printReport نصّ HTML)
+const sigCell = (url) => url
+  ? `<img src="${url}" alt="توقيع" style="height:34px;max-width:120px;object-fit:contain" />`
+  : "✓ أقرّ إلكترونيًا";
+
 export function EthicsReport() {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState(null);
   const [tab, setTab] = useState("pending");
   const [q, setQ] = useState("");
+  const [sigs, setSigs] = useState(() => new Map());   // user_id → رابط صورة التوقيع
 
   useEffect(() => {
     (async () => {
@@ -129,6 +135,12 @@ export function EthicsReport() {
       if (t.error || a.error) { setErr((t.error ?? a.error).message); setRows([]); return; }
       const at = new Map((a.data ?? []).map((r) => [r.user_id, r.acked_at]));
       setRows((t.data ?? []).map((x) => ({ ...x, acked_at: at.get(x.user_id) ?? null })).sort(byName()));
+      // صور توقيعات من أقرّ (supabase/ethics_signatures.sql) — إن لم يُنفَّذ يبقى «✓ أقرّ إلكترونيًا»
+      const { data: sg } = await supabase.rpc("doc_acks_signatures", { p_doc: ETHICS_KEY });
+      if (sg?.length) {
+        const { data: links } = await supabase.storage.from("form-assets").createSignedUrls(sg.map((x) => x.path), 3600);
+        setSigs(new Map(sg.map((x, i) => [x.user_id, links?.[i]?.signedUrl]).filter(([, u]) => u)));
+      }
     })();
   }, []);
 
@@ -144,8 +156,8 @@ export function EthicsReport() {
     sections: [
       { title: "لم يطّلعوا بعد", subtitle: countAr(pending.length, "teacher"), headers: ["م", "المعلم"],
         rows: pending.map((r, i) => [i + 1, r.full_name]), tableClass: "danger" },
-      { title: "اطّلعوا وأقرّوا", subtitle: countAr(done.length, "teacher"), headers: ["م", "المعلم", "تاريخ الإقرار"],
-        rows: done.map((r, i) => [i + 1, r.full_name, fmtDateTime(r.acked_at)]), tableClass: "success" },
+      { title: "اطّلعوا وأقرّوا", subtitle: countAr(done.length, "teacher"), headers: ["م", "المعلم", "تاريخ الإقرار", "التوقيع"],
+        rows: done.map((r, i) => [i + 1, r.full_name, fmtDateTime(r.acked_at), sigCell(sigs.get(r.user_id))]), tableClass: "success" },
     ],
     signatures: [
       { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME },
@@ -211,10 +223,15 @@ export function EthicsReport() {
               </p>
             )}
             {shown.map((r) => (
-              <div key={r.user_id} className="flex items-center gap-3 px-4 py-2.5">
+              <div key={r.user_id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5">
                 <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">{r.full_name}</p>
                 {r.acked_at
-                  ? <span className="chip bg-present/10 text-present">✓ {fmtDateTime(r.acked_at)}</span>
+                  ? <div className="flex w-full items-center justify-between gap-2">
+                      <span className="chip bg-present/10 text-present">✓ {fmtDateTime(r.acked_at)}</span>
+                      {sigs.get(r.user_id)
+                        ? <img src={sigs.get(r.user_id)} alt="توقيع" className="h-9 max-w-[110px] object-contain" />
+                        : <span className="text-[11px] text-faint">لم يرفع توقيعه</span>}
+                    </div>
                   : r.mobile && (
                     <a href={`https://api.whatsapp.com/send?phone=${waNumber(r.mobile)}&text=${encodeURIComponent(remindText(r.full_name))}`}
                        target="_blank" rel="noreferrer"

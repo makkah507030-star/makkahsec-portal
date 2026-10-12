@@ -76,6 +76,22 @@ export default function Records() {
 /* ============================================================= */
 
 
+// مزامنة حساب الدخول بعد الحفظ (supabase/functions/sync-login): يُنشأ لمن لا حساب له،
+// ويُنقل للرقم الجديد إن تغيّر رقم الهوية أو الجوال. يعيد نصًّا يُلحق برسالة الحفظ.
+async function syncLogin(table, id) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const { data, error } = await supabase.functions.invoke("sync-login", {
+    body: { table, id },
+    headers: { Authorization: `Bearer ${session?.access_token}` },
+  });
+  if (error || data?.error) {
+    return { ok: false, text: `حُفظ السجل، لكن تعذّر تحديث حساب الدخول: ${data?.error ?? await describeEdgeError(error)}` };
+  }
+  if (data?.created) return { ok: true, text: ` وأُنشئ حساب دخوله: اسم المستخدم ${data.username} وكلمة المرور الأولية ${data.password}.` };
+  if (data?.moved) return { ok: true, text: ` ونُقل حساب دخوله إلى ${data.username}، وكلمة المرور الأولية ${data.password} (يغيّرها عند أول دخول).` };
+  return { ok: true, text: "" };
+}
+
 function Banner({ err, msg }) {
   if (!err && !msg) return null;
   return (
@@ -238,11 +254,6 @@ function StudentsTab({ year, yearLabel }) {
         studentId = data.id;
       }
 
-      // مزامنة الاسم في حساب الدخول إن وُجد (لا نُغيّر اسم المستخدم/رقم الهوية هناك)
-      if (existing?.user_id) {
-        await supabase.from("users").update({ full_name }).eq("id", existing.user_id);
-      }
-
       if (form.classId) {
         if (!year) throw new Error("لم تُضبط السنة الدراسية النشطة في الإعدادات");
         const { error } = await supabase
@@ -273,7 +284,9 @@ function StudentsTab({ year, yearLabel }) {
         if (error) throw error;
       }
 
-      setMsg(existing ? "تم حفظ تعديلات الطالب." : "تمت إضافة الطالب.");
+      const login = await syncLogin("students", studentId);
+      if (!login.ok) setErr(login.text);
+      setMsg((existing ? "تم حفظ تعديلات الطالب" : "تمت إضافة الطالب") + (login.text && login.ok ? "،" + login.text : "."));
       setAdding(false);
       setEditingId(null);
       await load();
@@ -654,6 +667,7 @@ function TeachersTab() {
       if (form.mobile && !mobile) throw new Error("رقم الجوال غير صالح");
       const specialization = cleanText(form.specialization) || null;
 
+      let teacherId = existing?.id;
       if (existing) {
         const { error } = await supabase
           .from("teachers")
@@ -661,17 +675,17 @@ function TeachersTab() {
           .eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("teachers")
-          .insert({ national_id, full_name, mobile: mobile || null, specialization });
+          .insert({ national_id, full_name, mobile: mobile || null, specialization })
+          .select("id").single();
         if (error) throw error;
+        teacherId = data.id;
       }
 
-      if (existing?.user_id) {
-        await supabase.from("users").update({ full_name }).eq("id", existing.user_id);
-      }
-
-      setMsg(existing ? "تم حفظ تعديلات المعلم." : "تمت إضافة المعلم.");
+      const login = await syncLogin("teachers", teacherId);
+      if (!login.ok) setErr(login.text);
+      setMsg((existing ? "تم حفظ تعديلات المعلم" : "تمت إضافة المعلم") + (login.text && login.ok ? "،" + login.text : "."));
       setAdding(false);
       setEditingId(null);
       await load();
@@ -857,6 +871,7 @@ function GuardiansTab() {
       if (!full_name) throw new Error("اسم ولي الأمر مطلوب");
       if (!mobile) throw new Error("رقم الجوال غير صالح");
 
+      let guardianId = existing?.id;
       if (existing) {
         const { error } = await supabase
           .from("guardians")
@@ -864,17 +879,17 @@ function GuardiansTab() {
           .eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("guardians")
-          .upsert({ full_name, mobile, national_id }, { onConflict: "mobile" });
+          .upsert({ full_name, mobile, national_id }, { onConflict: "mobile" })
+          .select("id").single();
         if (error) throw error;
+        guardianId = data.id;
       }
 
-      if (existing?.user_id) {
-        await supabase.from("users").update({ full_name }).eq("id", existing.user_id);
-      }
-
-      setMsg(existing ? "تم حفظ تعديلات ولي الأمر." : "تمت إضافة ولي الأمر.");
+      const login = await syncLogin("guardians", guardianId);
+      if (!login.ok) setErr(login.text);
+      setMsg((existing ? "تم حفظ تعديلات ولي الأمر" : "تمت إضافة ولي الأمر") + (login.text && login.ok ? "،" + login.text : "."));
       setAdding(false);
       setEditingId(null);
       await load();
