@@ -1,5 +1,6 @@
 // src/pages/EventsReportDoc.jsx
 import { fmtDate } from "../lib/dates";
+import { todayISO } from "../lib/schoolTime";
 import { PRINCIPAL_NAME } from "../lib/exportUtils.js";
 import {
   S, n, countAr, pct, dmy, paginate, Ring, Bars, StackedColumns, Legend, Kpis, Highlights, Box, Signs, Page, Cover, IC,
@@ -9,7 +10,8 @@ import {
    تقرير الأحداث والمناسبات بطقم التقارير (components/report):
    الغلاف ← ملخص الأحداث (المؤشرات، والأشهر، والتصنيفات) ← أبرز الأحداث
    بصور تقاريرها ← سجل الأحداث كاملًا ثم التوقيعات.
-   الأحداث الملغاة تظهر في السجل بحالتها ولا تدخل في الأرقام.
+   الأرقام من الأحداث المنفّذة وحدها (eventPhase)؛ القادمة والملغاة وما لم يُستكمل تظهر
+   في السجل بحالتها.
    ===================================================================== */
 
 const CAP = 800;
@@ -18,42 +20,61 @@ export const STAGE_AR = {
   permission: "الاستئذان", attendance: "الحضور", certificates: "الشهادات",
   report: "التقرير", approved: "معتمد",
 };
+const MONTH_SERIES = [{ k: "approved", t: "معتمد", c: S[0] }, { k: "open", t: "بانتظار الاعتماد", c: S[2] }, { k: "upcoming", t: "قادم", c: S[1] }];
 const MONTHS_AR = (k) => new Date(`${k}-15T12:00:00`).toLocaleDateString("ar-SA-u-ca-gregory-nu-latn", { month: "short" });
 
+/* حال الحدث في الإحصاءات: الملغى لا يُعدّ، والقادم لم يحن موعده، والمسودة التي مضى موعدها
+   «لم يُستكمل»، وما عدا ذلك منفَّذ: معتمد أو بانتظار الاعتماد. الأرقام كلها من المنفَّذ وحده. */
+export function eventPhase(e, today = todayISO()) {
+  if (e.cancelled_at) return "cancelled";
+  if (e.event_date > today) return "upcoming";
+  if (e.stage === "draft") return "incomplete";
+  return e.stage === "approved" ? "approved" : "done";
+}
+
 export function eventsModel(events, counts) {
-  const live = events.filter((e) => !e.cancelled_at);
+  const today = todayISO();
+  const ph = (e) => eventPhase(e, today);
+  const done = events.filter((e) => ["approved", "done"].includes(ph(e)));
   const c = (e) => counts[e.id] ?? { total: 0, attended: 0, certs: 0, consent: 0 };
-  const t = { events: live.length, nominated: 0, attended: 0, certs: 0, consent: 0, approved: 0, cancelled: events.length - live.length };
-  live.forEach((e) => {
+  const t = {
+    events: done.length, nominated: 0, attended: 0, certs: 0, consent: 0,
+    approved: done.filter((e) => ph(e) === "approved").length,
+    upcoming: events.filter((e) => ph(e) === "upcoming").length,
+    incomplete: events.filter((e) => ph(e) === "incomplete").length,
+    cancelled: events.filter((e) => ph(e) === "cancelled").length,
+  };
+  done.forEach((e) => {
     const x = c(e);
     t.nominated += x.total; t.attended += x.attended; t.certs += x.certs; t.consent += x.consent ?? 0;
-    if (e.stage === "approved") t.approved++;
   });
-  // الأحداث بالشهر: المعتمد وما زال قيد التنفيذ
+  // الأحداث بالشهر: المعتمد، والمنفَّذ بانتظار الاعتماد، والقادم
   const months = {};
-  live.forEach((e) => {
-    const k = e.event_date.slice(0, 7);
-    const m = (months[k] ??= { approved: 0, open: 0 });
-    m[e.stage === "approved" ? "approved" : "open"] += 1;
+  events.forEach((e) => {
+    const p = ph(e);
+    if (p === "cancelled" || p === "incomplete") return;
+    const m = (months[e.event_date.slice(0, 7)] ??= { approved: 0, open: 0, upcoming: 0 });
+    m[p === "approved" ? "approved" : p === "done" ? "open" : "upcoming"] += 1;
   });
   const monthCols = Object.keys(months).sort().slice(-8).map((k) => ({ label: MONTHS_AR(k), sub: k.slice(0, 4), values: months[k] }));
   const cats = {};
-  live.forEach((e) => { const k = e.category || "غير مصنّف"; cats[k] = (cats[k] ?? 0) + 1; });
+  done.forEach((e) => { const k = e.category || "غير مصنّف"; cats[k] = (cats[k] ?? 0) + 1; });
   const byOrganizer = {};
-  live.forEach((e) => { const k = e.organizer_name || "—"; byOrganizer[k] = (byOrganizer[k] ?? 0) + 1; });
-  return { live, c, t, monthCols, cats: Object.entries(cats).sort((a, b) => b[1] - a[1]), orgs: Object.entries(byOrganizer).sort((a, b) => b[1] - a[1]) };
+  done.forEach((e) => { const k = e.organizer_name || "—"; byOrganizer[k] = (byOrganizer[k] ?? 0) + 1; });
+  return { live: done, ph, c, t, monthCols, cats: Object.entries(cats).sort((a, b) => b[1] - a[1]), orgs: Object.entries(byOrganizer).sort((a, b) => b[1] - a[1]) };
 }
 
 function highlights(m) {
   const out = [];
-  if (!m.t.events) return ["لا أحداث منفّذة في هذه الفترة."];
+  if (!m.t.events) return [m.t.upcoming ? `لا أحداث منفّذة بعد، وأحداث قادمة: ${n(m.t.upcoming)}.` : "لا أحداث منفّذة في هذه الفترة."];
   out.push(`الأحداث والمناسبات المنفّذة: ${countAr(m.t.events, "event")}، اعتُمد منها ${n(m.t.approved)}.`);
   if (m.t.attended) out.push(`الحضور: ${countAr(m.t.attended, "student")} من ${countAr(m.t.nominated, "nominee", "g")} (${pct(m.t.attended, m.t.nominated) ?? 0}%).`);
   if (m.t.certs) out.push(`شهادات المشاركة الصادرة للطلاب: ${countAr(m.t.certs, "cert")}.`);
   if (m.cats[0]) out.push(`أكثر التصنيفات: «${m.cats[0][0]}» بعدد ${n(m.cats[0][1])}.`);
   const top = [...m.live].sort((a, b) => m.c(b).attended - m.c(a).attended)[0];
   if (top && m.c(top).attended) out.push(`أكبر الأحداث حضورًا: «${top.title}» (${countAr(m.c(top).attended, "student")}).`);
-  if (m.t.cancelled) out.push(`أحداث أُلغيت: ${n(m.t.cancelled)} (لا تدخل في الأرقام).`);
+  if (m.t.upcoming) out.push(`أحداث قادمة لم يحن موعدها: ${n(m.t.upcoming)} (لا تدخل في الأرقام).`);
+  if (m.t.incomplete || m.t.cancelled) out.push(`لم يُستكمل ${n(m.t.incomplete)}، وأُلغي ${n(m.t.cancelled)} (لا تدخل في الأرقام).`);
   return out.slice(0, 6);
 }
 
@@ -111,7 +132,7 @@ export function eventsReportPages({ events, counts, photos = {}, scopeLabel, org
 
     <Page key="sum" {...common} page={2} sec={{ no: 1, title: "ملخص الأحداث", sub: "المؤشرات وتوزيع الأحداث على الأشهر والتصنيفات" }}>
       <Kpis items={[
-        { ic: "star", t: "الأحداث", v: m.t.events, s: `معتمدة ${m.t.approved}`, c: S[0] },
+        { ic: "star", t: "الأحداث المنفّذة", v: m.t.events, s: `معتمدة ${m.t.approved} · قادمة ${m.t.upcoming}`, c: S[0] },
         { ic: "users", t: "المرشحون", v: m.t.nominated, s: `الموافقات ${m.t.consent}`, c: S[1] },
         { ic: "check", t: "الحاضرون", v: m.t.attended, s: `من ${countAr(m.t.nominated, "nominee", "g")}`, c: S[2] },
         { ic: "award", t: "الشهادات", v: m.t.certs, s: "شهادات مشاركة", c: S[3] },
@@ -128,8 +149,8 @@ export function eventsReportPages({ events, counts, photos = {}, scopeLabel, org
         <Box icon="chart" title="الأحداث بالشهر">
           {m.monthCols.length ? (
             <>
-              <StackedColumns width={320} height={170} cols={m.monthCols} series={[{ k: "approved", t: "معتمد", c: S[0] }, { k: "open", t: "قيد التنفيذ", c: S[2] }]} />
-              <Legend series={[{ k: "approved", t: "معتمد", c: S[0] }, { k: "open", t: "قيد التنفيذ", c: S[2] }]} />
+              <StackedColumns width={320} height={170} cols={m.monthCols} series={MONTH_SERIES} />
+              <Legend series={MONTH_SERIES} />
             </>
           ) : <div className="mr-empty">لا أحداث.</div>}
         </Box>
@@ -166,7 +187,12 @@ export function eventsReportPages({ events, counts, photos = {}, scopeLabel, org
                   <td>{e.title}{e.category && <span style={{ display: "block", fontSize: 10, color: "var(--mr-ink2)" }}>{e.category}{e.venue ? ` · ${e.venue}` : ""}</span>}</td>
                   <td className="c num">{dmy(e.event_date)}</td><td style={{ fontSize: 10.5 }}>{e.organizer_name || "—"}</td>
                   <td className="c num">{m.c(e).attended}</td><td className="c num">{m.c(e).certs}</td>
-                  <td className="c"><span className={`mr-chip ${e.cancelled_at ? "no" : e.stage === "approved" ? "ok" : "auto"}`}>{e.cancelled_at ? "ملغى" : STAGE_AR[e.stage] ?? e.stage}</span></td>
+                  <td className="c">{(() => {
+                    const p = m.ph(e);
+                    const [cls, label] = p === "cancelled" ? ["no", "ملغى"] : p === "upcoming" ? ["auto", "قادم"] : p === "incomplete" ? ["no", "لم يُستكمل"]
+                      : p === "approved" ? ["ok", "معتمد"] : ["auto", STAGE_AR[e.stage] ?? e.stage];
+                    return <span className={`mr-chip ${cls}`}>{label}</span>;
+                  })()}</td>
                 </tr>
               ))}</tbody>
             </table>
