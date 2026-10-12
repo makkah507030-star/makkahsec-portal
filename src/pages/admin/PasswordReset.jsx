@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase, initialPassword } from "../../lib/supabase";
+import { describeEdgeError } from "../../lib/edgeError.js";
 import { ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDateTime } from "../../lib/dates";
@@ -53,7 +54,8 @@ export default function PasswordReset() {
         body: { user_id: u.id },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
-      if (error) throw error;
+      // سبب الرفض الفعلي من الدالة بدل «non-2xx status code»
+      if (error) throw new Error(await describeEdgeError(error));
       if (data?.error) throw new Error(data.error);
 
       setMsg({

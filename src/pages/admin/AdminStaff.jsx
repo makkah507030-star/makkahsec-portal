@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { describeEdgeError } from "../../lib/edgeError.js";
 import { supabase } from "../../lib/supabase";
 import {
   useSession, ADMIN_ROLE_LABEL, ASSIGNABLE_ROLES, PERMISSIONS,
@@ -10,22 +11,6 @@ import DangerZone from "../../components/DangerZone.jsx";
 import { SIGNERS, loadSigners } from "../../lib/signers.js";
 import { byName } from "../../lib/sortAr.js";
 
-// يستخرج رسالة الخطأ الفعلية من استجابة Supabase Edge Function
-// (بدل الرسالة العامة "Edge Function returned a non-2xx status code")
-async function describeEdgeError(e) {
-  if (e?.context && typeof e.context.clone === "function") {
-    try {
-      const body = await e.context.clone().json();
-      if (body?.error || body?.message) return body.error ?? body.message;
-    } catch {
-      try {
-        const text = await e.context.clone().text();
-        if (text) return text;
-      } catch { /* تجاهل */ }
-    }
-  }
-  return e?.message ?? String(e);
-}
 
 export default function AdminStaff() {
   const { isSuper } = useSession();
