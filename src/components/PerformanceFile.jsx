@@ -2,14 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
-import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
+import { signatureByName } from "../lib/userSignatures";
+import { loadPrincipalSignature } from "../lib/principalSignature";
+import ReportViewer from "./report/ReportViewer.jsx";
+import { perfReportPages } from "./PerfReportDoc.jsx";
 import {
   ACCEPT, AUTO_SOURCE, ITEM_HINT, PORTAL_TAG, SOURCE_LABEL, activeYear, loadAutoCounts, elementColor, elementSummary, itemStatus, loadEvidence,
   loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile,
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
-import logoIcon from "../assets/icon-mint.png";
-import moeLogo from "../assets/moe-logo.png";
 import Loader from "./Loader.jsx";
 
 /* =====================================================================
@@ -434,7 +435,7 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
   );
 }
 
-function TrackView({ elements, evidence, auto, info, name, readOnly }) {
+function TrackView({ elements, evidence, auto, readOnly, onReport }) {
   const [filter, setFilter] = useState("all");
   const rows = useMemo(() => elements.filter((e) => !e.evaluator_only).flatMap((el) =>
     el.items.map((it) => ({ el, it, st: itemStatus(it, evidence, auto) }))), [elements, evidence, auto]);
@@ -459,25 +460,7 @@ function TrackView({ elements, evidence, auto, info, name, readOnly }) {
     return `آلي · العداد ${r.st.auto.cnt}`;
   };
 
-  const print = () => {
-    const teacher = info?.full_name ?? name ?? "";
-    printReport({
-      title: "متابعة شواهد الأداء الوظيفي",
-      subtitle: `${teacher} · متوفر ${ok} · غير متوفر ${rows.length - ok}`,
-      sections: elements.filter((e) => !e.evaluator_only).map((el) => {
-        const list = shown.filter((r) => r.el.key === el.key);
-        return list.length ? {
-          title: `${el.title} (${el.weight}%)`,
-          headers: ["م", "البند", "الحالة", "الشاهد والعدد"],
-          rows: list.map((r, i) => [i + 1, r.it.title, r.st.ok ? "متوفر" : "غير متوفر", evText(r)]),
-        } : null;
-      }).filter(Boolean),
-      logoUrl: new URL(logoIcon, window.location.origin).href,
-      moeLogoUrl: new URL(moeLogo, window.location.origin).href,
-      signatures: [{ title: "المعلم", name: teacher }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
-      signOnLastPageOnly: true,
-    });
-  };
+
 
   const tab = (k, label) => (
     <button key={k} onClick={() => setFilter(k)}
@@ -493,7 +476,7 @@ function TrackView({ elements, evidence, auto, info, name, readOnly }) {
         <span className="chip w-28 justify-center bg-warning-light text-warning">غير متوفر <span className="num mr-1">{rows.length - ok}</span></span>
         <div className="flex-1" />
         {tab("all", "الكل")}{tab("ok", "المتوفر")}{tab("missing", "غير المتوفر")}
-        <button className="btn-primary" onClick={print}>طباعة</button>
+        <button className="btn-primary" onClick={onReport}>طباعة التقرير</button>
       </div>
       {/* القائمة مطوية: سطر لكل عنصر بعدّاديه، ويُفتح بالضغط لتظهر بنوده */}
       <div className="flex justify-end gap-3 text-sm">
@@ -534,6 +517,22 @@ function TrackView({ elements, evidence, auto, info, name, readOnly }) {
       {readOnly && <p className="text-xs text-muted">{REVIEW_NOTE.replace("للمقيِّم أن يطلب", "يمكنك طلب")}</p>}
     </div>
   );
+}
+
+/* التقرير النهائي بهوية استوديو البوابة (PerfReportDoc.jsx): غلاف وملخص وتفاصيل ونواقص وتوقيعات */
+function PerfReport({ elements, evidence, auto, visits, info, name, year }) {
+  const [theme, setTheme] = useState("light");
+  const [sigs, setSigs] = useState({});
+  const teacher = info?.full_name ?? name ?? "";
+  useEffect(() => {
+    let live = true;
+    Promise.all([teacher ? signatureByName(teacher) : null, loadPrincipalSignature()])
+      .then(([t, p]) => { if (live) setSigs({ teacher: t, principal: p?.url ?? null }); });
+    return () => { live = false; };
+  }, [teacher]);
+  const pages = useMemo(() => perfReportPages({ elements, evidence, auto, visits, info, name, year, theme, sigs }),
+    [elements, evidence, auto, visits, info, name, year, theme, sigs]);
+  return <ReportViewer id="perf-report" pages={pages} theme={theme} setTheme={setTheme} fileTitle={`شواهد الأداء الوظيفي - ${teacher}`} />;
 }
 
 export default function PerformanceFile({ uid, name, readOnly = false }) {
@@ -578,7 +577,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
       <InfoBox info={info} name={name} />
 
       <div className="flex gap-2">
-        {[["cards", "بطاقات العناصر"], ["track", "متابعة الشواهد"]].map(([k, l]) => (
+        {[["cards", "بطاقات العناصر"], ["track", "متابعة الشواهد"], ["report", "التقرير النهائي"]].map(([k, l]) => (
           <button key={k} onClick={() => setView(k)}
                   className={`w-36 rounded-sm2 py-2 text-sm font-semibold ${view === k ? "bg-mint-deep text-white" : "border border-line bg-paper text-ink"}`}>
             {l}
@@ -586,8 +585,10 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
         ))}
       </div>
 
-      {view === "track" ? (
-        <TrackView elements={elements} evidence={evidence} auto={auto} info={info} name={name} readOnly={readOnly} />
+      {view === "report" ? (
+        <PerfReport elements={elements} evidence={evidence} auto={auto} visits={visits} info={info} name={name} year={year} />
+      ) : view === "track" ? (
+        <TrackView elements={elements} evidence={evidence} auto={auto} readOnly={readOnly} onReport={() => setView("report")} />
       ) : (
         <>
           <OverallProgress elements={elements} evidence={evidence} auto={auto} />

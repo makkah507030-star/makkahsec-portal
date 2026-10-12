@@ -1,0 +1,228 @@
+/* =====================================================================
+   طقم التقارير المصمّمة — أوراق A4 (794×1123 بمقاس 96dpi) بهوية استوديو
+   البوابة (studio.css): الغلاف بزخرفة الاستوديو، والصفحات الداخلية بإطار
+   هادئ موفّر للحبر. نسختان: ملوّنة (stu-light) ورسمية (stu-official).
+   يستعمله: التقرير الشهري للموجه، وملف التطوير المهني للقسم، وشواهد الأداء.
+   ===================================================================== */
+
+.mr { --mr-deep: #3E6350; --mr-acc: #2E7D57; --mr-mint: #89D7AD; --mr-tint: #EDFAF2; --mr-line: #DCEBE2;
+      --mr-ink: #1C3328; --mr-ink2: #5E7268; --mr-gold: #B8912F;
+      --s1: #1F8A5B; --s2: #3A72B5; --s3: #B07F1A; --s4: #B4506A; }
+.mr.stu-official { --mr-ink: #101010; --mr-ink2: #646464; }
+
+/* ——— الإطار الداخلي داخل هامش الطباعة الآمن ——— */
+.mr-frame { position: absolute; inset: 30px; border-radius: 18px; border: 1.5px solid var(--mr-line); background: #fff; overflow: hidden; }
+.mr-frame::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 128px;
+  background: radial-gradient(ellipse 70% 120% at 100% 0%, #DDF3E6 0%, transparent 70%), linear-gradient(180deg, #F3FAF6, #fff); }
+.mr-frame::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: linear-gradient(90deg, var(--mr-mint) 0 78%, rgba(137,215,173,.3) 78%); }
+.stu-official .mr-frame { border-radius: 6px; border-color: var(--mr-deep); }
+.stu-official .mr-frame::before { display: none; }
+.stu-official .mr-frame::after { left: 6px; right: 6px; top: 6px; bottom: 6px; height: auto; background: none; border: 1px solid #B8912F; border-radius: 3px; opacity: .7; }
+
+.mr-page { position: absolute; inset: 30px; padding: 26px 34px 20px; display: flex; flex-direction: column; color: var(--mr-ink); }
+.mr-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; margin-top: 12px; overflow: hidden; }
+
+/* ——— الترويسة الداخلية ——— */
+.mr-head { display: flex; justify-content: space-between; align-items: center; }
+.mr-head .brand { display: flex; align-items: center; gap: 10px; }
+.mr-head .brand img { width: 38px; height: 38px; object-fit: contain; }
+.mr-head .brand b { display: block; font-size: 15px; font-weight: 700; }
+.mr-head .brand span { display: block; font-size: 11.5px; color: var(--mr-ink2); }
+.mr-head .meta { display: flex; gap: 6px; }
+.mr-pill { border: 1.3px solid rgba(62,99,80,.35); color: var(--mr-deep); border-radius: 999px; padding: 3px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; background: #fff; }
+.mr-pill.solid { background: var(--mr-deep); border-color: var(--mr-deep); color: #fff; }
+.mr-gov { display: flex; justify-content: space-between; align-items: center; }
+.mr-gov .lines { font-size: 11px; line-height: 1.5; font-weight: 500; }
+.mr-gov .lines b { display: block; color: var(--mr-deep); font-weight: 700; }
+.mr-gov .ttl { text-align: center; }
+.mr-gov .ttl b { display: block; font-size: 15px; color: var(--mr-deep); }
+.mr-gov .ttl span { font-size: 12px; color: var(--mr-ink2); }
+.mr-gov .logos { display: flex; gap: 12px; align-items: center; }
+.mr-gov .logos img { height: 38px; }
+.mr-rule { height: 1.5px; margin-top: 10px; background: linear-gradient(90deg, transparent, #3E635022 12%, #3E6350 50%, #3E635022 88%, transparent); }
+
+/* ——— عنوان القسم ——— */
+.mr-sec { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+.mr-sec .no { flex: none; width: 46px; height: 46px; border-radius: 13px; background: var(--mr-mint); color: #16301F;
+              display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.mr-sec .no small { font-size: 9px; font-weight: 600; } .mr-sec .no b { font-size: 21px; font-weight: 700; margin-top: 2px; }
+.stu-official .mr-sec .no { background: var(--mr-deep); color: #fff; }
+.mr-sec h2 { font-size: 23px; font-weight: 700; line-height: 1.15; }
+.stu-official .mr-sec h2 { color: var(--mr-deep); }
+.mr-sec p { font-size: 12.5px; color: var(--mr-ink2); margin-top: 2px; }
+.mr-sec .grule { flex: 1; align-self: flex-end; margin-bottom: 8px; height: 1.5px; background: linear-gradient(270deg, var(--mr-gold), transparent); opacity: .7; }
+
+/* ——— الصناديق ——— */
+.mr-box { border: 1.3px solid var(--mr-line); border-radius: 14px; background: #fff; padding: 12px 14px; min-width: 0; }
+.stu-official .mr-box { border-radius: 8px; }
+.mr-box.tint { background: #F6FBF8; }
+.mr-box > h3 { display: flex; align-items: center; gap: 7px; font-size: 14px; font-weight: 700; margin-bottom: 9px; }
+.mr-box > h3 svg { width: 16px; height: 16px; color: var(--mr-acc); flex: none; }
+.mr-box > h3 .aside { margin-right: auto; font-size: 11.5px; font-weight: 500; color: var(--mr-ink2); }
+.mr-row { display: grid; gap: 12px; }
+.mr-row.c2 { grid-template-columns: 1fr 1fr; } .mr-row.c3 { grid-template-columns: repeat(3, 1fr); }
+.mr-row.c32 { grid-template-columns: 1.25fr 1fr; }
+.mr-note { font-size: 11px; color: var(--mr-ink2); line-height: 1.6; }
+.mr-empty { font-size: 12.5px; color: var(--mr-ink2); text-align: center; padding: 14px 6px; border: 1.3px dashed var(--mr-line); border-radius: 10px; }
+
+/* ——— بطاقات الأرقام ——— */
+.mr-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.mr-kpi { position: relative; border: 1.3px solid var(--mr-line); border-radius: 14px; padding: 9px 12px 8px; background: #fff; overflow: hidden; }
+.stu-official .mr-kpi { border-radius: 8px; }
+.mr-kpi::before { content: ""; position: absolute; top: 0; right: 0; width: 4px; height: 100%; background: var(--c, var(--mr-mint)); }
+.mr-kpi .ic { position: absolute; top: 10px; left: 10px; width: 30px; height: 30px; border-radius: 9px; background: var(--mr-tint); color: var(--mr-acc); display: flex; align-items: center; justify-content: center; }
+.mr-kpi .ic svg { width: 17px; height: 17px; }
+.mr-kpi .v { margin-top: 2px; text-align: right; font-size: 32px; font-weight: 700; line-height: 1; }
+.mr-kpi .k { margin-top: 4px; font-size: 12.5px; font-weight: 600; }
+.mr-kpi .s { margin-top: 2px; font-size: 10.5px; color: var(--mr-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ——— الحلقات ——— */
+.mr-rings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+.mr-ring svg { width: 84px; height: 84px; display: block; margin: 0 auto; }
+.mr-ring b { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 700; }
+.mr-ring span { display: block; font-size: 10.5px; color: var(--mr-ink2); }
+
+/* ——— المفتاح ——— */
+.mr-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--mr-ink2); }
+.mr-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-left: 5px; vertical-align: -1px; }
+.mr-legend b { color: var(--mr-ink); font-weight: 700; margin-right: 4px; }
+
+/* ——— الأشرطة الأفقية ——— */
+.mr-bars { display: grid; gap: 7px; }
+.mr-bar { display: grid; grid-template-columns: 108px 1fr 30px; align-items: center; gap: 8px; font-size: 12px; }
+.mr-bar.wide { grid-template-columns: 190px 1fr 30px; }
+.mr-bar .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--mr-ink); }
+.mr-bar .tr { height: 12px; background: #F0F5F2; border-radius: 4px; overflow: hidden; }
+.mr-bar .tr i { display: block; height: 100%; border-radius: 4px; background: var(--c, var(--s1)); min-width: 3px; }
+.mr-bar .n { font-weight: 700; text-align: left; }
+
+/* شريط مقسّم */
+.mr-split { display: flex; height: 16px; border-radius: 5px; overflow: hidden; gap: 2px; background: #F0F5F2; }
+.mr-split i { display: block; height: 100%; }
+
+/* ——— الصناديق الصغيرة ——— */
+.mr-tiles { display: grid; gap: 8px; }
+.mr-tile { border-radius: 11px; background: var(--mr-tint); padding: 9px 10px; text-align: center; }
+.stu-official .mr-tile { background: #fff; border: 1px solid var(--mr-line); }
+.mr-tile b { display: block; font-size: 24px; font-weight: 700; line-height: 1.05; color: var(--c, var(--mr-ink)); }
+.mr-tile span { display: block; margin-top: 3px; font-size: 11px; color: var(--mr-ink2); line-height: 1.35; }
+
+/* ——— أبرز ما في الشهر ——— */
+.mr-high { border-radius: 14px; background: linear-gradient(135deg, #234A36, #2F6047); color: #fff; padding: 12px 18px; position: relative; overflow: hidden; }
+.mr-high::after { content: ""; position: absolute; width: 220px; height: 220px; border-radius: 50%; left: -70px; top: -90px; background: rgba(137,215,173,.18); }
+.stu-official .mr-high { background: #F6FBF8; color: var(--mr-ink); border: 1.3px solid var(--mr-line); border-radius: 8px; }
+.stu-official .mr-high::after { display: none; }
+.mr-high h3 { font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
+.mr-high h3 svg { width: 18px; height: 18px; color: var(--mr-mint); }
+.stu-official .mr-high h3 svg { color: var(--mr-acc); }
+.mr-high ul { list-style: none; margin-top: 6px; display: grid; gap: 2px; position: relative; z-index: 1; }
+.mr-high li { display: flex; gap: 9px; font-size: 12.5px; line-height: 1.6; }
+.mr-high li::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 2px; background: var(--mr-mint); margin-top: 8px; transform: rotate(45deg); }
+
+/* ——— بطاقات البرامج ——— */
+.mr-progs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mr-prog { border: 1.3px solid var(--mr-line); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; background: #fff; }
+.stu-official .mr-prog { border-radius: 8px; }
+.mr-prog .ph { height: 128px; background: linear-gradient(135deg, #E4F4EA, #F5FBF7); display: flex; align-items: center; justify-content: center; color: #9CC7AE; position: relative; }
+.mr-prog .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mr-prog .ph svg { width: 44px; height: 44px; }
+.mr-prog .ph .kind { position: absolute; top: 8px; right: 8px; background: #fff; color: var(--c); border-radius: 999px; padding: 2px 10px; font-size: 11px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.mr-prog .bd { padding: 9px 12px 11px; }
+.mr-prog h4 { font-size: 14px; font-weight: 700; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mr-prog .mt { margin-top: 4px; display: flex; gap: 10px; font-size: 11px; color: var(--mr-ink2); }
+.mr-prog .mt b { color: var(--mr-ink); }
+.mr-prog p { margin-top: 5px; font-size: 11.5px; line-height: 1.6; color: var(--mr-ink2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.mr-prog.compact .ph { height: 96px; }
+
+/* ——— القوائم ——— */
+.mr-list { display: grid; gap: 0; }
+.mr-list div { display: flex; justify-content: space-between; gap: 10px; padding: 6px 2px; font-size: 12px; }
+.mr-list div + div { border-top: 1px dashed var(--mr-line); }
+.mr-list span:last-child { color: var(--mr-ink2); white-space: nowrap; }
+
+/* ——— الملاحظات والتوقيعات ——— */
+.mr-notes { font-size: 12.5px; line-height: 1.85; white-space: pre-line; }
+.mr-lines { display: grid; gap: 20px; padding: 8px 0 4px; }
+.mr-lines i { display: block; border-bottom: 1.3px dotted #B9CEC1; }
+.mr-signs { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 16px; align-items: end; text-align: center; margin-top: 4px; }
+.mr-signs small { display: block; font-size: 12px; color: var(--mr-ink2); }
+.mr-signs b { display: block; font-size: 15px; font-weight: 700; margin-top: 2px; }
+.mr-signs .sig { height: 54px; display: flex; align-items: flex-end; justify-content: center; }
+.mr-signs .sig img { max-height: 54px; max-width: 170px; object-fit: contain; }
+.mr-signs .sig .ln { width: 150px; border-top: 1.3px dotted #9FB7A8; }
+.mr-signs .stamp { width: 104px; height: 104px; border-radius: 50%; border: 1.3px dashed #9FB7A8; color: var(--mr-ink2); font-size: 11px; display: flex; align-items: center; justify-content: center; margin: 0 auto; }
+.mr-signs .stamp.img { border: none; } .mr-signs .stamp img { width: 100%; height: 100%; object-fit: contain; }
+
+/* ——— التذييل ——— */
+.mr-foot { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--mr-ink2); padding-top: 9px; border-top: 1px solid var(--mr-line); margin-top: 10px; }
+.mr-foot .pg { font-weight: 700; color: var(--mr-deep); }
+.mr-foot .site { font-weight: 700; color: var(--mr-acc); direction: ltr; }
+
+/* =====================================================================
+   الغلاف
+   ===================================================================== */
+.mr-cover .stu-page { padding: 40px 46px 34px; }
+.mr-cover .hero { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.mr-cover .stu-h1 { font-size: 92px; }
+.mr-cover .stu-sub { font-size: 38px; }
+.mr-cover .month { margin-top: 26px; display: flex; align-items: center; gap: 14px; }
+.mr-cover .month .m { background: var(--mr-deep); color: #fff; border-radius: 16px; padding: 10px 22px; }
+.mr-cover .month .m b { display: block; font-size: 30px; font-weight: 700; line-height: 1.2; }
+.mr-cover .month .m span { display: block; font-size: 14px; opacity: .85; }
+.mr-cover .month .hj { font-size: 16px; color: var(--stu-text2); line-height: 1.6; }
+.mr-cover .month .hj b { display: block; color: var(--stu-text); font-size: 18px; }
+.mr-cover .stu-info { margin-top: 30px; }
+.mr-cover .stu-row { grid-template-columns: 44px 130px 1fr; padding: 12px 20px; }
+.mr-cover .strip { margin: 22px 0 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.mr-cover .strip div { border-radius: 16px; background: rgba(255,255,255,.85); border: 1.5px solid var(--stu-cardB); padding: 12px 10px; text-align: center; }
+.mr-cover .strip b { display: block; font-size: 34px; font-weight: 700; line-height: 1.05; color: var(--stu-accent); }
+.mr-cover .strip span { display: block; margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--stu-text2); }
+.stu-official.mr-cover .hero { text-align: center; align-items: center; }
+.stu-official.mr-cover .stu-h1 { color: #3E6350; }
+.stu-official.mr-cover .month { justify-content: center; }
+.stu-official.mr-cover .stu-info { width: 100%; }
+.mr-cover .conf { margin-top: 10px; font-size: 12.5px; color: var(--stu-text2); display: flex; align-items: center; gap: 6px; }
+.mr-cover .conf svg { width: 15px; height: 15px; }
+
+/* =====================================================================
+   الجداول والمصفوفات وبطاقات الأشخاص (ملف التطوير المهني وشواهد الأداء)
+   ===================================================================== */
+.mr-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11.5px; border: 1.3px solid var(--mr-line); border-radius: 10px; overflow: hidden; }
+.mr-table th { background: var(--mr-deep); color: #fff; font-weight: 600; padding: 6px 7px; text-align: right; white-space: nowrap; }
+.mr-table th.c, .mr-table td.c { text-align: center; }
+.mr-table td { padding: 5px 7px; border-top: 1px solid var(--mr-line); vertical-align: top; line-height: 1.5; }
+.mr-table tr:nth-child(even) td { background: #F8FBF9; }
+.stu-official .mr-table { border-radius: 6px; }
+
+.mr-matrix { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 11px; }
+.mr-matrix th { font-weight: 700; color: var(--mr-ink2); padding: 2px; text-align: center; }
+.mr-matrix th.nm { text-align: right; }
+.mr-matrix td { height: 24px; text-align: center; border-radius: 6px; font-weight: 700; }
+.mr-matrix td.nm { text-align: right; font-weight: 600; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; border-radius: 0; }
+.mr-matrix td.ok { background: #DFF3E7; color: #1F6B47; }
+.mr-matrix td.ok.hi { background: #A9DDBF; color: #134B31; }
+.mr-matrix td.no { background: #FBEDEA; color: #B4506A; font-weight: 600; }
+
+.mr-chip { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.mr-chip.ok { background: #DFF3E7; color: #1F6B47; }
+.mr-chip.no { background: #FBEDEA; color: #B4506A; }
+.mr-chip.auto { background: #E6EEF8; color: #2E5E95; }
+
+.mr-gap { border: 1.3px solid var(--mr-line); border-right: 4px solid var(--c, var(--s4)); border-radius: 10px; padding: 7px 11px; background: #fff; }
+.mr-gap + .mr-gap { margin-top: 7px; }
+.mr-gap h4 { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+.mr-gap h4 .aside { margin-right: auto; font-size: 11px; font-weight: 600; color: var(--mr-ink2); }
+.mr-gap .warn { margin-top: 3px; font-size: 11.5px; font-weight: 700; color: #B4506A; }
+.mr-gap ul { list-style: none; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+.mr-gap li { font-size: 10.5px; background: #F4F7F5; border-radius: 6px; padding: 2px 7px; color: var(--mr-ink2); }
+.mr-gap li b { color: var(--mr-ink); margin-left: 3px; }
+.mr-gap p.hint { margin-top: 2px; font-size: 10.5px; color: var(--mr-ink2); line-height: 1.55; }
+
+.mr-who { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; font-size: 13.5px; font-weight: 700; color: var(--mr-deep); }
+.mr-who .av { width: 24px; height: 24px; border-radius: 50%; background: var(--mr-tint); color: var(--mr-deep); font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.mr-who .aside { margin-right: auto; font-size: 11px; font-weight: 500; color: var(--mr-ink2); }
+.mr-bar.xwide { grid-template-columns: 300px 1fr 44px; }
+
+.mr-miss { border-right: 3px solid var(--c, var(--s4)); padding: 3px 10px 4px; margin: 0 0 5px; background: #FAFCFB; border-radius: 0 0 0 6px; }
+.mr-miss b { display: block; font-size: 12px; font-weight: 700; line-height: 1.45; }
+.mr-miss span { display: block; font-size: 10.5px; color: var(--mr-ink2); line-height: 1.6; }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../lib/session.jsx";
 import { supabase } from "../lib/supabase";
@@ -16,10 +16,10 @@ import moeLogo from "../assets/moe-logo.png";
      والمناسبات» أو يُربط بحدث نُفّذ (guidance_5.sql)، فيُعدّ منفَّذًا حين يُعتمد
      حدثه ومستفيدوه طلابه؛ أو يوثَّق تنفيذه يدويًا بالمستفيدين والأثر والصور.
    • طلبات المقابلة: من الطالب أو ولي أمره، يحدد الموجه موعدها أو يرد.
-   • التقرير الشهري: أرقام عمل الموجه في الشهر، مطبوعًا بتوقيعه وتوقيع المدير.
+   • التقرير الشهري بغلافه ورسومه: guidance/MonthlyReport.jsx.
    ===================================================================== */
 
-const BUCKET = "guidance-files";
+export const BUCKET = "guidance-files";
 const MAX_PHOTOS = 3;
 export const PROGRAM_KIND = { awareness: "توعوي", preventive: "وقائي", developmental: "نمائي", remedial: "علاجي" };
 const PRESETS = [
@@ -47,7 +47,7 @@ const EV_STAGE = { draft: "بيانات الحدث", participants: "المشار
 const EV_SELECT = "*, school_events(id, serial, title, stage, event_date, cancelled_at, event_participants(count))";
 
 /** البرامج مع أحداثها، وقبل تشغيل guidance_5.sql بلا أحداث */
-async function loadPrograms(grade) {
+export async function loadPrograms(grade) {
   let r = await supabase.from("guidance_programs").select(EV_SELECT).eq("grade", grade)
     .order("planned_date", { ascending: true, nullsFirst: false });
   if (r.error && /event|relationship|school_events/i.test(r.error.message)) {
@@ -354,92 +354,6 @@ export function Requests({ grade }) {
                   </div>
                 </div>
               )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ------------------------------ التقرير الشهري ------------------------------ */
-export function MonthlyReport({ grade, me }) {
-  const [month, setMonth] = useState(todayISO().slice(0, 7));
-  const [d, setD] = useState(null);
-  const [err, setErr] = useState("");
-
-  useEffect(() => {
-    const from = `${month}-01`;
-    const [y, m] = month.split("-").map(Number);
-    const to = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);   // أول الشهر التالي
-    setD(null); setErr("");
-    Promise.all([
-      supabase.from("guidance_cases").select("id, status, outcome, opened_at, closed_at, source").eq("grade", grade),
-      supabase.from("guidance_sessions").select("id, kind, session_date, guidance_cases!inner(grade)").eq("guidance_cases.grade", grade)
-        .gte("session_date", from).lt("session_date", to),
-      loadPrograms(grade),
-      supabase.from("guidance_requests").select("id, status, created_at").eq("grade", grade).gte("created_at", from).lt("created_at", to),
-    ]).then(([c, s, p, r]) => {
-      const e = c.error || s.error || p.error || r.error;
-      if (e) setErr(setupErr(e, "guidance_3.sql وguidance_4.sql"));
-      const inM = (t) => t && t.slice(0, 10) >= from && t.slice(0, 10) < to;
-      const cases = c.data ?? [];
-      const prog = (p.data ?? []).map((x) => ({ ...x, st: programState(x) })).filter((x) => x.st.done && inM(x.st.date));
-      setD({
-        opened: cases.filter((x) => inM(x.opened_at)).length,
-        closed: cases.filter((x) => inM(x.closed_at)).length,
-        improved: cases.filter((x) => inM(x.closed_at) && x.outcome === "improved").length,
-        openNow: cases.filter((x) => x.status === "open").length,
-        sessions: s.data ?? [],
-        programs: prog,
-        beneficiaries: prog.reduce((a, x) => a + (x.st.beneficiaries ?? 0), 0),
-        requests: r.data ?? [],
-      });
-    });
-  }, [grade, month]);
-
-  const kinds = useMemo(() => {
-    const k = { individual: 0, group: 0, guardian: 0, teacher: 0 };
-    (d?.sessions ?? []).forEach((s) => { k[s.kind] = (k[s.kind] ?? 0) + 1; });
-    return k;
-  }, [d]);
-
-  if (err) return <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>;
-  const stats = d ? [
-    ["حالات فُتحت", d.opened], ["حالات أُغلقت", d.closed], ["منها تحسّنت", d.improved], ["حالات مفتوحة الآن", d.openNow],
-    ["جلسات إرشادية", d.sessions.length], ["مقابلات أولياء الأمور", kinds.guardian],
-    ["برامج نُفّذت", d.programs.length], ["المستفيدون من البرامج", d.beneficiaries],
-    ["طلبات مقابلة", d.requests.length], ["طلبات تمت", d.requests.filter((x) => x.status === "done").length],
-  ] : [];
-  const monthLabel = new Date(`${month}-15T12:00:00`).toLocaleDateString("ar-SA-u-ca-gregory", { month: "long", year: "numeric" });
-
-  const print = () => printReport({
-    title: "التقرير الشهري للموجه الطلابي",
-    subtitle: `${GRADE_NAMES[grade] ?? ""} · ${monthLabel}`,
-    sections: [
-      { title: "أرقام الشهر", headers: ["البيان", "العدد"], rows: stats },
-      { title: "الجلسات بحسب النوع", headers: ["فردية", "جماعية", "مع ولي الأمر", "مع المعلم"],
-        rows: [[kinds.individual, kinds.group, kinds.guardian, kinds.teacher]] },
-      ...(d.programs.length ? [{ title: "البرامج المنفذة", headers: ["م", "البرنامج", "نوعه", "التاريخ", "المستفيدون"],
-        rows: d.programs.map((x, i) => [i + 1, x.title, PROGRAM_KIND[x.kind], fmtDate(x.st.date + "T00:00:00"), x.st.beneficiaries ?? "—"]) }] : []),
-    ],
-    signatures: [{ title: "الموجه الطلابي", name: me ?? "" }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
-    signOnLastPageOnly: true,
-    ...logos(),
-  });
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <input type="month" className="field num w-auto" value={month} onChange={(e) => setMonth(e.target.value)} />
-        {d && <button className="btn-primary px-4 py-1.5 text-xs" onClick={print}>طباعة التقرير</button>}
-      </div>
-      {!d ? <Loader /> : (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-          {stats.map(([t, v]) => (
-            <div key={t} className="rounded-card border border-line bg-white px-2 py-3 text-center">
-              <p className="num text-xl font-bold text-ink">{v}</p>
-              <p className="mt-1 text-[11.5px] text-muted">{t}</p>
             </div>
           ))}
         </div>

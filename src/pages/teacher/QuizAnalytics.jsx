@@ -4,10 +4,10 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import Loader from "../../components/Loader.jsx";
-import PrintPortal from "../../components/PrintPortal.jsx";
-import { printThen } from "../../lib/print.js";
-import logoIcon from "../../assets/icon-mint.png";
-import moeLogo from "../../assets/moe-logo.png";
+import ReportViewer from "../../components/report/ReportViewer.jsx";
+import { loadPrincipalSignature } from "../../lib/principalSignature";
+import { academicYearLabel, TERM_LABEL } from "../studio/lib";
+import { quizReportPages } from "./QuizReportDoc.jsx";
 import { fmtDate } from "../../lib/dates";
 
 /* =====================================================================
@@ -17,7 +17,7 @@ import { fmtDate } from "../../lib/dates";
      لا نجاح ولا رسوب في اختبارات الفترات، فالمؤشر هو التفوق.
    • رسوم: متوسط كل اختبار، وتوزيع الدرجات، ومقارنة الفصول.
    • تحليل الفقرات لاختبار واحد مصحَّح آليًا: نسبة الإجابة الصحيحة لكل فقرة.
-   • المتفوقون ومن يحتاجون دعمًا، وتقرير مطبوع.
+   • المتفوقون ومن يحتاجون دعمًا، وتقرير مصمّم بهوية استوديو البوابة (QuizReportDoc.jsx).
    ===================================================================== */
 
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
@@ -67,7 +67,11 @@ export default function QuizAnalytics() {
   const [data, setData] = useState(null);   // { quizzes, subs, classes, students, questions }
   const [err, setErr] = useState(null);
   const [f, setF] = useState({ period: "", subject: "", classId: "", quizId: "" });
-  const [printing, setPrinting] = useState(false);
+  const [view, setView] = useState("screen");   // screen | report (التقرير النهائي)
+  const [theme, setTheme] = useState("light");
+  const [principalSig, setPrincipalSig] = useState(null);
+  const [termLabel, setTermLabel] = useState("");
+  useEffect(() => { loadPrincipalSignature().then((p) => setPrincipalSig(p?.url ?? null)); }, []);
 
   // توقيع المعلم (من «توقيعي») لذيل التقرير المطبوع
   const [sigUrl, setSigUrl] = useState(null);
@@ -81,24 +85,13 @@ export default function QuizAnalytics() {
     })();
   }, [uid]);
 
-  // الطباعة بعد اكتمال الصور (الشعارات والتوقيع)
-  const printReport = () => {
-    setPrinting(true);
-    setTimeout(async () => {
-      const until = Date.now() + 5000;
-      while (Date.now() < until && [...document.querySelectorAll("#qa-report img")].some((im) => !im.complete)) {
-        await new Promise((r) => setTimeout(r, 150));
-      }
-      printThen(() => setPrinting(false));
-    }, 300);
-  };
-
   useEffect(() => {
     if (!uid) return;
     (async () => {
       const { data: st } = await supabase.from("settings")
         .select("key, value").in("key", ["active_year", "active_term"]);
       const m = Object.fromEntries((st ?? []).map((r) => [r.key, r.value]));
+      setTermLabel(TERM_LABEL[Number(m.active_term ?? 1)] ?? "");
 
       // اختبارات المعلم المنفّذة (بدأ رصدها أو أُقفلت) في الفصل الدراسي الحالي
       const { data: qz, error: e1 } = await supabase.from("quizzes")
@@ -211,6 +204,18 @@ export default function QuizAnalytics() {
     }).filter((x) => x.value != null);
   }, [one, data, rows]);
 
+  // التقرير النهائي بطقم التقارير (QuizReportDoc.jsx) للنطاق المختار نفسه
+  const scopeLine = data ? [
+    f.subject ? subjects.find(([id]) => id === f.subject)?.[1] : null, f.period ? PERIOD_LABEL[f.period] : null,
+    f.classId ? classLabel(data.classes[f.classId]) : null, one ? one.title : null,
+  ].filter(Boolean).join(" · ") : "";
+  const reportKey = `${view}|${theme}|${scopeLine}|${kpi.sheets}|${kpi.avg}|${sigUrl}|${principalSig}|${termLabel}`;
+  const pages = useMemo(() => (view === "report" && data && kpi.sheets ? quizReportPages({
+    r: { kpi, perQuiz, dist, perClass, items, one, top, support, classes: data.classes },
+    teacher: profile?.full_name ?? "", scopeLine, year: academicYearLabel(), term: termLabel, theme,
+    sigs: { teacher: sigUrl, principal: principalSig },
+  }) : null), [reportKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!data) return <Loader />;
 
   const sel = "field py-2 text-sm";
@@ -226,10 +231,12 @@ export default function QuizAnalytics() {
           </p>
         </div>
         {!nothing && (
-          <button className="btn-ghost shrink-0" disabled={!kpi.sheets}
-                  onClick={printReport}>
-            طباعة التقرير
-          </button>
+          <div className="flex shrink-0 gap-1.5">
+            {[["screen", "التحليل"], ["report", "التقرير النهائي"]].map(([k, t]) => (
+              <button key={k} onClick={() => setView(k)} disabled={k === "report" && !kpi.sheets}
+                      className={`rounded-pill px-4 py-1.5 text-sm font-medium ${view === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>{t}</button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -267,41 +274,16 @@ export default function QuizAnalytics() {
             </select>
           </section>
 
-          <Report kpi={kpi} perQuiz={perQuiz} dist={dist} perClass={perClass} items={items}
-                  one={one} top={top} support={support} classes={data.classes} graded={graded.length} />
+          {view === "report" && kpi.sheets ? (
+            <ReportViewer id="qa-report" pages={pages} theme={theme} setTheme={setTheme}
+              fileTitle={`تحليل نتائج الاختبارات - ${profile?.full_name ?? ""}`} />
+          ) : (
+            <Report kpi={kpi} perQuiz={perQuiz} dist={dist} perClass={perClass} items={items}
+                    one={one} top={top} support={support} classes={data.classes} graded={graded.length} />
+          )}
         </>
       )}
 
-      {printing && (
-        <PrintPortal id="qa-report" margin="10mm 12mm">
-          <div className="bg-white text-ink" style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif" }}>
-            <div className="flex items-start justify-between gap-4">
-              <div className="text-[11px] font-medium leading-[1.8]">
-                <div>المملكة العربية السعودية</div><div>وزارة التعليم</div>
-                <div>الإدارة العامة للتعليم بمنطقة مكة المكرمة</div>
-                <div className="font-bold text-mint-deep">مدرسة مكة الثانوية</div>
-              </div>
-              <div className="text-center">
-                <p className="text-[15px] font-bold">تقرير تحليل نتائج الاختبارات</p>
-                <p className="mt-1 text-[11.5px] text-muted">
-                  {profile?.full_name ?? ""}
-                  {f.subject ? ` · ${subjects.find(([id]) => id === f.subject)?.[1] ?? ""}` : ""}
-                  {f.period ? ` · ${PERIOD_LABEL[f.period]}` : ""}
-                  {f.classId ? ` · ${classLabel(data.classes[f.classId])}` : ""}
-                  {one ? ` · ${one.title}` : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <img src={moeLogo} alt="" className="h-9 w-auto" /><img src={logoIcon} alt="" className="h-9 w-auto" />
-              </div>
-            </div>
-            <div className="mb-4 mt-2 h-px w-full" style={{ background: BAR, ...INK }} />
-            <Report print kpi={kpi} perQuiz={perQuiz} dist={dist} perClass={perClass} items={items}
-                    one={one} top={top} support={support} classes={data.classes} graded={graded.length}
-                    teacher={{ name: profile?.full_name ?? "", sigUrl }} />
-          </div>
-        </PrintPortal>
-      )}
     </div>
   );
 }

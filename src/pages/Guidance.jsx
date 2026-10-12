@@ -10,7 +10,9 @@ import Loader from "../components/Loader.jsx";
 import StudentPicker from "../components/StudentPicker.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
-import { Programs, Requests, MonthlyReport } from "./GuidanceMore.jsx";
+import { Programs, Requests } from "./GuidanceMore.jsx";
+import MonthlyReport from "./guidance/MonthlyReport.jsx";
+import { WATCH_AT, LATE_AT, reasonsOf, SOURCE, KIND, OUTCOME } from "../lib/guidanceWarning";
 import GuidanceInquiries from "../components/GuidanceInquiries.jsx";
 
 /* =====================================================================
@@ -22,33 +24,13 @@ import GuidanceInquiries from "../components/GuidanceInquiries.jsx";
      ثلاث مرات فأكثر (المواقف الثلاثة في الإجراءات)، ومتوسط الاختبارات القصيرة
      أقل من 60٪ («يحتاج دعمًا» في دورة الاختبار) في مادتين فأكثر، والإحالات.
    • الحالات: سجل سري لكل حالة وجلساتها، وإغلاقها بنتيجتها، وطباعتها.
-   • الخطة والبرامج، وطلبات المقابلة، والتقرير الشهري: GuidanceMore.jsx.
+   • الخطة والبرامج، وطلبات المقابلة: GuidanceMore.jsx.
+   • التقرير الشهري بغلافه ورسومه: guidance/MonthlyReport.jsx.
    • استمارات المستوى (توضيح مستوى الطالب من معلميه): components/GuidanceInquiries.jsx.
    ===================================================================== */
 
-const WATCH_AT = 5;          // متابعة الغياب كما في «الإنذارات والمحاضر»
-const LATE_AT = 3;           // التأخر الصباحي: الموقف الثالث
-const LOW_SUBJECTS_AT = 2;   // مادتان فأكثر دون 60٪
-const SOURCE = { warning: "الإنذار المبكر", referral: "إحالة", guardian: "طلب ولي الأمر", student: "طلب الطالب", teacher: "ملاحظة معلم", other: "أخرى" };
-const KIND = { individual: "فردية", group: "جماعية", guardian: "مع ولي الأمر", teacher: "مع المعلم" };
-const OUTCOME = { improved: "تحسّنت الحالة", referred: "أُحيلت لجهة مختصة", continuing: "مستمرة تُتابع لاحقًا" };
-
-const absStage = (d) => [...WARNING_STAGES].reverse().find((s) => d >= s.days)?.label ?? (d >= WATCH_AT ? "متابعة" : null);
 const pill = (on) => `rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
-
-// أسباب ظهور الطالب في الإنذار المبكر
-function reasonsOf(r) {
-  const out = [];
-  const st = absStage(r.absent_days);
-  if (st) out.push({ k: "absence", t: `غياب ${r.absent_days} أيام · ${st}`, c: "bg-absent/10 text-absent" });
-  if (r.late_days >= LATE_AT) out.push({ k: "late", t: `تأخر صباحي ${r.late_days} مرات`, c: "bg-late/10 text-late" });
-  if (r.low_subjects.length >= LOW_SUBJECTS_AT)
-    out.push({ k: "study", t: `تعثر دراسي: ${r.low_subjects.join("، ")}`, c: "bg-excused/10 text-excused" });
-  if (r.referrals > 0)
-    out.push({ k: "behavior", t: `إحالات ${r.referrals}${r.max_degree ? ` · الدرجة ${r.max_degree}` : ""}`, c: "bg-warning-light text-warning" });
-  return out;
-}
 
 export default function Guidance() {
   const { adminRoles, profile } = useSession();
