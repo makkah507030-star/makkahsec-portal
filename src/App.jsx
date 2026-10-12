@@ -77,6 +77,7 @@ const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const Guidance = lazy(() => import("./pages/Guidance.jsx"));
 const StudentNotes = lazy(() => import("./pages/StudentNotes.jsx"));
+const StudentDropouts = lazy(() => import("./pages/StudentDropouts.jsx"));
 const ExamSchedules = lazy(() => import("./pages/ExamSchedules.jsx"));
 const Events = lazy(() => import("./pages/Events.jsx"));
 const Plc = lazy(() => import("./pages/Plc.jsx"));
@@ -418,6 +419,8 @@ export default function App() {
           <Route path="/inquiry/:id" element={<GuidanceInquiry />} />
           {/* ملاحظات الطلاب — الصفحة تتحقق من الدور، والقاعدة تفرض من يكتب كل نوع */}
           <Route path="/student-notes" element={<StudentNotes />} />
+          {/* الطلاب المنقطعون — المعلم يبلّغ عن طلاب فصوله، والوكيل يطوي القيد ويعيد؛ القاعدة تفرض الصلاحية */}
+          {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/dropouts" element={<StudentDropouts />} />}
           {/* جداول الاختبارات: العرض للجميع، والإدارة بصلاحية */}
           <Route path="/exams" element={<ExamSchedules />} />
           {/* الأحداث والمناسبات — لكل معلم وإداري */}
