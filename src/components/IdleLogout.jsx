@@ -72,7 +72,7 @@ export default function IdleLogout() {
            className="nt-pop w-full max-w-sm rounded-xl2 border border-line bg-white p-5 text-center shadow-card">
         <p className="text-base font-bold text-ink">هل ما زلت هنا؟</p>
         <p className="mt-2 text-sm leading-relaxed text-muted">
-          لم نلحظ نشاطًا منذ مدة، وسيُسجَّل خروجك تلقائيًا لحماية حسابك بعد
+          لم نلاحظ نشاطًا منذ مدة، وسيُسجَّل خروجك تلقائيًا لحماية حسابك بعد
           {" "}<span className="num font-bold text-absent">{left}</span> ثانية.
         </p>
         <div className="mt-4 flex justify-center gap-2">
