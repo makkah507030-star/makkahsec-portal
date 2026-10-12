@@ -53,12 +53,12 @@ export function perfModel(elements, evidence, auto) {
 function highlights(m, visits) {
   const out = [];
   const sorted = [...m.els].sort((a, b) => b.p - a.p);
-  out.push(`نسبة الإنجاز الكلية ${m.p}%: ${countAr(m.ok, "item")} متوفر من ${m.total}.`);
+  out.push(`نسبة الإنجاز الكلية ${m.p}%: المتوفر ${m.ok} من ${countAr(m.total, "item", "g")}.`);
   if (sorted[0]) out.push(`أعلى العناصر اكتمالًا: «${sorted[0].el.title}» بنسبة ${sorted[0].p}%.`);
   const low = sorted.filter((e) => e.p < 100).slice(-1)[0];
   if (low) out.push(`أكثرها حاجة للاستكمال: «${low.el.title}» (${low.ok} من ${low.total}).`);
-  if (m.src.auto) out.push(`${countAr(m.src.auto, "item")} تصل شواهدها تلقائيًا من عمل المعلم في البوابة.`);
-  if (m.hours) out.push(`ساعات التطوير المهني المسجلة: ${n(m.hours)} ساعة.`);
+  if (m.src.auto) out.push(`بنود تصل شواهدها تلقائيًا من عمل المعلم في البوابة: ${n(m.src.auto)}.`);
+  if (m.hours) out.push(`ساعات التطوير المهني المسجلة: ${countAr(m.hours, "hour")}.`);
   if (visits.length) out.push(`زيارات الدعم الواردة من الإدارة: ${n(visits.length)}.`);
   return out.slice(0, 6);
 }
@@ -91,18 +91,18 @@ export function perfReportPages({ elements, evidence, auto, visits = [], info, n
     <Cover key="cover" theme={theme} c={{
       year: `${year}هـ`, tag: ["award", "ملف الأداء الوظيفي للمعلم"], title: "شواهد الأداء الوظيفي", sub: teacher,
       titleSize: 72, subSize: teacher.length > 28 ? 30 : 36,
-      badge: { main: `${m.p}%`, sub: "نسبة الإنجاز" }, side: { main: `${m.ok} من ${m.total} بندًا`, sub: "بنود شواهدها متوفرة" },
+      badge: { main: `${m.p}%`, sub: "نسبة الإنجاز" }, side: { main: `${m.ok} من ${countAr(m.total, "item", "g")}`, sub: "بنود شواهدها متوفرة" },
       rows: [["user", "المعلم", teacher || "—"], ["book", "المادة", subjects],
              ["cap", "الصفوف والفصول", `${grades || "—"}${info?.classes?.length ? ` · ${countAr(info.classes.length, "cls")}` : ""}`],
              ["calendar", "العام الدراسي", `${year}هـ`]],
       note: ["check", "الشواهد كما في ملف المعلم بالبوابة: المرفوعة، والواردة من النماذج والزيارات، والآلية من عمله."],
-      strip: [[m.ok, "بندًا متوفرًا"], [m.missing, "بندًا غير متوفر"], [evidence.length, "شاهدًا في الملف"], [m.src.auto, "بندًا يصل تلقائيًا"]],
+      strip: [[m.ok, "البنود المتوفرة"], [m.missing, "البنود غير المتوفرة"], [evidence.length, "الشواهد في الملف"], [m.src.auto, "بنود تصل تلقائيًا"]],
       foot: "الأداء الوظيفي",
     }} />,
 
     <Page key="sum" {...common} page={2} sec={{ no: 1, title: "ملخص الإنجاز", sub: "اكتمال شواهد عناصر نموذج تقييم الأداء" }}>
       <Kpis items={[
-        { ic: "check", t: "بنود متوفرة", v: m.ok, s: `من ${m.total} بندًا`, c: S[0] },
+        { ic: "check", t: "بنود متوفرة", v: m.ok, s: `من ${countAr(m.total, "item", "g")}`, c: S[0] },
         { ic: "alert", t: "بنود غير متوفرة", v: m.missing, s: "تُستكمل قبل التقييم", c: S[3] },
         { ic: "doc", t: "شواهد في الملف", v: evidence.length, s: `مرفوع ${m.src.upload} · نماذج ${m.src.forms}`, c: S[1] },
         { ic: "clock", t: "ساعات التطوير", v: m.hours, s: `زيارات الدعم ${visits.length}`, c: S[2] },

@@ -3,7 +3,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import { WARNING_STAGES } from "../../lib/officialAttendance";
 import { PRINCIPAL_NAME } from "../../lib/exportUtils";
 import {
-  S, n, Ring, Bars, Split, GroupedColumns, Legend, Kpis, Highlights, Box, Signs, Page, Cover,
+  S, n, countAr, Ring, Bars, Split, GroupedColumns, Legend, Kpis, Highlights, Box, Signs, Page, Cover,
 } from "../../components/report/ReportKit.jsx";
 
 /* =====================================================================
@@ -20,13 +20,13 @@ const docOf = (info) => ({ title: "التقرير الشهري لشؤون الط
 function highlights(d) {
   const a = d.attendance, out = [];
   if (!a.days) out.push("لم تُعتمد أيام حضور رسمية في هذا الشهر بعد.");
-  else out.push(`نسبة الحضور الرسمية ${pc(a.pct)} في ${n(a.days)} يومًا دراسيًا معتمدًا.`);
+  else out.push(`نسبة الحضور الرسمية ${pc(a.pct)}، والأيام المعتمدة: ${countAr(a.days, "day")}.`);
   const best = [...a.grades].sort((x, y) => (y.pct ?? 0) - (x.pct ?? 0))[0];
   if (best?.pct != null && a.grades.length > 1) out.push(`أعلى الصفوف حضورًا: ${GRADE_NAMES[best.g]} بنسبة ${pc(best.pct)}.`);
   const worstDay = [...a.weekdays].sort((x, y) => (y.rate ?? 0) - (x.rate ?? 0))[0];
   if (worstDay?.rate) out.push(`أعلى أيام الأسبوع غيابًا: ${WD[worstDay.w]} (${pc(worstDay.rate)}).`);
   if (a.repeat3) out.push(`طلاب تكرر غيابهم 3 أيام فأكثر: ${n(a.repeat3)}.`);
-  if (d.fpOn && d.late.incidents) out.push(`حالات التأخر الصباحي: ${n(d.late.incidents)} لـ ${n(d.late.students)} طالبًا.`);
+  if (d.fpOn && d.late.incidents) out.push(`حالات التأخر الصباحي: ${n(d.late.incidents)}، والمتأخرون: ${countAr(d.late.students, "student")}.`);
   if (d.warnings.total) out.push(`إنذارات غياب صدرت: ${n(d.warnings.total)}.`);
   if (d.referrals.total) out.push(`الإحالات: ${n(d.referrals.total)}، أُقفل منها ${n(d.referrals.closed)}.`);
   return out.slice(0, 6);
@@ -56,18 +56,18 @@ export function affairsPages({ d, info, theme = "light", notes, sigs = {} }) {
       year: info.year, tag: ["shield", "شؤون الطلاب"], title: "التقرير الشهري", sub: "لشؤون الطلاب",
       badge: { main: info.month, sub: "الشهر" }, side: { main: info.hijri, sub: info.termLabel },
       rows: [["user", "وكيل شؤون الطلاب", info.deputy || "—"], ["calendar", "الفترة", info.range],
-             ["check", "الأيام المعتمدة", `${n(a.days)} يومًا دراسيًا`], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],
+             ["check", "الأيام المعتمدة", countAr(a.days, "day")], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],
       note: ["check", "الأرقام من الأيام المعتمدة في البوابة: الحضور الرسمي في الحصتين الأولى والثانية."],
-      strip: [[pc(a.pct), "نسبة الحضور"], [a.absent, "غياب بدون عذر"], [d.fpOn ? l.incidents : "—", "حالة تأخر"], [d.referrals.total, "إحالة"]],
+      strip: [[pc(a.pct), "نسبة الحضور"], [a.absent, "الغياب بدون عذر"], [d.fpOn ? l.incidents : "—", "حالات التأخر"], [d.referrals.total, "الإحالات"]],
       foot: "شؤون الطلاب",
     }} />,
 
     <Page key="att" {...common} page={2} sec={{ no: 1, title: "الحضور والغياب", sub: "من الأيام المعتمدة في الشهر" }}>
       <Kpis items={[
-        { ic: "check", t: "نسبة الحضور", v: pc(a.pct), s: `في ${a.days} يومًا معتمدًا`, c: S[0] },
+        { ic: "check", t: "نسبة الحضور", v: pc(a.pct), s: `الأيام المعتمدة ${a.days}`, c: S[0] },
         { ic: "alert", t: "غياب بدون عذر", v: a.absent, s: `بعذر ${n(a.excused)}`, c: S[3] },
         { ic: "users", t: "طلاب غابوا", v: a.students, s: `تكرر 3 أيام فأكثر ${a.repeat3}`, c: S[1] },
-        { ic: "calendar", t: "أيام معتمدة", v: a.days, s: `لم يُحضَّر ${n(a.pending)} سجلًا`, c: S[2] },
+        { ic: "calendar", t: "أيام معتمدة", v: a.days, s: `سجلات لم تُحضَّر ${n(a.pending)}`, c: S[2] },
       ]} />
       <Box icon="cap" title="نسبة الحضور لكل صف">
         <div className="mr-rings">
@@ -94,9 +94,9 @@ export function affairsPages({ d, info, theme = "light", notes, sigs = {} }) {
     <Page key="late" {...common} page={3} sec={{ no: 2, title: "التأخر الصباحي والإنذارات", sub: "التأخر من البصمة، وإنذارات الغياب الصادرة، والطلاب الأكثر غيابًا" }}>
       {d.fpOn ? (
         <Kpis items={[
-          { ic: "clock", t: "حالات التأخر", v: l.incidents, s: `لـ ${n(l.students)} طالبًا`, c: S[2] },
+          { ic: "clock", t: "حالات التأخر", v: l.incidents, s: `المتأخرون ${n(l.students)}`, c: S[2] },
           { ic: "users", t: "تأخروا 3 مرات فأكثر", v: l.repeat3, s: "الموقف الثالث في الإجراءات", c: S[3] },
-          { ic: "hourglass", t: "مجموع الدقائق", v: l.minutes, s: l.incidents ? `متوسط ${Math.round(l.minutes / l.incidents)} دقيقة` : "—", c: S[1] },
+          { ic: "hourglass", t: "مجموع الدقائق", v: l.minutes, s: l.incidents ? `المتوسط ${countAr(Math.round(l.minutes / l.incidents), "minute")}` : "—", c: S[1] },
           { ic: "alert", t: "إنذارات الغياب", v: d.warnings.total, s: "صدرت في الشهر", c: S[0] },
         ]} />
       ) : <Box icon="clock" title="التأخر الصباحي" tint><p className="mr-note" style={{ fontSize: 12 }}>البصمة مقفلة في البوابة، فلا يُحتسب التأخر الصباحي في هذا التقرير.</p></Box>}

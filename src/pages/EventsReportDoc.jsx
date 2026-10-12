@@ -2,7 +2,7 @@
 import { fmtDate } from "../lib/dates";
 import { PRINCIPAL_NAME } from "../lib/exportUtils.js";
 import {
-  S, n, pct, dmy, paginate, Ring, Bars, StackedColumns, Legend, Kpis, Highlights, Box, Signs, Page, Cover, IC,
+  S, n, countAr, pct, dmy, paginate, Ring, Bars, StackedColumns, Legend, Kpis, Highlights, Box, Signs, Page, Cover, IC,
 } from "../components/report/ReportKit.jsx";
 
 /* =====================================================================
@@ -47,12 +47,12 @@ export function eventsModel(events, counts) {
 function highlights(m) {
   const out = [];
   if (!m.t.events) return ["لا أحداث منفّذة في هذه الفترة."];
-  out.push(`نُفّذ ${n(m.t.events)} حدثًا ومناسبة، اعتُمد منها ${n(m.t.approved)}.`);
-  if (m.t.attended) out.push(`حضرها ${n(m.t.attended)} طالبًا من ${n(m.t.nominated)} مرشحًا (${pct(m.t.attended, m.t.nominated) ?? 0}%).`);
-  if (m.t.certs) out.push(`صدرت ${n(m.t.certs)} شهادة مشاركة للطلاب.`);
+  out.push(`الأحداث والمناسبات المنفّذة: ${countAr(m.t.events, "event")}، اعتُمد منها ${n(m.t.approved)}.`);
+  if (m.t.attended) out.push(`الحضور: ${countAr(m.t.attended, "student")} من ${countAr(m.t.nominated, "nominee", "g")} (${pct(m.t.attended, m.t.nominated) ?? 0}%).`);
+  if (m.t.certs) out.push(`شهادات المشاركة الصادرة للطلاب: ${countAr(m.t.certs, "cert")}.`);
   if (m.cats[0]) out.push(`أكثر التصنيفات: «${m.cats[0][0]}» بعدد ${n(m.cats[0][1])}.`);
   const top = [...m.live].sort((a, b) => m.c(b).attended - m.c(a).attended)[0];
-  if (top && m.c(top).attended) out.push(`أكبر الأحداث حضورًا: «${top.title}» (${n(m.c(top).attended)} طالبًا).`);
+  if (top && m.c(top).attended) out.push(`أكبر الأحداث حضورًا: «${top.title}» (${countAr(m.c(top).attended, "student")}).`);
   if (m.t.cancelled) out.push(`أحداث أُلغيت: ${n(m.t.cancelled)} (لا تدخل في الأرقام).`);
   return out.slice(0, 6);
 }
@@ -101,11 +101,11 @@ export function eventsReportPages({ events, counts, photos = {}, scopeLabel, org
   return [
     <Cover key="cover" theme={theme} c={{
       year, tag: ["star", "الأحداث والمناسبات"], title: "تقرير الأحداث", sub: "والمناسبات المدرسية", titleSize: 84,
-      badge: { main: n(m.t.events), sub: "حدثًا منفّذًا" }, side: { main: period, sub: scopeLabel },
+      badge: { main: n(m.t.events), sub: "الأحداث المنفّذة" }, side: { main: period, sub: scopeLabel },
       rows: [["user", "النطاق", organizer ? `ما نفّذه: ${organizer}` : "كل أحداث المدرسة"], ["calendar", "الفترة", period],
              ["check", "المعتمدة", `${n(m.t.approved)} من ${n(m.t.events)}`], ["doc", "تاريخ الإصدار", fmtDate(new Date())]],
       note: ["check", "أرقام الأحداث كما وُثّقت في البوابة: المرشحون، والحضور، والشهادات، والاعتماد."],
-      strip: [[m.t.events, "حدثًا ومناسبة"], [m.t.attended, "طالبًا حاضرًا"], [m.t.certs, "شهادة صادرة"], [m.t.approved, "حدثًا معتمدًا"]],
+      strip: [[m.t.events, "الأحداث والمناسبات"], [m.t.attended, "الطلاب الحاضرون"], [m.t.certs, "الشهادات الصادرة"], [m.t.approved, "الأحداث المعتمدة"]],
       foot: "الأحداث والمناسبات",
     }} />,
 
@@ -113,7 +113,7 @@ export function eventsReportPages({ events, counts, photos = {}, scopeLabel, org
       <Kpis items={[
         { ic: "star", t: "الأحداث", v: m.t.events, s: `معتمدة ${m.t.approved}`, c: S[0] },
         { ic: "users", t: "المرشحون", v: m.t.nominated, s: `الموافقات ${m.t.consent}`, c: S[1] },
-        { ic: "check", t: "الحاضرون", v: m.t.attended, s: `من ${m.t.nominated} مرشحًا`, c: S[2] },
+        { ic: "check", t: "الحاضرون", v: m.t.attended, s: `من ${countAr(m.t.nominated, "nominee", "g")}`, c: S[2] },
         { ic: "award", t: "الشهادات", v: m.t.certs, s: "شهادات مشاركة", c: S[3] },
       ]} />
       <Box icon="trophy" title="مؤشرات الإنجاز">

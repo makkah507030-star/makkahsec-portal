@@ -4,7 +4,7 @@ import { WARNING_STAGES } from "../../lib/officialAttendance";
 import { PD_KINDS } from "../../lib/pd";
 import { PRINCIPAL_NAME } from "../../lib/exportUtils";
 import {
-  S, n, pct, dmy, Ring, Bars, Split, GroupedColumns, Legend, Kpis, Highlights, Box, Signs, Page, Cover,
+  S, n, countAr, pct, dmy, Ring, Bars, Split, GroupedColumns, Legend, Kpis, Highlights, Box, Signs, Page, Cover,
 } from "../../components/report/ReportKit.jsx";
 
 /* =====================================================================
@@ -19,8 +19,8 @@ const MODE = { paper: "ورقي", omr: "تصحيح آلي", online: "إلكتر�
 function highlights(d) {
   const out = [];
   const a = d.attendance;
-  if (a.days) out.push(`نسبة الحضور الرسمية ${pc(a.pct)} في ${n(a.days)} يومًا دراسيًا معتمدًا.`);
-  if (d.events.total) out.push(`نُفّذ ${n(d.events.total)} حدثًا ومناسبة حضرها ${n(d.events.attended)} طالبًا.`);
+  if (a.days) out.push(`نسبة الحضور الرسمية ${pc(a.pct)}، والأيام المعتمدة: ${countAr(a.days, "day")}.`);
+  if (d.events.total) out.push(`الأحداث والمناسبات: ${countAr(d.events.total, "event")}، والطلاب الحاضرون ${n(d.events.attended)}.`);
   const pdAll = d.pd.reports + d.pd.plc + d.pd.visits;
   if (pdAll) out.push(`أنشطة التطوير المهني المعتمدة: ${n(pdAll)} (تقارير ${n(d.pd.reports)}، مجتمعات تعلم ${n(d.pd.plc)}، زيارات ${n(d.pd.visits)}).`);
   if (d.quizzes.total) out.push(`اختبارات منفّذة عبر البوابة: ${n(d.quizzes.total)}${d.quizzes.avg != null ? ` بمتوسط أداء ${pc(d.quizzes.avg)}` : ""}.`);
@@ -43,18 +43,18 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
       year: info.year, tag: ["building", "مدرسة مكة الثانوية"], title: "التقرير الشهري", sub: "لأعمال المدرسة",
       badge: { main: info.month, sub: "الشهر" }, side: { main: info.hijri, sub: info.termLabel },
       rows: [["user", "مدير المدرسة", PRINCIPAL_NAME], ["calendar", "الفترة", info.range],
-             ["check", "الأيام المعتمدة", `${n(a.days)} يومًا دراسيًا`], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],
+             ["check", "الأيام المعتمدة", countAr(a.days, "day")], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],
       note: ["chart", "خلاصة الشهر من أقسام البوابة: شؤون الطلاب، والتوجيه، والأحداث، والتطوير المهني، والاختبارات، والنماذج."],
-      strip: [[pc(a.pct), "نسبة الحضور"], [d.events.total, "حدثًا ومناسبة"], [pdAll, "نشاط تطوير مهني"], [d.forms.total, "نموذجًا صادرًا"]],
+      strip: [[pc(a.pct), "نسبة الحضور"], [d.events.total, "الأحداث والمناسبات"], [pdAll, "أنشطة التطوير المهني"], [d.forms.total, "النماذج الصادرة"]],
       foot: "التقرير الشهري",
     }} />,
 
     <Page key="dash" {...common} page={2} sec={{ no: 1, title: "لوحة المدرسة", sub: "أرقام الشهر من أقسام البوابة" }}>
       <Kpis items={[
-        { ic: "check", t: "نسبة الحضور", v: pc(a.pct), s: `في ${a.days} يومًا معتمدًا`, c: S[0] },
+        { ic: "check", t: "نسبة الحضور", v: pc(a.pct), s: `الأيام المعتمدة ${a.days}`, c: S[0] },
         { ic: "arrow", t: "الإحالات", v: d.referrals.total, s: `أُقفلت ${d.referrals.closed}`, c: S[3] },
         { ic: "chat", t: "جلسات إرشادية", v: g.sessions, s: `حالات جديدة ${g.opened}`, c: S[1] },
-        { ic: "star", t: "الأحداث", v: d.events.total, s: `حضرها ${n(d.events.attended)} طالبًا`, c: S[2] },
+        { ic: "star", t: "الأحداث", v: d.events.total, s: `الحاضرون ${n(d.events.attended)}`, c: S[2] },
         { ic: "award", t: "التطوير المهني", v: pdAll, s: `شواهد مرفوعة ${n(d.pd.evidence)}`, c: S[0] },
         { ic: "doc", t: "اختبارات منفّذة", v: d.quizzes.total, s: d.quizzes.avg != null ? `متوسط ${pc(d.quizzes.avg)}` : "—", c: S[1] },
         { ic: "clip", t: "نماذج صادرة", v: d.forms.total, s: `${d.forms.by.length} أنواع`, c: S[2] },
@@ -99,7 +99,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
             <div key={t} className="mr-tile"><b className="num">{n(v)}</b><span>{t}</span></div>
           ))}
         </div>
-        {g.beneficiaries > 0 && <p className="mr-note" style={{ marginTop: 6 }}>المستفيدون من البرامج الإرشادية: {n(g.beneficiaries)} طالبًا.</p>}
+        {g.beneficiaries > 0 && <p className="mr-note" style={{ marginTop: 6 }}>المستفيدون من البرامج الإرشادية: {countAr(g.beneficiaries, "student")}.</p>}
       </Box>
       <Box icon="list" title="الأكثر غيابًا" aside="أيام بدون عذر">
         {a.top.length ? (
@@ -129,7 +129,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
       <div className="mr-row c2">
         <Box icon="star" title="أبرز الأحداث" aside={n(d.events.total)}>
           {d.events.top.length ? (
-            <div className="mr-list">{d.events.top.map((e) => <div key={e.title + e.date}><span>{e.title}</span><span className="num">{dmy(e.date)} · {e.attended} طالبًا</span></div>)}</div>
+            <div className="mr-list">{d.events.top.map((e) => <div key={e.title + e.date}><span>{e.title}</span><span className="num">{dmy(e.date)} · الحاضرون {e.attended}</span></div>)}</div>
           ) : <div className="mr-empty">لا أحداث هذا الشهر.</div>}
         </Box>
         <Box icon="clip" title="النماذج الأكثر استخدامًا" aside={n(d.forms.total)}>

@@ -47,7 +47,7 @@ export function deptModel(rows, items) {
 function highlights(m, items, sessions) {
   const out = [];
   if (!m.N) return ["لا معلمين مسجلين في القسم بعد."];
-  out.push(`سجّل معلمو القسم ${countAr(m.total, "evidence")} في البوابة${m.hours ? `، منها ${countAr(m.hours, "hour")} تدريبية` : ""}.`);
+  out.push(`سجّل معلمو القسم في البوابة ${countAr(m.total, "evidence", "g")}${m.hours ? `، وساعات التدريب ${n(m.hours)}` : ""}.`);
   const best = [...m.perItem].sort((a, b) => b.done - a.done)[0];
   if (best?.done) out.push(`أكثر البنود استيفاءً: «${best.title}» (${best.done} من ${m.N}).`);
   const zero = m.perItem.filter((i) => !i.done);
@@ -110,7 +110,7 @@ export function deptFilePages({ rows, items, sessions, deptName, year, theme = "
       rows: [["user", "رئيس القسم", m.head || "—"], ["users", "معلمو القسم", countAr(m.N, "teacher")],
              ["book", "بنود العنصر", countAr(L, "item")], ["calendar", "تاريخ الإصدار", fmtDate(new Date())]],
       note: ["check", "شواهد المعلمين كما سُجّلت في البوابة، من ملفات الأداء الوظيفي ونماذج التطوير المهني."],
-      strip: [[m.N, "معلمو القسم"], [m.total, "شاهدًا ومشاركة"], [m.hours, "ساعة تدريبية"], [`${m.coverage}%`, "استيفاء البنود"]],
+      strip: [[m.N, "معلمو القسم"], [m.total, "الشواهد والمشاركات"], [m.hours, "الساعات التدريبية"], [`${m.coverage}%`, "استيفاء البنود"]],
       foot: "التطوير المهني",
     }} />,
 
@@ -144,7 +144,7 @@ export function deptFilePages({ rows, items, sessions, deptName, year, theme = "
     </Page>,
 
     <Page key="matrix" {...common} page={++pg} sec={{ no: 2, title: "مصفوفة الاستيفاء", sub: "عدد الشواهد لكل معلم في كل بند" }}>
-      <Box icon="users" title="إنجاز المعلمين" aside={`من ${countAr(L, "item")}`}>
+      <Box icon="users" title="إنجاز المعلمين" aside={`من ${countAr(L, "item", "g")}`}>
         <Bars items={m.teachers.map((t) => ({ t: `${t.name}${t.head ? " (الرئيس)" : ""}`, v: t.filled, note: `${t.filled}/${L}` }))} max={L} wide />
       </Box>
       <Box icon="grid" title="المصفوفة" aside="الأعمدة أرقام البنود في صفحة الإحصائيات">
