@@ -454,7 +454,7 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
                   `فلا حاجة لمشاركة ${p.student_name} فيها. السبب: ${reason.trim()}`,
           p_kind: "general", p_link: null,
           p_roles: null, p_user_ids: [doc.recipient_user_id],
-          p_grade: null, p_class_no: null, p_is_auto: false,
+          p_grade: null, p_class_no: null, p_is_auto: true,
         });
         if (nid) {
           n++;
@@ -856,7 +856,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
         p_body: `صدر لك نموذج موافقة على مشاركة ${p.student_name} في «${e.title}»` +
                 ` يوم ${fmtG(e.event_date)}. افتحه للموافقة والتوقيع.`,
         p_kind: "general", p_link: `/doc/${doc.id}`,
-        p_roles: null, p_user_ids: [g.user_id], p_grade: null, p_class_no: null, p_is_auto: false,
+        p_roles: null, p_user_ids: [g.user_id], p_grade: null, p_class_no: null, p_is_auto: true,
       });
       if (nid) {
         try {
@@ -895,7 +895,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
                 ` بانتظار ردّك. افتحه من البوابة.`,
         p_kind: "general", p_link: `/doc/${p.consent_doc_id}`,
         p_roles: null, p_user_ids: [doc.recipient_user_id],
-        p_grade: null, p_class_no: null, p_is_auto: false,
+        p_grade: null, p_class_no: null, p_is_auto: true,
       });
       if (nid) {
         try {
@@ -1778,13 +1778,14 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
   );
 }
 
-/** إشعار في الجرس وعلى الجوال لمستخدمين محدّدين */
+/** إشعار في الجرس وعلى الجوال لمستخدمين محدّدين — آلي (p_is_auto) كإشعارات الفعالية
+ *  كلها في هذه الصفحة، لأن منظّمها قد يكون معلمًا، والإرسال اليدوي مقصور على الإدارة */
 async function notifyUsers(userIds, title, body, link = "/events") {
   const ids = [...new Set(userIds.filter(Boolean))];
   if (!ids.length) return;
   const { data: nid } = await supabase.rpc("send_notification", {
     p_title: title, p_body: body, p_kind: "general", p_link: link,
-    p_roles: null, p_user_ids: ids, p_grade: null, p_class_no: null, p_is_auto: false,
+    p_roles: null, p_user_ids: ids, p_grade: null, p_class_no: null, p_is_auto: true,
   });
   if (!nid) return;
   try {
