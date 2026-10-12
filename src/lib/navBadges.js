@@ -199,9 +199,10 @@ async function load() {
       items: items(giGuardian, "/inquiry", (r) => r.student_name) },
   ].map((t) => ({ ...t, n: t.items.length, to: "/", tone: "warning" }));
 
-  // المتاح الآن أو الجاري، لا القادم ولا ما انتهى أو سُلِّم
-  const quizzesDue = onlineQuizzes.filter((r) => !r.submitted_at && new Date(r.closes_at) > Date.now()
-    && (r.started_at || new Date(r.opens_at) <= Date.now()));
+  // كل اختبار لم يُسلَّم ولم يُغلق: الجاري والمتاح الآن، والقادم بموعد فتحه — يظهر فور نشره
+  const quizzesDue = onlineQuizzes.filter((r) => !r.submitted_at && new Date(r.closes_at) > Date.now());
+  const quizSoon = (r) => !r.started_at && new Date(r.opens_at) > Date.now();
+  const quizWhen = (r) => (quizSoon(r) ? `يُفتح ${fmtDateTime(r.opens_at)}` : `يُغلق ${fmtDateTime(r.closes_at)}`);
 
   const ethicsDue = Array.isArray(ethicsAck) && ethicsAck.length === 0 ? 1 : 0;
 
@@ -227,10 +228,10 @@ async function load() {
       items: items(refGuardian, "/referral", (r) => `إحالة — ${r.students?.full_name ?? ""}`),
       label: "إحالات تنتظر اطلاعك وردك", tone: "absent", icon: "send" },
     { key: "onlineQuizzes", n: quizzesDue.length, to: "/", label: "اختبارات إلكترونية بانتظارك",
-      tone: quizzesDue.some((r) => r.started_at) ? "absent" : "warning", icon: "quiz",
-      sub: quizzesDue.length === 1 ? `يُغلق ${fmtDateTime(quizzesDue[0].closes_at)}` : "",
+      tone: quizzesDue.some((r) => r.started_at) ? "absent" : quizzesDue.every(quizSoon) ? "mint" : "warning", icon: "quiz",
+      sub: quizzesDue.length === 1 ? quizWhen(quizzesDue[0]) : "",
       items: quizzesDue.map((r) => ({ id: r.quiz_id, to: `/quiz/${r.quiz_id}`,
-        title: `${r.title}${r.subject_name ? ` · ${r.subject_name}` : ""}${r.started_at ? " · جارٍ — أكمل" : ""}` })) },
+        title: `${r.title}${r.subject_name ? ` · ${r.subject_name}` : ""} · ${r.started_at ? "جارٍ — أكمل" : quizWhen(r)}` })) },
     { key: "pledges", n: pledges.length, to: "/", items: items(pledges, "/behavior", () => "تعهد سلوكي"),
       label: "تعهدات تنتظر توقيعك", tone: "absent", icon: "shield" },
 
