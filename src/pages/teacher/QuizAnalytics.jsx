@@ -67,7 +67,7 @@ export default function QuizAnalytics() {
   const [data, setData] = useState(null);   // { quizzes, subs, classes, students, questions }
   const [err, setErr] = useState(null);
   const [f, setF] = useState({ period: "", subject: "", classId: "", quizId: "" });
-  const [view, setView] = useState("screen");   // screen | report (التقرير المصمّم)
+  const [view, setView] = useState("screen");   // screen | report (التقرير النهائي)
   const [theme, setTheme] = useState("light");
   const [principalSig, setPrincipalSig] = useState(null);
   const [termLabel, setTermLabel] = useState("");
@@ -204,7 +204,7 @@ export default function QuizAnalytics() {
     }).filter((x) => x.value != null);
   }, [one, data, rows]);
 
-  // التقرير المصمّم بطقم التقارير (QuizReportDoc.jsx) للنطاق المختار نفسه
+  // التقرير النهائي بطقم التقارير (QuizReportDoc.jsx) للنطاق المختار نفسه
   const scopeLine = data ? [
     f.subject ? subjects.find(([id]) => id === f.subject)?.[1] : null, f.period ? PERIOD_LABEL[f.period] : null,
     f.classId ? classLabel(data.classes[f.classId]) : null, one ? one.title : null,
@@ -232,7 +232,7 @@ export default function QuizAnalytics() {
         </div>
         {!nothing && (
           <div className="flex shrink-0 gap-1.5">
-            {[["screen", "التحليل"], ["report", "التقرير المصمّم"]].map(([k, t]) => (
+            {[["screen", "التحليل"], ["report", "التقرير النهائي"]].map(([k, t]) => (
               <button key={k} onClick={() => setView(k)} disabled={k === "report" && !kpi.sheets}
                       className={`rounded-pill px-4 py-1.5 text-sm font-medium ${view === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>{t}</button>
             ))}

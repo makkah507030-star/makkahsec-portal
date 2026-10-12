@@ -519,7 +519,7 @@ function TrackView({ elements, evidence, auto, readOnly, onReport }) {
   );
 }
 
-/* التقرير المصمّم بهوية استوديو البوابة (PerfReportDoc.jsx): غلاف وملخص وتفاصيل ونواقص وتوقيعات */
+/* التقرير النهائي بهوية استوديو البوابة (PerfReportDoc.jsx): غلاف وملخص وتفاصيل ونواقص وتوقيعات */
 function PerfReport({ elements, evidence, auto, visits, info, name, year }) {
   const [theme, setTheme] = useState("light");
   const [sigs, setSigs] = useState({});
@@ -577,7 +577,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
       <InfoBox info={info} name={name} />
 
       <div className="flex gap-2">
-        {[["cards", "بطاقات العناصر"], ["track", "متابعة الشواهد"], ["report", "التقرير المصمّم"]].map(([k, l]) => (
+        {[["cards", "بطاقات العناصر"], ["track", "متابعة الشواهد"], ["report", "التقرير النهائي"]].map(([k, l]) => (
           <button key={k} onClick={() => setView(k)}
                   className={`w-36 rounded-sm2 py-2 text-sm font-semibold ${view === k ? "bg-mint-deep text-white" : "border border-line bg-paper text-ink"}`}>
             {l}

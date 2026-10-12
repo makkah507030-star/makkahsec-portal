@@ -83,7 +83,7 @@ export default function EventsReports() {
     return t;
   }, [shown, counts]);
 
-  // التقرير المصمّم: صورة أولى لكل حدث معتمد، والتوقيعات والختم
+  // التقرير النهائي: صورة أولى لكل حدث معتمد، والتوقيعات والختم
   useEffect(() => {
     if (view !== "report") return;
     const withPhoto = shown.filter((e) => !e.cancelled_at && e.stage === "approved" && e.report_photos?.length && !(e.id in photos)).slice(0, 12);
@@ -138,7 +138,7 @@ export default function EventsReports() {
         </div>
         <div className="mr-auto flex gap-1.5">
           <button className={pill(view === "list")} onClick={() => setView("list")}>القائمة</button>
-          <button className={pill(view === "report")} onClick={() => setView("report")}>التقرير المصمّم</button>
+          <button className={pill(view === "report")} onClick={() => setView("report")}>التقرير النهائي</button>
         </div>
       </div>
 
