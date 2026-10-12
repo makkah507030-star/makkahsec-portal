@@ -7,7 +7,7 @@ import ReportViewer from "../components/report/ReportViewer.jsx";
 import { signatureByName } from "../lib/userSignatures";
 import { loadPrincipalSignature, loadSchoolStamp } from "../lib/principalSignature";
 import { academicYearLabel } from "./studio/lib";
-import { eventsReportPages, STAGE_AR } from "./EventsReportDoc.jsx";
+import { eventsReportPages, eventPhase, STAGE_AR } from "./EventsReportDoc.jsx";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
@@ -40,6 +40,7 @@ export default function EventsReports() {
   const [theme, setTheme] = useState("light");
   const [photos, setPhotos] = useState({});
   const [sigs, setSigs] = useState({});
+  const [news, setNews] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -72,8 +73,8 @@ export default function EventsReports() {
   }, [rows, scope, uid, from, to]);
 
   const totals = useMemo(() => {
-    // الأحداث الملغاة تظهر في القائمة بحالتها، ولا تدخل في الإجماليات
-    const live = shown.filter((e) => !e.cancelled_at);
+    // الإجماليات من الأحداث المنفّذة وحدها (eventPhase): القادمة والملغاة وما لم يُستكمل تظهر في القائمة بحالتها
+    const live = shown.filter((e) => ["approved", "done"].includes(eventPhase(e)));
     const t = { events: live.length, students: 0, certs: 0, approved: 0 };
     live.forEach((e) => {
       t.students += counts[e.id]?.attended ?? 0;
@@ -92,6 +93,14 @@ export default function EventsReports() {
       .then(({ data }) => setPhotos((p) => ({ ...p, ...Object.fromEntries(withPhoto.map((e, i) => [e.id, data?.[i]?.signedUrl ?? null])) })));
   }, [view, shown]);   // eslint-disable-line react-hooks/exhaustive-deps
   const organizer = scope === "mine" ? profile?.full_name ?? "" : null;
+  // أخبار البوابة المنشورة في الفترة — لتقرير كل الأحداث وحده (الأخبار للمدرسة لا لمنظّم بعينه)
+  useEffect(() => {
+    if (view !== "report" || organizer) { setNews([]); return; }
+    let q = supabase.from("news").select("id, title, excerpt, cover_url, published_at, created_at").eq("is_published", true);
+    if (from) q = q.gte("published_at", from);
+    if (to) q = q.lt("published_at", `${to}T23:59:59`);
+    q.order("published_at", { ascending: false }).limit(6).then(({ data }) => setNews(data ?? []));
+  }, [view, organizer, from, to]);
   useEffect(() => {
     if (view !== "report") return;
     let live = true;
@@ -100,9 +109,9 @@ export default function EventsReports() {
     return () => { live = false; };
   }, [view, organizer]);
   const pages = useMemo(() => (view === "report" && rows ? eventsReportPages({
-    events: shown, counts, photos, organizer, from, to, theme, sigs, year: academicYearLabel(),
+    events: shown, counts, photos, news, organizer, from, to, theme, sigs, year: academicYearLabel(),
     scopeLabel: organizer ? "ما نفّذته" : "كل الأحداث",
-  }) : null), [view, rows, shown, counts, photos, organizer, from, to, theme, sigs]);
+  }) : null), [view, rows, shown, counts, photos, news, organizer, from, to, theme, sigs]);
 
   const pill = (on) =>
     `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -148,7 +157,7 @@ export default function EventsReports() {
       ) : (
         <>
       <div className="no-print grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[["الأحداث", totals.events], ["الطلاب المشاركون", totals.students],
+        {[["الأحداث المنفّذة", totals.events], ["الطلاب المشاركون", totals.students],
           ["الشهادات الصادرة", totals.certs], ["المعتمدة", totals.approved]].map(([t, v]) => (
           <div key={t} className="card px-4 py-3 text-center">
             <p className="num text-2xl font-bold text-mint-deep">{v}</p>
@@ -167,11 +176,14 @@ export default function EventsReports() {
             <div key={e.id} className="card p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="min-w-0 flex-1 truncate text-sm font-bold text-ink">{e.title}</p>
-                <span className={`chip shrink-0 ${
-                  e.cancelled_at ? "bg-absent/10 text-absent"
-                  : e.stage === "approved" ? "bg-present/10 text-present" : "bg-mint-tint text-mint-deep"}`}>
-                  {e.cancelled_at ? "ملغى" : STAGE_AR[e.stage] ?? e.stage}
-                </span>
+                {(() => {
+                  const p = eventPhase(e);
+                  const [cls, label] = p === "cancelled" ? ["bg-absent/10 text-absent", "ملغى"]
+                    : p === "incomplete" ? ["bg-absent/10 text-absent", "لم يُستكمل"]
+                    : p === "upcoming" ? ["bg-excused/10 text-excused", `قادم · ${STAGE_AR[e.stage] ?? e.stage}`]
+                    : p === "approved" ? ["bg-present/10 text-present", "معتمد"] : ["bg-mint-tint text-mint-deep", STAGE_AR[e.stage] ?? e.stage];
+                  return <span className={`chip shrink-0 ${cls}`}>{label}</span>;
+                })()}
               </div>
               <p className="num mt-1 text-xs text-faint">
                 {e.serial} · {fmtG(e.event_date)}

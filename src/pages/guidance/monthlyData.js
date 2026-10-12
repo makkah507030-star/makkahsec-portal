@@ -30,7 +30,7 @@ export async function loadMonthly({ grade, month, uid, isCounselor }) {
   const b = monthBounds(month);
   const inM = (t) => { const d = day(t); return !!d && d >= b.from && d < b.to; };
 
-  const [cases, sessions, progs, reqs, inq, refs, events, counselor, term, students] = await Promise.all([
+  const [cases, sessions, progs, reqs, inq, refs, refsPending, events, counselor, term, students] = await Promise.all([
     quiet(supabase.from("guidance_cases").select("id, status, outcome, opened_at, closed_at, source").eq("grade", grade)),
     quiet(supabase.from("guidance_sessions").select("id, kind, session_date, guidance_cases!inner(grade)")
       .eq("guidance_cases.grade", grade).gte("session_date", b.trendFrom).lt("session_date", b.to)),
@@ -39,8 +39,11 @@ export async function loadMonthly({ grade, month, uid, isCounselor }) {
       .gte("created_at", b.from).lt("created_at", b.to)),
     quiet(supabase.from("guidance_inquiries").select("id, status, flag, created_at, sent_at").eq("grade", grade)
       .or(`and(created_at.gte.${b.from},created_at.lt.${b.to}),and(sent_at.gte.${b.from},sent_at.lt.${b.to})`)),
-    quiet(supabase.from("student_referrals").select("id, kind, status, counselor_id, counselor_at, created_at").eq("grade", grade)
-      .gte("created_at", b.trendFrom)),
+    // الإحالات التي حُوّلت للموجه في الشهر (deputy_at) أو أجرى فيها إجراءه (counselor_at)
+    quiet(supabase.from("student_referrals").select("id, kind, status, counselor_id, counselor_at, deputy_at, closed_at").eq("grade", grade)
+      .or(`and(deputy_at.gte.${b.from},deputy_at.lt.${b.to}),and(counselor_at.gte.${b.from},counselor_at.lt.${b.to})`)),
+    quiet(supabase.from("student_referrals").select("id", { count: "exact", head: true }).eq("grade", grade)
+      .in("status", ["with_counselor", "returned_to_counselor"])),
     uid ? quiet(supabase.from("school_events").select("id, title, event_date, stage, cancelled_at, event_participants(count)")
       .eq("organizer_id", uid).gte("event_date", b.from).lt("event_date", b.to).is("cancelled_at", null)) : { data: [] },
     quiet(supabase.from("admin_roles").select("user_id, users(full_name)").eq("role_type", `counselor_${grade}`).limit(1).maybeSingle()),
@@ -83,7 +86,9 @@ export async function loadMonthly({ grade, month, uid, isCounselor }) {
   // استمارات المستوى والإحالات
   const I = inq.data ?? [];
   const F = refs.data ?? [];
-  const refsIn = F.filter((x) => inM(x.counselor_at) || (inM(x.created_at) && ["with_counselor", "returned_to_counselor"].includes(x.status)));
+  // وصلت الموجه: حُوّلت إليه في الشهر، ولم يوجّهها الوكيل لولي الأمر مباشرة أو يُعِدها للمعلم
+  const reached = (x) => !!x.counselor_at || ["with_counselor", "returned_to_counselor"].includes(x.status);
+  const refsIn = F.filter((x) => inM(x.deputy_at) && reached(x));
 
   // النماذج مجمّعة بالقالب
   const formsBy = {};
@@ -134,7 +139,7 @@ export async function loadMonthly({ grade, month, uid, isCounselor }) {
     },
     referrals: {
       received: refsIn.length, handled: F.filter((x) => inM(x.counselor_at)).length,
-      pending: F.filter((x) => ["with_counselor", "returned_to_counselor"].includes(x.status)).length,
+      pending: refsPending.count ?? 0,
       behavior: refsIn.filter((x) => x.kind === "behavior").length,
     },
     forms: { total: formRows.length, by: Object.entries(formsBy).sort((a, c) => c[1] - a[1]) },

@@ -33,8 +33,8 @@ function Cover({ theme, d, info }) {
       rows: [["user", "الموجه الطلابي", info.counselor || "—"], ["cap", "الصف", info.grade],
              ["calendar", "الفترة", info.range], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],
       note: ["lock", "أرقام مجمّعة من سجلات البوابة، دون أسماء الطلاب حفاظًا على سرية الحالات."],
-      strip: [[d.sessions.total, "جلسة إرشادية"], [d.cases.opened + d.cases.closed, "حالة تمت متابعتها"],
-              [d.programs.done.length, "برنامج منفّذ"], [d.forms.total, "نموذج صادر"]],
+      strip: [[d.sessions.total, "الجلسات الإرشادية"], [d.cases.opened + d.cases.closed, "الحالات المتابَعة"],
+              [d.programs.done.length, "البرامج المنفّذة"], [d.forms.total, "النماذج الصادرة"]],
       foot: "التوجيه الطلابي",
     }} />
   );
@@ -56,7 +56,7 @@ function highlights(d, warn) {
   if (d.requests.total) out.push(`طلبات المقابلة: ${n(d.requests.total)} من الطلاب وأولياء الأمور، تمّ منها ${n(d.requests.byStatus.done ?? 0)}.`);
   if (d.forms.total) out.push(`النماذج الصادرة: ${countAr(d.forms.total, "form")}، أكثرها «${d.forms.by[0][0]}».`);
   if (d.referrals.received) out.push(`الإحالات الواردة: ${n(d.referrals.received)}، عولج منها ${n(d.referrals.handled)}.`);
-  if (warn?.flagged) out.push(`الإنذار المبكر: ${countAr(warn.flagged, "student")} يحتاجون تدخلًا، منهم ${n(warn.covered)} بحالة مفتوحة.`);
+  if (warn?.flagged) out.push(`الإنذار المبكر: طلاب يحتاجون تدخلًا ${n(warn.flagged)}، منهم ${n(warn.covered)} بحالة مفتوحة.`);
   if (!out.length) out.push("لم تُسجَّل أعمال للموجه في البوابة لهذا الشهر.");
   return out.slice(0, 6);
 }
@@ -119,14 +119,14 @@ function CasesPage({ theme, d, warn, info, page, total }) {
             </div>
           </div>
           <div className="mr-box">
-            <h3>{IC.folder}مصادر الحالات الجديدة<span className="aside num">{d.cases.opened} حالة</span></h3>
+            <h3>{IC.folder}مصادر الحالات الجديدة<span className="aside num">{countAr(d.cases.opened, "case")}</span></h3>
             {d.cases.opened ? <Bars items={src} /> : <div className="mr-empty">لم تُفتح حالات جديدة هذا الشهر.</div>}
           </div>
         </div>
 
         <div className="mr-row c32">
           <div className="mr-box">
-            <h3>{IC.check}نتائج الحالات المغلقة<span className="aside num">{d.cases.closed} حالة</span></h3>
+            <h3>{IC.check}نتائج الحالات المغلقة<span className="aside num">{countAr(d.cases.closed, "case")}</span></h3>
             {d.cases.closed ? <Split parts={outs} /> : <div className="mr-empty">لم تُغلق حالات هذا الشهر.</div>}
           </div>
           <div className="mr-tiles" style={{ gridTemplateColumns: "1fr 1fr" }}>
@@ -266,7 +266,7 @@ function CommsPage({ theme, d, info, page, total, notes, sigs }) {
         <div className="mr-box">
           <h3>{IC.doc}النماذج المستخدمة<span className="aside num">{countAr(d.forms.total, "form")}</span></h3>
           {d.forms.total ? (
-            <Bars wide items={d.forms.by.slice(0, 9).map(([t, v], i) => ({ t, v, c: S[i % 2 ? 1 : 0] }))} />
+            <Bars full items={d.forms.by.slice(0, 9).map(([t, v], i) => ({ t, v, c: S[i % 2 ? 1 : 0] }))} />
           ) : <div className="mr-empty">لم تصدر نماذج من البوابة هذا الشهر.</div>}
         </div>
 

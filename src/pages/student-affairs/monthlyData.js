@@ -2,6 +2,7 @@
 import { supabase } from "../../lib/supabase";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { loadFingerprintPublic } from "../../lib/officialAttendance";
+import { stageOf } from "../../lib/referrals";
 
 /* =====================================================================
    بيانات التقرير الشهري لشؤون الطلاب: الحضور والغياب من الأيام المعتمدة
@@ -41,7 +42,8 @@ export async function loadAffairsMonthly(month) {
     fetchAllPaged(() => lt(supabase.from("official_day_marks").select("student_id, attend_date, full_name, grade, class_no, late_minutes")
       .gt("late_minutes", 0).gte("attend_date", b.from)).order("attend_date").order("student_id")).catch(() => []),
     quiet(supabase.from("absence_warnings").select("stage, issued_on").gte("issued_on", b.from).lt("issued_on", b.to)),
-    quiet(supabase.from("student_referrals").select("kind, status, grade, created_at, closed_at").gte("created_at", b.from).lt("created_at", b.to)),
+    quiet(supabase.from("student_referrals").select("kind, status, grade, created_at, closed_at, counselor_id, counselor_at, deputy_at, teacher_at, guardian_ack_at")
+      .gte("created_at", b.from).lt("created_at", b.to)),
     quiet(supabase.from("student_dropouts").select("status, reason, reported_at, decided_at").gte("reported_at", b.from).lt("reported_at", b.to)),
     loadFingerprintPublic().catch(() => ({ on: false })),
   ]);
@@ -99,7 +101,10 @@ export async function loadAffairsMonthly(month) {
     warnings: { total: W.length, byStage: count(W, "stage") },
     referrals: {
       total: R.length, byKind: count(R, "kind"), byGrade: count(R, "grade"),
-      closed: R.filter((r) => ["closed", "archived", "guardian_replied"].includes(r.status)).length,
+      // أُنهي إجراؤها: أُقفلت وأُشعر ولي الأمر (closed_at) — ومنها ما ينتظر تأكيد ولي الأمر
+      closed: R.filter((r) => r.closed_at).length,
+      // عند من هي الآن (stageOf كما في صفحة الإحالات)
+      byStage: count(R.map((r) => ({ g: stageOf(r).group })), "g"),
     },
     dropouts: { total: X.length, byStatus: count(X, "status") },
     trend,
