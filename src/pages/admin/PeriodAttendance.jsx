@@ -14,6 +14,15 @@ const waNumber = (m) => {
   return d.startsWith("05") ? `966${d.slice(1)}` : d.startsWith("5") ? `966${d}` : d;
 };
 
+// رسالة جاهزة لمن لم يحضّر: تُفتح في واتساب مكتوبة ويمكن تعديلها قبل الإرسال
+const remindText = (s) => [
+  `السلام عليكم ورحمة الله وبركاته${s.teachers?.full_name ? ` أ. ${s.teachers.full_name}` : ""}`,
+  `نذكّرك بضرورة تحضير الحصة ${s.period_no}${s.classes?.class_no ? ` لفصل ${s.classes.class_no}` : ""}`
+    + `${s.subjects?.name ? ` (${s.subjects.name})` : ""} اليوم في بوابة مكة الثانوية الرقمية، فالتحضير يُعتمد عليه في غياب الطلاب وإشعار أولياء أمورهم.`,
+  "شاكرين تعاونك.",
+  "makkahsec.com",
+].join("\n");
+
 export default function PeriodAttendance() {
   const [d, setD] = useState(null);
   const [openDone, setOpenDone] = useState(null);
@@ -212,9 +221,9 @@ function PeriodGroup({ title, tone, kindLabel, rows, open, setOpen }) {
                            className="num rounded-sm2 border border-line px-2 py-1 text-xs font-semibold text-ink hover:bg-canvas">
                           {s.mobile}
                         </a>
-                        <a href={`https://wa.me/${waNumber(s.mobile)}`} target="_blank" rel="noreferrer"
+                        <a href={`https://wa.me/${waNumber(s.mobile)}?text=${encodeURIComponent(remindText(s))}`} target="_blank" rel="noreferrer"
                            className="rounded-sm2 bg-present px-2 py-1 text-xs font-semibold text-white hover:opacity-90">
-                          واتساب
+                          تذكير واتساب
                         </a>
                       </div>
                     )}
