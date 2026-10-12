@@ -926,8 +926,26 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       closed_at: new Date().toISOString(),
       status: "with_guardian",
     };
+    await sendToGuardian(patch, "أُقفلت الإحالة وأُشعر الطالب وولي أمره.");
+  };
+
+  // ②ج الوكيل يتجاوز الموجه ويوجّهها لولي الأمر مباشرة (حسب ما يراه)
+  const toGuardianDirect = async () => {
+    if (!note.trim()) return;
+    const now = new Date().toISOString();
+    await sendToGuardian({
+      deputy_id: uid, deputy_name: profile?.full_name ?? "",
+      deputy_note: note.trim(), deputy_sig: await mySig(), deputy_at: now,
+      close_note: "وُجّهت لولي الأمر مباشرة دون التحويل للموجه الطلابي.",
+      closed_at: now, status: "with_guardian", return_note: null,
+    }, "أُرسلت الإحالة لولي الأمر مباشرة وأُشعر هو والطالب.");
+  };
+
+  // حفظ الإقفال ثم إشعار الطالب وولي أمره
+  const sendToGuardian = async (patch, okText) => {
+    setBusy(true);
     const { error } = await supabase.from("student_referrals").update(patch).eq("id", r.id);
-    if (error) { onChange({ ok: false, text: error.message }); return; }
+    if (error) { setBusy(false); onChange({ ok: false, text: error.message }); return; }
 
     // إشعار الطالب وولي أمره
     const ids = new Set();
@@ -943,8 +961,9 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
         ? `صدر إشعار بمشكلة سلوكية بشأن ${r.student_name} (${r.serial}) والإجراءات المتخذة حياله.`
         : `صدرت إحالة بشأن ${r.student_name} برقم ${r.serial}.`) +
       " افتحه من البوابة للاطّلاع وتأكيد الاستلام.", `/referral/${r.id}`);
+    setBusy(false);
     setOpen(false);
-    onChange({ ok: true, text: "أُقفلت الإحالة وأُشعر الطالب وولي أمره." });
+    onChange({ ok: true, text: okText });
   };
 
   // ④ب الوكيل يعيدها للموجه
@@ -1093,6 +1112,10 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
               <button className="btn-primary w-full" disabled={busy || !counselor || !note.trim()}
                       onClick={toCounselor}>
                 تحويل للموجه الطلابي
+              </button>
+              <button disabled={busy || !note.trim()} onClick={toGuardianDirect}
+                      className="w-full rounded-pill border border-warning/40 py-2 text-sm font-semibold text-warning hover:bg-warning/5">
+                إرسال لولي الأمر مباشرة (دون الموجه)
               </button>
               {r.kind === "teacher" && r.teacher_id && (
                 <button disabled={busy || !note.trim()} onClick={returnToTeacher}

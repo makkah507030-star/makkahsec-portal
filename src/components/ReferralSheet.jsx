@@ -7,6 +7,7 @@ import { PRINCIPAL_NAME, STUDENT_DEPUTY_NAME } from "../lib/exportUtils.js";
 import { degreeName, violationPhrase, BEHAVIOR_SOURCE } from "../lib/behavior.js";
 import { fmtDate } from "../lib/dates";
 import { useReferralSigs } from "../lib/referralSigs.js";
+import { isDirectToGuardian } from "../lib/referrals.js";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
@@ -163,6 +164,7 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
   if (!r) return null;
   if (r.kind === "behavior") return <BehaviorSheets r={r} stampUrl={stampUrl} guardianView={guardianView} />;
   const missing = r.kind === "missing";
+  const direct = isDirectToGuardian(r);
 
   return (
     <div className="sheet mx-auto bg-white text-ink"
@@ -234,7 +236,8 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
         </>
       )}
 
-      {/* ③ الموجه الطلابي */}
+      {/* ③ الموجه الطلابي — لا يظهر إن وجّهها الوكيل لولي الأمر مباشرة */}
+      {!direct && (
       <Stage n={missing ? "٢" : "٣"} title="الموجه الطلابي" who={r.counselor_name} at={r.counselor_at} sig={r.counselor_sig}>
         <Field label="الإجراء المتخذ والملاحظات" value={r.counselor_note} />
         {r.return_note && (
@@ -244,10 +247,12 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
           </p>
         )}
       </Stage>
+      )}
 
       {/* ④ الإقفال */}
       {r.closed_at && (
-        <Stage n={missing ? "٣" : "٤"} title="اعتماد وإقفال الإحالة" who={r.deputy_name}
+        <Stage n={missing || direct ? "٣" : "٤"}
+               title={direct ? "التوجيه لولي الأمر مباشرة" : "اعتماد وإقفال الإحالة"} who={r.deputy_name}
                at={r.closed_at} sig={r.deputy_sig}>
           <Field label="قرار الإقفال" value={r.close_note} />
         </Stage>
@@ -255,7 +260,7 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
 
       {/* ⑤ ولي الأمر */}
       {(r.guardian_ack_at || r.status === "with_guardian") && (
-        <Stage n={missing ? "٤" : "٥"} title="إقرار ولي الأمر" tone="gold"
+        <Stage n={missing || direct ? "٤" : "٥"} title="إقرار ولي الأمر" tone="gold"
                who={r.guardian_ack_at ? "ولي أمر الطالب" : ""}
                at={r.guardian_ack_at} sig={null}>
           <Field label="تأكيد الاستلام"
