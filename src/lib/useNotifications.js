@@ -139,5 +139,6 @@ export const KIND_META = {
   permission: { label: "استئذان",  tone: "bg-excused/15 text-excused" },
   news:       { label: "خبر",      tone: "bg-mint-tint text-mint-deep" },
   alert:      { label: "تنبيه",    tone: "bg-late/10 text-late" },
+  quiz:       { label: "اختبار",   tone: "bg-warning/10 text-warning" },
   general:    { label: "تعميم",    tone: "bg-gray-tint text-muted" },
 };
