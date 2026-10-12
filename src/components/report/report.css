@@ -1,7 +1,8 @@
 /* =====================================================================
-   التقرير الشهري للموجه الطلابي — أوراق A4 (794×1123 بمقاس 96dpi) بهوية
-   استوديو البوابة (studio.css): الغلاف بزخرفة الاستوديو، والصفحات الداخلية
-   بإطار هادئ موفّر للحبر. نسختان: ملوّنة (stu-light) ورسمية (stu-official).
+   طقم التقارير المصمّمة — أوراق A4 (794×1123 بمقاس 96dpi) بهوية استوديو
+   البوابة (studio.css): الغلاف بزخرفة الاستوديو، والصفحات الداخلية بإطار
+   هادئ موفّر للحبر. نسختان: ملوّنة (stu-light) ورسمية (stu-official).
+   يستعمله: التقرير الشهري للموجه، وملف التطوير المهني للقسم، وشواهد الأداء.
    ===================================================================== */
 
 .mr { --mr-deep: #3E6350; --mr-acc: #2E7D57; --mr-mint: #89D7AD; --mr-tint: #EDFAF2; --mr-line: #DCEBE2;
@@ -19,7 +20,7 @@
 .stu-official .mr-frame::after { left: 6px; right: 6px; top: 6px; bottom: 6px; height: auto; background: none; border: 1px solid #B8912F; border-radius: 3px; opacity: .7; }
 
 .mr-page { position: absolute; inset: 30px; padding: 26px 34px 20px; display: flex; flex-direction: column; color: var(--mr-ink); }
-.mr-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.mr-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; margin-top: 12px; overflow: hidden; }
 
 /* ——— الترويسة الداخلية ——— */
 .mr-head { display: flex; justify-content: space-between; align-items: center; }
@@ -182,3 +183,46 @@
 .stu-official.mr-cover .stu-info { width: 100%; }
 .mr-cover .conf { margin-top: 10px; font-size: 12.5px; color: var(--stu-text2); display: flex; align-items: center; gap: 6px; }
 .mr-cover .conf svg { width: 15px; height: 15px; }
+
+/* =====================================================================
+   الجداول والمصفوفات وبطاقات الأشخاص (ملف التطوير المهني وشواهد الأداء)
+   ===================================================================== */
+.mr-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11.5px; border: 1.3px solid var(--mr-line); border-radius: 10px; overflow: hidden; }
+.mr-table th { background: var(--mr-deep); color: #fff; font-weight: 600; padding: 6px 7px; text-align: right; white-space: nowrap; }
+.mr-table th.c, .mr-table td.c { text-align: center; }
+.mr-table td { padding: 5px 7px; border-top: 1px solid var(--mr-line); vertical-align: top; line-height: 1.5; }
+.mr-table tr:nth-child(even) td { background: #F8FBF9; }
+.stu-official .mr-table { border-radius: 6px; }
+
+.mr-matrix { width: 100%; border-collapse: separate; border-spacing: 3px; font-size: 11px; }
+.mr-matrix th { font-weight: 700; color: var(--mr-ink2); padding: 2px; text-align: center; }
+.mr-matrix th.nm { text-align: right; }
+.mr-matrix td { height: 24px; text-align: center; border-radius: 6px; font-weight: 700; }
+.mr-matrix td.nm { text-align: right; font-weight: 600; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px; border-radius: 0; }
+.mr-matrix td.ok { background: #DFF3E7; color: #1F6B47; }
+.mr-matrix td.ok.hi { background: #A9DDBF; color: #134B31; }
+.mr-matrix td.no { background: #FBEDEA; color: #B4506A; font-weight: 600; }
+
+.mr-chip { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.mr-chip.ok { background: #DFF3E7; color: #1F6B47; }
+.mr-chip.no { background: #FBEDEA; color: #B4506A; }
+.mr-chip.auto { background: #E6EEF8; color: #2E5E95; }
+
+.mr-gap { border: 1.3px solid var(--mr-line); border-right: 4px solid var(--c, var(--s4)); border-radius: 10px; padding: 7px 11px; background: #fff; }
+.mr-gap + .mr-gap { margin-top: 7px; }
+.mr-gap h4 { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; }
+.mr-gap h4 .aside { margin-right: auto; font-size: 11px; font-weight: 600; color: var(--mr-ink2); }
+.mr-gap .warn { margin-top: 3px; font-size: 11.5px; font-weight: 700; color: #B4506A; }
+.mr-gap ul { list-style: none; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px; }
+.mr-gap li { font-size: 10.5px; background: #F4F7F5; border-radius: 6px; padding: 2px 7px; color: var(--mr-ink2); }
+.mr-gap li b { color: var(--mr-ink); margin-left: 3px; }
+.mr-gap p.hint { margin-top: 2px; font-size: 10.5px; color: var(--mr-ink2); line-height: 1.55; }
+
+.mr-who { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; font-size: 13.5px; font-weight: 700; color: var(--mr-deep); }
+.mr-who .av { width: 24px; height: 24px; border-radius: 50%; background: var(--mr-tint); color: var(--mr-deep); font-size: 12px; display: flex; align-items: center; justify-content: center; }
+.mr-who .aside { margin-right: auto; font-size: 11px; font-weight: 500; color: var(--mr-ink2); }
+.mr-bar.xwide { grid-template-columns: 300px 1fr 44px; }
+
+.mr-miss { border-right: 3px solid var(--c, var(--s4)); padding: 3px 10px 4px; margin: 0 0 5px; background: #FAFCFB; border-radius: 0 0 0 6px; }
+.mr-miss b { display: block; font-size: 12px; font-weight: 700; line-height: 1.45; }
+.mr-miss span { display: block; font-size: 10.5px; color: var(--mr-ink2); line-height: 1.6; }
