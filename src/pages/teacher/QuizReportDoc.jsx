@@ -76,15 +76,13 @@ export function quizReportPages({ r, teacher, scopeLine, year, term, theme = "li
           <Ring value={pct(kpi.sheets, attend)} label="حضور الاختبارات" sub={`${n(kpi.sheets)} من ${n(attend)}`} color={S[3]} />
         </div>
       </Box>
-      <div className="mr-row c2">
-        <Box icon="chart" title="توزيع الدرجات" aside={countAr(distTotal, "sheet")}>
-          <Bars items={[...dist].reverse().map((b) => ({ t: b.excel ? `${b.t} (تفوق)` : b.t, v: b.n, c: b.c, note: `${pct(b.n, distTotal) ?? 0}%` }))} />
-        </Box>
-        <Box icon="list" title="متوسط كل اختبار" aside={`${n(perQuiz.length)}`}>
-          {perQuiz.length ? <Bars max={100} items={perQuiz.slice(0, 9).map((q) => ({ t: q.label, v: q.value, note: p1(q.value), c: S[0] }))} /> : <div className="mr-empty">لا اختبارات.</div>}
-        </Box>
-      </div>
-      <Highlights title="خلاصة النتائج" items={highlights(r)} />
+      <Box icon="chart" title="توزيع الدرجات" aside={countAr(distTotal, "sheet")}>
+        <Bars wide items={[...dist].reverse().map((b) => ({ t: b.excel ? `${b.t} (تفوق)` : b.t, v: b.n, c: b.c, note: `${pct(b.n, distTotal) ?? 0}%` }))} />
+      </Box>
+      <Box icon="list" title="متوسط كل اختبار" aside={perQuiz.length > 6 ? `أحدث 6 من ${n(perQuiz.length)}` : n(perQuiz.length)}>
+        {perQuiz.length ? <Bars full max={100} items={perQuiz.slice(-6).map((q) => ({ t: q.label, v: q.value, note: p1(q.value), c: S[0] }))} /> : <div className="mr-empty">لا اختبارات.</div>}
+      </Box>
+      <Highlights title="خلاصة النتائج" items={highlights(r).slice(0, 4)} />
     </Page>,
 
     <Page key="cls" {...common} page={3} sec={{ no: 2, title: "الفصول والفقرات", sub: one ? `مقارنة الفصول، وتحليل فقرات «${one.title}»` : "مقارنة الفصول بمتوسطها ونسبة تفوقها" }}>

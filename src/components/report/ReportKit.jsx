@@ -249,13 +249,14 @@ export function GroupedColumns({ cols, series, current, height = 150, width = 64
   );
 }
 
-/* أشرطة أفقية بعدد كل عنصر: items = [{ t, v, c?, note? }] */
-export function Bars({ items, wide, max }) {
+/* أشرطة أفقية بعدد كل عنصر: items = [{ t, v, c?, note? }]
+   wide: عمود أسماء أعرض، وfull: لصندوق بعرض الصفحة فتظهر الأسماء الطويلة كاملة */
+export function Bars({ items, wide, full, max }) {
   const m = Math.max(1, max ?? Math.max(...items.map((x) => x.v)));
   return (
     <div className="mr-bars">
       {items.map((x) => (
-        <div key={x.t} className={`mr-bar${wide ? " wide" : ""}`}>
+        <div key={x.t} className={`mr-bar${full ? " xwide" : wide ? " wide" : ""}`}>
           <span className="t">{x.t}</span>
           <span className="tr"><i style={{ width: `${(x.v / m) * 100}%`, "--c": x.c ?? S[0], opacity: x.v ? 1 : 0 }} /></span>
           <span className="n num">{x.note ?? n(x.v)}</span>

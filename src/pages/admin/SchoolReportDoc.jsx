@@ -125,25 +125,23 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
             </p>
           )}
         </Box>
-        <Box icon="award" title="التطوير المهني" aside={n(pdAll)}>
-          <Bars items={[
-            ...Object.entries(PD_KINDS).map(([k, v]) => ({ t: v.short ?? v.t, v: d.pd.byKind[k] ?? 0, c: S[0] })),
-            { t: "جلسات مجتمعات التعلم", v: d.pd.plc, c: S[2] }, { t: "زيارات تبادلية", v: d.pd.visits, c: S[2] },
-          ]} />
-        </Box>
-      </div>
-      <div className="mr-row c2">
         <Box icon="star" title="أبرز الأحداث" aside={n(d.events.total)}>
           {d.events.top.length ? (
-            <div className="mr-list">{d.events.top.map((e) => <div key={e.title + e.date}><span>{e.title}</span><span className="num">{dmy(e.date)} · الحاضرون {e.attended}</span></div>)}</div>
+            <div className="mr-list">{d.events.top.slice(0, 4).map((e) => <div key={e.title + e.date}><span>{e.title}</span><span className="num">{dmy(e.date)} · الحاضرون {e.attended}</span></div>)}</div>
           ) : <div className="mr-empty">لا أحداث هذا الشهر.</div>}
         </Box>
-        <Box icon="clip" title="النماذج الأكثر استخدامًا" aside={n(d.forms.total)}>
-          {d.forms.total ? <Bars items={d.forms.by.slice(0, 6).map(([t, v]) => ({ t, v, c: S[1] }))} /> : <div className="mr-empty">لا نماذج صادرة.</div>}
-        </Box>
       </div>
-      <Box icon="pen" title="ملاحظات مدير المدرسة وتوجيهاته" tint style={{ minHeight: 120, maxHeight: 240, overflow: "hidden" }}>
-        {notes?.trim() ? <div className="mr-notes">{notes.trim()}</div> : <div className="mr-lines">{[0, 1, 2].map((i) => <i key={i} />)}</div>}
+      <Box icon="award" title="التطوير المهني" aside={`الأنشطة المعتمدة ${n(pdAll)}`}>
+        <Bars full items={[
+          ...Object.entries(PD_KINDS).map(([k, v]) => ({ t: v.short ?? v.t, v: d.pd.byKind[k] ?? 0, c: S[0] })),
+          { t: "جلسات مجتمعات التعلم المهني", v: d.pd.plc, c: S[2] }, { t: "الزيارات التبادلية", v: d.pd.visits, c: S[2] },
+        ]} />
+      </Box>
+      <Box icon="clip" title="النماذج الأكثر استخدامًا" aside={`النماذج الصادرة ${n(d.forms.total)}`}>
+        {d.forms.total ? <Bars full items={d.forms.by.slice(0, 6).map(([t, v]) => ({ t, v, c: S[1] }))} /> : <div className="mr-empty">لا نماذج صادرة.</div>}
+      </Box>
+      <Box icon="pen" title="ملاحظات مدير المدرسة وتوجيهاته" tint style={{ minHeight: 96, maxHeight: 180, overflow: "hidden" }}>
+        {notes?.trim() ? <div className="mr-notes">{notes.trim()}</div> : <div className="mr-lines">{[0, 1].map((i) => <i key={i} />)}</div>}
       </Box>
       <Signs stamp={sigs.stamp} people={[{ title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
     </Page>,

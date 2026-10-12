@@ -266,7 +266,7 @@ function CommsPage({ theme, d, info, page, total, notes, sigs }) {
         <div className="mr-box">
           <h3>{IC.doc}النماذج المستخدمة<span className="aside num">{countAr(d.forms.total, "form")}</span></h3>
           {d.forms.total ? (
-            <Bars wide items={d.forms.by.slice(0, 9).map(([t, v], i) => ({ t, v, c: S[i % 2 ? 1 : 0] }))} />
+            <Bars full items={d.forms.by.slice(0, 9).map(([t, v], i) => ({ t, v, c: S[i % 2 ? 1 : 0] }))} />
           ) : <div className="mr-empty">لم تصدر نماذج من البوابة هذا الشهر.</div>}
         </div>
 
