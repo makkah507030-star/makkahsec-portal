@@ -28,7 +28,7 @@ const nextFive = () => {
 };
 const mins = (ms) => Math.max(0, Math.ceil(ms / 60000));
 
-export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk, onStatus }) {
+export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk, onStatus, audioMissing = false }) {
   const [online, setOnline] = useState(undefined);   // undefined = تحميل، null = غير منشور
   const [assigns, setAssigns] = useState([]);
   const [subs, setSubs] = useState({});
@@ -112,6 +112,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     if (closes <= opens) { setMsg({ ok: false, text: "موعد الإغلاق يجب أن يكون بعد موعد الفتح." }); return; }
     if (closes <= new Date()) { setMsg({ ok: false, text: "موعد الإغلاق مضى." }); return; }
     if (!f.selected.size) { setMsg({ ok: false, text: "اختر طالبًا واحدًا على الأقل." }); return; }
+    if (audioMissing) { setMsg({ ok: false, text: "ارفع ملف الاستماع أولًا من تبويب «الأسئلة» — أسئلة الاستماع تحتاجه." }); return; }
     setBusy(true); setMsg(null);
     const { data: n, error } = await supabase.rpc("publish_online_quiz", {
       p_quiz: quiz.id, p_students: [...f.selected],

@@ -487,6 +487,8 @@ function QuizEditor({ quiz, uid, onBack }) {
   const online = q.mode === "online";
   const external = q.mode === "external";   // من خارج البوابة: بلا أسئلة، يُرصد مجموعه فقط
   const omr = !paper && !online && !external;
+  // سؤال الاستماع: للاختبار الإلكتروني باللغة الإنجليزية (supabase/quiz_listening_1.sql)
+  const listening = online && q.lang === "en";
   const [layout, setLayout] = useState(null);
   const [paperPrint, setPaperPrint] = useState(null);   // { copies, answerKey }
   const kinds = paper ? PAPER_KINDS.filter((k) => !k.hidden) : KINDS;
@@ -552,15 +554,17 @@ function QuizEditor({ quiz, uid, onBack }) {
   const marksUsed = useMemo(
     () => (questions ?? []).reduce((a, x) => a + Number(x.marks || 0), 0), [questions]);
 
-  const countOf = (kind) => (questions ?? []).filter((x) => x.kind === kind).length;
+  // أسئلة الاستماع تُعدّ في قسمها لا هنا
+  const countOf = (kind) => (questions ?? []).filter((x) => x.kind === kind && !(listening && x.listening)).length;
 
-  const addQuestion = async (kind) => {
+  const addQuestion = async (kind, extra = {}) => {
     const base = {
       quiz_id: q.id,
       sort_order: (questions?.length ?? 0) + 1,
       kind,
       text: "",
       marks: 1,
+      ...extra,
     };
     const payload =
       kind === "mcq"
@@ -577,7 +581,7 @@ function QuizEditor({ quiz, uid, onBack }) {
             options: { lines: LINES[kind].def }, answer: "" };
 
     const { data, error } = await supabase.from("quiz_questions").insert(payload).select().single();
-    if (error) { setMsg({ ok: false, text: setupHint(error) }); return; }
+    if (error) { setMsg({ ok: false, text: extra.listening ? audioHint(error) : setupHint(error) }); return; }
     if (data) setQuestions((prev) => [...(prev ?? []), data]);
   };
 
@@ -620,6 +624,47 @@ function QuizEditor({ quiz, uid, onBack }) {
     supabase.storage.from("quiz-images").remove([row.image_path]);
   };
 
+  // ملف الاستماع: مخزن quiz-audio الخاص، ويُسمع برابط مؤقت
+  const [audio, setAudio] = useState({});             // { path, url }
+  const audioUrl = q.listening_audio && audio.path === q.listening_audio ? audio.url : null;
+  useEffect(() => {
+    const path = q.listening_audio;
+    if (!path) return;
+    supabase.storage.from("quiz-audio").createSignedUrl(path, 6 * 3600)
+      .then(({ data }) => setAudio({ path, url: data?.signedUrl ?? null }));
+  }, [q.listening_audio]);
+
+  const audioHint = (e) => (/bucket|not found|row-level|listening|mime|size|exceeded/i.test(e?.message ?? "")
+    ? (/mime|size|exceeded/i.test(e?.message ?? "") ? "الملف يجب أن يكون صوتيًا (mp3 أو m4a أو wav) وحجمه أقل من 20 ميجابايت."
+       : "سؤال الاستماع يحتاج تنفيذ ملفي supabase/quiz_listening_1.sql و quiz_listening_2.sql في قاعدة البيانات مرة واحدة.")
+    : e?.message);
+
+  const uploadAudio = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith("audio/")) { setMsg({ ok: false, text: "اختر ملفًا صوتيًا (mp3 أو m4a أو wav)." }); return; }
+    if (file.size > 20 * 1024 * 1024) { setMsg({ ok: false, text: "حجم الملف الصوتي يجب أن يكون أقل من 20 ميجابايت." }); return; }
+    const ext = (file.name.split(".").pop() || "mp3").toLowerCase().replace(/[^a-z0-9]/g, "") || "mp3";
+    const path = `${q.id}/listening-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("quiz-audio").upload(path, file, { contentType: file.type });
+    if (error) { setMsg({ ok: false, text: audioHint(error) }); return; }
+    const { error: e2 } = await supabase.from("quizzes").update({ listening_audio: path }).eq("id", q.id);
+    if (e2) { setMsg({ ok: false, text: audioHint(e2) }); supabase.storage.from("quiz-audio").remove([path]); return; }
+    if (q.listening_audio) supabase.storage.from("quiz-audio").remove([q.listening_audio]);
+    setQ((x) => ({ ...x, listening_audio: path }));
+    setMsg({ ok: true, text: "رُفع ملف الاستماع." });
+  };
+
+  const removeAudio = async () => {
+    if (!q.listening_audio || !window.confirm("حذف ملف الاستماع؟ تبقى أسئلته، ويمكنك رفع ملف آخر.")) return;
+    const { error } = await supabase.from("quizzes").update({ listening_audio: null }).eq("id", q.id);
+    if (error) { setMsg({ ok: false, text: audioHint(error) }); return; }
+    supabase.storage.from("quiz-audio").remove([q.listening_audio]);
+    setQ((x) => ({ ...x, listening_audio: null }));
+  };
+
+  const listenQs = (questions ?? []).filter((x) => x.listening);
+  const mainQs = (questions ?? []).filter((x) => !x.listening);
+
   const removeQ = async (row) => {
     if (!window.confirm("حذف السؤال؟")) return;
     await supabase.from("quiz_questions").delete().eq("id", row.id);
@@ -645,6 +690,7 @@ function QuizEditor({ quiz, uid, onBack }) {
     await removeQuizCards(q.id);
     const { error } = await supabase.from("quizzes").delete().eq("id", q.id);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (q.listening_audio) supabase.storage.from("quiz-audio").remove([q.listening_audio]);
     onBack();
   };
 
@@ -856,10 +902,23 @@ function QuizEditor({ quiz, uid, onBack }) {
                     ))}
                   </div>
                 ))
-              : (questions ?? []).map((row, i) => (
-                  <QuestionCard key={row.id} row={row} index={i + 1} lang={q.lang ?? "ar"}
-                                onPatch={patchQ} onRemove={removeQ} />
-                ))}
+              : (
+                <>
+                  {listening && (
+                    <ListeningSection audioPath={q.listening_audio} audioUrl={audioUrl} rows={listenQs}
+                                      onUpload={uploadAudio} onRemoveAudio={removeAudio}
+                                      onAdd={(kind) => addQuestion(kind, { listening: true })}
+                                      onPatch={patchQ} onRemove={removeQ} />
+                  )}
+                  {listening && mainQs.length > 0 && (
+                    <p className="px-1 pt-1 text-xs font-bold text-mint-deep">بقية الأسئلة</p>
+                  )}
+                  {(listening ? mainQs : questions ?? []).map((row, i) => (
+                    <QuestionCard key={row.id} row={row} index={i + 1} lang={q.lang ?? "ar"}
+                                  onPatch={patchQ} onRemove={removeQ} />
+                  ))}
+                </>
+              )}
           </div>
 
           <div className="card p-4">
@@ -880,7 +939,7 @@ function QuizEditor({ quiz, uid, onBack }) {
               {paper
                 ? "تُرتَّب الأسئلة في الورقة بحسب نوعها، ويُرقَّم كل نوع سؤالًا مستقلًا. لا حدّ للعدد: إذا امتلأت الصفحة الأولى انتقل الباقي إلى صفحة ثانية."
                 : online
-                ? "لا حدّ لعدد الأسئلة في الاختبار الإلكتروني، ويُصحَّح آليًا فور تسليم الطالب."
+                ? `لا حدّ لعدد الأسئلة في الاختبار الإلكتروني، ويُصحَّح آليًا فور تسليم الطالب.${listening ? " أسئلة الاستماع تُضاف من قسمها أعلاه، وتظهر للطالب أولًا." : ""}`
                 : "لا حدّ لعدد الأسئلة: إذا امتلأت الصفحة الأولى انتقل الباقي إلى صفحة ثانية، وتأتي بطاقة الإجابة كاملة في آخر صفحة."}
             </p>
             {omr && (questions?.length ?? 0) > 0 && fit && <OmrPagesNote fit={fit} className="mt-2" />}
@@ -925,6 +984,7 @@ function QuizEditor({ quiz, uid, onBack }) {
         <div className="no-print">
           <OnlineQuizPanel quiz={q} linked={linked} questionsCount={questions?.length ?? 0}
                            marksOk={marksUsed === Number(q.total_marks)}
+                           audioMissing={listening && listenQs.length > 0 && !q.listening_audio}
                            onStatus={(status, silent) => {
                              if (silent) setQ((x) => ({ ...x, status }));
                              else setStatus(status);
@@ -1541,6 +1601,70 @@ function PrintBtn({ title, sub, onClick, busy, tone }) {
 }
 
 /** صورة السؤال: رفع، وعرضها في الورقة (٪ من عرض الصفحة)، وحذف */
+/* قسم الاستماع (الاختبار الإلكتروني بالإنجليزية): ملف صوتي واحد يرفعه المعلم،
+   وعليه فقرات اختيار متعدد أو صح وخطأ تُصحَّح آليًا وتظهر للطالب أولًا مع المشغّل. */
+function ListeningSection({ audioPath, audioUrl, rows, onUpload, onRemoveAudio, onAdd, onPatch, onRemove }) {
+  const [busy, setBusy] = useState(false);
+  const pick = (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setBusy(true);
+    Promise.resolve(onUpload(f)).finally(() => setBusy(false));
+  };
+  const input = <input type="file" accept="audio/*" className="hidden" onChange={pick} />;
+
+  return (
+    <section className="space-y-3 rounded-card border border-[#CCF2DB] bg-mint-tint/60 p-3">
+      <div>
+        <p className="text-sm font-bold text-mint-deep">سؤال الاستماع · Listening</p>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+          ارفع ملفًا صوتيًا (mp3 أو m4a أو wav، أقل من 20 ميجابايت)، ثم أضف عليه فقرات اختيار متعدد أو صح وخطأ.
+          يسمعه الطالب بعد بدء الاختبار فقط.
+        </p>
+      </div>
+
+      {audioPath ? (
+        <div className="space-y-2 rounded-card border border-line bg-white p-3">
+          {audioUrl ? <audio controls preload="metadata" src={audioUrl} className="w-full" />
+                    : <p className="text-xs text-faint">…</p>}
+          <div className="flex gap-3">
+            <label className="cursor-pointer text-xs font-medium text-mint-deep hover:underline">
+              {input}{busy ? "جارٍ الرفع…" : "تغيير الملف"}
+            </label>
+            <button onClick={onRemoveAudio} className="text-xs font-medium text-absent hover:underline">حذف الملف</button>
+          </div>
+        </div>
+      ) : (
+        <label className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-card border border-dashed border-mint-deep/40 bg-white px-3 py-4 text-sm font-medium text-mint-deep hover:bg-canvas ${busy ? "opacity-50" : ""}`}>
+          {input}
+          {busy ? "جارٍ رفع الملف الصوتي…" : "+ رفع الملف الصوتي"}
+        </label>
+      )}
+
+      {rows.map((row, i) => (
+        <QuestionCard key={row.id} row={row} index={i + 1} lang="en" onPatch={onPatch} onRemove={onRemove} />
+      ))}
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-xs text-muted">إضافة فقرة استماع:</span>
+        {KINDS.filter((k) => k.key !== "match").map((k) => {
+          const n = rows.filter((x) => x.kind === k.key).length;
+          return (
+            <button key={k.key} onClick={() => onAdd(k.key)}
+              className="rounded-pill border border-[#CCF2DB] bg-white px-4 py-1.5 text-sm font-medium text-mint-deep transition-colors hover:bg-[#CCF2DB]">
+              + {k.label} <span className="num opacity-75">{n ? `(${n})` : ""}</span>
+            </button>
+          );
+        })}
+      </div>
+      {rows.length > 0 && !audioPath && (
+        <p className="text-[11px] font-semibold text-warning">لم يُرفع الملف الصوتي بعد — أسئلة الاستماع تحتاجه.</p>
+      )}
+    </section>
+  );
+}
+
 function QuestionImage({ row, image, save }) {
   const [busy, setBusy] = useState(false);
   const width = Number(row.image_width) || 60;
