@@ -55,7 +55,8 @@ export default function OfficialAbsence({ initialDate }) {
         manual: !!m?.manual,
         note: m?.note ?? null,
         editedBy: m?.edited_by_name ?? null,
-        changed: day && !m?.manual && approved !== r.official,
+        // تغيّر الحالة، أو تغيّر التأخر (بصمة وصلت بعد الاعتماد فلم يعد «متأخرًا بلا وقت»، أو العكس)
+        changed: day && !m?.manual && (approved !== r.official || ((m?.late_minutes ?? 0) > 0) !== !!r.isLate),
       };
     });
   }, [live, markBy, day]);

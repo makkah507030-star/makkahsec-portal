@@ -311,30 +311,16 @@ async function handle(event, admin) {
         });
       }
 
-      // (1ب) رقم الجهاز جزء من آخر رقم الهوية: بعض الأجهزة تحفظ الهوية بلا أول خانة أو
-      // خانتين (1156631309 ← 156631309). يُقبل حين يطابق طالبًا واحدًا فقط، وللأرقام
-      // من 8 خانات فأكثر حتى لا يلتبس رقم قصير بغيره.
+      // (1ب) رقم الجهاز جزء متصل من رقم الهوية: الجهاز لا يتسع لعشر خانات، فيُختصر الرقم عند
+      // التسجيل بحذف خانات من أوله أو آخره أو كليهما (1156631309 ← 156631309، 2428699728 ←
+      // 242869972، 1157259597 ← 15725959). يُقبل للأرقام من 8 خانات فأكثر حين يطابق طالبًا واحدًا فقط.
       const unresolved = uniqUids.filter((u) => /^\d{8,}$/.test(u) && !variantsOf(u).some((v) => byKey.has(v)));
       for (const part of chunk(unresolved, 40)) {
         const { data: studs } = await admin
           .from("students").select("id, national_id").eq("is_active", true)
-          .or(part.map((u) => `national_id.like.*${u}`).join(","));
+          .or(part.map((u) => `national_id.like.*${u}*`).join(","));
         for (const u of part) {
-          const hits = (studs || []).filter((s) => String(s.national_id ?? "").endsWith(u));
-          if (hits.length === 1) byKey.set(u, hits[0].id);
-        }
-      }
-
-      // (1ج) رقم الجهاز أول تسع خانات من الهوية: بعض الأجهزة لا تتسع إلا لتسع خانات، فتُحذف
-      // الخانة الأخيرة عند التسجيل (2428699728 ← 242869972). يُقبل للأرقام من تسع خانات حين
-      // يطابق طالبًا واحدًا فقط هويته عشر خانات تبدأ به.
-      const cut = uniqUids.filter((u) => /^\d{9}$/.test(u) && !variantsOf(u).some((v) => byKey.has(v)));
-      for (const part of chunk(cut, 40)) {
-        const { data: studs } = await admin
-          .from("students").select("id, national_id").eq("is_active", true)
-          .or(part.map((u) => `national_id.like.${u}*`).join(","));
-        for (const u of part) {
-          const hits = (studs || []).filter((s) => /^\d{10}$/.test(String(s.national_id ?? "")) && String(s.national_id).startsWith(u));
+          const hits = (studs || []).filter((s) => String(s.national_id ?? "").includes(u));
           if (hits.length === 1) byKey.set(u, hits[0].id);
         }
       }
