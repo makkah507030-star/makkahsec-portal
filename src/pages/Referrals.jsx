@@ -110,7 +110,7 @@ export default function Referrals() {
           <button className={pill(tab === "new")} onClick={() => setTab("new")}>طلابي</button>
         )}
         <button className={pill(tab === "inbox")} onClick={() => setTab("inbox")}>
-          {isDeputy || isCounselor ? "بانتظاري" : "ملفاتي"}
+          {isDeputy || isCounselor ? "بانتظار إجرائي" : "ملفاتي"}
           {mine.length > 0 && <span className="num"> ({mine.length})</span>}
         </button>
         {isDeputy && (
