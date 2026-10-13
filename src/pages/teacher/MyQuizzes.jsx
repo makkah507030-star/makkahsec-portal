@@ -1260,8 +1260,14 @@ function MatchEditor({ local, setLocal, save, ltr = false }) {
   return (
     <div className="space-y-2">
       <p className="text-[11px] text-faint">
-        اكتب عناصر العمودين، ثم اختر لكل عنصر في الأول ما يقابله في الثاني.
+        اكتب عناصر العمودين في أي ترتيب، ثم اختر في القائمة لكل عنصر من العمود الأول الكلمةَ التي تقابله من العمود الثاني.
       </p>
+      <div className="hidden items-center gap-2 text-[11px] font-semibold text-muted sm:flex">
+        <span className="w-3 shrink-0" />
+        <span className="min-w-[120px] flex-1">العمود الأول</span>
+        <span className="min-w-[120px] flex-1">العمود الثاني (بأي ترتيب)</span>
+        <span className="w-48 shrink-0">مقابل كلمة العمود الأول</span>
+      </div>
       {left.map((l, i) => (
         <div key={i} className="flex flex-wrap items-center gap-2">
           <span className="num shrink-0 text-xs text-muted">{i + 1}</span>
@@ -1274,11 +1280,14 @@ function MatchEditor({ local, setLocal, save, ltr = false }) {
                  placeholder={ltr ? "Column B" : "العمود الثاني"}
                  onChange={(e) => setSide("right", i, e.target.value)}
                  onBlur={() => save({ options: o })} />
-          <select className="field w-24 shrink-0" value={ans[String(i)] ?? ""}
+          {/* المفتاح لعنصر العمود الأول في هذا السطر: القائمة تعرض كلمات العمود الثاني نفسها لا حروفها،
+              فلا يُظن أنها للكلمة المجاورة في العمود الثاني (أُدخل مفتاح معكوس بسبب ذلك) */}
+          <select className="field w-full shrink-0 sm:w-48" value={ans[String(i)] ?? ""}
+                  title={`ما يقابل «${(l || "").trim() || i + 1}» من العمود الثاني`} dir={ltr ? "ltr" : "rtl"}
                   onChange={(e) => save({ answer: { ...ans, [String(i)]: e.target.value } })}>
-            <option value="">يقابل…</option>
-            {right.map((_, k) => (
-              <option key={k} value={String(k)}>{LTRS[k] ?? k + 1}</option>
+            <option value="">اختر المقابل</option>
+            {right.map((r, k) => (
+              <option key={k} value={String(k)}>{LTRS[k] ?? k + 1}) {r || "—"}</option>
             ))}
           </select>
         </div>
