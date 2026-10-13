@@ -163,7 +163,7 @@ export function BehaviorSteps({ uid, student, violation, subject, onState, steps
     return (
       <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">
         مخالفة من الدرجة {degreeName(violation.degree)}: {stepsOnly
-          ? "لا تدرّج فيها، تُحال مباشرة لوكيل شؤون الطلاب من «إحالة جديدة»."
+          ? "لا تدرّج فيها، تُحال مباشرة لوكيل شؤون الطلاب برفع الإحالة."
           : "تُحال مباشرة لوكيل شؤون الطلاب."}
       </p>
     );
@@ -205,7 +205,7 @@ export function BehaviorSteps({ uid, student, violation, subject, onState, steps
       </div>
       {next === -1 && (
         <p className="mt-2 rounded-sm2 bg-present/10 px-3 py-2 text-xs text-present">
-          اكتملت الخطوات الثلاث. إن تكررت المخالفة {stepsOnly ? "فارفع الإحالة من «إحالة جديدة»." : "فارفع الإحالة."}
+          اكتملت الخطوات الثلاث. إن تكررت المخالفة {stepsOnly ? "فارفع الإحالة برفع الإحالة." : "فارفع الإحالة."}
         </p>
       )}
       {err && <p className="mt-2 rounded-sm2 bg-absent/10 px-3 py-2 text-xs text-absent">{err}</p>}

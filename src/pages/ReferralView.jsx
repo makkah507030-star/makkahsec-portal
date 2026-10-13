@@ -82,11 +82,13 @@ export default function ReferralView() {
     if (e) { setMsg({ ok: false, text: `تعذّر الحفظ: ${e.message}` }); return; }
     setR((x) => ({ ...x, guardian_ack_at: new Date().toISOString(),
                    guardian_note: note.trim(), status: "guardian_replied" }));
-    setMsg({ ok: true, text: "شكرًا لك. وصل إقرارك وردّك لوكيل شؤون الطلاب." });
-    // إشعار الوكيل برد ولي الأمر (supabase/referral_deputies.sql)
-    const body = `ردّ ولي أمر ${r.student_name} على ${r.serial}${note.trim() ? `: ${note.trim()}` : "."}`;
-    if (r.deputy_id) notifyUsers([r.deputy_id], "وصل رد ولي الأمر", body, "/referrals");
-    else notifyDeputies("وصل رد ولي الأمر", body);
+    setMsg({ ok: true, text: "شكرًا لك. وصل إقرارك وردّك لوكيل شؤون الطلاب، وأُغلق الملف." });
+    // إقرار ولي الأمر يغلق الملف (الحلقة السادسة)؛ يُشعر الوكيل ومن أرسلها من الموجهين
+    // (supabase/referral_deputies.sql)
+    const body = `أقرّ ولي أمر ${r.student_name} بالاطلاع على ${r.serial} وأُغلق الملف${note.trim() ? `. رده: ${note.trim()}` : "."}`;
+    if (r.deputy_id) notifyUsers([r.deputy_id], "أقرّ ولي الأمر وأُغلقت الإحالة", body, "/referrals?tab=all");
+    else notifyDeputies("أقرّ ولي الأمر وأُغلقت الإحالة", body, "/referrals?tab=all");
+    if (r.counselor_id) notifyUsers([r.counselor_id], "أقرّ ولي الأمر وأُغلقت الإحالة", body, "/referrals?tab=all");
   };
 
   if (error) {

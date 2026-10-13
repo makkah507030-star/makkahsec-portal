@@ -112,7 +112,7 @@ async function load() {
     rowsFlag((f) => supabase.from("form_documents").select(`id, title, serial${f}`)
       .eq("recipient_user_id", uid).eq("status", "awaiting_reply").order("created_at").limit(50)),
     isDeputy ? rowsFlag((f) => supabase.from("student_referrals").select(`id, student_name${f}`)
-      .in("status", ["with_deputy", "guardian_replied"]).order("created_at").limit(100)) : noRows,
+      .eq("status", "with_deputy").order("created_at").limit(100)) : noRows,
     isCounselor ? rowsFlag((f) => supabase.from("student_referrals").select(`id, student_name${f}`).eq("counselor_id", uid)
       .in("status", ["with_counselor", "returned_to_counselor"]).order("created_at").limit(100)) : noRows,
     has("tech_support") ? count(head("notification_drafts").eq("status", "pending")) : none,
