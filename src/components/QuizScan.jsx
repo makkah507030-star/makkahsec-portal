@@ -1,7 +1,8 @@
 // src/components/QuizScan.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CARD_VERSIONS, cardLayout, rowsToAnswers } from "../lib/omrLayout.js";
-import { imageFromFile, readCard } from "../lib/omrReader.js";
+import { rowsToAnswers } from "../lib/omrLayout.js";
+import { cardLayouts, readCardFile } from "../lib/omrScan.js";
+import { hashIndex } from "../lib/omrCode.js";
 import { saveQuizCard } from "../lib/quizCards.js";
 
 /* =====================================================================
@@ -23,14 +24,10 @@ const STATUS = {
 
 export default function QuizScan({ quiz, questions, students, subs, startId, onSave, onAbsent, onClose }) {
   const ltr = quiz?.lang === "en";
-  const current = useMemo(() => cardLayout(questions, { ltr }), [questions, ltr]);
-  // أشكال البطاقة السابقة: أوراق طُبعت قبل آخر تحديث تُقرأ بشكلها (المكرَّر يُستبعد)
-  const older = useMemo(() => {
-    const sig = (l) => JSON.stringify(l.rows.map((r) => r.bubbles[0])) + l.H;
-    const seen = new Set([sig(current)]);
-    return CARD_VERSIONS.slice(1).map((version) => cardLayout(questions, { ltr, version }))
-      .filter((l) => !seen.has(sig(l)) && seen.add(sig(l)));
-  }, [questions, ltr, current]);
+  const shapes = useMemo(() => cardLayouts(questions, ltr), [questions, ltr]);
+  const current = shapes.current;
+  // البطاقة باسم الطالب تحمل رمزه (lib/omrCode.js): يُنبَّه المعلم إن كانت لطالب آخر
+  const byHash = useMemo(() => hashIndex(students), [students]);
   const [layout, setLayout] = useState(current);
   useEffect(() => { setLayout(current); }, [current]);
 
@@ -61,18 +58,9 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
     if (!file) return;
     setStage("reading"); setError(null); setSaved(null);
     try {
-      const img = await imageFromFile(file);
-      // نترك للمتصفح فرصة لعرض «جارٍ القراءة» قبل المعالجة
-      await new Promise((r) => setTimeout(r, 30));
-      // نقرأ بالشكل الحالي، وبالسابق إن اختلف، ونأخذ الأوضح: أكثر صفوف مقروءة بثقة
-      const tries = [current, ...older]
-        .map((l) => ({ l, r: readCard(img, l) }))
-        .filter((x) => x.r.ok);
-      if (!tries.length) { setError(readCard(img, current, { preview: false }).error); setStage("capture"); return; }
-      const clarity = ({ r }) => r.rows.reduce((a, x) => a + (x.status === "ok" ? 1 : 0)
-        + (x.pick != null ? x.scores[x.pick] : 0) / 100, 0);
-      const best = tries.reduce((a, x) => (clarity(x) > clarity(a) ? x : a));
-      setLayout(best.l); setResult(best.r); setPicks(best.r.picks); setStage("review");
+      const r = await readCardFile(file, shapes);
+      if (!r.ok) { setError(r.error); setStage("capture"); return; }
+      setLayout(r.layout); setResult(r.result); setPicks(r.result.picks); setStage("review");
     } catch (e) {
       setError(e?.message || "تعذّرت قراءة الصورة."); setStage("capture");
     }
@@ -80,6 +68,8 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
 
   const toggle = (key, k) => setPicks((p) => ({ ...p, [key]: p[key] === k ? null : k }));
 
+  // صاحب البطاقة من رمزها: طالب، أو undefined (لا رمز أو ليس في الفصل)، أو null (بصمة مشتركة)
+  const owner = result?.studentHash != null ? byHash.get(result.studentHash) : undefined;
   const flagged = result ? result.rows.filter((r) => r.status !== "ok" && picks[r.key] === r.pick) : [];
   const unresolved = result ? result.rows.filter((r) => r.status === "multi" && picks[r.key] == null) : [];
 
@@ -171,10 +161,23 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
             <section className="card overflow-hidden p-2">
               <img src={result.preview} alt="البطاقة كما قُرئت" className="w-full rounded-sm2" />
               <p className="px-2 pt-2 text-[11px] text-muted">
-                تأكّد أن الاسم في البطاقة هو <b className="text-ink">{student.full_name}</b>.
-                الدوائر المُحاطة بالأخضر هي ما قُرئ.
+                {owner === student ? <>✓ البطاقة باسم <b className="text-ink">{student.full_name}</b> (من رمزها).</>
+                  : <>تأكّد أن الاسم في البطاقة هو <b className="text-ink">{student.full_name}</b>.</>}
+                {" "}الدوائر المُحاطة بالأخضر هي ما قُرئ.
               </p>
             </section>
+            {owner && owner !== student && (
+              <div className="rounded-card border border-absent/30 bg-absent/5 px-3 py-2 text-sm text-absent">
+                هذه البطاقة باسم <b>{owner.full_name}</b> لا {student.full_name}.
+                <button className="mr-2 rounded-pill border border-absent/40 bg-white px-3 py-1 text-xs font-semibold"
+                        onClick={() => setIdx(students.indexOf(owner))}>احفظها لـ{owner.full_name.split(" ")[0]}</button>
+              </div>
+            )}
+            {owner === undefined && result.studentHash != null && (
+              <p className="rounded-card bg-warning/10 px-3 py-2 text-sm text-warning">
+                رمز البطاقة لطالب ليس في هذا الفصل. تأكّد من الفصل المختار.
+              </p>
+            )}
 
             {(flagged.length > 0 || unresolved.length > 0) ? (
               <p className="rounded-card bg-warning/10 px-3 py-2 text-sm text-warning">
@@ -187,32 +190,7 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
               </p>
             )}
 
-            <section className="card divide-y divide-line overflow-hidden">
-              {layout.rows.map((lr) => {
-                const r = result.rows.find((x) => x.key === lr.key);
-                const st = STATUS[r.status];
-                // اختبار الإنجليزي: A B C و True/False من اليسار كما في بطاقة التظليل
-                const letters = lr.kind === "truefalse" ? (ltr ? ["True", "False"] : ["صح", "خطأ"]) : (ltr ? EN_LTRS : AR_LTRS);
-                return (
-                  <div key={lr.key} className={`flex items-center gap-2 px-3 py-2 ${st ? "bg-warning/5" : ""}`}>
-                    <span className="num w-16 shrink-0 text-xs font-bold text-muted">{lr.label}</span>
-                    <div className="min-w-0 flex-1">
-                      <div dir={ltr ? "ltr" : "rtl"} className="flex flex-wrap gap-1.5">
-                        {lr.bubbles.map((_, k) => (
-                          <button key={k} onClick={() => toggle(lr.key, k)}
-                            className={`grid h-9 min-w-9 place-items-center rounded-full border px-2 text-xs font-bold transition-colors ${
-                              picks[lr.key] === k ? "border-mint-deep bg-mint-deep text-white"
-                                                  : "border-line bg-white text-muted"}`}>
-                            {letters[k] ?? k + 1}
-                          </button>
-                        ))}
-                      </div>
-                      {st && <span className={`chip mt-1.5 inline-block text-[10px] ${st.c}`}>{st.t}</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </section>
+            <CardRows layout={layout} result={result} picks={picks} toggle={toggle} ltr={ltr} />
 
             <div className="sticky bottom-0 flex gap-2 bg-canvas pb-2 pt-1">
               <button className="btn-primary flex-1 py-3" disabled={busy} onClick={save}>
@@ -230,3 +208,35 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
   );
 }
 
+/** صفوف البطاقة كما قُرئت: لكل فقرة دوائرها، والمختارة مظلَّلة، والمُعلَّم بلونه — يضغط
+    المعلم الدائرة الصحيحة لتعديلها. مشتركة بين التصوير الفردي والتصحيح الجماعي */
+export function CardRows({ layout, result, picks, toggle, ltr }) {
+  return (
+    <section className="card divide-y divide-line overflow-hidden">
+      {layout.rows.map((lr) => {
+        const r = result.rows.find((x) => x.key === lr.key);
+        const st = STATUS[r.status];
+        // اختبار الإنجليزي: A B C و True/False من اليسار كما في بطاقة التظليل
+        const letters = lr.kind === "truefalse" ? (ltr ? ["True", "False"] : ["صح", "خطأ"]) : (ltr ? EN_LTRS : AR_LTRS);
+        return (
+          <div key={lr.key} className={`flex items-center gap-2 px-3 py-2 ${st ? "bg-warning/5" : ""}`}>
+            <span className="num w-16 shrink-0 text-xs font-bold text-muted">{lr.label}</span>
+            <div className="min-w-0 flex-1">
+              <div dir={ltr ? "ltr" : "rtl"} className="flex flex-wrap gap-1.5">
+                {lr.bubbles.map((_, k) => (
+                  <button key={k} onClick={() => toggle(lr.key, k)}
+                    className={`grid h-9 min-w-9 place-items-center rounded-full border px-2 text-xs font-bold transition-colors ${
+                      picks[lr.key] === k ? "border-mint-deep bg-mint-deep text-white"
+                                          : "border-line bg-white text-muted"}`}>
+                    {letters[k] ?? k + 1}
+                  </button>
+                ))}
+              </div>
+              {st && <span className={`chip mt-1.5 inline-block text-[10px] ${st.c}`}>{st.t}</span>}
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}

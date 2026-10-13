@@ -3,6 +3,7 @@ import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import logoIcon from "../assets/icon-mint.png";
 import { CARD, cardLayout, groupQuestions } from "../lib/omrLayout.js";
+import { codeCells, studentCodeBits, CODE } from "../lib/omrCode.js";
 import moeLogo from "../assets/moe-logo.png";
 
 /* =====================================================================
@@ -31,6 +32,7 @@ const AR = {
   colA: "العمود الأول", colB: "العمود الثاني", answerCol: "الإجابة", statement: "العبارة",
   matchHint: "اكتب في خانة الإجابة حرف العنصر المقابل من العمود الثاني.",
   qShort: "س", fShort: "ف", item: "الفقرة", question: "السؤال", page: "صفحة", of: "من",
+  idNo: "رقم الهوية", codeNote: "رمز الطالب — لا تكتب عليه",
   bubbleHint: "ظلّل الدائرة كاملة بقلم رصاص، وامحُ محوًا تامًا عند التغيير",
   ordinals: ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"],
   markWord: (n) => `${n} ${n === 1 ? "درجة" : n === 2 ? "درجتان" : n <= 10 ? "درجات" : "درجة"}`,
@@ -50,6 +52,7 @@ const EN = {
   colA: "Column A", colB: "Column B", answerCol: "Answer", statement: "Statement",
   matchHint: "Write the letter of the matching item from column B.",
   qShort: "Q", fShort: "P", item: "Item", question: "Question", page: "Page", of: "of",
+  idNo: "ID", codeNote: "Student code — do not mark",
   bubbleHint: "Fill the circle completely with a pencil; erase fully to change",
   ordinals: ["One", "Two", "Three", "Four", "Five", "Six"],
   markWord: (n) => `${n} ${n === 1 ? "mark" : "marks"}`,
@@ -93,7 +96,7 @@ export function QuizPrintArea({ children }) {
    وهي نفس الأرقام التي يقرأ بها قارئ الكاميرا، فتتطابق الطباعة والقراءة تمامًا.
    علاماتها المرجعية الأربع 8 مم محاطة بفراغ أبيض ليسهل كشفها.
    ===================================================================== */
-function AnswerCard({ questions = [], t, ltr, quiz, className, studentName }) {
+function AnswerCard({ questions = [], t, ltr, quiz, className, studentName, studentId, nationalId }) {
   const L = cardLayout(questions, { ltr, labels: { qShort: t.qShort, fShort: t.fShort } });
   if (!L.rows.length) return null;
   const mm = (v) => `${v}mm`;
@@ -137,6 +140,32 @@ function AnswerCard({ questions = [], t, ltr, quiz, className, studentName }) {
             </div>
           );
         });
+      })()}
+
+      {/* رمز الطالب (lib/omrCode.js) في الشريط السفلي، ورقم الهوية بجانبه — للبطاقة باسم الطالب فقط:
+          يقرؤه الماسح فيعرف صاحب البطاقة في التصحيح الجماعي */}
+      {studentId && (() => {
+        const cells = codeCells(L), bits = studentCodeBits(studentId), c = CODE.CELL;
+        const left = cells[0].x - c / 2, right = cells[cells.length - 1].x + c / 2, y = cells[0].y;
+        const edge = CARD.PAD + CARD.MARK + 1.5;
+        return (
+          <>
+            {cells.map((p, i) => bits[i] ? (
+              <span key={i} style={abs(p.x - c / 2, p.y - c / 2, c, c, { background: "#000" })} />
+            ) : null)}
+            <span style={abs(left - 0.8, y - c / 2 - 0.8, right - left + 1.6, c + 1.6, { border: "0.15mm solid #999" })} />
+            {nationalId && (
+              <span className="num flex items-center justify-center whitespace-nowrap text-[8.5px]"
+                    style={abs(right + 2, y - 2.5, L.W - edge - right - 2, 5)}>
+                {t.idNo}: <b style={{ marginInlineStart: "1mm" }}>{nationalId}</b>
+              </span>
+            )}
+            <span className="flex items-center justify-center whitespace-nowrap text-[7.5px]"
+                  style={abs(edge, y - 2.5, left - edge - 2, 5, { color: "#555" })}>
+              {t.codeNote}
+            </span>
+          </>
+        );
       })()}
 
       {/* عنوان كل سؤال فوق عموده: كل سؤال يبدأ عمودًا جديدًا */}
@@ -455,7 +484,7 @@ const PAGE_H = 296, PAD_T = 8, PAD_B = 5, PAD_X = 9;
  * وجاءت بطاقة الإجابة كاملة في آخرها (أو في صفحة مستقلة) لتبقى صالحة للكاميرا.
  * onFit({ zoom, fits, pages, cardFits })
  */
-export default function QuizPaper({ quiz, questions = [], className = "", studentName = "", teacherName = "", onFit }) {
+export default function QuizPaper({ quiz, questions = [], className = "", studentName = "", studentId = null, nationalId = "", teacherName = "", onFit }) {
   const ltr = quiz?.lang === "en";
   const t = ltr ? EN : AR;
   const dir = ltr ? "ltr" : "rtl";
@@ -561,7 +590,8 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
     padding: `${PAD_T}mm ${PAD_X}mm ${PAD_B}mm`,
     display: "flex", flexDirection: "column", overflow: "hidden", fontFamily: font,
   };
-  const card = <AnswerCard questions={questions} t={t} ltr={ltr} quiz={quiz} className={className} studentName={studentName} />;
+  const card = <AnswerCard questions={questions} t={t} ltr={ltr} quiz={quiz} className={className} studentName={studentName}
+                           studentId={studentId} nationalId={nationalId} />;
   const headProps = { quiz, t, className, studentName };
 
   // نسخة القياس — لا تظهر ولا تُطبع

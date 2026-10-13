@@ -714,13 +714,14 @@ function QuizEditor({ quiz, uid, onBack }) {
     if (kind === "names") {
       const ids = id === "*" ? linked.map((l) => l.class_id) : [id];
       const { data } = await supabase.from("student_enrollment")
-        .select("class_id, students(id, full_name)").in("class_id", ids).eq("status", "active");
+        .select("class_id, students(id, full_name, national_id)").in("class_id", ids).eq("status", "active");
       copies = ids.flatMap((cid) => {
         const cls = sheetClass(linked.find((l) => l.class_id === cid));
         return (data ?? []).filter((r) => r.class_id === cid && r.students)
           .map((r) => r.students)
           .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"))
-          .map((st) => ({ studentName: st.full_name, className: cls }));
+          // رمز الطالب ورقم هويته في البطاقة: يعرفه الماسح في التصحيح الجماعي
+          .map((st) => ({ studentName: st.full_name, className: cls, studentId: st.id, nationalId: st.national_id ?? "" }));
       });
       if (!copies.length) { window.alert("لا طلاب في الفصل المختار."); return; }
     } else {
