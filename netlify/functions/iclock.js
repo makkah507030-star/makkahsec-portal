@@ -311,6 +311,20 @@ async function handle(event, admin) {
         });
       }
 
+      // (1ب) رقم الجهاز جزء من آخر رقم الهوية: بعض الأجهزة تحفظ الهوية بلا أول خانة أو
+      // خانتين (1156631309 ← 156631309). يُقبل حين يطابق طالبًا واحدًا فقط، وللأرقام
+      // من 8 خانات فأكثر حتى لا يلتبس رقم قصير بغيره.
+      const unresolved = uniqUids.filter((u) => /^\d{8,}$/.test(u) && !variantsOf(u).some((v) => byKey.has(v)));
+      for (const part of chunk(unresolved, 40)) {
+        const { data: studs } = await admin
+          .from("students").select("id, national_id").eq("is_active", true)
+          .or(part.map((u) => `national_id.like.*${u}`).join(","));
+        for (const u of part) {
+          const hits = (studs || []).filter((s) => String(s.national_id ?? "").endsWith(u));
+          if (hits.length === 1) byKey.set(u, hits[0].id);
+        }
+      }
+
       const resolve = (uid) => {
         for (const v of variantsOf(uid)) if (byKey.has(v)) return byKey.get(v);
         return null;
