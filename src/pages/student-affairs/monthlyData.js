@@ -14,6 +14,8 @@ import { stageOf } from "../../lib/referrals";
 const iso = (y, m, d = 1) => new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10);
 const quiet = (p) => Promise.resolve(p).then((r) => (r?.error ? { data: null } : r)).catch(() => ({ data: null }));
 const pctOf = (present, total, pending = 0) => (total - pending > 0 ? Math.round((present * 1000) / (total - pending)) / 10 : null);
+/** متوسط اليوم الواحد بمنزلة عشرية: تعرضه التقارير بدل المجاميع الكبيرة */
+export const perDay = (v, days) => (days ? Math.round((v / days) * 10) / 10 : 0);
 
 export function monthBounds(month) {
   const [y, m] = month.split("-").map(Number);
@@ -90,13 +92,19 @@ export async function loadAffairsMonthly(month) {
     month, ...b, fpOn: !!fp?.on,
     attendance: {
       days: mDays.length, ...tot, pct: pctOf(tot.present, tot.total, tot.pending),
-      grades: Object.entries(grades).sort().map(([g, v]) => ({ g: Number(g), ...v, pct: pctOf(v.present, v.total, v.pending) })),
-      weekdays: [0, 1, 2, 3, 4].filter((w) => wd[w]).map((w) => ({ w, ...wd[w], rate: pctOf(wd[w].absent, wd[w].total, wd[w].pending) })),
+      // متوسطات اليوم الواحد من الأيام المعتمدة
+      daily: { present: perDay(tot.present, mDays.length), absent: perDay(tot.absent, mDays.length), excused: perDay(tot.excused, mDays.length) },
+      grades: Object.entries(grades).sort().map(([g, v]) => ({ g: Number(g), ...v, pct: pctOf(v.present, v.total, v.pending),
+        daily: { present: perDay(v.present, mDays.length), absent: perDay(v.absent, mDays.length) } })),
+      weekdays: [0, 1, 2, 3, 4].filter((w) => wd[w]).map((w) => ({ w, ...wd[w], rate: pctOf(wd[w].absent, wd[w].total, wd[w].pending), daily: perDay(wd[w].absent, wd[w].n) })),
       students: absentTop.length, repeat3: absentTop.filter((s) => s.days >= 3).length, top: absentTop.slice(0, 10),
     },
     late: {
       incidents: late.length, students: lateTop.length, minutes: late.reduce((a, r) => a + (Number(r.late_minutes) || 0), 0),
       repeat3: lateTop.filter((s) => s.days >= 3).length, byGrade: lateByGrade, top: lateTop.slice(0, 10),
+      // متوسط حالات التأخر في اليوم، ومتوسط دقائق الحالة الواحدة
+      daily: perDay(late.length, mDays.length), avgMinutes: late.length ? Math.round(late.reduce((a, r) => a + (Number(r.late_minutes) || 0), 0) / late.length) : 0,
+      dailyByGrade: Object.fromEntries(Object.entries(lateByGrade).map(([g, v]) => [g, perDay(v, mDays.length)])),
     },
     warnings: { total: W.length, byStage: count(W, "stage") },
     referrals: {
