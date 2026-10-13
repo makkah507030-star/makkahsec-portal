@@ -15,6 +15,8 @@ import PrintPortal from "../components/PrintPortal.jsx";
 import { printThen } from "../lib/print.js";
 import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
+import { signatureByName, useSignatureByName } from "../lib/userSignatures.js";
+import { STUDENT_DEPUTY_NAME } from "../lib/signers.js";
 
 /* =====================================================================
    الطلاب المنقطعون (supabase/student_dropouts_1.sql و _2.sql):
@@ -288,7 +290,12 @@ function Cards({ rows, manage = false, search = false, empty, onChange }) {
     const t = q.trim();
     return t ? rows.filter((r) => (r.student_name ?? "").includes(t) || (r.national_id ?? "").includes(t)) : rows;
   }, [rows, q]);
-  const print = (r) => { setPrinting(r); setTimeout(() => printThen(() => setPrinting(null)), 80); };
+  // التوقيعان يُجلبان ويُحمَّلان قبل الطباعة حتى لا تخرج الورقة بلا صورتيهما
+  const print = async (r) => {
+    const urls = await Promise.all([signatureByName(r.reported_by_name), r.decided_at ? signatureByName(deputyOf(r)) : null]);
+    await Promise.all(urls.filter(Boolean).map((u) => new Promise((ok) => { const i = new Image(); i.onload = i.onerror = ok; i.src = u; })));
+    setPrinting(r); setTimeout(() => printThen(() => setPrinting(null)), 150);
+  };
 
   return (
     <div className="space-y-3">
@@ -381,6 +388,20 @@ function Card({ r, manage, onChange, onPrint }) {
 
 const GOV = ["المملكة العربية السعودية", "وزارة التعليم", "الإدارة العامة للتعليم بمنطقة مكة المكرمة"];
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
+const deputyOf = (r) => r.decided_by_name || STUDENT_DEPUTY_NAME;
+
+function SignBox({ role, name, signed = true }) {
+  const url = useSignatureByName(signed ? name : "", null);
+  return (
+    <div>
+      <p className="font-semibold">{role}</p>
+      <div className="mx-auto flex h-14 items-end justify-center">
+        {url ? <img src={url} alt="" className="max-h-14 w-auto object-contain" /> : null}
+      </div>
+      <p className="mx-auto mt-1 w-48 border-t border-faint pt-1 font-semibold">{name || "—"}</p>
+    </div>
+  );
+}
 
 function DropoutPrint({ r }) {
   const reason = REASONS[r.reason] ?? REASONS.other;
@@ -421,8 +442,9 @@ function DropoutPrint({ r }) {
           </tbody>
         </table>
         <div className="mt-12 grid grid-cols-2 gap-8 text-center text-[12.5px]">
-          <div><p className="font-semibold">المعلم المبلّغ</p><p className="mt-8">..........................</p></div>
-          <div><p className="font-semibold">وكيل شؤون الطلاب</p><p className="mt-8">..........................</p></div>
+          <SignBox role="المعلم المبلّغ" name={r.reported_by_name} />
+          {/* توقيع الوكيل بعد أن يتخذ إجراءه، واسمه من «أسماء الموقّعين» قبل ذلك */}
+          <SignBox role="وكيل شؤون الطلاب" name={deputyOf(r)} signed={!!r.decided_at} />
         </div>
         <p className="mt-10 text-center text-[10px] text-faint">صدر من بوابة مكة الثانوية الرقمية · makkahsec.com</p>
       </div>

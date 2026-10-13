@@ -95,16 +95,21 @@ export default function SubstitutePeriod() {
       .in("schedule_id", list.map((s) => s.id));
     const takenSet = new Set((taken ?? [])
       .filter((r) => r.cover_teacher_id !== me.id).map((r) => r.schedule_id));
+    // ما حضّرته أنا يبقى ظاهرًا لإعادة التحضير حتى قبل نهاية الحصة بخمس دقائق
+    const mineSet = new Set((taken ?? [])
+      .filter((r) => r.cover_teacher_id === me.id).map((r) => r.schedule_id));
 
-    setCandidates(list.filter((s) => !doneSet.has(s.id) && !takenSet.has(s.id)));
+    setCandidates(list
+      .filter((s) => (!doneSet.has(s.id) || mineSet.has(s.id)) && !takenSet.has(s.id))
+      .map((s) => ({ ...s, mine: mineSet.has(s.id) && doneSet.has(s.id) })));
   };
 
   useEffect(() => { loadCandidates(); }, [me, dow, nowPeriod, year, term]);
 
   const openRoster = async (sched) => {
     setMsg(null);
-    // تحقّق أخير قبل الفتح تفاديًا لتعارض مع معلم انتظار آخر أسرع
-    const { count } = await supabase.from("class_attendance")
+    // تحقّق أخير قبل الفتح تفاديًا لتعارض مع معلم انتظار آخر أسرع (إلا إعادة تحضيري)
+    const { count } = sched.mine ? { count: 0 } : await supabase.from("class_attendance")
       .select("id", { count: "exact", head: true })
       .eq("schedule_id", sched.id).eq("attend_date", date);
     if (count > 0) {
@@ -135,6 +140,11 @@ export default function SubstitutePeriod() {
 
     const init = {};
     list.forEach((s) => { init[s.id] = excSet.has(s.id) ? "excused" : "present"; });
+    // إعادة التحضير: يبدأ من الحالات المحفوظة (supabase/substitute_reedit.sql)
+    if (sched.mine) {
+      const { data: saved } = await supabase.rpc("substitute_marks", { p_schedule_id: sched.id, p_date: date });
+      (saved ?? []).forEach((r) => { if (r.student_id in init) init[r.student_id] = r.status; });
+    }
     setMarks(init);
     setSelected(sched);
   };
@@ -235,6 +245,13 @@ export default function SubstitutePeriod() {
     return nowMinutes() - toMinutes(row.start_time) >= GRACE_MINUTES;
   })();
 
+  // التحضير وإعادته متاحان حتى قبل نهاية الحصة بخمس دقائق
+  const editOpen = (() => {
+    const row = ptimeOf(nowPeriod);
+    if (!row?.end_time) return true;
+    return nowMinutes() <= toMinutes(row.end_time) - 5;
+  })();
+
   if (loading) return <Loader />;
 
   if (!dow) {
@@ -307,7 +324,7 @@ export default function SubstitutePeriod() {
 
         <div className="flex gap-2">
           <button className="btn-primary" onClick={save} disabled={saving || !students.length}>
-            {saving ? "جارٍ الحفظ…" : "حفظ التحضير وتسجيلي معلم انتظار"}
+            {saving ? "جارٍ الحفظ…" : selected.mine ? "حفظ التعديل" : "حفظ التحضير وتسجيلي معلم انتظار"}
           </button>
           <button className="btn-ghost" onClick={() => setSelected(null)} disabled={saving}>
             إلغاء
@@ -331,7 +348,7 @@ export default function SubstitutePeriod() {
         <h1 className="text-lg font-bold">حصص الانتظار</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           إذا كنت تغطّي فصلًا غاب عنه معلمه في الحصة الجارية، اخترْه من القائمة وسجّل
-          التحضير — يظهر السجل مرة واحدة فقط بعد الحفظ لضمان عدم تعارضه مع حصة أخرى.
+          التحضير. ويمكنك إعادة تحضيره وتعديله حتى قبل نهاية الحصة بخمس دقائق.
         </p>
       </div>
 
@@ -368,10 +385,15 @@ export default function SubstitutePeriod() {
                   {c.classes?.grade ? ` · ${GRADE_NAMES[c.classes.grade]}` : ""} · {c.subjects?.name ?? "بلا مادة"}
                 </p>
                 <p className="mt-0.5 text-xs text-muted">معلمه الأصلي: {c.teachers?.full_name ?? "—"}</p>
+                {c.mine && <p className="mt-0.5 text-xs font-semibold text-present">✓ حضّرتها</p>}
               </div>
-              <button onClick={() => openRoster(c)} className="btn-primary shrink-0">
-                دخول انتظار
-              </button>
+              {!editOpen ? (
+                <span className="shrink-0 text-xs text-muted">انتهى وقت التحضير</span>
+              ) : (
+                <button onClick={() => openRoster(c)} className={c.mine ? "btn-ghost shrink-0" : "btn-primary shrink-0"}>
+                  {c.mine ? "إعادة التحضير" : "دخول انتظار"}
+                </button>
+              )}
             </div>
           ))}
         </div>

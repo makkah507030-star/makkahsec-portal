@@ -1,5 +1,5 @@
 // src/components/FormSheet.jsx
-import { Fragment } from "react";
+import { Fragment, useLayoutEffect, useRef, useState } from "react";
 import logoIcon from "../assets/icon-mint.png";
 import { noEra } from "../lib/dates";
 import moeLogo from "../assets/moe-logo.png";
@@ -405,6 +405,8 @@ function Official(p) {
 
 /* جدول حصر: أعمدة معرَّفة وصفوف فارغة تُملأ بخط اليد بعد الطباعة */
 /* تلوين المستوى (ممتاز، جيد جدًا، جيد، مقبول، ضعيف) في الاستمارات — يُطبع بألوانه */
+// التلوين في حقول المستوى وأعمدته فقط («مستوى…»، «التقدير») — لا في كل خانة كُتب فيها «ممتاز»
+const LEVEL_FIELD = /مستوى|المستوى|تقدير|التقدير/;
 function levelCell(value) {
   const b = levelBand(value);
   return b ? { background: b.bg, color: b.text, fontWeight: 700, textAlign: "center", ...INK } : undefined;
@@ -442,7 +444,8 @@ function BlankTable({ field, value }) {
               {cols.map((_, c) => (
                 <td key={c} className="h-7 border border-line px-2 align-middle text-ink"
                     // المستوى مكتوبًا في الخانة، أو علامة تحت عمود عنوانه مستوى (ممتاز، جيد جدًا…)
-                    style={levelCell(data[r]?.[c]) ?? (String(data[r]?.[c] ?? "").trim() ? levelCell(cols[c]) : undefined)}>
+                    style={(LEVEL_FIELD.test(cols[c] ?? "") ? levelCell(data[r]?.[c]) : undefined)
+                           ?? (String(data[r]?.[c] ?? "").trim() ? levelCell(cols[c]) : undefined)}>
                   {c === 0 && !data[r]?.[c] ? <span className="num text-faint">{r + 1}</span> : (data[r]?.[c] ?? "")}
                 </td>
               ))}
@@ -1643,7 +1646,7 @@ function Administrative(p) {
           ) : (
             <div key={f.name} className="flex gap-3 border-b border-line py-2">
               <span className="w-44 shrink-0 text-[13px] text-muted">{f.label}</span>
-              {levelBand(asText(v[f.name]))
+              {LEVEL_FIELD.test(f.label ?? "") && levelBand(asText(v[f.name]))
                 ? <LevelChip value={asText(v[f.name])} />
                 : <span className="whitespace-pre-line text-[14px] text-ink">{asText(v[f.name]) || "—"}</span>}
             </div>
@@ -1677,6 +1680,45 @@ function EvidenceStrip({ items }) {
       {" — "}{EVIDENCE_NOTE}
     </div>
   );
+}
+
+/* ملاءمة الورقة: إن طال المحتوى (توصيات أو جداول طويلة) عن صفحة A4 يُصغَّر كله
+   بالنسبة اللازمة حتى يتسع (حتى 60%) بدل أن يخرج عن حدود الورقة. النسبة تُقاس في
+   المعاينة الظاهرة وتُحفظ، فتأخذها نسخة الطباعة المخفية على الشاشة. */
+const fitCache = new Map();
+function FitBody({ fitKey, pageH, children }) {
+  const ref = useRef(null);
+  const [z, setZ] = useState(() => fitCache.get(fitKey) ?? 1);
+  // الارتفاع بالمليمتر مقسومًا على النسبة: مع zoom تُضرب الأطوال فيها فيبقى الطول الظاهر صفحة واحدة
+  const h = (zz) => `calc(${pageH} / ${zz})`;
+  useLayoutEffect(() => {
+    const fit = () => {
+      const el = ref.current;
+      const body = el?.firstElementChild;
+      if (!el || !body) return;
+      if (!el.clientHeight) { if (fitCache.has(fitKey)) setZ(fitCache.get(fitKey)); return; }
+      // أكبر نسبة يتسع بها المحتوى (بحث ثنائي بين 60% و100%)
+      const fits = (zz) => {
+        el.style.zoom = zz; el.style.height = h(zz);
+        return body.scrollHeight <= body.clientHeight + 1;
+      };
+      let zz = 1;
+      if (!fits(1)) {
+        let lo = 0.6, hi = 1;
+        for (let i = 0; i < 8; i++) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+        zz = Math.floor(lo * 1000) / 1000;
+        fits(zz);
+      }
+      fitCache.set(fitKey, zz);
+      setZ(zz);
+    };
+    fit();
+    // الخطوط والصور (التوقيعات) قد تصل بعد العرض الأول فتغيّر الطول
+    document.fonts?.ready?.then(fit);
+    const t = setTimeout(fit, 800);
+    return () => clearTimeout(t);
+  }, [fitKey]);
+  return <div ref={ref} style={{ zoom: z, height: h(z) }}>{children}</div>;
 }
 
 export default function FormSheet({
@@ -1733,8 +1775,11 @@ export default function FormSheet({
   }
 
   return (
-    <div className={sheetCls} style={sheetStyle}>
-      <Body {...props} />
+    <div className={sheetCls} style={{ ...sheetStyle, overflow: "hidden" }}>
+      <FitBody fitKey={JSON.stringify([template.id ?? template.key, values, doc?.serial ?? null])}
+               pageH={landscape ? "210mm" : "297mm"}>
+        <Body {...props} />
+      </FitBody>
       <EvidenceStrip items={ev} />
     </div>
   );

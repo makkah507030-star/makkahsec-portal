@@ -667,6 +667,10 @@ function DailyRateReport() {
     );
     const resolved = t.present + t.absent;
     t.pct = resolved ? Math.round((t.present / resolved) * 100) : null;
+    // متوسط اليوم الواحد بدل المجاميع الكبيرة للفصل كاملًا
+    const n = (rows ?? []).length;
+    const avg = (v) => (n ? Math.round((v / n) * 10) / 10 : 0);
+    t.dPresent = avg(t.present); t.dAbsent = avg(t.absent);
     return t;
   }, [rows]);
 
@@ -675,7 +679,7 @@ function DailyRateReport() {
     i + 1, fmtDate(r.attend_date + "T00:00:00"), r.present, r.absent,
     r.pct != null ? `${r.pct}%` : "—",
   ]);
-  const totalPlain = ["", "الإجمالي — الفصل الدراسي", totals.present, totals.absent,
+  const totalPlain = ["", "المتوسط اليومي — الفصل الدراسي", totals.dPresent, totals.dAbsent,
     totals.pct != null ? `${totals.pct}%` : "—"];
 
   // للتصدير: Excel يحتاج قيمًا مباشرة
@@ -717,7 +721,7 @@ function DailyRateReport() {
     <div className="space-y-4">
       <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
         نسبة الحضور محسوبة يوميًا بنفس قاعدة الحضور الرسمي، وفي آخر السجل
-        مجموع وإجمالي نسبة الفصل الدراسي كاملًا.
+        متوسط الحضور والغياب في اليوم الواحد ونسبة الفصل الدراسي كاملًا.
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -743,9 +747,9 @@ function DailyRateReport() {
           </div>
           <div className="rounded-card border border-line bg-white px-4 py-3 text-center">
             <p className="num text-2xl font-bold leading-none text-absent">
-              {totals.absent.toLocaleString("ar")}
+              {totals.dAbsent.toLocaleString("ar")}
             </p>
-            <p className="mt-1.5 text-xs text-muted">إجمالي حالات الغياب</p>
+            <p className="mt-1.5 text-xs text-muted">متوسط الغياب اليومي</p>
           </div>
         </div>
       )}
@@ -783,11 +787,11 @@ function DailyRateReport() {
 
           <div className="flex items-center justify-between gap-3 bg-mint-tint px-4 py-3">
             <span className="text-sm font-bold text-mint-deep">
-              الإجمالي — الفصل الدراسي كاملًا
+              المتوسط اليومي — الفصل الدراسي كاملًا
             </span>
             <div className="flex shrink-0 items-center gap-2">
-              <span className="num chip bg-present/15 font-semibold text-present">{totals.present}</span>
-              <span className="num chip bg-absent/15 font-semibold text-absent">{totals.absent}</span>
+              <span className="num chip bg-present/15 font-semibold text-present">{totals.dPresent}</span>
+              <span className="num chip bg-absent/15 font-semibold text-absent">{totals.dAbsent}</span>
               <span className="num w-12 text-left text-base font-bold text-mint-deep">
                 {totals.pct != null ? `${totals.pct}%` : "—"}
               </span>

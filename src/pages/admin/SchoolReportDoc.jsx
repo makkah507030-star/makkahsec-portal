@@ -20,7 +20,7 @@ const MODE = { paper: "ورقي (رصد يدوي)", omr: "ورقي (تصحيح �
 function highlights(d) {
   const out = [];
   const a = d.attendance;
-  if (a.days) out.push(`نسبة الحضور الرسمية ${pc(a.pct)}، والأيام المعتمدة: ${countAr(a.days, "day")}.`);
+  if (a.days) out.push(`نسبة الحضور الرسمية ${pc(a.pct)}، والأيام المعتمدة: ${countAr(a.days, "day")}، ومتوسط الغياب اليومي ${n(a.daily.absent)} طالب.`);
   if (d.events.total) out.push(`الأحداث والمناسبات المنفّذة: ${countAr(d.events.total, "event")}، والطلاب الحاضرون ${n(d.events.attended)}${d.events.upcoming ? `، وقادمة ${n(d.events.upcoming)}` : ""}.`);
   if (d.pd.total) out.push(`أنشطة التطوير المهني: ${n(d.pd.total)} (تقارير ${n(d.pd.reports)}، مجتمعات تعلم ${n(d.pd.plc)}، زيارات ${n(d.pd.visits)})، اعتُمد منها ${n(d.pd.approved)}.`);
   if (d.quizzes.total) out.push(`الاختبارات في البوابة: ${n(d.quizzes.total)}، رُصدت درجات ${n(d.quizzes.graded)} منها${d.quizzes.avg != null ? ` بمتوسط أداء ${pc(d.quizzes.avg)}` : ""}.`);
@@ -62,7 +62,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
       ]} />
       <Box icon="trophy" title="مؤشرات الإنجاز">
         <div className="mr-rings">
-          <Ring value={a.pct == null ? null : Math.round(a.pct)} label="الحضور" sub={`${n(a.present)} حضور`} color={S[0]} />
+          <Ring value={a.pct == null ? null : Math.round(a.pct)} label="الحضور" sub={`${n(a.daily.present)} حاضر يوميًا`} color={S[0]} />
           <Ring value={pct(d.events.approved, d.events.total)} label="اعتماد الأحداث" sub={`${d.events.approved} من ${d.events.total}`} color={S[1]} />
           <Ring value={pct(d.referrals.closed, d.referrals.total)} label="إنهاء الإحالات" sub={`${d.referrals.closed} من ${d.referrals.total}`} color={S[2]} />
           <Ring value={pct(g.requestsDone, g.requests)} label="مقابلات الموجهين" sub={`${g.requestsDone} من ${g.requests}`} color={S[3]} />
@@ -80,9 +80,9 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
         <Box icon="cap" title="الحضور لكل صف" aside="نسبة الحضور الرسمية">
           {a.grades.length ? <Bars max={100} items={a.grades.map((x, i) => ({ t: GRADE_NAMES[x.g], v: x.pct ?? 0, note: pc(x.pct), c: S[i % 4] }))} /> : <div className="mr-empty">لا أيام معتمدة.</div>}
           <div className="mr-tiles" style={{ gridTemplateColumns: "repeat(3, 1fr)", marginTop: 10 }}>
-            <div className="mr-tile" style={{ "--c": "var(--s4)" }}><b className="num">{n(a.absent)}</b><span>غياب بدون عذر</span></div>
+            <div className="mr-tile" style={{ "--c": "var(--s4)" }}><b className="num">{n(a.daily.absent)}</b><span>متوسط الغياب اليومي</span></div>
             <div className="mr-tile"><b className="num">{n(a.repeat3)}</b><span>تكرر غيابهم 3 أيام</span></div>
-            <div className="mr-tile"><b className="num">{d.fpOn ? n(d.late.incidents) : "—"}</b><span>حالات تأخر</span></div>
+            <div className="mr-tile"><b className="num">{d.fpOn ? n(d.late.daily) : "—"}</b><span>متوسط التأخر اليومي</span></div>
           </div>
         </Box>
         <Box icon="alert" title="الإنذارات والإحالات">

@@ -29,7 +29,8 @@ function highlights(d) {
   const worstDay = [...a.weekdays].sort((x, y) => (y.rate ?? 0) - (x.rate ?? 0))[0];
   if (worstDay?.rate) out.push(`أعلى أيام الأسبوع غيابًا: ${WD[worstDay.w]} (${pc(worstDay.rate)}).`);
   if (a.repeat3) out.push(`طلاب تكرر غيابهم 3 أيام فأكثر: ${n(a.repeat3)}.`);
-  if (d.fpOn && d.late.incidents) out.push(`حالات التأخر الصباحي: ${n(d.late.incidents)}، والمتأخرون: ${countAr(d.late.students, "student")}.`);
+  if (a.days) out.push(`متوسط الغياب بدون عذر في اليوم الواحد: ${n(a.daily.absent)} طالب.`);
+  if (d.fpOn && d.late.incidents) out.push(`متوسط التأخر الصباحي في اليوم: ${n(d.late.daily)} طالب، والمتأخرون خلال الشهر: ${countAr(d.late.students, "student")}.`);
   if (d.warnings.total) out.push(`إنذارات غياب صدرت: ${n(d.warnings.total)}.`);
   if (d.referrals.total) out.push(`الإحالات: ${n(d.referrals.total)}، أُنهي إجراء ${n(d.referrals.closed)} منها.`);
   return out.slice(0, 6);
@@ -61,23 +62,23 @@ export function affairsPages({ d, info, theme = "light", notes, sigs = {} }) {
       rows: [["user", "وكيل شؤون الطلاب", info.deputy || "—"], ["calendar", "الفترة", info.range],
              ["check", "الأيام المعتمدة", countAr(a.days, "day")], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],
       note: ["check", "الأرقام من الأيام المعتمدة في البوابة: الحضور الرسمي في الحصتين الأولى والثانية."],
-      strip: [[pc(a.pct), "نسبة الحضور"], [a.absent, "الغياب بدون عذر"], [d.fpOn ? l.incidents : "—", "حالات التأخر"], [d.referrals.total, "الإحالات"]],
+      strip: [[pc(a.pct), "نسبة الحضور"], [n(a.daily.absent), "متوسط الغياب اليومي"], [d.fpOn ? n(l.daily) : "—", "متوسط التأخر اليومي"], [d.referrals.total, "الإحالات"]],
       foot: "شؤون الطلاب",
     }} />,
 
     <Page key="att" {...common} page={2} sec={{ no: 1, title: "الحضور والغياب", sub: "من الأيام المعتمدة في الشهر" }}>
       <Kpis items={[
         { ic: "check", t: "نسبة الحضور", v: pc(a.pct), s: `الأيام المعتمدة ${a.days}`, c: S[0] },
-        { ic: "alert", t: "غياب بدون عذر", v: a.absent, s: `بعذر ${n(a.excused)}`, c: S[3] },
+        { ic: "alert", t: "متوسط الغياب اليومي", v: n(a.daily.absent), s: `بدون عذر · بعذر ${n(a.daily.excused)} يوميًا`, c: S[3] },
         { ic: "users", t: "طلاب غابوا", v: a.students, s: `تكرر 3 أيام فأكثر ${a.repeat3}`, c: S[1] },
         { ic: "calendar", t: "أيام معتمدة", v: a.days, s: `سجلات لم تُحضَّر ${n(a.pending)}`, c: S[2] },
       ]} />
       <Box icon="cap" title="نسبة الحضور لكل صف">
         <div className="mr-rings">
-          <Ring value={a.pct == null ? null : Math.round(a.pct)} label="المدرسة" sub={`${n(a.present)} حضور`} color="var(--mr-deep)" />
+          <Ring value={a.pct == null ? null : Math.round(a.pct)} label="المدرسة" sub={`${n(a.daily.present)} حاضر يوميًا`} color="var(--mr-deep)" />
           {[1, 2, 3].map((g, i) => {
             const x = a.grades.find((r) => r.g === g);
-            return <Ring key={g} value={x?.pct == null ? null : Math.round(x.pct)} label={GRADE_NAMES[g]} sub={x ? `غياب ${n(x.absent)}` : "—"} color={S[i]} />;
+            return <Ring key={g} value={x?.pct == null ? null : Math.round(x.pct)} label={GRADE_NAMES[g]} sub={x ? `غياب ${n(x.daily.absent)} يوميًا` : "—"} color={S[i]} />;
           })}
         </div>
       </Box>
@@ -97,9 +98,9 @@ export function affairsPages({ d, info, theme = "light", notes, sigs = {} }) {
     <Page key="late" {...common} page={3} sec={{ no: 2, title: "التأخر الصباحي والإنذارات", sub: "التأخر من البصمة، وإنذارات الغياب الصادرة، والطلاب الأكثر غيابًا" }}>
       {d.fpOn ? (
         <Kpis items={[
-          { ic: "clock", t: "حالات التأخر", v: l.incidents, s: `المتأخرون ${n(l.students)}`, c: S[2] },
+          { ic: "clock", t: "متوسط التأخر اليومي", v: n(l.daily), s: `المتأخرون خلال الشهر ${n(l.students)}`, c: S[2] },
           { ic: "users", t: "تأخروا 3 مرات فأكثر", v: l.repeat3, s: "الموقف الثالث في الإجراءات", c: S[3] },
-          { ic: "hourglass", t: "مجموع الدقائق", v: l.minutes, s: l.incidents ? `المتوسط ${countAr(Math.round(l.minutes / l.incidents), "minute")}` : "—", c: S[1] },
+          { ic: "hourglass", t: "متوسط دقائق التأخر", v: n(l.avgMinutes), s: "للحالة الواحدة", c: S[1] },
           { ic: "alert", t: "إنذارات الغياب", v: d.warnings.total, s: "صدرت في الشهر", c: S[0] },
         ]} />
       ) : <Box icon="clock" title="التأخر الصباحي" tint><p className="mr-note" style={{ fontSize: 12 }}>البصمة مقفلة في البوابة، فلا يُحتسب التأخر الصباحي في هذا التقرير.</p></Box>}
@@ -107,15 +108,15 @@ export function affairsPages({ d, info, theme = "light", notes, sigs = {} }) {
         <Box icon="alert" title="إنذارات الغياب" aside={n(d.warnings.total)}>
           <Bars items={WARNING_STAGES.map((s, i) => ({ t: s.label, v: d.warnings.byStage[s.key] ?? 0, c: [S[2], S[3], S[1]][i] }))} wide />
         </Box>
-        <Box icon="cap" title="التأخر حسب الصف" aside={d.fpOn ? n(l.incidents) : "—"}>
-          {d.fpOn ? <Bars items={[1, 2, 3].map((g) => ({ t: GRADE_NAMES[g], v: l.byGrade[g] ?? 0, c: S[2] }))} /> : <div className="mr-empty">البصمة مقفلة.</div>}
+        <Box icon="cap" title="التأخر حسب الصف" aside={d.fpOn ? "متوسط اليوم" : "—"}>
+          {d.fpOn ? <Bars items={[1, 2, 3].map((g) => ({ t: GRADE_NAMES[g], v: l.dailyByGrade[g] ?? 0, c: S[2] }))} /> : <div className="mr-empty">البصمة مقفلة.</div>}
         </Box>
       </div>
       <div className="mr-row c2" style={{ alignItems: "start" }}>
         <Box icon="list" title="الأكثر غيابًا" aside="أيام بدون عذر"><StudentsTable list={a.top.slice(0, d.fpOn ? 10 : 14)} unit="الأيام" /></Box>
         {d.fpOn
           ? <Box icon="list" title="الأكثر تأخرًا" aside="مرات التأخر"><StudentsTable list={l.top} unit="المرات" /></Box>
-          : <Box icon="calendar" title="الصفوف" aside="غياب بدون عذر"><Bars items={a.grades.map((x) => ({ t: GRADE_NAMES[x.g], v: x.absent, c: S[3] }))} /></Box>}
+          : <Box icon="calendar" title="الصفوف" aside="متوسط الغياب اليومي"><Bars items={a.grades.map((x) => ({ t: GRADE_NAMES[x.g], v: x.daily.absent, c: S[3] }))} /></Box>}
       </div>
     </Page>,
 

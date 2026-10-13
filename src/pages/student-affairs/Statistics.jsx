@@ -56,6 +56,8 @@ export default function Statistics() {
     () => (days ?? []).filter((d) => !(skipPartial && isPartial(d))),
     [days, skipPartial]
   );
+  // متوسط اليوم الواحد من أيام الإجمالي، بدل المجاميع الكبيرة
+  const perDay = (v) => (used.length ? Math.round((v / used.length) * 10) / 10 : 0);
 
   const totals = useMemo(() => {
     const t = { total: 0, present: 0, absent: 0, excused: 0, pending: 0, fTotal: 0, fPresent: 0, fPending: 0, late: 0 };
@@ -150,8 +152,8 @@ export default function Statistics() {
     };
     if (view === "grade") return {
       title: "نسبة الحضور حسب الصفوف",
-      headers: ["الصف", "حالات الغياب", "بعذر", "نسبة الحضور الرسمية"],
-      rows: byGrade.map((r) => [GRADE_NAMES[r.g] ?? r.g, r.absent, r.excused, pctText(r.pct)]),
+      headers: ["الصف", "متوسط الغياب اليومي", "متوسط الغياب بعذر", "نسبة الحضور الرسمية"],
+      rows: byGrade.map((r) => [GRADE_NAMES[r.g] ?? r.g, perDay(r.absent), perDay(r.excused), pctText(r.pct)]),
     };
     return {
       title: "سجل نسب الحضور والغياب اليومية",
@@ -161,7 +163,7 @@ export default function Statistics() {
           i + 1, fmtDate(d.attend_date + "T00:00:00"), weekdayOf(d.attend_date), d.absent, d.excused,
           fp ? d.late_count ?? "—" : "—", pctText(d.official_pct), d.final_pct != null ? pctText(d.final_pct) : "—",
         ]),
-        ["", "الإجمالي", "", totals.absent, totals.excused, totals.late, pctText(totals.pct), pctText(totals.fPct)],
+        ["", "المتوسط اليومي", "", perDay(totals.absent), perDay(totals.excused), fp ? perDay(totals.late) : "—", pctText(totals.pct), pctText(totals.fPct)],
       ],
     };
   };
@@ -183,7 +185,7 @@ export default function Statistics() {
           <Fig value={pctText(totals.fPct)} label="النسبة المكتملة للفترة" tone="text-present" />
           <Fig value={used.length} label="يوم في الإجمالي"
                hint={partialCount ? `${partialCount} ناقص${skipPartial ? " (مستبعد)" : ""}` : undefined} />
-          <Fig value={totals.absent.toLocaleString("ar")} label="حالات غياب رسمي" tone="text-absent" />
+          <Fig value={perDay(totals.absent).toLocaleString("ar")} label="متوسط الغياب الرسمي اليومي" tone="text-absent" />
         </div>
       )}
 
@@ -273,7 +275,7 @@ export default function Statistics() {
               }))
             : byGrade.map((r) => ({
                 k: r.g, name: GRADE_NAMES[r.g] ?? r.g, pct: r.pct,
-                sub: <>غياب <span className="num">{r.absent}</span> · بعذر <span className="num">{r.excused}</span></>,
+                sub: <>متوسط الغياب اليومي <span className="num">{perDay(r.absent)}</span> · بعذر <span className="num">{perDay(r.excused)}</span></>,
               })))
             .map((r) => (
               <div key={r.k} className="flex items-center justify-between gap-3 px-4 py-3">
