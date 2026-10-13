@@ -1236,7 +1236,10 @@ function McqEditor({ local, setLocal, save, ltr = false }) {
           {ltr ? "+ Another option" : "+ خيار آخر"}
         </button>
       )}
-      <p className="text-[11px] text-faint">اضغط الحرف لتحديد الإجابة الصحيحة.</p>
+      <p className="text-[11px] text-faint">
+        اضغط الحرف لتحديد الإجابة الصحيحة — الآن: <b className="text-mint-deep">{LTRS[Number(answer)] ?? "—"}</b>
+        {answer === "0" && <span className="text-warning"> (القيمة التلقائية، تأكّد منها)</span>}
+      </p>
     </div>
   );
 }

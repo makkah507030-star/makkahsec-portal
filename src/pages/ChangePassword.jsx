@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { supabase, initialPassword } from "../lib/supabase";
+import { supabase, initialPassword, idToEmail } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
 
@@ -35,10 +35,30 @@ export default function ChangePassword() {
 
     setBusy(true);
 
-    const { error: pwErr } = await supabase.auth.updateUser({ password: pw1 });
+    // الجلسة قد تنتهي والصفحة مفتوحة (الجوال في الخلفية، أو حُذفت بيانات المتصفح)،
+    // فيرفض Supabase بـ «Auth session missing». نجدّدها أولًا، وإلا ندخل من جديد
+    // بكلمة المرور الأولية — فهذه الصفحة لا تظهر إلا لحساب ما زال على كلمته الأولية.
+    const ensureSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) return true;
+      const { data: r } = await supabase.auth.refreshSession();
+      if (r?.session) return true;
+      if (!profile?.username) return false;
+      const { error: inErr } = await supabase.auth.signInWithPassword({
+        email: idToEmail(profile.username), password: initialPassword(profile.username),
+      });
+      return !inErr;
+    };
+
+    let { error: pwErr } = await supabase.auth.updateUser({ password: pw1 });
+    if (pwErr && /session/i.test(pwErr.message) && await ensureSession()) {
+      ({ error: pwErr } = await supabase.auth.updateUser({ password: pw1 }));
+    }
     if (pwErr) {
       setBusy(false);
-      setError("تعذّر تغيير كلمة المرور: " + pwErr.message);
+      setError(/session/i.test(pwErr.message)
+        ? "انتهت جلسة الدخول. اضغط «تسجيل الخروج» أسفل الصفحة، ثم ادخل من جديد برقم الهوية وكلمة المرور الحالية، وغيّرها مباشرة."
+        : "تعذّر تغيير كلمة المرور: " + pwErr.message);
       return;
     }
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { sendPush } from "../lib/pushSend.js";
 import { todayISO } from "../lib/schoolTime";
+import { loadTermStart } from "../lib/officialAttendance";
 import { fmtDate } from "../lib/dates";
 import { degreeName } from "../lib/behavior";
 import {
@@ -31,7 +32,7 @@ const GUIDE = {
     ],
     sub: [
       "الموقف الأول: التنبيه الشفهي بأسلوب تربوي.",
-      "الموقف الثاني: تدوين المشكلة وتوقيع الطالب عليها.",
+      "الموقف الثاني: تدوين المشكلة، ويصل الطالب إشعار ليقرّ بها إلكترونيًا.",
       "الموقف الثالث: إشعار ولي الأمر عبر البوابة.",
     ],
     open: [
@@ -97,17 +98,16 @@ async function notifyGuardian(studentId, title, body, category) {
 
 /* --------------------- التدرج في المخالفة السلوكية ---------------------
    onState({ ready, steps }): ready = اكتملت الخطوات أو المخالفة تُحال مباشرة */
-export function BehaviorSteps({ uid, student, violation, subject, onState }) {
+export function BehaviorSteps({ uid, student, violation, subject, onState, stepsOnly = false }) {
   const [acts, setActs] = useState(null);
+  const [since, setSince] = useState(null);   // { date, why } بداية الدورة الحالية
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   const load = async () => {
-    const { data, error } = await supabase.from("student_actions")
-      .select("action, action_date, detail, violation_text")
-      .eq("student_id", student.id).eq("teacher_id", uid).eq("category", "behavior")
-      .order("created_at");
-    setActs(error ? [] : data ?? []);
+    const cyc = await stepsCycle(uid, student.id);
+    setSince(cyc);
+    setActs(await cycleActions(uid, student.id, cyc));
   };
   useEffect(() => { setActs(null); setErr(""); load(); }, [student.id]);
 
@@ -119,9 +119,14 @@ export function BehaviorSteps({ uid, student, violation, subject, onState }) {
 
   useEffect(() => {
     if (acts === null) return;
-    onState({
+    onState?.({
       ready: direct || next === -1,
-      steps: done.filter(Boolean).map((d, i) => ({ t: BEHAVIOR_STEPS[i].t, date: fmtDate(d.action_date) })),
+      steps: done.filter(Boolean).map((d) => {
+        const st = BEHAVIOR_STEPS.find((x) => x.key === d.action);
+        const ack = d.action === "record"
+          ? (d.student_ack_at ? ` — أقرّ الطالب إلكترونيًا ${fmtDate(d.student_ack_at)}` : " — لم يقرّ الطالب بعد") : "";
+        return { t: st.t + ack, date: fmtDate(d.action_date) };
+      }),
     });
   }, [acts, direct]);
 
@@ -134,11 +139,16 @@ export function BehaviorSteps({ uid, student, violation, subject, onState }) {
           `نفيدكم بتكرار ملاحظة سلوكية على الطالب ${student.full_name}${subject ? ` في مادة ${subject}` : ""}: ` +
           `${violation?.text ?? ""} وقد نُبّه شفهيًا ودُوّنت المشكلة، ونأمل تعاونكم في توجيهه.`, "behavior");
       } else {
-        const { error } = await supabase.from("student_actions").insert({
+        const { data, error } = await supabase.from("student_actions").insert({
           student_id: student.id, teacher_id: uid, category: "behavior", action: step.key,
           detail: step.t, violation_text: violation?.text ?? null, violation_degree: violation?.degree ?? null,
-        });
+        }).select("id").single();
         if (error) throw error;
+        // التدوين: يصل الطالب إشعار ليقرّ بالاطلاع إلكترونيًا (supabase/behavior_steps_ack.sql)
+        if (step.key === "record" && data?.id) {
+          const { data: nid } = await supabase.rpc("notify_student_record", { p_action: data.id });
+          if (nid) await sendPush(nid).catch(() => {});
+        }
       }
       await load();
     } catch (e) {
@@ -152,7 +162,9 @@ export function BehaviorSteps({ uid, student, violation, subject, onState }) {
   if (direct) {
     return (
       <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">
-        مخالفة من الدرجة {degreeName(violation.degree)}: تُحال مباشرة لوكيل شؤون الطلاب.
+        مخالفة من الدرجة {degreeName(violation.degree)}: {stepsOnly
+          ? "لا تدرّج فيها، تُحال مباشرة لوكيل شؤون الطلاب من «إحالة جديدة»."
+          : "تُحال مباشرة لوكيل شؤون الطلاب."}
       </p>
     );
   }
@@ -160,9 +172,14 @@ export function BehaviorSteps({ uid, student, violation, subject, onState }) {
 
   return (
     <div className="rounded-card border border-line bg-canvas/60 p-3 text-sm">
-      <p className="mb-2 font-semibold text-ink">
+      <p className="mb-1 font-semibold text-ink">
         إجراءات المعلم قبل الإحالة <span className="text-xs font-normal text-muted">— كل خطوة في موقف مستقل</span>
       </p>
+      {since?.date && (
+        <p className="mb-2 text-[11px] text-faint">
+          تُحسب منذ {since.why} (<span className="num">{fmtDate(since.date)}</span>)، وتبدأ من جديد بعد كل إحالة للطالب.
+        </p>
+      )}
       <div className="space-y-2">
         {BEHAVIOR_STEPS.map((s, i) => (
           <div key={s.key} className="flex items-start gap-2">
@@ -170,21 +187,57 @@ export function BehaviorSteps({ uid, student, violation, subject, onState }) {
             <div className="min-w-0 flex-1">
               <p className="text-ink">{s.t}</p>
               {done[i] && <p className="text-[11.5px] text-muted">سُجّل بتاريخ <span className="num">{fmtDate(done[i].action_date)}</span></p>}
+              {done[i] && s.key === "record" && (done[i].student_ack_at
+                ? <p className="text-[11.5px] text-present">✓ أقرّ الطالب إلكترونيًا <span className="num">{fmtDate(done[i].student_ack_at)}</span></p>
+                : <p className="text-[11.5px] text-warning">بانتظار إقرار الطالب — وصله إشعار في البوابة</p>)}
               {i === next && (actedToday ? (
                 <p className="text-[11.5px] text-warning">سجّلت إجراءً اليوم. الخطوة التالية عند تكرار المخالفة في موقف لاحق.</p>
               ) : (
                 <button type="button" disabled={busy} onClick={record}
                         className="mt-1 rounded-pill border border-mint-deep px-3 py-1 text-[11.5px] font-semibold text-mint-deep hover:bg-mint-tint disabled:opacity-50">
-                  {busy ? "جارٍ الحفظ…" : s.key === "guardian" ? "إرسال إشعار لولي الأمر الآن" : "تسجيل هذا الإجراء اليوم"}
+                  {busy ? "جارٍ الحفظ…" : s.key === "guardian" ? "إرسال إشعار لولي الأمر الآن"
+                    : s.key === "record" ? "تدوين المخالفة اليوم وإرسالها للطالب ليقرّ بها" : "تسجيل هذا الإجراء اليوم"}
                 </button>
               ))}
             </div>
           </div>
         ))}
       </div>
+      {next === -1 && (
+        <p className="mt-2 rounded-sm2 bg-present/10 px-3 py-2 text-xs text-present">
+          اكتملت الخطوات الثلاث. إن تكررت المخالفة {stepsOnly ? "فارفع الإحالة من «إحالة جديدة»." : "فارفع الإحالة."}
+        </p>
+      )}
       {err && <p className="mt-2 rounded-sm2 bg-absent/10 px-3 py-2 text-xs text-absent">{err}</p>}
     </div>
   );
+}
+
+/* بداية دورة التدرج للطالب عند هذا المعلم: بداية الفصل الدراسي، أو آخر إحالة رفعها له بعدها */
+async function stepsCycle(uid, studentId) {
+  const today = todayISO();
+  const [term, { data: ref }] = await Promise.all([
+    loadTermStart(today),
+    supabase.from("student_referrals").select("created_at").eq("student_id", studentId)
+      .eq("teacher_id", uid).order("created_at", { ascending: false }).limit(1),
+  ]);
+  const last = ref?.[0]?.created_at ?? null;
+  if (last && (!term || last.slice(0, 10) >= term)) return { date: last, at: last, why: "آخر إحالة له" };
+  return term ? { date: term, at: null, why: "بداية الفصل الدراسي" } : { date: null, at: null, why: "" };
+}
+
+/** إجراءات الدورة الحالية (بعد بدايتها) — مع إقرار الطالب إن فُعّل */
+async function cycleActions(uid, studentId, cyc) {
+  const q = (cols) => {
+    let x = supabase.from("student_actions").select(cols)
+      .eq("student_id", studentId).eq("teacher_id", uid).eq("category", "behavior").order("created_at");
+    if (cyc?.at) x = x.gt("created_at", cyc.at);
+    else if (cyc?.date) x = x.gte("action_date", cyc.date);
+    return x;
+  };
+  let { data, error } = await q("id, action, action_date, detail, violation_text, created_at, student_ack_at");
+  if (error) ({ data } = await q("id, action, action_date, detail, violation_text, created_at"));
+  return data ?? [];
 }
 
 /* --------------------- توثيق التأخر الدراسي والمهام الأدائية --------------------- */

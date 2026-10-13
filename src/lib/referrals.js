@@ -130,6 +130,14 @@ export async function notifyUsers(userIds, title, body, link) {
   } catch { /* الإجراء نفسه حُفظ */ }
 }
 
+/** إشعار وكلاء شؤون الطلاب (supabase/referral_deputies.sql) — من أي حساب */
+export async function notifyDeputies(title, body, link = "/referrals") {
+  try {
+    const { data } = await supabase.rpc("student_deputy_ids");
+    if (data?.length) await notifyUsers(data, title, body, link);
+  } catch { /* الإجراء نفسه حُفظ */ }
+}
+
 /* =====================================================================
    صيغ جاهزة لحقول الإحالة — بطاقات مساعدة في الإنشاء والرد (PresetChips)
    ===================================================================== */
@@ -209,7 +217,7 @@ export const refTypeLabel = (k) => REF_TYPES.find((t) => t.key === k)?.label ?? 
    كل خطوة في موقف (يوم) مستقل. والثالثة فما فوق تُحال مباشرة. */
 export const BEHAVIOR_STEPS = [
   { key: "verbal",   t: "التنبيه الشفهي بأسلوب تربوي" },
-  { key: "record",   t: "تدوين المشكلة وتوقيع الطالب عليها" },
+  { key: "record",   t: "تدوين المشكلة وإقرار الطالب بها إلكترونيًا" },
   { key: "guardian", t: "إشعار ولي الأمر عبر البوابة" },
 ];
 export const DIRECT_DEGREE = 3;

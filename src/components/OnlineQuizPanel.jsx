@@ -113,6 +113,19 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     if (closes <= new Date()) { setMsg({ ok: false, text: "موعد الإغلاق مضى." }); return; }
     if (!f.selected.size) { setMsg({ ok: false, text: "اختر طالبًا واحدًا على الأقل." }); return; }
     if (audioMissing) { setMsg({ ok: false, text: "ارفع ملف الاستماع أولًا من تبويب «الأسئلة» — أسئلة الاستماع تحتاجه." }); return; }
+    // قبل النشر: أسئلة الاختيار المتعدد التي بقي مفتاحها على الخيار الأول (القيمة الافتراضية
+    // عند الإضافة) — كثيرًا ما تُنسى فيُحسب الطلاب كلهم مخطئين
+    if (!renotify) {
+      const { data: qs } = await supabase.from("quiz_questions")
+        .select("kind, answer, sort_order, created_at").eq("quiz_id", quiz.id)
+        .order("sort_order").order("created_at");
+      const firstKey = (qs ?? []).map((x, i) => ({ ...x, n: i + 1 }))
+        .filter((x) => x.kind === "mcq" && String(x.answer ?? "0").replace(/"/g, "") === "0");
+      if (firstKey.length && !window.confirm(
+        `تنبيه: الإجابة الصحيحة في ${firstKey.length === 1 ? "السؤال" : "الأسئلة"} ${firstKey.map((x) => x.n).join("، ")} ` +
+        "هي الخيار الأول (A / أ).\n\nهذه القيمة التلقائية عند إضافة السؤال. إن لم تحدّدها بنفسك فارجع لتبويب " +
+        "«الأسئلة» واضغط حرف الخيار الصحيح، وإلا يُحسب الطلاب مخطئين.\n\nهل الإجابات صحيحة وتريد النشر؟")) return;
+    }
     setBusy(true); setMsg(null);
     const { data: n, error } = await supabase.rpc("publish_online_quiz", {
       p_quiz: quiz.id, p_students: [...f.selected],

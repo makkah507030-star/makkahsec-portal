@@ -20,12 +20,13 @@ import UsageBadge from "../components/UsageBadge.jsx";
 import {
   STATUS, OPEN_STATUSES, LATE_DAYS, stageOf, daysSince, daysLabel, isLate, timelineOf, notifyUsers,
   PRESETS_TEACHER_DONE, PRESETS_BEHAVIOR_NOTE, PRESETS_DEPUTY_TRANSFER, PRESETS_COUNSELOR, PRESETS_DEPUTY_REVIEW,
-  REF_TYPES, ACADEMIC_ITEMS, academicItemDone, docsSummary, refTypeLabel,
+  REF_TYPES, ACADEMIC_ITEMS, academicItemDone, docsSummary, refTypeLabel, notifyDeputies,
 } from "../lib/referrals";
 import { ReferralGuide, BehaviorSteps, AcademicDocs, DocsView } from "../components/ReferralProcedures.jsx";
 import PresetChips from "../components/PresetChips.jsx";
 import Sticker, { FlagPicker } from "../components/Sticker.jsx";
 import { urgentPrefix } from "../lib/flags.js";
+import { loadTermStart } from "../lib/officialAttendance";
 
 /* =====================================================================
    إحالة الطالب — شاشة واحدة تخدم المسار كاملًا بحسب دور المستخدم:
@@ -105,6 +106,9 @@ export default function Referrals() {
 
       <div className="no-print flex flex-wrap gap-1.5">
         {isTeacher && (
+          <button className={pill(tab === "steps")} onClick={() => setTab("steps")}>رصد مخالفة</button>
+        )}
+        {isTeacher && (
           <button className={pill(tab === "new")} onClick={() => setTab("new")}>إحالة جديدة</button>
         )}
         {isDeputy && (
@@ -130,8 +134,12 @@ export default function Referrals() {
         </p>
       )}
 
+      {tab === "steps" && isTeacher && (
+        <NewReferral key="steps" stepsOnly uid={uid} profile={profile} onDone={() => {}} />
+      )}
+
       {tab === "new" && isTeacher && (
-        <NewReferral uid={uid} profile={profile} onDone={(t) => { setMsg(t); setTab("inbox"); load(); }} />
+        <NewReferral key="new" uid={uid} profile={profile} onDone={(t) => { setMsg(t); setTab("inbox"); load(); }} />
       )}
 
       {tab === "behavior" && isDeputy && (
@@ -304,7 +312,7 @@ function NewBehaviorReferral({ uid, profile, onDone }) {
 }
 
 /* ------------------------- إحالة جديدة (المعلم) ------------------------- */
-function NewReferral({ uid, profile, onDone }) {
+function NewReferral({ uid, profile, onDone, stepsOnly = false }) {
   const [classes, setClasses] = useState([]);
   const [classId, setClassId] = useState(null);
   const [students, setStudents] = useState([]);
@@ -374,6 +382,27 @@ function NewReferral({ uid, profile, onDone }) {
     })();
   }, [uid]);
 
+  // رصد مخالفة: أين وصل كل طالب من الخطوات الثلاث في دورته الحالية
+  const [progress, setProgress] = useState({});
+  const loadProgress = async (ids) => {
+    if (!stepsOnly || !ids.length) return;
+    const term = await loadTermStart(todayISO());
+    const [{ data: refs }, { data: acts }] = await Promise.all([
+      supabase.from("student_referrals").select("student_id, created_at").eq("teacher_id", uid).in("student_id", ids),
+      supabase.from("student_actions").select("student_id, action, created_at, action_date")
+        .eq("teacher_id", uid).eq("category", "behavior").in("student_id", ids)
+        .gte("action_date", term ?? "1900-01-01"),
+    ]);
+    const lastRef = {};
+    (refs ?? []).forEach((r) => { if (!lastRef[r.student_id] || r.created_at > lastRef[r.student_id]) lastRef[r.student_id] = r.created_at; });
+    const m = {};
+    (acts ?? []).forEach((a) => {
+      if (lastRef[a.student_id] && a.created_at <= lastRef[a.student_id]) return;
+      (m[a.student_id] ??= new Set()).add(a.action);
+    });
+    setProgress(Object.fromEntries(Object.entries(m).map(([k, v]) => [k, v.size])));
+  };
+
   const pickClass = async (row, list) => {
     setClassId(row.class_id);
     setCtx({
@@ -384,9 +413,12 @@ function NewReferral({ uid, profile, onDone }) {
     });
     const { data } = await supabase.from("student_enrollment")
       .select("students(id, full_name)").eq("class_id", row.class_id).eq("status", "active");
-    setStudents((data ?? []).map((e) => e.students).filter(Boolean)
-      .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar")));
+    const list2 = (data ?? []).map((e) => e.students).filter(Boolean)
+      .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"));
+    setStudents(list2);
     setStudentId("");
+    setProgress({});
+    loadProgress(list2.map((x) => x.id));
   };
 
   const CAPACITIES = ["حصة انتظار", "إشراف", "مناوبة"];
@@ -480,6 +512,8 @@ function NewReferral({ uid, profile, onDone }) {
       ...(outside ? { outside_class: true } : {}),
     });
     setBusy(false);
+    if (!error) notifyDeputies(urgentPrefix(flag ?? (urgentOk ? "urgent" : null)) + "إحالة طالب جديدة من معلم",
+      `رفع ${profile?.full_name ?? "معلم"} إحالة ${student?.full_name ?? ""} برقم ${serial}.`);
     onDone(error ? { ok: false, text: /ref_type|docs|urgent_reason|schema cache/i.test(error.message)
                        ? "لم تُفعَّل إجراءات الإحالة الجديدة بعد في قاعدة البيانات." : error.message }
                  : { ok: true, text: `أُرسلت الإحالة ${serial} لوكيل شؤون الطلاب.` });
@@ -502,10 +536,10 @@ function NewReferral({ uid, profile, onDone }) {
             ))}
             {classes.length === 0 && <p className="text-sm text-muted">لا فصول مسندة إليك.</p>}
           </div>
-          <button type="button" onClick={openOutside}
+          {!stepsOnly && <button type="button" onClick={openOutside}
             className="mt-3 rounded-sm2 border border-dashed border-mint-deep/50 bg-mint-tint px-3.5 py-2 text-xs font-semibold text-mint-deep hover:bg-[#CCF2DB]">
             طالب من خارج فصولي — حصة انتظار أو إشراف أو مناوبة
-          </button>
+          </button>}
         </div>
       ) : (
         <div className="space-y-3 rounded-sm2 border border-mint-deep/30 bg-mint-tint/50 p-3">
@@ -584,12 +618,16 @@ function NewReferral({ uid, profile, onDone }) {
         <select className="field mt-1 w-full" value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}>
           <option value="">اختر الطالب…</option>
-          {students.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+          {students.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.full_name}{stepsOnly && progress[s.id] ? ` — ${progress[s.id]} من 3` : ""}
+            </option>
+          ))}
         </select>
       </div>
 
       {/* نوع الإحالة: السلوكية بالتدرج، والدراسية بشروط الموجه الطلابي */}
-      <div>
+      {!stepsOnly && <div>
         <label className="text-xs text-muted">نوع الإحالة</label>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {REF_TYPES.map((t) => (
@@ -600,9 +638,14 @@ function NewReferral({ uid, profile, onDone }) {
             </button>
           ))}
         </div>
-      </div>
+      </div>}
 
-      <ReferralGuide type={refType} />
+      {stepsOnly ? (
+        <p className="rounded-sm2 bg-canvas px-3 py-2 text-xs leading-relaxed text-muted">
+          سجّل هنا خطوات المعالجة مع الطالب قبل الإحالة، خطوة في كل موقف: التنبيه الشفهي، ثم تدوين المخالفة
+          (يصل الطالب إشعار ليقرّ بها إلكترونيًا)، ثم إشعار ولي الأمر. يظهر أمام كل طالب عدد ما اكتمل منها.
+        </p>
+      ) : <ReferralGuide type={refType} />}
 
       {refType === "behavior" && (
         <div>
@@ -613,7 +656,8 @@ function NewReferral({ uid, profile, onDone }) {
 
       {student && !outside && refType === "behavior" && violation && urgent === null && (
         <BehaviorSteps key={student.id} uid={uid} student={student} violation={violation}
-                       subject={ctx.subject} onState={setSteps} />
+                       subject={ctx.subject} stepsOnly={stepsOnly}
+                       onState={(st) => { setSteps(st); if (stepsOnly) setProgress((p) => ({ ...p, [student.id]: st.steps.length })); }} />
       )}
       {student && outside && refType === "behavior" && violation && (
         <p className="rounded-sm2 bg-canvas px-3 py-2 text-xs text-muted">
@@ -625,6 +669,7 @@ function NewReferral({ uid, profile, onDone }) {
         <AcademicDocs key={student.id} uid={uid} student={student} docs={docs} onChange={setDocs} />
       )}
 
+      {!stepsOnly && <>
       {refType === "behavior" && violation && !outside && !direct && (
         urgent === null ? (
           <button type="button" onClick={() => setUrgent("")}
@@ -682,6 +727,7 @@ function NewReferral({ uid, profile, onDone }) {
               onClick={submit}>
         {busy ? "جارٍ الإرسال…" : "رفع الإحالة لوكيل شؤون الطلاب"}
       </button>
+      </>}
     </section>
   );
 }
@@ -902,8 +948,13 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       status: "with_counselor", return_note: null,
       ...(flag || r.flag ? { flag } : {}),
     }, `أُحيلت إلى ${c.name} وأُشعر بها.`,
-    () => notifyUsers([c.id], urgentPrefix(flag) + "إحالة طالب جديدة",
-      `أحال إليك وكيل شؤون الطلاب إحالة ${r.student_name} برقم ${r.serial}.`, "/referrals"));
+    () => {
+      notifyUsers([c.id], urgentPrefix(flag) + "إحالة طالب جديدة",
+        `أحال إليك وكيل شؤون الطلاب إحالة ${r.student_name} برقم ${r.serial}.`, "/referrals");
+      // المعلم المحيل يعرف أن إحالته تحرّكت
+      notifyUsers([r.teacher_id], "تحرّكت إحالتك",
+        `حوّل وكيل شؤون الطلاب إحالة ${r.student_name} (${r.serial}) إلى ${c.name}.`, "/referrals?tab=inbox");
+    });
   };
 
   // ③ الموجه يكتب إجراءه
@@ -956,6 +1007,8 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       .select("guardians(user_id)").eq("student_id", r.student_id);
     (gs ?? []).forEach((g) => { if (g.guardians?.user_id) ids.add(g.guardians.user_id); });
 
+    if (r.teacher_id) notifyUsers([r.teacher_id], "أُقفلت إحالتك",
+      `أُقفلت إحالة ${r.student_name} (${r.serial}) وأُشعر ولي الأمر بالإجراء المتخذ.`, "/referrals?tab=inbox");
     await notifyUsers([...ids], r.kind === "behavior" ? "إشعار بمشكلة سلوكية" : "إحالة طالب",
       (r.kind === "behavior"
         ? `صدر إشعار بمشكلة سلوكية بشأن ${r.student_name} (${r.serial}) والإجراءات المتخذة حياله.`
@@ -994,18 +1047,40 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       docs: newDocs,
       done_in_class: [docsSummary(r.ref_type, newDocs), extra].filter(Boolean).join("\n") || null,
       status: "with_deputy", teacher_at: new Date().toISOString(),
-    }, "أُعيد رفع الإحالة لوكيل شؤون الطلاب.");
+    }, "أُعيد رفع الإحالة لوكيل شؤون الطلاب.",
+    () => (r.deputy_id
+      ? notifyUsers([r.deputy_id], "أُعيد رفع إحالة بعد استكمالها",
+          `استكمل ${r.teacher_name} توثيق إحالة ${r.student_name} (${r.serial}).`, "/referrals")
+      : notifyDeputies("أُعيد رفع إحالة بعد استكمالها",
+          `استكمل ${r.teacher_name} توثيق إحالة ${r.student_name} (${r.serial}).`)));
   };
 
   // ⑤ بعد رد ولي الأمر: تنتهي المتابعة وتُحفظ في السجل
   const archive = async () => {
-    act({ status: "archived" }, "انتهت متابعة الإحالة وحُفظت في السجل.");
+    act({ status: "archived",
+          ...(r.status === "with_guardian" ? { close_note: [r.close_note, "انتهت المتابعة دون رد ولي الأمر."].filter(Boolean).join("\n") } : {}) },
+      "انتهت متابعة الإحالة وحُفظت في السجل.");
+  };
+
+  // ⑤ب لم يرد ولي الأمر: تذكيره مرة أخرى
+  const remindGuardian = async () => {
+    setBusy(true);
+    const ids = [];
+    const { data: gs } = await supabase.from("guardian_student")
+      .select("guardians(user_id)").eq("student_id", r.student_id);
+    (gs ?? []).forEach((g) => { if (g.guardians?.user_id) ids.push(g.guardians.user_id); });
+    await notifyUsers(ids, "تذكير: إحالة بانتظار اطلاعك",
+      `نأمل الاطلاع على ${r.kind === "behavior" ? "الإشعار" : "الإحالة"} بشأن ${r.student_name} (${r.serial}) وتأكيد الاستلام.`,
+      `/referral/${r.id}`);
+    setBusy(false);
+    onChange(ids.length ? { ok: true, text: "أُرسل التذكير لولي الأمر." }
+                        : { ok: false, text: "لا حساب لولي أمر هذا الطالب في البوابة — تواصل معه هاتفيًا ثم أنهِ المتابعة." });
   };
 
   const st = STATUS[r.status] ?? { t: r.status, c: "" };
   const counselorTurn = isCounselor && r.counselor_id === uid &&
     ["with_counselor", "returned_to_counselor"].includes(r.status);
-  const deputyTurn = isDeputy && ["with_deputy", "guardian_replied"].includes(r.status);
+  const deputyTurn = isDeputy && ["with_deputy", "guardian_replied", "with_guardian"].includes(r.status);
   const teacherTurn = r.teacher_id === uid && r.status === "returned_to_teacher";
   const stage = stageOf(r);
   const days = daysSince(stage.since);
@@ -1149,6 +1224,26 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
             <button className="btn-primary w-full" disabled={busy} onClick={archive}>
               إنهاء المتابعة وحفظها في السجل
             </button>
+          )}
+          {/* لم يرد ولي الأمر: تذكيره، أو إنهاء المتابعة بعد التواصل معه هاتفيًا */}
+          {isDeputy && r.status === "with_guardian" && (
+            <div className="space-y-2 rounded-card border border-warning/30 bg-warning/5 p-3">
+              <p className="text-xs leading-relaxed text-muted">
+                لم يؤكد ولي الأمر استلامها بعد ({daysLabel(daysSince(r.closed_at))}).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button disabled={busy} onClick={remindGuardian}
+                        className="rounded-pill border border-warning/40 px-4 py-1.5 text-sm font-semibold text-warning hover:bg-warning/5">
+                  تذكير ولي الأمر
+                </button>
+                {daysSince(r.closed_at) >= LATE_DAYS && (
+                  <button disabled={busy} onClick={archive}
+                          className="rounded-pill border border-line px-4 py-1.5 text-sm font-semibold text-muted hover:bg-canvas">
+                    إنهاء المتابعة دون رده
+                  </button>
+                )}
+              </div>
+            </div>
           )}
         </div>
       )}
