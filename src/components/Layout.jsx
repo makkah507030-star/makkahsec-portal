@@ -11,6 +11,7 @@ import TrialBanner from "./TrialBanner.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
 import IdleLogout from "./IdleLogout.jsx";
+import QuickNote from "./QuickNote.jsx";
 import { loadPrincipalSignature } from "../lib/principalSignature.js";
 import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
@@ -32,6 +33,7 @@ const ADMIN_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home" },
+      { to: "/notebook", label: "مفكرتي", icon: "edit", kw: "ملاحظات مهام تذكير" },
       { to: "/school-report", label: "التقرير الشهري للمدرسة", roles: ["principal", "tech_support"], icon: "chart", kw: "تقرير شهري خلاصة" },
     ],
   },
@@ -138,6 +140,7 @@ const TEACHER_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home", kw: "يومي" },
+      { to: "/notebook", label: "مفكرتي", icon: "edit", kw: "ملاحظات مهام تذكير" },
     ],
   },
   {
@@ -742,6 +745,7 @@ export default function Layout({ children }) {
           <main className="min-w-0 flex-1 px-4 pb-24 pt-5 sm:px-6 lg:pb-5">
             <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
           </main>
+          {isStaff && <QuickNote />}
         </div>
       </div>
 

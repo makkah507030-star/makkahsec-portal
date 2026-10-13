@@ -6,6 +6,7 @@ import { fmtHijri, fmtDateTime } from "./dates.js";
 import { todayISO } from "./schoolTime.js";
 import { countAr } from "./arabicCount.js";
 import { FLAG_ORDER, flagRank } from "./flags.js";
+import { loadDueNotes, noteTitle, dueState } from "./notes.js";
 
 /* =====================================================================
    «بانتظار إجرائك» — مصدر واحد لكل ما ينتظر إجراء المستخدم: عدادات القائمة الجانبية
@@ -100,7 +101,7 @@ async function load() {
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
     plcBack, pdBack, xvBack, perfAck, guidance,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
-    giTeacher, giDeputy, giCounselor, giGuardian, dropouts, ethicsAck, onlineQuizzes,
+    giTeacher, giDeputy, giCounselor, giGuardian, dropouts, ethicsAck, onlineQuizzes, myNotes,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? rowsFlag((f) => supabase.from("form_documents").select(`id, title, recipient${f}`)
@@ -171,6 +172,9 @@ async function load() {
 
     // الطالب: اختبارات إلكترونية مفتوحة الآن لم يسلّمها، والقادم يبقى في بطاقة «الاختبارات الإلكترونية»
     isStudent ? rowsOf(supabase.rpc("my_online_quizzes")) : noRows,
+
+    // مفكرتي: مهام حلّ موعدها (supabase/staff_notes.sql)
+    staff ? loadDueNotes() : noRows,
   ]);
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
@@ -281,6 +285,14 @@ async function load() {
 
     noor,
 
+    // مفكرتي: مهامك التي حلّ موعدها، والمتأخرة أولًا
+    { key: "notes", n: myNotes.length, to: "/notebook", icon: "edit",
+      label: "مهام في مفكرتي حلّ موعدها",
+      tone: myNotes.some((x) => dueState(x) === "overdue") ? "absent" : "warning",
+      sub: myNotes.some((x) => dueState(x) === "overdue") ? `متأخرة ${myNotes.filter((x) => dueState(x) === "overdue").length}` : "",
+      items: myNotes.map((x) => ({ id: x.id, to: `/notebook?n=${x.id}`,
+        title: `${noteTitle(x)}${dueState(x) === "overdue" ? " · متأخرة" : x.due_time ? ` · ${x.due_time.slice(0, 5)}` : ""}` })) },
+
     // للعلم
     { key: "replies", n: replies, to: "/forms-review", label: "إفادات وصلت على نماذجك", tone: "mint", icon: "inbox" },
   ].filter((t) => t.n > 0).map((t) => {
@@ -304,6 +316,7 @@ async function load() {
     "/my-performance": perfAck,
     "/dropouts": dropouts.length,
     "/ethics": ethicsDue,
+    "/notebook": myNotes.length,
     "/guidance": guidance + giDeputy.length + giReady.length,
     "/": behaviorGuardian.length + refGuardian.length + pledges.length + giGuardian.length + quizzesDue.length,
     _tasks: tasks,
