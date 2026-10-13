@@ -7,7 +7,7 @@ import { PRINCIPAL_NAME, STUDENT_DEPUTY_NAME } from "../lib/exportUtils.js";
 import { degreeName, violationPhrase, BEHAVIOR_SOURCE } from "../lib/behavior.js";
 import { fmtDate } from "../lib/dates";
 import { useReferralSigs } from "../lib/referralSigs.js";
-import { isDirectToGuardian } from "../lib/referrals.js";
+import { isDirectToGuardian, closedByCounselor } from "../lib/referrals.js";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
@@ -165,6 +165,7 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
   if (r.kind === "behavior") return <BehaviorSheets r={r} stampUrl={stampUrl} guardianView={guardianView} />;
   const missing = r.kind === "missing";
   const direct = isDirectToGuardian(r);
+  const byCounselor = closedByCounselor(r);
 
   return (
     <div className="sheet mx-auto bg-white text-ink"
@@ -243,7 +244,7 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
         {r.return_note && (
           <p className="mt-1.5 rounded-sm2 px-2.5 py-1.5 text-[11px]"
              style={{ background: "#FCF5E6", color: "#7E6318", ...INK }}>
-            <b>أُعيدت للموجه: </b>{r.return_note}
+            <b>ملاحظة الإعادة: </b>{r.return_note}
           </p>
         )}
       </Stage>
@@ -252,8 +253,9 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
       {/* ④ الإقفال */}
       {r.closed_at && (
         <Stage n={missing || direct ? "٣" : "٤"}
-               title={direct ? "التوجيه لولي الأمر مباشرة" : "اعتماد وإقفال الإحالة"} who={r.deputy_name}
-               at={r.closed_at} sig={r.deputy_sig}>
+               title={direct ? "التوجيه لولي الأمر مباشرة" : byCounselor ? "اعتماد الموجه الطلابي والإرسال لولي الأمر" : "اعتماد وإقفال الإحالة"}
+               who={byCounselor ? r.counselor_name : r.deputy_name}
+               at={r.closed_at} sig={byCounselor ? r.counselor_sig : r.deputy_sig}>
           <Field label="قرار الإقفال" value={r.close_note} />
         </Stage>
       )}
@@ -390,7 +392,9 @@ function BehaviorSheets({ r, stampUrl, guardianView }) {
             )}
           </Stage>
           {r.closed_at && (
-            <Stage n="٢" title="اعتماد وكيل شؤون الطلاب والإرسال لولي الأمر" who={r.deputy_name} at={r.closed_at} sig={r.deputy_sig}>
+            <Stage n="٢" title={closedByCounselor(r) ? "اعتماد الموجه الطلابي والإرسال لولي الأمر" : "اعتماد وكيل شؤون الطلاب والإرسال لولي الأمر"}
+                   who={closedByCounselor(r) ? r.counselor_name : r.deputy_name} at={r.closed_at}
+                   sig={closedByCounselor(r) ? r.counselor_sig : r.deputy_sig}>
               <Field label="الاعتماد" value={r.close_note} />
             </Stage>
           )}

@@ -24,18 +24,26 @@ const pill = (on) => `rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium trans
 export default function ReportViewer({ id, pages, theme, setTheme, fileTitle, controls, children }) {
   const fontsReady = useFontsReady();
   const mobile = useMemo(() => isTouchDevice(), []);
+  const android = useMemo(() => /Android/i.test(navigator.userAgent), []);
+  const linkText = android ? "تنزيل ملف PDF" : "فتح ملف PDF";
   const liveRef = useRef(null);
   const [pdf, setPdf] = useState(null);
   const [printImgs, setPrintImgs] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const urls = useRef([]);
+  useEffect(() => () => { urls.current.forEach((u) => URL.revokeObjectURL(u)); }, []);
 
   const capture = useCallback(async () => {
     const imgs = await rasterSheets(liveRef.current, A4);
     setPrintImgs(imgs);
     if (imgs?.length) {
       const blob = jpegsToPdf(imgs, { w: 210, h: 297 });
-      setPdf((old) => { if (old?.url) URL.revokeObjectURL(old.url); return { blob, url: URL.createObjectURL(blob), name: `${fileTitle}.pdf` }; });
+      // الروابط تبقى صالحة حتى مغادرة الصفحة: إلغاء الرابط عند كل تحديث للتقرير (توقيع يُحمَّل،
+      // ملاحظة تُكتب) كان يُفشل فتحه في تبويب لم يُحمَّل بعد («فشل تحميل مستند PDF»)
+      const url = URL.createObjectURL(blob);
+      urls.current.push(url);
+      setPdf({ blob, url, name: `${fileTitle}.pdf` });
     }
   }, [fileTitle]);
 
@@ -65,9 +73,9 @@ export default function ReportViewer({ id, pages, theme, setTheme, fileTitle, co
     const file = new File([pdf.blob], pdf.name, { type: "application/pdf" });
     if (navigator.canShare?.({ files: [file] })) {
       navigator.share({ files: [file], title: pdf.name }).catch((e) => {
-        if (e?.name !== "AbortError") setMsg("افتح الملف من رابط «فتح ملف PDF» ثم اطبعه.");
+        if (e?.name !== "AbortError") setMsg(`${android ? "نزّل الملف من رابط «تنزيل ملف PDF» ثم افتحه" : "افتح الملف من رابط «فتح ملف PDF»"} واطبعه.`);
       });
-    } else setMsg("افتح الملف من رابط «فتح ملف PDF» ثم اطبعه من قائمة المتصفح.");
+    } else setMsg(`${android ? "نزّل الملف من رابط «تنزيل ملف PDF» ثم افتحه" : "افتح الملف من رابط «فتح ملف PDF»"} واطبعه.`);
   };
 
   return (
@@ -83,7 +91,10 @@ export default function ReportViewer({ id, pages, theme, setTheme, fileTitle, co
             {busy ? "جارٍ تجهيز الملف…" : "طباعة / حفظ PDF"}
           </button>
         </div>
-        {mobile && pdf && <a href={pdf.url} target="_blank" rel="noreferrer" className="block text-xs text-mint-deep underline">فتح ملف PDF</a>}
+        {/* على أندرويد تنزيل لا فتح في تبويب (كما في الاستوديو): كروم لا يفتح رابط blob لملف PDF
+            في تبويب جديد («فشل تحميل مستند PDF»)، والتنزيل يفتحه عارض الملفات في الجهاز */}
+        {mobile && pdf && <a href={pdf.url} target="_blank" rel="noopener noreferrer" download={android ? pdf.name : undefined}
+                             className="block text-xs text-mint-deep underline">{linkText}</a>}
         {msg && <p className="text-xs text-mint-deep">{msg}</p>}
         {children}
       </div>

@@ -14,14 +14,14 @@ export const STATUS = {
   returned_to_teacher:   { t: "مُعادة للمعلم لاستكمال التوثيق", c: "bg-absent/10 text-absent" },
   closed:                { t: "مُقفلة",                c: "bg-present/10 text-present" },
   with_guardian:         { t: "لدى ولي الأمر",         c: "bg-warning/10 text-warning" },
-  guardian_replied:      { t: "وصل رد ولي الأمر",      c: "bg-present/10 text-present" },
+  guardian_replied:      { t: "أقرّ ولي الأمر · مُغلقة", c: "bg-present/10 text-present" },
   archived:              { t: "مؤرشفة",                c: "bg-canvas text-muted" },
 };
 
-// ما زالت قيد المتابعة (لم تنتهِ)
+// ما زالت قيد المتابعة (لم تنتهِ). إقرار ولي الأمر يغلق الملف تلقائيًا (guardian_replied)
 export const OPEN_STATUSES = [
   "with_deputy", "with_counselor", "returned_to_counselor", "returned_to_teacher",
-  "with_guardian", "guardian_replied",
+  "with_guardian",
 ];
 
 // الأعمدة اللازمة لحساب المرحلة
@@ -39,11 +39,14 @@ const DAY = 24 * 60 * 60 * 1000;
 export function stageOf(r) {
   switch (r.status) {
     case "with_deputy":
+      // أعادها الموجه للوكيل بملاحظة (السلسلة الجديدة)
+      if (returnedByCounselor(r)) return { group: "deputy", who: "وكيل شؤون الطلاب",
+        since: r.deputy_at ?? r.created_at, what: "أعادها الموجه بملاحظة" };
       return r.counselor_at
         ? { group: "deputy", who: "وكيل شؤون الطلاب", since: r.counselor_at,
             what: "لاعتماد إجراء الموجه" }
         : { group: "deputy", who: "وكيل شؤون الطلاب", since: r.teacher_at ?? r.created_at,
-            what: "للتحويل للموجه" };
+            what: "لاتخاذ القرار" };
     case "with_counselor":
       return { group: "counselor", who: r.counselor_name || "الموجه الطلابي",
                since: r.deputy_at ?? r.created_at, what: "لاتخاذ الإجراء" };
@@ -56,12 +59,88 @@ export function stageOf(r) {
     case "with_guardian":
       return { group: "guardian", who: "ولي الأمر", since: r.closed_at ?? r.created_at,
                what: "لتأكيد الاستلام" };
-    case "guardian_replied":
-      return { group: "deputy", who: "وكيل شؤون الطلاب", since: r.guardian_ack_at ?? r.created_at,
-               what: "للاطّلاع على رد ولي الأمر وإنهاء المتابعة" };
     default:
       return { group: "done", who: "", since: null, what: "" };
   }
+}
+
+/* =====================================================================
+   سلسلة الإحالة: ست حلقات، لكل حلقة صاحب واحد ومخارج محددة
+   ① معالجة المعلم ② رفع الإحالة ③ قرار الوكيل ④ إجراء الموجه (اختيارية)
+   ⑤ ولي الأمر ⑥ الإغلاق — تُحسب من أعمدة الإحالة نفسها
+   ===================================================================== */
+
+// يُذكَّر ولي الأمر بعد يومين، ويغلق الوكيل الملف دون رده بعد خمسة أيام
+export const REMIND_DAYS = 2;
+export const NO_REPLY_DAYS = 5;
+
+/** أعادها الموجه للوكيل: عادت للوكيل ومعها ملاحظة ولم يكتب الموجه إجراءه */
+export const returnedByCounselor = (r) =>
+  r.status === "with_deputy" && !!r.counselor_id && !r.counselor_at && !!r.return_note;
+
+/** أرسلها الموجه لولي الأمر بنفسه بعد اعتماد إجرائه (الوقتان واحد) */
+export const closedByCounselor = (r) =>
+  !!r.counselor_at && !!r.closed_at && new Date(r.counselor_at).getTime() === new Date(r.closed_at).getTime();
+
+/** سبب تجاوز الحلقتين الأولى والثانية أو الأولى وحدها، وإلا null */
+function skipReason(r) {
+  if (r.kind === "missing") return "طالب مفقود رصده الوكيل";
+  if (r.kind === "behavior") return "مخالفة رصدها الوكيل";
+  if (r.ref_type && r.ref_type !== "behavior") return null;
+  if (r.docs?.direct) return "مخالفة من الدرجة الثالثة فما فوق";
+  if (r.docs?.urgent || r.urgent_reason) return "حالة عاجلة";
+  if (r.outside_class) return "طالب من خارج فصول المعلم";
+  return null;
+}
+
+/** حلقات السلسلة لإحالة محفوظة: state = done | now | todo | skip | back */
+export function chainOf(r) {
+  const fromDeputy = r.kind === "missing" || r.kind === "behavior";
+  const skip = skipReason(r);
+  const stepsN = r.docs?.steps?.length ?? 0;
+  const closed = ["guardian_replied", "archived", "closed"].includes(r.status);
+  const toGuardian = !!r.closed_at;
+  const direct = toGuardian && !r.counselor_at && !closedByCounselor(r);
+
+  const l1 = fromDeputy || skip
+    ? { state: "skip", note: skip }
+    : { state: "done", note: r.ref_type && r.ref_type !== "behavior" ? "التوثيق الدراسي" : `${stepsN}/3` };
+  const l2 = fromDeputy
+    ? { state: "skip", note: "يصدرها الوكيل" }
+    : r.status === "returned_to_teacher"
+      ? { state: "back", note: "مُعادة للاستكمال", at: r.deputy_at }
+      : { state: "done", at: r.teacher_at ?? r.created_at, who: r.teacher_name };
+
+  const atDeputy = r.status === "with_deputy" && !r.counselor_at;
+  const l3 = atDeputy
+    ? { state: "now", note: returnedByCounselor(r) ? "أعادها الموجه" : null }
+    : r.status === "returned_to_teacher" ? { state: "todo" }
+    : { state: "done", at: r.deputy_at ?? r.closed_at, who: r.deputy_name };
+
+  const l4 = direct ? { state: "skip", note: "وجّهها الوكيل لولي الأمر" }
+    : ["with_counselor", "returned_to_counselor"].includes(r.status)
+      ? { state: "now", who: r.counselor_name, note: r.status === "returned_to_counselor" ? "أعادها الوكيل" : null }
+    : r.counselor_at ? { state: "done", at: r.counselor_at, who: r.counselor_name }
+    : returnedByCounselor(r) ? { state: "back", note: "أعادها للوكيل" }
+    : { state: "todo" };
+
+  const l5 = r.guardian_ack_at ? { state: "done", at: r.guardian_ack_at }
+    : r.status === "with_guardian" ? { state: "now", note: daysLabel(daysSince(r.closed_at)) }
+    : r.status === "with_deputy" && r.counselor_at ? { state: "now", note: "اعتماد الوكيل قبل الإرسال" }
+    : closed && toGuardian ? { state: "skip", note: "لم يرد" }
+    : { state: "todo" };
+
+  const l6 = closed ? { state: "done", at: r.guardian_ack_at ?? r.closed_at, note: r.guardian_ack_at ? null : "دون رد ولي الأمر" }
+    : { state: "todo" };
+
+  return [
+    { key: "teacher", t: "معالجة المعلم", ...l1 },
+    { key: "submit", t: "رفع الإحالة", ...l2 },
+    { key: "deputy", t: "قرار الوكيل", ...l3 },
+    { key: "counselor", t: "إجراء الموجه", optional: true, ...l4 },
+    { key: "guardian", t: "ولي الأمر", ...l5 },
+    { key: "close", t: "الإغلاق", ...l6 },
+  ];
 }
 
 export function daysSince(v) {
@@ -80,7 +159,7 @@ export const daysLabel = (n) =>
 
 /* أرسلها الوكيل لولي الأمر مباشرة دون تحويلها للموجه */
 export const isDirectToGuardian = (r) =>
-  r.kind === "teacher" && !!r.closed_at && !r.counselor_id;
+  r.kind === "teacher" && !!r.closed_at && !r.counselor_at;
 
 /* مسار الإحالة خطوة خطوة: ما تمّ بتاريخه، وما بقي */
 export function timelineOf(r) {
