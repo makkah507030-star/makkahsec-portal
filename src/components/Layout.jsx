@@ -33,7 +33,6 @@ const ADMIN_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home" },
-      { to: "/notebook", label: "مفكرتي", icon: "edit", kw: "ملاحظات مهام تذكير" },
       { to: "/school-report", label: "التقرير الشهري للمدرسة", roles: ["principal", "tech_support"], icon: "chart", kw: "تقرير شهري خلاصة" },
     ],
   },
@@ -140,7 +139,6 @@ const TEACHER_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home", kw: "يومي" },
-      { to: "/notebook", label: "مفكرتي", icon: "edit", kw: "ملاحظات مهام تذكير" },
     ],
   },
   {
@@ -212,6 +210,7 @@ const BASIC_GROUPS = [
 
 // أسفل القائمة: الحساب والمساعدة
 const FOOTER = [
+  { to: "/notebook", label: "مفكرتي", icon: "edit", staffOnly: true, kw: "ملاحظات مهام تذكير" },
   { to: "/my-signature", label: "توقيعي", icon: "signature", staffOnly: true },
   { to: "/help", label: "دليل الاستخدام", icon: "help" },
   { to: "/contact", label: "الدعم الفني", icon: "chat", hideForRoles: ["tech_support", "principal"] },
