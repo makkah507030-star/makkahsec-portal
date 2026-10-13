@@ -236,7 +236,9 @@ async function handle(event, admin) {
         const dt = String(parts[1]).trim();
         if (dt.startsWith(attendDate)) {
           const dev = new Date(dt.replace(" ", "T") + TZ_OFFSET).getTime();
-          if (!isNaN(dev) && dev <= serverMs + 2 * 60000 && dev >= serverMs - 12 * 3600000) ms = dev;
+          // ساعة الجهاز قد تسبق الحقيقة بثوانٍ (سُجّل حتى 25 ثانية): لا نأخذ وقتًا بعد
+          // لحظة الوصول، فلا تُرفض بصمة وصلت قبل بداية الحصة الأولى لأن الجهاز «متقدّم»
+          if (!isNaN(dev) && dev <= serverMs + 2 * 60000 && dev >= serverMs - 12 * 3600000) ms = Math.min(dev, serverMs);
         }
         if (!timeByUid.has(uid) || ms < timeByUid.get(uid)) timeByUid.set(uid, ms);
       }
