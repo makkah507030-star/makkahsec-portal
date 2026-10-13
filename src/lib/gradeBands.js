@@ -48,6 +48,9 @@ const LEVELS = {
   "ضعيف":    { label: "ضعيف",    bg: "#F9D9D9", text: "#8E2424", solid: "#B23A3A" },
 };
 LEVELS["راسب"] = LEVELS["ضعيف"];
+// صيغ المؤنث: «ممتازة»، «جيدة جدا»…
+[["ممتازة", "ممتاز"], ["جيدة جدا", "جيد جدا"], ["جيدة", "جيد"], ["مقبولة", "مقبول"], ["ضعيفة", "ضعيف"]]
+  .forEach(([f, m]) => { LEVELS[f] = LEVELS[m]; });
 
 export function levelBand(value) {
   const s = String(value ?? "").replace(/[\u064B-\u0652]/g, "").replace(/\s+/g, " ").trim();

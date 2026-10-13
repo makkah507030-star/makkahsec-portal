@@ -405,6 +405,8 @@ function Official(p) {
 
 /* جدول حصر: أعمدة معرَّفة وصفوف فارغة تُملأ بخط اليد بعد الطباعة */
 /* تلوين المستوى (ممتاز، جيد جدًا، جيد، مقبول، ضعيف) في الاستمارات — يُطبع بألوانه */
+// التلوين في حقول المستوى وأعمدته فقط («مستوى…»، «التقدير») — لا في كل خانة كُتب فيها «ممتاز»
+const LEVEL_FIELD = /مستوى|المستوى|تقدير|التقدير/;
 function levelCell(value) {
   const b = levelBand(value);
   return b ? { background: b.bg, color: b.text, fontWeight: 700, textAlign: "center", ...INK } : undefined;
@@ -442,7 +444,8 @@ function BlankTable({ field, value }) {
               {cols.map((_, c) => (
                 <td key={c} className="h-7 border border-line px-2 align-middle text-ink"
                     // المستوى مكتوبًا في الخانة، أو علامة تحت عمود عنوانه مستوى (ممتاز، جيد جدًا…)
-                    style={levelCell(data[r]?.[c]) ?? (String(data[r]?.[c] ?? "").trim() ? levelCell(cols[c]) : undefined)}>
+                    style={(LEVEL_FIELD.test(cols[c] ?? "") ? levelCell(data[r]?.[c]) : undefined)
+                           ?? (String(data[r]?.[c] ?? "").trim() ? levelCell(cols[c]) : undefined)}>
                   {c === 0 && !data[r]?.[c] ? <span className="num text-faint">{r + 1}</span> : (data[r]?.[c] ?? "")}
                 </td>
               ))}
@@ -1643,7 +1646,7 @@ function Administrative(p) {
           ) : (
             <div key={f.name} className="flex gap-3 border-b border-line py-2">
               <span className="w-44 shrink-0 text-[13px] text-muted">{f.label}</span>
-              {levelBand(asText(v[f.name]))
+              {LEVEL_FIELD.test(f.label ?? "") && levelBand(asText(v[f.name]))
                 ? <LevelChip value={asText(v[f.name])} />
                 : <span className="whitespace-pre-line text-[14px] text-ink">{asText(v[f.name]) || "—"}</span>}
             </div>
