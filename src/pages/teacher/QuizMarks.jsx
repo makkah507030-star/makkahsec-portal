@@ -22,7 +22,12 @@ import EvidenceTags from "../../components/EvidenceTags.jsx";
    فيُصحَّح آليًا وتظهر درجته. والكشف يُطبع بهوية المدرسة.
    ===================================================================== */
 
-const LETTERS = ["أ", "ب", "ج", "د", "هـ"];
+// حروف الخيارات وصح/خطأ بلغة الاختبار: اختبار الإنجليزي A B C و True/False من اليسار
+const AR_L = { ltrs: ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"],
+               tf: [["true", "صح"], ["false", "خطأ"]], dir: "rtl" };
+const EN_L = { ltrs: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"],
+               tf: [["true", "True"], ["false", "False"]], dir: "ltr" };
+const quizLang = (quiz) => (quiz?.lang === "en" ? EN_L : AR_L);
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
 export default function QuizMarks() {
@@ -298,7 +303,7 @@ export default function QuizMarks() {
                   </div>
 
                   {active?.id === s.id && (
-                    <AnswerSheet student={s} questions={ordered}
+                    <AnswerSheet student={s} questions={ordered} quiz={quiz}
                                  initial={sub?.answers ?? {}}
                                  onSave={(a) => saveAnswers(s, a)}
                                  onAbsent={() => markAbsent(s)} />
@@ -453,7 +458,8 @@ export default function QuizMarks() {
 }
 
 /* ------------------- رصد إجابات طالب بضغطات سريعة ------------------- */
-function AnswerSheet({ student, questions, initial, onSave, onAbsent }) {
+function AnswerSheet({ student, questions, quiz, initial, onSave, onAbsent }) {
+  const L = quizLang(quiz);
   const [ans, setAns] = useState(initial ?? {});
   const [busy, setBusy] = useState(false);
 
@@ -473,22 +479,22 @@ function AnswerSheet({ student, questions, initial, onSave, onAbsent }) {
           </p>
 
           {q.kind === "mcq" && (
-            <div className="mt-1 flex flex-wrap gap-1.5">
+            <div dir={L.dir} className="mt-1 flex flex-wrap gap-1.5">
               {(q.options ?? []).map((_, k) => (
                 <button key={k} onClick={() => set(q.id, String(k))}
                   className={`h-9 w-9 rounded-full border text-xs font-bold transition-colors ${
                     String(ans[q.id]) === String(k)
                       ? "border-mint-deep bg-mint-deep text-white"
                       : "border-line bg-white text-muted hover:border-mint-deep"}`}>
-                  {LETTERS[k]}
+                  {L.ltrs[k] ?? k + 1}
                 </button>
               ))}
             </div>
           )}
 
           {q.kind === "truefalse" && (
-            <div className="mt-1 flex gap-1.5">
-              {[["true", "صح"], ["false", "خطأ"]].map(([v, t]) => (
+            <div dir={L.dir} className="mt-1 flex gap-1.5">
+              {L.tf.map(([v, t]) => (
                 <button key={v} onClick={() => set(q.id, v)}
                   className={`rounded-pill px-4 py-1.5 text-xs font-semibold transition-colors ${
                     ans[q.id] === v ? "bg-mint-deep text-white"
@@ -509,7 +515,7 @@ function AnswerSheet({ student, questions, initial, onSave, onAbsent }) {
                           onChange={(e) => setMatch(q.id, k, e.target.value)}>
                     <option value="">—</option>
                     {(q.options?.right ?? []).map((_, r) => (
-                      <option key={r} value={String(r)}>{LETTERS[r] ?? r + 1}</option>
+                      <option key={r} value={String(r)}>{L.ltrs[r] ?? r + 1}</option>
                     ))}
                   </select>
                 </div>
@@ -541,6 +547,7 @@ function AnswerSheet({ student, questions, initial, onSave, onAbsent }) {
    فثلاثة أسئلة = ثلاث ضغطات لكل طالب.
    ===================================================================== */
 function FastEntry({ students, questions, subs, quiz, onSave, onAbsent, onClose }) {
+  const L = quizLang(quiz);
   const [si, setSi] = useState(() => {
     const first = students.findIndex((s) => !subs[s.id]);
     return first >= 0 ? first : 0;
@@ -619,22 +626,22 @@ function FastEntry({ students, questions, subs, quiz, onSave, onAbsent, onClose 
         </p>
 
         {q.kind === "mcq" && (
-          <div className="mx-auto mt-6 flex w-full max-w-sm flex-wrap justify-center gap-3">
+          <div dir={L.dir} className="mx-auto mt-6 flex w-full max-w-sm flex-wrap justify-center gap-3">
             {(q.options ?? []).map((_, k) => (
               <button key={k} onClick={() => choose(String(k))} disabled={busy}
                 className={`grid h-16 w-16 place-items-center rounded-2xl border-2 text-xl font-bold transition-colors ${
                   String(ans[q.id]) === String(k)
                     ? "border-mint-deep bg-mint-deep text-white"
                     : "border-line text-ink hover:border-mint-deep"}`}>
-                {LETTERS[k]}
+                {L.ltrs[k] ?? k + 1}
               </button>
             ))}
           </div>
         )}
 
         {q.kind === "truefalse" && (
-          <div className="mx-auto mt-6 flex w-full max-w-sm gap-3">
-            {[["true", "صح"], ["false", "خطأ"]].map(([v, t]) => (
+          <div dir={L.dir} className="mx-auto mt-6 flex w-full max-w-sm gap-3">
+            {L.tf.map(([v, t]) => (
               <button key={v} onClick={() => choose(v)} disabled={busy}
                 className={`h-16 flex-1 rounded-2xl border-2 text-lg font-bold transition-colors ${
                   ans[q.id] === v ? "border-mint-deep bg-mint-deep text-white"
@@ -651,14 +658,14 @@ function FastEntry({ students, questions, subs, quiz, onSave, onAbsent, onClose 
               <div key={k} className="flex items-center gap-2">
                 <span className="num w-6 shrink-0 text-sm font-bold text-muted">{k + 1}</span>
                 <span className="min-w-0 flex-1 truncate text-sm text-ink">{l}</span>
-                <div className="flex shrink-0 gap-1">
+                <div dir={L.dir} className="flex shrink-0 gap-1">
                   {(q.options?.right ?? []).map((_, r) => (
                     <button key={r} onClick={() => chooseMatch(k, String(r))} disabled={busy}
                       className={`h-9 w-9 rounded-lg border text-xs font-bold transition-colors ${
                         ans[q.id]?.[String(k)] === String(r)
                           ? "border-mint-deep bg-mint-deep text-white"
                           : "border-line text-muted"}`}>
-                      {LETTERS[r]}
+                      {L.ltrs[r] ?? r + 1}
                     </button>
                   ))}
                 </div>

@@ -6,7 +6,7 @@
 //    GET  /iclock/cdata?SN=...&options=all      → المصافحة وإعدادات الجهاز
 //    POST /iclock/cdata?SN=...&table=ATTLOG     → سجلات البصمات
 //    GET  /iclock/getrequest?SN=...             → استعلام عن أوامر
-//    GET  /iclock/rtdata?SN=...&type=time       → طلب الوقت (الإصدارات الأحدث)
+//    GET  /iclock/rtdata?SN=...&type=time       → طلب الوقت (نردّ OK فقط — انظر أدناه)
 //    POST /iclock/devicecmd?SN=...              → نتيجة تنفيذ أمر
 //
 //  الردود نص عادي (text/plain) بصيغة يفهمها الجهاز.
@@ -236,7 +236,9 @@ async function handle(event, admin) {
         const dt = String(parts[1]).trim();
         if (dt.startsWith(attendDate)) {
           const dev = new Date(dt.replace(" ", "T") + TZ_OFFSET).getTime();
-          if (!isNaN(dev) && dev <= serverMs + 2 * 60000 && dev >= serverMs - 12 * 3600000) ms = dev;
+          // ساعة الجهاز قد تسبق الحقيقة بثوانٍ (سُجّل حتى 25 ثانية): لا نأخذ وقتًا بعد
+          // لحظة الوصول، فلا تُرفض بصمة وصلت قبل بداية الحصة الأولى لأن الجهاز «متقدّم»
+          if (!isNaN(dev) && dev <= serverMs + 2 * 60000 && dev >= serverMs - 12 * 3600000) ms = Math.min(dev, serverMs);
         }
         if (!timeByUid.has(uid) || ms < timeByUid.get(uid)) timeByUid.set(uid, ms);
       }
@@ -309,6 +311,20 @@ async function handle(event, admin) {
         });
       }
 
+      // (1ب) رقم الجهاز جزء من آخر رقم الهوية: بعض الأجهزة تحفظ الهوية بلا أول خانة أو
+      // خانتين (1156631309 ← 156631309). يُقبل حين يطابق طالبًا واحدًا فقط، وللأرقام
+      // من 8 خانات فأكثر حتى لا يلتبس رقم قصير بغيره.
+      const unresolved = uniqUids.filter((u) => /^\d{8,}$/.test(u) && !variantsOf(u).some((v) => byKey.has(v)));
+      for (const part of chunk(unresolved, 40)) {
+        const { data: studs } = await admin
+          .from("students").select("id, national_id").eq("is_active", true)
+          .or(part.map((u) => `national_id.like.*${u}`).join(","));
+        for (const u of part) {
+          const hits = (studs || []).filter((s) => String(s.national_id ?? "").endsWith(u));
+          if (hits.length === 1) byKey.set(u, hits[0].id);
+        }
+      }
+
       const resolve = (uid) => {
         for (const v of variantsOf(uid)) if (byKey.has(v)) return byKey.get(v);
         return null;
@@ -368,16 +384,12 @@ async function handle(event, admin) {
       return text(`OK: ${rawUids.length}`);
     }
 
-    // ---------- طلب الوقت من الخادم (بروتوكول ADMS الأحدث) ----------
-    // بعض الطرازات لا تنفّذ أمر SET OPTIONS DateTime، وتطلب الوقت بنفسها هنا
-    // بالثواني منذ 1970 (UTC) مع فرق التوقيت
-    if (path.includes("/rtdata") && String(params.type || "").toLowerCase() === "time") {
-      await admin.from("devices")
-        .update({ time_synced_at: new Date().toISOString() })
-        .eq("serial_no", sn);
-      const reply = `DateTime=${Math.floor(Date.now() / 1000)},ServerTZ=+0300`;
-      console.log(`iclock: rtdata time sent to ${sn} → ${reply}`);
-      return text(reply);
+    // ---------- طلب الوقت من الجهاز (rtdata) ----------
+    // لا نردّ بالوقت هنا: أجهزة المدرسة (CGDQ…) تقرأ الرقم بصيغة ZKTeco المرمّزة لا
+    // بثواني 1970، فيصير تاريخها 2055 وترفض البصمات «الفترة الزمنية غير صالحة».
+    // ضبط الساعة يكفيه أمر SET OPTIONS DateTime الذي تقبله كل الأجهزة (Return=0).
+    if (path.includes("/rtdata")) {
+      return text("OK");
     }
 
     // ---------- 3) استعلام الجهاز عن الأوامر ----------
