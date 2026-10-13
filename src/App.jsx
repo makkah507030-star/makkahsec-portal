@@ -92,6 +92,7 @@ const EventsReports = lazy(() => import("./pages/EventsReports.jsx"));
 const MyQuizzes = lazy(() => import("./pages/teacher/MyQuizzes.jsx"));
 const QuizMarks = lazy(() => import("./pages/teacher/QuizMarks.jsx"));
 const QuizAnalytics = lazy(() => import("./pages/teacher/QuizAnalytics.jsx"));
+const Notebook = lazy(() => import("./pages/Notebook.jsx"));
 const QuizTake = lazy(() => import("./pages/QuizTake.jsx"));
 const ExamsAdmin = lazy(() => import("./pages/admin/ExamsAdmin.jsx"));
 const ReferralView = lazy(() => import("./pages/ReferralView.jsx"));
@@ -416,6 +417,7 @@ export default function App() {
           <Route path="/doc/:id" element={<DocumentView />} />
           {/* نماذجي — ما صدر باسم المستخدم، ولولي الأمر مستندات أبنائه */}
           <Route path="/my-documents" element={<MyDocuments />} />
+          <Route path="/notebook" element={<Notebook />} />
           {/* إحالة الطالب — الشاشة للمعلم والإدارة، والملف لصاحبه وولي أمره */}
           <Route path="/referrals" element={<Referrals />} />
           <Route path="/guidance" element={<Guidance />} />
