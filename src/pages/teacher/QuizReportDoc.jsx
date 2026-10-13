@@ -24,6 +24,8 @@ function highlights({ kpi, perQuiz, perClass, items, support }) {
   const bc = [...perClass].sort((a, b) => b.value - a.value)[0];
   if (bc && perClass.length > 1) out.push(`أعلى الفصول متوسطًا: ${bc.label} (${p1(bc.value)}).`);
   const hard = items.filter((x) => x.value < 50).length;
+  const sus = items.filter((x) => x.suspect).length;
+  if (sus) out.push(`فقرات يُرجَّح أن مفتاح إجابتها خاطئ (اتفق أغلب الطلاب على غيره): ${n(sus)}، وتحتاج مراجعة قبل اعتماد الدرجات.`);
   if (items.length) out.push(`فقرات صعبة أجاب عنها أقل من نصف الطلاب: ${n(hard)} من ${n(items.length)}.`);
   if (support.length) out.push(`طلاب يحتاجون دعمًا (متوسطهم دون 60٪): ${n(support.length)}.`);
   return out.slice(0, 6);
@@ -46,8 +48,11 @@ function StudentTable({ list, classes }) {
  *  r: { kpi, perQuiz, dist, perClass, items, one, top, support, classes } من صفحة التحليل */
 export function quizReportPages({ r, teacher, scopeLine, year, term, theme = "light", sigs = {} }) {
   const doc = { title: "تحليل نتائج الاختبارات", meta: [teacher, scopeLine || term], foot: "تحليل النتائج" };
-  const { kpi, perQuiz, dist, perClass, items, one, top, support, classes } = r;
-  const common = { theme, doc, total: 4 };
+  const { kpi, perQuiz, dist, perClass, items, one, top, support, classes, sheet = [] } = r;
+  // كشف الدرجات الكامل ملحقًا: 36 طالبًا في الورقة
+  const chunks = [];
+  for (let i = 0; i < sheet.length; i += 36) chunks.push(sheet.slice(i, i + 36));
+  const common = { theme, doc, total: 4 + chunks.length };
   const distTotal = dist.reduce((a, b) => a + b.n, 0);
   const attend = kpi.sheets + kpi.absent;
   return [
@@ -107,6 +112,14 @@ export function quizReportPages({ r, teacher, scopeLine, year, term, theme = "li
               ))}
             </div>
             <p className="mr-note" style={{ marginTop: 6 }}>▲ فقرة صعبة: أجاب عنها صحيحًا أقل من نصف الطلاب، وتستحق إعادة التدريس.</p>
+            {items.some((x) => x.suspect) && (
+              <div style={{ marginTop: 8, padding: "7px 10px", borderRadius: 8, background: "#FBEBEB", color: "#A23B3B", fontSize: 11, lineHeight: 1.75 }}>
+                <b style={{ display: "block" }}>⚠ مفتاح يحتاج مراجعة: اتفق أغلب الطلاب على إجابة غير المفتاح المحفوظ</b>
+                {items.filter((x) => x.suspect).flatMap((x) => x.suspect.split("؛ ").map((t, k) => (
+                  <div key={x.id + k}><b className="num">{x.label}</b> · <bdi>{t}</bdi></div>
+                )))}
+              </div>
+            )}
           </>
         ) : <div className="mr-empty">{one ? "لا إجابات مصحّحة آليًا لهذا الاختبار." : "يظهر تحليل الفقرات حين يُختار اختبار واحد مصحّح آليًا أو إلكتروني."}</div>}
       </Box>
@@ -127,5 +140,23 @@ export function quizReportPages({ r, teacher, scopeLine, year, term, theme = "li
       </Box>
       <Signs showStamp={false} people={[{ title: "المعلم", name: teacher, sig: sigs.teacher }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
     </Page>,
+
+    ...chunks.map((list, ci) => (
+      <Page key={`sheet${ci}`} {...common} page={5 + ci}
+            sec={ci ? { no: 4, title: "كشف الدرجات (تتمة)" } : { no: 4, title: "كشف الدرجات", sub: one ? `درجة كل طالب في «${one.title}» من ${n(one.total_marks)}` : "متوسط كل طالب عبر اختبارات النطاق" }}>
+        <table className="mr-table">
+          <thead><tr><th className="c" style={{ width: 28 }}>م</th><th>الطالب</th><th className="c" style={{ width: 60 }}>الفصل</th>
+            {one ? <th className="c" style={{ width: 70 }}>الدرجة</th> : <th className="c" style={{ width: 60 }}>الاختبارات</th>}
+            <th className="c" style={{ width: 70 }}>النسبة</th></tr></thead>
+          <tbody>{list.map((s, i) => (
+            <tr key={s.id}><td className="c num">{ci * 36 + i + 1}</td>
+              <td style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 300 }}>{s.name}</td>
+              <td className="c num">{classes[s.cls]?.class_no ?? "—"}</td>
+              {one ? <td className="c num">{s.score == null ? "—" : `${s.score} / ${n(one.total_marks)}`}</td> : <td className="c num">{s.n}</td>}
+              <td className="c num" style={{ color: s.avg < 60 ? "#A23B3B" : undefined }}>{p1(s.avg)}</td></tr>
+          ))}</tbody>
+        </table>
+      </Page>
+    )),
   ];
 }

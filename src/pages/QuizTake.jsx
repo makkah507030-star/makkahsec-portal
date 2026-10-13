@@ -153,9 +153,20 @@ export default function QuizTake() {
     supabase.storage.from("quiz-audio").createSignedUrl(audioPath, 3 * 3600)
       .then(({ data: d }) => setAudioUrl(d?.signedUrl ?? null));
   }, [state, audioPath]);
-  const pending = qs.filter((q) => !answered(q, answers[q.id])).length;
   const ltr = data?.quiz?.lang === "en";
   const t = ltr ? EN : AR;
+  // الأسئلة الناقصة بترتيب ظهورها، وعنوان كل منها كما يراه الطالب: «س2 ف3» أو «Q2 P3»
+  const missing = useMemo(() => {
+    const out = [];
+    const add = (list, no) => list.forEach((q, qi) => {
+      if (!answered(q, answers[q.id])) out.push({ id: q.id, label: `${t.q}${no} ${t.f}${qi + 1}` });
+    });
+    listenGroups.forEach((g) => add(g.list, 1));
+    groups.forEach((g, gi) => add(g.list, gi + 1 + (listenGroups.length ? 1 : 0)));
+    return out;
+  }, [listenGroups, groups, answers, t]);
+  const pending = missing.length;
+  const [showMissing, setShowMissing] = useState(false);
 
   if (err && !data) return <Box><p className="text-sm text-absent">{err}</p></Box>;
   if (!data) return <Box><Loader compact /></Box>;
@@ -247,7 +258,8 @@ export default function QuizTake() {
   // ——— المحاولة الجارية ———
   const urgent = left != null && left <= 60000;
   const renderQ = (q, qi) => (
-    <div key={q.id} className="rounded-card border border-line/70 p-3">
+    <div key={q.id} id={`q-${q.id}`} className={`scroll-mt-24 rounded-card border p-3 ${
+      showMissing && !answered(q, answers[q.id]) ? "border-warning bg-warning-light/60" : "border-line/70"}`}>
       <div className="flex items-start gap-2">
         <span className="num shrink-0 rounded-pill bg-canvas px-2 py-0.5 text-[11px] font-semibold text-muted">
           {t.f}{qi + 1}
@@ -360,14 +372,20 @@ export default function QuizTake() {
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/95 px-4 py-3 backdrop-blur" dir="rtl">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <p className="flex-1 text-xs text-muted">
-            {pending ? <>بقي <bdi className="num font-bold text-warning">{pending}</bdi> بلا إجابة</> : "أجبت عن كل الأسئلة"}
+            {pending ? (showMissing
+              ? <>أكمل قبل التسليم: <span className="font-bold text-warning">{missing.slice(0, 8).map((m, i) => <span key={m.id}>{i > 0 && "، "}<bdi className="num">{m.label}</bdi></span>)}{pending > 8 ? "…" : ""}</span></>
+              : <>بقي <bdi className="num font-bold text-warning">{pending}</bdi> بلا إجابة</>) : "أجبت عن كل الأسئلة"}
           </p>
-          <button className="btn-primary" disabled={busy}
+          {/* لا يُسلَّم يدويًا إلا بعد الإجابة عن كل الأسئلة (وكل فقرات المزاوجة)؛
+              أما عند انتهاء الوقت فيُسلَّم تلقائيًا بما فيه */}
+          <button className={`btn-primary ${pending ? "opacity-60" : ""}`} disabled={busy}
                   onClick={() => {
-                    const msg = pending
-                      ? `لم تُجب عن ${pending} ${pending === 1 ? "سؤال" : "أسئلة"}.\nهل تريد التسليم نهائيًا؟`
-                      : "تسليم الاختبار نهائيًا؟ لا يمكن التعديل بعده.";
-                    if (window.confirm(msg)) submit(false);
+                    if (pending) {
+                      setShowMissing(true);
+                      document.getElementById(`q-${missing[0].id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      return;
+                    }
+                    if (window.confirm("تسليم الاختبار نهائيًا؟ لا يمكن التعديل بعده.")) submit(false);
                   }}>
             {busy ? "جارٍ التسليم…" : "تسليم"}
           </button>

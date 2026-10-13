@@ -1,6 +1,7 @@
 // src/pages/teacher/QuizAnalytics.jsx
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { cmpAr } from "../../lib/sortAr";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import Loader from "../../components/Loader.jsx";
@@ -47,6 +48,36 @@ const clean = (v) => (typeof v === "string" ? v.replace(/^"|"$/g, "") : v);
 const classLabel = (c) => (c ? `${GRADE_NAMES[c.grade] ?? ""} — ${c.class_no}` : "—");
 
 /** هل أجاب الطالب الفقرة صحيحًا؟ (للمصحَّح آليًا) — المزاوجة بنسبة أزواجها الصحيحة */
+/* مفتاح يُرجَّح أنه خاطئ: اتفق 60٪ فأكثر من الطلاب (5 فأكثر) على إجابة واحدة غير المفتاح.
+   في المزاوجة يُفحص كل زوج. يعيد وصفًا قصيرًا أو null */
+const SUSPECT_SHARE = 0.6;
+const LTR_EN = ["A", "B", "C", "D", "E", "F", "G", "H"], LTR_AR = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح"];
+function suspectKey(q, answers, en) {
+  const L = en ? LTR_EN : LTR_AR;
+  const show = (v) => (q.kind === "truefalse" ? (String(v) === "true" ? "صح" : "خطأ") : L[Number(v)] ?? Number(v) + 1);
+  const majority = (vals) => {
+    const c = new Map();
+    vals.forEach((v) => c.set(String(v), (c.get(String(v)) ?? 0) + 1));
+    const [v, n] = [...c.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+    return { v, n: n ?? 0, of: vals.length };
+  };
+  const key = clean(q.answer);
+  if (q.kind === "mcq" || q.kind === "truefalse") {
+    const m = majority(answers.filter((a) => a != null).map(clean));
+    return m.of >= 5 && m.n / m.of >= SUSPECT_SHARE && m.v !== String(key)
+      ? `اختار ${m.n} من ${m.of} «${show(m.v)}» والمفتاح «${show(key)}»` : null;
+  }
+  if (q.kind === "match" && key && typeof key === "object") {
+    const bad = Object.keys(key).map((p) => {
+      const m = majority(answers.filter((a) => a && typeof a === "object" && a[p] != null && a[p] !== "").map((a) => a[p]));
+      return m.of >= 5 && m.n / m.of >= SUSPECT_SHARE && m.v !== String(key[p])
+        ? `الزوج ${Number(p) + 1}: اختار ${m.n} من ${m.of} «${L[Number(m.v)] ?? m.v}» والمفتاح «${L[Number(key[p])] ?? key[p]}»` : null;
+    }).filter(Boolean);
+    return bad.length ? bad.join("؛ ") : null;
+  }
+  return null;
+}
+
 function correctness(q, a) {
   if (a == null) return 0;
   const key = clean(q.answer);
@@ -85,6 +116,7 @@ export default function QuizAnalytics() {
     })();
   }, [uid]);
 
+  const [tick, setTick] = useState(0);
   useEffect(() => {
     if (!uid) return;
     (async () => {
@@ -95,7 +127,7 @@ export default function QuizAnalytics() {
 
       // اختبارات المعلم المنفّذة (بدأ رصدها أو أُقفلت) في الفصل الدراسي الحالي
       const { data: qz, error: e1 } = await supabase.from("quizzes")
-        .select("id, title, subject_id, subject_name, grade, period, total_marks, exam_date, mode, status, created_at")
+        .select("id, title, subject_id, subject_name, grade, period, total_marks, exam_date, mode, status, created_at, lang")
         .eq("teacher_id", uid)
         .eq("academic_year", m.active_year ?? "").eq("term", Number(m.active_term ?? 1))
         .in("status", ["marking", "closed"]);
@@ -104,7 +136,7 @@ export default function QuizAnalytics() {
       if (!ids.length) { setData({ quizzes: [], subs: [], classes: {}, students: {}, questions: [] }); return; }
 
       const [{ data: sb }, { data: qs }, { data: lk }] = await Promise.all([
-        supabase.from("quiz_submissions").select("quiz_id, class_id, student_id, score, absent, answers").in("quiz_id", ids),
+        supabase.from("quiz_submissions").select("id, quiz_id, class_id, student_id, score, absent, answers").in("quiz_id", ids),
         supabase.from("quiz_questions").select("id, quiz_id, kind, answer, text, marks, sort_order").in("quiz_id", ids),
         supabase.from("quiz_classes").select("quiz_id, class_id, classes(id, class_no, grade)").in("quiz_id", ids),
       ]);
@@ -121,7 +153,7 @@ export default function QuizAnalytics() {
         subs: sb ?? [], classes, students, questions: qs ?? [],
       });
     })();
-  }, [uid]);
+  }, [uid, tick]);
 
   // الخيارات المتاحة للتصفية
   const subjects = useMemo(() => {
@@ -200,9 +232,30 @@ export default function QuizAnalytics() {
     return qs.map((q, i) => {
       const vals = sheets.map((s) => correctness(q, s.answers?.[q.id])).filter((v) => v != null);
       return { id: q.id, label: `ف${i + 1}`, text: q.text || "—",
-               value: vals.length ? Math.round(avg(vals) * 100) : null };
+               value: vals.length ? Math.round(avg(vals) * 100) : null,
+               suspect: suspectKey(q, sheets.map((s) => s.answers?.[q.id]), one.lang === "en") };
     }).filter((x) => x.value != null);
   }, [one, data, rows]);
+
+  // إعادة تصحيح أوراق اختبار مصحَّح آليًا بعد تعديل مفتاحه (grade_submission لكل ورقة)
+  const [regrading, setRegrading] = useState(false);
+  const regrade = async (quiz) => {
+    if (!quiz || !window.confirm(`إعادة تصحيح أوراق «${quiz.title}» بالمفتاح المحفوظ الآن؟ تتغير درجات الطلاب بحسبه.`)) return;
+    setRegrading(true);
+    const ids = (data?.subs ?? []).filter((r) => r.quiz_id === quiz.id && !r.absent).map((r) => r.id);
+    for (const id of ids) await supabase.rpc("grade_submission", { p_submission: id });
+    setRegrading(false);
+    setTick((t) => t + 1);
+  };
+
+  // كشف الدرجات الكامل للتقرير: كل طالب مرصود، بالفصل ثم الاسم، ودرجته إن كان الاختبار واحدًا
+  const sheet = (() => {
+    if (!data) return [];
+    const score = one ? Object.fromEntries(graded.filter((r) => r.quiz_id === one.id).map((r) => [r.student_id, Number(r.score)])) : {};
+    const cn = (id) => data.classes[id] ?? {};
+    return [...perStudent].sort((a, b) => (cn(a.cls).grade - cn(b.cls).grade) || (cn(a.cls).class_no - cn(b.cls).class_no)
+      || cmpAr(a.name, b.name)).map((x) => ({ ...x, n: x.list.length, score: score[x.id] ?? null }));
+  })();
 
   // التقرير النهائي بطقم التقارير (QuizReportDoc.jsx) للنطاق المختار نفسه
   const scopeLine = data ? [
@@ -211,7 +264,7 @@ export default function QuizAnalytics() {
   ].filter(Boolean).join(" · ") : "";
   const reportKey = `${view}|${theme}|${scopeLine}|${kpi.sheets}|${kpi.avg}|${sigUrl}|${principalSig}|${termLabel}`;
   const pages = useMemo(() => (view === "report" && data && kpi.sheets ? quizReportPages({
-    r: { kpi, perQuiz, dist, perClass, items, one, top, support, classes: data.classes },
+    r: { kpi, perQuiz, dist, perClass, items, one, top, support, classes: data.classes, sheet },
     teacher: profile?.full_name ?? "", scopeLine, year: academicYearLabel(), term: termLabel, theme,
     sigs: { teacher: sigUrl, principal: principalSig },
   }) : null), [reportKey]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -349,6 +402,19 @@ export function Report({ print = false, kpi, perQuiz, dist, perClass, items, one
             <>
               <HBars data={items.map((x) => ({ ...x, note: x.text }))} unit="٪" max={100}
                      line={HARD_PCT} lowLabel="فقرة صعبة" compact />
+              {items.some((x) => x.suspect) && (
+                <div className="mt-3 space-y-1 rounded-sm2 border border-absent/30 bg-absent/5 px-3 py-2 text-xs leading-relaxed text-absent">
+                  <p className="font-bold">⚠ مفتاح إجابة يحتاج مراجعة: اتفق أغلب الطلاب على إجابة غير المفتاح المحفوظ</p>
+                  {items.filter((x) => x.suspect).map((x) => (
+                    <p key={x.id}><b className="num">{x.label}</b> ({x.text.length > 40 ? `${x.text.slice(0, 40)}…` : x.text}): {x.suspect}</p>
+                  ))}
+                  <p className="text-muted">إن كان المفتاح خاطئًا: صحّحه من «اختباراتي» ← الأسئلة، ثم أعد تصحيح الأوراق بالمفتاح الجديد.</p>
+                  <button type="button" disabled={regrading} onClick={() => regrade(one)}
+                          className="mt-1 rounded-pill border border-absent/40 bg-white px-3 py-1 text-xs font-semibold text-absent hover:bg-absent/5 disabled:opacity-50">
+                    {regrading ? "جارٍ إعادة التصحيح…" : "إعادة تصحيح أوراق هذا الاختبار"}
+                  </button>
+                </div>
+              )}
               {hard.length > 0 && (
                 <p className="mt-3 rounded-sm2 bg-warning-light px-3 py-2 text-xs leading-relaxed text-warning">
                   ⚠ فقرات أجاب عنها أقل من نصف الطلاب إجابة صحيحة: <b className="num">{hard.map((x) => x.label).join("، ")}</b> — تستحق المراجعة أو إعادة الشرح.
