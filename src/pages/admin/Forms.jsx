@@ -1081,11 +1081,11 @@ export default function Forms({ view = "issue", openKey = null }) {
   const [rFrom, setRFrom] = useState("");
   const [rTo, setRTo] = useState("");
 
-  // اعتماد الرد أو إعادته للمستفيد بملاحظة
+  // اعتماد الرد أو إعادته للمستفيد بملاحظة — ويُحفظ وقت القرار (decided_at) لتاريخ خطوة قرار المدير في الورقة
   const handleReply = async (d, action, note = null) => {
     const patch =
       action === "approve"
-        ? { status: "issued", decision_note: null, data: { ...d.data, ...(decision[d.id] ?? {}) } }
+        ? { status: "issued", decision_note: null, data: { ...d.data, ...(decision[d.id] ?? {}), decided_at: new Date().toISOString() } }
         : { status: "awaiting_reply", decision_note: note };
     const { data: saved, error } = await supabase.from("form_documents")
       .update(patch).eq("id", d.id).select("id");
@@ -1713,7 +1713,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     let ok = 0;
     for (const d of chosenDocs) {
       const patch = tab === "replies"
-        ? { status: "issued", decision_note: null, data: { ...d.data, ...(decision[d.id] ?? {}) } }
+        ? { status: "issued", decision_note: null, data: { ...d.data, ...(decision[d.id] ?? {}), decided_at: new Date().toISOString() } }
         : { status: "approved", decision_note: null, approved_by: session.user.id,
             approved_at: new Date().toISOString() };
       const { data } = await supabase.from("form_documents").update(patch).eq("id", d.id).select("id");

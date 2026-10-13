@@ -1168,6 +1168,9 @@ const rangeOf = (v) => {
   const [a, b] = String(v ?? "").split(" إلى ");
   return [(a ?? "").replace(/^من\s*/, "").trim(), (b ?? "").trim()];
 };
+// تاريخ قرار المدير (الخطوة الأخيرة في المساءلة): وقت اعتماده الإفادة، وفي المستندات
+// السابقة لحفظه: وقت الاعتماد إن وُجد، وإلا وقت الإفادة التي بُني عليها القرار
+const decidedAt = (v, doc) => v.decided_at || doc?.approved_at || doc?.reply_at || null;
 const hijriTs = (ts) => {
   if (!ts) return "";
   const h = toHijri(new Date(ts));
@@ -1347,7 +1350,7 @@ function AbsenceForm(p) {
           {decided && !["عذره مقبول", "عذره غير مقبول ويحسم عليه"].some((k) => sameTxt(k, v.f10)) && <P className="text-[13px] font-semibold text-ink">{v.f10}</P>}
           {String(v.action_taken ?? "").trim() && <P>{v.action_taken}</P>}
           <SigLine label="مدير المدرسة" name={decided ? p.principalName : ""} url={decided ? p.principalSigUrl : null}
-                   date={decided ? hijriTs(doc?.approved_at) : ""} />
+                   date={decided ? hijriTs(decidedAt(v, doc)) : ""} />
           </Step>
         </div>
         <p className="mt-2 text-[11.5px] leading-[1.8] text-ink">
@@ -1427,7 +1430,7 @@ function AbsenceForm(p) {
           {other && <P className="text-[13px] font-semibold leading-[1.95] text-ink">{other}</P>}
           {String(v.f6 ?? "").trim() && <P>{v.f6}</P>}
           <SigLine label="اسم الرئيس المباشر" name={decided ? p.principalName : ""} url={decided ? p.principalSigUrl : null}
-                   date={decided ? hijriTs(doc?.approved_at) : ""} />
+                   date={decided ? hijriTs(decidedAt(v, doc)) : ""} />
           </Step>
         </div>
         <div className="mt-1.5 text-[11.5px] leading-[1.75] text-ink">
