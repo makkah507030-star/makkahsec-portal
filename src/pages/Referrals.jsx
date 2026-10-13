@@ -20,7 +20,7 @@ import UsageBadge from "../components/UsageBadge.jsx";
 import {
   STATUS, OPEN_STATUSES, LATE_DAYS, stageOf, daysSince, daysLabel, isLate, timelineOf, notifyUsers,
   PRESETS_TEACHER_DONE, PRESETS_BEHAVIOR_NOTE, PRESETS_DEPUTY_TRANSFER, PRESETS_COUNSELOR, PRESETS_DEPUTY_REVIEW,
-  REF_TYPES, ACADEMIC_ITEMS, academicItemDone, docsSummary, refTypeLabel,
+  REF_TYPES, ACADEMIC_ITEMS, academicItemDone, docsSummary, refTypeLabel, notifyDeputies,
 } from "../lib/referrals";
 import { ReferralGuide, BehaviorSteps, AcademicDocs, DocsView } from "../components/ReferralProcedures.jsx";
 import PresetChips from "../components/PresetChips.jsx";
@@ -480,6 +480,8 @@ function NewReferral({ uid, profile, onDone }) {
       ...(outside ? { outside_class: true } : {}),
     });
     setBusy(false);
+    if (!error) notifyDeputies(urgentPrefix(flag ?? (urgentOk ? "urgent" : null)) + "إحالة طالب جديدة من معلم",
+      `رفع ${profile?.full_name ?? "معلم"} إحالة ${student?.full_name ?? ""} برقم ${serial}.`);
     onDone(error ? { ok: false, text: /ref_type|docs|urgent_reason|schema cache/i.test(error.message)
                        ? "لم تُفعَّل إجراءات الإحالة الجديدة بعد في قاعدة البيانات." : error.message }
                  : { ok: true, text: `أُرسلت الإحالة ${serial} لوكيل شؤون الطلاب.` });
@@ -902,8 +904,13 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       status: "with_counselor", return_note: null,
       ...(flag || r.flag ? { flag } : {}),
     }, `أُحيلت إلى ${c.name} وأُشعر بها.`,
-    () => notifyUsers([c.id], urgentPrefix(flag) + "إحالة طالب جديدة",
-      `أحال إليك وكيل شؤون الطلاب إحالة ${r.student_name} برقم ${r.serial}.`, "/referrals"));
+    () => {
+      notifyUsers([c.id], urgentPrefix(flag) + "إحالة طالب جديدة",
+        `أحال إليك وكيل شؤون الطلاب إحالة ${r.student_name} برقم ${r.serial}.`, "/referrals");
+      // المعلم المحيل يعرف أن إحالته تحرّكت
+      notifyUsers([r.teacher_id], "تحرّكت إحالتك",
+        `حوّل وكيل شؤون الطلاب إحالة ${r.student_name} (${r.serial}) إلى ${c.name}.`, "/referrals?tab=inbox");
+    });
   };
 
   // ③ الموجه يكتب إجراءه
@@ -956,6 +963,8 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       .select("guardians(user_id)").eq("student_id", r.student_id);
     (gs ?? []).forEach((g) => { if (g.guardians?.user_id) ids.add(g.guardians.user_id); });
 
+    if (r.teacher_id) notifyUsers([r.teacher_id], "أُقفلت إحالتك",
+      `أُقفلت إحالة ${r.student_name} (${r.serial}) وأُشعر ولي الأمر بالإجراء المتخذ.`, "/referrals?tab=inbox");
     await notifyUsers([...ids], r.kind === "behavior" ? "إشعار بمشكلة سلوكية" : "إحالة طالب",
       (r.kind === "behavior"
         ? `صدر إشعار بمشكلة سلوكية بشأن ${r.student_name} (${r.serial}) والإجراءات المتخذة حياله.`
@@ -994,18 +1003,40 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       docs: newDocs,
       done_in_class: [docsSummary(r.ref_type, newDocs), extra].filter(Boolean).join("\n") || null,
       status: "with_deputy", teacher_at: new Date().toISOString(),
-    }, "أُعيد رفع الإحالة لوكيل شؤون الطلاب.");
+    }, "أُعيد رفع الإحالة لوكيل شؤون الطلاب.",
+    () => (r.deputy_id
+      ? notifyUsers([r.deputy_id], "أُعيد رفع إحالة بعد استكمالها",
+          `استكمل ${r.teacher_name} توثيق إحالة ${r.student_name} (${r.serial}).`, "/referrals")
+      : notifyDeputies("أُعيد رفع إحالة بعد استكمالها",
+          `استكمل ${r.teacher_name} توثيق إحالة ${r.student_name} (${r.serial}).`)));
   };
 
   // ⑤ بعد رد ولي الأمر: تنتهي المتابعة وتُحفظ في السجل
   const archive = async () => {
-    act({ status: "archived" }, "انتهت متابعة الإحالة وحُفظت في السجل.");
+    act({ status: "archived",
+          ...(r.status === "with_guardian" ? { close_note: [r.close_note, "انتهت المتابعة دون رد ولي الأمر."].filter(Boolean).join("\n") } : {}) },
+      "انتهت متابعة الإحالة وحُفظت في السجل.");
+  };
+
+  // ⑤ب لم يرد ولي الأمر: تذكيره مرة أخرى
+  const remindGuardian = async () => {
+    setBusy(true);
+    const ids = [];
+    const { data: gs } = await supabase.from("guardian_student")
+      .select("guardians(user_id)").eq("student_id", r.student_id);
+    (gs ?? []).forEach((g) => { if (g.guardians?.user_id) ids.push(g.guardians.user_id); });
+    await notifyUsers(ids, "تذكير: إحالة بانتظار اطلاعك",
+      `نأمل الاطلاع على ${r.kind === "behavior" ? "الإشعار" : "الإحالة"} بشأن ${r.student_name} (${r.serial}) وتأكيد الاستلام.`,
+      `/referral/${r.id}`);
+    setBusy(false);
+    onChange(ids.length ? { ok: true, text: "أُرسل التذكير لولي الأمر." }
+                        : { ok: false, text: "لا حساب لولي أمر هذا الطالب في البوابة — تواصل معه هاتفيًا ثم أنهِ المتابعة." });
   };
 
   const st = STATUS[r.status] ?? { t: r.status, c: "" };
   const counselorTurn = isCounselor && r.counselor_id === uid &&
     ["with_counselor", "returned_to_counselor"].includes(r.status);
-  const deputyTurn = isDeputy && ["with_deputy", "guardian_replied"].includes(r.status);
+  const deputyTurn = isDeputy && ["with_deputy", "guardian_replied", "with_guardian"].includes(r.status);
   const teacherTurn = r.teacher_id === uid && r.status === "returned_to_teacher";
   const stage = stageOf(r);
   const days = daysSince(stage.since);
@@ -1149,6 +1180,26 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
             <button className="btn-primary w-full" disabled={busy} onClick={archive}>
               إنهاء المتابعة وحفظها في السجل
             </button>
+          )}
+          {/* لم يرد ولي الأمر: تذكيره، أو إنهاء المتابعة بعد التواصل معه هاتفيًا */}
+          {isDeputy && r.status === "with_guardian" && (
+            <div className="space-y-2 rounded-card border border-warning/30 bg-warning/5 p-3">
+              <p className="text-xs leading-relaxed text-muted">
+                لم يؤكد ولي الأمر استلامها بعد ({daysLabel(daysSince(r.closed_at))}).
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button disabled={busy} onClick={remindGuardian}
+                        className="rounded-pill border border-warning/40 px-4 py-1.5 text-sm font-semibold text-warning hover:bg-warning/5">
+                  تذكير ولي الأمر
+                </button>
+                {daysSince(r.closed_at) >= LATE_DAYS && (
+                  <button disabled={busy} onClick={archive}
+                          className="rounded-pill border border-line px-4 py-1.5 text-sm font-semibold text-muted hover:bg-canvas">
+                    إنهاء المتابعة دون رده
+                  </button>
+                )}
+              </div>
+            </div>
           )}
         </div>
       )}

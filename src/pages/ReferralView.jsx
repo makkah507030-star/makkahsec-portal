@@ -7,7 +7,7 @@ import ReferralSheet, { ReferralPrintArea, sheetPages } from "../components/Refe
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import PresetChips from "../components/PresetChips.jsx";
-import { PRESETS_GUARDIAN } from "../lib/referrals";
+import { PRESETS_GUARDIAN, notifyDeputies, notifyUsers } from "../lib/referrals";
 
 /* =====================================================================
    عرض ملف الإحالة لصاحبه: الطالب للاطّلاع، وولي الأمر للاطّلاع
@@ -83,6 +83,10 @@ export default function ReferralView() {
     setR((x) => ({ ...x, guardian_ack_at: new Date().toISOString(),
                    guardian_note: note.trim(), status: "guardian_replied" }));
     setMsg({ ok: true, text: "شكرًا لك. وصل إقرارك وردّك لوكيل شؤون الطلاب." });
+    // إشعار الوكيل برد ولي الأمر (supabase/referral_deputies.sql)
+    const body = `ردّ ولي أمر ${r.student_name} على ${r.serial}${note.trim() ? `: ${note.trim()}` : "."}`;
+    if (r.deputy_id) notifyUsers([r.deputy_id], "وصل رد ولي الأمر", body, "/referrals");
+    else notifyDeputies("وصل رد ولي الأمر", body);
   };
 
   if (error) {
