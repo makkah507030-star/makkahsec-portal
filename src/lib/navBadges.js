@@ -288,7 +288,7 @@ async function load() {
     // مفكرتي: مهامك التي حلّ موعدها، والمتأخرة أولًا
     { key: "notes", n: myNotes.length, to: "/notebook", icon: "edit",
       label: "مهام في مفكرتي حلّ موعدها",
-      tone: myNotes.some((x) => dueState(x) === "overdue") ? "absent" : "warning",
+      tone: "note",   // لون مستقل (TasksBox)؛ والمتأخر يُذكر في السطر تحت العنوان
       sub: myNotes.some((x) => dueState(x) === "overdue") ? `متأخرة ${myNotes.filter((x) => dueState(x) === "overdue").length}` : "",
       items: myNotes.map((x) => ({ id: x.id, to: `/notebook?n=${x.id}`,
         title: `${noteTitle(x)}${dueState(x) === "overdue" ? " · متأخرة" : x.due_time ? ` · ${x.due_time.slice(0, 5)}` : ""}` })) },
