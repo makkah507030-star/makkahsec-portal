@@ -55,13 +55,36 @@ export default function ReportViewer({ id, pages, theme, setTheme, fileTitle, co
     return () => clearTimeout(t);
   }, [mobile, pages, fontsReady, capture]);
 
-  const printNow = () => {
-    setMsg("");
-    if (!mobile) {
+  // الحاسب: تُلتقط الأوراق صورًا (كالجوال) ثم تُطبع الصور. طباعة الأوراق الحيّة مباشرة كانت تُفشل
+  // معاينة الطباعة في متصفحات الحاسب بالبيانات الحقيقية («فشل تحميل مستند PDF»)، والصور تُطبع دائمًا
+  const [deskImgs, setDeskImgs] = useState(null);
+  const [printReq, setPrintReq] = useState(0);
+  useEffect(() => { setDeskImgs(null); }, [pages, theme]);
+  useEffect(() => {
+    if (!printReq) return;
+    let alive = true;
+    (async () => {
+      const imgs = [...document.querySelectorAll(`#${id} img.desk-print`)];
+      await Promise.all(imgs.map((im) => im.decode?.().catch(() => {})));
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      if (!alive) return;
       const prev = document.title;
       document.title = fileTitle;
       window.print();
       setTimeout(() => { document.title = prev; }, 500);
+    })();
+    return () => { alive = false; };
+  }, [printReq]);
+
+  const printNow = () => {
+    setMsg("");
+    if (!mobile) {
+      if (deskImgs) { setPrintReq((n) => n + 1); return; }
+      setBusy(true);
+      rasterSheets(liveRef.current, A4)
+        .then((imgs) => { setDeskImgs(imgs); setPrintReq((n) => n + 1); })
+        .catch((e) => setMsg(`تعذّر تجهيز الطباعة: ${e.message ?? e}`))
+        .finally(() => setBusy(false));
       return;
     }
     if (!pdf) {
@@ -110,18 +133,21 @@ export default function ReportViewer({ id, pages, theme, setTheme, fileTitle, co
         </div>
       )}
 
-      {/* نسخة حيّة خارج الشاشة تُلتقط منها صور ملف PDF على الجوال */}
-      {mobile && pages && (
+      {/* نسخة حيّة خارج الشاشة تُلتقط منها صور الطباعة (ملف PDF على الجوال، والصور المطبوعة على الحاسب) */}
+      {pages && (
         <div ref={liveRef} aria-hidden="true" style={{ position: "fixed", left: -20000, top: 0, pointerEvents: "none" }}>{pages}</div>
       )}
 
       {pages && (
         <PrintPortal id={id}
           extraCss={`#${id} .sheet { break-after: page; } #${id} .sheet:last-child { break-after: auto; }
-            #${id} img.ios-print { zoom: 1 !important; margin: 0 auto !important; break-inside: avoid; }`}>
+            #${id} img.ios-print { zoom: 1 !important; margin: 0 auto !important; break-inside: avoid; }
+            #${id} img.desk-print { zoom: 1 !important; margin: 0 !important; break-inside: avoid; }`}>
           {printImgs
             ? printImgs.map((src, i) => <img key={i} className="sheet ios-print" src={src} alt="" style={{ display: "block", margin: "0 auto", ...iosFit(A4) }} />)
-            : pages}
+            : deskImgs
+              ? deskImgs.map((src, i) => <img key={i} className="sheet desk-print" src={src} alt="" style={{ display: "block", width: "210mm", height: "296.5mm" }} />)
+              : pages}
         </PrintPortal>
       )}
     </div>
