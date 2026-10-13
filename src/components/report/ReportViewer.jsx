@@ -31,14 +31,19 @@ export default function ReportViewer({ id, pages, theme, setTheme, fileTitle, co
   const [printImgs, setPrintImgs] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const urls = useRef([]);
+  useEffect(() => () => { urls.current.forEach((u) => URL.revokeObjectURL(u)); }, []);
 
   const capture = useCallback(async () => {
     const imgs = await rasterSheets(liveRef.current, A4);
     setPrintImgs(imgs);
     if (imgs?.length) {
       const blob = jpegsToPdf(imgs, { w: 210, h: 297 });
-      // الرابط القديم يُلغى بعد دقيقة لا فورًا: قد يكون عارض PDF ما زال يقرؤه
-      setPdf((old) => { if (old?.url) setTimeout(() => URL.revokeObjectURL(old.url), 60000); return { blob, url: URL.createObjectURL(blob), name: `${fileTitle}.pdf` }; });
+      // الروابط تبقى صالحة حتى مغادرة الصفحة: إلغاء الرابط عند كل تحديث للتقرير (توقيع يُحمَّل،
+      // ملاحظة تُكتب) كان يُفشل فتحه في تبويب لم يُحمَّل بعد («فشل تحميل مستند PDF»)
+      const url = URL.createObjectURL(blob);
+      urls.current.push(url);
+      setPdf({ blob, url, name: `${fileTitle}.pdf` });
     }
   }, [fileTitle]);
 
