@@ -9,6 +9,26 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import { byName } from "../../lib/sortAr.js";
+import { normName } from "../../lib/userSignatures.js";
+
+/* ربط اسم مكتوب نصًّا (من الجدول المستورد) بحساب موظف: تطابق تام بعد توحيد الكتابة
+   («بن» والهمزات)، وإلا أن تأتي كلمات الاسم كلها بترتيبها في اسم موظف واحد فقط
+   («فهد المعبدي» ← «فهد بن نايف ماطر المعبدي»). يعيد معرّف الحساب أو null. */
+function matchStaff(name, staff) {
+  const n = normName(name);
+  if (!n) return null;
+  const exact = staff.filter((s) => normName(s.full_name) === n);
+  if (exact.length === 1) return exact[0].id;
+  if (exact.length > 1) return null;
+  const words = n.split(" ");
+  const inOrder = (full) => {
+    let i = 0;
+    for (const w of normName(full).split(" ")) if (w === words[i]) i++;
+    return i === words.length;
+  };
+  const hits = words.length >= 2 ? staff.filter((s) => inOrder(s.full_name)) : [];
+  return hits.length === 1 ? hits[0].id : null;
+}
 
 /* =====================================================================
    إدارة المناوبة والإشراف.
@@ -172,6 +192,25 @@ function DutyTab({ staff }) {
   };
 
   useEffect(() => { load(); }, [from]);
+
+  // ربط تلقائي لمن بقي اسمه «غير مربوط» متى وُجد حسابه بالاسم
+  useEffect(() => {
+    if (!rows?.length || !staff.length) return;
+    const todo = [];
+    rows.forEach((r) => {
+      const f = {};
+      if (!r.user_a && r.name_a) { const id = matchStaff(r.name_a, staff); if (id) f.user_a = id; }
+      if (!r.user_b && r.name_b) { const id = matchStaff(r.name_b, staff); if (id) f.user_b = id; }
+      if (Object.keys(f).length) todo.push([r, f]);
+    });
+    if (!todo.length) return;
+    (async () => {
+      for (const [r, f] of todo) await supabase.from("duty_roster").update(f).eq("id", r.id);
+      const byId = new Map(todo.map(([r, f]) => [r.id, f]));
+      setRows((rs) => rs.map((r) => (byId.has(r.id) ? { ...r, ...byId.get(r.id) } : r)));
+      setMsg({ ok: true, text: `رُبط ${todo.length === 1 ? "يوم واحد" : `${todo.length} أيام`} بحسابات أصحابها تلقائيًا بالاسم.` });
+    })();
+  }, [rows, staff]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // تجميع الأيام بالأسابيع: يُعتمد اسم الأسبوع، وإلا يُحسب من تاريخ الأحد
   const weeks = useMemo(() => {
@@ -407,6 +446,20 @@ function SupTab({ staff }) {
   };
 
   useEffect(() => { load(); }, []);
+
+  // ربط تلقائي لمن بقي اسمه «غير مربوط» متى وُجد حسابه بالاسم
+  useEffect(() => {
+    if (!rows?.length || !staff.length) return;
+    const todo = rows.filter((r) => !r.user_id && r.person_name)
+      .map((r) => [r, matchStaff(r.person_name, staff)]).filter(([, id]) => id);
+    if (!todo.length) return;
+    (async () => {
+      for (const [r, id] of todo) await supabase.from("supervision_duty").update({ user_id: id }).eq("id", r.id);
+      const byId = new Map(todo.map(([r, id]) => [r.id, id]));
+      setRows((rs) => rs.map((r) => (byId.has(r.id) ? { ...r, user_id: byId.get(r.id) } : r)));
+      setMsg({ ok: true, text: `رُبط ${todo.length} من المشرفين بحساباتهم تلقائيًا بالاسم.` });
+    })();
+  }, [rows, staff]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addRow = async () => {
     if (!add.user) { setMsg({ ok: false, text: "اختر الموظف." }); return; }
