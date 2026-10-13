@@ -22,6 +22,8 @@ export function iosFit(size, realSize) {
 export function isTouchDevice() {
   if (isMobileDevice()) return true;
   const ua = navigator.userAgent || "";
+  // حاسب ويندوز بشاشة لمس: كروم فيه يطبع الصفحة بمقاسها وألوانها مباشرة، فلا حاجة لملف PDF من الصور
+  if (/Windows NT/.test(ua)) return false;
   if (/CriOS|FxiOS|EdgiOS/.test(ua)) return true;
   return !!window.matchMedia?.("(pointer: coarse)").matches && navigator.maxTouchPoints > 0;
 }

@@ -33,7 +33,8 @@ export function jpegsToPdf(jpegs, pageMm) {
   const push = (x) => { const u = typeof x === "string" ? enc.encode(x) : x; parts.push(u); len += u.length; };
   const obj = (n, body) => { offsets[n] = len; push(`${n} 0 obj\n`); body(); push("\nendobj\n"); };
 
-  push("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+  // سطر التعليق الثاني بايتات ثنائية حقيقية (فوق 127) كما تشترط الصيغة، لا نصًا يُرمَّز UTF-8
+  push("%PDF-1.4\n"); push(new Uint8Array([0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a]));
   const n = jpegs.length;
   // 1 الفهرس، 2 الصفحات، ثم لكل صفحة: الصفحة والصورة والمحتوى
   const pageIds = jpegs.map((_, i) => 3 + i * 3);
