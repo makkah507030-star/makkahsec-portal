@@ -13,6 +13,9 @@ import { groupQuestions } from "../../lib/omrLayout.js";
 import { useNotice } from "../../lib/useNotice.js";
 import { quietly } from "../../lib/notice.js";
 import PrincipalSign from "../../components/PrincipalSign.jsx";
+import { fmtDate } from "../../lib/dates";
+
+const MODE_NAME = { online: "إلكتروني", paper: "ورقي", external: "من خارج البوابة", omr: "تصحيح آلي" };
 import { PRINCIPAL_NAME } from "../../lib/exportUtils.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
 
@@ -51,6 +54,7 @@ export default function QuizMarks() {
   const [loadErr, setLoadErr] = useState(null);
   const [msg, setMsg] = useNotice(null);
   const [printing, setPrinting] = useState(false);
+  const [sheets, setSheets] = useState({});   // quiz_id → عدد الأوراق المرصودة
 
   useEffect(() => {
     if (!uid) return;
@@ -60,6 +64,15 @@ export default function QuizMarks() {
         .in("status", ["ready", "marking", "closed"])
         .order("created_at", { ascending: false });
       setQuizzes(data ?? []);
+      // عدد الأوراق المرصودة لكل اختبار — يميّز النسخ المتشابهة الاسم
+      const ids = (data ?? []).map((q) => q.id);
+      if (ids.length) {
+        const { data: sb } = await supabase.from("quiz_submissions")
+          .select("quiz_id").in("quiz_id", ids).eq("absent", false);
+        const m = {};
+        (sb ?? []).forEach((r) => { m[r.quiz_id] = (m[r.quiz_id] ?? 0) + 1; });
+        setSheets(m);
+      }
     })();
   }, [uid]);
 
@@ -198,7 +211,8 @@ export default function QuizMarks() {
             <option value="">اختر الاختبار…</option>
             {(quizzes ?? []).map((q) => (
               <option key={q.id} value={q.id}>
-                {q.mode === "paper" ? "📝 " : q.mode === "online" ? "📱 " : q.mode === "external" ? "⇪ " : ""}{q.title} — {q.subject_name ?? ""} ({q.total_marks} درجة)
+                {q.mode === "paper" ? "📝 " : q.mode === "online" ? "📱 " : q.mode === "external" ? "⇪ " : ""}{q.title} — {q.subject_name ?? ""}
+                {" · "}{MODE_NAME[q.mode] ?? "تصحيح آلي"} · {fmtDate(q.created_at)} · {sheets[q.id] ? `${sheets[q.id]} ورقة` : "بلا أوراق"}
               </option>
             ))}
           </select>
