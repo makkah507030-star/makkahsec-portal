@@ -18,6 +18,8 @@ const TONE = {
   absent:  { card: "border-absent/25 bg-absent/5 hover:bg-absent/10",    icon: "bg-absent/10 text-absent",       num: "text-absent" },
   warning: { card: "border-warning/30 bg-warning/5 hover:bg-warning/10", icon: "bg-warning-light text-warning",  num: "text-warning" },
   mint:    { card: "border-[#CCF2DB] bg-mint-tint hover:bg-mint-light",  icon: "bg-white text-mint-deep",        num: "text-mint-deep" },
+  // مفكرتي: لون مستقل يميّز مهامك الشخصية عن مهام البوابة
+  note:    { card: "border-[#C9DBEC] bg-[#EEF4FA] hover:bg-[#E2ECF6]",   icon: "bg-white text-[#2F5F86]",        num: "text-[#2F5F86]" },
 };
 
 // آخر ما رآه المستخدم من مهام — يبقى بين زيارات الرئيسية ليُعرف ما أُنجز منذها
