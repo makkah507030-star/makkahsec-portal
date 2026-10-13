@@ -6,7 +6,7 @@
 //    GET  /iclock/cdata?SN=...&options=all      → المصافحة وإعدادات الجهاز
 //    POST /iclock/cdata?SN=...&table=ATTLOG     → سجلات البصمات
 //    GET  /iclock/getrequest?SN=...             → استعلام عن أوامر
-//    GET  /iclock/rtdata?SN=...&type=time       → طلب الوقت (الإصدارات الأحدث)
+//    GET  /iclock/rtdata?SN=...&type=time       → طلب الوقت (نردّ OK فقط — انظر أدناه)
 //    POST /iclock/devicecmd?SN=...              → نتيجة تنفيذ أمر
 //
 //  الردود نص عادي (text/plain) بصيغة يفهمها الجهاز.
@@ -368,16 +368,12 @@ async function handle(event, admin) {
       return text(`OK: ${rawUids.length}`);
     }
 
-    // ---------- طلب الوقت من الخادم (بروتوكول ADMS الأحدث) ----------
-    // بعض الطرازات لا تنفّذ أمر SET OPTIONS DateTime، وتطلب الوقت بنفسها هنا
-    // بالثواني منذ 1970 (UTC) مع فرق التوقيت
-    if (path.includes("/rtdata") && String(params.type || "").toLowerCase() === "time") {
-      await admin.from("devices")
-        .update({ time_synced_at: new Date().toISOString() })
-        .eq("serial_no", sn);
-      const reply = `DateTime=${Math.floor(Date.now() / 1000)},ServerTZ=+0300`;
-      console.log(`iclock: rtdata time sent to ${sn} → ${reply}`);
-      return text(reply);
+    // ---------- طلب الوقت من الجهاز (rtdata) ----------
+    // لا نردّ بالوقت هنا: أجهزة المدرسة (CGDQ…) تقرأ الرقم بصيغة ZKTeco المرمّزة لا
+    // بثواني 1970، فيصير تاريخها 2055 وترفض البصمات «الفترة الزمنية غير صالحة».
+    // ضبط الساعة يكفيه أمر SET OPTIONS DateTime الذي تقبله كل الأجهزة (Return=0).
+    if (path.includes("/rtdata")) {
+      return text("OK");
     }
 
     // ---------- 3) استعلام الجهاز عن الأوامر ----------
