@@ -325,6 +325,20 @@ async function handle(event, admin) {
         }
       }
 
+      // (1ج) رقم الجهاز أول تسع خانات من الهوية: بعض الأجهزة لا تتسع إلا لتسع خانات، فتُحذف
+      // الخانة الأخيرة عند التسجيل (2428699728 ← 242869972). يُقبل للأرقام من تسع خانات حين
+      // يطابق طالبًا واحدًا فقط هويته عشر خانات تبدأ به.
+      const cut = uniqUids.filter((u) => /^\d{9}$/.test(u) && !variantsOf(u).some((v) => byKey.has(v)));
+      for (const part of chunk(cut, 40)) {
+        const { data: studs } = await admin
+          .from("students").select("id, national_id").eq("is_active", true)
+          .or(part.map((u) => `national_id.like.${u}*`).join(","));
+        for (const u of part) {
+          const hits = (studs || []).filter((s) => /^\d{10}$/.test(String(s.national_id ?? "")) && String(s.national_id).startsWith(u));
+          if (hits.length === 1) byKey.set(u, hits[0].id);
+        }
+      }
+
       const resolve = (uid) => {
         for (const v of variantsOf(uid)) if (byKey.has(v)) return byKey.get(v);
         return null;
