@@ -13,6 +13,7 @@ import { saveQuizCard } from "../lib/quizCards.js";
    ===================================================================== */
 
 const AR_LTRS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"];
+const EN_LTRS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"];
 const STATUS = {
   ok:    null,
   faint: { t: "تظليل باهت — تأكّد", c: "bg-warning/10 text-warning" },
@@ -190,12 +191,13 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
               {layout.rows.map((lr) => {
                 const r = result.rows.find((x) => x.key === lr.key);
                 const st = STATUS[r.status];
-                const letters = lr.kind === "truefalse" ? ["صح", "خطأ"] : AR_LTRS;
+                // اختبار الإنجليزي: A B C و True/False من اليسار كما في بطاقة التظليل
+                const letters = lr.kind === "truefalse" ? (ltr ? ["True", "False"] : ["صح", "خطأ"]) : (ltr ? EN_LTRS : AR_LTRS);
                 return (
                   <div key={lr.key} className={`flex items-center gap-2 px-3 py-2 ${st ? "bg-warning/5" : ""}`}>
                     <span className="num w-16 shrink-0 text-xs font-bold text-muted">{lr.label}</span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap gap-1.5">
+                      <div dir={ltr ? "ltr" : "rtl"} className="flex flex-wrap gap-1.5">
                         {lr.bubbles.map((_, k) => (
                           <button key={k} onClick={() => toggle(lr.key, k)}
                             className={`grid h-9 min-w-9 place-items-center rounded-full border px-2 text-xs font-bold transition-colors ${
