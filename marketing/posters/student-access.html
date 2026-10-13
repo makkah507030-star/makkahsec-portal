@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>الوصول إلى البوابة — للطلاب</title>
+<!-- منشور A4 للوحة الإعلانات: طريقة دخول الطالب إلى البوابة من المتصفح (ثيم فاتح).
+     يُصدَّر إلى PDF وPNG بالأمر: node render.mjs -->
+<style>
+@font-face { font-family: Plex; font-weight: 400; src: url(../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2); }
+@font-face { font-family: Plex; font-weight: 500; src: url(../../public/fonts/ibm-plex-sans-arabic-500-arabic.woff2); }
+@font-face { font-family: Plex; font-weight: 600; src: url(../../public/fonts/ibm-plex-sans-arabic-600-arabic.woff2); }
+@font-face { font-family: Plex; font-weight: 700; src: url(../../public/fonts/ibm-plex-sans-arabic-700-arabic.woff2); }
+@font-face { font-family: Plex; font-weight: 400; src: url(../../public/fonts/ibm-plex-sans-arabic-400-latin.woff2); unicode-range: U+0000-00FF; }
+@font-face { font-family: Plex; font-weight: 500; src: url(../../public/fonts/ibm-plex-sans-arabic-500-latin.woff2); unicode-range: U+0000-00FF; }
+@font-face { font-family: Plex; font-weight: 600; src: url(../../public/fonts/ibm-plex-sans-arabic-600-latin.woff2); unicode-range: U+0000-00FF; }
+@font-face { font-family: Plex; font-weight: 700; src: url(../../public/fonts/ibm-plex-sans-arabic-700-latin.woff2); unicode-range: U+0000-00FF; }
+@page { size: A4; margin: 0; }
+:root { --mint: #89D7AD; --deep: #3E6350; --tint: #EDFAF2; --light: #CCF2DB; --ink: #101010; --muted: #6B6B6B; --line: #D9D9D9; --gold: #E2B457; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 794px; height: 1123px; background: #fff; }
+body { font-family: Plex, sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.sheet { position: relative; width: 794px; height: 1123px; overflow: hidden; background: #fff; }
+.sheet::before { content: ""; position: absolute; inset: 0; opacity: .5;
+  background: radial-gradient(520px 360px at 100% 0%, var(--tint), transparent 70%), radial-gradient(420px 320px at 0% 100%, var(--tint), transparent 70%); }
+.ltr { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+
+header { position: relative; display: flex; align-items: center; gap: 14px; padding: 34px 44px 0; }
+header img.icon { width: 50px; }
+header b { display: block; font: 700 21px Plex; }
+header small { display: block; font: 400 13px Plex; color: var(--muted); }
+header img.moe { margin-right: auto; height: 46px; }
+
+.hero { position: relative; text-align: center; padding: 26px 44px 0; }
+.tag { display: inline-block; background: var(--deep); color: #fff; font: 700 15px Plex; padding: 6px 18px; border-radius: 999px; }
+.hero h1 { font: 700 46px/1.25 Plex; margin-top: 12px; }
+.hero h1 em { font-style: normal; color: var(--deep); position: relative; }
+.hero h1 em::after { content: ""; position: absolute; right: 0; left: 0; bottom: -2px; height: 6px; border-radius: 6px; background: var(--gold); opacity: .85; }
+.hero p { font: 500 17px Plex; color: var(--muted); margin-top: 8px; }
+
+/* شريط العنوان الكبير */
+.bar { position: relative; margin: 22px auto 0; width: 600px; border-radius: 22px; background: #fff; border: 2px solid var(--deep);
+  box-shadow: 0 18px 40px -22px rgba(30,60,45,.55); padding: 14px 18px; display: flex; align-items: center; gap: 14px; direction: ltr; }
+.bar .lock { width: 30px; height: 30px; color: var(--deep); flex: none; }
+.bar .url { font: 700 44px/1 Plex; letter-spacing: .5px; color: var(--ink); }
+.bar .go { margin-left: auto; background: var(--deep); color: #fff; font: 700 17px Plex; border-radius: 12px; padding: 10px 16px; direction: rtl; }
+.bar-note { text-align: center; font: 500 14px Plex; color: var(--muted); margin-top: 10px; }
+
+/* الخطوات */
+.steps { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 24px 40px 0; }
+.step { border: 1.5px solid var(--line); border-radius: 18px; background: #fff; padding: 14px 14px 16px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.step .n { width: 36px; height: 36px; border-radius: 50%; background: var(--deep); color: #fff; font: 700 19px/36px Plex; }
+.step h3 { font: 700 18px Plex; margin-top: 8px; }
+.step p { font: 400 13.5px/1.6 Plex; color: #444; margin-top: 4px; }
+.step p b { color: var(--ink); }
+
+/* شاشة جوال مصغرة */
+.phone { width: 170px; height: 236px; margin-top: 12px; border-radius: 24px; border: 6px solid #1d2b24; background: #F7F9F8; overflow: hidden; position: relative; }
+.phone .sb { height: 26px; background: #EEF2F0; display: flex; align-items: center; justify-content: center; padding: 0 8px; direction: ltr; }
+.phone .sb span { width: 100%; background: #fff; border: 1px solid #dcdcdc; border-radius: 8px; font: 600 11px/18px Plex; color: #333; text-align: center; }
+.mini-h { display: flex; align-items: center; justify-content: space-between; padding: 8px 8px; background: #fff; border-bottom: 1px solid #eee; }
+.mini-h i { font-style: normal; font: 700 8.5px Plex; }
+.mini-h .btn { background: var(--deep); color: #fff; border-radius: 999px; padding: 4px 8px; font: 700 8.5px Plex; box-shadow: 0 0 0 3px var(--gold); }
+.mini-hero { margin: 10px 8px; height: 80px; border-radius: 10px; background: var(--tint); display: grid; place-items: center; font: 700 11px Plex; color: var(--deep); }
+.mini-line { margin: 6px 10px; height: 8px; border-radius: 5px; background: #e6e6e6; }
+.f { margin: 8px 10px 0; text-align: right; }
+.f label { font: 600 8.5px Plex; color: #555; display: block; margin-bottom: 3px; }
+.f div { border: 1.5px solid var(--deep); border-radius: 8px; height: 26px; background: #fff; font: 600 11px/23px Plex; color: var(--ink); padding: 0 8px; direction: ltr; text-align: right; }
+.f div.pw { letter-spacing: 2px; }
+.mini-btn { margin: 10px 10px 0; background: var(--deep); color: #fff; border-radius: 8px; font: 700 10px/24px Plex; text-align: center; }
+.mini-card { margin: 8px; background: #fff; border-radius: 12px; border: 1px solid #e6e6e6; padding: 8px; text-align: right; }
+.mini-card b { font: 700 10px Plex; display: block; }
+.hand { position: absolute; font-size: 20px; }
+
+/* الشريط السفلي */
+.extra { position: relative; display: grid; grid-template-columns: 1.25fr 1fr; gap: 16px; padding: 18px 40px 0; }
+.box { border-radius: 18px; padding: 14px 18px; }
+.box h4 { font: 700 16px Plex; display: flex; align-items: center; gap: 8px; }
+.box ul { list-style: none; margin-top: 6px; }
+.box li { font: 400 13px/1.75 Plex; color: #333; }
+.box li b { color: var(--ink); }
+.install { background: var(--tint); border: 1.5px solid var(--light); }
+.find { border: 1.5px solid var(--line); }
+.find li::before { content: "✓"; color: var(--deep); font-weight: 700; margin-left: 6px; }
+.ic { width: 18px; height: 18px; vertical-align: -3px; color: var(--deep); }
+
+footer { position: absolute; bottom: 0; left: 0; right: 0; background: var(--deep); color: #fff; padding: 16px 44px; display: flex; align-items: center; gap: 18px; }
+footer b { font: 700 15px Plex; }
+footer span { font: 400 13px Plex; opacity: .85; }
+footer .site { margin-right: auto; font: 700 20px Plex; direction: ltr; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header>
+    <img class="icon" src="../../src/assets/icon-mint.png" alt="">
+    <div><b>بوابة مكة الثانوية الرقمية</b><small>مدرسة مكة الثانوية · مكة المكرمة</small></div>
+    <img class="moe" src="../../src/assets/moe-logo.png" alt="">
+  </header>
+
+  <section class="hero">
+    <span class="tag">للطلاب</span>
+    <h1>مدرستك كلها <em>في جوالك</em></h1>
+    <p>بلا تطبيق ولا تحميل — افتح المتصفح واكتب العنوان</p>
+  </section>
+
+  <div class="bar">
+    <svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
+    <span class="url">makkahsec.com</span>
+    <span class="go">انتقال</span>
+  </div>
+  <p class="bar-note">اكتبه في <b>شريط العنوان</b> أعلى المتصفح — Safari في الآيفون، أو Chrome في الأندرويد</p>
+
+  <section class="steps">
+    <div class="step">
+      <span class="n">1</span>
+      <h3>افتح المتصفح</h3>
+      <p>اكتب <b class="ltr">makkahsec.com</b><br>في شريط العنوان ثم اضغط <b>«انتقال»</b></p>
+      <div class="phone">
+        <div class="sb"><span>makkahsec.com</span></div>
+        <div class="mini-line" style="margin-top:14px;width:70%"></div><div class="mini-line" style="width:50%"></div>
+        <div class="mini-hero" style="height:110px">بوابة مكة الثانوية الرقمية</div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="n">2</span>
+      <h3>اضغط «الدخول للبوابة»</h3>
+      <p>الزر الأخضر في <b>أعلى الصفحة</b><br>بجانب شعار البوابة</p>
+      <div class="phone">
+        <div class="sb"><span>makkahsec.com</span></div>
+        <div class="mini-h"><i>بوابة مكة الثانوية</i><span class="btn">الدخول للبوابة</span></div>
+        <div class="mini-hero">المدرسة كلها في جوالك</div>
+        <div class="mini-line" style="width:80%"></div><div class="mini-line" style="width:60%"></div><div class="mini-line" style="width:70%"></div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="n">3</span>
+      <h3>اكتب رقم هويتك</h3>
+      <p>في الخانتين معًا: <b>رقم الهوية</b> و<b>كلمة المرور</b><br>ثم اضغط «دخول»</p>
+      <div class="phone">
+        <div class="sb"><span>makkahsec.com/login</span></div>
+        <div class="mini-card" style="margin-top:12px">
+          <b>تسجيل الدخول</b>
+          <div class="f"><label>رقم الهوية</label><div>1xxxxxxxxx</div></div>
+          <div class="f"><label>كلمة المرور</label><div>1xxxxxxxxx</div></div>
+          <div class="mini-btn">دخول</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="extra">
+    <div class="box install">
+      <h4><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        بعد أول دخول</h4>
+      <ul>
+        <li>ستُطلب منك <b>كلمة مرور جديدة من 8 خانات فأكثر</b> — احفظها ولا تشاركها.</li>
+        <li><b>ثبّت البوابة على شاشتك:</b> في الآيفون زر المشاركة ← «إضافة إلى الشاشة الرئيسية»،
+          وفي الأندرويد قائمة ⋮ ← «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».</li>
+        <li>فعّل <b>الإشعارات</b> من الصفحة الرئيسية ليصلك كل جديد.</li>
+      </ul>
+    </div>
+    <div class="box find">
+      <h4>ماذا تجد في البوابة؟</h4>
+      <ul>
+        <li>جدولك والحصة الآن</li>
+        <li>اختباراتك ودرجاتك</li>
+        <li>جداول الاختبارات</li>
+        <li>غيابك وتأخرك</li>
+        <li>نماذجك والإشعارات</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    <div><b>نسيت كلمة المرور؟</b><br><span>راجع إدارة المدرسة لإعادة تعيينها</span></div>
+    <div class="site">makkahsec.com</div>
+  </footer>
+</div>
+</body>
+</html>
