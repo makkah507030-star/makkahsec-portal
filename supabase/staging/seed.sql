@@ -139,6 +139,19 @@ insert into public.students (id, user_id, national_id, full_name, nationality) v
   ('00000000-0000-4000-e000-000000000304', null, '9000000112', 'طالب تجريبي الثاني عشر', 'سعودي')
 on conflict (national_id) do nothing;
 
+-- حسابات دخول لبقية الطلاب (9000000102–9000000112): معرّف الحساب ينتهي برقم الهوية
+-- (scripts/staging-users.mjs)، ويُربط كل طالب بحسابه
+insert into public.users (id, username, full_name, role, is_active, must_change_pw, activated_at)
+select ('00000000-0000-4000-a000-000000000' || right(s.national_id, 3))::uuid, s.national_id, s.full_name,
+       'student', true, false, now()
+from public.students s
+where s.national_id between '9000000102' and '9000000112'
+on conflict (id) do nothing;
+
+update public.students s
+   set user_id = ('00000000-0000-4000-a000-000000000' || right(s.national_id, 3))::uuid
+ where s.national_id between '9000000102' and '9000000112' and s.user_id is null;
+
 -- يُلحق كل طالب بفصله من الرقم الثالث في معرّفه (1xx → 101، 2xx → 201، 3xx → 301)
 insert into public.student_enrollment (student_id, class_id, academic_year, status)
 select s.id, ('00000000-0000-4000-d000-000000000' || substr(right(s.id::text, 3), 1, 1) || '01')::uuid, '1448', 'active'
