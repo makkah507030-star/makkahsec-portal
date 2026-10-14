@@ -152,7 +152,7 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
                 غائب
               </button>
             </div>
-            <p className="text-[11px] text-faint">تُقرأ الصورة داخل جهازك ولا تُرفع لأي خادم.</p>
+            <p className="text-[11px] text-faint">تُقرأ الصورة داخل جهازك، وتُحفظ في البوابة نسخة مصغّرة من البطاقة المصحّحة، وتُحذف بنهاية الفصل.</p>
           </section>
         )}
 
