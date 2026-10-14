@@ -713,7 +713,7 @@ function FastEntry({ students, questions, subs, quiz, onSave, onAbsent, onClose 
 
 /* ------------------ رصد الاختبار الورقي: المجموع مباشرة ------------------ */
 // خانة لكل طالب: اكتب الدرجة ثم Enter فتُحفظ وينتقل المؤشر للطالب التالي.
-// «غ» تعني غائب، والخانة الفارغة لا تُحفظ.
+// «غ» تعني غائب (تُكتب أو بزرها — لوحة الأرقام في الجوال لا تكتبها)، والخانة الفارغة لا تُحفظ.
 function ScoreGrid({ students, subs, total, onSave }) {
   const shown = (sub) => (sub?.absent ? "غ" : sub?.score != null ? String(Number(sub.score)) : "");
   const [vals, setVals] = useState(() => Object.fromEntries(students.map((s) => [s.id, shown(subs[s.id])])));
@@ -730,8 +730,9 @@ function ScoreGrid({ students, subs, total, onSave }) {
 
   // Enter ثم خروج المؤشر من الخانة يستدعيان الحفظ معًا — تُحفظ القيمة مرة واحدة
   const inflight = useRef({});   // student_id -> القيمة الجاري حفظها
-  const commit = async (st) => {
-    const v = vals[st.id] ?? "";
+  // override: قيمة تُحفظ مباشرة دون انتظار تحديث الخانة (زر «غ»)
+  const commit = async (st, override) => {
+    const v = override ?? vals[st.id] ?? "";
     if (v === shown(subs[st.id])) return;                 // لم يتغيّر
     if (inflight.current[st.id] === v) return;            // يُحفظ الآن
     const p = parse(v);
@@ -752,6 +753,13 @@ function ScoreGrid({ students, subs, total, onSave }) {
     const el = document.querySelector(`[data-sg="${i}"]`);
     if (el) { el.focus(); el.select(); }
   };
+  const markAbsent = (i) => {
+    const st = students[i];
+    setVals((x) => ({ ...x, [st.id]: "غ" }));
+    setState((x) => ({ ...x, [st.id]: null }));
+    commit(st, "غ");
+    focusRow(i + 1);
+  };
   const onKey = (e, i) => {
     if (e.key === "Enter" || e.key === "ArrowDown") { e.preventDefault(); commit(students[i]); focusRow(i + 1); }
     if (e.key === "ArrowUp") { e.preventDefault(); commit(students[i]); focusRow(i - 1); }
@@ -762,7 +770,7 @@ function ScoreGrid({ students, subs, total, onSave }) {
     <div className="no-print card overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-mint-tint/50 px-4 py-2.5">
         <p className="text-xs text-muted">
-          اكتب مجموع الطالب ثم <b>Enter</b> للتالي · <b>غ</b> للغائب ·
+          اكتب مجموع الطالب ثم <b>Enter</b> للتالي · زر <b>غ</b> للغائب ·
           الدرجة من <span className="num">0</span> إلى <span className="num">{total}</span>
         </p>
         <p className="num text-xs font-semibold text-mint-deep">{done}/{students.length}</p>
@@ -780,6 +788,10 @@ function ScoreGrid({ students, subs, total, onSave }) {
                      onKeyDown={(e) => onKey(e, i)} onBlur={() => commit(s)} onFocus={(e) => e.target.select()}
                      className={`field num w-20 shrink-0 py-1.5 text-center ${bad ? "border-absent text-absent" : ""} ${
                        vals[s.id] === "غ" ? "text-absent" : ""}`} />
+              <button type="button" title="غائب" onMouseDown={(e) => e.preventDefault()} onClick={() => markAbsent(i)}
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-pill border border-absent/40 text-xs font-bold text-absent hover:bg-absent/10">
+                غ
+              </button>
               <span className="num w-9 shrink-0 text-xs text-faint">/{total}</span>
               <span className="grid w-5 shrink-0 place-items-center text-sm" aria-live="polite">
                 {st === "saving" ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-mint border-t-transparent" />
