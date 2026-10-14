@@ -193,7 +193,7 @@ export default function QuizTake() {
   };
 
   const start = async () => {
-    if (!window.confirm("بمجرد البدء يبدأ العدّ التنازلي ولا يتوقف حتى لو خرجت من الصفحة.\n\nهل أنت مستعد؟")) return;
+    if (!window.confirm("بمجرد البدء يبدأ العدّ التنازلي ولا يتوقف حتى لو خرجت من الصفحة.\n\nأتعهّد بعدم تصوير الاختبار أو نشره.\n\nهل أنت مستعد؟")) return;
     setBusy(true); setErr(null);
     const { data: d, error } = await supabase.rpc("start_online_quiz", { p_quiz: id });
     setBusy(false);
@@ -264,6 +264,16 @@ export default function QuizTake() {
           <p className="mt-3 whitespace-pre-line rounded-card bg-canvas px-3 py-2 text-sm text-ink">
             {data.quiz.instructions}
           </p>
+        )}
+        {state !== "closed" && (
+          <div className="mt-4 rounded-card border border-absent/30 bg-danger-light px-3 py-2.5 text-sm leading-relaxed">
+            <p className="font-bold text-absent">تنبيه: يُمنع تصوير الاختبار أو نشره</p>
+            <p className="mt-1 text-ink">
+              يُمنع تصوير أسئلة الاختبار أو تسجيلها بالفيديو أو نسخها أو إرسالها لأي أحد. تظهر على الشاشة
+              علامة باسمك ورقم هويتك، فأي صورة تُنشر يُعرف صاحبها، ويُعدّ ذلك غشًّا تُطبَّق عليه لائحة
+              السلوك والمواظبة. وتُخفى الأسئلة إن خرجت من صفحة الاختبار.
+            </p>
+          </div>
         )}
         {state === "upcoming" && (
           <p className="mt-4 rounded-card bg-warning/10 px-3 py-2 text-sm text-warning">
