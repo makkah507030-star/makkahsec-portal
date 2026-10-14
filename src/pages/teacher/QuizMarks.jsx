@@ -110,7 +110,10 @@ export default function QuizMarks() {
   }, [quizId]);
 
   // طلاب الفصل وإجاباتهم
+  // loadSeq: عند تبديل الاختبار أو الفصل بسرعة يُهمل الطلب الأقدم إن وصل متأخرًا
+  const loadSeq = useRef(0);
   const loadClass = async () => {
+    const seq = ++loadSeq.current;
     setClassLoaded(false);
     if (!classId || !quizId) { setStudents([]); setSubs({}); return; }
     const [{ data: en, error: e1 }, { data: sb, error: e2 }] = await Promise.all([
@@ -119,6 +122,7 @@ export default function QuizMarks() {
       supabase.from("quiz_submissions")
         .select("*").eq("quiz_id", quizId).eq("class_id", classId),
     ]);
+    if (seq !== loadSeq.current) return;
     setStudents((en ?? []).map((x) => x.students).filter(Boolean)
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar")));
     setSubs(Object.fromEntries((sb ?? []).map((x) => [x.student_id, x])));
@@ -275,7 +279,9 @@ export default function QuizMarks() {
             ))}
           </div>
 
-          {isPaper && (
+          {/* خانات الرصد تُبنى مرة واحدة من الدرجات المحفوظة — فلا تُعرض إلا بعد اكتمال جلب
+              الفصل الحالي، وإلا بُنيت من بيانات الفصل أو الاختبار السابق فظهرت فارغة */}
+          {isPaper && classLoaded && (
             <ScoreGrid key={`${quizId}-${classId}`} students={students} subs={subs} total={Number(quiz?.total_marks ?? 0)} onSave={saveScore} />
           )}
 
