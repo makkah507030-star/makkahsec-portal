@@ -7,6 +7,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import QuizScan from "../../components/QuizScan.jsx";
+import QuizBatchScan from "../../components/QuizBatchScan.jsx";
 import { openQuizCard } from "../../lib/quizCards.js";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import { groupQuestions } from "../../lib/omrLayout.js";
@@ -49,6 +50,7 @@ export default function QuizMarks() {
   const [active, setActive] = useState(null); // الطالب قيد الرصد
   const [fast, setFast] = useState(false);    // وضع الإدخال السريع
   const [scanFrom, setScanFrom] = useState(null); // التصحيح بالكاميرا: الطالب الذي نبدأ به
+  const [batch, setBatch] = useState(false);       // التصحيح الجماعي (QuizBatchScan)
   const [quizLoaded, setQuizLoaded] = useState(false);   // اكتمل جلب فصول الاختبار وأسئلته
   const [classLoaded, setClassLoaded] = useState(false); // اكتمل جلب طلاب الفصل
   const [loadErr, setLoadErr] = useState(null);
@@ -344,6 +346,12 @@ export default function QuizMarks() {
                     📷 التصحيح بالكاميرا
                   </button>
                 )}
+                {!isOnline && (
+                  <button className="btn-primary flex-1" onClick={() => setBatch(true)}
+                          title="صور بطاقات الفصل كلها دفعة واحدة: تُعرف كل بطاقة من رمز الطالب المطبوع فيها">
+                    🗂️ التصحيح الجماعي
+                  </button>
+                )}
                 <button className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep"
                         onClick={() => setFast(true)}>
                   الإدخال السريع
@@ -366,6 +374,12 @@ export default function QuizMarks() {
         <QuizScan quiz={quiz} questions={questions} students={students} subs={subs}
                   startId={scanFrom} onSave={saveAnswers} onAbsent={markAbsent}
                   onClose={() => { setScanFrom(null); loadClass(); }} />
+      )}
+
+      {batch && (
+        <QuizBatchScan quiz={quiz} questions={questions} students={students} subs={subs}
+                       onSave={saveAnswers} onAbsent={markAbsent}
+                       onClose={() => { setBatch(false); loadClass(); }} />
       )}
 
       {fast && (

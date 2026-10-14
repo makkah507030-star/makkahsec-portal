@@ -1,4 +1,5 @@
 // src/lib/omrReader.js
+import { codeCells, decodeBits, CODE } from "./omrCode.js";
 /* =====================================================================
    قارئ بطاقة الإجابة من صورة الجوال — يعمل كاملًا داخل المتصفح،
    ولا تُرفع الصورة لأي خادم.
@@ -341,7 +342,12 @@ export function readCard(img, layout, { maxSide = 1600, preview = true } = {}) {
   });
 
   const picks = Object.fromEntries(rows.map((r) => [r.key, r.pick]));
-  const out = { ok: true, rows, picks, contrast: Math.round(contrast) };
+  // رمز الطالب (lib/omrCode.js): المربع المطبوع أسود تمامًا، فالحد بين ٠ و١ في المنتصف
+  const bits = codeCells(layout).map((c) => {
+    const v = Math.max(0, Math.min(1, (P - discMean(at, Hm, c.x, c.y, CODE.CELL * 0.3)) / contrast));
+    return v >= 0.6 ? 1 : v <= 0.35 ? 0 : null;
+  });
+  const out = { ok: true, rows, picks, contrast: Math.round(contrast), studentHash: decodeBits(bits) };
 
   // صورة مصحّحة للبطاقة مع إبراز القراءة — ليراجعها المعلم قبل الحفظ
   if (preview) out.preview = renderPreview(at, Hm, layout, rows);
