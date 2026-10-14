@@ -1086,6 +1086,17 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
           `استكمل ${r.teacher_name} توثيق إحالة ${r.student_name} (${r.serial}).`)));
   };
 
+  // المعلم يحذف إحالته قبل اتخاذ أي إجراء فيها
+  const remove = async () => {
+    if (!window.confirm(`حذف إحالة ${r.student_name} (${r.serial})؟ لا يمكن التراجع.`)) return;
+    setBusy(true);
+    const { data, error } = await supabase.from("student_referrals").delete().eq("id", r.id).select("id");
+    setBusy(false);
+    onChange(error || !data?.length
+      ? { ok: false, text: error?.message || "تعذّر الحذف: اتُّخذ فيها إجراء أو لا تملك صلاحية حذفها." }
+      : { ok: true, text: `حُذفت الإحالة ${r.serial}.` });
+  };
+
   // ⑤ بعد رد ولي الأمر: تنتهي المتابعة وتُحفظ في السجل
   const archive = async () => {
     act({ status: "archived",
@@ -1115,6 +1126,9 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
   // ③ قرار الوكيل: أول وصولها، أو بعد إعادة الموجه
   const deciding = isDeputy && r.status === "with_deputy" && !r.counselor_at;
   const teacherTurn = r.teacher_id === uid && r.status === "returned_to_teacher";
+  // يحذف المعلم إحالته ما لم يُتخذ فيها إجراء: لم يحوّلها الوكيل ولم يصلها الموجه أو ولي الأمر
+  const teacherCanDelete = r.teacher_id === uid && !r.deputy_at && !r.counselor_id && !r.counselor_at &&
+    !r.closed_at && ["with_deputy", "returned_to_teacher"].includes(r.status);
   const stage = stageOf(r);
   const days = daysSince(stage.since);
   const late = isLate(r);
@@ -1137,6 +1151,12 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
                 className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
           الملف
         </button>
+        {teacherCanDelete && (
+          <button onClick={remove} disabled={busy}
+                  className="shrink-0 rounded-pill border border-absent/40 px-3 py-1 text-xs text-absent hover:bg-absent/5">
+            حذف
+          </button>
+        )}
         {(deputyTurn || counselorTurn || teacherTurn) && (
           <button onClick={() => { setOpen((v) => !v); setNote(""); }}
                   className="shrink-0 rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white">

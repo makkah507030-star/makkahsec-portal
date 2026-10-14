@@ -47,10 +47,19 @@ function Person({ name, me, tone = "mint" }) {
       ? "border-warning/25 bg-warning-light text-ink"
       : "border-mint-light bg-white text-ink";
   return (
-    <span className={`inline-flex max-w-full items-center gap-1.5 rounded-pill border px-3 py-1 text-sm font-medium ${look}`}>
+    <span title={name} className={`flex min-w-0 items-center justify-center gap-1.5 rounded-pill border px-3 py-1.5 text-sm font-medium ${look}`}>
       <span className="truncate">{name}</span>
       {me && <span className="shrink-0 rounded-pill bg-white/20 px-1.5 text-[10px] font-bold">أنت</span>}
     </span>
+  );
+}
+
+// شبكة بطاقات الأسماء: أعمدة متساوية فتأتي البطاقات بحجم واحد مرتبة
+function Names({ children }) {
+  return (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(13.5rem,1fr))] gap-1.5">
+      {children}
+    </div>
   );
 }
 
@@ -204,21 +213,21 @@ export default function DutyCard({ personal = false }) {
                   <p className="mb-1.5 text-[11px] font-medium text-faint">
                     المعلمون المشرفون · <span className="num">{teachers.length}</span>
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <Names>
                     {teachers.map((r, i) => (
                       <Person key={i} name={r.person_name} me={r.user_id === uid} />
                     ))}
-                  </div>
+                  </Names>
                 </div>
               )}
               {followers.length > 0 && (
                 <div className="shrink-0 border-t border-mint-light pt-3 md:border-r md:border-t-0 md:pr-4 md:pt-0">
                   <p className="mb-1.5 text-[11px] font-medium text-faint">المشرف المتابع</p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <Names>
                     {followers.map((r, i) => (
                       <Person key={i} name={r.person_name} me={r.user_id === uid} tone="amber" />
                     ))}
-                  </div>
+                  </Names>
                 </div>
               )}
             </div>
@@ -230,9 +239,9 @@ export default function DutyCard({ personal = false }) {
           {!personal && dow > 0 && (
             <Block icon={SHIELD} title="مناوبو اليوم" hint={data.today?.note || null}>
               {todayDuty.length ? (
-                <div className="flex flex-wrap gap-1.5">
+                <Names>
                   {todayDuty.map((p, i) => <Person key={i} name={p.name} me={p.me} />)}
-                </div>
+                </Names>
               ) : (
                 <p className="text-xs text-muted">لا مناوبة مسجّلة لهذا اليوم.</p>
               )}

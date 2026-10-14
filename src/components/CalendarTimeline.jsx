@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
+import { countAr } from "../lib/arabicCount";
 
 const KIND_LABEL = {
   holiday:    "إجازة",
@@ -22,13 +23,11 @@ function daysUntil(dateStr) {
 function countdownText(days) {
   if (days === 0) return "اليوم";
   if (days === 1) return "غدًا";
-  if (days < 7) return `بعد ${days} أيام`;
-  if (days < 30) {
-    const w = Math.round(days / 7);
-    return w === 1 ? "بعد أسبوع" : `بعد ${w} أسابيع`;
-  }
-  const m = Math.round(days / 30);
-  return m === 1 ? "بعد شهر" : `بعد ${m} أشهر`;
+  // الواحد بلا عدد («بعد أسبوع»)، والمثنى بصيغته («بعد أسبوعين») لا «بعد 2 أسابيع»
+  const after = (n, noun, one) => (n === 1 ? `بعد ${one}` : `بعد ${countAr(n, noun, { acc: true })}`);
+  if (days < 7) return after(days, "day", "يوم");
+  if (days < 30) return after(Math.round(days / 7), "week", "أسبوع");
+  return after(Math.round(days / 30), "month", "شهر");
 }
 
 export default function CalendarTimeline() {
