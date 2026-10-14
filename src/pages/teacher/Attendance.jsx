@@ -425,7 +425,7 @@ export default function Attendance() {
                     <p className="truncate text-sm font-medium leading-tight text-ink">{s.full_name}</p>
                     {/* رقم الهوية يظهر دائمًا، بصم الطالب أم لم يبصم */}
                     {s.national_id && (
-                      <p className="num mt-0.5 text-xs leading-none text-faint">{s.national_id}</p>
+                      <p className="num mt-0.5 text-right text-xs leading-none text-faint">{s.national_id}</p>
                     )}
                     <StudentNoteChips name={s.full_name} notes={notesBy[s.id]} />
                   </div>
