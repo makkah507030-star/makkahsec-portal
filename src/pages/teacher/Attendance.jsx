@@ -57,7 +57,7 @@ export default function Attendance() {
   const [marks, setMarks] = useState({});
   const [excused, setExcused] = useState(new Set());
   const [punched, setPunched] = useState(new Set());
-  // البصمة المقفلة (مرحلة التجربة) لا تظهر في الكشف: لا وسوم بصمة، ويبقى رقم الهوية
+  // البصمة المقفلة (مرحلة التجربة) لا تظهر في الكشف: لا وسوم بصمة
   const [fpOn, setFpOn] = useState(false);
   useEffect(() => { loadFingerprintEnabled().then(setFpOn, () => setFpOn(false)); }, []);
   const [permits, setPermits] = useState({}); // student_id -> { by, note }
@@ -423,8 +423,8 @@ export default function Attendance() {
                   <AbsenceBox stat={absStats[s.id]} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium leading-tight text-ink">{s.full_name}</p>
-                    {/* من بصم يكفيه وسم «تم التبصيم» بدل رقم هويته */}
-                    {s.national_id && !(fpOn && punched.has(s.id)) && (
+                    {/* رقم الهوية يظهر دائمًا، بصم الطالب أم لم يبصم */}
+                    {s.national_id && (
                       <p className="num mt-0.5 text-xs leading-none text-faint">{s.national_id}</p>
                     )}
                     <StudentNoteChips name={s.full_name} notes={notesBy[s.id]} />
