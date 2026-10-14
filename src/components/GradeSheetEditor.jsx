@@ -13,6 +13,7 @@ import {
      ويستطيع إرجاع الخانة للقيمة الآلية بزر ↺.
    • المجاميع تُحسب تلقائيًا حين تكتمل خانات الفترة.
    • Enter ينقل للطالب التالي في نفس العمود — لرصد سريع بلوحة المفاتيح.
+   • زر «غ» بجانب الخانة النشطة يرصد الطالب غائبًا — لوحة الأرقام في الجوال لا تكتب «غ».
    ===================================================================== */
 
 const P_LABEL = { period1: "الفترة الأولى", period2: "الفترة الثانية" };
@@ -30,6 +31,7 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
   const [bad, setBad] = useState({});          // key → true للقيمة غير الصالحة
   const [saving, setSaving] = useState(0);
   const [err, setErr] = useState(null);
+  const [active, setActive] = useState(null);  // آخر خانة نشطة "صف|عمود" — يظهر بجانبها زر «غ»
   const tableRef = useRef(null);
 
   useEffect(() => {
@@ -55,10 +57,11 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
     return true;
   };
 
-  const commit = async (student, c) => {
+  // override: قيمة تُحفظ مباشرة دون انتظار تحديث المسودة (زر «غ»)
+  const commit = async (student, c, override) => {
     const k = keyOf(student.id, c.cell);
-    if (!(k in draft)) return;
-    const res = validCell(draft[k], c.max);
+    if (override === undefined && !(k in draft)) return;
+    const res = validCell(override ?? draft[k], c.max);
     if (!res.ok) { setBad((b) => ({ ...b, [k]: true })); return; }
     setBad((b) => { const n = { ...b }; delete n[k]; return n; });
     setDraft((d) => { const n = { ...d }; delete n[k]; return n; });
@@ -68,12 +71,24 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
     await persist(student.id, c.cell, res.value);
   };
 
+  const focusNext = (row, col, from) => {
+    const next = tableRef.current?.querySelector(`input[data-r="${row + 1}"][data-c="${col}"]`);
+    if (next) next.focus(); else from?.blur();
+  };
+
   // Enter ⇒ الطالب التالي في نفس العمود
   const onKey = (e, row, col) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
-    const next = tableRef.current?.querySelector(`input[data-r="${row + 1}"][data-c="${col}"]`);
-    if (next) next.focus(); else e.currentTarget.blur();
+    focusNext(row, col, e.currentTarget);
+  };
+
+  // زر «غ»: يرصد الطالب غائبًا في الخانة ثم ينتقل للطالب التالي
+  const markAbsent = (st, c, row, col) => {
+    const k = keyOf(st.id, c.cell);
+    setDraft((d) => ({ ...d, [k]: "غ" }));
+    commit(st, c, "غ");
+    focusNext(row, col);
   };
 
   const loading = entries === null && !err;
@@ -99,7 +114,7 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-white px-4 py-2 text-[11px] text-muted">
         <span className="flex items-center gap-1.5"><span className={`h-3 w-3 rounded-[3px] border ${TONE.auto}`} /> من التصحيح الآلي</span>
         <span className="flex items-center gap-1.5"><span className={`h-3 w-3 rounded-[3px] border ${TONE.manual}`} /> عدّله المعلم</span>
-        <span>اكتب رقمًا أو «غ» للغائب · Enter للطالب التالي</span>
+        <span>اكتب رقمًا، أو اضغط زر «غ» بجانب الخانة للغائب · Enter للطالب التالي</span>
         {autoCount > 0
           ? <span className="text-mint-deep">عمود التقويمات التحريرية من <bdi>{autoCount}</bdi> اختبار قصير مصحَّح</span>
           : <span>لا توجد اختبارات قصيرة مصحَّحة لهذا الفصل بعد</span>}
@@ -158,11 +173,20 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
                             <input value={shown} inputMode="decimal"
                                    data-r={ri} data-c={ci}
                                    onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}
+                                   onFocus={() => setActive(`${ri}|${ci}`)}
                                    onBlur={() => commit(st, c)}
                                    onKeyDown={(e) => onKey(e, ri, ci)}
                                    className={`num h-8 w-14 rounded-[5px] border text-center text-xs outline-none focus:ring-2 focus:ring-mint-deep/40 ${
                                      bad[k] ? "border-absent bg-absent/10" : TONE[c.src] ?? TONE[""]}`}
                                    title={bad[k] ? `اكتب رقمًا من 0 إلى ${c.max} أو «غ»` : ""} />
+                            {active === `${ri}|${ci}` && (
+                              <button type="button" title="غائب"
+                                      onMouseDown={(e) => e.preventDefault()}
+                                      onClick={() => markAbsent(st, c, ri, ci)}
+                                      className="grid h-8 w-7 shrink-0 place-items-center rounded-[5px] border border-absent/40 text-xs font-bold text-absent hover:bg-absent/10">
+                                غ
+                              </button>
+                            )}
                             {c.src === "manual" && c.auto !== "" && (
                               <button type="button" title={`إرجاع للقيمة الآلية (${c.auto})`}
                                       onClick={() => persist(st.id, c.cell, null)}

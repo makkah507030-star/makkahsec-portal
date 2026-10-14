@@ -87,14 +87,19 @@ export default function TeacherRecords() {
           map.set(key, {
             key,
             subject,
-            subject_id: r.subject_id ?? null,
+            subject_ids: [],
             class_id: r.class_id,
             class_no: r.classes?.class_no ?? 0,
             grade: r.classes?.grade ?? 0,
             students: [],
           });
         }
+        const g = map.get(key);
+        if (r.subject_id && !g.subject_ids.includes(r.subject_id)) g.subject_ids.push(r.subject_id);
       });
+      // المادة نفسها قد تُربط حصصها بأكثر من رقم، والحصص تصل بلا ترتيب ثابت:
+      // نثبّت رقمًا واحدًا (الأصغر) حتى تُحفظ الخانات دائمًا تحت المفتاح نفسه
+      map.forEach((g) => { g.subject_ids.sort(); g.subject_id = g.subject_ids[0] ?? null; });
 
       const list = [...map.values()];
       const classIds = [...new Set(list.map((g) => g.class_id))];
