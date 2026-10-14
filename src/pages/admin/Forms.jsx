@@ -1273,6 +1273,9 @@ export default function Forms({ view = "issue", openKey = null }) {
   if (viewing) {
     const d = viewing.doc;
     const printable = d.status === "issued" || d.status === "approved";
+    // نماذج الإفادة (التنبيه والمساءلة) تصل المستفيد موقّعة من المدير، فيظهر توقيعه في خطوتها الأولى
+    // قبل القرار أيضًا كما يراها المستفيد؛ وتوقيع القرار نفسه لا يظهر إلا بعده (FormSheet)
+    const principalSigned = printable || d.status === "awaiting_reply" || d.status === "replied";
     return (
       <div className="space-y-4">
         <div className="no-print flex flex-wrap items-center justify-between gap-2">
@@ -1292,7 +1295,7 @@ export default function Forms({ view = "issue", openKey = null }) {
             <FormSheet template={viewing.template} values={d.data} doc={d}
                        sigUrl={printable ? viewing.sig : null}
                        stampUrl={printable ? viewing.stamp : null}
-                       principalSigUrl={printable ? viewing.principal : null}
+                       principalSigUrl={principalSigned ? viewing.principal : null}
                        principalName={assets.principal_name}
                        // توقيع المستفيد على إفادته يظهر متى وقّع، قبل الاعتماد أيضًا
                        replySigUrl={viewing.replySig}

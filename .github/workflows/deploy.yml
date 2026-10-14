@@ -7,6 +7,16 @@ name: Deploy
 on:
   push:
     branches: [main]
+    # توفير الرصيد: لا نشر إن اقتصر الدمج على ملفات لا تدخل في بناء الموقع
+    # (قاعدة ignore في netlify.toml لا تعمل هنا لأن النشر من GitHub لا من Netlify)
+    paths-ignore:
+      - "supabase/**"
+      - "docs/**"
+      - "**/*.md"
+      - "deploy.bat"
+      - ".github/workflows/deploy-staging.yml"
+      - ".github/workflows/staging-setup.yml"
+      - ".github/workflows/backup.yml"
   workflow_dispatch:
 
 # نشر واحد في كل مرة؛ الأحدث لا يُلغي الجاري حتى لا يُقطع رفع نصفه
