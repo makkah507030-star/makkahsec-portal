@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
 import { groupQuestions } from "../lib/omrLayout.js";
 import Loader from "../components/Loader.jsx";
+import { useSession } from "../lib/session.jsx";
 
 /* =====================================================================
    الاختبار الإلكتروني — صفحة الطالب (/quiz/:id).
@@ -13,6 +14,9 @@ import Loader from "../components/Loader.jsx";
      فلا تضيع لو انقطع الاتصال أو أُغلق المتصفح.
    • يُسلَّم تلقائيًا عند انتهاء الوقت، ولا يُسلَّم إلا مرة واحدة.
    • الأسئلة تصل بلا إجاباتها الصحيحة، والتصحيح يتم في الخادم.
+   • الحدّ من تسريب الأسئلة بالتصوير (المتصفح لا يمنعه فعليًا): علامة مائية
+     باسم الطالب وهويته تكشف مصدر أي صورة، وإخفاء الأسئلة حين يغادر الطالب
+     الصفحة، ومنع النسخ والطباعة، وترتيب للخيارات يختلف من طالب لآخر.
    ===================================================================== */
 
 const AR = { ltrs: ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"], tf: [["true", "صح"], ["false", "خطأ"]], q: "س", f: "ف",
@@ -34,6 +38,31 @@ const clock = (ms) => {
   return h ? `${h}:${p(m)}:${p(x)}` : `${p(m)}:${p(x)}`;
 };
 
+// ترتيب ثابت لكل طالب وسؤال يختلف من طالب لآخر؛ القيمة المحفوظة تبقى رقم الخيار الأصلي
+const shuffled = (n, seed) => {
+  let h = 2166136261;
+  for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  const idx = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
+    const j = h % (i + 1);
+    [idx[i], idx[j]] = [idx[j], idx[i]];
+  }
+  return idx;
+};
+
+// علامة مائية متكررة باسم الطالب وهويته تغطي الصفحة
+function Watermark({ text }) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="140">` +
+    `<text x="130" y="75" text-anchor="middle" transform="rotate(-25 130 70)" ` +
+    `font-family="IBM Plex Sans Arabic, Tahoma, sans-serif" font-size="14" fill="#101010" fill-opacity="0.09">` +
+    `${text.replace(/[<&>"]/g, "")}</text></svg>`;
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-30"
+         style={{ backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")` }} />
+  );
+}
+
 const answered = (q, a) => {
   if (a == null) return false;
   if (q.kind !== "match") return true;
@@ -43,6 +72,7 @@ const answered = (q, a) => {
 
 export default function QuizTake() {
   const { id } = useParams();
+  const { profile } = useSession();
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -119,6 +149,35 @@ export default function QuizTake() {
     return () => window.removeEventListener("beforeunload", h);
   }, [state]);
 
+  // تُخفى الأسئلة حين يغادر الطالب الصفحة أو التطبيق (أداة تصوير، تطبيق آخر، تقسيم الشاشة)
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    if (state !== "in_progress") return;
+    // قائمة «يقابله…» المفتوحة في المزاوجة قد تُفقد النافذة تركيزها على بعض الأجهزة
+    const hide = () => { if (document.activeElement?.tagName !== "SELECT") setAway(true); };
+    const vis = () => { if (document.hidden) setAway(true); };
+    // زر تصوير الشاشة في ويندوز: تُخفى الأسئلة ويُفرَّغ ما نُسخ
+    const key = (e) => {
+      if (e.key === "PrintScreen") { setAway(true); navigator.clipboard?.writeText("").catch(() => {}); }
+      if ((e.ctrlKey || e.metaKey) && ["p", "s", "c"].includes(e.key?.toLowerCase())) e.preventDefault();
+    };
+    const block = (e) => e.preventDefault();
+    window.addEventListener("blur", hide);
+    document.addEventListener("visibilitychange", vis);
+    window.addEventListener("keyup", key);
+    window.addEventListener("keydown", key);
+    document.addEventListener("copy", block);
+    document.addEventListener("contextmenu", block);
+    return () => {
+      window.removeEventListener("blur", hide);
+      document.removeEventListener("visibilitychange", vis);
+      window.removeEventListener("keyup", key);
+      window.removeEventListener("keydown", key);
+      document.removeEventListener("copy", block);
+      document.removeEventListener("contextmenu", block);
+    };
+  }, [state]);
+
   const setAnswer = (qid, v) => {
     setAnswers((prev) => {
       const next = { ...prev, [qid]: v };
@@ -134,7 +193,7 @@ export default function QuizTake() {
   };
 
   const start = async () => {
-    if (!window.confirm("بمجرد البدء يبدأ العدّ التنازلي ولا يتوقف حتى لو خرجت من الصفحة.\n\nهل أنت مستعد؟")) return;
+    if (!window.confirm("بمجرد البدء يبدأ العدّ التنازلي ولا يتوقف حتى لو خرجت من الصفحة.\n\nأتعهّد بعدم تصوير الاختبار أو نشره.\n\nهل أنت مستعد؟")) return;
     setBusy(true); setErr(null);
     const { data: d, error } = await supabase.rpc("start_online_quiz", { p_quiz: id });
     setBusy(false);
@@ -206,6 +265,16 @@ export default function QuizTake() {
             {data.quiz.instructions}
           </p>
         )}
+        {state !== "closed" && (
+          <div className="mt-4 rounded-card border border-absent/30 bg-danger-light px-3 py-2.5 text-sm leading-relaxed">
+            <p className="font-bold text-absent">تنبيه: يُمنع تصوير الاختبار أو نشره</p>
+            <p className="mt-1 text-ink">
+              يُمنع تصوير أسئلة الاختبار أو تسجيلها بالفيديو أو نسخها أو إرسالها لأي أحد. تظهر على الشاشة
+              علامة باسمك ورقم هويتك، فأي صورة تُنشر يُعرف صاحبها، ويُعدّ ذلك غشًّا تُطبَّق عليه لائحة
+              السلوك والمواظبة. وتُخفى الأسئلة إن خرجت من صفحة الاختبار.
+            </p>
+          </div>
+        )}
         {state === "upcoming" && (
           <p className="mt-4 rounded-card bg-warning/10 px-3 py-2 text-sm text-warning">
             لم يُفتح بعد — يُفتح بعد <bdi className="num font-bold">{clock(opensAt - serverNow)}</bdi>
@@ -270,14 +339,15 @@ export default function QuizTake() {
 
       {q.kind === "mcq" && (
         <div className="mt-2 grid gap-1.5">
-          {(q.options ?? []).map((o, k) => {
+          {shuffled((q.options ?? []).length, `${profile?.id}:${q.id}`).map((k, pos) => {
+            const o = q.options[k];
             const on = answers[q.id] === String(k);
             return (
               <button key={k} type="button" onClick={() => setAnswer(q.id, String(k))}
                 className={`flex items-center gap-2 rounded-card border px-3 py-2 text-start text-sm transition-colors ${
                   on ? "border-mint-deep bg-mint-tint text-ink" : "border-line bg-white text-ink hover:bg-canvas"}`}>
                 <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-bold ${
-                  on ? "border-mint-deep bg-mint-deep text-white" : "border-line text-muted"}`}>{t.ltrs[k]}</span>
+                  on ? "border-mint-deep bg-mint-deep text-white" : "border-line text-muted"}`}>{t.ltrs[pos]}</span>
                 <span className="flex-1">{o}</span>
               </button>
             );
@@ -312,8 +382,8 @@ export default function QuizTake() {
                 <select className="field w-auto max-w-[55%] py-1.5 text-sm" value={cur}
                         onChange={(e) => setAnswer(q.id, { ...(answers[q.id] ?? {}), [String(k)]: e.target.value })}>
                   <option value="">{ltr ? "Choose…" : "يقابله…"}</option>
-                  {(q.options?.right ?? []).map((r, ri) => (
-                    <option key={ri} value={String(ri)}>{t.ltrs[ri] ?? ri + 1}) {r}</option>
+                  {shuffled((q.options?.right ?? []).length, `${profile?.id}:${q.id}:r`).map((ri, pos) => (
+                    <option key={ri} value={String(ri)}>{t.ltrs[pos] ?? pos + 1}) {q.options.right[ri]}</option>
                   ))}
                 </select>
               </div>
@@ -324,7 +394,20 @@ export default function QuizTake() {
     </div>
   );
   return (
-    <div className="mx-auto max-w-2xl space-y-4 pb-24" dir={ltr ? "ltr" : "rtl"}>
+    <div className="mx-auto max-w-2xl select-none space-y-4 pb-24 print:hidden" dir={ltr ? "ltr" : "rtl"}
+         style={{ WebkitTouchCallout: "none" }}>
+      <Watermark text={`${profile?.full_name ?? ""} · ${profile?.username ?? ""}`} />
+      {away && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-paper p-6" dir="rtl">
+          <div className="max-w-sm text-center">
+            <p className="text-base font-bold text-ink">الأسئلة مخفية</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              تُخفى الأسئلة حين تغادر صفحة الاختبار. الوقت مستمر، وإجاباتك محفوظة.
+            </p>
+            <button className="btn-primary mt-4 w-full" onClick={() => setAway(false)}>العودة للاختبار</button>
+          </div>
+        </div>
+      )}
       <div className="sticky top-0 z-20 -mx-1 flex items-center gap-3 rounded-card border border-line bg-white/95 px-3 py-2 shadow-card backdrop-blur" dir="rtl">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-ink">{data.quiz?.title}</p>
