@@ -16,6 +16,10 @@ const P_SHORT = { period1: "p1", period2: "p2" };
 
 const clean = (t) => String(t ?? "").replace(/\s+/g, " ").trim();
 export const subjectKey = (g) => g.subject_id || clean(g.subject);
+// كل مفاتيح المادة: قد تُربط حصص المادة نفسها في الفصل بأكثر من رقم مادة، وكان الرقم
+// المأخوذ يتغيّر بين فتح وآخر فتُحفظ الخانات تحت مفاتيح مختلفة — فنقرأها كلها
+export const subjectKeys = (g) =>
+  [...new Set([...(g.subject_ids ?? []), g.subject_id, clean(g.subject)].filter(Boolean))];
 export const fmtNum = (v) => String(Math.round(Number(v) * 10) / 10);
 export const cellId = (period, col) => `${P_SHORT[period]}:${col}`;
 
@@ -44,7 +48,7 @@ export async function loadQuizMarks(supabase, { uid, year, term, groups }) {
   const out = {};
   groups.forEach((g) => {
     const mine = qz.filter((q) =>
-      (q.subject_id && g.subject_id ? q.subject_id === g.subject_id : clean(q.subject_name) === clean(g.subject)) &&
+      (q.subject_id && g.subject_id ? subjectKeys(g).includes(q.subject_id) : clean(q.subject_name) === clean(g.subject)) &&
       linked.has(`${q.id}|${g.class_id}`));
     if (!mine.length) return;
     const res = { period1: {}, period2: {}, count: { period1: 0, period2: 0 } };
@@ -73,13 +77,18 @@ export async function loadEntries(supabase, { uid, year, term, groups }) {
   if (!uid || !groups.length) return {};
   const classIds = [...new Set(groups.map((g) => String(g.class_id)))];
   const { data } = await supabase.from("grade_entries")
-    .select("class_id, subject_key, student_id, cell, value")
+    .select("class_id, subject_key, student_id, cell, value, updated_at")
     .eq("teacher_user_id", uid).eq("academic_year", String(year)).eq("term", term)
     .in("class_id", classIds);
-  const out = {};
+  const out = {}, at = {};
   (data ?? []).forEach((e) => {
-    const g = groups.find((x) => String(x.class_id) === e.class_id && subjectKey(x) === e.subject_key);
-    if (g) out[`${g.key}|${e.student_id}|${e.cell}`] = e.value ?? "";
+    const g = groups.find((x) => String(x.class_id) === e.class_id && subjectKeys(x).includes(e.subject_key));
+    if (!g) return;
+    // الخانة نفسها تحت أكثر من مفتاح: الأحدث هو ما كتبه المعلم أخيرًا
+    const k = `${g.key}|${e.student_id}|${e.cell}`;
+    if (k in at && at[k] >= (e.updated_at ?? "")) return;
+    at[k] = e.updated_at ?? "";
+    out[k] = e.value ?? "";
   });
   return out;
 }
@@ -90,14 +99,19 @@ export async function saveEntry(supabase, { uid, year, term, g, studentId, cell,
     teacher_user_id: uid, class_id: String(g.class_id), subject_key: subjectKey(g),
     academic_year: String(year), term, student_id: String(studentId), cell,
   };
-  if (value === null) {
+  // حذف الخانة تحت مفاتيح المادة المعطاة (لا تظهر نسخة قديمة بعد الإرجاع أو التعديل)
+  const drop = (keys) => {
     let q = supabase.from("grade_entries").delete();
-    Object.entries(key).forEach(([k, v]) => { q = q.eq(k, v); });
-    return q;
-  }
-  return supabase.from("grade_entries")
+    Object.entries(key).forEach(([k, v]) => { if (k !== "subject_key") q = q.eq(k, v); });
+    return q.in("subject_key", keys);
+  };
+  if (value === null) return drop(subjectKeys(g));
+  const res = await supabase.from("grade_entries")
     .upsert({ ...key, value, updated_at: new Date().toISOString() },
             { onConflict: "teacher_user_id,class_id,subject_key,academic_year,term,student_id,cell" });
+  const others = subjectKeys(g).filter((k) => k !== key.subject_key);
+  if (!res.error && others.length) await drop(others);
+  return res;
 }
 
 /* ——— صف طالب كاملًا ———
