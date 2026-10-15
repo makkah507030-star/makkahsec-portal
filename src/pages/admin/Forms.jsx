@@ -147,6 +147,20 @@ const isSelfTarget = (target, recipient, uid, myName) =>
   (target && (target.uid ?? target.user_id) === uid) ||
   (normName(myName) !== "" && normName(recipient) === normName(myName));
 
+// مساءلة الغياب وقرار الحسم: عدد أيام الغياب وفترته (بالهجري) لسطر الرقم واسم المعلم.
+// الفترة في المساءلة f4 وعددها days_count، وفي قرار الحسم الفترة f6 وعددها f5
+const ABSENCE_FIELDS = { frm_absence_inquiry: ["f4", "days_count"], frm_absence_deduction: ["f6", "f5"] };
+const absenceLine = (d) => {
+  const keys = ABSENCE_FIELDS[d.form_templates?.key];
+  if (!keys) return "";
+  const range = d.data?.[keys[0]];
+  const n = Number(d.data?.[keys[1]]) || rangeDays(range);
+  if (!n) return "";
+  const [a, b] = String(range ?? "").split(" إلى ").map((x) => x.match(/\d{2}\/\d{2}\/1[34]\d\d/)?.[0]);
+  const span = a && b && a !== b ? `: من ${a} إلى ${b}` : a ? `: ${a}` : "";
+  return `غياب ${countAr(n, "day", { acc: true })}${span}`;
+};
+
 // صيغة جاهزة: تستبدل النص، أو تُضاف سطرًا جديدًا في الحقول المعلَّمة presets_append
 const pickPreset = (field, current, t) => {
   if (!field.presets_append) return t;
@@ -1950,6 +1964,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                   <p className="flex items-center gap-2 font-semibold text-ink"><span>{d.title}</span><Sticker flag={d.flag} /></p>
                   <p className="num mt-0.5 text-xs text-faint">
                     {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
+                    {absenceLine(d) && <> · <span dir="rtl" className="font-semibold text-absent">{absenceLine(d)}</span></>}
                   </p>
                 </div>
                 <button onClick={() => startEdit(d)} className="btn-primary px-4 py-1.5 text-xs">
@@ -1993,6 +2008,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                   <p className="font-semibold text-ink">{d.title}</p>
                   <p className="num mt-0.5 text-xs text-faint">
                     {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
+                    {absenceLine(d) && <> · <span dir="rtl" className="font-semibold text-absent">{absenceLine(d)}</span></>}
                   </p>
                   {d.created_by !== session.user.id && d.signature_name && (
                     <p className="mt-0.5 text-[11px] text-faint">أصدرها: {d.signature_name}</p>
@@ -2193,6 +2209,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                     <p className="flex items-center gap-2 text-sm font-medium text-ink"><span className="truncate">{d.title}</span><Sticker flag={d.flag} /></p>
                     <p className="num mt-0.5 text-xs text-faint">
                       {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
+                      {absenceLine(d) && <> · <span dir="rtl" className="font-semibold text-absent">{absenceLine(d)}</span></>}
                     </p>
                   </div>
                   <span className="flex shrink-0 items-center gap-1.5">
@@ -2304,6 +2321,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                   <p className="flex items-center gap-2 font-semibold text-ink"><span>{d.title}</span><Sticker flag={d.flag} /></p>
                   <p className="num mt-0.5 text-xs text-faint">
                     {d.serial}{d.recipient ? ` · ${d.recipient}` : ""}
+                    {absenceLine(d) && <> · <span dir="rtl" className="font-semibold text-absent">{absenceLine(d)}</span></>}
                   </p>
                   {(d.data?.self_issued || (d.created_by && d.recipient_user_id === d.created_by)) && (
                     <p className="mt-1.5 inline-block rounded-pill bg-absent/10 px-2.5 py-0.5 text-[11px] font-semibold text-absent">
