@@ -214,6 +214,9 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .qlist span { font-size: 12px; color: var(--muted); }
 .tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .tiles span { display: grid; justify-items: center; gap: 1px; padding: 8px 4px; border-radius: 10px; background: var(--tint); border: 1px solid var(--mint-light); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.tiles.t2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tiles.t2 b { font-size: 24px; }
+.tiles b small { font-size: 12px; font-weight: 600; }
 .tiles b { font-size: 18px; color: var(--deep); line-height: 1.2; }
 .grp { font-size: 12.5px; font-weight: 700; color: var(--deep); margin-top: 2px; }
 .keys { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); }
@@ -619,8 +622,9 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
     <div class="sec-h"><h2>التطوير المهني والزيارات</h2><p>ما تعلّمه وما طبّقه</p></div>
     <div class="grid2">
       <div class="card">
-        <div class="card-h"><div><h3>التطوير المهني</h3><p class="sub num">٣٢ ساعة حضور هذا العام</p></div><span class="src mix">بوابة + المعلم</span></div>
-        <div class="tags"><span class="tag num">برامج تدريبية، ٢٢ ساعة</span><span class="tag num">مؤتمرات وورش، ١٠ ساعات</span><span class="tag num">لقاءات مجتمع التعلم، ٦</span><span class="tag num">زيارات تبادلية، ٢</span></div>
+        <div class="card-h"><div><h3>التطوير المهني</h3><p class="sub">هذا العام</p></div><span class="src mix">بوابة + المعلم</span></div>
+        <div class="imp-sum"><span class="v num" style="direction:rtl">٣٢</span><span class="sub">ساعة حضور</span></div>
+        <div class="tiles t2"><span><b class="num">٢٢ <small>ساعة</small></b>برامج تدريبية</span><span><b class="num">١٠ <small>ساعات</small></b>مؤتمرات وورش</span><span><b class="num">٦</b>لقاءات مجتمع التعلم</span><span><b class="num">٢</b>زيارات تبادلية</span></div>
       </div>
       <div class="card">
         <div class="card-h"><div><h3>زيارات الدعم</h3><p class="sub">من الإدارة المدرسية · نقاط القوة فقط</p></div><span class="src auto">تلقائي</span></div>
