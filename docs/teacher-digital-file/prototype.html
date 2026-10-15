@@ -353,6 +353,23 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .opt:has(input:not(:checked)) { color: var(--faint); text-decoration: line-through; }
 .share-wrap { display: grid; gap: 12px; background: var(--surface); border: 1px dashed var(--mint); border-radius: 18px; padding: 14px 16px; }
 .share-wrap .qr-card { border: 0; padding: 0; }
+.pill { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; background: var(--bg); }
+.pblk { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.ph3 { font-size: 14px; }
+.toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; }
+.toggle input { position: absolute; opacity: 0; }
+.knob { flex: none; width: 44px; height: 26px; border-radius: 999px; background: var(--track); position: relative; transition: background .2s; }
+.knob::after { content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: inset-inline-start .2s; }
+.toggle input:checked + .knob { background: var(--deep); }
+.toggle input:checked + .knob::after { inset-inline-start: 21px; }
+.toggle input:focus-visible + .knob { outline: 2px solid var(--mint); outline-offset: 2px; }
+.pend { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; background: var(--bg); }
+.pend p { font-size: 13.5px; }
+.pend-b { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.fields label, .addw { font-size: 12.5px; color: var(--muted); display: grid; gap: 4px; }
+.fields select, .fields input, .addw input { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.addw { grid-template-columns: minmax(0,1fr); }
 
 .sents { display: grid; gap: 6px; }
 .sent { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; font-size: 13px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; cursor: pointer; background: var(--bg); }
@@ -452,6 +469,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
           <span class="hchip">رياضيات ٢-١ و٢-٢</span>
           <span class="hchip num">٥ فصول · ١٤٢ طالبًا</span>
           <span class="hchip num">٢٤ حصة أسبوعيًا</span>
+          <span class="hchip" id="rankChip">معلم متقدم</span>
         </div>
       </div>
       <div class="ring-wrap">
@@ -532,7 +550,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   <section class="sec anim" id="teach">
     <div class="sec-h"><h2>التخطيط والتدريس</h2><p>التحضير والمتابعة</p></div>
     <div class="card week" id="weekCard">
-      <div class="card-h"><div><h3>دروس هذا الأسبوع</h3><p class="sub num">من ١٥/١٠ إلى ٢١/١٠/٢٠٢٦ · كتبها المعلم عند مشاركة الملف</p></div><span class="src up">يكتبها المعلم</span></div>
+      <div class="card-h"><div><h3>دروس هذا الأسبوع</h3><p class="sub num">من ١٥/١٠ إلى ٢١/١٠/٢٠٢٦ · كتبها المعلم وتظهر سبعة أيام</p></div><span class="src up">يكتبها المعلم</span></div>
       <div class="lessons" id="weekLessons"></div>
     </div>
     <div class="grid2">
@@ -651,7 +669,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
     </div>
     <div class="card">
       <div class="card-h"><div><h3>إنجازات أخرى</h3><p class="sub">يكتبها المعلم بنفسه</p></div><span class="src up">يكتبه المعلم</span></div>
-      <ul class="qlist">
+      <ul class="qlist" id="otherWins">
         <li><b>المركز الثاني في أولمبياد الرياضيات على مستوى المنطقة</b><span>تأهل أحد طلابه للمرحلة الوطنية</span></li>
         <li><b>شكر من مكتب التعليم</b><span class="num">١٤٤٧هـ</span></li>
         <li><b>عضو لجنة التميّز المدرسي</b><span>هذا العام</span></li>
@@ -675,18 +693,14 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
     </details>
   </section>
 
-  <!-- المشاركة: يختار المعلم الأقسام ثم يعرض الرمز -->
+  <!-- لوحة المعلم: يراها المعلم وحده -->
   <div class="share-wrap">
-  <div class="picker">
-    <div class="card-h"><div><h3>ماذا يرى الزائر؟</h3><p class="sub">يختار المعلم الأقسام قبل المشاركة، وتختفي غير المختارة من الصفحة فورًا. جرّبها هنا.</p></div><span class="lock" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap">يراه المعلم فقط</span></div>
-    <div class="opts" id="opts"></div>
-    <p class="sub" style="background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:8px 12px">مثال لتنبيه يراه المعلم الذي لا اختبار له في البوابة: «نسبة طلابك لا تظهر لأنه لا اختبارات لك هذا الفصل. أضف اختبارك من «اختباراتي» ← «اختبار من خارج البوابة» وارصد درجات طلابك لتظهر.»</p>
-    <div class="colors">
-      <div><h3 style="font-size:14px">قراءة في ٣٠ ثانية</h3><p class="sub">اختر ٣ جمل تظهر للزائر. تظهر هنا الجمل التي تستحقها بياناتك فقط، وأرقامها تتحدّث تلقائيًا.</p></div>
-      <div class="sents" id="sents"></div>
-    </div>
-    <div class="colors">
-      <div><h3 style="font-size:14px">لون ملفك</h3><p class="sub">الأخضر لون البوابة هو الافتراضي لكل المعلمين، ويمكنك اختيار غيره.</p></div>
+    <div class="card-h"><div><h3 style="font-size:17px">لوحة المعلم</h3><p class="sub">إعدادات ملفك الرقمي</p></div><span class="lock pill">يراه المعلم فقط</span></div>
+
+    <div class="pblk"><label class="toggle"><input type="checkbox" id="onSw" checked><span class="knob"></span><span><b>ملفي الرقمي</b> <span class="sub" id="onTxt">مفعّل: يفتحه من معه الرابط</span></span></label></div>
+
+    <div class="pblk colors">
+      <div><h3 class="ph3">لون ملفك</h3><p class="sub">الأخضر لون البوابة هو الافتراضي لكل المعلمين، ويمكنك اختيار غيره.</p></div>
       <div class="row" id="swatches">
         <button class="sw" type="button" data-s="science" aria-pressed="true"><span class="dot" style="background:#3E6350"></span>أخضر<small>افتراضي</small></button>
         <button class="sw" type="button" data-s="math" aria-pressed="false"><span class="dot" style="background:#3A78B5"></span>أزرق</button>
@@ -698,22 +712,55 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
         <button class="sw" type="button" data-s="slate" aria-pressed="false"><span class="dot" style="background:#4A5866"></span>رمادي</button>
       </div>
     </div>
-  </div>
-  <div class="wk-in">
-    <h3 style="font-size:14px">دروسك خلال صلاحية الرابط</h3>
-    <label for="wkText">اكتب دروس الأيام السبعة القادمة، كل مادة في سطر، وتظهر للزائر في قسم التخطيط. اختياري: إن تركتها فارغة لا يظهر القسم.</label>
-    <textarea id="wkText" rows="5">رياضيات ٢-١: المتتابعات الحسابية · المتتابعات الهندسية
-رياضيات ٢-٢: الاحتمال المشروط · مراجعة الوحدة الثالثة</textarea>
-  </div>
+
+    <div class="pblk">
+      <div><h3 class="ph3">آراء الإدارة بانتظار موافقتك</h3><p class="sub">لا يظهر الرأي للزائر إلا إذا اخترت «إظهار». ولا يمكنك تعديل نصه.</p></div>
+      <div class="pend"><p>«تخطيطه للدروس مسبق ومنظّم، وسجل متابعته مكتمل أولًا بأول…»</p><span class="sub num">وكيل الشؤون التعليمية، ٠٥/١٠/٢٠٢٦</span>
+        <div class="pend-b"><button class="btn pri" type="button" data-q="show">إظهار</button><button class="btn ghost" type="button" data-q="hide">إخفاء</button><span class="sub" id="qState"></span></div></div>
+    </div>
+
+    <div class="pblk">
+      <div><h3 class="ph3">بياناتك</h3><p class="sub">تُدخل مرة واحدة. ما تتركه فارغًا لا يظهر.</p></div>
+      <div class="fields">
+        <label>سنة التعيين<select id="fYear"><option>١٤٣٤هـ</option><option>١٤٣٥هـ</option><option value="">—</option></select></label>
+        <label>تقييم الأداء ١٤٤٧هـ (من ٥)<input id="fRate" value="٤٫٦٢" inputmode="decimal"></label>
+        <label>رتبة المعلم<select id="fRank"><option value="">—</option><option>معلم ممارس</option><option selected>معلم متقدم</option><option>معلم خبير</option></select></label>
+      </div>
+    </div>
+
+    <div class="pblk picker">
+      <div><h3 class="ph3">ماذا يرى الزائر؟</h3><p class="sub">تختفي الأقسام غير المختارة من الصفحة فورًا. جرّبها هنا.</p></div>
+    <div class="opts" id="opts"></div>
+    <p class="sub" style="background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:8px 12px">مثال لتنبيه يراه المعلم الذي لا اختبار له في البوابة: «نسبة طلابك لا تظهر لأنه لا اختبارات لك هذا الفصل. أضف اختبارك من «اختباراتي» ← «اختبار من خارج البوابة» وارصد درجات طلابك لتظهر.»</p>
+    </div>
+
+    <div class="pblk">
+      <div><h3 class="ph3">قراءة في ٣٠ ثانية</h3><p class="sub">اختر ٣ جمل تظهر للزائر. تظهر هنا الجمل التي تستحقها بياناتك فقط، وأرقامها تتحدّث تلقائيًا.</p></div>
+      <div class="sents" id="sents"></div>
+    </div>
+
+    <div class="pblk">
+      <div><h3 class="ph3">إنجازات أخرى</h3><p class="sub">اكتب ما تريد إظهاره في قسم الإنجازات، كل إنجاز في سطر.</p></div>
+      <form class="addw" id="addWin"><input id="winT" placeholder="مثل: المركز الأول في مسابقة…" aria-label="الإنجاز"><input id="winD" placeholder="تفصيل اختياري" aria-label="التفصيل"><button class="btn pri" type="submit">إضافة</button></form>
+    </div>
+
+    <div class="pblk">
+      <div><h3 class="ph3">شارك ملفك</h3></div>
+      <div class="wk-in">
+        <label for="wkText">دروسك هذا الأسبوع: كل مادة في سطر. تظهر للزائر سبعة أيام من كتابتها ثم تختفي، واكتبها من جديد متى شئت. اختياري.</label>
+        <textarea id="wkText" rows="4">رياضيات ٢-١: المتتابعات الحسابية، المتتابعات الهندسية
+رياضيات ٢-٢: الاحتمال المشروط، مراجعة الوحدة الثالثة</textarea>
+      </div>
   <div class="qr-card">
     <div>
-      <h3>شارك هذا الملف</h3>
-      <p class="sub">يعرضه المعلم للزائر، فيمسح الرمز بجواله ويرى الأقسام التي اخترتها. الرابط صالح ٧ أيام، ويُلغى في أي وقت.</p>
-      <button class="copy" id="copyBtn" type="button">نسخ الرابط</button>
+      <h3>رابط ملفك</h3>
+      <p class="sub">رابط ثابت طوال العام: يعرضه المعلم للزائر فيمسح الرمز بجواله ويرى الأقسام التي اخترتها.</p>
+      <button class="copy" id="copyBtn" type="button">نسخ الرابط</button> <button class="copy" type="button" id="newLink">إلغاء الرابط وإنشاء جديد</button>
       <p class="sub code" id="linkText" style="color:var(--muted);font-size:11.5px;margin-top:6px">makkahsec.sa/t/MS-7Q4K</p>
     </div>
     <div class="qr-box" id="qr" aria-label="رمز QR للملف"></div>
   </div>
+    </div>
   </div>
 
   <!-- سجل الزوار: للمعلم فقط -->
@@ -843,6 +890,31 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   };
   [].forEach.call(document.querySelectorAll(".sw"), function (b) { b.addEventListener("click", function () { setSubject(b.dataset.s); }); });
   setSubject("science");
+
+  /* لوحة المعلم: التفعيل، والرتبة، ورأي الإدارة، وإنجازات أخرى */
+  var onSw = document.getElementById("onSw"), onTxt = document.getElementById("onTxt");
+  onSw.addEventListener("change", function () { onTxt.textContent = onSw.checked ? "مفعّل: يفتحه من معه الرابط" : "موقوف: الرابط معطّل ولا يفتحه أحد"; });
+  var fRank = document.getElementById("fRank"), rankChip = document.getElementById("rankChip");
+  fRank.addEventListener("change", function () { rankChip.textContent = fRank.value; rankChip.hidden = !fRank.value; });
+  [].forEach.call(document.querySelectorAll("[data-q]"), function (b) {
+    b.addEventListener("click", function () {
+      var show = b.dataset.q === "show";
+      document.querySelector("#quote .more").hidden = !show;
+      document.getElementById("qState").textContent = show ? "يظهر للزائر" : "مخفي عن الزائر";
+    });
+  });
+  document.getElementById("addWin").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var t = document.getElementById("winT").value.trim(), d = document.getElementById("winD").value.trim();
+    if (!t) return;
+    var li = document.createElement("li"), b = document.createElement("b"), sp = document.createElement("span");
+    b.textContent = t; sp.textContent = d; li.appendChild(b); li.appendChild(sp);
+    document.getElementById("otherWins").appendChild(li);
+    document.getElementById("winT").value = ""; document.getElementById("winD").value = "";
+  });
+  document.getElementById("newLink").addEventListener("click", function () {
+    if (window.confirm("إلغاء الرابط الحالي؟ يتعطل الرابط القديم ورمزه، ويُنشأ رابط جديد.")) document.getElementById("linkText").textContent = "makkahsec.sa/t/MS-2H8D";
+  });
 
   /* ترحيب الزائر */
   var welcome = document.getElementById("welcome");
