@@ -112,7 +112,7 @@ body { font-family: PlexL, Plex, Tahoma, sans-serif; color: #fff; }
         <div class="h"><span class="ico"><img src="assets/icon-white.png" alt=""><i class="ring" id="r1"></i><i class="ring" id="r2"></i><i class="ring" id="r3"></i></span>
           <b>بوابة مكة الثانوية</b><span>الآن</span></div>
         <p class="from">وكيل الشؤون التعليمية</p>
-        <p class="msg">تم اختيارك ضمن <span class="hl" id="hl">أداة الزيارات الصفية</span> لفريق التقويم الخارجي من هيئة تقويم التعليم والتدريب.</p>
+        <p class="msg">تم اختيارك ضمن <span class="hl" id="hl">أداة الملاحظة الصفية</span> لفريق التقويم الخارجي من هيئة تقويم التعليم والتدريب.</p>
       </div>
     </div>
   </section>
@@ -136,7 +136,7 @@ body { font-family: PlexL, Plex, Tahoma, sans-serif; color: #fff; }
     <div class="center">
       <div class="logo-box"><i class="burst" id="b1"></i><i class="burst" id="b2"></i><img src="assets/icon-white.png" alt="" id="logo"></div>
       <p class="title" id="ttl">ملف المعلم الرقمي<i class="shine" id="shine"></i></p>
-      <p class="mid soft" id="sub3">تقرير واحد عن أعمالك، يُبنى لحظة فتحه</p>
+      <p class="mid soft" id="sub3">تقرير واحد عن أعمالك، يُبنى لحظة تفعيله</p>
     </div>
   </section>
 
@@ -144,9 +144,9 @@ body { font-family: PlexL, Plex, Tahoma, sans-serif; color: #fff; }
   <section class="scene" id="s4">
     <p class="cap" id="cap4">من عملك في البوابة… تلقائيًا</p>
     <div class="phone" id="ph4"><div class="screen"><span class="notch"></span><img src="assets/report.png" alt="" id="rep"></div></div>
-    <div class="badge" id="bd1" style="right:14px;top:300px"><b data-count="412" data-start="21" data-dur="1.2">0</b><span>حصة حضّرها</span></div>
-    <div class="badge" id="bd2" style="left:12px;top:420px"><b data-count="81.4" data-dec="1" data-suffix="%" data-start="22.5" data-dur="1.2">0</b><span>متوسط طلابه</span></div>
-    <div class="badge" id="bd3" style="right:18px;top:560px"><b data-count="7.4" data-dec="1" data-prefix="+" data-start="24" data-dur="1.2">0</b><span>تحسّن طلابه</span></div>
+    <div class="badge" id="bd1" style="right:14px;top:300px"><b data-count="412" data-start="22.2" data-dur="1.2">0</b><span>حصة حضّرها</span></div>
+    <div class="badge" id="bd2" style="left:12px;top:420px"><b data-count="81.4" data-dec="1" data-suffix="%" data-start="25.6" data-dur="1.2">0</b><span>متوسط طلابه</span></div>
+    <div class="badge" id="bd3" style="right:18px;top:560px"><b data-count="7.4" data-dec="1" data-prefix="+" data-start="27.4" data-dur="1.2">0</b><span>تحسّن طلابه</span></div>
     <div class="chips">
       <span class="chip" id="c1">حصصك وتحضيرك</span><span class="chip" id="c2">نتائج طلابك وتحسّنهم</span>
       <span class="chip" id="c3">اختباراتك</span><span class="chip" id="c4">تطويرك المهني</span>
@@ -212,62 +212,63 @@ anim($("bl2"), { transform: ["translate(0,0)", "translate(-240px,-420px)"] }, 0,
 anim($("bl3"), { transform: ["translate(0,0) scale(1)", "translate(-80px,-300px) scale(1.4)"] }, 0, END, INOUT);
 
 /* الانتقال بين المشاهد: دائرة بألوان الهوية تتمدد من الوسط ثم تختفي */
-[8, 14, 19, 29, 35, 40].forEach((T, i) => anim($("w" + (i + 1)), [
+[10.6, 14.4, 20.2, 30.1, 33.8, 36.8].forEach((T, i) => anim($("w" + (i + 1)), [
   { transform: "scale(0)", opacity: 1 }, { transform: "scale(1)", opacity: 1, offset: .5 }, { transform: "scale(1.15)", opacity: 0 }], T - .35, .7, INOUT));
 
+/* التوقيت مطابق للتعليق الصوتي (vo.mp3 يبدأ عند 0.6 ث): كل مشهد يبدأ مع سطره */
 /* 1) الإشعار */
-scene("s1", 0, 8);
+scene("s1", 0, 10.6);
 rise($("lock"), .1, .7);
 anim($("notif"), { transform: ["translateY(-220px) scale(.92)", "translateY(0) scale(1)"], opacity: [0, 1] }, .8, .7, BACK);
 anim($("shake"), { transform: ["translateX(0)", "translateX(-7px)", "translateX(7px)", "translateX(-6px)", "translateX(6px)", "translateX(-3px)", "translateX(0)"] }, 1.5, .6, "linear");
 ["r1", "r2", "r3"].forEach((id, i) => anim($(id), { opacity: [.9, 0], transform: ["scale(1)", "scale(2.6)"] }, 1.5 + i * .3, .9, "ease-out"));
-anim($("hl"), { backgroundSize: ["0% 100%", "100% 100%"] }, 3, .8, INOUT);
-anim($("shake"), { transform: ["scale(1)", "scale(1.06)"] }, 5, 2.6, INOUT, "forwards");
+anim($("hl"), { backgroundSize: ["0% 100%", "100% 100%"] }, 6.6, .8, INOUT);
+anim($("shake"), { transform: ["scale(1)", "scale(1.06)"] }, 7.6, 2.8, INOUT, "forwards");
 
 /* 2) الكلمات */
-scene("s2", 8, 14);
-[...$("l1").querySelectorAll(".w")].forEach((w, i) => rise(w, 8.3 + i * .22));
-[...$("l2").querySelectorAll(".w")].forEach((w, i) => rise(w, 9.9 + i * .22));
-anim($("ul"), { transform: ["scaleX(0)", "scaleX(1)"] }, 11.2, .6, INOUT);
-["i1", "i2", "i3"].forEach((id, i) => { pop($(id), 11.8 + i * .25);
-  anim($(id), { transform: ["translateY(0)", "translateY(-8px)", "translateY(0)"] }, 12.6 + i * .2, 1.2, INOUT, "forwards"); });
+scene("s2", 10.6, 14.4);
+[...$("l1").querySelectorAll(".w")].forEach((w, i) => rise(w, 10.8 + i * .22));
+[...$("l2").querySelectorAll(".w")].forEach((w, i) => rise(w, 12.5 + i * .18));
+anim($("ul"), { transform: ["scaleX(0)", "scaleX(1)"] }, 13.3, .5, INOUT);
+["i1", "i2", "i3"].forEach((id, i) => { pop($(id), 13.4 + i * .18);
+  anim($(id), { transform: ["translateY(0)", "translateY(-8px)", "translateY(0)"] }, 13.9 + i * .1, .6, INOUT, "forwards"); });
 
 /* 3) الشعار */
-scene("s3", 14, 19);
-anim($("logo"), { transform: ["scale(0) rotate(-25deg)", "scale(1) rotate(0)"], opacity: [0, 1] }, 14.2, .8, BACK);
-["b1", "b2"].forEach((id, i) => anim($(id), { opacity: [.9, 0], transform: ["scale(.6)", "scale(2.4)"] }, 14.5 + i * .25, 1, "ease-out"));
-anim($("ttl"), { clipPath: ["inset(0 0 0 100%)", "inset(0 0 0 0)"] }, 15, .8, INOUT);
-anim($("shine"), { left: ["-90px", "110%"] }, 16.1, .9, INOUT);
-rise($("sub3"), 16.3);
+scene("s3", 14.4, 20.2);
+anim($("logo"), { transform: ["scale(0) rotate(-25deg)", "scale(1) rotate(0)"], opacity: [0, 1] }, 14.5, .8, BACK);
+["b1", "b2"].forEach((id, i) => anim($(id), { opacity: [.9, 0], transform: ["scale(.6)", "scale(2.4)"] }, 14.8 + i * .25, 1, "ease-out"));
+anim($("ttl"), { clipPath: ["inset(0 0 0 100%)", "inset(0 0 0 0)"] }, 14.7, .8, INOUT);
+anim($("shine"), { left: ["-90px", "110%"] }, 18.9, .9, INOUT);
+rise($("sub3"), 16.4);
 
 /* 4) التقرير */
-scene("s4", 19, 29);
-rise($("cap4"), 19.2);
-anim($("ph4"), { transform: ["translateY(420px) rotate(10deg)", "translateY(0) rotate(0)"] }, 19.3, 1, BACK);
-anim($("rep"), { transform: ["translateY(0)", "translateY(-62%)"] }, 20.6, 7.8, INOUT);
-["bd1", "bd2", "bd3"].forEach((id, i) => pop($(id), 20.8 + i * 1.5, "scale(.3) rotate(-8deg)"));
-["c1", "c2", "c3", "c4"].forEach((id, i) => pop($(id), 21.4 + i * 1.4, "translateY(20px) scale(.6)"));
+scene("s4", 20.2, 30.1);
+rise($("cap4"), 20.4);
+anim($("ph4"), { transform: ["translateY(420px) rotate(10deg)", "translateY(0) rotate(0)"] }, 20.4, 1, BACK);
+anim($("rep"), { transform: ["translateY(0)", "translateY(-62%)"] }, 21.6, 8, INOUT);
+[22, 25.4, 27.2].forEach((t0, i) => pop($(["bd1", "bd2", "bd3"][i]), t0, "scale(.3) rotate(-8deg)"));
+[22.6, 25.3, 27.7, 28.6].forEach((t0, i) => pop($("c" + (i + 1)), t0, "translateY(20px) scale(.6)"));
 
 /* 5) لوحة المعلم */
-scene("s5", 29, 35);
-rise($("cap5"), 29.2);
-anim($("ph5"), { transform: ["translateX(-460px) rotate(-8deg)", "translateX(0) rotate(0)"] }, 29.3, .9, BACK);
-anim($("pan"), { transform: ["translateY(0)", "translateY(-38%)"] }, 30.2, 4.3, INOUT);
-["k1", "k2", "k3"].forEach((id, i) => pop($(id), 30.8 + i * 1.1, "scale(.3)"));
+scene("s5", 30.1, 33.8);
+rise($("cap5"), 30.2);
+anim($("ph5"), { transform: ["translateX(-460px) rotate(-8deg)", "translateX(0) rotate(0)"] }, 30.2, .8, BACK);
+anim($("pan"), { transform: ["translateY(0)", "translateY(-38%)"] }, 30.9, 2.8, INOUT);
+[30.6, 32.1, 33.0].forEach((t0, i) => pop($("k" + (i + 1)), t0, "scale(.3)"));
 
 /* 6) البطاقة */
-scene("s6", 35, 40);
-rise($("cap6"), 35.2);
-anim($("card"), { transform: ["rotateY(95deg) scale(.9)", "rotateY(0) scale(1)"], opacity: [0, 1] }, 35.3, 1, BACK);
-anim($("scan"), { opacity: [0, 1, 1, 0], transform: ["translateY(-150px)", "translateY(-150px)", "translateY(110px)", "translateY(110px)"] }, 36.6, 2, "linear");
-pop($("okb"), 38.7, "scale(.3)");
+scene("s6", 33.8, 36.8);
+rise($("cap6"), 33.9);
+anim($("card"), { transform: ["rotateY(95deg) scale(.9)", "rotateY(0) scale(1)"], opacity: [0, 1] }, 33.9, .8, BACK);
+anim($("scan"), { opacity: [0, 1, 1, 0], transform: ["translateY(-150px)", "translateY(-150px)", "translateY(110px)", "translateY(110px)"] }, 34.9, 1.2, "linear");
+pop($("okb"), 36.0, "scale(.3)");
 
 /* 7) الدعوة */
-scene("s7", 40, END);
-[...$("t7").querySelectorAll(".w")].forEach((w, i) => rise(w, 40.3 + i * .2));
-pop($("cta"), 41, "scale(.3)");
-anim($("cta"), { transform: ["scale(1)", "scale(1.08)", "scale(1)", "scale(1.08)", "scale(1)"] }, 42.2, 1.6, INOUT, "forwards");
-rise($("path"), 41.8); rise($("lg7"), 42.4); rise($("br7"), 42.6);
+scene("s7", 36.8, END);
+[...$("t7").querySelectorAll(".w")].forEach((w, i) => rise(w, 37 + i * .2));
+pop($("cta"), 38.4, "scale(.3)");
+anim($("cta"), { transform: ["scale(1)", "scale(1.08)", "scale(1)", "scale(1.08)", "scale(1)"] }, 42.4, 1.6, INOUT, "forwards");
+rise($("path"), 39.8); rise($("lg7"), 41.6); rise($("br7"), 41.8);
 /* قصاصات احتفال من الزر: مسارات ثابتة (لا عشوائية) ليتطابق كل توليد */
 const COLORS = ["#89D7AD", "#FFFFFF", "#A4CBF2", "#E6C27A"];
 for (let i = 0; i < 26; i++) {
@@ -277,7 +278,7 @@ for (let i = 0; i < 26; i++) {
   const x = Math.cos(ang) * r, y = Math.sin(ang) * r - 40;
   anim(c, [{ opacity: 1, transform: "translate(-5px,-8px) rotate(0)" },
            { opacity: 1, transform: `translate(${x}px,${y}px) rotate(${(i * 47) % 360}deg)`, offset: .6 },
-           { opacity: 0, transform: `translate(${x * 1.1}px,${y + 120}px) rotate(${(i * 83) % 540}deg)` }], 41.1, 1.8, "cubic-bezier(.1,.8,.3,1)", "forwards");
+           { opacity: 0, transform: `translate(${x * 1.1}px,${y + 120}px) rotate(${(i * 83) % 540}deg)` }], 38.5, 1.8, "cubic-bezier(.1,.8,.3,1)", "forwards");
 }
 
 /* العدّادات تُحسب من الزمن مباشرة */
