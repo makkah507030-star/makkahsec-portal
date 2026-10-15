@@ -1,0 +1,10 @@
+-- ملف المعلم الرقمي (الجزء 4): بيانات يكتبها المعلم لقسم «التخطيط والتدريس».
+-- • madrasati: إحصاءات منصة مدرستي
+--   { lessons, homework, tests, enrich, weekly_plan (true/false), at }
+-- • activities: الأنشطة الصفية واللاصفية، نوع النشاط وعدده
+--   { class: [{ t, n }], extra: [{ t, n }] }
+-- يُنفَّذ بعد الأجزاء 1 و2 و3. تكرار التنفيذ آمن.
+
+alter table public.teacher_dfiles add column if not exists madrasati jsonb not null default '{}'::jsonb;
+alter table public.teacher_dfiles add column if not exists activities jsonb not null default '{}'::jsonb;
+-- نهاية الجزء 4

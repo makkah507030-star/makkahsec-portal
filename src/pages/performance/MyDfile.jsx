@@ -4,7 +4,7 @@ import { useSession } from "../../lib/session.jsx";
 import { useBackStep } from "../../lib/backStep.js";
 import DfileReport from "../../components/dfile/DfileReport.jsx";
 import {
-  COLORS, PARTS, RANKS, dfileError, loadDfile, loadDfileData, sentences,
+  ACTIVITY_LABEL, ACTIVITY_PRESETS, COLORS, MADRASATI, PARTS, RANKS, actTotal, dfileError, loadDfile, loadDfileData, sentences,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -29,6 +29,7 @@ export default function MyDfile() {
   const [saved, setSaved] = useState("");
   const [preview, setPreview] = useState(false);
   const [win, setWin] = useState({ t: "", d: "" });
+  const [custom, setCustom] = useState({ class: "", extra: "" });
   useBackStep(preview, () => setPreview(false), "لوحة الملف");
 
   const load = useCallback(async () => {
@@ -95,6 +96,19 @@ export default function MyDfile() {
   const hidden = new Set(s.hidden ?? []);
   const picked = s.sentences ?? [];
   const wins = s.other_wins ?? [];
+  const mad = s.madrasati ?? {};
+  const act = s.activities ?? {};
+  const num = (v) => {
+    const n = parseInt(String(v).replace(/[٠-٩]/g, (c) => "٠١٢٣٤٥٦٧٨٩".indexOf(c)), 10);
+    return n > 0 ? Math.min(n, 9999) : null;
+  };
+  const setMad = (patch) => save({ madrasati: { ...mad, ...patch, at: new Date().toISOString().slice(0, 10) } });
+  const setAct = (k, list) => save({ activities: { ...act, [k]: list } });
+  const addAct = (k, t) => {
+    const list = act[k] ?? [];
+    if (!t.trim() || list.some((x) => x.t === t.trim())) return;
+    setAct(k, [...list, { t: t.trim(), n: 1 }]);
+  };
 
   return (
     <div className="space-y-4">
@@ -139,6 +153,57 @@ export default function MyDfile() {
                      save({ perf_rating: v >= 1 && v <= 5 ? Math.round(v * 100) / 100 : null, perf_year: v >= 1 && v <= 5 ? year - 1 : null });
                    }} /></div>
         </div>
+      </Block>
+
+      <Block title="منصة مدرستي" sub="انقل الأرقام من إحصاءاتك في المنصة. ما تتركه فارغًا لا يظهر.">
+        <div className="grid grid-cols-2 gap-3">
+          {MADRASATI.map((m) => (
+            <div key={m.key}><label className="label">{m.t}</label>
+              <input className="field num" inputMode="numeric" defaultValue={mad[m.key] ?? ""}
+                     onBlur={(e) => { const v = num(e.target.value); if (v !== (mad[m.key] ?? null)) setMad({ [m.key]: v }); }} /></div>
+          ))}
+        </div>
+        <div>
+          <p className="label">إرسال الخطة الأسبوعية</p>
+          <div className="flex gap-2">
+            {[[true, "نعم"], [false, "لا"]].map(([v, t]) => (
+              <button key={t} type="button" onClick={() => setMad({ weekly_plan: v })}
+                      className={mad.weekly_plan === v ? "btn-primary" : "btn-ghost"}>{t}</button>
+            ))}
+          </div>
+        </div>
+      </Block>
+
+      <Block title="الأنشطة" sub="اختر نوع النشاط من البطاقات أو اكتب غيره، ثم اكتب عدده.">
+        {["class", "extra"].map((k) => {
+          const list = act[k] ?? [];
+          return (
+            <div key={k} className="space-y-2 border-t border-line/60 pt-3 first:border-0 first:pt-0">
+              <p className="text-sm font-bold text-ink">{ACTIVITY_LABEL[k]} <span className="num font-normal text-muted">({actTotal(list)})</span></p>
+              {list.length > 0 && (
+                <ul className="space-y-1.5">
+                  {list.map((x, i) => (
+                    <li key={x.t} className="flex items-center gap-2 text-sm">
+                      <span className="flex-1 text-ink">{x.t}</span>
+                      <input className="field num w-20 py-1.5 text-center" inputMode="numeric" defaultValue={x.n} aria-label={`عدد ${x.t}`}
+                             onBlur={(e) => { const v = num(e.target.value) ?? 0; if (v !== x.n) setAct(k, list.map((y, j) => (j === i ? { ...y, n: v } : y))); }} />
+                      <button type="button" className="text-xs text-danger" onClick={() => setAct(k, list.filter((_, j) => j !== i))}>حذف</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="flex flex-wrap gap-1.5">
+                {ACTIVITY_PRESETS[k].filter((t) => !list.some((x) => x.t === t)).map((t) => (
+                  <button key={t} type="button" className="chip border border-line bg-canvas text-muted hover:text-ink" onClick={() => addAct(k, t)}>+ {t}</button>
+                ))}
+              </div>
+              <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); addAct(k, custom[k]); setCustom({ ...custom, [k]: "" }); }}>
+                <input className="field" placeholder="نوع آخر…" value={custom[k]} onChange={(e) => setCustom({ ...custom, [k]: e.target.value })} />
+                <button className="btn-ghost" type="submit">إضافة</button>
+              </form>
+            </div>
+          );
+        })}
       </Block>
 
       <Block title="ماذا يرى الزائر؟" sub="الأقسام غير المختارة لا تظهر في ملفك.">

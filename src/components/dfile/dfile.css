@@ -231,3 +231,7 @@
 .dfile .df-tl .df-dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--deep); background: var(--surface); margin-top: 4px; }
 .dfile .df-tl b { font-size: 14px; }
 .dfile .df-tl .df-when { font-size: 12px; color: var(--faint); }
+.dfile .df-ok { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--deep); background: var(--tint); border: 1px solid var(--mint-light); border-radius: 999px; padding: 3px 12px; justify-self: start; }
+.dfile .df-ok svg { width: 15px; height: 15px; }
+.dfile .df-actg { display: grid; gap: 6px; }
+.dfile .df-actg + .df-actg { padding-top: 10px; border-top: 1px solid var(--line); }

@@ -41,7 +41,25 @@ export const ELEMENTS = [
   ["e10", "تحليل النتائج وتشخيص المستويات"], ["e11", "تنوع أساليب التقويم"],
 ];
 
-export const MODE_LABEL = { online: "إلكتروني", omr: "ورقي بتصحيح آلي", paper: "ورقي", external: "من خارج البوابة" };
+/* إحصاءات منصة مدرستي: يكتبها المعلم من المنصة (الجزء 4 من SQL) */
+export const MADRASATI = [
+  { key: "lessons", t: "الدروس المحضّرة" },
+  { key: "homework", t: "الواجبات" },
+  { key: "tests", t: "الاختبارات" },
+  { key: "enrich", t: "الإثراءات" },
+];
+
+/* أنواع جاهزة للأنشطة، ويضيف المعلم غيرها */
+export const ACTIVITY_PRESETS = {
+  class: ["التعلم التعاوني", "العصف الذهني", "لعب الأدوار", "حل المشكلات", "الخرائط الذهنية", "التعلم بالاكتشاف",
+    "المناقشة والحوار", "التجارب العملية", "العروض التقديمية", "المسابقات الصفية", "الألعاب التعليمية", "القراءة الموجهة"],
+  extra: ["الإذاعة المدرسية", "المسابقات", "الرحلات العلمية", "المعارض", "الأندية الطلابية", "المبادرات التطوعية",
+    "الأيام العالمية والمناسبات", "الورش والمحاضرات", "الأولمبياد", "البرامج الإثرائية"],
+};
+export const ACTIVITY_LABEL = { class: "الأنشطة الصفية", extra: "الأنشطة اللاصفية" };
+export const actTotal = (list) => (list ?? []).reduce((a, x) => a + (Number(x.n) || 0), 0);
+
+export const MODE_LABEL ={ online: "إلكتروني", omr: "ورقي بتصحيح آلي", paper: "ورقي", external: "من خارج البوابة" };
 export const MODE_ORDER = ["online", "omr", "paper", "external"];
 export const MODE_COLOR = { online: "var(--e04)", omr: "var(--e03)", paper: "var(--e05)", external: "var(--e09)" };
 export const PERIOD_LABEL = { diagnostic: "تشخيصي", period1: "الفترة الأولى", period2: "الفترة الثانية" };

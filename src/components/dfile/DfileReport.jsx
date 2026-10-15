@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./dfile.css";
 import { fmtDate } from "../../lib/dates.js";
 import {
-  BANDS, BAND_COLOR, ELEMENTS, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
+  BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
   avgGain, experience, hours, pc, pct, pickedSentences,
 } from "../../lib/dfile.js";
 
@@ -25,6 +25,14 @@ const Svg = ({ d, ...p }) => (
     <path d={d} />
   </svg>
 );
+
+/* «3 أنشطة صفية» و«11 نشاطًا صفيًا» */
+const actWord = (n, k) => {
+  const c = k === "class";
+  if (n >= 3 && n <= 10) return c ? "أنشطة صفية" : "أنشطة لاصفية";
+  if (n <= 2) return c ? "نشاط صفي" : "نشاط لاصفي";
+  return c ? "نشاطًا صفيًا" : "نشاطًا لاصفيًا";
+};
 
 /* «3 شواهد» و«11 شاهدًا» */
 const evLabel = (n) => `${n} ${n >= 3 && n <= 10 ? "شواهد" : "شاهدًا"}`;
@@ -331,8 +339,13 @@ export default function DfileReport({ data: d, settings: s, code }) {
   const evTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + Number(ev[k] ?? 0), 0);
   const evMax = Math.max(1, ...ELEMENTS.map(([k]) => Number(ev[k] ?? 0)));
 
+  const mad = s?.madrasati ?? {};
+  const madOn = MADRASATI.some((m) => Number(mad[m.key]) > 0) || mad.weekly_plan === true;
+  const act = s?.activities ?? {};
+  const actOn = actTotal(act.class) > 0 || actTotal(act.extra) > 0;
+
   const has = {
-    teach: d.lessons > 0 || d.subs > 0,
+    teach: d.lessons > 0 || d.subs > 0 || madOn || actOn,
     results: (d.grades?.n ?? 0) > 0,
     assess: (d.quizzes?.length ?? 0) > 0,
     growth: true,
@@ -373,14 +386,40 @@ export default function DfileReport({ data: d, settings: s, code }) {
         )}
         {show("teach") && has.teach && (
           <Section id="teach" title="التخطيط والتدريس" sub="التحضير والمتابعة">
-            <div className="df-card">
-              <CardH title="الحصص والتحضير" sub="التحضير اليومي في البوابة هذا العام" src="تلقائي" />
-              <div className="df-tiles">
-                <span><b className="df-num">{d.lessons}</b>حصة حضّرها</span>
-                <span><b className="df-num">{pc(d.ontime ?? 0)}</b>في يومها</span>
-                <span><b className="df-num">{d.subs}</b>حصة انتظار</span>
+            {(d.lessons > 0 || d.subs > 0) && (
+              <div className="df-card">
+                <CardH title="الحصص والتحضير" sub="التحضير اليومي في البوابة هذا العام" src="تلقائي" />
+                <div className="df-tiles">
+                  <span><b className="df-num">{d.lessons}</b>حصة حضّرها</span>
+                  <span><b className="df-num">{pc(d.ontime ?? 0)}</b>في يومها</span>
+                  <span><b className="df-num">{d.subs}</b>حصة انتظار</span>
+                </div>
               </div>
-            </div>
+            )}
+            {madOn && (
+              <div className="df-card">
+                <CardH title="منصة مدرستي" sub="من إحصاءات المنصة هذا الفصل" src="يكتبه المعلم" srcKind="up" />
+                <div className="df-tiles df-t2">
+                  {MADRASATI.filter((m) => Number(mad[m.key]) > 0).map((m) => (
+                    <span key={m.key}><b className="df-num">{mad[m.key]}</b>{m.t}</span>
+                  ))}
+                </div>
+                {mad.weekly_plan === true && <p className="df-ok"><Svg d={ICON.ok} strokeWidth="2.2" />يرسل الخطة الأسبوعية</p>}
+              </div>
+            )}
+            {actOn && (
+              <div className="df-card">
+                <CardH title="الأنشطة" sub="الصفية واللاصفية ونوع كل نشاط" src="يكتبه المعلم" srcKind="up" />
+                {["class", "extra"].filter((k) => actTotal(act[k]) > 0).map((k) => (
+                  <div key={k} className="df-actg">
+                    <div className="df-imp-sum"><span className="df-v df-num" style={{ direction: "rtl" }}>{actTotal(act[k])}</span>
+                      <span className="df-sub">{actWord(actTotal(act[k]), k)}</span></div>
+                    <div className="df-tags">{act[k].filter((x) => Number(x.n) > 0).map((x) => (
+                      <span key={x.t} className="df-tag df-num">{x.t}، {x.n}</span>))}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Section>
         )}
         {show("results") && has.results && <Results g={d.grades} />}
