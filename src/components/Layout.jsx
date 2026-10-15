@@ -93,6 +93,7 @@ const ADMIN_GROUPS = [
     title: "الأداء الوظيفي",
     items: [
       { to: "/performance",  label: "تقييم الأداء الوظيفي", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء" },
+      { to: "/dfiles-admin", label: "ملفات المعلمين الرقمية", roles: ["tech_support"], icon: "idcard", kw: "ملف رقمي إيقاف نقل تقاعد رمز" },
     ],
   },
   {

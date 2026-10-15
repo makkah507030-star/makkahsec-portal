@@ -235,3 +235,27 @@
 .dfile .df-ok svg { width: 15px; height: 15px; }
 .dfile .df-actg { display: grid; gap: 6px; }
 .dfile .df-actg + .df-actg { padding-top: 10px; border-top: 1px solid var(--line); }
+/* بطاقة الرمز (DfileCard) */
+.dfile.df-cardwrap { padding: 0; background: none; display: grid; justify-items: center; }
+.dfile .df-idcard { position: relative; overflow: hidden; width: 288px; aspect-ratio: 9 / 16; border-radius: 22px; color: #fff;
+  background: linear-gradient(160deg, var(--s-a), var(--s-b) 70%); box-shadow: var(--shadow);
+  display: grid; grid-template-rows: auto auto auto auto 1fr auto auto; justify-items: center; align-items: center; gap: 6px; padding: 18px 18px 16px; text-align: center; }
+.dfile .df-idcard::after { content: ""; position: absolute; inset: 0; opacity: .08; pointer-events: none;
+  background-image: radial-gradient(circle at 0 0, transparent 13px, #fff 14px, transparent 15px), radial-gradient(circle at 28px 28px, transparent 13px, #fff 14px, transparent 15px);
+  background-size: 28px 28px; mask-image: linear-gradient(to bottom, #000, transparent 45%); }
+.dfile .df-idcard > * { position: relative; z-index: 1; }
+.dfile .df-id-top { display: flex; align-items: center; gap: 8px; justify-self: stretch; text-align: start; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.2); }
+.dfile .df-id-top img { width: 30px; height: 30px; object-fit: contain; }
+.dfile .df-id-top b { display: block; font-size: 12.5px; line-height: 1.3; }
+.dfile .df-id-top span { font-size: 10.5px; opacity: .75; }
+.dfile .df-id-photo { width: 78px; height: 78px; border-radius: 50%; border: 3px solid rgba(255,255,255,.85); background: rgba(255,255,255,.14); display: grid; place-items: center; overflow: hidden; margin-top: 6px; }
+.dfile .df-id-photo svg { width: 46px; height: 46px; color: rgba(255,255,255,.9); }
+.dfile .df-id-photo img { width: 100%; height: 100%; object-fit: cover; }
+.dfile .df-id-name { font-size: 17px; font-weight: 700; line-height: 1.35; }
+.dfile .df-id-meta { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; font-size: 11.5px; }
+.dfile .df-id-meta span { padding: 2px 9px; border-radius: 999px; background: rgba(255,255,255,.14); }
+.dfile .df-id-meta .df-id-rank { background: var(--s-c); color: var(--s-a); font-weight: 700; }
+.dfile .df-id-qr { width: 132px; height: 132px; background: #fff; border-radius: 14px; padding: 9px; display: grid; place-items: center; }
+.dfile .df-id-qr img { width: 100%; height: 100%; image-rendering: pixelated; }
+.dfile .df-id-code { font-family: var(--mono); font-size: 15px; letter-spacing: 3px; direction: ltr; }
+.dfile .df-id-foot { font-size: 10.5px; opacity: .75; }

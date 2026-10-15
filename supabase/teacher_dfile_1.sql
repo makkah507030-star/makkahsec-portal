@@ -44,7 +44,7 @@ begin
   if tg_op = 'INSERT' then
     new.code := public.dfile_new_code();
     new.disabled_at := null; new.disabled_by := null; new.disabled_reason := null;
-  elsif not public.has_admin_role(array['tech_support']) then
+  elsif auth.uid() is not null and not public.has_admin_role(array['tech_support']) then  -- محرر SQL بلا مستخدم مسموح
     new.teacher_user_id := old.teacher_user_id; new.code := old.code;
     new.disabled_at := old.disabled_at; new.disabled_by := old.disabled_by;
     new.disabled_reason := old.disabled_reason;

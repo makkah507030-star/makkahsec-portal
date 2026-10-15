@@ -139,3 +139,32 @@ export function dfileError(e) {
     ? "ملف المعلم الرقمي يحتاج تنفيذ ملفات supabase/teacher_dfile_1.sql و2 و3 في قاعدة البيانات مرة واحدة."
     : e?.message ?? "تعذّر التحميل.";
 }
+
+/* ===== الرابط العام والزوار (supabase/teacher_dfile_5.sql) ===== */
+
+/* رابط الزائر الثابت. الرمز يحمل q=1 ليُعرف أن الزائر فتحه بالمسح */
+export const dfileLink = (code, qr = false) => `${window.location.origin}/f/${code}${qr ? "?q=1" : ""}`;
+
+export async function loadPublic(code) {
+  const { data, error } = await supabase.rpc("dfile_public", { p_code: code });
+  if (error) throw error;
+  return data;
+}
+
+export async function visitStart(code, name, org, via) {
+  const { data } = await supabase.rpc("dfile_visit_start", { p_code: code, p_name: name ?? "", p_org: org ?? "", p_via: via });
+  return data ?? null;
+}
+
+export function visitPing(id, seconds) {
+  if (!id) return;
+  supabase.rpc("dfile_visit_ping", { p_id: id, p_seconds: Math.round(seconds) }).then(() => {}, () => {});
+}
+
+export async function loadVisits(uid) {
+  const { data } = await supabase.from("dfile_visits").select("id, visitor_name, visitor_org, via, started_at, seconds")
+    .eq("teacher_user_id", uid).order("started_at", { ascending: false }).limit(50);
+  return data ?? [];
+}
+
+export const STOP_REASONS = ["نقل من المدرسة", "تقاعد", "تحويل إلى عمل إداري"];

@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { useBackStep } from "../../lib/backStep.js";
 import DfileReport from "../../components/dfile/DfileReport.jsx";
+import DfileShare from "../../components/dfile/DfileShare.jsx";
 import {
   ACTIVITY_LABEL, ACTIVITY_PRESETS, COLORS, MADRASATI, PARTS, RANKS, actTotal, dfileError, loadDfile, loadDfileData, sentences,
 } from "../../lib/dfile.js";
@@ -263,8 +264,7 @@ export default function MyDfile() {
       </Block>
 
       <Block title="رابط ملفك" sub="رابط ثابت طوال العام، وبطاقته بهوية البوابة لتعرضها أو تطبعها.">
-        <p className="text-sm text-ink">كود ملفك: <b className="font-mono tracking-widest" dir="ltr">{s.code}</b></p>
-        <p className="text-sm text-muted">بطاقة الرمز والرابط وسجل الزوار تصل في الدفعة القادمة. ملفك مفعّل، ويوقفه الدعم الفني فقط عند نقلك من المدرسة أو تقاعدك أو تحويلك إلى عمل إداري.</p>
+        <DfileShare uid={uid} s={s} d={d} onSave={save} />
       </Block>
     </div>
   );

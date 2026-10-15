@@ -1,8 +1,10 @@
--- ملف المعلم الرقمي (الجزء 3 من 3): أرقام التقرير من بيانات البوابة.
--- يستدعيها المعلم لنفسه، والمدير والدعم الفني لأي معلم. لا أسماء طلاب فيها.
+-- ملف المعلم الرقمي (الجزء 3): أرقام التقرير من بيانات البوابة، دون أسماء طلاب.
+-- • dfile_data_core: الحساب نفسه، لا يُستدعى مباشرة (تستخدمه الدالتان التاليتان).
+-- • dfile_data: للمعلم نفسه، والمدير والدعم الفني لأي معلم.
+-- • dfile_public (الجزء 5): للزائر بكود الملف.
 -- يُنفَّذ بعد الجزأين 1 و2. تكرار التنفيذ آمن.
 
-create or replace function public.dfile_data(p_uid uuid)
+create or replace function public.dfile_data_core(p_uid uuid)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
 declare
   y text := (select value from public.settings where key = 'active_year');
@@ -12,9 +14,6 @@ declare
   cls uuid[];
   r jsonb;
 begin
-  if p_uid is distinct from auth.uid() and not public.has_admin_role(array['principal', 'tech_support']) then
-    raise exception 'غير مصرّح';
-  end if;
   select coalesce(min(start_date)::timestamptz, now() - interval '1 year') into y0
     from public.academic_calendar where academic_year = y;
   select array_agg(distinct class_id) into cls from public.schedule
@@ -80,6 +79,17 @@ begin
     'grades', public.dfile_grades(p_uid, y)
   ) into r;
   return r;
+end; $$;
+
+revoke execute on function public.dfile_data_core(uuid) from public, anon, authenticated;
+
+create or replace function public.dfile_data(p_uid uuid)
+returns jsonb language plpgsql stable security definer set search_path = public as $$
+begin
+  if p_uid is distinct from auth.uid() and not public.has_admin_role(array['principal', 'tech_support']) then
+    raise exception 'غير مصرّح';
+  end if;
+  return public.dfile_data_core(p_uid);
 end; $$;
 
 revoke execute on function public.dfile_data(uuid) from public, anon;
