@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <title>فيديو ملف المعلم الرقمي</title>
-<!-- فيديو إعلاني طولي (1080×1920، 45 ثانية) بهوية البوابة.
-     كل حركة بالـ Web Animations ومتوقفة، وrender.mjs يقدّم الزمن إطارًا إطارًا عبر seek(t)
-     ثم يجمع الإطارات في MP4. للمعاينة في المتصفح: video.html?play -->
+<!-- فيديو إعلاني طولي (1080×1920، 45 ثانية) بهوية البوابة وحركات موشن جرافيك.
+     كل حركة بالـ Web Animations ومتوقفة، وrender.mjs يقدّم الزمن إطارًا إطارًا عبر seek(t)،
+     وsfx.py يولّد المؤثرات الصوتية على الأوقات نفسها. للمعاينة في المتصفح: video.html?play -->
 <style>
 @font-face { font-family: Plex; font-weight: 400; src: url(../../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2) format("woff2"); }
 @font-face { font-family: Plex; font-weight: 500; src: url(../../../public/fonts/ibm-plex-sans-arabic-500-arabic.woff2) format("woff2"); }
@@ -18,89 +18,135 @@ html, body { width: 540px; height: 960px; overflow: hidden; background: #000; }
 body { font-family: PlexL, Plex, Tahoma, sans-serif; color: #fff; }
 .stage { position: relative; width: 540px; height: 960px; overflow: hidden;
   background: radial-gradient(120% 80% at 80% 0%, #4c7a63 0%, var(--b) 35%, var(--a) 100%); }
-.pattern { position: absolute; inset: 0; opacity: .07;
+.pattern { position: absolute; inset: -80px; opacity: .07;
   background-image: radial-gradient(circle at 0 0, transparent 17px, #fff 18px, transparent 19.5px),
                     radial-gradient(circle at 36px 36px, transparent 17px, #fff 18px, transparent 19.5px);
   background-size: 36px 36px; }
-.scene { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; }
-.center { display: grid; justify-items: center; text-align: center; gap: 18px; padding: 0 44px; }
-.big { font-size: 40px; font-weight: 700; line-height: 1.35; }
-.mid { font-size: 25px; font-weight: 600; line-height: 1.5; }
-.soft { color: rgba(255,255,255,.78); }
+.blob { position: absolute; border-radius: 50%; filter: blur(40px); opacity: .35; }
+.scene { position: absolute; inset: 0; opacity: 0; }
+.wipe { position: absolute; left: 50%; top: 50%; width: 1200px; height: 1200px; margin: -600px 0 0 -600px; border-radius: 50%;
+  background: radial-gradient(circle, var(--c) 0 38%, var(--b) 38.5% 60%, var(--a) 60.5%); z-index: 20; }
+.center { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; text-align: center; gap: 16px; padding: 0 40px; }
+.big { font-size: 40px; font-weight: 700; line-height: 1.4; }
+.mid { font-size: 23px; font-weight: 600; line-height: 1.5; }
+.soft { color: rgba(255,255,255,.8); }
 .mint { color: var(--c); }
+.w { display: inline-block; }
 
-/* المشهد 1: الإشعار على الجوال */
-.lock { position: absolute; top: 120px; left: 0; right: 0; text-align: center; }
-.lock .time { font-size: 92px; font-weight: 300; letter-spacing: 2px; font-family: PlexL; }
+/* 1) الإشعار */
+.lock { position: absolute; top: 110px; left: 0; right: 0; text-align: center; }
+.lock .time { font-size: 96px; font-weight: 400; letter-spacing: 2px; font-family: PlexL; line-height: 1.1; }
 .lock .date { font-size: 20px; color: rgba(255,255,255,.8); }
-.notif { position: absolute; top: 420px; left: 26px; right: 26px; background: rgba(255,255,255,.96); color: var(--ink);
-  border-radius: 26px; padding: 20px 22px; box-shadow: 0 24px 60px -20px rgba(0,0,0,.6); }
-.notif .h { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #5F6B65; }
-.notif .h img { width: 34px; height: 34px; border-radius: 9px; background: var(--b); padding: 5px; }
+.shake { position: absolute; top: 400px; left: 24px; right: 24px; }
+.notif { background: rgba(255,255,255,.97); color: var(--ink); border-radius: 26px; padding: 20px 22px; box-shadow: 0 24px 60px -18px rgba(0,0,0,.6); position: relative; }
+.notif .h { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #5F6B65; position: relative; }
+.ico { position: relative; width: 36px; height: 36px; }
+.ico img { width: 36px; height: 36px; border-radius: 10px; background: var(--b); padding: 6px; position: relative; z-index: 1; }
+.ring { position: absolute; left: 50%; top: 50%; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 12px; border: 2px solid var(--b); opacity: 0; }
 .notif .h b { color: var(--ink); font-weight: 700; }
 .notif .h span { margin-inline-start: auto; }
 .notif .from { margin-top: 12px; font-size: 18px; font-weight: 700; }
-.notif .msg { margin-top: 6px; font-size: 19px; line-height: 1.65; }
-.notif .msg mark { background: #DDF3E6; color: var(--b); font-weight: 700; padding: 0 4px; border-radius: 6px; }
+.notif .msg { margin-top: 6px; font-size: 19px; line-height: 1.7; }
+.hl { background: linear-gradient(#DDF3E6, #DDF3E6) no-repeat right / 0% 100%; color: var(--b); font-weight: 700; padding: 0 4px; border-radius: 6px; }
 
-/* المشهد 4–6: الجوال والصور */
-.phone { position: absolute; left: 50%; top: 150px; width: 310px; height: 610px; margin-left: -155px; border-radius: 44px;
-  background: #0d1612; padding: 12px; box-shadow: 0 40px 80px -30px rgba(0,0,0,.7), inset 0 0 0 2px rgba(255,255,255,.12); }
-.screen { width: 100%; height: 100%; border-radius: 34px; overflow: hidden; background: var(--paper); position: relative; }
+/* 2) الكلمات والأيقونات */
+.uline { height: 6px; width: 260px; border-radius: 6px; background: var(--c); transform-origin: right; transform: scaleX(0); }
+.icons { display: flex; gap: 22px; margin-top: 22px; }
+.icn { width: 76px; height: 76px; border-radius: 22px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25);
+  display: grid; place-items: center; opacity: 0; }
+.icn svg { width: 38px; height: 38px; color: var(--c); }
+
+/* 3) الشعار */
+.logo-box { position: relative; width: 120px; height: 120px; display: grid; place-items: center; }
+.logo-box img { width: 104px; position: relative; z-index: 1; }
+.burst { position: absolute; left: 50%; top: 50%; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 3px solid var(--c); opacity: 0; }
+.title { font-size: 48px; font-weight: 700; position: relative; overflow: hidden; padding: 0 6px; }
+.shine { position: absolute; top: 0; bottom: 0; width: 70px; left: -90px; background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); transform: skewX(-18deg); }
+
+/* 4–5) الجوال */
+.phone { position: absolute; left: 50%; top: 170px; width: 300px; height: 590px; margin-left: -150px; border-radius: 42px;
+  background: #0d1612; padding: 11px; box-shadow: 0 40px 80px -30px rgba(0,0,0,.7), inset 0 0 0 2px rgba(255,255,255,.12); }
+.screen { width: 100%; height: 100%; border-radius: 32px; overflow: hidden; background: var(--paper); position: relative; }
 .screen img { width: 100%; display: block; position: absolute; top: 0; left: 0; }
-.notch { position: absolute; top: 18px; left: 50%; width: 92px; height: 24px; margin-left: -46px; border-radius: 20px; background: #0d1612; z-index: 2; }
-.cap { position: absolute; left: 0; right: 0; top: 64px; text-align: center; font-size: 27px; font-weight: 700; padding: 0 30px; }
-.chips { position: absolute; left: 22px; right: 22px; bottom: 40px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.chip { background: rgba(255,255,255,.95); color: var(--b); font-weight: 700; font-size: 18px; border-radius: 999px; padding: 8px 18px; opacity: 0;
-  box-shadow: 0 10px 24px -12px rgba(0,0,0,.5); }
-.cardimg { position: absolute; left: 50%; top: 150px; width: 340px; margin-left: -170px; border-radius: 30px; box-shadow: 0 0 0 3px rgba(255,255,255,.35), 0 40px 80px -30px rgba(0,0,0,.8); }
-.scan { position: absolute; left: 50%; top: 560px; width: 150px; height: 4px; margin-left: -75px; background: var(--c); border-radius: 4px;
-  box-shadow: 0 0 18px 4px rgba(137,215,173,.8); opacity: 0; }
+.notch { position: absolute; top: 16px; left: 50%; width: 88px; height: 22px; margin-left: -44px; border-radius: 20px; background: #0d1612; z-index: 2; }
+.cap { position: absolute; left: 0; right: 0; top: 56px; text-align: center; font-size: 27px; font-weight: 700; padding: 0 30px; line-height: 1.45; }
+.badge { position: absolute; background: #fff; color: var(--ink); border-radius: 18px; padding: 10px 14px; box-shadow: 0 18px 36px -16px rgba(0,0,0,.6);
+  display: grid; gap: 0; text-align: center; opacity: 0; }
+.badge b { font-size: 26px; color: var(--b); font-family: PlexL, Plex; line-height: 1.15; direction: ltr; unicode-bidi: isolate; }
+.badge span { font-size: 12.5px; color: #5F6B65; font-weight: 600; }
+.chips { position: absolute; left: 18px; right: 18px; bottom: 44px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.chip { background: rgba(255,255,255,.96); color: var(--b); font-weight: 700; font-size: 17px; border-radius: 999px; padding: 8px 16px; opacity: 0;
+  box-shadow: 0 10px 24px -12px rgba(0,0,0,.5); display: inline-flex; align-items: center; gap: 6px; }
+.chip svg { width: 16px; height: 16px; }
 
-/* المشهد 7: الدعوة */
+/* 6) البطاقة */
+.flip { position: absolute; left: 50%; top: 140px; width: 330px; margin-left: -165px; perspective: 1200px; }
+.cardimg { width: 330px; border-radius: 30px; box-shadow: 0 0 0 3px rgba(255,255,255,.35), 0 40px 80px -30px rgba(0,0,0,.8); display: block; opacity: 0; }
+.scan { position: absolute; left: 50%; top: 520px; width: 150px; height: 4px; margin-left: -75px; background: var(--c); border-radius: 4px;
+  box-shadow: 0 0 18px 4px rgba(137,215,173,.85); opacity: 0; }
+.ok { position: absolute; left: 50%; top: 760px; margin-left: -110px; width: 220px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--c); color: var(--a); font-weight: 700; font-size: 20px; border-radius: 999px; padding: 10px 0; opacity: 0; }
+.ok svg { width: 22px; height: 22px; }
+
+/* 7) الدعوة */
+.btn { position: relative; background: var(--c); color: var(--a); font-weight: 700; font-size: 27px; border-radius: 999px; padding: 15px 42px; }
 .path { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25);
   border-radius: 18px; padding: 12px 18px; font-size: 21px; font-weight: 600; }
 .path i { font-style: normal; color: var(--c); }
-.logo-w { width: 96px; }
 .brand { font-size: 17px; color: rgba(255,255,255,.8); }
-.btn { background: var(--c); color: var(--a); font-weight: 700; font-size: 26px; border-radius: 999px; padding: 14px 40px; }
+.conf { position: absolute; left: 50%; top: 50%; width: 10px; height: 16px; border-radius: 3px; opacity: 0; }
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
-  <div class="pattern"></div>
+  <div class="pattern" id="pat"></div>
+  <div class="blob" id="bl1" style="width:340px;height:340px;background:#89D7AD;left:-120px;top:80px"></div>
+  <div class="blob" id="bl2" style="width:300px;height:300px;background:#A4CBF2;right:-110px;top:560px;opacity:.18"></div>
+  <div class="blob" id="bl3" style="width:260px;height:260px;background:#89D7AD;left:140px;top:820px;opacity:.22"></div>
 
   <!-- 1) 0–8: رسالة الوكيل -->
   <section class="scene" id="s1">
-    <div class="lock"><div class="time">7:12</div><div class="date">الأحد، 18 أكتوبر</div></div>
-    <div class="notif" id="notif">
-      <div class="h"><img src="assets/icon-white.png" alt=""><b>بوابة مكة الثانوية</b><span>الآن</span></div>
-      <p class="from">وكيل الشؤون التعليمية</p>
-      <p class="msg">تم اختيارك ضمن <mark>أداة الزيارات الصفية</mark> لفريق التقويم الخارجي من هيئة تقويم التعليم والتدريب.</p>
+    <div class="lock" id="lock"><div class="time">7:12</div><div class="date">الأحد، 18 أكتوبر</div></div>
+    <div class="shake" id="shake">
+      <div class="notif" id="notif">
+        <div class="h"><span class="ico"><img src="assets/icon-white.png" alt=""><i class="ring" id="r1"></i><i class="ring" id="r2"></i><i class="ring" id="r3"></i></span>
+          <b>بوابة مكة الثانوية</b><span>الآن</span></div>
+        <p class="from">وكيل الشؤون التعليمية</p>
+        <p class="msg">تم اختيارك ضمن <span class="hl" id="hl">أداة الزيارات الصفية</span> لفريق التقويم الخارجي من هيئة تقويم التعليم والتدريب.</p>
+      </div>
     </div>
   </section>
 
   <!-- 2) 8–14: تفرّغ لدرسك -->
   <section class="scene" id="s2">
     <div class="center">
-      <p class="big" id="s2a">تفرّغ لإعداد درسك…</p>
-      <p class="big mint" id="s2b">والبوابة تجهّز لك<br>الوثائق والأدوات</p>
+      <p class="big" id="l1"><span class="w">تفرّغ</span> <span class="w">لإعداد</span> <span class="w">درسك…</span></p>
+      <p class="big mint" id="l2"><span class="w">والبوابة</span> <span class="w">تجهّز</span> <span class="w">لك</span><br><span class="w">الوثائق</span> <span class="w">والأدوات</span></p>
+      <span class="uline" id="ul"></span>
+      <div class="icons">
+        <span class="icn" id="i1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6v18h12V7ZM14 3v4h4M9 13h6M9 17h4"/></svg></span>
+        <span class="icn" id="i2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg></span>
+        <span class="icn" id="i3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2z"/></svg></span>
+      </div>
     </div>
   </section>
 
   <!-- 3) 14–19: الشعار والاسم -->
   <section class="scene" id="s3">
     <div class="center">
-      <img class="logo-w" src="assets/icon-white.png" alt="" id="s3logo">
-      <p class="big" style="font-size:46px">ملف المعلم الرقمي</p>
-      <p class="mid soft">تقرير واحد عن أعمالك، يُبنى لحظة فتحه</p>
+      <div class="logo-box"><i class="burst" id="b1"></i><i class="burst" id="b2"></i><img src="assets/icon-white.png" alt="" id="logo"></div>
+      <p class="title" id="ttl">ملف المعلم الرقمي<i class="shine" id="shine"></i></p>
+      <p class="mid soft" id="sub3">تقرير واحد عن أعمالك، يُبنى لحظة فتحه</p>
     </div>
   </section>
 
   <!-- 4) 19–29: التقرير على الجوال -->
   <section class="scene" id="s4">
-    <p class="cap">من عملك في البوابة… تلقائيًا</p>
-    <div class="phone"><div class="screen"><span class="notch"></span><img src="assets/report.png" alt="" id="rep"></div></div>
+    <p class="cap" id="cap4">من عملك في البوابة… تلقائيًا</p>
+    <div class="phone" id="ph4"><div class="screen"><span class="notch"></span><img src="assets/report.png" alt="" id="rep"></div></div>
+    <div class="badge" id="bd1" style="right:14px;top:300px"><b data-count="412" data-start="21" data-dur="1.2">0</b><span>حصة حضّرها</span></div>
+    <div class="badge" id="bd2" style="left:12px;top:420px"><b data-count="81.4" data-dec="1" data-suffix="%" data-start="22.5" data-dur="1.2">0</b><span>متوسط طلابه</span></div>
+    <div class="badge" id="bd3" style="right:18px;top:560px"><b data-count="7.4" data-dec="1" data-prefix="+" data-start="24" data-dur="1.2">0</b><span>تحسّن طلابه</span></div>
     <div class="chips">
       <span class="chip" id="c1">حصصك وتحضيرك</span><span class="chip" id="c2">نتائج طلابك وتحسّنهم</span>
       <span class="chip" id="c3">اختباراتك</span><span class="chip" id="c4">تطويرك المهني</span>
@@ -109,79 +155,147 @@ body { font-family: PlexL, Plex, Tahoma, sans-serif; color: #fff; }
 
   <!-- 5) 29–35: لوحة المعلم -->
   <section class="scene" id="s5">
-    <p class="cap">وأضف ما في منصة مدرستي<br>وأنشطتك الصفية واللاصفية</p>
-    <div class="phone" style="top:200px"><div class="screen"><span class="notch"></span><img src="assets/panel.png" alt="" id="pan"></div></div>
+    <p class="cap" id="cap5">وأضف منصة مدرستي<br>وأنشطتك الصفية واللاصفية</p>
+    <div class="phone" id="ph5" style="top:190px"><div class="screen"><span class="notch"></span><img src="assets/panel.png" alt="" id="pan"></div></div>
+    <div class="chips">
+      <span class="chip" id="k1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>منصة مدرستي</span>
+      <span class="chip" id="k2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>الأنشطة</span>
+      <span class="chip" id="k3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>اللون والأقسام</span>
+    </div>
   </section>
 
   <!-- 6) 35–40: بطاقة الرمز -->
   <section class="scene" id="s6">
-    <p class="cap" style="top:60px">بطاقة برمز ثابت يمسحه الزائر</p>
-    <img class="cardimg" src="assets/card.png" alt="" id="card">
+    <p class="cap" style="top:52px" id="cap6">بطاقة برمز ثابت يمسحه الزائر</p>
+    <div class="flip"><img class="cardimg" src="assets/card.png" alt="" id="card"></div>
     <span class="scan" id="scan"></span>
+    <span class="ok" id="okb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>يرى ملفك فورًا</span>
   </section>
 
   <!-- 7) 40–45: فعّل ملفك -->
   <section class="scene" id="s7">
-    <div class="center" style="gap:24px">
-      <p class="big">جاهز قبل الزيارة</p>
+    <div class="center" style="gap:22px" id="c7">
+      <p class="big" id="t7"><span class="w">جاهز</span> <span class="w">قبل</span> <span class="w">الزيارة</span></p>
       <span class="btn" id="cta">فعّل ملفك الآن</span>
-      <span class="path">الأداء الوظيفي <i>←</i> ملف المعلم الرقمي</span>
-      <img class="logo-w" src="assets/icon-white.png" alt="" style="width:64px;margin-top:20px">
-      <span class="brand">بوابة مكة الثانوية الرقمية</span>
+      <span class="path" id="path">الأداء الوظيفي <i>←</i> ملف المعلم الرقمي</span>
+      <img src="assets/icon-white.png" alt="" style="width:60px;margin-top:18px" id="lg7">
+      <span class="brand" id="br7">بوابة مكة الثانوية الرقمية</span>
     </div>
   </section>
+
+  <div class="wipe" id="w1"></div><div class="wipe" id="w2"></div><div class="wipe" id="w3"></div>
+  <div class="wipe" id="w4"></div><div class="wipe" id="w5"></div><div class="wipe" id="w6"></div>
 </div>
 
 <script>
-/* كل حركة: عنصر، وإطاراتها، وبدايتها ومدتها بالثواني */
 const $ = (id) => document.getElementById(id);
 const A = [];
-const E = "cubic-bezier(.2,.7,.2,1)";
+const E = "cubic-bezier(.2,.7,.2,1)", BACK = "cubic-bezier(.34,1.56,.64,1)", INOUT = "cubic-bezier(.65,0,.35,1)";
+const END = 46;
+/* حركة متوقفة يقدّمها seek(t). fill "both" للحركة الأولى على العنصر، و"forwards" لما يليها */
 function anim(el, frames, start, dur, easing = E, fill = "both") {
   const a = el.animate(frames, { duration: dur * 1000, delay: start * 1000, fill, easing });
-  a.pause(); A.push(a);
+  a.pause(); A.push(a); return a;
 }
-const END = 46;
-function scene(id, from, to) {          // ظهور المشهد واختفاؤه بحركة واحدة على طول الفيديو
-  const o = (t) => t / END;
-  const a = $(id).animate([
-    { opacity: 0, offset: 0 }, { opacity: 0, offset: o(from) }, { opacity: 1, offset: o(from + .5) },
-    { opacity: 1, offset: o(to - .5) }, { opacity: 0, offset: o(to) }, { opacity: 0, offset: 1 },
-  ], { duration: END * 1000, fill: "both" });
-  a.pause(); A.push(a);
+function scene(id, from, to) {
+  const o = (t) => Math.max(0, Math.min(1, t / END));
+  anim($(id), [{ opacity: 0, offset: 0 }, { opacity: 0, offset: o(from) }, { opacity: 1, offset: o(from + .25) },
+    { opacity: 1, offset: o(to - .25) }, { opacity: 0, offset: o(to) }, { opacity: 0, offset: 1 }], 0, END, "linear");
 }
+const pop = (el, t, from = "scale(.4)") => anim(el, { opacity: [0, 1], transform: [from, "scale(1)"] }, t, .55, BACK);
+const rise = (el, t, d = .55) => anim(el, { opacity: [0, 1], transform: ["translateY(26px)", "none"], filter: ["blur(6px)", "blur(0)"] }, t, d);
 
+/* الخلفية الحية طوال الفيديو */
+anim($("pat"), { transform: ["translate(0,0)", "translate(-72px,-36px)"] }, 0, END, "linear");
+anim($("bl1"), { transform: ["translate(0,0)", "translate(260px,520px)"] }, 0, END, INOUT);
+anim($("bl2"), { transform: ["translate(0,0)", "translate(-240px,-420px)"] }, 0, END, INOUT);
+anim($("bl3"), { transform: ["translate(0,0) scale(1)", "translate(-80px,-300px) scale(1.4)"] }, 0, END, INOUT);
+
+/* الانتقال بين المشاهد: دائرة بألوان الهوية تتمدد من الوسط ثم تختفي */
+[8, 14, 19, 29, 35, 40].forEach((T, i) => anim($("w" + (i + 1)), [
+  { transform: "scale(0)", opacity: 1 }, { transform: "scale(1)", opacity: 1, offset: .5 }, { transform: "scale(1.15)", opacity: 0 }], T - .35, .7, INOUT));
+
+/* 1) الإشعار */
 scene("s1", 0, 8);
-anim($("notif"), { transform: ["translateY(-160px) scale(.96)", "translateY(0) scale(1)"], opacity: [0, 1] }, .8, .8);
-anim($("notif"), { transform: ["scale(1)", "scale(1.03)", "scale(1)"] }, 5, 1, E, "none");
+rise($("lock"), .1, .7);
+anim($("notif"), { transform: ["translateY(-220px) scale(.92)", "translateY(0) scale(1)"], opacity: [0, 1] }, .8, .7, BACK);
+anim($("shake"), { transform: ["translateX(0)", "translateX(-7px)", "translateX(7px)", "translateX(-6px)", "translateX(6px)", "translateX(-3px)", "translateX(0)"] }, 1.5, .6, "linear");
+["r1", "r2", "r3"].forEach((id, i) => anim($(id), { opacity: [.9, 0], transform: ["scale(1)", "scale(2.6)"] }, 1.5 + i * .3, .9, "ease-out"));
+anim($("hl"), { backgroundSize: ["0% 100%", "100% 100%"] }, 3, .8, INOUT);
+anim($("shake"), { transform: ["scale(1)", "scale(1.06)"] }, 5, 2.6, INOUT, "forwards");
 
+/* 2) الكلمات */
 scene("s2", 8, 14);
-anim($("s2a"), { opacity: [0, 1], transform: ["translateY(20px)", "none"] }, 8.3, .7);
-anim($("s2b"), { opacity: [0, 1], transform: ["translateY(20px)", "none"] }, 10.2, .7);
+[...$("l1").querySelectorAll(".w")].forEach((w, i) => rise(w, 8.3 + i * .22));
+[...$("l2").querySelectorAll(".w")].forEach((w, i) => rise(w, 9.9 + i * .22));
+anim($("ul"), { transform: ["scaleX(0)", "scaleX(1)"] }, 11.2, .6, INOUT);
+["i1", "i2", "i3"].forEach((id, i) => { pop($(id), 11.8 + i * .25);
+  anim($(id), { transform: ["translateY(0)", "translateY(-8px)", "translateY(0)"] }, 12.6 + i * .2, 1.2, INOUT, "forwards"); });
 
+/* 3) الشعار */
 scene("s3", 14, 19);
-anim($("s3logo"), { transform: ["scale(.6) rotate(-8deg)", "scale(1) rotate(0)"], opacity: [0, 1] }, 14.2, .9);
+anim($("logo"), { transform: ["scale(0) rotate(-25deg)", "scale(1) rotate(0)"], opacity: [0, 1] }, 14.2, .8, BACK);
+["b1", "b2"].forEach((id, i) => anim($(id), { opacity: [.9, 0], transform: ["scale(.6)", "scale(2.4)"] }, 14.5 + i * .25, 1, "ease-out"));
+anim($("ttl"), { clipPath: ["inset(0 0 0 100%)", "inset(0 0 0 0)"] }, 15, .8, INOUT);
+anim($("shine"), { left: ["-90px", "110%"] }, 16.1, .9, INOUT);
+rise($("sub3"), 16.3);
 
+/* 4) التقرير */
 scene("s4", 19, 29);
-anim($("rep"), { transform: ["translateY(0)", "translateY(-62%)"] }, 20, 8.5, "ease-in-out");
-["c1", "c2", "c3", "c4"].forEach((id, i) => anim($(id), { opacity: [0, 1], transform: ["translateY(14px)", "none"] }, 20.5 + i * 1.6, .5));
+rise($("cap4"), 19.2);
+anim($("ph4"), { transform: ["translateY(420px) rotate(10deg)", "translateY(0) rotate(0)"] }, 19.3, 1, BACK);
+anim($("rep"), { transform: ["translateY(0)", "translateY(-62%)"] }, 20.6, 7.8, INOUT);
+["bd1", "bd2", "bd3"].forEach((id, i) => pop($(id), 20.8 + i * 1.5, "scale(.3) rotate(-8deg)"));
+["c1", "c2", "c3", "c4"].forEach((id, i) => pop($(id), 21.4 + i * 1.4, "translateY(20px) scale(.6)"));
 
+/* 5) لوحة المعلم */
 scene("s5", 29, 35);
-anim($("pan"), { transform: ["translateY(0)", "translateY(-38%)"] }, 29.8, 4.6, "ease-in-out");
+rise($("cap5"), 29.2);
+anim($("ph5"), { transform: ["translateX(-460px) rotate(-8deg)", "translateX(0) rotate(0)"] }, 29.3, .9, BACK);
+anim($("pan"), { transform: ["translateY(0)", "translateY(-38%)"] }, 30.2, 4.3, INOUT);
+["k1", "k2", "k3"].forEach((id, i) => pop($(id), 30.8 + i * 1.1, "scale(.3)"));
 
+/* 6) البطاقة */
 scene("s6", 35, 40);
-anim($("card"), { transform: ["translateY(40px) scale(.94)", "none"], opacity: [0, 1] }, 35.2, .8);
-anim($("scan"), { opacity: [0, 1, 1, 0], transform: ["translateY(-150px)", "translateY(-150px)", "translateY(110px)", "translateY(110px)"] }, 36.6, 2.2, "linear");
+rise($("cap6"), 35.2);
+anim($("card"), { transform: ["rotateY(95deg) scale(.9)", "rotateY(0) scale(1)"], opacity: [0, 1] }, 35.3, 1, BACK);
+anim($("scan"), { opacity: [0, 1, 1, 0], transform: ["translateY(-150px)", "translateY(-150px)", "translateY(110px)", "translateY(110px)"] }, 36.6, 2, "linear");
+pop($("okb"), 38.7, "scale(.3)");
 
-scene("s7", 40, 46);
-anim($("cta"), { transform: ["scale(.8)", "scale(1.06)", "scale(1)"], opacity: [0, 1, 1] }, 40.6, .9);
+/* 7) الدعوة */
+scene("s7", 40, END);
+[...$("t7").querySelectorAll(".w")].forEach((w, i) => rise(w, 40.3 + i * .2));
+pop($("cta"), 41, "scale(.3)");
+anim($("cta"), { transform: ["scale(1)", "scale(1.08)", "scale(1)", "scale(1.08)", "scale(1)"] }, 42.2, 1.6, INOUT, "forwards");
+rise($("path"), 41.8); rise($("lg7"), 42.4); rise($("br7"), 42.6);
+/* قصاصات احتفال من الزر: مسارات ثابتة (لا عشوائية) ليتطابق كل توليد */
+const COLORS = ["#89D7AD", "#FFFFFF", "#A4CBF2", "#E6C27A"];
+for (let i = 0; i < 26; i++) {
+  const c = document.createElement("i"); c.className = "conf"; c.style.background = COLORS[i % 4];
+  $("stage").appendChild(c);
+  const ang = (i / 26) * Math.PI * 2 + (i % 3) * .2, r = 150 + (i * 37) % 120;
+  const x = Math.cos(ang) * r, y = Math.sin(ang) * r - 40;
+  anim(c, [{ opacity: 1, transform: "translate(-5px,-8px) rotate(0)" },
+           { opacity: 1, transform: `translate(${x}px,${y}px) rotate(${(i * 47) % 360}deg)`, offset: .6 },
+           { opacity: 0, transform: `translate(${x * 1.1}px,${y + 120}px) rotate(${(i * 83) % 540}deg)` }], 41.1, 1.8, "cubic-bezier(.1,.8,.3,1)", "forwards");
+}
+
+/* العدّادات تُحسب من الزمن مباشرة */
+const counters = [...document.querySelectorAll("[data-count]")];
+function counts(t) {
+  counters.forEach((el) => {
+    const to = +el.dataset.count, s = +el.dataset.start, d = +el.dataset.dur, dec = +(el.dataset.dec || 0);
+    const p = Math.max(0, Math.min(1, (t - s) / d)), v = to * (1 - Math.pow(1 - p, 3));
+    el.textContent = (el.dataset.prefix || "") + v.toFixed(dec) + (el.dataset.suffix || "");
+  });
+}
 
 window.TOTAL = 45;
-window.seek = (t) => A.forEach((a) => { a.currentTime = t * 1000; });
+window.seek = (t) => { A.forEach((a) => { a.currentTime = t * 1000; }); counts(t); };
 window.seek(0);
 if (location.search.includes("play")) {
   const t0 = performance.now();
-  const tick = () => { const t = (performance.now() - t0) / 1000 % window.TOTAL; window.seek(t); requestAnimationFrame(tick); };
+  const tick = () => { window.seek((performance.now() - t0) / 1000 % window.TOTAL); requestAnimationFrame(tick); };
   tick();
 }
 </script>

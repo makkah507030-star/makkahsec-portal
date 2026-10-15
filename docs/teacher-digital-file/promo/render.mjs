@@ -1,5 +1,6 @@
 // يحوّل video.html إلى MP4 طولي 1080×1920: إطار لكل 1/24 ثانية بـ seek(t)، ثم ffmpeg.
 // الاستعمال: node render.mjs <مسار-playwright> <مجلد-إطارات-مؤقت> <ملف-الإخراج.mp4>
+// يولّد المؤثرات بـ sfx.py ويدمجها في الفيديو (بلا موسيقى).
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -19,6 +20,9 @@ for (let i = 0; i < total * FPS; i++) {
   await p.screenshot({ path: `${tmp}/f${String(i).padStart(5, "0")}.jpg`, type: "jpeg", quality: 92 });
 }
 await b.close();
-execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", `${tmp}/f%05d.jpg`,
-  "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-preset", "medium", "-movflags", "+faststart", out]);
+const sfx = `${tmp}/sfx.wav`;
+execFileSync("python3", [fileURLToPath(new URL("./sfx.py", import.meta.url)), sfx]);
+execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", `${tmp}/f%05d.jpg`, "-i", sfx,
+  "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-preset", "medium",
+  "-c:a", "aac", "-b:a", "160k", "-shortest", "-movflags", "+faststart", out]);
 console.log("done", out);
