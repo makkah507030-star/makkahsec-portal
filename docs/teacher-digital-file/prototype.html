@@ -304,7 +304,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .cmp .avg { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink); border-radius: 2px; }
 .cmp .avg::after { content: ""; position: absolute; top: -5px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--ink); }
 
-.wins { display: grid; gap: 10px; }
+.wins { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0,1fr)); }
 @media (min-width: 640px) { .wins { grid-template-columns: repeat(3, minmax(0,1fr)); } }
 .win { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 6px; align-content: start; }
 .win .medal { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--warn-bg); color: var(--warn); }
@@ -642,11 +642,17 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
     <div class="sec-h"><h2>المبادرات والإنجازات</h2><p>ما صنعه المعلم خارج الحصة</p></div>
     <div class="wins">
       <div class="win"><span class="medal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0ZM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg></span>
-        <span class="lvl">على مستوى المنطقة</span><b>المركز الثاني في أولمبياد الرياضيات</b><p>درّب ٣ طلاب، وتأهل أحدهم للمرحلة الوطنية.</p><span class="src mix">بوابة + المعلم</span></div>
+        <b>أولمبياد الرياضيات</b><p class="num">١٢/٠٩/٢٠٢٦، شارك ٣ طلاب</p><span class="src auto">من الأحداث</span></div>
       <div class="win"><span class="medal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M5.6 5.6l2.1 2.1M3 12h3M18 12h3M16.3 7.7l2.1-2.1M8 16a4 4 0 1 1 8 0v2H8Z"/></svg></span>
-        <span class="lvl">على مستوى المدرسة</span><b>مبادرة «دقيقة رياضيات» الصباحية</b><p>٢٢ لقاءً في الإذاعة، شارك فيها ٦٠ طالبًا.</p><span class="src auto">من الأحداث</span></div>
-      <div class="win"><span class="medal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M21 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span>
-        <span class="lvl">لزملائه</span><b>قدّم ورشة «التقويم البنائي بالبطاقات»</b><p>حضرها ١٤ معلمًا، ٣ ساعات تطوير.</p><span class="src auto">من التطوير المهني</span></div>
+        <b>مبادرة «دقيقة رياضيات» الصباحية</b><p class="num">٢٢ لقاءً في الإذاعة، شارك ٦٠ طالبًا</p><span class="src auto">من الأحداث</span></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><div><h3>إنجازات أخرى</h3><p class="sub">يكتبها المعلم بنفسه</p></div><span class="src up">يكتبه المعلم</span></div>
+      <ul class="qlist">
+        <li><b>المركز الثاني في أولمبياد الرياضيات على مستوى المنطقة</b><span>تأهل أحد طلابه للمرحلة الوطنية</span></li>
+        <li><b>شكر من مكتب التعليم</b><span class="num">١٤٤٧هـ</span></li>
+        <li><b>عضو لجنة التميّز المدرسي</b><span>هذا العام</span></li>
+      </ul>
     </div>
   </section>
 
