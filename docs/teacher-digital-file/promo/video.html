@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>فيديو ملف المعلم الرقمي</title>
+<!-- فيديو إعلاني طولي (1080×1920، 45 ثانية) بهوية البوابة.
+     كل حركة بالـ Web Animations ومتوقفة، وrender.mjs يقدّم الزمن إطارًا إطارًا عبر seek(t)
+     ثم يجمع الإطارات في MP4. للمعاينة في المتصفح: video.html?play -->
+<style>
+@font-face { font-family: Plex; font-weight: 400; src: url(../../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2) format("woff2"); }
+@font-face { font-family: Plex; font-weight: 500; src: url(../../../public/fonts/ibm-plex-sans-arabic-500-arabic.woff2) format("woff2"); }
+@font-face { font-family: Plex; font-weight: 600; src: url(../../../public/fonts/ibm-plex-sans-arabic-600-arabic.woff2) format("woff2"); }
+@font-face { font-family: Plex; font-weight: 700; src: url(../../../public/fonts/ibm-plex-sans-arabic-700-arabic.woff2) format("woff2"); }
+@font-face { font-family: PlexL; font-weight: 400 700; src: url(../../../public/fonts/ibm-plex-sans-arabic-600-latin.woff2) format("woff2"); }
+:root { --a: #2F4F40; --b: #3E6350; --c: #89D7AD; --ink: #10241A; --paper: #F3F6F4; }
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 540px; height: 960px; overflow: hidden; background: #000; }
+body { font-family: PlexL, Plex, Tahoma, sans-serif; color: #fff; }
+.stage { position: relative; width: 540px; height: 960px; overflow: hidden;
+  background: radial-gradient(120% 80% at 80% 0%, #4c7a63 0%, var(--b) 35%, var(--a) 100%); }
+.pattern { position: absolute; inset: 0; opacity: .07;
+  background-image: radial-gradient(circle at 0 0, transparent 17px, #fff 18px, transparent 19.5px),
+                    radial-gradient(circle at 36px 36px, transparent 17px, #fff 18px, transparent 19.5px);
+  background-size: 36px 36px; }
+.scene { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; }
+.center { display: grid; justify-items: center; text-align: center; gap: 18px; padding: 0 44px; }
+.big { font-size: 40px; font-weight: 700; line-height: 1.35; }
+.mid { font-size: 25px; font-weight: 600; line-height: 1.5; }
+.soft { color: rgba(255,255,255,.78); }
+.mint { color: var(--c); }
+
+/* المشهد 1: الإشعار على الجوال */
+.lock { position: absolute; top: 120px; left: 0; right: 0; text-align: center; }
+.lock .time { font-size: 92px; font-weight: 300; letter-spacing: 2px; font-family: PlexL; }
+.lock .date { font-size: 20px; color: rgba(255,255,255,.8); }
+.notif { position: absolute; top: 420px; left: 26px; right: 26px; background: rgba(255,255,255,.96); color: var(--ink);
+  border-radius: 26px; padding: 20px 22px; box-shadow: 0 24px 60px -20px rgba(0,0,0,.6); }
+.notif .h { display: flex; align-items: center; gap: 10px; font-size: 15px; color: #5F6B65; }
+.notif .h img { width: 34px; height: 34px; border-radius: 9px; background: var(--b); padding: 5px; }
+.notif .h b { color: var(--ink); font-weight: 700; }
+.notif .h span { margin-inline-start: auto; }
+.notif .from { margin-top: 12px; font-size: 18px; font-weight: 700; }
+.notif .msg { margin-top: 6px; font-size: 19px; line-height: 1.65; }
+.notif .msg mark { background: #DDF3E6; color: var(--b); font-weight: 700; padding: 0 4px; border-radius: 6px; }
+
+/* المشهد 4–6: الجوال والصور */
+.phone { position: absolute; left: 50%; top: 150px; width: 310px; height: 610px; margin-left: -155px; border-radius: 44px;
+  background: #0d1612; padding: 12px; box-shadow: 0 40px 80px -30px rgba(0,0,0,.7), inset 0 0 0 2px rgba(255,255,255,.12); }
+.screen { width: 100%; height: 100%; border-radius: 34px; overflow: hidden; background: var(--paper); position: relative; }
+.screen img { width: 100%; display: block; position: absolute; top: 0; left: 0; }
+.notch { position: absolute; top: 18px; left: 50%; width: 92px; height: 24px; margin-left: -46px; border-radius: 20px; background: #0d1612; z-index: 2; }
+.cap { position: absolute; left: 0; right: 0; top: 64px; text-align: center; font-size: 27px; font-weight: 700; padding: 0 30px; }
+.chips { position: absolute; left: 22px; right: 22px; bottom: 40px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.chip { background: rgba(255,255,255,.95); color: var(--b); font-weight: 700; font-size: 18px; border-radius: 999px; padding: 8px 18px; opacity: 0;
+  box-shadow: 0 10px 24px -12px rgba(0,0,0,.5); }
+.cardimg { position: absolute; left: 50%; top: 150px; width: 340px; margin-left: -170px; border-radius: 30px; box-shadow: 0 0 0 3px rgba(255,255,255,.35), 0 40px 80px -30px rgba(0,0,0,.8); }
+.scan { position: absolute; left: 50%; top: 560px; width: 150px; height: 4px; margin-left: -75px; background: var(--c); border-radius: 4px;
+  box-shadow: 0 0 18px 4px rgba(137,215,173,.8); opacity: 0; }
+
+/* المشهد 7: الدعوة */
+.path { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25);
+  border-radius: 18px; padding: 12px 18px; font-size: 21px; font-weight: 600; }
+.path i { font-style: normal; color: var(--c); }
+.logo-w { width: 96px; }
+.brand { font-size: 17px; color: rgba(255,255,255,.8); }
+.btn { background: var(--c); color: var(--a); font-weight: 700; font-size: 26px; border-radius: 999px; padding: 14px 40px; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="pattern"></div>
+
+  <!-- 1) 0–8: رسالة الوكيل -->
+  <section class="scene" id="s1">
+    <div class="lock"><div class="time">7:12</div><div class="date">الأحد، 18 أكتوبر</div></div>
+    <div class="notif" id="notif">
+      <div class="h"><img src="assets/icon-white.png" alt=""><b>بوابة مكة الثانوية</b><span>الآن</span></div>
+      <p class="from">وكيل الشؤون التعليمية</p>
+      <p class="msg">تم اختيارك ضمن <mark>أداة الزيارات الصفية</mark> لفريق التقويم الخارجي من هيئة تقويم التعليم والتدريب.</p>
+    </div>
+  </section>
+
+  <!-- 2) 8–14: تفرّغ لدرسك -->
+  <section class="scene" id="s2">
+    <div class="center">
+      <p class="big" id="s2a">تفرّغ لإعداد درسك…</p>
+      <p class="big mint" id="s2b">والبوابة تجهّز لك<br>الوثائق والأدوات</p>
+    </div>
+  </section>
+
+  <!-- 3) 14–19: الشعار والاسم -->
+  <section class="scene" id="s3">
+    <div class="center">
+      <img class="logo-w" src="assets/icon-white.png" alt="" id="s3logo">
+      <p class="big" style="font-size:46px">ملف المعلم الرقمي</p>
+      <p class="mid soft">تقرير واحد عن أعمالك، يُبنى لحظة فتحه</p>
+    </div>
+  </section>
+
+  <!-- 4) 19–29: التقرير على الجوال -->
+  <section class="scene" id="s4">
+    <p class="cap">من عملك في البوابة… تلقائيًا</p>
+    <div class="phone"><div class="screen"><span class="notch"></span><img src="assets/report.png" alt="" id="rep"></div></div>
+    <div class="chips">
+      <span class="chip" id="c1">حصصك وتحضيرك</span><span class="chip" id="c2">نتائج طلابك وتحسّنهم</span>
+      <span class="chip" id="c3">اختباراتك</span><span class="chip" id="c4">تطويرك المهني</span>
+    </div>
+  </section>
+
+  <!-- 5) 29–35: لوحة المعلم -->
+  <section class="scene" id="s5">
+    <p class="cap">وأضف ما في منصة مدرستي<br>وأنشطتك الصفية واللاصفية</p>
+    <div class="phone" style="top:200px"><div class="screen"><span class="notch"></span><img src="assets/panel.png" alt="" id="pan"></div></div>
+  </section>
+
+  <!-- 6) 35–40: بطاقة الرمز -->
+  <section class="scene" id="s6">
+    <p class="cap" style="top:60px">بطاقة برمز ثابت يمسحه الزائر</p>
+    <img class="cardimg" src="assets/card.png" alt="" id="card">
+    <span class="scan" id="scan"></span>
+  </section>
+
+  <!-- 7) 40–45: فعّل ملفك -->
+  <section class="scene" id="s7">
+    <div class="center" style="gap:24px">
+      <p class="big">جاهز قبل الزيارة</p>
+      <span class="btn" id="cta">فعّل ملفك الآن</span>
+      <span class="path">الأداء الوظيفي <i>←</i> ملف المعلم الرقمي</span>
+      <img class="logo-w" src="assets/icon-white.png" alt="" style="width:64px;margin-top:20px">
+      <span class="brand">بوابة مكة الثانوية الرقمية</span>
+    </div>
+  </section>
+</div>
+
+<script>
+/* كل حركة: عنصر، وإطاراتها، وبدايتها ومدتها بالثواني */
+const $ = (id) => document.getElementById(id);
+const A = [];
+const E = "cubic-bezier(.2,.7,.2,1)";
+function anim(el, frames, start, dur, easing = E, fill = "both") {
+  const a = el.animate(frames, { duration: dur * 1000, delay: start * 1000, fill, easing });
+  a.pause(); A.push(a);
+}
+const END = 46;
+function scene(id, from, to) {          // ظهور المشهد واختفاؤه بحركة واحدة على طول الفيديو
+  const o = (t) => t / END;
+  const a = $(id).animate([
+    { opacity: 0, offset: 0 }, { opacity: 0, offset: o(from) }, { opacity: 1, offset: o(from + .5) },
+    { opacity: 1, offset: o(to - .5) }, { opacity: 0, offset: o(to) }, { opacity: 0, offset: 1 },
+  ], { duration: END * 1000, fill: "both" });
+  a.pause(); A.push(a);
+}
+
+scene("s1", 0, 8);
+anim($("notif"), { transform: ["translateY(-160px) scale(.96)", "translateY(0) scale(1)"], opacity: [0, 1] }, .8, .8);
+anim($("notif"), { transform: ["scale(1)", "scale(1.03)", "scale(1)"] }, 5, 1, E, "none");
+
+scene("s2", 8, 14);
+anim($("s2a"), { opacity: [0, 1], transform: ["translateY(20px)", "none"] }, 8.3, .7);
+anim($("s2b"), { opacity: [0, 1], transform: ["translateY(20px)", "none"] }, 10.2, .7);
+
+scene("s3", 14, 19);
+anim($("s3logo"), { transform: ["scale(.6) rotate(-8deg)", "scale(1) rotate(0)"], opacity: [0, 1] }, 14.2, .9);
+
+scene("s4", 19, 29);
+anim($("rep"), { transform: ["translateY(0)", "translateY(-62%)"] }, 20, 8.5, "ease-in-out");
+["c1", "c2", "c3", "c4"].forEach((id, i) => anim($(id), { opacity: [0, 1], transform: ["translateY(14px)", "none"] }, 20.5 + i * 1.6, .5));
+
+scene("s5", 29, 35);
+anim($("pan"), { transform: ["translateY(0)", "translateY(-38%)"] }, 29.8, 4.6, "ease-in-out");
+
+scene("s6", 35, 40);
+anim($("card"), { transform: ["translateY(40px) scale(.94)", "none"], opacity: [0, 1] }, 35.2, .8);
+anim($("scan"), { opacity: [0, 1, 1, 0], transform: ["translateY(-150px)", "translateY(-150px)", "translateY(110px)", "translateY(110px)"] }, 36.6, 2.2, "linear");
+
+scene("s7", 40, 46);
+anim($("cta"), { transform: ["scale(.8)", "scale(1.06)", "scale(1)"], opacity: [0, 1, 1] }, 40.6, .9);
+
+window.TOTAL = 45;
+window.seek = (t) => A.forEach((a) => { a.currentTime = t * 1000; });
+window.seek(0);
+if (location.search.includes("play")) {
+  const t0 = performance.now();
+  const tick = () => { const t = (performance.now() - t0) / 1000 % window.TOTAL; window.seek(t); requestAnimationFrame(tick); };
+  tick();
+}
+</script>
+</body>
+</html>
