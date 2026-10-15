@@ -71,6 +71,7 @@ const MySignature = lazy(() => import("./pages/MySignature.jsx"));
 const DocumentView = lazy(() => import("./pages/DocumentView.jsx"));
 const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
 const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx"));
+const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
 const PerformanceAdmin = lazy(() => import("./pages/performance/PerformanceAdmin.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
 const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
@@ -387,6 +388,8 @@ export default function App() {
               <Route path="/my-absence" element={<SubjectAbsenceReport />} />
               {/* ملف الأداء الوظيفي — المعلم وشواهده، وسياسات القاعدة تقصره عليه وعلى المدير */}
               <Route path="/my-performance" element={<MyPerformance />} />
+              {/* ملف المعلم الرقمي — لوحة المعلم ومعاينة تقريره، وسياسات القاعدة تقصرها عليه */}
+              <Route path="/my-dfile" element={<MyDfile />} />
               {/* النماذج والشهادات — النماذج المتاحة للمعلم تحدّدها سياسات القاعدة */}
               {/* key مختلف: الانتقال بين الصفحتين يبدأ مكوّنًا جديدًا فلا يبقى تبويب الأخرى مفتوحًا */}
               <Route path="/forms" element={<Forms key="issue" />} />

@@ -184,6 +184,7 @@ const TEACHER_GROUPS = [
     title: "الأداء الوظيفي",
     items: [
       { to: "/my-performance", label: "شواهد الأداء الوظيفي", icon: "award", kw: "شواهد تقييم أداء" },
+      { to: "/my-dfile",       label: "ملف المعلم الرقمي",   icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف تقرير" },
       { to: "/ethics",         label: "ميثاق أخلاقيات المهنة", icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
     ],
   },
