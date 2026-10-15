@@ -198,7 +198,9 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 /* توزيع التقديرات */
 .stack { display: flex; height: 22px; border-radius: 7px; overflow: hidden; gap: 2px; }
 .stack i { display: block; height: 100%; }
-.g1 { background: #3E6350; } .g2 { background: #89D7AD; } .g3 { background: #C9D9A0; } .g4 { background: #E6C27A; } .g5 { background: #D98C7A; }
+/* ألوان التقديرات الثابتة نفسها في بطاقة الدرجات (b5 ممتاز … b1 ضعيف) */
+.stack i[class^="b"], .keys i[class^="b"] { background: var(--c); }
+.grp { font-size: 12.5px; font-weight: 700; color: var(--deep); margin-top: 2px; }
 .keys { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); }
 .keys span { display: inline-flex; align-items: center; gap: 5px; }
 .keys i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
@@ -548,17 +550,22 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
     </div>
     <div class="grid2">
       <div class="card">
-        <div class="card-h"><div><h3>توزيع التقديرات</h3><p class="sub">آخر كشف درجات معتمد</p></div><span class="src auto">تلقائي</span></div>
-        <div class="cls"><span>٢/١</span><div class="stack"><i class="g1" style="flex:34"></i><i class="g2" style="flex:30"></i><i class="g3" style="flex:22"></i><i class="g4" style="flex:10"></i><i class="g5" style="flex:4"></i></div></div>
-        <div class="cls"><span>٢/٢</span><div class="stack"><i class="g1" style="flex:28"></i><i class="g2" style="flex:33"></i><i class="g3" style="flex:24"></i><i class="g4" style="flex:11"></i><i class="g5" style="flex:4"></i></div></div>
-        <div class="cls"><span>٢/٣</span><div class="stack"><i class="g1" style="flex:14"></i><i class="g2" style="flex:26"></i><i class="g3" style="flex:31"></i><i class="g4" style="flex:20"></i><i class="g5" style="flex:9"></i></div></div>
-        <div class="keys"><span><i class="g1"></i>ممتاز</span><span><i class="g2"></i>جيد جدًا</span><span><i class="g3"></i>جيد</span><span><i class="g4"></i>مقبول</span><span><i class="g5"></i>يحتاج دعمًا</span></div>
+        <div class="card-h"><div><h3>توزيع التقديرات لكل فصل</h3><p class="sub">متوسط كل طالب في اختبارات الفصل</p></div><span class="src auto">تلقائي</span></div>
+        <div class="cls"><span>٢/١</span><div class="stack"><i class="b5" style="flex:34"></i><i class="b4" style="flex:30"></i><i class="b3" style="flex:22"></i><i class="b2" style="flex:10"></i><i class="b1" style="flex:4"></i></div></div>
+        <div class="cls"><span>٢/٢</span><div class="stack"><i class="b5" style="flex:28"></i><i class="b4" style="flex:33"></i><i class="b3" style="flex:24"></i><i class="b2" style="flex:11"></i><i class="b1" style="flex:4"></i></div></div>
+        <div class="cls"><span>٢/٣</span><div class="stack"><i class="b5" style="flex:14"></i><i class="b4" style="flex:26"></i><i class="b3" style="flex:31"></i><i class="b2" style="flex:20"></i><i class="b1" style="flex:9"></i></div></div>
+        <div class="cls"><span>٢/٤</span><div class="stack"><i class="b5" style="flex:36"></i><i class="b4" style="flex:34"></i><i class="b3" style="flex:20"></i><i class="b2" style="flex:8"></i><i class="b1" style="flex:2"></i></div></div>
+        <div class="cls"><span>٢/٥</span><div class="stack"><i class="b5" style="flex:48"></i><i class="b4" style="flex:37"></i><i class="b3" style="flex:13"></i><i class="b2" style="flex:2"></i></div></div>
+        <div class="keys"><span><i class="b5"></i>ممتاز</span><span><i class="b4"></i>جيد جدًا</span><span><i class="b3"></i>جيد</span><span><i class="b2"></i>مقبول</span><span><i class="b1"></i>ضعيف</span></div>
       </div>
       <div class="card">
-        <div class="card-h"><div><h3>الطلاب الذين يحتاجون دعمًا</h3><p class="sub">ما فعله المعلم لهم</p></div><span class="src mix">بوابة + المعلم</span></div>
+        <div class="card-h"><div><h3>الدعم العلاجي والإثرائي</h3><p class="sub">من دورة الاختبار · الطالب يُحسب مرة واحدة</p></div><span class="src auto">تلقائي</span></div>
+        <p class="grp">العلاجي · من نزل عن ٦٠٪ في اختبار</p>
         <div class="bar"><div class="row"><span>شملتهم خطة علاجية</span><span class="num">١٤ من ١٦</span></div><div class="track"><div class="fill" style="width:87.5%"></div></div></div>
-        <div class="bar"><div class="row"><span>تحسّنوا في الاختبار التالي</span><span class="num">١١ من ١٤</span></div><div class="track"><div class="fill" style="width:78.6%"></div></div></div>
-        <p class="sub num">٣ إحالات للتوجيه الطلابي · غياب المادة ٤٫١٪</p>
+        <div class="bar"><div class="row"><span>الخطط العلاجية المنفّذة</span><span class="num">٣ من ٣</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+        <p class="grp">الإثرائي · من بلغ ٩٠٪ فأكثر</p>
+        <div class="bar"><div class="row"><span>كُرّم من المتفوقين</span><span class="num">٤٨ من ٤٨</span></div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+        <p class="sub num">خطتان إثرائيتان</p>
       </div>
     </div>
   </section>
