@@ -1,0 +1,892 @@
+<title>ملف المعلم الرقمي</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* التخطيط: عمود واحد للجوال (بطاقة هوية ← أرقام ← قراءة سريعة ← أقسام بتبويب لاصق)، وشبكة أوسع على الحاسب */
+:root {
+  --bg: #F3F6F4;
+  --surface: #FFFFFF;
+  --ink: #101010;
+  --muted: #5F6B65;
+  --faint: #98A39D;
+  --line: #DCE5E0;
+  /* لون التخصص: ثلاث درجات تُشتق منها ألوان الهوية (داكن · أساسي · فاتح) */
+  --s-a: #2F4F40; --s-b: #3E6350; --s-c: #89D7AD;
+  --deep: var(--s-b);
+  --mint: var(--s-c);
+  --mint-light: color-mix(in srgb, var(--s-b) 20%, #fff);
+  --tint: color-mix(in srgb, var(--s-b) 8%, #fff);
+  --good: #3E6350;
+  --warn: #9A7B22;
+  --warn-bg: #FBF3DE;
+  --info: #3F6B99;
+  --info-bg: #E8EFF7;
+  --hero-a: var(--s-a);
+  --hero-b: var(--s-b);
+  --hero-ink: #FFFFFF;
+  --hero-soft: rgba(255,255,255,.72);
+  --track: #E7EDEA;
+  --gmix: 0%;
+  --shadow: 0 1px 2px rgba(16,40,28,.05), 0 10px 28px -16px rgba(16,40,28,.28);
+  --font: "IBM Plex Sans Arabic", Tahoma, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --e01:#6b6b6b; --e02:#3e6350; --e03:#2f7f7a; --e04:#3f6b99; --e05:#5a5f9e; --e06:#7a5c99;
+  --e07:#9a4f6e; --e08:#a5523f; --e09:#b07a2a; --e10:#7d7f2a; --e11:#5f8a3a;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0F1613; --surface: #17211C; --ink: #EEF3F0; --muted: #A7B5AD; --faint: #6E7D75; --line: #2A3832;
+  --deep: var(--s-c); --mint: var(--s-c); --mint-light: color-mix(in srgb, var(--s-b) 35%, #17211C); --tint: color-mix(in srgb, var(--s-b) 18%, #17211C); --good: #89D7AD;
+  --warn: #E2C06A; --warn-bg: #2E2816; --info: #8DB4E2; --info-bg: #1A2633;
+  --hero-a: color-mix(in srgb, var(--s-a) 70%, #000); --hero-b: color-mix(in srgb, var(--s-b) 62%, #000); --hero-ink: #F2FBF6; --hero-soft: rgba(242,251,246,.7);
+  --track: #25332C; --gmix: 45%; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -16px rgba(0,0,0,.7);
+  --e01:#9a9a9a; --e02:#7fbf9c; --e03:#5fbdb6; --e04:#7fa6d6; --e05:#9599d6; --e06:#b394d4;
+  --e07:#d48aa8; --e08:#de8d78; --e09:#dcae62; --e10:#b7ba5a; --e11:#93c26c;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0F1613; --surface: #17211C; --ink: #EEF3F0; --muted: #A7B5AD; --faint: #6E7D75; --line: #2A3832;
+  --deep: var(--s-c); --mint: var(--s-c); --mint-light: color-mix(in srgb, var(--s-b) 35%, #17211C); --tint: color-mix(in srgb, var(--s-b) 18%, #17211C); --good: #89D7AD;
+  --warn: #E2C06A; --warn-bg: #2E2816; --info: #8DB4E2; --info-bg: #1A2633;
+  --hero-a: color-mix(in srgb, var(--s-a) 70%, #000); --hero-b: color-mix(in srgb, var(--s-b) 62%, #000); --hero-ink: #F2FBF6; --hero-soft: rgba(242,251,246,.7);
+  --track: #25332C; --gmix: 45%; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px -16px rgba(0,0,0,.7);
+  --e01:#9a9a9a; --e02:#7fbf9c; --e03:#5fbdb6; --e04:#7fa6d6; --e05:#9599d6; --e06:#b394d4;
+  --e07:#d48aa8; --e08:#de8d78; --e09:#dcae62; --e10:#b7ba5a; --e11:#93c26c;
+  color-scheme: dark;
+}
+
+/* ألوان التخصصات */
+:root[data-subject="math"]    { --s-a: #2A5A8A; --s-b: #3A78B5; --s-c: #A4CBF2; }
+:root[data-subject="science"] { --s-a: #2F4F40; --s-b: #3E6350; --s-c: #89D7AD; }
+:root[data-subject="arabic"]  { --s-a: #5A2E2E; --s-b: #8A4343; --s-c: #E3A7A0; }
+:root[data-subject="english"] { --s-a: #3B3566; --s-b: #5A5199; --s-c: #B2A9F0; }
+:root[data-subject="islamic"] { --s-a: #1F4F4C; --s-b: #2F7F7A; --s-c: #87D3CC; }
+:root[data-subject="social"]  { --s-a: #5C4417; --s-b: #8C6A22; --s-c: #E6C27A; }
+:root[data-subject="navy"]    { --s-a: #121A33; --s-b: #22305A; --s-c: #A3B3E0; }
+:root[data-subject="slate"]   { --s-a: #2B343D; --s-b: #4A5866; --s-c: #A9BACB; }
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 48px;
+}
+.wrap { max-width: 860px; margin: 0 auto; display: grid; gap: 18px; }
+.num { font-variant-numeric: tabular-nums; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; border-radius: 6px; }
+
+/* شريط النموذج التجريبي */
+.demo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; justify-content: space-between;
+  font-size: 12.5px; color: var(--warn); background: var(--warn-bg); border-radius: 12px; padding: 8px 12px;
+}
+.legend { display: flex; gap: 10px; flex-wrap: wrap; color: var(--muted); }
+
+/* بطاقة الهوية */
+.hero {
+  position: relative; overflow: hidden; border-radius: 22px; color: var(--hero-ink);
+  background: linear-gradient(135deg, var(--hero-a), var(--hero-b));
+  padding: 22px 20px 18px; box-shadow: var(--shadow);
+}
+.hero::after {
+  /* نقش هندسي خفيف مستوحى من الزخرفة — ثماني تكرار */
+  content: ""; position: absolute; inset: 0; opacity: .09; pointer-events: none;
+  background-image: radial-gradient(circle at 0 0, transparent 13px, currentColor 14px, transparent 15px),
+                    radial-gradient(circle at 28px 28px, transparent 13px, currentColor 14px, transparent 15px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to left, #000, transparent 70%);
+}
+.hero-top { position: relative; z-index: 1; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.eyebrow { font-size: 12px; color: var(--hero-soft); letter-spacing: .3px; }
+.hero h1 { font-size: 24px; line-height: 1.35; margin-top: 4px; font-weight: 700; }
+.hero .role { color: var(--hero-soft); font-size: 14px; margin-top: 2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.hchip { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.18); }
+.ring { position: relative; width: 92px; height: 92px; flex: none; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .lbl { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .lbl b { font-size: 22px; line-height: 1; }
+.ring .lbl { justify-items: center; }
+.ring .lbl b { font-size: 24px; }
+.ring .lbl span { font-size: 11px; color: var(--hero-soft); margin-top: 4px; }
+.ring-yr { margin-top: 4px; font-size: 10.5px; color: var(--hero-soft); white-space: nowrap; }
+.ring-cap { margin-top: 6px; text-align: center; font-size: 11px; font-weight: 600; color: var(--hero-ink); background: rgba(255,255,255,.14); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.ring-wrap { flex: none; display: grid; justify-items: center; text-align: center; }
+.hero-foot {
+  position: relative; z-index: 1; margin-top: 16px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,.25);
+  display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: space-between; font-size: 12px; color: var(--hero-soft);
+}
+.live { display: inline-flex; align-items: center; gap: 6px; }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 0 rgba(137,215,173,.7); animation: pulse 2s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 7px rgba(137,215,173,0); } 100% { box-shadow: 0 0 0 0 rgba(137,215,173,0); } }
+.code { font-family: var(--mono); letter-spacing: 1px; color: var(--hero-ink); }
+
+/* الأرقام */
+.kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 640px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 2px; }
+.kpi .v { font-size: 26px; font-weight: 700; color: var(--deep); line-height: 1.2; }
+.kpi .v small { font-size: 14px; font-weight: 600; }
+.kpi .l { font-size: 12.5px; color: var(--muted); }
+.kpi .d { font-size: 11.5px; color: var(--faint); }
+/* بطاقة التقديرات: عرض كامل في الجوال (ومعها الخامسة)، وعمود واحد في الشاشة الأوسع */
+.kpi { align-content: start; }
+.kpi:nth-child(5), .kpi.grades { grid-column: 1 / -1; }
+@media (min-width: 640px) { .kpi:nth-child(5) { grid-column: span 2; } }
+.kpi.grades { gap: 8px; }
+.g-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.g-bar { display: flex; gap: 2px; height: 8px; border-radius: 5px; overflow: hidden; }
+.g-chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+.gc { display: grid; justify-items: center; gap: 1px; border-radius: 8px; padding: 4px 2px; font-size: 10.5px; white-space: nowrap;
+      background: color-mix(in srgb, var(--c) 14%, var(--surface)); color: color-mix(in srgb, var(--c), #fff var(--gmix)); }
+.gc b { font-size: 13px; }
+.b5 { --c: #4E7D66; } .b4 { --c: #3F6B99; } .b3 { --c: #3E8FD1; } .b2 { --c: #9A7B22; } .b1 { --c: #B4661E; }
+.g-bar i { background: var(--c); }
+.spark { width: 100%; height: 26px; margin-top: 4px; }
+
+/* القراءة السريعة */
+.brief { background: var(--tint); border: 1px solid var(--mint-light); border-radius: 16px; padding: 14px 16px; display: grid; gap: 10px; }
+.brief h2 { font-size: 15px; color: var(--deep); }
+.brief ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.brief li { display: grid; grid-template-columns: 22px minmax(0,1fr); gap: 8px; font-size: 14px; }
+.brief li svg { width: 18px; height: 18px; margin-top: 3px; color: var(--deep); }
+
+/* التبويب اللاصق */
+.tabs {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px);
+  margin-inline: -4px; padding: 8px 4px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px;
+  padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
+}
+.tab[aria-current="true"] { background: var(--deep); border-color: var(--deep); color: var(--surface); }
+
+/* الأقسام */
+section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
+.sec-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.sec-h h2 { font-size: 19px; }
+.sec-h p { font-size: 12.5px; color: var(--muted); }
+.grid2 { display: grid; gap: 12px; }
+@media (min-width: 700px) { .grid2 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; display: grid; gap: 10px; min-width: 0; }
+.card h3 { font-size: 15px; }
+.card-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.sub { font-size: 12.5px; color: var(--muted); }
+
+.src { flex: none; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.src.auto { background: var(--mint-light); color: var(--deep); }
+.src.up { background: var(--info-bg); color: var(--info); }
+.src.mix { background: var(--warn-bg); color: var(--warn); }
+
+/* أشرطة */
+.bar { display: grid; gap: 4px; }
+.bar .row { display: flex; justify-content: space-between; font-size: 13px; gap: 8px; }
+.bar .row span:last-child { color: var(--muted); }
+.track { height: 9px; border-radius: 6px; background: var(--track); overflow: hidden; position: relative; }
+.fill { height: 100%; border-radius: 6px; background: var(--deep); transform-origin: right; }
+.mark { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); opacity: .55; border-radius: 2px; }
+.anim .fill { animation: grow .9s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes grow { from { transform: scaleX(0); } }
+
+/* توزيع التقديرات */
+.stack { display: flex; height: 22px; border-radius: 7px; overflow: hidden; gap: 2px; }
+.stack i { display: block; height: 100%; }
+.g1 { background: #3E6350; } .g2 { background: #89D7AD; } .g3 { background: #C9D9A0; } .g4 { background: #E6C27A; } .g5 { background: #D98C7A; }
+.keys { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); }
+.keys span { display: inline-flex; align-items: center; gap: 5px; }
+.keys i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+.cls { display: grid; grid-template-columns: 52px minmax(0,1fr); gap: 10px; align-items: center; font-size: 13px; }
+
+/* مخطط التحسن */
+.chart { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-family: var(--font); font-size: 11px; }
+.chart .axis { stroke: var(--line); }
+.chart .before { fill: var(--surface); stroke: var(--faint); stroke-width: 2; }
+.chart .after { fill: var(--deep); }
+.chart .link { stroke: var(--mint); stroke-width: 4; stroke-linecap: round; }
+.chart .gain { fill: var(--deep); font-weight: 700; direction: ltr; unicode-bidi: plaintext; }
+
+/* الخط الزمني */
+.tl { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.tl li { display: grid; grid-template-columns: 18px minmax(0,1fr); gap: 10px; position: relative; padding-bottom: 14px; }
+.tl li::before { content: ""; position: absolute; right: 8px; top: 16px; bottom: 0; width: 2px; background: var(--line); }
+.tl li:last-child::before { display: none; }
+.tl .dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--deep); background: var(--surface); margin-top: 4px; }
+.tl b { font-size: 14px; }
+.tl .when { font-size: 12px; color: var(--faint); }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.tag { font-size: 11.5px; padding: 2px 8px; border-radius: 999px; background: var(--tint); color: var(--deep); border: 1px solid var(--mint-light); }
+
+/* عناصر الأداء */
+.els { display: grid; gap: 8px; }
+.el { display: grid; grid-template-columns: 30px minmax(0,1fr) 46px; gap: 10px; align-items: center; font-size: 13px; }
+.el .k { font-family: var(--mono); font-size: 11px; color: var(--surface); border-radius: 6px; padding: 2px 0; text-align: center; }
+.el .t { min-width: 0; }
+.el .t p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.el .n { text-align: left; color: var(--muted); font-size: 12px; }
+
+/* الشواهد المرفوعة */
+.docs { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+@media (min-width: 640px) { .docs { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+.doc {
+  text-align: right; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px;
+  display: grid; gap: 6px; cursor: pointer; transition: transform .15s, border-color .15s;
+}
+.doc:hover { border-color: var(--mint); transform: translateY(-2px); }
+.doc .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--info-bg); color: var(--info); }
+.doc .ic svg { width: 18px; height: 18px; }
+.doc b { font-size: 13.5px; line-height: 1.4; }
+.doc span { font-size: 11.5px; color: var(--faint); }
+
+/* بطاقة الرمز */
+.qr-card {
+  display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center;
+  background: var(--surface); border: 1px dashed var(--mint); border-radius: 18px; padding: 14px 16px;
+}
+.qr-card h3 { font-size: 15px; }
+.qr-box { width: 96px; height: 96px; background: #fff; border-radius: 10px; padding: 6px; display: grid; place-items: center; }
+.qr-box img, .qr-box canvas { width: 100% !important; height: 100% !important; }
+.copy { margin-top: 8px; border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 4px 12px; font-size: 12px; cursor: pointer; }
+
+.quote {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px;
+  display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 12px; align-items: start;
+}
+.quote .qm { font-size: 44px; line-height: .8; color: var(--mint); font-weight: 700; }
+.quote blockquote { margin: 0; font-size: 15px; line-height: 1.75; }
+.quote .by { margin-top: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.quote .more { grid-column: 1 / -1; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.quote .more blockquote { font-size: 14px; }
+.quote .qm.sm { font-size: 34px; }
+.quote .sig { font-size: 11px; font-weight: 600; color: var(--deep); border: 1px solid var(--mint-light); background: var(--tint); border-radius: 6px; padding: 1px 7px; }
+
+.cmp { display: grid; gap: 12px; }
+.cmp .row { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.cmp .row b { color: var(--deep); }
+.cmp .row span { color: var(--muted); font-size: 12px; }
+.cmp .track { height: 11px; }
+.cmp .avg { position: absolute; top: -4px; bottom: -4px; width: 3px; background: var(--ink); border-radius: 2px; }
+.cmp .avg::after { content: ""; position: absolute; top: -5px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: var(--ink); }
+
+.wins { display: grid; gap: 10px; }
+@media (min-width: 640px) { .wins { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+.win { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 6px; align-content: start; }
+.win .medal { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--warn-bg); color: var(--warn); }
+.win .medal svg { width: 22px; height: 22px; }
+.win b { font-size: 14px; line-height: 1.45; }
+.win p { font-size: 12.5px; color: var(--muted); }
+.win .src { justify-self: start; }
+.win .lvl { justify-self: start; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--tint); color: var(--deep); }
+
+.private { border: 1.5px dashed var(--faint); border-radius: 18px; padding: 14px 16px; display: grid; gap: 10px; background: var(--surface); }
+.private .ph { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.private .lock { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
+.visits { list-style: none; margin: 0; padding: 0; display: grid; }
+.visits li { display: grid; grid-template-columns: 36px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.visits li:first-child { border-top: 0; }
+.visits .av { width: 36px; height: 36px; border-radius: 50%; background: var(--tint); color: var(--deep); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.visits span { color: var(--faint); font-size: 12px; }
+.visits .dur { color: var(--muted); font-size: 12px; text-align: left; }
+
+.subjects { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line); cursor: pointer; padding: 0; }
+.sw[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+.colors { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.colors .row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.colors .sw {
+  width: auto; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: none; background: var(--bg);
+  display: grid; justify-items: center; gap: 4px; padding: 8px 4px; font-size: 12px; color: var(--muted);
+}
+.colors .sw .dot { width: 26px; height: 26px; border-radius: 50%; }
+.colors .sw small { font-size: 10px; color: var(--faint); line-height: 1; }
+.colors .sw[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); color: var(--ink); font-weight: 600; }
+
+.welcome { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; display: grid; gap: 10px; }
+.welcome h2 { font-size: 15px; }
+.welcome form { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)) auto auto; gap: 8px; }
+@media (max-width: 560px) { .welcome form { grid-template-columns: minmax(0,1fr) minmax(0,1fr); } }
+.welcome input { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.btn { font-size: 13.5px; font-weight: 600; border-radius: 999px; padding: 8px 16px; cursor: pointer; border: 1px solid var(--deep); }
+.btn.pri { background: var(--deep); color: var(--surface); }
+.btn.ghost { background: transparent; color: var(--muted); border-color: var(--line); }
+
+.picker { display: grid; gap: 8px; }
+.picker .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opt { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; cursor: pointer; background: var(--bg); user-select: none; }
+.opt input { accent-color: var(--deep); margin: 0; }
+.opt:has(input:not(:checked)) { color: var(--faint); text-decoration: line-through; }
+.share-wrap { display: grid; gap: 12px; background: var(--surface); border: 1px dashed var(--mint); border-radius: 18px; padding: 14px 16px; }
+.share-wrap .qr-card { border: 0; padding: 0; }
+
+.sents { display: grid; gap: 6px; }
+.sent { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; font-size: 13px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; cursor: pointer; background: var(--bg); }
+.sent input { accent-color: var(--deep); margin: 3px 0 0; }
+.sent:has(input:checked) { border-color: var(--deep); background: var(--tint); }
+.sent:has(input:disabled) { opacity: .5; cursor: not-allowed; }
+.cmp2 { display: grid; gap: 10px; }
+.cmp-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.cmp-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cmp-legend i { width: 12px; height: 8px; border-radius: 3px; display: inline-block; }
+.cmp-legend .me { background: var(--deep); } .cmp-legend .sc { background: var(--faint); }
+.cm { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; background: var(--bg); }
+.cm-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.cm-h b { font-size: 13.5px; }
+.delta { flex: none; font-size: 11.5px; font-weight: 700; color: var(--deep); background: var(--tint); border: 1px solid var(--mint-light); border-radius: 999px; padding: 1px 9px; white-space: nowrap; }
+.cm-r { display: grid; grid-template-columns: 48px minmax(0,1fr) 64px; gap: 8px; align-items: center; }
+.cm-r .who { font-size: 11.5px; color: var(--muted); }
+.cm-r .track { height: 10px; }
+.cm-r .fill.sc { background: var(--faint); }
+.cm-r .val { text-align: left; font-size: 13px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.cm-r .val.me { font-size: 16px; color: var(--deep); font-weight: 700; }
+.cm-note { font-size: 11px; color: var(--faint); }
+.fold summary { list-style: none; cursor: pointer; display: grid; gap: 8px; }
+.fold summary::-webkit-details-marker { display: none; }
+.fold-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.fold-h b { color: var(--deep); }
+.chev { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--tint); color: var(--deep); transition: transform .2s; }
+.chev svg { width: 18px; height: 18px; }
+.fold[open] .chev { transform: rotate(180deg); }
+.fold-dots { display: flex; flex-wrap: wrap; gap: 5px; }
+.fold-dots span { font-size: 11px; font-weight: 600; color: var(--deep); background: var(--tint); border: 1px solid var(--mint-light); border-radius: 999px; padding: 1px 9px; }
+.fold-dots span::before { content: "▲ "; font-size: 8px; vertical-align: 1px; }
+.fold-cta { font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
+.fold .c, .fold[open] .o { display: none; }
+.fold[open] .c { display: inline; }
+.fold[open] .fold-dots { display: none; }
+.lessons { display: grid; gap: 8px; }
+.lesson { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; }
+.lesson .sb { font-size: 11.5px; font-weight: 700; color: var(--deep); background: var(--tint); border: 1px solid var(--mint-light); border-radius: 8px; padding: 2px 8px; white-space: nowrap; }
+.lesson p { font-size: 14px; line-height: 1.7; }
+.wk-in { display: grid; gap: 6px; }
+.wk-in label { font-size: 12.5px; color: var(--muted); }
+.wk-in textarea { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; resize: vertical; min-height: 120px; line-height: 1.7; }
+.foot { text-align: center; font-size: 12px; color: var(--faint); display: grid; gap: 4px; }
+
+/* معاينة الشاهد */
+.sheet-bg[hidden] { display: none; }
+.sheet-bg { position: fixed; inset: 0; background: rgba(8,16,12,.45); z-index: 20; display: grid; align-items: end; }
+.sheet {
+  background: var(--surface); border-radius: 20px 20px 0 0; max-width: 620px; width: 100%; margin: 0 auto;
+  padding: 18px max(18px, env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+  display: grid; gap: 10px; animation: up .25s ease-out;
+}
+@keyframes up { from { transform: translateY(30px); opacity: .4; } }
+.paper { border: 1px solid var(--line); border-radius: 12px; background: var(--bg); height: 190px; display: grid; place-items: center; color: var(--faint); font-size: 13px; }
+.close { justify-self: start; border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 6px 16px; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div class="wrap">
+
+  <div class="demo" role="note">
+    <span><b>نموذج أولي ببيانات تجريبية</b> · الاسم والأرقام للتوضيح فقط</span>
+    <span class="legend">
+      <span class="src auto">تلقائي من البوابة</span>
+      <span class="src mix">من البوابة + إكمال المعلم</span>
+      <span class="src up">يرفعه المعلم</span>
+    </span>
+  </div>
+
+  <!-- ترحيب الزائر: الاسم والجهة اختياريان -->
+  <div class="welcome" id="welcome">
+    <h2>مرحبًا بك في ملف المعلم</h2>
+    <p class="sub">اكتب اسمك وجهتك ليعرف المعلم من اطّلع على ملفه. هذا اختياري.</p>
+    <form id="welcomeForm">
+      <input id="vName" placeholder="الاسم" autocomplete="name" aria-label="الاسم">
+      <input id="vOrg" placeholder="الجهة، مثل مكتب التعليم" aria-label="الجهة">
+      <button class="btn pri" type="submit">دخول</button>
+      <button class="btn ghost" type="button" id="skipBtn">تخطٍّ</button>
+    </form>
+  </div>
+
+  <!-- بطاقة الهوية -->
+  <header class="hero">
+    <div class="hero-top">
+      <div>
+        <p class="eyebrow">مدرسة مكة الثانوية · ملف المعلم الرقمي · ١٤٤٨هـ</p>
+        <h1>أ. فيصل بن سالم القرشي</h1>
+        <p class="role" id="roleText">معلم رياضيات · ١٤ سنة خبرة</p>
+        <div class="chips">
+          <span class="hchip">رياضيات ٢-١ و٢-٢</span>
+          <span class="hchip num">٥ فصول · ١٤٢ طالبًا</span>
+          <span class="hchip num">٢٤ حصة أسبوعيًا</span>
+        </div>
+      </div>
+      <div class="ring-wrap">
+      <div class="ring" aria-label="تقييم الأداء للعام السابق 4.62 من 5">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="9"/>
+          <circle id="ringArc" cx="50" cy="50" r="42" fill="none" stroke="var(--mint)" stroke-width="9" stroke-linecap="round"
+                  stroke-dasharray="263.9" stroke-dashoffset="20.1"/>
+        </svg>
+        <div class="lbl"><b class="num" data-count="4.62" data-dec="2">٤٫٦٢</b><span>من ٥</span></div>
+      </div>
+      <span class="ring-cap">تخطى التوقعات</span>
+      <span class="ring-yr">تقييم أداء ١٤٤٧هـ</span>
+      </div>
+    </div>
+    <div class="hero-foot">
+      <span class="live"><i></i>يُبنى مباشرة من البوابة · آخر تحديث ١٥/١٠/٢٠٢٦ ٩:١٢ص</span>
+      <span>رمز التحقق <span class="code">MS-7Q4K</span></span>
+    </div>
+  </header>
+
+  <!-- رأي الإدارة -->
+  <figure class="quote" id="quote" style="margin:0">
+    <span class="qm" aria-hidden="true">”</span>
+    <div>
+      <blockquote>معلم يصنع الفرق في فصوله: تخطيط منظّم، ومتابعة دقيقة لكل طالب، ومبادرة دائمة في مجتمع التعلم بالمدرسة. نعتز بأن يكون واجهة لمدرسة مكة الثانوية.</blockquote>
+      <figcaption class="by"><span>مدير المدرسة · ١٢/١٠/٢٠٢٦</span><span class="sig">موقّع إلكترونيًا</span><span class="src auto">من البوابة</span></figcaption>
+    </div>
+    <div class="more">
+      <span class="qm sm" aria-hidden="true">”</span>
+      <div>
+        <blockquote>تخطيطه للدروس مسبق ومنظّم، وسجل متابعته مكتمل أولًا بأول، ولمسنا أثر الخطط العلاجية في نتائج طلابه هذا الفصل.</blockquote>
+        <figcaption class="by"><span>وكيل الشؤون التعليمية · ٠٥/١٠/٢٠٢٦</span><span class="sig">موقّع إلكترونيًا</span></figcaption>
+      </div>
+    </div>
+  </figure>
+
+  <!-- الأرقام -->
+  <div class="kpis" id="kpis">
+    <div class="kpi"><span class="v num" data-count="412">٤١٢</span><span class="l">حصة منفّذة هذا العام</span><span class="d">التحضير في وقته ٩٨٪</span></div>
+    <div class="kpi"><span class="v num" data-count="6">٦</span><span class="l">لقاءات مجتمع التعلم</span><span class="d">قدّم منها لقاءًا واحدًا</span></div>
+    <div class="kpi"><span class="v num" data-count="14">١٤</span><span class="l">اختبارًا وتقويمًا</span><span class="d">٤ أنواع تقويم</span></div>
+    <div class="kpi"><span class="v num" data-count="32">٣٢</span><span class="l">ساعة تطوير مهني</span><span class="d">المستهدف ٣٠ ساعة</span></div>
+    <div class="kpi"><span class="v num" data-count="57">٥٧</span><span class="l">تواصلًا مع أولياء الأمور</span><span class="d">إشعارات ومقابلات</span></div>
+    <div class="kpi grades">
+      <div class="g-top"><span class="v num" data-count="81.4" data-dec="1" data-suffix="٪">٨١٫٤٪</span><span class="l">متوسط درجات طلابه</span></div>
+      <div class="g-bar" aria-hidden="true"><i class="b5" style="flex:32"></i><i class="b4" style="flex:32"></i><i class="b3" style="flex:22"></i><i class="b2" style="flex:10"></i><i class="b1" style="flex:4"></i></div>
+      <div class="g-chips">
+        <span class="gc b5"><b class="num">٣٢٪</b>ممتاز</span>
+        <span class="gc b4"><b class="num">٣٢٪</b>جيد جدًا</span>
+        <span class="gc b3"><b class="num">٢٢٪</b>جيد</span>
+        <span class="gc b2"><b class="num">١٠٪</b>مقبول</span>
+        <span class="gc b1"><b class="num">٤٪</b>ضعيف</span>
+      </div>
+      <span class="d">من ١٤ اختبارًا هذا الفصل · ١٤٢ طالبًا</span>
+    </div>
+  </div>
+
+  <!-- القراءة السريعة -->
+  <aside class="brief">
+    <h2>قراءة في ٣٠ ثانية</h2>
+    <ul id="briefList"></ul>
+  </aside>
+
+
+  <!-- التبويب -->
+  <nav class="tabs" aria-label="أقسام الملف">
+    <button class="tab" data-to="teach" aria-current="true">التخطيط والتدريس</button>
+    <button class="tab" data-to="results">النتائج</button>
+    <button class="tab" data-to="assess">التقويم</button>
+    <button class="tab" data-to="growth">التطوير المهني</button>
+    <button class="tab" data-to="wins">الإنجازات</button>
+    <button class="tab" data-to="elements">عناصر الأداء</button>
+    <button class="tab" data-to="docs">الشواهد</button>
+  </nav>
+
+  <!-- التخطيط والتدريس -->
+  <section class="sec anim" id="teach">
+    <div class="sec-h"><h2>التخطيط والتدريس</h2><p>التحضير والمتابعة</p></div>
+    <div class="card week" id="weekCard">
+      <div class="card-h"><div><h3>دروس هذا الأسبوع</h3><p class="sub num">من ١٥/١٠ إلى ٢١/١٠/٢٠٢٦ · كتبها المعلم عند مشاركة الملف</p></div><span class="src up">يكتبها المعلم</span></div>
+      <div class="lessons" id="weekLessons"></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h"><div><h3>الحصص والتحضير</h3><p class="sub">التحضير اليومي في البوابة خلال ٨ أسابيع</p></div><span class="src auto">تلقائي</span></div>
+        <svg class="chart" viewBox="0 0 320 110" role="img" aria-label="نسبة التحضير في وقته أسبوعيًا بين 94 و100 بالمئة">
+          <line class="axis" x1="10" y1="90" x2="310" y2="90"/>
+          <line class="axis" x1="10" y1="20" x2="310" y2="20" stroke-dasharray="3 4"/>
+          <text x="312" y="24" text-anchor="end">١٠٠٪</text>
+          <path d="M20 41 L60 34 L100 48 L140 27 L180 27 L220 34 L260 20 L300 20 L300 90 L20 90 Z" fill="var(--mint)" opacity=".22"/>
+          <path d="M20 41 L60 34 L100 48 L140 27 L180 27 L220 34 L260 20 L300 20" fill="none" stroke="var(--deep)" stroke-width="2.5" stroke-linejoin="round"/>
+          <circle cx="300" cy="20" r="4.5" fill="var(--deep)"/>
+          <text x="20" y="106" text-anchor="middle">أ١</text><text x="300" y="106" text-anchor="middle">أ٨</text>
+        </svg>
+        <p class="sub num">٤١٢ حصة · ٢٨ حصة انتظار · ٢ تأخر في التحضير</p>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><h3>تحضير الدروس</h3><p class="sub">ملفات المعلم لكل وحدة</p></div><span class="src up">يرفعه المعلم</span></div>
+        <div class="tags"><span class="tag">الوحدة ١ · الدوال</span><span class="tag">الوحدة ٢ · المتتابعات</span><span class="tag">الوحدة ٣ · الاحتمالات</span><span class="tag">١٨ خطة درس</span></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><h3>سجل المتابعة</h3><p class="sub">الواجبات والمشاركة والتطبيقات الصفية</p></div><span class="src auto">تلقائي</span></div>
+        <div class="bar"><div class="row"><span>اكتمال الرصد</span><span class="num">٩٤٪</span></div><div class="track"><div class="fill" style="width:94%"></div></div></div>
+        <p class="sub num">١٬٢٤٨ رصدًا · آخر رصد قبل يومين</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- النتائج -->
+  <section class="sec anim" id="results">
+    <div class="sec-h"><h2>نتائج الطلاب</h2><p>دون أسماء الطلاب</p></div>
+    <div class="card">
+      <div class="card-h"><div><h3>تحسّن الطلاب من أول اختبار إلى آخره</h3><p class="sub">متوسط الفصل من ١٠٠ · الدائرة الفارغة أول اختبار · يظهر عند وجود اختبارين فأكثر</p></div><span class="src auto">تلقائي</span></div>
+      <svg class="chart" viewBox="0 0 340 196" role="img" aria-label="متوسطات الفصول قبل وبعد">
+        <line class="axis" x1="70" y1="12" x2="70" y2="170"/>
+        <g class="axis"><line x1="70" y1="170" x2="330" y2="170"/></g>
+        <text x="70" y="188" text-anchor="middle">٥٠</text><text x="200" y="188" text-anchor="middle">٧٥</text><text x="330" y="188" text-anchor="middle">١٠٠</text>
+        <!-- السلّم: 50 → x=70 ، 100 → x=330 ، أي 5.2 لكل درجة -->
+        <g><text x="58" y="34" text-anchor="end">٢/١</text><line class="link" x1="226" y1="30" x2="262.4" y2="30"/><circle class="before" cx="226" cy="30" r="6"/><circle class="after" cx="262.4" cy="30" r="6"/><text class="gain" x="276" y="34">+٧</text></g>
+        <g><text x="58" y="66" text-anchor="end">٢/٢</text><line class="link" x1="210.4" y1="62" x2="241.6" y2="62"/><circle class="before" cx="210.4" cy="62" r="6"/><circle class="after" cx="241.6" cy="62" r="6"/><text class="gain" x="255" y="66">+٦</text></g>
+        <g><text x="58" y="98" text-anchor="end">٢/٣</text><line class="link" x1="127.2" y1="94" x2="189.6" y2="94"/><circle class="before" cx="127.2" cy="94" r="6"/><circle class="after" cx="189.6" cy="94" r="6"/><text class="gain" x="203" y="98">+١٢</text></g>
+        <g><text x="58" y="130" text-anchor="end">٢/٤</text><line class="link" x1="195" y1="126" x2="226" y2="126"/><circle class="before" cx="195" cy="126" r="6"/><circle class="after" cx="226" cy="126" r="6"/><text class="gain" x="240" y="130">+٦</text></g>
+        <g><text x="58" y="162" text-anchor="end">٢/٥</text><line class="link" x1="236.4" y1="152" x2="267.6" y2="152"/><circle class="before" cx="236.4" cy="152" r="6"/><circle class="after" cx="267.6" cy="152" r="6"/><text class="gain" x="281" y="156">+٦</text></g>
+      </svg>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h"><div><h3>توزيع التقديرات</h3><p class="sub">آخر كشف درجات معتمد</p></div><span class="src auto">تلقائي</span></div>
+        <div class="cls"><span>٢/١</span><div class="stack"><i class="g1" style="flex:34"></i><i class="g2" style="flex:30"></i><i class="g3" style="flex:22"></i><i class="g4" style="flex:10"></i><i class="g5" style="flex:4"></i></div></div>
+        <div class="cls"><span>٢/٢</span><div class="stack"><i class="g1" style="flex:28"></i><i class="g2" style="flex:33"></i><i class="g3" style="flex:24"></i><i class="g4" style="flex:11"></i><i class="g5" style="flex:4"></i></div></div>
+        <div class="cls"><span>٢/٣</span><div class="stack"><i class="g1" style="flex:14"></i><i class="g2" style="flex:26"></i><i class="g3" style="flex:31"></i><i class="g4" style="flex:20"></i><i class="g5" style="flex:9"></i></div></div>
+        <div class="keys"><span><i class="g1"></i>ممتاز</span><span><i class="g2"></i>جيد جدًا</span><span><i class="g3"></i>جيد</span><span><i class="g4"></i>مقبول</span><span><i class="g5"></i>يحتاج دعمًا</span></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><h3>الطلاب الذين يحتاجون دعمًا</h3><p class="sub">ما فعله المعلم لهم</p></div><span class="src mix">بوابة + المعلم</span></div>
+        <div class="bar"><div class="row"><span>شملتهم خطة علاجية</span><span class="num">١٤ من ١٦</span></div><div class="track"><div class="fill" style="width:87.5%"></div></div></div>
+        <div class="bar"><div class="row"><span>تحسّنوا في الاختبار التالي</span><span class="num">١١ من ١٤</span></div><div class="track"><div class="fill" style="width:78.6%"></div></div></div>
+        <p class="sub num">٣ إحالات للتوجيه الطلابي · غياب المادة ٤٫١٪</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- التقويم -->
+  <section class="sec anim" id="assess">
+    <div class="sec-h"><h2>التقويم والاختبارات</h2><p>تنوّع الأدوات وجودة الأسئلة</p></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h"><div><h3>تنوّع أساليب التقويم</h3><p class="sub">١٤ أداة هذا الفصل</p></div><span class="src auto">تلقائي</span></div>
+        <div class="stack" style="height:28px"><i style="flex:5;background:var(--e04)"></i><i style="flex:4;background:var(--e03)"></i><i style="flex:3;background:var(--e05)"></i><i style="flex:2;background:var(--e09)"></i></div>
+        <div class="keys"><span><i style="background:var(--e04)"></i>إلكتروني ٥</span><span><i style="background:var(--e03)"></i>ورقي بتصحيح آلي ٤</span><span><i style="background:var(--e05)"></i>ورقي ٣</span><span><i style="background:var(--e09)"></i>مهام أدائية ٢</span></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><h3>تحليل الأسئلة</h3><p class="sub">من التصحيح الآلي</p></div><span class="src auto">تلقائي</span></div>
+        <div class="bar"><div class="row"><span>أسئلة متوسطة الصعوبة (المثالي)</span><span class="num">٧١٪</span></div><div class="track"><div class="fill" style="width:71%"></div></div></div>
+        <p class="sub">أصعب سؤال: «إيجاد الحد العام لمتتابعة حسابية»، أجاب عنه ٣٨٪، وأُعيد شرحه في الحصة التالية.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><div><h3>أوراق العمل والاختبارات</h3><p class="sub">نماذج الأسئلة والإجابات</p></div><span class="src mix">بوابة + المعلم</span></div>
+      <div class="tags"><span class="tag">اختبار قصير ١ · ٢٨ سؤالًا</span><span class="tag">ورقة عمل المتتابعات</span><span class="tag">مهمة أدائية: نمذجة النمو</span><span class="tag">اختبار الفترة · مع جدول المواصفات</span></div>
+    </div>
+  </section>
+
+  <!-- التطوير المهني -->
+  <section class="sec anim" id="growth">
+    <div class="sec-h"><h2>التطوير المهني والزيارات</h2><p>ما تعلّمه وما طبّقه</p></div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h"><div><h3>ساعات التطوير المهني</h3><p class="sub">المستهدف السنوي ٣٠ ساعة</p></div><span class="src mix">بوابة + المعلم</span></div>
+        <div class="bar"><div class="row"><span>برامج تدريبية</span><span class="num">٢٢ ساعة</span></div><div class="track"><div class="fill" style="width:73%"></div></div></div>
+        <div class="bar"><div class="row"><span>مؤتمرات وورش</span><span class="num">١٠ ساعات</span></div><div class="track"><div class="fill" style="width:33%"></div></div></div>
+        <p class="sub num">٤ لقاءات مجتمع تعلم · ٢ زيارة تبادلية (نفّذ ١ وحضر ١)</p>
+      </div>
+      <div class="card">
+        <div class="card-h"><div><h3>زيارات الدعم</h3><p class="sub">من الإدارة المدرسية</p></div><span class="src auto">تلقائي</span></div>
+        <ol class="tl">
+          <li><span class="dot"></span><div><b>الزيارة ٣ · فصل ٢/٣</b><p class="when">٠٢/١٠/٢٠٢٦ · وكيل الشؤون التعليمية</p><div class="tags"><span class="tag">إدارة صفية فاعلة</span><span class="tag">تقويم مستمر</span></div></div></li>
+          <li><span class="dot"></span><div><b>الزيارة ٢ · فصل ٢/١</b><p class="when">١٤/٠٩/٢٠٢٦ · مدير المدرسة</p><div class="tags"><span class="tag">تنويع الاستراتيجيات</span></div></div></li>
+          <li><span class="dot"></span><div><b>الزيارة ١ · فصل ٢/٢</b><p class="when">٣١/٠٨/٢٠٢٦ · وكيل الشؤون التعليمية</p><div class="tags"><span class="tag">التمكن العلمي</span></div></div></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- المبادرات والإنجازات -->
+  <section class="sec" id="wins">
+    <div class="sec-h"><h2>المبادرات والإنجازات</h2><p>ما صنعه المعلم خارج الحصة</p></div>
+    <div class="wins">
+      <div class="win"><span class="medal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0ZM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg></span>
+        <span class="lvl">على مستوى المنطقة</span><b>المركز الثاني في أولمبياد الرياضيات</b><p>درّب ٣ طلاب، وتأهل أحدهم للمرحلة الوطنية.</p><span class="src mix">بوابة + المعلم</span></div>
+      <div class="win"><span class="medal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M5.6 5.6l2.1 2.1M3 12h3M18 12h3M16.3 7.7l2.1-2.1M8 16a4 4 0 1 1 8 0v2H8Z"/></svg></span>
+        <span class="lvl">على مستوى المدرسة</span><b>مبادرة «دقيقة رياضيات» الصباحية</b><p>٢٢ لقاءً في الإذاعة، شارك فيها ٦٠ طالبًا.</p><span class="src auto">من الأحداث</span></div>
+      <div class="win"><span class="medal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M21 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span>
+        <span class="lvl">لزملائه</span><b>قدّم ورشة «التقويم البنائي بالبطاقات»</b><p>حضرها ١٤ معلمًا، ٣ ساعات تطوير.</p><span class="src auto">من التطوير المهني</span></div>
+    </div>
+  </section>
+
+  <!-- عناصر الأداء -->
+  <section class="sec anim" id="elements">
+    <div class="sec-h"><h2>عناصر الأداء الوظيفي</h2><p>عدد الشواهد لكل عنصر</p></div>
+    <div class="card els" id="els"></div>
+  </section>
+
+  <!-- الشواهد -->
+  <section class="sec" id="docs">
+    <div class="sec-h"><h2>الشواهد من خارج البوابة</h2><p>اضغط على الشاهد لمعاينته</p></div>
+    <div class="docs" id="docGrid"></div>
+  </section>
+
+  <!-- المشاركة: يختار المعلم الأقسام ثم يعرض الرمز -->
+  <div class="share-wrap">
+  <div class="picker">
+    <div class="card-h"><div><h3>ماذا يرى الزائر؟</h3><p class="sub">يختار المعلم الأقسام قبل المشاركة، وتختفي غير المختارة من الصفحة فورًا. جرّبها هنا.</p></div><span class="lock" style="font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap">يراه المعلم فقط</span></div>
+    <div class="opts" id="opts"></div>
+    <p class="sub" style="background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:8px 12px">مثال لتنبيه يراه المعلم الذي لا اختبار له في البوابة: «نسبة طلابك لا تظهر لأنه لا اختبارات لك هذا الفصل. أضف اختبارك من «اختباراتي» ← «اختبار من خارج البوابة» وارصد درجات طلابك لتظهر.»</p>
+    <div class="colors">
+      <div><h3 style="font-size:14px">قراءة في ٣٠ ثانية</h3><p class="sub">اختر ٣ جمل تظهر للزائر. تظهر هنا الجمل التي تستحقها بياناتك فقط، وأرقامها تتحدّث تلقائيًا.</p></div>
+      <div class="sents" id="sents"></div>
+    </div>
+    <div class="colors">
+      <div><h3 style="font-size:14px">لون ملفك</h3><p class="sub">الأخضر لون البوابة هو الافتراضي لكل المعلمين، ويمكنك اختيار غيره.</p></div>
+      <div class="row" id="swatches">
+        <button class="sw" type="button" data-s="science" aria-pressed="true"><span class="dot" style="background:#3E6350"></span>أخضر<small>افتراضي</small></button>
+        <button class="sw" type="button" data-s="math" aria-pressed="false"><span class="dot" style="background:#3A78B5"></span>أزرق</button>
+        <button class="sw" type="button" data-s="islamic" aria-pressed="false"><span class="dot" style="background:#2F7F7A"></span>أزرق مخضر</button>
+        <button class="sw" type="button" data-s="english" aria-pressed="false"><span class="dot" style="background:#5A5199"></span>بنفسجي</button>
+        <button class="sw" type="button" data-s="navy" aria-pressed="false"><span class="dot" style="background:#22305A"></span>كحلي</button>
+        <button class="sw" type="button" data-s="arabic" aria-pressed="false"><span class="dot" style="background:#8A4343"></span>أحمر</button>
+        <button class="sw" type="button" data-s="social" aria-pressed="false"><span class="dot" style="background:#8C6A22"></span>ذهبي</button>
+        <button class="sw" type="button" data-s="slate" aria-pressed="false"><span class="dot" style="background:#4A5866"></span>رمادي</button>
+      </div>
+    </div>
+  </div>
+  <div class="wk-in">
+    <h3 style="font-size:14px">دروسك خلال صلاحية الرابط</h3>
+    <label for="wkText">اكتب دروس الأيام السبعة القادمة، كل مادة في سطر، وتظهر للزائر في قسم التخطيط. اختياري: إن تركتها فارغة لا يظهر القسم.</label>
+    <textarea id="wkText" rows="5">رياضيات ٢-١: المتتابعات الحسابية · المتتابعات الهندسية
+رياضيات ٢-٢: الاحتمال المشروط · مراجعة الوحدة الثالثة</textarea>
+  </div>
+  <div class="qr-card">
+    <div>
+      <h3>شارك هذا الملف</h3>
+      <p class="sub">يعرضه المعلم للزائر، فيمسح الرمز بجواله ويرى الأقسام التي اخترتها. الرابط صالح ٧ أيام، ويُلغى في أي وقت.</p>
+      <button class="copy" id="copyBtn" type="button">نسخ الرابط</button>
+      <p class="sub code" id="linkText" style="color:var(--muted);font-size:11.5px;margin-top:6px">makkahsec.sa/t/MS-7Q4K</p>
+    </div>
+    <div class="qr-box" id="qr" aria-label="رمز QR للملف"></div>
+  </div>
+  </div>
+
+  <!-- سجل الزوار: للمعلم فقط -->
+  <div class="private">
+    <div class="ph"><h3 style="font-size:15px">من اطّلع على ملفك</h3><span class="lock">يراه المعلم فقط · لا يظهر للزائر</span></div>
+    <ul class="visits">
+      <li><span class="av">م</span><div>مشرف الرياضيات · مكتب التعليم<br><span>اليوم ٩:٠٤ص · مسح الرمز</span></div><span class="dur num">٦ دقائق</span></li>
+      <li><span class="av">ل</span><div>لجنة التميّز المدرسي<br><span>١٣/١٠/٢٠٢٦ · الرابط</span></div><span class="dur num">١٢ دقيقة</span></li>
+      <li><span class="av">ز</span><div>زائر بلا اسم<br><span>٠٩/١٠/٢٠٢٦ · مسح الرمز</span></div><span class="dur num">٢ دقيقة</span></li>
+    </ul>
+    <p class="sub">يكتب الزائر اسمه وجهته اختياريًا عند الفتح، والأقسام الأكثر قراءة تظهر هنا لاحقًا.</p>
+  </div>
+
+  <footer class="foot">
+    <span>صادر من بوابة مكة الثانوية الرقمية · يتحدّث تلقائيًا مع كل عمل جديد للمعلم</span>
+    <span>لا يعرض أسماء الطلاب ولا بياناتهم الشخصية</span>
+  </footer>
+</div>
+
+<div class="sheet-bg" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h3 id="sheetTitle">—</h3>
+    <p class="sub" id="sheetMeta">—</p>
+    <div class="paper">معاينة الملف (PDF أو صورة) تظهر هنا</div>
+    <button class="close" id="closeSheet" type="button">إغلاق</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function () {
+  var ar = function (s) { return String(s).replace(/\d/g, function (d) { return "٠١٢٣٤٥٦٧٨٩"[d]; }).replace(".", "٫"); };
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* عناصر الأداء الأحد عشر — بألوانها في ملف الشواهد */
+  var EL = [
+    ["e01", "أداء الواجبات الوظيفية", 0, "يقدّره المقيِّم"],
+    ["e02", "التفاعل مع المجتمع المهني", 9], ["e03", "التفاعل مع أولياء الأمور", 7],
+    ["e04", "التنويع في استراتيجيات التدريس", 6], ["e05", "تحسين نتائج المتعلمين", 8],
+    ["e06", "إعداد وتنفيذ خطة التعلم", 5], ["e07", "توظيف تقنيات ووسائل التعلم", 6],
+    ["e08", "تهيئة بيئة تعليمية", 3], ["e09", "الإدارة الصفية", 4],
+    ["e10", "تحليل النتائج وتشخيص المستويات", 7], ["e11", "تنوع أساليب التقويم", 9]
+  ];
+  var max = 10, els = document.getElementById("els");
+  EL.forEach(function (e) {
+    var row = document.createElement("div"); row.className = "el";
+    row.innerHTML = '<span class="k" style="background:var(--' + e[0] + ')">' + e[0].slice(1) + '</span>' +
+      '<div class="t"><p>' + e[1] + '</p><div class="track" style="margin-top:4px"><div class="fill" style="width:' +
+      (e[2] / max * 100) + '%;background:var(--' + e[0] + ')"></div></div></div>' +
+      '<span class="n num">' + (e[3] ? "المقيِّم" : ar(e[2]) + " شاهد") + '</span>';
+    els.appendChild(row);
+  });
+
+  /* الشواهد المرفوعة */
+  var DOCS = [
+    ["ملف الإنجاز", "PDF · ٤٫٢ م.ب", "folder"], ["شهادة برنامج التقويم البنائي", "صورة · ٦ ساعات", "award"],
+    ["صور نشاط يوم الرياضيات", "٦ صور", "image"], ["خطة علاجية ٢/٣", "PDF · ٩ طلاب", "file"],
+    ["ورقة عمل الدوال", "PDF · ٤ صفحات", "file"], ["شكر من مكتب التعليم", "صورة", "award"]
+  ];
+  var ICON = {
+    folder: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z",
+    award: "M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM8.5 14 7 22l5-3 5 3-1.5-8",
+    image: "M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15 9.5a1.5 1.5 0 1 0 0-.01",
+    file: "M14 3H6v18h12V7ZM14 3v4h4M9 13h6M9 17h4"
+  };
+  var grid = document.getElementById("docGrid");
+  var sheet = document.getElementById("sheet");
+  DOCS.forEach(function (d) {
+    var b = document.createElement("button"); b.type = "button"; b.className = "doc";
+    b.innerHTML = '<span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="' + ICON[d[2]] + '"/></svg></span><b>' + d[0] + '</b><span>' + d[1] + '</span>';
+    b.addEventListener("click", function () {
+      document.getElementById("sheetTitle").textContent = d[0];
+      document.getElementById("sheetMeta").textContent = d[1] + " · رفعه المعلم";
+      sheet.hidden = false; document.getElementById("closeSheet").focus();
+    });
+    grid.appendChild(b);
+  });
+  var closeSheet = function () { sheet.hidden = true; };
+  document.getElementById("closeSheet").addEventListener("click", closeSheet);
+  sheet.addEventListener("click", function (e) { if (e.target === sheet) closeSheet(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSheet(); });
+
+  /* عدّاد الأرقام: يبدأ من القيمة النهائية الظاهرة ثم يعدّ مرة واحدة */
+  if (!reduce) {
+    document.querySelectorAll("[data-count]").forEach(function (el) {
+      var to = parseFloat(el.dataset.count), dec = +(el.dataset.dec || 0);
+      var pre = el.dataset.prefix || "", suf = el.dataset.suffix || "", t0 = null, dur = 1100;
+      var step = function (t) {
+        if (!t0) t0 = t;
+        var p = Math.min(1, (t - t0) / dur), v = to * (1 - Math.pow(1 - p, 3));
+        el.textContent = pre + ar(v.toFixed(dec)) + suf;
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+    var arc = document.getElementById("ringArc");
+    arc.animate([{ strokeDashoffset: 263.9 }, { strokeDashoffset: 20.1 }], { duration: 1300, easing: "cubic-bezier(.2,.7,.2,1)" });
+  }
+
+  /* التبويب اللاصق: ينقل للقسم ويتتبّع القسم الظاهر */
+  var tabs = [].slice.call(document.querySelectorAll(".tab"));
+  tabs.forEach(function (t) {
+    t.addEventListener("click", function () {
+      document.getElementById(t.dataset.to).scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    });
+  });
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        tabs.forEach(function (t) {
+          var on = t.dataset.to === en.target.id;
+          t.setAttribute("aria-current", on ? "true" : "false");
+          if (on) t.scrollIntoView({ block: "nearest", inline: "center" });
+        });
+      });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    tabs.forEach(function (t) { io.observe(document.getElementById(t.dataset.to)); });
+  }
+
+
+  /* لون الملف: الافتراضي لون التخصص، ويختار المعلم غيره من ألوان معدّة */
+  var setSubject = function (k) {
+    document.documentElement.setAttribute("data-subject", k);
+    [].forEach.call(document.querySelectorAll(".sw"), function (b) { b.setAttribute("aria-pressed", b.dataset.s === k ? "true" : "false"); });
+  };
+  [].forEach.call(document.querySelectorAll(".sw"), function (b) { b.addEventListener("click", function () { setSubject(b.dataset.s); }); });
+  setSubject("science");
+
+  /* ترحيب الزائر */
+  var welcome = document.getElementById("welcome");
+  document.getElementById("welcomeForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var n = document.getElementById("vName").value.trim();
+    welcome.innerHTML = '<p class="sub">' + (n ? "أهلًا " + n.replace(/[<>&]/g, "") + "، " : "") + "سُجّلت زيارتك. تصفّح الملف بالأسفل.</p>";
+  });
+  document.getElementById("skipBtn").addEventListener("click", function () { welcome.hidden = true; });
+
+  /* قراءة في ٣٠ ثانية: يختار المعلم ٣ من الجمل المستحقة */
+  var IC = {
+    win: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0Z", up: "M3 17l6-6 4 4 8-8M15 7h6v6", ok: "M20 6 9 17l-5-5",
+    clock: "M12 8v4l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z", users: "M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2M10 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8"
+  };
+  var SENT = [
+    ["win", "حقق المركز الثاني في أولمبياد الرياضيات على مستوى المنطقة."],
+    ["up", "تحسّن متوسط طلابه ٧٫٤ درجة من أول اختبار إلى آخره."],
+    ["ok", "٦٤٪ من طلابه بتقدير جيد جدًا فأعلى."],
+    ["clock", "تجاوز المستهدف السنوي للتطوير المهني: ٣٢ ساعة من ٣٠."],
+    ["users", "قدّم لقاءً لزملائه في مجتمع التعلم."],
+    ["ok", "منتظم في تحضير حصصه: ٩٨٪ منها في وقتها."],
+    ["ok", "نوّع أدوات التقويم: ٤ أنواع في ١٤ اختبارًا."],
+    ["users", "غطّى ٢٨ حصة انتظار لزملائه."],
+    ["users", "تواصل مع أولياء الأمور ٥٧ مرة هذا الفصل."]
+  ];
+  var picked = [0, 1, 2];
+  var briefList = document.getElementById("briefList"), sents = document.getElementById("sents");
+  var drawBrief = function () {
+    briefList.innerHTML = picked.map(function (i) {
+      return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + IC[SENT[i][0]] + '"/></svg><span>' + SENT[i][1] + '</span></li>';
+    }).join("");
+    [].forEach.call(sents.querySelectorAll("input"), function (inp) {
+      inp.checked = picked.indexOf(+inp.value) >= 0;
+      inp.disabled = !inp.checked && picked.length >= 3;
+    });
+  };
+  SENT.forEach(function (x, i) {
+    var l = document.createElement("label"); l.className = "sent";
+    l.innerHTML = '<input type="checkbox" id="sent-' + i + '" value="' + i + '"><span>' + x[1] + '</span>';
+    l.querySelector("input").addEventListener("change", function (e) {
+      if (e.target.checked) picked.push(i); else picked = picked.filter(function (p) { return p !== i; });
+      picked.sort(function (a, b) { return a - b; });
+      drawBrief();
+    });
+    sents.appendChild(l);
+  });
+  drawBrief();
+
+  /* دروس الأسبوع: تُكتب عند إنشاء الرابط وتظهر طوال صلاحيته */
+  var wkText = document.getElementById("wkText"), wkOut = document.getElementById("weekLessons"), wkCard = document.getElementById("weekCard");
+  var esc = function (t) { return t.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
+  var drawWeek = function () {
+    var lines = wkText.value.split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
+    wkCard.hidden = !lines.length;
+    wkOut.innerHTML = lines.map(function (l) {
+      var i = l.indexOf(":"), sb = i > 0 ? l.slice(0, i) : "", body = i > 0 ? l.slice(i + 1).trim() : l;
+      return '<div class="lesson">' + (sb ? '<span class="sb">' + esc(sb) + '</span>' : '<span></span>') + '<p>' + esc(body) + '</p></div>';
+    }).join("");
+  };
+  wkText.addEventListener("input", drawWeek); drawWeek();
+
+  /* اختيار الأقسام الظاهرة للزائر */
+  var PARTS = [["quote", "رأي الإدارة"], ["teach", "التخطيط والتدريس"], ["results", "النتائج"],
+               ["assess", "التقويم"], ["growth", "التطوير المهني"], ["wins", "الإنجازات"], ["elements", "عناصر الأداء"], ["docs", "الشواهد"]];
+  var opts = document.getElementById("opts");
+  PARTS.forEach(function (p) {
+    var l = document.createElement("label"); l.className = "opt";
+    l.innerHTML = '<input type="checkbox" id="show-' + p[0] + '" checked> ' + p[1];
+    l.querySelector("input").addEventListener("change", function (e) {
+      document.getElementById(p[0]).hidden = !e.target.checked;
+      var t = document.querySelector('.tab[data-to="' + p[0] + '"]'); if (t) t.hidden = !e.target.checked;
+    });
+    opts.appendChild(l);
+  });
+
+  /* رمز QR تجريبي */
+  try {
+    if (window.QRCode) new QRCode(document.getElementById("qr"), { text: "https://makkahsec.sa/t/MS-7Q4K", width: 84, height: 84, colorDark: "#1f3a2d", colorLight: "#ffffff" });
+  } catch (e) {}
+
+  document.getElementById("copyBtn").addEventListener("click", function () {
+    var btn = this, txt = "https://makkahsec.sa/t/MS-7Q4K";
+    var done = function () { btn.textContent = "نُسخ الرابط"; setTimeout(function () { btn.textContent = "نسخ الرابط"; }, 1800); };
+    try {
+      navigator.clipboard.writeText(txt).then(done, function () {
+        var r = document.createRange(); r.selectNodeContents(document.getElementById("linkText"));
+        var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      });
+    } catch (e) {}
+  });
+})();
+</script>
