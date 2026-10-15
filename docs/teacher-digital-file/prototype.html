@@ -215,6 +215,18 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .chart .link { stroke: var(--mint); stroke-width: 4; stroke-linecap: round; }
 .chart .gain { fill: var(--deep); font-weight: 700; direction: ltr; unicode-bidi: plaintext; }
 
+/* تحسّن الطلاب: رقم إجمالي ثم سطر لكل فصل */
+.imp-sum { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.imp-sum .v { font-size: 28px; font-weight: 700; color: var(--deep); line-height: 1.1; direction: ltr; unicode-bidi: plaintext; }
+.imp { display: grid; gap: 10px; --base: color-mix(in srgb, var(--deep) 32%, var(--track)); }
+.imp-r { display: grid; gap: 4px; }
+.imp-t { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.imp-t span:first-of-type { flex: 1; color: var(--muted); }
+.imp-t .delta { direction: ltr; unicode-bidi: plaintext; }
+.imp-k .fill { position: absolute; inset-block: 0; inset-inline-start: 0; }
+.gainf { position: absolute; inset-block: 0; background: var(--deep); border-radius: 0 6px 6px 0; }
+.anim .imp-k .fill { animation: none; }
+
 /* الخط الزمني */
 .tl { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
 .tl li { display: grid; grid-template-columns: 18px minmax(0,1fr); gap: 10px; position: relative; padding-bottom: 14px; }
@@ -535,18 +547,16 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   <section class="sec anim" id="results">
     <div class="sec-h"><h2>نتائج الطلاب</h2><p>دون أسماء الطلاب</p></div>
     <div class="card">
-      <div class="card-h"><div><h3>تحسّن الطلاب من أول اختبار إلى آخره</h3><p class="sub">متوسط الفصل من ١٠٠ · الدائرة الفارغة أول اختبار · يظهر عند وجود اختبارين فأكثر</p></div><span class="src auto">تلقائي</span></div>
-      <svg class="chart" viewBox="0 0 340 196" role="img" aria-label="متوسطات الفصول قبل وبعد">
-        <line class="axis" x1="70" y1="12" x2="70" y2="170"/>
-        <g class="axis"><line x1="70" y1="170" x2="330" y2="170"/></g>
-        <text x="70" y="188" text-anchor="middle">٥٠</text><text x="200" y="188" text-anchor="middle">٧٥</text><text x="330" y="188" text-anchor="middle">١٠٠</text>
-        <!-- السلّم: 50 → x=70 ، 100 → x=330 ، أي 5.2 لكل درجة -->
-        <g><text x="58" y="34" text-anchor="end">٢/١</text><line class="link" x1="226" y1="30" x2="262.4" y2="30"/><circle class="before" cx="226" cy="30" r="6"/><circle class="after" cx="262.4" cy="30" r="6"/><text class="gain" x="276" y="34">+٧</text></g>
-        <g><text x="58" y="66" text-anchor="end">٢/٢</text><line class="link" x1="210.4" y1="62" x2="241.6" y2="62"/><circle class="before" cx="210.4" cy="62" r="6"/><circle class="after" cx="241.6" cy="62" r="6"/><text class="gain" x="255" y="66">+٦</text></g>
-        <g><text x="58" y="98" text-anchor="end">٢/٣</text><line class="link" x1="127.2" y1="94" x2="189.6" y2="94"/><circle class="before" cx="127.2" cy="94" r="6"/><circle class="after" cx="189.6" cy="94" r="6"/><text class="gain" x="203" y="98">+١٢</text></g>
-        <g><text x="58" y="130" text-anchor="end">٢/٤</text><line class="link" x1="195" y1="126" x2="226" y2="126"/><circle class="before" cx="195" cy="126" r="6"/><circle class="after" cx="226" cy="126" r="6"/><text class="gain" x="240" y="130">+٦</text></g>
-        <g><text x="58" y="162" text-anchor="end">٢/٥</text><line class="link" x1="236.4" y1="152" x2="267.6" y2="152"/><circle class="before" cx="236.4" cy="152" r="6"/><circle class="after" cx="267.6" cy="152" r="6"/><text class="gain" x="281" y="156">+٦</text></g>
-      </svg>
+      <div class="card-h"><div><h3>تحسّن الطلاب من أول اختبار إلى آخره</h3><p class="sub">متوسط كل فصل من ١٠٠ · يظهر عند وجود اختبارين فأكثر</p></div><span class="src auto">تلقائي</span></div>
+      <div class="imp-sum"><span class="v num">+٧٫٤</span><span class="sub">درجة متوسط التحسّن في فصوله الخمسة</span></div>
+      <div class="imp">
+        <div class="imp-r"><div class="imp-t"><b>٢/١</b><span class="num">من ٨٠ إلى ٨٧</span><span class="delta num">+٧</span></div><div class="track imp-k"><div class="fill" style="width:80%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:80%;width:7%"></div></div></div>
+        <div class="imp-r"><div class="imp-t"><b>٢/٢</b><span class="num">من ٧٧ إلى ٨٣</span><span class="delta num">+٦</span></div><div class="track imp-k"><div class="fill" style="width:77%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:77%;width:6%"></div></div></div>
+        <div class="imp-r"><div class="imp-t"><b>٢/٣</b><span class="num">من ٦١ إلى ٧٣</span><span class="delta num">+١٢</span></div><div class="track imp-k"><div class="fill" style="width:61%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:61%;width:12%"></div></div></div>
+        <div class="imp-r"><div class="imp-t"><b>٢/٤</b><span class="num">من ٧٤ إلى ٨٠</span><span class="delta num">+٦</span></div><div class="track imp-k"><div class="fill" style="width:74%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:74%;width:6%"></div></div></div>
+        <div class="imp-r"><div class="imp-t"><b>٢/٥</b><span class="num">من ٨٢ إلى ٨٨</span><span class="delta num">+٦</span></div><div class="track imp-k"><div class="fill" style="width:82%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:82%;width:6%"></div></div></div>
+        <div class="keys"><span><i style="background:var(--base)"></i>أول اختبار</span><span><i style="background:var(--deep)"></i>التحسّن حتى آخر اختبار</span></div>
+      </div>
     </div>
     <div class="grid2">
       <div class="card">
