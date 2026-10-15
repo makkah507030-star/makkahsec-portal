@@ -413,6 +413,20 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .lesson { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; }
 .lesson .sb { font-size: 11.5px; font-weight: 700; color: var(--deep); background: var(--tint); border: 1px solid var(--mint-light); border-radius: 8px; padding: 2px 8px; white-space: nowrap; }
 .lesson p { font-size: 14px; line-height: 1.7; }
+.upl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; cursor: pointer; }
+.wkcards { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x mandatory; }
+.wkc { flex: none; width: 210px; scroll-snap-align: start; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); padding: 10px 12px; display: grid; gap: 6px; align-content: start; }
+.wkc.now { border-color: var(--deep); background: var(--tint); }
+.wkc h4 { margin: 0; font-size: 13px; display: flex; justify-content: space-between; gap: 6px; }
+.wkc h4 span { font-weight: 600; font-size: 11px; color: var(--deep); }
+.wkc .lesson { grid-template-columns: minmax(0,1fr); gap: 3px; }
+.wkc .lesson .sb { justify-self: start; }
+.wkc .lesson p { font-size: 12.5px; line-height: 1.6; }
+.lcards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.lcard { border: 1px solid var(--mint-light); background: var(--tint); border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; }
+.lcard .sb { justify-self: start; font-size: 11.5px; font-weight: 700; color: var(--surface); background: var(--deep); border-radius: 8px; padding: 2px 8px; margin-bottom: 2px; }
+.lcard p { font-size: 13.5px; line-height: 1.55; }
+.lcard p::before { content: "• "; color: var(--deep); }
 .wk-in { display: grid; gap: 6px; }
 .wk-in label { font-size: 12.5px; color: var(--muted); }
 .wk-in textarea { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; resize: vertical; min-height: 120px; line-height: 1.7; }
@@ -550,8 +564,8 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   <section class="sec anim" id="teach">
     <div class="sec-h"><h2>التخطيط والتدريس</h2><p>التحضير والمتابعة</p></div>
     <div class="card week" id="weekCard">
-      <div class="card-h"><div><h3>دروس هذا الأسبوع</h3><p class="sub num">من ١٥/١٠ إلى ٢١/١٠/٢٠٢٦ · كتبها المعلم وتظهر سبعة أيام</p></div><span class="src up">يكتبها المعلم</span></div>
-      <div class="lessons" id="weekLessons"></div>
+      <div class="card-h"><div><h3>دروس هذا الأسبوع</h3><p class="sub num" id="weekSub"></p></div><span class="src mix">من توزيع المنهج</span></div>
+      <div class="lcards" id="weekLessons"></div>
     </div>
     <div class="grid2">
       <div class="card">
@@ -559,17 +573,17 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
         <svg class="chart" viewBox="0 0 320 110" role="img" aria-label="نسبة التحضير في وقته أسبوعيًا بين 94 و100 بالمئة">
           <line class="axis" x1="10" y1="90" x2="310" y2="90"/>
           <line class="axis" x1="10" y1="20" x2="310" y2="20" stroke-dasharray="3 4"/>
-          <text x="312" y="24" text-anchor="end">١٠٠٪</text>
+          <text x="290" y="14" text-anchor="middle">١٠٠٪</text>
           <path d="M20 41 L60 34 L100 48 L140 27 L180 27 L220 34 L260 20 L300 20 L300 90 L20 90 Z" fill="var(--mint)" opacity=".22"/>
           <path d="M20 41 L60 34 L100 48 L140 27 L180 27 L220 34 L260 20 L300 20" fill="none" stroke="var(--deep)" stroke-width="2.5" stroke-linejoin="round"/>
           <circle cx="300" cy="20" r="4.5" fill="var(--deep)"/>
           <text x="20" y="106" text-anchor="middle">أ١</text><text x="300" y="106" text-anchor="middle">أ٨</text>
         </svg>
-        <p class="sub num">٤١٢ حصة · ٢٨ حصة انتظار · ٢ تأخر في التحضير</p>
+        <p class="sub num">٤١٢ حصة، و٢٨ حصة انتظار، و٢ تأخر في التحضير</p>
       </div>
       <div class="card">
         <div class="card-h"><div><h3>تحضير الدروس</h3><p class="sub">ملفات المعلم لكل وحدة</p></div><span class="src up">يرفعه المعلم</span></div>
-        <div class="tags"><span class="tag">الوحدة ١ · الدوال</span><span class="tag">الوحدة ٢ · المتتابعات</span><span class="tag">الوحدة ٣ · الاحتمالات</span><span class="tag">١٨ خطة درس</span></div>
+        <div class="tags"><span class="tag">الوحدة ١: الدوال</span><span class="tag">الوحدة ٢: المتتابعات</span><span class="tag">الوحدة ٣: الاحتمالات</span><span class="tag">١٨ خطة درس</span></div>
       </div>
       <div class="card">
         <div class="card-h"><div><h3>سجل المتابعة</h3><p class="sub">الواجبات والمشاركة والتطبيقات الصفية</p></div><span class="src auto">تلقائي</span></div>
@@ -745,15 +759,16 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
     </div>
 
     <div class="pblk">
-      <div><h3 class="ph3">شارك ملفك</h3></div>
-      <div class="wk-in">
-        <label for="wkText">دروسك هذا الأسبوع: كل مادة في سطر. تظهر للزائر سبعة أيام من كتابتها ثم تختفي، واكتبها من جديد متى شئت. اختياري.</label>
-        <textarea id="wkText" rows="4">رياضيات ٢-١: المتتابعات الحسابية، المتتابعات الهندسية
-رياضيات ٢-٢: الاحتمال المشروط، مراجعة الوحدة الثالثة</textarea>
-      </div>
+      <div><h3 class="ph3">توزيع المنهج</h3><p class="sub">ارفع ملف التوزيع (Excel أو PDF) مرة واحدة. تقرؤه البوابة وتحوّله إلى بطاقات أسابيع، فيرى الزائر دروس الأسبوع الدراسي الذي يفتح فيه الملف.</p></div>
+      <label class="upl"><input type="file" accept=".xlsx,.xls,.pdf" hidden><span class="btn ghost">رفع ملف التوزيع</span><span class="sub num">رُفع ٠١/٠٩/٢٠٢٦: <bdi>distribution-math2.pdf</bdi></span></label>
+      <p class="sub num">قرأت البوابة ١٨ أسبوعًا. راجع البطاقات وصحّح ما يلزم:</p>
+      <div class="wkcards" id="wkCards"></div>
+    </div>
+
+    <div class="pblk">
+      <div><h3 class="ph3">رابط ملفك</h3></div>
   <div class="qr-card">
     <div>
-      <h3>رابط ملفك</h3>
       <p class="sub">رابط ثابت طوال العام: يعرضه المعلم للزائر فيمسح الرمز بجواله ويرى الأقسام التي اخترتها.</p>
       <button class="copy" id="copyBtn" type="button">نسخ الرابط</button> <button class="copy" type="button" id="newLink">إلغاء الرابط وإنشاء جديد</button>
       <p class="sub code" id="linkText" style="color:var(--muted);font-size:11.5px;margin-top:6px">makkahsec.sa/t/MS-7Q4K</p>
@@ -963,18 +978,29 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   });
   drawBrief();
 
-  /* دروس الأسبوع: تُكتب عند إنشاء الرابط وتظهر طوال صلاحيته */
-  var wkText = document.getElementById("wkText"), wkOut = document.getElementById("weekLessons"), wkCard = document.getElementById("weekCard");
+  /* توزيع المنهج: ترفعه المعلم مرة، وتعرض البوابة للزائر أسبوع يوم الفتح حسب الأسابيع الدراسية */
+  var DIST = [
+    { n: "السابع", from: "٠٤/١٠", to: "٠٨/١٠", l: [["رياضيات ٢-١", "المتسلسلات، مراجعة"], ["رياضيات ٢-٢", "قانون الاحتمال الكلي"]] },
+    { n: "الثامن", from: "١١/١٠", to: "١٥/١٠", now: true, l: [["رياضيات ٢-١", "المتتابعات الحسابية، المتتابعات الهندسية"], ["رياضيات ٢-٢", "الاحتمال المشروط، مراجعة الوحدة الثالثة"]] },
+    { n: "التاسع", from: "١٨/١٠", to: "٢٢/١٠", l: [["رياضيات ٢-١", "مجموع المتسلسلة الهندسية"], ["رياضيات ٢-٢", "اختبار الوحدة الثالثة"]] }
+  ];
   var esc = function (t) { return t.replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); };
-  var drawWeek = function () {
-    var lines = wkText.value.split("\n").map(function (l) { return l.trim(); }).filter(Boolean);
-    wkCard.hidden = !lines.length;
-    wkOut.innerHTML = lines.map(function (l) {
-      var i = l.indexOf(":"), sb = i > 0 ? l.slice(0, i) : "", body = i > 0 ? l.slice(i + 1).trim() : l;
-      return '<div class="lesson">' + (sb ? '<span class="sb">' + esc(sb) + '</span>' : '<span></span>') + '<p>' + esc(body) + '</p></div>';
-    }).join("");
+  var lessonsHTML = function (w) {
+    return w.l.map(function (x) { return '<div class="lesson"><span class="sb">' + esc(x[0]) + '</span><p>' + esc(x[1]) + '</p></div>'; }).join("");
   };
-  wkText.addEventListener("input", drawWeek); drawWeek();
+  var cur = DIST.filter(function (w) { return w.now; })[0];
+  document.getElementById("weekCard").hidden = !cur;
+  if (cur) {
+    document.getElementById("weekSub").textContent = "الأسبوع " + cur.n + "، من " + cur.from + " إلى " + cur.to + "/٢٠٢٦";
+    document.getElementById("weekLessons").innerHTML = cur.l.map(function (x) {
+      return '<div class="lcard"><span class="sb">' + esc(x[0]) + '</span>' + x[1].split("، ").map(function (t) { return '<p>' + esc(t) + '</p>'; }).join("") + '</div>';
+    }).join("");
+  }
+  document.getElementById("wkCards").innerHTML = DIST.map(function (w) {
+    return '<div class="wkc' + (w.now ? " now" : "") + '"><h4>الأسبوع ' + w.n + (w.now ? "<span>الحالي</span>" : "") + '</h4><p class="sub num">' + w.from + ' إلى ' + w.to + '</p>' + lessonsHTML(w) + '</div>';
+  }).join("");
+  var nowCard = document.querySelector("#wkCards .now");
+  if (nowCard) nowCard.scrollIntoView({ block: "nearest", inline: "center" });
 
   /* اختيار الأقسام الظاهرة للزائر */
   var PARTS = [["quote", "رأي الإدارة"], ["teach", "التخطيط والتدريس"], ["results", "النتائج"],
