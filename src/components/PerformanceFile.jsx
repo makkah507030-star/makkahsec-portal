@@ -12,6 +12,7 @@ import {
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
 import Loader from "./Loader.jsx";
+import { useBackStep } from "../lib/backStep.js";
 
 /* =====================================================================
    ملف الأداء الوظيفي للمعلم — يفتحه المعلم لملفه، ومدير المدرسة لملف أي
@@ -560,6 +561,8 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
   }, [uid]);
 
   useEffect(() => { setElements(null); setView("cards"); setCurrent(null); reload(); }, [reload]);
+
+  useBackStep(!!current, () => setCurrent(null), "البطاقات");
 
   if (elements === null) return <Loader />;
   if (err) return <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>;

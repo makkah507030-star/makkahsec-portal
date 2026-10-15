@@ -19,6 +19,7 @@ import { loadActiveTerm } from "../../lib/officialAttendance";
 import SymbolsToolbar from "../../components/SymbolsToolbar.jsx";
 import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
+import { useBackStep } from "../../lib/backStep.js";
 
 /* =====================================================================
    اختباراتي — اختبارات المعلم.
@@ -101,6 +102,7 @@ export default function MyQuizzes() {
   useEffect(() => { if (uid) load(); }, [uid]);
 
   const open = (list ?? []).find((q) => q.id === openId);
+  useBackStep(!!open, () => { setOpenId(null); load(); }, "اختباراتي");
   if (open) {
     return <QuizEditor quiz={open} uid={uid}
                        onBack={() => { setOpenId(null); load(); }} />;

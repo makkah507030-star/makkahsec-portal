@@ -22,6 +22,7 @@ import Access from "./Access.jsx";
 import Scaled from "./Scaled.jsx";
 import { StudioAssets } from "./assets";
 import { loadSchoolStamp } from "./data";
+import { useBackStep } from "../../lib/backStep.js";
 
 /* =====================================================================
    استوديو البوابة — قوالب بهوية المدرسة يملؤها المستخدم ويطبعها أو يصدّرها.
@@ -147,6 +148,8 @@ export default function Studio() {
   const open = (tpl, saved) => setEdit(saved
     ? { tpl, theme: saved.theme, orient: saved.orient, data: saved.data, id: saved.id, section: saved.section }
     : { tpl, theme: tpl.defaultTheme ?? "light", orient: tpl.defaultOrient ?? "portrait", data: tpl.defaults(ctx ?? {}, current), id: null, section: current });
+
+  useBackStep(!!edit, () => setEdit(null), "الاستوديو");
 
   if (!ctx) return <Loader />;
 

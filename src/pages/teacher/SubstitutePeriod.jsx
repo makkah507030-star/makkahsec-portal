@@ -8,6 +8,7 @@ import {
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { isMissingTable } from "../../lib/officialAttendance.js";
+import { useBackStep } from "../../lib/backStep.js";
 
 const TEACHER_ORDER = ["present", "absent", "late"];
 const SOLID = {
@@ -251,6 +252,8 @@ export default function SubstitutePeriod() {
     if (!row?.end_time) return true;
     return nowMinutes() <= toMinutes(row.end_time) - 5;
   })();
+
+  useBackStep(!!selected, () => setSelected(null));
 
   if (loading) return <Loader />;
 

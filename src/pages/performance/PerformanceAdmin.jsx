@@ -7,6 +7,7 @@ import PerformanceFile from "../../components/PerformanceFile.jsx";
 import { ReviewEditor } from "../../components/PerformanceReview.jsx";
 import Loader from "../../components/Loader.jsx";
 import { byName } from "../../lib/sortAr.js";
+import { useBackStep } from "../../lib/backStep.js";
 
 /* =====================================================================
    تقييم الأداء الوظيفي — لمدير المدرسة، وللدعم الفني للمتابعة الفنية:
@@ -95,6 +96,8 @@ export default function PerformanceAdmin() {
   }, []);
 
   const shown = useMemo(() => (teachers ?? []).filter((t) => !q.trim() || t.full_name.includes(q.trim())), [teachers, q]);
+
+  useBackStep(!!picked, () => { setPicked(null); setFileTab("file"); }, "قائمة المعلمين");
 
   if (teachers === null) return <Loader />;
 

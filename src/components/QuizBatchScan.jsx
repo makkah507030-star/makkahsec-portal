@@ -5,6 +5,7 @@ import { cardLayouts, readCardFile } from "../lib/omrScan.js";
 import { hashIndex } from "../lib/omrCode.js";
 import { saveQuizCard } from "../lib/quizCards.js";
 import { CardRows } from "./QuizScan.jsx";
+import { useBackStep } from "../lib/backStep.js";
 
 /* =====================================================================
    التصحيح الجماعي لبطاقات الإجابة.
@@ -103,6 +104,7 @@ export default function QuizBatchScan({ quiz, questions, students, subs, onSave,
   const count = (st) => items.filter((x) => x.state === st).length;
   const pending = count("queued") + count("reading");
   const reviewing = items.find((x) => x.id === open);
+  useBackStep(!!reviewing, () => setOpen(null));
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-canvas" dir="rtl">
