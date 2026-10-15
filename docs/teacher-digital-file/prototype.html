@@ -353,16 +353,15 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .opt:has(input:not(:checked)) { color: var(--faint); text-decoration: line-through; }
 .share-wrap { display: grid; gap: 12px; background: var(--surface); border: 1px dashed var(--mint); border-radius: 18px; padding: 14px 16px; }
 .share-wrap .qr-card { border: 0; padding: 0; }
+.linkb { display: grid; gap: 10px; justify-items: center; text-align: center; }
+.qr-box.big { width: 168px; height: 168px; padding: 10px; border: 1px solid var(--line); }
+.linkt { font-size: 14px; color: var(--ink); direction: ltr; }
+.lbtns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.on-note { display: inline-flex; align-items: center; gap: 6px; text-align: start; }
+.dotlive { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--deep); }
 .pill { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; background: var(--bg); }
 .pblk { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .ph3 { font-size: 14px; }
-.toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; }
-.toggle input { position: absolute; opacity: 0; }
-.knob { flex: none; width: 44px; height: 26px; border-radius: 999px; background: var(--track); position: relative; transition: background .2s; }
-.knob::after { content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: inset-inline-start .2s; }
-.toggle input:checked + .knob { background: var(--deep); }
-.toggle input:checked + .knob::after { inset-inline-start: 21px; }
-.toggle input:focus-visible + .knob { outline: 2px solid var(--mint); outline-offset: 2px; }
 .pend { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; background: var(--bg); }
 .pend p { font-size: 13.5px; }
 .pend-b { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -711,8 +710,6 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   <div class="share-wrap">
     <div class="card-h"><div><h3 style="font-size:17px">لوحة المعلم</h3><p class="sub">إعدادات ملفك الرقمي</p></div><span class="lock pill">يراه المعلم فقط</span></div>
 
-    <div class="pblk"><label class="toggle"><input type="checkbox" id="onSw" checked><span class="knob"></span><span><b>ملفي الرقمي</b> <span class="sub" id="onTxt">مفعّل: يفتحه من معه الرابط</span></span></label></div>
-
     <div class="pblk colors">
       <div><h3 class="ph3">لون ملفك</h3><p class="sub">الأخضر لون البوابة هو الافتراضي لكل المعلمين، ويمكنك اختيار غيره.</p></div>
       <div class="row" id="swatches">
@@ -767,14 +764,13 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 
     <div class="pblk">
       <div><h3 class="ph3">رابط ملفك</h3></div>
-  <div class="qr-card">
-    <div>
-      <p class="sub">رابط ثابت طوال العام: يعرضه المعلم للزائر فيمسح الرمز بجواله ويرى الأقسام التي اخترتها.</p>
-      <button class="copy" id="copyBtn" type="button">نسخ الرابط</button> <button class="copy" type="button" id="newLink">إلغاء الرابط وإنشاء جديد</button>
-      <p class="sub code" id="linkText" style="color:var(--muted);font-size:11.5px;margin-top:6px">makkahsec.sa/t/MS-7Q4K</p>
-    </div>
-    <div class="qr-box" id="qr" aria-label="رمز QR للملف"></div>
-  </div>
+      <div class="linkb">
+        <div class="qr-box big" id="qr" aria-label="رمز QR للملف"></div>
+        <p class="code linkt" id="linkText">makkahsec.sa/t/MS-7Q4K</p>
+        <div class="lbtns"><button class="btn pri" id="copyBtn" type="button">نسخ الرابط</button><button class="btn ghost" id="dlQr" type="button">تنزيل الرمز</button><button class="btn ghost" id="shareBtn" type="button">مشاركة</button></div>
+        <p class="sub">رابط ثابت طوال العام: اطبع رمزه أو أرسله، ويرى الزائر الأقسام التي اخترتها.</p>
+        <p class="sub on-note"><span class="dotlive"></span>ملفك مفعّل. يوقفه الدعم الفني فقط عند نقلك من المدرسة أو تقاعدك أو تحويلك إلى عمل إداري.</p>
+      </div>
     </div>
   </div>
 
@@ -907,8 +903,6 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   setSubject("science");
 
   /* لوحة المعلم: التفعيل، والرتبة، ورأي الإدارة، وإنجازات أخرى */
-  var onSw = document.getElementById("onSw"), onTxt = document.getElementById("onTxt");
-  onSw.addEventListener("change", function () { onTxt.textContent = onSw.checked ? "مفعّل: يفتحه من معه الرابط" : "موقوف: الرابط معطّل ولا يفتحه أحد"; });
   var fRank = document.getElementById("fRank"), rankChip = document.getElementById("rankChip");
   fRank.addEventListener("change", function () { rankChip.textContent = fRank.value; rankChip.hidden = !fRank.value; });
   [].forEach.call(document.querySelectorAll("[data-q]"), function (b) {
@@ -927,8 +921,16 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
     document.getElementById("otherWins").appendChild(li);
     document.getElementById("winT").value = ""; document.getElementById("winD").value = "";
   });
-  document.getElementById("newLink").addEventListener("click", function () {
-    if (window.confirm("إلغاء الرابط الحالي؟ يتعطل الرابط القديم ورمزه، ويُنشأ رابط جديد.")) document.getElementById("linkText").textContent = "makkahsec.sa/t/MS-2H8D";
+  /* تنزيل الرمز صورة للطباعة، والمشاركة من قائمة الجوال */
+  document.getElementById("dlQr").addEventListener("click", function () {
+    var c = document.querySelector("#qr canvas"), im = document.querySelector("#qr img");
+    var url = c ? c.toDataURL("image/png") : im && im.src; if (!url) return;
+    var a = document.createElement("a"); a.href = url; a.download = "رمز-ملف-المعلم.png"; document.body.appendChild(a); a.click(); a.remove();
+  });
+  document.getElementById("shareBtn").addEventListener("click", function () {
+    var url = "https://makkahsec.sa/t/MS-7Q4K";
+    if (navigator.share) navigator.share({ title: "ملف المعلم الرقمي", url: url }).catch(function () {});
+    else document.getElementById("copyBtn").click();
   });
 
   /* ترحيب الزائر */
@@ -1018,7 +1020,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 
   /* رمز QR تجريبي */
   try {
-    if (window.QRCode) new QRCode(document.getElementById("qr"), { text: "https://makkahsec.sa/t/MS-7Q4K", width: 84, height: 84, colorDark: "#1f3a2d", colorLight: "#ffffff" });
+    if (window.QRCode) new QRCode(document.getElementById("qr"), { text: "https://makkahsec.sa/t/MS-7Q4K", width: 300, height: 300, colorDark: "#1f3a2d", colorLight: "#ffffff" });
   } catch (e) {}
 
   document.getElementById("copyBtn").addEventListener("click", function () {
