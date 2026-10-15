@@ -215,17 +215,14 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .chart .link { stroke: var(--mint); stroke-width: 4; stroke-linecap: round; }
 .chart .gain { fill: var(--deep); font-weight: 700; direction: ltr; unicode-bidi: plaintext; }
 
-/* تحسّن الطلاب: رقم إجمالي ثم سطر لكل فصل */
+/* تحسّن الطلاب: رقم إجمالي ثم عمودان لكل فصل (أول اختبار وآخره) */
 .imp-sum { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .imp-sum .v { font-size: 28px; font-weight: 700; color: var(--deep); line-height: 1.1; direction: ltr; unicode-bidi: plaintext; }
-.imp { display: grid; gap: 10px; --base: color-mix(in srgb, var(--deep) 32%, var(--track)); }
-.imp-r { display: grid; gap: 4px; }
-.imp-t { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.imp-t span:first-of-type { flex: 1; color: var(--muted); }
-.imp-t .delta { direction: ltr; unicode-bidi: plaintext; }
-.imp-k .fill { position: absolute; inset-block: 0; inset-inline-start: 0; }
-.gainf { position: absolute; inset-block: 0; background: var(--deep); border-radius: 0 6px 6px 0; }
-.anim .imp-k .fill { animation: none; }
+#results { --base: color-mix(in srgb, var(--deep) 32%, var(--track)); }
+.cols .cb { fill: var(--base); } .cols .ca { fill: var(--deep); }
+.cols .cv { font-size: 10.5px; } .cols .cv.a { fill: var(--deep); font-weight: 700; }
+.cols .cc { fill: var(--ink); font-weight: 600; font-size: 12px; }
+.cols .cg { fill: var(--deep); font-weight: 700; font-size: 12px; direction: ltr; unicode-bidi: plaintext; }
 
 /* الخط الزمني */
 .tl { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
@@ -549,14 +546,15 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
     <div class="card">
       <div class="card-h"><div><h3>تحسّن الطلاب من أول اختبار إلى آخره</h3><p class="sub">متوسط كل فصل من ١٠٠ · يظهر عند وجود اختبارين فأكثر</p></div><span class="src auto">تلقائي</span></div>
       <div class="imp-sum"><span class="v num">+٧٫٤</span><span class="sub">درجة متوسط التحسّن في فصوله الخمسة</span></div>
-      <div class="imp">
-        <div class="imp-r"><div class="imp-t"><b>٢/١</b><span class="num">من ٨٠ إلى ٨٧</span><span class="delta num">+٧</span></div><div class="track imp-k"><div class="fill" style="width:80%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:80%;width:7%"></div></div></div>
-        <div class="imp-r"><div class="imp-t"><b>٢/٢</b><span class="num">من ٧٧ إلى ٨٣</span><span class="delta num">+٦</span></div><div class="track imp-k"><div class="fill" style="width:77%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:77%;width:6%"></div></div></div>
-        <div class="imp-r"><div class="imp-t"><b>٢/٣</b><span class="num">من ٦١ إلى ٧٣</span><span class="delta num">+١٢</span></div><div class="track imp-k"><div class="fill" style="width:61%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:61%;width:12%"></div></div></div>
-        <div class="imp-r"><div class="imp-t"><b>٢/٤</b><span class="num">من ٧٤ إلى ٨٠</span><span class="delta num">+٦</span></div><div class="track imp-k"><div class="fill" style="width:74%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:74%;width:6%"></div></div></div>
-        <div class="imp-r"><div class="imp-t"><b>٢/٥</b><span class="num">من ٨٢ إلى ٨٨</span><span class="delta num">+٦</span></div><div class="track imp-k"><div class="fill" style="width:82%;background:var(--base)"></div><div class="gainf" style="inset-inline-start:82%;width:6%"></div></div></div>
-        <div class="keys"><span><i style="background:var(--base)"></i>أول اختبار</span><span><i style="background:var(--deep)"></i>التحسّن حتى آخر اختبار</span></div>
-      </div>
+      <svg class="chart cols" viewBox="0 0 340 196" role="img" aria-label="متوسط كل فصل في أول اختبار وآخر اختبار">
+        <line class="axis" x1="6" y1="150" x2="334" y2="150"/>
+        <g><rect class="cb" x="300" y="46.0" width="20" height="104.0" rx="3"/><rect class="ca" x="276" y="36.9" width="20" height="113.1" rx="3"/><text class="cv" x="310" y="41.0" text-anchor="middle">٨٠</text><text class="cv a" x="286" y="31.9" text-anchor="middle">٨٧</text><text class="cc" x="298" y="168" text-anchor="middle">٢/١</text><text class="cg" x="298" y="188" text-anchor="middle">+٧</text></g>
+        <g><rect class="cb" x="236" y="49.9" width="20" height="100.1" rx="3"/><rect class="ca" x="212" y="42.1" width="20" height="107.9" rx="3"/><text class="cv" x="246" y="44.9" text-anchor="middle">٧٧</text><text class="cv a" x="222" y="37.1" text-anchor="middle">٨٣</text><text class="cc" x="234" y="168" text-anchor="middle">٢/٢</text><text class="cg" x="234" y="188" text-anchor="middle">+٦</text></g>
+        <g><rect class="cb" x="172" y="70.7" width="20" height="79.3" rx="3"/><rect class="ca" x="148" y="55.1" width="20" height="94.9" rx="3"/><text class="cv" x="182" y="65.7" text-anchor="middle">٦١</text><text class="cv a" x="158" y="50.1" text-anchor="middle">٧٣</text><text class="cc" x="170" y="168" text-anchor="middle">٢/٣</text><text class="cg" x="170" y="188" text-anchor="middle">+١٢</text></g>
+        <g><rect class="cb" x="108" y="53.8" width="20" height="96.2" rx="3"/><rect class="ca" x="84" y="46.0" width="20" height="104.0" rx="3"/><text class="cv" x="118" y="48.8" text-anchor="middle">٧٤</text><text class="cv a" x="94" y="41.0" text-anchor="middle">٨٠</text><text class="cc" x="106" y="168" text-anchor="middle">٢/٤</text><text class="cg" x="106" y="188" text-anchor="middle">+٦</text></g>
+        <g><rect class="cb" x="44" y="43.4" width="20" height="106.6" rx="3"/><rect class="ca" x="20" y="35.6" width="20" height="114.4" rx="3"/><text class="cv" x="54" y="38.4" text-anchor="middle">٨٢</text><text class="cv a" x="30" y="30.6" text-anchor="middle">٨٨</text><text class="cc" x="42" y="168" text-anchor="middle">٢/٥</text><text class="cg" x="42" y="188" text-anchor="middle">+٦</text></g>
+      </svg>
+      <div class="keys"><span><i style="background:var(--base)"></i>أول اختبار</span><span><i style="background:var(--deep)"></i>آخر اختبار</span></div>
     </div>
     <div class="grid2">
       <div class="card">
