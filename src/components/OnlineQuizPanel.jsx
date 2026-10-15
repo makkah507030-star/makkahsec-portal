@@ -13,6 +13,7 @@ import { useNotice } from "../lib/useNotice.js";
    • «نشر وإرسال» يُسند الاختبار ويُرسل إشعار الجرس والجوال برابط الاختبار
      للطلاب المختارين فقط.
    • بعد النشر: متابعة حيّة لمن بدأ ومن سلّم ودرجته، مع التذكير والإغلاق والتعديل.
+   • بعد الإغلاق: «إعادة فتح لمن لم يختبر» تفتحه من الآن حتى موعد جديد وتُشعر من لم يبدأ فقط.
    • التسليم يُصحَّح آليًا ويظهر في «التصحيح والدرجات» وكشف الرصد كالورقي.
    ===================================================================== */
 
@@ -34,6 +35,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   const [subs, setSubs] = useState({});
   const [roster, setRoster] = useState({});          // class_id → [{id, full_name}]
   const [form, setForm] = useState(null);            // عند الإنشاء أو التعديل
+  const [reopen, setReopen] = useState(null);        // موعد الإغلاق الجديد عند إعادة الفتح
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useNotice(null);
   const [tick, setTick] = useState(Date.now());
@@ -149,6 +151,28 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
       duration: online.duration_min, show: online.show_result,
       selected: new Set(assigns.map((a) => a.student_id)),
     });
+  };
+
+  // إعادة فتح الاختبار بعد إغلاقه لمن لم يبدأه: يُفتح من الآن حتى الموعد الجديد، ويبقى الطلاب كلهم
+  // في القائمة (من سلّم لا يدخل مرة أخرى)، ويُرسل الإشعار لمن لم يسلّم — وهم بعد الإغلاق من لم يبدأ فقط
+  const doReopen = async () => {
+    const closes = new Date(reopen);
+    if (isNaN(closes)) { setMsg({ ok: false, text: "حدّد موعد الإغلاق الجديد." }); return; }
+    if (closes <= new Date()) { setMsg({ ok: false, text: "موعد الإغلاق الجديد يجب أن يكون بعد الآن." }); return; }
+    const opens = new Date(); opens.setSeconds(0, 0);
+    setBusy(true); setMsg(null);
+    const { data: n, error } = await supabase.rpc("publish_online_quiz", {
+      p_quiz: quiz.id, p_students: assigns.map((a) => a.student_id),
+      p_opens: opens.toISOString(), p_closes: closes.toISOString(),
+      p_duration: online.duration_min, p_show_result: online.show_result, p_renotify: true,
+    });
+    setBusy(false);
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    setReopen(null);
+    setTick(Date.now());
+    setMsg({ ok: true, text: `أُعيد فتح الاختبار حتى ${fmtDateTime(closes)}` +
+      (n ? `، وأُرسل الإشعار إلى ${n === 1 ? "طالب واحد" : n === 2 ? "طالبين" : `${n} ${n <= 10 ? "طلاب" : "طالبًا"}`}.` : ".") });
+    load();
   };
 
   const closeNow = async () => {
@@ -294,11 +318,13 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     const sub = subs[a.student_id];
     if (a.submitted_at) return { t: "سلّم", c: "text-present", score: sub?.score };
     if (a.started_at) return { t: `يؤدّيه الآن — بقي ${mins(new Date(a.deadline_at).getTime() - now)} د`, c: "text-warning" };
-    if (sub?.absent) return { t: "غائب", c: "text-absent" };
+    // بعد إعادة الفتح يبقى سجل الغياب القديم حتى يختبر، فلا يُعرض «غائب» والاختبار مفتوح
+    if (sub?.absent && now >= closes) return { t: "غائب", c: "text-absent" };
     return { t: now >= closes ? "لم يبدأ" : "لم يبدأ بعد", c: "text-muted" };
   };
   const done = assigns.filter((a) => a.submitted_at).length;
   const going = assigns.filter((a) => a.started_at && !a.submitted_at).length;
+  const missed = now >= closes ? assigns.filter((a) => !a.started_at) : [];
 
   return (
     <section className="card space-y-4 p-4">
@@ -326,7 +352,36 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
 
       {box(msg)}
 
+      {reopen != null && (
+        <div className="space-y-3 rounded-card border border-[#CCF2DB] bg-mint-tint p-3">
+          <p className="text-sm font-semibold text-ink">إعادة فتح الاختبار لمن لم يختبر</p>
+          <p className="text-xs leading-relaxed text-muted">
+            يُفتح الاختبار من الآن حتى الموعد الجديد، ويصل إشعار في الجرس وعلى الجوال إلى
+            {missed.length === 1 ? " طالب واحد" : missed.length === 2 ? " طالبين" : ` ${missed.length} ${missed.length <= 10 ? "طلاب" : "طالبًا"}`}:
+            <span className="text-ink"> {missed.map((a) => a.students?.full_name).join("، ")}</span>.
+            من سلّم لا يتأثر، ومن لا يختبر حتى الموعد الجديد يُسجَّل غائبًا.
+          </p>
+          <label className="block text-xs text-muted">يُغلق في
+            <input type="datetime-local" className="field mt-1" value={reopen} onChange={(e) => setReopen(e.target.value)} />
+          </label>
+          <p className="text-[11px] text-faint">المدة كما هي: <bdi className="num">{online.duration_min}</bdi> دقيقة لكل طالب.</p>
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-primary flex-1" disabled={busy} onClick={doReopen}>
+              {busy ? "جارٍ الفتح…" : "إعادة الفتح وإرسال الإشعار"}
+            </button>
+            <button className="rounded-pill border border-line px-4 py-2 text-sm text-muted"
+                    onClick={() => { setReopen(null); setMsg(null); }}>إلغاء</button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
+        {missed.length > 0 && reopen == null && (
+          <button className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep"
+                  disabled={busy} onClick={() => { setMsg(null); setReopen(toLocal(new Date(nextFive().getTime() + 24 * 3600e3))); }}>
+            إعادة فتح لمن لم يختبر (<bdi className="num">{missed.length}</bdi>)
+          </button>
+        )}
         <button className="rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:bg-canvas"
                 onClick={() => { setTick(Date.now()); load(); }}>تحديث</button>
         <button className="rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:bg-canvas"
