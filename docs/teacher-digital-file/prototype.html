@@ -255,11 +255,11 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 
 /* عناصر الأداء */
 .els { display: grid; gap: 8px; }
-.el { display: grid; grid-template-columns: 30px minmax(0,1fr) 46px; gap: 10px; align-items: center; font-size: 13px; }
+.el { display: grid; grid-template-columns: 30px minmax(0,1fr) 74px; gap: 10px; align-items: center; font-size: 13px; }
 .el .k { font-family: var(--mono); font-size: 11px; color: var(--surface); border-radius: 6px; padding: 2px 0; text-align: center; }
 .el .t { min-width: 0; }
 .el .t p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.el .n { text-align: left; color: var(--muted); font-size: 12px; }
+.el .n { text-align: left; color: var(--muted); font-size: 12px; white-space: nowrap; min-width: 46px; }
 
 /* الشواهد المرفوعة */
 .docs { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
@@ -662,7 +662,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   <!-- عناصر الأداء -->
   <section class="sec anim" id="elements">
     <details class="card fold">
-      <summary><div class="fold-h"><div><h2 class="fold-t">عناصر الأداء الوظيفي</h2><p class="sub num">٦٤ شاهدًا في ١٠ عناصر، والعنصر الأول يقدّره المقيِّم</p><p class="fold-note">الشواهد تُجمع طوال العام حتى موعد تقييم الأداء الوظيفي النهائي.</p><span class="fold-cta"><span class="o">عرض العناصر</span><span class="c">إخفاء</span></span></div><span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div></summary>
+      <summary><div class="fold-h"><div><h2 class="fold-t">عناصر الأداء الوظيفي</h2><p class="sub num">٦٤ شاهدًا في ١٠ عناصر، والعنصر الأول يقدّره مدير المدرسة</p><p class="fold-note">الشواهد تُجمع طوال العام حتى موعد تقييم الأداء الوظيفي النهائي.</p><span class="fold-cta"><span class="o">عرض العناصر</span><span class="c">إخفاء</span></span></div><span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div></summary>
       <div class="els" id="els"></div>
     </details>
   </section>
@@ -750,7 +750,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 
   /* عناصر الأداء الأحد عشر — بألوانها في ملف الشواهد */
   var EL = [
-    ["e01", "أداء الواجبات الوظيفية", 0, "يقدّره المقيِّم"],
+    ["e01", "أداء الواجبات الوظيفية", 0, "يقدّره مدير المدرسة"],
     ["e02", "التفاعل مع المجتمع المهني", 9], ["e03", "التفاعل مع أولياء الأمور", 7],
     ["e04", "التنويع في استراتيجيات التدريس", 6], ["e05", "تحسين نتائج المتعلمين", 8],
     ["e06", "إعداد وتنفيذ خطة التعلم", 5], ["e07", "توظيف تقنيات ووسائل التعلم", 6],
@@ -763,7 +763,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
     row.innerHTML = '<span class="k" style="background:var(--' + e[0] + ')">' + e[0].slice(1) + '</span>' +
       '<div class="t"><p>' + e[1] + '</p><div class="track" style="margin-top:4px"><div class="fill" style="width:' +
       (e[2] / max * 100) + '%;background:var(--' + e[0] + ')"></div></div></div>' +
-      '<span class="n num">' + (e[3] ? "المقيِّم" : ar(e[2]) + (e[2] >= 3 && e[2] <= 10 ? " شواهد" : " شاهدًا")) + '</span>';
+      '<span class="n num">' + (e[3] ? "يقدّره المدير" : ar(e[2]) + (e[2] >= 3 && e[2] <= 10 ? " شواهد" : " شاهدًا")) + '</span>';
     els.appendChild(row);
   });
 
