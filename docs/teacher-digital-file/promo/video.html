@@ -144,9 +144,9 @@ body { font-family: PlexL, Plex, Tahoma, sans-serif; color: #fff; }
   <section class="scene" id="s4">
     <p class="cap" id="cap4">من عملك في البوابة… تلقائيًا</p>
     <div class="phone" id="ph4"><div class="screen"><span class="notch"></span><img src="assets/report.png" alt="" id="rep"></div></div>
-    <div class="badge" id="bd1" style="right:14px;top:300px"><b data-count="412" data-start="22.2" data-dur="1.2">0</b><span>حصة حضّرها</span></div>
-    <div class="badge" id="bd2" style="left:12px;top:420px"><b data-count="81.4" data-dec="1" data-suffix="%" data-start="25.6" data-dur="1.2">0</b><span>متوسط طلابه</span></div>
-    <div class="badge" id="bd3" style="right:18px;top:560px"><b data-count="7.4" data-dec="1" data-prefix="+" data-start="27.4" data-dur="1.2">0</b><span>تحسّن طلابه</span></div>
+    <div class="badge" id="bd1" style="right:14px;top:300px"><b data-count="412" data-start="19.8" data-dur="1.2">0</b><span>حصة حضّرها</span></div>
+    <div class="badge" id="bd2" style="left:12px;top:420px"><b data-count="81.4" data-dec="1" data-suffix="%" data-start="21.4" data-dur="1.2">0</b><span>متوسط طلابه</span></div>
+    <div class="badge" id="bd3" style="right:18px;top:560px"><b data-count="7.4" data-dec="1" data-prefix="+" data-start="22.4" data-dur="1.2">0</b><span>تحسّن طلابه</span></div>
     <div class="chips">
       <span class="chip" id="c1">حصصك وتحضيرك</span><span class="chip" id="c2">نتائج طلابك وتحسّنهم</span>
       <span class="chip" id="c3">اختباراتك</span><span class="chip" id="c4">تطويرك المهني</span>
@@ -175,7 +175,7 @@ body { font-family: PlexL, Plex, Tahoma, sans-serif; color: #fff; }
   <!-- 7) 40–45: فعّل ملفك -->
   <section class="scene" id="s7">
     <div class="center" style="gap:22px" id="c7">
-      <p class="big" id="t7"><span class="w">جاهز</span> <span class="w">قبل</span> <span class="w">الزيارة</span></p>
+      <p class="big" id="t7"><span class="w">كن</span> <span class="w">جاهزًا</span> <span class="w">قبل</span> <span class="w">الزيارة</span></p>
       <span class="btn" id="cta">فعّل ملفك الآن</span>
       <span class="path" id="path">الأداء الوظيفي <i>←</i> ملف المعلم الرقمي</span>
       <img src="assets/icon-white.png" alt="" style="width:60px;margin-top:18px" id="lg7">
@@ -212,63 +212,64 @@ anim($("bl2"), { transform: ["translate(0,0)", "translate(-240px,-420px)"] }, 0,
 anim($("bl3"), { transform: ["translate(0,0) scale(1)", "translate(-80px,-300px) scale(1.4)"] }, 0, END, INOUT);
 
 /* الانتقال بين المشاهد: دائرة بألوان الهوية تتمدد من الوسط ثم تختفي */
-[10.6, 14.4, 20.2, 30.1, 33.8, 36.8].forEach((T, i) => anim($("w" + (i + 1)), [
+[6.2, 11.2, 16.8, 25.8, 30.8, 35.6].forEach((T, i) => anim($("w" + (i + 1)), [
   { transform: "scale(0)", opacity: 1 }, { transform: "scale(1)", opacity: 1, offset: .5 }, { transform: "scale(1.15)", opacity: 0 }], T - .35, .7, INOUT));
 
-/* التوقيت مطابق للتعليق الصوتي (vo.mp3 يبدأ عند 0.6 ث): كل مشهد يبدأ مع سطره */
-/* 1) الإشعار */
-scene("s1", 0, 10.6);
-rise($("lock"), .1, .7);
-anim($("notif"), { transform: ["translateY(-220px) scale(.92)", "translateY(0) scale(1)"], opacity: [0, 1] }, .8, .7, BACK);
-anim($("shake"), { transform: ["translateX(0)", "translateX(-7px)", "translateX(7px)", "translateX(-6px)", "translateX(6px)", "translateX(-3px)", "translateX(0)"] }, 1.5, .6, "linear");
-["r1", "r2", "r3"].forEach((id, i) => anim($(id), { opacity: [.9, 0], transform: ["scale(1)", "scale(2.6)"] }, 1.5 + i * .3, .9, "ease-out"));
-anim($("hl"), { backgroundSize: ["0% 100%", "100% 100%"] }, 6.6, .8, INOUT);
-anim($("shake"), { transform: ["scale(1)", "scale(1.06)"] }, 7.6, 2.8, INOUT, "forwards");
+/* التوقيت مطابق للتعليق الصوتي: vo.mp3 يبدأ عند 1.2 ث، ومواضع جمله من تفريغه (Whisper) وفترات صمته.
+   الوقت هنا = وقت الكلمة في التسجيل + 1.2 */
+/* 1) الإشعار: «تم اختيارك ضمن أداة الملاحظة الصفية…» */
+scene("s1", 0, 6.2);
+rise($("lock"), .1, .6);
+anim($("notif"), { transform: ["translateY(-220px) scale(.92)", "translateY(0) scale(1)"], opacity: [0, 1] }, .5, .7, BACK);
+anim($("shake"), { transform: ["translateX(0)", "translateX(-7px)", "translateX(7px)", "translateX(-6px)", "translateX(6px)", "translateX(-3px)", "translateX(0)"] }, 1.1, .6, "linear");
+["r1", "r2", "r3"].forEach((id, i) => anim($(id), { opacity: [.9, 0], transform: ["scale(1)", "scale(2.6)"] }, 1.1 + i * .3, .9, "ease-out"));
+anim($("hl"), { backgroundSize: ["0% 100%", "100% 100%"] }, 2.5, .8, INOUT);
+anim($("shake"), { transform: ["scale(1)", "scale(1.06)"] }, 3.4, 2.6, INOUT, "forwards");
 
-/* 2) الكلمات */
-scene("s2", 10.6, 14.4);
-[...$("l1").querySelectorAll(".w")].forEach((w, i) => rise(w, 10.8 + i * .22));
-[...$("l2").querySelectorAll(".w")].forEach((w, i) => rise(w, 12.5 + i * .18));
-anim($("ul"), { transform: ["scaleX(0)", "scaleX(1)"] }, 13.3, .5, INOUT);
-["i1", "i2", "i3"].forEach((id, i) => { pop($(id), 13.4 + i * .18);
-  anim($(id), { transform: ["translateY(0)", "translateY(-8px)", "translateY(0)"] }, 13.9 + i * .1, .6, INOUT, "forwards"); });
+/* 2) «تفرّغ لإعداد درسك… والبوابة تجهّز لك الوثائق والأدوات» */
+scene("s2", 6.2, 11.2);
+[...$("l1").querySelectorAll(".w")].forEach((w, i) => rise(w, 6.3 + i * .4));
+[...$("l2").querySelectorAll(".w")].forEach((w, i) => rise(w, 8.0 + i * .45));
+anim($("ul"), { transform: ["scaleX(0)", "scaleX(1)"] }, 10.0, .5, INOUT);
+["i1", "i2", "i3"].forEach((id, i) => { pop($(id), 10.0 + i * .18);
+  anim($(id), { transform: ["translateY(0)", "translateY(-8px)", "translateY(0)"] }, 10.5 + i * .1, .6, INOUT, "forwards"); });
 
-/* 3) الشعار */
-scene("s3", 14.4, 20.2);
-anim($("logo"), { transform: ["scale(0) rotate(-25deg)", "scale(1) rotate(0)"], opacity: [0, 1] }, 14.5, .8, BACK);
-["b1", "b2"].forEach((id, i) => anim($(id), { opacity: [.9, 0], transform: ["scale(.6)", "scale(2.4)"] }, 14.8 + i * .25, 1, "ease-out"));
-anim($("ttl"), { clipPath: ["inset(0 0 0 100%)", "inset(0 0 0 0)"] }, 14.7, .8, INOUT);
-anim($("shine"), { left: ["-90px", "110%"] }, 18.9, .9, INOUT);
-rise($("sub3"), 16.4);
+/* 3) «ملف المعلم الرقمي، تقرير واحد عن أعمالك يُبنى لحظة تفعيله» */
+scene("s3", 11.2, 16.8);
+anim($("logo"), { transform: ["scale(0) rotate(-25deg)", "scale(1) rotate(0)"], opacity: [0, 1] }, 11.3, .8, BACK);
+["b1", "b2"].forEach((id, i) => anim($(id), { opacity: [.9, 0], transform: ["scale(.6)", "scale(2.4)"] }, 11.6 + i * .25, 1, "ease-out"));
+anim($("ttl"), { clipPath: ["inset(0 0 0 100%)", "inset(0 0 0 0)"] }, 11.4, .9, INOUT);
+rise($("sub3"), 13.1);
+anim($("shine"), { left: ["-90px", "110%"] }, 15.4, .9, INOUT);
 
-/* 4) التقرير */
-scene("s4", 20.2, 30.1);
-rise($("cap4"), 20.4);
-anim($("ph4"), { transform: ["translateY(420px) rotate(10deg)", "translateY(0) rotate(0)"] }, 20.4, 1, BACK);
-anim($("rep"), { transform: ["translateY(0)", "translateY(-62%)"] }, 21.6, 8, INOUT);
-[22, 25.4, 27.2].forEach((t0, i) => pop($(["bd1", "bd2", "bd3"][i]), t0, "scale(.3) rotate(-8deg)"));
-[22.6, 25.3, 27.7, 28.6].forEach((t0, i) => pop($("c" + (i + 1)), t0, "translateY(20px) scale(.6)"));
+/* 4) «من عملك في البوابة تلقائيًا: حصصك وتحضيرك، ونتائج طلابك وتحسّنهم، واختباراتك وتطويرك المهني» */
+scene("s4", 16.8, 25.8);
+rise($("cap4"), 16.9);
+anim($("ph4"), { transform: ["translateY(420px) rotate(10deg)", "translateY(0) rotate(0)"] }, 16.9, 1, BACK);
+anim($("rep"), { transform: ["translateY(0)", "translateY(-62%)"] }, 18, 7.5, INOUT);
+[19.6, 21.2, 22.2].forEach((t0, i) => pop($(["bd1", "bd2", "bd3"][i]), t0, "scale(.3) rotate(-8deg)"));
+[19.5, 21.0, 23.2, 24.4].forEach((t0, i) => pop($("c" + (i + 1)), t0, "translateY(20px) scale(.6)"));
 
-/* 5) لوحة المعلم */
-scene("s5", 30.1, 33.8);
-rise($("cap5"), 30.2);
-anim($("ph5"), { transform: ["translateX(-460px) rotate(-8deg)", "translateX(0) rotate(0)"] }, 30.2, .8, BACK);
-anim($("pan"), { transform: ["translateY(0)", "translateY(-38%)"] }, 30.9, 2.8, INOUT);
-[30.6, 32.1, 33.0].forEach((t0, i) => pop($("k" + (i + 1)), t0, "scale(.3)"));
+/* 5) «وأضف إحصاءات منصة مدرستي، وأنشطتك الصفية واللاصفية» */
+scene("s5", 25.8, 30.8);
+rise($("cap5"), 25.9);
+anim($("ph5"), { transform: ["translateX(-460px) rotate(-8deg)", "translateX(0) rotate(0)"] }, 25.9, .8, BACK);
+anim($("pan"), { transform: ["translateY(0)", "translateY(-38%)"] }, 26.6, 4, INOUT);
+[27.0, 28.4, 29.6].forEach((t0, i) => pop($("k" + (i + 1)), t0, "scale(.3)"));
 
-/* 6) البطاقة */
-scene("s6", 33.8, 36.8);
-rise($("cap6"), 33.9);
-anim($("card"), { transform: ["rotateY(95deg) scale(.9)", "rotateY(0) scale(1)"], opacity: [0, 1] }, 33.9, .8, BACK);
-anim($("scan"), { opacity: [0, 1, 1, 0], transform: ["translateY(-150px)", "translateY(-150px)", "translateY(110px)", "translateY(110px)"] }, 34.9, 1.2, "linear");
-pop($("okb"), 36.0, "scale(.3)");
+/* 6) «بطاقة برمز ثابت، يمسحه الزائر بجواله فيرى ملفك» */
+scene("s6", 30.8, 35.6);
+rise($("cap6"), 30.9);
+anim($("card"), { transform: ["rotateY(95deg) scale(.9)", "rotateY(0) scale(1)"], opacity: [0, 1] }, 30.9, .9, BACK);
+anim($("scan"), { opacity: [0, 1, 1, 0], transform: ["translateY(-150px)", "translateY(-150px)", "translateY(110px)", "translateY(110px)"] }, 32.7, 1.6, "linear");
+pop($("okb"), 34.5, "scale(.3)");
 
-/* 7) الدعوة */
-scene("s7", 36.8, END);
-[...$("t7").querySelectorAll(".w")].forEach((w, i) => rise(w, 37 + i * .2));
-pop($("cta"), 38.4, "scale(.3)");
-anim($("cta"), { transform: ["scale(1)", "scale(1.08)", "scale(1)", "scale(1.08)", "scale(1)"] }, 42.4, 1.6, INOUT, "forwards");
-rise($("path"), 39.8); rise($("lg7"), 41.6); rise($("br7"), 41.8);
+/* 7) «كن جاهزًا قبل الزيارة، فعّل ملفك الآن: الأداء الوظيفي، ثم ملف المعلم الرقمي» */
+scene("s7", 35.6, END);
+[...$("t7").querySelectorAll(".w")].forEach((w, i) => rise(w, 35.8 + i * .3));
+pop($("cta"), 37.6, "scale(.3)");
+anim($("cta"), { transform: ["scale(1)", "scale(1.08)", "scale(1)", "scale(1.08)", "scale(1)"] }, 42.6, 1.6, INOUT, "forwards");
+rise($("path"), 39.1); rise($("lg7"), 40.6); rise($("br7"), 40.8);
 /* قصاصات احتفال من الزر: مسارات ثابتة (لا عشوائية) ليتطابق كل توليد */
 const COLORS = ["#89D7AD", "#FFFFFF", "#A4CBF2", "#E6C27A"];
 for (let i = 0; i < 26; i++) {
@@ -278,7 +279,7 @@ for (let i = 0; i < 26; i++) {
   const x = Math.cos(ang) * r, y = Math.sin(ang) * r - 40;
   anim(c, [{ opacity: 1, transform: "translate(-5px,-8px) rotate(0)" },
            { opacity: 1, transform: `translate(${x}px,${y}px) rotate(${(i * 47) % 360}deg)`, offset: .6 },
-           { opacity: 0, transform: `translate(${x * 1.1}px,${y + 120}px) rotate(${(i * 83) % 540}deg)` }], 38.5, 1.8, "cubic-bezier(.1,.8,.3,1)", "forwards");
+           { opacity: 0, transform: `translate(${x * 1.1}px,${y + 120}px) rotate(${(i * 83) % 540}deg)` }], 37.7, 1.8, "cubic-bezier(.1,.8,.3,1)", "forwards");
 }
 
 /* العدّادات تُحسب من الزمن مباشرة */

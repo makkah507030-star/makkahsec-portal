@@ -22,10 +22,10 @@ for (let i = 0; i < total * FPS; i++) {
 await b.close();
 const sfx = `${tmp}/sfx.wav`;
 execFileSync("python3", [fileURLToPath(new URL("./sfx.py", import.meta.url)), sfx]);
-// التعليق (assets/vo.mp3) يبدأ عند 0.6 ث بمستواه، والمؤثرات تحته بنحو 9 ديسيبل
+// التعليق (assets/vo.mp3) يبدأ عند 1.2 ث بمستواه، والمؤثرات تحته بنحو 9 ديسيبل
 const vo = fileURLToPath(new URL("./assets/vo.mp3", import.meta.url));
 execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", `${tmp}/f%05d.jpg`, "-i", sfx, "-i", vo,
-  "-filter_complex", "[1:a]volume=0.36[s];[2:a]aresample=48000,pan=stereo|c0=c0|c1=c0,adelay=600:all=1,volume=1.0[v];[s][v]amix=inputs=2:normalize=0:duration=first,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[a]",
+  "-filter_complex", "[1:a]volume=0.36[s];[2:a]aresample=48000,pan=stereo|c0=c0|c1=c0,adelay=1200:all=1,volume=1.0[v];[s][v]amix=inputs=2:normalize=0:duration=first,loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000[a]",
   "-map", "0:v", "-map", "[a]",
   "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-preset", "medium",
   "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart", out]);
