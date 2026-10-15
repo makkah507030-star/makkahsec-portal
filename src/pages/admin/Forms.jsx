@@ -311,7 +311,8 @@ function RubricInput({ field, value, onChange }) {
   );
 }
 
-/* صيغ جاهزة لحقل بعينه — تُدار من «إدارة النماذج» وتُحفظ مع الحقل */
+/* صيغ جاهزة لحقل بعينه — تُدار من «إدارة النماذج» وتُحفظ مع الحقل.
+   النص كاملًا بلا قص: الطويل يلتف على أكثر من سطر داخل البطاقة */
 function FieldPresets({ field, onPick }) {
   const list = Array.isArray(field?.presets) ? field.presets : [];
   if (!list.length) return null;
@@ -321,9 +322,9 @@ function FieldPresets({ field, onPick }) {
         <span className="w-full text-[11px] text-faint">اضغط البطاقة لإضافتها، ويمكن الجمع بين أكثر من بطاقة والتعديل بعدها.</span>
       )}
       {list.map((t, i) => (
-        <button key={i} type="button" onClick={() => onPick(t)} title={t}
-                className="max-w-full truncate rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
-          {t.length > 42 ? t.slice(0, 42) + "…" : t}
+        <button key={i} type="button" onClick={() => onPick(t)}
+                className="max-w-full rounded-[14px] border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-right text-[11.5px] font-medium leading-relaxed text-mint-deep hover:bg-[#CCF2DB]">
+          {t}
         </button>
       ))}
     </div>
