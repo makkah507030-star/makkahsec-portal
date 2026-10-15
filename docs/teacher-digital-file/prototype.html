@@ -380,6 +380,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .fold-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .fold-h b { color: var(--deep); }
 .fold-t { font-size: 19px; }
+.fold-note { margin: 6px 0 4px; font-size: 12px; color: var(--info); background: var(--info-bg); border-radius: 8px; padding: 5px 10px; }
 .fold[open] summary { padding-bottom: 6px; }
 .chev { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--tint); color: var(--deep); transition: transform .2s; }
 .chev svg { width: 18px; height: 18px; }
@@ -661,7 +662,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   <!-- عناصر الأداء -->
   <section class="sec anim" id="elements">
     <details class="card fold">
-      <summary><div class="fold-h"><div><h2 class="fold-t">عناصر الأداء الوظيفي</h2><p class="sub num">٦٤ شاهدًا في ١٠ عناصر، والعنصر الأول يقدّره المقيِّم</p><span class="fold-cta"><span class="o">عرض العناصر</span><span class="c">إخفاء</span></span></div><span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div></summary>
+      <summary><div class="fold-h"><div><h2 class="fold-t">عناصر الأداء الوظيفي</h2><p class="sub num">٦٤ شاهدًا في ١٠ عناصر، والعنصر الأول يقدّره المقيِّم</p><p class="fold-note">الشواهد تُجمع طوال العام حتى موعد تقييم الأداء الوظيفي النهائي.</p><span class="fold-cta"><span class="o">عرض العناصر</span><span class="c">إخفاء</span></span></div><span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div></summary>
       <div class="els" id="els"></div>
     </details>
   </section>
@@ -669,7 +670,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
   <!-- الشواهد -->
   <section class="sec" id="docs">
     <details class="card fold">
-      <summary><div class="fold-h"><div><h2 class="fold-t">الشواهد من خارج البوابة</h2><p class="sub num">٦ ملفات رفعها المعلم</p><span class="fold-cta"><span class="o">عرض الشواهد</span><span class="c">إخفاء</span></span></div><span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div></summary>
+      <summary><div class="fold-h"><div><h2 class="fold-t">الشواهد من خارج البوابة</h2><p class="sub num">٦ ملفات رفعها المعلم</p><p class="fold-note">الشواهد تُجمع طوال العام حتى موعد تقييم الأداء الوظيفي النهائي.</p><span class="fold-cta"><span class="o">عرض الشواهد</span><span class="c">إخفاء</span></span></div><span class="chev" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></div></summary>
       <div class="docs" id="docGrid"></div>
     </details>
   </section>
