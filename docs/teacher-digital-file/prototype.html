@@ -208,6 +208,10 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .dist small { font-size: 10.5px; color: color-mix(in srgb, var(--c), var(--ink) 25%); font-weight: 600; white-space: nowrap; }
 .cls { align-items: start; }
 .cls > span { line-height: 22px; }
+.qlist { list-style: none; margin: 0; padding: 0; display: grid; }
+.qlist li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.qlist li:first-child { border-top: 0; }
+.qlist span { font-size: 12px; color: var(--muted); }
 .grp { font-size: 12.5px; font-weight: 700; color: var(--deep); margin-top: 2px; }
 .keys { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); }
 .keys span { display: inline-flex; align-items: center; gap: 5px; }
@@ -588,22 +592,28 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 
   <!-- التقويم -->
   <section class="sec anim" id="assess">
-    <div class="sec-h"><h2>التقويم والاختبارات</h2><p>تنوّع الأدوات وجودة الأسئلة</p></div>
+    <div class="sec-h"><h2>التقويم والاختبارات</h2><p>من «اختباراتي» في البوابة</p></div>
     <div class="grid2">
       <div class="card">
-        <div class="card-h"><div><h3>تنوّع أساليب التقويم</h3><p class="sub">١٤ أداة هذا الفصل</p></div><span class="src auto">تلقائي</span></div>
+        <div class="card-h"><div><h3>تنوّع أساليب التقويم</h3><p class="sub">١٤ اختبارًا هذا الفصل</p></div><span class="src auto">تلقائي</span></div>
         <div class="stack" style="height:28px"><i style="flex:5;background:var(--e04)"></i><i style="flex:4;background:var(--e03)"></i><i style="flex:3;background:var(--e05)"></i><i style="flex:2;background:var(--e09)"></i></div>
-        <div class="keys"><span><i style="background:var(--e04)"></i>إلكتروني ٥</span><span><i style="background:var(--e03)"></i>ورقي بتصحيح آلي ٤</span><span><i style="background:var(--e05)"></i>ورقي ٣</span><span><i style="background:var(--e09)"></i>مهام أدائية ٢</span></div>
+        <div class="keys"><span><i style="background:var(--e04)"></i>إلكتروني ٥</span><span><i style="background:var(--e03)"></i>ورقي بتصحيح آلي ٤</span><span><i style="background:var(--e05)"></i>ورقي ٣</span><span><i style="background:var(--e09)"></i>من خارج البوابة ٢</span></div>
+        <p class="sub num">تشخيصي ٢، الفترة الأولى ٧، الفترة الثانية ٥</p>
       </div>
       <div class="card">
-        <div class="card-h"><div><h3>تحليل الأسئلة</h3><p class="sub">من التصحيح الآلي</p></div><span class="src auto">تلقائي</span></div>
-        <div class="bar"><div class="row"><span>أسئلة متوسطة الصعوبة (المثالي)</span><span class="num">٧١٪</span></div><div class="track"><div class="fill" style="width:71%"></div></div></div>
-        <p class="sub">أصعب سؤال: «إيجاد الحد العام لمتتابعة حسابية»، أجاب عنه ٣٨٪، وأُعيد شرحه في الحصة التالية.</p>
+        <div class="card-h"><div><h3>تحليل الأسئلة</h3><p class="sub">للاختبارات المصححة آليًا</p></div><span class="src auto">تلقائي</span></div>
+        <div class="imp-sum"><span class="v num" style="direction:rtl">٩</span><span class="sub">اختبارات حُلّلت فقراتها: نسبة الإجابة الصحيحة لكل سؤال</span></div>
       </div>
     </div>
     <div class="card">
-      <div class="card-h"><div><h3>أوراق العمل والاختبارات</h3><p class="sub">نماذج الأسئلة والإجابات</p></div><span class="src mix">بوابة + المعلم</span></div>
-      <div class="tags"><span class="tag">اختبار قصير ١ · ٢٨ سؤالًا</span><span class="tag">ورقة عمل المتتابعات</span><span class="tag">مهمة أدائية: نمذجة النمو</span><span class="tag">اختبار الفترة · مع جدول المواصفات</span></div>
+      <div class="card-h"><div><h3>اختباراته</h3><p class="sub">العنوان والنوع وعدد الأسئلة · دون نص الأسئلة</p></div><span class="src auto">تلقائي</span></div>
+      <ul class="qlist">
+        <li><b>اختبار الفترة الأولى</b><span class="num">ورقي بتصحيح آلي، ٣٠ سؤالًا</span></li>
+        <li><b>اختبار قصير ١: المتتابعات</b><span class="num">إلكتروني، ٢٨ سؤالًا</span></li>
+        <li><b>الاختبار التشخيصي</b><span class="num">ورقي، ٢٠ سؤالًا</span></li>
+        <li><b>اختبار الدوال</b><span>من خارج البوابة</span></li>
+      </ul>
+      <p class="sub num">و١٠ اختبارات أخرى</p>
     </div>
   </section>
 
