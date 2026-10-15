@@ -15,6 +15,7 @@ import QuickNote from "./QuickNote.jsx";
 import { loadPrincipalSignature } from "../lib/principalSignature.js";
 import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
+import { useBackSteps, goBack } from "../lib/backStep.js";
 
 /* =====================================================================
    القائمة الجانبية — مرتبة من العمل اليومي إلى الإعدادات، وفي أسفلها
@@ -261,6 +262,7 @@ export function Icon({ name, className = "h-[18px] w-[18px]" }) {
     chalk:  "M4 19v-3l11-11 3 3-11 11H4ZM14 6l3 3",
     clock:  "M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
     swap:   "M8 3 4 7l4 4M4 7h13M16 21l4-4-4-4M20 17H7",
+    refresh: "M21 12a9 9 0 1 1-2.6-6.4M21 4v5h-5",
     whistle: "M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6zM9 12l2 2 4-4",
     key:    "M14 7a4 4 0 1 1-5.6 5.6L3 18v3h3l5.4-5.4A4 4 0 0 1 14 7Z",
     shield: "M12 3l8 3v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z",
@@ -388,6 +390,9 @@ export default function Layout({ children }) {
     window.scrollTo({ top: 0 });
   };
 
+  // التفاصيل المفتوحة داخل الصفحة (lib/backStep.js) — يظهر لها زر رجوع عائم في الجوال
+  const steps = useBackSteps();
+
   /* ---------- طيّ القائمة إلى أيقونات (سطح المكتب) ---------- */
   const [collapsed, setCollapsed] = useState(() => store.get("nav.collapsed", false));
   const setCollapsedSaved = (v) => { setCollapsed(v); store.set("nav.collapsed", v); };
@@ -482,10 +487,25 @@ export default function Layout({ children }) {
   const Actions = () => (
     <div className="flex shrink-0 items-center gap-2">
       <ViewSwitch />
+      <Refresh />
       <PreviewSite />
       <NotificationBell />
       <SignOut />
     </div>
+  );
+
+  // تحديث الصفحة — بديل زر التحديث في المتصفح، وتطبيق الجوال المثبّت لا يظهر فيه شريط المتصفح
+  const Refresh = () => (
+    <button
+      type="button"
+      onClick={() => window.location.reload()}
+      title="تحديث الصفحة"
+      aria-label="تحديث الصفحة"
+      className="flex shrink-0 items-center gap-1.5 rounded-pill border border-line px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint hover:text-mint-deep sm:px-3.5"
+    >
+      <Icon name="refresh" className="h-4 w-4" />
+      <span className="hidden sm:inline">تحديث</span>
+    </button>
   );
 
   // معاينة سريعة للصفحة الرئيسية العامة (الموقع المنشور) في تبويب جديد — للوصول السريع بعد أي تعديل
@@ -747,6 +767,19 @@ export default function Layout({ children }) {
           {isStaff && <QuickNote />}
         </div>
       </div>
+
+      {/* زر رجوع عائم — الجوال: يغلق التفاصيل المفتوحة داخل الصفحة، قريبًا من الإبهام */}
+      {steps.length > 0 && (
+        <button type="button" onClick={goBack}
+                className={`fixed right-4 z-30 flex items-center gap-1.5 rounded-pill bg-mint-deep py-2.5 pl-4 pr-3 text-sm font-semibold text-white shadow-lg hover:bg-mint-hover lg:hidden print:hidden ${
+                  bottomItems.length > 0 ? "bottom-[calc(5rem+env(safe-area-inset-bottom))]" : "bottom-6"}`}>
+          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none"
+               stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+          <span className="max-w-[11rem] truncate">{steps.at(-1).label}</span>
+        </button>
+      )}
 
       {/* الشريط السفلي — الجوال: أهم الصفحات و«المزيد» يفتح القائمة كاملة */}
       {bottomItems.length > 0 && (

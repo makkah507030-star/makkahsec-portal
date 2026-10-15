@@ -14,6 +14,7 @@ import { Programs, Requests } from "./GuidanceMore.jsx";
 import MonthlyReport from "./guidance/MonthlyReport.jsx";
 import { WATCH_AT, LATE_AT, reasonsOf, SOURCE, KIND, OUTCOME } from "../lib/guidanceWarning";
 import GuidanceInquiries from "../components/GuidanceInquiries.jsx";
+import { useBackStep } from "../lib/backStep.js";
 
 /* =====================================================================
    التوجيه الطلابي (supabase/guidance_1.sql و guidance_2.sql).
@@ -46,6 +47,8 @@ export default function Guidance() {
   const [tick, setTick] = useState(0);
 
   useEffect(() => { if (!grade && myGrades[0]) setGrade(myGrades[0]); }, [myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  useBackStep(!!openCase, () => { setOpenCase(null); setTick((t) => t + 1); }, "الحالات");
 
   if (!myGrades.length) return <p className="card px-4 py-6 text-sm text-muted">هذه الصفحة لموجهي الصفوف ووكيل شؤون الطلاب ومدير المدرسة والدعم الفني.</p>;
 

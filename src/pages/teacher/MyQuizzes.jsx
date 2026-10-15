@@ -19,6 +19,7 @@ import { loadActiveTerm } from "../../lib/officialAttendance";
 import SymbolsToolbar from "../../components/SymbolsToolbar.jsx";
 import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
+import { useBackStep } from "../../lib/backStep.js";
 
 /* =====================================================================
    اختباراتي — اختبارات المعلم.
@@ -101,6 +102,7 @@ export default function MyQuizzes() {
   useEffect(() => { if (uid) load(); }, [uid]);
 
   const open = (list ?? []).find((q) => q.id === openId);
+  useBackStep(!!open, () => { setOpenId(null); load(); }, "اختباراتي");
   if (open) {
     return <QuizEditor quiz={open} uid={uid}
                        onBack={() => { setOpenId(null); load(); }} />;
@@ -594,7 +596,7 @@ function QuizEditor({ quiz, uid, onBack }) {
   // صور الأسئلة: مخزن خاص، فتُعرض بروابط مؤقتة تُجلب لما لم يُجلب بعد
   const [images, setImages] = useState({});
   useEffect(() => {
-    const need = [...new Set((questions ?? []).map((x) => x.image_path).filter(Boolean))]
+    const need = [...new Set((questions ?? []).flatMap((x) => [x.image_path, ...(x.option_images ?? [])]).filter(Boolean))]
       .filter((path) => !images[path]);
     if (!need.length) return;
     supabase.storage.from("quiz-images").createSignedUrls(need, 6 * 3600).then(({ data }) => {
@@ -603,7 +605,9 @@ function QuizEditor({ quiz, uid, onBack }) {
     });
   }, [questions]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const imgHint = (e) => (/bucket|not found|row-level|image_path|image_width/i.test(e?.message ?? "")
+  const imgHint = (e) => (/option_images/i.test(e?.message ?? "")
+    ? "صور الخيارات تحتاج تنفيذ ملفي supabase/quiz_online_images_1.sql و_2 في قاعدة البيانات مرة واحدة."
+    : /bucket|not found|row-level|image_path|image_width/i.test(e?.message ?? "")
     ? "صور الأسئلة تحتاج تنفيذ ملف supabase/quiz_models_images.sql في قاعدة البيانات مرة واحدة."
     : e?.message);
 
@@ -616,6 +620,30 @@ function QuizEditor({ quiz, uid, onBack }) {
     const err = await patchQ(row, { image_path: path });
     if (err) { setMsg({ ok: false, text: imgHint(err) }); return; }
     if (row.image_path) supabase.storage.from("quiz-images").remove([row.image_path]);
+  };
+
+  // صورة خيار في الاختيار من متعدد: option_images مصفوفة بترتيب الخيارات
+  const uploadOptionImage = async (row, i, file) => {
+    if (!file) return;
+    const img = await shrinkImage(file);
+    const path = `${q.id}/${row.id}-o${i}-${Date.now()}.${img.type === "image/png" ? "png" : "jpg"}`;
+    const { error } = await supabase.storage.from("quiz-images").upload(path, img, { contentType: img.type });
+    if (error) { setMsg({ ok: false, text: imgHint(error) }); return; }
+    const old = row.option_images?.[i];
+    const next = Array.from({ length: Math.max(i + 1, row.option_images?.length ?? 0) }, (_, k) => row.option_images?.[k] ?? null);
+    next[i] = path;
+    const err = await patchQ(row, { option_images: next });
+    if (err) { setMsg({ ok: false, text: imgHint(err) }); supabase.storage.from("quiz-images").remove([path]); return; }
+    if (old) supabase.storage.from("quiz-images").remove([old]);
+  };
+
+  const removeOptionImage = async (row, i) => {
+    const old = row.option_images?.[i];
+    if (!old) return;
+    const next = [...row.option_images];
+    next[i] = null;
+    await patchQ(row, { option_images: next.some(Boolean) ? next : null });
+    supabase.storage.from("quiz-images").remove([old]);
   };
 
   const removeImage = async (row) => {
@@ -728,8 +756,14 @@ function QuizEditor({ quiz, uid, onBack }) {
       copies = [{ className: sheetClass(linked.find((l) => l.class_id === id)) }];
     }
     setPrinting({ copies });
-    // تُترك الأوراق لتقيس نفسها وتتّسع في صفحة واحدة قبل فتح نافذة الطباعة
-    setTimeout(() => printThen(() => setPrinting(null)), copies.length > 1 ? 700 : 250);
+    // تُترك الأوراق لتقيس نفسها وتتّسع في صفحة واحدة، وتُنتظر صور الأسئلة، قبل فتح نافذة الطباعة
+    setTimeout(async () => {
+      const until = Date.now() + 6000;
+      while (Date.now() < until && [...document.querySelectorAll("#quiz-print img")].some((im) => !im.complete)) {
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      printThen(() => setPrinting(null));
+    }, copies.length > 1 ? 700 : 250);
   };
 
   const pill = (on) =>
@@ -803,7 +837,7 @@ function QuizEditor({ quiz, uid, onBack }) {
         <div aria-hidden="true"
              style={{ position: "fixed", top: 0, left: -10000, visibility: "hidden", pointerEvents: "none" }}>
           <QuizPaper quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
-                     onFit={setFit} />
+                     images={images} onFit={setFit} />
         </div>
       )}
 
@@ -811,7 +845,7 @@ function QuizEditor({ quiz, uid, onBack }) {
       {printing && (
         <QuizPrintArea>
           {printing.copies.map((c, i) => (
-            <QuizPaper key={i} quiz={q} questions={questions} {...c} teacherName={profile?.full_name ?? ""} />
+            <QuizPaper key={i} quiz={q} questions={questions} {...c} teacherName={profile?.full_name ?? ""} images={images} />
           ))}
         </QuizPrintArea>
       )}
@@ -916,6 +950,8 @@ function QuizEditor({ quiz, uid, onBack }) {
                   )}
                   {(listening ? mainQs : questions ?? []).map((row, i) => (
                     <QuestionCard key={row.id} row={row} index={i + 1} lang={q.lang ?? "ar"}
+                                  image={online || omr ? { url: images[row.image_path], onUpload: uploadImage, onRemove: removeImage, printed: omr } : null}
+                                  optImage={online || omr ? { urls: images, onUpload: uploadOptionImage, onRemove: removeOptionImage } : null}
                                   onPatch={patchQ} onRemove={removeQ} />
                   ))}
                 </>
@@ -1119,7 +1155,7 @@ function QuizDetails({ q, onSaved }) {
   );
 }
 
-function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false, image = null }) {
+function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = false, image = null, optImage = null }) {
   const ltr = lang === "en";
   const [local, setLocal] = useState(row);
 
@@ -1160,7 +1196,8 @@ function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = fals
       )}
 
       {row.kind === "mcq" && (
-        <McqEditor local={local} setLocal={setLocal} save={save} ltr={ltr} />
+        <McqEditor local={local} setLocal={setLocal} save={save} ltr={ltr}
+                   optImage={optImage && { ...optImage, row }} />
       )}
 
       {row.kind === "truefalse" && (
@@ -1195,7 +1232,7 @@ function QuestionCard({ row, index, onPatch, onRemove, lang = "ar", paper = fals
   );
 }
 
-function McqEditor({ local, setLocal, save, ltr = false }) {
+function McqEditor({ local, setLocal, save, ltr = false, optImage = null }) {
   const LTRS = ltr ? ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N"] : LETTERS;
   const opts = Array.isArray(local.options) ? local.options : ["", "", ""];
   const answer = String(local.answer ?? "0").replace(/"/g, "");
@@ -1221,11 +1258,18 @@ function McqEditor({ local, setLocal, save, ltr = false }) {
                  placeholder={ltr ? `Option ${LTRS[i]}` : `الخيار ${LTRS[i]}`}
                  onChange={(e) => setOpt(i, e.target.value)}
                  onBlur={() => save({ options: opts })} />
+          {optImage && <OptionImage i={i} optImage={optImage} />}
           {opts.length > 2 && (
             <button onClick={() => {
                       const next = opts.filter((_, k) => k !== i);
+                      // صورة الخيار المحذوف تُحذف معه، وتنزاح صور ما بعده مع خياراتها
+                      const imgs = optImage?.row.option_images;
+                      const gone = imgs?.[i];
+                      const nextImgs = imgs ? imgs.filter((_, k) => k !== i) : undefined;
                       save({ options: next,
-                             answer: String(Math.min(Number(answer), next.length - 1)) });
+                             answer: String(Math.min(Number(answer), next.length - 1)),
+                             ...(imgs ? { option_images: nextImgs.some(Boolean) ? nextImgs : null } : {}) });
+                      if (gone) supabase.storage.from("quiz-images").remove([gone]);
                     }}
                     className="shrink-0 text-xs text-absent">×</button>
           )}
@@ -1678,6 +1722,39 @@ function ListeningSection({ audioPath, audioUrl, rows, onUpload, onRemoveAudio, 
   );
 }
 
+/* صورة خيار: زر صغير بجانب الخيار، ومصغّرتها بعد الرفع (الضغط عليها يحذفها) */
+function OptionImage({ i, optImage }) {
+  const [busy, setBusy] = useState(false);
+  const path = optImage.row.option_images?.[i];
+  const url = path ? optImage.urls[path] : null;
+  const pick = (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    setBusy(true);
+    Promise.resolve(optImage.onUpload(optImage.row, i, f)).finally(() => setBusy(false));
+  };
+  if (path) {
+    return (
+      <span className="flex shrink-0 items-center gap-1">
+        <span className="grid h-9 w-12 place-items-center overflow-hidden rounded-[6px] border border-line bg-white">
+          {url ? <img src={url} alt="" className="max-h-full max-w-full object-contain" /> : <span className="text-[10px] text-faint">…</span>}
+        </span>
+        <button type="button" onClick={() => optImage.onRemove(optImage.row, i)} title="حذف صورة الخيار"
+                className="text-[11px] text-absent hover:underline">حذف</button>
+      </span>
+    );
+  }
+  return (
+    <label title="صورة للخيار" className={`grid h-8 w-8 shrink-0 cursor-pointer place-items-center rounded-sm2 border border-dashed border-line text-muted hover:border-mint-deep hover:text-mint-deep ${busy ? "opacity-50" : ""}`}>
+      <input type="file" accept="image/*" className="hidden" onChange={pick} />
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15 9.5h.01" />
+      </svg>
+    </label>
+  );
+}
+
 function QuestionImage({ row, image, save }) {
   const [busy, setBusy] = useState(false);
   const width = Number(row.image_width) || 60;
@@ -1704,13 +1781,15 @@ function QuestionImage({ row, image, save }) {
         {image.url ? <img src={image.url} alt="" className="max-h-full max-w-full object-contain" />
                    : <span className="text-[11px] text-faint">…</span>}
       </div>
-      <div className="min-w-[160px] flex-1 space-y-1">
-        <label className="flex items-center justify-between text-[11px] text-muted">
-          <span>عرضها في الورقة</span><span className="num">{width}٪</span>
-        </label>
-        <input type="range" min="20" max="100" step="10" value={width} className="w-full accent-[#3E6350]"
-               onChange={(e) => save({ image_width: Number(e.target.value) })} />
-      </div>
+      {image.printed !== false ? (
+        <div className="min-w-[160px] flex-1 space-y-1">
+          <label className="flex items-center justify-between text-[11px] text-muted">
+            <span>عرضها في الورقة</span><span className="num">{width}٪</span>
+          </label>
+          <input type="range" min="20" max="100" step="10" value={width} className="w-full accent-[#3E6350]"
+                 onChange={(e) => save({ image_width: Number(e.target.value) })} />
+        </div>
+      ) : <p className="min-w-[160px] flex-1 text-[11px] text-muted">تظهر للطالب تحت نص السؤال.</p>}
       <div className="flex shrink-0 flex-col gap-1">
         <label className="cursor-pointer text-xs font-medium text-mint-deep hover:underline">
           {input}{busy ? "…" : "تغيير"}

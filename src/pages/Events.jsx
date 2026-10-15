@@ -19,6 +19,7 @@ import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes.js";
 import { sendPush } from "../lib/pushSend.js";
 import { countAr } from "../lib/arabicCount.js";
 import { cmpAr } from "../lib/sortAr.js";
+import { useBackStep } from "../lib/backStep.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -56,7 +57,9 @@ export default function Events() {
   // ?open=<معرّف>&step=approval — من «الاعتماد والمتابعة»: يفتح الحدث على مرحلة الاعتماد
   const [params, setParams] = useSearchParams();
   const [openId, setOpenId] = useState(params.get("open"));
-  const openStep = params.get("step");
+  const [openStep, setOpenStep] = useState(params.get("step"));
+  // يُمسح الرابط بعد فتح الحدث منه، فيعيد زر الرجوع إلى القائمة لا إلى الحدث
+  useEffect(() => { if (params.get("open")) setParams({}, { replace: true }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [creating, setCreating] = useState(false);
   const [msg, setMsg] = useNotice(null);
 
@@ -69,13 +72,15 @@ export default function Events() {
   useEffect(() => { load(); }, [uid]);
 
   const open = (list ?? []).find((e) => e.id === openId);
+  const closeOpen = () => { setOpenId(null); setOpenStep(null); load(); };
+  useBackStep(!!open, closeOpen, "الأحداث");
 
   if (open) {
     return (
       <EventWizard ev={open} uid={uid} profile={profile} isSupport={isSupport}
                    isPrincipal={roles.includes("principal")}
                    startAtApproval={openStep === "approval" && !!open.report_submitted_at}
-                   onBack={() => { setOpenId(null); setParams({}, { replace: true }); load(); }}
+                   onBack={closeOpen}
                    onMsg={setMsg} msg={msg} />
     );
   }

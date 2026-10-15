@@ -754,6 +754,7 @@ export async function printReport(opts) {
           return pg;
         }
         var pg = startPage(false);
+        var last = null;   /* آخر قطعة جدول وُضعت: { pg, tb, skel } */
         flow.forEach(function(item){
           var isTable = item.tagName === 'TABLE' && item.tBodies && item.tBodies[0] && item.tBodies[0].rows.length;
           if(isTable){
@@ -775,10 +776,26 @@ export async function printReport(opts) {
                 if(!fits(pg._b)){ s.tb.removeChild(r); break; }
                 ri++;
               }
+              last = { pg: pg, tb: s.tb, skel: skel };
               if(ri < rows.length) pg = startPage(true);
             }
           } else {
-            if(!tryPlace(pg._b, item)){ pg = startPage(true); pg._b.appendChild(item); }
+            if(!tryPlace(pg._b, item)){
+              var prev = last && last.pg === pg ? last : null;
+              pg = startPage(true);
+              /* التوقيعات لا تنتقل وحدها إلى صفحة جديدة: تصحبها آخر صفوف الجدول */
+              if(prev && item.classList.contains('sign')){
+                var n = Math.min(3, prev.tb.rows.length - 1);
+                if(n > 0){
+                  var m = prev.skel();
+                  var moved = [].slice.call(prev.tb.rows, -n);
+                  moved.forEach(function(r){ m.tb.appendChild(r); });
+                  pg._b.appendChild(m.t);
+                }
+              }
+              pg._b.appendChild(item);
+            }
+            last = null;
           }
         });
       });

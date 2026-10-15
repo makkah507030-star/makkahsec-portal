@@ -212,6 +212,16 @@ export default function QuizTake() {
     supabase.storage.from("quiz-audio").createSignedUrl(audioPath, 3 * 3600)
       .then(({ data: d }) => setAudioUrl(d?.signedUrl ?? null));
   }, [state, audioPath]);
+  // صور الأسئلة والخيارات: مخزن خاص يفتحه للطالب بدء المحاولة، فتُعرض بروابط مؤقتة
+  const [imgs, setImgs] = useState({});
+  useEffect(() => {
+    if (state !== "in_progress") return;
+    const paths = [...new Set(qs.flatMap((q) => [q.image_path, ...(q.option_images ?? [])]).filter(Boolean))];
+    if (!paths.length) return;
+    supabase.storage.from("quiz-images").createSignedUrls(paths, 3 * 3600).then(({ data: d }) => {
+      setImgs(Object.fromEntries((d ?? []).filter((x) => x.signedUrl && x.path).map((x) => [x.path, x.signedUrl])));
+    });
+  }, [state, qs]);
   const ltr = data?.quiz?.lang === "en";
   const t = ltr ? EN : AR;
   // الأسئلة الناقصة بترتيب ظهورها، وعنوان كل منها كما يراه الطالب: «س2 ف3» أو «Q2 P3»
@@ -336,6 +346,13 @@ export default function QuizTake() {
         <p className="flex-1 whitespace-pre-line text-sm font-medium leading-relaxed text-ink">{q.text}</p>
         <span className="num shrink-0 text-[11px] text-faint">({Number(q.marks)})</span>
       </div>
+      {q.image_path && (
+        <div className="mt-2 grid place-items-center rounded-card border border-line/70 bg-white p-2">
+          {imgs[q.image_path]
+            ? <img src={imgs[q.image_path]} alt="" className="max-h-[60vh] max-w-full object-contain" />
+            : <span className="py-6 text-xs text-faint">…</span>}
+        </div>
+      )}
 
       {q.kind === "mcq" && (
         <div className="mt-2 grid gap-1.5">
@@ -348,7 +365,14 @@ export default function QuizTake() {
                   on ? "border-mint-deep bg-mint-tint text-ink" : "border-line bg-white text-ink hover:bg-canvas"}`}>
                 <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-bold ${
                   on ? "border-mint-deep bg-mint-deep text-white" : "border-line text-muted"}`}>{t.ltrs[pos]}</span>
-                <span className="flex-1">{o}</span>
+                <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+                  {q.option_images?.[k] && (
+                    imgs[q.option_images[k]]
+                      ? <img src={imgs[q.option_images[k]]} alt="" className="max-h-40 max-w-full rounded-[6px] object-contain" />
+                      : <span className="text-xs text-faint">…</span>
+                  )}
+                  {o && <span>{o}</span>}
+                </span>
               </button>
             );
           })}

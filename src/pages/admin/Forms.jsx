@@ -24,6 +24,7 @@ import { fmtDate } from "../../lib/dates";
 import { cmpAr } from "../../lib/sortAr.js";
 import Sticker, { FlagPicker } from "../../components/Sticker.jsx";
 import { flagRank, urgentPrefix } from "../../lib/flags.js";
+import { useBackStep } from "../../lib/backStep.js";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -1281,6 +1282,10 @@ export default function Forms({ view = "issue", openKey = null }) {
     if (t) start(t);
     else setMsg({ ok: false, text: "النموذج غير متاح بعد: يحتاج تنفيذ ملفه في قاعدة البيانات مرة واحدة." });
   }, [openKey, loading, usable]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // زر الرجوع في الجوال والمتصفح يغلق النموذج المفتوح بدل مغادرة الصفحة
+  useBackStep(!!picked, () => setPicked(null), "النماذج");
+  useBackStep(!!viewing, () => setViewing(null));
 
   if (loading) return <Loader />;
 
