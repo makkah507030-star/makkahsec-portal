@@ -212,6 +212,9 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
 .qlist li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
 .qlist li:first-child { border-top: 0; }
 .qlist span { font-size: 12px; color: var(--muted); }
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.tiles span { display: grid; justify-items: center; gap: 1px; padding: 8px 4px; border-radius: 10px; background: var(--tint); border: 1px solid var(--mint-light); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.tiles b { font-size: 18px; color: var(--deep); line-height: 1.2; }
 .grp { font-size: 12.5px; font-weight: 700; color: var(--deep); margin-top: 2px; }
 .keys { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); }
 .keys span { display: inline-flex; align-items: center; gap: 5px; }
@@ -597,7 +600,7 @@ section.sec { display: grid; gap: 12px; scroll-margin-top: 64px; }
         <div class="card-h"><div><h3>تنوّع أساليب التقويم</h3><p class="sub">١٤ اختبارًا هذا الفصل</p></div><span class="src auto">تلقائي</span></div>
         <div class="dist"><span style="flex:5;--c:var(--e04)"><i></i><small class="num">٥</small></span><span style="flex:4;--c:var(--e03)"><i></i><small class="num">٤</small></span><span style="flex:3;--c:var(--e05)"><i></i><small class="num">٣</small></span><span style="flex:2;--c:var(--e09)"><i></i><small class="num">٢</small></span></div>
         <div class="keys"><span><i style="background:var(--e04)"></i>إلكتروني</span><span><i style="background:var(--e03)"></i>ورقي بتصحيح آلي</span><span><i style="background:var(--e05)"></i>ورقي</span><span><i style="background:var(--e09)"></i>من خارج البوابة</span></div>
-        <p class="sub num">تشخيصي ٢، الفترة الأولى ٧، الفترة الثانية ٥</p>
+        <div class="tiles"><span><b class="num">٢</b>تشخيصي</span><span><b class="num">٧</b>الفترة الأولى</span><span><b class="num">٥</b>الفترة الثانية</span></div>
       </div>
     <div class="card">
       <div class="card-h"><div><h3>اختباراته</h3><p class="sub">العنوان والنوع وعدد الأسئلة · دون نص الأسئلة</p></div><span class="src auto">تلقائي</span></div>
