@@ -13,6 +13,7 @@ import {
 } from "../lib/improve.js";
 import Loader from "../components/Loader.jsx";
 import { supabase } from "../lib/supabase";
+import { excelBoard, printBoard, printGoal, printRecord } from "../lib/improvePrint.js";
 
 /* =====================================================================
    خطط التطوير — حلقة التحسين (src/lib/improve.js):
@@ -213,6 +214,7 @@ function Goal({ g, uid, boss, onDone, focus }) {
         </p>
       )}
       {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}
+      <button className="text-xs text-mint-deep underline" onClick={() => printGoal(g)}>طباعة الخطة</button>
     </section>
   );
 }
@@ -277,12 +279,7 @@ function Board({ rows, onPick }) {
 
 /* --------------- أثر الخطط العلاجية في دورة الاختبار (quiz_plans_board) --------------- */
 const VERIFY_LATE_DAYS = 14;
-function QuizBoard({ year }) {
-  const [rows, setRows] = useState(null);
-  useEffect(() => {
-    if (!year) return;
-    supabase.rpc("quiz_plans_board", { p_year: year }).then(({ data, error }) => setRows(error ? [] : data ?? []));
-  }, [year]);
+function QuizBoard({ rows }) {
   if (!rows) return <Loader compact />;
   const done = rows.filter((r) => r.status === "done");
   const measured = done.filter((r) => r.measured_at && r.impact?.n);
@@ -335,6 +332,11 @@ export default function Improve() {
   const [tab, setTab] = useState(null);
   const [showClosed, setShowClosed] = useState(false);
   const focusId = params.get("g");
+  const [quizRows, setQuizRows] = useState(null);   // الخطط العلاجية في دورة الاختبار (للوحة المدير)
+  useEffect(() => {
+    if (!boss || !year) return;
+    supabase.rpc("quiz_plans_board", { p_year: year }).then(({ data, error }) => setQuizRows(error ? [] : data ?? []));
+  }, [boss, year]);
 
   const load = useCallback(async () => {
     try {
@@ -404,11 +406,19 @@ export default function Improve() {
         <p className="card px-4 py-6 text-center text-sm text-muted">لا توصيات تطوير بعد. تظهر هنا حين يؤكد الزائر توصية في زيارة الدعم أو تقييم الأداء.</p>
       ) : cur === "board" ? (
         <div className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-ghost" onClick={() => printBoard(yearRows, quizRows, year)}>طباعة التقرير</button>
+            <button className="btn-ghost" disabled={!yearRows.length} onClick={() => excelBoard(yearRows, year)}>تصدير Excel</button>
+          </div>
           <Board rows={yearRows} onPick={(g) => { setTab("follow"); setParams({ g: g.id }, { replace: true }); }} />
-          <QuizBoard year={year} />
+          <QuizBoard rows={quizRows} />
         </div>
       ) : (
         <div className="space-y-3">
+          {cur === "mine" && (
+            <button className="btn-ghost" onClick={() => printRecord(mine.filter((g) => !g.academic_year || g.academic_year === year),
+              mine[0]?.teacher?.full_name ?? "", year)}>طباعة سجل تطويري</button>
+          )}
           {list.length === 0 && <p className="card px-4 py-6 text-center text-sm text-muted">لا خطط مفتوحة هنا.</p>}
           {list.map((g) => <Goal key={g.id} g={g} uid={uid} boss={boss} onDone={load} focus={g.id === focusId} />)}
           {hiddenClosed > 0 && (
