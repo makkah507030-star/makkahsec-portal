@@ -91,6 +91,14 @@ export default function ResultsCard({ studentId }) {
                   </div>
                 </div>
 
+                {/* إشعار الفترة يحوي مواد الفصلين، والنسبة محسوبة من المواد المرصودة فيه فقط */}
+                {r.report_type !== "final" && (
+                  <p className="mt-2 rounded-sm2 bg-warning-light px-3 py-2 text-[11px] leading-relaxed text-warning">
+                    ملاحظة: النسبة والترتيب أعلاه خاصة بـ{REPORT_TYPE_LABEL[r.report_type]} فقط،
+                    وليست النتيجة النهائية للطالب.
+                  </p>
+                )}
+
                 <button
                   onClick={() => openPdf(r)}
                   disabled={busyId === r.id}
