@@ -417,7 +417,7 @@ export default function Improve() {
         <div className="space-y-3">
           {cur === "mine" && (
             <button className="btn-ghost" onClick={() => printRecord(mine.filter((g) => !g.academic_year || g.academic_year === year),
-              mine[0]?.teacher?.full_name ?? "", year)}>طباعة سجل تطويري</button>
+              mine[0]?.teacher?.full_name ?? "", year)}>طباعة سجل التطوير</button>
           )}
           {list.length === 0 && <p className="card px-4 py-6 text-center text-sm text-muted">لا خطط مفتوحة هنا.</p>}
           {list.map((g) => <Goal key={g.id} g={g} uid={uid} boss={boss} onDone={load} focus={g.id === focusId} />)}
