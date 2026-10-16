@@ -4,8 +4,9 @@ import { useSession } from "../../lib/session.jsx";
 import { useBackStep } from "../../lib/backStep.js";
 import DfileReport from "../../components/dfile/DfileReport.jsx";
 import DfileShare from "../../components/dfile/DfileShare.jsx";
+import DfileDistribution from "../../components/dfile/DfileDistribution.jsx";
 import {
-  ACTIVITY_LABEL, ACTIVITY_PRESETS, COLORS, MADRASATI, PARTS, RANKS, actTotal, dfileError, loadDfile, loadDfileData, sentences,
+  ACTIVITY_LABEL, ACTIVITY_PRESETS, COLORS, MADRASATI, PARTS, RANKS, OPINION_ROLE, actTotal, decideOpinion, dfileError, loadDfile, loadDfileData, loadMyOpinions, sentences,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -26,6 +27,7 @@ export default function MyDfile() {
   const uid = session.user.id;
   const [s, setS] = useState(undefined);       // undefined: يُحمَّل، null: لم يُفعَّل
   const [d, setD] = useState(null);
+  const [ops, setOps] = useState([]);
   const [err, setErr] = useState("");
   const [saved, setSaved] = useState("");
   const [preview, setPreview] = useState(false);
@@ -35,8 +37,8 @@ export default function MyDfile() {
 
   const load = useCallback(async () => {
     try {
-      const [row, data] = await Promise.all([loadDfile(uid), loadDfileData(uid)]);
-      setS(row ?? null); setD(data);
+      const [row, data, mine] = await Promise.all([loadDfile(uid), loadDfileData(uid), loadMyOpinions(uid)]);
+      setS(row ?? null); setD(data); setOps(mine);
     } catch (e) { setErr(dfileError(e)); setS(null); }
   }, [uid]);
   useEffect(() => { load(); }, [load]);
@@ -135,6 +137,22 @@ export default function MyDfile() {
           ))}
         </div>
       </Block>
+
+      {ops.length > 0 && (
+        <Block title="آراء الإدارة" sub="لا يظهر الرأي للزائر إلا إذا اخترت «إظهار»، ولا يمكنك تعديل نصه. وإذا عدّله كاتبه عاد إليك لتختار.">
+          {ops.map((o) => (
+            <div key={o.id} className="space-y-2 rounded-sm2 border border-line/60 bg-canvas p-3">
+              <p className="text-sm leading-relaxed text-ink">«{o.body}»</p>
+              <p className="text-xs text-muted">{[o.author_name, OPINION_ROLE[o.author_role]].filter(Boolean).join("، ")}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button className={o.decision === "shown" ? "btn-primary" : "btn-ghost"} onClick={async () => { await decideOpinion(o.id, true); load(); }}>إظهار</button>
+                <button className={o.decision === "hidden" ? "btn-primary" : "btn-ghost"} onClick={async () => { await decideOpinion(o.id, false); load(); }}>إخفاء</button>
+                <span className="text-xs text-muted">{{ pending: "بانتظار اختيارك", shown: "يظهر للزائر", hidden: "مخفي عن الزائر" }[o.decision]}</span>
+              </div>
+            </div>
+          ))}
+        </Block>
+      )}
 
       <Block title="بياناتك" sub="تُدخل مرة واحدة، وما تتركه فارغًا لا يظهر.">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -261,6 +279,10 @@ export default function MyDfile() {
           <input className="field" placeholder="تفصيل اختياري" value={win.d} onChange={(e) => setWin({ ...win, d: e.target.value })} />
           <button className="btn-primary" type="submit">إضافة</button>
         </form>
+      </Block>
+
+      <Block title="توزيع المنهج" sub="ارفع ملف التوزيع لكل مادة مرة واحدة (Excel أو PDF). تقرؤه البوابة أسابيع تراجعها، ويرى الزائر دروس الأسبوع الدراسي الحالي فقط.">
+        <DfileDistribution s={s} d={d} onSave={save} />
       </Block>
 
       <Block title="رابط ملفك" sub="رابط ثابت طوال العام، وبطاقته بهوية البوابة لتعرضها أو تطبعها.">

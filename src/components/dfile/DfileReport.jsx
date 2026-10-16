@@ -3,7 +3,7 @@ import "./dfile.css";
 import { fmtDate } from "../../lib/dates.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
-  avgGain, experience, hours, pc, pct, pickedSentences,
+  OPINION_ROLE, avgGain, experience, hours, openDoc, pc, pct, pickedSentences, weekWord,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -339,13 +339,26 @@ export default function DfileReport({ data: d, settings: s, code }) {
   const evTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + Number(ev[k] ?? 0), 0);
   const evMax = Math.max(1, ...ELEMENTS.map(([k]) => Number(ev[k] ?? 0)));
 
+  // دروس الأسبوع الدراسي الحالي من توزيع المنهج، لكل مادة
+  const lessons = d.week ? (s?.distribution?.items ?? [])
+    .map((it) => ({ s: it.subject, t: (it.weeks ?? []).find((w) => w.n === d.week.n)?.t }))
+    .filter((x) => x.t) : [];
+  const opinions = d.opinions ?? [];
+  const [docErr, setDocErr] = useState("");
+  const viewDoc = async (id) => {
+    setDocErr("");
+    const w = window.open("about:blank", "_blank");   // تُفتح النافذة فور الضغط حتى لا يمنعها المتصفح
+    try { const url = await openDoc(code, id); if (w) w.location.replace(url); else window.location.assign(url); }
+    catch (e) { if (w) w.close(); setDocErr(e.message); }
+  };
+
   const mad = s?.madrasati ?? {};
   const madOn = MADRASATI.some((m) => Number(mad[m.key]) > 0) || mad.weekly_plan === true;
   const act = s?.activities ?? {};
   const actOn = actTotal(act.class) > 0 || actTotal(act.extra) > 0;
 
   const has = {
-    teach: d.lessons > 0 || d.subs > 0 || madOn || actOn,
+    teach: d.lessons > 0 || d.subs > 0 || madOn || actOn || lessons.length > 0,
     results: (d.grades?.n ?? 0) > 0,
     assess: (d.quizzes?.length ?? 0) > 0,
     growth: true,
@@ -373,6 +386,20 @@ export default function DfileReport({ data: d, settings: s, code }) {
     <div className="dfile" dir="rtl" data-subject={s?.color || "science"} ref={root}>
       <div className="df-wrap">
         <Hero d={d} s={s} code={code} />
+        {show("quote") && opinions.length > 0 && (
+          <figure className="df-quote" style={{ margin: 0 }}>
+            {opinions.map((o, i) => (
+              <div key={o.role} className={i ? "df-more" : "df-q1"}>
+                <span className={`df-qm${i ? " df-sm" : ""}`} aria-hidden="true">”</span>
+                <div>
+                  <blockquote>{o.body}</blockquote>
+                  <figcaption className="df-by"><span>{o.name ? `${o.name}، ` : ""}{OPINION_ROLE[o.role]}، {fmtDate(o.at)}</span>
+                    <span className="df-sig">موقّع إلكترونيًا</span></figcaption>
+                </div>
+              </div>
+            ))}
+          </figure>
+        )}
         <Kpis d={d} />
         {brief.length > 0 && (
           <aside className="df-brief"><h2>قراءة في 30 ثانية</h2>
@@ -386,6 +413,18 @@ export default function DfileReport({ data: d, settings: s, code }) {
         )}
         {show("teach") && has.teach && (
           <Section id="teach" title="التخطيط والتدريس" sub="التحضير والمتابعة">
+            {lessons.length > 0 && (
+              <div className="df-card">
+                <CardH title="دروس هذا الأسبوع" src="من توزيع المنهج" srcKind="mix"
+                       sub={`الأسبوع ${weekWord(d.week.n)}، من ${fmtDate(d.week.from)} إلى ${fmtDate(d.week.to)}`} />
+                <div className="df-lcards">
+                  {lessons.map((x) => (
+                    <div className="df-lcard" key={x.s}><span className="df-sb">{x.s}</span>
+                      {x.t.split(/،|\n/).map((t) => t.trim()).filter(Boolean).map((t) => <p key={t}>{t}</p>)}</div>
+                  ))}
+                </div>
+              </div>
+            )}
             {(d.lessons > 0 || d.subs > 0) && (
               <div className="df-card">
                 <CardH title="الحصص والتحضير" sub="التحضير اليومي في البوابة هذا العام" src="تلقائي" />
@@ -446,10 +485,12 @@ export default function DfileReport({ data: d, settings: s, code }) {
                 open={!!open.docs} onToggle={(v) => setOpen((o) => ({ ...o, docs: v }))}>
             <div className="df-docs">
               {d.docs.map((f) => (
-                <div className="df-doc" key={f.id}><span className="df-ic"><Svg d={ICON.file} /></span><b>{f.title}</b>
-                  <span className="df-num">{f.date ? fmtDate(f.date) : f.name ?? ""}</span></div>
+                <button type="button" className="df-doc" key={f.id} onClick={() => viewDoc(f.id)}>
+                  <span className="df-ic"><Svg d={ICON.file} /></span><b>{f.title}</b>
+                  <span className="df-num">{f.date ? fmtDate(f.date) : f.name ?? ""}</span></button>
               ))}
             </div>
+            {docErr && <p className="df-sub" style={{ color: "var(--warn)", marginTop: 8 }}>{docErr}</p>}
           </Fold>
         )}
         <footer className="df-foot">

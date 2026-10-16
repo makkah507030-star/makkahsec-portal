@@ -1,7 +1,5 @@
--- ملف المعلم الرقمي (الجزء 3): أرقام التقرير من بيانات البوابة، دون أسماء طلاب.
--- • dfile_data_core: الحساب نفسه، لا يُستدعى مباشرة (تستخدمه الدالتان التاليتان).
--- • dfile_data: للمعلم نفسه، والمدير والدعم الفني لأي معلم.
--- • dfile_public (الجزء 5): للزائر بكود الملف.
+-- ملف المعلم الرقمي (الجزء 3): أرقام التقرير دون أسماء طلاب. dfile_data_core للحساب (لا يُستدعى مباشرة)،
+-- وdfile_data للمعلم والمدير والدعم الفني، وdfile_public (الجزء 5) للزائر. opinions من الجزء 6.
 -- يُنفَّذ بعد الجزأين 1 و2. تكرار التنفيذ آمن.
 
 create or replace function public.dfile_data_core(p_uid uuid)
@@ -76,7 +74,11 @@ begin
                'date', event_date) order by created_at desc), '[]')
                from public.perf_evidence where teacher_user_id = p_uid and academic_year = y
                 and source = 'upload' and file_path is not null),
-    'grades', public.dfile_grades(p_uid, y)
+    'week', public.dfile_week(),
+    'grades', public.dfile_grades(p_uid, y),
+    'opinions', (select coalesce(jsonb_agg(jsonb_build_object('role', o.author_role, 'name', o.author_name, 'body', o.body, 'at', o.written_at)
+                  order by o.author_role = 'principal' desc), '[]')
+                  from public.dfile_opinions o where o.teacher_user_id = p_uid and o.decision = 'shown')
   ) into r;
   return r;
 end; $$;

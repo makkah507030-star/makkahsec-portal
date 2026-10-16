@@ -259,3 +259,4 @@
 .dfile .df-id-qr img { width: 100%; height: 100%; image-rendering: pixelated; }
 .dfile .df-id-code { font-family: var(--mono); font-size: 15px; letter-spacing: 3px; direction: ltr; }
 .dfile .df-id-foot { font-size: 10.5px; opacity: .75; }
+.dfile .df-quote .df-q1 { grid-column: 1 / -1; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 12px; }

@@ -74,6 +74,7 @@ const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx")
 const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
 const DfilePublic = lazy(() => import("./pages/DfilePublic.jsx"));
 const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
+const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
 const PerformanceAdmin = lazy(() => import("./pages/performance/PerformanceAdmin.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
 const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
@@ -343,6 +344,7 @@ export default function App() {
               {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة، وللدعم الفني للمتابعة الفنية */}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<PerformanceAdmin />} />}
               {isTechSupport && <Route path="/dfiles-admin" element={<DfilesAdmin />} />}
+              {(adminRoles.includes("principal") || adminRoles.includes("deputy_academic")) && <Route path="/dfile-opinions" element={<DfileOpinions />} />}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/school-report" element={<SchoolReport />} />}
               {can("reports") && <Route path="/student-affairs" element={<StudentAffairs />} />}
               {/* الصفحتان السابقتان باقيتان بروابطهما — محتواهما صار داخل مركز تقارير شؤون الطلاب */}

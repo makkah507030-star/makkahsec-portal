@@ -64,4 +64,24 @@ returns jsonb language sql stable security definer set search_path = public as $
 $$;
 
 revoke execute on function public.dfile_grades(uuid, text) from public, anon;
+
+-- الأسبوع الدراسي الحالي (من الأحد إلى الخميس) من آخر «بداية فصل» في التقويم،
+-- ولا تُعدّ الأسابيع التي تغطيها إجازة كاملة. null في أسبوع الإجازة أو قبل بداية الفصل.
+create or replace function public.dfile_week()
+returns jsonb language sql stable security definer set search_path = public as $$
+  with d as (select (now() at time zone 'Asia/Riyadh')::date today),
+  t as (select max(start_date) s from public.academic_calendar, d
+         where kind = 'term_start' and is_active and start_date <= d.today),
+  w as (select g::date sun from t, d,
+          generate_series(t.s - extract(dow from t.s)::int, d.today, interval '7 days') g),
+  wk as (select sun, not exists (select 1 from public.academic_calendar h
+                                  where h.kind = 'holiday' and h.is_active and h.start_date <= w.sun
+                                    and coalesce(h.end_date, h.start_date) >= w.sun + 4) study
+           from w),
+  cur as (select max(sun) sun from wk)
+  select case when (select study from wk where sun = cur.sun)
+              then jsonb_build_object('n', (select count(*) from wk where study and sun <= cur.sun),
+                                      'from', cur.sun, 'to', cur.sun + 4) end
+    from cur;
+$$;
 -- نهاية الجزء 2

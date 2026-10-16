@@ -14,7 +14,7 @@ begin
   return jsonb_build_object('status', 'ok',
     'settings', jsonb_build_object('code', f.code, 'color', f.color, 'hidden', f.hidden, 'sentences', f.sentences,
       'appoint_year', f.appoint_year, 'perf_rating', f.perf_rating, 'perf_year', f.perf_year, 'rank', f.rank,
-      'other_wins', f.other_wins, 'madrasati', f.madrasati, 'activities', f.activities),
+      'other_wins', f.other_wins, 'madrasati', f.madrasati, 'activities', f.activities, 'distribution', f.distribution),
     'data', public.dfile_data_core(f.teacher_user_id));
 end; $$;
 

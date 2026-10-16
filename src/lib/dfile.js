@@ -25,6 +25,7 @@ export const RANKS = ["معلم ممارس", "معلم متقدم", "معلم خ
 
 /* الأقسام التي يختار المعلم إظهارها للزائر */
 export const PARTS = [
+  { key: "quote", t: "رأي الإدارة" },
   { key: "teach", t: "التخطيط والتدريس" },
   { key: "results", t: "النتائج" },
   { key: "assess", t: "التقويم" },
@@ -168,3 +169,28 @@ export async function loadVisits(uid) {
 }
 
 export const STOP_REASONS = ["نقل من المدرسة", "تقاعد", "تحويل إلى عمل إداري"];
+
+/* ===== شواهد المعلم المرفوعة: رابط مؤقت عبر netlify/functions/dfile-doc.js ===== */
+export async function openDoc(code, id) {
+  const r = await fetch("/.netlify/functions/dfile-doc", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, id }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.url) throw new Error(j.error || "تعذّر فتح الشاهد");
+  return j.url;
+}
+
+/* ===== رأي الإدارة (supabase/teacher_dfile_6.sql) ===== */
+export const OPINION_ROLE = { principal: "مدير المدرسة", deputy_academic: "وكيل الشؤون التعليمية" };
+
+export async function loadMyOpinions(uid) {
+  const { data } = await supabase.from("dfile_opinions").select("id, author_role, author_name, body, written_at, decision")
+    .eq("teacher_user_id", uid).order("author_role", { ascending: false });
+  return data ?? [];
+}
+export const decideOpinion = (id, show) => supabase.rpc("dfile_opinion_decide", { p_id: id, p_show: show });
+
+/* ===== الأسبوع الدراسي ===== */
+const WEEK_WORDS = ["", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر",
+  "الحادي عشر", "الثاني عشر", "الثالث عشر", "الرابع عشر", "الخامس عشر", "السادس عشر", "السابع عشر", "الثامن عشر", "التاسع عشر", "العشرون"];
+export const weekWord = (n) => WEEK_WORDS[n] ?? String(n);
