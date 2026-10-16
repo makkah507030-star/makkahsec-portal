@@ -194,3 +194,9 @@ export const decideOpinion = (id, show) => supabase.rpc("dfile_opinion_decide", 
 const WEEK_WORDS = ["", "الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر",
   "الحادي عشر", "الثاني عشر", "الثالث عشر", "الرابع عشر", "الخامس عشر", "السادس عشر", "السابع عشر", "الثامن عشر", "التاسع عشر", "العشرون"];
 export const weekWord = (n) => WEEK_WORDS[n] ?? String(n);
+
+/* ===== المواد من الجدول الدراسي: مادة وصفّ وفصولها (courses في dfile_data) ===== */
+const GRADE = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
+/* اسم المادة كما في الجدول، ومعه الصف إن لم يكن في الاسم رقم يدل عليه */
+export const courseLabel = (c) => (/\d/.test(c.subject) ? c.subject : `${c.subject} (${GRADE[c.grade] ?? ""})`);
+export const subjectsOf = (d) => [...new Set((d?.courses ?? []).map(courseLabel))];

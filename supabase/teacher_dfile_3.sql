@@ -21,9 +21,9 @@ begin
     'year', y,
     'name', (select full_name from public.users where id = p_uid),
     'spec', (select specialization from public.teachers where id = tid),
-    'subjects', (select coalesce(jsonb_agg(distinct sb.name), '[]') from public.schedule s
-                   join public.subjects sb on sb.id = s.subject_id
-                  where s.teacher_id = tid and s.academic_year = y and s.term = tm),
+    'courses', (select coalesce(jsonb_agg(jsonb_build_object('subject', x.name, 'grade', x.grade, 'classes', x.cls) order by x.grade, x.name), '[]')
+                  from (select sb.name, c.grade, jsonb_agg(distinct c.class_no) cls from public.schedule s join public.subjects sb on sb.id = s.subject_id
+                          join public.classes c on c.id = s.class_id where s.teacher_id = tid and s.academic_year = y and s.term = tm group by 1, 2) x),
     'classes', (select coalesce(jsonb_agg(jsonb_build_object('id', c.id, 'label', c.class_no::text)
                                  order by c.grade, c.class_no), '[]')
                   from public.classes c where c.id = any(cls)),

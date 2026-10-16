@@ -3,7 +3,7 @@ import "./dfile.css";
 import { fmtDate } from "../../lib/dates.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
-  OPINION_ROLE, avgGain, experience, hours, openDoc, pc, pct, pickedSentences, weekWord,
+  OPINION_ROLE, avgGain, subjectsOf, experience, hours, openDoc, pc, pct, pickedSentences, weekWord,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -104,7 +104,7 @@ function Hero({ d, s, code }) {
             {[d.spec && `معلم ${d.spec}`, exp != null && `${exp} سنة خبرة`].filter(Boolean).join("، ")}
           </p>
           <div className="df-chips">
-            {d.subjects?.length > 0 && <span className="df-hchip">{d.subjects.join(" و")}</span>}
+            {subjectsOf(d).length > 0 && <span className="df-hchip">{subjectsOf(d).join(" و")}</span>}
             {classes > 0 && <span className="df-hchip df-num">{classes} فصول، {d.students} طالبًا</span>}
             {d.weekly > 0 && <span className="df-hchip df-num">{d.weekly} حصة أسبوعيًا</span>}
             {s?.rank && <span className="df-hchip">{s.rank}</span>}
@@ -341,7 +341,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
 
   // دروس الأسبوع الدراسي الحالي من توزيع المنهج، لكل مادة
   const lessons = d.week ? (s?.distribution?.items ?? [])
-    .map((it) => ({ s: it.subject, t: (it.weeks ?? []).find((w) => w.n === d.week.n)?.t }))
+    .map((it) => ({ s: it.subject, c: it.classes ?? [], t: (it.weeks ?? []).find((w) => w.n === d.week.n)?.t }))
     .filter((x) => x.t) : [];
   const opinions = d.opinions ?? [];
   const [docErr, setDocErr] = useState("");
@@ -420,6 +420,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
                 <div className="df-lcards">
                   {lessons.map((x) => (
                     <div className="df-lcard" key={x.s}><span className="df-sb">{x.s}</span>
+                      {x.c.length > 0 && <small className="df-lcls df-num">الفصول {x.c.join(" و")}</small>}
                       {x.t.split(/،|\n/).map((t) => t.trim()).filter(Boolean).map((t) => <p key={t}>{t}</p>)}</div>
                   ))}
                 </div>
