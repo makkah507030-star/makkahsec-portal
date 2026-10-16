@@ -471,6 +471,15 @@ export const TEMPLATES = [
       preview: "/templates/presentation-template.jpg", app: "PowerPoint", color: "#C43E1C", ratio: "16 / 9" },
     fields: [], defaults: () => ({}),
   },
+  {
+    key: "ppt-model-lesson",
+    sections: ["teacher"],
+    title: "حصة نموذجية (PowerPoint)",
+    desc: "حصة 50 دقيقة لأي مادة: تهيئة وأهداف ونمذجة وتعاوني ومتمايز وبطاقة خروج، مع ملاحظات للمعلم ودليل الزيارة الصفية.",
+    download: { href: "/templates/model-lesson-template.pptx", file: "حصة-نموذجية-مدرسة-مكة-الثانوية.pptx",
+      preview: "/templates/model-lesson-template.jpg", app: "PowerPoint", color: "#C43E1C", ratio: "16 / 9" },
+    fields: [], defaults: () => ({}),
+  },
 ];
 
 export const templateOf = (key) => TEMPLATES.find((t) => t.key === key);
