@@ -10,9 +10,33 @@ import { loadPdfjs } from "../../lib/pdfjs.js";
 
 const MAX_PAGES = 30;
 
+/* صورة الشاهد مدوّرة بربع دورة لكل ضغطة: صور البطاقات والشهادات تُلتقط كثيرًا والجوال بالعرض */
+function RotImage({ src, alt, rot }) {
+  const ref = useRef(null);
+  const [img, setImg] = useState(null);
+  useEffect(() => {
+    const i = new Image();
+    i.onload = () => setImg(i);
+    i.src = src;
+  }, [src]);
+  useEffect(() => {
+    const c = ref.current;
+    if (!c || !img) return;
+    const side = rot % 180 !== 0;
+    c.width = side ? img.naturalHeight : img.naturalWidth;
+    c.height = side ? img.naturalWidth : img.naturalHeight;
+    const ctx = c.getContext("2d");
+    ctx.translate(c.width / 2, c.height / 2);
+    ctx.rotate((rot * Math.PI) / 180);
+    ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2);
+  }, [img, rot]);
+  return <canvas ref={ref} role="img" aria-label={alt} className="df-viewer-img" />;
+}
+
 export default function DfileDocViewer({ code, doc, onClose }) {
   const [state, setState] = useState({ busy: true, err: "", url: "", pdf: false });
   const pages = useRef(null);
+  const [rot, setRot] = useState(0);
 
   useEffect(() => {
     let off = false;
@@ -65,13 +89,14 @@ export default function DfileDocViewer({ code, doc, onClose }) {
       <div className="df-viewer-box" onClick={(e) => e.stopPropagation()}>
         <header>
           <b>{doc.title}</b>
+          {state.url && !state.pdf && <button type="button" className="df-rot" onClick={() => setRot((r) => (r + 90) % 360)}>تدوير</button>}
           {state.url && <a href={state.url} target="_blank" rel="noreferrer">فتح الملف</a>}
           <button type="button" onClick={onClose} aria-label="إغلاق">✕</button>
         </header>
         <div className="df-viewer-body">
           {state.busy && <p className="df-sub">جارٍ عرض الشاهد…</p>}
           {state.err && <p className="df-sub" style={{ color: "var(--warn)" }}>{state.err}</p>}
-          {state.url && !state.pdf && <img src={state.url} alt={doc.title} />}
+          {state.url && !state.pdf && <RotImage src={state.url} alt={doc.title} rot={rot} />}
           <div ref={pages} className="df-viewer-pages" />
         </div>
       </div>
