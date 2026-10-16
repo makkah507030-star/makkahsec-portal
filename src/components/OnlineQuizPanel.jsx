@@ -39,6 +39,13 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useNotice(null);
   const [tick, setTick] = useState(Date.now());
+  const [planIds, setPlanIds] = useState(null);      // اختبار التحقق: طلاب خطته العلاجية وحدهم
+
+  useEffect(() => {
+    if (!quiz.verify_plan_id) return;
+    supabase.from("quiz_plans").select("students").eq("id", quiz.verify_plan_id).maybeSingle()
+      .then(({ data }) => setPlanIds(new Set((data?.students ?? []).map((x) => x.id))));
+  }, [quiz.verify_plan_id]);
 
   const classLabel = (cid) => {
     const l = linked.find((x) => x.class_id === cid);
@@ -89,7 +96,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   }, [isOpen, form]);
 
   const openForm = () => {
-    const allIds = Object.values(roster).flat().map((s) => s.id);
+    const allIds = Object.values(roster).flat().map((s) => s.id).filter((id) => !planIds || planIds.has(id));
     if (online) {
       setForm({
         opens: toLocal(online.opens_at), closes: toLocal(online.closes_at),

@@ -188,12 +188,21 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
   );
 }
 
+const VERIFY_MODES = [["paper", "ورقي"], ["omr", "ورقي بتصحيح آلي"], ["online", "إلكتروني"], ["external", "من خارج البوابة"]];
+const VERIFY_MODE_HINT = {
+  paper: "ورقة قصيرة تُطبع لطلاب الخطة، ويُرصد مجموعها يدويًا.",
+  omr: "ورقة ببطاقة تظليل تُصحَّح بالكاميرا.",
+  online: "يُنشر لطلاب الخطة وحدهم ويُصحَّح آليًا فور التسليم، ويمكنك إضافة غيرهم عند النشر.",
+  external: "بلا أسئلة في البوابة: ترصد مجموع كل طالب من اختبار طبّقته بنفسك.",
+};
+
 /* التحقق من أثر خطة علاجية نُفّذت: اختبار تحقق لطلابها، والقياس آلي بعد رصده */
 function VerifyBox({ q, p, subs, vq, last, onPlan2, onChanged }) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState(q.mode ?? "omr");   // نوع اختبار التحقق، والافتراضي نوع الأصلي
   const auto = useRef(false);
   const ids = useMemo(() => new Set((p.students ?? []).map((s) => s.id)), [p.students]);
   const rows = (vq?.subs ?? []).filter((r) => ids.has(r.student_id));
@@ -220,12 +229,12 @@ function VerifyBox({ q, p, subs, vq, last, onPlan2, onChanged }) {
     setBusy(true); setErr("");
     const classIds = [...new Set(subs.filter((r) => ids.has(r.student_id)).map((r) => r.class_id).filter(Boolean))];
     const { data, error } = await supabase.from("quizzes").insert({
-      teacher_id: q.teacher_id, mode: q.mode, title: `اختبار تحقق: ${q.title}${p.round > 1 ? " (الجولة الثانية)" : ""}`,
+      teacher_id: q.teacher_id, mode, title: `اختبار تحقق: ${q.title}${p.round > 1 ? " (الجولة الثانية)" : ""}`,
       subject_id: q.subject_id, subject_name: q.subject_name, grade: q.grade, period: "verify",
       total_marks: q.total_marks, exam_date: todayISO(), duration_min: q.duration_min, lang: q.lang,
       instructions: p.skills ? `المهارات المستهدفة: ${p.skills}` : null,
       academic_year: q.academic_year, term: q.term, verify_plan_id: p.id,
-      ...(q.mode === "external" ? { status: "ready" } : {}),
+      ...(mode === "external" ? { status: "ready" } : {}),
     }).select("id").single();
     if (!error && classIds.length) {
       await supabase.from("quiz_classes").insert(classIds.map((class_id) => ({ quiz_id: data.id, class_id, exam_date: todayISO() })));
@@ -291,6 +300,18 @@ function VerifyBox({ q, p, subs, vq, last, onPlan2, onChanged }) {
             أنشئ اختبارًا قصيرًا في المهارات المستهدفة لطلاب الخطة ({countAr(ids.size, "student")})، ويُقاس الأثر آليًا بعد رصده:
             نسبة كل طالب قبل الخطة مقابل نسبته في اختبار التحقق.
           </p>
+          <div>
+            <p className="text-xs text-muted">نوع اختبار التحقق</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {VERIFY_MODES.map(([k, t]) => (
+                <button key={k} type="button" onClick={() => setMode(k)}
+                        className={`rounded-pill px-3 py-1 text-xs font-medium ${mode === k ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted hover:bg-canvas"}`}>
+                  {t}{k === q.mode ? " (نوع الأصلي)" : ""}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-faint">{VERIFY_MODE_HINT[mode]}</p>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
             <button className="btn-primary" disabled={busy} onClick={create}>إنشاء اختبار التحقق</button>
             <button className="text-xs text-muted underline" disabled={busy} onClick={skip}>تعذّر التحقق</button>

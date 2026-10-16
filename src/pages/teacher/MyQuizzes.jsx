@@ -747,9 +747,10 @@ function QuizEditor({ quiz, uid, onBack }) {
       const ids = id === "*" ? linked.map((l) => l.class_id) : [id];
       const { data } = await supabase.from("student_enrollment")
         .select("class_id, students(id, full_name, national_id)").in("class_id", ids).eq("status", "active");
+      const only = await planStudents(q);
       copies = ids.flatMap((cid) => {
         const cls = sheetClass(linked.find((l) => l.class_id === cid));
-        return (data ?? []).filter((r) => r.class_id === cid && r.students)
+        return (data ?? []).filter((r) => r.class_id === cid && r.students && (!only || only.has(r.students.id)))
           .map((r) => r.students)
           .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"))
           // رمز الطالب ورقم هويته في البطاقة: يعرفه الماسح في التصحيح الجماعي
@@ -1066,6 +1067,13 @@ function QuizEditor({ quiz, uid, onBack }) {
 /* --------------------------- بطاقة السؤال --------------------------- */
 // درجة اختبار الفترة الأولى المعتمدة — تنبيه لا إلزام، فالكشف يحوّل أي درجة لسقف عموده
 const PERIOD1_MARKS = 20;
+/* طلاب الخطة العلاجية لاختبار التحقق (null لغيره): الطباعة بالأسماء لهم وحدهم */
+async function planStudents(quiz) {
+  if (!quiz.verify_plan_id) return null;
+  const { data } = await supabase.from("quiz_plans").select("students").eq("id", quiz.verify_plan_id).maybeSingle();
+  return data ? new Set((data.students ?? []).map((x) => x.id)) : null;
+}
+
 /* اختبار التحقق: مرتبط بخطة علاجية، ويُقاس أثرها آليًا بعد رصده (supabase/quiz_verify_*.sql) */
 function VerifyBanner({ q }) {
   const [src, setSrc] = useState(null);
@@ -1543,12 +1551,13 @@ function PaperTab({ quiz, questions, linked, layout, teacherName, onOpts, onPrin
     if (mode === "class") {
       const { data } = await supabase.from("student_enrollment")
         .select("class_id, students(id, full_name)").in("class_id", classIds).eq("status", "active");
+      const only = await planStudents(quiz);
       const label = (id) => {
         const c = linked.find((l) => l.class_id === id)?.classes;
         return c ? `${GRADE_NAMES[c.grade] ?? ""} — ${c.class_no}` : "";
       };
       copies = classIds.flatMap((cid) =>
-        (data ?? []).filter((r) => r.class_id === cid && r.students)
+        (data ?? []).filter((r) => r.class_id === cid && r.students && (!only || only.has(r.students.id)))
           .map((r) => r.students)
           .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar"))
           // النموذجان بالتناوب: المتجاوران في الترتيب لا يأخذان النموذج نفسه
