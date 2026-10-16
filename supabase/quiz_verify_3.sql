@@ -1,0 +1,52 @@
+-- حلقة التحسين — المرحلة الثانية (الجزء 3 من 3): مرحلة «التحقق من الأثر» في متابعة الدورات، ولوحة المدير، والملف الرقمي.
+-- • perf_open_cycles كما في performance_review.sql، وتُضاف مرحلتا «التحقق من الأثر» و«الخطة الثانية».
+-- • quiz_plans_board: الخطط العلاجية للعام مع أثرها، للمدير والدعم الفني.
+-- • perf_open_cycles هنا تحلّ محل نسختها في performance_review.sql (لا يُعاد تنفيذ ذاك بعد هذا).
+-- يُنفَّذ بعد الجزأين 1 و2، ثم يُعاد تنفيذ improvement_loop_5 ليضيف أثر الخطط العلاجية. تكرار التنفيذ آمن.
+
+create or replace function public.perf_open_cycles(p_year text)
+returns table (teacher_user_id uuid, quiz_id uuid, title text, period text, stage text, created_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select z.teacher_id, z.id, z.title, z.period,
+         case
+           when z.status = 'draft' then 'البناء والتطبيق'
+           when not exists (select 1 from public.quiz_submissions s where s.quiz_id = z.id and s.score is not null) then 'التصحيح والرصد'
+           when z.analyzed_at is null then 'التحليل'
+           when (z.period = 'diagnostic' or jsonb_array_length(coalesce(z.analysis->'support', '[]'::jsonb)) > 0)
+                and not exists (select 1 from public.quiz_plans p where p.quiz_id = z.id and p.kind = 'remedial') then 'الخطة'
+           when exists (select 1 from public.quiz_plans p where p.quiz_id = z.id and p.status <> 'done') then 'التنفيذ'
+           when exists (select 1 from public.quiz_plans p where p.quiz_id = z.id and p.kind = 'remedial' and p.measured_at is null) then 'التحقق من الأثر'
+           when exists (select 1 from public.quiz_plans p where p.quiz_id = z.id and p.kind = 'remedial' and p.round = 1
+                          and coalesce((p.impact->>'below')::int, 0) > 0
+                          and not exists (select 1 from public.quiz_plans p2 where p2.quiz_id = z.id and p2.kind = 'remedial' and p2.round = 2))
+             then 'الخطة الثانية'
+           else 'التكريم والإغلاق'
+         end,
+         z.created_at
+    from public.quizzes z
+   where public.has_admin_role(array['principal', 'tech_support'])
+     and z.period in ('diagnostic', 'period1', 'period2')
+     and coalesce(z.academic_year, p_year) = p_year
+     and z.cycle_closed_at is null
+   order by z.created_at;
+$$;
+
+revoke execute on function public.perf_open_cycles(text) from public, anon;
+grant  execute on function public.perf_open_cycles(text) to authenticated;
+
+create or replace function public.quiz_plans_board(p_year text)
+returns table (id uuid, quiz_id uuid, title text, subject text, teacher text, round smallint, status text,
+               students int, end_date date, done_at timestamptz, measured_at timestamptz, impact jsonb)
+language sql stable security definer set search_path = public as $$
+  select p.id, z.id, z.title, z.subject_name, u.full_name, p.round, p.status, jsonb_array_length(p.students),
+         p.end_date, p.done_at, p.measured_at, p.impact - 'students'
+    from public.quiz_plans p join public.quizzes z on z.id = p.quiz_id left join public.users u on u.id = z.teacher_id
+   where public.has_admin_role(array['principal', 'tech_support'])
+     and p.kind = 'remedial' and coalesce(z.academic_year, p_year) = p_year
+   order by p.created_at desc;
+$$;
+
+revoke execute on function public.quiz_plans_board(text) from public, anon;
+grant  execute on function public.quiz_plans_board(text) to authenticated;
+
+-- نهاية الجزء 3

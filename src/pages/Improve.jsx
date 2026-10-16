@@ -12,6 +12,7 @@ import {
   act, addDays, dueState, loadGoals,
 } from "../lib/improve.js";
 import Loader from "../components/Loader.jsx";
+import { supabase } from "../lib/supabase";
 
 /* =====================================================================
    خطط التطوير — حلقة التحسين (src/lib/improve.js):
@@ -274,6 +275,55 @@ function Board({ rows, onPick }) {
   );
 }
 
+/* --------------- أثر الخطط العلاجية في دورة الاختبار (quiz_plans_board) --------------- */
+const VERIFY_LATE_DAYS = 14;
+function QuizBoard({ year }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    if (!year) return;
+    supabase.rpc("quiz_plans_board", { p_year: year }).then(({ data, error }) => setRows(error ? [] : data ?? []));
+  }, [year]);
+  if (!rows) return <Loader compact />;
+  const done = rows.filter((r) => r.status === "done");
+  const measured = done.filter((r) => r.measured_at && r.impact?.n);
+  const waiting = done.filter((r) => !r.measured_at);
+  const late = waiting.filter((r) => r.done_at && Date.now() - new Date(r.done_at) > VERIFY_LATE_DAYS * 864e5);
+  const n = measured.reduce((a, r) => a + Number(r.impact.n), 0);
+  const passed = measured.reduce((a, r) => a + Number(r.impact.passed), 0);
+  const stuck = measured.filter((r) => r.round > 1 && Number(r.impact.below) > 0);
+  const tile = (v, t, c = "text-ink") => (
+    <div className="card px-3 py-3 text-center"><p className={`num text-2xl font-bold ${c}`}>{v}</p><p className="text-xs text-muted">{t}</p></div>
+  );
+  const line = (r, extra) => (
+    <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-sm">
+      <span className="min-w-0 flex-1 text-ink">{r.teacher ?? "معلم"} · {r.title}{r.round > 1 ? " · الخطة الثانية" : ""}</span>
+      <span className="text-xs text-muted">{extra}</span>
+    </div>
+  );
+  return (
+    <section className="space-y-3">
+      <h2 className="px-1 font-bold text-ink">أثر الخطط العلاجية في دورة الاختبار</h2>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {tile(done.length, "خطط علاجية نُفّذت")}
+        {tile(measured.length, "قيس أثرها باختبار تحقق")}
+        {tile(n ? `${Math.round((100 * passed) / n)}%` : "—", `من طلابها بلغوا 60%${n ? ` (${passed} من ${n})` : ""}`, "text-mint-deep")}
+        {tile(late.length, `بلا تحقق أكثر من ${VERIFY_LATE_DAYS} يومًا`, late.length ? "text-absent" : "text-ink")}
+      </div>
+      {(stuck.length > 0 || late.length > 0) && (
+        <div className="card divide-y divide-line/60 overflow-hidden">
+          {stuck.map((r) => line(r, `بقي ${r.impact.below} دون 60% بعد الخطة الثانية`))}
+          {late.map((r) => line(r, `نُفّذت ${fmtDate(r.done_at)} ولم يُتحقق من أثرها`))}
+        </div>
+      )}
+      {measured.length > 0 && (
+        <div className="card divide-y divide-line/60 overflow-hidden">
+          {measured.slice(0, 12).map((r) => line(r, `المتوسط ${r.impact.before}% ← ${r.impact.after}% · بلغ 60% ${r.impact.passed} من ${r.impact.n}`))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function Improve() {
   const { session, adminRoles } = useSession();
   const uid = session?.user?.id;
@@ -353,7 +403,10 @@ export default function Improve() {
       {!tabs.length && !err ? (
         <p className="card px-4 py-6 text-center text-sm text-muted">لا توصيات تطوير بعد. تظهر هنا حين يؤكد الزائر توصية في زيارة الدعم أو تقييم الأداء.</p>
       ) : cur === "board" ? (
-        <Board rows={yearRows} onPick={(g) => { setTab("follow"); setParams({ g: g.id }, { replace: true }); }} />
+        <div className="space-y-4">
+          <Board rows={yearRows} onPick={(g) => { setTab("follow"); setParams({ g: g.id }, { replace: true }); }} />
+          <QuizBoard year={year} />
+        </div>
       ) : (
         <div className="space-y-3">
           {list.length === 0 && <p className="card px-4 py-6 text-center text-sm text-muted">لا خطط مفتوحة هنا.</p>}

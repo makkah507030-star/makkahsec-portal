@@ -1,6 +1,6 @@
 // src/pages/teacher/MyQuizzes.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
@@ -65,7 +65,7 @@ const PERIODS = [
   { key: "period2", label: "الفترة الثانية" },
 ];
 // أسماء الفترات للعرض — يبقى «النهائي» لاختبارات سابقة أُنشئت به
-const PERIOD_LABEL = { diagnostic: "تشخيصي", period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي" };
+const PERIOD_LABEL = { diagnostic: "تشخيصي", period1: "الفترة الأولى", period2: "الفترة الثانية", final: "النهائي", verify: "اختبار تحقق" };
 
 const STATUS = {
   draft:   { t: "مسودة",        c: "bg-canvas text-muted" },
@@ -89,6 +89,9 @@ export default function MyQuizzes() {
   const [list, setList] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [creating, setCreating] = useState(false);
+  // ?q= يفتح اختبارًا بعينه (اختبار التحقق من دورة الاختبار، أو من «بانتظار إجرائك»)
+  const [params, setParams] = useSearchParams();
+  const linkedId = params.get("q");
   const [msg, setMsg] = useNotice(null);
 
   const load = async () => {
@@ -99,13 +102,14 @@ export default function MyQuizzes() {
     loadActiveTerm().then(({ year, term }) => year && purgeOldQuizCards(data, year, term));
   };
 
-  useEffect(() => { if (uid) load(); }, [uid]);
+  useEffect(() => { if (uid) load(); }, [uid, linkedId]);
+  useEffect(() => { if (linkedId) setOpenId(linkedId); }, [linkedId]);
 
   const open = (list ?? []).find((q) => q.id === openId);
-  useBackStep(!!open, () => { setOpenId(null); load(); }, "اختباراتي");
+  const close = () => { setOpenId(null); if (linkedId) setParams({}, { replace: true }); load(); };
+  useBackStep(!!open, close, "اختباراتي");
   if (open) {
-    return <QuizEditor quiz={open} uid={uid}
-                       onBack={() => { setOpenId(null); load(); }} />;
+    return <QuizEditor key={open.id} quiz={open} uid={uid} onBack={close} />;
   }
 
   return (
@@ -852,6 +856,8 @@ function QuizEditor({ quiz, uid, onBack }) {
 
       <QuizDetails q={q} onSaved={(fields) => { setQ((x) => ({ ...x, ...fields })); setMsg({ ok: true, text: "حُفظت بيانات الاختبار." }); }} />
 
+      {q.period === "verify" && <VerifyBanner q={q} />}
+
       {/* دورة الاختبار: التشخيصي والفترتان فقط، والنهائي له نظامه */}
       {CYCLE_PERIODS.includes(q.period) && (
         <QuizCycle q={q} questionsCount={questions?.length ?? 0} teacherName={profile?.full_name}
@@ -1060,6 +1066,29 @@ function QuizEditor({ quiz, uid, onBack }) {
 /* --------------------------- بطاقة السؤال --------------------------- */
 // درجة اختبار الفترة الأولى المعتمدة — تنبيه لا إلزام، فالكشف يحوّل أي درجة لسقف عموده
 const PERIOD1_MARKS = 20;
+/* اختبار التحقق: مرتبط بخطة علاجية، ويُقاس أثرها آليًا بعد رصده (supabase/quiz_verify_*.sql) */
+function VerifyBanner({ q }) {
+  const [src, setSrc] = useState(null);
+  useEffect(() => {
+    if (!q.verify_plan_id) return;
+    supabase.from("quiz_plans").select("quiz_id, skills, students, round, quizzes!quiz_plans_quiz_id_fkey(title)")
+      .eq("id", q.verify_plan_id).maybeSingle().then(({ data }) => setSrc(data ?? null));
+  }, [q.verify_plan_id]);
+  return (
+    <div className="no-print space-y-1 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+      <p className="font-semibold">
+        اختبار تحقق للخطة العلاجية {src?.round > 1 ? "الثانية " : ""}في «{src?.quizzes?.title ?? "الاختبار الأصلي"}»
+      </p>
+      <p>
+        يُقدَّم لطلاب الخطة ({src ? countStudents(src.students?.length ?? 0) : "…"})، ويكفي أسئلة قليلة في المهارات المستهدفة.
+        بعد رصد درجاتهم يُقاس الأثر آليًا في دورة الاختبار الأصلي: نسبة كل طالب قبل الخطة وبعدها.
+      </p>
+      {src?.quiz_id && <Link className="text-xs underline" to={`/quizzes?q=${src.quiz_id}`}>العودة إلى دورة الاختبار الأصلي</Link>}
+    </div>
+  );
+}
+const countStudents = (n) => (n === 1 ? "طالب واحد" : n === 2 ? "طالبان" : n <= 10 ? `${n} طلاب` : `${n} طالبًا`);
+
 function MarksHint({ period, marks }) {
   if (period !== "period1") return null;
   const off = String(marks).trim() !== "" && Number(marks) !== PERIOD1_MARKS;
