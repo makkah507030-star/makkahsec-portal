@@ -305,6 +305,46 @@ function Growth({ d }) {
   );
 }
 
+/* أثر التطوير (supabase/improvement_loop_5.sql): بنود تحسّنت بعد خطة تطوير متابَعة، من درجة خط الأساس
+   إلى درجة الزيارة أو التقييم التالي، وخطط علاجية ارتفع متوسط طلابها في اختبار التحقق. لا يُعرض ما لم يتحسّن */
+const countWord = (n, one, two, few, many) => (n === 1 ? one : n === 2 ? two : `${n} ${n <= 10 ? few : many}`);
+function Impact({ list }) {
+  const goals = list.filter((x) => x.el), plans = list.filter((x) => x.kind === "quiz");
+  return (
+    <Section id="impact" title="أثر التطوير" sub="من التوصية والخطة إلى أثر يُقاس">
+      {goals.length > 0 && (
+        <div className="df-card">
+          <CardH title="بنود الأداء" src="تلقائي"
+                 sub={`${countWord(goals.length, "بند واحد تحسّن", "بندان تحسّنا", "بنود تحسّنت", "بندًا تحسّنت")} بعد خطة تطوير هذا العام`} />
+          <div className="df-els">
+            {goals.map((x, i) => (
+              <div className="df-el" key={i}>
+                <span className="df-k" style={{ background: `var(--${x.el})` }}>{x.el.slice(1)}</span>
+                <div className="df-t"><p>{ELEMENTS.find(([k]) => k === x.el)?.[1]}</p>
+                  <p className="df-sub">{x.cycle > 1 ? "بعد دورتين: " : ""}إلى «{RATING_LABEL[x.to]}»</p></div>
+                <span className="df-n df-num">{x.from ?? "—"} ← {x.to}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {plans.length > 0 && (
+        <div className="df-card">
+          <CardH title="الخطط العلاجية" src="تلقائي"
+                 sub={`${countWord(plans.length, "خطة واحدة", "خطتان", "خطط", "خطة")} قيس أثرها باختبار تحقق`} />
+          <ul className="df-qlist">
+            {plans.map((x, i) => (
+              <li key={i}><b>{x.title}</b>
+                <span>ارتفع متوسط طلابها من <span className="df-num" style={{ direction: "ltr", unicodeBidi: "isolate" }}>{x.before}%</span> إلى <span className="df-num" style={{ direction: "ltr", unicodeBidi: "isolate" }}>{x.after}%</span>،
+                  وبلغ <span className="df-num">{x.passed}</span> من <span className="df-num">{x.n}</span> منهم <span className="df-num" style={{ direction: "ltr", unicodeBidi: "isolate" }}>{60}%</span> فأكثر</span></li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </Section>
+  );
+}
+
 function Wins({ d, s }) {
   const ev = d.events ?? [], other = s?.other_wins ?? [];
   if (!ev.length && !other.length) return null;
@@ -362,6 +402,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
     results: (d.grades?.n ?? 0) > 0,
     assess: (d.quizzes?.length ?? 0) > 0,
     growth: true,
+    impact: (d.impact?.length ?? 0) > 0,
     wins: (d.events?.length ?? 0) > 0 || (s?.other_wins?.length ?? 0) > 0,
     elements: true,
     docs: (d.docs?.length ?? 0) > 0,
@@ -492,6 +533,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
         {show("results") && has.results && <Results g={d.grades} />}
         {show("assess") && has.assess && <Assess d={d} />}
         {show("growth") && <Growth d={d} />}
+        {show("impact") && has.impact && <Impact list={d.impact} />}
         {show("wins") && <Wins d={d} s={s} />}
         {show("elements") && (
           <Fold id="elements" title="عناصر الأداء الوظيفي" open={!!open.elements} onToggle={(v) => setOpen((o) => ({ ...o, elements: v }))}

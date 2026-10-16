@@ -249,7 +249,7 @@ async function portalData(uid, studentId) {
     supabase.from("quiz_submissions")
       .select("score, absent, marked_at, quizzes!inner(title, total_marks, teacher_id)")
       .eq("student_id", studentId).eq("quizzes.teacher_id", uid).not("score", "is", null),
-    supabase.from("quiz_plans").select("kind, skills, procedures, status, done_at, created_at, students, quizzes(title)")
+    supabase.from("quiz_plans").select("kind, skills, procedures, status, done_at, created_at, students, quizzes!quiz_plans_quiz_id_fkey(title)")
       .eq("teacher_id", uid).eq("kind", "remedial"),
     supabase.from("student_actions").select("detail, action_date")
       .eq("student_id", studentId).eq("teacher_id", uid).eq("category", "academic").eq("action", "guardian"),

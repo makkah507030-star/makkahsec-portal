@@ -91,6 +91,7 @@ const Plc = lazy(() => import("./pages/Plc.jsx"));
 const PlcDepartments = lazy(() => import("./pages/Plc.jsx").then((m) => ({ default: m.PlcDepartments })));
 const PdReports = lazy(() => import("./pages/PdReports.jsx"));
 const ExchangeVisits = lazy(() => import("./pages/ExchangeVisits.jsx"));
+const Improve = lazy(() => import("./pages/Improve.jsx"));
 const PlcFile = lazy(() => import("./pages/Plc.jsx").then((m) => ({ default: m.PlcFile })));
 const EventsReports = lazy(() => import("./pages/EventsReports.jsx"));
 const MyQuizzes = lazy(() => import("./pages/teacher/MyQuizzes.jsx"));
@@ -460,6 +461,8 @@ export default function App() {
           <Route path="/plc-file" element={<PlcFile />} />
           <Route path="/xvisits" element={<ExchangeVisits />} />
           <Route path="/xvisits/:id" element={<ExchangeVisits />} />
+          {/* خطط التطوير (حلقة التحسين) — للمعلم خططه، وللزائر ما يتابعه، وللمدير اللوحة؛ القاعدة تفرض الصلاحية */}
+          {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/improve" element={<Improve />} />}
           <Route path="/pd" element={<PdReports />} />
           <Route path="/pd/:id" element={<PdReports />} />
           {/* اختباراتي — للمعلم */}
