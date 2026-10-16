@@ -224,9 +224,26 @@ const maxOptsOf = (g) => Math.max(1, ...g.list.map((x) => (Array.isArray(x.optio
    الوزن بحبر أسود ومسافات أوسع، فيتصدّر السؤال وتبقى الخيارات واضحة. */
 const QNUM = { fontVariantNumeric: "tabular-nums" };
 
-function QItem({ q, n, t, maxOpts, pageTop = false }) {
-  if (q.kind === "truefalse") return <TfRow q={q} n={n} t={t} pageTop={pageTop} />;
-  if (q.kind === "mcq") return <McqTable q={q} n={n} t={t} maxOpts={maxOpts} />;
+/* صورة السؤال تحت نصه بعرضها المحدّد (نسبة من عرض الورقة)، وصورة الخيار داخل خانته */
+function QImg({ q, images }) {
+  const src = q.image_path ? images?.[q.image_path] : null;
+  if (!src) return null;
+  return (
+    <div className="my-1 flex justify-center">
+      <img src={src} alt="" style={{ width: `${Math.min(100, Math.max(20, Number(q.image_width) || 60))}%`,
+                                     maxHeight: "80mm", objectFit: "contain", display: "block" }} />
+    </div>
+  );
+}
+function OptImg({ q, k, images }) {
+  const src = q.option_images?.[k] ? images?.[q.option_images[k]] : null;
+  if (!src) return null;
+  return <img src={src} alt="" style={{ maxHeight: "22mm", maxWidth: "100%", objectFit: "contain", display: "block", margin: "1px auto" }} />;
+}
+
+function QItem({ q, n, t, maxOpts, pageTop = false, images }) {
+  if (q.kind === "truefalse") return <TfRow q={q} n={n} t={t} pageTop={pageTop} images={images} />;
+  if (q.kind === "mcq") return <McqTable q={q} n={n} t={t} maxOpts={maxOpts} images={images} />;
   // المزاوجة: كل صف في الجدول فقرة مستقلة في بطاقة الإجابة («س3: ف1، ف2…»)، فلا رقم
   // للجدول كله — الصفوف نفسها مرقّمة ف1، ف2… لتطابق البطاقة. ونص السؤال إن وُجد فوقه.
   const left = q.options?.left ?? [], right = q.options?.right ?? [];
@@ -234,6 +251,7 @@ function QItem({ q, n, t, maxOpts, pageTop = false }) {
   return (
     <div className="qbox text-[13.5px] leading-[1.65]" style={{ color: "#000" }}>
       {q.text?.trim() && <p className="mb-1 font-semibold">{q.text}</p>}
+      <QImg q={q} images={images} />
 
       {q.kind === "match" && (
         <div>
@@ -385,17 +403,17 @@ function buildBlocks(groups) {
   return out;
 }
 
-function Block({ b, t, first }) {
+function Block({ b, t, first, images }) {
   // padding لا margin: حتى يدخل الفراغ في قياس ارتفاع الجزء
   return b.head
     ? <div style={{ display: "flow-root", paddingTop: first ? 0 : "4px" }}><GroupHead g={b.g} gi={b.gi} t={t} /></div>
-    : <div style={{ display: "flow-root", paddingTop: b.q.kind === "truefalse" && b.n > 1 && !first ? 0 : b.q.kind === "mcq" ? "5px" : "3px" }}><QItem q={b.q} n={b.n} t={t} maxOpts={b.maxOpts} pageTop={first} /></div>;
+    : <div style={{ display: "flow-root", paddingTop: b.q.kind === "truefalse" && b.n > 1 && !first ? 0 : b.q.kind === "mcq" ? "5px" : "3px" }}><QItem q={b.q} n={b.n} t={t} maxOpts={b.maxOpts} pageTop={first} images={images} /></div>;
 }
 
 /* الاختيار من متعدد في جدول: رقم الفقرة يمينًا بطول الجدول، ونص السؤال في
    الصف الأول على عرضه بخلفية خفيفة، والخيارات تحته. جدول ثابت التخطيط فتتحاذى
    خانات الخيارات في كل فقرات السؤال حتى لو اختلف عددها. */
-function McqTable({ q, n, t, maxOpts }) {
+function McqTable({ q, n, t, maxOpts, images }) {
   const b = { borderColor: "#000" };
   const shade = { background: "#F5F5F5", ...INK };
   return (
@@ -415,6 +433,7 @@ function McqTable({ q, n, t, maxOpts }) {
             <td colSpan={maxOpts * 2} className="border px-2 py-[5px] font-semibold"
                 style={{ ...b, background: "#FAFAFA", ...INK }}>
               {q.text}
+              <QImg q={q} images={images} />
             </td>
           </tr>
           <tr className="text-[12.5px] font-medium">
@@ -425,7 +444,7 @@ function McqTable({ q, n, t, maxOpts }) {
                   <td className="num border px-1 py-[4px] text-center font-bold" style={{ ...b, ...shade }}>
                     {o != null ? t.ltrs[k] : ""}
                   </td>
-                  <td className="border px-1.5 py-[4px]" style={b}>{o ?? ""}</td>
+                  <td className="border px-1.5 py-[4px]" style={b}><OptImg q={q} k={k} images={images} />{o ?? ""}</td>
                 </Fragment>
               );
             })}
@@ -443,7 +462,7 @@ const TF_COLS = (
     <col style={{ width: "10mm" }} /><col /><col style={{ width: "15mm" }} /><col style={{ width: "15mm" }} />
   </colgroup>
 );
-function TfRow({ q, n, t, pageTop }) {
+function TfRow({ q, n, t, pageTop, images }) {
   // الصف المتصل بما قبله بلا حدّ علوي، إلا إن بدأ صفحة جديدة
   const cell = { borderColor: "#000", borderStyle: "solid", borderWidth: "1px", ...(n > 1 && !pageTop ? { borderTopWidth: 0 } : {}) };
   const shade = { background: "#F5F5F5", ...INK };
@@ -463,7 +482,7 @@ function TfRow({ q, n, t, pageTop }) {
             <td dir="auto" className="px-1 py-[5px] text-center font-bold" style={{ ...cell, ...shade, ...QNUM, ...(n === 1 ? { borderTopWidth: 0 } : {}) }}>
               {t.fShort}{n}
             </td>
-            <td className="px-2 py-[5px] font-semibold" style={{ ...cell, ...(n === 1 ? { borderTopWidth: 0 } : {}) }}>{q.text}</td>
+            <td className="px-2 py-[5px] font-semibold" style={{ ...cell, ...(n === 1 ? { borderTopWidth: 0 } : {}) }}>{q.text}<QImg q={q} images={images} /></td>
             {t.tf.map((x) => (
               <td key={x} className="px-1 py-[5px] text-center text-[12.5px] font-medium"
                   style={{ ...cell, ...(n === 1 ? { borderTopWidth: 0 } : {}) }}>{x}</td>
@@ -484,7 +503,7 @@ const PAGE_H = 296, PAD_T = 8, PAD_B = 5, PAD_X = 9;
  * وجاءت بطاقة الإجابة كاملة في آخرها (أو في صفحة مستقلة) لتبقى صالحة للكاميرا.
  * onFit({ zoom, fits, pages, cardFits })
  */
-export default function QuizPaper({ quiz, questions = [], className = "", studentName = "", studentId = null, nationalId = "", teacherName = "", onFit }) {
+export default function QuizPaper({ quiz, questions = [], className = "", studentName = "", studentId = null, nationalId = "", teacherName = "", onFit, images = {} }) {
   const ltr = quiz?.lang === "en";
   const t = ltr ? EN : AR;
   const dir = ltr ? "ltr" : "rtl";
@@ -555,8 +574,14 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
     };
     run();
     document.fonts?.ready?.then(run);
-    return () => { dead = true; };
-  }, [quiz, questions, className, studentName, teacherName, overflowFor]); // eslint-disable-line react-hooks/exhaustive-deps
+    // الصور تغيّر ارتفاع الفقرات بعد تحميلها، فيُعاد القياس عند اكتمال كل صورة
+    const pending = [...(measRef.current?.querySelectorAll("img") ?? [])].filter((im) => !im.complete);
+    pending.forEach((im) => { im.addEventListener("load", run); im.addEventListener("error", run); });
+    return () => {
+      dead = true;
+      pending.forEach((im) => { im.removeEventListener("load", run); im.removeEventListener("error", run); });
+    };
+  }, [quiz, questions, className, studentName, teacherName, overflowFor, images]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // الصفحة الواحدة: منطقة الأسئلة تأخذ ما بين الترويسة والبطاقة، وإن زادت
   // الأسئلة عنها نصغّرها تدريجيًا (zoom) حتى تتّسع كاملة.
@@ -583,7 +608,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
     const fits = inner.getBoundingClientRect().height <= area.getBoundingClientRect().height - mm4 + 1;
     if (!fits) { setOverflowFor(questions); return; }
     onFit?.({ zoom: z, fits: true, pages: 1, cardFits: true });
-  }, [plan, quiz, questions, className, studentName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [plan, quiz, questions, className, studentName, images]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sheetStyle = {
     width: "210mm", height: `${PAGE_H}mm`, maxWidth: "210mm",
@@ -605,7 +630,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
       <div data-runhead style={{ display: "flow-root" }}><RunHead {...headProps} page={2} total={2} /></div>
       <div data-foot style={{ display: "flow-root" }}><Foot t={t} teacherName={teacherName} page={1} total={2} /></div>
       <div data-card style={{ display: "flow-root" }}><div style={{ display: "flow-root" }}>{card}</div></div>
-      {blocks.map((b, i) => <div key={b.key} data-block><Block b={b} t={t} first={i === 0} /></div>)}
+      {blocks.map((b, i) => <div key={b.key} data-block><Block b={b} t={t} first={i === 0} images={images} /></div>)}
     </div>
   );
 
@@ -619,7 +644,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
           {/* الأسئلة في الأعلى، والبطاقة في الأسفل — تُصغَّر الأسئلة لتتّسع */}
           <div ref={areaRef} className="mt-1.5 min-h-0 flex-1 overflow-hidden">
             <div ref={innerRef}>
-              {blocks.map((b, i) => <Block key={b.key} b={b} t={t} first={i === 0} />)}
+              {blocks.map((b, i) => <Block key={b.key} b={b} t={t} first={i === 0} images={images} />)}
             </div>
           </div>
 
@@ -645,7 +670,7 @@ export default function QuizPaper({ quiz, questions = [], className = "", studen
             {/* البطاقة في صفحة وحدها: في أعلاها مباشرة تحت الترويسة */}
             {last && !idx.length && <div className="shrink-0">{card}</div>}
             <div className="mt-1.5 min-h-0 flex-1 overflow-hidden">
-              {idx.map((i, k) => <Block key={blocks[i].key} b={blocks[i]} t={t} first={k === 0} />)}
+              {idx.map((i, k) => <Block key={blocks[i].key} b={blocks[i]} t={t} first={k === 0} images={images} />)}
             </div>
             {last && idx.length > 0 && <div className="shrink-0">{card}</div>}
             <Foot t={t} teacherName={teacherName} page={pi + 1} total={total} />
