@@ -130,7 +130,8 @@ class Slide:
         self.text(0.5, 1.4, 9.0, 0.7, title, 30, INK, True, name="Title")
         self.slidenum()
 
-    def table(self, x, y, colw, rows, rowh=0.33, sz=11):
+    def table(self, x, y, colw, rows, rowh=0.33, sz=11, key=-1):
+        """key: عمود العناوين (الأيمن افتراضًا لأن الأعمدة تُمرَّر معكوسة للعربية)"""
         i = self._id()
         grid = "".join(f'<a:gridCol w="{e(c)}"/>' for c in colw)
 
@@ -143,7 +144,7 @@ class Slide:
                     f'<a:tcPr marL="73152" marR="73152" marT="27432" marB="27432" anchor="ctr">{bd}'
                     f'<a:solidFill><a:srgbClr val="{fill}"/></a:solidFill></a:tcPr></a:tc>')
         trs = "".join(
-            f'<a:tr h="{e(rowh)}">' + "".join(cell(t, ri == 0, ri % 2 == 0, ci == 0) for ci, t in enumerate(r)) + "</a:tr>"
+            f'<a:tr h="{e(rowh)}">' + "".join(cell(t, ri == 0, ri % 2 == 0, ci == key % len(r)) for ci, t in enumerate(r)) + "</a:tr>"
             for ri, r in enumerate(rows))
         self.shapes.append(
             f'<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="{i}" name="Table {i}"/><p:cNvGraphicFramePr>'
