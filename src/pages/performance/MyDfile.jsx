@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { fmtDate } from "../../lib/dates.js";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { useBackStep } from "../../lib/backStep.js";
@@ -105,7 +106,8 @@ export default function MyDfile() {
     const n = parseInt(String(v).replace(/[٠-٩]/g, (c) => "٠١٢٣٤٥٦٧٨٩".indexOf(c)), 10);
     return n > 0 ? Math.min(n, 9999) : null;
   };
-  const setMad = (patch) => save({ madrasati: { ...mad, ...patch, at: new Date().toISOString().slice(0, 10) } });
+  // at: يوم إدخال الأرقام بتوقيت الرياض، ويظهر في التقرير «آخر تحديث»
+  const setMad = (patch) => save({ madrasati: { ...mad, ...patch, at: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }) } });
   const setAct = (k, list) => save({ activities: { ...act, [k]: list } });
   const addAct = (k, t) => {
     const list = act[k] ?? [];
@@ -191,6 +193,7 @@ export default function MyDfile() {
             ))}
           </div>
         </div>
+        {mad.at && <p className="num text-xs text-faint">آخر تحديث: {fmtDate(mad.at)}</p>}
       </Block>
 
       <Block title="الأنشطة" sub="اختر نوع النشاط من البطاقات أو اكتب غيره، ثم اكتب عدده.">
