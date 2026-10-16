@@ -86,13 +86,12 @@ end; $$;
 revoke execute on function public.dfile_data_core(uuid) from public, anon, authenticated;
 create or replace function public.dfile_data(p_uid uuid)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
-declare i jsonb;  -- «أثر التطوير» من حلقة التحسين (improvement_loop_5) إن وُجدت دالته، فلا يهم ترتيب التنفيذ
+declare i jsonb; a jsonb;  -- «أثر التطوير» (improvement_loop_5) والشواهد الآلية (perf_auto_core_2) إن وُجدت دالتاهما
 begin
-  if p_uid is distinct from auth.uid() and not public.has_admin_role(array['principal', 'tech_support']) then
-    raise exception 'غير مصرّح';
-  end if;
+  if p_uid is distinct from auth.uid() and not public.has_admin_role(array['principal', 'tech_support']) then raise exception 'غير مصرّح'; end if;
   if to_regprocedure('public.improve_impact(uuid)') is not null then execute 'select public.improve_impact($1)' into i using p_uid; end if;
-  return public.dfile_data_core(p_uid) || jsonb_build_object('impact', coalesce(i, '[]'::jsonb));
+  if to_regprocedure('public.dfile_auto_evidence(uuid)') is not null then execute 'select public.dfile_auto_evidence($1)' into a using p_uid; end if;
+  return public.dfile_data_core(p_uid) || jsonb_build_object('impact', coalesce(i, '[]'::jsonb), 'evidence_auto', coalesce(a, '{}'::jsonb));
 end; $$;
 revoke execute on function public.dfile_data(uuid) from public, anon;
 grant  execute on function public.dfile_data(uuid) to authenticated;

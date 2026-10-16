@@ -41,7 +41,8 @@ const actWord = (n, k) => {
 };
 
 /* «3 شواهد» و«11 شاهدًا» */
-const evLabel = (n) => `${n} ${n >= 3 && n <= 10 ? "شواهد" : "شاهدًا"}`;
+/* «شاهد» بعد الرقم: 1 شاهد، 2 شاهدين، 3–10 شواهد، وغيرها شاهدًا */
+const evLabel = (n) => `${n} ${n === 1 ? "شاهد" : n === 2 ? "شاهدين" : n >= 3 && n <= 10 ? "شواهد" : "شاهدًا"}`;
 
 const Src = ({ k = "auto", children }) => <span className={`df-src df-${k}`}>{children}</span>;
 
@@ -381,8 +382,11 @@ export default function DfileReport({ data: d, settings: s, code }) {
   const [cur, setCur] = useState(null);
   const root = useRef(null);
   const brief = pickedSentences(d, s);
-  const ev = d.evidence ?? {};
-  const evTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + Number(ev[k] ?? 0), 0);
+  // شواهد كل عنصر: ما سجّله المعلم، والآلية التي تحسبها البوابة من عمله (perf_auto_core_2)
+  const auto = d.evidence_auto ?? {};
+  const ev = Object.fromEntries(ELEMENTS.map(([k]) => [k, Number(d.evidence?.[k] ?? 0) + Number(auto[k] ?? 0)]));
+  const evTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + ev[k], 0);
+  const autoTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + Number(auto[k] ?? 0), 0);
   const evMax = Math.max(1, ...ELEMENTS.map(([k]) => Number(ev[k] ?? 0)));
 
   // دروس الأسبوع الدراسي الحالي من توزيع المنهج، لكل مادة
@@ -539,7 +543,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
         {show("wins") && <Wins d={d} s={s} />}
         {show("elements") && (
           <Fold id="elements" title="عناصر الأداء الوظيفي" open={!!open.elements} onToggle={(v) => setOpen((o) => ({ ...o, elements: v }))}
-                line={`${evTotal} شاهدًا في ${ELEMENTS.length - 1} عناصر، والعنصر الأول يقدّره مدير المدرسة`}>
+                line={`${evLabel(evTotal)} في ${ELEMENTS.length - 1} عناصر${autoTotal ? `، منها ${autoTotal} من عمله في البوابة` : ""}، والعنصر الأول يقدّره مدير المدرسة`}>
             <div className="df-els">
               {ELEMENTS.map(([k, t], i) => (
                 <div className="df-el" key={k}>
