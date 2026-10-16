@@ -28,6 +28,11 @@ const Svg = ({ d, ...p }) => (
 );
 
 /* «3 أنشطة صفية» و«11 نشاطًا صفيًا» */
+/* «ساعة» بعد الرقم: 2 ساعتين، 3–10 ساعات، وغيرها ساعة */
+const hourWord = (n) => {
+  const v = Number(n) || 0;
+  return v === 2 ? "ساعتين" : v >= 3 && v <= 10 ? "ساعات" : "ساعة";
+};
 const actWord = (n, k) => {
   const c = k === "class";
   if (n >= 3 && n <= 10) return c ? "أنشطة صفية" : "أنشطة لاصفية";
@@ -146,7 +151,7 @@ function Kpis({ d }) {
         {d.plc_led > 0 && <span className="df-d">قدّم منها {d.plc_led}</span>}</div>
       <div className="df-kpi"><span className="df-v df-num">{d.quizzes?.length ?? 0}</span><span className="df-l">اختبارًا وتقويمًا</span>
         {modes > 0 && <span className="df-d">{modes} أنواع تقويم</span>}</div>
-      <div className="df-kpi"><span className="df-v df-num">{h}</span><span className="df-l">ساعة تطوير مهني</span>
+      <div className="df-kpi"><span className="df-v df-num">{h}</span><span className="df-l">{hourWord(h)} تطوير مهني</span>
         <span className="df-d">برامج تدريبية ومؤتمرات</span></div>
       <div className="df-kpi"><span className="df-v df-num">{d.guardian_msgs}</span><span className="df-l">تواصلًا مع أولياء الأمور</span>
         <span className="df-d">إشعارات وصلت أولياء الأمور</span></div>
@@ -277,10 +282,10 @@ function Growth({ d }) {
       <div className="df-grid2">
         <div className="df-card">
           <CardH title="التطوير المهني" sub="هذا العام" src="بوابة + المعلم" srcKind="mix" />
-          <div className="df-imp-sum"><span className="df-v df-num">{hours(d)}</span><span className="df-sub">ساعة حضور</span></div>
+          <div className="df-imp-sum"><span className="df-v df-num">{hours(d)}</span><span className="df-sub">{hourWord(hours(d))} حضور</span></div>
           <div className="df-tiles df-t2">
-            <span><b className="df-num">{d.hours_train} <small>ساعة</small></b>برامج تدريبية</span>
-            <span><b className="df-num">{d.hours_conf} <small>ساعة</small></b>مؤتمرات وورش</span>
+            <span><b className="df-num">{d.hours_train} <small>{hourWord(d.hours_train)}</small></b>برامج تدريبية</span>
+            <span><b className="df-num">{d.hours_conf} <small>{hourWord(d.hours_conf)}</small></b>مؤتمرات وورش</span>
             <span><b className="df-num">{d.plc}</b>لقاءات مجتمع التعلم</span>
             <span><b className="df-num">{d.xvisits}</b>زيارات تبادلية</span>
           </div>
