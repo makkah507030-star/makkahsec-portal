@@ -205,17 +205,16 @@ s.text(0.5, 2.2, 9.0, 0.55, "اكتب هنا سؤالًا يكشف الخطأ ا
 for j, L in enumerate("أبجد"):
     x = 5.1 if j % 2 == 0 else 0.5
     y = 2.95 if j < 2 else 3.9
-    s.card(x, y, 4.4, 0.78, "FFFFFF", 12000)
+    opt = s.shape(x, y, 4.4, 0.78, "roundRect", "FFFFFF", LINE, adj=12000, shadow=True, name=f"زر الخيار {L}",
+                  label=["الخيار الأول", "الخيار الثاني", "الخيار الثالث", "الخيار الرابع"][j], sz=15, align="r", ins=(0.8, 1.7))
     s.circle(x + 3.75, y + 0.14, 0.5, MINT)
     s.text(x + 3.75, y + 0.14, 0.5, 0.5, L, 17, DARK, True, "ctr", "ctr")
-    s.text(x + 0.25, y, 3.35, 0.78, ["الخيار الأول", "الخيار الثاني", "الخيار الثالث", "الخيار الرابع"][j], 15, INK, anchor="ctr")
     ok = j == 0  # الإجابة الصحيحة: «أ»
     col = DEEP if ok else "A23B3B"
     fb = [s.shape(x, y, 4.4, 0.78, "roundRect", None, col, lw=38100, adj=12000, name="إطار التغذية الراجعة"),
           s.shape(x + 0.2, y + 0.22, 1.35, 0.34, "roundRect", col, col, adj=50000, name="شارة التغذية الراجعة"),
           s.text(x + 0.2, y + 0.22, 1.35, 0.34, "✓ إجابة صحيحة" if ok else "✗ فكّر مجددًا", 11, "FFFFFF", True, "ctr", "ctr")]
-    hot = s.hotspot(x, y, 4.4, 0.78, f"الخيار {L}")
-    s.anim(fb, "in", 300, trigger=hot)
+    s.anim(fb, "in", 300, trigger=opt)
 s.text(0.5, 4.75, 9.0, 0.25, "انقر على الخيار الذي اختاره أغلب الطلاب ليظهر إن كان صحيحًا.", 10, MUTED)
 s.notes = [
     "تفاعل الشريحة: بعد أن يرفع الطلاب بطاقاتهم، انقر على أي خيار فيظهر حوله إطار وشارة: أخضر «إجابة صحيحة» أو أحمر «فكّر مجددًا». ثم اطلب من صاحب إجابة خاطئة أن يشرح تفكيره (تغذية راجعة فورية).",
@@ -407,9 +406,11 @@ for g in range(6):
     s.text(x + 3.0, y + 0.14, 1.25, 0.4, f"المجموعة {g + 1}", 12, "FFFFFF", True, "ctr", "ctr")
     for k in range(5):
         sx = x + 2.45 - k * 0.48
-        s.text(sx, y + 0.12, 0.42, 0.44, "☆", 22, "C9D6CE", True, "ctr", "ctr")
-        star = s.text(sx, y + 0.12, 0.42, 0.44, "★", 22, "B8912F", True, "ctr", "ctr")
-        s.anim(star, "in", 300, trigger=s.hotspot(sx, y + 0.12, 0.42, 0.44, f"نجمة {k + 1} للمجموعة {g + 1}"))
+        slot = s.shape(sx, y + 0.14, 0.42, 0.4, "roundRect", TINT, "CCF2DB", adj=20000, name=f"زر نجمة {k + 1} للمجموعة {g + 1}",
+                       label="☆", sz=20, color="9DB5A8", b=True)
+        star = s.shape(sx, y + 0.14, 0.42, 0.4, "roundRect", "FFF6DA", "E9D49A", adj=20000, name="نجمة",
+                       label="★", sz=20, color="B8912F", b=True)
+        s.anim(star, "in", 300, trigger=slot)
 s.text(0.5, 4.72, 9.0, 0.25, "انقر على النجمة الفارغة لتمتلئ.", 10, MUTED)
 s.notes = [
     "استعملها في الخلاصة للإعلان عن النتيجة: انقر على النجوم الفارغة لكل مجموعة بعدد نجومها التي سجّلتها على السبورة أثناء الحصة، ثم احتفِ بالفائز.",

@@ -35,7 +35,8 @@ class Slide:
         return f"rId{self.images.index(path) + 1}"
 
     # ---------- أشكال ----------
-    def shape(self, x, y, w, h, prst="rect", fill=None, line=None, lw=12700, adj=None, shadow=False, dash=None, alpha=None, name="Shape"):
+    def shape(self, x, y, w, h, prst="rect", fill=None, line=None, lw=12700, adj=None, shadow=False, dash=None, alpha=None, name="Shape",
+              label=None, sz=12, color=INK, b=False, align="ctr", ins=(0, 0)):
         i = self._id()
         av = f'<a:gd name="adj" fmla="val {adj}"/>' if adj is not None else ""
         if fill:
@@ -53,7 +54,10 @@ class Slide:
         self.shapes.append(
             f'<p:sp><p:nvSpPr><p:cNvPr id="{i}" name="{name} {i}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
             f'<p:spPr><a:xfrm><a:off x="{e(x)}" y="{e(y)}"/><a:ext cx="{e(w)}" cy="{e(h)}"/></a:xfrm>'
-            f'<a:prstGeom prst="{prst}"><a:avLst>{av}</a:avLst></a:prstGeom>{f}{ln}{sh}</p:spPr></p:sp>')
+            f'<a:prstGeom prst="{prst}"><a:avLst>{av}</a:avLst></a:prstGeom>{f}{ln}{sh}</p:spPr>'
+            + (f'<p:txBody><a:bodyPr wrap="square" lIns="{e(ins[1])}" tIns="0" rIns="{e(ins[0])}" bIns="0" rtlCol="1" anchor="ctr"/>'
+               f'<a:lstStyle/><a:p><a:pPr rtl="1" algn="{align}"><a:buNone/></a:pPr>{self.run(label, sz, color, b)}</a:p></p:txBody>'
+               if label is not None else "") + '</p:sp>')
         return i
 
     def card(self, x, y, w, h, fill="FFFFFF", adj=6000):
@@ -237,18 +241,17 @@ class Slide:
         self.text(7.9, 0.95, 1.6, 0.36, pill, 12, DARK, True, "ctr", "ctr", name="Label")
         if minutes:
             # شارة الزمن: تتكرر في كل شريحة مرحلة لتذكير المعلم بإدارة الوقت
-            self.shape(6.15, 0.95, 1.6, 0.36, "roundRect", DEEP, DEEP, adj=50000, name="Time")
+            chip = self.shape(6.15, 0.95, 1.6, 0.36, "roundRect", DEEP, DEEP, adj=50000, name="زر المؤقت",
+                              label=minutes, color="FFFFFF", b=True, ins=(0.42, 0.1))
             self.pic("icons/Timer-w.png", 7.38, 1.03, 0.2, 0.2, "مؤقت")
-            self.text(6.25, 0.95, 1.08, 0.36, minutes, 12, "FFFFFF", True, "ctr", "ctr", name="TimeText")
             # المؤقت: نقرة على الشارة تبدأ شريطًا يتناقص بالمدة الحقيقية، ثم تظهر «انتهى الوقت»
             mins = int("".join(ch for ch in minutes if ch.isdigit()))
             bar = self.shape(6.35, 1.245, 1.2, 0.035, "rect", MINT, None, name="شريط المؤقت")
             # تظهر بجانب الشارة لا فوقها، فتبقى المدة ظاهرة للتعديل في وضع التحرير
             end = [self.shape(4.85, 0.95, 1.2, 0.36, "roundRect", "B8912F", "B8912F", adj=50000, name="انتهى الوقت"),
                    self.text(4.85, 0.95, 1.2, 0.36, "انتهى الوقت", 12, "FFFFFF", True, "ctr", "ctr", name="انتهى الوقت")]
-            hot = self.hotspot(6.15, 0.95, 1.6, 0.36, "زر المؤقت")
-            self.anim(bar, "out", mins * 60000, trigger=hot)
-            self.anim(end, "in", 500, start="after", trigger=hot)
+            self.anim(bar, "out", mins * 60000, trigger=chip)
+            self.anim(end, "in", 500, start="after", trigger=chip)
         if Slide.home is not None and Slide.home is not self:
             self.hotspot(7.9, 0.95, 1.6, 0.36, "العودة إلى خريطة الحصة", link=Slide.home)
         self.text(0.5, 1.4, 9.0, 0.7, title, 30, INK, True, name="Title")
