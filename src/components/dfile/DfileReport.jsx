@@ -83,8 +83,8 @@ function Dist({ parts }) {
   const shown = parts.filter((p) => p.n > 0);
   return (
     <div className="df-dist">
-      {shown.map((p) => (
-        <span key={p.k} style={{ flex: p.n, "--c": p.c }}><i /><small className="df-num">{p.label}</small></span>
+      {shown.map((p, i) => (
+        <span key={p.k} style={{ flex: p.n, "--c": p.c, "--i": i }}><i /><small className="df-num">{p.label}</small></span>
       ))}
     </div>
   );
@@ -115,10 +115,10 @@ function Hero({ d, s, code }) {
             <div className="df-ring" aria-label={`تقييم الأداء للعام السابق ${rate} من 5`}>
               <svg viewBox="0 0 100 100" aria-hidden="true">
                 <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.16)" strokeWidth="9" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke="var(--mint)" strokeWidth="9" strokeLinecap="round"
-                        strokeDasharray="263.9" strokeDashoffset={263.9 * (1 - rate / 5)} />
+                <circle className="df-arc" cx="50" cy="50" r="42" fill="none" stroke="var(--mint)" strokeWidth="9" strokeLinecap="round"
+                        strokeDasharray="263.9" strokeDashoffset={263.9 * (1 - rate / 5)} style={{ "--off": 263.9 * (1 - rate / 5) }} />
               </svg>
-              <div className="df-lbl"><b className="df-num">{rate.toFixed(2)}</b><span>من 5</span></div>
+              <div className="df-lbl"><b className="df-num" data-count={rate.toFixed(2)}>{rate.toFixed(2)}</b><span>من 5</span></div>
             </div>
             <span className="df-ring-cap">{RATING_LABEL[Math.min(5, Math.max(1, Math.floor(rate)))]}</span>
             {s.perf_year && <span className="df-sub" style={{ color: "var(--hero-soft)", fontSize: 10.5 }}>تقييم أداء {s.perf_year}هـ</span>}
@@ -153,7 +153,7 @@ function Kpis({ d }) {
         <div className="df-kpi df-grades">
           <div className="df-g-top"><span className="df-v df-num">{pc(g.avg)}</span><span className="df-l">متوسط درجات طلابه</span></div>
           <div className="df-g-bar" aria-hidden="true">
-            {BANDS.map(([k]) => <i key={k} className={`df-${k}`} style={{ flex: g.bands?.[k] ?? 0 }} />)}
+            {BANDS.map(([k], i) => <i key={k} className={`df-${k}`} style={{ flex: g.bands?.[k] ?? 0, "--i": i }} />)}
           </div>
           <div className="df-g-chips">
             {BANDS.map(([k, t]) => (
@@ -184,7 +184,7 @@ function Results({ g }) {
             {imp.map((c, i) => {
               const cx = W - 10 - step * (i + 0.5), hb = c.first * 1.3, ha = c.last * 1.3, dlt = c.last - c.first;
               return (
-                <g key={c.label}>
+                <g key={c.label} style={{ "--i": i }}>
                   <rect className="df-cb" x={cx + 2} y={150 - hb} width="20" height={hb} rx="3" />
                   <rect className="df-ca" x={cx - 22} y={150 - ha} width="20" height={ha} rx="3" />
                   <text className="df-cv" x={cx + 12} y={145 - hb} textAnchor="middle">{c.first}</text>
@@ -374,6 +374,32 @@ export default function DfileReport({ data: d, settings: s, code }) {
     const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && setCur(e.target.id.slice(3))),
       { rootMargin: "-30% 0px -60% 0px" });
     root.current?.querySelectorAll(".df-sec[id]").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [d, s]);
+
+  // حركة الرسوم مرة واحدة حين يظهر الرسم على الشاشة (ولا حركة لمن فعّل «تقليل الحركة»)
+  useEffect(() => {
+    const els = [...(root.current?.querySelectorAll(".df-track, .df-dist, .df-g-bar, .df-cols, .df-ring") ?? [])];
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (still || !("IntersectionObserver" in window)) { els.forEach((el) => el.classList.add("df-in")); return undefined; }
+    const counts = els.flatMap((el) => [...el.querySelectorAll("[data-count]")]);
+    counts.forEach((b) => { b.textContent = (0).toFixed((b.dataset.count.split(".")[1] ?? "").length); });
+    const count = (b) => {
+      const to = Number(b.dataset.count), dec = (b.dataset.count.split(".")[1] ?? "").length, t0 = performance.now();
+      const step = (t) => {
+        const k = Math.min(1, (t - t0) / 1100);
+        b.textContent = (to * (1 - (1 - k) ** 3)).toFixed(dec);
+        if (k < 1) requestAnimationFrame(step); else b.textContent = b.dataset.count;
+      };
+      requestAnimationFrame(step);
+    };
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      e.target.classList.add("df-in");
+      e.target.querySelectorAll("[data-count]").forEach(count);
+      io.unobserve(e.target);
+    }), { rootMargin: "0px 0px -12% 0px" });
+    els.forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, [d, s]);
 
