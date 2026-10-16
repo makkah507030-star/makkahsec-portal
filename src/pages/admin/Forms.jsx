@@ -22,6 +22,7 @@ import { useUsageCounts } from "../../lib/usage.js";
 import UsageBadge from "../../components/UsageBadge.jsx";
 import { fmtDate } from "../../lib/dates";
 import { cmpAr } from "../../lib/sortAr.js";
+import FormsArchive from "../../components/FormsArchive.jsx";
 import Sticker, { FlagPicker } from "../../components/Sticker.jsx";
 import { flagRank, urgentPrefix } from "../../lib/flags.js";
 import { useBackStep } from "../../lib/backStep.js";
@@ -2205,9 +2206,7 @@ export default function Forms({ view = "issue", openKey = null }) {
               {msg.text}
             </p>
           )}
-          <div className="card divide-y divide-line overflow-hidden">
-            {docs.length === 0 && <p className="px-4 py-6 text-sm text-muted">لا مستندات بعد.</p>}
-            {docs.map((d) => (
+          <FormsArchive docs={docs} renderRow={(d) => (
               <div key={d.id} className="flex items-center gap-2 px-2 py-1 hover:bg-canvas">
                 <button onClick={() => openDoc(d)}
                         className="flex min-w-0 flex-1 items-center justify-between gap-3 px-2 py-2 text-right">
@@ -2246,8 +2245,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                   </button>
                 )}
               </div>
-            ))}
-          </div>
+            )} />
         </>
       )}
 
