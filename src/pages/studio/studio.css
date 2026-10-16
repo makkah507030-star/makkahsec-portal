@@ -201,6 +201,8 @@
              display: flex; align-items: center; justify-content: center; box-shadow: 0 24px 50px -24px rgba(62,99,80,.55); }
 .stu-dark .stu-dicon { box-shadow: 0 24px 60px -20px rgba(137,215,173,.45); }
 .stu-official .stu-dicon { background: #3E6350; color: #fff; box-shadow: none; border-radius: 24px; }
+/* رمز ذوي الاحتياجات الخاصة بالأزرق الدولي في كل الثيمات */
+.stu-dicon.blue, .stu-official .stu-dicon.blue { background: #1565C0; color: #fff; box-shadow: 0 24px 50px -24px rgba(21,101,192,.6); }
 .stu-dicon svg { width: 104px; height: 104px; stroke-width: 1.8; }
 .stu-dtext { flex: 1; min-width: 0; overflow: hidden; }
 .stu-door .stu-h1 { margin-top: 0; }
