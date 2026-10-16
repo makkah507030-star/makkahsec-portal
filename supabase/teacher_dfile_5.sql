@@ -6,16 +6,17 @@
 
 create or replace function public.dfile_public(p_code text)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
-declare f public.teacher_dfiles;
+declare f public.teacher_dfiles; i jsonb;  -- i: «أثر التطوير» إن وُجدت دالته (improvement_loop_5)
 begin
   select d.* into f from public.teacher_dfiles d join public.users u on u.id = d.teacher_user_id
    where d.code = upper(trim(p_code)) and d.disabled_at is null and u.is_active;
   if not found then return jsonb_build_object('status', 'off'); end if;
+  if to_regprocedure('public.improve_impact(uuid)') is not null then execute 'select public.improve_impact($1)' into i using f.teacher_user_id; end if;
   return jsonb_build_object('status', 'ok',
     'settings', jsonb_build_object('code', f.code, 'color', f.color, 'hidden', f.hidden, 'sentences', f.sentences,
       'appoint_year', f.appoint_year, 'perf_rating', f.perf_rating, 'perf_year', f.perf_year, 'rank', f.rank,
       'other_wins', f.other_wins, 'madrasati', f.madrasati, 'activities', f.activities, 'distribution', f.distribution),
-    'data', public.dfile_data_core(f.teacher_user_id));
+    'data', public.dfile_data_core(f.teacher_user_id) || jsonb_build_object('impact', coalesce(i, '[]'::jsonb)));
 end; $$;
 
 revoke execute on function public.dfile_public(text) from public;
