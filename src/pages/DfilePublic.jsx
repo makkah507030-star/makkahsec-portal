@@ -61,7 +61,7 @@ export default function DfilePublic() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <input className="field" placeholder="الاسم" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} aria-label="الاسم" />
-              <input className="field" placeholder="الجهة، مثل مكتب التعليم" value={org} onChange={(e) => setOrg(e.target.value)} maxLength={80} aria-label="الجهة" />
+              <input className="field" placeholder="الجهة، مثل مدير المدرسة" value={org} onChange={(e) => setOrg(e.target.value)} maxLength={80} aria-label="الجهة" />
               <button className="btn-primary" type="submit">دخول</button>
               <button className="btn-ghost" type="button" onClick={() => { start(); setWelcome(false); }}>تخطٍّ</button>
             </div>

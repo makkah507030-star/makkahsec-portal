@@ -280,3 +280,15 @@
 .dfile .df-id-foot { font-size: 10.5px; opacity: .75; }
 .dfile .df-quote .df-q1 { grid-column: 1 / -1; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 12px; }
 .dfile .df-lcard .df-lcls { font-size: 11px; color: var(--muted); margin-top: -2px; }
+
+/* عارض الشاهد داخل الصفحة */
+.dfile .df-viewer { position: fixed; inset: 0; z-index: 60; background: rgba(8,16,12,.62); display: grid; place-items: center; padding: 12px; }
+.dfile .df-viewer-box { width: min(900px, 100%); height: min(92vh, 100%); background: var(--surface); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow); }
+.dfile .df-viewer-box header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.dfile .df-viewer-box header b { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dfile .df-viewer-box header a { font-size: 12.5px; color: var(--deep); text-decoration: underline; white-space: nowrap; }
+.dfile .df-viewer-box header button { width: 32px; height: 32px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.dfile .df-viewer-body { flex: 1; overflow: auto; padding: 12px; background: var(--bg); }
+.dfile .df-viewer-body img { display: block; max-width: 100%; margin: 0 auto; border-radius: 8px; }
+.dfile .df-viewer-pages { display: grid; gap: 10px; }
+.dfile .df-viewer-pages canvas { display: block; background: #fff; border-radius: 6px; box-shadow: var(--shadow); }

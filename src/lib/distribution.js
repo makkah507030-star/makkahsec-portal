@@ -4,6 +4,7 @@
    فيراجع المعلم البطاقات ويصحّحها قبل الحفظ (لوحة ملف المعلم الرقمي).
    المكتبتان تُحمّلان عند الرفع فقط لثقلهما.
    ===================================================================== */
+import { loadPdfjs } from "./pdfjs.js";
 
 const ORD = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر"];
 const norm = (s) => String(s ?? "").replace(/[ً-ْـ]/g, "").replace(/[أإآ]/g, "ا").replace(/\s+/g, " ").trim();
@@ -68,9 +69,7 @@ async function fromExcel(file) {
 }
 
 async function fromPdf(file) {
-  const pdfjs = await import("pdfjs-dist");
-  const { default: worker } = await import("pdfjs-dist/build/pdf.worker.min.mjs?url");
-  pdfjs.GlobalWorkerOptions.workerSrc = worker;
+  const pdfjs = await loadPdfjs();
   const pdf = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise;
   const out = [];
   let cur = null;

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./dfile.css";
+import DfileDocViewer from "./DfileDocViewer.jsx";
 import { fmtDate } from "../../lib/dates.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
-  OPINION_ROLE, avgGain, subjectsOf, experience, hours, openDoc, pc, pct, pickedSentences, weekWord,
+  OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -384,13 +385,9 @@ export default function DfileReport({ data: d, settings: s, code }) {
     .map((it) => ({ s: it.subject, c: it.classes ?? [], t: (it.weeks ?? []).find((w) => w.n === d.week.n)?.t }))
     .filter((x) => x.t) : [];
   const opinions = d.opinions ?? [];
-  const [docErr, setDocErr] = useState("");
-  const viewDoc = async (id) => {
-    setDocErr("");
-    const w = window.open("about:blank", "_blank");   // تُفتح النافذة فور الضغط حتى لا يمنعها المتصفح
-    try { const url = await openDoc(code, id); if (w) w.location.replace(url); else window.location.assign(url); }
-    catch (e) { if (w) w.close(); setDocErr(e.message); }
-  };
+  // الشاهد يُعرض داخل الصفحة (DfileDocViewer)، فيراه الزائر في كل جهاز
+  const [doc, setDoc] = useState(null);
+  const closeDoc = useCallback(() => setDoc(null), [setDoc]);
 
   const mad = s?.madrasati ?? {};
   const madOn = MADRASATI.some((m) => Number(mad[m.key]) > 0) || mad.weekly_plan === true;
@@ -555,14 +552,14 @@ export default function DfileReport({ data: d, settings: s, code }) {
                 open={!!open.docs} onToggle={(v) => setOpen((o) => ({ ...o, docs: v }))}>
             <div className="df-docs">
               {d.docs.map((f) => (
-                <button type="button" className="df-doc" key={f.id} onClick={() => viewDoc(f.id)}>
+                <button type="button" className="df-doc" key={f.id} onClick={() => setDoc(f)}>
                   <span className="df-ic"><Svg d={ICON.file} /></span><b>{f.title}</b>
                   <span className="df-num">{f.date ? fmtDate(f.date) : f.name ?? ""}</span></button>
               ))}
             </div>
-            {docErr && <p className="df-sub" style={{ color: "var(--warn)", marginTop: 8 }}>{docErr}</p>}
           </Fold>
         )}
+        {doc && <DfileDocViewer code={code} doc={doc} onClose={closeDoc} />}
         <footer className="df-foot">
           <span>صادر من بوابة مكة الثانوية الرقمية، يتحدّث تلقائيًا مع كل عمل جديد للمعلم</span>
           <span>لا يعرض أسماء الطلاب ولا بياناتهم الشخصية</span>
