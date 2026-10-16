@@ -93,6 +93,7 @@ const ADMIN_GROUPS = [
     title: "الأداء الوظيفي",
     items: [
       { to: "/performance",  label: "تقييم الأداء الوظيفي", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء" },
+      { to: "/improve",      label: "خطط التطوير", icon: "target", kw: "حلقة التحسين توصيات متابعة أثر زيارة دعم" },
       { to: "/dfiles-admin", label: "ملفات المعلمين الرقمية", roles: ["tech_support"], icon: "idcard", kw: "ملف رقمي إيقاف نقل تقاعد رمز" },
       { to: "/dfile-opinions", label: "رأي الإدارة في ملفات المعلمين", roles: ["principal", "deputy_academic"], icon: "edit", kw: "ملف رقمي رأي توصية المعلم" },
     ],
@@ -186,6 +187,7 @@ const TEACHER_GROUPS = [
     title: "الأداء الوظيفي",
     items: [
       { to: "/my-performance", label: "شواهد الأداء الوظيفي", icon: "award", kw: "شواهد تقييم أداء" },
+      { to: "/improve",        label: "خطط التطوير",         icon: "target", kw: "حلقة التحسين توصيات متابعة أثر زيارة دعم" },
       { to: "/my-dfile",       label: "ملف المعلم الرقمي",   icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف تقرير" },
       { to: "/ethics",         label: "ميثاق أخلاقيات المهنة", icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
     ],

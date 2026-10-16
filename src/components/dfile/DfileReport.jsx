@@ -305,6 +305,29 @@ function Growth({ d }) {
   );
 }
 
+/* أثر التطوير: بنود تحسّنت بعد خطة تطوير متابَعة (supabase/improvement_loop_5.sql)،
+   من درجة خط الأساس إلى درجة الزيارة أو التقييم التالي، ولا يُعرض ما لم يتحسّن */
+function Impact({ list }) {
+  return (
+    <Section id="impact" title="أثر التطوير" sub="بنود تحسّنت بعد خطة تطوير متابَعة">
+      <div className="df-card">
+        <CardH title="من التوصية إلى الأثر" sub={`${list.length === 1 ? "بند واحد تحسّن" : list.length === 2 ? "بندان تحسّنا"
+          : `${list.length} ${list.length <= 10 ? "بنود" : "بندًا"} تحسّنت`} هذا العام`} src="تلقائي" />
+        <div className="df-els">
+          {list.map((x, i) => (
+            <div className="df-el" key={i}>
+              <span className="df-k" style={{ background: `var(--${x.el})` }}>{x.el.slice(1)}</span>
+              <div className="df-t"><p>{ELEMENTS.find(([k]) => k === x.el)?.[1]}</p>
+                <p className="df-sub">{x.cycle > 1 ? "بعد دورتين: " : ""}إلى «{RATING_LABEL[x.to]}»</p></div>
+              <span className="df-n df-num">{x.from ?? "—"} ← {x.to}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Section>
+  );
+}
+
 function Wins({ d, s }) {
   const ev = d.events ?? [], other = s?.other_wins ?? [];
   if (!ev.length && !other.length) return null;
@@ -362,6 +385,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
     results: (d.grades?.n ?? 0) > 0,
     assess: (d.quizzes?.length ?? 0) > 0,
     growth: true,
+    impact: (d.impact?.length ?? 0) > 0,
     wins: (d.events?.length ?? 0) > 0 || (s?.other_wins?.length ?? 0) > 0,
     elements: true,
     docs: (d.docs?.length ?? 0) > 0,
@@ -491,6 +515,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
         {show("results") && has.results && <Results g={d.grades} />}
         {show("assess") && has.assess && <Assess d={d} />}
         {show("growth") && <Growth d={d} />}
+        {show("impact") && has.impact && <Impact list={d.impact} />}
         {show("wins") && <Wins d={d} s={s} />}
         {show("elements") && (
           <Fold id="elements" title="عناصر الأداء الوظيفي" open={!!open.elements} onToggle={(v) => setOpen((o) => ({ ...o, elements: v }))}

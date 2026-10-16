@@ -30,6 +30,7 @@ export const PARTS = [
   { key: "results", t: "النتائج" },
   { key: "assess", t: "التقويم" },
   { key: "growth", t: "التطوير المهني" },
+  { key: "impact", t: "أثر التطوير" },
   { key: "wins", t: "الإنجازات" },
   { key: "elements", t: "عناصر الأداء" },
   { key: "docs", t: "الشواهد" },

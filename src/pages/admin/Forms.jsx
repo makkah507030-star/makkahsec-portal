@@ -26,6 +26,8 @@ import FormsArchive from "../../components/FormsArchive.jsx";
 import Sticker, { FlagPicker } from "../../components/Sticker.jsx";
 import { flagRank, urgentPrefix } from "../../lib/flags.js";
 import { useBackStep } from "../../lib/backStep.js";
+import ImprovePicker from "../../components/ImprovePicker.jsx";
+import { confirmedCount, visitScores } from "../../lib/improve.js";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -742,6 +744,10 @@ export default function Forms({ view = "issue", openKey = null }) {
     });
   }, [picked, values, chosen]);
 
+  // زيارة الدعم: درجات البنود لاقتراح توصيات حلقة التحسين (src/lib/improve.js)
+  const isVisit = picked?.key === "teacher_support_visit" && (picked.fields ?? []).some((f) => f.name === "rb_perf");
+  const visitImp = useMemo(() => (isVisit ? visitScores(values.rb_perf) : null), [isVisit, values.rb_perf]);
+
   // حصص المعلم في الفصل الدراسي الحالي: فصوله ومواده وحصصه
   const loadLessons = async (head, { keep = false, tpl = picked } = {}) => {
     setLessons(null);
@@ -951,6 +957,17 @@ export default function Forms({ view = "issue", openKey = null }) {
       .reduce((a, f) => { const sc = rubricScore(f, values[f.name]); return a + (sc.count - sc.rated); }, 0);
     if (unrated && !window.confirm(
       `لم تُقدَّر ${unrated} من عناصر البنود.\nهل تصدر الاستمارة رغم ذلك؟\n\nيمكنك بدلًا من ذلك «حفظ مسودة» وإكمالها لاحقًا.`)) return;
+
+    // توصيات حلقة التحسين: المؤكدة تحتاج بندها، والمقترحة بلا تأكيد تُنبَّه قبل الإصدار
+    if (isVisit) {
+      const imp = values.improve ?? [];
+      if (imp.some((x) => x.on && x.text?.trim() && !x.key)) {
+        setMsg({ ok: false, text: "اختر البند لكل توصية مؤكدة في «توصيات التحسين» ليُقاس أثرها." });
+        return;
+      }
+      if (imp.length && !confirmedCount(imp) && !window.confirm(
+        `في «توصيات التحسين» ${imp.length} مقترحة لم تؤكد منها شيئًا، فلن تُفتح للمعلم خطة تطوير.\nهل تصدر الاستمارة رغم ذلك؟`)) return;
+    }
 
     setSaving(true); setMsg(null);
 
@@ -1277,14 +1294,24 @@ export default function Forms({ view = "issue", openKey = null }) {
   const printNow = () => window.print();
 
   // مدخل مباشر لنموذج بعينه (مثل «قبول طالب» من القائمة الجانبية): يُفتح عند التحميل
+  // و«زيارة المتابعة» من خطط التطوير (/improve): استمارة دعم المعلم باسمه
+  const visitFor = location.state?.visitFor ?? null;
+  const directKey = openKey ?? (visitFor ? "teacher_support_visit" : null);
   const opened = useRef(false);
   useEffect(() => {
-    if (!openKey || opened.current || loading) return;
+    if (!directKey || opened.current || loading) return;
     opened.current = true;
-    const t = usable.find((x) => x.key === openKey);
+    const t = usable.find((x) => x.key === directKey);
     if (t) start(t);
     else setMsg({ ok: false, text: "النموذج غير متاح بعد: يحتاج تنفيذ ملفه في قاعدة البيانات مرة واحدة." });
-  }, [openKey, loading, usable]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [directKey, loading, usable]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visitPicked = useRef(false);
+  useEffect(() => {
+    if (!visitFor || visitPicked.current || picked?.key !== "teacher_support_visit" || !staff.length) return;
+    visitPicked.current = true;
+    const m = staff.find((x) => x.uid === visitFor);
+    if (m && !chosen.length) toggleStaff(m);
+  }, [visitFor, picked, staff]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // زر الرجوع في الجوال والمتصفح يغلق النموذج المفتوح بدل مغادرة الصفحة
   useBackStep(!!picked, () => setPicked(null), "النماذج");
@@ -1601,6 +1628,15 @@ export default function Forms({ view = "issue", openKey = null }) {
                 )}
               </div>
             ))}
+
+            {isVisit && (
+              <div>
+                <label className="text-xs text-muted">توصيات التحسين (خطة تطوير بموعد متابعة)</label>
+                <ImprovePicker scores={visitImp.scores} notes={visitImp.notes} text={values.f6}
+                               textLabel={(picked.fields ?? []).find((f) => f.name === "f6")?.label ?? "جوانب تحتاج دعمًا"}
+                               value={values.improve} onChange={(val) => setValues((v) => ({ ...v, improve: val }))} />
+              </div>
+            )}
 
             {needsReply && (
               <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs leading-relaxed text-mint-deep">
