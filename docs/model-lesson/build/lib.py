@@ -11,6 +11,7 @@ def e(v):
 
 
 class Slide:
+    home = None  # شريحة خريطة الحصة: النقر على شارة المرحلة يعود إليها
     def __init__(self, layout, hidden=False):
         self.layout = layout  # 2 محتوى، 4 غامقة
         self.hidden = hidden
@@ -18,6 +19,10 @@ class Slide:
         self.images = []  # مسارات الصور بترتيب rId
         self.notes = []
         self.nid = 1
+        self.sp_ids = []    # أشكال (لا صور) لها حركة، لقائمة bldLst
+        self.main = []      # مجموعات النقر في التسلسل الرئيسي: [[(spid, نوع, مدة، بدء)]]
+        self.trig = []      # [(معرّف الزر، مجموعات النقر)] تسلسلات تُشغَّل بالنقر على زر
+        self.links = []     # أهداف الروابط: شريحة أو "last" (آخر شريحة عُرضت)
 
     def _id(self):
         self.nid += 1
@@ -48,12 +53,13 @@ class Slide:
             f'<p:sp><p:nvSpPr><p:cNvPr id="{i}" name="{name} {i}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
             f'<p:spPr><a:xfrm><a:off x="{e(x)}" y="{e(y)}"/><a:ext cx="{e(w)}" cy="{e(h)}"/></a:xfrm>'
             f'<a:prstGeom prst="{prst}"><a:avLst>{av}</a:avLst></a:prstGeom>{f}{ln}{sh}</p:spPr></p:sp>')
+        return i
 
     def card(self, x, y, w, h, fill="FFFFFF", adj=6000):
-        self.shape(x, y, w, h, "roundRect", fill, LINE, adj=adj, shadow=True, name="Card")
+        return self.shape(x, y, w, h, "roundRect", fill, LINE, adj=adj, shadow=True, name="Card")
 
     def circle(self, x, y, d, fill=MINT, line=None):
-        self.shape(x, y, d, d, "ellipse", fill, line or fill, name="Circle")
+        return self.shape(x, y, d, d, "ellipse", fill, line or fill, name="Circle")
 
     def pic(self, path, x, y, w, h, descr=""):
         i = self._id()
@@ -64,6 +70,7 @@ class Slide:
             f'<p:blipFill><a:blip r:embed="{rid}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>'
             f'<p:spPr><a:xfrm><a:off x="{e(x)}" y="{e(y)}"/><a:ext cx="{e(w)}" cy="{e(h)}"/></a:xfrm>'
             f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>')
+        return i
 
     def icon(self, name, cx, cy, d=0.6, bg=MINT, variant=""):
         """رمز داخل دائرة كما في القالب: دائرة نعناعية ورمز داكن"""
@@ -106,6 +113,107 @@ class Slide:
             f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr>'
             f'<p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" rtlCol="1" anchor="{anchor}"></a:bodyPr>'
             f'<a:lstStyle/>{"".join(ps)}</p:txBody></p:sp>')
+        return i
+
+    # ---------- التفاعل ----------
+    def hotspot(self, x, y, w, h, name="زر", link=None):
+        """منطقة نقر شفافة (تعبئة بشفافية كاملة لتلتقط النقر)، وقد تحمل رابطًا لشريحة"""
+        i = self._id()
+        hl = ""
+        if link is not None:
+            self.links.append(link)
+            k = len(self.links) - 1
+            hl = (f'<a:hlinkClick r:id="" action="ppaction://hlinkshowjump?jump=lastslideviewed"/>' if link == "last"
+                  else f'<a:hlinkClick r:id="@@L{k}@@" action="ppaction://hlinksldjump"/>')
+        self.shapes.append(
+            f'<p:sp><p:nvSpPr><p:cNvPr id="{i}" name="{escape(name)} {i}">{hl}</p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+            f'<p:spPr><a:xfrm><a:off x="{e(x)}" y="{e(y)}"/><a:ext cx="{e(w)}" cy="{e(h)}"/></a:xfrm>'
+            f'<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="FFFFFF"><a:alpha val="0"/></a:srgbClr></a:solidFill>'
+            f'<a:ln><a:noFill/></a:ln></p:spPr></p:sp>')
+        return i
+
+    def anim(self, ids, kind="in", dur=500, start="click", trigger=None, pics=()):
+        """حركة لأشكال: kind = in (ظهور تدريجي) أو out (مسح خروج بطيء للمؤقت)،
+        start = click (مجموعة نقر جديدة) أو with (مع السابق) أو after (بعد السابق)"""
+        ids = [ids] if isinstance(ids, int) else list(ids)
+        for i in ids:
+            if i not in pics and i not in self.sp_ids:
+                self.sp_ids.append(i)
+        if trigger is None:
+            seqs = self.main
+        else:
+            for t, g in self.trig:
+                if t == trigger:
+                    seqs = g
+                    break
+            else:
+                seqs = []
+                self.trig.append((trigger, seqs))
+        if start == "click" or not seqs:
+            seqs.append([])
+        for n, i in enumerate(ids):
+            seqs[-1].append((i, kind, dur, start if n == 0 else "with"))
+
+    def _effect(self, c, spid, kind, dur, node, delay=0):
+        tgt = f'<p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl>'
+        vis = lambda v, d: (f'<p:set><p:cBhvr><p:cTn id="{c()}" dur="1" fill="hold"><p:stCondLst><p:cond delay="{d}"/></p:stCondLst></p:cTn>'
+                            f'{tgt}<p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr>'
+                            f'<p:to><p:strVal val="{v}"/></p:to></p:set>')
+        if kind == "in":
+            head = f'presetID="10" presetClass="entr" presetSubtype="0"'
+            body = vis("visible", 0) + f'<p:animEffect transition="in" filter="fade"><p:cBhvr><p:cTn id="{c()}" dur="{dur}"/>{tgt}</p:cBhvr></p:animEffect>'
+        else:
+            head = f'presetID="22" presetClass="exit" presetSubtype="8"'
+            body = (f'<p:animEffect transition="out" filter="wipe(left)"><p:cBhvr><p:cTn id="{c()}" dur="{dur}"/>{tgt}</p:cBhvr></p:animEffect>'
+                    + vis("hidden", dur - 1))
+        return (f'<p:par><p:cTn id="{c()}" {head} fill="hold" grpId="0" nodeType="{node}"><p:stCondLst><p:cond delay="{delay}"/></p:stCondLst>'
+                f'<p:childTnLst>{body}</p:childTnLst></p:cTn></p:par>')
+
+    def _groups(self, c, groups):
+        out = []
+        for g in groups:
+            # تقسيم المجموعة إلى مراحل زمنية: «بعد السابق» يبدأ مرحلة جديدة بعد أطول حركة في المرحلة السابقة
+            stages, t, longest = [], 0, 0
+            for spid, kind, dur, start in g:
+                if start == "after" and stages:
+                    t += longest
+                    longest = 0
+                    stages.append((t, []))
+                elif not stages:
+                    stages.append((0, []))
+                node = "clickEffect" if start == "click" else ("afterEffect" if start == "after" else "withEffect")
+                stages[-1][1].append((spid, kind, dur, node))
+                longest = max(longest, dur)
+            inner = "".join(
+                f'<p:par><p:cTn id="{c()}" fill="hold"><p:stCondLst><p:cond delay="{st}"/></p:stCondLst><p:childTnLst>'
+                + "".join(self._effect(c, *ef) for ef in efs) + '</p:childTnLst></p:cTn></p:par>'
+                for st, efs in stages)
+            out.append(f'<p:par><p:cTn id="{c()}" fill="hold"><p:stCondLst><p:cond delay="indefinite"/></p:stCondLst>'
+                       f'<p:childTnLst>{inner}</p:childTnLst></p:cTn></p:par>')
+        return "".join(out)
+
+    def timing(self):
+        if not self.main and not self.trig:
+            return ""
+        n = [2]
+
+        def c():
+            n[0] += 1
+            return n[0]
+        nav = ('<p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>'
+               '<p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst>')
+        seqs = ""
+        if self.main:
+            seqs += (f'<p:seq concurrent="1" nextAc="seek"><p:cTn id="{c()}" dur="indefinite" nodeType="mainSeq"><p:childTnLst>'
+                     f'{self._groups(c, self.main)}</p:childTnLst></p:cTn>{nav}</p:seq>')
+        for t, g in self.trig:
+            seqs += (f'<p:seq concurrent="1" nextAc="seek"><p:cTn id="{c()}" restart="whenNotActive" fill="hold" evtFilter="cancelBubble" nodeType="interactiveSeq">'
+                     f'<p:stCondLst><p:cond evt="onClick" delay="0"><p:tgtEl><p:spTgt spid="{t}"/></p:tgtEl></p:cond></p:stCondLst>'
+                     f'<p:endSync evt="end" delay="0"><p:rtn val="all"/></p:endSync><p:childTnLst>{self._groups(c, g)}</p:childTnLst></p:cTn>'
+                     '<p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst></p:seq>')
+        bld = "".join(f'<p:bldP spid="{i}" grpId="0" animBg="1"/>' for i in self.sp_ids)
+        return (f'<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>'
+                f'{seqs}</p:childTnLst></p:cTn></p:par></p:tnLst>' + (f'<p:bldLst>{bld}</p:bldLst>' if bld else "") + '</p:timing>')
 
     def slidenum(self, color=MUTED):
         i = self._id()
@@ -127,6 +235,17 @@ class Slide:
             self.shape(6.15, 0.95, 1.6, 0.36, "roundRect", DEEP, DEEP, adj=50000, name="Time")
             self.pic("icons/Timer-w.png", 7.38, 1.03, 0.2, 0.2, "مؤقت")
             self.text(6.25, 0.95, 1.08, 0.36, minutes, 12, "FFFFFF", True, "ctr", "ctr", name="TimeText")
+            # المؤقت: نقرة على الشارة تبدأ شريطًا يتناقص بالمدة الحقيقية، ثم تظهر «انتهى الوقت»
+            mins = int("".join(ch for ch in minutes if ch.isdigit()))
+            bar = self.shape(6.35, 1.245, 1.2, 0.035, "rect", MINT, None, name="شريط المؤقت")
+            # تظهر بجانب الشارة لا فوقها، فتبقى المدة ظاهرة للتعديل في وضع التحرير
+            end = [self.shape(4.85, 0.95, 1.2, 0.36, "roundRect", "B8912F", "B8912F", adj=50000, name="انتهى الوقت"),
+                   self.text(4.85, 0.95, 1.2, 0.36, "انتهى الوقت", 12, "FFFFFF", True, "ctr", "ctr", name="انتهى الوقت")]
+            hot = self.hotspot(6.15, 0.95, 1.6, 0.36, "زر المؤقت")
+            self.anim(bar, "out", mins * 60000, trigger=hot)
+            self.anim(end, "in", 500, start="after", trigger=hot)
+        if Slide.home is not None and Slide.home is not self:
+            self.hotspot(7.9, 0.95, 1.6, 0.36, "العودة إلى خريطة الحصة", link=Slide.home)
         self.text(0.5, 1.4, 9.0, 0.7, title, 30, INK, True, name="Title")
         self.slidenum()
 
@@ -162,4 +281,5 @@ class Slide:
                 '<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'
                 '<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'
                 + "".join(self.shapes) +
-                '</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>')
+                '</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>'
+                '<p:transition spd="med"><p:fade/></p:transition>' + self.timing() + '</p:sld>')
