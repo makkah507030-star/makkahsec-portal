@@ -300,8 +300,13 @@
 
 /* السجلات والنماذج */
 .dfile .df-recs { display: grid; gap: 14px; }
-.dfile .df-recs .df-tags { gap: 7px; margin-top: 8px; }
-.dfile .df-recs .df-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 4px 11px; }
-.dfile .df-recs .df-tag svg { width: 13px; height: 13px; flex: none; }
+/* بطاقات بحجم واحد: عمودان في الجوال وثلاثة في الشاشة الواسعة، والنص يلتف داخلها */
+.dfile .df-recs .df-tags { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+@media (min-width: 640px) { .dfile .df-recs .df-tags { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.dfile .df-recs .df-tag { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 8px 12px; border-radius: 12px;
+  font-size: 12.5px; font-weight: 600; line-height: 1.45; text-align: start; overflow-wrap: anywhere; }
+.dfile .df-recs .df-tag svg { width: 16px; height: 16px; flex: none; }
 .dfile .df-recs .df-tag-f { background: var(--info-bg); color: var(--info); border-color: transparent; }
 .dfile .df-recs .df-tag-o { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.dfile .df-recs .df-tag-o svg { color: var(--muted); }
+.dfile .df-recs > div + div { border-top: 1px dashed var(--line); padding-top: 14px; }

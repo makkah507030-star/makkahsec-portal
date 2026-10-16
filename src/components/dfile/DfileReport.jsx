@@ -21,6 +21,7 @@ const ICON = {
   medal: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0ZM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4",
   file: "M14 3H6v18h12V7ZM14 3v4h4M9 13h6M9 17h4",
   image: "M4 5h16v14H4ZM4 15l4-4 4 4 3-3 5 5M15 9.5h.01",
+  book: "M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2ZM5 18a2 2 0 0 1 2-2h11M9 8h5",
 };
 const ELEMENT_NAME = Object.fromEntries(ELEMENTS);
 const Svg = ({ d, ...p }) => (
@@ -549,16 +550,18 @@ export default function DfileReport({ data: d, settings: s, code }) {
         {show("records") && has.records && (
           <Section id="records" title="السجلات والنماذج" sub="بأسمائها فقط">
             <div className="df-card df-recs">
-              {recAuto.length + recForms.length > 0 && (
-                <div><CardH title="من البوابة" sub="سجلات ونماذج يعمل عليها في البوابة هذا العام" src="تلقائي" />
-                  <div className="df-tags">
-                    {recAuto.map((k) => <span key={k} className="df-tag"><Svg d={ICON.ok} strokeWidth="2.4" />{RECORD_AUTO[k]}</span>)}
-                    {recForms.map((t) => <span key={t} className="df-tag df-tag-f"><Svg d={ICON.file} />{t}</span>)}
-                  </div></div>
+              {/* ثلاث مجموعات متتالية ببطاقات بحجم واحد: السجلات الآلية، ثم النماذج الصادرة، ثم ما أضافه المعلم */}
+              {recAuto.length > 0 && (
+                <div><CardH title="سجلات البوابة" sub="يعمل عليها في البوابة هذا العام" src="تلقائي" />
+                  <div className="df-tags">{recAuto.map((k) => <span key={k} className="df-tag"><Svg d={ICON.ok} strokeWidth="2.4" />{RECORD_AUTO[k]}</span>)}</div></div>
+              )}
+              {recForms.length > 0 && (
+                <div><CardH title="النماذج الصادرة" sub="أصدرها من البوابة هذا العام" src="تلقائي" />
+                  <div className="df-tags">{recForms.map((t) => <span key={t} className="df-tag df-tag-f"><Svg d={ICON.file} />{t}</span>)}</div></div>
               )}
               {recOwn.length > 0 && (
                 <div><CardH title="سجلات أخرى" sub="ورقية أو خارجية" src="يكتبه المعلم" srcKind="up" />
-                  <div className="df-tags">{recOwn.map((t) => <span key={t} className="df-tag df-tag-o">{t}</span>)}</div></div>
+                  <div className="df-tags">{recOwn.map((t) => <span key={t} className="df-tag df-tag-o"><Svg d={ICON.book} />{t}</span>)}</div></div>
               )}
             </div>
           </Section>
