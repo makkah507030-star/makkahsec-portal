@@ -688,7 +688,8 @@ function Field({ f, tpl, data, set, ctx }) {
           {f.options.map((k) => (
             <button key={k} onClick={() => set(f.name, k)} title={ICON_LABEL[k]}
               className={`flex flex-col items-center gap-1 rounded-sm2 py-2 text-[10.5px] [&_svg]:h-5 [&_svg]:w-5 ${
-                data[f.name] === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                data[f.name] === k ? (k === "accessible" ? "bg-[#1565C0] text-white" : "bg-mint-deep text-white")
+                  : `border border-line bg-white hover:bg-canvas ${k === "accessible" ? "text-[#1565C0]" : "text-muted"}`}`}>
               {ICONS[k]}{ICON_LABEL[k]}
             </button>
           ))}

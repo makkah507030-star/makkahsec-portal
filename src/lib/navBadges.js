@@ -7,6 +7,7 @@ import { todayISO } from "./schoolTime.js";
 import { countAr } from "./arabicCount.js";
 import { FLAG_ORDER, flagRank } from "./flags.js";
 import { loadDueNotes, noteTitle, dueState } from "./notes.js";
+import { EL_TITLE, LATE_AFTER, addDays, dueState as goalDue } from "./improve.js";
 
 /* =====================================================================
    «بانتظار إجرائك» — مصدر واحد لكل ما ينتظر إجراء المستخدم: عدادات القائمة الجانبية
@@ -50,6 +51,10 @@ const rowsFlag = async (make) => {
 };
 const head = (t) => supabase.from(t).select("id", { count: "exact", head: true });
 const mine = (uid) => JSON.stringify([{ user_id: uid }]);   // attendees @> [{user_id}]
+
+const QP_QUIZ = "quizzes!quiz_plans_quiz_id_fkey(title, cycle_closed_at)";
+const VERIFY_LATE_DAYS = 14;   // خطة علاجية نُفّذت ولم يُقس أثرها بعد أسبوعين: تظهر للمدير
+const GOAL_TEACHER = "teacher:users!improvement_goals_teacher_user_id_fkey(full_name)";
 
 const BEHAVIOR_KIND = { pledge: "تعهد سلوكي", invite: "دعوة ولي أمر", notice: "إشعار سلوكي" };
 
@@ -102,6 +107,7 @@ async function load() {
     plcBack, pdBack, xvBack, perfAck, guidance,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
     giTeacher, giDeputy, giCounselor, giGuardian, dropouts, ethicsAck, onlineQuizzes, myNotes,
+    goals, goalsLate, qPlans, qPlansLate,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? rowsFlag((f) => supabase.from("form_documents").select(`id, title, recipient${f}`)
@@ -175,6 +181,23 @@ async function load() {
 
     // مفكرتي: مهام حلّ موعدها (supabase/staff_notes.sql)
     staff ? loadDueNotes() : noRows,
+
+    // خطط التطوير: توصيات المعلم وما يتابعه الزائر، والمتأخر للمدير (supabase/improvement_loop_*.sql)
+    staff ? rowsOf(supabase.from("improvement_goals")
+      .select(`id, teacher_user_id, owner_user_id, status, element_key, follow_up_date, progress_at, plan_return_note, cycle, ${GOAL_TEACHER}`)
+      .in("status", ["plan", "review", "active"]).or(`teacher_user_id.eq.${uid},owner_user_id.eq.${uid}`).limit(200)) : noRows,
+    has("principal") ? rowsOf(supabase.from("improvement_goals")
+      .select(`id, element_key, follow_up_date, ${GOAL_TEACHER}`)
+      .eq("status", "active").lt("follow_up_date", addDays(todayISO(), -LATE_AFTER))
+      .or(`owner_user_id.is.null,owner_user_id.neq.${uid}`).order("follow_up_date").limit(100)) : noRows,
+
+    // الخطط العلاجية في دورة الاختبار: انتهاء مدتها، واختبار التحقق، والخطة الثانية (supabase/quiz_verify_*.sql)
+    role === "teacher" ? rowsOf(supabase.from("quiz_plans")
+      .select("id, quiz_id, kind, round, status, end_date, measured_at, impact, quizzes!quiz_plans_quiz_id_fkey!inner(title, cycle_closed_at)")
+      .eq("teacher_id", uid).is("quizzes.cycle_closed_at", null).limit(200)) : noRows,
+    has("principal") ? rowsOf(supabase.from("quiz_plans").select(`id, quiz_id, done_at, ${QP_QUIZ}`)
+      .eq("kind", "remedial").eq("status", "done").is("measured_at", null)
+      .lt("done_at", new Date(Date.now() - VERIFY_LATE_DAYS * 864e5).toISOString()).limit(100)) : noRows,
   ]);
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
@@ -209,6 +232,20 @@ async function load() {
   const quizWhen = (r) => (quizSoon(r) ? `يُفتح ${fmtDateTime(r.opens_at)}` : `يُغلق ${fmtDateTime(r.closes_at)}`);
 
   const ethicsDue = Array.isArray(ethicsAck) && ethicsAck.length === 0 ? 1 : 0;
+
+  // خطط التطوير: خطة يكتبها المعلم، واعتماد للزائر، ومتابعة حلّ موعدها للطرفين
+  const goalItem = (g, extra = "") => ({ id: g.id, to: `/improve?g=${g.id}`,
+    title: `${g.teacher_user_id === uid ? "" : `${g.teacher?.full_name ?? "معلم"} · `}${EL_TITLE[g.element_key] ?? ""}${extra}` });
+  const goalPlan = goals.filter((g) => g.status === "plan" && g.teacher_user_id === uid);
+  const goalReview = goals.filter((g) => g.status === "review" && g.owner_user_id === uid);
+  // الخطط العلاجية: ما حلّ موعد نهايته ولم يُسجَّل تنفيذه، وما نُفّذ وينتظر اختبار التحقق
+  const qOpen = qPlans;
+  const qItem = (x, extra) => ({ id: x.id, to: `/quizzes?q=${x.quiz_id}`, title: `${x.quizzes?.title ?? "اختبار"}${extra}` });
+  const qEnded = qOpen.filter((x) => x.status === "planned" && x.end_date && x.end_date <= todayISO());
+  const qVerify = qOpen.filter((x) => x.kind === "remedial" && x.status === "done" && !x.measured_at);
+  const qRound2 = qOpen.filter((x) => x.kind === "remedial" && (x.round ?? 1) === 1 && Number(x.impact?.below) > 0
+    && !qOpen.some((y) => y.quiz_id === x.quiz_id && y.kind === "remedial" && y.round === 2));
+  const goalDueRows = goals.filter((g) => goalDue(g) && (g.owner_user_id === uid || (g.teacher_user_id === uid && !g.progress_at)));
 
   const tasks = [
     // العاجل أولًا: الإقرار بميثاق أخلاقيات المهنة
@@ -253,6 +290,20 @@ async function load() {
       items: items(xvHost, "/xvisits", (r) => `زيارة ${r.visitor_name ?? ""}`),
       label: "زيارات تبادلية تنتظر توقيعك", tone: "warning", icon: "signature" },
     ...giTasks,
+    { key: "goalPlan", n: goalPlan.length, to: "/improve?tab=mine", label: "توصيات تطوير تنتظر خطتك", icon: "target",
+      tone: goalPlan.some((g) => g.plan_return_note || g.cycle > 1) ? "absent" : "warning",
+      items: goalPlan.map((g) => goalItem(g, g.plan_return_note ? " · أُعيدت بملاحظة" : g.cycle > 1 ? " · دورة ثانية" : "")) },
+    { key: "goalReview", n: goalReview.length, to: "/improve?tab=follow", label: "خطط تطوير تنتظر اعتمادك", tone: "warning", icon: "target",
+      items: goalReview.map((g) => goalItem(g)) },
+    { key: "goalDue", n: goalDueRows.length, to: "/improve", label: "متابعة خطط تطوير حلّ موعدها", icon: "target",
+      tone: goalDueRows.some((g) => goalDue(g) === "late") ? "absent" : "warning",
+      items: goalDueRows.map((g) => goalItem(g, goalDue(g) === "late" ? " · متأخرة" : g.teacher_user_id === uid ? " · سجّل ما نفّذته" : " · زيارة المتابعة")) },
+    { key: "quizPlanEnd", n: qEnded.length, to: "/quizzes", label: "خطط علاجية أو إثرائية انتهت مدتها", tone: "warning", icon: "quiz",
+      sub: "سجّل تنفيذها ليُتحقق من أثرها", items: qEnded.map((x) => qItem(x, x.kind === "remedial" ? " · علاجية" : " · إثرائية")) },
+    { key: "quizVerify", n: qVerify.length, to: "/quizzes", label: "خطط علاجية تنتظر اختبار التحقق", tone: "warning", icon: "quiz",
+      items: qVerify.map((x) => qItem(x, x.round > 1 ? " · الخطة الثانية" : "")) },
+    { key: "quizRound2", n: qRound2.length, to: "/quizzes", label: "طلاب بقوا دون 60% بعد التحقق: خطة ثانية بدعم أعلى", tone: "absent", icon: "quiz",
+      items: qRound2.map((x) => qItem(x, ` · ${countAr(Number(x.impact.below), "student")}`)) },
     { key: "perfAck", n: perfAck, to: "/my-performance", label: "تقييم أداء ينتظر اطلاعك", tone: "warning", icon: "award" },
     { key: "referrals", n: refDeputy.length + refCounselor.length, to: "/referrals", label: "إحالات تنتظر إجراءك", tone: "warning", icon: "send",
       items: [...refDeputy, ...refCounselor].map((r) => ({ id: r.id, to: "/referrals", title: r.student_name ?? "", flag: r.flag ?? null })) },
@@ -285,6 +336,14 @@ async function load() {
 
     noor,
 
+    { key: "goalLate", n: goalsLate.length, to: "/improve?tab=board", label: "خطط تطوير متأخرة المتابعة", tone: "absent",
+      icon: "target", follow: true, sub: `تجاوزت موعدها بأكثر من ${countAr(LATE_AFTER, "day", { acc: true })} دون قياس`,
+      items: goalsLate.map((g) => goalItem(g, ` · الموعد ${fmtHijri(g.follow_up_date)}`)) },
+
+    { key: "quizVerifyLate", n: qPlansLate.length, to: "/improve?tab=board", label: "خطط علاجية لم يُتحقق من أثرها",
+      tone: "warning", icon: "quiz", follow: true, sub: `نُفّذت منذ أكثر من ${countAr(VERIFY_LATE_DAYS, "day", { acc: true })}`,
+      items: qPlansLate.map((x) => ({ id: x.id, title: x.quizzes?.title ?? "خطة علاجية" })) },
+
     // مفكرتي: مهامك التي حلّ موعدها، والمتأخرة أولًا
     { key: "notes", n: myNotes.length, to: "/notebook", icon: "edit",
       label: "مهام في مفكرتي حلّ موعدها",
@@ -314,6 +373,8 @@ async function load() {
       + pdToSign.length + pdPending.length + pdBack.length
       + xvHost.length + xvPending.length + xvBack.length,
     "/my-performance": perfAck,
+    "/improve": goalPlan.length + goalReview.length + goalDueRows.length,
+    "/quizzes": qEnded.length + qVerify.length + qRound2.length,
     "/dropouts": dropouts.length,
     "/ethics": ethicsDue,
     "/notebook": myNotes.length,

@@ -71,6 +71,10 @@ const MySignature = lazy(() => import("./pages/MySignature.jsx"));
 const DocumentView = lazy(() => import("./pages/DocumentView.jsx"));
 const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
 const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx"));
+const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
+const DfilePublic = lazy(() => import("./pages/DfilePublic.jsx"));
+const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
+const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
 const PerformanceAdmin = lazy(() => import("./pages/performance/PerformanceAdmin.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
 const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
@@ -87,6 +91,7 @@ const Plc = lazy(() => import("./pages/Plc.jsx"));
 const PlcDepartments = lazy(() => import("./pages/Plc.jsx").then((m) => ({ default: m.PlcDepartments })));
 const PdReports = lazy(() => import("./pages/PdReports.jsx"));
 const ExchangeVisits = lazy(() => import("./pages/ExchangeVisits.jsx"));
+const Improve = lazy(() => import("./pages/Improve.jsx"));
 const PlcFile = lazy(() => import("./pages/Plc.jsx").then((m) => ({ default: m.PlcFile })));
 const EventsReports = lazy(() => import("./pages/EventsReports.jsx"));
 const MyQuizzes = lazy(() => import("./pages/teacher/MyQuizzes.jsx"));
@@ -145,6 +150,15 @@ export default function App() {
   if (loading || !holidaysReady) {
     return (
       <Loader screen />
+    );
+  }
+
+  // ملف المعلم الرقمي للزائر: صفحة عامة بالكود، تُفتح بدخول أو دونه
+  if (location.pathname.startsWith("/f/")) {
+    return (
+      <Suspense fallback={pageFallback}>
+        <Routes><Route path="/f/:code" element={<DfilePublic />} /></Routes>
+      </Suspense>
     );
   }
 
@@ -330,6 +344,8 @@ export default function App() {
               )}
               {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة، وللدعم الفني للمتابعة الفنية */}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<PerformanceAdmin />} />}
+              {isTechSupport && <Route path="/dfiles-admin" element={<DfilesAdmin />} />}
+              {(adminRoles.includes("principal") || adminRoles.includes("deputy_academic")) && <Route path="/dfile-opinions" element={<DfileOpinions />} />}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/school-report" element={<SchoolReport />} />}
               {can("reports") && <Route path="/student-affairs" element={<StudentAffairs />} />}
               {/* الصفحتان السابقتان باقيتان بروابطهما — محتواهما صار داخل مركز تقارير شؤون الطلاب */}
@@ -387,6 +403,8 @@ export default function App() {
               <Route path="/my-absence" element={<SubjectAbsenceReport />} />
               {/* ملف الأداء الوظيفي — المعلم وشواهده، وسياسات القاعدة تقصره عليه وعلى المدير */}
               <Route path="/my-performance" element={<MyPerformance />} />
+              {/* ملف المعلم الرقمي — لوحة المعلم ومعاينة تقريره، وسياسات القاعدة تقصرها عليه */}
+              <Route path="/my-dfile" element={<MyDfile />} />
               {/* النماذج والشهادات — النماذج المتاحة للمعلم تحدّدها سياسات القاعدة */}
               {/* key مختلف: الانتقال بين الصفحتين يبدأ مكوّنًا جديدًا فلا يبقى تبويب الأخرى مفتوحًا */}
               <Route path="/forms" element={<Forms key="issue" />} />
@@ -443,6 +461,8 @@ export default function App() {
           <Route path="/plc-file" element={<PlcFile />} />
           <Route path="/xvisits" element={<ExchangeVisits />} />
           <Route path="/xvisits/:id" element={<ExchangeVisits />} />
+          {/* خطط التطوير (حلقة التحسين) — للمعلم خططه، وللزائر ما يتابعه، وللمدير اللوحة؛ القاعدة تفرض الصلاحية */}
+          {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/improve" element={<Improve />} />}
           <Route path="/pd" element={<PdReports />} />
           <Route path="/pd/:id" element={<PdReports />} />
           {/* اختباراتي — للمعلم */}

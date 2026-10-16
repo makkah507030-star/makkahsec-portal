@@ -6,6 +6,9 @@ import { activeYear, elementColor, elementSummary, loadAutoCounts, loadEvidence,
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import Loader from "./Loader.jsx";
+import ImprovePicker from "./ImprovePicker.jsx";
+import { confirmedCount } from "../lib/improve.js";
+import { Link } from "react-router-dom";
 
 /* =====================================================================
    تقييم الأداء الوظيفي بمرحلتيه (supabase/performance_review.sql):
@@ -66,7 +69,7 @@ export function ReviewEditor({ teacher }) {
   const [year, setYear] = useState("");
   const [rows, setRows] = useState({});          // { mid, final }
   const [stage, setStage] = useState("mid");
-  const [form, setForm] = useState({ ratings: {}, positives: "", recommendations: "" });
+  const [form, setForm] = useState({ ratings: {}, positives: "", recommendations: "", improve: [] });
   const [summary, setSummary] = useState({});    // ملخص الشواهد لكل عنصر
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
@@ -85,7 +88,7 @@ export function ReviewEditor({ teacher }) {
     const st = m.mid?.sent_at ? "final" : "mid";
     setStage(st);
     const r = m[st];
-    setForm({ ratings: r?.ratings ?? {}, positives: r?.positives ?? "", recommendations: r?.recommendations ?? "" });
+    setForm({ ratings: r?.ratings ?? {}, positives: r?.positives ?? "", recommendations: r?.recommendations ?? "", improve: r?.improve ?? [] });
   }, [teacher.user_id]);
 
   useEffect(() => { load(); }, [load]);
@@ -100,23 +103,38 @@ export function ReviewEditor({ teacher }) {
   const pick = (s) => {
     setStage(s); setMsg(null);
     const r = rows[s];
-    setForm({ ratings: r?.ratings ?? {}, positives: r?.positives ?? "", recommendations: r?.recommendations ?? "" });
+    setForm({ ratings: r?.ratings ?? {}, positives: r?.positives ?? "", recommendations: r?.recommendations ?? "", improve: r?.improve ?? [] });
   };
 
   const save = async (send = false) => {
     setMsg(null);
     if (send && !overall(elements, form.ratings)) { setMsg({ ok: false, text: "قدّر كل العناصر قبل الإرسال." }); return; }
-    if (send && !window.confirm(`إرسال ${STAGE_LABEL[stage]} إلى ${teacher.full_name}؟ لن يمكن تعديله بعد الإرسال.`)) return;
+    // توصيات حلقة التحسين: المؤكدة تحتاج بندها، وتُنشأ للمعلم عند الإرسال
+    const imp = form.improve ?? [];
+    if (send && imp.some((x) => x.on && x.text?.trim() && !x.key)) {
+      setMsg({ ok: false, text: "اختر البند لكل توصية مؤكدة في «توصيات التحسين» ليُقاس أثرها." }); return;
+    }
+    const n = confirmedCount(imp);
+    if (send && !window.confirm(`إرسال ${STAGE_LABEL[stage]} إلى ${teacher.full_name}؟ لن يمكن تعديله بعد الإرسال.`
+      + (n ? `\n\nستُفتح للمعلم ${n} من توصيات التحسين ليكتب خطته لكل منها.`
+           : imp.length ? `\n\nلم تؤكد أيًّا من توصيات التحسين المقترحة (${imp.length})، فلن تُفتح للمعلم خطة تطوير.` : ""))) return;
     setBusy(true);
     const payload = {
       teacher_user_id: teacher.user_id, academic_year: year, stage,
       ratings: form.ratings, positives: form.positives.trim() || null,
       recommendations: form.recommendations.trim() || null, updated_at: new Date().toISOString(),
+      ...(imp.length ? { improve: imp } : {}),
       ...(send ? { sent_at: new Date().toISOString() } : {}),
     };
-    const { error } = row
-      ? await supabase.from("perf_reviews").update(payload).eq("id", row.id)
-      : await supabase.from("perf_reviews").insert(payload);
+    const write = (p) => (row
+      ? supabase.from("perf_reviews").update(p).eq("id", row.id)
+      : supabase.from("perf_reviews").insert(p));
+    let { error } = await write(payload);
+    // قبل تشغيل supabase/improvement_loop_1.sql لا عمود للتوصيات: يُحفظ التقييم بدونها
+    if (error && /improve/.test(error.message ?? "")) {
+      const { improve: _drop, ...rest } = payload;
+      ({ error } = await write(rest));
+    }
     if (!error && send) {
       try {
         await supabase.rpc("send_notification", {
@@ -206,6 +224,21 @@ export function ReviewEditor({ teacher }) {
               <textarea className="field min-h-[90px]" value={form.recommendations} onChange={(e) => setForm((f) => ({ ...f, recommendations: e.target.value }))} />
             )}
           </div>
+        </div>
+
+        <div>
+          <label className="label">توصيات التحسين (خطة تطوير بموعد متابعة)</label>
+          {locked ? (
+            <p className="text-sm text-muted">
+              {confirmedCount(row.improve) ? <>توصيات مؤكدة: <span className="num">{confirmedCount(row.improve)}</span>، وتُتابع خططها في </>
+                : "لم تُؤكَّد توصيات في هذا التقييم. الخطط تُتابع في "}
+              <Link to="/improve?tab=follow" className="text-mint-deep underline">خطط التطوير</Link>.
+            </p>
+          ) : (
+            <ImprovePicker scores={form.ratings} text={form.recommendations} textLabel="التوصيات"
+                           measuredBy="الزيارة أو التقييم التالي"
+                           value={form.improve} onChange={(val) => setForm((f) => ({ ...f, improve: val }))} />
+          )}
         </div>
 
         {row?.ack_at && (
