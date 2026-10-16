@@ -21,7 +21,9 @@ body { font-family: PlexL, Plex, Tahoma, sans-serif; color: #10241A;
 .top img { width: 38px; }
 .top b { font-size: 15px; display: block; }
 .top span { font-size: 11.5px; color: #5F6B65; }
-.eyebrow { position: absolute; top: 92px; right: 30px; display: inline-block; background: #3E6350; color: #fff; font-size: 13px; font-weight: 600;
+.eyebrows { position: absolute; top: 92px; right: 30px; display: flex; gap: 6px; }
+.eyebrow.alt { background: #E3F2E9; color: #3E6350; box-shadow: inset 0 0 0 1px #BFE3CD; }
+.eyebrow { display: inline-block; background: #3E6350; color: #fff; font-size: 13px; font-weight: 600;
   border-radius: 999px; padding: 4px 14px; }
 h1 { position: absolute; top: 126px; right: 30px; font-size: 40px; font-weight: 700; color: #2F4F40; line-height: 1.2; }
 .lead { position: absolute; top: 190px; right: 30px; width: 300px; font-size: 17px; line-height: 1.7; color: #3B4A42; }
@@ -46,7 +48,7 @@ h1 { position: absolute; top: 126px; right: 30px; font-size: 40px; font-weight: 
 <body>
 <div class="pattern"></div>
 <div class="top"><img src="../../../src/assets/icon-mint.png" alt=""><div><b>بوابة مكة الثانوية الرقمية</b><span>خدمة جديدة للمعلمين</span></div></div>
-<span class="eyebrow">قبل زيارة التقويم الخارجي</span>
+<div class="eyebrows"><span class="eyebrow">قبل زيارة التقويم الخارجي</span><span class="eyebrow alt">والزيارات الصفية لإدارة المدرسة</span></div>
 <h1>ملف المعلم الرقمي</h1>
 <p class="lead">تفرّغ لإعداد درسك…<br><b>والبوابة تجهّز لك الوثائق والأدوات.</b></p>
 <div class="feats">
