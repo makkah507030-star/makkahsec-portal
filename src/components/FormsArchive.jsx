@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
    أرشيف النماذج — بدل قائمة واحدة تطول كل يوم:
    بطاقات متابعة بما ينتظر إجراءً، وبحث وتصفية بالنموذج، وتجميع بالشهر
    الهجري أو بالنموذج في أقسام مطوية يُفتح أحدثها فقط.
-   renderRow يرسم صف المستند كما هو في صفحة النماذج (فتح وإرسال وحذف).
+   renderRow يرسم صف المستند كما هو في صفحة النماذج (فتح وإرسال وحذف)،
+   وmore يجلب مستندات أقدم (يغيب حين لا يبقى أقدم).
    ===================================================================== */
 
 const PAGE = 20;
@@ -33,13 +34,17 @@ function periodOf(created) {
   return { key: label, label };
 }
 
-export default function FormsArchive({ docs, renderRow }) {
+export default function FormsArchive({ docs, renderRow, more }) {
   const [q, setQ] = useState("");
   const [form, setForm] = useState("");
   const [follow, setFollow] = useState("");
   const [by, setBy] = useState("date");
   const [open, setOpen] = useState({});      // الأقسام المفتوحة يدويًا
   const [shown, setShown] = useState({});    // عدد الظاهر في كل قسم
+  const [busy, setBusy] = useState(false);
+  const docCount = docs.length;
+  // ينتهي التحميل حين يصل عدد المستندات الجديد
+  if (busy && docCount !== busy) setBusy(false);
 
   const counts = useMemo(() => Object.fromEntries(FOLLOW.map((f) => [f.k, docs.filter(f.test).length])), [docs]);
   const forms = useMemo(() => [...new Set(docs.map((d) => d.title).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ar")), [docs]);
@@ -133,6 +138,13 @@ export default function FormsArchive({ docs, renderRow }) {
           </div>
         );
       })}
+
+      {more && (
+        <button onClick={() => { setBusy(docCount); more(); }} disabled={!!busy}
+                className="w-full rounded-sm2 border border-line bg-paper py-2.5 text-sm text-mint-deep hover:bg-canvas disabled:opacity-60">
+          {busy ? "جارٍ التحميل…" : "تحميل الأقدم"}
+        </button>
+      )}
     </div>
   );
 }
