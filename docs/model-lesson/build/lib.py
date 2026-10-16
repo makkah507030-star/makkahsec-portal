@@ -24,6 +24,7 @@ class Slide:
         self.main = []      # مجموعات النقر في التسلسل الرئيسي: [[(spid, نوع, مدة، بدء)]]
         self.trig = []      # [(معرّف الزر، مجموعات النقر)] تسلسلات تُشغَّل بالنقر على زر
         self.links = []     # أهداف الروابط: شريحة أو "last" (آخر شريحة عُرضت)
+        self.sounds = []    # أصوات مرافقة للحركات (أسماء ملفات sounds/*.wav)
 
     def _id(self):
         self.nid += 1
@@ -137,7 +138,7 @@ class Slide:
             f'<a:ln><a:noFill/></a:ln></p:spPr></p:sp>')
         return i
 
-    def anim(self, ids, kind="in", dur=500, start="click", trigger=None, pics=()):
+    def anim(self, ids, kind="in", dur=500, start="click", trigger=None, pics=(), sound=None):
         """حركة لأشكال: kind = in (ظهور تدريجي) أو out (مسح خروج بطيء للمؤقت)،
         start = click (مجموعة نقر جديدة) أو with (مع السابق) أو after (بعد السابق)"""
         ids = [ids] if isinstance(ids, int) else list(ids)
@@ -157,10 +158,12 @@ class Slide:
         if start == "click" or not seqs:
             assert trigger is None or not seqs, "زر التفاعل يشغّل مجموعة واحدة؛ استعمل زرًا لكل نقرة"
             seqs.append([])
+        if sound and sound not in self.sounds:
+            self.sounds.append(sound)
         for n, i in enumerate(ids):
-            seqs[-1].append((i, kind, dur, start if n == 0 else "with"))
+            seqs[-1].append((i, kind, dur, start if n == 0 else "with", sound if n == 0 else None))
 
-    def _effect(self, c, spid, kind, dur, node, delay=0):
+    def _effect(self, c, spid, kind, dur, node, sound=None, delay=0):
         tgt = f'<p:tgtEl><p:spTgt spid="{spid}"/></p:tgtEl>'
         vis = lambda v, d: (f'<p:set><p:cBhvr><p:cTn id="{c()}" dur="1" fill="hold"><p:stCondLst><p:cond delay="{d}"/></p:stCondLst></p:cTn>'
                             f'{tgt}<p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr>'
@@ -172,15 +175,21 @@ class Slide:
             head = f'presetID="22" presetClass="exit" presetSubtype="8"'
             body = (f'<p:animEffect transition="out" filter="wipe(left)"><p:cBhvr><p:cTn id="{c()}" dur="{dur}"/>{tgt}</p:cBhvr></p:animEffect>'
                     + vis("hidden", dur - 1))
+        snd = ""
+        if sound:
+            # «صوت التحسين» للحركة كما يكتبه PowerPoint: يُشغَّل مع بدء الحركة
+            snd = (f'<p:subTnLst><p:audio><p:cMediaNode showWhenStopped="0"><p:cTn id="{c()}" display="0" masterRel="sameClick">'
+                   f'<p:stCondLst><p:cond delay="0"/></p:stCondLst><p:endCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:endCondLst>'
+                   f'</p:cTn><p:tgtEl><p:sndTgt r:embed="@@S{self.sounds.index(sound)}@@" name="{sound}.wav"/></p:tgtEl></p:cMediaNode></p:audio></p:subTnLst>')
         return (f'<p:par><p:cTn id="{c()}" {head} fill="hold" grpId="0" nodeType="{node}"><p:stCondLst><p:cond delay="{delay}"/></p:stCondLst>'
-                f'<p:childTnLst>{body}</p:childTnLst></p:cTn></p:par>')
+                f'<p:childTnLst>{body}</p:childTnLst>{snd}</p:cTn></p:par>')
 
     def _groups(self, c, groups, first_now=False):
         out = []
         for gi, g in enumerate(groups):
             # تقسيم المجموعة إلى مراحل زمنية: «بعد السابق» يبدأ مرحلة جديدة بعد أطول حركة في المرحلة السابقة
             stages, t, longest = [], 0, 0
-            for spid, kind, dur, start in g:
+            for spid, kind, dur, start, sound in g:
                 if start == "after" and stages:
                     t += longest
                     longest = 0
@@ -188,7 +197,7 @@ class Slide:
                 elif not stages:
                     stages.append((0, []))
                 node = "clickEffect" if start == "click" else ("afterEffect" if start == "after" else "withEffect")
-                stages[-1][1].append((spid, kind, dur, node))
+                stages[-1][1].append((spid, kind, dur, node, sound))
                 longest = max(longest, dur)
             inner = "".join(
                 f'<p:par><p:cTn id="{c()}" fill="hold"><p:stCondLst><p:cond delay="{st}"/></p:stCondLst><p:childTnLst>'
@@ -251,7 +260,7 @@ class Slide:
             end = [self.shape(4.85, 0.95, 1.2, 0.36, "roundRect", "B8912F", "B8912F", adj=50000, name="انتهى الوقت"),
                    self.text(4.85, 0.95, 1.2, 0.36, "انتهى الوقت", 12, "FFFFFF", True, "ctr", "ctr", name="انتهى الوقت")]
             self.anim(bar, "out", mins * 60000, trigger=chip)
-            self.anim(end, "in", 500, start="after", trigger=chip)
+            self.anim(end, "in", 500, start="after", trigger=chip, sound="timeup")
         if Slide.home is not None and Slide.home is not self:
             self.hotspot(7.9, 0.95, 1.6, 0.36, "العودة إلى خريطة الحصة", link=Slide.home)
         self.text(0.5, 1.4, 9.0, 0.7, title, 30, INK, True, name="Title")
