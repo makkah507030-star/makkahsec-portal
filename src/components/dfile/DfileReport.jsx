@@ -20,7 +20,9 @@ const ICON = {
   chev: "M6 9l6 6 6-6",
   medal: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0ZM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4",
   file: "M14 3H6v18h12V7ZM14 3v4h4M9 13h6M9 17h4",
+  image: "M4 5h16v14H4ZM4 15l4-4 4 4 3-3 5 5M15 9.5h.01",
 };
+const ELEMENT_NAME = Object.fromEntries(ELEMENTS);
 const Svg = ({ d, ...p }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>
     <path d={d} />
@@ -561,9 +563,11 @@ export default function DfileReport({ data: d, settings: s, code }) {
                 open={!!open.docs} onToggle={(v) => setOpen((o) => ({ ...o, docs: v }))}>
             <div className="df-docs">
               {d.docs.map((f) => (
+                // اسم الملف الأصلي لا يظهر: العنوان الذي كتبه المعلم، وعنصر الأداء، ونوع الملف، والتاريخ
                 <button type="button" className="df-doc" key={f.id} onClick={() => setDoc(f)}>
-                  <span className="df-ic"><Svg d={ICON.file} /></span><b>{f.title}</b>
-                  <span className="df-num">{f.date ? fmtDate(f.date) : f.name ?? ""}</span></button>
+                  <span className="df-ic"><Svg d={f.kind === "image" ? ICON.image : ICON.file} /></span><b>{f.title}</b>
+                  {ELEMENT_NAME[f.el] && <span className="df-doc-el" style={{ color: `var(--${f.el})` }}>{ELEMENT_NAME[f.el]}</span>}
+                  <span className="df-num">{[f.kind === "image" ? "صورة" : "PDF", f.date && fmtDate(f.date)].filter(Boolean).join("، ")}</span></button>
               ))}
             </div>
           </Fold>

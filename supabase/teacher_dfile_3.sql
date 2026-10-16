@@ -70,8 +70,9 @@ begin
     'evidence', (select coalesce(jsonb_object_agg(k, n), '{}') from (
                    select left(item_key, 3) k, sum(use_count) n from public.perf_evidence
                     where teacher_user_id = p_uid and academic_year = y group by 1) x),
-    'docs', (select coalesce(jsonb_agg(jsonb_build_object('id', id, 'title', title, 'name', file_name,
-               'date', event_date) order by created_at desc), '[]')
+    -- الشواهد المرفوعة: العنوان والعنصر والنوع والتاريخ، دون اسم الملف الأصلي (قد يكون طويلًا أو غير مناسب)
+    'docs', (select coalesce(jsonb_agg(jsonb_build_object('id', id, 'title', title, 'el', left(item_key, 3),
+               'kind', case when file_path ~* '\.pdf$' then 'pdf' else 'image' end, 'date', event_date) order by created_at desc), '[]')
                from public.perf_evidence where teacher_user_id = p_uid and academic_year = y
                 and source = 'upload' and file_path is not null),
     'week', public.dfile_week(),

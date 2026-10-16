@@ -37,7 +37,7 @@ export const handler = async (event) => {
     if (!f || f.disabled_at || (f.hidden ?? []).includes("docs")) return json({ error: "الملف غير متاح" }, 404);
 
     const { data: ev } = await admin.from("perf_evidence")
-      .select("file_path, file_name, source, teacher_user_id")
+      .select("file_path, source, teacher_user_id")
       .eq("id", id).maybeSingle();
     if (!ev || ev.teacher_user_id !== f.teacher_user_id || ev.source !== "upload" || !ev.file_path) {
       return json({ error: "الشاهد غير موجود" }, 404);
@@ -45,7 +45,8 @@ export const handler = async (event) => {
 
     const { data: signed, error } = await admin.storage.from("perf-evidence").createSignedUrl(ev.file_path, 300);
     if (error || !signed?.signedUrl) return json({ error: "تعذّر فتح الشاهد" }, 500);
-    return json({ url: signed.signedUrl, name: ev.file_name ?? null });
+    // اسم الملف الأصلي لا يُرسل للزائر؛ يكفيه عنوان الشاهد
+    return json({ url: signed.signedUrl });
   } catch {
     return json({ error: "تعذّر فتح الشاهد" }, 500);
   }
