@@ -1,4 +1,5 @@
 # أدوات بناء شرائح بهوية قالب البوابة (نفس الخط والألوان والمقاسات)
+import re
 from xml.sax.saxutils import escape
 
 EMU = 914400
@@ -150,6 +151,7 @@ class Slide:
                 seqs = []
                 self.trig.append((trigger, seqs))
         if start == "click" or not seqs:
+            assert trigger is None or not seqs, "زر التفاعل يشغّل مجموعة واحدة؛ استعمل زرًا لكل نقرة"
             seqs.append([])
         for n, i in enumerate(ids):
             seqs[-1].append((i, kind, dur, start if n == 0 else "with"))
@@ -169,9 +171,9 @@ class Slide:
         return (f'<p:par><p:cTn id="{c()}" {head} fill="hold" grpId="0" nodeType="{node}"><p:stCondLst><p:cond delay="{delay}"/></p:stCondLst>'
                 f'<p:childTnLst>{body}</p:childTnLst></p:cTn></p:par>')
 
-    def _groups(self, c, groups):
+    def _groups(self, c, groups, first_now=False):
         out = []
-        for g in groups:
+        for gi, g in enumerate(groups):
             # تقسيم المجموعة إلى مراحل زمنية: «بعد السابق» يبدأ مرحلة جديدة بعد أطول حركة في المرحلة السابقة
             stages, t, longest = [], 0, 0
             for spid, kind, dur, start in g:
@@ -188,7 +190,8 @@ class Slide:
                 f'<p:par><p:cTn id="{c()}" fill="hold"><p:stCondLst><p:cond delay="{st}"/></p:stCondLst><p:childTnLst>'
                 + "".join(self._effect(c, *ef) for ef in efs) + '</p:childTnLst></p:cTn></p:par>'
                 for st, efs in stages)
-            out.append(f'<p:par><p:cTn id="{c()}" fill="hold"><p:stCondLst><p:cond delay="indefinite"/></p:stCondLst>'
+            start = "0" if (first_now and gi == 0) else "indefinite"
+            out.append(f'<p:par><p:cTn id="{c()}" fill="hold"><p:stCondLst><p:cond delay="{start}"/></p:stCondLst>'
                        f'<p:childTnLst>{inner}</p:childTnLst></p:cTn></p:par>')
         return "".join(out)
 
@@ -209,11 +212,13 @@ class Slide:
         for t, g in self.trig:
             seqs += (f'<p:seq concurrent="1" nextAc="seek"><p:cTn id="{c()}" restart="whenNotActive" fill="hold" evtFilter="cancelBubble" nodeType="interactiveSeq">'
                      f'<p:stCondLst><p:cond evt="onClick" delay="0"><p:tgtEl><p:spTgt spid="{t}"/></p:tgtEl></p:cond></p:stCondLst>'
-                     f'<p:endSync evt="end" delay="0"><p:rtn val="all"/></p:endSync><p:childTnLst>{self._groups(c, g)}</p:childTnLst></p:cTn>'
+                     f'<p:endSync evt="end" delay="0"><p:rtn val="all"/></p:endSync><p:childTnLst>{self._groups(c, g, True)}</p:childTnLst></p:cTn>'
                      '<p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst></p:seq>')
         bld = "".join(f'<p:bldP spid="{i}" grpId="0" animBg="1"/>' for i in self.sp_ids)
-        return (f'<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>'
-                f'{seqs}</p:childTnLst></p:cTn></p:par></p:tnLst>' + (f'<p:bldLst>{bld}</p:bldLst>' if bld else "") + '</p:timing>')
+        xml = (f'<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>'
+               f'{seqs}</p:childTnLst></p:cTn></p:par></p:tnLst>' + (f'<p:bldLst>{bld}</p:bldLst>' if bld else "") + '</p:timing>')
+        k = iter(range(1, 100000))
+        return re.sub(r'<p:cTn id="\d+"', lambda m: f'<p:cTn id="{next(k)}"', xml)
 
     def slidenum(self, color=MUTED):
         i = self._id()
