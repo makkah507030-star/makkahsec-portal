@@ -94,7 +94,12 @@ export default function ResultsAdmin() {
 
   const studentByNid = useMemo(() => {
     const m = new Map();
-    students.forEach((s) => m.set(cleanIdentity(s.national_id), s));
+    // ومفتاح ثانٍ بلا أصفار بادئة: الرقم «0160764366» قد يُحفظ في الكشوف «160764366»
+    students.forEach((s) => {
+      const id = cleanIdentity(s.national_id);
+      m.set(id, s);
+      m.set(id.replace(/^0+/, ""), s);
+    });
     return m;
   }, [students]);
 
@@ -126,7 +131,8 @@ export default function ResultsAdmin() {
         const items = [];
         for (const [i, g] of groups.entries()) {
           const blob = srcDoc ? await extractPages(srcDoc, g.pages) : file;
-          const matched = g.nationalId ? studentByNid.get(cleanIdentity(g.nationalId)) ?? null : null;
+          const nid = cleanIdentity(g.nationalId ?? "");
+          const matched = nid ? studentByNid.get(nid) ?? studentByNid.get(nid.replace(/^0+/, "")) ?? null : null;
           items.push({
             id: `${ph.id}-${i}`,
             fileName: file.name,

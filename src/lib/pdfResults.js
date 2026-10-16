@@ -17,8 +17,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 const NUM = /^\d+(?:\.\d+)?$/;
 
-/** رقم الهوية/الإقامة: 10 خانات يبدأ بـ 1 أو 2 */
-const findNationalId = (text) => text.match(/\b[12]\d{9}\b/)?.[0] ?? null;
+/**
+ * رقم الهوية: أول نص في الصفحة كله أرقام من 8 إلى 15 خانة. ليس دائمًا 10 خانات
+ * يبدأ بـ 1 أو 2 — في نور أرقام تبدأ بصفر وأخرى من 12 خانة (حدود/جواز).
+ * العام «1447-1448» والتاريخ ورقم التقرير لا تطابق لأنها ليست أرقامًا خالصة.
+ */
+const findNationalId = (items) =>
+  items.map((it) => it.str.trim()).find((t) => /^\d{8,15}$/.test(t)) ?? null;
 
 /**
  * مجموع الطالب في إشعار الفترة. جدول المواد يضم مواد الفصلين معًا، ولكل مادة
@@ -83,7 +88,7 @@ export async function analyzeResultsPdf(buf) {
     const page = await pdf.getPage(i);
     const { items } = await page.getTextContent();
     const text = items.map((it) => it.str).join(" ");
-    const nid = findNationalId(text);
+    const nid = findNationalId(items);
     const last = groups[groups.length - 1];
     let g = last;
     if (!last || (nid && nid !== last.nationalId)) {
