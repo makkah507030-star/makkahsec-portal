@@ -4,7 +4,7 @@ import DfileDocViewer from "./DfileDocViewer.jsx";
 import { fmtDate, fmtHijri } from "../../lib/dates.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
-  OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord,
+  DAYS, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -393,7 +393,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
 
   // دروس الأسبوع الدراسي الحالي من توزيع المنهج، لكل مادة
   const lessons = d.week ? (s?.distribution?.items ?? [])
-    .map((it) => ({ s: it.subject, c: it.classes ?? [], t: (it.weeks ?? []).find((w) => w.n === d.week.n)?.t }))
+    .map((it) => { const w = (it.weeks ?? []).find((x) => x.n === d.week.n); return { s: it.subject, c: it.classes ?? [], t: w?.t, days: w?.days }; })
     .filter((x) => x.t) : [];
   const opinions = d.opinions ?? [];
   // الشاهد يُعرض داخل الصفحة (DfileDocViewer)، فيراه الزائر في كل جهاز
@@ -496,7 +496,10 @@ export default function DfileReport({ data: d, settings: s, code }) {
                   {lessons.map((x) => (
                     <div className="df-lcard" key={x.s}><span className="df-sb">{x.s}</span>
                       {x.c.length > 0 && <small className="df-lcls df-num">الفصول {x.c.join(" و")}</small>}
-                      {x.t.split(/،|\n/).map((t) => t.trim()).filter(Boolean).map((t) => <p key={t}>{t}</p>)}</div>
+                      {/* المكتوب يدويًا يومًا بيوم يُعرض بأيامه، والمستورد سطرًا لكل درس */}
+                      {x.days?.some((t) => t?.trim())
+                        ? x.days.map((t, i) => t?.trim() && <p key={i}><b className="df-lday">{DAYS[i]}</b>{t}</p>)
+                        : x.t.split(/،|\n/).map((t) => t.trim()).filter(Boolean).map((t) => <p key={t}>{t}</p>)}</div>
                   ))}
                 </div>
               </div>

@@ -294,3 +294,6 @@
 .dfile .df-viewer-body .df-viewer-img { display: block; max-width: 100%; max-height: 100%; margin: 0 auto; border-radius: 8px; }
 .dfile .df-viewer-pages { display: grid; gap: 10px; }
 .dfile .df-viewer-pages canvas { display: block; background: #fff; border-radius: 6px; box-shadow: var(--shadow); }
+
+/* اليوم في دروس الأسبوع المكتوبة يدويًا */
+.dfile .df-lday { color: var(--deep); font-weight: 700; margin-left: 6px; }
