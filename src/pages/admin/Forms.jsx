@@ -465,6 +465,8 @@ export default function Forms({ view = "issue", openKey = null }) {
   const [flag, setFlag] = useState(null);          // ملصق المستند: عاجل/سري/للاطلاع والتوجيه (lib/flags.js)
 
   const [docs, setDocs] = useState([]);
+  // الأرشيف يجلب آخر 200 ويزيدها زر «تحميل الأقدم»
+  const [docLimit, setDocLimit] = useState(200);
   const [editing, setEditing] = useState(null);     // مستند مُعاد يجري تصحيحه
   const [returned, setReturned] = useState([]);     // ما أعاده المدير إليّ
   const [drafts, setDrafts] = useState([]);         // مسوداتي: نماذج حُفظت لتُكمَل لاحقًا
@@ -656,11 +658,11 @@ export default function Forms({ view = "issue", openKey = null }) {
     const { data } = await supabase.from("form_documents")
       .select("*, form_templates(title, category, orientation, fields, key, signature_source)")
       .neq("status", "draft")
-      .order("created_at", { ascending: false }).limit(200);
+      .order("created_at", { ascending: false }).limit(docLimit);
     setDocs(data ?? []);
   };
   // يُحمَّل عند فتح الصفحة ليُحتسب عدّاد الردود والاعتماد فورًا
-  useEffect(() => { loadDocs(); }, [tab]);
+  useEffect(() => { loadDocs(); }, [tab, docLimit]);
 
   useEffect(() => {
     if (!review || !isManager) return;
@@ -2206,7 +2208,8 @@ export default function Forms({ view = "issue", openKey = null }) {
               {msg.text}
             </p>
           )}
-          <FormsArchive docs={docs} renderRow={(d) => (
+          <FormsArchive docs={docs} more={docs.length >= docLimit ? () => setDocLimit(docLimit + 200) : null}
+                        renderRow={(d) => (
               <div key={d.id} className="flex items-center gap-2 px-2 py-1 hover:bg-canvas">
                 <button onClick={() => openDoc(d)}
                         className="flex min-w-0 flex-1 items-center justify-between gap-3 px-2 py-2 text-right">
