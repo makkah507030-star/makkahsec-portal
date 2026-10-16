@@ -4,7 +4,7 @@ import DfileDocViewer from "./DfileDocViewer.jsx";
 import { fmtDate, fmtHijri } from "../../lib/dates.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
-  DAYS, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord,
+  DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -405,8 +405,13 @@ export default function DfileReport({ data: d, settings: s, code }) {
   const act = s?.activities ?? {};
   const actOn = actTotal(act.class) > 0 || actTotal(act.extra) > 0;
 
+  // السجلات والنماذج: الآلية من البوابة، وأسماء النماذج الصادرة، وما أضافه المعلم
+  const recAuto = (d.records?.auto ?? []).filter((k) => RECORD_AUTO[k]);
+  const recForms = d.records?.forms ?? [];
+  const recOwn = s?.records ?? [];
   const has = {
     teach: d.lessons > 0 || d.subs > 0 || madOn || actOn || lessons.length > 0,
+    records: recAuto.length + recForms.length + recOwn.length > 0,
     results: (d.grades?.n ?? 0) > 0,
     assess: (d.quizzes?.length ?? 0) > 0,
     growth: true,
@@ -539,6 +544,23 @@ export default function DfileReport({ data: d, settings: s, code }) {
                 ))}
               </div>
             )}
+          </Section>
+        )}
+        {show("records") && has.records && (
+          <Section id="records" title="السجلات والنماذج" sub="بأسمائها فقط">
+            <div className="df-card df-recs">
+              {recAuto.length + recForms.length > 0 && (
+                <div><CardH title="من البوابة" sub="سجلات ونماذج يعمل عليها في البوابة هذا العام" src="تلقائي" />
+                  <div className="df-tags">
+                    {recAuto.map((k) => <span key={k} className="df-tag"><Svg d={ICON.ok} strokeWidth="2.4" />{RECORD_AUTO[k]}</span>)}
+                    {recForms.map((t) => <span key={t} className="df-tag df-tag-f"><Svg d={ICON.file} />{t}</span>)}
+                  </div></div>
+              )}
+              {recOwn.length > 0 && (
+                <div><CardH title="سجلات أخرى" sub="ورقية أو خارجية" src="يكتبه المعلم" srcKind="up" />
+                  <div className="df-tags">{recOwn.map((t) => <span key={t} className="df-tag df-tag-o">{t}</span>)}</div></div>
+              )}
+            </div>
           </Section>
         )}
         {show("results") && has.results && <Results g={d.grades} />}

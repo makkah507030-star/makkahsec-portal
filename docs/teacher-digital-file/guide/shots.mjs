@@ -32,7 +32,7 @@ export async function takeShots(chromium, base, exe) {
   p = await page("panel.html", { h: 900 });
   await p.screenshot({ path: out("panel-top") }); done.push("panel-top");
   const BLOCKS = [
-    ["opinions", "آراء الإدارة"], ["data", "بياناتك"], ["madrasati", "منصة مدرستي"], ["activities", "الأنشطة"],
+    ["opinions", "آراء الإدارة"], ["data", "بياناتك"], ["madrasati", "منصة مدرستي"], ["activities", "الأنشطة"], ["records", "السجلات والنماذج"],
     ["sections", "ماذا يرى الزائر؟"], ["sentences", "قراءة في 30 ثانية"], ["wins", "إنجازات أخرى"],
     ["distribution", "توزيع المنهج"],
   ];
@@ -59,6 +59,7 @@ export async function takeShots(chromium, base, exe) {
   const noteBtn = await p.addStyleTag({ content: "button.fixed { visibility: hidden !important; }" });
   // الأقسام المطوية في التقرير: #df-elements و#df-docs
   const fold = async (id) => { const x = p.locator(`#df-${id} summary`); await x.scrollIntoViewIfNeeded(); await x.click(); await p.waitForTimeout(1800); };
+  await shoot(p.locator("#df-records"), "visitor-records"); done.push("visitor-records");
   await fold("elements");
   await shoot(p.locator("#df-elements"), "visitor-elements"); done.push("visitor-elements");
   await fold("docs");

@@ -297,3 +297,11 @@
 
 /* اليوم في دروس الأسبوع المكتوبة يدويًا */
 .dfile .df-lday { color: var(--deep); font-weight: 700; margin-left: 6px; }
+
+/* السجلات والنماذج */
+.dfile .df-recs { display: grid; gap: 14px; }
+.dfile .df-recs .df-tags { gap: 7px; margin-top: 8px; }
+.dfile .df-recs .df-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 4px 11px; }
+.dfile .df-recs .df-tag svg { width: 13px; height: 13px; flex: none; }
+.dfile .df-recs .df-tag-f { background: var(--info-bg); color: var(--info); border-color: transparent; }
+.dfile .df-recs .df-tag-o { background: var(--surface); color: var(--ink); border-color: var(--line); }
