@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./dfile.css";
 import DfileDocViewer from "./DfileDocViewer.jsx";
-import { fmtDate } from "../../lib/dates.js";
+import { fmtDate, fmtHijri } from "../../lib/dates.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
   OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord,
@@ -567,7 +567,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
                 <button type="button" className="df-doc" key={f.id} onClick={() => setDoc(f)}>
                   <span className="df-ic"><Svg d={f.kind === "image" ? ICON.image : ICON.file} /></span><b>{f.title}</b>
                   {ELEMENT_NAME[f.el] && <span className="df-doc-el" style={{ color: `var(--${f.el})` }}>{ELEMENT_NAME[f.el]}</span>}
-                  <span className="df-num">{[f.kind === "image" ? "صورة" : "PDF", f.date && fmtDate(f.date)].filter(Boolean).join("، ")}</span></button>
+                  <span className="df-num">{[f.kind === "image" ? "صورة" : "PDF", f.date && fmtHijri(f.date)].filter(Boolean).join("، ")}</span></button>
               ))}
             </div>
           </Fold>
