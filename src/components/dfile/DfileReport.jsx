@@ -512,6 +512,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
                   ))}
                 </div>
                 {mad.weekly_plan === true && <p className="df-ok"><Svg d={ICON.ok} strokeWidth="2.2" />يرسل الخطة الأسبوعية</p>}
+                {mad.at && <p className="df-upd df-num">آخر تحديث {fmtDate(mad.at)}</p>}
               </div>
             )}
             {actOn && (
