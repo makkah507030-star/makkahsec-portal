@@ -144,8 +144,14 @@ export function dfileError(e) {
 
 /* ===== الرابط العام والزوار (supabase/teacher_dfile_5.sql) ===== */
 
-/* رابط الزائر الثابت. الرمز يحمل q=1 ليُعرف أن الزائر فتحه بالمسح */
-export const dfileLink = (code, qr = false) => `${window.location.origin}/f/${code}${qr ? "?q=1" : ""}`;
+/* رابط الزائر الثابت. الرمز يحمل q=1 ليُعرف أن الزائر فتحه بالمسح، ورسالة واتساب w=1 */
+export const dfileLink = (code, via = false) =>
+  `${window.location.origin}/f/${code}${via === true || via === "qr" ? "?q=1" : via === "wa" ? "?w=1" : ""}`;
+
+/* الكلمة الترحيبية الافتراضية لمشاركة الملف عبر واتساب (يعدّلها المعلم وتُحفظ في share_msg) */
+export const SHARE_MSG = "السلام عليكم ورحمة الله وبركاته،\n"
+  + "يسعدني اطلاعكم على ملفي الرقمي في بوابة مكة الثانوية الرقمية، "
+  + "وأتشرف بملاحظاتكم وتوجيهاتكم في سجل الزوار داخل الملف، فهي محل تقديري واهتمامي.";
 
 export async function loadPublic(code) {
   const { data, error } = await supabase.rpc("dfile_public", { p_code: code });
@@ -158,13 +164,20 @@ export async function visitStart(code, name, org, via) {
   return data ?? null;
 }
 
+/* ملاحظة الزائر في سجل الزوار (supabase/teacher_dfile_7.sql) */
+export async function visitNote(id, note) {
+  const { data, error } = await supabase.rpc("dfile_visit_note", { p_id: id, p_note: note ?? "" });
+  if (error) throw new Error(/dfile_visit_note|schema cache/i.test(error.message) ? "حفظ الملاحظات غير مفعّل بعد." : error.message);
+  return data === true;
+}
+
 export function visitPing(id, seconds) {
   if (!id) return;
   supabase.rpc("dfile_visit_ping", { p_id: id, p_seconds: Math.round(seconds) }).then(() => {}, () => {});
 }
 
 export async function loadVisits(uid) {
-  const { data } = await supabase.from("dfile_visits").select("id, visitor_name, visitor_org, via, started_at, seconds")
+  const { data } = await supabase.from("dfile_visits").select("*")
     .eq("teacher_user_id", uid).order("started_at", { ascending: false }).limit(50);
   return data ?? [];
 }

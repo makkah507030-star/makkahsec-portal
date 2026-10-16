@@ -28,11 +28,14 @@ create table if not exists public.dfile_visits (
   teacher_user_id uuid not null references public.users(id) on delete cascade,
   visitor_name text,
   visitor_org text,
-  via text not null default 'link' check (via in ('qr', 'link')),
+  via text not null default 'link',
   started_at timestamptz not null default now(),
   seconds integer not null default 0
 );
 create index if not exists dfile_visits_teacher_idx on public.dfile_visits (teacher_user_id, started_at desc);
+-- طريقة الفتح: الرمز، أو الرابط، أو رسالة واتساب من المعلم (wa)
+alter table public.dfile_visits drop constraint if exists dfile_visits_via_check;
+alter table public.dfile_visits add constraint dfile_visits_via_check check (via in ('qr', 'link', 'wa'));
 
 alter table public.dfile_visits enable row level security;
 drop policy if exists dfile_visits_read on public.dfile_visits;
@@ -49,7 +52,7 @@ begin
   if uid is null or uid = auth.uid() then return null; end if;
   insert into public.dfile_visits (teacher_user_id, visitor_name, visitor_org, via)
   values (uid, nullif(left(trim(coalesce(p_name, '')), 80), ''), nullif(left(trim(coalesce(p_org, '')), 80), ''),
-          case when p_via = 'qr' then 'qr' else 'link' end)
+          case when p_via in ('qr', 'wa') then p_via else 'link' end)
   returning id into vid;
   return vid;
 end; $$;

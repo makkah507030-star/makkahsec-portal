@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import DfileReport from "../components/dfile/DfileReport.jsx";
-import { loadPublic, visitPing, visitStart } from "../lib/dfile.js";
+import { loadPublic, visitNote, visitPing, visitStart } from "../lib/dfile.js";
 
 /* =====================================================================
-   ملف المعلم الرقمي للزائر: /f/:code برابط ثابت أو بمسح الرمز (?q=1)، دون دخول.
-   يكتب الزائر اسمه وجهته اختياريًا أو يتخطى، وتُسجَّل الزيارة ومدتها للمعلم.
+   ملف المعلم الرقمي للزائر: /f/:code برابط ثابت أو بمسح الرمز (?q=1) أو من رسالة
+   واتساب المعلم (?w=1)، دون دخول. يكتب الزائر اسمه وجهته اختياريًا أو يتخطى، وتُسجَّل
+   الزيارة ومدتها للمعلم، ويكتب ملاحظته للمعلم في سجل الزوار.
    ===================================================================== */
 
 const AUTO_START = 15;   // ثانية: تُسجَّل الزيارة دون اسم إن لم يكتب الزائر ولم يتخطَّ
@@ -19,7 +20,8 @@ export default function DfilePublic() {
   const [name, setName] = useState("");
   const [org, setOrg] = useState("");
   const visit = useRef({ id: null, started: false, t0: Date.now() });
-  const via = new URLSearchParams(window.location.search).has("q") ? "qr" : "link";
+  const qs = new URLSearchParams(window.location.search);
+  const via = qs.has("q") ? "qr" : qs.has("w") ? "wa" : "link";
 
   useEffect(() => {
     let alive = true;
@@ -29,9 +31,10 @@ export default function DfilePublic() {
 
   const start = async (n = "", o = "") => {
     const v = visit.current;
-    if (v.started) return;
+    if (v.started) return v.ready;
     v.started = true; v.t0 = Date.now();
-    v.id = await visitStart(code, n, o, via);
+    v.ready = visitStart(code, n, o, via).then((id) => (v.id = id));
+    return v.ready;
   };
 
   // تسجيل تلقائي بلا اسم، ثم تحديث المدة دوريًا وعند مغادرة الصفحة
@@ -57,7 +60,7 @@ export default function DfilePublic() {
           <form className="card space-y-3 p-4" onSubmit={(e) => { e.preventDefault(); start(name, org); setWelcome(false); }}>
             <div>
               <h1 className="text-base font-bold text-ink">مرحبًا بك في ملف المعلم</h1>
-              <p className="mt-0.5 text-sm text-muted">اكتب اسمك وجهتك ليعرف المعلم من اطّلع على ملفه. هذا اختياري.</p>
+              <p className="mt-0.5 text-sm text-muted">اكتب اسمك وجهتك ليعرف المعلم من اطّلع على ملفه، وتستطيع كتابة ملاحظتك له من الزر أسفل الصفحة. هذا اختياري.</p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <input className="field" placeholder="الاسم" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} aria-label="الاسم" />
@@ -69,7 +72,57 @@ export default function DfilePublic() {
         </div>
       )}
       <DfileReport data={res.data} settings={res.settings} code={res.settings.code} />
+      <VisitorNote save={async (text) => {
+        if (!visit.current.started) setWelcome(false);
+        const id = await start(name, org);
+        if (!id) throw new Error("تعذّر حفظ الملاحظة. أعد تحميل الصفحة ثم حاول مرة أخرى.");
+        return visitNote(id, text);
+      }} />
     </div>
+  );
+}
+
+/* «اكتب ملاحظتك للمعلم»: زر ثابت أسفل الصفحة يفتح نافذة الملاحظة، وتُحفظ في سجل الزوار */
+function VisitorNote({ save }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [state, setState] = useState("");   // "" | busy | saved | رسالة خطأ
+  const send = async (e) => {
+    e.preventDefault();
+    setState("busy");
+    try { await save(text); setState("saved"); }
+    catch (er) { setState(er.message || "تعذّر حفظ الملاحظة."); }
+  };
+  return (
+    <>
+      <button type="button" onClick={() => { setOpen(true); if (state !== "busy") setState(""); }}
+              className="fixed bottom-4 left-4 z-40 rounded-pill bg-mint-deep px-4 py-2.5 text-sm font-bold text-white shadow-card">
+        {state === "saved" ? "✓ ملاحظتك وصلت" : "اكتب ملاحظتك للمعلم"}
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center" dir="rtl" onClick={() => setOpen(false)}>
+          <form className="card w-full max-w-md space-y-3 p-4" onSubmit={send} onClick={(e) => e.stopPropagation()}>
+            <div>
+              <p className="text-base font-bold text-ink">ملاحظتك في سجل الزوار</p>
+              <p className="mt-0.5 text-sm text-muted">يراها المعلم وحده، ويسعده توجيهك وملاحظاتك.</p>
+            </div>
+            <textarea className="field min-h-32" value={text} onChange={(e) => { setText(e.target.value); setState(""); }}
+                      maxLength={1000} placeholder="اكتب ملاحظتك هنا" aria-label="الملاحظة" autoFocus />
+            {state && state !== "busy" && (
+              <p className={`text-sm ${state === "saved" ? "text-present" : "text-absent"}`}>
+                {state === "saved" ? "حُفظت ملاحظتك، شكرًا لك. يمكنك تعديلها وحفظها مرة أخرى." : state}
+              </p>
+            )}
+            <div className="flex gap-2">
+              <button className="btn-primary flex-1" type="submit" disabled={state === "busy" || !text.trim()}>
+                {state === "busy" ? "جارٍ الحفظ…" : "حفظ الملاحظة"}
+              </button>
+              <button className="btn-ghost" type="button" onClick={() => setOpen(false)}>إغلاق</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </>
   );
 }
 
