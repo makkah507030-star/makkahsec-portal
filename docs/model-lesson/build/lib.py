@@ -37,7 +37,7 @@ class Slide:
 
     # ---------- أشكال ----------
     def shape(self, x, y, w, h, prst="rect", fill=None, line=None, lw=12700, adj=None, shadow=False, dash=None, alpha=None, name="Shape",
-              label=None, sz=12, color=INK, b=False, align="ctr", ins=(0, 0)):
+              label=None, sz=12, color=INK, b=False, align="ctr", ins=(0, 0), link=None):
         i = self._id()
         av = f'<a:gd name="adj" fmla="val {adj}"/>' if adj is not None else ""
         if fill:
@@ -53,7 +53,7 @@ class Slide:
         sh = ('<a:effectLst><a:outerShdw blurRad="127000" dist="38100" dir="5400000" algn="bl" rotWithShape="0">'
               '<a:srgbClr val="3E6350"><a:alpha val="12000"/></a:srgbClr></a:outerShdw></a:effectLst>') if shadow else ""
         self.shapes.append(
-            f'<p:sp><p:nvSpPr><p:cNvPr id="{i}" name="{name} {i}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
+            f'<p:sp><p:nvSpPr><p:cNvPr id="{i}" name="{escape(name)} {i}">{self._hl(link)}</p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
             f'<p:spPr><a:xfrm><a:off x="{e(x)}" y="{e(y)}"/><a:ext cx="{e(w)}" cy="{e(h)}"/></a:xfrm>'
             f'<a:prstGeom prst="{prst}"><a:avLst>{av}</a:avLst></a:prstGeom>{f}{ln}{sh}</p:spPr>'
             + (f'<p:txBody><a:bodyPr wrap="square" lIns="{e(ins[1])}" tIns="0" rIns="{e(ins[0])}" bIns="0" rtlCol="1" anchor="ctr"/>'
@@ -122,15 +122,24 @@ class Slide:
         return i
 
     # ---------- التفاعل ----------
+    def _hl(self, link):
+        """رابط النقر: شريحة، أو مفتاح في MARK، أو "last" للعودة إلى آخر شريحة عُرضت"""
+        if link is None:
+            return ""
+        self.links.append(link)
+        k = len(self.links) - 1
+        return (f'<a:hlinkClick r:id="" action="ppaction://hlinkshowjump?jump=lastslideviewed"/>' if link == "last"
+                else f'<a:hlinkClick r:id="@@L{k}@@" action="ppaction://hlinksldjump"/>')
+
+    def button(self, x, y, w, h, label, link, fill=TINT, line="CCF2DB", color=DEEP, sz=11):
+        """زر ظاهر يحمل نصه ورابطه في شكل واحد"""
+        return self.shape(x, y, w, h, "roundRect", fill, line, adj=50000, name=f"زر {label}",
+                          label=label, sz=sz, color=color, b=True, link=link)
+
     def hotspot(self, x, y, w, h, name="زر", link=None):
         """منطقة نقر شفافة (تعبئة بشفافية كاملة لتلتقط النقر)، وقد تحمل رابطًا لشريحة"""
         i = self._id()
-        hl = ""
-        if link is not None:
-            self.links.append(link)
-            k = len(self.links) - 1
-            hl = (f'<a:hlinkClick r:id="" action="ppaction://hlinkshowjump?jump=lastslideviewed"/>' if link == "last"
-                  else f'<a:hlinkClick r:id="@@L{k}@@" action="ppaction://hlinksldjump"/>')
+        hl = self._hl(link)
         self.shapes.append(
             f'<p:sp><p:nvSpPr><p:cNvPr id="{i}" name="{escape(name)} {i}">{hl}</p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr>'
             f'<p:spPr><a:xfrm><a:off x="{e(x)}" y="{e(y)}"/><a:ext cx="{e(w)}" cy="{e(h)}"/></a:xfrm>'
