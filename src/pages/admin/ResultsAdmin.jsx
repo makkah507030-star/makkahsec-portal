@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { cleanIdentity } from "../../lib/importer";
-import { extractResultCandidates } from "../../lib/pdfResults";
+import { analyzeResultsPdf, extractPages, loadPdfDoc, percentOf } from "../../lib/pdfResults";
 import { gradeBand, REPORT_TYPE_LABEL } from "../../lib/gradeBands";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { useNotice } from "../../lib/useNotice.js";
@@ -10,6 +10,9 @@ import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 
 const REPORT_TYPES = ["period1", "period2", "final"];
+// إشعار الفترة من نور بلا معدل: نحسب النسبة نحن من مجموع الطالب ÷ النهاية العظمى.
+// أما الاختبارات النهائية فالمعدل مكتوب في الملف ويُختار من الأرقام المرشّحة.
+const isPeriod = (t) => t !== "final";
 
 function Banner({ err, msg }) {
   if (!err && !msg) return null;
@@ -112,33 +115,44 @@ export default function ResultsAdmin() {
 
   const handleFiles = async (fileList) => {
     setErr(""); setMsg("");
-    const files = Array.from(fileList);
-    const items = files.map((file) => ({
-      id: `${file.name}-${file.size}-${Math.random()}`,
-      file,
-      url: URL.createObjectURL(file),
-      status: "processing",
-      nationalId: null,
-      matched: null,
-      candidates: [],
-      chosen: null,
-      error: null,
-    }));
-    setQueue((q) => [...q, ...items]);
-
-    for (const item of items) {
+    for (const file of Array.from(fileList)) {
+      const ph = { id: `${file.name}-${Math.random()}`, fileName: file.name, status: "processing" };
+      setQueue((q) => [...q, ph]);
       try {
-        const { nationalId, averageCandidates } = await extractResultCandidates(item.file);
-        const matched = nationalId ? studentByNid.get(cleanIdentity(nationalId)) ?? null : null;
-        setQueue((q) => q.map((r) => r.id === item.id ? {
-          ...r, status: matched ? "matched" : "unmatched",
-          nationalId, candidates: averageCandidates, matched,
-        } : r));
+        const buf = await file.arrayBuffer();
+        const groups = await analyzeResultsPdf(buf);
+        // ملف لطالب واحد يُرفع كما هو؛ ملف الفصل أو الصف أو المدرسة يُقسَّم ملفًا لكل طالب
+        const srcDoc = groups.length > 1 ? await loadPdfDoc(buf) : null;
+        const items = [];
+        for (const [i, g] of groups.entries()) {
+          const blob = srcDoc ? await extractPages(srcDoc, g.pages) : file;
+          const matched = g.nationalId ? studentByNid.get(cleanIdentity(g.nationalId)) ?? null : null;
+          items.push({
+            id: `${ph.id}-${i}`,
+            fileName: file.name,
+            file: blob,
+            url: URL.createObjectURL(blob),
+            status: matched ? "matched" : "unmatched",
+            nationalId: g.nationalId,
+            matched,
+            periodTotal: g.periodTotal,
+            candidates: g.averageCandidates,
+            chosen: null,
+            error: null,
+          });
+        }
+        setQueue((q) => q.flatMap((r) => (r.id === ph.id ? items : [r])));
       } catch (e) {
-        setQueue((q) => q.map((r) => r.id === item.id ? { ...r, status: "error", error: e.message } : r));
+        setQueue((q) => q.map((r) => r.id === ph.id ? { ...r, status: "error", error: e.message } : r));
       }
     }
   };
+
+  /** النسبة التي ستُحفظ للطالب: محسوبة في الفترات، ومختارة يدويًا في النهائي */
+  const averageOf = (r) => (isPeriod(reportType)
+    ? (r.periodTotal ? percentOf(r.periodTotal) : null)
+    : r.chosen);
+  const isReady = (r) => r.matched && r.status !== "uploaded" && (isPeriod(reportType) || r.chosen != null);
 
   const setChosen = (id, value) => {
     setQueue((q) => q.map((r) => r.id === id ? { ...r, chosen: value } : r));
@@ -161,7 +175,7 @@ export default function ResultsAdmin() {
     setBusy(true); setErr(""); setMsg("");
     let ok = 0, fail = 0;
     for (const item of queue) {
-      if (item.status === "uploaded" || !item.matched || item.chosen == null) continue;
+      if (!isReady(item)) continue;
       try {
         const path = `${item.matched.id}/${reportType}_${year}.pdf`;
         const { error: upErr } = await supabase.storage.from("results")
@@ -172,7 +186,7 @@ export default function ResultsAdmin() {
           student_id: item.matched.id,
           report_type: reportType,
           academic_year: year,
-          average: item.chosen,
+          average: averageOf(item),
           file_path: path,
           uploaded_by: profile?.id ?? null,
         }, { onConflict: "student_id,report_type,academic_year" });
@@ -295,15 +309,16 @@ export default function ResultsAdmin() {
   };
 
   const matchedCount = queue.filter((r) => r.status === "matched" || r.status === "uploaded").length;
-  const readyCount = queue.filter((r) => r.matched && r.chosen != null && r.status !== "uploaded").length;
+  const readyCount = queue.filter(isReady).length;
 
   return (
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">نتائج الطلاب</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          ارفع ملفات النتائج PDF كما هي من نظام نور — يتم ربطها تلقائيًا برقم الهوية داخل كل
-          ملف. تبقى النتائج مخفية عن الطلاب وأولياء الأمور حتى تضغط «نشر».
+          ارفع ملفات النتائج PDF كما هي من نظام نور، لطالب واحد أو لفصل أو صف أو المدرسة كاملة —
+          يُقسَّم الملف ويُربط كل طالب تلقائيًا برقم الهوية. تبقى النتائج مخفية عن الطلاب وأولياء
+          الأمور حتى تضغط «نشر».
         </p>
       </div>
 
@@ -326,7 +341,7 @@ export default function ResultsAdmin() {
       <section className="card space-y-3 p-4">
         <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-card border-2 border-dashed border-line bg-canvas px-4 py-8 text-center hover:border-mint-deep">
           <span className="text-sm font-semibold text-ink">اضغط لاختيار ملفات PDF (يمكن اختيار عدة ملفات دفعة واحدة)</span>
-          <span className="text-xs text-muted">سيُستخرج رقم الهوية من كل ملف تلقائيًا لمطابقته بالطالب</span>
+          <span className="text-xs text-muted">ملف لطالب أو لفصل أو صف أو المدرسة — سيُستخرج رقم الهوية من كل صفحة لمطابقتها بالطالب</span>
           <input type="file" accept="application/pdf" multiple className="hidden"
             onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = ""; }} />
         </label>
@@ -335,10 +350,13 @@ export default function ResultsAdmin() {
           <>
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
               <span>مطابق: <span className="num font-bold text-ink">{matchedCount}</span> من <span className="num font-bold text-ink">{queue.length}</span></span>
-              <button onClick={applyFirstChoiceToAll}
-                className="mr-auto rounded-sm2 border border-line bg-paper px-3 py-1.5 font-medium text-ink hover:bg-canvas">
-                تطبيق نفس موضع المعدل المختار على كل الملفات
-              </button>
+              <span className="mr-auto" />
+              {!isPeriod(reportType) && (
+                <button onClick={applyFirstChoiceToAll}
+                  className="rounded-sm2 border border-line bg-paper px-3 py-1.5 font-medium text-ink hover:bg-canvas">
+                  تطبيق نفس موضع المعدل المختار على كل الملفات
+                </button>
+              )}
               <button onClick={clearDone}
                 className="rounded-sm2 border border-line bg-paper px-3 py-1.5 font-medium text-ink hover:bg-canvas">
                 إخفاء المرفوعة
@@ -348,11 +366,13 @@ export default function ResultsAdmin() {
             <div className="divide-y divide-line rounded-card border border-line">
               {queue.map((r) => (
                 <div key={r.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
-                  <a href={r.url} target="_blank" rel="noopener" className="text-xs font-medium text-mint-deep hover:underline">
-                    معاينة
-                  </a>
+                  {r.url && (
+                    <a href={r.url} target="_blank" rel="noopener" className="text-xs font-medium text-mint-deep hover:underline">
+                      معاينة
+                    </a>
+                  )}
                   <div className="min-w-[140px] flex-1">
-                    {r.status === "processing" && <p className="text-xs text-muted">جارٍ التحليل…</p>}
+                    {r.status === "processing" && <p className="text-xs text-muted">جارٍ تحليل {r.fileName}…</p>}
                     {r.status === "unmatched" && (
                       <p className="text-xs text-danger">
                         لم يُطابَق (رقم الهوية المستخرج: {r.nationalId ?? "غير موجود"})
@@ -368,7 +388,18 @@ export default function ResultsAdmin() {
                     )}
                   </div>
 
-                  {(r.status === "matched" || r.status === "uploaded") && (
+                  {(r.status === "matched" || r.status === "uploaded") && isPeriod(reportType) && (
+                    r.periodTotal ? (
+                      <span className="num rounded-sm2 bg-mint-tint px-2.5 py-1 text-xs font-semibold text-mint-deep"
+                        title={`${r.periodTotal.subjects} مادة مرصودة`}>
+                        {r.periodTotal.total} من {r.periodTotal.max} = {percentOf(r.periodTotal)}%
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted">لم تُرصد الدرجات — يُرفع بلا نسبة</span>
+                    )
+                  )}
+
+                  {(r.status === "matched" || r.status === "uploaded") && !isPeriod(reportType) && (
                     <div className="flex flex-wrap gap-1.5">
                       {r.candidates.length === 0 ? (
                         <span className="text-xs text-danger">لا توجد أرقام مرشّحة للمعدل</span>
@@ -393,8 +424,9 @@ export default function ResultsAdmin() {
               رفع {readyCount} ملفًا جاهزًا
             </button>
             <p className="text-[11px] leading-relaxed text-muted">
-              اختر لكل ملف الرقم الصحيح للمعدل من الأزرار أعلاه (افتح «معاينة» أول مرة للتأكد من
-              الرقم الصحيح في نفس الموضع لكل الملفات)، ثم استخدم «تطبيق نفس الموضع» لتوفير الوقت.
+              {isPeriod(reportType)
+                ? "النسبة تُحسب تلقائيًا من المواد المرصودة فقط: مجموع درجات الطالب ÷ مجموع النهاية العظمى لتلك المواد. راجع ملفًا أو اثنين بـ«معاينة» قبل الرفع."
+                : "اختر لكل ملف الرقم الصحيح للمعدل من الأزرار أعلاه (افتح «معاينة» أول مرة للتأكد من الرقم الصحيح في نفس الموضع لكل الملفات)، ثم استخدم «تطبيق نفس الموضع» لتوفير الوقت."}
             </p>
           </>
         )}
