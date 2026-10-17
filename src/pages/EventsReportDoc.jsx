@@ -74,7 +74,7 @@ function highlights(m) {
   const top = [...m.live].sort((a, b) => m.c(b).attended - m.c(a).attended)[0];
   if (top && m.c(top).attended) out.push(`أكبر الأحداث حضورًا: «${top.title}» (${countAr(m.c(top).attended, "student")}).`);
   if (m.t.upcoming) out.push(`أحداث قادمة لم يحن موعدها: ${n(m.t.upcoming)} (لا تدخل في الأرقام).`);
-  if (m.t.incomplete || m.t.cancelled) out.push(`لم يُستكمل ${n(m.t.incomplete)}، وأُلغي ${n(m.t.cancelled)} (لا تدخل في الأرقام).`);
+  if (m.t.incomplete) out.push(`أحداث لم تُستكمل: ${n(m.t.incomplete)} (لا تدخل في الأرقام).`);
   return out.slice(0, 6);
 }
 

@@ -482,7 +482,7 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
       <div>
         <p className="text-sm font-semibold text-absent">إلغاء الحدث</p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted">
-          يبقى الحدث موثّقًا في القائمة والتقارير بحالة «ملغى» وسببه، ولا يدخل في الإجماليات.
+          يبقى الحدث موثّقًا في قائمة الأحداث بحالة «ملغى» وسببه، ولا يظهر في التقارير.
         </p>
       </div>
       <div>
