@@ -8,7 +8,6 @@ import { signatureByName } from "../lib/userSignatures";
 import { loadPrincipalSignature, loadSchoolStamp } from "../lib/principalSignature";
 import { academicYearLabel } from "./studio/lib";
 import { eventsReportPages, eventPhase, STAGE_AR } from "./EventsReportDoc.jsx";
-import { eventReach, listCerts } from "../lib/eventAudience.js";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
@@ -61,20 +60,13 @@ export default function EventsReports() {
         if (p.cert_issued_at) x.certs++;
         if (p.consent_at) x.consent++;
       });
-      // حدث للمدرسة كلها: المرشّحون والحاضرون بفئاته (lib/eventAudience.js)،
-      // و named عدد المسمَّين وحدهم أساسًا لنسبة الموافقات
-      (data ?? []).forEach((e) => {
-        const x = c[e.id] ?? { total: 0, attended: 0, certs: 0, consent: 0 };
-        const r = eventReach(e, x);
-        // الشهادات: الطلاب من cert_issued_at، والمعلمون والإدارة والضيوف من cert_at
-        c[e.id] = { ...x, named: x.total, total: r.nominated, attended: r.attended, certs: x.certs + listCerts(e) };
-      });
       setCounts(c);
     })();
   }, [uid]);
 
   const shown = useMemo(() => {
-    let list = rows ?? [];
+    // الأحداث الملغاة لا تظهر في التقارير أصلًا
+    let list = (rows ?? []).filter((e) => !e.cancelled_at);
     if (scope === "mine") list = list.filter((e) => e.organizer_id === uid);
     if (from) list = list.filter((e) => e.event_date >= from);
     if (to) list = list.filter((e) => e.event_date <= to);
@@ -82,7 +74,7 @@ export default function EventsReports() {
   }, [rows, scope, uid, from, to]);
 
   const totals = useMemo(() => {
-    // الإجماليات من الأحداث المنفّذة وحدها (eventPhase): القادمة والملغاة وما لم يُستكمل تظهر في القائمة بحالتها
+    // الإجماليات من الأحداث المنفّذة وحدها (eventPhase): القادمة وما لم يُستكمل تظهر في القائمة بحالتها
     const live = shown.filter((e) => ["approved", "done"].includes(eventPhase(e)));
     const t = { events: live.length, students: 0, certs: 0, approved: 0 };
     live.forEach((e) => {
@@ -96,7 +88,7 @@ export default function EventsReports() {
   // التقرير النهائي: صورة أولى لكل حدث معتمد، والتوقيعات والختم
   useEffect(() => {
     if (view !== "report") return;
-    const withPhoto = shown.filter((e) => !e.cancelled_at && e.stage === "approved" && e.report_photos?.length && !(e.id in photos)).slice(0, 12);
+    const withPhoto = shown.filter((e) => e.stage === "approved" && e.report_photos?.length && !(e.id in photos)).slice(0, 12);
     if (!withPhoto.length) return;
     supabase.storage.from("event-reports").createSignedUrls(withPhoto.map((e) => e.report_photos[0]), 3600)
       .then(({ data }) => setPhotos((p) => ({ ...p, ...Object.fromEntries(withPhoto.map((e, i) => [e.id, data?.[i]?.signedUrl ?? null])) })));
@@ -166,7 +158,7 @@ export default function EventsReports() {
       ) : (
         <>
       <div className="no-print grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[["الأحداث المنفّذة", totals.events], ["المستفيدون", totals.students],
+        {[["الأحداث المنفّذة", totals.events], ["الطلاب المشاركون", totals.students],
           ["الشهادات الصادرة", totals.certs], ["المعتمدة", totals.approved]].map(([t, v]) => (
           <div key={t} className="card px-4 py-3 text-center">
             <p className="num text-2xl font-bold text-mint-deep">{v}</p>

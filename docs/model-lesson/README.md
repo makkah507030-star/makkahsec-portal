@@ -47,7 +47,7 @@
 | `model-lesson-template.jpg` | صورة معاينة 900×507 لبطاقة الاستوديو |
 | `build/` | مولّد الملف: `build.py` (المحتوى) و`lib.py` (أدوات الأشكال بهوية القالب) |
 | `build/icons/` | رموز Lucide بألوان الهوية (داكن، أبيض، أخضر) يولّدها `icons.js` |
-| `post/` | المنشور: `post.html` (عريضة 1600×900)، و`guide.html` بطاقة الاستخدام السريع (1080×1350)، والنص المرافق |
+| `post/` | منشور واحد للإعلان: صورة `post.html` (1600×1120) ونصها `post.md`، يحيلان إلى استوديو البوابة بلا شرح للدليل |
 
 ## إعادة توليد العرض
 
@@ -78,10 +78,10 @@ python3 recolor.py ../model-lesson-template.pptx ../colors
 
 ## صورة المنشور
 
-افتح `post/post.html` في المتصفح بعرض 1600×900، أو بالمتصفح دون واجهة:
+افتح `post/post.html` في المتصفح بعرض 1600×1120، أو بالمتصفح دون واجهة:
 
 ```
-headless_shell --window-size=1600,900 --screenshot=post/model-lesson-wide.png file://$PWD/post/post.html
+headless_shell --window-size=1600,1120 --screenshot=post/model-lesson-post.png file://$PWD/post/post.html
 ```
 
 ## إن أردنا نشره في الاستوديو لاحقًا

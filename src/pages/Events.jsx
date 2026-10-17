@@ -20,7 +20,6 @@ import { sendPush } from "../lib/pushSend.js";
 import { countAr } from "../lib/arabicCount.js";
 import { cmpAr } from "../lib/sortAr.js";
 import { useBackStep } from "../lib/backStep.js";
-import { AUDIENCE, audienceOf, audienceLabel, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -145,7 +144,6 @@ export default function Events() {
                 {e.serial} · {fmtG(e.event_date)}
                 {e.category ? ` · ${e.category}` : ""}
                 {e.organizer_name ? ` · ${e.organizer_name}` : ""}
-                {audienceOf(e).length ? ` · للمدرسة كلها: ${audienceLabel(e)}` : ""}
               </p>
               <div className="mt-2.5 h-1.5 overflow-hidden rounded-pill bg-canvas">
                 <div className={`h-full rounded-pill transition-all ${cancelled ? "bg-line" : "bg-mint-deep"}`}
@@ -164,7 +162,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
   const [cats, setCats] = useState([]);
   const [f, setF] = useState({
     title: "", category: "", event_date: todayISO(),
-    start_time: "", end_time: "", venue: "", description: "", goals: "", audience: [],
+    start_time: "", end_time: "", venue: "", description: "", goals: "",
   });
   const [busy, setBusy] = useState(false);
 
@@ -192,8 +190,6 @@ function NewEvent({ uid, profile, roles, onDone }) {
       venue: f.venue.trim() || null,
       description: f.description.trim() || null,
       goals: f.goals.trim() || null,
-      // يُرسل العمود عند اختيار فئة فقط، فلا يتعطّل إنشاء الأحداث العادية قبل تشغيل events_audience_1.sql
-      ...(f.audience.length ? { audience: f.audience } : {}),
       organizer_id: uid,
       organizer_name: profile?.full_name ?? "",
       organizer_role: roleLabel,
@@ -203,9 +199,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
 
     setBusy(false);
     if (error) { onDone(null, { ok: false, text: error.message }); return; }
-    onDone(data.id, { ok: true, text: f.audience.length
-      ? `أُنشئ الحدث ${serial} للمدرسة كلها. أضف المكرَّمين بالاسم إن وُجدوا، ثم تابع.`
-      : `أُنشئ الحدث ${serial}. انتقل لاختيار الطلاب.` });
+    onDone(data.id, { ok: true, text: `أُنشئ الحدث ${serial}. انتقل لاختيار الطلاب.` });
   };
 
   return (
@@ -270,47 +264,11 @@ function NewEvent({ uid, profile, roles, onDone }) {
                   onChange={(e) => setF((x) => ({ ...x, goals: e.target.value }))} />
       </div>
 
-      <AudiencePicker value={f.audience} onChange={(audience) => setF((x) => ({ ...x, audience }))} />
-
       <button className="btn-primary w-full" onClick={save}
               disabled={busy || f.title.trim().length < 3 || !f.event_date}>
-        {busy ? "جارٍ الحفظ…" : f.audience.length ? "حفظ والمتابعة" : "حفظ والانتقال لاختيار الطلاب"}
+        {busy ? "جارٍ الحفظ…" : "حفظ والانتقال لاختيار الطلاب"}
       </button>
     </section>
-  );
-}
-
-/* «حدث للمدرسة كلها»: فئة أو أكثر يُحسب أفرادها آليًا، دون اختيار أسمائهم */
-function AudiencePicker({ value, onChange }) {
-  const [counts, setCounts] = useState(null);
-  useEffect(() => {
-    supabase.rpc("ev_audience_count", { p_audience: AUDIENCE.map((a) => a.k) })
-      .then(({ data }) => setCounts(data ?? null));
-  }, []);
-  const toggle = (k) => onChange(value.includes(k) ? value.filter((x) => x !== k) : [...value, k]);
-  const hasStaff = value.includes("teachers") || value.includes("admin");
-  const hasMass = value.includes("students") || value.includes("guardians");
-
-  return (
-    <div>
-      <label className="text-xs text-muted">حدث للمدرسة كلها (اختياري)</label>
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
-        {AUDIENCE.map((a) => (
-          <button key={a.k} type="button" onClick={() => toggle(a.k)}
-            className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
-              value.includes(a.k) ? "bg-mint-deep text-white"
-                                  : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-            {value.includes(a.k) ? "✓ " : ""}{a.t}
-            {counts && <span className="num mr-1 opacity-75">({counts[a.k] ?? 0})</span>}
-          </button>
-        ))}
-      </div>
-      <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed text-faint">
-        {!value.length && <p>اختر فئة أو أكثر إن كان الحدث لها كلها، فتُحسب في التقارير دون اختيار أسمائها.</p>}
-        {hasMass && <p>الطلاب وأولياء الأمور: لا يحتاج الحدث موافقة ولا استئذانًا، ولا تصدر لهم شهادات جماعية. المكرَّمون منهم يُضافون بالاسم.</p>}
-        {hasStaff && <p>المعلمون والإدارة: يُحدَّد من حضر منهم في كشف الحضور، وتصدر الشهادات لهم.</p>}
-      </div>
-    </div>
   );
 }
 
@@ -347,8 +305,6 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
 
   const done = stageIndex(e.stage);
   const cancelled = !!e.cancelled_at;
-  // حدث للمدرسة كلها: الموافقة والاستئذان لا تلزمان (lib/eventAudience.js)
-  const skip = parts !== null && skipsConsent(e, parts);
   const [cancelling, setCancelling] = useState(false);
 
   // استعادة حدث أُلغي بالخطأ — يعود لمرحلته، والاستئذان المسحوب يُرفع من جديد يدويًا
@@ -407,21 +363,19 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
       <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
         {STAGES.map((s, i) => {
           // مرحلة الاعتماد تُفتح حين يُرفع التقرير لمدير المدرسة
-          const skipped = skip && (s.key === "consent" || s.key === "permission");
-          const reached = !skipped && (i <= done || (i === 7 && !!e.report_submitted_at));
+          const reached = i <= done || (i === 7 && !!e.report_submitted_at);
           const active = i === step;
           return (
             <button key={s.key} onClick={() => reached && setStep(i)} disabled={!reached}
-              title={skipped ? "لا تلزم في حدث للمدرسة كلها" : undefined}
               className={`flex shrink-0 items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
                 active ? "bg-mint-deep text-white"
                 : reached ? "border border-mint-light bg-mint-tint text-mint-deep"
-                : "border border-line bg-white text-faint"} ${skipped ? "line-through" : ""}`}>
+                : "border border-line bg-white text-faint"}`}>
               <span className={`grid h-4 w-4 place-items-center rounded-full text-[10px] ${
                 active ? "bg-white/25" : reached ? "bg-white" : "bg-canvas"}`}>
-                {skipped ? "–" : i < done ? "✓" : s.n}
+                {i < done ? "✓" : s.n}
               </span>
-              {s.key === "participants" && audienceOf(e).length ? "المشاركون" : s.label}
+              {s.label}
             </button>
           );
         })}
@@ -437,25 +391,16 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
       {/* الحدث الملغى يُعرض ببياناته فقط، بلا إجراءات */}
       {!cancelled && step === 0 && <StageInfo key={e.id} e={e} parts={parts} patch={patch}
                                 onNext={() => advance("participants")} />}
-      {!cancelled && step === 1 && <StageParticipants e={e} parts={parts} reload={loadParts} skip={skip}
-                                        onNext={() => (skip ? advance("attendance", "انتقلنا لكشف الحضور.")
-                                                            : advance("consent", "انتقلنا لإرسال الموافقات."))} />}
-      {!cancelled && skip && (step === 2 || step === 3) && (
-        <section className="card space-y-3 p-4">
-          <p className="text-sm leading-relaxed text-ink">
-            الحدث للمدرسة كلها ({audienceLabel(e)})، فلا يحتاج موافقة أولياء الأمور ولا استئذانًا.
-          </p>
-          <button className="btn-primary w-full" onClick={() => advance("attendance")}>المتابعة لكشف الحضور</button>
-        </section>
-      )}
-      {!cancelled && !skip && step === 2 && <StageConsent e={e} parts={parts} reload={loadParts}
+      {!cancelled && step === 1 && <StageParticipants e={e} parts={parts} reload={loadParts}
+                                        onNext={() => advance("consent", "انتقلنا لإرسال الموافقات.")} />}
+      {!cancelled && step === 2 && <StageConsent e={e} parts={parts} reload={loadParts}
                                    uid={uid} organizerName={profile?.full_name ?? ""}
                                    onNext={() => advance("permission", "انتقلنا للاستئذان.")} />}
-      {!cancelled && !skip && step === 3 && <StagePermission e={e} parts={parts} uid={uid} reload={loadParts}
+      {!cancelled && step === 3 && <StagePermission e={e} parts={parts} uid={uid} reload={loadParts}
                                       onNext={() => advance("attendance", "انتقلنا لكشف الحضور.")} />}
-      {!cancelled && step === 4 && <StageAttendance e={e} parts={parts} reload={loadParts} skip={skip} patch={patch}
+      {!cancelled && step === 4 && <StageAttendance e={e} parts={parts} reload={loadParts}
                                       onNext={() => advance("certificates", "انتقلنا للشهادات.")} />}
-      {!cancelled && step === 5 && <StageCertificates e={e} parts={parts} patch={patch} reload={loadParts} isSupport={isSupport}
+      {!cancelled && step === 5 && <StageCertificates e={e} parts={parts} patch={patch} isSupport={isSupport}
                                         onNext={() => advance("report", "انتقلنا للتقرير.")} />}
       {!cancelled && step === 6 && <StageReport e={e} parts={parts} patch={patch} onMsg={onMsg}
                                                 onSubmitted={() => setStep(7)} />}
@@ -537,7 +482,7 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
       <div>
         <p className="text-sm font-semibold text-absent">إلغاء الحدث</p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted">
-          يبقى الحدث موثّقًا في القائمة والتقارير بحالة «ملغى» وسببه، ولا يدخل في الإجماليات.
+          يبقى الحدث موثّقًا في قائمة الأحداث بحالة «ملغى» وسببه، ولا يظهر في التقارير.
         </p>
       </div>
       <div>
@@ -576,7 +521,6 @@ function StageInfo({ e, parts, patch, onNext }) {
     title: e.title ?? "", category: e.category ?? "", event_date: e.event_date ?? "",
     description: e.description ?? "", goals: e.goals ?? "", venue: e.venue ?? "",
     start_time: String(e.start_time ?? "").slice(0, 5), end_time: String(e.end_time ?? "").slice(0, 5),
-    audience: audienceOf(e),
   });
   const [f, setF] = useState(init);
   const [busy, setBusy] = useState(false);
@@ -625,12 +569,6 @@ function StageInfo({ e, parts, patch, onNext }) {
       venue: f.venue.trim() || null,
       description: f.description.trim() || null,
       goals: f.goals.trim() || null,
-      // من سُجّل حضوره من فئة أُزيلت يُحذف معها
-      ...(JSON.stringify(f.audience) !== JSON.stringify(was.audience) ? {
-        audience: f.audience,
-        audience_attended: (e.audience_attended ?? []).filter((x) =>
-          f.audience.includes(x.kind === "admin" ? "admin" : "teachers")),
-      } : {}),
     }, "حُفظت بيانات الحدث.");
     setBusy(false);
     if (ok && next) onNext();
@@ -711,7 +649,6 @@ function StageInfo({ e, parts, patch, onNext }) {
         <textarea rows={2} className="field mt-1 w-full" value={f.goals}
                   onChange={(x) => setF((v) => ({ ...v, goals: x.target.value }))} />
       </div>
-      <AudiencePicker value={f.audience} onChange={(audience) => setF((v) => ({ ...v, audience }))} />
       <p className="text-[11px] text-faint">عنوان الشهادة وقالبها ونصّها تُضبط في مرحلة «الشهادات».</p>
 
       <div className="flex flex-wrap gap-2">
@@ -730,7 +667,7 @@ function StageInfo({ e, parts, patch, onNext }) {
 }
 
 /* ② اختيار الطلاب */
-function StageParticipants({ e, parts, reload, skip, onNext }) {
+function StageParticipants({ e, parts, reload, onNext }) {
   const [classes, setClasses] = useState([]);
   const [classId, setClassId] = useState(null);
   const [students, setStudents] = useState([]);
@@ -780,34 +717,10 @@ function StageParticipants({ e, parts, reload, skip, onNext }) {
     ? students.filter((s) => s.full_name.includes(q.trim()))
     : students;
 
-  const aud = audienceOf(e);
-  const counts = e.audience_counts ?? {};
-
   return (
     <div className="space-y-3">
-      {aud.length > 0 && (
-        <section className="card space-y-2 border-mint-light bg-mint-tint/50 p-4">
-          <p className="text-sm font-semibold text-ink">حدث للمدرسة كلها</p>
-          <div className="flex flex-wrap gap-1.5">
-            {AUDIENCE.filter((a) => aud.includes(a.k)).map((a) => (
-              <span key={a.k} className="chip bg-white text-mint-deep">
-                {a.t}<span className="num mr-1">{counts[a.k] ?? "—"}</span>
-              </span>
-            ))}
-          </div>
-          <p className="text-xs leading-relaxed text-muted">
-            تُحسب الفئة كاملة دون اختيار أسمائها.
-            {staffKinds(e).length > 0 && " حضور المعلمين والإدارة يُحدَّد في كشف الحضور، ولهم تصدر الشهادات."}
-            {(aud.includes("students") || aud.includes("guardians")) &&
-              " لا شهادات جماعية للطلاب وأولياء الأمور: أضف المكرَّمين من الطلاب بأسمائهم أدناه، ومن أولياء الأمور في «شهادات الضيوف وأولياء الأمور» بمرحلة الشهادات."}
-          </p>
-        </section>
-      )}
-
       <section className="card p-4">
-        <p className="text-sm font-semibold text-ink">
-          {aud.length ? "الطلاب المكرَّمون بالاسم (اختياري)" : "اختيار الطلاب المشاركين"}
-        </p>
+        <p className="text-sm font-semibold text-ink">اختيار الطلاب المشاركين</p>
         <p className="mt-0.5 text-xs text-muted">الاختيار مفتوح لكل طلاب المدرسة.</p>
 
         <div className="mt-3 space-y-2">
@@ -858,9 +771,9 @@ function StageParticipants({ e, parts, reload, skip, onNext }) {
             </span>
           ))}
         </div>
-        <button className="btn-primary mt-4 w-full" disabled={(parts?.length ?? 0) === 0 && !aud.length}
+        <button className="btn-primary mt-4 w-full" disabled={(parts?.length ?? 0) === 0}
                 onClick={onNext}>
-          {skip ? "المتابعة لكشف الحضور" : "المتابعة لإرسال موافقات أولياء الأمور"}
+          المتابعة لإرسال موافقات أولياء الأمور
         </button>
       </section>
     </div>
@@ -1409,11 +1322,9 @@ function StagePermission({ e, parts, uid, reload, onNext }) {
 }
 
 /* ⑤ كشف الحضور */
-function StageAttendance({ e, parts, reload, skip, patch, onNext }) {
+function StageAttendance({ e, parts, reload, onNext }) {
   const [busy, setBusy] = useState(false);
-  // في حدث المدرسة كلها لا موافقات، فالمكرَّمون بالاسم كلهم في الكشف
-  const approved = (parts ?? []).filter((p) => skip || p.consent_at);
-  const aud = audienceOf(e);
+  const approved = (parts ?? []).filter((p) => p.consent_at);
 
   const mark = async (p, value) => {
     setBusy(true);
@@ -1431,15 +1342,9 @@ function StageAttendance({ e, parts, reload, skip, patch, onNext }) {
   };
 
   const present = approved.filter((p) => p.attended).length;
-  const staffIn = (e.audience_attended ?? []).length;
-  // حدث الطلاب أو أولياء الأمور للمدرسة كلها منفَّذ بفئته، ولو لم يُسمَّ فيه أحد
-  const canNext = present > 0 || staffIn > 0 || aud.includes("students") || aud.includes("guardians");
 
   return (
     <div className="space-y-3">
-      {staffKinds(e).length > 0 && <StaffAttendance e={e} patch={patch} />}
-
-      {(approved.length > 0 || !aud.length) && <>
       <section className="card p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -1491,89 +1396,11 @@ function StageAttendance({ e, parts, reload, skip, patch, onNext }) {
           )}
         </div>
       </section>
-      </>}
 
-      <button className="btn-primary w-full" onClick={onNext} disabled={!canNext}>
+      <button className="btn-primary w-full" onClick={onNext} disabled={present === 0}>
         المتابعة لإصدار الشهادات
       </button>
     </div>
-  );
-}
-
-/* حضور المعلمين والإدارة في حدث للمدرسة كلها: الأسماء من ev_audience_members،
-   ويُحدَّد من حضر فيُحفظ في audience_attended، ولهم وحدهم تصدر الشهادات. */
-function StaffAttendance({ e, patch }) {
-  const [members, setMembers] = useState(null);
-  const [err, setErr] = useState(null);
-  const [q, setQ] = useState("");
-  const [busy, setBusy] = useState(false);
-  const kinds = staffKinds(e);
-
-  useEffect(() => {
-    (async () => {
-      const { data, error } = await supabase.rpc("ev_audience_members", { p_event: e.id, p_kinds: kinds });
-      if (error) { setErr(error.message); setMembers([]); return; }
-      setMembers((data ?? []).map((m) => ({
-        key: m.key, name: m.full_name, kind: m.kind,
-        role: m.kind === "admin" ? (ADMIN_ROLE_LABEL[m.roles?.[0]] ?? "الإدارة") : "معلم",
-      })).sort((a, b) => cmpAr(a.name, b.name)));
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [e.id, kinds.join()]);
-
-  const attended = e.audience_attended ?? [];
-  const isIn = new Set(attended.map((x) => x.key));
-  const save = async (list) => {
-    setBusy(true);
-    await patch({ audience_attended: list });
-    setBusy(false);
-  };
-  const toggle = (m) => save(isIn.has(m.key) ? attended.filter((x) => x.key !== m.key) : [...attended, m]);
-  const all = (on) => save(on ? members.map((m) => attended.find((x) => x.key === m.key) ?? m) : []);
-  const shown = q.trim() ? (members ?? []).filter((m) => m.name.includes(q.trim())) : members ?? [];
-  const label = kinds.map((k) => (k === "teachers" ? "المعلمين" : "الإدارة")).join(" و");
-
-  return (
-    <section className="card overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-        <div>
-          <p className="text-sm font-semibold text-ink">حضور {label}</p>
-          <p className="mt-0.5 text-xs text-muted">
-            الحاضر <span className="num font-semibold text-present">{attended.length}</span> من{" "}
-            <span className="num">{members?.length ?? "…"}</span> · تصدر الشهادات لمن حضر
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => all(true)} disabled={busy || !members?.length}
-                  className="rounded-pill bg-present/10 px-3.5 py-1.5 text-xs font-semibold text-present">
-            تحديد الكل
-          </button>
-          <button onClick={() => all(false)} disabled={busy || !attended.length}
-                  className="rounded-pill border border-line px-3.5 py-1.5 text-xs text-muted">
-            مسح
-          </button>
-        </div>
-      </div>
-      {err && <p className="bg-absent/10 px-4 py-2 text-xs text-absent">تعذّر جلب الأسماء: {err}</p>}
-      {(members?.length ?? 0) > 8 && (
-        <div className="px-4 pt-3">
-          <input className="field w-full" type="search" value={q} placeholder="ابحث بالاسم"
-                 onChange={(x) => setQ(x.target.value)} />
-        </div>
-      )}
-      {!members ? <Loader compact /> : (
-        <div className="max-h-96 divide-y divide-line overflow-y-auto">
-          {shown.map((m) => (
-            <label key={m.key} className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-sm hover:bg-mint-tint">
-              <input type="checkbox" checked={isIn.has(m.key)} disabled={busy} onChange={() => toggle(m)} />
-              <span className="min-w-0 flex-1 truncate">{m.name}</span>
-              <span className="shrink-0 text-xs text-faint">{m.role}</span>
-            </label>
-          ))}
-          {shown.length === 0 && <p className="px-4 py-6 text-sm text-muted">لا أسماء.</p>}
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -1627,7 +1454,7 @@ function usePrintWhenReady(id, trigger, onDone) {
 }
 
 /* ⑥ الشهادات */
-function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
+function StageCertificates({ e, parts, patch, isSupport, onNext }) {
   const [f, setF] = useState({
     cert_title: e.cert_title ?? "",
     cert_template: e.cert_template ?? (isNationalDay(e) ? "national" : "classic"),
@@ -1643,13 +1470,7 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
   const [printing, setPrinting] = useState(null);   // الشهادات المُعدّة للطباعة
 
   const attended = useMemo(() => (parts ?? []).filter((p) => p.attended === true), [parts]);
-  // المعلمون والإدارة الحاضرون في حدث للمدرسة كلها، بصيغة المشارك نفسها
-  const staff = useMemo(() => (e.audience_attended ?? []).map((x) => (
-    { id: `s-${x.key}`, key: x.key, student_name: x.name, class_label: x.role, staff: true, cert_issued_at: x.cert_at })),
-  [e.audience_attended]);
-  const serialOf = (p) => (p.staff
-    ? `${e.serial}-M${String(staff.indexOf(p) + 1).padStart(3, "0")}`
-    : `${e.serial}-${String(attended.indexOf(p) + 1).padStart(3, "0")}`);
+  const serialOf = (p) => `${e.serial}-${String(attended.indexOf(p) + 1).padStart(3, "0")}`;
   const draft = { ...e, ...f, cert_text: certText };
 
   usePrintWhenReady("ev-cert", printing, () => setPrinting(null));
@@ -1664,21 +1485,6 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
     if (!list.length) return;
     await save();
     setPrinting(list);
-    await markIssued(list);
-  };
-
-  // عدّاد الشهادات: تُسجَّل الطباعة الأولى لكل اسم، وإعادة الطباعة لا تغيّرها
-  const markIssued = async (list) => {
-    const at = new Date().toISOString();
-    const ids = list.filter((p) => !p.staff && !p.cert_issued_at).map((p) => p.id);
-    if (ids.length) {
-      await supabase.from("event_participants").update({ cert_issued_at: at }).in("id", ids).is("cert_issued_at", null);
-      await reload();
-    }
-    const keys = new Set(list.filter((p) => p.staff && !p.cert_issued_at).map((p) => p.key));
-    if (keys.size) {
-      await patch({ audience_attended: (e.audience_attended ?? []).map((x) => (keys.has(x.key) ? { ...x, cert_at: at } : x)) });
-    }
   };
 
   return (
@@ -1687,7 +1493,7 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
         <div>
           <h2 className="text-sm font-semibold text-ink">شهادة الحدث</h2>
           <p className="mt-0.5 text-xs text-muted">
-            تصدر شهادة لكل {staffKinds(e).length ? "من" : "طالب"} سُجّل «حضر» في كشف الحضور، على قالب الشهادات المعتمد: توقيع منظّم الحدث وختم المدرسة وتوقيع المدير.
+            تصدر شهادة لكل طالب سُجّل «حضر» في كشف الحضور، على قالب الشهادات المعتمد: توقيع منظّم الحدث وختم المدرسة وتوقيع المدير.
           </p>
         </div>
 
@@ -1749,7 +1555,6 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
           ))}
           <p className="text-[11px] text-faint">
             اسم الطالب يُكتب تلقائيًا بارزًا بين السطر التمهيدي ونص الشهادة، لكل طالب في شهادته.
-            {staffKinds(e).length > 0 && " وفي شهادات المعلمين والإدارة تُكتب «الأستاذ» مكان «الطالب»."}
           </p>
         </div>
 
@@ -1804,7 +1609,6 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
                 <p className="truncate text-sm font-medium text-ink">{p.student_name}</p>
                 <p className="num truncate text-xs text-faint">{p.class_label} · {serialOf(p)}</p>
               </div>
-              {p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
               <button onClick={() => printList([p])}
                       className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
                 طباعة
@@ -1812,44 +1616,10 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
             </div>
           ))}
           {attended.length === 0 && (
-            <p className="px-4 py-6 text-sm text-muted">
-              {audienceOf(e).length ? "لا طلاب مكرَّمون بالاسم في هذا الحدث."
-                                    : "لا طلاب حاضرون. سجّل الحضور في المرحلة السابقة أولًا."}
-            </p>
+            <p className="px-4 py-6 text-sm text-muted">لا طلاب حاضرون. سجّل الحضور في المرحلة السابقة أولًا.</p>
           )}
         </div>
       </section>
-
-      {staffKinds(e).length > 0 && (
-        <section className="card overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-            <p className="text-sm text-ink">
-              المعلمون والإدارة الحاضرون <span className="num font-semibold text-present">{staff.length}</span>
-            </p>
-            <button className="btn-primary" disabled={!staff.length} onClick={() => printList(staff)}>
-              طباعة شهاداتهم ({staff.length})
-            </button>
-          </div>
-          <div className="divide-y divide-line">
-            {staff.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-ink">{p.student_name}</p>
-                  <p className="num truncate text-xs text-faint">{p.class_label} · {serialOf(p)}</p>
-                </div>
-                {p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
-                <button onClick={() => printList([p])}
-                        className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
-                  طباعة
-                </button>
-              </div>
-            ))}
-            {staff.length === 0 && (
-              <p className="px-4 py-6 text-sm text-muted">لم يُحدَّد حاضرون من المعلمين والإدارة. حدّدهم في كشف الحضور.</p>
-            )}
-          </div>
-        </section>
-      )}
 
       <GuestCertificates e={e} patch={patch} sigUrl={sigUrl} school={school} />
 
@@ -1913,14 +1683,7 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
   };
   const printList = async (gs) => {
     if (!gs.length) return;
-    if (!(await save())) return;
-    setPrinting(gs);
-    // عدّاد الشهادات: تاريخ الطباعة الأولى مع كل ضيف
-    const at = new Date().toISOString();
-    const ids = new Set(gs.filter((g) => !g.cert_at).map((g) => g.id));
-    if (!ids.size) return;
-    const next = ready.map((g) => (ids.has(g.id) ? { ...g, cert_at: at } : g));
-    if (await patch({ guests: next })) setList((l) => l.map((g) => (ids.has(g.id) ? { ...g, cert_at: at } : g)));
+    if (await save()) setPrinting(gs);
   };
 
   if (!open) {
@@ -2009,7 +1772,6 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
                 طباعة شهادته
               </button>
             )}
-            {g.cert_at && <span className="mr-2 text-xs text-present">طُبعت ✓</span>}
           </div>
         ))}
       </div>
@@ -2101,24 +1863,12 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
   const consented = all.filter((p) => p.consent_at);
   const attended = all.filter((p) => p.attended === true);
   const noPhoto = consented.filter((p) => p.consent_photo === false).length;
-  const aud = audienceOf(e);
-  const staffIn = (e.audience_attended ?? []).map((x) => ({ id: x.key, student_name: x.name, class_label: x.role }));
-  // حدث للمدرسة كلها: أعداد فئاته، ومن حضر من المعلمين والإدارة، والمكرَّمون بالاسم، والمستفيدون
-  // الشهادات المطبوعة: الطلاب، والمعلمون والإدارة، والضيوف
-  const certs = all.filter((p) => p.cert_issued_at).length + listCerts(e);
-  const stats = aud.length ? [
-    ...AUDIENCE.filter((a) => aud.includes(a.k)).map((a) => [a.t, e.audience_counts?.[a.k] ?? 0]),
-    ...(staffKinds(e).length ? [["حضر من المعلمين والإدارة", staffIn.length]] : []),
-    ...(all.length ? [["المكرَّمون بالاسم", attended.length]] : []),
-    ["المستفيدون", eventReach(e, { total: all.length, attended: attended.length }).attended],
-    ["الشهادات الصادرة", certs],
-  ] : [
+  const stats = [
     ["المرشّحون", all.length],
     ["وافق أولياؤهم", consented.length],
     ["وافق على التصوير", consented.filter((p) => p.consent_photo).length],
     ["الحاضرون", attended.length],
     ["نسبة الحضور", consented.length ? `${Math.round((attended.length / consented.length) * 100)}%` : "—"],
-    ["الشهادات الصادرة", certs],
   ];
 
   // الصور في مخزن خاص، فتُقرأ بروابط موقّعة مؤقتة
@@ -2296,7 +2046,7 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
 
       {printing && (
         <PrintPortal id="ev-report-sheet" margin="10mm 14mm">
-          <EventReportSheet event={{ ...e, ...f }} stats={stats} attended={attended} staff={staffIn} photos={photos}
+          <EventReportSheet event={{ ...e, ...f }} stats={stats} attended={attended} photos={photos}
                             sigUrl={sigUrl} stampUrl={school.stampUrl} principalName={school.principalName}
                             principalUrl={approved ? school.principalUrl : null} />
         </PrintPortal>

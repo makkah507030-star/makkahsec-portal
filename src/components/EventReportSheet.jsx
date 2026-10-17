@@ -3,7 +3,6 @@ import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
 import { fmtDate } from "../lib/dates";
 import BidiDate from "./BidiDate.jsx";
-import { audienceLabel } from "../lib/eventAudience.js";
 
 /* =====================================================================
    تقرير تنفيذ الحدث — ورقة A4 عمودية بهوية المدرسة.
@@ -89,7 +88,7 @@ function Time12({ t }) {
   return <BidiDate value={`${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} `} suffix={h < 12 ? "ص" : "م"} />;
 }
 
-export default function EventReportSheet({ event: e, stats, attended, staff = [], photos, sigUrl, stampUrl, principalName, principalUrl }) {
+export default function EventReportSheet({ event: e, stats, attended, photos, sigUrl, stampUrl, principalName, principalUrl }) {
   const date = e?.event_date ? `${e.event_date}T12:00:00` : null;
   const info = [
     ["رقم الحدث", <span className="num">{e.serial}</span>],
@@ -137,13 +136,6 @@ export default function EventReportSheet({ event: e, stats, attended, staff = []
               ))}
             </tr>
           ))}
-          {audienceLabel(e) && (
-            <tr>
-              <td colSpan={2} style={cell}>
-                <span style={{ color: "#6B7A72" }}>حدث للمدرسة كلها: </span>{audienceLabel(e)}
-              </td>
-            </tr>
-          )}
         </tbody>
       </table>
 
@@ -178,21 +170,20 @@ export default function EventReportSheet({ event: e, stats, attended, staff = []
       {has(e.report_outcomes) && <Section title="النتائج والأثر"><p style={para}>{e.report_outcomes.trim()}</p></Section>}
       {has(e.report_recommendations) && <Section title="التوصيات"><p style={para}>{e.report_recommendations.trim()}</p></Section>}
 
-      {/* الحاضرون: الطلاب، ثم المعلمون والإدارة في حدث للمدرسة كلها */}
-      {[["الطلاب الحاضرون", "اسم الطالب", "الصف والفصل", attended],
-        ["المعلمون والإدارة الحاضرون", "الاسم", "الصفة", staff]].map(([title, nameCol, subCol, list]) => list.length > 0 && (
-        <div key={title}>
-          <Heading>{title} (<span className="num">{list.length}</span>)</Heading>
+      {/* الحاضرون */}
+      {attended.length > 0 && (
+        <>
+          <Heading>الطلاب الحاضرون (<span className="num">{attended.length}</span>)</Heading>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "9.5pt" }}>
             <thead>
               <tr style={{ background: "#EDFAF2", ...INK }}>
                 <th style={{ ...cell, width: "10mm" }}>م</th>
-                <th style={{ ...cell, textAlign: "right" }}>{nameCol}</th>
-                <th style={{ ...cell, textAlign: "right", width: "60mm" }}>{subCol}</th>
+                <th style={{ ...cell, textAlign: "right" }}>اسم الطالب</th>
+                <th style={{ ...cell, textAlign: "right", width: "60mm" }}>الصف والفصل</th>
               </tr>
             </thead>
             <tbody>
-              {list.map((p, i) => (
+              {attended.map((p, i) => (
                 <tr key={p.id} style={{ breakInside: "avoid" }}>
                   <td className="num" style={{ ...cell, textAlign: "center" }}>{i + 1}</td>
                   <td style={cell}>{p.student_name}</td>
@@ -201,8 +192,8 @@ export default function EventReportSheet({ event: e, stats, attended, staff = []
               ))}
             </tbody>
           </table>
-        </div>
-      ))}
+        </>
+      )}
 
       {/* التواقيع */}
       <div className="grid items-end" style={{ gridTemplateColumns: "1fr auto 1fr", gap: "6mm", marginTop: "10mm", breakInside: "avoid" }}>

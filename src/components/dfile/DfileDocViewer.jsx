@@ -50,7 +50,10 @@ export default function DfileDocViewer({ code, doc, onClose }) {
         setState({ busy: pdf, err: "", url, pdf });
         if (!pdf) return;
         const pdfjs = await loadPdfjs();
-        task = pdfjs.getDocument({ url });
+        // disableFontFace: تُرسم الحروف من خط الملف نفسه رسمًا، لا عبر تحميله خطًا في المتصفح.
+        // في بعض الأجهزة يفشل التحميل فيكتب pdfjs النص بخط بديل حرفًا حرفًا، فتظهر
+        // الكلمات العربية مقطّعة الحروف وبينها فراغات، مع أن الملف سليم.
+        task = pdfjs.getDocument({ url, disableFontFace: true });
         const file = await task.promise;
         const box = pages.current;
         if (off || !box) return;

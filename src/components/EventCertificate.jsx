@@ -137,19 +137,12 @@ const Rule = ({ color }) => (
                 background: `linear-gradient(90deg,transparent,${color}22 12%,${color} 50%,${color}22 88%,transparent)` }} />
 );
 
-/** «الطالب» كلمةً مستقلة تصير «الأستاذ»، ومعها «للطالب» و«والطالب» و«بالطالب» ونحوها،
-    في التمهيد والمتن والختام. لا تمسّ «الطلاب» ولا «الطالبين». */
-const STUDENT = /(^|[^\u0600-\u06FF])([وفبك]?)(لل|ال)طالب(?![\u0600-\u06FF])/g;
-const toStaff = (t) => String(t ?? "").replace(STUDENT, (_, pre, w, al) => `${pre}${w}${al === "لل" ? "للأستاذ" : "الأستاذ"}`);
-const forStaff = (c) => ({ intro: toStaff(c.intro), body: toStaff(c.body), closing: toStaff(c.closing) });
-
 export default function EventCertificate({ event, participant, sigUrl, stampUrl, principalUrl, principalName, serial }) {
   const tpl = THEMES[event?.cert_template] ? event.cert_template : "classic";
   const th = THEMES[tpl];
   const national = tpl === "national";
 
-  // شهادة معلم أو إداري في حدث للمدرسة كلها: «الأستاذ» مكان «الطالب» في النص كله
-  const { intro, body, closing } = participant?.staff ? forStaff(readCert(event)) : readCert(event);
+  const { intro, body, closing } = readCert(event);
   const closingLines = closing.split("\n").map((l) => l.trim()).filter(Boolean);
   const dayNo = String(nationalDayNo(event?.event_date));
   const title = event?.cert_title?.trim() || DEFAULT_CERT_TITLE;

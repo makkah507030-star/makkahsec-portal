@@ -38,7 +38,7 @@ export function eventsModel(events, counts) {
   const done = events.filter((e) => ["approved", "done"].includes(ph(e)));
   const c = (e) => counts[e.id] ?? { total: 0, attended: 0, certs: 0, consent: 0 };
   const t = {
-    events: done.length, nominated: 0, named: 0, attended: 0, certs: 0, consent: 0,
+    events: done.length, nominated: 0, attended: 0, certs: 0, consent: 0,
     approved: done.filter((e) => ph(e) === "approved").length,
     upcoming: events.filter((e) => ph(e) === "upcoming").length,
     incomplete: events.filter((e) => ph(e) === "incomplete").length,
@@ -46,7 +46,7 @@ export function eventsModel(events, counts) {
   };
   done.forEach((e) => {
     const x = c(e);
-    t.nominated += x.total; t.named += x.named ?? x.total; t.attended += x.attended; t.certs += x.certs; t.consent += x.consent ?? 0;
+    t.nominated += x.total; t.attended += x.attended; t.certs += x.certs; t.consent += x.consent ?? 0;
   });
   // الأحداث بالشهر: المعتمد، والمنفَّذ بانتظار الاعتماد، والقادم
   const months = {};
@@ -68,13 +68,13 @@ function highlights(m) {
   const out = [];
   if (!m.t.events) return [m.t.upcoming ? `لا أحداث منفّذة بعد، وأحداث قادمة: ${n(m.t.upcoming)}.` : "لا أحداث منفّذة في هذه الفترة."];
   out.push(`الأحداث والمناسبات المنفّذة: ${countAr(m.t.events, "event")}، اعتُمد منها ${n(m.t.approved)}.`);
-  if (m.t.attended) out.push(`الحضور: ${countAr(m.t.attended, "beneficiary")} من ${countAr(m.t.nominated, "nominee", "g")} (${pct(m.t.attended, m.t.nominated) ?? 0}%).`);
-  if (m.t.certs) out.push(`الشهادات الصادرة: ${countAr(m.t.certs, "cert")}.`);
+  if (m.t.attended) out.push(`الحضور: ${countAr(m.t.attended, "student")} من ${countAr(m.t.nominated, "nominee", "g")} (${pct(m.t.attended, m.t.nominated) ?? 0}%).`);
+  if (m.t.certs) out.push(`شهادات المشاركة الصادرة للطلاب: ${countAr(m.t.certs, "cert")}.`);
   if (m.cats[0]) out.push(`أكثر التصنيفات: «${m.cats[0][0]}» بعدد ${n(m.cats[0][1])}.`);
   const top = [...m.live].sort((a, b) => m.c(b).attended - m.c(a).attended)[0];
-  if (top && m.c(top).attended) out.push(`أكبر الأحداث حضورًا: «${top.title}» (${countAr(m.c(top).attended, "beneficiary")}).`);
+  if (top && m.c(top).attended) out.push(`أكبر الأحداث حضورًا: «${top.title}» (${countAr(m.c(top).attended, "student")}).`);
   if (m.t.upcoming) out.push(`أحداث قادمة لم يحن موعدها: ${n(m.t.upcoming)} (لا تدخل في الأرقام).`);
-  if (m.t.incomplete || m.t.cancelled) out.push(`لم يُستكمل ${n(m.t.incomplete)}، وأُلغي ${n(m.t.cancelled)} (لا تدخل في الأرقام).`);
+  if (m.t.incomplete) out.push(`أحداث لم تُستكمل: ${n(m.t.incomplete)} (لا تدخل في الأرقام).`);
   return out.slice(0, 6);
 }
 
@@ -148,7 +148,7 @@ export function eventsReportPages({ events, counts, photos = {}, news = [], scop
       rows: [["user", "النطاق", organizer ? `ما نفّذه: ${organizer}` : "كل أحداث المدرسة"], ["calendar", "الفترة", period],
              ["check", "المعتمدة", `${n(m.t.approved)} من ${n(m.t.events)}`], ["doc", "تاريخ الإصدار", fmtDate(new Date())]],
       note: ["check", "أرقام الأحداث كما وُثّقت في البوابة: المرشحون، والحضور، والشهادات، والاعتماد."],
-      strip: [[m.t.events, "الأحداث والمناسبات"], [m.t.attended, "المستفيدون الحاضرون"], [m.t.certs, "الشهادات الصادرة"], [m.t.approved, "الأحداث المعتمدة"]],
+      strip: [[m.t.events, "الأحداث والمناسبات"], [m.t.attended, "الطلاب الحاضرون"], [m.t.certs, "الشهادات الصادرة"], [m.t.approved, "الأحداث المعتمدة"]],
       foot: "الأحداث والمناسبات",
     }} />,
 
@@ -163,7 +163,7 @@ export function eventsReportPages({ events, counts, photos = {}, news = [], scop
         <div className="mr-rings">
           <Ring value={pct(m.t.approved, m.t.events)} label="اعتماد الأحداث" sub={`${m.t.approved} من ${m.t.events}`} color={S[0]} />
           <Ring value={pct(m.t.attended, m.t.nominated)} label="نسبة الحضور" sub={`${m.t.attended} من ${m.t.nominated}`} color={S[1]} />
-          <Ring value={pct(m.t.consent, m.t.named)} label="موافقات أولياء الأمور" sub={`${m.t.consent} من ${m.t.named}`} color={S[2]} />
+          <Ring value={pct(m.t.consent, m.t.nominated)} label="موافقات أولياء الأمور" sub={`${m.t.consent} من ${m.t.nominated}`} color={S[2]} />
           <Ring value={pct(m.t.certs, m.t.attended)} label="الشهادات للحاضرين" sub={`${m.t.certs} من ${m.t.attended}`} color={S[3]} />
         </div>
       </Box>
