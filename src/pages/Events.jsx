@@ -799,7 +799,7 @@ function StageParticipants({ e, parts, reload, skip, onNext }) {
             تُحسب الفئة كاملة دون اختيار أسمائها.
             {staffKinds(e).length > 0 && " حضور المعلمين والإدارة يُحدَّد في كشف الحضور، ولهم تصدر الشهادات."}
             {(aud.includes("students") || aud.includes("guardians")) &&
-              " لا شهادات جماعية للطلاب وأولياء الأمور: أضف المكرَّمين من الطلاب بأسمائهم أدناه، ومن أولياء الأمور في «شهادات الضيوف والمتعاونين» بمرحلة الشهادات."}
+              " لا شهادات جماعية للطلاب وأولياء الأمور: أضف المكرَّمين من الطلاب بأسمائهم أدناه، ومن أولياء الأمور في «شهادات الضيوف وأولياء الأمور» بمرحلة الشهادات."}
           </p>
         </section>
       )}
@@ -1871,12 +1871,21 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
 
 /* شهادات الضيوف والمتعاونين — اختيارية: للمحاضرين والمدربين ومنفّذي الفعاليات
    من خارج المدرسة، بتصميم مستقل عن شهادات الطلاب. تُحفظ قائمتهم مع الحدث. */
-const newGuest = () => ({ id: Math.random().toString(36).slice(2, 10), name: "", entity: "", task: "" });
+const newGuest = (kind = "guest") => ({ id: Math.random().toString(36).slice(2, 10), kind, name: "", entity: "", student: "", task: "" });
+
+/* المكرَّم من أولياء الأمور: «ولي أمر الطالب/ …» تحت اسمه، ونص شكر على شراكته مع المدرسة */
+const isGuardian = (g) => g.kind === "guardian";
+const guestText = (g) => (isGuardian(g)
+  ? `وذلك تقديرًا ${g.task?.trim() ? forTask(g.task) : "لتعاونه الصادق ومشاركته الفاعلة"}، وحرصه على الشراكة مع المدرسة في خدمة أبنائها.`
+  : `وذلك تقديرًا ${forTask(g.task)}، وما بذله من جهد وعطاء أسهم في نجاح البرنامج.`);
+const guestEntity = (g) => (isGuardian(g)
+  ? (g.student?.trim() ? `ولي أمر الطالب/ ${g.student.trim()}` : "ولي أمر طالب")
+  : g.entity);
 
 function guestCertProps(e, g, i, sigUrl, school) {
   return {
-    name: g.name, entity: g.entity,
-    text: `وذلك تقديرًا ${forTask(g.task)}، وما بذله من جهد وعطاء أسهم في نجاح البرنامج.`,
+    name: g.name, entity: guestEntity(g),
+    text: guestText(g),
     activity: e.title,
     dateText: e.event_date ? stripBidi(fmtDate(`${e.event_date}T12:00:00`)) : "",
     closing: "سائلين الله له دوام التوفيق والسداد",
@@ -1918,13 +1927,19 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
     return (
       <section className="card flex flex-wrap items-center justify-between gap-3 p-4">
         <div>
-          <h2 className="text-sm font-semibold text-ink">شهادات الضيوف والمتعاونين <span className="font-normal text-faint">— اختياري</span></h2>
-          <p className="mt-0.5 text-xs text-muted">لمن شارك من خارج المدرسة: محاضر أو مدرب أو منفّذ فعالية.</p>
+          <h2 className="text-sm font-semibold text-ink">شهادات الضيوف وأولياء الأمور <span className="font-normal text-faint">— اختياري</span></h2>
+          <p className="mt-0.5 text-xs text-muted">لمن شارك من خارج المدرسة: محاضر أو مدرب أو منفّذ فعالية، أو ولي أمر طالب مكرَّم.</p>
         </div>
-        <button className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
-                onClick={() => { setOpen(true); if (!list.length) setList([newGuest()]); }}>
-          إضافة ضيف
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
+                  onClick={() => { setOpen(true); if (!list.length) setList([newGuest()]); }}>
+            إضافة ضيف
+          </button>
+          <button className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
+                  onClick={() => { setOpen(true); if (!list.length) setList([newGuest("guardian")]); }}>
+            إضافة ولي أمر
+          </button>
+        </div>
       </section>
     );
   }
@@ -1932,17 +1947,27 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
   return (
     <section className="card space-y-4 p-4">
       <div>
-        <h2 className="text-sm font-semibold text-ink">شهادات الضيوف والمتعاونين <span className="font-normal text-faint">— اختياري</span></h2>
+        <h2 className="text-sm font-semibold text-ink">شهادات الضيوف وأولياء الأمور <span className="font-normal text-faint">— اختياري</span></h2>
         <p className="mt-0.5 text-xs text-muted">
-          شهادة شكر بتصميم خاص لكل ضيف، تحمل عنوان الحدث وتاريخه، بتوقيع منظّم الحدث وختم المدرسة وتوقيع المدير.
+          شهادة شكر بتصميم خاص لكل ضيف أو ولي أمر مكرَّم، تحمل عنوان الحدث وتاريخه، بتوقيع منظّم الحدث وختم المدرسة وتوقيع المدير.
         </p>
       </div>
 
       <div className="space-y-3">
         {list.map((g, i) => (
           <div key={g.id} className="space-y-2 rounded-sm2 border border-line p-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-mint-deep">الضيف <span className="num">{i + 1}</span></span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-mint-deep"><span className="num">{i + 1}</span>.</span>
+                {[["guest", "ضيف أو متعاون"], ["guardian", "ولي أمر طالب"]].map(([k, t]) => (
+                  <button key={k} type="button" onClick={() => set(g.id, "kind", k)}
+                    className={`rounded-pill px-3 py-1 text-[11.5px] font-medium transition-colors ${
+                      (g.kind ?? "guest") === k ? "bg-mint-deep text-white"
+                                                : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+                    {t}
+                  </button>
+                ))}
+              </div>
               <button type="button" className="text-[11px] text-absent hover:underline"
                       onClick={() => setList((l) => l.filter((x) => x.id !== g.id))}>
                 حذف
@@ -1950,22 +1975,32 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               <div>
-                <label className="text-[11px] text-faint">الاسم مع اللقب</label>
-                <input className="field mt-1 w-full" value={g.name} placeholder="مثال: الدكتور/ خالد بن سعيد الغامدي"
+                <label className="text-[11px] text-faint">{isGuardian(g) ? "اسم ولي الأمر مع اللقب" : "الاسم مع اللقب"}</label>
+                <input className="field mt-1 w-full" value={g.name}
+                       placeholder={isGuardian(g) ? "مثال: الأستاذ/ فهد بن سعد الحارثي" : "مثال: الدكتور/ خالد بن سعيد الغامدي"}
                        onChange={(x) => set(g.id, "name", x.target.value)} />
               </div>
-              <div>
-                <label className="text-[11px] text-faint">الجهة (اختياري)</label>
-                <input className="field mt-1 w-full" value={g.entity} placeholder="مثال: جامعة أم القرى"
-                       onChange={(x) => set(g.id, "entity", x.target.value)} />
-              </div>
+              {isGuardian(g) ? (
+                <div>
+                  <label className="text-[11px] text-faint">اسم الطالب</label>
+                  <input className="field mt-1 w-full" value={g.student ?? ""} placeholder="مثال: سلمان بن فهد الحارثي"
+                         onChange={(x) => set(g.id, "student", x.target.value)} />
+                </div>
+              ) : (
+                <div>
+                  <label className="text-[11px] text-faint">الجهة (اختياري)</label>
+                  <input className="field mt-1 w-full" value={g.entity} placeholder="مثال: جامعة أم القرى"
+                         onChange={(x) => set(g.id, "entity", x.target.value)} />
+                </div>
+              )}
             </div>
             <div>
-              <label className="text-[11px] text-faint">المهمة التي نفّذها (اختياري)</label>
-              <input className="field mt-1 w-full" value={g.task} placeholder="مثال: تقديم محاضرة توعوية عن السلامة المرورية"
+              <label className="text-[11px] text-faint">{isGuardian(g) ? "سبب التكريم (اختياري)" : "المهمة التي نفّذها (اختياري)"}</label>
+              <input className="field mt-1 w-full" value={g.task}
+                     placeholder={isGuardian(g) ? "مثال: المشاركة في تنظيم حفل اليوم الوطني" : "مثال: تقديم محاضرة توعوية عن السلامة المرورية"}
                      onChange={(x) => set(g.id, "task", x.target.value)} />
               <p className="mt-1 text-[11px] leading-relaxed text-faint">
-                يُكتب في الشهادة: «وذلك تقديرًا {forTask(g.task)}، وما بذله من جهد وعطاء أسهم في نجاح البرنامج.»
+                يُكتب في الشهادة: «{guestText(g)}»
               </p>
             </div>
             {g.name.trim() && (
@@ -1979,10 +2014,16 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
         ))}
       </div>
 
-      <button type="button" className="text-sm font-medium text-mint-deep hover:underline"
-              onClick={() => setList((l) => [...l, newGuest()])}>
-        + إضافة ضيف آخر
-      </button>
+      <div className="flex flex-wrap gap-4">
+        <button type="button" className="text-sm font-medium text-mint-deep hover:underline"
+                onClick={() => setList((l) => [...l, newGuest()])}>
+          + إضافة ضيف
+        </button>
+        <button type="button" className="text-sm font-medium text-mint-deep hover:underline"
+                onClick={() => setList((l) => [...l, newGuest("guardian")])}>
+          + إضافة ولي أمر
+        </button>
+      </div>
 
       {ready.length > 0 && (
         <div className="space-y-2">
@@ -2002,10 +2043,10 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
       <div className="flex flex-wrap gap-2">
         <button className="rounded-sm2 border border-mint-deep px-4 py-2 text-sm font-semibold text-mint-deep hover:bg-mint-tint"
                 onClick={save}>
-          حفظ قائمة الضيوف
+          حفظ القائمة
         </button>
         <button className="btn-primary" disabled={!ready.length} onClick={() => printList(ready)}>
-          طباعة شهادات الضيوف ({ready.length})
+          طباعة الشهادات ({ready.length})
         </button>
       </div>
 
