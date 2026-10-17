@@ -5,7 +5,7 @@
    قيمة كل خانة:
    ١) ما كتبه المعلم (جدول grade_entries) — يتقدّم دائمًا.
    ٢) وإلا القيمة التلقائية:
-      • من «سجل المتابعة الإلكتروني 2» لأي عمود اكتمل رصد بنوده فيه (lib/followUp2.js).
+      • من «سجل المتابعة الإلكتروني 3» لأي عمود اكتمل رصد بنوده فيه (lib/followUp3.js).
       • وإلا عمود «التقويمات التحريرية» من الاختبارات القصيرة المصحّحة في البوابة
         (متوسط نسب الطالب × سقف العمود، والغائب «غ»).
    ٣) مجموع الفترة يُحسب حين تكتمل كل خانات الفترة أرقامًا، والمجموع النهائي
@@ -138,7 +138,7 @@ export async function saveColumn(supabase, { uid, year, term, g, studentIds, cel
 /* ——— صف طالب كاملًا ———
    خانات بترتيب الكشف: أعمدة الفترة الأولى، مجموعها، أعمدة الثانية، مجموعها، المجموع.
    كل خانة: { text, src: "manual" | "auto" | "log" | "calc" | "", period, col, max, auto }
-   log: درجات الأعمدة من سجل المتابعة 2 (loadLogMarks) */
+   log: درجات الأعمدة من سجل المتابعة 3 (loadLogMarks) */
 export function buildRow(g, shape, student, marks, entries, log) {
   const { cols, qIdx, qMax } = shape;
   const cells = [];

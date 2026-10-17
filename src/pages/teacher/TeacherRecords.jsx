@@ -6,7 +6,7 @@ import { printReport, PRINCIPAL_NAME, ACADEMIC_DEPUTY_NAME } from "../../lib/exp
 import { configFor, isKnownSubject, buildGradeHeader, gradeBlankCount } from "../../lib/gradeSheets";
 import { loadQuizMarks, loadEntries, sheetShape, buildRow } from "../../lib/gradeBook";
 import GradeSheetEditor from "../../components/GradeSheetEditor.jsx";
-import { loadLogMarks } from "../../lib/followUp2.js";
+import { loadLogMarks } from "../../lib/followUp3.js";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";

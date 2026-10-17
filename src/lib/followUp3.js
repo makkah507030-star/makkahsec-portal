@@ -1,19 +1,22 @@
-// src/lib/followUp2.js
+// src/lib/followUp3.js
 /* =====================================================================
-   سجل المتابعة الإلكتروني 2: توزيع المعلم درجات الفترة على بنود يسمّيها،
-   وحساب درجة كل عمود من أعمدة نور منها لكشف رصد الدرجات.
+   سجل المتابعة الإلكتروني 3 (تجريبي، الفصل الدراسي الأول 1448): توزيع المعلم درجات
+   الفترة على بنود يسمّيها، وحساب درجة كل عمود من أعمدة نور منها لكشف رصد الدرجات.
+   مستقل عن السجلين 1 و2: بنوده r3_* وتوزيعه في جدوله.
 
    • كل بند يتبع عمودًا من أعمدة الفترة كما في نور (lib/gradeSheets.js)،
      ومجموع بنود كل عمود يساوي سقفه، فيخرج الكشف مطابقًا لنور.
    • البند «خانات»: خانة لكل درجة (✓ تُحتسب، ✗ لا)، أو «درجة»: رقم يُكتب.
-   • التوزيع في teacher_follow_up_weights.weights لكل معلم × مادة × عام × فصل دراسي:
+   • التوزيع في teacher_follow_up_dist3.weights لكل معلم × مادة × عام × فصل دراسي
+     (supabase/follow_up_v3.sql):
        { v: 2, dists: { "<بنية الأعمدة>": [ {id, label, max, type, col}, … ] } }
      بنية الأعمدة (shapeSig) تفصل الصفوف التي تختلف أعمدة المادة فيها.
-     والصيغة الأولى { homework, participation, classwork } تُقرأ كما هي.
-   • الرصد في teacher_follow_up ببند r2_<id> (للخانات slot_no لكل خانة، وللدرجة 1).
+   • الرصد في teacher_follow_up ببند r3_<id> (للخانات slot_no لكل خانة، وللدرجة 1).
    ===================================================================== */
 import { configFor } from "./gradeSheets";
 
+export const ITEM_PREFIX = "r3_";
+export const DIST_TABLE = "teacher_follow_up_dist3";
 export const LOG_PERIODS = { period1: "الفترة الأولى", period2: "الفترة الثانية" };
 
 /** أعمدة الفترة للمادة والصف كما في نور */
@@ -33,7 +36,7 @@ export function defaultItems(cols) {
         { id: "participation", label: "المشاركة", max: 15, type: "box", col: c.i },
         { id: "classwork", label: "التطبيقات الصفية", max: 10, type: "box", col: c.i },
       ]
-    // معرّف ثابت: «written» للعمود الأول كما في الصيغة الأولى، فيبقى ما رُصد فيه
+    // معرّف ثابت لكل عمود، فيبقى ما رُصد فيه إن أُعيد التوزيع المعتاد
     : [{ id: c.i === 0 ? "written" : `col${c.i}`, label: c.label, max: c.max, type: "score", col: c.i }]));
 }
 
@@ -60,20 +63,8 @@ function split(c, n, name, type) {
 /** بنود التوزيع لهذه الأعمدة من المحفوظ، أو null إن لم يُعتمد توزيع صالح لها */
 export function itemsFor(weights, cols) {
   if (!weights) return null;
-  if (weights.v === 2) {
-    const items = weights.dists?.[shapeSig(cols)];
-    return validDist(items, cols).ok ? items : null;
-  }
-  // الصيغة الأولى: بنود المهام الثلاثة بدرجاتها، وبقية الأعمدة كالتوزيع المعتاد
-  const tasks = cols.find(isTasks);
-  const old = ["homework", "participation", "classwork"];
-  if (!tasks || old.reduce((a, k) => a + (Number(weights[k]) || 0), 0) !== tasks.max) return null;
-  const labels = { homework: "الواجبات", participation: "المشاركة", classwork: "التطبيقات الصفية" };
-  const items = [
-    ...cols.filter((c) => c !== tasks).flatMap((c) => defaultItems([c])),
-    ...old.filter((k) => Number(weights[k]) > 0).map((k) => ({ id: k, label: labels[k], max: Number(weights[k]), type: "box", col: tasks.i })),
-  ];
-  return items.sort((a, b) => a.col - b.col);
+  const items = weights.v === 2 ? weights.dists?.[shapeSig(cols)] : null;
+  return validDist(items, cols).ok ? items : null;
 }
 
 /** صلاحية التوزيع: كل بند باسم ودرجة، ومجموع كل عمود يساوي سقفه */
@@ -125,7 +116,8 @@ export function columnScores(items, get) {
 }
 
 /* ——— لكشف رصد الدرجات: درجات الأعمدة من السجل ———
-   ترجع { [g.key]: { period1: { studentId: { col: درجة } }, period2: {…} } } */
+   ترجع { [g.key]: { period1: { studentId: { col: درجة } }, period2: {…} } }
+   وقبل تشغيل follow_up_v3.sql يفشل الاستعلام فترجع {} ويبقى الكشف كما كان. */
 export async function loadLogMarks(supabase, { uid, year, term, groups }) {
   if (!uid || !groups.length) return {};
   const { data: t } = await supabase.from("teachers").select("id").eq("user_id", uid).maybeSingle();
@@ -133,11 +125,11 @@ export async function loadLogMarks(supabase, { uid, year, term, groups }) {
   const subjects = [...new Set(groups.map((g) => g.subject))];
   const classIds = [...new Set(groups.map((g) => g.class_id))];
   const [{ data: ws }, { data: rows }] = await Promise.all([
-    supabase.from("teacher_follow_up_weights").select("subject, weights")
+    supabase.from(DIST_TABLE).select("subject, weights")
       .eq("teacher_id", t.id).eq("academic_year", String(year)).eq("term", term).in("subject", subjects),
     supabase.from("teacher_follow_up").select("class_id, subject, period, student_id, item_key, slot_no, mark")
       .eq("teacher_id", t.id).eq("academic_year", String(year)).eq("term", term)
-      .in("class_id", classIds).like("item_key", "r2_%"),
+      .in("class_id", classIds).like("item_key", `${ITEM_PREFIX}%`),
   ]);
   const out = {};
   groups.forEach((g) => {
@@ -149,7 +141,7 @@ export async function loadLogMarks(supabase, { uid, year, term, groups }) {
       const marks = {};
       (rows ?? []).forEach((r) => {
         if (String(r.class_id) !== String(g.class_id) || r.subject !== g.subject || r.period !== label || r.mark === null) return;
-        marks[`${r.student_id}::${r.item_key.slice(3)}::${r.slot_no}`] = r.mark;
+        marks[`${r.student_id}::${r.item_key.slice(ITEM_PREFIX.length)}::${r.slot_no}`] = r.mark;
       });
       g.students.forEach((st) => {
         const sc = columnScores(items, (id, sn) => marks[`${st.id}::${id}::${sn}`]);

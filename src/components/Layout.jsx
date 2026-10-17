@@ -159,7 +159,7 @@ const TEACHER_GROUPS = [
     title: "طلابي",
     items: [
       { to: "/records",    label: "السجلات",                tabKey: "records", icon: "layers" },
-      { to: "/follow-up",  label: "سجل المتابعة الإلكتروني", also: ["/follow-up-2"], icon: "clipboard", kw: "مهام ادائية مشاركة" },
+      { to: "/follow-up",  label: "سجل المتابعة الإلكتروني", also: ["/follow-up-2", "/follow-up-3"], icon: "clipboard", kw: "مهام ادائية مشاركة" },
       { to: "/my-absence", label: "تقرير غياب مادتي",       icon: "trend" },
       { to: "/referrals",  label: "إحالة طالب",             icon: "send", kw: "موجه" },
       { to: "/dropouts",   label: "الإبلاغ عن طالب منقطع",  icon: "userX", kw: "انقطاع سفر غياب" },

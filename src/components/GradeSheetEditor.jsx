@@ -6,12 +6,12 @@ import { countAr } from "../lib/arabicCount.js";
 import {
   PERIODS, loadQuizMarks, loadEntries, saveEntry, saveColumn, sheetShape, buildRow, validCell, cellId,
 } from "../lib/gradeBook";
-import { loadLogMarks } from "../lib/followUp2.js";
+import { loadLogMarks } from "../lib/followUp3.js";
 
 /* =====================================================================
    محرّر كشف رصد الدرجات لفصل ومادة.
    • عمود «التقويمات التحريرية» يأتي تلقائيًا من الاختبارات المصحّحة (أخضر).
-   • وأي عمود اكتمل رصد بنوده في «سجل المتابعة الإلكتروني 2» يأتي منه (أزرق).
+   • وأي عمود اكتمل رصد بنوده في «سجل المتابعة الإلكتروني 3» يأتي منه (أزرق).
    • المعلم يعدّل أي خانة في أي وقت، فيُحفظ تعديله فورًا ويتقدّم على الآلي (أصفر)،
      ويستطيع إرجاع الخانة للقيمة الآلية بزر ↺.
    • صف «للجميع» أعلى الكشف: درجة تُكتب في خانة عمود تُرصد لكل طلاب الفصل في ذلك العمود.
@@ -31,7 +31,7 @@ const TONE = {
 export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
   const shape = useMemo(() => sheetShape(g), [g]);
   const [marks, setMarks] = useState(null);
-  const [log, setLog] = useState(null);        // درجات الأعمدة من سجل المتابعة 2
+  const [log, setLog] = useState(null);        // درجات الأعمدة من سجل المتابعة 3
   const [entries, setEntries] = useState(null);
   const [draft, setDraft] = useState({});      // key → نص قيد الكتابة
   const [bad, setBad] = useState({});          // key → true للقيمة غير الصالحة
@@ -167,7 +167,7 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-white px-4 py-2 text-[11px] text-muted">
         <span className="flex items-center gap-1.5"><span className={`h-3 w-3 rounded-[3px] border ${TONE.auto}`} /> من التصحيح الآلي</span>
-        <span className="flex items-center gap-1.5"><span className={`h-3 w-3 rounded-[3px] border ${TONE.log}`} /> من سجل المتابعة 2</span>
+        <span className="flex items-center gap-1.5"><span className={`h-3 w-3 rounded-[3px] border ${TONE.log}`} /> من سجل المتابعة 3</span>
         <span className="flex items-center gap-1.5"><span className={`h-3 w-3 rounded-[3px] border ${TONE.manual}`} /> عدّله المعلم</span>
         <span>اكتب رقمًا، أو اضغط زر «غ» بجانب الخانة للغائب · Enter للطالب التالي</span>
         {autoCount > 0
