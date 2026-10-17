@@ -142,7 +142,10 @@ export default function EventCertificate({ event, participant, sigUrl, stampUrl,
   const th = THEMES[tpl];
   const national = tpl === "national";
 
-  const { intro, body, closing } = readCert(event);
+  const cert = readCert(event);
+  // شهادة معلم أو إداري في حدث للمدرسة كلها: «الأستاذ» مكان «الطالب»
+  const intro = participant?.staff ? cert.intro.replace(/الطالب/g, "الأستاذ") : cert.intro;
+  const { body, closing } = cert;
   const closingLines = closing.split("\n").map((l) => l.trim()).filter(Boolean);
   const dayNo = String(nationalDayNo(event?.event_date));
   const title = event?.cert_title?.trim() || DEFAULT_CERT_TITLE;
