@@ -5,7 +5,8 @@ import { loadPublic, visitNote, visitPing, visitStart } from "../lib/dfile.js";
 
 /* =====================================================================
    ملف المعلم الرقمي للزائر: /f/:code برابط ثابت أو بمسح الرمز (?q=1) أو من رسالة
-   واتساب المعلم (?w=1)، دون دخول. يكتب الزائر اسمه وجهته اختياريًا أو يتخطى، وتُسجَّل
+   واتساب المعلم (?w=1)، دون دخول. يظهر الترحيب وحده أولًا: يكتب الزائر اسمه وجهته
+   اختياريًا أو يتخطى، ثم يظهر الملف من بطاقة المعلم. وتُسجَّل
    الزيارة ومدتها للمعلم، ويكتب ملاحظته للمعلم في سجل الزوار.
    ===================================================================== */
 
@@ -53,27 +54,31 @@ export default function DfilePublic() {
   if (!res) return <Note title="جارٍ فتح الملف…" />;
   if (res.status !== "ok") return <Note title="هذا الملف غير متاح حاليًا" body="قد يكون الرابط غير صحيح، أو أُوقف الملف." />;
 
+  // الترحيب وحده أولًا: يكتب الزائر اسمه وجهته أو يتخطى، ثم يظهر الملف من بطاقة المعلم
+  const enter = (n = "", o = "") => { start(n, o); setWelcome(false); window.scrollTo(0, 0); };
+  if (welcome) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-8" style={{ background: "var(--df-bg, #F3F6F4)" }} dir="rtl">
+        <form className="card w-full max-w-[560px] space-y-3 p-4" onSubmit={(e) => { e.preventDefault(); enter(name, org); }}>
+          <div>
+            <h1 className="text-base font-bold text-ink">مرحبًا بك في ملف المعلم</h1>
+            <p className="mt-0.5 text-sm text-muted">اكتب اسمك وجهتك ليعرف المعلم من اطّلع على ملفه، وتستطيع كتابة ملاحظتك له من الزر أسفل الصفحة. هذا اختياري.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input className="field" placeholder="الاسم" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} aria-label="الاسم" />
+            <input className="field" placeholder="الجهة، مثل مدير المدرسة" value={org} onChange={(e) => setOrg(e.target.value)} maxLength={80} aria-label="الجهة" />
+            <button className="btn-primary" type="submit">دخول</button>
+            <button className="btn-ghost" type="button" onClick={() => enter()}>تخطٍّ</button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: "var(--df-bg, #F3F6F4)" }}>
-      {welcome && (
-        <div className="mx-auto max-w-[860px] px-4 pt-4">
-          <form className="card space-y-3 p-4" onSubmit={(e) => { e.preventDefault(); start(name, org); setWelcome(false); }}>
-            <div>
-              <h1 className="text-base font-bold text-ink">مرحبًا بك في ملف المعلم</h1>
-              <p className="mt-0.5 text-sm text-muted">اكتب اسمك وجهتك ليعرف المعلم من اطّلع على ملفه، وتستطيع كتابة ملاحظتك له من الزر أسفل الصفحة. هذا اختياري.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <input className="field" placeholder="الاسم" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} aria-label="الاسم" />
-              <input className="field" placeholder="الجهة، مثل مدير المدرسة" value={org} onChange={(e) => setOrg(e.target.value)} maxLength={80} aria-label="الجهة" />
-              <button className="btn-primary" type="submit">دخول</button>
-              <button className="btn-ghost" type="button" onClick={() => { start(); setWelcome(false); }}>تخطٍّ</button>
-            </div>
-          </form>
-        </div>
-      )}
       <DfileReport data={res.data} settings={res.settings} code={res.settings.code} />
       <VisitorNote save={async (text) => {
-        if (!visit.current.started) setWelcome(false);
         const id = await start(name, org);
         if (!id) throw new Error("تعذّر حفظ الملاحظة. أعد تحميل الصفحة ثم حاول مرة أخرى.");
         return visitNote(id, text);
