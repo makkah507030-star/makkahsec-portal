@@ -7,7 +7,7 @@ import DfileReport from "../../components/dfile/DfileReport.jsx";
 import DfileShare from "../../components/dfile/DfileShare.jsx";
 import DfileDistribution from "../../components/dfile/DfileDistribution.jsx";
 import {
-  ACTIVITY_LABEL, ACTIVITY_PRESETS, COLORS, MADRASATI, PARTS, RANKS, OPINION_ROLE, actTotal, decideOpinion, dfileError, loadDfile, loadDfileData, loadMyOpinions, sentences,
+  ACTIVITY_LABEL, ACTIVITY_PRESETS, COLORS, RECORD_AUTO, RECORD_PRESETS, MADRASATI, PARTS, RANKS, OPINION_ROLE, actTotal, decideOpinion, dfileError, loadDfile, loadDfileData, loadMyOpinions, sentences,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -34,6 +34,7 @@ export default function MyDfile() {
   const [preview, setPreview] = useState(false);
   const [win, setWin] = useState({ t: "", d: "" });
   const [custom, setCustom] = useState({ class: "", extra: "" });
+  const [recName, setRecName] = useState("");
   useBackStep(preview, () => setPreview(false), "لوحة الملف");
 
   const load = useCallback(async () => {
@@ -108,6 +109,8 @@ export default function MyDfile() {
   };
   // at: يوم إدخال الأرقام بتوقيت الرياض، ويظهر في التقرير «آخر تحديث»
   const setMad = (patch) => save({ madrasati: { ...mad, ...patch, at: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" }) } });
+  const recs = s.records ?? [];
+  const addRec = (t) => { const v = (t ?? "").trim(); if (v && !recs.includes(v)) save({ records: [...recs, v] }); };
   const setAct = (k, list) => save({ activities: { ...act, [k]: list } });
   const addAct = (k, t) => {
     const list = act[k] ?? [];
@@ -226,6 +229,38 @@ export default function MyDfile() {
             </div>
           );
         })}
+      </Block>
+
+      <Block title="السجلات والنماذج" sub="أسماء فقط. ما تستخدمه في البوابة يظهر وحده، وأضف ما تستخدمه من سجلات ورقية أو خارجية.">
+        {((d?.records?.auto ?? []).length + (d?.records?.forms ?? []).length) > 0 && (
+          <div>
+            <p className="label">من البوابة (تلقائي)</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(d.records.auto ?? []).filter((k) => RECORD_AUTO[k]).map((k) => <span key={k} className="chip bg-mint-tint text-mint-deep">✓ {RECORD_AUTO[k]}</span>)}
+              {(d.records.forms ?? []).map((t) => <span key={t} className="chip bg-excused/10 text-excused">{t}</span>)}
+            </div>
+          </div>
+        )}
+        <div>
+          <p className="label">سجلات أخرى تضيفها</p>
+          {recs.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {recs.map((t) => (
+                <span key={t} className="chip border border-line bg-white text-ink">{t}
+                  <button type="button" className="mr-1 text-danger" aria-label={`حذف ${t}`} onClick={() => save({ records: recs.filter((x) => x !== t) })}>✕</button></span>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {RECORD_PRESETS.filter((t) => !recs.includes(t)).map((t) => (
+              <button key={t} type="button" className="chip border border-line bg-canvas text-muted hover:text-ink" onClick={() => addRec(t)}>+ {t}</button>
+            ))}
+          </div>
+          <form className="mt-2 flex gap-2" onSubmit={(e) => { e.preventDefault(); addRec(recName); setRecName(""); }}>
+            <input className="field" placeholder="سجل آخر…" value={recName} onChange={(e) => setRecName(e.target.value)} maxLength={60} />
+            <button className="btn-ghost" type="submit">إضافة</button>
+          </form>
+        </div>
       </Block>
 
       <Block title="ماذا يرى الزائر؟" sub="الأقسام غير المختارة لا تظهر في ملفك.">

@@ -1,0 +1,23 @@
+export const d = {
+  year: "1448", name: "فيصل بن سالم القرشي", spec: "رياضيات", courses: [{ subject: "رياضيات 1-1", grade: 1, classes: [101, 102] }, { subject: "رياضيات 2-1", grade: 2, classes: [201, 202, 203] }, { subject: "رياضيات 2-2", grade: 2, classes: [204, 205] }],
+  classes: [1,2,3,4,5].map((i) => ({ id: i, label: String(200 + i) })), students: 142, weekly: 24,
+  week: { n: 8, from: "2026-10-11", to: "2026-10-15" }, opinions: [{ role: "principal", name: "عبدالله بن محمد الزهراني", body: "معلم يصنع الفرق في فصوله: تخطيط منظّم، ومتابعة دقيقة لكل طالب، ومبادرة دائمة في مجتمع التعلم.", at: "2026-10-12" }], lessons: 412, ontime: 98, subs: 28, plc: 6, plc_led: 1, xvisits: 2, hours_train: 22, hours_conf: 10, guardian_msgs: 57,
+  quizzes: [
+    ...Array(5).fill(0).map((_, i) => ({ title: `اختبار قصير ${i + 1}`, mode: "online", period: "period1", q: 20 + i })),
+    ...Array(4).fill(0).map((_, i) => ({ title: `اختبار ورقي ${i + 1}`, mode: "omr", period: i ? "period2" : "diagnostic", q: 30 })),
+    ...Array(3).fill(0).map((_, i) => ({ title: `ورقة عمل ${i + 1}`, mode: "paper", period: "period1", q: 10 })),
+    ...Array(2).fill(0).map((_, i) => ({ title: `اختبار الدوال ${i + 1}`, mode: "external", period: "period2", q: 0 })),
+  ],
+  visits: [{ date: "2026-10-02", cls: "فصل 203، الحصة الثالثة، رياضيات", by: "وكيل الشؤون التعليمية", strengths: "إدارة صفية فاعلة\nتقويم مستمر" },
+           { date: "2026-09-14", cls: "فصل 201", by: "مدير المدرسة", strengths: "تنويع الاستراتيجيات" }],
+  events: [{ title: "أولمبياد الرياضيات", date: "2026-09-12", n: 3 }, { title: "مبادرة دقيقة رياضيات", date: "2026-09-20", n: 60 }],
+  records: { auto: ["attendance", "followup", "grades", "quizzes", "plans", "subs", "guardians"], forms: ["إشعار غياب طالب", "استدعاء ولي أمر", "شهادة شكر وتقدير"] },
+  evidence: { e02: 9, e03: 7, e04: 6, e05: 8, e06: 5, e07: 6, e08: 3, e09: 4, e10: 7, e11: 9 },
+  docs: [{ id: 1, title: "شهادة حضور برنامج التقويم البنائي وتوظيف نتائجه في التدريس", el: "e02", kind: "pdf", date: "2026-09-01" }, { id: 2, title: "تقرير تحليل نتائج الاختبار التشخيصي للصف الثاني الثانوي", el: "e10", kind: "pdf", date: "2026-09-20" }, { id: 3, title: "صورة من مبادرة دقيقة رياضيات", el: "e05", kind: "image" }],
+  grades: { n: 142, avg: 81.4, bands: { b5: 45, b4: 46, b3: 31, b2: 14, b1: 6 },
+    classes: [{ label: "201", bands: { b5: 10, b4: 9, b3: 6, b2: 3, b1: 1 } }, { label: "202", bands: { b5: 8, b4: 9, b3: 7, b2: 3, b1: 1 } },
+              { label: "203", bands: { b5: 4, b4: 7, b3: 9, b2: 6, b1: 3 } }, { label: "204", bands: { b5: 10, b4: 10, b3: 6, b2: 2, b1: 1 } },
+              { label: "205", bands: { b5: 13, b4: 11, b3: 3, b2: 0, b1: 0 } }],
+    improve: [{ label: "201", first: 80, last: 87 }, { label: "202", first: 77, last: 83 }, { label: "203", first: 61, last: 73 }, { label: "204", first: 74, last: 80 }, { label: "205", first: 82, last: 88 }],
+    support: { used: 3, need: 16, planned: 14, plans: 3, plans_done: 3, top: 48, honored: 48, enrich: 2 } },
+};

@@ -3,6 +3,7 @@
 -- بنود السجل الثاني تُحفظ بالبادئة r2_ (r2_homework…)، فكانت تُعدّ أنواعًا
 -- مستقلة عن بنود السجل الأول وتظهر بأسمائها البرمجية. تُوحَّد هنا بحذف البادئة.
 -- تكرار التنفيذ آمن.
+-- ⚠ حلّ محله perf_auto_core_1 و2 (الحساب في perf_auto_counts_core): لا يُعاد تنفيذ هذا الملف بعدهما.
 -- =====================================================================
 create or replace function public.perf_auto_counts(p_uid uuid, p_year text)
 returns table (teacher_user_id uuid, item_key text, cnt bigint, last_at timestamptz)

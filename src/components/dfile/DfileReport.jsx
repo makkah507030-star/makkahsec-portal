@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./dfile.css";
-import { fmtDate } from "../../lib/dates.js";
+import DfileDocViewer from "./DfileDocViewer.jsx";
+import { fmtDate, fmtHijri } from "../../lib/dates.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
-  OPINION_ROLE, avgGain, subjectsOf, experience, hours, openDoc, pc, pct, pickedSentences, weekWord,
+  DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -19,7 +20,10 @@ const ICON = {
   chev: "M6 9l6 6 6-6",
   medal: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0ZM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4",
   file: "M14 3H6v18h12V7ZM14 3v4h4M9 13h6M9 17h4",
+  image: "M4 5h16v14H4ZM4 15l4-4 4 4 3-3 5 5M15 9.5h.01",
+  book: "M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2ZM5 18a2 2 0 0 1 2-2h11M9 8h5",
 };
+const ELEMENT_NAME = Object.fromEntries(ELEMENTS);
 const Svg = ({ d, ...p }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...p}>
     <path d={d} />
@@ -27,6 +31,11 @@ const Svg = ({ d, ...p }) => (
 );
 
 /* «3 أنشطة صفية» و«11 نشاطًا صفيًا» */
+/* «ساعة» بعد الرقم: 2 ساعتين، 3–10 ساعات، وغيرها ساعة */
+const hourWord = (n) => {
+  const v = Number(n) || 0;
+  return v === 2 ? "ساعتين" : v >= 3 && v <= 10 ? "ساعات" : "ساعة";
+};
 const actWord = (n, k) => {
   const c = k === "class";
   if (n >= 3 && n <= 10) return c ? "أنشطة صفية" : "أنشطة لاصفية";
@@ -35,7 +44,8 @@ const actWord = (n, k) => {
 };
 
 /* «3 شواهد» و«11 شاهدًا» */
-const evLabel = (n) => `${n} ${n >= 3 && n <= 10 ? "شواهد" : "شاهدًا"}`;
+/* «شاهد» بعد الرقم: 1 شاهد، 2 شاهدين، 3–10 شواهد، وغيرها شاهدًا */
+const evLabel = (n) => `${n} ${n === 1 ? "شاهد" : n === 2 ? "شاهدين" : n >= 3 && n <= 10 ? "شواهد" : "شاهدًا"}`;
 
 const Src = ({ k = "auto", children }) => <span className={`df-src df-${k}`}>{children}</span>;
 
@@ -145,7 +155,7 @@ function Kpis({ d }) {
         {d.plc_led > 0 && <span className="df-d">قدّم منها {d.plc_led}</span>}</div>
       <div className="df-kpi"><span className="df-v df-num">{d.quizzes?.length ?? 0}</span><span className="df-l">اختبارًا وتقويمًا</span>
         {modes > 0 && <span className="df-d">{modes} أنواع تقويم</span>}</div>
-      <div className="df-kpi"><span className="df-v df-num">{h}</span><span className="df-l">ساعة تطوير مهني</span>
+      <div className="df-kpi"><span className="df-v df-num">{h}</span><span className="df-l">{hourWord(h)} تطوير مهني</span>
         <span className="df-d">برامج تدريبية ومؤتمرات</span></div>
       <div className="df-kpi"><span className="df-v df-num">{d.guardian_msgs}</span><span className="df-l">تواصلًا مع أولياء الأمور</span>
         <span className="df-d">إشعارات وصلت أولياء الأمور</span></div>
@@ -276,10 +286,10 @@ function Growth({ d }) {
       <div className="df-grid2">
         <div className="df-card">
           <CardH title="التطوير المهني" sub="هذا العام" src="بوابة + المعلم" srcKind="mix" />
-          <div className="df-imp-sum"><span className="df-v df-num">{hours(d)}</span><span className="df-sub">ساعة حضور</span></div>
+          <div className="df-imp-sum"><span className="df-v df-num">{hours(d)}</span><span className="df-sub">{hourWord(hours(d))} حضور</span></div>
           <div className="df-tiles df-t2">
-            <span><b className="df-num">{d.hours_train} <small>ساعة</small></b>برامج تدريبية</span>
-            <span><b className="df-num">{d.hours_conf} <small>ساعة</small></b>مؤتمرات وورش</span>
+            <span><b className="df-num">{d.hours_train} <small>{hourWord(d.hours_train)}</small></b>برامج تدريبية</span>
+            <span><b className="df-num">{d.hours_conf} <small>{hourWord(d.hours_conf)}</small></b>مؤتمرات وورش</span>
             <span><b className="df-num">{d.plc}</b>لقاءات مجتمع التعلم</span>
             <span><b className="df-num">{d.xvisits}</b>زيارات تبادلية</span>
           </div>
@@ -375,30 +385,34 @@ export default function DfileReport({ data: d, settings: s, code }) {
   const [cur, setCur] = useState(null);
   const root = useRef(null);
   const brief = pickedSentences(d, s);
-  const ev = d.evidence ?? {};
-  const evTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + Number(ev[k] ?? 0), 0);
+  // شواهد كل عنصر: ما سجّله المعلم، والآلية التي تحسبها البوابة من عمله (perf_auto_core_2)
+  const auto = d.evidence_auto ?? {};
+  const ev = Object.fromEntries(ELEMENTS.map(([k]) => [k, Number(d.evidence?.[k] ?? 0) + Number(auto[k] ?? 0)]));
+  const evTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + ev[k], 0);
+  const autoTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + Number(auto[k] ?? 0), 0);
   const evMax = Math.max(1, ...ELEMENTS.map(([k]) => Number(ev[k] ?? 0)));
 
   // دروس الأسبوع الدراسي الحالي من توزيع المنهج، لكل مادة
   const lessons = d.week ? (s?.distribution?.items ?? [])
-    .map((it) => ({ s: it.subject, c: it.classes ?? [], t: (it.weeks ?? []).find((w) => w.n === d.week.n)?.t }))
+    .map((it) => { const w = (it.weeks ?? []).find((x) => x.n === d.week.n); return { s: it.subject, c: it.classes ?? [], t: w?.t, days: w?.days }; })
     .filter((x) => x.t) : [];
   const opinions = d.opinions ?? [];
-  const [docErr, setDocErr] = useState("");
-  const viewDoc = async (id) => {
-    setDocErr("");
-    const w = window.open("about:blank", "_blank");   // تُفتح النافذة فور الضغط حتى لا يمنعها المتصفح
-    try { const url = await openDoc(code, id); if (w) w.location.replace(url); else window.location.assign(url); }
-    catch (e) { if (w) w.close(); setDocErr(e.message); }
-  };
+  // الشاهد يُعرض داخل الصفحة (DfileDocViewer)، فيراه الزائر في كل جهاز
+  const [doc, setDoc] = useState(null);
+  const closeDoc = useCallback(() => setDoc(null), [setDoc]);
 
   const mad = s?.madrasati ?? {};
   const madOn = MADRASATI.some((m) => Number(mad[m.key]) > 0) || mad.weekly_plan === true;
   const act = s?.activities ?? {};
   const actOn = actTotal(act.class) > 0 || actTotal(act.extra) > 0;
 
+  // السجلات والنماذج: الآلية من البوابة، وأسماء النماذج الصادرة، وما أضافه المعلم
+  const recAuto = (d.records?.auto ?? []).filter((k) => RECORD_AUTO[k]);
+  const recForms = d.records?.forms ?? [];
+  const recOwn = s?.records ?? [];
   const has = {
     teach: d.lessons > 0 || d.subs > 0 || madOn || actOn || lessons.length > 0,
+    records: recAuto.length + recForms.length + recOwn.length > 0,
     results: (d.grades?.n ?? 0) > 0,
     assess: (d.quizzes?.length ?? 0) > 0,
     growth: true,
@@ -488,7 +502,10 @@ export default function DfileReport({ data: d, settings: s, code }) {
                   {lessons.map((x) => (
                     <div className="df-lcard" key={x.s}><span className="df-sb">{x.s}</span>
                       {x.c.length > 0 && <small className="df-lcls df-num">الفصول {x.c.join(" و")}</small>}
-                      {x.t.split(/،|\n/).map((t) => t.trim()).filter(Boolean).map((t) => <p key={t}>{t}</p>)}</div>
+                      {/* المكتوب يدويًا يومًا بيوم يُعرض بأيامه، والمستورد سطرًا لكل درس */}
+                      {x.days?.some((t) => t?.trim())
+                        ? x.days.map((t, i) => t?.trim() && <p key={i}><b className="df-lday">{DAYS[i]}</b>{t}</p>)
+                        : x.t.split(/،|\n/).map((t) => t.trim()).filter(Boolean).map((t) => <p key={t}>{t}</p>)}</div>
                   ))}
                 </div>
               </div>
@@ -530,6 +547,25 @@ export default function DfileReport({ data: d, settings: s, code }) {
             )}
           </Section>
         )}
+        {show("records") && has.records && (
+          <Section id="records" title="السجلات والنماذج" sub="بأسمائها فقط">
+            <div className="df-card df-recs">
+              {/* ثلاث مجموعات متتالية ببطاقات بحجم واحد: السجلات الآلية، ثم النماذج الصادرة، ثم ما أضافه المعلم */}
+              {recAuto.length > 0 && (
+                <div><CardH title="سجلات البوابة" sub="يعمل عليها في البوابة هذا العام" src="تلقائي" />
+                  <div className="df-tags">{recAuto.map((k) => <span key={k} className="df-tag"><Svg d={ICON.ok} strokeWidth="2.4" />{RECORD_AUTO[k]}</span>)}</div></div>
+              )}
+              {recForms.length > 0 && (
+                <div><CardH title="النماذج الصادرة" sub="أصدرها من البوابة هذا العام" src="تلقائي" />
+                  <div className="df-tags">{recForms.map((t) => <span key={t} className="df-tag df-tag-f"><Svg d={ICON.file} />{t}</span>)}</div></div>
+              )}
+              {recOwn.length > 0 && (
+                <div><CardH title="سجلات أخرى" sub="ورقية أو خارجية" src="يكتبه المعلم" srcKind="up" />
+                  <div className="df-tags">{recOwn.map((t) => <span key={t} className="df-tag df-tag-o"><Svg d={ICON.book} />{t}</span>)}</div></div>
+              )}
+            </div>
+          </Section>
+        )}
         {show("results") && has.results && <Results g={d.grades} />}
         {show("assess") && has.assess && <Assess d={d} />}
         {show("growth") && <Growth d={d} />}
@@ -537,7 +573,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
         {show("wins") && <Wins d={d} s={s} />}
         {show("elements") && (
           <Fold id="elements" title="عناصر الأداء الوظيفي" open={!!open.elements} onToggle={(v) => setOpen((o) => ({ ...o, elements: v }))}
-                line={`${evTotal} شاهدًا في ${ELEMENTS.length - 1} عناصر، والعنصر الأول يقدّره مدير المدرسة`}>
+                line={`${evLabel(evTotal)} في ${ELEMENTS.length - 1} عناصر${autoTotal ? `، منها ${autoTotal} من عمله في البوابة` : ""}، والعنصر الأول يقدّره مدير المدرسة`}>
             <div className="df-els">
               {ELEMENTS.map(([k, t], i) => (
                 <div className="df-el" key={k}>
@@ -555,14 +591,16 @@ export default function DfileReport({ data: d, settings: s, code }) {
                 open={!!open.docs} onToggle={(v) => setOpen((o) => ({ ...o, docs: v }))}>
             <div className="df-docs">
               {d.docs.map((f) => (
-                <button type="button" className="df-doc" key={f.id} onClick={() => viewDoc(f.id)}>
-                  <span className="df-ic"><Svg d={ICON.file} /></span><b>{f.title}</b>
-                  <span className="df-num">{f.date ? fmtDate(f.date) : f.name ?? ""}</span></button>
+                // اسم الملف الأصلي لا يظهر: العنوان الذي كتبه المعلم، وعنصر الأداء، ونوع الملف، والتاريخ
+                <button type="button" className="df-doc" key={f.id} onClick={() => setDoc(f)}>
+                  <span className="df-ic"><Svg d={f.kind === "image" ? ICON.image : ICON.file} /></span><b>{f.title}</b>
+                  {ELEMENT_NAME[f.el] && <span className="df-doc-el" style={{ color: `var(--${f.el})` }}>{ELEMENT_NAME[f.el]}</span>}
+                  <span className="df-num">{[f.kind === "image" ? "صورة" : "PDF", f.date && fmtHijri(f.date)].filter(Boolean).join("، ")}</span></button>
               ))}
             </div>
-            {docErr && <p className="df-sub" style={{ color: "var(--warn)", marginTop: 8 }}>{docErr}</p>}
           </Fold>
         )}
+        {doc && <DfileDocViewer code={code} doc={doc} onClose={closeDoc} />}
         <footer className="df-foot">
           <span>صادر من بوابة مكة الثانوية الرقمية، يتحدّث تلقائيًا مع كل عمل جديد للمعلم</span>
           <span>لا يعرض أسماء الطلاب ولا بياناتهم الشخصية</span>

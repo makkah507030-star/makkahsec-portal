@@ -6,17 +6,18 @@
 
 create or replace function public.dfile_public(p_code text)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
-declare f public.teacher_dfiles; i jsonb;  -- i: «أثر التطوير» إن وُجدت دالته (improvement_loop_5)
+declare f public.teacher_dfiles; x jsonb;  -- إضافات التقرير من dfile_extra (الجزء 8) إن وُجدت
 begin
   select d.* into f from public.teacher_dfiles d join public.users u on u.id = d.teacher_user_id
    where d.code = upper(trim(p_code)) and d.disabled_at is null and u.is_active;
   if not found then return jsonb_build_object('status', 'off'); end if;
-  if to_regprocedure('public.improve_impact(uuid)') is not null then execute 'select public.improve_impact($1)' into i using f.teacher_user_id; end if;
+  if to_regprocedure('public.dfile_extra(uuid)') is not null then execute 'select public.dfile_extra($1)' into x using f.teacher_user_id; end if;
   return jsonb_build_object('status', 'ok',
     'settings', jsonb_build_object('code', f.code, 'color', f.color, 'hidden', f.hidden, 'sentences', f.sentences,
       'appoint_year', f.appoint_year, 'perf_rating', f.perf_rating, 'perf_year', f.perf_year, 'rank', f.rank,
-      'other_wins', f.other_wins, 'madrasati', f.madrasati, 'activities', f.activities, 'distribution', f.distribution),
-    'data', public.dfile_data_core(f.teacher_user_id) || jsonb_build_object('impact', coalesce(i, '[]'::jsonb)));
+      'other_wins', f.other_wins, 'madrasati', f.madrasati, 'activities', f.activities, 'distribution', f.distribution,
+      'records', to_jsonb(f) -> 'records'),   -- to_jsonb: يعمل قبل إضافة العمود في الجزء 8
+    'data', public.dfile_data_core(f.teacher_user_id) || coalesce(x, '{}'::jsonb));
 end; $$;
 
 revoke execute on function public.dfile_public(text) from public;
@@ -27,11 +28,14 @@ create table if not exists public.dfile_visits (
   teacher_user_id uuid not null references public.users(id) on delete cascade,
   visitor_name text,
   visitor_org text,
-  via text not null default 'link' check (via in ('qr', 'link')),
+  via text not null default 'link',
   started_at timestamptz not null default now(),
   seconds integer not null default 0
 );
 create index if not exists dfile_visits_teacher_idx on public.dfile_visits (teacher_user_id, started_at desc);
+-- طريقة الفتح: الرمز، أو الرابط، أو رسالة واتساب من المعلم (wa)
+alter table public.dfile_visits drop constraint if exists dfile_visits_via_check;
+alter table public.dfile_visits add constraint dfile_visits_via_check check (via in ('qr', 'link', 'wa'));
 
 alter table public.dfile_visits enable row level security;
 drop policy if exists dfile_visits_read on public.dfile_visits;
@@ -48,7 +52,7 @@ begin
   if uid is null or uid = auth.uid() then return null; end if;
   insert into public.dfile_visits (teacher_user_id, visitor_name, visitor_org, via)
   values (uid, nullif(left(trim(coalesce(p_name, '')), 80), ''), nullif(left(trim(coalesce(p_org, '')), 80), ''),
-          case when p_via = 'qr' then 'qr' else 'link' end)
+          case when p_via in ('qr', 'wa') then p_via else 'link' end)
   returning id into vid;
   return vid;
 end; $$;

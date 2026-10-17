@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>دليل المعلم: ملف المعلم الرقمي</title>
+<!-- دليل المعلم لاستخدام ملف المعلم الرقمي، بهوية الملف نفسه (src/components/dfile/dfile.css).
+     صفحات A4 تُطبع PDF بـ build.mjs. الصور من shots/ ويعيد build.mjs التقاطها من الكود الحالي.
+     عند أي تعديل: حدّث النص هنا، وأضف سطرًا في «سجل التعديلات» آخر الدليل، ثم شغّل build.mjs. -->
+<style>
+@font-face { font-family: Plex; font-weight: 400; src: url(../../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2) format("woff2"); }
+@font-face { font-family: Plex; font-weight: 500; src: url(../../../public/fonts/ibm-plex-sans-arabic-500-arabic.woff2) format("woff2"); }
+@font-face { font-family: Plex; font-weight: 600; src: url(../../../public/fonts/ibm-plex-sans-arabic-600-arabic.woff2) format("woff2"); }
+@font-face { font-family: Plex; font-weight: 700; src: url(../../../public/fonts/ibm-plex-sans-arabic-700-arabic.woff2) format("woff2"); }
+@font-face { font-family: PlexL; font-weight: 400 700; src: url(../../../public/fonts/ibm-plex-sans-arabic-600-latin.woff2) format("woff2"); }
+@page { size: A4; margin: 0; }
+:root { --bg: #F3F6F4; --surface: #fff; --ink: #101010; --muted: #5F6B65; --faint: #98A39D; --line: #DCE5E0;
+  --s-a: #2F4F40; --s-b: #3E6350; --s-c: #89D7AD; --tint: #EEF3F0; --mint-light: #D8E5DD; --warn: #9A7B22; --warn-bg: #FBF3DE;
+  --info: #3F6B99; --info-bg: #E8EFF7;
+  --e02:#3e6350; --e03:#2f7f7a; --e04:#3f6b99; --e05:#5a5f9e; --e06:#7a5c99; --e07:#9a4f6e; --e08:#a5523f; --e09:#b07a2a; --e10:#7d7f2a; --e11:#5f8a3a; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #d9dfdb; }
+body { font-family: PlexL, Plex, Tahoma, sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 210mm; height: 297mm; margin: 0 auto 8mm; background: var(--bg); position: relative; overflow: hidden; page-break-after: always;
+  padding: 16mm 15mm 18mm; display: flex; flex-direction: column; gap: 6mm; }
+.page:last-child { page-break-after: auto; }
+@media print { html, body { background: none; } .page { margin: 0; } }
+
+/* رأس الصفحة وتذييلها */
+.ph { display: flex; align-items: center; gap: 8px; font-size: 10.5pt; color: var(--muted); }
+.ph img { width: 22px; }
+.ph b { color: var(--s-b); font-weight: 700; }
+.ph .sp { flex: 1; }
+.pf { position: absolute; bottom: 9mm; right: 15mm; left: 15mm; display: flex; justify-content: space-between; font-size: 9pt; color: var(--faint); }
+
+/* الغلاف */
+.cover { padding: 0; background: linear-gradient(160deg, var(--s-a), var(--s-b) 70%); color: #fff; }
+.cover .in { padding: 26mm 18mm; display: flex; flex-direction: column; height: 100%; }
+.cover .brand { display: flex; align-items: center; gap: 12px; font-size: 13pt; font-weight: 600; }
+.cover .brand img { width: 44px; }
+.cover .brand small { display: block; font-size: 10pt; font-weight: 400; opacity: .75; }
+.cover h1 { font-size: 40pt; line-height: 1.25; margin-top: 30mm; font-weight: 700; }
+.cover .lead { font-size: 15pt; line-height: 1.8; opacity: .88; margin-top: 6mm; max-width: 150mm; }
+.cover .tag { display: inline-block; margin-top: 10mm; background: var(--s-c); color: #16301F; border-radius: 999px; padding: 6px 18px; font-weight: 700; font-size: 12pt; align-self: flex-start; }
+.cover .phones { margin-top: auto; display: flex; gap: 8mm; justify-content: center; align-items: flex-end; }
+.cover .phones .phone { width: 52mm; }
+.cover .phones .phone:nth-child(2) { width: 60mm; }
+.cover .foot { margin-top: 10mm; font-size: 10pt; opacity: .7; display: flex; justify-content: space-between; }
+
+/* عنوان القسم */
+.sh { display: flex; align-items: center; gap: 10px; }
+.sh .n { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13pt; flex: none; }
+.sh h2 { font-size: 19pt; font-weight: 700; color: var(--s-a); }
+.lead2 { font-size: 11.5pt; line-height: 1.9; color: var(--muted); }
+
+/* صف: شرح وصورة */
+.row { display: flex; gap: 8mm; align-items: flex-start; flex: 1; min-height: 0; }
+.txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4mm; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 5mm 5.5mm; box-shadow: 0 1px 2px rgba(16,40,28,.05), 0 10px 28px -18px rgba(16,40,28,.28); }
+.card h3 { font-size: 12.5pt; font-weight: 700; color: var(--s-b); margin-bottom: 2mm; }
+.card p, .card li { font-size: 10.8pt; line-height: 1.85; }
+.card ol, .card ul { padding-right: 5mm; }
+.card li + li { margin-top: 1mm; }
+.path { display: inline-flex; gap: 6px; align-items: center; background: var(--tint); border: 1px solid var(--mint-light); color: var(--s-a); border-radius: 999px; padding: 3px 12px; font-weight: 600; font-size: 10.5pt; }
+.tip { background: var(--info-bg); border-color: transparent; }
+.tip h3 { color: var(--info); }
+.warn { background: var(--warn-bg); border-color: transparent; }
+.warn h3 { color: var(--warn); }
+b.k { color: var(--s-a); }
+
+/* إطار الجوال للصور */
+.shots { width: 72mm; flex: none; display: flex; flex-direction: column; gap: 5mm; align-items: center; }
+.shots.two { width: 150mm; flex-direction: row; align-items: flex-start; justify-content: center; }
+.phone { width: 66mm; background: #101a15; border-radius: 9mm; padding: 2.4mm; box-shadow: 0 18px 40px -22px rgba(16,40,28,.6); }
+.phone img { width: 100%; display: block; border-radius: 7mm; }
+.phone.crop img { height: 128mm; object-fit: cover; object-position: top; }
+.shot { width: 70mm; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 10px 28px -18px rgba(16,40,28,.35); background: #fff; }
+.shot img { width: 100%; display: block; }
+.cap { font-size: 9pt; color: var(--faint); text-align: center; margin-top: 1.5mm; }
+
+/* الفهرس */
+.toc { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5mm; }
+.toc div { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 3.2mm 4mm; font-size: 11pt; font-weight: 600; }
+.toc span { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-size: 10pt; flex: none; }
+.toc small { margin-right: auto; color: var(--faint); font-weight: 400; }
+
+table { width: 100%; border-collapse: collapse; font-size: 10.5pt; }
+th, td { text-align: right; padding: 2.4mm 3mm; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+th { color: var(--s-b); font-weight: 700; background: var(--tint); }
+.num { font-family: PlexL, Plex, sans-serif; direction: ltr; unicode-bidi: isolate; }
+</style>
+</head>
+<body>
+
+<!-- ============================ الغلاف ============================ -->
+<section class="page cover">
+  <div class="in">
+    <div class="brand"><img src="../../../src/assets/icon-white.png" alt=""><div>بوابة مكة الثانوية الرقمية<small>مدرسة مكة الثانوية</small></div></div>
+    <h1>دليل المعلم<br>ملف المعلم الرقمي</h1>
+    <p class="lead">تقرير تفاعلي عن أعمالك يُبنى لحظة فتحه من بيانات البوابة، تعرضه برمز أو رابط على مدير المدرسة والمشرف وفريق التقويم الخارجي، ويكتبون لك ملاحظاتهم.</p>
+    <span class="tag">خطوة بخطوة، بالشاشات</span>
+    <div class="phones">
+      <div class="phone"><img src="shots/panel-top.png" alt=""></div>
+      <div class="phone"><img src="shots/visitor-report.png" alt=""></div>
+      <div class="phone"><img src="shots/share-card.png" alt=""></div>
+    </div>
+    <div class="foot"><span>الإصدار 1.0</span><span class="num">05/05/1448 - 16/10/2026</span></div>
+  </div>
+</section>
+
+<!-- ============================ الفهرس والمقدمة ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>المقدمة</span></div>
+  <div class="sh"><span class="n" style="background:var(--s-b)">i</span><h2>ما ملف المعلم الرقمي؟</h2></div>
+  <p class="lead2">صفحة واحدة تعرض أعمالك هذا العام كما سجّلتها البوابة: حصصك وتحضيرك، واختباراتك ونتائج طلابك، وتطويرك المهني، وشواهد أدائك. لا تكتب فيها تقريرًا ولا تجمع أوراقًا؛ الأرقام تتحدّث وحدها مع كل عمل جديد.</p>
+  <div class="row" style="flex:none">
+    <div class="txt">
+      <div class="card"><h3>لماذا يفيدك؟</h3><ul>
+        <li><b class="k">قبل الزيارات:</b> زيارة فريق التقويم الخارجي، والزيارات الصفية لإدارة المدرسة؛ ملفك جاهز برمز واحد.</li>
+        <li><b class="k">يُبنى تلقائيًا</b> من عملك في البوابة، وتضيف أنت ما لا تعرفه البوابة.</li>
+        <li><b class="k">تتحكم فيما يظهر:</b> الأقسام، واللون، والجمل المختصرة، وآراء الإدارة.</li>
+        <li><b class="k">يجمع ملاحظات الزوار</b> في سجل تراه أنت وحدك.</li>
+      </ul></div>
+      <div class="card tip"><h3>خصوصية الطلاب والزملاء</h3><p>لا يعرض الملف أسماء الطلاب أبدًا، ولا يقارنك بأي زميل. ولوحة إعداد الملف تراها أنت وحدك.</p></div>
+    </div>
+  </div>
+  <div class="sh" style="margin-top:2mm"><span class="n" style="background:var(--s-a)">≡</span><h2>محتويات الدليل</h2></div>
+  <div class="toc">
+    <div><span style="background:var(--e02)">1</span>التفعيل والوصول<small>3</small></div>
+    <div><span style="background:var(--e03)">2</span>لوحة الملف واللون<small>4</small></div>
+    <div><span style="background:var(--e04)">3</span>آراء الإدارة<small>5</small></div>
+    <div><span style="background:var(--e05)">4</span>بياناتك ومنصة مدرستي<small>6</small></div>
+    <div><span style="background:var(--e06)">5</span>الأنشطة والإنجازات<small>7</small></div>
+    <div><span style="background:var(--e07)">6</span>السجلات والنماذج<small>8</small></div>
+    <div><span style="background:var(--e08)">7</span>ما يظهر للزائر<small>9</small></div>
+    <div><span style="background:var(--e09)">8</span>توزيع المنهج<small>10</small></div>
+    <div><span style="background:var(--e10)">9</span>رابط ملفك وبطاقته<small>11</small></div>
+    <div><span style="background:var(--e11)">10</span>المشاركة عبر واتساب وسجل الزوار<small>12</small></div>
+    <div><span style="background:var(--e03)">11</span>ما يراه الزائر<small>13</small></div>
+    <div><span style="background:var(--e04)">12</span>الشواهد<small>14</small></div>
+    <div><span style="background:var(--e05)">13</span>أسئلة شائعة وسجل التعديلات<small>15</small></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>2</span></div>
+</section>
+
+<!-- ============================ 1 التفعيل ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>التفعيل والوصول</span></div>
+  <div class="sh"><span class="n" style="background:var(--e02)">1</span><h2>التفعيل والوصول</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>أين تجده؟</h3>
+        <p>من القائمة الجانبية في البوابة:</p>
+        <p style="margin-top:2mm"><span class="path">الأداء الوظيفي ← ملف المعلم الرقمي</span></p>
+      </div>
+      <div class="card"><h3>التفعيل مرة واحدة</h3><ol>
+        <li>افتح «ملف المعلم الرقمي».</li>
+        <li>اضغط <b class="k">«فعّل ملفي»</b>.</li>
+        <li>يُنشأ لملفك <b class="k">رمز ثابت</b> مثل <span class="num">MS-7Q4K</span> ورابط لا يتغيّران طوال العام.</li>
+      </ol></div>
+      <div class="card tip"><h3>التفعيل اختياري</h3><p>بعده تختار ما يظهر للزائر ولون ملفك. ولا يوقف ملفك إلا الدعم الفني، عند النقل من المدرسة أو التقاعد أو التحويل إلى عمل إداري.</p></div>
+    </div>
+    <div class="shots"><div class="phone"><img src="shots/activate.png" alt=""></div><p class="cap">شاشة التفعيل</p></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>3</span></div>
+</section>
+
+<!-- ============================ 2 اللوحة ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>لوحة الملف</span></div>
+  <div class="sh"><span class="n" style="background:var(--e03)">2</span><h2>لوحة الملف واللون</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>لوحتك تراها أنت وحدك</h3><p>فيها كل إعدادات ملفك في صفحة واحدة، وكل تغيير يُحفظ تلقائيًا فور كتابته.</p></div>
+      <div class="card"><h3>«معاينة كما يراها الزائر»</h3><p>الزر في أعلى اللوحة يعرض ملفك تمامًا كما سيراه الزائر. ارجع منه بزر <b class="k">«رجوع إلى اللوحة»</b>. استخدمه بعد كل تعديل.</p></div>
+      <div class="card"><h3>لون ملفك</h3><p>الأخضر لون البوابة هو الافتراضي. يمكنك اختيار لون آخر من ثمانية ألوان، فيتغيّر لون رأس الملف وبطاقته وبعض العناصر.</p></div>
+    </div>
+    <div class="shots"><div class="phone crop"><img src="shots/panel-top.png" alt=""></div><p class="cap">أعلى اللوحة: المعاينة واللون</p></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>4</span></div>
+</section>
+
+<!-- ============================ 3 آراء الإدارة ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>آراء الإدارة</span></div>
+  <div class="sh"><span class="n" style="background:var(--e04)">3</span><h2>آراء الإدارة</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>من يكتب الرأي؟</h3><p>مدير المدرسة ووكيل الشؤون التعليمية، كلٌّ برأي مختصر عن أدائك، من صفحة خاصة بهما.</p></div>
+      <div class="card"><h3>أنت تقرر ظهوره</h3><ul>
+        <li>يصلك الرأي في هذا القسم <b class="k">«بانتظار اختيارك»</b>.</li>
+        <li>اضغط <b class="k">«إظهار»</b> ليظهر في أعلى ملفك للزائر، أو <b class="k">«إخفاء»</b>.</li>
+        <li>لا يمكنك تعديل نص الرأي.</li>
+        <li>إذا عدّله كاتبه عاد إليك لتختار من جديد.</li>
+      </ul></div>
+      <div class="card tip"><h3>لماذا هو مهم؟</h3><p>رأي مدير المدرسة أول ما يقرؤه الزائر بعد بياناتك، وهو شهادة مختصرة لا تصنعها الأرقام.</p></div>
+    </div>
+    <div class="shots"><div class="shot"><img src="shots/opinions.png" alt=""></div><p class="cap">رأيان: أحدهما ظاهر والآخر بانتظار اختيارك</p></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>5</span></div>
+</section>
+
+<!-- ============================ 4 بياناتك ومدرستي ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>بياناتك ومنصة مدرستي</span></div>
+  <div class="sh"><span class="n" style="background:var(--e05)">4</span><h2>بياناتك ومنصة مدرستي</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>بياناتك (مرة واحدة)</h3><ul>
+        <li><b class="k">سنة التعيين</b> بالهجري: تُحسب منها سنوات خبرتك.</li>
+        <li><b class="k">رتبة المعلم:</b> ممارس أو متقدم أو خبير.</li>
+        <li><b class="k">تقييم الأداء الوظيفي</b> للعام السابق من 5، مثل <span class="num">4.62</span>.</li>
+      </ul><p style="margin-top:2mm">ما تتركه فارغًا لا يظهر.</p></div>
+      <div class="card"><h3>منصة مدرستي</h3><p>البوابة لا ترى منصة مدرستي، فانقل أرقامك من إحصاءاتك فيها:</p><ul>
+        <li>الدروس المحضّرة، والواجبات، والاختبارات، والإثراءات.</li>
+        <li>إرسال الخطة الأسبوعية: نعم أو لا.</li>
+      </ul></div>
+      <div class="card tip"><h3>«آخر تحديث»</h3><p>كلما عدّلت رقمًا يُسجَّل تاريخ اليوم ويظهر للزائر تحت الأرقام. حدّثها كل أسبوعين أو قبل أي زيارة.</p></div>
+    </div>
+    <div class="shots"><div class="shot"><img src="shots/data.png" alt=""></div><div class="shot"><img src="shots/madrasati.png" alt=""></div></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>6</span></div>
+</section>
+
+<!-- ============================ 5 الأنشطة والإنجازات ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>الأنشطة والإنجازات</span></div>
+  <div class="sh"><span class="n" style="background:var(--e06)">5</span><h2>الأنشطة والإنجازات</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>الأنشطة الصفية واللاصفية</h3><ol>
+        <li>اختر نوع النشاط من البطاقات الجاهزة، مثل «التعلم التعاوني» أو «الإذاعة المدرسية»، أو اكتب نوعًا آخر.</li>
+        <li>اكتب عدد مرات تنفيذه هذا العام.</li>
+      </ol><p style="margin-top:2mm">تظهر للزائر بأنواعها وأعدادها في قسم «التخطيط والتدريس».</p></div>
+      <div class="card"><h3>إنجازات أخرى</h3><p>ما لا تعرفه البوابة: جائزة، أو مركز في مسابقة، أو مبادرة. اكتب الإنجاز وتفصيله، واذكر المستوى (المنطقة أو المملكة) إن وُجد. يظهر في قسم «الإنجازات» مع أحداثك المعتمدة في البوابة.</p></div>
+    </div>
+    <div class="shots"><div class="shot"><img src="shots/activities.png" alt=""></div><div class="shot"><img src="shots/wins.png" alt=""></div></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>7</span></div>
+</section>
+
+<!-- ============================ 6 السجلات والنماذج ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>السجلات والنماذج</span></div>
+  <div class="sh"><span class="n" style="background:var(--e07)">6</span><h2>السجلات والنماذج</h2></div>
+  <p class="lead2">قسم يعرض للزائر <b class="k">أسماء</b> السجلات والنماذج التي تستخدمها في عملك، دون أرقام أو محتوى أو أسماء طلاب. يجيب عن سؤال الزائر المعتاد: «ما السجلات التي تستخدمها؟».</p>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>من البوابة (تلقائي)</h3><p>يظهر السجل وحده بعلامة ✓ إذا استخدمته هذا العام:</p><ul>
+        <li>سجل التحضير والحضور بالحصة، وسجل المتابعة الإلكتروني، وسجل رصد الدرجات.</li>
+        <li>سجل الاختبارات وتحليل النتائج، والخطط العلاجية والإثرائية.</li>
+        <li>سجل حصص الانتظار، وسجل التواصل مع أولياء الأمور.</li>
+        <li><b class="k">النماذج التي أصدرتها</b> بأسمائها، مثل «إشعار غياب طالب».</li>
+      </ul></div>
+      <div class="card"><h3>سجلات أخرى تضيفها</h3><p>ما تستخدمه ورقيًا أو خارج البوابة: اختر من البطاقات الجاهزة مثل «سجل الطلاب المتعثرين» و«ملف الأنشطة»، أو اكتب اسمًا آخر واضغط «إضافة». واحذف أي سجل بعلامة ✕.</p></div>
+      <div class="card tip"><h3>إخفاء القسم</h3><p>من «ماذا يرى الزائر؟» ألغِ اختيار «السجلات والنماذج» إن لم ترغب في إظهاره.</p></div>
+    </div>
+    <div class="shots"><div class="shot" style="width:58mm"><img src="shots/records.png" alt=""></div><p class="cap">في لوحتك</p>
+      <div class="shot" style="width:58mm"><img src="shots/visitor-records.png" alt=""></div><p class="cap">كما يراه الزائر</p></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>8</span></div>
+</section>
+
+<!-- ============================ 7 ما يظهر للزائر ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>ما يظهر للزائر</span></div>
+  <div class="sh"><span class="n" style="background:var(--e07)">7</span><h2>ما يظهر للزائر</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>ماذا يرى الزائر؟</h3><p>اختر الأقسام التي تظهر في ملفك:</p><p style="margin-top:1.5mm">رأي الإدارة، والتخطيط والتدريس، والنتائج، والتقويم، والتطوير المهني، وأثر التطوير، والإنجازات، وعناصر الأداء، والشواهد.</p><p style="margin-top:1.5mm">القسم غير المختار لا يظهر، ولا تُفتح شواهده حتى بالرابط المباشر.</p></div>
+      <div class="card"><h3>قراءة في 30 ثانية</h3><p>جمل قصيرة في أعلى ملفك تلخّص أبرز ما فيه، مثل تحسّن نتائج طلابك. اختر <b class="k">3 جمل</b>:</p><ul>
+        <li>تظهر لك الجمل التي تستحقها بياناتك فقط.</li>
+        <li>أرقامها تتحدّث تلقائيًا.</li>
+        <li>إن لم تختر تظهر أعلاها أولوية.</li>
+      </ul></div>
+    </div>
+    <div class="shots"><div class="shot"><img src="shots/sections.png" alt=""></div><div class="shot"><img src="shots/sentences.png" alt=""></div></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>9</span></div>
+</section>
+
+<!-- ============================ 8 توزيع المنهج ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>توزيع المنهج</span></div>
+  <div class="sh"><span class="n" style="background:var(--e08)">8</span><h2>توزيع المنهج</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>لماذا؟</h3><p>يرى الزائر <b class="k">دروس الأسبوع الدراسي الحالي</b> لكل مادة تدرّسها، فيعرف المشرف ما تشرحه هذا الأسبوع قبل أن يدخل فصلك.</p></div>
+      <div class="card"><h3>الخطوات (مرة واحدة لكل مادة)</h3><ol>
+        <li>تظهر موادك وفصولك من الجدول الدراسي تلقائيًا.</li>
+        <li>بجانب كل مادة ارفع ملف التوزيع: <b class="k">Excel أو PDF</b>.</li>
+        <li>تقرؤه البوابة أسابيع، فراجعها وصحّح ما يحتاج: عدّل نص أسبوع، أو احذفه، أو أضف أسبوعًا.</li>
+      </ol></div>
+      <div class="card"><h3>أو «كتابة يدوية»</h3><p>إن تعذّر رفع الملف أو لم تُقرأ أسابيعه جيدًا: اضغط <b class="k">«كتابة يدوية»</b> بجانب المادة، واكتب دروس الأسبوع الحالي يومًا بيوم من الأحد إلى الخميس. تظهر للزائر بأيامها، وما تتركه فارغًا لا يظهر. حدّثها كل أسبوع.</p></div>
+      <div class="card warn"><h3>القراءة تقريبية</h3><p>تختلف أشكال ملفات التوزيع، فراجع الأسابيع بعد الرفع. وإن لم تكن مادتك في الجدول فأضفها من أسفل القسم.</p></div>
+    </div>
+    <div class="shots"><div class="shot"><img src="shots/distribution.png" alt=""></div></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>10</span></div>
+</section>
+
+<!-- ============================ 9 رابط ملفك ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>رابط ملفك وبطاقته</span></div>
+  <div class="sh"><span class="n" style="background:var(--e09)">9</span><h2>رابط ملفك وبطاقته</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>البطاقة</h3><p>بطاقة بهوية البوابة فيها اسمك ورتبتك وتخصصك ورمز QR ورمز ملفك. يمسحها الزائر بكاميرا جواله فيفتح ملفك دون تسجيل دخول.</p></div>
+      <div class="card"><h3>الأزرار</h3><ul>
+        <li><b class="k">رفع صورة:</b> صورتك على البطاقة اختيارية، وإن لم ترفعها تظهر أيقونة.</li>
+        <li><b class="k">تنزيل البطاقة:</b> صورة بمقاس شاشة الجوال، تعرضها على الزائر أو تطبعها وتضعها على مكتبك.</li>
+        <li><b class="k">نسخ الرابط</b> و<b class="k">مشاركة:</b> لإرساله بأي تطبيق.</li>
+      </ul></div>
+      <div class="card tip"><h3>الرابط ثابت</h3><p>اطبع البطاقة مرة واحدة؛ الرابط لا يتغيّر طوال العام، والملف يتحدّث وحده.</p></div>
+    </div>
+    <div class="shots"><div class="shot"><img src="shots/share-card.png" alt=""></div></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>11</span></div>
+</section>
+
+<!-- ============================ 10 واتساب وسجل الزوار ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>واتساب وسجل الزوار</span></div>
+  <div class="sh"><span class="n" style="background:var(--e10)">10</span><h2>المشاركة عبر واتساب وسجل الزوار</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>المشاركة عبر واتساب</h3><ol>
+        <li>راجع <b class="k">الكلمة الترحيبية</b>؛ نصها جاهز يطلب الاطلاع وكتابة الملاحظات، وعدّله كما تشاء فيُحفظ لك.</li>
+        <li>اضغط <b class="k">«مشاركة عبر واتساب»</b>، واختر واتساب من قائمة المشاركة.</li>
+        <li>تُرسل صورة البطاقة مع كلمتك والرابط واسمك.</li>
+      </ol><p style="margin-top:2mm">في الحاسب تُنزَّل البطاقة ويُفتح واتساب بالنص، فأرفق الصورة يدويًا.</p></div>
+      <div class="card warn"><h3>إن وصلت الصورة دون النص</h3><p>بعض الأجهزة، خصوصًا الآيفون، ترسل الصورة وحدها. النص يُنسخ تلقائيًا، فالصقه في المحادثة.</p></div>
+      <div class="card"><h3>من اطّلع على ملفك</h3><p>تراه أنت وحدك: اسم الزائر وجهته إن كتبهما، ووقت الزيارة ومدتها، وطريقة الفتح (مسح الرمز أو الرابط أو واتساب)، و<b class="k">ملاحظته</b> بخلفية خضراء تحت اسمه.</p></div>
+    </div>
+    <div class="shots"><div class="shot"><img src="shots/share-wa.png" alt=""></div><div class="shot"><img src="shots/share-log.png" alt=""></div></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>12</span></div>
+</section>
+
+<!-- ============================ 11 ما يراه الزائر ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>ما يراه الزائر</span></div>
+  <div class="sh"><span class="n" style="background:var(--e11)">11</span><h2>ما يراه الزائر</h2></div>
+  <p class="lead2">يفتح الزائر ملفك من الرمز أو الرابط دون تسجيل دخول. هذه رحلته في ملفك:</p>
+  <div class="row" style="flex:none">
+    <div class="shots two">
+      <div><div class="phone"><img src="shots/visitor-welcome.png" alt=""></div><p class="cap">1. الترحيب: اسمه وجهته اختياريًا</p></div>
+      <div><div class="phone"><img src="shots/visitor-note.png" alt=""></div><p class="cap">2. «اكتب ملاحظتك للمعلم» من الزر أسفل الصفحة</p></div>
+    </div>
+  </div>
+  <div class="card"><h3>ما يحدث في كل خطوة</h3><ul>
+    <li><b class="k">الترحيب:</b> يكتب الزائر اسمه وجهته ليعرف من اطّلع على ملفك، أو يتخطى. تُسجَّل الزيارة ومدتها في الحالتين.</li>
+    <li><b class="k">الملف:</b> يتنقل بين الأقسام التي اخترتها، ويفتح الشواهد داخل الصفحة.</li>
+    <li><b class="k">الملاحظة:</b> زر ثابت أسفل الصفحة يكتب منه ملاحظته لك، ويعدّلها خلال يوم. تصلك في «من اطّلع على ملفك».</li>
+  </ul></div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>13</span></div>
+</section>
+
+<!-- ============================ 12 الشواهد ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>الشواهد</span></div>
+  <div class="sh"><span class="n" style="background:var(--e03)">12</span><h2>الشواهد</h2></div>
+  <div class="row">
+    <div class="txt">
+      <div class="card"><h3>عناصر الأداء الوظيفي</h3><p>عدد شواهدك لكل عنصر من العناصر الأحد عشر، من مصدرين:</p><ul>
+        <li><b class="k">ما سجّلته بنفسك</b> في «شواهد الأداء الوظيفي».</li>
+        <li><b class="k">الشواهد الآلية:</b> تحسبها البوابة من عملك، كالاختبارات وتحليلها، والخطط العلاجية والإثرائية، والإشعارات لأولياء الأمور، وسجل المتابعة، والشهادات.</li>
+      </ul><p style="margin-top:2mm">العنصر الأول يقدّره مدير المدرسة فلا تُعدّ له شواهد.</p></div>
+      <div class="card"><h3>الشواهد من خارج البوابة</h3><p>الملفات التي رفعتها في «شواهد الأداء الوظيفي» (PDF أو صورة)، يفتحها الزائر <b class="k">داخل الصفحة</b>:</p><ul>
+        <li>يظهر لكل شاهد <b class="k">العنوان الذي كتبته</b> وعنصر الأداء ونوع الملف والتاريخ، ولا يظهر اسم الملف الأصلي، فاكتب عنوانًا واضحًا.</li>
+        <li>ملف PDF بصفحاته، والصورة بزر <b class="k">«تدوير»</b> إن ظهرت جانبية.</li>
+        <li>الرابط مؤقت لخمس دقائق، ومخزن الشواهد يبقى خاصًا.</li>
+      </ul></div>
+      <div class="card tip"><h3>نصيحة</h3><p>صوّر الشهادات والبطاقات والجوال بالطول، أو دوّر الصورة قبل رفعها، لتظهر مستقيمة دون أن يضغط الزائر «تدوير».</p></div>
+    </div>
+    <div class="shots"><div class="shot"><img src="shots/visitor-docs.png" alt=""></div><p class="cap">قائمة الشواهد عند الزائر</p>
+      <div class="phone crop" style="width:56mm"><img src="shots/visitor-doc-view.png" alt="" style="height:100mm"></div><p class="cap">شاهد PDF معروض داخل الصفحة</p></div>
+  </div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>14</span></div>
+</section>
+
+<!-- ============================ 13 أسئلة شائعة وسجل التعديلات ============================ -->
+<section class="page">
+  <div class="ph"><img src="../../../src/assets/icon-mint.png" alt=""><b>دليل ملف المعلم الرقمي</b><span class="sp"></span><span>أسئلة شائعة</span></div>
+  <div class="sh"><span class="n" style="background:var(--e04)">13</span><h2>أسئلة شائعة</h2></div>
+  <div class="card"><table>
+    <tr><th style="width:38%">السؤال</th><th>الجواب</th></tr>
+    <tr><td>هل يرى الزائر أسماء طلابي؟</td><td>لا، أبدًا. الملف يعرض أرقامًا ونسبًا فقط، ولا يقارنك بأي زميل.</td></tr>
+    <tr><td>رقم في ملفي غير صحيح، من أين أصلحه؟</td><td>الأرقام الآلية من عملك في البوابة: صحّح مصدرها (الاختبار أو السجل أو الشاهد) فيتحدّث الملف. وأرقام منصة مدرستي تعدّلها من لوحتك.</td></tr>
+    <tr><td>هل يتغيّر الرابط إن عدّلت ملفي؟</td><td>لا. الرابط والرمز ثابتان طوال العام، والمحتوى يتحدّث وحده.</td></tr>
+    <tr><td>أريد إخفاء قسم مؤقتًا.</td><td>من «ماذا يرى الزائر؟» ألغِ اختياره، وأعده متى شئت.</td></tr>
+    <tr><td>هل يرى الزائر ملاحظات غيره؟</td><td>لا. الملاحظات تراها أنت وحدك (ومدير المدرسة والدعم الفني للمتابعة).</td></tr>
+    <tr><td>أوقِف ملفي، ماذا يعني؟</td><td>يوقفه الدعم الفني عند النقل أو التقاعد أو التحويل إلى عمل إداري، فلا يفتحه أحد بالرابط حتى يُعاد تفعيله.</td></tr>
+  </table></div>
+  <div class="sh" style="margin-top:2mm"><span class="n" style="background:var(--s-a)">✎</span><h2>سجل التعديلات</h2></div>
+  <div class="card"><table>
+    <tr><th style="width:16%">الإصدار</th><th style="width:28%">التاريخ</th><th>التعديل</th></tr>
+    <tr><td class="num">1.0</td><td class="num">05/05/1448 - 16/10/2026</td><td>الإصدار الأول: التفعيل، واللوحة، وآراء الإدارة، والبيانات ومنصة مدرستي، والأنشطة والإنجازات، والأقسام الظاهرة، وتوزيع المنهج، والبطاقة، والمشاركة عبر واتساب، وسجل الزوار وملاحظاتهم، والشواهد، والسجلات والنماذج، وكتابة دروس الأسبوع يدويًا.</td></tr>
+  </table></div>
+  <div class="pf"><span>بوابة مكة الثانوية الرقمية</span><span>15</span></div>
+</section>
+
+</body>
+</html>

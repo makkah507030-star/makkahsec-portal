@@ -1,6 +1,6 @@
 -- ملف المعلم الرقمي (الجزء 3): أرقام التقرير دون أسماء طلاب. dfile_data_core للحساب (لا يُستدعى مباشرة)،
 -- وdfile_data للمعلم والمدير والدعم الفني، وdfile_public (الجزء 5) للزائر. opinions من الجزء 6.
--- يُنفَّذ بعد الجزأين 1 و2. تكرار التنفيذ آمن.
+-- يُنفَّذ بعد الجزأين 1 و2 وبعد events_audience_2.sql (دالة ev_reach). تكرار التنفيذ آمن.
 
 create or replace function public.dfile_data_core(p_uid uuid)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
@@ -62,7 +62,7 @@ begin
                 where d.recipient_user_id = p_uid and ft.key = 'teacher_support_visit'
                   and d.status not in ('draft', 'pending', 'rejected') and d.created_at >= y0),
     'events', (select coalesce(jsonb_agg(jsonb_build_object('title', e.title, 'date', e.event_date,
-                 'n', (select count(*) from public.event_participants p where p.event_id = e.id and p.attended is not false))
+                 'n', public.ev_reach(e.id))
                  order by e.event_date desc), '[]')
                  from public.school_events e where e.organizer_id = p_uid and e.stage = 'approved'
                   and e.cancelled_at is null and e.event_date >= y0::date),
@@ -70,8 +70,9 @@ begin
     'evidence', (select coalesce(jsonb_object_agg(k, n), '{}') from (
                    select left(item_key, 3) k, sum(use_count) n from public.perf_evidence
                     where teacher_user_id = p_uid and academic_year = y group by 1) x),
-    'docs', (select coalesce(jsonb_agg(jsonb_build_object('id', id, 'title', title, 'name', file_name,
-               'date', event_date) order by created_at desc), '[]')
+    -- الشواهد المرفوعة: العنوان والعنصر والنوع والتاريخ، دون اسم الملف الأصلي (قد يكون طويلًا أو غير مناسب)
+    'docs', (select coalesce(jsonb_agg(jsonb_build_object('id', id, 'title', title, 'el', left(item_key, 3),
+               'kind', case when file_path ~* '\.pdf$' then 'pdf' else 'image' end, 'date', event_date) order by created_at desc), '[]')
                from public.perf_evidence where teacher_user_id = p_uid and academic_year = y
                 and source = 'upload' and file_path is not null),
     'week', public.dfile_week(),
@@ -86,13 +87,11 @@ end; $$;
 revoke execute on function public.dfile_data_core(uuid) from public, anon, authenticated;
 create or replace function public.dfile_data(p_uid uuid)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
-declare i jsonb;  -- «أثر التطوير» من حلقة التحسين (improvement_loop_5) إن وُجدت دالته، فلا يهم ترتيب التنفيذ
+declare x jsonb;  -- إضافات التقرير من dfile_extra (الجزء 8) إن وُجدت، فلا يهم ترتيب التنفيذ
 begin
-  if p_uid is distinct from auth.uid() and not public.has_admin_role(array['principal', 'tech_support']) then
-    raise exception 'غير مصرّح';
-  end if;
-  if to_regprocedure('public.improve_impact(uuid)') is not null then execute 'select public.improve_impact($1)' into i using p_uid; end if;
-  return public.dfile_data_core(p_uid) || jsonb_build_object('impact', coalesce(i, '[]'::jsonb));
+  if p_uid is distinct from auth.uid() and not public.has_admin_role(array['principal', 'tech_support']) then raise exception 'غير مصرّح'; end if;
+  if to_regprocedure('public.dfile_extra(uuid)') is not null then execute 'select public.dfile_extra($1)' into x using p_uid; end if;
+  return public.dfile_data_core(p_uid) || coalesce(x, '{}'::jsonb);
 end; $$;
 revoke execute on function public.dfile_data(uuid) from public, anon;
 grant  execute on function public.dfile_data(uuid) to authenticated;

@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { readDistribution } from "../../lib/distribution.js";
-import { courseLabel, weekWord } from "../../lib/dfile.js";
+import { DAYS, courseLabel, weekWord } from "../../lib/dfile.js";
 import { countAr } from "../../lib/arabicCount.js";
 
 /* =====================================================================
    توزيع المنهج في لوحة المعلم: سطر لكل مادة وصفّ من جدوله الدراسي (مع فصولها)،
    وبجانبه رفع ملف التوزيع (Excel أو PDF)، فتقرؤه البوابة أسابيع يراجعها ويصحّحها.
    ويُضاف يدويًا ما ليس في الجدول. ويرى الزائر دروس الأسبوع الدراسي الحالي فقط.
+   «كتابة يدوية»: دروس الأسبوع الحالي يومًا بيوم (الأحد إلى الخميس) لمن تعذّر عليه
+   الاستيراد، وتُحفظ أسبوعًا في التوزيع نفسه (days، وt مجموعها) فيعمل مع الملف أو دونه.
    ===================================================================== */
+
+/* نص الأسبوع من أيامه، ليبقى t صالحًا لمن يقرأ النص وحده */
+const daysText = (days) => days.map((x, i) => (x.trim() ? `${DAYS[i]}: ${x.trim()}` : "")).filter(Boolean).join("، ");
 
 export default function DfileDistribution({ s, d, onSave }) {
   const items = s.distribution?.items ?? [];
@@ -18,6 +23,7 @@ export default function DfileDistribution({ s, d, onSave }) {
   const [msg, setMsg] = useState({});
   const [open, setOpen] = useState("");
   const [extra, setExtra] = useState("");
+  const [manual, setManual] = useState("");
   const cur = d?.week?.n ?? null;
   const curRef = useRef(null);
 
@@ -39,6 +45,18 @@ export default function DfileDistribution({ s, d, onSave }) {
 
   const setWeeks = (label, weeks) => store(items.map((it) => (it.subject !== label ? it : { ...it, weeks })));
 
+  // يوم من الأسبوع الحالي: يُنشأ سطر المادة وأسبوعها إن لم يوجدا
+  const setDay = (row, i, text) => {
+    const it = itemOf(row.label) ?? { subject: row.label, classes: row.classes, file: null, weeks: [] };
+    const w = it.weeks.find((x) => x.n === cur) ?? { n: cur, t: "" };
+    const days = [...(w.days ?? DAYS.map(() => ""))];
+    if ((days[i] ?? "") === text) return;
+    days[i] = text;
+    const week = { ...w, days, t: daysText(days) };
+    const weeks = [...it.weeks.filter((x) => x.n !== cur), week].sort((a, b) => a.n - b.n);
+    store([...items.filter((x) => x.subject !== row.label), { ...it, weeks }]);
+  };
+
   return (
     <div className="space-y-3">
       {cur && <p className="text-xs text-muted">الأسبوع الدراسي الحالي: {weekWord(cur)}، ودروسه هي ما يراه الزائر.</p>}
@@ -49,7 +67,7 @@ export default function DfileDistribution({ s, d, onSave }) {
         return (
           <div key={row.label} className="rounded-sm2 border border-line/60">
             <div className="flex flex-wrap items-center gap-2 px-3 py-2">
-              <button type="button" className="min-w-0 flex-1 text-start" onClick={() => it && setOpen(open === row.label ? "" : row.label)}>
+              <button type="button" className="min-w-0 basis-full text-start sm:basis-0 sm:flex-1" onClick={() => it && setOpen(open === row.label ? "" : row.label)}>
                 <p className="text-sm font-bold text-ink">{row.label}</p>
                 <p className="text-xs text-muted">
                   {row.classes.length > 0 && `الفصول ${row.classes.join(" و")}`}
@@ -60,8 +78,25 @@ export default function DfileDistribution({ s, d, onSave }) {
                 <input type="file" hidden accept=".xlsx,.xls,.csv,.pdf" disabled={!!busy} onChange={(e) => { upload(row, e.target.files?.[0]); e.target.value = ""; }} />
                 {busy === row.label ? "جارٍ القراءة…" : it ? "استبدال الملف" : "رفع ملف التوزيع"}
               </label>
-              {it && <button type="button" className="text-xs text-danger" onClick={() => { store(items.filter((x) => x.subject !== row.label)); setOpen(""); }}>حذف</button>}
+              {cur && (
+                <button type="button" className={manual === row.label ? "btn-primary" : "btn-ghost"}
+                        onClick={() => setManual(manual === row.label ? "" : row.label)}>كتابة يدوية</button>
+              )}
+              {it && <button type="button" className="text-xs text-danger" onClick={() => { store(items.filter((x) => x.subject !== row.label)); setOpen(""); setManual(""); }}>حذف</button>}
             </div>
+            {manual === row.label && cur && (
+              <div className="space-y-2 border-t border-line/60 p-3">
+                <p className="text-xs text-muted">دروس الأسبوع {weekWord(cur)} يومًا بيوم، ويراها الزائر هذا الأسبوع. ما تتركه فارغًا لا يظهر.</p>
+                {DAYS.map((day, i) => (
+                  <div key={`${row.label}-${cur}-${i}`} className="flex items-start gap-2">
+                    <span className="w-16 shrink-0 pt-2 text-sm font-bold text-ink">{day}</span>
+                    <input className="field text-sm" placeholder="الدرس أو الدروس"
+                           defaultValue={it?.weeks.find((w) => w.n === cur)?.days?.[i] ?? ""}
+                           onBlur={(e) => setDay(row, i, e.target.value.trim())} maxLength={160} />
+                  </div>
+                ))}
+              </div>
+            )}
             {msg[row.label] && <p className="mx-3 mb-2 rounded-sm2 bg-canvas px-3 py-2 text-sm text-muted">{msg[row.label]}</p>}
             {it && open === row.label && (
               <div className="max-h-96 space-y-2 overflow-y-auto border-t border-line/60 p-3">

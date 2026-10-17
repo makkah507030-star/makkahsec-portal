@@ -154,7 +154,8 @@
 .dfile .df-doc:hover { border-color: var(--mint); transform: translateY(-2px); }
 .dfile .df-doc .df-ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--info-bg); color: var(--info); }
 .dfile .df-doc .df-ic svg { width: 18px; height: 18px; }
-.dfile .df-doc b { font-size: 13.5px; line-height: 1.4; }
+.dfile .df-doc b { font-size: 13.5px; line-height: 1.4; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.dfile .df-doc .df-doc-el { font-size: 11.5px; font-weight: 600; line-height: 1.4; }
 .dfile .df-doc span { font-size: 11.5px; color: var(--faint); }
 .dfile .df-quote { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 12px; align-items: start; }
 .dfile .df-quote .df-qm { font-size: 44px; line-height: .8; color: var(--mint); font-weight: 700; }
@@ -280,3 +281,32 @@
 .dfile .df-id-foot { font-size: 10.5px; opacity: .75; }
 .dfile .df-quote .df-q1 { grid-column: 1 / -1; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 12px; }
 .dfile .df-lcard .df-lcls { font-size: 11px; color: var(--muted); margin-top: -2px; }
+
+/* عارض الشاهد داخل الصفحة */
+.dfile .df-viewer { position: fixed; inset: 0; z-index: 60; background: rgba(8,16,12,.62); display: grid; place-items: center; padding: 12px; }
+.dfile .df-viewer-box { width: min(900px, 100%); height: min(92vh, 100%); background: var(--surface); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: var(--shadow); }
+.dfile .df-viewer-box header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.dfile .df-viewer-box header b { flex: 1; min-width: 0; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dfile .df-viewer-box header a { font-size: 12.5px; color: var(--deep); text-decoration: underline; white-space: nowrap; }
+.dfile .df-viewer-box header .df-rot { width: auto; padding: 0 12px; font-size: 12.5px; font-family: inherit; }
+.dfile .df-viewer-box header button { width: 32px; height: 32px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.dfile .df-viewer-body { flex: 1; overflow: auto; padding: 12px; background: var(--bg); }
+.dfile .df-viewer-body .df-viewer-img { display: block; max-width: 100%; max-height: 100%; margin: 0 auto; border-radius: 8px; }
+.dfile .df-viewer-pages { display: grid; gap: 10px; }
+.dfile .df-viewer-pages canvas { display: block; background: #fff; border-radius: 6px; box-shadow: var(--shadow); }
+
+/* اليوم في دروس الأسبوع المكتوبة يدويًا */
+.dfile .df-lday { color: var(--deep); font-weight: 700; margin-left: 6px; }
+
+/* السجلات والنماذج */
+.dfile .df-recs { display: grid; gap: 14px; }
+/* بطاقات بحجم واحد: عمودان في الجوال وثلاثة في الشاشة الواسعة، والنص يلتف داخلها */
+.dfile .df-recs .df-tags { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+@media (min-width: 640px) { .dfile .df-recs .df-tags { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.dfile .df-recs .df-tag { display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 8px 12px; border-radius: 12px;
+  font-size: 12.5px; font-weight: 600; line-height: 1.45; text-align: start; overflow-wrap: anywhere; }
+.dfile .df-recs .df-tag svg { width: 16px; height: 16px; flex: none; }
+.dfile .df-recs .df-tag-f { background: var(--info-bg); color: var(--info); border-color: transparent; }
+.dfile .df-recs .df-tag-o { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.dfile .df-recs .df-tag-o svg { color: var(--muted); }
+.dfile .df-recs > div + div { border-top: 1px dashed var(--line); padding-top: 14px; }
