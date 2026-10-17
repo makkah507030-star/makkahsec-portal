@@ -7,7 +7,6 @@ import { fmtDate, fmtDateTime } from "../lib/dates";
 import { shrinkImage } from "../lib/imageResize.js";
 import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
 import Loader from "../components/Loader.jsx";
-import { eventReach } from "../lib/eventAudience.js";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 
@@ -45,7 +44,7 @@ const setupErr = (e, file) => (/guidance_|schema cache|relation/i.test(e?.messag
 // مراحل الحدث (pages/Events.jsx) بأسمائها المختصرة
 const EV_STAGE = { draft: "بيانات الحدث", participants: "المشاركون", consent: "موافقة أولياء الأمور", permission: "الاستئذان",
   attendance: "كشف الحضور", certificates: "الشهادات", report: "التقرير", approved: "معتمد" };
-const EV_SELECT = "*, school_events(*, event_participants(count))";
+const EV_SELECT = "*, school_events(id, serial, title, stage, event_date, cancelled_at, event_participants(count))";
 
 /** البرامج مع أحداثها، وقبل تشغيل guidance_5.sql بلا أحداث */
 export async function loadPrograms(grade) {
@@ -57,10 +56,6 @@ export async function loadPrograms(grade) {
   }
   return r;
 }
-const evReach = (ev) => {
-  const named = ev.event_participants?.[0]?.count ?? 0;
-  return eventReach(ev, { total: named, attended: named }).attended;
-};
 /** حال البرنامج: منفَّذ يدويًا أو باعتماد حدثه، ومستفيدوه */
 export function programState(p) {
   const ev = p.school_events;
@@ -68,8 +63,7 @@ export function programState(p) {
   return {
     ev, done: p.status === "done" || evDone,
     date: p.status === "done" ? p.done_date : evDone ? ev.event_date : null,
-    // المستفيدون: المسمَّون في الحدث، وفئاته إن كان للمدرسة كلها (lib/eventAudience.js)
-    beneficiaries: p.beneficiaries ?? (evDone ? evReach(ev) : null),
+    beneficiaries: p.beneficiaries ?? (evDone ? ev.event_participants?.[0]?.count ?? null : null),
   };
 }
 
