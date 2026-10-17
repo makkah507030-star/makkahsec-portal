@@ -6,6 +6,7 @@ import { printReport, PRINCIPAL_NAME, ACADEMIC_DEPUTY_NAME } from "../../lib/exp
 import { configFor, isKnownSubject, buildGradeHeader, gradeBlankCount } from "../../lib/gradeSheets";
 import { loadQuizMarks, loadEntries, sheetShape, buildRow } from "../../lib/gradeBook";
 import GradeSheetEditor from "../../components/GradeSheetEditor.jsx";
+import { loadLogMarks } from "../../lib/followUp2.js";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
@@ -171,8 +172,11 @@ export default function TeacherRecords() {
     if (!chosen.length) return;
     setBusy(true);
     const ctx = { uid: session?.user?.id, year, term, groups: chosen };
-    let qm = {}, entries = {};
-    try { [qm, entries] = await Promise.all([loadQuizMarks(supabase, ctx), loadEntries(supabase, ctx)]); }
+    let qm = {}, entries = {}, lm = {};
+    try {
+      [qm, entries, lm] = await Promise.all([loadQuizMarks(supabase, ctx), loadEntries(supabase, ctx),
+                                             loadLogMarks(supabase, ctx).catch(() => ({}))]);
+    }
     catch { /* نطبع ما توفّر */ }
 
     const sections = chosen.map((g) => {
@@ -199,7 +203,7 @@ export default function TeacherRecords() {
         rows: g.students.map((s, i) => [
           i + 1,
           { text: s.full_name ?? "", cls: "name" },
-          ...buildRow(g, shape, s, marks, entries).map((c) => ({ text: c.text, cls: "blank" })),
+          ...buildRow(g, shape, s, marks, entries, lm[g.key]).map((c) => ({ text: c.text, cls: "blank" })),
         ]),
       };
     });

@@ -4,8 +4,10 @@
 
    قيمة كل خانة:
    ١) ما كتبه المعلم (جدول grade_entries) — يتقدّم دائمًا.
-   ٢) وإلا القيمة التلقائية: عمود «التقويمات التحريرية» يُملأ من الاختبارات
-      القصيرة المصحّحة في البوابة (متوسط نسب الطالب × سقف العمود، والغائب «غ»).
+   ٢) وإلا القيمة التلقائية:
+      • من «سجل المتابعة الإلكتروني 2» لأي عمود اكتمل رصد بنوده فيه (lib/followUp2.js).
+      • وإلا عمود «التقويمات التحريرية» من الاختبارات القصيرة المصحّحة في البوابة
+        (متوسط نسب الطالب × سقف العمود، والغائب «غ»).
    ٣) مجموع الفترة يُحسب حين تكتمل كل خانات الفترة أرقامًا، والمجموع النهائي
       متوسط الفترتين (مجموعهما ÷ ٢) حين يكتمل مجموعاهما.
    ===================================================================== */
@@ -135,8 +137,9 @@ export async function saveColumn(supabase, { uid, year, term, g, studentIds, cel
 
 /* ——— صف طالب كاملًا ———
    خانات بترتيب الكشف: أعمدة الفترة الأولى، مجموعها، أعمدة الثانية، مجموعها، المجموع.
-   كل خانة: { text, src: "manual" | "auto" | "calc" | "", period, col, max, auto } */
-export function buildRow(g, shape, student, marks, entries) {
+   كل خانة: { text, src: "manual" | "auto" | "log" | "calc" | "", period, col, max, auto }
+   log: درجات الأعمدة من سجل المتابعة 2 (loadLogMarks) */
+export function buildRow(g, shape, student, marks, entries, log) {
   const { cols, qIdx, qMax } = shape;
   const cells = [];
   const totals = {};
@@ -144,10 +147,12 @@ export function buildRow(g, shape, student, marks, entries) {
     const periodCells = cols.map((c, ci) => {
       const id = cellId(p, ci);
       const k = `${g.key}|${student.id}|${id}`;
+      const fromLog = log?.[p]?.[student.id]?.[ci];
       const autoRaw = ci === qIdx ? marks?.[p]?.[student.id] : undefined;
-      const auto = autoRaw == null ? "" : autoRaw === "غ" ? "غ" : fmtNum(autoRaw * qMax);
+      const auto = fromLog != null ? fmtNum(fromLog)
+        : autoRaw == null ? "" : autoRaw === "غ" ? "غ" : fmtNum(autoRaw * qMax);
       const has = Object.prototype.hasOwnProperty.call(entries, k);
-      return { text: has ? entries[k] : auto, src: has ? "manual" : auto ? "auto" : "",
+      return { text: has ? entries[k] : auto, src: has ? "manual" : fromLog != null ? "log" : auto ? "auto" : "",
                period: p, col: ci, cell: id, max: c.max, auto };
     });
     const nums = periodCells.map((c) => (c.text !== "" && c.text !== "غ" && isFinite(Number(c.text))) ? Number(c.text) : null);

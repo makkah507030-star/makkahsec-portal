@@ -6,10 +6,12 @@ import { countAr } from "../lib/arabicCount.js";
 import {
   PERIODS, loadQuizMarks, loadEntries, saveEntry, saveColumn, sheetShape, buildRow, validCell, cellId,
 } from "../lib/gradeBook";
+import { loadLogMarks } from "../lib/followUp2.js";
 
 /* =====================================================================
    محرّر كشف رصد الدرجات لفصل ومادة.
    • عمود «التقويمات التحريرية» يأتي تلقائيًا من الاختبارات المصحّحة (أخضر).
+   • وأي عمود اكتمل رصد بنوده في «سجل المتابعة الإلكتروني 2» يأتي منه (أزرق).
    • المعلم يعدّل أي خانة في أي وقت، فيُحفظ تعديله فورًا ويتقدّم على الآلي (أصفر)،
      ويستطيع إرجاع الخانة للقيمة الآلية بزر ↺.
    • صف «للجميع» أعلى الكشف: درجة تُكتب في خانة عمود تُرصد لكل طلاب الفصل في ذلك العمود.
@@ -22,12 +24,14 @@ const P_LABEL = { period1: "الفترة الأولى", period2: "الفترة �
 const TONE = {
   manual: "bg-[#FFF3D6] border-[#E8C46A]",
   auto:   "bg-mint-tint border-[#BFE8D0]",
+  log:    "bg-[#EAF2FB] border-[#B7CFEA] dark:bg-excused/10 dark:border-excused/40",
   "":     "bg-white border-line",
 };
 
 export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
   const shape = useMemo(() => sheetShape(g), [g]);
   const [marks, setMarks] = useState(null);
+  const [log, setLog] = useState(null);        // درجات الأعمدة من سجل المتابعة 2
   const [entries, setEntries] = useState(null);
   const [draft, setDraft] = useState({});      // key → نص قيد الكتابة
   const [bad, setBad] = useState({});          // key → true للقيمة غير الصالحة
@@ -43,8 +47,8 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
 
   useEffect(() => {
     const ctx = { uid, year, term, groups: [g] };
-    Promise.all([loadQuizMarks(supabase, ctx), loadEntries(supabase, ctx)])
-      .then(([qm, en]) => { setMarks(qm[g.key] ?? null); setEntries(en); })
+    Promise.all([loadQuizMarks(supabase, ctx), loadEntries(supabase, ctx), loadLogMarks(supabase, ctx).catch(() => ({}))])
+      .then(([qm, en, lm]) => { setMarks(qm[g.key] ?? null); setEntries(en); setLog(lm[g.key] ?? null); })
       .catch((e) => setErr(e?.message || "تعذّر تحميل الكشف"));
   }, [g, uid, year, term]);
 
@@ -113,7 +117,7 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
     if (res.value === "") return;
     const at = PERIODS.indexOf(p) * (shape.nCols + 1) + ci;
     const differ = g.students.filter((st) => {
-      const t = buildRow(g, shape, st, marks, entries ?? {})[at]?.text ?? "";
+      const t = buildRow(g, shape, st, marks, entries ?? {}, log)[at]?.text ?? "";
       return t !== "" && t !== res.value;
     }).length;
     const col = `«${c.label}» في ${P_LABEL[p]}`;
@@ -163,6 +167,7 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-line bg-white px-4 py-2 text-[11px] text-muted">
         <span className="flex items-center gap-1.5"><span className={`h-3 w-3 rounded-[3px] border ${TONE.auto}`} /> من التصحيح الآلي</span>
+        <span className="flex items-center gap-1.5"><span className={`h-3 w-3 rounded-[3px] border ${TONE.log}`} /> من سجل المتابعة 2</span>
         <span className="flex items-center gap-1.5"><span className={`h-3 w-3 rounded-[3px] border ${TONE.manual}`} /> عدّله المعلم</span>
         <span>اكتب رقمًا، أو اضغط زر «غ» بجانب الخانة للغائب · Enter للطالب التالي</span>
         {autoCount > 0
@@ -231,7 +236,7 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
             </thead>
             <tbody>
               {g.students.map((st, ri) => {
-                const row = buildRow(g, shape, st, marks, entries ?? {});
+                const row = buildRow(g, shape, st, marks, entries ?? {}, log);
                 return (
                   <tr key={st.id}>
                     <td className="num sticky right-0 z-[1] w-[36px] min-w-[36px] max-w-[36px] border border-line bg-white py-1 text-center text-muted">{ri + 1}</td>
