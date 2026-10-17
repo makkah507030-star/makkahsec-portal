@@ -5,7 +5,7 @@
   # توفير الرصيد: يُتخطّى النشر إن اقتصر التعديل على ملفات لا تدخل في بناء الموقع
   # (SQL تُشغَّل يدويًا في Supabase، والتوثيق وملفات الوصف). نجاح الأمر = تخطٍّ،
   # وأي تغيير آخر أو تعذّر المقارنة (أول بناء) يُبقي النشر كالمعتاد.
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)supabase/' ':(exclude)docs/' ':(exclude)*.md' ':(exclude)deploy.bat'"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF -- . ':(exclude)supabase/' ':(exclude)docs/' ':(exclude)*.md' ':(exclude)deploy.bat' ':(exclude)marketing/'"
 
 # ===================== الدوال المجدولة =====================
 # المواعيد بتوقيت UTC، والسعودية تسبقه بثلاث ساعات.
