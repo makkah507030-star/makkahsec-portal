@@ -328,12 +328,12 @@ export const TEMPLATES = [
     desc: "لافتات الاتجاهات والتعليمات بسهم ورمز: دورات المياه، المصلى، نقطة التجمع، ممنوع الدخول…",
     presets: {
       title: ["دورات المياه", "المصلى", "مخرج الطوارئ", "نقطة التجمع", "ممنوع الدخول", "الهدوء من فضلك",
-              "الإدارة", "المقصف", "الدرج", "المصعد", "برادة الماء", "الاستقبال"],
+              "الإدارة", "المقصف", "الدرج", "المصعد", "برادة الماء", "الاستقبال", "ذوو الاحتياجات الخاصة"],
     },
     fields: [
       { name: "title", label: "النص الرئيسي", max: 30 },
       { name: "sub", label: "سطر إضافي (اختياري)", max: 60 },
-      { name: "icon", label: "الرمز", type: "icon", options: ["wc", "mosque", "exit", "assembly", "noentry", "quiet", "food", "stairs", "elevator", "water", "info", "building"] },
+      { name: "icon", label: "الرمز", type: "icon", options: ["wc", "mosque", "exit", "assembly", "noentry", "quiet", "food", "stairs", "elevator", "water", "info", "building", "accessible"] },
       { name: "arrow", label: "السهم", type: "opts", options: () => [["", "بلا"], ["right", "→ يمين"], ["left", "← يسار"], ["up", "↑ أمام"], ["down", "↓ أسفل"]] },
       { name: "tone", label: "الطابع", type: "opts", options: () => [["", "إرشادي"], ["warn", "تنبيه"]] },
     ],

@@ -33,7 +33,7 @@ export const ICONS = {
   clock:    <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>,
   star:     <svg {...P}><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>,
   globe:    <svg {...P}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/></svg>,
-  // ذوو الاحتياجات الخاصة: الرمز الدولي للكرسي المتحرك، ويُلوَّن بالأزرق في لوحة الباب
+  // ذوو الاحتياجات الخاصة: الرمز الدولي للكرسي المتحرك، ويُلوَّن بالأزرق في لوحة الباب واللافتة
   accessible: <svg {...P}><circle cx="11" cy="3.8" r="1.8"/><path d="M11 7v6h5.5l2.5 5M11 9.5h5"/><path d="M8 10.5a5.5 5.5 0 1 0 7.8 6.6"/></svg>,
   // دورات مياه (رجال) — مدرسة بنين
   wc:       <svg {...P}><circle cx="12" cy="4.2" r="2"/><path d="M9.5 8h5a1.5 1.5 0 0 1 1.5 1.5V15h-1.5v6.5h-5V15H8V9.5A1.5 1.5 0 0 1 9.5 8z"/><path d="M12 15v6.5"/></svg>,
@@ -505,7 +505,7 @@ export function Sign({ theme = "light", orient = "landscape", d }) {
         <div className={`stu-sbody ${land ? "row" : "col"}`}>
           {side && d.arrow === "right" && arrow}
           {!side && d.arrow === "up" && arrow}
-          <div className="stu-sicon">{ICONS[d.icon] ?? ICONS.info}</div>
+          <div className={`stu-sicon${d.icon === "accessible" ? " blue" : ""}`}>{ICONS[d.icon] ?? ICONS.info}</div>
           <div className="stu-stext">
             <div className={`stu-h1${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{d.title}</div>
             {d.sub && <div className="stu-ssub">{d.sub}</div>}

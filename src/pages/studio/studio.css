@@ -347,6 +347,7 @@
 .stu-sicon { flex: none; width: 230px; height: 230px; border-radius: 52px; background: #89D7AD; color: #16301F;
              display: flex; align-items: center; justify-content: center; box-shadow: 0 24px 50px -24px rgba(62,99,80,.55); }
 .stu-official .stu-sicon { background: #3E6350; color: #fff; box-shadow: none; border-radius: 28px; }
+.stu-sicon.blue, .stu-official .stu-sicon.blue { background: #1565C0; color: #fff; box-shadow: 0 24px 50px -24px rgba(21,101,192,.6); }
 .stu-sicon svg { width: 130px; height: 130px; stroke-width: 1.7; }
 .stu-stext { min-width: 0; }
 .stu-signage .stu-h1 { margin-top: 0; }
