@@ -2,8 +2,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { GRADE_NAMES } from "../lib/schoolTime";
+import { countAr } from "../lib/arabicCount.js";
 import {
-  PERIODS, loadQuizMarks, loadEntries, saveEntry, sheetShape, buildRow, validCell,
+  PERIODS, loadQuizMarks, loadEntries, saveEntry, saveColumn, sheetShape, buildRow, validCell, cellId,
 } from "../lib/gradeBook";
 
 /* =====================================================================
@@ -11,7 +12,8 @@ import {
    • عمود «التقويمات التحريرية» يأتي تلقائيًا من الاختبارات المصحّحة (أخضر).
    • المعلم يعدّل أي خانة في أي وقت، فيُحفظ تعديله فورًا ويتقدّم على الآلي (أصفر)،
      ويستطيع إرجاع الخانة للقيمة الآلية بزر ↺.
-   • المجاميع تُحسب تلقائيًا حين تكتمل خانات الفترة.
+   • صف «للجميع» أعلى الكشف: درجة تُكتب في خانة عمود تُرصد لكل طلاب الفصل في ذلك العمود.
+   • المجاميع تُحسب تلقائيًا حين تكتمل خانات الفترة، والنهائي متوسط الفترتين (÷ ٢).
    • Enter ينقل للطالب التالي في نفس العمود — لرصد سريع بلوحة المفاتيح.
    • زر «غ» بجانب الخانة النشطة يرصد الطالب غائبًا — لوحة الأرقام في الجوال لا تكتب «غ».
    ===================================================================== */
@@ -33,6 +35,11 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
   const [err, setErr] = useState(null);
   const [active, setActive] = useState(null);  // آخر خانة نشطة "صف|عمود" — يظهر بجانبها زر «غ»
   const tableRef = useRef(null);
+  const [fill, setFill] = useState({});        // صف «للجميع»: الخانة ← النص
+  const [fillBad, setFillBad] = useState({});
+  const [note, setNote] = useState(null);
+  const noteTimer = useRef(null);
+  const filling = useRef(new Set());           // خانات «للجميع» قيد الرصد: نافذة التأكيد تُفقد الخانة التركيز فلا يتكرر
 
   useEffect(() => {
     const ctx = { uid, year, term, groups: [g] };
@@ -91,6 +98,49 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
     focusNext(row, col);
   };
 
+  // صف «للجميع»: الدرجة نفسها لكل طلاب الفصل في العمود، بعد التأكيد إن كانت فيه درجات مرصودة
+  const applyFill = async (p, ci, c) => {
+    const cell = cellId(p, ci);
+    if (filling.current.has(cell)) return;
+    filling.current.add(cell);
+    try { await fillColumn(p, ci, c, cell); } finally { filling.current.delete(cell); }
+  };
+  const clearFill = (cell) => setFill((f) => { const n = { ...f }; delete n[cell]; return n; });
+  const fillColumn = async (p, ci, c, cell) => {
+    const res = validCell(fill[cell] ?? "", c.max);
+    if (!res.ok) { setFillBad((b) => ({ ...b, [cell]: true })); return; }
+    setFillBad((b) => { const n = { ...b }; delete n[cell]; return n; });
+    if (res.value === "") return;
+    const at = PERIODS.indexOf(p) * (shape.nCols + 1) + ci;
+    const differ = g.students.filter((st) => {
+      const t = buildRow(g, shape, st, marks, entries ?? {})[at]?.text ?? "";
+      return t !== "" && t !== res.value;
+    }).length;
+    const col = `«${c.label}» في ${P_LABEL[p]}`;
+    if (differ && !window.confirm(`سيُرصد ${res.value} لجميع الطلاب (${g.students.length}) في ${col}، ويحل محل ما رُصد سابقًا (${countAr(differ, "student")}). متابعة؟`)) {
+      clearFill(cell);
+      return;
+    }
+    setSaving((n) => n + 1); setErr(null);
+    const { error } = await saveColumn(supabase, { uid, year, term, g, studentIds: g.students.map((st) => st.id), cell, value: res.value });
+    setSaving((n) => n - 1);
+    if (error) { setErr(`لم يُرصد للجميع: ${error.message}`); return; }
+    setEntries((e) => {
+      const n = { ...e };
+      g.students.forEach((st) => { n[keyOf(st.id, cell)] = res.value; });
+      return n;
+    });
+    setDraft((d) => {
+      const n = { ...d };
+      g.students.forEach((st) => { delete n[keyOf(st.id, cell)]; });
+      return n;
+    });
+    clearFill(cell);
+    setNote(`رُصد ${res.value} لجميع الطلاب في ${col}.`);
+    clearTimeout(noteTimer.current);
+    noteTimer.current = setTimeout(() => setNote(null), 4000);
+  };
+
   const loading = entries === null && !err;
   const autoCount = marks ? marks.count.period1 + marks.count.period2 : 0;
 
@@ -121,6 +171,7 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
       </div>
 
       {err && <p className="bg-absent/10 px-4 py-2 text-sm text-absent">{err}</p>}
+      {note && <p className="bg-present/10 px-4 py-2 text-sm text-present">{note}</p>}
 
       <div className="flex-1 overflow-auto p-3">
         {loading ? (
@@ -134,7 +185,9 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
                 {PERIODS.map((p) => (
                   <th key={p} colSpan={shape.nCols + 1} className="border border-line bg-[#EFEFEF] px-2 py-1.5">{P_LABEL[p]}</th>
                 ))}
-                <th rowSpan={2} className="border border-line bg-[#EFEFEF] px-2 py-1.5">المجموع</th>
+                <th rowSpan={2} className="border border-line bg-[#EFEFEF] px-2 py-1.5 leading-snug">
+                  المجموع النهائي<span className="block text-[10px] font-normal text-muted">(الفترتان ÷ 2)</span>
+                </th>
               </tr>
               <tr>
                 {PERIODS.map((p) => (
@@ -148,6 +201,32 @@ export default function GradeSheetEditor({ g, uid, year, term, onClose }) {
                     <th className="border border-line bg-white px-1.5 py-1 font-medium">مجموع الفترة</th>
                   </Fragment>
                 ))}
+              </tr>
+              {/* صف «للجميع»: يُكتب فيه رقم ثم Enter، فيُرصد لكل طلاب الفصل في العمود */}
+              <tr>
+                <th colSpan={2} className="sticky right-0 z-20 border border-line bg-mint-tint px-2 py-1 text-right font-semibold text-mint-deep">
+                  للجميع <span className="font-normal text-muted">· اكتب الدرجة ثم Enter</span>
+                </th>
+                {PERIODS.map((p) => (
+                  <Fragment key={p}>
+                    {shape.cols.map((c, ci) => {
+                      const cell = cellId(p, ci);
+                      return (
+                        <th key={ci} className="border border-line bg-mint-tint p-0.5">
+                          <input value={fill[cell] ?? ""} inputMode="decimal" placeholder="الكل" aria-label={`درجة ${c.label} لجميع الطلاب`}
+                                 onChange={(e) => { setFill((f) => ({ ...f, [cell]: e.target.value })); setFillBad((b) => { const n = { ...b }; delete n[cell]; return n; }); }}
+                                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyFill(p, ci, c); } }}
+                                 onBlur={() => { if ((fill[cell] ?? "").trim()) applyFill(p, ci, c); }}
+                                 title={fillBad[cell] ? `اكتب رقمًا من 0 إلى ${c.max} أو «غ»` : `يُرصد لجميع الطلاب (من 0 إلى ${c.max})`}
+                                 className={`num h-8 w-14 rounded-[5px] border text-center text-xs font-semibold outline-none placeholder:font-normal placeholder:text-faint focus:ring-2 focus:ring-mint-deep/40 ${
+                                   fillBad[cell] ? "border-absent bg-absent/10" : "border-mint-deep/40 bg-white"}`} />
+                        </th>
+                      );
+                    })}
+                    <th className="border border-line bg-mint-tint" />
+                  </Fragment>
+                ))}
+                <th className="border border-line bg-mint-tint" />
               </tr>
             </thead>
             <tbody>

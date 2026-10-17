@@ -6,8 +6,8 @@
    ١) ما كتبه المعلم (جدول grade_entries) — يتقدّم دائمًا.
    ٢) وإلا القيمة التلقائية: عمود «التقويمات التحريرية» يُملأ من الاختبارات
       القصيرة المصحّحة في البوابة (متوسط نسب الطالب × سقف العمود، والغائب «غ»).
-   ٣) مجموع الفترة يُحسب حين تكتمل كل خانات الفترة أرقامًا، والمجموع الكلي
-      حين يكتمل مجموعا الفترتين.
+   ٣) مجموع الفترة يُحسب حين تكتمل كل خانات الفترة أرقامًا، والمجموع النهائي
+      متوسط الفترتين (مجموعهما ÷ ٢) حين يكتمل مجموعاهما.
    ===================================================================== */
 import { configFor, quizColumnIndex } from "./gradeSheets";
 
@@ -114,6 +114,25 @@ export async function saveEntry(supabase, { uid, year, term, g, studentId, cell,
   return res;
 }
 
+/* ——— خانة واحدة بقيمة واحدة لعدة طلاب (صف «للجميع» في المحرّر)، بطلب واحد ——— */
+export async function saveColumn(supabase, { uid, year, term, g, studentIds, cell, value }) {
+  const base = {
+    teacher_user_id: uid, class_id: String(g.class_id), subject_key: subjectKey(g),
+    academic_year: String(year), term, cell,
+  };
+  const at = new Date().toISOString();
+  const res = await supabase.from("grade_entries")
+    .upsert(studentIds.map((id) => ({ ...base, student_id: String(id), value, updated_at: at })),
+            { onConflict: "teacher_user_id,class_id,subject_key,academic_year,term,student_id,cell" });
+  const others = subjectKeys(g).filter((k) => k !== base.subject_key);
+  if (!res.error && others.length) {
+    await supabase.from("grade_entries").delete()
+      .eq("teacher_user_id", uid).eq("class_id", base.class_id).eq("academic_year", base.academic_year)
+      .eq("term", term).eq("cell", cell).in("student_id", studentIds.map(String)).in("subject_key", others);
+  }
+  return res;
+}
+
 /* ——— صف طالب كاملًا ———
    خانات بترتيب الكشف: أعمدة الفترة الأولى، مجموعها، أعمدة الثانية، مجموعها، المجموع.
    كل خانة: { text, src: "manual" | "auto" | "calc" | "", period, col, max, auto } */
@@ -137,7 +156,8 @@ export function buildRow(g, shape, student, marks, entries) {
     cells.push(...periodCells,
       { text: total == null ? "" : fmtNum(total), src: total == null ? "" : "calc", period: p, total: true });
   });
-  const grand = totals.period1 != null && totals.period2 != null ? totals.period1 + totals.period2 : null;
+  // المجموع النهائي = (مجموع الفترة الأولى + مجموع الفترة الثانية) ÷ ٢
+  const grand = totals.period1 != null && totals.period2 != null ? (totals.period1 + totals.period2) / 2 : null;
   cells.push({ text: grand == null ? "" : fmtNum(grand), src: grand == null ? "" : "calc", grand: true });
   return cells;
 }
