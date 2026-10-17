@@ -69,7 +69,7 @@ function highlights(m) {
   if (!m.t.events) return [m.t.upcoming ? `لا أحداث منفّذة بعد، وأحداث قادمة: ${n(m.t.upcoming)}.` : "لا أحداث منفّذة في هذه الفترة."];
   out.push(`الأحداث والمناسبات المنفّذة: ${countAr(m.t.events, "event")}، اعتُمد منها ${n(m.t.approved)}.`);
   if (m.t.attended) out.push(`الحضور: ${countAr(m.t.attended, "beneficiary")} من ${countAr(m.t.nominated, "nominee", "g")} (${pct(m.t.attended, m.t.nominated) ?? 0}%).`);
-  if (m.t.certs) out.push(`شهادات المشاركة الصادرة للطلاب: ${countAr(m.t.certs, "cert")}.`);
+  if (m.t.certs) out.push(`الشهادات الصادرة: ${countAr(m.t.certs, "cert")}.`);
   if (m.cats[0]) out.push(`أكثر التصنيفات: «${m.cats[0][0]}» بعدد ${n(m.cats[0][1])}.`);
   const top = [...m.live].sort((a, b) => m.c(b).attended - m.c(a).attended)[0];
   if (top && m.c(top).attended) out.push(`أكبر الأحداث حضورًا: «${top.title}» (${countAr(m.c(top).attended, "beneficiary")}).`);

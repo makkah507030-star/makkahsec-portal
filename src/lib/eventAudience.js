@@ -28,6 +28,11 @@ export function skipsConsent(e, parts) {
   return a.includes("students") || a.includes("guardians") || (a.length > 0 && !(parts ?? []).length);
 }
 
+/** شهادات الحدث المطبوعة خارج event_participants: المعلمون والإدارة والضيوف.
+    تاريخ الطباعة الأولى cert_at مع كل اسم في audience_attended و guests */
+export const listCerts = (e) =>
+  [...(e?.audience_attended ?? []), ...(Array.isArray(e?.guests) ? e.guests : [])].filter((x) => x?.cert_at).length;
+
 /** المستفيدون من الحدث. c: عدّ الطلاب المسمَّين {total, attended}.
     الطلاب: كلهم إن كان الحدث لهم (والمسمَّون منهم ضمنهم)، وإلا المسمَّون.
     أولياء الأمور: كلهم إن كانوا من فئته. المعلمون والإدارة: المستهدفون كلهم، والحاضر من سُجّل بالاسم.

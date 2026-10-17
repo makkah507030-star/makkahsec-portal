@@ -8,7 +8,7 @@ import { signatureByName } from "../lib/userSignatures";
 import { loadPrincipalSignature, loadSchoolStamp } from "../lib/principalSignature";
 import { academicYearLabel } from "./studio/lib";
 import { eventsReportPages, eventPhase, STAGE_AR } from "./EventsReportDoc.jsx";
-import { eventReach } from "../lib/eventAudience.js";
+import { eventReach, listCerts } from "../lib/eventAudience.js";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
@@ -66,7 +66,8 @@ export default function EventsReports() {
       (data ?? []).forEach((e) => {
         const x = c[e.id] ?? { total: 0, attended: 0, certs: 0, consent: 0 };
         const r = eventReach(e, x);
-        c[e.id] = { ...x, named: x.total, total: r.nominated, attended: r.attended };
+        // الشهادات: الطلاب من cert_issued_at، والمعلمون والإدارة والضيوف من cert_at
+        c[e.id] = { ...x, named: x.total, total: r.nominated, attended: r.attended, certs: x.certs + listCerts(e) };
       });
       setCounts(c);
     })();

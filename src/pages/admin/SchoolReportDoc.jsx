@@ -21,7 +21,7 @@ function highlights(d) {
   const out = [];
   const a = d.attendance;
   if (a.days) out.push(`نسبة الحضور الرسمية ${pc(a.pct)}، والأيام المعتمدة: ${countAr(a.days, "day")}، ومتوسط الغياب اليومي ${n(a.daily.absent)} طالب.`);
-  if (d.events.total) out.push(`الأحداث والمناسبات المنفّذة: ${countAr(d.events.total, "event")}، والمستفيدون الحاضرون ${n(d.events.attended)}${d.events.upcoming ? `، وقادمة ${n(d.events.upcoming)}` : ""}.`);
+  if (d.events.total) out.push(`الأحداث والمناسبات المنفّذة: ${countAr(d.events.total, "event")}، والمستفيدون الحاضرون ${n(d.events.attended)}${d.events.certs ? `، والشهادات الصادرة ${n(d.events.certs)}` : ""}${d.events.upcoming ? `، وقادمة ${n(d.events.upcoming)}` : ""}.`);
   if (d.pd.total) out.push(`أنشطة التطوير المهني: ${n(d.pd.total)} (تقارير ${n(d.pd.reports)}، مجتمعات تعلم ${n(d.pd.plc)}، زيارات ${n(d.pd.visits)})، اعتُمد منها ${n(d.pd.approved)}.`);
   if (d.quizzes.total) out.push(`الاختبارات في البوابة: ${n(d.quizzes.total)}، رُصدت درجات ${n(d.quizzes.graded)} منها${d.quizzes.avg != null ? ` بمتوسط أداء ${pc(d.quizzes.avg)}` : ""}.`);
   if (d.guidance.sessions) out.push(`الجلسات الإرشادية: ${n(d.guidance.sessions)}، والحالات الجديدة ${n(d.guidance.opened)}.`);
@@ -54,7 +54,7 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
         { ic: "check", t: "نسبة الحضور", v: pc(a.pct), s: `الأيام المعتمدة ${a.days}`, c: S[0] },
         { ic: "arrow", t: "الإحالات", v: d.referrals.total, s: `أُنهي إجراؤها ${d.referrals.closed}`, c: S[3] },
         { ic: "chat", t: "جلسات إرشادية", v: g.sessions, s: `حالات جديدة ${g.opened}`, c: S[1] },
-        { ic: "star", t: "الأحداث المنفّذة", v: d.events.total, s: `الحاضرون ${n(d.events.attended)}${d.events.upcoming ? ` · قادمة ${d.events.upcoming}` : ""}`, c: S[2] },
+        { ic: "star", t: "الأحداث المنفّذة", v: d.events.total, s: `الحاضرون ${n(d.events.attended)}${d.events.certs ? ` · الشهادات ${n(d.events.certs)}` : ""}${d.events.upcoming ? ` · قادمة ${d.events.upcoming}` : ""}`, c: S[2] },
         { ic: "award", t: "التطوير المهني", v: pdAll, s: `معتمد ${n(d.pd.approved)} · شواهد ${n(d.pd.evidence)}`, c: S[0] },
         { ic: "doc", t: "الاختبارات", v: d.quizzes.total, s: `رُصدت ${d.quizzes.graded}${d.quizzes.avg != null ? ` · متوسط ${pc(d.quizzes.avg)}` : ""}`, c: S[1] },
         { ic: "clip", t: "نماذج صادرة", v: d.forms.total, s: `${d.forms.by.length} أنواع`, c: S[2] },

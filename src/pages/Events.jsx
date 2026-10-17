@@ -20,7 +20,7 @@ import { sendPush } from "../lib/pushSend.js";
 import { countAr } from "../lib/arabicCount.js";
 import { cmpAr } from "../lib/sortAr.js";
 import { useBackStep } from "../lib/backStep.js";
-import { AUDIENCE, audienceOf, audienceLabel, staffKinds, skipsConsent, eventReach } from "../lib/eventAudience.js";
+import { AUDIENCE, audienceOf, audienceLabel, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -455,7 +455,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
                                       onNext={() => advance("attendance", "انتقلنا لكشف الحضور.")} />}
       {!cancelled && step === 4 && <StageAttendance e={e} parts={parts} reload={loadParts} skip={skip} patch={patch}
                                       onNext={() => advance("certificates", "انتقلنا للشهادات.")} />}
-      {!cancelled && step === 5 && <StageCertificates e={e} parts={parts} patch={patch} isSupport={isSupport}
+      {!cancelled && step === 5 && <StageCertificates e={e} parts={parts} patch={patch} reload={loadParts} isSupport={isSupport}
                                         onNext={() => advance("report", "انتقلنا للتقرير.")} />}
       {!cancelled && step === 6 && <StageReport e={e} parts={parts} patch={patch} onMsg={onMsg}
                                                 onSubmitted={() => setStep(7)} />}
@@ -1529,7 +1529,7 @@ function StaffAttendance({ e, patch }) {
     setBusy(false);
   };
   const toggle = (m) => save(isIn.has(m.key) ? attended.filter((x) => x.key !== m.key) : [...attended, m]);
-  const all = (on) => save(on ? members : []);
+  const all = (on) => save(on ? members.map((m) => attended.find((x) => x.key === m.key) ?? m) : []);
   const shown = q.trim() ? (members ?? []).filter((m) => m.name.includes(q.trim())) : members ?? [];
   const label = kinds.map((k) => (k === "teachers" ? "المعلمين" : "الإدارة")).join(" و");
 
@@ -1627,7 +1627,7 @@ function usePrintWhenReady(id, trigger, onDone) {
 }
 
 /* ⑥ الشهادات */
-function StageCertificates({ e, parts, patch, isSupport, onNext }) {
+function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
   const [f, setF] = useState({
     cert_title: e.cert_title ?? "",
     cert_template: e.cert_template ?? (isNationalDay(e) ? "national" : "classic"),
@@ -1645,7 +1645,8 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
   const attended = useMemo(() => (parts ?? []).filter((p) => p.attended === true), [parts]);
   // المعلمون والإدارة الحاضرون في حدث للمدرسة كلها، بصيغة المشارك نفسها
   const staff = useMemo(() => (e.audience_attended ?? []).map((x) => (
-    { id: `s-${x.key}`, student_name: x.name, class_label: x.role, staff: true })), [e.audience_attended]);
+    { id: `s-${x.key}`, key: x.key, student_name: x.name, class_label: x.role, staff: true, cert_issued_at: x.cert_at })),
+  [e.audience_attended]);
   const serialOf = (p) => (p.staff
     ? `${e.serial}-M${String(staff.indexOf(p) + 1).padStart(3, "0")}`
     : `${e.serial}-${String(attended.indexOf(p) + 1).padStart(3, "0")}`);
@@ -1663,6 +1664,21 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
     if (!list.length) return;
     await save();
     setPrinting(list);
+    await markIssued(list);
+  };
+
+  // عدّاد الشهادات: تُسجَّل الطباعة الأولى لكل اسم، وإعادة الطباعة لا تغيّرها
+  const markIssued = async (list) => {
+    const at = new Date().toISOString();
+    const ids = list.filter((p) => !p.staff && !p.cert_issued_at).map((p) => p.id);
+    if (ids.length) {
+      await supabase.from("event_participants").update({ cert_issued_at: at }).in("id", ids).is("cert_issued_at", null);
+      await reload();
+    }
+    const keys = new Set(list.filter((p) => p.staff && !p.cert_issued_at).map((p) => p.key));
+    if (keys.size) {
+      await patch({ audience_attended: (e.audience_attended ?? []).map((x) => (keys.has(x.key) ? { ...x, cert_at: at } : x)) });
+    }
   };
 
   return (
@@ -1788,6 +1804,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
                 <p className="truncate text-sm font-medium text-ink">{p.student_name}</p>
                 <p className="num truncate text-xs text-faint">{p.class_label} · {serialOf(p)}</p>
               </div>
+              {p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
               <button onClick={() => printList([p])}
                       className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
                 طباعة
@@ -1820,6 +1837,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
                   <p className="truncate text-sm font-medium text-ink">{p.student_name}</p>
                   <p className="num truncate text-xs text-faint">{p.class_label} · {serialOf(p)}</p>
                 </div>
+                {p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
                 <button onClick={() => printList([p])}
                         className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
                   طباعة
@@ -1886,7 +1904,14 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
   };
   const printList = async (gs) => {
     if (!gs.length) return;
-    if (await save()) setPrinting(gs);
+    if (!(await save())) return;
+    setPrinting(gs);
+    // عدّاد الشهادات: تاريخ الطباعة الأولى مع كل ضيف
+    const at = new Date().toISOString();
+    const ids = new Set(gs.filter((g) => !g.cert_at).map((g) => g.id));
+    if (!ids.size) return;
+    const next = ready.map((g) => (ids.has(g.id) ? { ...g, cert_at: at } : g));
+    if (await patch({ guests: next })) setList((l) => l.map((g) => (ids.has(g.id) ? { ...g, cert_at: at } : g)));
   };
 
   if (!open) {
@@ -1949,6 +1974,7 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
                 طباعة شهادته
               </button>
             )}
+            {g.cert_at && <span className="mr-2 text-xs text-present">طُبعت ✓</span>}
           </div>
         ))}
       </div>
@@ -2037,17 +2063,21 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
   const aud = audienceOf(e);
   const staffIn = (e.audience_attended ?? []).map((x) => ({ id: x.key, student_name: x.name, class_label: x.role }));
   // حدث للمدرسة كلها: أعداد فئاته، ومن حضر من المعلمين والإدارة، والمكرَّمون بالاسم، والمستفيدون
+  // الشهادات المطبوعة: الطلاب، والمعلمون والإدارة، والضيوف
+  const certs = all.filter((p) => p.cert_issued_at).length + listCerts(e);
   const stats = aud.length ? [
     ...AUDIENCE.filter((a) => aud.includes(a.k)).map((a) => [a.t, e.audience_counts?.[a.k] ?? 0]),
     ...(staffKinds(e).length ? [["حضر من المعلمين والإدارة", staffIn.length]] : []),
     ...(all.length ? [["المكرَّمون بالاسم", attended.length]] : []),
     ["المستفيدون", eventReach(e, { total: all.length, attended: attended.length }).attended],
+    ["الشهادات الصادرة", certs],
   ] : [
     ["المرشّحون", all.length],
     ["وافق أولياؤهم", consented.length],
     ["وافق على التصوير", consented.filter((p) => p.consent_photo).length],
     ["الحاضرون", attended.length],
     ["نسبة الحضور", consented.length ? `${Math.round((attended.length / consented.length) * 100)}%` : "—"],
+    ["الشهادات الصادرة", certs],
   ];
 
   // الصور في مخزن خاص، فتُقرأ بروابط موقّعة مؤقتة
