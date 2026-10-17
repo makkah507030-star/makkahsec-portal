@@ -130,7 +130,7 @@ export default function TeacherTodayCard() {
         {periods.map((p) => {
           const st = done.has(p.id) ? "done" : started(p) ? "late" : "soon";
           const tone = {
-            done: "border-[#CCF2DB] bg-mint-tint text-mint-deep",
+            done: "border-mint-light bg-mint-tint text-mint-deep",
             late: "border-absent/30 bg-absent/5 text-absent",
             soon: "border-line bg-white text-muted",
           }[st];

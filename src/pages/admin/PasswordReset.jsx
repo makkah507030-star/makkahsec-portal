@@ -143,7 +143,7 @@ export default function PasswordReset() {
                     {confirming?.id !== u.id && (
                       <button
                         onClick={() => { setConfirming(u); setMsg(null); }}
-                        className="shrink-0 rounded-sm2 border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep"
+                        className="shrink-0 rounded-sm2 border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-mint-light hover:text-mint-deep"
                       >
                         إعادة تعيين
                       </button>
@@ -351,7 +351,7 @@ function UnactivatedBoxes() {
           return (
             <button key={r} onClick={() => openBox(r)}
               className={`rounded-card border p-3 text-right transition-colors ${
-                openRole === r ? "border-mint-deep bg-mint-tint" : "border-line bg-white hover:border-[#CCF2DB] hover:bg-canvas"}`}>
+                openRole === r ? "border-mint-deep bg-mint-tint" : "border-line bg-white hover:border-mint-light hover:bg-canvas"}`}>
               <div className="flex items-baseline justify-between">
                 <p className="text-xs font-semibold text-ink">{ROLE_META[r].label}</p>
                 <span className="num text-[11px] text-faint">{s.total}</span>

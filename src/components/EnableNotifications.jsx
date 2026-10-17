@@ -39,7 +39,7 @@ export default function EnableNotifications() {
   // مثبّتة وفعّالة
   if (state.subscribed && state.permission === "granted") {
     return (
-      <section className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+      <section className="rounded-card border border-mint-light bg-mint-tint px-4 py-3">
         <div className="flex items-center gap-2.5">
           {Bell}
           <p className="flex-1 text-sm font-semibold text-mint-deep">إشعارات الجوال مُفعّلة على هذا الجهاز</p>
@@ -73,7 +73,7 @@ export default function EnableNotifications() {
             </p>
           ) : (
             <button onClick={on} disabled={busy}
-              className="mt-2.5 rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-[#6AA786] disabled:opacity-60">
+              className="mt-2.5 rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-mint-hover disabled:opacity-60">
               {busy ? "جارٍ التفعيل…" : "تفعيل الإشعارات"}
             </button>
           )}

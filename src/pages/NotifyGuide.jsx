@@ -39,7 +39,7 @@ function Steps({ title, sub, items }) {
 export default function NotifyGuide() {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <header className="rounded-card border border-[#CCF2DB] bg-mint-tint px-5 py-6 text-center">
+      <header className="rounded-card border border-mint-light bg-mint-tint px-5 py-6 text-center">
         <img src={logoIcon} alt="" className="mx-auto h-12 w-12 object-contain" />
         <h1 className="mt-3 text-xl font-bold text-mint-deep">تفعيل إشعارات الجوال</h1>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">

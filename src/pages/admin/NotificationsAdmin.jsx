@@ -252,7 +252,7 @@ function SendForm() {
 
   return (
     <div className="space-y-5">
-      <section className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+      <section className="rounded-card border border-mint-light bg-mint-tint px-4 py-3">
         <p className="text-sm leading-relaxed text-mint-deep">
           الإشعارات تصل الآن إلى <b>جوال المستخدم مباشرة</b> بعد تفعيل الخدمة من حسابه
           (إضافةً إلى ظهورها داخل البوابة).{" "}
@@ -261,7 +261,7 @@ function SendForm() {
           </Link>
         </p>
         {!isTechSupport && (
-          <p className="mt-2 border-t border-[#CCF2DB] pt-2 text-xs text-[#6AA786]">
+          <p className="mt-2 border-t border-mint-light pt-2 text-xs text-mint-hover">
             ملاحظة: إشعاراتك تُرسَل بعد <b>اعتماد الدعم الفني</b>، وستصلك نتيجة الاعتماد.
           </p>
         )}
@@ -424,7 +424,7 @@ function SendForm() {
               <div className="flex flex-wrap gap-1.5">
                 {picked.map((p) => (
                   <span key={p.id}
-                    className="flex items-center gap-1.5 rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-xs text-mint-deep">
+                    className="flex items-center gap-1.5 rounded-pill border border-mint-light bg-mint-tint px-3 py-1 text-xs text-mint-deep">
                     {p.full_name ?? p.username}
                     <button onClick={() => setPicked((l) => l.filter((x) => x.id !== p.id))}
                       className="text-absent">×</button>

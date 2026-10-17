@@ -197,7 +197,7 @@ export default function NewsArticle() {
           </Link>
           <Link
             to="/news"
-            className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep"
+            className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-mint-light hover:text-mint-deep"
           >
             كل الأخبار والمقالات
           </Link>
@@ -318,7 +318,7 @@ export default function NewsArticle() {
             )}
 
             {/* تذييل المقال: مشاركة وطباعة + العودة */}
-            <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-card border border-[#CCF2DB] bg-[#F4FBF8] px-5 py-4">
+            <div className="mt-12 flex flex-wrap items-center justify-between gap-4 rounded-card border border-mint-light bg-[#F4FBF8] px-5 py-4">
               <div className="min-w-0">
                 <p className="text-sm font-bold text-ink">هل أعجبك الخبر؟</p>
                 <p className="mt-0.5 text-xs text-muted">

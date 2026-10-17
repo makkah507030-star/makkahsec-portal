@@ -77,7 +77,7 @@ export function GradePills({ grade, setGrade }) {
 export function Note({ children, tone = "mint" }) {
   const cls = tone === "warn"
     ? "border-[#F0E3C4] bg-warning-light text-warning"
-    : "border-[#CCF2DB] bg-mint-tint text-mint-deep";
+    : "border-mint-light bg-mint-tint text-mint-deep";
   return <p className={`rounded-card border px-4 py-3 text-sm leading-relaxed ${cls}`}>{children}</p>;
 }
 

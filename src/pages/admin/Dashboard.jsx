@@ -197,10 +197,10 @@ export default function Dashboard() {
 
       {/* تحضير اليوم — لا يُعرض إلا بعد اكتمال تحميل البيانات (d.unmarked) */}
       {canReports && d.unmarked && dow > 0 && (
-        <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-5">
+        <section className="rounded-card border border-mint-light bg-mint-tint p-5">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-medium text-[#6AA786]">تحضير اليوم</p>
+              <p className="text-xs font-medium text-mint-hover">تحضير اليوم</p>
               <p className="mt-1.5 text-3xl font-bold leading-none text-mint-deep">
                 <span className="num">{marked}</span>
                 <span className="text-lg font-medium text-muted"> / {d.schedCount}</span>
@@ -215,7 +215,7 @@ export default function Dashboard() {
               <p className="num text-4xl font-bold leading-none text-mint-deep">{pct}%</p>
               <button onClick={() => setLegend((v) => !v)} aria-label="دلالة الألوان" title="دلالة الألوان"
                 className={`grid h-6 w-6 place-items-center rounded-full border text-xs font-bold transition-colors ${
-                  legend ? "border-mint-deep bg-mint-deep text-white" : "border-[#CCF2DB] bg-white text-mint-deep hover:bg-canvas"}`}>؟</button>
+                  legend ? "border-mint-deep bg-mint-deep text-white" : "border-mint-light bg-white text-mint-deep hover:bg-canvas"}`}>؟</button>
             </div>
           </div>
           {legend && (
@@ -233,7 +233,7 @@ export default function Dashboard() {
             </div>
           )}
           <div className="mt-4 h-2 overflow-hidden rounded-pill bg-white">
-            <div className="h-full rounded-pill bg-[#6AA786] transition-all" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-pill bg-mint-hover transition-all" style={{ width: `${pct}%` }} />
           </div>
           <Link to="/period-attendance"
             className="mt-3 inline-block text-xs font-semibold text-mint-deep hover:underline">
@@ -310,10 +310,10 @@ function OfficialStatusBox({ date }) {
 
   return (
     <Link to="/student-affairs?tab=official"
-      className="block rounded-card border border-[#CCF2DB] bg-mint-tint p-5 transition-colors hover:bg-mint-tint/70">
+      className="block rounded-card border border-mint-light bg-mint-tint p-5 transition-colors hover:bg-mint-tint/70">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-medium text-[#6AA786]">
+          <p className="text-xs font-medium text-mint-hover">
             الحضور والغياب الرسمي{data.approved ? " — معتمد" : " — مبدئي"}
           </p>
           <div className="mt-1.5 flex items-baseline gap-4">

@@ -82,7 +82,7 @@ export function ClassNotesButton({ students, notesBy }) {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)}
-        className="mt-2 inline-flex items-center gap-1.5 rounded-pill border border-[#CCF2DB] bg-white px-3 py-1 text-xs font-semibold text-mint-deep hover:bg-mint-tint">
+        className="mt-2 inline-flex items-center gap-1.5 rounded-pill border border-mint-light bg-white px-3 py-1 text-xs font-semibold text-mint-deep hover:bg-mint-tint">
         ملاحظات الطلاب <span className="num">({withNotes.length})</span>
       </button>
       {open && (

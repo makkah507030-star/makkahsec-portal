@@ -17,9 +17,11 @@ import Sticker from "./Sticker.jsx";
 const TONE = {
   absent:  { card: "border-absent/25 bg-absent/5 hover:bg-absent/10",    icon: "bg-absent/10 text-absent",       num: "text-absent" },
   warning: { card: "border-warning/30 bg-warning/5 hover:bg-warning/10", icon: "bg-warning-light text-warning",  num: "text-warning" },
-  mint:    { card: "border-[#CCF2DB] bg-mint-tint hover:bg-mint-light",  icon: "bg-white text-mint-deep",        num: "text-mint-deep" },
+  mint:    { card: "border-mint-light bg-mint-tint hover:bg-mint-light",  icon: "bg-white text-mint-deep",        num: "text-mint-deep" },
   // مفكرتي: لون مستقل يميّز مهامك الشخصية عن مهام البوابة
-  note:    { card: "border-[#C9DBEC] bg-[#EEF4FA] hover:bg-[#E2ECF6]",   icon: "bg-white text-[#2F5F86]",        num: "text-[#2F5F86]" },
+  // الداكن: الأزرق نفسه شفافًا على السطح الداكن (dark:)
+  note:    { card: "border-[#C9DBEC] bg-[#EEF4FA] hover:bg-[#E2ECF6] dark:border-excused/40 dark:bg-excused/10 dark:hover:bg-excused/20",
+             icon: "bg-white text-[#2F5F86] dark:text-[#8DB6E6]", num: "text-[#2F5F86] dark:text-[#8DB6E6]" },
 };
 
 // آخر ما رآه المستخدم من مهام — يبقى بين زيارات الرئيسية ليُعرف ما أُنجز منذها
@@ -80,7 +82,7 @@ export default function TasksBox() {
           {tasks.map((t) => <TaskCard key={t.key} t={t} active={open === t.key}
                                       onExpand={() => setOpen(open === t.key ? null : t.key)} />)}
           {shownDone.map((t) => (
-            <div key={`done-${t.key}`} className="tasks-done flex min-h-[6.5rem] flex-col rounded-card border border-[#CCF2DB] bg-mint-tint p-3">
+            <div key={`done-${t.key}`} className="tasks-done flex min-h-[6.5rem] flex-col rounded-card border border-mint-light bg-mint-tint p-3">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-mint-deep">
                 <Icon name="check" className="h-4 w-4" />
               </span>

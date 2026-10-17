@@ -81,7 +81,7 @@ export default function Notebook() {
   const done = shown.filter((n) => n.done_at);
   return (
     <div className="space-y-5">
-      <div className="rounded-card border border-[#CCF2DB] bg-gradient-to-l from-mint-tint to-[#F7FCF9] px-5 py-4 text-center">
+      <div className="rounded-card border border-mint-light bg-gradient-to-l from-mint-tint to-[#F7FCF9] px-5 py-4 text-center">
         <p className="text-lg font-semibold leading-loose text-mint-deep">
           ﴿ وَاذْكُر رَّبَّكَ إِذَا نَسِيتَ وَقُلْ عَسَىٰ أَن يَهْدِيَنِ رَبِّي لِأَقْرَبَ مِنْ هَٰذَا رَشَدًا ﴾
         </p>
@@ -179,7 +179,7 @@ function NoteCard({ n, focus, editing, onEdit, onCancel, onSaved, onPatch, onRem
           <div className="space-y-1">
             {items.map((x, i) => (
               <label key={i} className="flex cursor-pointer items-center gap-2 text-sm">
-                <input type="checkbox" className="h-4 w-4 accent-[#3E6350]" checked={!!x.done} onChange={() => toggleItem(i)} />
+                <input type="checkbox" className="h-4 w-4 accent-mint-deep" checked={!!x.done} onChange={() => toggleItem(i)} />
                 <span className={x.done ? "text-faint line-through" : "text-ink"}>{x.t}</span>
               </label>
             ))}

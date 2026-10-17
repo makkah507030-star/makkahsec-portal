@@ -105,7 +105,7 @@ export default function NotificationView() {
           {n.attachment_url && (
             <a href={n.attachment_url} target="_blank" rel="noreferrer"
                download={n.attachment_name || undefined}
-               className="mt-5 flex items-center gap-3 rounded-card border border-[#CCF2DB] bg-mint-tint/50 px-4 py-3 transition-colors hover:bg-mint-tint">
+               className="mt-5 flex items-center gap-3 rounded-card border border-mint-light bg-mint-tint/50 px-4 py-3 transition-colors hover:bg-mint-tint">
               <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6 shrink-0 text-mint-deep"
                    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" /><path d="M14 3v5h5" />
@@ -138,7 +138,7 @@ export default function NotificationView() {
           {n.link && (
             <a href={n.link} target={/^https?:/.test(n.link) ? "_blank" : undefined}
                rel="noreferrer"
-               className="mt-5 inline-flex items-center gap-2 rounded-pill bg-mint-deep px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#6AA786]">
+               className="mt-5 inline-flex items-center gap-2 rounded-pill bg-mint-deep px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-mint-hover">
               فتح الرابط
               <span>←</span>
             </a>

@@ -160,7 +160,7 @@ export default function MyQuizzes() {
         {items.map((q) => {
           const st = STATUS[q.status] ?? STATUS.draft;
           return (
-            <div key={q.id} className="card p-4 transition-colors hover:border-[#CCF2DB]">
+            <div key={q.id} className="card p-4 transition-colors hover:border-mint-light">
               <div className="flex items-start gap-3">
                 <button onClick={() => setOpenId(q.id)} className="min-w-0 flex-1 text-right">
                   <p className="truncate text-sm font-bold text-ink">{q.title}</p>
@@ -871,7 +871,7 @@ function QuizEditor({ quiz, uid, onBack }) {
       )}
 
       {external && (
-        <div className="no-print flex flex-wrap items-center gap-3 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+        <div className="no-print flex flex-wrap items-center gap-3 rounded-card border border-mint-light bg-mint-tint px-4 py-3">
           <p className="min-w-0 flex-1 text-sm leading-relaxed text-mint-deep">
             اختبار من خارج البوابة: أسند فصوله، ثم ارصد مجموع كل طالب من الدرجة الكلية
             (<span className="num">{q.total_marks}</span>). بعدها تكمل دورة الاختبار: التحليل والخطة والتكريم.
@@ -913,7 +913,7 @@ function QuizEditor({ quiz, uid, onBack }) {
         <div className="no-print space-y-3">
           <div className={`rounded-card border px-4 py-3 ${
             marksUsed === Number(q.total_marks)
-              ? "border-[#CCF2DB] bg-mint-tint" : "border-warning/35 bg-warning/5"}`}>
+              ? "border-mint-light bg-mint-tint" : "border-warning/35 bg-warning/5"}`}>
             <p className={`num text-sm font-semibold ${
               marksUsed === Number(q.total_marks) ? "text-mint-deep" : "text-warning"}`}>
               مجموع الدرجات: {marksUsed} من {q.total_marks}
@@ -972,7 +972,7 @@ function QuizEditor({ quiz, uid, onBack }) {
                 const n = countOf(k.key);
                 return (
                   <button key={k.key} onClick={() => addQuestion(k.key)} title={k.hint}
-                    className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-4 py-1.5 text-sm font-medium text-mint-deep transition-colors hover:bg-[#CCF2DB]">
+                    className="rounded-pill border border-mint-light bg-mint-tint px-4 py-1.5 text-sm font-medium text-mint-deep transition-colors hover:bg-mint-light">
                     {paper ? "+ " : ""}{k.label}{" "}
                     <span className="num opacity-75">{n ? `(${n})` : ""}</span>
                   </button>
@@ -1083,7 +1083,7 @@ function VerifyBanner({ q }) {
       .eq("id", q.verify_plan_id).maybeSingle().then(({ data }) => setSrc(data ?? null));
   }, [q.verify_plan_id]);
   return (
-    <div className="no-print space-y-1 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+    <div className="no-print space-y-1 rounded-card border border-mint-light bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
       <p className="font-semibold">
         اختبار تحقق للخطة العلاجية {src?.round > 1 ? "الثانية " : ""}في «{src?.quizzes?.title ?? "الاختبار الأصلي"}»
       </p>
@@ -1416,7 +1416,7 @@ function FillEditor({ local, setLocal, save, ltr = false }) {
                 onBlur={() => save({ text: local.text })} />
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={insertBlank}
-                className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-xs font-medium text-mint-deep hover:bg-[#CCF2DB]">
+                className="rounded-pill border border-mint-light bg-mint-tint px-3 py-1 text-xs font-medium text-mint-deep hover:bg-mint-light">
           + إدراج فراغ
         </button>
         <span className="num text-[11px] text-faint">
@@ -1681,7 +1681,7 @@ function PrintBtn({ title, sub, onClick, busy, tone }) {
   return (
     <button onClick={onClick} disabled={busy}
       className={`flex w-full items-center justify-between gap-3 rounded-sm2 border px-3 py-2.5 text-right transition-colors disabled:opacity-50 ${
-        tone === "key" ? "border-[#CCF2DB] bg-mint-tint hover:bg-[#CCF2DB]" : "border-line hover:bg-canvas"}`}>
+        tone === "key" ? "border-mint-light bg-mint-tint hover:bg-mint-light" : "border-line hover:bg-canvas"}`}>
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium text-ink">{title}</span>
         <span className="block truncate text-[11px] text-faint">{sub}</span>
@@ -1710,7 +1710,7 @@ function ListeningSection({ audioPath, audioUrl, rows, onUpload, onRemoveAudio, 
   const input = <input type="file" accept="audio/*" className="hidden" onChange={pick} />;
 
   return (
-    <section className="space-y-3 rounded-card border border-[#CCF2DB] bg-mint-tint/60 p-3">
+    <section className="space-y-3 rounded-card border border-mint-light bg-mint-tint/60 p-3">
       <div>
         <p className="text-sm font-bold text-mint-deep">سؤال الاستماع · Listening</p>
         <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
@@ -1747,7 +1747,7 @@ function ListeningSection({ audioPath, audioUrl, rows, onUpload, onRemoveAudio, 
           const n = rows.filter((x) => x.kind === k.key).length;
           return (
             <button key={k.key} onClick={() => onAdd(k.key)}
-              className="rounded-pill border border-[#CCF2DB] bg-white px-4 py-1.5 text-sm font-medium text-mint-deep transition-colors hover:bg-[#CCF2DB]">
+              className="rounded-pill border border-mint-light bg-white px-4 py-1.5 text-sm font-medium text-mint-deep transition-colors hover:bg-mint-light">
               + {k.label} <span className="num opacity-75">{n ? `(${n})` : ""}</span>
             </button>
           );
@@ -1824,7 +1824,7 @@ function QuestionImage({ row, image, save }) {
           <label className="flex items-center justify-between text-[11px] text-muted">
             <span>عرضها في الورقة</span><span className="num">{width}٪</span>
           </label>
-          <input type="range" min="20" max="100" step="10" value={width} className="w-full accent-[#3E6350]"
+          <input type="range" min="20" max="100" step="10" value={width} className="w-full accent-mint-deep"
                  onChange={(e) => save({ image_width: Number(e.target.value) })} />
         </div>
       ) : <p className="min-w-[160px] flex-1 text-[11px] text-muted">تظهر للطالب تحت نص السؤال.</p>}

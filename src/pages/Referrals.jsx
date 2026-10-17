@@ -551,7 +551,7 @@ function NewReferral({ uid, profile, onDone }) {
             {classes.length === 0 && <p className="text-sm text-muted">لا فصول مسندة إليك.</p>}
           </div>
           <button type="button" onClick={openOutside}
-            className="mt-3 rounded-sm2 border border-dashed border-mint-deep/50 bg-mint-tint px-3.5 py-2 text-xs font-semibold text-mint-deep hover:bg-[#CCF2DB]">
+            className="mt-3 rounded-sm2 border border-dashed border-mint-deep/50 bg-mint-tint px-3.5 py-2 text-xs font-semibold text-mint-deep hover:bg-mint-light">
             طالب من خارج فصولي — حصة انتظار أو إشراف أو مناوبة
           </button>
         </div>
@@ -712,7 +712,7 @@ function NewReferral({ uid, profile, onDone }) {
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {reasons.map((t) => (
             <button key={t} type="button" onClick={() => setReason(t)}
-                    className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
+                    className="rounded-pill border border-mint-light bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-mint-light">
               {t}
             </button>
           ))}
@@ -1330,7 +1330,7 @@ function ReferralChain({ links }) {
   return (
     <ol className="-mx-1 mt-2 flex flex-wrap gap-1 px-1">
       {links.map((x, i) => {
-        const cls = x.state === "done" ? "border border-[#CCF2DB] bg-mint-tint text-mint-deep"
+        const cls = x.state === "done" ? "border border-mint-light bg-mint-tint text-mint-deep"
           : x.state === "now" ? "bg-mint-deep text-white"
           : x.state === "back" ? "bg-absent/10 text-absent"
           : x.state === "skip" ? "border border-dashed border-line bg-canvas text-muted"

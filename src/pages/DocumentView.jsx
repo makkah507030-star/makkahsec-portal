@@ -241,7 +241,7 @@ export default function DocumentView() {
             </p>
           </div>
           <label className="flex cursor-pointer items-start gap-2 text-sm text-ink">
-            <input type="checkbox" className="mt-1 accent-[#3E6350]" checked={ackChecked}
+            <input type="checkbox" className="mt-1 accent-mint-deep" checked={ackChecked}
                    onChange={(e) => setAckChecked(e.target.checked)} />
             أقرّ بأني اطلعت على ما ورد في هذه الاستمارة من تقييم وجوانب دعم وتطوير.
           </label>
@@ -326,7 +326,7 @@ export default function DocumentView() {
                       {f.presets.map((t, i) => (
                         <button key={i} type="button" title={t}
                                 onClick={() => setReply((r) => ({ ...r, [f.name]: t }))}
-                                className="max-w-full truncate rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
+                                className="max-w-full truncate rounded-pill border border-mint-light bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-mint-light">
                           {t.length > 42 ? t.slice(0, 42) + "…" : t}
                         </button>
                       ))}

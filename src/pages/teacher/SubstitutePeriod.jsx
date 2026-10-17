@@ -265,8 +265,8 @@ export default function SubstitutePeriod() {
   if (selected) {
     return (
       <div className="space-y-4">
-        <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-4">
-          <p className="text-xs font-medium text-[#6AA786]">
+        <section className="rounded-card border border-mint-light bg-mint-tint p-4">
+          <p className="text-xs font-medium text-mint-hover">
             {todayLabel()} · الحصة <span className="num">{selected.period_no}</span>
             {ptimeOf(selected.period_no) && <span className="num"> · {fmtRange(ptimeOf(selected.period_no))}</span>}
             {" "}· انتظار
@@ -355,7 +355,7 @@ export default function SubstitutePeriod() {
         </p>
       </div>
 
-      <p className="text-xs font-medium text-[#6AA786]">
+      <p className="text-xs font-medium text-mint-hover">
         {todayLabel()} · الحصة الجارية الآن <span className="num">{nowPeriod}</span>
         {ptimeOf(nowPeriod) && <span className="num"> · {fmtRange(ptimeOf(nowPeriod))}</span>}
       </p>

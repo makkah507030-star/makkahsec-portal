@@ -65,7 +65,7 @@ export default function Landing() {
           </div>
           <button
             onClick={() => navigate("/login")}
-            className="rounded-pill bg-mint-deep px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#6AA786]"
+            className="rounded-pill bg-mint-deep px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-mint-hover"
           >
             الدخول للبوابة
           </button>
@@ -80,12 +80,12 @@ export default function Landing() {
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 left-32 h-72 w-72 rounded-full bg-[#CCF2DB]/60"
+          className="pointer-events-none absolute -bottom-32 left-32 h-72 w-72 rounded-full bg-mint-light/60"
         />
 
         <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 py-16 md:grid-cols-[1.1fr_.9fr] md:py-20">
           <div>
-            <p className="text-sm font-semibold text-[#6AA786]">
+            <p className="text-sm font-semibold text-mint-hover">
               العام الدراسي <span className="num">1448–1449</span>
             </p>
             <h1 className="mt-3 text-3xl font-bold leading-[1.35] text-ink md:text-[2.6rem]">
@@ -102,7 +102,7 @@ export default function Landing() {
             <div className="mt-8 flex flex-wrap gap-3">
               <a
                 href="#sections"
-                className="rounded-pill border border-[#CCF2DB] bg-white px-7 py-3 text-sm font-semibold text-mint-deep transition-colors hover:bg-mint-tint"
+                className="rounded-pill border border-mint-light bg-white px-7 py-3 text-sm font-semibold text-mint-deep transition-colors hover:bg-mint-tint"
               >
                 تعرّف على الأقسام
               </a>
@@ -139,18 +139,18 @@ export default function Landing() {
               <Link
                 key={s.title}
                 to={s.to}
-                className="rounded-card border border-line bg-white p-5 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
+                className="rounded-card border border-line bg-white p-5 transition-colors hover:border-mint-light hover:bg-mint-tint/40"
               >
                 <h3 className="text-sm font-bold text-mint-deep">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
-                <span className="mt-3 inline-block text-xs font-semibold text-[#6AA786]">
+                <span className="mt-3 inline-block text-xs font-semibold text-mint-hover">
                   {s.cta ?? "اطّلع أكثر ←"}
                 </span>
               </Link>
             ) : (
               <article
                 key={s.title}
-                className="rounded-card border border-line bg-white p-5 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
+                className="rounded-card border border-line bg-white p-5 transition-colors hover:border-mint-light hover:bg-mint-tint/40"
               >
                 <h3 className="text-sm font-bold text-mint-deep">{s.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">{s.body}</p>
@@ -175,7 +175,7 @@ export default function Landing() {
                 href={l.url}
                 target="_blank"
                 rel="noreferrer"
-                className="rounded-card border border-line bg-white px-5 py-4 text-sm font-medium text-ink transition-colors hover:border-[#CCF2DB] hover:text-mint-deep"
+                className="rounded-card border border-line bg-white px-5 py-4 text-sm font-medium text-ink transition-colors hover:border-mint-light hover:text-mint-deep"
               >
                 {l.name}
               </a>
@@ -187,8 +187,8 @@ export default function Landing() {
       {/* مدير المدرسة */}
       <section className="bg-white px-5 py-12">
         <div className="mx-auto max-w-6xl">
-          <div className="rounded-card border border-[#CCF2DB] bg-mint-tint px-6 py-7 text-center">
-            <p className="text-xs font-medium text-[#6AA786]">مدير المدرسة</p>
+          <div className="rounded-card border border-mint-light bg-mint-tint px-6 py-7 text-center">
+            <p className="text-xs font-medium text-mint-hover">مدير المدرسة</p>
             <p className="mt-2 text-lg font-bold text-mint-deep">
               عبدالله بن حسن سلمان الفيفي
             </p>

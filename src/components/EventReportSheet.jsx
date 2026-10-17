@@ -144,7 +144,8 @@ export default function EventReportSheet({ event: e, stats, attended, photos, si
 
       {/* الأعداد */}
       <Section title="المشاركة">
-        <div className="grid" style={{ gridTemplateColumns: `repeat(${stats.length}, 1fr)`, gap: "2mm" }}>
+        {/* حتى خمس خانات في صف واحد، وما زاد في صفين متقاربين، فلا تنكسر العناوين */}
+        <div className="grid" style={{ gridTemplateColumns: `repeat(${stats.length > 5 ? Math.ceil(stats.length / 2) : stats.length}, 1fr)`, gap: "2mm" }}>
           {stats.map(([k, v]) => (
             <div key={k} className="text-center" style={{ border: "0.25mm solid #DDE5E0", borderRadius: "1.5mm", padding: "2mm 1mm" }}>
               <p className="num" style={{ fontSize: "15pt", fontWeight: 700, color: ACCENT }}>{v}</p>

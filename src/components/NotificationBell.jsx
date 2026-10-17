@@ -33,7 +33,7 @@ export default function NotificationBell() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="الإشعارات"
-        className="relative rounded-pill border border-line p-2 text-muted transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint hover:text-mint-deep"
+        className="relative rounded-pill border border-line p-2 text-muted transition-colors hover:border-mint-light hover:bg-mint-tint hover:text-mint-deep"
       >
         <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4"
              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

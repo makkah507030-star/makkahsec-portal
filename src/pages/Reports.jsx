@@ -719,7 +719,7 @@ function DailyRateReport() {
 
   return (
     <div className="space-y-4">
-      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+      <p className="rounded-card border border-mint-light bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
         نسبة الحضور محسوبة يوميًا بنفس قاعدة الحضور الرسمي، وفي آخر السجل
         متوسط الحضور والغياب في اليوم الواحد ونسبة الفصل الدراسي كاملًا.
       </p>
@@ -914,7 +914,7 @@ export function AbsenceDaysReport({ scopeIds }) {
 
   return (
     <div className="space-y-4">
-      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+      <p className="rounded-card border border-mint-light bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
         يوم الغياب الكامل هو يوم غاب فيه الطالب عن جميع حصصه المسجّلة. والغياب الجزئي
         يعني غيابه عن بعض الحصص دون بعض.
       </p>
@@ -1213,7 +1213,7 @@ export function TeacherSheetsReport() {
 
   return (
     <div className="space-y-4">
-      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+      <p className="rounded-card border border-mint-light bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
         كشوف التحضير كما أدخلها المعلمون فعليًا في اليوم المحدَّد — تُعرض تحت اسم من
         قام بالتحضير (بما في ذلك معلم الانتظار ومن رصد متأخرًا)، كل كشف (معلم × فصل × حصة)
         في ورقة مستقلة عند الطباعة، بأسماء الطلاب وأرقام هوياتهم وحالة كل طالب

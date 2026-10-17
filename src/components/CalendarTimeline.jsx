@@ -60,7 +60,7 @@ export default function CalendarTimeline() {
             {/* الخط الزمني */}
             <div
               aria-hidden="true"
-              className="absolute right-0 left-0 top-[7px] hidden h-px bg-[#CCF2DB] lg:block"
+              className="absolute right-0 left-0 top-[7px] hidden h-px bg-mint-light lg:block"
             />
 
             {events.map((e) => {
@@ -73,17 +73,17 @@ export default function CalendarTimeline() {
                 <article key={e.id} className="relative">
                   <span
                     className={`relative z-[1] block h-3.5 w-3.5 rounded-full border-2 border-white ${
-                      isNow ? "bg-mint-deep" : "bg-[#89D7AD]"
+                      isNow ? "bg-mint-deep" : "bg-mint"
                     }`}
                   />
                   <div
                     className={`mt-4 rounded-card border p-4 ${
                       isNow
-                        ? "border-[#CCF2DB] bg-mint-tint"
+                        ? "border-mint-light bg-mint-tint"
                         : "border-line bg-white"
                     }`}
                   >
-                    <p className="text-[11px] font-semibold text-[#6AA786]">
+                    <p className="text-[11px] font-semibold text-mint-hover">
                       {isNow ? "جارية الآن" : countdownText(days)}
                     </p>
                     <h3 className="mt-1.5 text-sm font-bold leading-snug text-ink">
