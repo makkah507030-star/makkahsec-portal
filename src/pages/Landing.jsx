@@ -42,6 +42,7 @@ const LINKS = [
   { name: "منصة مدرستي", url: "https://schools.madrasati.sa" },
   { name: "نظام نور", url: "https://noor.moe.gov.sa" },
   { name: "بوابة التعليم", url: "https://edugate.moe.gov.sa/" },
+  { name: "تطبيق مستقبلهم", url: "https://apps.apple.com/sa/app/%D9%85%D8%B3%D8%AA%D9%82%D8%A8%D9%84%D9%87%D9%85/id6446278845" },
 ];
 
 export default function Landing() {
@@ -167,7 +168,7 @@ export default function Landing() {
             روابط المنصات الرسمية التابعة لوزارة التعليم.
           </p>
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {LINKS.map((l) => (
               <a
                 key={l.name}
