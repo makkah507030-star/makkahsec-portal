@@ -21,7 +21,7 @@ function highlights(d) {
   const out = [];
   const a = d.attendance;
   if (a.days) out.push(`نسبة الحضور الرسمية ${pc(a.pct)}، والأيام المعتمدة: ${countAr(a.days, "day")}، ومتوسط الغياب اليومي ${n(a.daily.absent)} طالب.`);
-  if (d.events.total) out.push(`الأحداث والمناسبات المنفّذة: ${countAr(d.events.total, "event")}، والطلاب الحاضرون ${n(d.events.attended)}${d.events.upcoming ? `، وقادمة ${n(d.events.upcoming)}` : ""}.`);
+  if (d.events.total) out.push(`الأحداث والمناسبات المنفّذة: ${countAr(d.events.total, "event")}، والمستفيدون الحاضرون ${n(d.events.attended)}${d.events.upcoming ? `، وقادمة ${n(d.events.upcoming)}` : ""}.`);
   if (d.pd.total) out.push(`أنشطة التطوير المهني: ${n(d.pd.total)} (تقارير ${n(d.pd.reports)}، مجتمعات تعلم ${n(d.pd.plc)}، زيارات ${n(d.pd.visits)})، اعتُمد منها ${n(d.pd.approved)}.`);
   if (d.quizzes.total) out.push(`الاختبارات في البوابة: ${n(d.quizzes.total)}، رُصدت درجات ${n(d.quizzes.graded)} منها${d.quizzes.avg != null ? ` بمتوسط أداء ${pc(d.quizzes.avg)}` : ""}.`);
   if (d.guidance.sessions) out.push(`الجلسات الإرشادية: ${n(d.guidance.sessions)}، والحالات الجديدة ${n(d.guidance.opened)}.`);
