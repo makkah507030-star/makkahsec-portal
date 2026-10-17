@@ -186,13 +186,6 @@ export async function visitNote(id, note) {
   return data === true;
 }
 
-/* اسم الزائر وجهته بعد بدء الزيارة (supabase/teacher_dfile_7.sql) */
-export async function visitWho(id, name, org) {
-  const { data, error } = await supabase.rpc("dfile_visit_who", { p_id: id, p_name: name ?? "", p_org: org ?? "" });
-  if (error) throw new Error(/dfile_visit_who|schema cache/i.test(error.message) ? "حفظ الاسم غير مفعّل بعد." : error.message);
-  return data === true;
-}
-
 export function visitPing(id, seconds) {
   if (!id) return;
   supabase.rpc("dfile_visit_ping", { p_id: id, p_seconds: Math.round(seconds) }).then(() => {}, () => {});

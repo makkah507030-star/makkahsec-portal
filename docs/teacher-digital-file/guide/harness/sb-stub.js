@@ -19,7 +19,7 @@ function q(table) {
   return o;
 }
 export const supabase = { from: q,
-  rpc: (fn) => Promise.resolve({ data: fn === "dfile_visit_start" ? "vid-1" : fn === "dfile_visit_note" || fn === "dfile_visit_who" ? true : fn === "dfile_opinion_list" ? [{ teacher_user_id: "u", name: "فيصل بن سالم القرشي", body: opinions[0].body, decision: "shown", written_at: "2026-10-12" }, { teacher_user_id: "v", name: "خالد بن محمد الحربي", body: null, decision: null }] : fn === "dfile_public" ? { status: "ok", settings: row, data: d } : fn === "dfile_data" ? d : null, error: null }),
+  rpc: (fn) => Promise.resolve({ data: fn === "dfile_visit_start" ? "vid-1" : fn === "dfile_visit_note" ? true : fn === "dfile_opinion_list" ? [{ teacher_user_id: "u", name: "فيصل بن سالم القرشي", body: opinions[0].body, decision: "shown", written_at: "2026-10-12" }, { teacher_user_id: "v", name: "خالد بن محمد الحربي", body: null, decision: null }] : fn === "dfile_public" ? { status: "ok", settings: row, data: d } : fn === "dfile_data" ? d : null, error: null }),
   storage: { from: () => ({ download: async () => ({ data: null }), createSignedUrl: async () => ({ data: null }) }) },
   auth: { getUser: async () => ({ data: { user: { id: "x" } } }) } };
 export const isConfigured = true;

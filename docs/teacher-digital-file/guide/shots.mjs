@@ -52,7 +52,7 @@ export async function takeShots(chromium, base, exe) {
   // 3) صفحة الزائر
   p = await page("public.html");
   await p.screenshot({ path: out("visitor-welcome") }); done.push("visitor-welcome");
-  await p.getByRole("button", { name: "إغلاق" }).click();   // شريط الترحيب أسفل الشاشة
+  await p.getByRole("button", { name: "تخطٍّ" }).click();
   await p.waitForTimeout(1500);
   await p.screenshot({ path: out("visitor-report") }); done.push("visitor-report");
   // زر «اكتب ملاحظتك» الثابت يُخفى في صور الأقسام، ويعود لصورة الملاحظة
