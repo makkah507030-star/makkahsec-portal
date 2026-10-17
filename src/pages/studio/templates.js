@@ -1,4 +1,5 @@
 // src/pages/studio/templates.js
+import { COLORS } from "../../lib/dfile.js";
 import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode, classShort, iconFor, signIconFor } from "./lib";
 import { loadSchedule, loadStudents, loadStaff, shortName } from "./data";
 import { DAY_NAMES, GRADE_NAMES } from "../../lib/schoolTime";
@@ -469,6 +470,19 @@ export const TEMPLATES = [
     desc: "14 شريحة بهوية المدرسة: غلاف ومحتويات ونقاط ومقارنة وأرقام ورسم بياني وجدول وخط زمني وختام.",
     download: { href: "/templates/presentation-template.pptx", file: "قالب-عرض-مدرسة-مكة-الثانوية.pptx",
       preview: "/templates/presentation-template.jpg", app: "PowerPoint", color: "#C43E1C", ratio: "16 / 9" },
+    fields: [], defaults: () => ({}),
+  },
+  {
+    key: "ppt-model-lesson",
+    sections: ["teacher"],
+    title: "حصة نموذجية (PowerPoint)",
+    desc: "حصة 50 دقيقة لأي مادة بإجراءات التدريس الفعّال وبنود الملاحظة الصفية: تهيئة وأهداف وشرح بالمثال وتعاوني ومتمايز وبطاقة خروج، تفاعلية مع ملاحظات للمعلم. اختر لون العرض.",
+    // ثمانية ألوان كألوان ملف المعلم الرقمي (COLORS)؛ الملفات من docs/model-lesson/colors
+    download: { href: "/templates/model-lesson/science.pptx", file: "حصة-نموذجية-مدرسة-مكة-الثانوية.pptx",
+      preview: "/templates/model-lesson/science.jpg", app: "PowerPoint", color: "#C43E1C", ratio: "16 / 9",
+      variants: COLORS.map((c) => ({ key: c.key, t: c.t, c: c.c,
+        href: `/templates/model-lesson/${c.key}.pptx`, preview: `/templates/model-lesson/${c.key}.jpg`,
+        file: `حصة-نموذجية-${c.t.replace(/\s+/g, "-")}-مدرسة-مكة-الثانوية.pptx` })) },
     fields: [], defaults: () => ({}),
   },
 ];
