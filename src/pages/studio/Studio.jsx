@@ -198,6 +198,7 @@ export default function Studio() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {list.map((tpl) => {
             // ملف Office: بطاقة تنزيل مباشرة بمعاينة الملف
+            if (tpl.download?.variants) return <DownloadVariants key={tpl.key} tpl={tpl} usage={usage} />;
             if (tpl.download) {
               const x = tpl.download;
               return (
@@ -929,6 +930,37 @@ function MyDesigns({ uid, onOpen }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/* ملف Office بعدة ألوان: نقاط الألوان تحت المعاينة، وزر التنزيل يأخذ اللون المختار */
+function DownloadVariants({ tpl, usage }) {
+  const x = tpl.download;
+  const [k, setK] = useState(x.variants[0].key);
+  const v = x.variants.find((y) => y.key === k) ?? x.variants[0];
+  return (
+    <div className="card flex flex-col overflow-hidden p-3 text-right">
+      <div className="relative overflow-hidden rounded-card shadow-card ring-1 ring-line/60" style={{ aspectRatio: x.ratio }}>
+        <img src={v.preview} alt={`${tpl.title} باللون ${v.t}`} className="h-full w-full object-cover" loading="lazy" />
+        <span className="absolute left-2 top-2 rounded-sm2 px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: x.color }}>{x.app}</span>
+      </div>
+      <div className="mt-3 flex items-start justify-between gap-2">
+        <p className="font-semibold text-ink">{tpl.title}</p>
+        <UsageBadge map={usage} category="studio" itemKey={tpl.key} />
+      </div>
+      <p className="mt-0.5 text-xs leading-relaxed text-muted">{tpl.desc}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="لون العرض">
+        {x.variants.map((y) => (
+          <button key={y.key} type="button" role="radio" aria-checked={y.key === k} title={y.t} aria-label={y.t}
+            onClick={() => setK(y.key)}
+            className={`h-6 w-6 rounded-full ring-offset-2 transition ${y.key === k ? "ring-2 ring-ink" : "ring-1 ring-line hover:ring-muted"}`}
+            style={{ background: y.c }} />
+        ))}
+        <span className="mr-1 text-xs text-muted">{v.t}</span>
+      </div>
+      <a href={v.href} download={v.file} onClick={() => trackUsage("studio", tpl.key, "download")}
+        className="mt-2 self-start rounded-pill bg-mint-deep px-3 py-1 text-xs font-medium text-white">تنزيل الملف</a>
     </div>
   );
 }

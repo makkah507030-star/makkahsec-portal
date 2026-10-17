@@ -8,6 +8,7 @@ const nm = (p) => path.join(root, "node_modules", p);
 const { default: react } = await import(nm("@vitejs/plugin-react/dist/index.js"));
 export default {
   root: here,
+  publicDir: path.join(root, "public"),  // صور القوالب وملفاتها (/templates/…)
   plugins: [react()],
   server: { fs: { strict: false } },
   css: { postcss: root },

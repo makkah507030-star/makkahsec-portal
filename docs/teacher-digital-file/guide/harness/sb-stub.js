@@ -13,7 +13,7 @@ const visits = [
 const admin = [{ ...row, users: { full_name: "فيصل بن سالم القرشي" } }, { teacher_user_id: "v", code: "MS-3HKD", enabled_at: "2026-10-05T08:00:00Z", disabled_at: "2026-10-13T08:00:00Z", disabled_reason: "نقل من المدرسة", users: { full_name: "خالد بن محمد الحربي" } }];
 function q(table) {
   const res = { data: table === "dfile_visits" ? visits : table === "dfile_opinions" ? opinions : table === "teacher_dfiles" ? (location.search.includes("admin") ? admin : location.search.includes("new") ? null : row) : null, error: null };
-  const o = { select() { return o; }, eq() { return o; }, order() { return o; }, limit() { return o; }, update() { return { eq: () => Promise.resolve({ error: null }) }; },
+  const o = { select() { return o; }, eq() { return o; }, in() { return o; }, neq() { return o; }, is() { return o; }, not() { return o; }, gte() { return o; }, lte() { return o; }, or() { return o; }, range() { return o; }, order() { return o; }, limit() { return o; }, update() { return { eq: () => Promise.resolve({ error: null }) }; },
     insert() { return o; }, single() { return Promise.resolve({ data: row }); }, maybeSingle() { return Promise.resolve({ data: location.search.includes("new") ? null : row, error: null }); },
     then(f, r) { return Promise.resolve(res).then(f, r); } };
   return o;
