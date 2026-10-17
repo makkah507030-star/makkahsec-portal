@@ -3,266 +3,213 @@
 <head>
 <meta charset="utf-8">
 <title>تقرير بوابة مكة الثانوية الرقمية</title>
-<!-- تقرير البوابة للجنة التقويم والاعتماد المدرسي — يُطبع PDF بـ build.mjs.
-     الأرقام من استعلام supabase/reports/report_numbers.sql ومن الكود نفسه. -->
+<!-- تقرير البوابة للجنة التقويم والاعتماد المدرسي، على طقم التقارير المصمّمة نفسه
+     (src/components/report/report.css) وأوراق استوديو البوابة (src/pages/studio/studio.css).
+     النسخة: ?theme=light (الملوّنة، الافتراضية) أو ?theme=official (الرسمية بترويسة الوزارة).
+     يُطبع PDF بـ build.mjs، والأرقام من supabase/reports/report_*.sql ومن الكود نفسه. -->
+<link rel="stylesheet" href="../../src/pages/studio/studio.css">
+<link rel="stylesheet" href="../../src/components/report/report.css">
 <style>
-@font-face{font-family:Plex;font-weight:400;src:url(../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2)}
-@font-face{font-family:Plex;font-weight:500;src:url(../../public/fonts/ibm-plex-sans-arabic-500-arabic.woff2)}
-@font-face{font-family:Plex;font-weight:600;src:url(../../public/fonts/ibm-plex-sans-arabic-600-arabic.woff2)}
-@font-face{font-family:Plex;font-weight:700;src:url(../../public/fonts/ibm-plex-sans-arabic-700-arabic.woff2)}
-@font-face{font-family:PlexL;font-weight:400;src:url(../../public/fonts/ibm-plex-sans-arabic-400-latin.woff2)}
-@font-face{font-family:PlexL;font-weight:600;src:url(../../public/fonts/ibm-plex-sans-arabic-600-latin.woff2)}
-@font-face{font-family:PlexL;font-weight:700;src:url(../../public/fonts/ibm-plex-sans-arabic-700-latin.woff2)}
-:root{--g:#3d6451;--g2:#2f4f40;--mint:#88d8ae;--bg:#eef7f1;--bd:#d3e6da;--tx:#1d2b25;--mu:#6c7b74;--soft:#f3f8f5}
-@page{size:A4;margin:0}
-*{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{font-family:PlexL,Plex,sans-serif;color:var(--tx);background:#888;font-size:10.5pt;line-height:1.75}
-.page{width:210mm;height:297mm;background:#fff;margin:0 auto 8mm;position:relative;overflow:hidden;padding:24mm 17.5mm 20mm;page-break-after:always}
-@media print{body{background:#fff}.page{margin:0}}
-.hdr{position:absolute;top:9mm;right:17.5mm;left:17.5mm;display:flex;justify-content:space-between;align-items:center;font-size:8pt;color:var(--mu)}
-.hdr .b{display:flex;align-items:center;gap:7px;color:var(--tx);font-weight:600}
-.hdr .b img{width:22px}
-.hdr .l::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--mint);margin-left:8px;vertical-align:middle}
-.ftr{position:absolute;bottom:9mm;right:17.5mm;left:17.5mm;border-top:1px solid #e3ebe6;padding-top:3mm;display:flex;justify-content:space-between;font-size:7.5pt;color:var(--mu)}
-.ftr .n{font-weight:700;color:var(--tx);font-size:9pt}
-.kick{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--g);font-size:10pt;margin-bottom:2mm}
-.kick .num{background:var(--g);color:#fff;border-radius:6px;padding:0 8px;font-size:9pt}
-h1{font-size:23pt;line-height:1.35;font-weight:700;margin-bottom:3mm}
-h3{font-size:12pt;font-weight:700;margin:5mm 0 2.5mm}
-.lead{color:#56645e;font-size:10.5pt;margin-bottom:5mm}
-.note{background:var(--bg);border-right:4px solid var(--mint);border-radius:8px;padding:3.5mm 5mm;font-size:9.5pt;margin:4mm 0}
-.grid{display:grid;gap:3.5mm}.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr 1fr}.g4{grid-template-columns:repeat(4,1fr)}
-.stat{border:1px solid var(--bd);border-radius:12px;padding:4mm 5mm;box-shadow:0 3px 10px rgba(30,70,50,.06)}
-.stat b{display:block;font-size:22pt;line-height:1.25;color:var(--g);font-weight:700}
-.stat .t{font-weight:700;font-size:9.5pt}
-.stat .s{color:var(--mu);font-size:8pt;line-height:1.55}
-.card{background:var(--soft);border:1px solid var(--bd);border-radius:12px;padding:4mm 5mm}
-.card h4{display:flex;align-items:center;gap:8px;font-size:11pt;font-weight:700;margin-bottom:1.5mm}
-.card p,.card li{font-size:9pt;color:#56645e;line-height:1.75}
-.ic{width:28px;height:28px;border-radius:7px;background:var(--g);display:inline-flex;align-items:center;justify-content:center;flex:none}
-.ic svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.new{display:inline-block;background:#fff3c9;color:#7a5a00;border-radius:20px;font-size:7pt;font-weight:700;padding:0 7px;line-height:1.8;margin-right:4px;vertical-align:middle}
-.chips{display:flex;flex-wrap:wrap;gap:2mm}
-.chip{background:var(--bg);border-radius:20px;padding:.6mm 3.5mm;font-size:8.3pt;font-weight:600;color:#33463c}
-.shot{border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 4px 14px rgba(30,70,50,.08)}
-.shot .bar{height:8mm;background:#f1f4f2;border-bottom:1px solid #e3e9e5;display:flex;align-items:center;gap:5px;padding:0 4mm;font-size:7.5pt;color:#7a8580}
-.shot .bar i{width:7px;height:7px;border-radius:50%;background:#cfd6d2;display:inline-block}
-.shot .bar span{background:#fff;border-radius:10px;padding:0 10px;margin-right:6px}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:400;src:url(../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2);unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:500;src:url(../../public/fonts/ibm-plex-sans-arabic-500-arabic.woff2);unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:600;src:url(../../public/fonts/ibm-plex-sans-arabic-600-arabic.woff2);unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:700;src:url(../../public/fonts/ibm-plex-sans-arabic-700-arabic.woff2);unicode-range:U+0600-06FF,U+0750-077F,U+08A0-08FF,U+FB50-FDFF,U+FE70-FEFF,U+200C-200E}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:400;src:url(../../public/fonts/ibm-plex-sans-arabic-400-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F,U+2212}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:500;src:url(../../public/fonts/ibm-plex-sans-arabic-500-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F,U+2212}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:600;src:url(../../public/fonts/ibm-plex-sans-arabic-600-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F,U+2212}
+@font-face{font-family:'IBM Plex Sans Arabic';font-weight:700;src:url(../../public/fonts/ibm-plex-sans-arabic-700-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F,U+2212}
+@page{size:A4 portrait;margin:0}
+html,body{margin:0;background:#9aa59f}
+.sheet{margin:0 auto 14px;break-after:page}
+@media print{html,body{background:#fff}.sheet{margin:0}}
+/* الأرقام لاتينية ومن اليسار لليمين كما في دليل الهوية (.num في src/index.css) */
+.stu .num{direction:ltr;unicode-bidi:isolate;display:inline-block;font-variant-numeric:tabular-nums}
+.mr svg{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.mr-body p.lead{font-size:13px;line-height:1.8;color:var(--mr-ink2)}
+.mr-box p{font-size:12px;line-height:1.75;color:var(--mr-ink2)}
+.mr-box p b{color:var(--mr-ink)}
+.mr-box ul.dl{list-style:none;display:grid;gap:4px}
+.mr-box ul.dl li{position:relative;padding-right:15px;font-size:12px;line-height:1.7;color:var(--mr-ink2)}
+.mr-box ul.dl li b{color:var(--mr-ink)}
+.mr-box ul.dl li::before{content:"";position:absolute;right:0;top:8px;width:7px;height:7px;border-radius:2px;background:var(--mr-mint);transform:rotate(45deg)}
+.mr-kpi .s{white-space:normal}
+.mr-kpi .v{font-size:30px}
+.new{display:inline-block;margin-right:6px;border-radius:999px;padding:0 8px;font-size:10px;font-weight:700;line-height:18px;background:var(--mr-tint);color:var(--mr-deep);border:1px solid var(--mr-mint);vertical-align:middle}
+.stu-official .new{background:#fff;color:#9A7B22;border-color:#B8912F88}
+.shot{border:1.3px solid var(--mr-line);border-radius:12px;overflow:hidden;background:#fff}
+.stu-official .shot{border-radius:6px}
 .shot img{display:block;width:100%}
-.cap{font-size:8pt;color:var(--mu);text-align:center;margin-top:2mm}
-.phone{border:9px solid #1d1f1e;border-radius:28px;overflow:hidden;background:#fff}
+.shot.crop img{object-fit:cover;object-position:top}
+.cap{font-size:11px;color:var(--mr-ink2);text-align:center;margin-top:4px}
+.phone{border:7px solid #1C3328;border-radius:24px;overflow:hidden;background:#fff}
 .phone img{display:block;width:100%}
-.steps{display:flex;gap:2mm;align-items:stretch}
-.steps .st{flex:1;border:1px solid var(--bd);background:var(--soft);border-radius:10px;padding:3mm 2mm;text-align:center}
-.steps .st i{display:inline-flex;width:24px;height:24px;border-radius:50%;background:var(--g);color:#fff;font-style:normal;font-weight:700;align-items:center;justify-content:center;font-size:9pt}
-.steps .st b{display:block;font-size:9pt;margin-top:1mm}
-.steps .st small{display:block;color:var(--mu);font-size:7.5pt;line-height:1.5}
-.steps .ar{align-self:center;color:#9bb1a5;font-size:10pt}
-.band{border-radius:14px;padding:6mm 7mm;background:linear-gradient(120deg,#e6f5ec,#c9ecd8);position:relative;overflow:hidden}
-.secband{height:45mm;margin:-2mm 0 7mm;display:flex;flex-direction:column;justify-content:center}
-.secband h1{margin:0}
-.secband p{color:#56645e}
-.secband .big{position:absolute;left:9mm;top:1mm;font-size:52pt;font-weight:700;color:rgba(61,100,81,.13)}
-ul.dots{list-style:none}
-ul.dots li{position:relative;padding-right:6mm;margin-bottom:1.4mm;font-size:9.5pt}
-ul.dots li::before{content:"";position:absolute;right:0;top:2.2mm;width:3mm;height:3mm;border-radius:3px;background:var(--mint)}
-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--bd);border-radius:12px;overflow:hidden;font-size:7.9pt}
-th{background:var(--g);color:#fff;text-align:right;padding:2.4mm 3mm;font-weight:600}
-td{padding:1.5mm 3mm;border-top:1px solid #e3ebe6;vertical-align:top;line-height:1.5}
-tr.grp td{background:var(--bg);font-weight:700;color:var(--g2);font-size:8.3pt;padding:1.2mm 3mm}
-td.code{font-weight:700;white-space:nowrap;direction:ltr;text-align:right}
-td.plus{color:var(--g);font-weight:600}
-.toc{list-style:none}
-.toc li{display:flex;align-items:center;border-bottom:1px solid #e1ebe5;padding:1.6mm 0;font-size:10.3pt}
-.toc li b{width:12mm;color:var(--g)}
-.toc li span{flex:1}
-.toc li em{font-style:normal;color:var(--mu);font-size:8.5pt}
-.bars .r{display:flex;align-items:center;gap:4mm;margin-bottom:2.2mm;font-size:9.5pt}
-.bars .r .l{width:38mm;font-weight:600}
-.bars .r .tr{flex:1;background:#f0f5f2;border-radius:6px;height:4.5mm;position:relative}
-.bars .r .tr i{position:absolute;right:0;top:0;bottom:0;background:var(--mint);border-radius:6px}
-.bars .r .v{width:8mm;text-align:left;font-weight:700}
-.tl .it{display:flex;gap:4mm;margin-bottom:3.5mm}
-.tl .dot{width:10px;flex:none;position:relative}
-.tl .dot::before{content:"";position:absolute;top:4mm;width:10px;height:10px;border-radius:50%;background:var(--g)}
-.tl .card{flex:1}
-.sig{display:flex;justify-content:space-between;margin-top:12mm}
-.sig div{width:44%;border-top:1px dashed #aab8b0;padding-top:3mm;text-align:center;font-size:9pt}
-.sig b{display:block;font-size:10pt}
-.sig small{color:var(--mu)}
-.mini{font-size:8pt;color:var(--mu)}
-.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+.flow{display:flex;gap:5px;align-items:stretch}
+.flow div{flex:1;border:1.3px solid var(--mr-line);background:#F6FBF8;border-radius:11px;padding:7px 4px;text-align:center}
+.stu-official .flow div{background:#fff;border-radius:6px}
+.flow i{display:inline-flex;width:22px;height:22px;border-radius:50%;background:var(--mr-deep);color:#fff;font-style:normal;font-weight:700;font-size:11.5px;align-items:center;justify-content:center}
+.flow b{display:block;font-size:12px;margin-top:3px;line-height:1.35}
+.flow small{display:block;font-size:10.5px;color:var(--mr-ink2);line-height:1.4}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chips span{background:var(--mr-tint);border-radius:999px;padding:2px 11px;font-size:11.5px;font-weight:600;color:var(--mr-deep)}
+.stu-official .chips span{background:#fff;border:1px solid var(--mr-line)}
+.toc div{padding:8px 4px!important;font-size:13.5px!important}
+.toc .no{color:var(--mr-deep);font-weight:700;width:30px}
+.mr-table td.code{font-weight:700;white-space:nowrap}
+.mr-table td.plus{color:var(--mr-acc);font-weight:600}
+.mr-table tr.grp td{background:var(--mr-tint)!important;color:var(--mr-deep);font-weight:700}
+.stu-official .mr-table tr.grp td{background:#F6FBF8!important}
+.mr-table{font-size:11px}
+.mr-table td{line-height:1.45;padding:4px 7px}
+.mr-sec .no svg{width:24px;height:24px}
+.road{display:grid;gap:8px}
+.road .mr-box{border-right:4px solid var(--mr-mint)}
+.road small{display:block;font-size:11px;font-weight:700;color:var(--mr-acc)}
 </style>
 </head>
 <body>
+<div id="doc">
 
 <!-- ======================= الغلاف ======================= -->
-<section class="page cover" style="padding:0;background:linear-gradient(160deg,#e3f4ea 0%,#d2eedf 55%,#c4ead5 100%)">
-  <svg style="position:absolute;left:-30mm;top:120mm;opacity:.07" width="200mm" height="190mm" viewBox="0 0 533 509"><path d="M90 150 L280 50 L470 150 L280 270Z M90 250 L280 350 L470 250 L470 290 L280 390 L90 290Z M90 350 L280 450 L470 350 L470 390 L280 490 L90 390Z" fill="#3d6451"/></svg>
-  <div style="position:absolute;top:17mm;right:17.5mm;display:flex;align-items:center;gap:10px">
-    <img src="img/logo.png" style="width:46px">
-    <div><b style="font-size:12pt">بوابة مكة الثانوية الرقمية</b><div style="font-size:8.5pt;color:#55665e">مدرسة مكة الثانوية · مكة المكرمة</div></div>
-  </div>
-  <div style="position:absolute;top:16mm;left:17.5mm;background:#fff;border-radius:10px;padding:2mm 3mm"><img src="img/moe.png" style="width:24mm;display:block"></div>
-  <div style="position:absolute;top:92mm;right:17.5mm;left:17.5mm">
-    <div style="color:var(--g);font-weight:700;font-size:11pt">مقدَّم إلى لجنة التقويم والاعتماد المدرسي</div>
-    <h1 style="font-size:40pt;line-height:1.3;margin:4mm 0 6mm;color:#1d3529">تقرير<br>بوابة مكة الثانوية<br>الرقمية</h1>
-    <div style="width:32mm;height:5px;border-radius:3px;background:var(--g)"></div>
-    <p style="font-size:12.5pt;color:#3f5248;margin-top:6mm;line-height:1.8">منظومة رقمية متكاملة تخدم الإدارة والمعلمين والطلاب وأولياء الأمور،<br>وتصنع لكل إجراء مدرسي شاهدًا موثقًا</p>
-    <div style="display:inline-flex;align-items:center;gap:6mm;margin-top:9mm;border:1px solid #9fc9b0;border-radius:14px;padding:4mm 6mm;background:rgba(255,255,255,.35)">
-      <div><b style="font-size:12pt">محمد بن حسن بن حسين الحازمي</b><div style="font-size:8.5pt;color:#55665e">محضر معمل الحاسب الآلي · مدرسة مكة الثانوية</div></div>
-      <div style="border-right:2px solid var(--g);padding-right:5mm;font-size:8.5pt;color:#55665e">مبادرة مقدّمة من</div>
+<template data-cover>
+  <div class="hero">
+    <div><span class="stu-tag">{shield}مقدَّم إلى لجنة التقويم والاعتماد المدرسي</span></div>
+    <h1 class="stu-h1" style="font-size:72px">تقرير البوابة</h1>
+    <span class="stu-sub" style="font-size:34px">بوابة مكة الثانوية الرقمية</span>
+    <div class="stu-grule"></div>
+    <div class="month">
+      <div class="m"><b>الإصدار الثاني</b><span>محدَّث بأرقام التشغيل الفعلي</span></div>
+      <div class="hj"><b class="num">17/10/2026</b><span class="num">06/05/1448</span></div>
     </div>
-    <div style="margin-top:6mm"><span style="background:var(--g);color:#fff;border-radius:20px;padding:1mm 4mm;font-size:9pt;font-weight:600">الإصدار الثاني · محدَّث بأرقام خمسة أسابيع من التشغيل</span></div>
+    <div class="stu-info">
+      <div class="stu-row"><div class="stu-ic">{pen}</div><div class="k">مبادرة مقدّمة من</div><div class="v" style="font-size:19px">محمد بن حسن بن حسين الحازمي<small>محضر معمل الحاسب الآلي</small></div></div>
+      <div class="stu-row"><div class="stu-ic">{home}</div><div class="k">الجهة</div><div class="v" style="font-size:19px">مدرسة مكة الثانوية · مكة المكرمة</div></div>
+      <div class="stu-row"><div class="stu-ic">{cal}</div><div class="k">فترة البيانات</div><div class="v" style="font-size:19px"><span class="num">14/09 - 17/10/2026</span><small>22 يوم دراسة فعلية</small></div></div>
+    </div>
+    <div class="conf">{chart}منظومة رقمية متكاملة تخدم الإدارة والمعلمين والطلاب وأولياء الأمور، وتصنع لكل إجراء مدرسي شاهدًا موثقًا</div>
   </div>
-  <div style="position:absolute;bottom:16mm;right:17.5mm;left:17.5mm;display:flex;justify-content:space-between;font-size:8pt;color:#55665e">
-    <div>العام الدراسي<b style="display:block;font-size:12pt;color:var(--tx)"><span class="ltr">1448 - 1449</span></b></div>
-    <div style="text-align:center">تاريخ التقرير<b style="display:block;font-size:12pt;color:var(--tx)"><span class="ltr">17/10/2026 - 06/05/1448</span></b></div>
-    <div style="text-align:left">الموقع<b style="display:block;font-size:12pt;color:var(--tx)">makkahsec.com</b></div>
+  <div class="strip">
+    <div><b class="num">548</b><span>حسابًا مفعّلًا</span></div>
+    <div><b class="num">3,620</b><span>سجل حضور يوميًا</span></div>
+    <div><b class="num">4,656</b><span>إشعارًا يصل يوميًا</span></div>
+    <div><b class="num">132</b><span>إجراءً موثقًا</span></div>
   </div>
-</section>
+</template>
 
 <!-- ======================= المحتويات ======================= -->
-<section class="page" data-label="المحتويات">
-  <div class="kick">المحتويات</div>
-  <h1>ما يتضمنه التقرير</h1>
-  <p class="lead">يعرض التقرير البوابة كما تعمل اليوم: خدماتها ومستفيديها، وما تنتجه من شواهد لمؤشرات التقويم والتصنيف والاعتماد المدرسي، وكيف تُدار وتُحمى بياناتها.</p>
-  <ul class="toc" id="toc"></ul>
-  <div class="note">كل الأرقام في هذا التقرير مستخرجة من البوابة نفسها: من قاعدة بياناتها في 17/10/2026، ومن دليل الاستخدام المدمج، ومن بنية النظام وصلاحياته. وكل الشاشات المعروضة لقطات حقيقية من البوابة ببيانات توضيحية.</div>
-</section>
+<template data-page data-title="محتويات التقرير" data-sub="يعرض البوابة كما تعمل اليوم، وما تنتجه من شواهد لمؤشرات التقويم">
+  <div class="mr-box"><div class="mr-list toc" id="toc"></div></div>
+  <div class="mr-box tint"><p>كل الأرقام في هذا التقرير مستخرجة من البوابة نفسها: من قاعدة بياناتها في <span class="num">17/10/2026</span>، ومن دليل الاستخدام المدمج، ومن بنية النظام وصلاحياته. والشاشات المعروضة لقطات حقيقية من البوابة ببيانات توضيحية.</p></div>
+</template>
 
-<!-- ======================= 01 الملخص التنفيذي ======================= -->
-<section class="page" data-label="الملخص التنفيذي" data-toc="الملخص التنفيذي والاستخدام الفعلي">
-  <div class="kick"><span class="num">01</span>الملخص التنفيذي</div>
-  <h1>بوابة واحدة لكل ما تحتاجه المدرسة</h1>
+<!-- ======================= 01 الملخص ======================= -->
+<template data-page data-no="01" data-toc="الملخص التنفيذي" data-title="بوابة واحدة لكل ما تحتاجه المدرسة" data-sub="الملخص التنفيذي">
   <p class="lead">بوابة مكة الثانوية الرقمية منصة ويب داخلية بنتها المدرسة لمجتمعها، تجمع في مكان واحد الحضور والغياب، والجداول، والنماذج الرسمية، والاختبارات، والأحداث، والتطوير المهني وتقييم الأداء، والتواصل مع الأسرة. تعمل على الجوال والحاسب، ويحصل كل مستخدم فيها على واجهة تناسب دوره.</p>
-  <div class="note"><b>البوابة مبادرة ذاتية</b> قدّمها محمد بن حسن بن حسين الحازمي، محضر معمل الحاسب الآلي، فصمّمها وطوّرها وأدارها لخدمة مجتمع المدرسة كله.</div>
-  <div class="grid g3">
-    <div class="stat"><b>4</b><div class="t">فئات مستفيدة</div><div class="s">الإدارة، والمعلمون، والطلاب، وأولياء الأمور</div></div>
-    <div class="stat"><b>24</b><div class="t">دورًا إداريًا وتخصصيًا</div><div class="s">لكل دور واجهته وصلاحياته</div></div>
-    <div class="stat"><b>132</b><div class="t">إجراءً موثقًا</div><div class="s">في دليل الاستخدام المدمج بالخطوات</div></div>
-    <div class="stat"><b>14</b><div class="t">قسمًا خدميًا</div><div class="s">من الحضور إلى الاختبارات والأحداث</div></div>
-    <div class="stat"><b>21</b><div class="t">قالبًا للهوية</div><div class="s">في استوديو البوابة للمطبوعات والعروض</div></div>
-    <div class="stat"><b>292</b><div class="t">سياسة حماية</div><div class="s">على مستوى كل سجل في 110 جداول</div></div>
-    <div class="stat"><b>11</b><div class="t">خدمة آلية</div><div class="s">تعمل في الخلفية: تذكير واعتماد وملخص وبصمة وروابط مؤقتة</div></div>
-    <div class="stat"><b>119</b><div class="t">شاشة</div><div class="s">تعمل على الجوال والحاسب</div></div>
-    <div class="stat"><b><span class="ltr">+490</span></b><div class="t">تحديثًا منشورًا</div><div class="s">تطوير مستمر بنسخة تجريبية قبل كل نشر</div></div>
+  <div class="mr-high"><h3>{spark}البوابة مبادرة ذاتية</h3><ul><li>قدّمها محمد بن حسن بن حسين الحازمي، محضر معمل الحاسب الآلي، فصمّمها وطوّرها وأدارها لخدمة مجتمع المدرسة كله.</li></ul></div>
+  <div class="mr-kpis" style="grid-template-columns:repeat(3,1fr)">
+    <div class="mr-kpi"><div class="ic">{users}</div><div class="v num">4</div><div class="k">فئات مستفيدة</div><div class="s">الإدارة، والمعلمون، والطلاب، وأولياء الأمور</div></div>
+    <div class="mr-kpi"><div class="ic">{key}</div><div class="v num">24</div><div class="k">دورًا إداريًا وتخصصيًا</div><div class="s">لكل دور واجهته وصلاحياته</div></div>
+    <div class="mr-kpi"><div class="ic">{book}</div><div class="v num">132</div><div class="k">إجراءً موثقًا</div><div class="s">في دليل الاستخدام المدمج بالخطوات</div></div>
+    <div class="mr-kpi"><div class="ic">{grid}</div><div class="v num">14</div><div class="k">قسمًا خدميًا</div><div class="s">من الحضور إلى الاختبارات والأحداث</div></div>
+    <div class="mr-kpi"><div class="ic">{palette}</div><div class="v num">21</div><div class="k">قالبًا للهوية</div><div class="s">في استوديو البوابة للمطبوعات والعروض</div></div>
+    <div class="mr-kpi"><div class="ic">{shield}</div><div class="v num">292</div><div class="k">سياسة حماية</div><div class="s">على مستوى كل سجل في 110 جداول</div></div>
+    <div class="mr-kpi"><div class="ic">{clock}</div><div class="v num">11</div><div class="k">خدمة آلية</div><div class="s">تذكير واعتماد وملخص وبصمة وروابط مؤقتة</div></div>
+    <div class="mr-kpi"><div class="ic">{phone}</div><div class="v num">119</div><div class="k">شاشة</div><div class="s">تعمل على الجوال والحاسب</div></div>
+    <div class="mr-kpi"><div class="ic">{flask}</div><div class="v num">+490</div><div class="k">تحديثًا منشورًا</div><div class="s">تطوير مستمر بنسخة تجريبية قبل كل نشر</div></div>
   </div>
-  <div class="grid g2" style="margin-top:5mm">
-    <div class="card"><h4><span class="ic" data-i="check"></span>ما الذي تغيّر في المدرسة</h4><p>صار تحضير الحصة من جوال المعلم، والغياب الرسمي يُعتمد آليًا، والنماذج والشهادات تصدر موقعة إلكترونيًا، والتطوير المهني يوثَّق ويصل شاهدًا لملف المعلم، وولي الأمر يعرف حضور ابنه في يومه.</p></div>
-    <div class="card"><h4><span class="ic" data-i="shield"></span>لماذا يهم ذلك للتقويم</h4><p>كل إجراء في البوابة يترك سجلًا مؤرخًا ومنسوبًا لصاحبه، فتتحول الممارسة اليومية إلى شواهد جاهزة تُستخرج تقارير مطبوعة أو ملفات Excel.</p></div>
+  <div class="mr-row c2">
+    <div class="mr-box tint"><h3>{check}ما الذي تغيّر في المدرسة</h3><p>صار تحضير الحصة من جوال المعلم، والغياب الرسمي يُعتمد آليًا، والنماذج والشهادات تصدر موقعة إلكترونيًا، والتطوير المهني يوثَّق ويصل شاهدًا لملف المعلم، وولي الأمر يعرف حضور ابنه في يومه.</p></div>
+    <div class="mr-box tint"><h3>{shield}لماذا يهم ذلك للتقويم</h3><p>كل إجراء في البوابة يترك سجلًا مؤرخًا ومنسوبًا لصاحبه، فتتحول الممارسة اليومية إلى شواهد جاهزة تُستخرج تقارير مطبوعة أو ملفات Excel.</p></div>
   </div>
-</section>
+</template>
 
 <!-- ======================= 01 الأرقام ======================= -->
-<section class="page" data-label="الاستخدام الفعلي">
-  <div class="kick"><span class="num">01</span>الاستخدام الفعلي منذ التشغيل</div>
-  <h1>البوابة بالأرقام</h1>
-  <div class="band" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5mm">
-    <div><div style="font-size:9pt;color:#56645e">في كل يوم دراسي، محسوبًا على 22 يوم دراسة فعلية</div><div style="font-size:16.5pt;font-weight:700;line-height:1.55">نحو 3,600 سجل حضور<br>و4,600 إشعار يصل لمستخدميه</div></div>
-    <div style="font-size:8.5pt;font-weight:700;line-height:2">من <span class="ltr"><span>14/09/2026 - 03/04/1448</span></span><br>إلى <span class="ltr"><span>17/10/2026 - 06/05/1448</span></span></div>
+<template data-page data-no="01" data-title="البوابة بالأرقام" data-sub="الاستخدام الفعلي من 14/09 إلى 17/10/2026، محسوبًا يوميًا على 22 يوم دراسة فعلية">
+  <div class="mr-high"><h3>{spark}في كل يوم دراسي</h3><ul><li>نحو 3,600 سجل حضور يرصدها المعلمون حصةً بحصة، و4,600 إشعار يصل إلى المعلمين والطلاب وأولياء الأمور، و382 طالبًا يبصمون عند الدخول.</li></ul></div>
+  <div class="mr-kpis" style="grid-template-columns:repeat(3,1fr)">
+    <div class="mr-kpi"><div class="ic">{check}</div><div class="v num">3,620</div><div class="k">سجل حضور يوميًا</div><div class="s">حصةً بحصة · <span class="num">79,635</span> إجمالًا</div></div>
+    <div class="mr-kpi"><div class="ic">{phone}</div><div class="v num">117</div><div class="k">حصة تُحضَّر يوميًا</div><div class="s">من جوال المعلم · <span class="num">2,573</span> إجمالًا</div></div>
+    <div class="mr-kpi"><div class="ic">{bell}</div><div class="v num">4,656</div><div class="k">إشعارًا يصل يوميًا</div><div class="s">للمعلمين والطلاب والأسر · <span class="num">102,432</span> إجمالًا</div></div>
+    <div class="mr-kpi"><div class="ic">{send}</div><div class="v num">1,415</div><div class="k">إشعارًا يُرسل يوميًا</div><div class="s">من الإدارة والمعلمين والخدمات · <span class="num">31,135</span> إجمالًا</div></div>
+    <div class="mr-kpi"><div class="ic">{finger}</div><div class="v num">382</div><div class="k">طالبًا يبصمون يوميًا</div><div class="s">منذ التشغيل الكامل للأجهزة في <span class="num">11/10/2026</span> · الذروة <span class="num">508</span></div></div>
+    <div class="mr-kpi"><div class="ic">{clip}</div><div class="v num">305</div><div class="k">خانة رصد يوميًا</div><div class="s">في سجل المتابعة الإلكتروني · <span class="num">6,709</span> إجمالًا</div></div>
+    <div class="mr-kpi"><div class="ic">{quiz}</div><div class="v num">35</div><div class="k">ورقة اختبار تُرصد يوميًا</div><div class="s"><span class="num">773</span> ورقة من <span class="num">58</span> اختبارًا، منها <span class="num">10</span> إلكترونية</div></div>
+    <div class="mr-kpi"><div class="ic">{cal}</div><div class="v num">21</div><div class="k">يوم غياب رسمي</div><div class="s">اعتُمد آليًا من <span class="num">22</span> يوم دراسة، دون تدخل يدوي</div></div>
+    <div class="mr-kpi"><div class="ic">{users}</div><div class="v num">548</div><div class="k">حسابًا مفعّلًا</div><div class="s"><span class="num">55</span> معلمًا، و<span class="num">361</span> طالبًا، و<span class="num">120</span> ولي أمر</div></div>
+    <div class="mr-kpi"><div class="ic">{doc}</div><div class="v num">193</div><div class="k">نموذجًا رسميًا</div><div class="s">صدر إلكترونيًا بالتوقيع والختم</div></div>
+    <div class="mr-kpi"><div class="ic">{send}</div><div class="v num">49</div><div class="k">إحالة طالب</div><div class="s">أُغلق منها <span class="num">44</span> بمسار موثّق حتى إقرار ولي الأمر</div></div>
+    <div class="mr-kpi"><div class="ic">{award}</div><div class="v num">135</div><div class="k">شاهد أداء وظيفي</div><div class="s">رفعه المعلمون، عدا الشواهد الآلية</div></div>
   </div>
-  <div class="grid g3">
-    <div class="stat"><b>3,620</b><div class="t">سجل حضور يوميًا</div><div class="s">حصةً بحصة · 79,635 إجمالًا</div></div>
-    <div class="stat"><b>117</b><div class="t">حصة تُحضَّر يوميًا</div><div class="s">من جوال المعلم · 2,573 إجمالًا</div></div>
-    <div class="stat"><b>1,415</b><div class="t">إشعارًا يُرسل يوميًا</div><div class="s">من الإدارة والمعلمين والخدمات · 31,135 إجمالًا</div></div>
-    <div class="stat"><b>4,656</b><div class="t">إشعارًا يصل يوميًا</div><div class="s">للمعلمين والطلاب والأسر · 102,432 إجمالًا</div></div>
-    <div class="stat"><b>305</b><div class="t">خانة رصد يوميًا</div><div class="s">في سجل المتابعة الإلكتروني · 6,709 إجمالًا</div></div>
-    <div class="stat"><b>548</b><div class="t">حسابًا مفعّلًا</div><div class="s">55 معلمًا، و361 طالبًا، و120 ولي أمر</div></div>
-    <div class="stat"><b>193</b><div class="t">نموذجًا رسميًا</div><div class="s">صدر إلكترونيًا بالتوقيع والختم</div></div>
-    <div class="stat"><b>21</b><div class="t">يوم غياب رسمي</div><div class="s">اعتُمد آليًا من 22 يوم دراسة، دون تدخل يدوي</div></div>
-    <div class="stat"><b>382</b><div class="t">طالبًا يبصمون يوميًا</div><div class="s">منذ التشغيل الكامل للأجهزة في 11/10/2026 · الذروة 508</div></div>
-    <div class="stat"><b>49</b><div class="t">إحالة طالب</div><div class="s">أُغلق منها 44 بمسار موثّق حتى إقرار ولي الأمر</div></div>
-    <div class="stat"><b>35</b><div class="t">ورقة اختبار تُرصد يوميًا</div><div class="s">773 ورقة من 58 اختبارًا، منها 10 إلكترونية</div></div>
-    <div class="stat"><b>135</b><div class="t">شاهد أداء وظيفي</div><div class="s">رفعه المعلمون، عدا الشواهد الآلية</div></div>
+  <div class="mr-row c2">
+    <div class="mr-box tint"><h3>{users}مشاركة الأسرة رقميًا</h3><p>شارك 77 طالبًا في الفعاليات، ووصلت 57 موافقة إلكترونية من أولياء أمورهم إلى حساباتهم، وصدرت 54 شهادة مشاركة دون ورقة واحدة.</p></div>
+    <div class="mr-box tint"><h3>{bell}وصول فوري</h3><p>فعّل 118 جهازًا إشعارات الجوال، فتصل رسائل المدرسة إلى الشاشة الرئيسية لحظة صدورها.</p></div>
   </div>
-  <div class="grid g2" style="margin-top:4.5mm">
-    <div class="card"><h4><span class="ic" data-i="users"></span>مشاركة الأسرة رقميًا</h4><p>شارك 77 طالبًا في الفعاليات، ووصلت 57 موافقة إلكترونية من أولياء أمورهم إلى حساباتهم، وصدرت 54 شهادة مشاركة دون ورقة واحدة.</p></div>
-    <div class="card"><h4><span class="ic" data-i="bell"></span>وصول فوري</h4><p>فعّل 118 جهازًا إشعارات الجوال، فتصل رسائل المدرسة إلى الشاشة الرئيسية لحظة صدورها.</p></div>
-  </div>
-  <p class="mini" style="margin-top:3mm">المصدر: قاعدة بيانات البوابة، استُخرجت الأرقام في <span class="ltr">17/10/2026 - 06/05/1448</span>، وتشمل كل ما سُجّل منذ أول تحضير. المعدل اليومي = الإجمالي ÷ 22 يوم دراسة فعلية (أيام الأحد إلى الخميس التي فيها تحضير، دون الإجازات). والبصمة على أيام تشغيل الأجهزة الكامل، من 11 إلى 15/10/2026.</p>
-</section>
+  <p class="mr-note">المصدر: قاعدة بيانات البوابة في <span class="num">17/10/2026</span>. المعدل اليومي = الإجمالي ÷ 22 يوم دراسة فعلية (أيام الأحد إلى الخميس التي فيها تحضير، دون الإجازات)، والبصمة على أيام تشغيل الأجهزة الكامل من 11 إلى <span class="num">15/10/2026</span>.</p>
+</template>
 
 <!-- ======================= الجديد ======================= -->
-<section class="page" data-label="جديد هذا الإصدار" data-toc="جديد هذا الإصدار">
-  <div class="kick"><span class="num">★</span>جديد هذا الإصدار</div>
-  <h1>ما أُضيف منذ الإصدار الأول</h1>
-  <p class="lead">صدر الإصدار الأول من التقرير في 04/10/2026. وفي الأسبوعين التاليين نُشر في البوابة أكثر من 150 تحديثًا، منها هذه الخدمات الجديدة، ولكل منها صفحتها في التقرير.</p>
-  <div class="grid g2">
-    <div class="card"><h4><span class="ic" data-i="id"></span>ملف المعلم الرقمي</h4><p>تقرير تفاعلي عن أعمال المعلم يُبنى من بيانات البوابة، ويُعرض برمز QR ورابط ثابت على المشرف أو اللجنة، مع سجل للزوار وملاحظاتهم.</p></div>
-    <div class="card"><h4><span class="ic" data-i="award"></span>تقييم الأداء الوظيفي وشواهده</h4><p>المعلم يرفع شواهده لكل بند، وتصل إليه شواهد آلية من عمله في البوابة، ويقيّمه المدير بمرحلتيه.</p></div>
-    <div class="card"><h4><span class="ic" data-i="book"></span>التطوير المهني</h4><p>ثمانية نماذج لسجل التطوير المهني، وتقارير جلسات مجتمع التعلم المهني، واستمارة تبادل الزيارات بين معلمي القسم، وملف تطوير لكل قسم.</p></div>
-    <div class="card"><h4><span class="ic" data-i="target"></span>خطط التطوير (حلقة التحسين)</h4><p>توصية، فخطة، فمتابعة بموعد، فأثر يُقاس آليًا من الزيارة أو التقييم التالي، مع لوحة للمدير.</p></div>
-    <div class="card"><h4><span class="ic" data-i="heart"></span>التوجيه الطلابي والإنذار المبكر</h4><p>قائمة آلية بمن يحتاج تدخلًا، وحالات سرية بجلساتها، وطلبات المقابلة، واستمارة توضيح المستوى، وتقرير شهري للموجه.</p></div>
-    <div class="card"><h4><span class="ic" data-i="send"></span>إحالة الطالب: سلسلة من ست حلقات</h4><p>من معالجة المعلم إلى إقرار ولي الأمر، لا تُفتح حلقة قبل اكتمال التي قبلها، وكل خطوة موثّقة باسم صاحبها وتاريخها.</p></div>
-    <div class="card"><h4><span class="ic" data-i="quiz"></span>دورة الاختبار والتصحيح الجماعي</h4><p>تشخيصي واختبارا فترتين بمراحل حتى الإغلاق، وخطط علاجية واختبار تحقق يقيس الأثر، وتصحيح بطاقات الفصل كله دفعة واحدة.</p></div>
-    <div class="card"><h4><span class="ic" data-i="clip"></span>متابعة رصد درجات نور</h4><p>كشف من الجدول الدراسي بكل مادة وفصل ومعلم، ونسبة الرصد لكل فترة، ومهلة ملونة منذ موعد الاختبار.</p></div>
-    <div class="card"><h4><span class="ic" data-i="chart"></span>التقارير المصمّمة والتقرير الشهري للمدرسة</h4><p>سبعة تقارير بغلاف ورسوم بيانية بهوية البوابة، منها خلاصة شهرية للمدرسة تصلح للرفع لمكتب التعليم.</p></div>
-    <div class="card"><h4><span class="ic" data-i="shield"></span>ميثاق أخلاقيات المهنة</h4><p>يطّلع عليه المعلم صفحةً صفحة ويقرّ به إلكترونيًا، وللإدارة تقرير بمن أقرّ ومن لم يقرّ، بتوقيعاتهم.</p></div>
-    <div class="card"><h4><span class="ic" data-i="userx"></span>الطلاب المنقطعون وملاحظات الطلاب</h4><p>بلاغ المعلم ببطاقة جاهزة، وطي القيد عند الوكيل، وملاحظات صحية وإرشادية تظهر شارةً لمعلمي الطالب.</p></div>
-    <div class="card"><h4><span class="ic" data-i="note"></span>مفكرتي، وقالب الحصة النموذجية</h4><p>ملاحظات ومهام شخصية بمواعيد للمعلمين والإداريين، وقالب PowerPoint للحصة النموذجية بثمانية ألوان.</p></div>
+<template data-page data-no="★" data-toc="جديد هذا الإصدار" data-title="ما أُضيف منذ الإصدار الأول" data-sub="أكثر من 150 تحديثًا نُشرت بعد 04/10/2026، منها هذه الخدمات الجديدة">
+  <div class="mr-row c2">
+    <div class="mr-box"><h3>{id}ملف المعلم الرقمي</h3><p>تقرير تفاعلي عن أعمال المعلم يُبنى من بيانات البوابة، ويُعرض برمز QR ورابط ثابت على المشرف أو اللجنة، مع سجل للزوار وملاحظاتهم.</p></div>
+    <div class="mr-box"><h3>{award}تقييم الأداء الوظيفي وشواهده</h3><p>المعلم يرفع شواهده لكل بند، وتصل إليه شواهد آلية من عمله في البوابة، ويقيّمه المدير بمرحلتيه.</p></div>
+    <div class="mr-box"><h3>{book}التطوير المهني</h3><p>ثمانية نماذج لسجل التطوير المهني، وتقارير جلسات مجتمع التعلم المهني، وتبادل الزيارات بين معلمي القسم، وملف تطوير لكل قسم.</p></div>
+    <div class="mr-box"><h3>{target}خطط التطوير (حلقة التحسين)</h3><p>توصية، فخطة، فمتابعة بموعد، فأثر يُقاس آليًا من الزيارة أو التقييم التالي، مع لوحة للمدير.</p></div>
+    <div class="mr-box"><h3>{heart}التوجيه الطلابي والإنذار المبكر</h3><p>قائمة آلية بمن يحتاج تدخلًا، وحالات سرية بجلساتها، وطلبات المقابلة، واستمارة توضيح المستوى، وتقرير شهري للموجه.</p></div>
+    <div class="mr-box"><h3>{send}إحالة الطالب: سلسلة من ست حلقات</h3><p>من معالجة المعلم إلى إقرار ولي الأمر، لا تُفتح حلقة قبل اكتمال التي قبلها، وكل خطوة موثّقة باسم صاحبها وتاريخها.</p></div>
+    <div class="mr-box"><h3>{quiz}دورة الاختبار والتصحيح الجماعي</h3><p>تشخيصي واختبارا فترتين بمراحل حتى الإغلاق، وخطط علاجية واختبار تحقق يقيس الأثر، وتصحيح بطاقات الفصل كله دفعة واحدة.</p></div>
+    <div class="mr-box"><h3>{clip}متابعة رصد درجات نور</h3><p>كشف من الجدول الدراسي بكل مادة وفصل ومعلم، ونسبة الرصد لكل فترة، ومهلة ملونة منذ موعد الاختبار.</p></div>
+    <div class="mr-box"><h3>{chart}التقارير المصمّمة</h3><p>سبعة تقارير بغلاف ورسوم بيانية بهوية البوابة، منها التقرير الشهري للمدرسة الصالح للرفع لمكتب التعليم.</p></div>
+    <div class="mr-box"><h3>{shield}ميثاق أخلاقيات المهنة</h3><p>يطّلع عليه المعلم صفحةً صفحة ويقرّ به إلكترونيًا، وللإدارة تقرير بمن أقرّ ومن لم يقرّ، بتوقيعاتهم.</p></div>
+    <div class="mr-box"><h3>{userx}الطلاب المنقطعون وملاحظات الطلاب</h3><p>بلاغ المعلم ببطاقة جاهزة، وطي القيد عند الوكيل، وملاحظات صحية وإرشادية تظهر شارةً لمعلمي الطالب.</p></div>
+    <div class="mr-box"><h3>{note}مفكرتي، وقالب الحصة النموذجية</h3><p>ملاحظات ومهام شخصية بمواعيد للمعلمين والإداريين، وقالب PowerPoint للحصة النموذجية بثمانية ألوان.</p></div>
   </div>
-</section>
+</template>
 
 <!-- ======================= 02 الرؤية ======================= -->
-<section class="page" data-label="البوابة في سطور" data-toc="البوابة في سطور: الرؤية والرسالة والأهداف">
-  <div class="kick"><span class="num">02</span>البوابة في سطور</div>
-  <h1>الرؤية والرسالة والأهداف</h1>
-  <div class="grid g2">
-    <div class="band" style="padding:5mm 6mm"><div style="font-size:9pt;font-weight:700;color:var(--g)">الرؤية</div><div style="font-size:13.5pt;font-weight:700;line-height:1.75;margin-top:1mm">مدرسة رقمية يعرف فيها كل فرد ما يخصه في لحظته، ويُنجز إجراءه من جواله.</div></div>
-    <div class="card"><div style="font-size:9pt;font-weight:700">الرسالة</div><p style="font-size:10pt;margin-top:1mm">تيسير العمل المدرسي على الإدارة والمعلمين، وتمكين الطالب وولي الأمر من المتابعة، بأدوات بسيطة وآمنة تحفظ البيانات وتوثّق الإجراء.</p></div>
+<template data-page data-no="02" data-toc="البوابة في سطور: الرؤية والرسالة والأهداف" data-title="الرؤية والرسالة والأهداف" data-sub="البوابة في سطور">
+  <div class="mr-row c2">
+    <div class="mr-high"><h3>{spark}الرؤية</h3><ul><li style="font-size:15px;font-weight:700">مدرسة رقمية يعرف فيها كل فرد ما يخصه في لحظته، ويُنجز إجراءه من جواله.</li></ul></div>
+    <div class="mr-box tint"><h3>{send}الرسالة</h3><p>تيسير العمل المدرسي على الإدارة والمعلمين، وتمكين الطالب وولي الأمر من المتابعة، بأدوات بسيطة وآمنة تحفظ البيانات وتوثّق الإجراء.</p></div>
   </div>
-  <h3>الأهداف السبعة</h3>
-  <div class="grid g2">
-    <div class="card"><h4><span class="ic" data-i="cal"></span>تنظيم اليوم الدراسي</h4><p>جداول وتحضير ومناوبة وإشراف في مكان واحد، بتوقيت زمني مضبوط لكل فصل دراسي.</p></div>
-    <div class="card"><h4><span class="ic" data-i="finger"></span>انضباط موثوق</h4><p>غياب رسمي يُعتمد آليًا من البصمة وتحضير المعلمين، وإنذار مبكر، وإنذارات ومحاضر على صيغ الدليل الرسمي.</p></div>
-    <div class="card"><h4><span class="ic" data-i="users"></span>شراكة مع الأسرة</h4><p>ولي الأمر يرى الحضور والنتائج والجدول، ويوافق على الفعاليات، ويرد على الإحالات.</p></div>
-    <div class="card"><h4><span class="ic" data-i="doc"></span>إدارة بلا ورق</h4><p>نماذج وشهادات وتعاميم تصدر وتُعتمد وتُوقَّع إلكترونيًا، وتُطبع عند الحاجة فقط.</p></div>
-    <div class="card"><h4><span class="ic" data-i="chart"></span>قرار مبني على البيانات</h4><p>تقارير ونسب وإحصاءات لحظية للإدارة، وتحليل نتائج الاختبارات للمعلم.</p></div>
-    <div class="card"><h4><span class="ic" data-i="palette"></span>هوية موحدة</h4><p>كل ما يصدر عن المدرسة بمظهر واحد عبر استوديو البوابة وقوالبه المعتمدة.</p></div>
-    <div class="card" style="grid-column:span 2"><h4><span class="ic" data-i="book"></span>معلم يتطور بشواهد<span class="new">جديد</span></h4><p>تطوير مهني موثّق، وخطط تحسين يُقاس أثرها، وشواهد أداء تُجمع طوال العام، وملف رقمي يعرض أعمال المعلم بلمسة.</p></div>
+  <div class="mr-row c2">
+    <div class="mr-box"><h3>{cal}تنظيم اليوم الدراسي</h3><p>جداول وتحضير ومناوبة وإشراف في مكان واحد، بتوقيت زمني مضبوط لكل فصل دراسي.</p></div>
+    <div class="mr-box"><h3>{finger}انضباط موثوق</h3><p>غياب رسمي يُعتمد آليًا من البصمة وتحضير المعلمين، وإنذار مبكر، وإنذارات ومحاضر على صيغ الدليل الرسمي.</p></div>
+    <div class="mr-box"><h3>{users}شراكة مع الأسرة</h3><p>ولي الأمر يرى الحضور والنتائج والجدول، ويوافق على الفعاليات، ويرد على الإحالات.</p></div>
+    <div class="mr-box"><h3>{doc}إدارة بلا ورق</h3><p>نماذج وشهادات وتعاميم تصدر وتُعتمد وتُوقَّع إلكترونيًا، وتُطبع عند الحاجة فقط.</p></div>
+    <div class="mr-box"><h3>{chart}قرار مبني على البيانات</h3><p>تقارير ونسب وإحصاءات لحظية للإدارة، وتحليل نتائج الاختبارات للمعلم.</p></div>
+    <div class="mr-box"><h3>{palette}هوية موحدة</h3><p>كل ما يصدر عن المدرسة بمظهر واحد عبر استوديو البوابة وقوالبه المعتمدة.</p></div>
   </div>
-  <div class="note"><b>مواكبة رؤية المملكة 2030:</b> تسهم البوابة في مسار التحول الرقمي في التعليم، وتدعم مستهدفات برنامج تنمية القدرات البشرية في تعزيز مشاركة الأسرة ورفع كفاءة الأداء المدرسي.</div>
-</section>
+  <div class="mr-box"><h3>{book}معلم يتطور بشواهد<span class="new">جديد</span></h3><p>تطوير مهني موثّق، وخطط تحسين يُقاس أثرها، وشواهد أداء تُجمع طوال العام، وملف رقمي يعرض أعمال المعلم بلمسة.</p></div>
+  <div class="mr-box tint"><p><b>مواكبة رؤية المملكة 2030:</b> تسهم البوابة في مسار التحول الرقمي في التعليم، وتدعم مستهدفات برنامج تنمية القدرات البشرية في تعزيز مشاركة الأسرة ورفع كفاءة الأداء المدرسي.</p></div>
+</template>
 
 <!-- ======================= 03 المستفيدون ======================= -->
-<section class="page" data-label="المستفيدون والأدوار" data-toc="المستفيدون والأدوار">
-  <div class="kick"><span class="num">03</span>المستفيدون والأدوار</div>
-  <h1>لكل فئة واجهتها، ولكل دور صلاحياته</h1>
-  <p class="lead">يدخل المستخدم برقم هويته، فتظهر له الخدمات التي تخصه وحدها. ومن يجمع بين التدريس ومهمة إدارية ينتقل بين الواجهتين بزر واحد.</p>
-  <div class="grid g2">
-    <div class="card"><h4><span class="ic" data-i="home"></span>الإدارة المدرسية</h4><p>لوحة يومية بالحضور والغياب، واعتماد الغياب الرسمي، والإنذارات والنماذج، ومتابعة رصد الدرجات، وتقييم الأداء الوظيفي، والتقرير الشهري للمدرسة، والتقارير الرسمية بالطباعة وExcel.</p></div>
-    <div class="card"><h4><span class="ic" data-i="pen"></span>المعلم</h4><p>تحضير الحصص وحصص الانتظار من الجوال، وجدوله، وسجل المتابعة، والاختبارات ودوراتها، والتطوير المهني، وشواهد الأداء، وملفه الرقمي، ومفكرته.</p></div>
-    <div class="card"><h4><span class="ic" data-i="msg"></span>الطالب</h4><p>الحضور والغياب، والجدول، والنتائج، والشهادات، والاختبارات الإلكترونية، وطلب مقابلة الموجه، والاطلاع على ما يصدر بشأنه.</p></div>
-    <div class="card"><h4><span class="ic" data-i="users"></span>ولي الأمر</h4><p>متابعة حضور الأبناء ونتائجهم، والموافقة على الفعاليات، والرد على الإحالات واستمارات المستوى، وإشعارات فورية على الجوال.</p></div>
+<template data-page data-no="03" data-toc="المستفيدون والأدوار" data-title="لكل فئة واجهتها، ولكل دور صلاحياته" data-sub="يدخل المستخدم برقم هويته، فتظهر له الخدمات التي تخصه وحدها">
+  <div class="mr-row c2">
+    <div class="mr-box"><h3>{home}الإدارة المدرسية</h3><p>لوحة يومية بالحضور والغياب، واعتماد الغياب الرسمي، والإنذارات والنماذج، ومتابعة رصد الدرجات، وتقييم الأداء الوظيفي، والتقرير الشهري للمدرسة، والتقارير الرسمية بالطباعة وExcel.</p></div>
+    <div class="mr-box"><h3>{pen}المعلم</h3><p>تحضير الحصص وحصص الانتظار من الجوال، وجدوله، وسجل المتابعة، والاختبارات ودوراتها، والتطوير المهني، وشواهد الأداء، وملفه الرقمي، ومفكرته.</p></div>
+    <div class="mr-box"><h3>{msg}الطالب</h3><p>الحضور والغياب، والجدول، والنتائج، والشهادات، والاختبارات الإلكترونية، وطلب مقابلة الموجه، والاطلاع على ما يصدر بشأنه.</p></div>
+    <div class="mr-box"><h3>{users}ولي الأمر</h3><p>متابعة حضور الأبناء ونتائجهم، والموافقة على الفعاليات، والرد على الإحالات واستمارات المستوى، وإشعارات فورية على الجوال.</p></div>
   </div>
-  <h3>24 دورًا إداريًا وتخصصيًا داخل الإدارة المدرسية</h3>
-  <p class="mini" style="margin-bottom:2.5mm">يُسند كل دور إلى موظف بعينه، فتظهر له أقسامه وصلاحياته، ويوقّع النماذج بصفته.</p>
-  <div class="chips">
-    <span class="chip">مدير المدرسة</span><span class="chip">وكيل الشؤون التعليمية</span><span class="chip">وكيل الشؤون المدرسية</span><span class="chip">وكيل شؤون الطلاب</span><span class="chip">الموجه الطلابي (3)</span><span class="chip">المساعد الإداري (3)</span><span class="chip">رائد النشاط</span><span class="chip">الدعم الفني</span><span class="chip">مسجّل المعلومات</span><span class="chip">البوابة الإعلامية</span><span class="chip">برنامج الموهوبين</span><span class="chip">برنامج جلوب البيئي العالمي</span><span class="chip">برنامج صوت الطالب</span><span class="chip">مكة سبورت</span><span class="chip">مسؤول الأمن والسلامة</span><span class="chip">الموجه الصحي</span><span class="chip">محضر مختبر العلوم (3)</span><span class="chip">محضر معمل الحاسب الآلي</span>
+  <div class="mr-box"><h3>{key}24 دورًا إداريًا وتخصصيًا<span class="aside">يُسند كل دور إلى موظف بعينه، ويوقّع النماذج بصفته</span></h3>
+    <div class="chips"><span>مدير المدرسة</span><span>وكيل الشؤون التعليمية</span><span>وكيل الشؤون المدرسية</span><span>وكيل شؤون الطلاب</span><span>الموجه الطلابي (3)</span><span>المساعد الإداري (3)</span><span>رائد النشاط</span><span>الدعم الفني</span><span>مسجّل المعلومات</span><span>البوابة الإعلامية</span><span>برنامج الموهوبين</span><span>برنامج جلوب البيئي العالمي</span><span>برنامج صوت الطالب</span><span>مكة سبورت</span><span>مسؤول الأمن والسلامة</span><span>الموجه الصحي</span><span>محضر مختبر العلوم (3)</span><span>محضر معمل الحاسب الآلي</span></div>
   </div>
-  <div class="note" style="margin-top:6mm">الصلاحيات تُضبط من داخل البوابة دون برمجة: صلاحيات الإدارة لكل دور، وصلاحيات المعلمين لكل تبويب، وصلاحيات قوالب الاستوديو والنماذج لكل فئة. ورؤساء الأقسام وأعضاؤها يُحدَّدون من شاشة «رؤساء الأقسام».</div>
-</section>
+  <div class="mr-box tint"><p>الصلاحيات تُضبط من داخل البوابة دون برمجة: صلاحيات الإدارة لكل دور، وصلاحيات المعلمين لكل تبويب، وصلاحيات قوالب الاستوديو والنماذج لكل فئة. ورؤساء الأقسام وأعضاؤها يُحدَّدون من شاشة «رؤساء الأقسام». ومن يجمع بين التدريس ومهمة إدارية ينتقل بين الواجهتين بزر واحد.</p></div>
+</template>
 
 <!-- ======================= 04 الخدمات ======================= -->
-<section class="page" data-label="منظومة الخدمات" data-toc="منظومة الخدمات">
-  <div class="kick"><span class="num">04</span>منظومة الخدمات</div>
-  <h1>14 قسمًا و132 إجراءً موثقًا</h1>
-  <p class="lead">كل خدمة في البوابة موثقة في دليل الاستخدام المدمج بخطواتها ولمن تتاح. والرسم يبين عدد الإجراءات الموثقة في كل قسم.</p>
-  <div class="bars" id="bars"></div>
-  <div class="grid g2" style="margin-top:5mm;grid-template-columns:1fr 1.15fr">
-    <div class="card"><h4><span class="ic" data-i="msg"></span>الدليل جزء من النظام</h4><p>يعرض لكل مستخدم ما يخصه فقط، ويشرح الخطوات والملاحظات والتنبيهات، ويُطبع بغلاف رسمي للتدريب أو للتسليم.</p><p style="margin-top:2mm">وتُتاح أدلة PDF لكل فئة في الصفحة العامة للبوابة، حتى قبل تسجيل الدخول، ومنها أدلة مصوّرة للجديد: ملف المعلم الرقمي، وسجل التطوير المهني، وسلسلة الإحالة.</p></div>
-    <div><div class="shot"><div class="bar"><i></i><i></i><i></i><span>makkahsec.com/help</span></div><img src="img/help.jpg"></div><div class="cap">دليل الاستخدام داخل البوابة: بحث وتصنيف حسب القسم والفئة</div></div>
+<template data-page data-no="04" data-toc="منظومة الخدمات" data-title="14 قسمًا و132 إجراءً موثقًا" data-sub="كل خدمة موثقة في دليل الاستخدام المدمج بخطواتها ولمن تتاح">
+  <div class="mr-box"><h3>{grid}الإجراءات الموثقة في كل قسم<span class="aside">من دليل الاستخدام داخل البوابة</span></h3><div class="mr-bars" id="bars"></div></div>
+  <div class="mr-row c32">
+    <div><div class="shot"><img src="img/help.jpg"></div><div class="cap">دليل الاستخدام داخل البوابة: بحث وتصنيف حسب القسم والفئة</div></div>
+    <div class="mr-box tint"><h3>{book}الدليل جزء من النظام</h3><p>يعرض لكل مستخدم ما يخصه فقط، ويشرح الخطوات والملاحظات والتنبيهات، ويُطبع بغلاف رسمي للتدريب أو للتسليم.</p><p style="margin-top:6px">وتُتاح أدلة PDF لكل فئة في الصفحة العامة قبل الدخول، ومنها أدلة مصوّرة للجديد: ملف المعلم الرقمي، وسجل التطوير المهني، وسلسلة الإحالة.</p></div>
   </div>
-</section>
+</template>
 
 <!-- ======================= 05 يوم المعلم ======================= -->
-<section class="page" data-label="يوم المعلم في البوابة" data-toc="يوم المعلم في البوابة">
-  <div class="band secband"><span class="big">05</span><h1>يوم المعلم في البوابة</h1><p>من التحضير إلى المتابعة، كل شيء من الجوال</p></div>
-  <div style="display:flex;gap:7mm">
-    <div style="width:56mm;flex:none"><div class="phone"><img src="img/teacher-phone.jpg"></div><div class="cap">تحضير الحصة: حاضر أو غائب أو متأخر بلمسة</div></div>
-    <ul class="dots" style="flex:1">
+<template data-page data-no="05" data-toc="يوم المعلم في البوابة" data-title="يوم المعلم في البوابة" data-sub="من التحضير إلى المتابعة، كل شيء من الجوال">
+  <div style="display:flex;gap:14px">
+    <div style="width:190px;flex:none"><div class="phone"><img src="img/teacher-phone.jpg"></div><div class="cap">تحضير الحصة: حاضر أو غائب أو متأخر بلمسة</div></div>
+    <div class="mr-box" style="flex:1"><ul class="dl">
       <li><b>تحضير الحصة الجارية</b> من الجوال، مع تمييز من لم يبصم صباحًا ومن لديه استئذان أو عذر، وشارة لمن له ملاحظة صحية.</li>
       <li><b>تذكير آلي</b> يصل المعلم إذا مرت عشر دقائق على بداية الحصة دون تحضير.</li>
       <li><b>حصص الانتظار</b> تُحضَّر بالطريقة نفسها، ويُعدَّل تحضيرها حتى قبل نهاية الحصة بخمس دقائق.</li>
@@ -270,150 +217,125 @@ td.plus{color:var(--g);font-weight:600}
       <li><b>سجل المتابعة الإلكتروني</b> وكشف رصد الدرجات بدل السجلات الورقية.</li>
       <li><b>تقرير غياب مادتي:</b> الأكثر غيابًا والمتتابع، والتوزيع حسب الفصل والحصة واليوم<span class="new">جديد</span></li>
       <li><b>إشعار أولياء أمور طلابي</b> مباشرة، و<b>شهادة شكر</b> للطالب المتميز.</li>
-      <li><b>إحالة طالب</b> سلوكية بسلسلة من ست حلقات، و<b>الإبلاغ عن طالب منقطع</b><span class="new">جديد</span> ببطاقة جاهزة.</li>
+      <li><b>إحالة طالب</b> بسلسلة من ست حلقات، و<b>الإبلاغ عن طالب منقطع</b> ببطاقة جاهزة<span class="new">جديد</span></li>
       <li><b>مفكرتي:</b> ملاحظات ومهام بمواعيد، وما حلّ موعده يظهر في «بانتظار إجرائك»<span class="new">جديد</span></li>
-      <li><b>الإفادة على النماذج</b> التي ترد إليه، وتوقيعه الإلكتروني عليها، و<b>الإقرار بميثاق أخلاقيات المهنة</b>.</li>
-    </ul>
+      <li><b>الإفادة على النماذج</b> وتوقيعه الإلكتروني عليها، و<b>الإقرار بميثاق أخلاقيات المهنة</b>.</li>
+    </ul></div>
   </div>
-  <div class="shot" style="margin-top:5mm"><div class="bar"><i></i><i></i><i></i><span>makkahsec.com/schedule</span></div><img src="img/schedule.jpg" style="height:52mm;object-fit:cover;object-position:top"></div>
-  <div class="cap">جدول المعلم الأسبوعي بتوقيت الحصص، جاهز للطباعة</div>
-</section>
+  <div class="shot crop"><img src="img/schedule.jpg" style="height:200px"></div><div class="cap">جدول المعلم الأسبوعي بتوقيت الحصص، جاهز للطباعة</div>
+</template>
 
 <!-- ======================= 06 شؤون الطلاب ======================= -->
-<section class="page" data-label="شؤون الطلاب والانضباط" data-toc="شؤون الطلاب والانضباط المدرسي">
-  <div class="kick"><span class="num">06</span>شؤون الطلاب والانضباط المدرسي</div>
-  <h1>الغياب يُرصد ويُعتمد ويُتابع آليًا</h1>
-  <p class="lead">تربط البوابة بين بصمة الطالب صباحًا وتحضير المعلم في كل حصة، فتعتمد الغياب الرسمي آليًا، وتنبّه الإدارة إلى كل حالة تحتاج متابعة.</p>
-  <div class="steps">
-    <div class="st"><i>1</i><b>بصمة الحضور</b><small>أجهزة البصمة ترسل السجلات للبوابة مباشرة</small></div><span class="ar">←</span>
-    <div class="st"><i>2</i><b>تحضير المعلمين</b><small>كل حصة تُرصد من الجوال</small></div><span class="ar">←</span>
-    <div class="st"><i>3</i><b>تذكير آلي</b><small>لمن تأخر في التحضير</small></div><span class="ar">←</span>
-    <div class="st"><i>4</i><b>اعتماد آلي</b><small>للغياب الرسمي بعد الحصة الثانية</small></div><span class="ar">←</span>
-    <div class="st"><i>5</i><b>ملخص يومي</b><small>للإدارة بما لم يُحضَّر</small></div><span class="ar">←</span>
-    <div class="st"><i>6</i><b>إنذار مبكر</b><small>للموجه بمن يحتاج تدخلًا</small></div>
+<template data-page data-no="06" data-toc="شؤون الطلاب والانضباط المدرسي" data-title="الغياب يُرصد ويُعتمد ويُتابع آليًا" data-sub="تربط البوابة بين بصمة الطالب صباحًا وتحضير المعلم في كل حصة">
+  <div class="flow">
+    <div><i>1</i><b>بصمة الحضور</b><small>الأجهزة ترسل للبوابة مباشرة</small></div>
+    <div><i>2</i><b>تحضير المعلمين</b><small>كل حصة من الجوال</small></div>
+    <div><i>3</i><b>تذكير آلي</b><small>لمن تأخر في التحضير</small></div>
+    <div><i>4</i><b>اعتماد آلي</b><small>بعد الحصة الثانية</small></div>
+    <div><i>5</i><b>ملخص يومي</b><small>للإدارة بما لم يُحضَّر</small></div>
+    <div><i>6</i><b>إنذار مبكر</b><small>للموجه بمن يحتاج تدخلًا</small></div>
   </div>
-  <div class="shot" style="margin-top:5mm"><div class="bar"><i></i><i></i><i></i><span>makkahsec.com/student-affairs</span></div><img src="img/student-affairs.jpg" style="height:72mm;object-fit:cover;object-position:top"></div>
-  <div class="cap">مركز تقارير شؤون الطلاب: لوحة اليوم، ونسبة الحضور، والتأخر، ومن بصم ولم يحضر</div>
-  <div class="grid g3" style="margin-top:4mm">
-    <div class="card"><h4><span class="ic" data-i="clock"></span>التأخر الصباحي</h4><p>بدقائقه وتكراره، وتقرير لفترة محددة، ومتوسط اليوم الواحد في التقارير الشهرية.</p></div>
-    <div class="card"><h4><span class="ic" data-i="flag"></span>الإنذارات والمحاضر</h4><p>تصدر بمراحلها، وتُحفظ في ملف الطالب الشامل المطبوع.</p></div>
-    <div class="card"><h4><span class="ic" data-i="userx"></span>الطلاب المنقطعون<span class="new">جديد</span></h4><p>بلاغ المعلم، فطي القيد أو رد البلاغ عند الوكيل، مع بطاقة مطبوعة بالتوقيعين. وصل 26 بلاغًا.</p></div>
+  <div class="shot crop"><img src="img/student-affairs.jpg" style="height:300px"></div><div class="cap">مركز تقارير شؤون الطلاب: لوحة اليوم، ونسبة الحضور، والتأخر، ومن بصم ولم يحضر</div>
+  <div class="mr-row c3">
+    <div class="mr-box"><h3>{clock}التأخر الصباحي</h3><p>بدقائقه وتكراره، وتقرير لفترة محددة، ومتوسط اليوم الواحد في التقارير الشهرية.</p></div>
+    <div class="mr-box"><h3>{flag}الإنذارات والمحاضر</h3><p>تصدر بمراحلها، وتُحفظ في ملف الطالب الشامل المطبوع.</p></div>
+    <div class="mr-box"><h3>{userx}المنقطعون<span class="new">جديد</span></h3><p>بلاغ المعلم، فطي القيد أو رده عند الوكيل، ببطاقة مطبوعة بالتوقيعين. وصل 26 بلاغًا.</p></div>
   </div>
-</section>
+</template>
 
-<!-- ======================= 06 تابع: الإحالة والتوجيه ======================= -->
-<section class="page" data-label="الإحالة والتوجيه الطلابي">
-  <div class="kick"><span class="num">06</span>شؤون الطلاب (تابع): الإحالة والتوجيه الطلابي</div>
-  <h1>من الإحالة إلى الإنذار المبكر، بمسار موثّق</h1>
-  <p class="lead">صارت إحالة الطالب سلسلة من ست حلقات لكل حلقة صاحبها، ولا تُفتح حلقة قبل اكتمال التي قبلها. وأُغلق 44 من 49 إحالة بإقرار ولي الأمر.</p>
-  <div class="shot"><img src="img/referral-chain.jpg"></div>
-  <div class="cap">سلسلة إحالة الطالب: معالجة المعلم، فرفع الإحالة، فقرار الوكيل، فإجراء الموجه، فولي الأمر، فالإغلاق</div>
-  <h3>التوجيه الطلابي<span class="new">جديد</span></h3>
-  <div class="grid g2">
-    <div class="card"><h4><span class="ic" data-i="alert"></span>الإنذار المبكر</h4><p>قائمة آلية لكل موجه بطلاب صفه الذين يحتاجون تدخلًا: الغياب بمراحل الإنذار (5، 10، 15، 20)، والتأخر ثلاث مرات فأكثر، ومتوسط أقل من 60% في مادتين فأكثر، والإحالات.</p></div>
-    <div class="card"><h4><span class="ic" data-i="lock"></span>الحالات وجلساتها</h4><p>سجل سري لكل حالة وجلساتها، وإغلاقها بنتيجتها وطباعتها. يرى كل موجه طلاب صفه وحده، ويرى الوكيل والمدير الصفوف كلها.</p></div>
-    <div class="card"><h4><span class="ic" data-i="doc"></span>استمارة توضيح المستوى</h4><p>يحدد كل معلم مستوى الطالب في مادته، ويكتب الموجه والوكيل رأيهما، وتصل نسخة لولي الأمر.</p></div>
-    <div class="card"><h4><span class="ic" data-i="cal"></span>الخطة والبرامج وطلبات المقابلة</h4><p>برامج الصف بموعدها تُنفَّذ أحداثًا في البوابة، وطلبات مقابلة من الطالب أو ولي أمره، وتقرير شهري بغلاف ورسوم.</p></div>
+<!-- ======================= 06 تابع ======================= -->
+<template data-page data-no="06" data-title="الإحالة والتوجيه الطلابي" data-sub="أُغلق 44 من 49 إحالة بمسار موثّق حتى إقرار ولي الأمر">
+  <div class="shot"><img src="img/referral-chain.jpg"></div><div class="cap">إحالة الطالب سلسلة من ست حلقات لكل حلقة صاحبها، ولا تُفتح حلقة قبل اكتمال التي قبلها</div>
+  <div class="mr-row c2">
+    <div class="mr-box"><h3>{alert}الإنذار المبكر<span class="new">جديد</span></h3><p>قائمة آلية لكل موجه بطلاب صفه الذين يحتاجون تدخلًا: الغياب بمراحل الإنذار (5، 10، 15، 20)، والتأخر ثلاث مرات فأكثر، ومتوسط أقل من 60% في مادتين فأكثر، والإحالات.</p></div>
+    <div class="mr-box"><h3>{lock}الحالات وجلساتها<span class="new">جديد</span></h3><p>سجل سري لكل حالة وجلساتها، وإغلاقها بنتيجتها وطباعتها. يرى كل موجه طلاب صفه وحده، ويرى الوكيل والمدير الصفوف كلها.</p></div>
+    <div class="mr-box"><h3>{doc}استمارة توضيح المستوى<span class="new">جديد</span></h3><p>يحدد كل معلم مستوى الطالب في مادته، ويكتب الموجه والوكيل رأيهما، وتصل نسخة لولي الأمر.</p></div>
+    <div class="mr-box"><h3>{cal}الخطة والبرامج والمقابلات<span class="new">جديد</span></h3><p>برامج الصف بموعدها تُنفَّذ أحداثًا في البوابة، وطلبات مقابلة من الطالب أو ولي أمره، وتقرير شهري بغلاف ورسوم.</p></div>
   </div>
-  <div class="note"><b>ملاحظات الطلاب:</b> يكتبها الموجه الصحي والموجهون الطلابيون، فتظهر لمعلمي الطالب شارةً تحت اسمه في كشف التحضير، دون كشف تفاصيلها.</div>
-</section>
+  <div class="mr-box tint"><p><b>ملاحظات الطلاب:</b> يكتبها الموجه الصحي والموجهون الطلابيون، فتظهر لمعلمي الطالب شارةً تحت اسمه في كشف التحضير، دون كشف تفاصيلها.</p></div>
+</template>
 
 <!-- ======================= 07 الطالب وولي الأمر ======================= -->
-<section class="page" data-label="الطالب وولي الأمر" data-toc="الطالب وولي الأمر: شراكة يومية">
-  <div class="band secband"><span class="big">07</span><h1>الطالب وولي الأمر: شراكة يومية</h1><p>الأسرة ترى ما يحدث في يوم ابنها، وتشارك في قراراته</p></div>
-  <div style="display:flex;gap:7mm">
-    <div style="flex:1">
-      <div class="card" style="margin-bottom:4mm"><h4><span class="ic" data-i="users"></span>لولي الأمر</h4>
-        <ul class="dots"><li>حضور الأبناء وغيابهم وتأخرهم يومًا بيوم</li><li>النتائج وجداول الاختبارات</li><li>الموافقة على مشاركة الابن في الفعاليات والزيارات</li><li>تأكيد استلام الإحالة والرد عليها</li><li>نسخة استمارة توضيح المستوى، وطلب مقابلة الموجه<span class="new">جديد</span></li><li>إشعارات فورية على الجوال لكل ما يصدر</li></ul></div>
-      <div class="card"><h4><span class="ic" data-i="msg"></span>للطالب</h4>
-        <ul class="dots"><li>جدول اليوم وسجل الحضور</li><li>الاختبارات الإلكترونية ونتائج الاختبارات القصيرة</li><li>الشهادات والنماذج الصادرة له</li><li>العد التنازلي للاختبارات النهائية</li><li>«بانتظار إجرائك»: الاختبار الإلكتروني يظهر فور نشره<span class="new">جديد</span></li></ul></div>
+<template data-page data-no="07" data-toc="الطالب وولي الأمر: شراكة يومية" data-title="الطالب وولي الأمر: شراكة يومية" data-sub="الأسرة ترى ما يحدث في يوم ابنها، وتشارك في قراراته">
+  <div style="display:flex;gap:14px">
+    <div style="flex:1;display:grid;gap:12px;align-content:start">
+      <div class="mr-box"><h3>{users}لولي الأمر</h3><ul class="dl"><li>حضور الأبناء وغيابهم وتأخرهم يومًا بيوم</li><li>النتائج وجداول الاختبارات</li><li>الموافقة على مشاركة الابن في الفعاليات والزيارات</li><li>تأكيد استلام الإحالة والرد عليها</li><li>نسخة استمارة توضيح المستوى، وطلب مقابلة الموجه<span class="new">جديد</span></li><li>إشعارات فورية على الجوال لكل ما يصدر</li></ul></div>
+      <div class="mr-box"><h3>{msg}للطالب</h3><ul class="dl"><li>جدول اليوم وسجل الحضور</li><li>الاختبارات الإلكترونية ونتائج الاختبارات القصيرة</li><li>الشهادات والنماذج الصادرة له</li><li>العد التنازلي للاختبارات النهائية</li><li>«بانتظار إجرائك»: الاختبار الإلكتروني يظهر فور نشره<span class="new">جديد</span></li></ul></div>
     </div>
-    <div style="width:56mm;flex:none"><div class="phone"><img src="img/student-phone.jpg"></div><div class="cap">الرئيسية كما يراها الطالب على جواله</div></div>
+    <div style="width:200px;flex:none"><div class="phone"><img src="img/student-phone.jpg"></div><div class="cap">الرئيسية كما يراها الطالب على جواله</div></div>
   </div>
-  <div class="note" style="margin-top:6mm"><b>تثبيت على الجوال:</b> تُضاف البوابة إلى الشاشة الرئيسية للجوال وتعمل كتطبيق مستقل، وتصل إشعاراتها كإشعارات التطبيقات دون تنزيل من المتاجر. وفعّل حسابه حتى الآن 361 طالبًا و120 ولي أمر.</div>
-</section>
+  <div class="mr-box tint"><p><b>تثبيت على الجوال:</b> تُضاف البوابة إلى الشاشة الرئيسية للجوال وتعمل كتطبيق مستقل، وتصل إشعاراتها كإشعارات التطبيقات دون تنزيل من المتاجر. وفعّل حسابه حتى الآن 361 طالبًا و120 ولي أمر.</p></div>
+</template>
 
 <!-- ======================= 08 التعليم والتقويم ======================= -->
-<section class="page" data-label="التعليم والتقويم" data-toc="التعليم والتقويم">
-  <div class="kick"><span class="num">08</span>التعليم والتقويم</div>
-  <h1>دورة اختبار متكاملة، وتحليل يدعم المعلم</h1>
-  <p class="lead">ينشئ المعلم اختباره مرة واحدة، ثم يختار طريقته: ورقي يُصحَّح آليًا، أو إلكتروني يؤديه الطالب من حسابه. وأنشأ المعلمون 58 اختبارًا رُصدت فيها 773 ورقة، بمعدل 35 ورقة في اليوم.</p>
-  <div class="grid g3">
-    <div class="card"><h4><span class="ic" data-i="doc"></span>ورقي بتصحيح آلي</h4><p>بطاقة إجابة باسم الطالب ورمز يقرؤه الماسح، وتصحيح جماعي: تُصوَّر بطاقات الفصل دفعة واحدة، ويُعرف صاحب كل بطاقة من رمزه<span class="new">جديد</span></p></div>
-    <div class="card"><h4><span class="ic" data-i="check"></span>إلكتروني محمي</h4><p>صور في الأسئلة وسؤال استماع، وعلامة مائية باسم الطالب، ومنع النسخ والطباعة، وترتيب خيارات مختلف لكل طالب<span class="new">جديد</span></p></div>
-    <div class="card"><h4><span class="ic" data-i="chart"></span>تحليل النتائج</h4><p>مستويات الأداء لكل سؤال وفصل، وتنبيه على مفتاح إجابة يُرجَّح خطؤه، وتقرير مطبوع بتوقيع المعلم.</p></div>
+<template data-page data-no="08" data-toc="التعليم والتقويم" data-title="دورة اختبار متكاملة، وتحليل يدعم المعلم" data-sub="58 اختبارًا رُصدت فيها 773 ورقة، بمعدل 35 ورقة في اليوم">
+  <div class="mr-row c3">
+    <div class="mr-box"><h3>{doc}ورقي بتصحيح آلي</h3><p>بطاقة إجابة باسم الطالب ورمز يقرؤه الماسح، وتصحيح جماعي: تُصوَّر بطاقات الفصل دفعة واحدة<span class="new">جديد</span></p></div>
+    <div class="mr-box"><h3>{check}إلكتروني محمي</h3><p>صور وسؤال استماع، وعلامة مائية باسم الطالب، ومنع النسخ، وترتيب خيارات مختلف لكل طالب<span class="new">جديد</span></p></div>
+    <div class="mr-box"><h3>{chart}تحليل النتائج</h3><p>مستويات الأداء لكل سؤال وفصل، وتنبيه على مفتاح إجابة يُرجَّح خطؤه، وتقرير بتوقيع المعلم.</p></div>
   </div>
-  <h3>دورة الاختبار المتتابعة<span class="new">جديد</span></h3>
-  <div class="steps">
-    <div class="st"><i>1</i><b>بيانات ونوع</b><small>تشخيصي أو فترة</small></div><span class="ar">←</span>
-    <div class="st"><i>2</i><b>أسئلة وتطبيق</b><small>ورقي أو إلكتروني</small></div><span class="ar">←</span>
-    <div class="st"><i>3</i><b>تصحيح وتحليل</b><small>آلي</small></div><span class="ar">←</span>
-    <div class="st"><i>4</i><b>خطة علاجية</b><small>لمن دون 60%</small></div><span class="ar">←</span>
-    <div class="st"><i>5</i><b>اختبار تحقق</b><small>يقيس الأثر آليًا</small></div><span class="ar">←</span>
-    <div class="st"><i>6</i><b>تكريم وإغلاق</b><small>شهادات للمتفوقين</small></div>
-  </div>
-  <p class="mini" style="margin-top:2mm">كل مرحلة منجزة تصل شاهدًا آليًا إلى «شواهد الأداء الوظيفي». ومن بقي دون 60% بعد التحقق تلزمه خطة ثانية بدعم أعلى، وما بقي بعدها يصل المدير.</p>
-  <div style="display:flex;gap:6mm;margin-top:4mm">
-    <div style="flex:1;display:grid;gap:3mm">
-      <div class="card"><h4><span class="ic" data-i="clip"></span>متابعة رصد درجات نور<span class="new">جديد</span></h4><p>كشف من الجدول الدراسي يطابق كشف نور، ونسبة الرصد لكل مادة وفترة، ولون المهلة منذ موعد الاختبار، لوكيل الشؤون التعليمية والمدير.</p></div>
-      <div class="card"><h4><span class="ic" data-i="pen"></span>كشف الرصد وسجل المتابعة</h4><p>يجمع درجات الاختبارات القصيرة في كشف واحد للمعلم، ويُصدَّر إلى Excel. ويُرصد فيه نحو 305 خانات في اليوم.</p></div>
-      <div class="card"><h4><span class="ic" data-i="cal"></span>النتائج والعد التنازلي</h4><p>ترفع الإدارة النتائج فتظهر لكل طالب وولي أمره، وموعد الاختبارات النهائية ظاهر في الصفحة العامة.</p></div>
+  <div class="mr-box"><h3>{target}دورة الاختبار المتتابعة<span class="new">جديد</span><span class="aside">كل مرحلة منجزة تصل شاهدًا آليًا لشواهد الأداء</span></h3>
+    <div class="flow">
+      <div><i>1</i><b>بيانات ونوع</b><small>تشخيصي أو فترة</small></div>
+      <div><i>2</i><b>أسئلة وتطبيق</b><small>ورقي أو إلكتروني</small></div>
+      <div><i>3</i><b>تصحيح وتحليل</b><small>آلي</small></div>
+      <div><i>4</i><b>خطة علاجية</b><small>لمن دون 60%</small></div>
+      <div><i>5</i><b>اختبار تحقق</b><small>يقيس الأثر آليًا</small></div>
+      <div><i>6</i><b>تكريم وإغلاق</b><small>شهادات للمتفوقين</small></div>
     </div>
-    <div style="width:70mm;flex:none"><div class="shot"><div class="bar"><i></i><i></i><i></i><span>جدول الاختبارات · طباعة</span></div><img src="img/exam-table.jpg"></div><div class="cap">جداول الاختبارات تُعد وتُنشر، وتُطبع بتوقيع وكيل شؤون الطلاب</div></div>
   </div>
-</section>
+  <div style="display:flex;gap:12px">
+    <div style="flex:1;display:grid;gap:10px;align-content:start">
+      <div class="mr-box"><h3>{clip}متابعة رصد درجات نور<span class="new">جديد</span></h3><p>كشف من الجدول الدراسي يطابق كشف نور، ونسبة الرصد لكل مادة وفترة، ولون المهلة منذ موعد الاختبار.</p></div>
+      <div class="mr-box"><h3>{pen}كشف الرصد وسجل المتابعة</h3><p>درجات الاختبارات القصيرة في كشف واحد يُصدَّر إلى Excel، ويُرصد فيه نحو 305 خانات في اليوم.</p></div>
+      <div class="mr-box"><h3>{cal}النتائج والعد التنازلي</h3><p>ترفع الإدارة النتائج فتظهر لكل طالب وولي أمره، وموعد الاختبارات النهائية ظاهر في الصفحة العامة.</p></div>
+    </div>
+    <div style="width:250px;flex:none"><div class="shot"><img src="img/exam-table.jpg"></div><div class="cap">جداول الاختبارات تُطبع بتوقيع وكيل شؤون الطلاب</div></div>
+  </div>
+</template>
 
 <!-- ======================= 09 الأحداث ======================= -->
-<section class="page" data-label="الأحداث والنماذج والشهادات" data-toc="الأحداث والنماذج والشهادات">
-  <div class="kick"><span class="num">09</span>الأحداث والنماذج والشهادات</div>
-  <h1>من الفكرة إلى الاعتماد، بمسار موثّق</h1>
-  <p class="lead">كل حدث أو مناسبة يمر بمراحل واضحة، وينتهي بتقرير معتمد وشهادات للمشاركين، فيصبح ملفًا جاهزًا لشواهد النشاط.</p>
-  <div class="steps">
-    <div class="st"><i>1</i><b>إنشاء الحدث</b><small>بموعده ومكانه</small></div><span class="ar">←</span>
-    <div class="st"><i>2</i><b>المشاركون</b><small>من الطلاب</small></div><span class="ar">←</span>
-    <div class="st"><i>3</i><b>موافقة ولي الأمر</b><small>من حسابه</small></div><span class="ar">←</span>
-    <div class="st"><i>4</i><b>الحضور</b><small>كشف آلي</small></div><span class="ar">←</span>
-    <div class="st"><i>5</i><b>الشهادات</b><small>باسم كل مشارك</small></div><span class="ar">←</span>
-    <div class="st"><i>6</i><b>التقرير</b><small>بالصور والإحصاء</small></div><span class="ar">←</span>
-    <div class="st"><i>7</i><b>الاعتماد</b><small>من المدير</small></div>
+<template data-page data-no="09" data-toc="الأحداث والنماذج والشهادات" data-title="من الفكرة إلى الاعتماد، بمسار موثّق" data-sub="كل حدث ينتهي بتقرير معتمد وشهادات للمشاركين، فيصبح ملفًا جاهزًا لشواهد النشاط">
+  <div class="flow">
+    <div><i>1</i><b>إنشاء الحدث</b><small>بموعده ومكانه</small></div>
+    <div><i>2</i><b>المشاركون</b><small>من الطلاب</small></div>
+    <div><i>3</i><b>موافقة ولي الأمر</b><small>من حسابه</small></div>
+    <div><i>4</i><b>الحضور</b><small>كشف آلي</small></div>
+    <div><i>5</i><b>الشهادات</b><small>باسم كل مشارك</small></div>
+    <div><i>6</i><b>التقرير</b><small>بالصور والإحصاء</small></div>
+    <div><i>7</i><b>الاعتماد</b><small>من المدير</small></div>
   </div>
-  <div class="shot" style="margin-top:5mm"><div class="bar"><i></i><i></i><i></i><span>PDF · شهادة مشاركة</span></div><img src="img/certificate.jpg" style="height:100mm;object-fit:cover"></div>
-  <div class="cap">شهادة مشاركة تصدر لكل طالب باسمه وتاريخ الحدث، بتوقيع المدير وختم المدرسة</div>
-  <div class="grid g3" style="margin-top:4mm">
-    <div class="card"><h4><span class="ic" data-i="doc"></span>النماذج الرسمية</h4><p>تصدر وتُعتمد إلكترونيًا، وتُرسل للمستفيد ليطّلع ويقرّ ويوقّع. صدر منها 193 نموذجًا، وأرشيفها منظّم للمتابعة.</p></div>
-    <div class="card"><h4><span class="ic" data-i="pen"></span>التوقيع والختم</h4><p>توقيع إلكتروني لكل موظف، وختم المدرسة وتوقيع المدير، يُضافان آليًا للنماذج المعتمدة.</p></div>
-    <div class="card"><h4><span class="ic" data-i="award"></span>الأحداث بالأرقام</h4><p>77 طالبًا مشاركًا، و57 موافقة إلكترونية من أولياء الأمور، و54 شهادة مشاركة.</p></div>
+  <div class="shot crop"><img src="img/certificate.jpg" style="height:400px"></div><div class="cap">شهادة مشاركة تصدر لكل طالب باسمه وتاريخ الحدث، بتوقيع المدير وختم المدرسة</div>
+  <div class="mr-row c3">
+    <div class="mr-box"><h3>{doc}النماذج الرسمية</h3><p>تصدر وتُعتمد إلكترونيًا، وتُرسل للمستفيد ليطّلع ويقرّ ويوقّع. صدر منها 193 نموذجًا، وأرشيفها منظّم للمتابعة.</p></div>
+    <div class="mr-box"><h3>{pen}التوقيع والختم</h3><p>توقيع إلكتروني لكل موظف، وختم المدرسة وتوقيع المدير، يُضافان آليًا للنماذج المعتمدة.</p></div>
+    <div class="mr-box"><h3>{award}الأحداث بالأرقام</h3><p>77 طالبًا مشاركًا، و57 موافقة إلكترونية من أولياء الأمور، و54 شهادة مشاركة.</p></div>
   </div>
-</section>
+</template>
 
-<!-- ======================= 10 التطوير المهني (جديد) ======================= -->
-<section class="page" data-label="التطوير المهني والأداء الوظيفي" data-toc="التطوير المهني والأداء الوظيفي">
-  <div class="kick"><span class="num">10</span>التطوير المهني والأداء الوظيفي<span class="new">قسم جديد</span></div>
-  <h1>وثّق مرة واحدة، ويصل شاهدك تلقائيًا</h1>
-  <p class="lead">ثمانية نماذج لسجل التطوير المهني بهوية البوابة، تُعبَّأ بالبطاقات وتُوقَّع وتُعتمد، ثم تُضاف إلى «شواهد الأداء الوظيفي» للمعلم دون رفع يدوي.</p>
-  <div class="shot"><img src="img/pd-guide.jpg"></div>
-  <div class="cap">سجل التطوير المهني: من إنشاء النموذج إلى إضافته لشواهد المعلم</div>
-  <div class="grid g4" style="margin-top:4mm">
-    <div class="stat"><b>27</b><div class="t">نموذج تطوير مهني</div><div class="s">موثّق ومعتمد</div></div>
-    <div class="stat"><b>31</b><div class="t">تبادل زيارات</div><div class="s">بين معلمي الأقسام</div></div>
-    <div class="stat"><b>135</b><div class="t">شاهد أداء</div><div class="s">رفعه المعلمون</div></div>
-    <div class="stat"><b>39</b><div class="t">إقرارًا بالميثاق</div><div class="s">ميثاق أخلاقيات المهنة</div></div>
+<!-- ======================= 10 التطوير المهني ======================= -->
+<template data-page data-no="10" data-toc="التطوير المهني والأداء الوظيفي" data-title="التطوير المهني والأداء الوظيفي" data-sub="وثّق مرة واحدة، ويصل شاهدك تلقائيًا · قسم جديد">
+  <div class="shot"><img src="img/pd-guide.jpg"></div><div class="cap">سجل التطوير المهني: ثمانية نماذج تُعبَّأ وتُوقَّع وتُعتمد، ثم تُضاف إلى شواهد الأداء الوظيفي للمعلم</div>
+  <div class="mr-kpis">
+    <div class="mr-kpi"><div class="ic">{book}</div><div class="v num">27</div><div class="k">نموذج تطوير مهني</div><div class="s">موثّق ومعتمد</div></div>
+    <div class="mr-kpi" style="--c:var(--s2)"><div class="ic">{swap}</div><div class="v num">31</div><div class="k">تبادل زيارات</div><div class="s">بين معلمي الأقسام</div></div>
+    <div class="mr-kpi" style="--c:var(--s3)"><div class="ic">{award}</div><div class="v num">135</div><div class="k">شاهد أداء</div><div class="s">رفعه المعلمون</div></div>
+    <div class="mr-kpi" style="--c:var(--s4)"><div class="ic">{shield}</div><div class="v num">39</div><div class="k">إقرارًا بالميثاق</div><div class="s">ميثاق أخلاقيات المهنة</div></div>
   </div>
-  <div class="grid g2" style="margin-top:4mm">
-    <div class="card"><h4><span class="ic" data-i="users"></span>مجتمعات التعلم المهني</h4><p>تقرير الجلسة بمراحله يصدره رئيس القسم ويوقّعه الحاضرون، وملف تطوير مهني لكل قسم بغلاف وإحصاءات ونواقص.</p></div>
-    <div class="card"><h4><span class="ic" data-i="swap"></span>تبادل الزيارات</h4><p>يصدرها الزائر لزميل من قسمه، ويوقّعها المستضيف بتعقيبه، ويعتمدها وكيل الشؤون التعليمية.</p></div>
-    <div class="card"><h4><span class="ic" data-i="award"></span>تقييم الأداء الوظيفي</h4><p>شواهد لكل بند يرفعها المعلم، وشواهد آلية من عمله في البوابة، وتقييم المدير بمرحلتيه، ودورات الاختبار غير المكتملة لكل معلم.</p></div>
-    <div class="card"><h4><span class="ic" data-i="target"></span>خطط التطوير (حلقة التحسين)</h4><p>لكل توصية من زيارة دعم المعلم أو تقييم الأداء: خطة يكتبها المعلم، فمتابعة بموعد، فأثر يُقاس آليًا من الدرجة التالية، مع لوحة للمدير.</p></div>
+  <div class="mr-row c2">
+    <div class="mr-box"><h3>{users}مجتمعات التعلم المهني</h3><p>تقرير الجلسة بمراحله يصدره رئيس القسم ويوقّعه الحاضرون، وملف تطوير مهني لكل قسم بغلاف وإحصاءات ونواقص.</p></div>
+    <div class="mr-box"><h3>{swap}تبادل الزيارات</h3><p>يصدرها الزائر لزميل من قسمه، ويوقّعها المستضيف بتعقيبه، ويعتمدها وكيل الشؤون التعليمية.</p></div>
+    <div class="mr-box"><h3>{award}تقييم الأداء الوظيفي</h3><p>شواهد لكل بند يرفعها المعلم، وشواهد آلية من عمله في البوابة، وتقييم المدير بمرحلتيه، ودورات الاختبار غير المكتملة لكل معلم.</p></div>
+    <div class="mr-box"><h3>{target}خطط التطوير (حلقة التحسين)</h3><p>لكل توصية من زيارة دعم المعلم أو تقييم الأداء: خطة يكتبها المعلم، فمتابعة بموعد، فأثر يُقاس آليًا، مع لوحة للمدير.</p></div>
   </div>
-</section>
+</template>
 
-<!-- ======================= 11 ملف المعلم الرقمي (جديد) ======================= -->
-<section class="page" data-label="ملف المعلم الرقمي" data-toc="ملف المعلم الرقمي">
-  <div class="band secband"><span class="big">11</span><h1>ملف المعلم الرقمي<span class="new">قسم جديد</span></h1><p>تقرير تفاعلي عن أعمال المعلم، يُبنى من بيانات البوابة لحظة فتحه</p></div>
-  <div style="display:flex;gap:6mm">
-    <div style="width:52mm;flex:none"><div class="phone"><img src="img/dfile-visitor.jpg"></div><div class="cap">التقرير كما يراه الزائر</div></div>
-    <div style="flex:1">
-      <ul class="dots">
+<!-- ======================= 11 ملف المعلم الرقمي ======================= -->
+<template data-page data-no="11" data-toc="ملف المعلم الرقمي" data-title="ملف المعلم الرقمي" data-sub="تقرير تفاعلي عن أعمال المعلم، يُبنى من بيانات البوابة لحظة فتحه · قسم جديد">
+  <div style="display:flex;gap:14px">
+    <div style="width:200px;flex:none"><div class="phone"><img src="img/dfile-visitor.jpg"></div><div class="cap">التقرير كما يراه الزائر</div></div>
+    <div style="flex:1;display:grid;gap:10px;align-content:start">
+      <div class="mr-box"><ul class="dl">
         <li><b>يُبنى من البوابة نفسها:</b> الحصص المحضّرة، والاختبارات وأساليب التقويم، وتحسّن الطلاب، والتطوير المهني، والإنجازات من الأحداث.</li>
         <li><b>عناصر الأداء الوظيفي</b> وشواهدها المرفوعة والآلية، يعاينها الزائر داخل الصفحة دون تنزيل.</li>
         <li><b>توزيع المنهج</b> لكل مادة وصف من الجدول الدراسي، وإحصاءات منصة مدرستي، والأنشطة الصفية واللاصفية.</li>
@@ -421,223 +343,230 @@ td.plus{color:var(--g);font-weight:600}
         <li><b>بطاقة برمز QR</b> ورابط ثابت طوال العام، تُشارَك عبر واتساب أو تُطبع.</li>
         <li><b>سجل الزوار:</b> من فتح الملف ومتى، وملاحظاتهم للمعلم.</li>
         <li><b>الخصوصية:</b> لا يعرض أسماء الطلاب ولا يقارن المعلم بزملائه، والشاهد يُفتح برابط مؤقت مدته خمس دقائق.</li>
-      </ul>
-      <div style="display:flex;gap:4mm;margin-top:3mm;align-items:flex-start">
-        <div style="width:40mm;flex:none"><div class="shot" style="border-radius:14px"><img src="img/dfile-card.jpg"></div><div class="cap">بطاقة الرمز</div></div>
-        <div class="grid" style="flex:1">
-          <div class="stat"><b>18</b><div class="t">ملفًا رقميًا مفعّلًا</div><div class="s">في أول أيام الإطلاق</div></div>
-          <div class="stat"><b>28</b><div class="t">زيارة للملفات</div><div class="s">منذ إطلاقه</div></div>
+      </ul></div>
+      <div style="display:flex;gap:10px;align-items:flex-start">
+        <div style="width:150px;flex:none"><div class="shot"><img src="img/dfile-card.jpg"></div><div class="cap">بطاقة الرمز</div></div>
+        <div class="mr-tiles" style="flex:1">
+          <div class="mr-tile"><b class="num">18</b><span>ملفًا رقميًا مفعّلًا في أول أيام الإطلاق</span></div>
+          <div class="mr-tile"><b class="num">28</b><span>زيارة للملفات منذ إطلاقه</span></div>
         </div>
       </div>
     </div>
   </div>
-  <div class="note" style="margin-top:5mm">يفعّل المعلم ملفه مرة واحدة، ويختار لونه وما يظهر من أقسامه، ولا يوقفه إلا الدعم الفني عند النقل أو التقاعد. ويرافقه دليل مصوّر بصيغة PDF.</div>
-</section>
+  <div class="mr-box tint"><p>يفعّل المعلم ملفه مرة واحدة، ويختار لونه وما يظهر من أقسامه، ولا يوقفه إلا الدعم الفني عند النقل أو التقاعد. ويرافقه دليل مصوّر بصيغة PDF.</p></div>
+</template>
 
-<!-- ======================= 12 الهوية والاستوديو ======================= -->
-<section class="page" data-label="الهوية والاستوديو" data-toc="الهوية البصرية واستوديو البوابة والتقارير المصمّمة">
-  <div class="band secband"><span class="big">12</span><h1>الهوية البصرية واستوديو البوابة</h1><p>كل ما يصدر عن المدرسة بمظهر واحد</p></div>
+<!-- ======================= 12 الاستوديو ======================= -->
+<template data-page data-no="12" data-toc="الهوية البصرية واستوديو البوابة والتقارير المصمّمة" data-title="الهوية البصرية واستوديو البوابة" data-sub="كل ما يصدر عن المدرسة بمظهر واحد">
   <p class="lead">يختار المستخدم القالب، ويملأ بياناته، فيخرج التصميم جاهزًا للطباعة بمقاسه الحقيقي أو صورة للنشر. التصميم ثابت بهوية المدرسة، فتتوحد مطبوعات كل الأقسام.</p>
-  <div class="shot"><div class="bar"><i></i><i></i><i></i><span>makkahsec.com/studio</span></div><img src="img/studio.jpg" style="height:66mm;object-fit:cover;object-position:top"></div>
-  <div class="cap">استوديو البوابة: قوالب للمعلمين والإداريين والطلاب، وأرشيف للهوية البصرية</div>
-  <h3>من قوالب الاستوديو (21 قالبًا)</h3>
-  <div class="chips">
-    <span class="chip">غلاف سجل</span><span class="chip">غلاف سجل إداري</span><span class="chip">فاصل أقسام</span><span class="chip">ملصقات ظهر الملفات</span><span class="chip">تعميم وإعلان</span><span class="chip">لوحة باب مكتب</span><span class="chip">لوحات الفصول</span><span class="chip">جدول الحصص المطبوع</span><span class="chip">أرقام الجلوس</span><span class="chip">لافتة إرشادية</span><span class="chip">بطاقة تعريف</span><span class="chip">رول أب للمناسبات</span><span class="chip">بطاقة شكر</span><span class="chip">إعلان للطلاب</span><span class="chip">منشور تواصل اجتماعي</span><span class="chip">قالب تقرير Word</span><span class="chip">قالب عرض PowerPoint</span><span class="chip" style="background:#fff3c9">حصة نموذجية PowerPoint · جديد</span>
+  <div class="shot crop"><img src="img/studio.jpg" style="height:250px"></div><div class="cap">استوديو البوابة: قوالب للمعلمين والإداريين والطلاب، وأرشيف للهوية البصرية</div>
+  <div class="mr-box"><h3>{palette}من قوالب الاستوديو<span class="aside">21 قالبًا</span></h3>
+    <div class="chips"><span>غلاف سجل</span><span>غلاف سجل إداري</span><span>فاصل أقسام</span><span>ملصقات ظهر الملفات</span><span>تعميم وإعلان</span><span>لوحة باب مكتب</span><span>لوحات الفصول</span><span>جدول الحصص المطبوع</span><span>أرقام الجلوس</span><span>لافتة إرشادية</span><span>بطاقة تعريف</span><span>رول أب للمناسبات</span><span>بطاقة شكر</span><span>إعلان للطلاب</span><span>منشور تواصل اجتماعي</span><span>قالب تقرير Word</span><span>قالب عرض PowerPoint</span><span>حصة نموذجية PowerPoint · جديد</span></div>
   </div>
-  <div style="display:flex;gap:5mm;margin-top:5mm;align-items:flex-start">
-    <div style="width:68mm;flex:none"><div class="shot"><img src="img/model-lesson.jpg"></div><div class="cap">قالب الحصة النموذجية بثمانية ألوان</div></div>
-    <div class="card" style="flex:1"><h4><span class="ic" data-i="chart"></span>التقارير المصمّمة<span class="new">جديد</span></h4><p>سبعة تقارير بغلاف ورسوم بيانية على طقم واحد بنسختين ملوّنة ورسمية: التقرير الشهري للمدرسة، والتقرير الشهري لشؤون الطلاب، والتقرير الشهري للموجه، وتقرير الأحداث، وتحليل نتائج الاختبارات، وشواهد الأداء الوظيفي، وملف التطوير المهني للقسم. تُطبع من الحاسب أو تُحفظ PDF من الجوال.</p></div>
+  <div class="mr-row c2">
+    <div><div class="shot"><img src="img/model-lesson.jpg"></div><div class="cap">قالب الحصة النموذجية بثمانية ألوان</div></div>
+    <div class="mr-box"><h3>{chart}التقارير المصمّمة<span class="new">جديد</span></h3><p>سبعة تقارير بغلاف ورسوم بيانية على طقم واحد بنسختين ملوّنة ورسمية: الشهري للمدرسة، والشهري لشؤون الطلاب، والشهري للموجه، والأحداث، وتحليل نتائج الاختبارات، وشواهد الأداء الوظيفي، وملف التطوير المهني للقسم. وهذا التقرير مبني على الطقم نفسه.</p></div>
   </div>
-</section>
+</template>
 
 <!-- ======================= 13 التواصل ======================= -->
-<section class="page" data-label="التواصل والإعلام" data-toc="التواصل والإعلام المدرسي">
-  <div class="kick"><span class="num">13</span>التواصل والإعلام المدرسي</div>
-  <h1>صوت المدرسة يصل في لحظته</h1>
-  <p class="lead">للبوابة صفحة عامة تعرّف بالمدرسة وأخبارها وتقويمها، وقنوات داخلية تصل كل فئة بما يخصها. يُرسل عبرها نحو 1,415 إشعارًا في اليوم الدراسي، يصل منها نحو 4,656 إلى الحسابات.</p>
-  <div class="shot"><div class="bar"><i></i><i></i><i></i><span>makkahsec.com</span></div><img src="img/landing.jpg"></div>
-  <div class="cap">الصفحة العامة للبوابة: الأخبار، والتقويم الدراسي، والعد التنازلي للاختبارات، وأقسام البوابة</div>
-  <div class="grid g3" style="margin-top:4mm">
-    <div class="card"><h4><span class="ic" data-i="bell"></span>إشعارات الجوال</h4><p>تُرسل لفئة أو فصل أو فرد، وتمر بمراجعة قبل وصولها عند الحاجة.</p></div>
-    <div class="card"><h4><span class="ic" data-i="doc"></span>الأخبار والمقالات</h4><p>تُنشر بصورها، وتُشارك في وسائل التواصل.</p></div>
-    <div class="card"><h4><span class="ic" data-i="cal"></span>التقويم والإجازات</h4><p>المناسبات والإجازات الرسمية، وتتوقف الجداول تلقائيًا في الإجازة.</p></div>
+<template data-page data-no="13" data-toc="التواصل والإعلام المدرسي" data-title="صوت المدرسة يصل في لحظته" data-sub="نحو 1,415 إشعارًا يُرسل في اليوم الدراسي، يصل منها نحو 4,656 إلى الحسابات">
+  <div class="shot"><img src="img/landing.jpg"></div><div class="cap">الصفحة العامة للبوابة: الأخبار، والتقويم الدراسي، والعد التنازلي للاختبارات، وأقسام البوابة</div>
+  <div class="mr-row c3">
+    <div class="mr-box"><h3>{bell}إشعارات الجوال</h3><p>تُرسل لفئة أو فصل أو فرد، وتمر بمراجعة قبل وصولها عند الحاجة.</p></div>
+    <div class="mr-box"><h3>{doc}الأخبار والمقالات</h3><p>تُنشر بصورها، وتُشارك في وسائل التواصل.</p></div>
+    <div class="mr-box"><h3>{cal}التقويم والإجازات</h3><p>المناسبات والإجازات الرسمية، وتتوقف الجداول تلقائيًا في الإجازة.</p></div>
   </div>
-  <div class="card" style="margin-top:4mm"><h4><span class="ic" data-i="msg"></span>«بانتظار إجرائك»</h4><p>صندوق واحد في الرئيسية يجمع لكل مستخدم ما ينتظره: نموذج يحتاج توقيعه، أو إحالة وصلت حلقته، أو اختبار إلكتروني نُشر، أو موعد متابعة في خطة تطوير، أو ملاحظة حلّ موعدها، أو إقرار بالميثاق لم يُنجز.</p></div>
-</section>
+  <div class="mr-box tint"><h3>{msg}«بانتظار إجرائك»</h3><p>صندوق واحد في الرئيسية يجمع لكل مستخدم ما ينتظره: نموذج يحتاج توقيعه، أو إحالة وصلت حلقته، أو اختبار إلكتروني نُشر، أو موعد متابعة في خطة تطوير، أو ملاحظة حلّ موعدها، أو إقرار بالميثاق لم يُنجز.</p></div>
+</template>
 
 <!-- ======================= 14 المواءمة ======================= -->
-<section class="page" data-label="المواءمة مع معايير التقويم" data-toc="المواءمة مع معايير التقويم والاعتماد المدرسي">
-  <div class="kick"><span class="num">14</span>المواءمة مع معايير التقويم والتصنيف والاعتماد المدرسي</div>
-  <h1>المؤشر، والخدمة، والشاهد</h1>
-  <p class="lead" style="margin-bottom:3.5mm">وفق ملحق (أ) من <b>الدليل الإجرائي للتقويم المدرسي الخارجي لمدارس التعليم العام</b> (الإصدار الثالث 1448 - 2026) الصادر عن هيئة تقويم التعليم والتدريب. نعرض المؤشرات التي تقدّم لها البوابة خدمة وشاهدًا مباشرًا.</p>
-  <table>
-    <tr><th style="width:15mm">الرمز</th><th>المؤشر كما في الدليل</th><th>خدمة البوابة</th><th>الشاهد المستخرج</th></tr>
+<template data-page data-no="14" data-toc="المواءمة مع معايير التقويم والاعتماد المدرسي" data-title="المؤشر، والخدمة، والشاهد" data-sub="وفق ملحق (أ) من الدليل الإجرائي للتقويم المدرسي الخارجي لمدارس التعليم العام (الإصدار الثالث 1448 - 2026)">
+  <table class="mr-table">
+    <tr><th style="width:52px">الرمز</th><th>المؤشر كما في الدليل</th><th>خدمة البوابة</th><th>الشاهد المستخرج</th></tr>
     <tr class="grp"><td colspan="4">الإدارة المدرسية · معيار التخطيط</td></tr>
-    <tr><td class="code">1-1-1-2</td><td>تتابع المدرسة تنفيذ خطتها التشغيلية وتطورها بما يضمن تحقيق أهدافها</td><td>التقويم الدراسي، والأحداث بمراحل اعتمادها، ولوحة اليوم، والتقرير الشهري للمدرسة</td><td>تقارير الأحداث المعتمدة، والتقويم المنشور، والتقرير الشهري المصمّم</td></tr>
+    <tr><td class="code num">1-1-1-2</td><td>تتابع المدرسة تنفيذ خطتها التشغيلية وتطورها بما يضمن تحقيق أهدافها</td><td>التقويم الدراسي، والأحداث بمراحل اعتمادها، ولوحة اليوم، والتقرير الشهري للمدرسة</td><td>تقارير الأحداث المعتمدة، والتقويم المنشور، والتقرير الشهري المصمّم</td></tr>
     <tr class="grp"><td colspan="4">الإدارة المدرسية · معيار قيادة العملية التعليمية</td></tr>
-    <tr><td class="code">1-2-1-1</td><td>تعزز المدرسة القيم الإسلامية والهوية الوطنية</td><td>المناسبات الوطنية والدينية بمشاركيها وشهاداتها</td><td>تقرير الحدث بالصور، وشهادات المشاركة</td></tr>
-    <tr><td class="code">1-2-1-2</td><td>تطبق المدرسة قيم مهنة التعليم وأخلاقياتها، وتتابع الالتزام بها</td><td class="plus">ميثاق أخلاقيات المهنة: اطلاع صفحةً صفحة وإقرار إلكتروني (39 إقرارًا)</td><td>تقرير من أقرّ ومن لم يقرّ بتوقيعاتهم</td></tr>
-    <tr><td class="code">1-2-1-3</td><td>تطبق المدرسة إجراءات محددة لدعم الانضباط المدرسي، وتتابع الالتزام بها</td><td>البصمة، والغياب الرسمي المعتمد آليًا، والتأخر، والإنذارات، وبلاغات الانقطاع</td><td>تقارير الغياب والتأخر، ومحاضر الإنذارات بمراحلها، وبطاقات الانقطاع</td></tr>
-    <tr><td class="code">1-2-1-4</td><td>تنفذ المدرسة برامج وأنشطة تربوية داعمة للسلوك الإيجابي لدى المتعلمين، ومنهم ذوو الإعاقة والموهوبون، وتتابعها</td><td>سلسلة الإحالة الست، والإنذار المبكر، وحالات التوجيه وجلساتها، وشهادات الشكر</td><td>سجل الإحالات بحلقاتها، وسجل الحالات، والتقرير الشهري للموجه</td></tr>
-    <tr><td class="code">1-2-1-5</td><td>تنفذ المدرسة برامج وأنشطة إثرائية؛ لتطوير مواهب المتعلمين، وتهيئهم للمستقبل، وتتابعها</td><td>أدوار برامج الموهوبين وجلوب وصوت الطالب ومكة سبورت، والأحداث، والخطط الإثرائية</td><td>كشوف المشاركين، وتقارير الأحداث، والشهادات</td></tr>
+    <tr><td class="code num">1-2-1-1</td><td>تعزز المدرسة القيم الإسلامية والهوية الوطنية</td><td>المناسبات الوطنية والدينية بمشاركيها وشهاداتها</td><td>تقرير الحدث بالصور، وشهادات المشاركة</td></tr>
+    <tr><td class="code num">1-2-1-2</td><td>تطبق المدرسة قيم مهنة التعليم وأخلاقياتها، وتتابع الالتزام بها</td><td class="plus">ميثاق أخلاقيات المهنة: اطلاع صفحةً صفحة وإقرار إلكتروني (39 إقرارًا)</td><td>تقرير من أقرّ ومن لم يقرّ بتوقيعاتهم</td></tr>
+    <tr><td class="code num">1-2-1-3</td><td>تطبق المدرسة إجراءات محددة لدعم الانضباط المدرسي، وتتابع الالتزام بها</td><td>البصمة، والغياب الرسمي المعتمد آليًا، والتأخر، والإنذارات، وبلاغات الانقطاع</td><td>تقارير الغياب والتأخر، ومحاضر الإنذارات بمراحلها، وبطاقات الانقطاع</td></tr>
+    <tr><td class="code num">1-2-1-4</td><td>تنفذ المدرسة برامج وأنشطة تربوية داعمة للسلوك الإيجابي لدى المتعلمين، ومنهم ذوو الإعاقة والموهوبون، وتتابعها</td><td>سلسلة الإحالة الست، والإنذار المبكر، وحالات التوجيه وجلساتها، وشهادات الشكر</td><td>سجل الإحالات بحلقاتها، وسجل الحالات، والتقرير الشهري للموجه</td></tr>
+    <tr><td class="code num">1-2-1-5</td><td>تنفذ المدرسة برامج وأنشطة إثرائية؛ لتطوير مواهب المتعلمين، وتهيئهم للمستقبل، وتتابعها</td><td>أدوار برامج الموهوبين وجلوب وصوت الطالب ومكة سبورت، والأحداث، والخطط الإثرائية</td><td>كشوف المشاركين، وتقارير الأحداث، والشهادات</td></tr>
     <tr class="grp"><td colspan="4">الإدارة المدرسية · معيار المجتمع المدرسي</td></tr>
-    <tr><td class="code">1-3-1-1</td><td>تعزز المدرسة بناء العلاقات الإيجابية والتعاون في المجتمع المدرسي</td><td>مركز الدعم، و«رأيك يصنع الفرق»، والأخبار، ومجتمعات التعلم وتبادل الزيارات</td><td>تقرير الدعم والملاحظات، وتقارير الجلسات، واستمارات الزيارات</td></tr>
-    <tr><td class="code">1-3-1-2</td><td>تعزز المدرسة مشاركة الأسرة في تعلم أبنائهم، والتحضير لمستقبلهم</td><td>حسابات أولياء الأمور، والإشعارات، والنتائج، والموافقات، وطلبات المقابلة، واستمارة المستوى</td><td>سجل الإشعارات، وموافقات أولياء الأمور، وردودهم على الإحالات</td></tr>
+    <tr><td class="code num">1-3-1-1</td><td>تعزز المدرسة بناء العلاقات الإيجابية والتعاون في المجتمع المدرسي</td><td>مركز الدعم، و«رأيك يصنع الفرق»، والأخبار، ومجتمعات التعلم وتبادل الزيارات</td><td>تقرير الدعم والملاحظات، وتقارير الجلسات، واستمارات الزيارات</td></tr>
+    <tr><td class="code num">1-3-1-2</td><td>تعزز المدرسة مشاركة الأسرة في تعلم أبنائهم، والتحضير لمستقبلهم</td><td>حسابات أولياء الأمور، والإشعارات، والنتائج، والموافقات، وطلبات المقابلة، واستمارة المستوى</td><td>سجل الإشعارات، وموافقات أولياء الأمور، وردودهم على الإحالات</td></tr>
     <tr class="grp"><td colspan="4">الإدارة المدرسية · معيار التطوير المؤسسي</td></tr>
-    <tr><td class="code">1-4-1-5</td><td>تدعم المدرسة التطوير المهني لمنسوبيها وفقًا لنتائج التقويم وتحليل احتياجاتهم</td><td class="plus">سجل التطوير المهني بثمانية نماذج، ومجتمعات التعلم، وتبادل الزيارات، وخطط التطوير من توصيات زيارة الدعم وتقييم الأداء</td><td>نماذج التطوير المعتمدة (27)، وملف التطوير المهني للقسم، وشواهد الأداء الوظيفي</td></tr>
-    <tr><td class="code">1-4-1-6</td><td>تطبق المدرسة التقويم الذاتي المبني على المعايير المعتمدة من الهيئة بشكل مستمر</td><td>الإحصاء والنسب، والتقارير المصمّمة، وإحصائية الاستخدام، وخطط التطوير</td><td>تقارير مطبوعة وملفات Excel مؤرخة، ولوحة المدير لخطط التحسين</td></tr>
-    <tr><td class="code">1-4-1-7</td><td>تنفذ المدرسة خطة التحسين بناء على نتائج التقويم المدرسي، وتتابعها</td><td class="plus">خطط التطوير: توصية، فخطة، فمتابعة بموعد، فأثر يُقاس آليًا</td><td>لوحة المدير: المفتوح والمتأخر والمغلق ونسبة التحسّن</td></tr>
+    <tr><td class="code num">1-4-1-5</td><td>تدعم المدرسة التطوير المهني لمنسوبيها وفقًا لنتائج التقويم وتحليل احتياجاتهم</td><td class="plus">سجل التطوير المهني بثمانية نماذج، ومجتمعات التعلم، وتبادل الزيارات، وخطط التطوير من توصيات زيارة الدعم وتقييم الأداء</td><td>نماذج التطوير المعتمدة (27)، وملف التطوير المهني للقسم، وشواهد الأداء الوظيفي</td></tr>
+    <tr><td class="code num">1-4-1-6</td><td>تطبق المدرسة التقويم الذاتي المبني على المعايير المعتمدة من الهيئة بشكل مستمر</td><td>الإحصاء والنسب، والتقارير المصمّمة، وإحصائية الاستخدام، وخطط التطوير</td><td>تقارير مطبوعة وملفات Excel مؤرخة، ولوحة المدير لخطط التحسين</td></tr>
+    <tr><td class="code num">1-4-1-7</td><td>تنفذ المدرسة خطة التحسين بناء على نتائج التقويم المدرسي، وتتابعها</td><td class="plus">خطط التطوير: توصية، فخطة، فمتابعة بموعد، فأثر يُقاس آليًا</td><td>لوحة المدير: المفتوح والمتأخر والمغلق ونسبة التحسّن</td></tr>
   </table>
-</section>
+</template>
 
-<section class="page" data-label="المواءمة مع معايير التقويم">
-  <div class="kick"><span class="num">14</span>المواءمة مع معايير التقويم (تابع)</div>
-  <table>
-    <tr><th style="width:15mm">الرمز</th><th>المؤشر كما في الدليل</th><th>خدمة البوابة</th><th>الشاهد المستخرج</th></tr>
+<template data-page data-no="14" data-title="المؤشر، والخدمة، والشاهد (تابع)" data-sub="الخدمة بالخط الأخضر: مؤشر أُضيف في هذا الإصدار (1-2-1-2، و1-4-1-5، و1-4-1-7، و2-2-1-2)">
+  <table class="mr-table">
+    <tr><th style="width:52px">الرمز</th><th>المؤشر كما في الدليل</th><th>خدمة البوابة</th><th>الشاهد المستخرج</th></tr>
     <tr class="grp"><td colspan="4">الإدارة المدرسية · معيار حقوق المتعلم وحمايته</td></tr>
-    <tr><td class="code">1-5-1-1</td><td>تلتزم المدرسة بالمحافظة على حقوق المتعلمين، وحمايتهم</td><td>حماية البيانات على مستوى السجل، وخصوصية الصور بموافقة ولي الأمر، والحالات السرية</td><td>سياسات الصلاحيات، وسجل الموافقات، وسجل العمليات</td></tr>
-    <tr><td class="code">1-5-1-2</td><td>توفر المدرسة مناخًا آمنًا للتعلم والنمو نفسيًا واجتماعيًا</td><td>التوجيه الطلابي والإنذار المبكر، والإحالات، والموجه الصحي وملاحظات الطلاب، والاستئذان</td><td>سجل الإحالات وإقفالها، وسجل الحالات، وسجل الاستئذان</td></tr>
+    <tr><td class="code num">1-5-1-1</td><td>تلتزم المدرسة بالمحافظة على حقوق المتعلمين، وحمايتهم</td><td>حماية البيانات على مستوى السجل، وخصوصية الصور بموافقة ولي الأمر، والحالات السرية</td><td>سياسات الصلاحيات، وسجل الموافقات، وسجل العمليات</td></tr>
+    <tr><td class="code num">1-5-1-2</td><td>توفر المدرسة مناخًا آمنًا للتعلم والنمو نفسيًا واجتماعيًا</td><td>التوجيه الطلابي والإنذار المبكر، والإحالات، والموجه الصحي وملاحظات الطلاب، والاستئذان</td><td>سجل الإحالات وإقفالها، وسجل الحالات، وسجل الاستئذان</td></tr>
     <tr class="grp"><td colspan="4">التعليم والتعلم · معيار بناء خبرات التعلم</td></tr>
-    <tr><td class="code">2-1-1-2</td><td>تدعم المدرسة تنفيذ المناهج بما يحقق نواتج التعلم المستهدفة</td><td>الجداول، وتحضير الحصص، وحصص الانتظار، وتوزيع المنهج في ملف المعلم، ومتابعة رصد نور</td><td>نسب تحضير الحصص اليومية، وتقرير حصص الانتظار، وكشف متابعة الرصد</td></tr>
-    <tr><td class="code">2-1-1-4</td><td>تفعّل المدرسة التقنية الرقمية؛ لدعم تعلم المتعلمين وتلبية احتياجاتهم</td><td>البوابة على الجوال، والاختبارات الإلكترونية بالصور والاستماع، وجدول الطالب</td><td>سجل الاختبارات الإلكترونية ونتائجها</td></tr>
+    <tr><td class="code num">2-1-1-2</td><td>تدعم المدرسة تنفيذ المناهج بما يحقق نواتج التعلم المستهدفة</td><td>الجداول، وتحضير الحصص، وحصص الانتظار، وتوزيع المنهج في ملف المعلم، ومتابعة رصد نور</td><td>نسب تحضير الحصص اليومية، وتقرير حصص الانتظار، وكشف متابعة الرصد</td></tr>
+    <tr><td class="code num">2-1-1-4</td><td>تفعّل المدرسة التقنية الرقمية؛ لدعم تعلم المتعلمين وتلبية احتياجاتهم</td><td>البوابة على الجوال، والاختبارات الإلكترونية بالصور والاستماع، وجدول الطالب</td><td>سجل الاختبارات الإلكترونية ونتائجها</td></tr>
     <tr class="grp"><td colspan="4">التعليم والتعلم · معيار تقويم التعلم</td></tr>
-    <tr><td class="code">2-2-1-1</td><td>تطبق المدرسة أساليب وأدوات تقويم متنوعة؛ للكشف عن مستويات أداء المتعلمين المختلفة</td><td>دورة الاختبار (تشخيصي وفترتان)، وتصحيح آلي وجماعي بالكاميرا، وإلكتروني</td><td>أوراق الاختبارات وبطاقات الإجابة، وكشوف الرصد</td></tr>
-    <tr><td class="code">2-2-1-2</td><td>تطبق المدرسة أساليب وأدوات متنوعة؛ لتقويم نواتج التعلم المستهدفة في مناهج التعليم</td><td class="plus">الاختبار التشخيصي واختبارا الفترتين، ومتابعة رصد درجات الفترات في نور</td><td>كشوف الرصد، وكشف متابعة الرصد بنسبه لكل مادة وفترة</td></tr>
-    <tr><td class="code">2-2-1-3</td><td>تحلل المدرسة نتائج التقويم، وتوظفها في تحسين عمليات التعليم والتعلم والتقويم</td><td>تحليل النتائج لكل سؤال وفصل، والخطط العلاجية والإثرائية، واختبار التحقق</td><td>تقرير تحليل النتائج بتوقيع المعلم، وقياس الأثر قبل الخطة وبعدها</td></tr>
-    <tr><td class="code">2-2-1-4</td><td>تقدم المدرسة التغذية الراجعة للمتعلمين وأولياء أمورهم، وتتابع تقدمهم بشكل مستمر</td><td>نتائج الاختبارات القصيرة في حساب الطالب وولي أمره، ونشر النتائج</td><td>النتائج المنشورة، والإشعارات المرسلة</td></tr>
+    <tr><td class="code num">2-2-1-1</td><td>تطبق المدرسة أساليب وأدوات تقويم متنوعة؛ للكشف عن مستويات أداء المتعلمين المختلفة</td><td>دورة الاختبار (تشخيصي وفترتان)، وتصحيح آلي وجماعي بالكاميرا، وإلكتروني</td><td>أوراق الاختبارات وبطاقات الإجابة، وكشوف الرصد</td></tr>
+    <tr><td class="code num">2-2-1-2</td><td>تطبق المدرسة أساليب وأدوات متنوعة؛ لتقويم نواتج التعلم المستهدفة في مناهج التعليم</td><td class="plus">الاختبار التشخيصي واختبارا الفترتين، ومتابعة رصد درجات الفترات في نور</td><td>كشوف الرصد، وكشف متابعة الرصد بنسبه لكل مادة وفترة</td></tr>
+    <tr><td class="code num">2-2-1-3</td><td>تحلل المدرسة نتائج التقويم، وتوظفها في تحسين عمليات التعليم والتعلم والتقويم</td><td>تحليل النتائج لكل سؤال وفصل، والخطط العلاجية والإثرائية، واختبار التحقق</td><td>تقرير تحليل النتائج بتوقيع المعلم، وقياس الأثر قبل الخطة وبعدها</td></tr>
+    <tr><td class="code num">2-2-1-4</td><td>تقدم المدرسة التغذية الراجعة للمتعلمين وأولياء أمورهم، وتتابع تقدمهم بشكل مستمر</td><td>نتائج الاختبارات القصيرة في حساب الطالب وولي أمره، ونشر النتائج</td><td>النتائج المنشورة، والإشعارات المرسلة</td></tr>
     <tr class="grp"><td colspan="4">نواتج التعلم · معيار التطور الشخصي والصحي والاجتماعي</td></tr>
-    <tr><td class="code">3-2-1-1</td><td>يظهر المتعلمون الاعتزاز بالقيم والهوية الوطنية</td><td>المناسبات الوطنية ومشاركة الطلاب فيها</td><td>تقارير الأحداث، وشهادات المشاركة</td></tr>
-    <tr><td class="code">3-2-1-4</td><td>يشارك المتعلمون في الأنشطة المجتمعية والأعمال التطوعية</td><td>الأحداث بمشاركيها، وموافقات أولياء الأمور، والشهادات</td><td>كشوف المشاركين والحضور، والشهادات</td></tr>
-    <tr><td class="code">3-2-1-5</td><td>يلتزم المتعلمون بقواعد السلوك والانضباط المدرسي</td><td>نسب الحضور، والتأخر، والإنذارات، وملف الطالب الشامل</td><td>الإحصاء والنسب، وملف الطالب، وتقارير الفصول</td></tr>
+    <tr><td class="code num">3-2-1-1</td><td>يظهر المتعلمون الاعتزاز بالقيم والهوية الوطنية</td><td>المناسبات الوطنية ومشاركة الطلاب فيها</td><td>تقارير الأحداث، وشهادات المشاركة</td></tr>
+    <tr><td class="code num">3-2-1-4</td><td>يشارك المتعلمون في الأنشطة المجتمعية والأعمال التطوعية</td><td>الأحداث بمشاركيها، وموافقات أولياء الأمور، والشهادات</td><td>كشوف المشاركين والحضور، والشهادات</td></tr>
+    <tr><td class="code num">3-2-1-5</td><td>يلتزم المتعلمون بقواعد السلوك والانضباط المدرسي</td><td>نسب الحضور، والتأخر، والإنذارات، وملف الطالب الشامل</td><td>الإحصاء والنسب، وملف الطالب، وتقارير الفصول</td></tr>
     <tr class="grp"><td colspan="4">البيئة المدرسية · معيار الأمن والسلامة</td></tr>
-    <tr><td class="code">4-2-1-1</td><td>تتوافر في مبنى المدرسة ومرافقها جميع متطلبات الأمن والسلامة</td><td>مسؤول الأمن والسلامة، والمناوبة والإشراف، ومتابعة من بصم ولم يحضر</td><td>جداول المناوبة والإشراف وتقريرها، وتقرير الطالب المفقود خلال اليوم</td></tr>
+    <tr><td class="code num">4-2-1-1</td><td>تتوافر في مبنى المدرسة ومرافقها جميع متطلبات الأمن والسلامة</td><td>مسؤول الأمن والسلامة، والمناوبة والإشراف، ومتابعة من بصم ولم يحضر</td><td>جداول المناوبة والإشراف وتقريرها، وتقرير الطالب المفقود خلال اليوم</td></tr>
   </table>
-  <div class="grid g2" style="margin-top:4mm">
-    <div class="card"><h4><span class="ic" data-i="chart"></span>بيانات موثوقة للقرار</h4><p>تخدم البوابة هدفَي التقويم: «دعم القيادات وصناع القرار في اتخاذ القرارات بيانات موثوقة» و«تعزيز مشاركة المعلمين وأولياء الأمور في عمليات تقويم الأداء المدرسي».</p></div>
-    <div class="card"><h4><span class="ic" data-i="doc"></span>شاهد جاهز عند الطلب</h4><p>كل شاهد مؤرخ بالصيغة الموحدة (الهجري - الميلادي) ومنسوب لمن أصدره، ويُطبع بترويسة وزارة التعليم والمدرسة أو يُصدَّر إلى Excel.</p></div>
+  <div class="mr-row c2">
+    <div class="mr-box tint"><h3>{chart}بيانات موثوقة للقرار</h3><p>تخدم البوابة هدفَي التقويم: «دعم القيادات وصناع القرار في اتخاذ القرارات بيانات موثوقة» و«تعزيز مشاركة المعلمين وأولياء الأمور في عمليات تقويم الأداء المدرسي».</p></div>
+    <div class="mr-box tint"><h3>{doc}شاهد جاهز عند الطلب</h3><p>كل شاهد مؤرخ بالصيغة الموحدة (الهجري - الميلادي) ومنسوب لمن أصدره، ويُطبع بترويسة وزارة التعليم والمدرسة أو يُصدَّر إلى Excel.</p></div>
   </div>
-  <div class="note">23 مؤشرًا من ملحق (أ)، منها أربعة أُضيفت في هذا الإصدار وخدمتها <b style="color:var(--g)">بالخط الأخضر</b>: 1-2-1-2، و1-4-1-5، و1-4-1-7، و2-2-1-2. والمؤشرات المتعلقة بالاختبارات الوطنية والمبنى المدرسي والكادر والموارد المالية لا تُقاس من البوابة، فلم تُدرج في الجدول.</div>
-</section>
+  <p class="mr-note">23 مؤشرًا من ملحق (أ). ولم تُدرج مؤشرات الاختبارات الوطنية والمبنى والكادر والموارد المالية لأنها لا تُقاس من البوابة.</p>
+</template>
 
 <!-- ======================= 15 الحوكمة ======================= -->
-<section class="page" data-label="الحوكمة والأمن" data-toc="الحوكمة والأمن وحماية البيانات">
-  <div class="kick"><span class="num">15</span>الحوكمة والأمن وحماية البيانات</div>
-  <h1>بيانات الطلاب أمانة تُحمى بطبقات</h1>
-  <p class="lead">صُممت البوابة على مبدأ «أقل صلاحية لازمة»: يرى كل مستخدم ما يخصه فقط، ويُسجَّل كل إجراء حساس باسم صاحبه ووقته.</p>
-  <div class="grid g2">
-    <div class="card"><h4><span class="ic" data-i="shield"></span>حماية على مستوى السجل</h4><p>292 سياسة في قاعدة البيانات تحدد من يقرأ كل سجل ومن يعدّله، فلا يرى المعلم إلا طلابه، ولا يرى ولي الأمر إلا أبناءه.</p></div>
-    <div class="card"><h4><span class="ic" data-i="key"></span>هوية ودخول</h4><p>الدخول برقم الهوية، وتغيير كلمة المرور إجباري في أول دخول، وخروج تلقائي لحسابات الإدارة عند الخمول.</p></div>
-    <div class="card"><h4><span class="ic" data-i="doc"></span>سجل العمليات</h4><p>يُسجّل من أنشأ وعدّل واعتمد، مع سجل للدخول والخروج يراجعه الدعم الفني.</p></div>
-    <div class="card"><h4><span class="ic" data-i="buoy"></span>نسخ احتياطي مزدوج</h4><p>نسخة يومية تُحفظ 7 أيام، ونسخة أسبوعية مشفّرة خارج الخادم تُحفظ 90 يومًا، تشمل البيانات والملفات.</p></div>
-    <div class="card"><h4><span class="ic" data-i="flask"></span>نسخة تجريبية</h4><p>كل تحديث يُجرَّب أولًا على نسخة مستقلة ببيانات وهمية قبل وصوله للمستخدمين.</p></div>
-    <div class="card"><h4><span class="ic" data-i="clock"></span>وضع الصيانة</h4><p>يُوقف البوابة مؤقتًا عن الجميع عدا الدعم الفني عند أي عمل حساس.</p></div>
-    <div class="card"><h4><span class="ic" data-i="check"></span>اعتماد متدرّج</h4><p>النماذج الرسمية والأحداث والإشعارات العامة تمر بمراجعة واعتماد قبل صدورها.</p></div>
-    <div class="card"><h4><span class="ic" data-i="users"></span>خصوصية الصور</h4><p>لا يظهر طالب في صورة منشورة إلا بموافقة ولي أمره المسجلة في البوابة.</p></div>
-    <div class="card"><h4><span class="ic" data-i="link"></span>روابط مؤقتة<span class="new">جديد</span></h4><p>التواقيع والأختام وشواهد الملف الرقمي في مخازن خاصة، تُفتح برابط مؤقت لمن يملك حق رؤيتها فقط.</p></div>
-    <div class="card"><h4><span class="ic" data-i="lock"></span>بيانات محجوبة<span class="new">جديد</span></h4><p>جوالات المعلمين محجوبة عن غير الإداريين، وحالات التوجيه سرية لموجه الصف ومن فوقه.</p></div>
+<template data-page data-no="15" data-toc="الحوكمة والأمن وحماية البيانات" data-title="بيانات الطلاب أمانة تُحمى بطبقات" data-sub="مبدأ «أقل صلاحية لازمة»: يرى كل مستخدم ما يخصه فقط، ويُسجَّل كل إجراء حساس باسم صاحبه ووقته">
+  <div class="mr-row c2">
+    <div class="mr-box"><h3>{shield}حماية على مستوى السجل</h3><p>292 سياسة في قاعدة البيانات تحدد من يقرأ كل سجل ومن يعدّله، فلا يرى المعلم إلا طلابه، ولا يرى ولي الأمر إلا أبناءه.</p></div>
+    <div class="mr-box"><h3>{key}هوية ودخول</h3><p>الدخول برقم الهوية، وتغيير كلمة المرور إجباري في أول دخول، وخروج تلقائي لحسابات الإدارة عند الخمول.</p></div>
+    <div class="mr-box"><h3>{doc}سجل العمليات</h3><p>يُسجّل من أنشأ وعدّل واعتمد، مع سجل للدخول والخروج يراجعه الدعم الفني.</p></div>
+    <div class="mr-box"><h3>{buoy}نسخ احتياطي مزدوج</h3><p>نسخة يومية تُحفظ 7 أيام، ونسخة أسبوعية مشفّرة خارج الخادم تُحفظ 90 يومًا، تشمل البيانات والملفات.</p></div>
+    <div class="mr-box"><h3>{flask}نسخة تجريبية</h3><p>كل تحديث يُجرَّب أولًا على نسخة مستقلة ببيانات وهمية قبل وصوله للمستخدمين.</p></div>
+    <div class="mr-box"><h3>{clock}وضع الصيانة</h3><p>يُوقف البوابة مؤقتًا عن الجميع عدا الدعم الفني عند أي عمل حساس.</p></div>
+    <div class="mr-box"><h3>{check}اعتماد متدرّج</h3><p>النماذج الرسمية والأحداث والإشعارات العامة تمر بمراجعة واعتماد قبل صدورها.</p></div>
+    <div class="mr-box"><h3>{users}خصوصية الصور</h3><p>لا يظهر طالب في صورة منشورة إلا بموافقة ولي أمره المسجلة في البوابة.</p></div>
+    <div class="mr-box"><h3>{link}روابط مؤقتة<span class="new">جديد</span></h3><p>التواقيع والأختام وشواهد الملف الرقمي في مخازن خاصة، تُفتح برابط مؤقت لمن يملك حق رؤيتها فقط.</p></div>
+    <div class="mr-box"><h3>{lock}بيانات محجوبة<span class="new">جديد</span></h3><p>جوالات المعلمين محجوبة عن غير الإداريين، وحالات التوجيه سرية لموجه الصف ومن فوقه.</p></div>
   </div>
-</section>
+</template>
 
 <!-- ======================= 16 الدعم ======================= -->
-<section class="page" data-label="الدعم والاستدامة" data-toc="الدعم والتدريب واستدامة التشغيل">
-  <div class="kick"><span class="num">16</span>الدعم والتدريب واستدامة التشغيل</div>
-  <h1>مستخدم مدعوم، ونظام يُقاس أداؤه</h1>
-  <div class="grid g2">
-    <div class="card"><h4><span class="ic" data-i="buoy"></span>مركز الدعم والمساندة</h4><p>طلب دعم من داخل البوابة، أو دون تسجيل دخول لمن تعثّر دخوله، باسمه ورقم جواله. ولكل طلب تذكرة ومتابعة وتقرير. وصل 20 طلبًا وملاحظة.</p></div>
-    <div class="card"><h4><span class="ic" data-i="pen"></span>رأيك يصنع الفرق</h4><p>قناة دائمة للاقتراحات والملاحظات والشكاوى، تصل الدعم الفني ويُرد عليها.</p></div>
-    <div class="card"><h4><span class="ic" data-i="msg"></span>التدريب الذاتي</h4><p>132 إجراءً موثقًا بالخطوات في دليل الاستخدام، وأدلة PDF مصوّرة لكل فئة وللخدمات الجديدة، ورسالة ترحيب عند الدخول.</p></div>
-    <div class="card"><h4><span class="ic" data-i="chart"></span>مؤشرات التشغيل</h4><p>إحصائية استخدام لكل خدمة ونموذج وقالب، ومؤشرات حالة الموقع وقاعدة البيانات للدعم الفني، ولقطة يومية لها.</p></div>
+<template data-page data-no="16" data-toc="الدعم والتدريب واستدامة التشغيل" data-title="مستخدم مدعوم، ونظام يُقاس أداؤه" data-sub="الدعم والتدريب واستدامة التشغيل">
+  <div class="mr-row c2">
+    <div class="mr-box"><h3>{buoy}مركز الدعم والمساندة</h3><p>طلب دعم من داخل البوابة، أو دون تسجيل دخول لمن تعثّر دخوله. ولكل طلب تذكرة ومتابعة وتقرير. وصل 20 طلبًا وملاحظة.</p></div>
+    <div class="mr-box"><h3>{pen}رأيك يصنع الفرق</h3><p>قناة دائمة للاقتراحات والملاحظات والشكاوى، تصل الدعم الفني ويُرد عليها.</p></div>
+    <div class="mr-box"><h3>{book}التدريب الذاتي</h3><p>132 إجراءً موثقًا بالخطوات في دليل الاستخدام، وأدلة PDF مصوّرة لكل فئة وللخدمات الجديدة، ورسالة ترحيب عند الدخول.</p></div>
+    <div class="mr-box"><h3>{chart}مؤشرات التشغيل</h3><p>إحصائية استخدام لكل خدمة ونموذج وقالب، ومؤشرات حالة الموقع وقاعدة البيانات للدعم الفني، ولقطة يومية لها.</p></div>
   </div>
-  <h3>الخدمات الآلية في الخلفية</h3>
-  <table>
-    <tr><th style="width:38mm">الخدمة</th><th>ما تفعله</th><th style="width:44mm">متى</th></tr>
+  <div class="mr-box"><h3>{clock}الخدمات الآلية في الخلفية</h3>
+  <table class="mr-table">
+    <tr><th style="width:150px">الخدمة</th><th>ما تفعله</th><th style="width:150px">متى</th></tr>
     <tr><td><b>استقبال البصمة</b></td><td>تستقبل سجلات أجهزة البصمة وتربطها بالطلاب، وتضبط ساعة الأجهزة من الخادم</td><td>لحظيًا</td></tr>
     <tr><td><b>تذكير التحضير</b></td><td>تنبّه المعلم الذي لم يحضّر حصته الجارية</td><td>كل 5 دقائق خلال الدوام</td></tr>
     <tr><td><b>الاعتماد الآلي</b></td><td>تعتمد الغياب الرسمي ونسبة الحضور وتُشعر الإدارة</td><td>بعد الحصة الثانية ونهاية اليوم</td></tr>
-    <tr><td><b>الملخص اليومي</b></td><td>إشعار واحد للإدارة بالحصص التي لم تُحضّر ومعلميها</td><td>2:20 مساءً</td></tr>
+    <tr><td><b>الملخص اليومي</b></td><td>إشعار واحد للإدارة بالحصص التي لم تُحضّر ومعلميها</td><td><span class="num">2:20</span> مساءً</td></tr>
     <tr><td><b>إرسال الإشعارات</b></td><td>توصيل الإشعارات إلى الجوالات</td><td>عند كل إرسال</td></tr>
-    <tr><td><b>مراقبة الموقع</b></td><td>لقطات دورية لحالة الموقع ومؤشراته، ولقطة يومية تُحفظ</td><td>دوريًا، و11:55 مساءً</td></tr>
+    <tr><td><b>مراقبة الموقع</b></td><td>لقطات دورية لحالة الموقع ومؤشراته، ولقطة يومية تُحفظ</td><td>دوريًا، و<span class="num">11:55</span> مساءً</td></tr>
     <tr><td><b>روابط التواقيع والأختام</b><span class="new">جديد</span></td><td>روابط مؤقتة لتواقيع النماذج والإحالات وتوقيع الوكيل على جداول الاختبارات</td><td>عند فتح المستند</td></tr>
     <tr><td><b>شواهد الملف الرقمي</b><span class="new">جديد</span></td><td>رابط مؤقت لخمس دقائق يعاين به الزائر شاهد المعلم دون دخول</td><td>عند فتح الشاهد</td></tr>
-  </table>
-</section>
+  </table></div>
+</template>
 
 <!-- ======================= 17 التحول الرقمي ======================= -->
-<section class="page" data-label="التحول الرقمي وخارطة الطريق" data-toc="التحول الرقمي وخارطة الطريق">
-  <div class="kick"><span class="num">17</span>التحول الرقمي وخارطة الطريق</div>
-  <h1>أثر ملموس، وتطوير لا يتوقف</h1>
-  <div class="grid g3">
-    <div class="stat"><b style="font-size:18pt">أقل ورق</b><div class="s">النماذج والشهادات والتعاميم والتطوير المهني تصدر وتُعتمد إلكترونيًا، وتُطبع عند الحاجة فقط.</div></div>
-    <div class="stat"><b style="font-size:18pt">وقت أقل</b><div class="s">اعتماد الغياب والتذكير والملخص اليومي والتصحيح الجماعي آلية بالكامل بدل المتابعة اليدوية.</div></div>
-    <div class="stat"><b style="font-size:18pt">قرار أسرع</b><div class="s">الإدارة ترى نسب اليوم لحظيًا، والموجه يرى الإنذار المبكر، وولي الأمر يعرف في اليوم نفسه.</div></div>
+<template data-page data-no="17" data-toc="التحول الرقمي وخارطة الطريق" data-title="أثر ملموس، وتطوير لا يتوقف" data-sub="التحول الرقمي وخارطة الطريق">
+  <div class="mr-tiles" style="grid-template-columns:repeat(3,1fr)">
+    <div class="mr-tile"><b>أقل ورق</b><span>النماذج والشهادات والتعاميم والتطوير المهني تصدر وتُعتمد إلكترونيًا، وتُطبع عند الحاجة فقط.</span></div>
+    <div class="mr-tile"><b>وقت أقل</b><span>اعتماد الغياب والتذكير والملخص اليومي والتصحيح الجماعي آلية بالكامل بدل المتابعة اليدوية.</span></div>
+    <div class="mr-tile"><b>قرار أسرع</b><span>الإدارة ترى نسب اليوم لحظيًا، والموجه يرى الإنذار المبكر، وولي الأمر يعرف في اليوم نفسه.</span></div>
   </div>
-  <h3>خارطة الطريق</h3>
-  <div class="tl">
-    <div class="it"><div class="dot"></div><div class="card"><div class="mini" style="font-weight:700">الآن</div><b>تشغيل كامل</b><p>الحضور والبصمة، والنماذج، والاختبارات ودوراتها، والأحداث، والاستوديو، والتواصل، والتوجيه الطلابي، والتطوير المهني، وتقييم الأداء، وملف المعلم الرقمي.</p></div></div>
-    <div class="it"><div class="dot"></div><div class="card"><div class="mini" style="font-weight:700">مستمر</div><b>تطوير مبني على الملاحظات</b><p>تحديثات منتظمة من مقترحات المستخدمين عبر «رأيك يصنع الفرق» ومركز الدعم، تُجرَّب أولًا على النسخة التجريبية.</p></div></div>
-    <div class="it"><div class="dot"></div><div class="card"><div class="mini" style="font-weight:700">لاحقًا</div><b>توسيع الشراكة وقياس الأثر</b><p>مبادرات طلابية وأنشطة مرتبطة بحسابات الطلاب، وتعميم ملف المعلم الرقمي على كل المعلمين، وقياس دوري لرضا المستفيدين.</p></div></div>
+  <div class="road">
+    <div class="mr-box"><small>الآن</small><h3 style="margin:2px 0 4px">تشغيل كامل</h3><p>الحضور والبصمة، والنماذج، والاختبارات ودوراتها، والأحداث، والاستوديو، والتواصل، والتوجيه الطلابي، والتطوير المهني، وتقييم الأداء، وملف المعلم الرقمي.</p></div>
+    <div class="mr-box"><small>مستمر</small><h3 style="margin:2px 0 4px">تطوير مبني على الملاحظات</h3><p>تحديثات منتظمة من مقترحات المستخدمين عبر «رأيك يصنع الفرق» ومركز الدعم، تُجرَّب أولًا على النسخة التجريبية.</p></div>
+    <div class="mr-box"><small>لاحقًا</small><h3 style="margin:2px 0 4px">توسيع الشراكة وقياس الأثر</h3><p>مبادرات طلابية وأنشطة مرتبطة بحسابات الطلاب، وتعميم ملف المعلم الرقمي على كل المعلمين، وقياس دوري لرضا المستفيدين.</p></div>
   </div>
-  <div class="band" style="margin-top:4mm"><b style="font-size:12.5pt;line-height:1.8">بوابة مكة الثانوية الرقمية ليست مشروعًا انتهى، بل أداة عمل يومية تتطور مع احتياج المدرسة، وتحفظ لكل جهد مدرسي شاهده.</b></div>
-  <div class="sig">
-    <div>إعداد وتنفيذ المبادرة<b>محمد بن حسن بن حسين الحازمي</b><small>محضر معمل الحاسب الآلي</small></div>
-    <div>اعتماد مدير المدرسة<b>عبدالله بن حسن سلمان الفيفي</b></div>
+  <div class="mr-high"><h3>{spark}خلاصة</h3><ul><li style="font-size:14px;font-weight:600">بوابة مكة الثانوية الرقمية ليست مشروعًا انتهى، بل أداة عمل يومية تتطور مع احتياج المدرسة، وتحفظ لكل جهد مدرسي شاهده.</li></ul></div>
+  <div class="mr-signs" style="margin-top:auto">
+    <div><small>إعداد وتنفيذ المبادرة</small><b>محمد بن حسن بن حسين الحازمي</b><div class="sig"><span class="ln"></span></div></div>
+    <div class="stamp">الختم</div>
+    <div><small>اعتماد مدير المدرسة</small><b>عبدالله بن حسن سلمان الفيفي</b><div class="sig"><span class="ln"></span></div></div>
   </div>
-</section>
+</template>
 
+</div>
 <script>
-// الأيقونات (خطوط بأسلوب lucide)
+// الأيقونات الخطية (بأسلوب أيقونات البوابة في ReportKit.jsx)
 const I = {
-  check:'<path d="M20 6 9 17l-5-5"/>', shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
-  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  check:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>', shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5c2 .6 3.5 2.4 3.5 5.5"/>',
   bell:'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
   id:'<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2"/><path d="M14 10h4M14 14h4"/>',
-  award:'<circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/>',
+  award:'<circle cx="12" cy="9" r="6"/><path d="M8.5 14L7 22l5-3 5 3-1.5-8"/>',
   book:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
-  target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
   heart:'<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/>',
   send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
   quiz:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
-  clip:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
-  chart:'<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>',
-  userx:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/>',
-  note:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
-  cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
-  finger:'<path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4M14 13.12c0 2.38 0 6.38-1 8.88M17.29 21.02c.12-.6.43-2.3.5-3.02M2 12a10 10 0 0 1 18-6M2 16h.01M21.8 16c.2-2 .13-5.35 0-6M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2M8.65 22c.21-.66.45-1.32.57-2M9 6.8a6 6 0 0 1 9 5.2v2"/>',
-  doc:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8"/>',
+  clip:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M9 10h6M9 14h6M9 18h3"/>',
+  chart:'<path d="M4 20V4M4 20h16"/><path d="M8 16v-4M12 16V8M16 16v-6"/>',
+  userx:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.5 3-5.5 6.5-5.5s6.5 2 6.5 5.5"/><path d="m17 8 5 5M22 8l-5 5"/>',
+  note:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  cal:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  finger:'<path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4M14 13.12c0 2.38 0 6.38-1 8.88M17.29 21.02c.12-.6.43-2.3.5-3.02M2 12a10 10 0 0 1 18-6M21.8 16c.2-2 .13-5.35 0-6M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2M9 6.8a6 6 0 0 1 9 5.2v2"/>',
   palette:'<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 0 0 0 20c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a6 6 0 0 0 6-6c0-4.9-4.5-8.6-10-8.6z"/>',
   home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
-  pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+  pen:'<path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/>',
   msg:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/>',
-  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   flag:'<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>',
-  alert:'<path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3z"/><path d="M12 9v4M12 17h.01"/>',
-  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  alert:'<path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5v.5"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   swap:'<path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/>',
   key:'<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3"/>',
-  buoy:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="m4.9 4.9 4.3 4.3M14.8 14.8l4.3 4.3M14.8 9.2l4.3-4.3M4.9 19.1l4.3-4.3"/>',
+  buoy:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="m5.6 5.6 3.6 3.6M14.8 14.8l3.6 3.6M14.8 9.2l3.6-3.6M5.6 18.4l3.6-3.6"/>',
   flask:'<path d="M9 2h6M10 2v7L4 20a1 1 0 0 0 .9 1.5h14.2A1 1 0 0 0 20 20L14 9V2"/><path d="M7 15h10"/>',
-  link:'<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>'
+  link:'<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+  grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  phone:'<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>',
+  spark:'<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5L18 18M6 18l2.5-2.5M15.5 8.5L18 6"/>',
+  list:'<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>'
 };
-document.querySelectorAll("[data-i]").forEach((e) => { e.innerHTML = `<svg viewBox="0 0 24 24">${I[e.dataset.i] || ""}</svg>`; });
+const svg = (k) => `<svg viewBox="0 0 24 24">${I[k] || ""}</svg>`;
+const fill = (h) => h.replace(/\{(\w+)\}/g, (m, k) => (I[k] ? svg(k) : m));
+
+const theme = new URLSearchParams(location.search).get("theme") === "official" ? "official" : "light";
+const ICON = "../../src/assets/icon-mint.png", MOE = "../../src/assets/moe-logo.png";
+const GOV = "المملكة العربية السعودية<br>وزارة التعليم<br>الإدارة العامة للتعليم بمنطقة مكة المكرمة<b>مدرسة مكة الثانوية</b>";
+const TITLE = "تقرير بوابة مكة الثانوية الرقمية";
+const FOOT = "تقرير لجنة التقويم والاعتماد المدرسي";
+
+const tpls = [...document.querySelectorAll("template")];
+const total = tpls.length;
+const out = tpls.map((t, i) => {
+  const body = fill(t.innerHTML);
+  if (t.hasAttribute("data-cover")) {
+    const head = theme === "official"
+      ? `<div class="stu-gov"><div class="lines">${GOV}</div><div class="logos"><img src="${MOE}"><img src="${ICON}"></div></div><div class="stu-rule"></div>`
+      : `<div class="stu-bar"><div class="stu-brand"><img src="${ICON}"><div><b>بوابة مكة الثانوية الرقمية</b><span>مدرسة مكة الثانوية</span></div></div><div class="stu-year num">1448 - 1449</div></div>`;
+    return `<div class="stu stu-cover stu-portrait stu-${theme} mr mr-cover sheet"><div class="stu-bgbox"><div class="stu-tex"></div><div class="stu-blob"></div><div class="stu-cube a"></div><div class="stu-cube b"></div><div class="stu-progress"></div></div>
+      <div class="stu-page">${head}${body}<div class="stu-foot"><span>بوابة مكة الثانوية الرقمية · ${FOOT}</span><span class="site">makkahsec.com</span></div></div></div>`;
+  }
+  const d = t.dataset;
+  const head = theme === "official"
+    ? `<div class="mr-gov"><div class="lines">${GOV}</div><div class="ttl"><b>${TITLE}</b><span>الإصدار الثاني · <span class="num">17/10/2026</span></span></div><div class="logos"><img src="${MOE}"><img src="${ICON}"></div></div><div class="mr-rule"></div>`
+    : `<div class="mr-head"><div class="brand"><img src="${ICON}"><div><b>${TITLE}</b><span>بوابة مكة الثانوية الرقمية · مدرسة مكة الثانوية</span></div></div><div class="meta"><span class="mr-pill">الإصدار الثاني</span><span class="mr-pill solid num">17/10/2026</span></div></div>`;
+  const no = d.no ? `<small>القسم</small><b class="num">${d.no}</b>` : svg("list");
+  const sec = `<div class="mr-sec"><div class="no">${no}</div><div><h2>${d.title}</h2>${d.sub ? `<p>${d.sub}</p>` : ""}</div><div class="grule"></div></div>`;
+  return `<div class="stu stu-portrait stu-${theme} mr sheet" data-toc="${d.toc || ""}" data-no="${d.no || ""}"><div class="mr-frame"></div><div class="mr-page">${head}${sec}<div class="mr-body">${body}</div>
+    <div class="mr-foot"><span>بوابة مكة الثانوية الرقمية · ${FOOT}</span><span class="pg">صفحة <span class="num">${i + 1}</span> من <span class="num">${total}</span></span><span class="site">makkahsec.com</span></div></div></div>`;
+});
+document.getElementById("doc").innerHTML = out.join("");
+
+// المحتويات
+const sheets = [...document.querySelectorAll(".sheet")];
+document.getElementById("toc").innerHTML = sheets.filter((s) => s.dataset.toc)
+  .map((s) => `<div><span><span class="no num">${s.dataset.no}</span> ${s.dataset.toc}</span><span class="num">${sheets.indexOf(s) + 1}</span></div>`).join("");
 
 // أقسام دليل الاستخدام وعدد إجراءاتها (src/pages/Help.jsx)
 const BARS = [["شؤون الطلاب",20],["استوديو البوابة",18],["النماذج والشهادات",16],["المعلم",12],["الطالب وولي الأمر",11],["الاختبارات القصيرة",10],["الدخول والحساب",9],["الأحداث والمناسبات",9],["الشؤون التعليمية",8],["المحتوى والإشعارات",6],["الدعم الفني",6],["الحسابات والصلاحيات",5],["النتائج",1],["التوجيه الطلابي",1]];
-document.getElementById("bars").innerHTML = BARS.map(([l, v]) =>
-  `<div class="r"><span class="l">${l}</span><span class="tr"><i style="width:${(v / 20) * 100}%"></i></span><span class="v">${v}</span></div>`).join("");
-
-// الترويسة والتذييل وأرقام الصفحات والمحتويات
-const pages = [...document.querySelectorAll(".page")];
-const total = pages.length, pad = (n) => String(n).padStart(2, "0");
-const toc = [];
-pages.forEach((p, i) => {
-  if (p.dataset.toc) toc.push([p.dataset.toc, i + 1]);
-  if (!p.dataset.label) return;
-  p.insertAdjacentHTML("afterbegin", `<div class="hdr"><span class="b"><img src="img/logo.png">تقرير بوابة مكة الثانوية الرقمية</span><span class="l">${p.dataset.label}</span></div>`);
-  p.insertAdjacentHTML("beforeend", `<div class="ftr"><span>مدرسة مكة الثانوية · makkahsec.com</span><span class="ltr"><span>17/10/2026 - 06/05/1448</span></span><span class="n ltr">${pad(i + 1)} / ${total}</span></div>`);
-});
-let k = 0;
-document.getElementById("toc").innerHTML = toc.map(([t, n]) =>
-  `<li><b>${t === "جديد هذا الإصدار" ? "★" : pad(++k)}</b><span>${t}</span><em>${n}</em></li>`).join("");
+document.getElementById("bars").innerHTML = BARS.map(([t, v]) =>
+  `<div class="mr-bar wide"><span class="t">${t}</span><span class="tr"><i style="width:${(v / 20) * 100}%"></i></span><span class="n num">${v}</span></div>`).join("");
 </script>
 </body>
 </html>
