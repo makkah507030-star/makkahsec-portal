@@ -151,7 +151,7 @@ export default function Feedback() {
           </Link>
           <Link
             to="/"
-            className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep"
+            className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-mint-light hover:text-mint-deep"
           >
             الرئيسية
           </Link>
@@ -171,7 +171,7 @@ export default function Feedback() {
           href="https://makkah507030.netlify.app/"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-6 flex items-center gap-4 rounded-card border border-line bg-white p-5 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
+          className="mt-6 flex items-center gap-4 rounded-card border border-line bg-white p-5 transition-colors hover:border-mint-light hover:bg-mint-tint/40"
         >
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mint-tint text-mint-deep">
             <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
@@ -227,7 +227,7 @@ export default function Feedback() {
                       <Link
                         key={t.id}
                         to={`/ticket/${t.id}`}
-                        className="flex items-center gap-3 rounded-card border border-line bg-white p-3.5 transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40"
+                        className="flex items-center gap-3 rounded-card border border-line bg-white p-3.5 transition-colors hover:border-mint-light hover:bg-mint-tint/40"
                       >
                         <span className={`chip shrink-0 ${st.cls}`}>{st.label}</span>
                         <p className="min-w-0 flex-1 truncate text-sm text-ink">

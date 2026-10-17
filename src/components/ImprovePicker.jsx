@@ -43,7 +43,7 @@ export default function ImprovePicker({ scores, notes, text, textLabel, value, o
           <div key={x.id} className={`rounded-sm2 border bg-paper p-2.5 ${x.on ? "border-mint-deep/50" : "border-line"}`}>
             <div className="flex flex-wrap items-center gap-2">
               <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-ink">
-                <input type="checkbox" className="accent-[#3E6350]" checked={x.on} onChange={(e) => set(x.id, { on: e.target.checked })} />
+                <input type="checkbox" className="accent-mint-deep" checked={x.on} onChange={(e) => set(x.id, { on: e.target.checked })} />
                 أوصي بها
               </label>
               <span className="chip mr-auto shrink-0 text-[11px]"

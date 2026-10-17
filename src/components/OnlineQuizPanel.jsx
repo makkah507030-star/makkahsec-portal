@@ -360,7 +360,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
       {box(msg)}
 
       {reopen != null && (
-        <div className="space-y-3 rounded-card border border-[#CCF2DB] bg-mint-tint p-3">
+        <div className="space-y-3 rounded-card border border-mint-light bg-mint-tint p-3">
           <p className="text-sm font-semibold text-ink">إعادة فتح الاختبار لمن لم يختبر</p>
           <p className="text-xs leading-relaxed text-muted">
             يُفتح الاختبار من الآن حتى الموعد الجديد، ويصل إشعار في الجرس وعلى الجوال إلى
@@ -384,7 +384,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
 
       <div className="flex flex-wrap gap-2">
         {missed.length > 0 && reopen == null && (
-          <button className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep"
+          <button className="rounded-pill border border-mint-light bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep"
                   disabled={busy} onClick={() => { setMsg(null); setReopen(toLocal(new Date(nextFive().getTime() + 24 * 3600e3))); }}>
             إعادة فتح لمن لم يختبر (<bdi className="num">{missed.length}</bdi>)
           </button>
@@ -395,7 +395,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
                 onClick={openForm}>تعديل المواعيد والطلاب</button>
         {now < closes && (
           <>
-            <button className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep"
+            <button className="rounded-pill border border-mint-light bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep"
                     disabled={busy} onClick={remind}>تذكير من لم يسلّم</button>
             <button className="rounded-pill border border-absent/40 px-3 py-1.5 text-xs font-semibold text-absent hover:bg-absent hover:text-white"
                     disabled={busy} onClick={closeNow}>إغلاق الآن</button>

@@ -317,10 +317,10 @@ export default function Attendance() {
     <div className="space-y-4">
       <MyDayBox periods={periods} marked={marked} />
 
-      <section className="overflow-hidden rounded-card border border-[#CCF2DB] bg-mint-tint">
+      <section className="overflow-hidden rounded-card border border-mint-light bg-mint-tint">
         <div className="px-5 pt-4">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-medium text-[#6AA786]">
+            <p className="text-xs font-medium text-mint-hover">
               {todayLabel()} · الحصة <span className="num">{active?.period_no}</span>
               {ptimeOf(active?.period_no) && (
                 <> · <span dir="rtl" className="inline-block">{fmtRange(ptimeOf(active?.period_no))}</span></>
@@ -343,9 +343,9 @@ export default function Attendance() {
           </p>
           <ClassNotesButton students={students} notesBy={notesBy} />
         </div>
-        <div className="mt-4 grid grid-cols-4 border-t border-[#CCF2DB] bg-white/50">
+        <div className="mt-4 grid grid-cols-4 border-t border-mint-light bg-white/50">
           {ORDER.map((k) => (
-            <div key={k} className="border-l border-[#CCF2DB] px-2 py-3 text-center last:border-l-0">
+            <div key={k} className="border-l border-mint-light px-2 py-3 text-center last:border-l-0">
               <p className={`num text-xl font-bold leading-none ${COUNT_TONE[k]}`}>
                 {counts[k]}
               </p>
@@ -592,10 +592,10 @@ function MyDayBox({ periods, marked }) {
   );
 
   return (
-    <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-5">
+    <section className="rounded-card border border-mint-light bg-mint-tint p-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-medium text-[#6AA786]">تحضير حصصك اليوم</p>
+          <p className="text-xs font-medium text-mint-hover">تحضير حصصك اليوم</p>
           <p className="mt-1.5 text-3xl font-bold leading-none text-mint-deep">
             <span className="num">{done.length}</span>
             <span className="text-lg font-medium text-muted"> / {total}</span>
@@ -610,7 +610,7 @@ function MyDayBox({ periods, marked }) {
       </div>
 
       <div className="mt-4 h-2 overflow-hidden rounded-pill bg-white">
-        <div className="h-full rounded-pill bg-[#6AA786] transition-all" style={{ width: `${pct}%` }} />
+        <div className="h-full rounded-pill bg-mint-hover transition-all" style={{ width: `${pct}%` }} />
       </div>
 
       {pending.length > 0 && (

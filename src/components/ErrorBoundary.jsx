@@ -48,7 +48,7 @@ export default class ErrorBoundary extends Component {
           </p>
           <button
             onClick={() => { try { sessionStorage.removeItem("mk_eb_reload"); } catch { /* تجاهل */ } window.location.href = "/"; }}
-            className="mt-5 inline-flex items-center justify-center rounded-full bg-[#3E6350] px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#345343]"
+            className="mt-5 inline-flex items-center justify-center rounded-full bg-mint-deep px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#345343]"
           >
             إعادة المحاولة
           </button>

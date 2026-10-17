@@ -293,7 +293,7 @@ function RubricInput({ field, value, onChange }) {
                   const on = !!e.check?.[r];
                   return (
                     <label key={r} className="flex cursor-pointer items-center gap-2 text-xs text-ink">
-                      <input type="checkbox" className="accent-[#3E6350]" checked={on}
+                      <input type="checkbox" className="accent-mint-deep" checked={on}
                              onChange={() => {
                                const check = [...(e.check ?? [])];
                                check[r] = !on;
@@ -327,7 +327,7 @@ function FieldPresets({ field, onPick }) {
       )}
       {list.map((t, i) => (
         <button key={i} type="button" onClick={() => onPick(t)}
-                className="max-w-full rounded-[14px] border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-right text-[11.5px] font-medium leading-relaxed text-mint-deep hover:bg-[#CCF2DB]">
+                className="max-w-full rounded-[14px] border border-mint-light bg-mint-tint px-3 py-1 text-right text-[11.5px] font-medium leading-relaxed text-mint-deep hover:bg-mint-light">
           {t}
         </button>
       ))}
@@ -1842,7 +1842,7 @@ export default function Forms({ view = "issue", openKey = null }) {
       </div>
 
       {!review && replies.filter((d) => d.status === "replied").length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-mint-light bg-mint-tint px-4 py-3">
           <p className="text-sm text-mint-deep">
             <span className="font-semibold">
               وصلك <span className="num">{replies.filter((d) => d.status === "replied").length}</span> ردًّا
@@ -1975,7 +1975,7 @@ export default function Forms({ view = "issue", openKey = null }) {
               .filter((t) => dept === "all" || (t.department ?? "school_admin") === dept)
               .map((t) => (
               <button key={t.id} onClick={() => start(t)}
-                      className="card p-4 text-right transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40">
+                      className="card p-4 text-right transition-colors hover:border-mint-light hover:bg-mint-tint/40">
                 <div className="flex items-start justify-between gap-2">
                   <p className="font-semibold text-ink">{t.title}</p>
                   <div className="flex shrink-0 flex-wrap justify-end gap-1">
@@ -2101,7 +2101,7 @@ export default function Forms({ view = "issue", openKey = null }) {
                 {/* قرار الإدارة وإغلاق المساءلة — يظهر بعد وصول الرد */}
                 {d.status === "replied" &&
                  (d.form_templates?.fields ?? []).filter((f) => f.after_reply && !f.legacy).length > 0 && (
-                  <div className="space-y-2 rounded-sm2 border border-[#CCF2DB] bg-mint-tint/40 p-3">
+                  <div className="space-y-2 rounded-sm2 border border-mint-light bg-mint-tint/40 p-3">
                     <p className="text-xs font-semibold text-mint-deep">قرار الإدارة</p>
                     {(d.form_templates?.fields ?? []).filter((f) => f.after_reply && !f.legacy).map((f) => (
                       <div key={f.name}>

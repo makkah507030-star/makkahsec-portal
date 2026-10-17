@@ -457,7 +457,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
             <li key={s.key}
               className={`flex shrink-0 items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium ${
                 now ? "bg-mint-deep text-white"
-                : ok ? "border border-[#CCF2DB] bg-mint-tint text-mint-deep"
+                : ok ? "border border-mint-light bg-mint-tint text-mint-deep"
                 : "border border-line bg-white text-faint"}`}>
               <span className={`num grid h-4 w-4 place-items-center rounded-full text-[10px] ${
                 now ? "bg-white/25" : ok ? "bg-white" : "bg-canvas"}`}>

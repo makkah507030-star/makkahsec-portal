@@ -32,7 +32,7 @@ export default function NewsList() {
           </Link>
           <Link
             to="/"
-            className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep"
+            className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-mint-light hover:text-mint-deep"
           >
             الرئيسية
           </Link>
@@ -55,7 +55,7 @@ export default function NewsList() {
             <Link
               key={n.id}
               to={`/news/${n.slug ?? n.id}`}
-              className="group overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-[#CCF2DB]"
+              className="group overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-mint-light"
             >
               <div className="aspect-[16/9] bg-mint-tint">
                 {n.cover_url ? (

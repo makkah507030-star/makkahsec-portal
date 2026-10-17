@@ -280,7 +280,7 @@ export function MissingTab() {
                className="rounded-sm2 border border-line px-3 py-2 text-sm" />
       </div>
 
-      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+      <p className="rounded-card border border-mint-light bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
         طالب ظهر حضوره مبكرًا (الحصة الأولى أو الثانية) ثم ظهر غيابه في حصة لاحقة
         حُضِّرت فعليًا — دليل مؤكد على مغادرته أو اختفائه، لا افتراضي.
       </p>

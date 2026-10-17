@@ -32,7 +32,7 @@ export default function ExamCountdown({ variant = "chip" }) {
 
   const tone = days <= 3 ? "border-absent/25 bg-absent/5 text-absent"
     : days <= 14 ? "border-warning/30 bg-warning-light text-warning"
-    : "border-[#CCF2DB] bg-mint-tint text-mint-deep";
+    : "border-mint-light bg-mint-tint text-mint-deep";
   const when = days === 1 ? "غدًا" : `بعد ${countAr(days, "day", { acc: true })}`;
 
   return (
@@ -50,10 +50,10 @@ export default function ExamCountdown({ variant = "chip" }) {
 
 function CountdownCard({ days }) {
   return (
-    <section className="rounded-card border border-[#CCF2DB] bg-mint-tint p-5">
+    <section className="rounded-card border border-mint-light bg-mint-tint p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-bold text-[#6AA786]">
+          <p className="text-sm font-bold text-mint-hover">
             العد التنازلي لموعد الاختبارات النهائية للفصل الدراسي الأول
           </p>
           <p className="mt-1 text-sm font-bold text-ink">الأحد {fmtDate(EXAM_DATE)}</p>

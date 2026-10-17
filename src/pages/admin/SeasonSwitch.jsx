@@ -116,7 +116,7 @@ function TimesEditor({ season, label, rows, isActive, otherSeasons, onDone, onCa
       <div className="space-y-2">
         {list.map((r, i) => (
           <div key={r.id ?? r._new} className={`flex flex-wrap items-center gap-2 rounded-sm2 border p-2 ${
-            r.kind === "period" ? "border-line bg-white" : "border-[#CCF2DB] bg-mint-tint"}`}>
+            r.kind === "period" ? "border-line bg-white" : "border-mint-light bg-mint-tint"}`}>
             <select className="field w-24 py-1.5 text-sm" value={r.kind === "period" ? "period" : "other"}
                     onChange={(e) => set(i, "kind", e.target.value === "period" ? "period" : (rows.find((x) => x.id === r.id && x.kind !== "period")?.kind ?? "break"))}>
               <option value="period">حصة</option>

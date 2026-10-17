@@ -351,7 +351,7 @@ export default function PermissionRequestPage() {
               </label>
             </div>
             <p className={`text-xs leading-relaxed ${
-              tempBadTime || (backTime && !tempPeriods.length) ? "text-[#A23B3B]" : "text-muted"}`}>
+              tempBadTime || (backTime && !tempPeriods.length) ? "text-absent" : "text-muted"}`}>
               {!backTime ? "حدّد وقت العودة، فتُحسب الحصص التي يغيبها تلقائيًا."
                 : tempBadTime ? "وقت العودة يجب أن يكون بعد وقت الخروج."
                 : !tempPeriods.length ? "لا تقع أي حصة في هذه المدة."
@@ -390,7 +390,7 @@ export default function PermissionRequestPage() {
             <button key={t} type="button" onClick={() => setNote(note === t ? "" : t)}
                     className={`rounded-pill border px-3 py-1 text-xs font-medium transition-colors ${
                       note === t ? "border-mint-deep bg-mint-deep text-white"
-                                 : "border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>
+                                 : "border-mint-light bg-mint-tint text-mint-deep hover:bg-mint-light"}`}>
               {t}
             </button>
           ))}
@@ -407,7 +407,7 @@ export default function PermissionRequestPage() {
       {result && (
         <p
           className={`text-sm ${
-            result.ok ? "text-mint-deep" : "text-[#A23B3B]"
+            result.ok ? "text-mint-deep" : "text-absent"
           }`}
         >
           {result.message}

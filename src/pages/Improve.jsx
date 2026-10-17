@@ -119,7 +119,7 @@ function Goal({ g, uid, boss, onDone, focus }) {
             <div className="mb-1.5 flex flex-wrap gap-1.5">
               {SUPPORT_PRESETS.map((t) => (
                 <button key={t} type="button" onClick={() => set("support", add(f.support, t))}
-                        className="rounded-[14px] border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] text-mint-deep hover:bg-[#CCF2DB]">{t}</button>
+                        className="rounded-[14px] border border-mint-light bg-mint-tint px-3 py-1 text-[11.5px] text-mint-deep hover:bg-mint-light">{t}</button>
               ))}
             </div>
             <textarea className="field min-h-[70px]" value={f.support} onChange={(e) => set("support", e.target.value)} />

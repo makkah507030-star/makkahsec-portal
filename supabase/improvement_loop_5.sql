@@ -5,6 +5,11 @@
 -- • تستدعيها dfile_data (teacher_dfile_3) وdfile_public (teacher_dfile_5) إن وُجدت، فلا يهم ترتيب التنفيذ.
 -- يُنفَّذ بعد الجزء 1 وبعد quiz_verify_1. تكرار التنفيذ آمن.
 
+-- أعمدة quiz_plans (round وimpact وmeasured_at) من quiz_verify_1. إعداد الموقع التجريبي يرتّب الملفات
+-- بتاريخ آخر commit، ولهذا الملف وquiz_verify_1 التاريخ نفسه فيسبقه أبجديًا. لذلك لا يُفحص متن الدالة
+-- عند إنشائها، كما في schema.sql، وتعمل بعد تنفيذ quiz_verify_1 أيًّا كان الترتيب.
+set check_function_bodies = off;
+
 create or replace function public.improve_impact(p_uid uuid)
 returns jsonb language sql stable security definer set search_path = public as $$
   with y as (select coalesce((select value from public.settings where key = 'active_year'), '') v)

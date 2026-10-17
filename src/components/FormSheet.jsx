@@ -241,7 +241,7 @@ function Frame({ theme }) {
   return (
     <>
       <div className="absolute inset-[7mm] border-[1.5px] border-mint-deep" style={INK} />
-      <div className="absolute inset-[9.5mm] border border-[#CCF2DB]" style={INK} />
+      <div className="absolute inset-[9.5mm] border border-mint-light" style={INK} />
     </>
   );
 }
@@ -431,7 +431,7 @@ function BlankTable({ field, value }) {
           <tr>
             {cols.map((c, i) => (
               <th key={i}
-                  className="border border-line bg-[#EDFAF2] px-2 py-1.5 text-center font-semibold text-mint-deep"
+                  className="border border-line bg-mint-tint px-2 py-1.5 text-center font-semibold text-mint-deep"
                   style={levelCell(c) ?? INK}>
                 {c}
               </th>
@@ -545,7 +545,7 @@ function StudentAdmission(p) {
     ...String(v.extra ?? "").split("\n").map((x) => x.trim()).filter(Boolean),
   ];
   const cell = "border border-line px-3 py-2";
-  const head = `${cell} bg-[#EDFAF2] text-center text-[12.5px] font-semibold text-mint-deep`;
+  const head = `${cell} bg-mint-tint text-center text-[12.5px] font-semibold text-mint-deep`;
   return (
     <div className="flex h-full flex-col p-[16mm]">
       <Head />
@@ -1288,7 +1288,7 @@ function Step({ n, title, children }) {
       <div className="flex items-center gap-2 px-3 py-[1px]" style={{ background: "#E9F4ED", ...INK }}>
         <span className="num grid h-[18px] w-[18px] place-items-center rounded-full text-[10.5px] font-bold leading-none text-white"
               style={{ background: "#3E6350", ...INK }}>{n}</span>
-        <span className="text-[13px] font-bold text-[#3E6350]">{title}</span>
+        <span className="text-[13px] font-bold text-mint-deep">{title}</span>
       </div>
       <div className="px-3 pb-0 pt-0">{children}</div>
     </section>
@@ -1417,7 +1417,7 @@ function AbsenceForm(p) {
             {opts.map((o, i) => (
               <div key={i} className="flex items-start gap-2 text-[13px] leading-[1.95] text-ink">
                 <span className="flex h-[1.95em] shrink-0 items-center">
-                  <span className="grid h-[17px] w-[17px] place-items-center rounded-full border border-[#3E6350] text-[10.5px] font-bold leading-none text-[#3E6350]"
+                  <span className="grid h-[17px] w-[17px] place-items-center rounded-full border border-mint-deep text-[10.5px] font-bold leading-none text-mint-deep"
                         style={INK}>{["أ", "ب", "ج"][i]}</span>
                 </span>
                 <span className="flex h-[1.95em] shrink-0 items-center [&>span]:ml-0 [&>span]:align-middle">
@@ -1434,7 +1434,7 @@ function AbsenceForm(p) {
           </Step>
         </div>
         <div className="mt-1.5 text-[11.5px] leading-[1.75] text-ink">
-          <p className="font-bold text-[#3E6350]">ملحوظات هامة</p>
+          <p className="font-bold text-mint-deep">ملحوظات هامة</p>
           <p><span className="num">1</span> - تستكمل الاستمارة من المدير المباشر وإصدار القرار بموجبه.</p>
           <p><span className="num">2</span> - إذا سبق إجازة نهاية الأسبوع غياب وألحقها غياب تحتسب مدة الغياب كاملة.</p>
           <p><span className="num">3</span> - يجب أن يوضح المتغيب أسباب غيابه فور تسلمه الاستمارة ويعيدها لمديره المباشر.</p>

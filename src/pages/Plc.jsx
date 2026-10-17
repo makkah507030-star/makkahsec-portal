@@ -192,7 +192,7 @@ export function Chips({ items, onPick }) {
     <div className="mt-1.5 flex flex-wrap gap-1.5">
       {items.map((t) => (
         <button key={t} type="button" onClick={() => onPick(t)}
-                className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
+                className="rounded-pill border border-mint-light bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-mint-light">
           + {t}
         </button>
       ))}
@@ -210,7 +210,7 @@ export function StageBar({ stage, reached, onPick, stages = PLC_STAGES }) {
           <button key={st.key} type="button" disabled={i > reached} onClick={() => onPick(i)}
             className={`flex shrink-0 items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
               active ? "bg-mint-deep text-white"
-              : i <= reached ? "border border-[#CCF2DB] bg-mint-tint text-mint-deep"
+              : i <= reached ? "border border-mint-light bg-mint-tint text-mint-deep"
               : "border border-line bg-white text-faint"}`}>
             <span className={`num grid h-4 w-4 place-items-center rounded-full text-[10px] ${
               active ? "bg-white/25" : i <= reached ? "bg-white" : "bg-canvas"}`}>{ok ? "✓" : i + 1}</span>

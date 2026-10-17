@@ -147,7 +147,7 @@ export default function ExamSchedules() {
       )}
 
       {term?.start_date && (
-        <div className="no-print rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+        <div className="no-print rounded-card border border-mint-light bg-mint-tint px-4 py-3">
           <p className="num text-sm font-semibold text-mint-deep">
             {fmtG(term.start_date)} — {fmtG(term.end_date)}
           </p>
@@ -171,7 +171,7 @@ export default function ExamSchedules() {
             <div key={s.id}
                  className={`card flex items-center gap-3 p-3.5 ${done ? "opacity-60" : ""}`}>
               {/* ورقة تقويم: اليوم، ورقم اليوم، والشهر الميلادي */}
-              <span className="flex w-14 shrink-0 flex-col items-center overflow-hidden rounded-sm2 border border-[#CCF2DB] bg-white text-center">
+              <span className="flex w-14 shrink-0 flex-col items-center overflow-hidden rounded-sm2 border border-mint-light bg-white text-center">
                 <span className="w-full bg-mint-deep py-0.5 text-[9.5px] font-semibold leading-tight text-white">
                   {s.exam_date ? dayName(s) : "—"}
                 </span>

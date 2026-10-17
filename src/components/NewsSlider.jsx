@@ -49,14 +49,14 @@ export default function NewsSlider() {
       <div className="mx-auto max-w-6xl px-5 py-14">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-xl font-bold text-ink">الأخبار والمقالات</h2>
-          <Link to="/news" className="text-sm font-medium text-[#6AA786] hover:text-mint-deep">
+          <Link to="/news" className="text-sm font-medium text-mint-hover hover:text-mint-deep">
             كل الأخبار والمقالات
           </Link>
         </div>
 
         <Link
           to={href}
-          className="group mt-6 block overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-[#CCF2DB]"
+          className="group mt-6 block overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-mint-light"
         >
           <div className="grid md:grid-cols-[1.3fr_1fr]">
             <div className="relative aspect-[16/9] bg-mint-tint">
@@ -89,7 +89,7 @@ export default function NewsSlider() {
                   {current.excerpt}
                 </p>
               )}
-              <span className="mt-5 text-sm font-semibold text-[#6AA786]">
+              <span className="mt-5 text-sm font-semibold text-mint-hover">
                 قراءة الخبر ←
               </span>
             </div>
@@ -104,7 +104,7 @@ export default function NewsSlider() {
                 onClick={() => go(i)}
                 aria-label={`الخبر ${i + 1}`}
                 className={`h-2 rounded-pill transition-all ${
-                  i === idx ? "w-7 bg-mint-deep" : "w-2 bg-[#CCF2DB] hover:bg-[#89D7AD]"
+                  i === idx ? "w-7 bg-mint-deep" : "w-2 bg-mint-light hover:bg-mint"
                 }`}
               />
             ))}

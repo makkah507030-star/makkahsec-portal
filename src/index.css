@@ -2,6 +2,59 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ——— الألوان: قنوات RGB تقرؤها tailwind.config.js ———
+   الفاتح هو الأصل. الداكن (html.dark، للطلاب حاليًا، src/lib/theme.js) على الشاشة وحدها،
+   فالطباعة تبقى فاتحة كما هي: الشهادات والتقارير والنماذج.
+   والورقة المعروضة على الشاشة (.sheet: النماذج والشهادات والتقارير) تبقى فاتحة في الداكن أيضًا. */
+:root, .dark .sheet {
+  --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 169 169 169;
+  --c-line: 195 195 195;    --c-canvas: 244 244 244;  --c-paper: 255 255 255;
+  --c-mint: 137 215 173;    --c-mint-hover: 106 167 134; --c-mint-deep: 62 99 80;
+  --c-mint-light: 204 242 219; --c-mint-tint: 237 250 242;
+  --c-danger-light: 251 235 235; --c-warning-light: 251 243 222;
+  --c-present: 78 125 102;  --c-absent: 162 59 59;   --c-late: 154 123 34;  --c-excused: 63 107 153;
+  --shadow-card: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px -14px rgba(0,0,0,.22);
+}
+
+@media screen {
+  html.dark {
+    color-scheme: dark;
+    --c-ink: 233 238 235;     --c-muted: 163 173 167;   --c-faint: 115 126 120;
+    --c-line: 58 67 62;       --c-canvas: 17 21 19;     --c-paper: 27 32 29;
+    --c-mint-deep: 74 131 102; --c-mint-light: 44 74 58; --c-mint-tint: 29 45 37;
+    --c-danger-light: 58 32 32; --c-warning-light: 56 48 28;
+    /* ألوان الحالة أخفّ قتامة لتبقى خلفيةً للنص الأبيض، ونصّها أفتح في القواعد أدناه */
+    --c-present: 78 140 108;  --c-absent: 190 80 80;   --c-late: 168 135 45;  --c-excused: 70 120 170;
+    --shadow-card: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.7);
+  }
+  /* النص الملوّن على الخلفية الداكنة يحتاج درجة أفتح من الخلفيات الملوّنة */
+  .dark .text-mint-deep, .dark .hover\:text-mint-deep:hover, .dark .text-success { color: rgb(143 211 174); }
+  .dark .text-present { color: rgb(124 199 159); }
+  .dark .text-absent, .dark .text-danger, .dark .hover\:text-absent:hover { color: rgb(238 142 142); }
+  .dark .text-late, .dark .text-warning { color: rgb(227 194 106); }
+  .dark .text-excused { color: rgb(141 182 230); }
+  /* bg-white مستخدمة لأسطح البطاقات والحقول في الصفحات كلها، فتتبع لون السطح.
+     الشفافة الخفيفة (‎/15 و‎/25) تبقى بيضاء لأنها فوق خلفيات ملوّنة. */
+  .dark .bg-white { background-color: rgb(var(--c-paper)); }
+  .dark .bg-white\/60 { background-color: rgb(var(--c-paper) / .6); }
+  .dark .bg-white\/70 { background-color: rgb(var(--c-paper) / .7); }
+  .dark .bg-white\/90 { background-color: rgb(var(--c-paper) / .9); }
+  .dark .bg-white\/95 { background-color: rgb(var(--c-paper) / .95); }
+  .dark .hover\:bg-white:hover { background-color: rgb(var(--c-paper)); }
+  /* شارة التقدير (lib/gradeBands): في الداكن لونها المصمت بنص أبيض بدل الخلفية الفاتحة */
+  .dark .band-chip { background: var(--band-solid); color: #fff; }
+
+  /* داخل الورقة تعود ألوان النص الأصلية (المتغيرات أعلاه عادت فاتحة) */
+  .dark .sheet { color-scheme: light; }
+  .dark .sheet .text-mint-deep, .dark .sheet .text-success { color: rgb(var(--c-mint-deep)); }
+  .dark .sheet .text-present { color: rgb(var(--c-present)); }
+  .dark .sheet .text-absent, .dark .sheet .text-danger { color: rgb(var(--c-absent)); }
+  .dark .sheet .text-late, .dark .sheet .text-warning { color: rgb(var(--c-late)); }
+  .dark .sheet .text-excused { color: rgb(var(--c-excused)); }
+  .dark .sheet .band-chip { background: var(--band-bg); color: var(--band-text); }
+}
+.band-chip { background: var(--band-bg); color: var(--band-text); }
+
 @layer base {
   html { -webkit-text-size-adjust: 100%; }
   body {
@@ -14,7 +67,7 @@
     direction: ltr;
     unicode-bidi: embed;
   }
-  :focus-visible { outline: 2px solid #3E6350; outline-offset: 2px; }
+  :focus-visible { outline: 2px solid rgb(var(--c-mint-deep)); outline-offset: 2px; }
 }
 
 @layer components {

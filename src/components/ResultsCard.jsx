@@ -62,8 +62,8 @@ export default function ResultsCard({ studentId }) {
                   </p>
                   {band && (
                     <span
-                      className="rounded-pill px-3 py-1 text-xs font-bold"
-                      style={{ background: band.bg, color: band.text }}
+                      className="band-chip rounded-pill px-3 py-1 text-xs font-bold"
+                      style={{ "--band-bg": band.bg, "--band-text": band.text, "--band-solid": band.solid }}
                     >
                       {band.label}
                     </span>
