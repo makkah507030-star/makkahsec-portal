@@ -22,7 +22,7 @@ export default function PresetChips({ items = [], value, onChange, replace = fal
           <button key={t} type="button" title={t} onClick={() => onChange(addPreset(value, t, replace))}
             className={`max-w-full truncate rounded-pill border px-3 py-1 text-[11.5px] font-medium transition-colors ${
               used ? "border-mint-deep bg-mint-deep text-white"
-                   : "border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>
+                   : "border-mint-light bg-mint-tint text-mint-deep hover:bg-mint-light"}`}>
             {used ? "✓ " : ""}{t.length > 48 ? t.slice(0, 48) + "…" : t}
           </button>
         );

@@ -529,7 +529,7 @@ function StudentForm({ classes, existing, initialClassId, initialGuardian, busy,
   };
 
   return (
-    <form onSubmit={submit} className="card space-y-3 border-[#CCF2DB] bg-mint-tint/40 p-4">
+    <form onSubmit={submit} className="card space-y-3 border-mint-light bg-mint-tint/40 p-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="الاسم الكامل">
           <input className="field" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
@@ -571,7 +571,7 @@ function StudentForm({ classes, existing, initialClassId, initialGuardian, busy,
         </Field>
       </div>
 
-      <div className="border-t border-[#CCF2DB] pt-3">
+      <div className="border-t border-mint-light pt-3">
         <p className="text-xs font-semibold text-mint-deep">ولي الأمر</p>
         {initialGuardian ? (
           <div className="mt-2 rounded-sm2 border border-line bg-paper px-3 py-2.5">
@@ -795,7 +795,7 @@ function TeacherForm({ existing, busy, onSave, onCancel }) {
   };
 
   return (
-    <form onSubmit={submit} className="card space-y-3 border-[#CCF2DB] bg-mint-tint/40 p-4">
+    <form onSubmit={submit} className="card space-y-3 border-mint-light bg-mint-tint/40 p-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="الاسم الكامل">
           <input className="field" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
@@ -1003,7 +1003,7 @@ function GuardianForm({ existing, busy, onSave, onCancel }) {
   };
 
   return (
-    <form onSubmit={submit} className="card space-y-3 border-[#CCF2DB] bg-mint-tint/40 p-4">
+    <form onSubmit={submit} className="card space-y-3 border-mint-light bg-mint-tint/40 p-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="الاسم الكامل">
           <input className="field" value={fullName} onChange={(e) => setFullName(e.target.value)} required />

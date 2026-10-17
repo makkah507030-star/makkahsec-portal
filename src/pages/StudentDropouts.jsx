@@ -204,7 +204,7 @@ function ReportForm({ isManager, onDone }) {
         <div>
           <label className="text-xs text-muted">الطالب <span className="text-faint">— بجانب كل طالب أيام غيابه الرسمي المتصلة حتى آخر يوم معتمد</span></label>
           {students === null ? <Loader /> : student ? (
-            <div className="mt-1.5 flex items-center justify-between gap-2 rounded-sm2 border border-[#CCF2DB] bg-mint-tint px-3 py-2">
+            <div className="mt-1.5 flex items-center justify-between gap-2 rounded-sm2 border border-mint-light bg-mint-tint px-3 py-2">
               <p className="text-sm font-semibold text-ink">{student.full_name}
                 <span className="mr-2 text-xs font-normal text-muted">{classLabel(cls)}</span>
                 <Streak n={student.absent_days} /></p>

@@ -55,7 +55,7 @@ export default function Guides() {
             <span className="text-sm font-bold text-ink">بوابة مكة الثانوية</span>
           </Link>
           <Link to="/"
-            className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep">
+            className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-mint-light hover:text-mint-deep">
             الرئيسية
           </Link>
         </div>
@@ -68,7 +68,7 @@ export default function Guides() {
         </p>
 
         {!session && (
-          <p className="mt-4 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+          <p className="mt-4 rounded-card border border-mint-light bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
             تُعرض هنا الأدلة العامة. سجّل الدخول لعرض الأدلة الخاصة بفئتك.
           </p>
         )}
@@ -129,7 +129,7 @@ function Card({ g }) {
   const image = isImage(g.file_url);
 
   return (
-    <article className="overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-[#CCF2DB]">
+    <article className="overflow-hidden rounded-card border border-line bg-white transition-colors hover:border-mint-light">
       {/* المنشور المصوّر يُعرض كاملًا، فهو المحتوى نفسه لا مجرد مرفق */}
       {image && (
         <a href={g.file_url} target="_blank" rel="noreferrer"
@@ -167,17 +167,17 @@ function Card({ g }) {
           {/* الصورة معروضة أعلاه، فيكفيها زر التحميل. وملف PDF يحتاج فتحًا وتحميلًا */}
           {image ? (
             <a href={g.file_url} download={g.file_name ?? true}
-               className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#6AA786]">
+               className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white hover:bg-mint-hover">
               تحميل الصورة
             </a>
           ) : (
             <>
               <a href={g.file_url} target="_blank" rel="noreferrer"
-                 className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#6AA786]">
+                 className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white hover:bg-mint-hover">
                 عرض الدليل
               </a>
               <a href={g.file_url} download={g.file_name ?? true}
-                 className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-[#CCF2DB] hover:text-mint-deep">
+                 className="rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted hover:border-mint-light hover:text-mint-deep">
                 تحميل
               </a>
             </>

@@ -63,7 +63,7 @@ export default function NoteEditor({ note = null, link = null, onSaved, onCancel
         <div className="space-y-1.5">
           {f.items.map((x, i) => (
             <div key={i} className="flex items-center gap-2">
-              <input type="checkbox" className="h-4 w-4 accent-[#3E6350]" checked={!!x.done}
+              <input type="checkbox" className="h-4 w-4 accent-mint-deep" checked={!!x.done}
                      onChange={(e) => setItem(i, { done: e.target.checked })} />
               <input className="field flex-1 py-1.5 text-sm" value={x.t} placeholder={`مهمة ${i + 1}`}
                      onChange={(e) => setItem(i, { t: e.target.value })}
@@ -104,14 +104,14 @@ export default function NoteEditor({ note = null, link = null, onSaved, onCancel
           </button>
         ))}
         <label className="mr-auto flex items-center gap-1.5 text-xs text-muted">
-          <input type="checkbox" className="h-4 w-4 accent-[#3E6350]" checked={f.pinned} onChange={(e) => set("pinned", e.target.checked)} />
+          <input type="checkbox" className="h-4 w-4 accent-mint-deep" checked={f.pinned} onChange={(e) => set("pinned", e.target.checked)} />
           تثبيت أعلى المفكرة
         </label>
       </div>
 
       {linkPath && (
         <label className="flex items-center gap-1.5 text-xs text-muted">
-          <input type="checkbox" className="h-4 w-4 accent-[#3E6350]" checked={keepLink} onChange={(e) => setKeepLink(e.target.checked)} />
+          <input type="checkbox" className="h-4 w-4 accent-mint-deep" checked={keepLink} onChange={(e) => setKeepLink(e.target.checked)} />
           ربطها بصفحة: <span className="truncate font-medium text-ink">{linkTitle || linkPath}</span>
         </label>
       )}

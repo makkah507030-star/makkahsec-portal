@@ -127,7 +127,7 @@ export default function DutyAdmin() {
 
       {report && (
         <>
-          <div className="no-print flex flex-wrap items-center justify-between gap-2 rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3">
+          <div className="no-print flex flex-wrap items-center justify-between gap-2 rounded-card border border-mint-light bg-mint-tint px-4 py-3">
             <p className="text-sm text-mint-deep">
               التقرير جاهز — <span className="num">{report.duty.length}</span> يوم مناوبة
               و<span className="num">{report.supervision.length}</span> اسم إشراف.

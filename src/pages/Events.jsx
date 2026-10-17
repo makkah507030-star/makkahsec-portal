@@ -127,7 +127,7 @@ export default function Events() {
           const cancelled = !!e.cancelled_at;
           return (
             <button key={e.id} onClick={() => setOpenId(e.id)}
-                    className={`card block w-full p-4 text-right transition-colors hover:border-[#CCF2DB] ${
+                    className={`card block w-full p-4 text-right transition-colors hover:border-mint-light ${
                       cancelled ? "opacity-70" : ""}`}>
               <div className="flex flex-wrap items-center gap-2">
                 <p className={`min-w-0 flex-1 truncate text-sm font-bold text-ink ${cancelled ? "line-through" : ""}`}>
@@ -415,7 +415,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
               title={skipped ? "لا تلزم في حدث للمدرسة كلها" : undefined}
               className={`flex shrink-0 items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
                 active ? "bg-mint-deep text-white"
-                : reached ? "border border-[#CCF2DB] bg-mint-tint text-mint-deep"
+                : reached ? "border border-mint-light bg-mint-tint text-mint-deep"
                 : "border border-line bg-white text-faint"} ${skipped ? "line-through" : ""}`}>
               <span className={`grid h-4 w-4 place-items-center rounded-full text-[10px] ${
                 active ? "bg-white/25" : reached ? "bg-white" : "bg-canvas"}`}>
@@ -786,7 +786,7 @@ function StageParticipants({ e, parts, reload, skip, onNext }) {
   return (
     <div className="space-y-3">
       {aud.length > 0 && (
-        <section className="card space-y-2 border-[#CCF2DB] bg-mint-tint/50 p-4">
+        <section className="card space-y-2 border-mint-light bg-mint-tint/50 p-4">
           <p className="text-sm font-semibold text-ink">حدث للمدرسة كلها</p>
           <div className="flex flex-wrap gap-1.5">
             {AUDIENCE.filter((a) => aud.includes(a.k)).map((a) => (
@@ -1740,7 +1740,7 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
                   <button key={i} type="button" title={t} onClick={() => setText((v) => ({ ...v, [k]: t }))}
                     className={`max-w-full truncate rounded-pill border px-3 py-1 text-[11.5px] font-medium ${
                       text[k] === t ? "border-mint-deep bg-mint-tint text-mint-deep"
-                                    : "border-[#CCF2DB] bg-white text-mint-deep hover:bg-mint-tint"}`}>
+                                    : "border-mint-light bg-white text-mint-deep hover:bg-mint-tint"}`}>
                     {i === 0 ? "الرسمية: " : ""}{t.length > 42 ? t.slice(0, 42) + "…" : t}
                   </button>
                 ))}

@@ -108,7 +108,7 @@ function DayTimeline({ t: saved, studentId, date }) {
   rows.sort((x, y) => x.period_no - y.period_no);
   return (
     <div className="my-1.5">
-      <p className="mb-1 text-[11.5px] font-semibold text-[#3E6350]">
+      <p className="mb-1 text-[11.5px] font-semibold text-mint-deep">
         {live ? "مسار الطالب في يوم الفقد حتى آخر حصة" : "مسار الطالب في اليوم حتى وقت الفقد"}
       </p>
       <table className="w-full border-collapse text-[11px]" style={INK}>

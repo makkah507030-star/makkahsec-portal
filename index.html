@@ -11,6 +11,16 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#3E6350" />
+    <!-- الوضع الداكن قبل تحميل الصفحة، لمن اختاره (الطلاب) وما زال مسجّلًا، فلا تومض الشاشة بيضاء.
+         Layout يصحّحه بعد معرفة الدور (src/lib/theme.js). -->
+    <script>
+      try {
+        if (localStorage.getItem("mk-theme") === "dark" &&
+            Object.keys(localStorage).some(function (k) { return /^sb-.*-auth-token$/.test(k); })) {
+          document.documentElement.classList.add("dark");
+        }
+      } catch (e) { /* التخزين ممنوع: الوضع الفاتح */ }
+    </script>
 
     <!-- Open Graph / معاينة المشاركة (واتساب، تويتر، ...) -->
     <meta property="og:site_name" content="بوابة مكة الثانوية الرقمية" />

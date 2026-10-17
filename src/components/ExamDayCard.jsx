@@ -44,7 +44,7 @@ export default function ExamDayCard() {
   const today = n === 0;
 
   return (
-    <section className={`overflow-hidden rounded-card border bg-white ${today ? "border-warning/50" : "border-[#CCF2DB]"}`}>
+    <section className={`overflow-hidden rounded-card border bg-white ${today ? "border-warning/50" : "border-mint-light"}`}>
       <div className={`flex flex-wrap items-center justify-between gap-2 px-4 py-3 ${today ? "bg-warning/10" : "bg-mint-tint"}`}>
         <div className="min-w-0">
           <p className={`text-sm font-bold ${today ? "text-warning" : "text-mint-deep"}`}>

@@ -14,9 +14,9 @@ import TrialBanner from "../components/TrialBanner.jsx";
 
 /* حقول بلون الهوية الأخضر بدل الأزرق الافتراضي للمتصفح */
 const FIELD =
-  "mk-field h-11 rounded-sm2 border border-[#CCF2DB] bg-mint-tint px-3 text-[15px] text-ink " +
+  "mk-field h-11 rounded-sm2 border border-mint-light bg-mint-tint px-3 text-[15px] text-ink " +
   "placeholder:text-faint focus:border-mint-deep focus:bg-white focus:outline-none " +
-  "focus:ring-2 focus:ring-[#89D7AD]/45 transition-colors";
+  "focus:ring-2 focus:ring-mint/45 transition-colors";
 
 /* كروم يفرض خلفية زرقاء على الحقول المحفوظة (autofill) ويتجاهل background،
    والحيلة المعتمدة أن نملأها بظل داخلي بلون الهوية ونؤخّر انتقاله طويلًا. */
@@ -126,8 +126,8 @@ export default function Login() {
           WebkitMaskImage: "radial-gradient(120% 70% at 50% 100%, #000 10%, transparent 65%)",
         }}
       />
-      <div className="pointer-events-none absolute -top-40 -right-32 h-[26rem] w-[26rem] rounded-full bg-[#89D7AD]/25 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-44 -left-28 h-[24rem] w-[24rem] rounded-full bg-[#CCF2DB]/40 blur-3xl" />
+      <div className="pointer-events-none absolute -top-40 -right-32 h-[26rem] w-[26rem] rounded-full bg-mint/25 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-44 -left-28 h-[24rem] w-[24rem] rounded-full bg-mint-light/40 blur-3xl" />
 
       {/* ——— المحتوى ——— */}
       <div className="relative flex min-h-screen flex-col items-center justify-center px-5 py-10">
@@ -135,7 +135,7 @@ export default function Login() {
 
           {/* الترويسة */}
           <div className="mb-6 text-center">
-            <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-mint-tint ring-1 ring-[#CCF2DB]">
+            <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-mint-tint ring-1 ring-mint-light">
               <img src={logoIcon} alt="" className="h-10 w-10 object-contain" />
             </span>
             <h1 className="text-[22px] font-bold leading-snug text-ink">
@@ -239,7 +239,7 @@ export default function Login() {
             <div className="mt-3 flex items-center justify-center gap-2">
               {[["/news", "الأخبار"], ["/contact", "الدعم الفني"], ["/", "الرئيسية"]].map(([to, label]) => (
                 <Link key={to} to={to}
-                  className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-4 py-1.5 text-xs font-semibold text-mint-deep transition-colors hover:bg-[#CCF2DB]">
+                  className="rounded-pill border border-mint-light bg-mint-tint px-4 py-1.5 text-xs font-semibold text-mint-deep transition-colors hover:bg-mint-light">
                   {label}
                 </Link>
               ))}

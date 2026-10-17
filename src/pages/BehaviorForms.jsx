@@ -268,7 +268,7 @@ function NewForm({ kind, uid, profile, roles, onBack, onDone }) {
               {PURPOSES.map((t) => (
                 <button key={t} type="button" onClick={() => setPurpose(t)}
                   className={`rounded-pill px-3 py-1 text-[11.5px] font-medium ${purpose === t
-                    ? "bg-mint-deep text-white" : "border border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>{t}</button>
+                    ? "bg-mint-deep text-white" : "border border-mint-light bg-mint-tint text-mint-deep hover:bg-mint-light"}`}>{t}</button>
               ))}
             </div>
             <textarea rows={2} className="field mt-1.5 w-full" value={purpose} onChange={(e) => setPurpose(e.target.value)} />
@@ -420,7 +420,7 @@ function StepsField({ degree, value, onChange }) {
           {sugg.map((t) => (
             <button key={t} type="button" onClick={() => add(t)}
               className={`rounded-pill px-3 py-1 text-[11.5px] font-medium ${value.includes(t)
-                ? "bg-mint-deep text-white" : "border border-[#CCF2DB] bg-mint-tint text-mint-deep hover:bg-[#CCF2DB]"}`}>
+                ? "bg-mint-deep text-white" : "border border-mint-light bg-mint-tint text-mint-deep hover:bg-mint-light"}`}>
               {value.includes(t) ? "✓ " : "+ "}{t}
             </button>
           ))}
@@ -467,7 +467,7 @@ function StatementFields({ text, setText, date, setDate, time, setTime, student 
           {STATEMENT_TEMPLATES.map((x) => (
             <button key={x.t} type="button"
               onClick={() => setText((cur) => (cur.trim() ? `${cur.trimEnd()}\n` : "") + x.v(name, dayText))}
-              className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
+              className="rounded-pill border border-mint-light bg-mint-tint px-3 py-1 text-[11.5px] font-medium text-mint-deep hover:bg-mint-light">
               + {x.t}
             </button>
           ))}

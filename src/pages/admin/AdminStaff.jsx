@@ -414,7 +414,7 @@ function RolePermissions() {
 
   return (
     <div className="space-y-4">
-      <p className="rounded-card border border-[#CCF2DB] bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
+      <p className="rounded-card border border-mint-light bg-mint-tint px-4 py-3 text-sm leading-relaxed text-mint-deep">
         اختر دورًا من القائمة، وحدّد صلاحياته، ثم احفظ.
         ومدير المدرسة والدعم الفني يملكان صلاحية كاملة دائمًا ولا يظهران هنا.
       </p>
@@ -477,7 +477,7 @@ function RolePermissions() {
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {PRESETS.map((pr) => (
                     <button key={pr.key} onClick={() => setSel(new Set(pr.perms))}
-                            className="rounded-pill bg-white px-3 py-1 text-xs font-medium text-mint-deep ring-1 ring-[#CCF2DB] hover:bg-mint-tint">
+                            className="rounded-pill bg-white px-3 py-1 text-xs font-medium text-mint-deep ring-1 ring-mint-light hover:bg-mint-tint">
                       {pr.label}
                     </button>
                   ))}
@@ -523,7 +523,7 @@ function RolePermissions() {
                         return (
                           <label key={k}
                             className={`flex cursor-pointer items-center justify-between gap-3 rounded-sm2 border px-3.5 py-2.5 transition-colors ${
-                              on ? "border-[#CCF2DB] bg-mint-tint/50" : "border-line"}`}>
+                              on ? "border-mint-light bg-mint-tint/50" : "border-line"}`}>
                             <span className="min-w-0">
                               <span className="block text-sm text-ink">{p.label}</span>
                               <span className="block text-[11px] leading-tight text-faint">{p.desc}</span>

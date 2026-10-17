@@ -204,7 +204,7 @@ export default function Studio() {
               return (
                 <a key={tpl.key} href={x.href} download={x.file}
                   onClick={() => trackUsage("studio", tpl.key, "download")}
-                  className="card group flex flex-col overflow-hidden p-3 text-right transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40">
+                  className="card group flex flex-col overflow-hidden p-3 text-right transition-colors hover:border-mint-light hover:bg-mint-tint/40">
                   <div className="relative overflow-hidden rounded-card shadow-card ring-1 ring-line/60" style={{ aspectRatio: x.ratio }}>
                     <img src={x.preview} alt="" className="h-full w-full object-cover" loading="lazy" />
                     <span className="absolute left-2 top-2 rounded-sm2 px-2 py-0.5 text-[11px] font-bold text-white" style={{ background: x.color }}>{x.app}</span>
@@ -222,7 +222,7 @@ export default function Studio() {
             const sz = sheetDims(tpl, "portrait", d);
             return (
               <button key={tpl.key} onClick={() => open(tpl)}
-                className="card group overflow-hidden p-3 text-right transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint/40">
+                className="card group overflow-hidden p-3 text-right transition-colors hover:border-mint-light hover:bg-mint-tint/40">
                 <div className="pointer-events-none">
                   <Scaled w={sz.w} h={sz.h}>
                     <SheetFor tpl={tpl} theme={tpl.defaultTheme ?? "light"} orient="portrait" data={d} />
@@ -791,7 +791,7 @@ function Field({ f, tpl, data, set, ctx }) {
         <div className="mt-1.5 flex flex-wrap gap-1">
           {presets.map((p) => (
             <button key={p} onClick={() => set(f.name, p)}
-              className="rounded-pill border border-[#CCF2DB] bg-mint-tint px-2.5 py-0.5 text-[11px] font-medium text-mint-deep hover:bg-[#CCF2DB]">
+              className="rounded-pill border border-mint-light bg-mint-tint px-2.5 py-0.5 text-[11px] font-medium text-mint-deep hover:bg-mint-light">
               {p}
             </button>
           ))}

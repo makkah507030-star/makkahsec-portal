@@ -39,7 +39,7 @@ function NationalDayBanner() {
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-2.5 gap-y-1 px-5 py-2.5 text-center text-xs leading-relaxed sm:text-sm">
         <span className="font-bold">اليوم الوطني السعودي</span>
         <span className="opacity-50">·</span>
-        <span className="font-semibold text-[#CCF2DB]">عزنا بطبعنا</span>
+        <span className="font-semibold text-mint-light">عزنا بطبعنا</span>
         <span className="opacity-50">·</span>
         <span className="opacity-95">
           نحتفي بمسيرةٍ من العز والفخر لوطننا
@@ -77,7 +77,7 @@ function TeacherDayBanner() {
    يدلّ من تعثّر دخوله على مركز الدعم والمساندة — يُرسل طلبه دون حساب. */
 function SupportBanner() {
   return (
-    <div className="bg-[#9A7B22] text-white">
+    <div className="bg-late text-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-5 py-2.5 text-center text-xs leading-relaxed sm:text-sm">
         <span className="font-semibold">تواجه صعوبة في الدخول إلى البوابة؟</span>
         <span className="opacity-60">·</span>
@@ -104,7 +104,7 @@ export default function TrialBanner({ variant, occasions = true }) {
 
   // للمسجّلين: شريط لتلقي الاقتراحات والملاحظات والشكاوى
   return (
-    <div className="bg-[#9A7B22] text-white">
+    <div className="bg-late text-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-2 gap-y-1 px-5 py-2.5 text-center text-xs leading-relaxed sm:text-sm">
         <span className="font-semibold">رأيك يصنع الفرق</span>
         <span className="opacity-60">·</span>

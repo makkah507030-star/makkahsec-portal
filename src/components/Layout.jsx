@@ -16,6 +16,7 @@ import { loadPrincipalSignature } from "../lib/principalSignature.js";
 import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 import { useBackSteps, goBack } from "../lib/backStep.js";
+import { savedTheme, saveTheme, applyTheme } from "../lib/theme.js";
 
 /* =====================================================================
    القائمة الجانبية — مرتبة من العمل اليومي إلى الإعدادات، وفي أسفلها
@@ -330,6 +331,14 @@ export default function Layout({ children }) {
   // إغلاق قائمة الجوال عند الانتقال لأي صفحة
   useEffect(() => { setOpen(false); }, [path]);
 
+  // الوضع الداكن للطالب وحده (lib/theme.js)، ويزول عند الخروج أو لغير الطالب
+  const isStudentView = effectiveRole === "student";
+  const [dark, setDark] = useState(() => savedTheme() === "dark");
+  useEffect(() => {
+    applyTheme(isStudentView && dark);
+    return () => applyTheme(false);
+  }, [isStudentView, dark]);
+
   // تحميل توقيع المدير المعتمد وأسماء الموقّعين مسبقًا — لتظهر في التقارير المطبوعة فورًا
   useEffect(() => { if (session) { loadPrincipalSignature(); loadSigners(); } }, [session]);
 
@@ -500,11 +509,32 @@ export default function Layout({ children }) {
   const Actions = () => (
     <div className="flex shrink-0 items-center gap-2">
       <ViewSwitch />
+      {isStudentView && <ThemeToggle />}
       <Refresh />
       <PreviewSite />
       <NotificationBell />
       <SignOut />
     </div>
+  );
+
+  // الوضع الداكن — للطلاب
+  const ThemeToggle = () => (
+    <button
+      type="button"
+      onClick={() => { const next = !dark; saveTheme(next ? "dark" : "light"); setDark(next); }}
+      title={dark ? "الوضع الفاتح" : "الوضع الداكن"}
+      aria-label={dark ? "الوضع الفاتح" : "الوضع الداكن"}
+      aria-pressed={dark}
+      className="flex shrink-0 items-center gap-1.5 rounded-pill border border-line px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-mint-light hover:bg-mint-tint hover:text-mint-deep sm:px-3.5"
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8"
+           strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {dark
+          ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>
+          : <path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5Z" />}
+      </svg>
+      <span className="hidden sm:inline">{dark ? "فاتح" : "داكن"}</span>
+    </button>
   );
 
   // تحديث الصفحة — بديل زر التحديث في المتصفح، وتطبيق الجوال المثبّت لا يظهر فيه شريط المتصفح
@@ -514,7 +544,7 @@ export default function Layout({ children }) {
       onClick={() => window.location.reload()}
       title="تحديث الصفحة"
       aria-label="تحديث الصفحة"
-      className="flex shrink-0 items-center gap-1.5 rounded-pill border border-line px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint hover:text-mint-deep sm:px-3.5"
+      className="flex shrink-0 items-center gap-1.5 rounded-pill border border-line px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:border-mint-light hover:bg-mint-tint hover:text-mint-deep sm:px-3.5"
     >
       <Icon name="refresh" className="h-4 w-4" />
       <span className="hidden sm:inline">تحديث</span>
@@ -530,7 +560,7 @@ export default function Layout({ children }) {
       target="_blank"
       rel="noopener noreferrer"
       title="الصفحة الرئيسية للبوابة"
-      className="flex shrink-0 items-center gap-1.5 rounded-pill border border-line px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint hover:text-mint-deep sm:px-3.5"
+      className="flex shrink-0 items-center gap-1.5 rounded-pill border border-line px-3 py-1.5 text-xs font-medium text-muted transition-colors hover:border-mint-light hover:bg-mint-tint hover:text-mint-deep sm:px-3.5"
     >
       <Icon name="home" className="h-4 w-4" />
       <span className="hidden sm:inline">الصفحة الرئيسية للبوابة</span>
@@ -568,7 +598,7 @@ export default function Layout({ children }) {
   const SignOut = () => (
     <button
       onClick={async () => { await signOut(); navigate("/login"); }}
-      className="shrink-0 rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted transition-colors hover:border-[#CCF2DB] hover:bg-mint-tint hover:text-mint-deep"
+      className="shrink-0 rounded-pill border border-line px-4 py-1.5 text-xs font-medium text-muted transition-colors hover:border-mint-light hover:bg-mint-tint hover:text-mint-deep"
     >
       خروج
     </button>

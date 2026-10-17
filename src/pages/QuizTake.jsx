@@ -451,7 +451,7 @@ export default function QuizTake() {
           <p className="text-sm font-bold text-ink">
             {t.q}<bdi className="num">1</bdi>: {t.listen}
           </p>
-          <div className="sticky top-16 z-10 rounded-card border border-[#CCF2DB] bg-mint-tint p-2">
+          <div className="sticky top-16 z-10 rounded-card border border-mint-light bg-mint-tint p-2">
             {audioUrl ? <audio controls preload="auto" src={audioUrl} className="w-full" controlsList="nodownload" />
               : audioUrl === null || !audioPath ? <p className="px-1 text-xs text-absent">{t.noAudio}</p>
               : <Loader compact />}
