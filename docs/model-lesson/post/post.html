@@ -10,7 +10,7 @@
 @font-face{font-family:Plex;font-weight:700;src:url(../../../public/fonts/ibm-plex-sans-arabic-700-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
 *{box-sizing:border-box;margin:0}
 html{background:#F6F9F7}
-body{width:1600px;height:900px;font-family:Plex;color:#1C3328;overflow:hidden;
+body{width:1600px;height:1120px;font-family:Plex;color:#1C3328;overflow:hidden;
  background:radial-gradient(900px 500px at 100% 0,#E3F6EA 0,transparent 70%),#F6F9F7;
  background-image:radial-gradient(900px 500px at 100% 0,#E3F6EA 0,transparent 70%),
   linear-gradient(#E9EFEB 1px,transparent 1px),linear-gradient(90deg,#E9EFEB 1px,transparent 1px);
@@ -21,6 +21,7 @@ body{width:1600px;height:900px;font-family:Plex;color:#1C3328;overflow:hidden;
 .logo img{width:34px}
 .brand b{display:block;font-size:22px;font-weight:700}
 .brand small{font-size:13px;color:#5E7268}
+.new{background:#3E6350;color:#fff;border-radius:99px;padding:10px 24px;font-weight:700;font-size:17px}
 .aud{background:#fff;border:1px solid #D5E7DC;border-radius:99px;padding:10px 22px;font-weight:600;font-size:16px}
 h1{font-size:52px;font-weight:700;margin-top:30px;letter-spacing:-.3px}
 h1 em{font-style:normal;color:#3E6350}
@@ -50,10 +51,21 @@ h1 em{font-style:normal;color:#3E6350}
 .path span.ch{background:#E3F6EA;border-radius:10px;padding:7px 15px;font-weight:700;color:#3E6350}
 .path .ar{color:#5E7268}
 .url{background:#fff;border-radius:99px;padding:10px 26px;font-weight:700;font-size:21px;box-shadow:0 2px 10px rgba(62,99,80,.1);direction:ltr}
+.row{display:flex;gap:24px;margin-top:26px;flex:1;min-height:0}
+.feats{width:430px;flex:none;display:flex;flex-direction:column;gap:16px}
+.feats .c{flex:1}
+.colors{flex:1;background:#fff;border:1px solid #D5E7DC;border-radius:22px;padding:18px 22px 16px;box-shadow:0 8px 24px -16px rgba(62,99,80,.35);display:flex;flex-direction:column}
+.colors .ph{margin-bottom:12px}
+.grid{flex:1;display:grid;grid-template-columns:repeat(4,1fr);gap:14px 14px;align-content:center}
+.v img{width:100%;aspect-ratio:900/507;object-fit:cover;border-radius:9px;display:block;box-shadow:0 6px 16px -10px rgba(28,51,40,.5)}
+.v p{display:flex;align-items:center;gap:7px;justify-content:center;margin-top:7px;font-weight:700;font-size:16px}
+.v p i{width:13px;height:13px;border-radius:50%}
+.path{flex-wrap:wrap}
 </style></head><body>
+<!-- منشور «الحصة النموذجية» الموحّد (١٦٠٠ × ١١٢٠): رحلة الحصة ومزاياها وألوانها الثمانية ومسار التنزيل من استوديو البوابة. -->
 <div class="top">
  <div class="brand"><div class="logo"><img src="../../../src/assets/icon-mint.png"></div><div><b>بوابة مكة الثانوية الرقمية</b><small>مدرسة مكة الثانوية</small></div></div>
- <div class="aud">للمعلمين · لكل المواد</div>
+ <div class="new">جديد في استوديو البوابة · للمعلمين</div>
 </div>
 <h1>حصة نموذجية جاهزة: <em>50 دقيقة</em> بإجراءات التدريس الفعّال</h1>
 <p class="sub">قالب <b>PowerPoint</b> بهوية البوابة لكل المواد، <b>مطابق لبنود الملاحظة الصفية</b> في منصة هيئة تقويم التعليم والتدريب</p>
@@ -65,18 +77,26 @@ h1 em{font-style:normal;color:#3E6350}
  <div class="lbl" id="lbl"></div>
 </div>
 
-<div class="cards">
- <div class="c"><i><img src="../build/icons/Timer.png"></i><div><b>19 شريحة تفاعلية</b><p>مؤقت لكل مرحلة، وكشف الإجابة بصوت، و«لوحة التميز» للمجموعات.</p></div></div>
- <div class="c"><i><img src="../build/icons/Users.png"></i><div><b>تعاوني ومتمايز</b><p>أدوار للمجموعة، وتقويم الأقران، ومسارات من «ادعمني» إلى «تحدَّ».</p></div></div>
- <div class="c"><i><img src="../build/icons/NotebookPen.png"></i><div><b>ملاحظات للمعلم</b><p>تحت كل شريحة: ماذا تفعل، وبدائل حسب المادة، وما يلاحظه المقيّم.</p></div></div>
- <div class="c dk"><i><img src="../build/icons/ClipboardCheck.png"></i><div><b>ثمانية ألوان</b><p>اختر لون عرضك من استوديو البوابة: الأخضر والأزرق والبنفسجي والكحلي وغيرها.</p></div></div>
+<div class="row">
+ <div class="feats">
+  <div class="c"><i><img src="../build/icons/Timer.png"></i><div><b>19 شريحة تفاعلية</b><p>مؤقت لكل مرحلة، وكشف الإجابة بصوت، و«لوحة التميز» للمجموعات.</p></div></div>
+  <div class="c"><i><img src="../build/icons/Users.png"></i><div><b>تعاوني ومتمايز</b><p>أدوار للمجموعة، وتقويم الأقران، ومسارات من «ادعمني» إلى «تحدَّ».</p></div></div>
+  <div class="c"><i><img src="../build/icons/NotebookPen.png"></i><div><b>ملاحظات للمعلم</b><p>تحت كل شريحة: ماذا تفعل، وبدائل حسب المادة، وما يلاحظه المقيّم.</p></div></div>
+ </div>
+ <div class="colors">
+  <div class="ph"><b>ثمانية ألوان</b><span>ألوان ملف المعلم الرقمي نفسها، فيتناسق عرضك مع ملفك</span></div>
+  <div class="grid" id="grid"></div>
+ </div>
 </div>
 
 <div class="foot">
- <div class="path">كيف أستخدمه؟ <span class="ar">←</span><span class="ch">اكتب درسك مكان الأمثلة</span><span class="ar">←</span><span class="ch">احفظه بصيغة <bdi>PowerPoint Show</bdi></span><span class="ar">←</span><span class="ch">اعرضه وانقر الأزرار</span></div>
+ <div class="path">للتنزيل <span class="ar">←</span><span class="ch">استوديو البوابة</span><span class="ar">←</span><span class="ch">المعلمين</span><span class="ar">←</span><span class="ch">«حصة نموذجية»</span><span class="ar">←</span><span class="ch">اختر لون العرض</span><span class="ar">←</span><span class="ch">تنزيل الملف</span></div>
  <div class="url">makkahsec.com</div>
 </div>
 <script>
+const C=[["science","أخضر","#3E6350"],["math","أزرق","#3A78B5"],["islamic","أزرق مخضر","#2F7F7A"],["english","بنفسجي","#5A5199"],
+ ["navy","كحلي","#22305A"],["arabic","أحمر","#8A4343"],["social","ذهبي","#8C6A22"],["slate","رمادي","#4A5866"]];
+grid.innerHTML=C.map(([k,t,c])=>`<div class="v"><img src="../../../public/templates/model-lesson/${k}.jpg"><p><i style="background:${c}"></i>${t}</p></div>`).join("");
 const P=[["التهيئة",5,"#CCF2DB","#16301F"],["الأهداف",3,"#CCF2DB","#16301F"],["الشرح بالمثال",10,"#3E6350","#fff"],["التعلم التعاوني",12,"#89D7AD","#16301F"],["المهام المتمايزة",8,"#89D7AD","#16301F"],["التقويم الختامي",7,"#16301F","#fff"],["الخلاصة والواجب",5,"#16301F","#fff"]];
 let t=0;const tk=document.getElementById('ticks');
 const add=(v,p)=>{const s=document.createElement('span');s.textContent=v;s.style.cssText=`position:absolute;right:${p}%;transform:translateX(50%)`;tk.appendChild(s)};
