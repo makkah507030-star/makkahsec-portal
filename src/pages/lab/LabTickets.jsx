@@ -7,7 +7,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import Loader from "../../components/Loader.jsx";
 import { fmtDateTime } from "../../lib/dates";
 import { notifyUsers } from "../../lib/referrals";
-import { TICKET_CATEGORIES, TICKET_STATUS, OPEN_TICKET, DEVICE_STATUS } from "../../lib/lab.js";
+import { TICKET_CATEGORIES, TICKET_STATUS, OPEN_TICKET, DEVICE_STATUS, uLayout } from "../../lib/lab.js";
 
 const FILTERS = [
   { key: "open", label: "المفتوحة" },
@@ -36,7 +36,7 @@ export default function LabTickets({ lab, canReport, isManager, reportSeat, onRe
   }, [lab, setMsg]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { if (reportSeat) setNewFor(reportSeat); }, [reportSeat]);
+  useEffect(() => { if (reportSeat != null) setNewFor(reportSeat); }, [reportSeat]);
 
   const codeOf = useMemo(() => Object.fromEntries(devices.map((d) => [d.seat_no, d.code])), [devices]);
   const openCount = (rows ?? []).filter((r) => OPEN_TICKET.includes(r.status)).length;
@@ -152,19 +152,7 @@ function NewTicket({ lab, devices, seat: seat0, onClose, onDone, onError }) {
   return (
     <Sheet title="بلاغ عطل" sub={dev ? `الجهاز ${dev.seat_no} · ${dev.code}` : "معمل الحاسب الآلي"} onClose={onClose}>
       <div className="space-y-3">
-        {!seat0 && (
-          <div>
-            <label className="label" htmlFor="tk-seat">الجهاز</label>
-            <select id="tk-seat" className="field" value={seat} onChange={(e) => setSeat(e.target.value)}>
-              <option value="">— اختر رقم الجهاز —</option>
-              {devices.map((d) => (
-                <option key={d.seat_no} value={d.seat_no}>
-                  {d.seat_no} · {d.code}{d.status !== "ok" ? ` (${DEVICE_STATUS[d.status]?.label})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        {!seat0 && <SeatPicker devices={devices} value={Number(seat) || null} onChange={setSeat} />}
         <div>
           <p className="label">نوع العطل</p>
           <div className="flex flex-wrap gap-1.5">
@@ -192,6 +180,39 @@ function NewTicket({ lab, devices, seat: seat0, onClose, onDone, onError }) {
         </button>
       </div>
     </Sheet>
+  );
+}
+
+// اختيار الجهاز من رسم المعمل (شكل U) — أسهل للمعلم الواقف أمام الجهاز من قائمة أرقام
+function SeatPicker({ devices, value, onChange }) {
+  const { cols, rows, pos } = uLayout(devices.length || 24);
+  return (
+    <div>
+      <p className="label">اضغط على الجهاز المعطّل</p>
+      <div className="rounded-sm2 bg-canvas p-2">
+        <div className="mb-1.5 flex items-center gap-1 text-[9px] text-faint">
+          <span className="w-9 text-center">يسار المعلم</span>
+          <span className="flex-1 rounded bg-paper py-0.5 text-center text-[10px] text-muted">السبورة</span>
+          <span className="w-9 text-center">يمين المعلم</span>
+        </div>
+        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, auto)` }}>
+          {devices.map((d) => {
+            const p = pos(d.seat_no);
+            const on = value === d.seat_no;
+            return (
+              <button key={d.seat_no} type="button" onClick={() => onChange(d.seat_no)}
+                      title={`${d.code}${d.status !== "ok" ? " — " + DEVICE_STATUS[d.status]?.label : ""}`}
+                      style={{ gridColumn: p.col, gridRow: p.row }}
+                      className={`num rounded border py-1 text-[11px] font-bold transition-colors ${
+                        on ? "border-mint-deep bg-mint-deep text-white"
+                          : d.status !== "ok" ? "border-transparent bg-danger-light text-absent" : "border-line bg-paper text-ink"}`}>
+                {d.seat_no}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 

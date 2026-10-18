@@ -24,9 +24,10 @@ export default function Lab() {
   const { granted } = useTeacherGrantedTabs();
   // ?report=5 يأتي من رمز QR على خلفية الجهاز (/lab/r/5)، و?tab= من الإشعارات
   const [params, setParams] = useSearchParams();
-  const reportSeat = Number(params.get("report")) || null;
+  // ?report=0 من لوحة البلاغ العامة: يُختار الجهاز من رسم المعمل
+  const reportSeat = /^\d+$/.test(params.get("report") ?? "") ? Number(params.get("report")) : null;
   const [tab, setTab] = useState(() =>
-    reportSeat ? "tickets" : TABS.some((t) => t.key === params.get("tab")) ? params.get("tab") : "booking");
+    reportSeat != null ? "tickets" : TABS.some((t) => t.key === params.get("tab")) ? params.get("tab") : "booking");
 
   const isManager = effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r));
   const canBook = effectiveRole === "teacher" && granted.has("computer_lab");
@@ -55,7 +56,7 @@ export default function Lab() {
       {tab === "devices" && <LabDevices lab={DEFAULT_LAB} isManager={isManager} canEdit={canBook || isManager} />}
       {tab === "tickets" && (
         <LabTickets lab={DEFAULT_LAB} canReport={canBook || isManager} isManager={isManager}
-                    reportSeat={reportSeat} onReportDone={() => reportSeat && setParams({}, { replace: true })} />
+                    reportSeat={reportSeat} onReportDone={() => reportSeat != null && setParams({}, { replace: true })} />
       )}
     </div>
   );

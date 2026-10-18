@@ -509,12 +509,13 @@ export default function App() {
   );
 }
 
-// رابط رمز QR على خلفية جهاز المعمل (/lab/r/5) ← صفحة البلاغ والجهاز محدد.
+// رابط رمز QR على خلفية جهاز المعمل أو ملصقه (/lab/r/5) ← صفحة البلاغ والجهاز محدد.
 // قبل الدخول يُحفظ الرابط في الجلسة، ويُفتح بعد تسجيل الدخول مباشرة.
 function LabReportRedirect() {
   const { seat } = useParams();
   const { session } = useSession();
-  const target = `/lab?report=${Number(seat) || ""}`;
+  // 0 = لوحة البلاغ العامة في المعمل: يُختار الجهاز من الرسم
+  const target = `/lab?report=${Number(seat) || 0}`;
   if (!session) {
     try { sessionStorage.setItem("mk_after_login", target); } catch { /* تجاهل */ }
     return <Navigate to="/login" replace />;

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useNotice } from "../../lib/useNotice.js";
 import { WALLPAPER_SIZES, drawWallpaper, downloadCanvas } from "../../lib/labWallpaper.js";
+import { printStickers, printReportPoster } from "../../lib/labPrint.js";
 
 const DEFAULT_NOTE = "حافظ على جهازك · لا تغيّر إعداداته · أطفئه بعد الاستخدام";
 
@@ -19,6 +20,7 @@ export default function LabWallpapers({ lab, devices }) {
   const [, setMsg] = useNotice(null);
 
   const opts = { ...WALLPAPER_SIZES[size], labName, note };
+  const popupBlocked = () => setMsg({ ok: false, text: "اسمح للمتصفح بفتح النوافذ المنبثقة لهذه الصفحة ثم أعد المحاولة." });
   const fileName = (d) => `wallpaper-${d.code}-${opts.w}x${opts.h}.png`;
   const device = devices.find((d) => d.seat_no === Number(seat)) ?? devices[0];
 
@@ -56,8 +58,8 @@ export default function LabWallpapers({ lab, devices }) {
       <button type="button" onClick={() => setOpen(!open)}
               className="flex w-full items-center justify-between px-4 py-3 text-start">
         <span>
-          <span className="block text-sm font-semibold text-ink">خلفيات سطح المكتب برمز البلاغ</span>
-          <span className="block text-xs text-muted">صورة لكل جهاز برقمه ورمز QR يفتح بلاغ العطل عنه مباشرة</span>
+          <span className="block text-sm font-semibold text-ink">رموز البلاغ: خلفيات سطح المكتب والملصقات</span>
+          <span className="block text-xs text-muted">رمز QR لكل جهاز يفتح بلاغ العطل عنه — على الشاشة، وملصقًا لحين لا يعمل الجهاز</span>
         </span>
         <span className="text-muted">{open ? "▴" : "▾"}</span>
       </button>
@@ -93,6 +95,15 @@ export default function LabWallpapers({ lab, devices }) {
             <button type="button" className="btn-primary w-full" disabled={!!busy} onClick={downloadAll}>
               {busy === "all" ? "جارٍ التنزيل…" : `تنزيل خلفيات كل الأجهزة (${devices.length})`}
             </button>
+            <div className="space-y-2 border-t border-line/60 pt-3">
+              <p className="text-xs text-muted">إن لم يقلع الجهاز أو لم يصل لسطح المكتب:</p>
+              <button type="button" className="btn-ghost w-full" onClick={async () => (await printStickers(devices, labName)) || popupBlocked()}>
+                طباعة ملصقات الأجهزة (ورقة A4)
+              </button>
+              <button type="button" className="btn-ghost w-full" onClick={async () => (await printReportPoster(labName)) || popupBlocked()}>
+                طباعة لوحة البلاغ العامة للمعمل
+              </button>
+            </div>
             <details className="rounded-sm2 bg-canvas px-3 py-2 text-xs text-muted">
               <summary className="cursor-pointer font-semibold text-ink">قفل الخلفية حتى لا يغيّرها الطالب</summary>
               <ol className="mt-2 list-decimal space-y-1 ps-4 leading-relaxed">
