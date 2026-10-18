@@ -71,8 +71,12 @@ export default function LabDevices({ lab, isManager }) {
       {/* رسم المعمل */}
       <div className="card p-3 sm:p-5">
         <div className="mx-auto max-w-xl">
-          <div className="mx-auto mb-3 w-2/3 rounded-sm2 bg-canvas py-1.5 text-center text-[11px] font-semibold text-muted">
-            السبورة ومكتب المعلم
+          <div className="mb-3 flex items-center gap-2 text-[10px] text-faint">
+            <span className="w-12 text-center">يسار المعلم</span>
+            <div className="flex-1 rounded-sm2 bg-canvas py-1.5 text-center text-[11px] font-semibold text-muted">
+              السبورة ومكتب المعلم
+            </div>
+            <span className="w-12 text-center">يمين المعلم</span>
           </div>
           <div className="grid gap-1.5 sm:gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, auto)` }}>
             {devices.map((d) => {
@@ -84,7 +88,7 @@ export default function LabDevices({ lab, isManager }) {
                         className={`relative flex aspect-square flex-col items-center justify-center rounded-sm2 border text-[10px] font-bold transition-transform hover:scale-105 sm:text-xs ${
                           d.status === "ok" ? "border-line bg-paper text-ink" : `border-transparent ${s.chip}`}`}>
                   <span className="num">{d.seat_no}</span>
-                  <span className={`absolute top-1 h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                  <span className={`absolute start-1 top-1 h-1.5 w-1.5 rounded-full ${s.dot}`} />
                 </button>
               );
             })}

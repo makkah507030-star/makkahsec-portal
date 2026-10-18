@@ -60,28 +60,28 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.teacher_granted_tabs g
                   where g.teacher_id = public.current_teacher_id() and g.tab_key = 'computer_lab');
 $$;
--- منسوبو المدرسة (إداري أو معلم) يرون المعمل وأجهزته وحجوزاته
-create or replace function public.lab_is_staff() returns boolean
+-- لا يرى المعمل وأجهزته وحجوزاته إلا معلمو التقنية المخوّلون ومسؤولو المعمل
+create or replace function public.lab_can_view() returns boolean
 language sql stable security definer set search_path = public as $$
-  select coalesce(public.current_user_role()::text in ('admin', 'teacher'), false);
+  select public.lab_is_manager() or public.lab_can_book();
 $$;
-revoke execute on function public.lab_is_manager(), public.lab_can_book(), public.lab_is_staff() from public, anon;
-grant  execute on function public.lab_is_manager(), public.lab_can_book(), public.lab_is_staff() to authenticated;
+revoke execute on function public.lab_is_manager(), public.lab_can_book(), public.lab_can_view() from public, anon;
+grant  execute on function public.lab_is_manager(), public.lab_can_book(), public.lab_can_view() to authenticated;
 
 alter table public.labs enable row level security;
 alter table public.lab_devices enable row level security;
 alter table public.lab_bookings enable row level security;
 
 drop policy if exists "labs read" on public.labs;
-create policy "labs read" on public.labs for select to authenticated using (public.lab_is_staff());
+create policy "labs read" on public.labs for select to authenticated using (public.lab_can_view());
 
 drop policy if exists "lab devices read" on public.lab_devices;
-create policy "lab devices read" on public.lab_devices for select to authenticated using (public.lab_is_staff());
+create policy "lab devices read" on public.lab_devices for select to authenticated using (public.lab_can_view());
 drop policy if exists "lab devices manage" on public.lab_devices;
 create policy "lab devices manage" on public.lab_devices for all to authenticated
   using (public.lab_is_manager()) with check (public.lab_is_manager());
 
 -- الحجوزات: قراءة فقط، والإضافة والإلغاء عبر الدالتين في الجزء 2
 drop policy if exists "lab bookings read" on public.lab_bookings;
-create policy "lab bookings read" on public.lab_bookings for select to authenticated using (public.lab_is_staff());
+create policy "lab bookings read" on public.lab_bookings for select to authenticated using (public.lab_can_view());
 -- نهاية الجزء 1

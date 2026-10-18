@@ -143,12 +143,6 @@ export default function LabBooking({ lab, canBook, isManager }) {
         </div>
       </div>
 
-      {!canBook && !isManager && (
-        <p className="rounded-sm2 bg-canvas px-3 py-2 text-xs text-muted">
-          العرض فقط — الحجز لمعلمي التقنية الرقمية المخوّلين من «صلاحيات المعلمين».
-        </p>
-      )}
-
       {/* الجوال: اختيار اليوم */}
       <div className="grid grid-cols-5 gap-1 md:hidden print:hidden">
         {DAYS.map((d) => (

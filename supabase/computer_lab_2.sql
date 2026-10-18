@@ -71,7 +71,7 @@ language sql stable security definer set search_path = public as $$
     from public.lab_bookings b
     join public.teachers t on t.id = b.teacher_id
     left join public.classes c on c.id = b.class_id
-   where public.lab_is_staff() and b.lab_id = p_lab and b.booking_date between p_from and p_to
+   where public.lab_can_view() and b.lab_id = p_lab and b.booking_date between p_from and p_to
    order by b.booking_date, b.period_no;
 $$;
 

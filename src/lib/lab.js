@@ -43,9 +43,10 @@ export const shortDate = (iso) => `${+iso.slice(8, 10)}/${+iso.slice(5, 7)}`;
 export const classText = (r) => (r?.class_no ? `فصل ${r.class_no}` : "");
 
 /**
- * موضع الجهاز في رسم المعمل على شكل U (شبكة باتجاه RTL، السبورة في الأعلى):
- * الضلع الأيمن من الأعلى إلى الأسفل، ثم القاعدة من اليمين إلى اليسار، ثم
- * الضلع الأيسر من الأسفل إلى الأعلى. للمعمل بـ 24 جهازًا: 8 + 8 + 8.
+ * موضع الجهاز في رسم المعمل على شكل U (شبكة باتجاه RTL، السبورة في الأعلى).
+ * الترقيم يبدأ من يمين المعلم الواقف عند السبورة مواجهًا الطلاب، وهو يسار
+ * الرسم: الضلع الأيسر من الأعلى إلى الأسفل، ثم القاعدة من اليسار إلى اليمين،
+ * ثم الضلع الأيمن من الأسفل إلى الأعلى. للمعمل بـ 24 جهازًا: 8 + 8 + 8.
  * يعيد { col, row } بترقيم CSS grid، ومعه أبعاد الشبكة كلها.
  */
 export function uLayout(total) {
@@ -53,9 +54,9 @@ export function uLayout(total) {
   const base = Math.max(total - 2 * arm, 0);
   const cols = base + 2, rows = arm + 1;
   const pos = (seat) => {
-    if (seat <= arm) return { col: 1, row: seat };
-    if (seat <= arm + base) return { col: seat - arm + 1, row: rows };
-    return { col: cols, row: rows - (seat - arm - base) };
+    if (seat <= arm) return { col: cols, row: seat };
+    if (seat <= arm + base) return { col: cols - (seat - arm), row: rows };
+    return { col: 1, row: rows - (seat - arm - base) };
   };
   return { cols, rows, pos };
 }
