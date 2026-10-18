@@ -216,7 +216,13 @@ function Results({ g }) {
               const tot = BANDS.reduce((a, [k]) => a + (c.bands?.[k] ?? 0), 0);
               return (
                 <div className="df-cls" key={c.label}><span>{c.label}</span>
-                  <Dist parts={BANDS.map(([k]) => ({ k, n: c.bands?.[k] ?? 0, c: BAND_COLOR[k], label: pc(pct(c.bands?.[k] ?? 0, tot)) }))} />
+                  <div className="min-w-0">
+                    <Dist parts={BANDS.map(([k]) => ({ k, n: c.bands?.[k] ?? 0, c: BAND_COLOR[k], label: pc(pct(c.bands?.[k] ?? 0, tot)) }))} />
+                    {/* اختبارات الفصل التي بُني عليها توزيعه (teacher_dfile_9.sql) */}
+                    {c.quizzes?.length > 0 && (
+                      <p className="df-cq">{c.quizzes.map((q) => `${q.t} (${MODE_LABEL[q.m] ?? MODE_LABEL.omr})`).join("، ")}</p>
+                    )}
+                  </div>
                 </div>
               );
             })}
