@@ -110,6 +110,7 @@ const ADMIN_GROUPS = [
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
       { to: "/events-reports", label: "تقارير الأحداث",     icon: "pie" },
+      { to: "/scouts",         label: "الفريق الكشفي", perm: "scouts", icon: "flag", kw: "كشافة اعضاء" },
       { to: "/studio",         label: "استوديو البوابة", icon: "palette", kw: "تصميم" },
     ],
   },

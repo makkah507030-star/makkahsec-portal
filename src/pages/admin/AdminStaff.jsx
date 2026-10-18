@@ -328,7 +328,7 @@ function MemberRow({ member, onSave, onReload }) {
 const CUSTOM_BLOCKED = ["accounts", "staff", "password_reset", "import", "records"];
 const CUSTOM_PERMS = PERMISSIONS.filter((p) => !CUSTOM_BLOCKED.includes(p.key));
 const CUSTOM_PRESETS = [
-  { label: "القائد الكشفي", external: true, perms: ["students", "news", "notifications"],
+  { label: "القائد الكشفي", external: true, perms: ["scouts", "students", "news", "notifications"],
     note: "القائد الكشفي الداعم للفريق الكشفي بالمدرسة" },
 ];
 const BLANK = { slot: null, label: "", external: false, note: "", perms: new Set() };
@@ -532,6 +532,8 @@ const PERM_GROUPS = [
     keys: ["schedules", "import", "calendar"] },
   { title: "المحتوى والتواصل",
     keys: ["news", "guides", "notifications", "feedback"] },
+  { title: "النشاط",
+    keys: ["scouts"] },
   { title: "الحسابات والنظام",
     keys: ["accounts", "staff", "password_reset", "login_log"] },
 ];
