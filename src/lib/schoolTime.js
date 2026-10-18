@@ -39,6 +39,14 @@ export function holidayToday() {
   return h ? { name: h.name } : null;
 }
 
+/** كائن الإجازة الرسمية { name } التي يقع فيها تاريخ معيّن YYYY-MM-DD، وإلا null */
+export function holidayOn(iso) {
+  const h = HOLIDAY_RANGES.find(
+    (r) => r.start && iso >= r.start && iso <= (r.end || r.start),
+  );
+  return h ? { name: h.name } : null;
+}
+
 /** أقرب إجازة رسمية لم تبدأ بعد { name, start, end, days } — days: الأيام حتى بدايتها */
 export function nextHoliday() {
   const t = todayISO();

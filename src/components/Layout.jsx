@@ -78,6 +78,7 @@ const ADMIN_GROUPS = [
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
+      { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
     ],
   },
   {
@@ -153,6 +154,7 @@ const TEACHER_GROUPS = [
       { to: "/substitute",  label: "حصص الانتظار",          tabKey: "substitute", icon: "swap" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
+      { to: "/lab",         label: "معمل الحاسب الآلي",     extraTabKey: "computer_lab", icon: "monitor", kw: "حجز اجهزة تقنية رقمية" },
     ],
   },
   {
@@ -263,6 +265,7 @@ export function Icon({ name, className = "h-[18px] w-[18px]" }) {
     news:   "M4 5h12v14H4zM16 8h4v9a2 2 0 0 1-4 0zM7 9h6M7 12h6M7 15h4",
     chat:   "M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4Z",
     upload: "M12 16V4m-5 5 5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
+    monitor: "M3 4h18v12H3zM8 21h8M12 16v5",
     grid:   "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
     table:  "M3 4h18v16H3zM3 9h18M3 14.5h18M9 4v16",
     chalk:  "M4 19v-3l11-11 3 3-11 11H4ZM14 6l3 3",

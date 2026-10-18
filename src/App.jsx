@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-
 import { useSession } from "./lib/session.jsx";
 import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
+import { LAB_MANAGER_ROLES } from "./lib/lab.js";
 import Layout from "./components/Layout.jsx";
 import FollowUpTabs from "./components/FollowUpTabs.jsx";
 import Login from "./pages/Login.jsx";
@@ -20,6 +21,7 @@ const TeacherRecords = lazy(() => import("./pages/teacher/TeacherRecords.jsx"));
 const FollowUpLog = lazy(() => import("./pages/teacher/FollowUpLog.jsx"));
 const FollowUpLog2 = lazy(() => import("./pages/teacher/FollowUpLog2.jsx"));
 const FollowUpLog3 = lazy(() => import("./pages/teacher/FollowUpLog3.jsx"));
+const Lab = lazy(() => import("./pages/lab/Lab.jsx"));
 const TeacherPermissions = lazy(() => import("./pages/admin/TeacherPermissions.jsx"));
 const NotificationsReview = lazy(() => import("./pages/admin/NotificationsReview.jsx"));
 const TeacherNotify = lazy(() => import("./pages/teacher/TeacherNotify.jsx"));
@@ -424,6 +426,11 @@ export default function App() {
           {(effectiveRole === "admin" && can("permissions")) ||
            (effectiveRole === "teacher" && grantedTabs.has("permissions")) ? (
             <Route path="/permissions" element={<PermissionRequestPage />} />
+          ) : null}
+          {/* معمل الحاسب الآلي — لمعلمي التقنية الرقمية المخوّلين ولمسؤولي المعمل */}
+          {(effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r))) ||
+           (effectiveRole === "teacher" && grantedTabs.has("computer_lab")) ? (
+            <Route path="/lab" element={<Lab />} />
           ) : null}
           {/* الأخبار للمعلمين المخوّلين — مسودات فقط، الصفحة نفسها تفرض هذا القيد */}
           {effectiveRole === "teacher" && grantedTabs.has("news") ? (
