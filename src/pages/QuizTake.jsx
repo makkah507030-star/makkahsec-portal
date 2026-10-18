@@ -63,11 +63,18 @@ function Watermark({ text }) {
   );
 }
 
+// المزاوجة: الأسطر الفارغة في العمودين (زوج أُضيف ولم يُكتب، أو قيمة null من الحفظ)
+// لا تُعرض ولا تُطلب — كانت تُبقي السؤال «بلا إجابة» فلا يُقبل التسليم
+const filled = (v) => v != null && String(v).trim() !== "";
+const matchRows = (q) => (q.options?.left ?? []).map((l, k) => k).filter((k) => filled(q.options.left[k]));
+
 const answered = (q, a) => {
-  if (a == null) return false;
-  if (q.kind !== "match") return true;
-  const n = (q.options?.left ?? []).length;
-  return n > 0 && Object.values(a).filter((v) => v !== "" && v != null).length >= n;
+  if (q.kind === "match") {
+    const rows = matchRows(q);
+    if (!rows.length) return true;
+    return !!a && rows.every((k) => filled(a[String(k)]));
+  }
+  return a != null;
 };
 
 export default function QuizTake() {
@@ -397,18 +404,21 @@ export default function QuizTake() {
 
       {q.kind === "match" && (
         <div className="mt-2 space-y-1.5">
-          {(q.options?.left ?? []).map((l, k) => {
+          {matchRows(q).map((k, row) => {
+            const l = q.options.left[k];
             const cur = (answers[q.id] ?? {})[String(k)] ?? "";
             return (
               <div key={k} className="flex items-center gap-2">
-                <span className="num w-5 shrink-0 text-center text-xs font-bold text-muted">{k + 1}</span>
+                <span className="num w-5 shrink-0 text-center text-xs font-bold text-muted">{row + 1}</span>
                 <span className="flex-1 rounded-card bg-canvas px-2.5 py-1.5 text-sm text-ink">{l}</span>
                 <select className="field w-auto max-w-[55%] py-1.5 text-sm" value={cur}
                         onChange={(e) => setAnswer(q.id, { ...(answers[q.id] ?? {}), [String(k)]: e.target.value })}>
                   <option value="">{ltr ? "Choose…" : "يقابله…"}</option>
-                  {shuffled((q.options?.right ?? []).length, `${profile?.id}:${q.id}:r`).map((ri, pos) => (
-                    <option key={ri} value={String(ri)}>{t.ltrs[pos] ?? pos + 1}) {q.options.right[ri]}</option>
-                  ))}
+                  {shuffled((q.options?.right ?? []).length, `${profile?.id}:${q.id}:r`)
+                    .filter((ri) => filled(q.options.right[ri]))
+                    .map((ri, pos) => (
+                      <option key={ri} value={String(ri)}>{t.ltrs[pos] ?? pos + 1}) {q.options.right[ri]}</option>
+                    ))}
                 </select>
               </div>
             );
