@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { cmpAr } from "../../lib/sortAr";
-import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import Loader from "../../components/Loader.jsx";
 import ReportViewer from "../../components/report/ReportViewer.jsx";
@@ -10,6 +9,7 @@ import { loadPrincipalSignature } from "../../lib/principalSignature";
 import { academicYearLabel, TERM_LABEL } from "../studio/lib";
 import { quizReportPages } from "./QuizReportDoc.jsx";
 import { fmtDate } from "../../lib/dates";
+import QuizTeacherPicker, { useQuizTeacher } from "../../components/QuizTeacherPicker.jsx";
 
 /* =====================================================================
    تحليل النتائج — للمعلم وحده، لاختباراته المنفّذة عبر البوابة فقط
@@ -92,8 +92,9 @@ function correctness(q, a) {
 }
 
 export default function QuizAnalytics() {
-  const { session, profile } = useSession();
-  const uid = session?.user?.id;
+  // الدعم الفني يختار المعلم ويطّلع دون إعادة تصحيح (QuizTeacherPicker.jsx)
+  const tq = useQuizTeacher();
+  const uid = tq.teacherId;
 
   const [data, setData] = useState(null);   // { quizzes, subs, classes, students, questions }
   const [err, setErr] = useState(null);
@@ -117,8 +118,10 @@ export default function QuizAnalytics() {
   }, [uid]);
 
   const [tick, setTick] = useState(0);
+  // تبديل المعلم (للدعم الفني) يبدأ التصفية من جديد
+  useEffect(() => { setF({ period: "", subject: "", classId: "", quizId: "" }); }, [uid]);
   useEffect(() => {
-    if (!uid) return;
+    if (!uid) { if (tq.viewOnly) setData({ quizzes: [], subs: [], classes: {}, students: {}, questions: [] }); return; }
     (async () => {
       const { data: st } = await supabase.from("settings")
         .select("key, value").in("key", ["active_year", "active_term"]);
@@ -265,7 +268,7 @@ export default function QuizAnalytics() {
   const reportKey = `${view}|${theme}|${scopeLine}|${kpi.sheets}|${kpi.avg}|${sigUrl}|${principalSig}|${termLabel}`;
   const pages = useMemo(() => (view === "report" && data && kpi.sheets ? quizReportPages({
     r: { kpi, perQuiz, dist, perClass, items, one, top, support, classes: data.classes, sheet },
-    teacher: profile?.full_name ?? "", scopeLine, year: academicYearLabel(), term: termLabel, theme,
+    teacher: tq.teacherName, scopeLine, year: academicYearLabel(), term: termLabel, theme,
     sigs: { teacher: sigUrl, principal: principalSig },
   }) : null), [reportKey]);   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -293,12 +296,14 @@ export default function QuizAnalytics() {
         )}
       </div>
 
+      <QuizTeacherPicker t={tq} />
+
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">تعذّر التحميل: {err}</p>}
 
       {nothing ? (
         <div className="card px-6 py-12 text-center">
           <p className="text-3xl">📊</p>
-          <p className="mt-3 text-sm font-semibold text-ink">لا نتائج لتحليلها بعد</p>
+          <p className="mt-3 text-sm font-semibold text-ink">{tq.viewOnly && !uid ? "اختر المعلم لعرض نتائج اختباراته" : "لا نتائج لتحليلها بعد"}</p>
           <p className="mt-1 text-xs leading-relaxed text-muted">
             يظهر التحليل حين تبدأ رصد درجات أحد اختباراتك في «التصحيح والدرجات»،
             أو يسلّم طلابك اختبارًا إلكترونيًا.
@@ -329,7 +334,7 @@ export default function QuizAnalytics() {
 
           {view === "report" && kpi.sheets ? (
             <ReportViewer id="qa-report" pages={pages} theme={theme} setTheme={setTheme}
-              fileTitle={`تحليل نتائج الاختبارات - ${profile?.full_name ?? ""}`} />
+              fileTitle={`تحليل نتائج الاختبارات - ${tq.teacherName}`} />
           ) : (
             <Report kpi={kpi} perQuiz={perQuiz} dist={dist} perClass={perClass} items={items}
                     one={one} top={top} support={support} classes={data.classes} graded={graded.length} />
@@ -409,10 +414,10 @@ export function Report({ print = false, kpi, perQuiz, dist, perClass, items, one
                     <p key={x.id}><b className="num">{x.label}</b> ({x.text.length > 40 ? `${x.text.slice(0, 40)}…` : x.text}): {x.suspect}</p>
                   ))}
                   <p className="text-muted">إن كان المفتاح خاطئًا: صحّحه من «اختباراتي» ← الأسئلة، ثم أعد تصحيح الأوراق بالمفتاح الجديد.</p>
-                  <button type="button" disabled={regrading} onClick={() => regrade(one)}
+                  {!tq.viewOnly && <button type="button" disabled={regrading} onClick={() => regrade(one)}
                           className="mt-1 rounded-pill border border-absent/40 bg-white px-3 py-1 text-xs font-semibold text-absent hover:bg-absent/5 disabled:opacity-50">
                     {regrading ? "جارٍ إعادة التصحيح…" : "إعادة تصحيح أوراق هذا الاختبار"}
-                  </button>
+                  </button>}
                 </div>
               )}
               {hard.length > 0 && (

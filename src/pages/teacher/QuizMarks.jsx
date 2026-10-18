@@ -19,6 +19,7 @@ import { fmtDate } from "../../lib/dates";
 const MODE_NAME = { online: "إلكتروني", paper: "ورقي", external: "من خارج البوابة", omr: "تصحيح آلي" };
 import { PRINCIPAL_NAME } from "../../lib/exportUtils.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
+import QuizTeacherPicker, { useQuizTeacher } from "../../components/QuizTeacherPicker.jsx";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -35,8 +36,12 @@ const quizLang = (quiz) => (quiz?.lang === "en" ? EN_L : AR_L);
 const INK = { WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" };
 
 export default function QuizMarks() {
-  const { session, profile } = useSession();
+  const { session } = useSession();
   const uid = session?.user?.id;
+  // الدعم الفني يختار المعلم ويطّلع دون رصد (QuizTeacherPicker.jsx)
+  const tq = useQuizTeacher();
+  const tid = tq.teacherId;
+  const viewOnly = tq.viewOnly;
 
   const [quizzes, setQuizzes] = useState(null);
   // ?q=<quiz_id> يفتح اختبارًا بعينه (من زر «دورة الاختبار»)
@@ -59,13 +64,14 @@ export default function QuizMarks() {
   const [sheets, setSheets] = useState({});   // quiz_id → عدد الأوراق المرصودة
 
   useEffect(() => {
-    if (!uid) return;
+    if (!tid) { if (viewOnly) { setQuizzes([]); setQuizId(""); } return; }
     (async () => {
       const { data } = await supabase.from("quizzes")
-        .select("*").eq("teacher_id", uid)
+        .select("*").eq("teacher_id", tid)
         .in("status", ["ready", "marking", "closed"])
         .order("created_at", { ascending: false });
       setQuizzes(data ?? []);
+      if (viewOnly) setQuizId((id) => ((data ?? []).some((q) => q.id === id) ? id : ""));
       // عدد الأوراق المرصودة لكل اختبار — يميّز النسخ المتشابهة الاسم
       const ids = (data ?? []).map((q) => q.id);
       if (ids.length) {
@@ -76,7 +82,7 @@ export default function QuizMarks() {
         setSheets(m);
       }
     })();
-  }, [uid]);
+  }, [tid, viewOnly]);
 
   const quiz = useMemo(
     () => (quizzes ?? []).find((q) => q.id === quizId), [quizzes, quizId]);
@@ -209,6 +215,8 @@ export default function QuizMarks() {
         </p>
       </div>
 
+      <QuizTeacherPicker t={tq} />
+
       <section className="no-print card space-y-3 p-4">
         <div>
           <label className="text-xs text-muted">الاختبار</label>
@@ -283,11 +291,11 @@ export default function QuizMarks() {
 
           {/* خانات الرصد تُبنى مرة واحدة من الدرجات المحفوظة — فلا تُعرض إلا بعد اكتمال جلب
               الفصل الحالي، وإلا بُنيت من بيانات الفصل أو الاختبار السابق فظهرت فارغة */}
-          {isPaper && classLoaded && (
+          {isPaper && !viewOnly && classLoaded && (
             <ScoreGrid key={`${quizId}-${classId}`} students={students} subs={subs} total={Number(quiz?.total_marks ?? 0)} onSave={saveScore} />
           )}
 
-          {!isPaper && (
+          {(!isPaper || viewOnly) && (
           <div className="no-print card divide-y divide-line overflow-hidden">
             {students.map((s) => {
               const sub = subs[s.id];
@@ -312,20 +320,22 @@ export default function QuizMarks() {
                         البطاقة
                       </button>
                     )}
-                    {!isOnline && (
+                    {!isOnline && !viewOnly && (
                       <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
                               className="shrink-0 rounded-pill border border-mint-deep px-2.5 py-1 text-xs font-semibold text-mint-deep">
                         📷
                       </button>
                     )}
+                    {(!viewOnly || (sub && !sub.absent && !isPaper)) && (
                     <button onClick={() => setActive(active?.id === s.id ? null : s)}
                             className="shrink-0 rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white">
-                      {active?.id === s.id ? "إغلاق" : sub ? "تعديل" : "رصد"}
+                      {active?.id === s.id ? "إغلاق" : viewOnly ? "الإجابات" : sub ? "تعديل" : "رصد"}
                     </button>
+                    )}
                   </div>
 
                   {active?.id === s.id && (
-                    <AnswerSheet student={s} questions={ordered} quiz={quiz}
+                    <AnswerSheet student={s} questions={ordered} quiz={quiz} readOnly={viewOnly}
                                  initial={sub?.answers ?? {}}
                                  onSave={(a) => saveAnswers(s, a)}
                                  onAbsent={() => markAbsent(s)} />
@@ -338,7 +348,7 @@ export default function QuizMarks() {
           )}
 
           <div className="no-print flex flex-wrap gap-2">
-            {isPaper ? null : (
+            {isPaper || viewOnly ? null : (
               <>
                 {!isOnline && (
                   <button className="btn-primary flex-1"
@@ -469,7 +479,7 @@ export default function QuizMarks() {
                   <p className="text-[12px] text-muted">معلم المادة</p>
                   <div className="h-8" />
                   <div className="mx-auto h-px w-44 bg-line" />
-                  <p className="mt-1.5 text-[12.5px] font-semibold">{profile?.full_name ?? "…"}</p>
+                  <p className="mt-1.5 text-[12.5px] font-semibold">{tq.teacherName || "…"}</p>
                 </div>
                 <div>
                   <p className="text-[12px] text-muted">مدير المدرسة</p>
@@ -492,7 +502,7 @@ export default function QuizMarks() {
 }
 
 /* ------------------- رصد إجابات طالب بضغطات سريعة ------------------- */
-function AnswerSheet({ student, questions, quiz, initial, onSave, onAbsent }) {
+function AnswerSheet({ student, questions, quiz, initial, onSave, onAbsent, readOnly = false }) {
   const L = quizLang(quiz);
   const [ans, setAns] = useState(initial ?? {});
   const [busy, setBusy] = useState(false);
@@ -505,7 +515,7 @@ function AnswerSheet({ student, questions, quiz, initial, onSave, onAbsent }) {
   return (
     <div className="mt-3 space-y-3 rounded-sm2 bg-mint-tint/40 p-3">
       {questions.map((q, i) => (
-        <div key={q.id}>
+        <div key={q.id} className={readOnly ? "pointer-events-none" : ""}>
           <p className="text-xs font-medium text-ink">
             <span className="num font-bold text-mint-deep">{q._label}</span>{" "}
             {q.text ? (q.text.length > 60 ? q.text.slice(0, 60) + "…" : q.text) : "—"}
@@ -559,7 +569,7 @@ function AnswerSheet({ student, questions, quiz, initial, onSave, onAbsent }) {
         </div>
       ))}
 
-      <div className="flex flex-wrap gap-2 pt-1">
+      {!readOnly && <div className="flex flex-wrap gap-2 pt-1">
         <button className="btn-primary flex-1" disabled={busy}
                 onClick={async () => { setBusy(true); await onSave(ans); setBusy(false); }}>
           حفظ وتصحيح
@@ -568,7 +578,7 @@ function AnswerSheet({ student, questions, quiz, initial, onSave, onAbsent }) {
                 className="rounded-pill border border-absent/40 px-4 py-2 text-sm font-semibold text-absent hover:bg-absent/5">
           غائب
         </button>
-      </div>
+      </div>}
     </div>
   );
 }
