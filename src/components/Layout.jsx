@@ -408,7 +408,10 @@ export default function Layout({ children }) {
      داخل تفاصيل الصفحة (lib/backStep.js) يغلقها ويحمل اسم الصفحة، وإلا يعود للصفحة
      السابقة، أو للرئيسية إن فُتحت الصفحة مباشرة من رابط أو إشعار ولا سابق لها. */
   const steps = useBackSteps();
-  const showBack = steps.length > 0 || path !== "/";
+  // صفحة أداء الاختبار الإلكتروني لها شريط «تسليم» مثبّت أسفل الشاشة: يُخفى فيها شريط
+  // التنقل السفلي وزر الرجوع العائم، فقد كانا يغطيان زر التسليم على الجوال ويُخرجان الطالب
+  const inQuiz = path.startsWith("/quiz/");
+  const showBack = !inQuiz && (steps.length > 0 || path !== "/");
   const onBack = () => {
     if (steps.length) goBack();
     else if (window.history.state?.idx > 0) navigate(-1);
@@ -450,7 +453,7 @@ export default function Layout({ children }) {
 
   /* ---------- الشريط السفلي (الجوال) ---------- */
   const allVisible = [...groups.flatMap((g) => g.items), ...footer];
-  const bottomItems = (BOTTOM[effectiveRole] ?? [])
+  const bottomItems = (inQuiz ? [] : BOTTOM[effectiveRole] ?? [])
     .map((to) => allVisible.find((i) => i.to === to))
     .filter(Boolean)
     .slice(0, 4);
