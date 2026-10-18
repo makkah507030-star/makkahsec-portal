@@ -61,6 +61,7 @@ export function SessionProvider({ children }) {
         .maybeSingle()),
       traced("سجل المعلم", supabase.from("teachers").select("id").eq("user_id", userId).maybeSingle()),
       traced("الأدوار الإدارية", supabase.from("admin_roles").select("role_type").eq("user_id", userId)),
+      loadCustomRoles(),   // أسماء الأدوار المخصّصة قبل عرض أي شاشة
     ]);
 
     setProfile(u ?? null);
@@ -243,7 +244,7 @@ export const ADMIN_ROLE_LABEL = {
   counselor:       "الموجه الطلابي",
 };
 
-// الأدوار المتاحة للإسناد في شاشة الإدارة
+// الأدوار المتاحة للإسناد في شاشة الإدارة (وتُلحق بها الأدوار المخصّصة عند الإقلاع)
 export const ASSIGNABLE_ROLES = [
   "principal",
   "deputy_academic",
@@ -270,6 +271,30 @@ export const ASSIGNABLE_ROLES = [
   "science_labs_3",
   "computer_lab",
 ];
+
+/* الأدوار المخصّصة (supabase/custom_roles_*.sql): خانات custom_1..custom_10 يسمّيها
+   المدير أو الدعم الفني من «الإدارة» ← «الأدوار المخصّصة»، مثل «القائد الكشفي».
+   تُضاف أسماؤها إلى ADMIN_ROLE_LABEL وقائمة الإسناد عند الإقلاع، فتظهر في كل
+   الشاشات كبقية الأدوار. وإن لم يُنفَّذ الملف بعد تبقى القوائم كما هي. */
+export const CUSTOM_SLOTS = Array.from({ length: 10 }, (_, i) => `custom_${i + 1}`);
+export const EXTERNAL_ROLES = new Set();   // أدوار من خارج المدرسة
+export async function loadCustomRoles() {
+  try {
+    const { data, error } = await supabase.from("custom_roles").select("role_type, label, external");
+    if (error) return;
+    const named = new Set((data ?? []).map((r) => r.role_type));
+    for (let i = ASSIGNABLE_ROLES.length - 1; i >= 0; i--) {
+      if (CUSTOM_SLOTS.includes(ASSIGNABLE_ROLES[i]) && !named.has(ASSIGNABLE_ROLES[i])) ASSIGNABLE_ROLES.splice(i, 1);
+    }
+    EXTERNAL_ROLES.clear();
+    CUSTOM_SLOTS.forEach((k) => { if (!named.has(k)) delete ADMIN_ROLE_LABEL[k]; });
+    for (const r of data ?? []) {
+      ADMIN_ROLE_LABEL[r.role_type] = r.label;
+      if (r.external) EXTERNAL_ROLES.add(r.role_type);
+      if (!ASSIGNABLE_ROLES.includes(r.role_type)) ASSIGNABLE_ROLES.push(r.role_type);
+    }
+  } catch { /* لا شيء: تبقى الأدوار الثابتة */ }
+}
 
 // تدرّج لوني مميّز لكل حساب إداري — يُستخدم في بطاقة غلاف الأخبار
 // بدلًا من رفع صورة يدويًا (كل حساب له لون ثابت وتلقائي خاص به)
@@ -340,4 +365,5 @@ export const PERMISSIONS = [
   { key: "feedback",       label: "الملاحظات",          desc: "ملاحظات المستخدمين" },
   { key: "password_reset", label: "استعادة كلمة المرور", desc: "إعادة تعيين لأي مستخدم" },
   { key: "login_log",      label: "سجل الدخول والخروج",  desc: "متابعة عمليات تسجيل الدخول والخروج بالوقت والحالة" },
+  { key: "scouts",         label: "الفريق الكشفي",      desc: "إضافة أعضاء الفريق الكشفي من كل الفصول وحذفهم" },
 ];

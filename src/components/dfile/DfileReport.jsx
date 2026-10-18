@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "./dfile.css";
 import DfileDocViewer from "./DfileDocViewer.jsx";
 import { fmtDate, fmtHijri } from "../../lib/dates.js";
+import { countAr } from "../../lib/arabicCount.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
   DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord,
@@ -146,6 +147,9 @@ function Hero({ d, s, code }) {
 function Kpis({ d }) {
   const g = d.grades ?? {};
   const modes = new Set((d.quizzes ?? []).map((q) => q.mode)).size;
+  // المعدود بعد الرقم الظاهر فوقه: 1 اختبار، 2 اختباران، 3–10 اختبارات وتقويمات، 11 فأكثر اختبارًا وتقويمًا
+  const nq = d.quizzes?.length ?? 0;
+  const quizWord = nq === 1 ? "اختبار" : nq === 2 ? "اختباران" : nq >= 3 && nq <= 10 ? "اختبارات وتقويمات" : "اختبارًا وتقويمًا";
   const h = hours(d);
   return (
     <div className="df-kpis">
@@ -153,8 +157,8 @@ function Kpis({ d }) {
         {d.ontime != null && <span className="df-d">في يومها {pc(d.ontime)}</span>}</div>
       <div className="df-kpi"><span className="df-v df-num">{d.plc}</span><span className="df-l">لقاءات مجتمع التعلم</span>
         {d.plc_led > 0 && <span className="df-d">قدّم منها {d.plc_led}</span>}</div>
-      <div className="df-kpi"><span className="df-v df-num">{d.quizzes?.length ?? 0}</span><span className="df-l">اختبارًا وتقويمًا</span>
-        {modes > 0 && <span className="df-d">{modes} أنواع تقويم</span>}</div>
+      <div className="df-kpi"><span className="df-v df-num">{d.quizzes?.length ?? 0}</span><span className="df-l">{quizWord}</span>
+        {modes > 0 && <span className="df-d">{countAr(modes, "evalType")}</span>}</div>
       <div className="df-kpi"><span className="df-v df-num">{h}</span><span className="df-l">{hourWord(h)} تطوير مهني</span>
         <span className="df-d">برامج تدريبية ومؤتمرات</span></div>
       <div className="df-kpi"><span className="df-v df-num">{d.guardian_msgs}</span><span className="df-l">تواصلًا مع أولياء الأمور</span>
@@ -170,7 +174,7 @@ function Kpis({ d }) {
               <span key={k} className={`df-gc df-${k}`}><b className="df-num">{pc(pct(g.bands?.[k] ?? 0, g.n))}</b>{t}</span>
             ))}
           </div>
-          <span className="df-d">من {d.quizzes?.length ?? 0} اختبارًا هذا العام، {g.n} طالبًا</span>
+          <span className="df-d">من {countAr(d.quizzes?.length ?? 0, "quiz", { acc: true })} هذا العام، {countAr(g.n, "student")}</span>
         </div>
       )}
     </div>
@@ -216,7 +220,13 @@ function Results({ g }) {
               const tot = BANDS.reduce((a, [k]) => a + (c.bands?.[k] ?? 0), 0);
               return (
                 <div className="df-cls" key={c.label}><span>{c.label}</span>
-                  <Dist parts={BANDS.map(([k]) => ({ k, n: c.bands?.[k] ?? 0, c: BAND_COLOR[k], label: pc(pct(c.bands?.[k] ?? 0, tot)) }))} />
+                  <div className="min-w-0">
+                    <Dist parts={BANDS.map(([k]) => ({ k, n: c.bands?.[k] ?? 0, c: BAND_COLOR[k], label: pc(pct(c.bands?.[k] ?? 0, tot)) }))} />
+                    {/* اختبارات الفصل التي بُني عليها توزيعه (teacher_dfile_9.sql) */}
+                    {c.quizzes?.length > 0 && (
+                      <p className="df-cq">{c.quizzes.map((q) => `${q.t} (${MODE_LABEL[q.m] ?? MODE_LABEL.omr})`).join("، ")}</p>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -258,7 +268,7 @@ function Assess({ d }) {
   return (
     <Section id="assess" title="التقويم والاختبارات" sub="من «اختباراتي» في البوابة">
       <div className="df-card">
-        <CardH title="تنوّع أساليب التقويم" sub={`${qs.length} اختبارًا هذا العام`} src="تلقائي" />
+        <CardH title="تنوّع أساليب التقويم" sub={`${countAr(qs.length, "quiz")} هذا العام`} src="تلقائي" />
         <Dist parts={MODE_ORDER.map((m) => ({ k: m, n: by(m, "mode"), c: MODE_COLOR[m], label: String(by(m, "mode")) }))} />
         <div className="df-keys">{MODE_ORDER.filter((m) => by(m, "mode")).map((m) => (
           <span key={m}><i style={{ background: MODE_COLOR[m] }} />{MODE_LABEL[m]}</span>))}</div>
@@ -273,7 +283,8 @@ function Assess({ d }) {
               <span className="df-num">{MODE_LABEL[q.mode] ?? ""}{q.mode !== "external" && q.q > 0 ? `، ${q.q} سؤالًا` : ""}</span></li>
           ))}
         </ul>
-        {qs.length > 4 && <p className="df-sub df-num">و{qs.length - 4} اختبارات أخرى</p>}
+        {qs.length > 4 && <p className="df-sub df-num">{qs.length - 4 === 1 ? "واختبار آخر" : qs.length - 4 === 2 ? "واختباران آخران"
+          : `و${countAr(qs.length - 4, "quiz")} ${qs.length - 4 <= 10 ? "أخرى" : "آخر"}`}</p>}
       </div>
     </Section>
   );

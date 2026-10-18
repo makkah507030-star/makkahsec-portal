@@ -3,6 +3,7 @@ import { describeEdgeError } from "../../lib/edgeError.js";
 import { supabase } from "../../lib/supabase";
 import {
   useSession, ADMIN_ROLE_LABEL, ASSIGNABLE_ROLES, PERMISSIONS,
+  CUSTOM_SLOTS, EXTERNAL_ROLES, loadCustomRoles,
 } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
@@ -28,6 +29,9 @@ export default function AdminStaff() {
       <div className="flex flex-wrap gap-1.5">
         <Tab on={tab === "members"} onClick={() => setTab("members")}>الأعضاء</Tab>
         {isSuper && (
+          <Tab on={tab === "custom"} onClick={() => setTab("custom")}>الأدوار المخصّصة</Tab>
+        )}
+        {isSuper && (
           <Tab on={tab === "perms"} onClick={() => setTab("perms")}>الصلاحيات</Tab>
         )}
         {isSuper && (
@@ -36,6 +40,7 @@ export default function AdminStaff() {
       </div>
 
       {tab === "members" && <Members />}
+      {tab === "custom" && isSuper && <CustomRoles onOpenMembers={() => setTab("members")} />}
       {tab === "perms" && isSuper && <RolePermissions />}
       {tab === "signers" && isSuper && <Signers />}
     </div>
@@ -158,10 +163,13 @@ function Members() {
                 className={`rounded-pill px-3.5 py-1.5 text-sm font-medium transition-colors ${
                   roles.has(k) ? "bg-mint-deep text-white"
                                : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-                {ADMIN_ROLE_LABEL[k]}
+                {ADMIN_ROLE_LABEL[k]}{EXTERNAL_ROLES.has(k) && " · من خارج المدرسة"}
               </button>
             ))}
           </div>
+          <p className="mt-1.5 text-[11.5px] text-faint">
+            لإسناد مهمة لشخص من خارج المدرسة (مثل القائد الكشفي) أضف دورها من تبويب «الأدوار المخصّصة» ثم اختره هنا.
+          </p>
         </div>
 
         <button className="btn-primary" disabled={!canSubmit || saving} onClick={submit}>
@@ -188,7 +196,7 @@ function Members() {
 
         <div className="divide-y divide-line">
           {list?.map((a) => (
-            <MemberRow key={a.id} member={a} onSave={editRoles} />
+            <MemberRow key={a.id} member={a} onSave={editRoles} onReload={load} />
           ))}
         </div>
       </section>
@@ -196,7 +204,8 @@ function Members() {
   );
 }
 
-function MemberRow({ member, onSave }) {
+function MemberRow({ member, onSave, onReload }) {
+  const { session } = useSession();
   const [editing, setEditing] = useState(false);
   const [sel, setSel] = useState(new Set(member.roles));
   const [busy, setBusy] = useState(false);
@@ -225,8 +234,28 @@ function MemberRow({ member, onSave }) {
     setEditing(false);
   };
 
+  // تفعيل الحساب أو تعطيله (admin_set_active في supabase/custom_roles_2.sql)
+  const setActive = async (on) => {
+    if (!on && !(await confirmDanger({
+      title: `تعطيل حساب ${member.full_name ?? member.username}`,
+      impact: ["لا يستطيع الدخول إلى البوابة حتى يُعاد تفعيله.", "تبقى أدواره وبياناته كما هي."],
+      confirmLabel: "تعطيل الحساب",
+    }))) return;
+    setBusy(true);
+    const { error } = await supabase.rpc("admin_set_active", { p_user: member.id, p_active: on });
+    setBusy(false);
+    if (error) {
+      alert(/admin_set_active/.test(error.message)
+        ? "التفعيل يحتاج تنفيذ ملف supabase/custom_roles_2.sql في قاعدة البيانات مرة واحدة."
+        : "تعذّر: " + error.message);
+      return;
+    }
+    await onReload();
+  };
+  const self = member.id === session?.user?.id;
+
   return (
-    <div className="px-4 py-3">
+    <div className={`px-4 py-3 ${member.is_active ? "" : "bg-canvas/60"}`}>
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-ink">
@@ -240,7 +269,7 @@ function MemberRow({ member, onSave }) {
             <div className="flex flex-wrap gap-1.5">
               {member.roles.map((r) => (
                 <span key={r} className="chip bg-mint-light text-mint-deep">
-                  {ADMIN_ROLE_LABEL[r] ?? r}
+                  {ADMIN_ROLE_LABEL[r] ?? r}{EXTERNAL_ROLES.has(r) && " · من خارج المدرسة"}
                 </span>
               ))}
               {!member.is_active && (
@@ -251,6 +280,12 @@ function MemberRow({ member, onSave }) {
                     className="shrink-0 text-xs font-medium text-mint-deep hover:underline">
               تعديل الأدوار
             </button>
+            {!self && (
+              <button onClick={() => setActive(!member.is_active)} disabled={busy}
+                      className={`shrink-0 text-xs font-medium hover:underline ${member.is_active ? "text-absent" : "text-present"}`}>
+                {member.is_active ? "تعطيل" : "تفعيل"}
+              </button>
+            )}
           </>
         )}
       </div>
@@ -263,7 +298,7 @@ function MemberRow({ member, onSave }) {
                 className={`rounded-pill px-3 py-1.5 text-xs font-medium transition-colors ${
                   sel.has(k) ? "bg-mint-deep text-white"
                              : "border border-line bg-white text-muted"}`}>
-                {ADMIN_ROLE_LABEL[k]}
+                {ADMIN_ROLE_LABEL[k]}{EXTERNAL_ROLES.has(k) && " · من خارج المدرسة"}
               </button>
             ))}
           </div>
@@ -281,9 +316,205 @@ function MemberRow({ member, onSave }) {
   );
 }
 
+/* ===================== الأدوار المخصّصة ===================== */
+
+/* =====================================================================
+   أدوار يضيفها المدير أو الدعم الفني بلا برمجة (supabase/custom_roles_*.sql):
+   اسم الدور، وهل هو لشخص من خارج المدرسة، وصلاحياته. يُحفظ في أول خانة
+   فارغة من custom_1..custom_10، ثم يُسند لشخص من تبويب «الأعضاء».
+   ===================================================================== */
+
+// صلاحيات لا تُمنح لدور مخصّص: تمسّ الحسابات والنظام
+const CUSTOM_BLOCKED = ["accounts", "staff", "password_reset", "import", "records"];
+const CUSTOM_PERMS = PERMISSIONS.filter((p) => !CUSTOM_BLOCKED.includes(p.key));
+const CUSTOM_PRESETS = [
+  { label: "القائد الكشفي", external: true, perms: ["scouts", "students", "news", "notifications"],
+    note: "القائد الكشفي الداعم للفريق الكشفي بالمدرسة" },
+];
+const BLANK = { slot: null, label: "", external: false, note: "", perms: new Set() };
+
+function CustomRoles({ onOpenMembers }) {
+  const [rows, setRows] = useState(null);
+  const [missing, setMissing] = useState(false);
+  const [form, setForm] = useState(null);   // null = مغلق، وإلا BLANK أو دور قيد التعديل
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useNotice(null);
+
+  const load = async () => {
+    const [{ data, error }, { data: perms }, { data: holders }] = await Promise.all([
+      supabase.from("custom_roles").select("*").order("created_at"),
+      supabase.from("role_permissions").select("role_type, permission").in("role_type", CUSTOM_SLOTS),
+      supabase.from("admin_roles").select("role_type").in("role_type", CUSTOM_SLOTS),
+    ]);
+    if (error) { setMissing(true); setRows([]); return; }
+    const p = {}; (perms ?? []).forEach((r) => (p[r.role_type] ??= new Set()).add(r.permission));
+    const n = {}; (holders ?? []).forEach((r) => { n[r.role_type] = (n[r.role_type] ?? 0) + 1; });
+    setRows((data ?? []).map((r) => ({ ...r, perms: p[r.role_type] ?? new Set(), n: n[r.role_type] ?? 0 })));
+  };
+  useEffect(() => { load(); }, []);
+
+  const togglePerm = (k) => setForm((f) => {
+    const s = new Set(f.perms); s.has(k) ? s.delete(k) : s.add(k);
+    return { ...f, perms: s };
+  });
+
+  const save = async () => {
+    const label = form.label.trim();
+    if (label.length < 2) { setMsg({ ok: false, text: "اكتب اسم الدور." }); return; }
+    if ((rows ?? []).some((r) => r.label === label && r.role_type !== form.slot)) {
+      setMsg({ ok: false, text: "يوجد دور بهذا الاسم." }); return;
+    }
+    const slot = form.slot ?? CUSTOM_SLOTS.find((k) => !(rows ?? []).some((r) => r.role_type === k));
+    if (!slot) { setMsg({ ok: false, text: "اكتملت الخانات العشر. احذف دورًا غير مُسند لإضافة غيره." }); return; }
+    setBusy(true);
+    const { error } = await supabase.from("custom_roles")
+      .upsert({ role_type: slot, label, external: form.external, note: form.note.trim() || null });
+    let e2 = null;
+    if (!error) {
+      ({ error: e2 } = await supabase.from("role_permissions").delete().eq("role_type", slot));
+      if (!e2 && form.perms.size) {
+        ({ error: e2 } = await supabase.from("role_permissions")
+          .insert([...form.perms].map((permission) => ({ role_type: slot, permission }))));
+      }
+    }
+    setBusy(false);
+    if (error || e2) { setMsg({ ok: false, text: (error || e2).message }); return; }
+    await loadCustomRoles();
+    setMsg({ ok: true, text: form.slot ? `حُفظ دور «${label}».` : `أُضيف دور «${label}». أسنده الآن لصاحبه من تبويب «الأعضاء».` });
+    setForm(null);
+    load();
+  };
+
+  const remove = async (r) => {
+    if (!(await confirmDanger({
+      title: `حذف دور «${r.label}»`,
+      impact: ["يُحذف الدور وصلاحياته، وتصبح خانته متاحة لدور آخر."],
+      confirmLabel: "حذف الدور",
+    }))) return;
+    await supabase.from("role_permissions").delete().eq("role_type", r.role_type);
+    const { error } = await supabase.from("custom_roles").delete().eq("role_type", r.role_type);
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    await loadCustomRoles();
+    load();
+  };
+
+  if (!rows) return <Loader />;
+  if (missing) return (
+    <div className="card px-6 py-10 text-center text-sm text-muted">
+      الأدوار المخصّصة تحتاج تنفيذ الملفين supabase/custom_roles_1.sql ثم custom_roles_2.sql في قاعدة البيانات مرة واحدة.
+    </div>
+  );
+
+  const pill = (on) => `rounded-pill px-3 py-1.5 text-xs font-medium transition-colors ${
+    on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
+
+  return (
+    <div className="space-y-4">
+      <section className="card space-y-3 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-semibold text-ink">الأدوار المخصّصة</h2>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              أدوار خارج القائمة الثابتة، لمنسوب في المدرسة أو لشخص من خارجها مثل القائد الكشفي.
+              أضف الدور وصلاحياته هنا، ثم أسنده لصاحبه وفعّل حسابه من تبويب «الأعضاء».
+            </p>
+          </div>
+          {!form && (
+            <button className="btn-primary shrink-0" onClick={() => setForm(BLANK)}
+                    disabled={rows.length >= CUSTOM_SLOTS.length}>+ إضافة دور</button>
+          )}
+        </div>
+
+        {form && (
+          <div className="space-y-3 rounded-sm2 bg-mint-tint/50 p-3">
+            {!form.slot && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted">قالب جاهز:</span>
+                {CUSTOM_PRESETS.map((t) => (
+                  <button key={t.label} type="button" className={pill(false)}
+                          onClick={() => setForm({ ...form, label: t.label, external: t.external, note: t.note, perms: new Set(t.perms) })}>
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs text-muted">اسم الدور</label>
+                <input className="field mt-1" value={form.label} maxLength={60}
+                       onChange={(e) => setForm({ ...form, label: e.target.value })} placeholder="مثال: القائد الكشفي" />
+              </div>
+              <div>
+                <label className="text-xs text-muted">وصف مختصر (اختياري)</label>
+                <input className="field mt-1" value={form.note}
+                       onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="مثال: الداعم للفريق الكشفي بالمدرسة" />
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-ink">
+              <input type="checkbox" checked={form.external} onChange={(e) => setForm({ ...form, external: e.target.checked })} />
+              من خارج المدرسة
+            </label>
+            <div>
+              <label className="text-xs text-muted">الصلاحيات</label>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {CUSTOM_PERMS.map((p) => (
+                  <button key={p.key} type="button" title={p.desc} className={pill(form.perms.has(p.key))}
+                          onClick={() => togglePerm(p.key)}>{p.label}</button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11.5px] text-faint">
+                الأحداث والمناسبات وإصدار النماذج والشهادات متاحة لكل حساب إداري دون صلاحية.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button className="btn-primary" onClick={save} disabled={busy}>{busy ? "جارٍ الحفظ…" : "حفظ الدور"}</button>
+              <button className="btn-ghost" onClick={() => setForm(null)}>إلغاء</button>
+            </div>
+          </div>
+        )}
+
+        {msg && (
+          <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>
+            {msg.text}
+            {msg.ok && !form && <button onClick={onOpenMembers} className="ms-2 font-semibold underline">الأعضاء</button>}
+          </p>
+        )}
+      </section>
+
+      <section className="card overflow-hidden">
+        {rows.length === 0 && <p className="px-4 py-6 text-sm text-muted">لا أدوار مخصّصة بعد.</p>}
+        <div className="divide-y divide-line">
+          {rows.map((r) => (
+            <div key={r.role_type} className="px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-ink">{r.label}</p>
+                {r.external && <span className="chip bg-warning-light text-warning">من خارج المدرسة</span>}
+                <span className="text-xs text-muted">{r.n ? `مُسند لـ ${r.n}` : "غير مُسند"}</span>
+                <button className="ms-auto text-xs font-medium text-mint-deep hover:underline"
+                        onClick={() => setForm({ slot: r.role_type, label: r.label, external: r.external, note: r.note ?? "", perms: new Set(r.perms) })}>
+                  تعديل
+                </button>
+                {r.n === 0 && (
+                  <button className="text-xs font-medium text-absent hover:underline" onClick={() => remove(r)}>حذف</button>
+                )}
+              </div>
+              {r.note && <p className="mt-1 text-xs text-muted">{r.note}</p>}
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {[...r.perms].map((k) => <span key={k} className="chip bg-mint-light text-mint-deep">{permByKey[k]?.label ?? k}</span>)}
+                {r.perms.size === 0 && <span className="text-[11.5px] text-faint">بلا صلاحيات إضافية</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 /* ===================== الصلاحيات ===================== */
 
-const EDITABLE_ROLES = ASSIGNABLE_ROLES.filter(
+// دالة لا ثابت: الأدوار المخصّصة تُضاف إلى ASSIGNABLE_ROLES أثناء العمل
+const editableRoles = () => ASSIGNABLE_ROLES.filter(
   (r) => r !== "principal" && r !== "tech_support"
 );
 
@@ -301,6 +532,8 @@ const PERM_GROUPS = [
     keys: ["schedules", "import", "calendar"] },
   { title: "المحتوى والتواصل",
     keys: ["news", "guides", "notifications", "feedback"] },
+  { title: "النشاط",
+    keys: ["scouts"] },
   { title: "الحسابات والنظام",
     keys: ["accounts", "staff", "password_reset", "login_log"] },
 ];
@@ -333,7 +566,7 @@ function RolePermissions() {
   const load = async () => {
     const { data } = await supabase.from("role_permissions").select("role_type, permission");
     const m = {};
-    EDITABLE_ROLES.forEach((r) => { m[r] = new Set(); });
+    editableRoles().forEach((r) => { m[r] = new Set(); });
     (data ?? []).forEach((r) => { (m[r.role_type] ??= new Set()).add(r.permission); });
     setMap(m);
     return m;
@@ -406,8 +639,8 @@ function RolePermissions() {
 
   const filteredRoles = useMemo(() => {
     const t = q.trim();
-    if (!t) return EDITABLE_ROLES;
-    return EDITABLE_ROLES.filter((r) => (ADMIN_ROLE_LABEL[r] ?? r).includes(t));
+    if (!t) return editableRoles();
+    return editableRoles().filter((r) => (ADMIN_ROLE_LABEL[r] ?? r).includes(t));
   }, [q]);
 
   if (!map) return <Loader compact />;
@@ -488,7 +721,7 @@ function RolePermissions() {
                   <select className="field flex-1" value={copyFrom}
                           onChange={(e) => setCopyFrom(e.target.value)}>
                     <option value="">اختر الدور…</option>
-                    {EDITABLE_ROLES.filter((r) => r !== role).map((r) => (
+                    {editableRoles().filter((r) => r !== role).map((r) => (
                       <option key={r} value={r}>
                         {ADMIN_ROLE_LABEL[r] ?? r} ({map[r]?.size ?? 0})
                       </option>
