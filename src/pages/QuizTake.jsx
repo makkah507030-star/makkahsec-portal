@@ -483,7 +483,8 @@ export default function QuizTake() {
 
       {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent" dir="rtl">{err}</p>}
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/95 px-4 py-3 backdrop-blur" dir="rtl">
+      {/* فوق أي شريط آخر للبوابة، وفوق منطقة الإيماءات أسفل شاشات iPhone */}
+      <div className="fixed inset-x-0 bottom-0 z-[35] border-t border-line bg-white/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur" dir="rtl">
         <div className="mx-auto flex max-w-2xl items-center gap-3">
           <p className="flex-1 text-xs text-muted">
             {pending ? (showMissing
