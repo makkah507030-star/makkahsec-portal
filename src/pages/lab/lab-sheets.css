@@ -1,0 +1,71 @@
+/* =====================================================================
+   مطبوعات معمل الحاسب الآلي — تُبنى على أوراق الاستوديو (studio.css):
+   ألوان النسخ الثلاث ومتغيراتها (--stu-*) والترويسة والزخارف كما هي.
+   ===================================================================== */
+
+/* العنوان ومقدمة الورقة */
+.lab-hero { margin-top: 34px; }
+.lab-hero.center { text-align: center; display: flex; flex-direction: column; align-items: center; }
+.lab-hero .stu-h1 { white-space: normal; }
+.lab-note { margin: 18px 0 14px; text-align: center; font-size: 14px; color: var(--stu-text2); }
+
+/* لوحة قواعد السلامة: بطاقتان في الصف تملأان ما بين العنوان والتذييل */
+.lab-rules-list { list-style: none; flex: 1; min-height: 0; margin-top: 28px; display: grid;
+                  grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; gap: 14px; }
+.lab-rules-list.one { grid-template-columns: 1fr; }
+.lab-rules-list li { display: flex; align-items: center; gap: 14px; padding: 14px 18px; min-height: 0; overflow: hidden;
+                     border: 1.5px solid var(--stu-cardB); background: var(--stu-card); border-radius: 16px; }
+.stu-official .lab-rules-list li { border-radius: 10px; }
+.lab-rules-list .stu-ic { flex: none; font-size: 19px; font-weight: 700; border-radius: 50%; }
+.lab-rules-list p { font-weight: 700; line-height: 1.55; color: var(--stu-text); }
+
+/* رمز QR في إطار أبيض — يُقرأ على كل النسخ */
+.lab-qr { background: #fff; border-radius: 22px; padding: 18px; align-self: center; line-height: 0;
+          box-shadow: 0 18px 50px -24px rgba(0,0,0,.35); }
+.stu-official .lab-qr { box-shadow: none; border: 1.5px solid #CCE3D4; }
+.lab-qr.big { margin: 26px auto 24px; }
+.lab-qr.big img { width: 300px; height: 300px; }
+
+/* لوحة البلاغ: الخطوات */
+.lab-steps { margin: auto 0 22px; }
+.lab-steps .stu-row { padding: 11px 20px; }
+.lab-steps .stu-row { grid-template-columns: 44px 1fr; }
+.lab-steps .stu-ic { font-size: 19px; font-weight: 700; }
+.lab-steps .v { font-size: 19px; white-space: normal; }
+
+/* ورقة الملصقات: 3 × 8 ملصقات بمقاس 63 × 33 مم تقريبًا وخطوط قص */
+.lab-stickers { background: #fff; }
+.lab-stickers .grid { position: absolute; inset: 34px 30px 52px; display: grid;
+                      grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(8, 1fr); }
+.lab-sticker { border: 1px dashed #BDBDBD; padding: 5px; min-height: 0; }
+.lab-sticker.empty { border-color: transparent; }
+.lab-sticker .in { position: relative; height: 100%; border-radius: 10px; overflow: hidden; background: var(--stu-bg);
+                   color: var(--stu-text); display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+.stu-official .lab-sticker .in { background: #fff; border: 1.5px solid #3E6350; border-radius: 6px; }
+.lab-sticker .in::before { content: ""; position: absolute; inset: 0;
+                           background: repeating-linear-gradient(135deg, var(--stu-lines) 0 1.5px, transparent 1.5px 18px); }
+.lab-sticker .in > * { position: relative; }
+.lab-sticker .qr { flex: none; background: #fff; border-radius: 8px; padding: 5px; line-height: 0; }
+.lab-sticker .qr img { width: 88px; height: 88px; }
+.lab-sticker .tx { min-width: 0; display: flex; flex-direction: column; }
+.lab-sticker .br { display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 600; color: var(--stu-text2); white-space: nowrap; }
+.lab-sticker .br img { width: 16px; height: 16px; }
+.lab-sticker b { font-size: 38px; line-height: 1; font-weight: 700; color: var(--stu-accent); margin-top: 4px; }
+.stu-dark .lab-sticker b { color: #89D7AD; }
+.lab-sticker small { font-size: 12px; font-weight: 700; direction: ltr; text-align: right; }
+.lab-sticker i { font-style: normal; font-size: 10.5px; color: var(--stu-gold); font-weight: 600; margin-top: 3px; }
+.lab-stickers .note { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 11px; color: #8A8A8A; }
+
+/* خلفية سطح المكتب */
+.lab-wall .panel { position: absolute; display: flex; flex-direction: column;
+                   border: 1.5px solid var(--stu-cardB); background: var(--stu-card); }
+.lab-wall .stu-brand b { font-weight: 700; }
+.lab-wall .mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 0; }
+.lab-wall .stu-tag svg { width: 1.1em; height: 1.1em; }
+.lab-wall .lbl { color: var(--stu-text2); font-weight: 500; }
+.lab-wall .big { line-height: .95; font-weight: 700; color: var(--stu-text); }
+.lab-wall .code { font-weight: 700; color: #89D7AD; direction: ltr; }
+.stu-light .lab-wall .code, .lab-wall.stu-light .code { color: var(--stu-accent); }
+.lab-wall .cap { text-align: center; font-weight: 700; color: var(--stu-text); line-height: 1.5; }
+.lab-wall .cap small { display: block; font-weight: 500; color: var(--stu-text2); font-size: .82em; }
+.lab-wall .foot-note { position: absolute; left: 6%; text-align: right; color: var(--stu-text2); font-weight: 500; }

@@ -8,7 +8,8 @@ import Loader from "../../components/Loader.jsx";
 import { fmtDateTime } from "../../lib/dates";
 import { byName } from "../../lib/sortAr.js";
 import { printReport } from "../../lib/exportUtils";
-import { printRulesPoster } from "../../lib/labPrint.js";
+import LabPrintDialog from "./LabPrintDialog.jsx";
+import { RulesSheet } from "./LabSheets.jsx";
 import { classText } from "../../lib/lab.js";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
@@ -20,6 +21,7 @@ export default function LabRules({ lab, isManager }) {
   const [reack, setReack] = useState(false);
   const [busy, setBusy] = useState(false);
   const [size, setSize] = useState("A3");
+  const [printing, setPrinting] = useState(false);
   const [msg, setMsg] = useNotice(null);
 
   const load = useCallback(async () => {
@@ -62,14 +64,7 @@ export default function LabRules({ lab, isManager }) {
           </div>
           {!editing && (
             <div className="flex flex-wrap items-center gap-2">
-              <select className="field w-auto py-2" value={size} onChange={(e) => setSize(e.target.value)} aria-label="حجم الورق">
-                <option value="A3">لوحة A3</option>
-                <option value="A4">ورقة A4</option>
-              </select>
-              <button type="button" className="btn-ghost py-2"
-                      onClick={async () => (await printRulesPoster(rules.items, labName, size)) || setMsg({ ok: false, text: "اسمح للمتصفح بفتح النوافذ المنبثقة ثم أعد المحاولة." })}>
-                طباعة اللوحة
-              </button>
+              <button type="button" className="btn-ghost py-2" onClick={() => setPrinting(true)}>طباعة اللوحة</button>
               {isManager && <button type="button" className="btn-primary py-2" onClick={() => setEditing([...rules.items])}>تعديل القواعد</button>}
             </div>
           )}
@@ -112,6 +107,23 @@ export default function LabRules({ lab, isManager }) {
       </div>
 
       <AcksByClass lab={lab} version={rules.version} />
+      {printing && (
+        <LabPrintDialog title="لوحة قواعد السلامة" fileName={`قواعد-السلامة-${labName}`} paper={size}
+                        onClose={() => setPrinting(false)}
+                        render={(th) => <RulesSheet theme={th} items={rules.items} labName={labName} />}>
+          <div>
+            <p className="label">مقاس الورق</p>
+            <div className="flex gap-1.5">
+              {["A3", "A4"].map((z) => (
+                <button key={z} type="button" onClick={() => setSize(z)}
+                        className={`rounded-pill px-3.5 py-1.5 text-xs font-medium ${size === z ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`}>
+                  {z === "A3" ? "لوحة A3" : "ورقة A4"}
+                </button>
+              ))}
+            </div>
+          </div>
+        </LabPrintDialog>
+      )}
       {msg && !msg.ok && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-absent">{msg.text}</p>}
     </div>
   );

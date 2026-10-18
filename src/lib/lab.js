@@ -78,3 +78,12 @@ export const OPEN_TICKET = ["new", "in_progress", "external"];
 
 /** رابط البلاغ المطبوع في رمز QR على خلفية الجهاز */
 export const reportUrl = (seat, origin = window.location.origin) => `${origin}/lab/r/${seat}`;
+
+// دقات شاشات أجهزة المعمل لخلفية سطح المكتب
+export const WALLPAPER_SIZES = [
+  { w: 1920, h: 1080, label: "1920 × 1080 (Full HD)" },
+  { w: 1600, h: 900,  label: "1600 × 900" },
+  { w: 1366, h: 768,  label: "1366 × 768" },
+  { w: 1280, h: 1024, label: "1280 × 1024 (شاشة مربعة)" },
+  { w: 1024, h: 768,  label: "1024 × 768 (أجهزة قديمة)" },
+];

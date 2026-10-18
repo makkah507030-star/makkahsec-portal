@@ -1,62 +1,67 @@
 // src/pages/lab/LabWallpapers.jsx
-// مولّد خلفيات سطح المكتب لأجهزة المعمل: لكل جهاز صورة برقمه ورمز QR للإبلاغ
-// عن عطل فيه، تُثبَّت على الجهاز ولا يغيّرها الطالب (تعليمات القفل أدناه).
-import { useEffect, useState } from "react";
+// رموز البلاغ بهوية البوابة: خلفية سطح مكتب لكل جهاز برقمه ورمز QR يفتح بلاغه،
+// وملصقات الأجهزة ولوحة البلاغ العامة لحين لا يصل الجهاز لسطح المكتب.
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useNotice } from "../../lib/useNotice.js";
-import { WALLPAPER_SIZES, drawWallpaper, downloadCanvas } from "../../lib/labWallpaper.js";
-import { printStickers, printReportPoster } from "../../lib/labPrint.js";
+import Scaled from "../studio/Scaled.jsx";
+import { downloadNode } from "../studio/lib";
+import { WALLPAPER_SIZES, reportUrl } from "../../lib/lab.js";
+import { WallpaperSheet, StickersSheet, PosterSheet, useQrCodes } from "./LabSheets.jsx";
+import LabPrintDialog from "./LabPrintDialog.jsx";
 
 const DEFAULT_NOTE = "حافظ على جهازك · لا تغيّر إعداداته · أطفئه بعد الاستخدام";
+const pill = (on) =>
+  `rounded-pill px-3.5 py-1.5 text-xs font-medium transition-colors ${
+    on ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted hover:bg-canvas"}`;
 
 export default function LabWallpapers({ lab, devices }) {
   const [labName, setLabName] = useState("معمل الحاسب الآلي");
   const [open, setOpen] = useState(false);
   const [size, setSize] = useState(0);
+  const [theme, setTheme] = useState("dark");
   const [note, setNote] = useState(DEFAULT_NOTE);
   const [seat, setSeat] = useState(devices[0]?.seat_no ?? 1);
-  const [preview, setPreview] = useState("");
-  const [busy, setBusy] = useState("");
+  const [exporting, setExporting] = useState(null);   // الأجهزة الجاري تنزيل خلفياتها
+  const [dialog, setDialog] = useState(null);         // "stickers" | "poster"
+  const offRef = useRef(null);
   const [, setMsg] = useNotice(null);
-
-  const opts = { ...WALLPAPER_SIZES[size], labName, note };
-  const popupBlocked = () => setMsg({ ok: false, text: "اسمح للمتصفح بفتح النوافذ المنبثقة لهذه الصفحة ثم أعد المحاولة." });
-  const fileName = (d) => `wallpaper-${d.code}-${opts.w}x${opts.h}.png`;
-  const device = devices.find((d) => d.seat_no === Number(seat)) ?? devices[0];
 
   useEffect(() => {
     supabase.from("labs").select("name").eq("id", lab).maybeSingle().then(({ data }) => data?.name && setLabName(data.name));
   }, [lab]);
 
+  const urls = [...devices.map((d) => reportUrl(d.seat_no)), reportUrl(0)];
+  const codes = useQrCodes(open ? urls : [], 520);
+  const { w, h } = WALLPAPER_SIZES[size];
+  const device = devices.find((d) => d.seat_no === Number(seat)) ?? devices[0];
+  const fileOf = (d) => `خلفية-${d.code}-${w}x${h}.png`;
+
+  // تُرسم الخلفيات المطلوبة خارج الشاشة بمقاسها الحقيقي، ثم تُنزَّل واحدة بعد أخرى
   useEffect(() => {
-    if (!open || !device) return;
+    if (!exporting) return;
     let alive = true;
-    drawWallpaper(device, opts).then((c) => alive && setPreview(c.toDataURL("image/png")));
+    (async () => {
+      await new Promise((r) => setTimeout(r, 300));
+      const nodes = offRef.current?.querySelectorAll(".lab-wall") ?? [];
+      for (let i = 0; i < nodes.length && alive; i++) {
+        await downloadNode(nodes[i], fileOf(exporting[i]), 1);
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      if (alive) {
+        if (exporting.length > 1) setMsg({ ok: true, text: `نُزّلت ${exporting.length} خلفية` });
+        setExporting(null);
+      }
+    })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, device, size, note, labName]);
+  }, [exporting]);
 
-  const downloadOne = async () => {
-    setBusy("one");
-    await downloadCanvas(await drawWallpaper(device, opts), fileName(device));
-    setBusy("");
-  };
-
-  // تنزيل متتابع بمهلة قصيرة — بعض المتصفحات تطلب السماح بتنزيل ملفات متعددة مرة واحدة
-  const downloadAll = async () => {
-    setBusy("all");
-    for (const d of devices) {
-      await downloadCanvas(await drawWallpaper(d, opts), fileName(d));
-      await new Promise((r) => setTimeout(r, 350));
-    }
-    setBusy("");
-    setMsg({ ok: true, text: `نُزّلت ${devices.length} خلفية` });
-  };
+  const wallProps = (d) => ({ theme, w, h, device: d, labName, note, qr: codes[reportUrl(d.seat_no)] });
 
   return (
     <div className="card overflow-hidden print:hidden">
-      <button type="button" onClick={() => setOpen(!open)}
-              className="flex w-full items-center justify-between px-4 py-3 text-start">
+      <button type="button" onClick={() => setOpen(!open)} className="flex w-full items-center justify-between px-4 py-3 text-start">
         <span>
           <span className="block text-sm font-semibold text-ink">رموز البلاغ: خلفيات سطح المكتب والملصقات</span>
           <span className="block text-xs text-muted">رمز QR لكل جهاز يفتح بلاغ العطل عنه — على الشاشة، وملصقًا لحين لا يعمل الجهاز</span>
@@ -67,12 +72,21 @@ export default function LabWallpapers({ lab, devices }) {
       {open && (
         <div className="grid gap-4 border-t border-line/60 p-4 lg:grid-cols-[1fr_18rem]">
           <div>
-            {preview
-              ? <img src={preview} alt={`خلفية ${device?.code}`} className="w-full rounded-sm2 border border-line shadow-card" />
-              : <div className="aspect-video w-full animate-pulse rounded-sm2 bg-canvas" />}
+            {device && (
+              <div className="pointer-events-none">
+                <Scaled w={w} h={h}><WallpaperSheet {...wallProps(device)} /></Scaled>
+              </div>
+            )}
             <p className="mt-1.5 text-center text-[11px] text-muted">معاينة {device?.code} — أيقونات سطح المكتب تبقى في الجهة اليسرى</p>
           </div>
           <div className="space-y-3">
+            <div>
+              <p className="label">النسخة</p>
+              <div className="flex gap-1.5">
+                <button type="button" className={pill(theme === "dark")} onClick={() => setTheme("dark")}>غامقة</button>
+                <button type="button" className={pill(theme === "light")} onClick={() => setTheme("light")}>فاتحة</button>
+              </div>
+            </div>
             <div>
               <label className="label" htmlFor="wp-size">دقة شاشة أجهزة المعمل</label>
               <select id="wp-size" className="field" value={size} onChange={(e) => setSize(Number(e.target.value))}>
@@ -89,21 +103,19 @@ export default function LabWallpapers({ lab, devices }) {
               <label className="label" htmlFor="wp-note">سطر التعليمات (اختياري)</label>
               <input id="wp-note" className="field" value={note} maxLength={80} onChange={(e) => setNote(e.target.value)} />
             </div>
-            <button type="button" className="btn-ghost w-full" disabled={!!busy} onClick={downloadOne}>
-              {busy === "one" ? "جارٍ التجهيز…" : `تنزيل خلفية ${device?.code}`}
+            <button type="button" className="btn-ghost w-full" disabled={!!exporting || !device} onClick={() => setExporting([device])}>
+              {exporting?.length === 1 ? "جارٍ التجهيز…" : `تنزيل خلفية ${device?.code ?? ""}`}
             </button>
-            <button type="button" className="btn-primary w-full" disabled={!!busy} onClick={downloadAll}>
-              {busy === "all" ? "جارٍ التنزيل…" : `تنزيل خلفيات كل الأجهزة (${devices.length})`}
+            <button type="button" className="btn-primary w-full" disabled={!!exporting} onClick={() => setExporting(devices)}>
+              {exporting?.length > 1 ? "جارٍ التنزيل…" : `تنزيل خلفيات كل الأجهزة (${devices.length})`}
             </button>
+
             <div className="space-y-2 border-t border-line/60 pt-3">
               <p className="text-xs text-muted">إن لم يقلع الجهاز أو لم يصل لسطح المكتب:</p>
-              <button type="button" className="btn-ghost w-full" onClick={async () => (await printStickers(devices, labName)) || popupBlocked()}>
-                طباعة ملصقات الأجهزة (ورقة A4)
-              </button>
-              <button type="button" className="btn-ghost w-full" onClick={async () => (await printReportPoster(labName)) || popupBlocked()}>
-                طباعة لوحة البلاغ العامة للمعمل
-              </button>
+              <button type="button" className="btn-ghost w-full" onClick={() => setDialog("stickers")}>ملصقات الأجهزة (ورقة A4)</button>
+              <button type="button" className="btn-ghost w-full" onClick={() => setDialog("poster")}>لوحة البلاغ العامة للمعمل</button>
             </div>
+
             <details className="rounded-sm2 bg-canvas px-3 py-2 text-xs text-muted">
               <summary className="cursor-pointer font-semibold text-ink">قفل الخلفية حتى لا يغيّرها الطالب</summary>
               <ol className="mt-2 list-decimal space-y-1 ps-4 leading-relaxed">
@@ -116,6 +128,21 @@ export default function LabWallpapers({ lab, devices }) {
             </details>
           </div>
         </div>
+      )}
+
+      {exporting && (
+        <div ref={offRef} aria-hidden="true" style={{ position: "fixed", left: -30000, top: 0, pointerEvents: "none" }}>
+          {exporting.map((d) => <WallpaperSheet key={d.seat_no} {...wallProps(d)} />)}
+        </div>
+      )}
+
+      {dialog === "stickers" && (
+        <LabPrintDialog title="ملصقات أجهزة المعمل" fileName={`ملصقات-${labName}`} onClose={() => setDialog(null)}
+                        render={(th) => <StickersSheet theme={th} devices={devices} labName={labName} codes={codes} />} />
+      )}
+      {dialog === "poster" && (
+        <LabPrintDialog title="لوحة البلاغ العامة" fileName={`لوحة-البلاغ-${labName}`} onClose={() => setDialog(null)}
+                        render={(th) => <PosterSheet theme={th} labName={labName} qr={codes[reportUrl(0)]} />} />
       )}
     </div>
   );
