@@ -15,6 +15,7 @@ import { GuidanceRequestCard } from "./GuidanceMore.jsx";
 import TasksBox from "../components/TasksBox.jsx";
 import OnlineQuizzesCard from "../components/OnlineQuizzesCard.jsx";
 import LabSeatCard from "../components/LabSeatCard.jsx";
+import LabRulesCard from "../components/LabRulesCard.jsx";
 import BehaviorAckCard from "../components/BehaviorAckCard.jsx";
 import QuizResults from "../components/QuizResults.jsx";
 import Loader from "../components/Loader.jsx";
@@ -143,6 +144,7 @@ export default function StudentHome() {
       {/* الترتيب بالأولوية: ما ينتظر الطالب، ثم يومه، ثم حضوره، ثم نتائجه، ثم المرجع */}
       <TasksBox />
       <BehaviorAckCard />
+      <LabRulesCard />
 
       <OnlineQuizzesCard />
 

@@ -92,3 +92,29 @@ export function printReportPoster(labName) {
       </ol>
     </div>`);
 }
+
+/** لوحة قواعد السلامة للتعليق في المعمل (A3 أو A4) */
+export function printRulesPoster(items, labName, size = "A3") {
+  const big = size === "A3";
+  return openPrint(`قواعد السلامة — ${labName}`, `
+    @page { size: ${size}; margin: 0; }
+    .pg { height: ${big ? 420 : 297}mm; padding: ${big ? 22 : 14}mm ${big ? 20 : 14}mm; display: flex; flex-direction: column;
+          -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .hd { background: linear-gradient(135deg, #10231A, #1F3A2D 60%, #33604A); color: #fff; border-radius: 6mm;
+          padding: ${big ? 12 : 8}mm; text-align: center; }
+    .hd .sc { margin: 0; font-size: ${big ? 18 : 13}pt; font-weight: 700; }
+    .hd .lb { margin: 1.5mm 0 0; color: #89D7AD; font-size: ${big ? 14 : 11}pt; }
+    .hd h1 { margin: ${big ? 6 : 4}mm 0 0; font-size: ${big ? 44 : 30}pt; }
+    .rules { list-style: none; padding: 0; margin: ${big ? 12 : 8}mm 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: ${big ? 6 : 4}mm; flex: 1; grid-auto-rows: 1fr; }
+    .rules li { display: flex; gap: ${big ? 5 : 3.5}mm; align-items: center; border: 0.4mm solid #D6E4DC; border-radius: 4mm;
+                padding: ${big ? 6 : 4}mm; background: #F5FAF7; break-inside: avoid; }
+    .rules .n { flex: none; width: ${big ? 14 : 10}mm; height: ${big ? 14 : 10}mm; border-radius: 50%; background: #3E6350; color: #fff;
+                display: grid; place-items: center; font-weight: 700; font-size: ${big ? 18 : 13}pt; }
+    .rules p { margin: 0; font-size: ${big ? 20 : 13}pt; line-height: 1.6; color: #1F3A2D; font-weight: 700; }
+    .ft { margin-top: ${big ? 10 : 6}mm; text-align: center; font-size: ${big ? 13 : 10}pt; color: #5B6F64; }
+  `, async () => `<div class="pg">
+      <div class="hd"><p class="sc">مدرسة مكة الثانوية</p><p class="lb">${esc(labName)}</p><h1>قواعد السلامة والتعليمات</h1></div>
+      <ol class="rules">${items.map((t, i) => `<li><span class="n num">${i + 1}</span><p>${esc(t)}</p></li>`).join("")}</ol>
+      <p class="ft">أقرّ كل طالب بقراءة هذه القواعد والالتزام بها عبر بوابة المدرسة.</p>
+    </div>`);
+}

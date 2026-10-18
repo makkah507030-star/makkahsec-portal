@@ -11,12 +11,14 @@ import LabBooking from "./LabBooking.jsx";
 import LabDevices from "./LabDevices.jsx";
 import LabSeating from "./LabSeating.jsx";
 import LabTickets from "./LabTickets.jsx";
+import LabRules from "./LabRules.jsx";
 
 const TABS = [
   { key: "booking", label: "حجز المعمل" },
   { key: "seating", label: "خريطة الجلوس" },
   { key: "devices", label: "سجل الأجهزة" },
   { key: "tickets", label: "البلاغات" },
+  { key: "rules", label: "قواعد السلامة" },
 ];
 
 export default function Lab() {
@@ -54,6 +56,7 @@ export default function Lab() {
       {tab === "booking" && <LabBooking lab={DEFAULT_LAB} canBook={canBook} isManager={isManager} />}
       {tab === "seating" && <LabSeating lab={DEFAULT_LAB} canEdit={canBook || isManager} />}
       {tab === "devices" && <LabDevices lab={DEFAULT_LAB} isManager={isManager} canEdit={canBook || isManager} />}
+      {tab === "rules" && <LabRules lab={DEFAULT_LAB} isManager={isManager} />}
       {tab === "tickets" && (
         <LabTickets lab={DEFAULT_LAB} canReport={canBook || isManager} isManager={isManager}
                     reportSeat={reportSeat} onReportDone={() => reportSeat != null && setParams({}, { replace: true })} />
