@@ -39,6 +39,9 @@ const REASONS = {
   other: { label: "سبب آخر", icon: "📝", text: "" },
 };
 
+// عبارة رد البلاغ الموحّدة: بطاقة جاهزة للوكيل حين يرد البلاغ لتوحيد الإجراء
+const DISMISS_TEXT = "الطالب منتظم ولديه غيابات جاري دراسة حالته";
+
 const STATUS = {
   reported:  { label: "بانتظار إجراء الوكيل", tone: "bg-warning-light text-warning" },
   withdrawn: { label: "مطوي القيد", tone: "bg-absent/10 text-absent" },
@@ -345,6 +348,7 @@ function Card({ r, manage, onChange, onPrint }) {
     <div className="card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-sm font-bold text-ink">{r.student_name}</p>
+        {r.national_id && <span className="text-xs text-muted" dir="ltr">{r.national_id}</span>}
         <span className="text-xs text-muted">{classLabel(r)}</span>
         <span className={`chip ${STATUS[r.status]?.tone}`}>{STATUS[r.status]?.label}</span>
         <button onClick={onPrint} className="ms-auto text-xs font-semibold text-mint-deep">طباعة البطاقة</button>
@@ -365,11 +369,15 @@ function Card({ r, manage, onChange, onPrint }) {
           {!act ? (
             <div className="flex flex-wrap gap-2">
               {actions.map((a) => (
-                <button key={a} onClick={() => setAct(a)} className={ACT[a].btn}>{ACT[a].label}</button>
+                <button key={a} onClick={() => { setAct(a); setNote(a === "dismiss" ? DISMISS_TEXT : ""); }} className={ACT[a].btn}>{ACT[a].label}</button>
               ))}
             </div>
           ) : (
             <div className="space-y-2">
+              {act === "dismiss" && (
+                <button type="button" onClick={() => setNote(DISMISS_TEXT)}
+                  className={`chip ${note === DISMISS_TEXT ? "bg-mint-deep text-white" : "bg-mint-tint text-mint-deep"}`}>✅ {DISMISS_TEXT}</button>
+              )}
               <textarea className="field" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder={ACT[act].ph} />
               <div className="flex flex-wrap gap-2">
                 <button onClick={run} disabled={busy} className={ACT[act].btn}>{busy ? "جارٍ التنفيذ…" : ACT[act].label}</button>
