@@ -22,6 +22,7 @@ const FollowUpLog = lazy(() => import("./pages/teacher/FollowUpLog.jsx"));
 const FollowUpLog2 = lazy(() => import("./pages/teacher/FollowUpLog2.jsx"));
 const FollowUpLog3 = lazy(() => import("./pages/teacher/FollowUpLog3.jsx"));
 const Lab = lazy(() => import("./pages/lab/Lab.jsx"));
+const LabGradeLink = lazy(() => import("./pages/lab/LabGradeLink.jsx"));
 const TeacherPermissions = lazy(() => import("./pages/admin/TeacherPermissions.jsx"));
 const NotificationsReview = lazy(() => import("./pages/admin/NotificationsReview.jsx"));
 const TeacherNotify = lazy(() => import("./pages/teacher/TeacherNotify.jsx"));
@@ -192,6 +193,8 @@ export default function App() {
           <Route path="/notifications-me" element={<Navigate to="/login" replace />} />
           {/* رمز QR على خلفية جهاز المعمل: يُحفظ البلاغ المطلوب ويُفتح بعد الدخول */}
           <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
+          {/* رمز درجة من ملف المعمل: يُرصد بعد الدخول */}
+          <Route path="/lab/g/:code" element={<LabGradeLink />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -439,6 +442,7 @@ export default function App() {
           ) : null}
           {/* معمل الحاسب الآلي — لمعلمي التقنية الرقمية المخوّلين ولمسؤولي المعمل */}
           <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
+          <Route path="/lab/g/:code" element={<LabGradeLink />} />
           {(effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r))) ||
            (effectiveRole === "teacher" && grantedTabs.has("computer_lab")) ? (
             <Route path="/lab" element={<Lab />} />

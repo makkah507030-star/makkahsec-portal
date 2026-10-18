@@ -4,12 +4,13 @@
 import { useState } from "react";
 import { LESSONS, lessonById } from "../../lab-content/index.js";
 import LessonPlayer, { lessonScore } from "./lessons/LessonPlayer.jsx";
+import LabSessions from "./LabSessions.jsx";
 
 const KEY = (id) => `lab-preview:${id}`;
 const load = (id) => { try { return JSON.parse(localStorage.getItem(KEY(id)) || "{}"); } catch { return {}; } };
 const save = (id, p) => { try { localStorage.setItem(KEY(id), JSON.stringify(p)); } catch { /* تجاهل */ } };
 
-export default function LabLessons() {
+export default function LabLessons({ lab, canCreate }) {
   const [openId, setOpenId] = useState(null);
   const [progress, setProgress] = useState({});
   const [round, setRound] = useState(0);   // يزيد عند مسح التقدم فيبدأ المشغّل من جديد
@@ -37,6 +38,7 @@ export default function LabLessons() {
 
   return (
     <div className="space-y-4">
+      <LabSessions lab={lab} canCreate={canCreate} />
       <p className="rounded-card bg-canvas px-3 py-2 text-xs leading-relaxed text-muted">
         جرّب الدروس كما يراها الطالب: مفهوم، ثم تدريب عملي بتصحيح فوري، ثم اختبار. الدروس المعلّمة «مسودة» تُطابَق مع كتاب الوزارة قبل اعتمادها.
       </p>
