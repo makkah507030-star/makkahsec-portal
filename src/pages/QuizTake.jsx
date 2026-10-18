@@ -1,5 +1,5 @@
 // src/pages/QuizTake.jsx
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
@@ -63,11 +63,18 @@ function Watermark({ text }) {
   );
 }
 
+// المزاوجة: الأسطر الفارغة في العمودين (زوج أُضيف ولم يُكتب، أو قيمة null من الحفظ)
+// لا تُعرض ولا تُطلب — كانت تُبقي السؤال «بلا إجابة» فلا يُقبل التسليم
+const filled = (v) => v != null && String(v).trim() !== "";
+const matchRows = (q) => (q.options?.left ?? []).map((l, k) => k).filter((k) => filled(q.options.left[k]));
+
 const answered = (q, a) => {
-  if (a == null) return false;
-  if (q.kind !== "match") return true;
-  const n = (q.options?.left ?? []).length;
-  return n > 0 && Object.values(a).filter((v) => v !== "" && v != null).length >= n;
+  if (q.kind === "match") {
+    const rows = matchRows(q);
+    if (!rows.length) return true;
+    return !!a && rows.every((k) => filled(a[String(k)]));
+  }
+  return a != null;
 };
 
 export default function QuizTake() {
@@ -178,9 +185,10 @@ export default function QuizTake() {
     };
   }, [state]);
 
-  const setAnswer = (qid, v) => {
+  // v قيمة أو دالة تُحسب من الإجابة السابقة (للمزاوجة: تُضاف الفقرة إلى آخر حالة لا إلى نسخة قديمة)
+  const setAnswer = useCallback((qid, v) => {
     setAnswers((prev) => {
-      const next = { ...prev, [qid]: v };
+      const next = { ...prev, [qid]: typeof v === "function" ? v(prev[qid]) : v };
       lsSet(id, next);
       clearTimeout(saveTimer.current);
       setSaved("saving");
@@ -190,7 +198,9 @@ export default function QuizTake() {
       }, 1500);
       return next;
     });
-  };
+  }, [id]);
+  const pickMatch = useCallback((qid, k, v) =>
+    setAnswer(qid, (prev) => ({ ...(prev && typeof prev === "object" ? prev : {}), [String(k)]: v })), [setAnswer]);
 
   const start = async () => {
     if (!window.confirm("بمجرد البدء يبدأ العدّ التنازلي ولا يتوقف حتى لو خرجت من الصفحة.\n\nأتعهّد بعدم تصوير الاختبار أو نشره.\n\nهل أنت مستعد؟")) return;
@@ -397,19 +407,16 @@ export default function QuizTake() {
 
       {q.kind === "match" && (
         <div className="mt-2 space-y-1.5">
-          {(q.options?.left ?? []).map((l, k) => {
+          {matchRows(q).map((k, row) => {
+            const l = q.options.left[k];
             const cur = (answers[q.id] ?? {})[String(k)] ?? "";
             return (
               <div key={k} className="flex items-center gap-2">
-                <span className="num w-5 shrink-0 text-center text-xs font-bold text-muted">{k + 1}</span>
-                <span className="flex-1 rounded-card bg-canvas px-2.5 py-1.5 text-sm text-ink">{l}</span>
-                <select className="field w-auto max-w-[55%] py-1.5 text-sm" value={cur}
-                        onChange={(e) => setAnswer(q.id, { ...(answers[q.id] ?? {}), [String(k)]: e.target.value })}>
-                  <option value="">{ltr ? "Choose…" : "يقابله…"}</option>
-                  {shuffled((q.options?.right ?? []).length, `${profile?.id}:${q.id}:r`).map((ri, pos) => (
-                    <option key={ri} value={String(ri)}>{t.ltrs[pos] ?? pos + 1}) {q.options.right[ri]}</option>
-                  ))}
-                </select>
+                <span className="num w-5 shrink-0 text-center text-xs font-bold text-muted">{row + 1}</span>
+                <span className={`flex-1 rounded-card px-2.5 py-1.5 text-sm text-ink ${
+                  filled(cur) ? "bg-mint-tint ring-1 ring-mint-deep/40" : "bg-canvas"}`}>{l}</span>
+                <MatchSelect q={q} k={k} cur={cur} ltrs={t.ltrs} seed={`${profile?.id}:${q.id}:r`}
+                             placeholder={ltr ? "Choose…" : "يقابله…"} onPick={pickMatch} />
               </div>
             );
           })}
@@ -501,6 +508,26 @@ export default function QuizTake() {
     </div>
   );
 }
+
+/* قائمة «يقابله…» في المزاوجة — مكوّن مستقل لا يُعاد رسمه مع عدّاد الوقت (كل ثانية).
+   إعادة الرسم كانت تُرجع القائمة المفتوحة على الجوال إلى قيمتها السابقة، فيظهر للطالب
+   اختياره ولا يُحتسب، ويبقى السؤال «بلا إجابة» فلا يُقبل التسليم. */
+const MatchSelect = memo(function MatchSelect({ q, k, cur, ltrs, seed, placeholder, onPick }) {
+  const right = q.options?.right ?? [];
+  const order = useMemo(() => {
+    const r = q.options?.right ?? [];
+    return shuffled(r.length, seed).filter((ri) => filled(r[ri]));
+  }, [q, seed]);
+  return (
+    <select className={`field w-auto max-w-[55%] py-1.5 text-sm ${filled(cur) ? "border-mint-deep bg-mint-tint font-semibold" : ""}`}
+            value={cur} onChange={(e) => onPick(q.id, k, e.target.value)}>
+      <option value="">{placeholder}</option>
+      {order.map((ri, pos) => (
+        <option key={ri} value={String(ri)}>{ltrs[pos] ?? pos + 1}) {right[ri]}</option>
+      ))}
+    </select>
+  );
+});
 
 function Box({ children }) {
   return <div className="card mx-auto max-w-lg p-5" dir="rtl">{children}</div>;
