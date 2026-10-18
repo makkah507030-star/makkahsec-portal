@@ -1,5 +1,5 @@
 // src/pages/lab/Lab.jsx
-// معمل الحاسب الآلي: حجز الحصص وسجل الأجهزة.
+// معمل الحاسب الآلي: الحجز، وخريطة الجلوس، والأجهزة، والبلاغات، وقواعد السلامة، وسجل الاستخدام.
 // يحجز معلمو التقنية الرقمية المخوّلون من «صلاحيات المعلمين»، ويدير الأجهزة
 // والحجوزات محضر معمل الحاسب الآلي ومدير المدرسة والدعم الفني.
 import { useState } from "react";
@@ -12,6 +12,7 @@ import LabDevices from "./LabDevices.jsx";
 import LabSeating from "./LabSeating.jsx";
 import LabTickets from "./LabTickets.jsx";
 import LabRules from "./LabRules.jsx";
+import LabUsage from "./LabUsage.jsx";
 
 const TABS = [
   { key: "booking", label: "حجز المعمل" },
@@ -19,6 +20,7 @@ const TABS = [
   { key: "devices", label: "سجل الأجهزة" },
   { key: "tickets", label: "البلاغات" },
   { key: "rules", label: "قواعد السلامة" },
+  { key: "usage", label: "سجل الاستخدام" },
 ];
 
 export default function Lab() {
@@ -43,10 +45,11 @@ export default function Lab() {
         </p>
       </div>
 
-      <div className="inline-flex max-w-full flex-wrap rounded-card border border-line bg-paper p-1 print:hidden">
+      {/* ست تبويبات: سطر واحد يُمرَّر أفقيًا على الجوال بدل التفافها */}
+      <div className="flex max-w-full overflow-x-auto rounded-card border border-line bg-paper p-1 sm:inline-flex print:hidden">
         {TABS.map((t) => (
           <button key={t.key} type="button" onClick={() => setTab(t.key)}
-                  className={`rounded-pill px-4 py-1.5 text-[13px] transition-colors ${
+                  className={`shrink-0 whitespace-nowrap rounded-pill px-4 py-1.5 text-[13px] transition-colors ${
                     tab === t.key ? "bg-mint-deep font-semibold text-white" : "font-medium text-muted hover:text-ink"}`}>
             {t.label}
           </button>
@@ -57,6 +60,7 @@ export default function Lab() {
       {tab === "seating" && <LabSeating lab={DEFAULT_LAB} canEdit={canBook || isManager} />}
       {tab === "devices" && <LabDevices lab={DEFAULT_LAB} isManager={isManager} canEdit={canBook || isManager} />}
       {tab === "rules" && <LabRules lab={DEFAULT_LAB} isManager={isManager} />}
+      {tab === "usage" && <LabUsage lab={DEFAULT_LAB} canBook={canBook} isManager={isManager} />}
       {tab === "tickets" && (
         <LabTickets lab={DEFAULT_LAB} canReport={canBook || isManager} isManager={isManager}
                     reportSeat={reportSeat} onReportDone={() => reportSeat != null && setParams({}, { replace: true })} />
