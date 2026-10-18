@@ -8,9 +8,11 @@ import { useTeacherGrantedTabs } from "../../lib/useTeacherGrantedTabs.js";
 import { LAB_MANAGER_ROLES, DEFAULT_LAB } from "../../lib/lab.js";
 import LabBooking from "./LabBooking.jsx";
 import LabDevices from "./LabDevices.jsx";
+import LabSeating from "./LabSeating.jsx";
 
 const TABS = [
   { key: "booking", label: "حجز المعمل" },
+  { key: "seating", label: "خريطة الجلوس" },
   { key: "devices", label: "سجل الأجهزة" },
 ];
 
@@ -41,9 +43,9 @@ export default function Lab() {
         ))}
       </div>
 
-      {tab === "booking"
-        ? <LabBooking lab={DEFAULT_LAB} canBook={canBook} isManager={isManager} />
-        : <LabDevices lab={DEFAULT_LAB} isManager={isManager} />}
+      {tab === "booking" && <LabBooking lab={DEFAULT_LAB} canBook={canBook} isManager={isManager} />}
+      {tab === "seating" && <LabSeating lab={DEFAULT_LAB} canEdit={canBook || isManager} />}
+      {tab === "devices" && <LabDevices lab={DEFAULT_LAB} isManager={isManager} />}
     </div>
   );
 }

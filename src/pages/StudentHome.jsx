@@ -14,6 +14,7 @@ import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
 import TasksBox from "../components/TasksBox.jsx";
 import OnlineQuizzesCard from "../components/OnlineQuizzesCard.jsx";
+import LabSeatCard from "../components/LabSeatCard.jsx";
 import BehaviorAckCard from "../components/BehaviorAckCard.jsx";
 import QuizResults from "../components/QuizResults.jsx";
 import Loader from "../components/Loader.jsx";
@@ -144,6 +145,8 @@ export default function StudentHome() {
       <BehaviorAckCard />
 
       <OnlineQuizzesCard />
+
+      <LabSeatCard />
 
       {/* جدول اليوم — لا يظهر إطلاقًا في أيام العطلة الأسبوعية */}
       {Boolean(dow) && (
