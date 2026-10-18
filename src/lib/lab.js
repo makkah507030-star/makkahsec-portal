@@ -60,3 +60,21 @@ export function uLayout(total) {
   };
   return { cols, rows, pos };
 }
+
+/* ---------------- بلاغات الأعطال ---------------- */
+
+export const TICKET_CATEGORIES = [
+  "لا يعمل / لا يقلع", "الشاشة", "لوحة المفاتيح", "الفأرة",
+  "الشبكة والإنترنت", "برنامج أو نظام", "الصوت", "أخرى",
+];
+
+export const TICKET_STATUS = {
+  new:         { label: "جديد",           chip: "bg-danger-light text-absent" },
+  in_progress: { label: "قيد المعالجة",   chip: "bg-warning-light text-late" },
+  external:    { label: "صيانة خارجية",  chip: "bg-canvas text-muted" },
+  resolved:    { label: "تم الحل",        chip: "bg-present/10 text-present" },
+};
+export const OPEN_TICKET = ["new", "in_progress", "external"];
+
+/** رابط البلاغ المطبوع في رمز QR على خلفية الجهاز */
+export const reportUrl = (seat, origin = window.location.origin) => `${origin}/lab/r/${seat}`;

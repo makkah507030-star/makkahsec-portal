@@ -10,12 +10,13 @@ import Loader from "../../components/Loader.jsx";
 import { fmtDateTime } from "../../lib/dates";
 import { printReport, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { DEVICE_STATUS, SPEC_FIELDS, uLayout } from "../../lib/lab.js";
+import LabWallpapers from "./LabWallpapers.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
 const COLS = "id, seat_no, code, status, cpu, ram, storage, os, software, serial_no, notes, updated_at";
 
-export default function LabDevices({ lab, isManager }) {
+export default function LabDevices({ lab, isManager, canEdit }) {
   const [devices, setDevices] = useState(null);
   const [open, setOpen] = useState(null);
   const [msg, setMsg] = useNotice(null);
@@ -96,6 +97,8 @@ export default function LabDevices({ lab, isManager }) {
           <p className="mt-3 text-center text-[11px] text-muted">اضغط على الجهاز {isManager ? "لعرض مواصفاته وتعديل حالته" : "لعرض مواصفاته"}.</p>
         </div>
       </div>
+
+      {canEdit && <LabWallpapers lab={lab} devices={devices} />}
 
       {open && (
         <DeviceSheet device={open} lab={lab} isManager={isManager} onClose={() => setOpen(null)}

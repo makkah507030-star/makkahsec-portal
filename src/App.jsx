@@ -1,6 +1,6 @@
 // src/App.jsx
 import { Suspense, lazy, useEffect } from "react";
-import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
 import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
@@ -138,6 +138,14 @@ export default function App() {
   // تحديث الـ Service Worker عند فتح التطبيق ليصل أحدث إصدار للجهاز
   useEffect(() => { ensureServiceWorker(); }, []);
 
+  // وجهة محفوظة قبل الدخول (رمز QR لجهاز المعمل) — تُفتح مرة واحدة بعد الدخول
+  useEffect(() => {
+    if (!session || !profile) return;
+    let target = null;
+    try { target = sessionStorage.getItem("mk_after_login"); sessionStorage.removeItem("mk_after_login"); } catch { /* تجاهل */ }
+    if (target) navigate(target, { replace: true });
+  }, [session, profile, navigate]);
+
   // عند الضغط على إشعار الجوال، يطلب Service Worker فتح صفحة الإشعار عبر رسالة —
   // ننتقل داخليًا (بلا إعادة تحميل) فتبقى الجلسة محفوظة ولا يعود للرئيسية.
   useEffect(() => {
@@ -182,6 +190,8 @@ export default function App() {
           {/* فتح إشعار قبل استعادة الجلسة → لصفحة الدخول بدل الرئيسية بصمت */}
           <Route path="/notify/:id" element={<Navigate to="/login" replace />} />
           <Route path="/notifications-me" element={<Navigate to="/login" replace />} />
+          {/* رمز QR على خلفية جهاز المعمل: يُحفظ البلاغ المطلوب ويُفتح بعد الدخول */}
+          <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -428,6 +438,7 @@ export default function App() {
             <Route path="/permissions" element={<PermissionRequestPage />} />
           ) : null}
           {/* معمل الحاسب الآلي — لمعلمي التقنية الرقمية المخوّلين ولمسؤولي المعمل */}
+          <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
           {(effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r))) ||
            (effectiveRole === "teacher" && grantedTabs.has("computer_lab")) ? (
             <Route path="/lab" element={<Lab />} />
@@ -496,4 +507,17 @@ export default function App() {
       </Suspense>
     </Layout>
   );
+}
+
+// رابط رمز QR على خلفية جهاز المعمل (/lab/r/5) ← صفحة البلاغ والجهاز محدد.
+// قبل الدخول يُحفظ الرابط في الجلسة، ويُفتح بعد تسجيل الدخول مباشرة.
+function LabReportRedirect() {
+  const { seat } = useParams();
+  const { session } = useSession();
+  const target = `/lab?report=${Number(seat) || ""}`;
+  if (!session) {
+    try { sessionStorage.setItem("mk_after_login", target); } catch { /* تجاهل */ }
+    return <Navigate to="/login" replace />;
+  }
+  return <Navigate to={target} replace />;
 }
