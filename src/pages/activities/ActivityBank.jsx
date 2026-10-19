@@ -7,6 +7,8 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import { GAMES, mediaUrl, sectionMeta, sectionsOf, youtubeId } from "../../lib/activities.js";
 import Loader from "../../components/Loader.jsx";
 import GameHost from "./games/GameHost.jsx";
+import { FloatPortal, canPin, useFloatWindow } from "./FloatWindow.jsx";
+import { Timer } from "./ClassTools.jsx";
 
 export function Cover({ card, className = "h-28" }) {
   const meta = sectionMeta(card.kind, card.section);
@@ -28,6 +30,9 @@ export default function ActivityBank({ kind, teacher }) {
   const [classes, setClasses] = useState([]);
   const [forClass, setForClass] = useState("");    // حصة الانتظار: الفصل الحالي لاقتراح ما لم يُقدَّم له
   const [used, setUsed] = useState(new Set());
+  const float = useFloatWindow();
+  const [floatCard, setFloatCard] = useState(null);
+  const openFloat = async (card) => { if (await float.open(card.title, 400, 600)) setFloatCard(card); };
 
   useEffect(() => {
     supabase.from("activity_cards").select("*").eq("kind", kind).eq("published", true)
@@ -104,7 +109,9 @@ export default function ActivityBank({ kind, teacher }) {
           })}
         </div>
       )}
+      {float.win && floatCard && <FloatingCard key={floatCard.id} card={floatCard} win={float.win} />}
       {open && <CardView card={open} teacher={teacher} classes={classes} defaultClass={forClass}
+                         onFloat={openFloat} floating={float.win && floatCard?.id === open.id}
                          onUsed={(cid) => cid === forClass && setUsed((s) => new Set([...s, open.id]))} onClose={() => setOpen(null)} />}
     </div>
   );
@@ -117,7 +124,36 @@ const Chip = ({ on, onClick, children }) => (
   </button>
 );
 
-export function CardView({ card, teacher, classes = [], defaultClass = "", onUsed, onClose }) {
+// خطوات النشاط الصفي ومؤقت في النافذة العائمة: يبقى مفتوحًا بعد إغلاق البطاقة
+function FloatingCard({ card, win }) {
+  const [step, setStep] = useState(0);
+  const meta = sectionMeta(card.kind, card.section);
+  return (
+    <FloatPortal win={win}>
+      <div className="space-y-2">
+        <p className="px-1 text-base font-bold text-ink">{meta.emoji} {card.title}</p>
+        <ol className="space-y-1.5">
+          {(card.steps ?? []).map((s, i) => (
+            <li key={i}>
+              <button type="button" onClick={() => setStep(i)}
+                      className={`flex w-full gap-2 rounded-card px-2.5 py-2 text-start text-sm ${i === step ? "bg-mint-deep text-white" : i < step ? "bg-paper text-faint line-through" : "bg-paper text-ink"}`}>
+                <span className="num font-bold">{i + 1}</span>
+                <span className="flex-1 leading-relaxed">{s.text}{s.min ? ` (${s.min} د)` : ""}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+        <div className="flex gap-2">
+          <button type="button" className="btn-ghost flex-1 py-1.5 text-sm" disabled={step === 0} onClick={() => setStep((x) => x - 1)}>السابقة</button>
+          <button type="button" className="btn-primary flex-1 py-1.5 text-sm" disabled={step >= (card.steps?.length ?? 1) - 1} onClick={() => setStep((x) => x + 1)}>التالية</button>
+        </div>
+        <Timer />
+      </div>
+    </FloatPortal>
+  );
+}
+
+export function CardView({ card, teacher, classes = [], defaultClass = "", onUsed, onClose, onFloat, floating }) {
   const [game, setGame] = useState(false);
   const [cls, setCls] = useState(defaultClass);
   const [done, setDone] = useState(null);
@@ -134,6 +170,7 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
   };
 
   if (game) return <GameHost card={card} onClose={() => setGame(false)} />;
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-3 sm:p-6" onClick={onClose}>
       <div className="card mx-auto max-w-2xl overflow-hidden" onClick={(e) => e.stopPropagation()} dir="rtl">
@@ -147,6 +184,12 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
             <h2 className="mt-1 text-xl font-bold text-ink">{card.title}</h2>
             {card.summary && <p className="mt-1 text-sm leading-relaxed text-muted">{card.summary}</p>}
           </div>
+          {card.kind === "class" && onFloat && (
+            <button type="button" className="btn-primary w-full py-2.5" title="تبقى فوق عرض الدرس لتعود إليها متى احتجت"
+                    onClick={() => onFloat(card)}>
+              🪟 {floating ? "مفتوح في نافذة عائمة" : `افتح في نافذة عائمة${canPin() ? " فوق عرض الدرس" : ""}`}
+            </button>
+          )}
           {card.game && (
             <button type="button" className="btn-primary w-full py-3 text-base" onClick={() => setGame(true)}>▶ ابدأ «{GAMES[card.game]}» على السبورة</button>
           )}

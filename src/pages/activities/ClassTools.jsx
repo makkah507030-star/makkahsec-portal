@@ -11,6 +11,7 @@ import { CUP_COLORS } from "../../lib/activities.js";
 import Loader from "../../components/Loader.jsx";
 import { fullscreen } from "./games/GameHost.jsx";
 import ChampionCertificate from "./ChampionCertificate.jsx";
+import { FloatPortal, canPin, useFloatWindow } from "./FloatWindow.jsx";
 
 const TOOLS = [
   { key: "pick", label: "🎲 اختيار طالب" },
@@ -29,6 +30,7 @@ export default function ClassTools() {
   const [board, setBoard] = useState(null);
   const [err, setErr] = useState("");
   const [big, setBig] = useState(false);     // عرض على السبورة
+  const float = useFloatWindow();            // نافذة عائمة فوق عرض الدرس
 
   useEffect(() => {
     supabase.rpc("act_my_classes").then(({ data, error }) => {
@@ -58,25 +60,59 @@ export default function ClassTools() {
 
   const content = !board ? <Loader compact /> : (
     <>
-      {tool === "pick" && <Picker students={board.students} big={big} onPoints={(s, p) => addPoints({ student_id: s.id }, p, "اختيار عشوائي")} />}
-      {tool === "league" && <League students={board.students} big={big} cert={{ subject: cur?.subject, classLabel: classLabel(cur) }} onPoints={(s, p, r) => addPoints({ student_id: s.id }, p, r)} />}
+      {tool === "pick" && <Picker key={sel} students={board.students} big={big} onPoints={(s, p) => addPoints({ student_id: s.id }, p, "اختيار عشوائي")} />}
+      {tool === "league" && <League students={board.students} big={big} compact={!!float.win} cert={{ subject: cur?.subject, classLabel: classLabel(cur) }} onPoints={(s, p, r) => addPoints({ student_id: s.id }, p, r)} />}
       {tool === "cup" && <Cup board={board} cid={cid} sid={sid} big={big} reload={load} cert={{ subject: cur?.subject, classLabel: classLabel(cur) }} onPoints={(g, p, r) => addPoints({ group_id: g.id }, p, r)} />}
       {tool === "timer" && <Timer big={big} />}
     </>
   );
 
+  const picker = (
+    <select className="field w-auto py-1.5 text-sm" value={sel} onChange={(e) => setSel(e.target.value)}>
+      {mine.map((m) => <option key={`${m.class_id}|${m.subject_id}`} value={`${m.class_id}|${m.subject_id}`}>
+        {GRADE_NAMES[m.grade] ?? ""} — {m.class_no} · {m.subject}</option>)}
+    </select>
+  );
+  const tabs = (
+    <div className="flex max-w-full gap-1 overflow-x-auto">
+      {TOOLS.map((t) => <button key={t.key} type="button" onClick={() => setTool(t.key)}
+        className={`shrink-0 rounded-pill px-3 py-1.5 text-xs font-semibold ${tool === t.key ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`}>{t.label}</button>)}
+    </div>
+  );
+
+  // الأدوات في النافذة العائمة: الصفحة تعرض تنبيهًا فقط
+  if (float.win) {
+    return (
+      <>
+        <div className="card flex flex-wrap items-center gap-3 p-4 text-sm">
+          <span className="text-2xl">🪟</span>
+          <p className="flex-1 text-ink">أدوات الصف مفتوحة في نافذة عائمة{canPin() ? " فوق كل النوافذ" : ""}. اعرض درسك، وارجع إليها متى احتجت.</p>
+          <button type="button" className="btn-ghost" onClick={float.close}>إعادتها إلى الصفحة</button>
+        </div>
+        <FloatPortal win={float.win}>
+          <div className="space-y-2">
+            {picker}
+            {tabs}
+            {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-xs text-absent">{err}</p>}
+            {content}
+          </div>
+        </FloatPortal>
+      </>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <select className="field w-auto text-sm" value={sel} onChange={(e) => setSel(e.target.value)}>
-          {mine.map((m) => <option key={`${m.class_id}|${m.subject_id}`} value={`${m.class_id}|${m.subject_id}`}>
-            {GRADE_NAMES[m.grade] ?? ""} — {m.class_no} · {m.subject}</option>)}
-        </select>
-        <div className="flex max-w-full gap-1 overflow-x-auto">
-          {TOOLS.map((t) => <button key={t.key} type="button" onClick={() => setTool(t.key)}
-            className={`shrink-0 rounded-pill px-3 py-1.5 text-xs font-semibold ${tool === t.key ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`}>{t.label}</button>)}
+        {picker}
+        {tabs}
+        <div className="mr-auto flex gap-2">
+          <button type="button" className="btn-ghost py-1.5 text-sm" title="تبقى فوق عرض الدرس لتعود إليها متى احتجت"
+                  onClick={async () => { if (!(await float.open("أدوات الصف", 420, 640))) setErr("منع المتصفح فتح النافذة — اسمح بالنوافذ المنبثقة للبوابة."); }}>
+            🪟 نافذة عائمة
+          </button>
+          <button type="button" className="btn-ghost py-1.5 text-sm" onClick={() => setBig(true)}>عرض على السبورة</button>
         </div>
-        <button type="button" className="btn-ghost mr-auto py-1.5 text-sm" onClick={() => setBig(true)}>عرض على السبورة</button>
       </div>
       {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       {big ? (
@@ -136,15 +172,15 @@ function Picker({ students, big, onPoints }) {
   );
 }
 
-function League({ students, big, cert, onPoints }) {
+function League({ students, big, compact, cert, onPoints }) {
   const [who, setWho] = useState(null);
   const [print, setPrint] = useState(false);
   const [reason, setReason] = useState("");
   const rows = [...students].sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, "ar"));
   const rank = (i) => (i > 0 && rows[i].points === rows[i - 1].points ? null : i);
   return (
-    <div className={`grid gap-3 ${big ? "" : "lg:grid-cols-[1fr_300px]"}`}>
-      <div className="card overflow-hidden">
+    <div className={`grid gap-3 ${big || compact ? "" : "lg:grid-cols-[1fr_300px]"}`}>
+      <div className={`card overflow-hidden ${compact ? "order-last" : ""}`}>
         <table className={`w-full ${big ? "text-xl" : "text-sm"}`}>
           <thead><tr className="border-b border-line bg-canvas text-right text-xs text-muted"><th className="w-12 p-2">#</th><th className="p-2">الطالب</th><th className="p-2 text-center">النقاط</th></tr></thead>
           <tbody>
@@ -240,7 +276,7 @@ function Cup({ board, cid, sid, big, cert, reload, onPoints }) {
   );
 }
 
-function Timer({ big }) {
+export function Timer({ big }) {
   const [total, setTotal] = useState(300);
   const [left, setLeft] = useState(300);
   const [run, setRun] = useState(false);
