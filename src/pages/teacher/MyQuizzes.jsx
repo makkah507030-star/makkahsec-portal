@@ -6,6 +6,7 @@ import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import QuizPaper, { QuizPrintArea } from "../../components/QuizPaper.jsx";
 import OnlineQuizPanel from "../../components/OnlineQuizPanel.jsx";
+import QuizImport from "../../components/QuizImport.jsx";
 import PaperExam from "../../components/PaperExam.jsx";
 import { PAPER_KINDS, BLANK, BLANK_RE, LINES, MODEL_LABEL, groupPaper, paperOpts } from "../../lib/paperExam.js";
 import { shrinkImage } from "../../lib/imageResize.js";
@@ -513,6 +514,7 @@ function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
   const [layout, setLayout] = useState(null);
   const [paperPrint, setPaperPrint] = useState(null);   // { copies, answerKey }
   const kinds = paper ? PAPER_KINDS.filter((k) => !k.hidden) : KINDS;
+  const [importing, setImporting] = useState(false);   // استيراد أسئلة من اختبار آخر
 
   // اختبار «تصحيح آلي» قديم سبق نشره إلكترونيًا يبقى تبويبه، فلا تضيع نتائجه
   const [legacyOnline, setLegacyOnline] = useState(false);
@@ -989,8 +991,27 @@ function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
               )}
           </div>
 
+          {importing && !viewOnly && (
+            <QuizImport quiz={q} uid={uid} listening={listening}
+                        allowed={(paper ? PAPER_KINDS : KINDS).map((k) => k.key)}
+                        nextOrder={(questions?.length ?? 0) + 1}
+                        onClose={() => setImporting(false)}
+                        onDone={(rows, m) => {
+                          if (rows.length) setQuestions((prev) => [...(prev ?? []), ...rows]);
+                          setMsg(m);
+                          if (m.ok) setImporting(false);
+                        }} />
+          )}
+
           {!viewOnly && <div className="card p-4">
-            <p className="text-xs text-muted">إضافة سؤال</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted">إضافة سؤال</p>
+              {!importing && (
+                <button type="button" className="text-xs font-semibold text-mint-deep underline" onClick={() => setImporting(true)}>
+                  استيراد أسئلة من اختبار آخر
+                </button>
+              )}
+            </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {kinds.map((k) => {
                 const n = countOf(k.key);
