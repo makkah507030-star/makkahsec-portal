@@ -75,6 +75,7 @@ const ADMIN_GROUPS = [
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "swap" },
       { to: "/noor-grades",       label: "متابعة رصد الدرجات", roles: ["principal", "deputy_academic", "tech_support"], icon: "clipboard", kw: "نور الفترات" },
+      { to: "/quiz-cycles",       label: "متابعة دورات الاختبار", roles: ["principal", "deputy_academic", "tech_support"], icon: "refresh", kw: "الدورات غير المكتملة اختبارات خطة علاجية" },
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
