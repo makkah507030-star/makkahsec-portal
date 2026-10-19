@@ -5,7 +5,7 @@ import { fmtDateTime } from "../lib/dates";
 import { GRADE_NAMES } from "../lib/schoolTime";
 import Loader from "./Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
-import OfflineQuizTools from "./OfflineQuizTools.jsx";
+import OfflineQuizTools, { OfflineQuizIntro } from "./OfflineQuizTools.jsx";
 import { buildOfflinePackage } from "../lib/offlineQuizBuild.js";
 
 /* =====================================================================
@@ -223,11 +223,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
         <section className="card space-y-3 p-4">
           <p className="text-sm font-semibold text-ink">{offline ? "إجراء الاختبار دون إنترنت" : "إجراء الاختبار إلكترونيًا"}</p>
           {offline ? (
-            <ol className="list-decimal space-y-1 pr-5 text-xs leading-relaxed text-muted">
-              <li>اختر الطلاب وآخر موعد، ثم «نشر»: يصلهم إشعار، فينزّل كلٌّ منهم الاختبار <b>مقفلًا</b> على جواله وهو متصل (في البيت مثلًا).</li>
-              <li>في الحصة، دون إنترنت: اعرض <b>مفتاح الفتح</b> على السبورة، فيمسحه الطلاب ويبدأ وقت كل منهم.</li>
-              <li>عند التسليم يظهر على جوال الطالب رمز QR بإجاباته؛ امسحه بجوالك فيُصحَّح وتنتقل درجته إلى كشف الرصد.</li>
-            </ol>
+            <OfflineQuizIntro open />
           ) : <p className="text-xs leading-relaxed text-muted">
             يؤدّي الطلاب الاختبار من البوابة على الجوال أو الحاسب بدل الورقة: يصلهم إشعار في الجرس وعلى الجوال
             برابط الاختبار، ولكلٍّ منهم وقت محدّد يبدأ من لحظة دخوله، ويُصحَّح آليًا فور التسليم وتنتقل درجته

@@ -10,6 +10,27 @@ import { fmtDateTime } from "../lib/dates";
 import { fmtKey, keyQr } from "../lib/offlineQuiz.js";
 import { buildOfflinePackage } from "../lib/offlineQuizBuild.js";
 import LabScanner from "../pages/lab/LabScanner.jsx";
+import { OFFLINE_NOTE, OFFLINE_SCENARIO } from "../lib/offlineQuizGuide.js";
+
+/** التعريف بالنوع ومثال الخطوات (مطويًّا أو ظاهرًا) */
+export function OfflineQuizIntro({ open = false }) {
+  return (
+    <div className="space-y-2">
+      <p className="rounded-sm2 border-r-4 border-mint-deep bg-mint-tint px-3 py-2 text-xs leading-relaxed text-ink">{OFFLINE_NOTE}</p>
+      <details className="rounded-card border border-line bg-paper" open={open}>
+        <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-mint-deep">مثال: كيف يسير الاختبار من البداية إلى النهاية؟</summary>
+        <ol className="space-y-2 border-t border-line px-3 py-2.5">
+          {OFFLINE_SCENARIO.map(([when, what], i) => (
+            <li key={when} className="flex gap-2 text-xs leading-relaxed">
+              <span className="num grid h-5 w-5 shrink-0 place-items-center rounded-full bg-mint-deep text-[10px] font-bold text-white">{i + 1}</span>
+              <span><b className="text-ink">{when}:</b> <span className="text-muted">{what}</span></span>
+            </li>
+          ))}
+        </ol>
+      </details>
+    </div>
+  );
+}
 
 export default function OfflineQuizTools({ quiz, viewOnly, onChanged }) {
   const [st, setSt] = useState(undefined);   // undefined = تحميل، null = لم تُجهَّز
@@ -40,6 +61,7 @@ export default function OfflineQuizTools({ quiz, viewOnly, onChanged }) {
   return (
     <div className="space-y-3 rounded-card border border-mint-light bg-mint-tint/50 p-3">
       <p className="text-sm font-semibold text-ink">الأداء دون إنترنت</p>
+      <OfflineQuizIntro />
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-xs text-absent">{err}</p>}
       {!st ? (
         <>
