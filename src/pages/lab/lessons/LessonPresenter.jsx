@@ -33,7 +33,7 @@ function framesOf(lesson) {
 const answerOf = (q) => (q.kind === "match" ? Object.fromEntries(q.pairs.map((_, i) => [i, i]))
   : q.kind === "input" ? q.answer[0] : q.answer);
 
-export default function LessonPresenter({ lesson, onExit }) {
+export default function LessonPresenter({ lesson, onExit, badge }) {
   const frames = useMemo(() => framesOf(lesson), [lesson]);
   const [i, setI] = useState(0);
   const [reveal, setReveal] = useState(false);
@@ -71,6 +71,7 @@ export default function LessonPresenter({ lesson, onExit }) {
           <p className="truncate text-xs text-muted">{lesson.grade} · الدرس {lesson.lesson.no}: {lesson.lesson.title}</p>
           <p className="truncate text-base font-bold text-ink">{ICON[f.st.type]} {f.st.title}{f.label && <span className="mr-2 text-sm font-normal text-muted">· {f.label}</span>}</p>
         </div>
+        {badge}
         <button type="button" className="btn-ghost px-3 py-1.5 text-sm" onClick={() => setZoom((z) => Math.max(0, z - 1))} title="تصغير (-)">أ−</button>
         <button type="button" className="btn-ghost px-3 py-1.5 text-sm" onClick={() => setZoom((z) => Math.min(ZOOMS.length - 1, z + 1))} title="تكبير (+)">أ+</button>
         <button type="button" className="btn-ghost px-3 py-1.5 text-sm" onClick={full} title="ملء الشاشة (F)">⛶</button>

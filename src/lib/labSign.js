@@ -69,3 +69,19 @@ export function resultCode({ origin = "", code, secret, seat, students, quiz, ma
   const sig = hmacSha256(secret, body).slice(0, 16);
   return `${origin ? `${origin}/lab/g/` : ""}${body}.${sig}`;
 }
+
+/** رمز الحصة (5 أرقام) للفصل والدرس في يوم، يطابق lab_room_code في computer_lab_11.sql */
+export function roomCode(secret, date, classIdx, lessonId) {
+  const h = hmacSha256(secret, `ROOM|${date}|${classIdx}|${lessonId}`);
+  return String(parseInt(h.slice(0, 7), 16) % 100000).padStart(5, "0");
+}
+
+/** رمز الدرجة من الملف الدائم: MKL2.رمز الملف.التاريخ.رقم الفصل.الدرس.الجهاز.الطلاب.الاختبار.الإتقان.المنجز.المحطات.التوقيع */
+export function installResultCode({ origin = "", code, secret, date, classIdx, lesson, seat, students, quiz, mastery, done, total }) {
+  const v = (n) => (n == null ? "x" : String(Math.round(n)));
+  const body = ["MKL2", code, date.replace(/-/g, ""), classIdx, lesson, seat, students.join("-"), v(quiz), v(mastery), done, total].join(".");
+  return `${origin ? `${origin}/lab/g/` : ""}${body}.${hmacSha256(secret, body).slice(0, 16)}`;
+}
+
+/** بصمة رمز المعلم في الملف الدائم (ردع لا حماية تامة: الملف على جهاز الطالب) */
+export const pinHash = (pin) => hmacSha256("mkl-pin", String(pin).trim());
