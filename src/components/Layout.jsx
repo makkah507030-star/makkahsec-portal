@@ -78,6 +78,12 @@ const ADMIN_GROUPS = [
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
+    ],
+  },
+  {
+    // تظهر لمن يُسمح له بأحد معاملها فقط (المجموعة الفارغة تُخفى)
+    title: "المعامل والمختبرات",
+    items: [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
     ],
   },
@@ -157,6 +163,11 @@ const TEACHER_GROUPS = [
       { to: "/substitute",  label: "حصص الانتظار",          tabKey: "substitute", icon: "swap" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
+    ],
+  },
+  {
+    title: "المعامل والمختبرات",
+    items: [
       { to: "/lab",         label: "معمل الحاسب الآلي",     extraTabKey: "computer_lab", icon: "monitor", kw: "حجز اجهزة تقنية رقمية" },
     ],
   },
