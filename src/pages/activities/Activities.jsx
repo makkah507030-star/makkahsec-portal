@@ -16,7 +16,7 @@ export default function Activities() {
   const tabs = [
     { key: "waiting", label: "حقيبة حصص الانتظار" },
     { key: "class", label: "الأنشطة الصفية" },
-    ...(teacher ? [{ key: "tools", label: "أدوات الصف ودوري المادة" }] : []),
+    { key: "tools", label: "أدوات الصف ودوري المادة" },
     ...(manager ? [{ key: "admin", label: "إدارة البنك" }] : []),
   ];
   const [params, setParams] = useSearchParams();
@@ -42,7 +42,7 @@ export default function Activities() {
         ))}
       </div>
       {(tab === "waiting" || tab === "class") && <ActivityBank key={tab} kind={tab} teacher={teacher} />}
-      {tab === "tools" && <ClassTools />}
+      {tab === "tools" && <ClassTools teacher={teacher} />}
       {tab === "admin" && <ActivityAdmin />}
     </div>
   );

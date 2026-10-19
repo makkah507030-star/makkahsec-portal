@@ -23,7 +23,7 @@ const shuffle = (a) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--
 const MEDAL = ["🥇", "🥈", "🥉"];
 const classLabel = (c) => (c ? `فصل ${GRADE_NAMES[c.grade] ?? ""} ${c.class_no}`.replace(/\s+/g, " ") : "");
 
-export default function ClassTools() {
+export default function ClassTools({ teacher = true }) {
   const [mine, setMine] = useState(null);
   const [sel, setSel] = useState("");
   const [tool, setTool] = useState("pick");
@@ -56,7 +56,17 @@ export default function ClassTools() {
   };
 
   if (!mine) return <Loader compact />;
-  if (!mine.length) return <p className="card p-6 text-center text-sm text-muted">{err || "لا توجد فصول في جدولك الدراسي."}</p>;
+  if (!mine.length) {
+    return (
+      <div className="card space-y-2 p-6 text-center text-sm leading-relaxed">
+        <p className="font-semibold text-ink">أدوات الصف ودوري المادة وكأسها للمعلمين</p>
+        <p className="text-muted">
+          {err || (teacher ? "لا توجد فصول في جدولك الدراسي لهذا العام."
+            : "تظهر فيها فصول المعلم وموادّه من جدوله الدراسي: اختيار طالب عشوائي، ودوري المادة للأفراد، وكأس المادة للمجموعات، والمؤقت. ادخل بحساب معلم، أو بدّل إلى واجهة المعلم إن كان حسابك معلمًا وإداريًا، لتجربتها.")}
+        </p>
+      </div>
+    );
+  }
 
   const content = !board ? <Loader compact /> : (
     <>
