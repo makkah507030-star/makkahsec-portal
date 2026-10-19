@@ -11,7 +11,7 @@ import ActivityAdmin from "./ActivityAdmin.jsx";
 
 export default function Activities() {
   const { effectiveRole, adminRoles } = useSession();
-  const manager = effectiveRole === "admin" && adminRoles.includes("deputy_academic");
+  const manager = effectiveRole === "admin" && ["deputy_academic", "tech_support"].some((r) => adminRoles.includes(r));
   const teacher = effectiveRole === "teacher";
   const tabs = [
     { key: "waiting", label: "حقيبة حصص الانتظار" },

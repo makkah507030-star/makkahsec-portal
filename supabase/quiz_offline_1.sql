@@ -53,8 +53,9 @@ end $$;
 create or replace function public.quiz_offline_status(p_quiz uuid)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare o quiz_offline%rowtype;
-begin
-  if not exists (select 1 from quizzes where id = p_quiz and teacher_id = auth.uid()) then
+begin   -- صاحب الاختبار، والدعم الفني والمدير للاطلاع
+  if not exists (select 1 from quizzes where id = p_quiz and teacher_id = auth.uid())
+     and not public.has_admin_role(array['tech_support', 'principal']) then
     raise exception 'غير مصرّح: الاختبار ليس لك';
   end if;
   select * into o from quiz_offline where quiz_id = p_quiz;

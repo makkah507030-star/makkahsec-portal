@@ -1,6 +1,6 @@
 -- =====================================================================
 -- بنك الأنشطة (الجزء 1 من 2): حقيبة حصص الانتظار والأنشطة الصفية
--- يديره وكيل الشؤون التعليمية (إضافة وتعديل ونشر)، ويستفيد منه المعلمون.
+-- يديره وكيل الشؤون التعليمية والدعم الفني (إضافة وتعديل ونشر)، ويستفيد منه المعلمون.
 -- الصور في مخزن activity-media (عام للقراءة)، والفيديو روابط فقط.
 -- تكرار التنفيذ آمن.
 -- =====================================================================
@@ -45,7 +45,7 @@ create index if not exists activity_uses_class on public.activity_uses (class_id
 
 create or replace function public.activity_manager() returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.has_admin_role(array['deputy_academic']);
+  select public.has_admin_role(array['deputy_academic', 'tech_support']);
 $$;
 
 alter table public.activity_cards enable row level security;
