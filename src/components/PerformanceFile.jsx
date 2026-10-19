@@ -12,6 +12,17 @@ import {
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
 import Loader from "./Loader.jsx";
+import { PD_KINDS } from "../lib/pd.js";
+
+// بنود سجل التطوير المهني: مصدرها «التطوير المهني» وحده بعد الاعتماد (plc_9_pd_actions.sql
+// وplc_6/plc_7 للزيارات ومجتمعات التعلم)، فلا تُضاف يدويًا هنا ولا تتكرر في العدد والساعات
+const PD_ITEM_KIND = { e02_01: "training", e02_02: "attend", e02_05: "conference", e02_07: "applied", e02_08: "production" };
+const PD_ITEM_SRC = {
+  ...Object.fromEntries(Object.entries(PD_ITEM_KIND).map(([k, kind]) => [k, { to: `/pd?kind=${kind}`, what: `أنشئ نموذج «${PD_KINDS[kind].short}»` }])),
+  e02_03: { to: "/xvisits", what: "سجّل زيارة تبادلية تستضيف فيها زميلًا من قسمك" },
+  e02_04: { to: "/xvisits", what: "سجّل زيارة تبادلية تزور فيها درس زميل" },
+  e02_06: { to: "/plc", what: "شارك في جلسات مجتمع التعلم في قسمك ووقّع على محاضرها" },
+};
 import { useBackStep } from "../lib/backStep.js";
 
 /* =====================================================================
@@ -415,7 +426,16 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                         : "كيف أجمعه؟ ارفع صورة أو ملف PDF يثبت تنفيذ البند، أو أرسل نموذجًا صادرًا من صفحة «النماذج والشهادات»."}
                     </p>
                   )}
-                  {!readOnly && !isOpen && (it.is_record || !st.ok) && (
+                  {/* بنود التطوير المهني: مصدرها الوحيد نماذجه المعتمدة، فلا تُضاف يدويًا هنا (لا تكرار في العدد والساعات) */}
+                  {!readOnly && PD_ITEM_SRC[it.key] && (
+                    <div className="flex flex-wrap items-center gap-3 rounded-sm2 border border-mint-light bg-mint-tint px-3 py-2.5">
+                      <p className="min-w-0 flex-1 text-sm leading-relaxed text-ink">
+                        يُضاف هذا البند من <b>«التطوير المهني»</b>: {PD_ITEM_SRC[it.key].what}، ويظهر هنا تلقائيًا بعد اعتماد وكيل الشؤون التعليمية.
+                      </p>
+                      <Link className="btn-primary shrink-0 py-1.5 text-sm" to={PD_ITEM_SRC[it.key].to}>إضافة عبر التطوير المهني</Link>
+                    </div>
+                  )}
+                  {!readOnly && !isOpen && !PD_ITEM_SRC[it.key] && (it.is_record || !st.ok) && (
                     <button className="btn-ghost" onClick={() => setOpen({ key: it.key, mode: "add" })}>
                       {it.is_record ? "إضافة مشاركة" : "رفع شاهد"}
                     </button>

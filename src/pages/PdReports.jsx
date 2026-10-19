@@ -65,6 +65,8 @@ function ReportList() {
   // ?tab= من صندوق «بانتظار إجرائك» يفتح التبويب المطلوب إن كان متاحًا لصاحب الحساب
   const [params] = useSearchParams();
   const linked = tabs.some((x) => x.k === params.get("tab")) ? params.get("tab") : null;
+  // ?kind= من «شواهد الأداء الوظيفي»: يُبرز النموذج المناسب للبند
+  const wantKind = PD_KIND_KEYS.includes(params.get("kind")) ? params.get("kind") : null;
   const cur = tab ?? linked ?? (roles.isDeputy ? "pending" : roles.seesAll ? "all" : tabs[0]?.k);
   const list = (rows ?? []).filter((r) => cur === "mine" ? r.owner_user_id === uid || attended(r)
     : cur === "sign" ? toSign(r) : cur === "dept" ? r.department_id === dept?.department_id
@@ -98,8 +100,8 @@ function ReportList() {
       {isTeacher && (
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {PD_KIND_KEYS.map((k) => (
-            <button key={k} type="button" onClick={() => create(k)}
-                    className="card flex flex-col items-start gap-1 p-3 text-right hover:bg-mint-tint/40">
+            <button key={k} type="button" onClick={() => create(k)} ref={(el) => k === wantKind && el?.scrollIntoView({ block: "center" })}
+                    className={`card flex flex-col items-start gap-1 p-3 text-right hover:bg-mint-tint/40 ${k === wantKind ? "ring-2 ring-mint-deep" : ""}`}>
               <span className="flex items-center gap-2">
                 <span dir="ltr" className="num rounded-pill bg-mint-light px-2 text-[11px] font-bold text-mint-deep">{PD_KINDS[k].item}</span>
                 <span className="text-sm font-semibold text-ink">{PD_KINDS[k].short}</span>
