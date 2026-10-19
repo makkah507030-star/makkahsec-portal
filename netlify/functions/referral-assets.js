@@ -43,7 +43,7 @@ export const handler = async (event) => {
     if (!referral_id) return json({ error: "الإحالة غير محدّدة" }, 400);
 
     const { data: r } = await admin.from("student_referrals")
-      .select("id, student_id, teacher_id, deputy_id, counselor_id, teacher_sig, deputy_sig, counselor_sig")
+      .select("id, student_id, teacher_id, deputy_id, counselor_id, teacher_sig, deputy_sig, counselor_sig, deputy_at, counselor_at")
       .eq("id", referral_id).maybeSingle();
     if (!r) return json({ error: "الإحالة غير موجودة" }, 404);
 
@@ -75,11 +75,20 @@ export const handler = async (event) => {
       return data?.signedUrl ?? null;
     };
 
+    // من اتخذ إجراءه قبل رفع توقيعه في «توقيعي» لم يُحفظ توقيعه في الإحالة:
+    // يُستكمل بتوقيعه الحالي حتى لا تخرج خانته فارغة
+    // (للمرحلة المنجزة فقط: الوكيل بعد deputy_at، والموجه بعد counselor_at)
+    const current = async (userId, done = true) => {
+      if (!userId || !done) return null;
+      const { data } = await admin.from("user_signatures").select("path").eq("user_id", userId).maybeSingle();
+      return data?.path ?? null;
+    };
+
     return json({
       ok: true,
-      teacher_sig: await sign(r.teacher_sig),
-      deputy_sig: await sign(r.deputy_sig),
-      counselor_sig: await sign(r.counselor_sig),
+      teacher_sig: await sign(r.teacher_sig || await current(r.teacher_id)),
+      deputy_sig: await sign(r.deputy_sig || await current(r.deputy_id, r.deputy_at)),
+      counselor_sig: await sign(r.counselor_sig || await current(r.counselor_id, r.counselor_at)),
     });
   } catch (e) {
     return json({ error: String(e?.message || e) }, 500);
