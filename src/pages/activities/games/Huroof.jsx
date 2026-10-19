@@ -3,6 +3,7 @@
 // المعلم سؤالًا جوابه يبدأ بالحرف؛ من يجيب يلوّن الخلية. يفوز الأخضر إن وصل اليمين باليسار،
 // والأحمر إن وصل الأعلى بالأسفل. الأسئلة من بيانات البطاقة: { letters: { "أ": [{q, a}], … } }.
 import { useMemo, useState } from "react";
+import { schoolHuroof } from "../../../lib/schoolQuestions.js";
 
 const N = 5;
 const TEAMS = {
@@ -35,8 +36,13 @@ function won(owner, team) {
   return false;
 }
 
-export default function Huroof({ data }) {
-  const bank = data?.letters ?? {};
+export default function Huroof({ data, school }) {
+  // أسئلة البطاقة، ومعها «من مدرستي»: معلمون وإداريون تبدأ أسماؤهم بالحرف
+  const bank = useMemo(() => {
+    const b = { ...(data?.letters ?? {}) }, s = schoolHuroof(school);
+    Object.entries(s).forEach(([l, qs]) => { if (b[l]) b[l] = [...qs, ...b[l]]; });
+    return b;
+  }, [data, school]);
   const all = useMemo(() => Object.keys(bank).filter((l) => bank[l]?.length), [bank]);
   const newBoard = () => shuffle(all).slice(0, N * N);
   const [letters, setLetters] = useState(newBoard);
@@ -50,7 +56,10 @@ export default function Huroof({ data }) {
   const ask = (i) => {
     const l = letters[i], qs = bank[l] ?? [];
     const used = usedQ[l] ?? [];
-    let idx = qs.findIndex((_, k) => !used.includes(k));
+    // سؤال المدرسة غير المستعمل يُفضَّل في أغلب المرات، للحماس
+    const free = qs.map((q, k) => k).filter((k) => !used.includes(k));
+    const sch = free.filter((k) => qs[k].school);
+    let idx = sch.length && Math.random() < 0.6 ? sch[0] : free.find((k) => !qs[k].school) ?? free[0] ?? -1;
     if (idx < 0) idx = Math.floor(Math.random() * qs.length);
     setUsedQ((u) => ({ ...u, [l]: [...(u[l] ?? []), idx] }));
     setPick({ i, ...qs[idx] }); setShow(false);
@@ -114,6 +123,7 @@ export default function Huroof({ data }) {
         ) : pick ? (
           <div className="card space-y-3 p-4">
             <p className="text-sm text-muted">حرف <b className="text-2xl text-ink">{label(letters[pick.i])}</b></p>
+            {pick.school && <p className="w-fit animate-pulse rounded-pill bg-[#FFE9A8] px-3 py-0.5 text-sm font-bold text-[#7A5A00]">🏫 سؤال من مدرستي</p>}
             <p className="text-xl font-bold leading-relaxed text-ink">{pick.q}</p>
             {show ? <p className="rounded-card bg-mint-tint px-3 py-2 text-xl font-bold text-mint-deep">{pick.a}</p>
               : <button type="button" className="btn-ghost w-full" onClick={() => setShow(true)}>إظهار الإجابة</button>}

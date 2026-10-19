@@ -3,13 +3,22 @@
 // للفريق الذي أجاب أولًا. الأسئلة من بيانات البطاقة: { questions: [{ q, options, answer }] }.
 import { useEffect, useMemo, useState } from "react";
 import { CUP_COLORS } from "../../../lib/activities.js";
+import { schoolQuiz } from "../../../lib/schoolQuestions.js";
 
 const LTR = ["أ", "ب", "ج", "د"];
 const shuffle = (a) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 const NAMES = ["الصقور", "النمور", "الفرسان", "النجوم"];
 
-export default function TeamsQuiz({ data }) {
-  const questions = useMemo(() => shuffle(data?.questions ?? []), [data]);
+// أسئلة «من مدرستي» تتخلل أسئلة البطاقة: سؤال كل ثلاثة، وحتى خمسة أسئلة
+function mix(base, school) {
+  const out = [...base], extra = school.slice(0, 5);
+  extra.forEach((q, k) => out.splice(Math.min(out.length, 2 + k * 4), 0, q));
+  return out;
+}
+
+export default function TeamsQuiz({ data, school }) {
+  const questions = useMemo(() => mix(shuffle(data?.questions ?? []), schoolQuiz(school)), [data, school]);
+  const fromSchool = questions.filter((x) => x.school).length;
   const [teams, setTeams] = useState(null);       // [{ name, color, score }]
   const [n, setN] = useState(2);
   const [secs, setSecs] = useState(30);
@@ -39,7 +48,7 @@ export default function TeamsQuiz({ data }) {
           <label className="block text-sm text-muted">وقت السؤال (ثانية)
             <input type="number" min={0} max={120} className="field num mt-1" value={secs} onChange={(e) => setSecs(Number(e.target.value) || 0)} />
           </label>
-          <p className="text-xs text-muted"><bdi className="num">{questions.length}</bdi> سؤالًا بترتيب عشوائي.</p>
+          <p className="text-xs text-muted"><bdi className="num">{questions.length}</bdi> سؤالًا بترتيب عشوائي{fromSchool ? <>، منها <bdi className="num">{fromSchool}</bdi> «🏫 من مدرستي»</> : ""}.</p>
           <button type="button" className="btn-primary w-full" onClick={() => {
             setTeams(Array.from({ length: n }, (_, k) => ({ name: NAMES[k], color: CUP_COLORS[k], score: 0 })));
             setLeft(secs || null);
@@ -71,6 +80,7 @@ export default function TeamsQuiz({ data }) {
               <span>السؤال <bdi className="num">{i + 1}</bdi> من <bdi className="num">{questions.length}</bdi></span>
               {left != null && <span className={`num rounded-pill px-4 py-1 text-2xl font-bold ${left <= 5 ? "bg-absent text-white" : "bg-mint-tint text-mint-deep"}`}>{left}</span>}
             </div>
+            {q.school && <p className="mx-auto w-fit animate-pulse rounded-pill bg-[#FFE9A8] px-4 py-1 text-lg font-bold text-[#7A5A00]">🏫 سؤال من مدرستي</p>}
             <p className="text-center text-3xl font-bold leading-relaxed text-ink sm:text-4xl">{q.q}</p>
             <div className={`grid gap-3 ${q.options.length > 2 ? "sm:grid-cols-2" : "grid-cols-2"}`}>
               {q.options.map((o, k) => (

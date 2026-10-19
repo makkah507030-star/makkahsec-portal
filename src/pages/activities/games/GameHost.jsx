@@ -1,6 +1,7 @@
 // src/pages/activities/games/GameHost.jsx
 // تشغيل لعبة البطاقة على السبورة بملء الشاشة: حروف، أو مسابقة الفرق.
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { loadSchoolFacts } from "../../../lib/schoolQuestions.js";
 import Huroof from "./Huroof.jsx";
 import TeamsQuiz from "./TeamsQuiz.jsx";
 
@@ -10,6 +11,9 @@ export const fullscreen = () => {
 };
 
 export default function GameHost({ card, onClose }) {
+  // «من مدرستي»: أسئلة من معلومات المدرسة تُدمج في اللعبة (تُجلب مرة، ودون إنترنت تُلعب بدونها)
+  const [school, setSchool] = useState(undefined);
+  useEffect(() => { loadSchoolFacts().then(setSchool); }, []);
   useEffect(() => {
     const h = (e) => {
       if (e.target.tagName === "INPUT") return;
@@ -27,8 +31,8 @@ export default function GameHost({ card, onClose }) {
         <button type="button" className="btn-ghost py-1 text-sm" onClick={onClose}>خروج</button>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        {card.game === "huroof" && <Huroof data={card.game_data} />}
-        {card.game === "teams_quiz" && <TeamsQuiz data={card.game_data} />}
+        {school !== undefined && card.game === "huroof" && <Huroof data={card.game_data} school={school} />}
+        {school !== undefined && card.game === "teams_quiz" && <TeamsQuiz data={card.game_data} school={school} />}
       </div>
     </div>
   );
