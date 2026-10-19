@@ -10,6 +10,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import { CUP_COLORS } from "../../lib/activities.js";
 import Loader from "../../components/Loader.jsx";
 import { fullscreen } from "./games/GameHost.jsx";
+import ChampionCertificate from "./ChampionCertificate.jsx";
 
 const TOOLS = [
   { key: "pick", label: "🎲 اختيار طالب" },
@@ -19,6 +20,7 @@ const TOOLS = [
 ];
 const shuffle = (a) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 const MEDAL = ["🥇", "🥈", "🥉"];
+const classLabel = (c) => (c ? `فصل ${GRADE_NAMES[c.grade] ?? ""} ${c.class_no}`.replace(/\s+/g, " ") : "");
 
 export default function ClassTools() {
   const [mine, setMine] = useState(null);
@@ -57,8 +59,8 @@ export default function ClassTools() {
   const content = !board ? <Loader compact /> : (
     <>
       {tool === "pick" && <Picker students={board.students} big={big} onPoints={(s, p) => addPoints({ student_id: s.id }, p, "اختيار عشوائي")} />}
-      {tool === "league" && <League students={board.students} big={big} onPoints={(s, p, r) => addPoints({ student_id: s.id }, p, r)} />}
-      {tool === "cup" && <Cup board={board} cid={cid} sid={sid} big={big} reload={load} onPoints={(g, p, r) => addPoints({ group_id: g.id }, p, r)} />}
+      {tool === "league" && <League students={board.students} big={big} cert={{ subject: cur?.subject, classLabel: classLabel(cur) }} onPoints={(s, p, r) => addPoints({ student_id: s.id }, p, r)} />}
+      {tool === "cup" && <Cup board={board} cid={cid} sid={sid} big={big} reload={load} cert={{ subject: cur?.subject, classLabel: classLabel(cur) }} onPoints={(g, p, r) => addPoints({ group_id: g.id }, p, r)} />}
       {tool === "timer" && <Timer big={big} />}
     </>
   );
@@ -134,8 +136,9 @@ function Picker({ students, big, onPoints }) {
   );
 }
 
-function League({ students, big, onPoints }) {
+function League({ students, big, cert, onPoints }) {
   const [who, setWho] = useState(null);
+  const [print, setPrint] = useState(false);
   const [reason, setReason] = useState("");
   const rows = [...students].sort((a, b) => b.points - a.points || a.name.localeCompare(b.name, "ar"));
   const rank = (i) => (i > 0 && rows[i].points === rows[i - 1].points ? null : i);
@@ -169,13 +172,19 @@ function League({ students, big, onPoints }) {
           <p className="border-t border-line pt-2 text-[11px] leading-relaxed text-faint">
             النقاط تتجمع حتى نهاية الفصل الدراسي، وصاحب أعلى مجموع بطل دوري المادة.
           </p>
+          {rows[0]?.points > 0 && (
+            <button type="button" className="btn-ghost w-full text-sm" onClick={() => setPrint(true)}>🏆 شهادة بطل الدوري</button>
+          )}
         </div>
       )}
+      {print && <ChampionCertificate kind="league" names={rows.filter((s) => s.points === rows[0].points).map((s) => s.name)}
+                                     points={rows[0].points} {...cert} onClose={() => setPrint(false)} />}
     </div>
   );
 }
 
-function Cup({ board, cid, sid, big, reload, onPoints }) {
+function Cup({ board, cid, sid, big, cert, reload, onPoints }) {
+  const [print, setPrint] = useState(false);
   const groups = [...board.groups].sort((a, b) => b.points - a.points);
   const [edit, setEdit] = useState(!board.groups.length);
   const [n, setN] = useState(4);
@@ -205,7 +214,14 @@ function Cup({ board, cid, sid, big, reload, onPoints }) {
           {board.groups.length > 0 && <button type="button" className="btn-ghost" onClick={() => setEdit(false)}>إلغاء</button>}
           <p className="w-full text-[11px] text-faint">مجموعات ثابتة طوال الفصل الدراسي، ونقاطها تتجمع، والأعلى بطل كأس المادة.</p>
         </div>
-      ) : <button type="button" className="text-xs text-muted underline" onClick={() => setEdit(true)}>إعادة تكوين المجموعات</button>)}
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" className="text-xs text-muted underline" onClick={() => setEdit(true)}>إعادة تكوين المجموعات</button>
+          {groups[0]?.points > 0 && <button type="button" className="btn-ghost py-1 text-sm" onClick={() => setPrint(true)}>🏆 شهادات بطل الكأس ({groups[0].name})</button>}
+        </div>
+      ))}
+      {print && <ChampionCertificate kind="cup" group={groups[0].name} names={groups[0].members.map((m) => names[m]).filter(Boolean)}
+                                     points={groups[0].points} {...cert} onClose={() => setPrint(false)} />}
       <div className={`grid gap-3 ${big ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2"}`}>
         {groups.map((g, i) => (
           <div key={g.id} className="card space-y-2 p-4" style={{ borderTop: `6px solid ${g.color ?? "#3E6350"}` }}>

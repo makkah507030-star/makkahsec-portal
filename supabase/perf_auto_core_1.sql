@@ -78,6 +78,20 @@ begin
   select fu.uid, x.k, count(distinct fu.k), max(fu.updated_at)
     from fu cross join (values ('e11_02'), ('e11_03')) as x(k)
    group by fu.uid, x.k;
+
+  -- بنك الأنشطة (activities_1/_2 إن شُغّلا)، يوم لكل شاهد: 4-2 النشاط الصفي، 8-4 كل نشاط ونقاط الدوري، 9-5 التعاوني
+  if to_regclass('public.activity_uses') is not null and to_regclass('public.subject_league_points') is not null then
+    return query execute $q$
+      with u as (select a.user_id uid, a.used_on, a.context, c.section from public.activity_uses a
+                   join public.activity_cards c on c.id = a.card_id
+                  where a.created_at >= $2 and ($1 is null or a.user_id = $1)),
+      r as (select uid, 'e04_02'::text k, used_on d from u where context = 'class'
+            union all select uid, 'e08_04', used_on from u
+            union all select uid, 'e09_05', used_on from u where section = 'coop'
+            union all select created_by, 'e08_04', created_at::date from public.subject_league_points
+                       where created_at >= $2 and ($1 is null or created_by = $1))
+      select uid, k, count(distinct d), max(d)::timestamptz from r where uid is not null group by uid, k $q$ using p_uid, y_start;
+  end if;
 end;
 $$;
 
