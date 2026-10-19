@@ -8,6 +8,71 @@ import { ensureServiceWorker } from "../lib/push.js";
 import { buildLabFile } from "../pages/lab/labFile.js";
 import { listPackages, savePackage, savePage } from "../lib/offlineQuiz.js";
 
+// أين يعمل الجوال: iPhone يفصل ذاكرة Safari عن أيقونة البوابة على الشاشة الرئيسية،
+// فيُفتح الاختبار في الحصة من المكان نفسه الذي نُزّل منه
+const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isApp = () => window.matchMedia?.("(display-mode: standalone)")?.matches || navigator.standalone === true;
+
+// نافذة «إضافة إلى الشاشة الرئيسية» في أندرويد (Chrome يطلقها حين يكون الموقع قابلًا للتثبيت)
+let installEvent = null;
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; });
+}
+
+function Downloaded() {
+  const addr = `${location.host}/offline-quiz`;
+  const ios = isIos(), app = isApp();
+  const [canInstall, setCanInstall] = useState(!!installEvent);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    const h = () => setCanInstall(true);
+    window.addEventListener("beforeinstallprompt", h);
+    return () => window.removeEventListener("beforeinstallprompt", h);
+  }, []);
+  const install = async () => { installEvent?.prompt(); await installEvent?.userChoice; installEvent = null; setCanInstall(false); };
+  const copy = () => navigator.clipboard?.writeText(`https://${addr}`).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
+
+  return (
+    <div className="space-y-3 rounded-card bg-present/10 px-3 py-3 text-sm leading-relaxed">
+      <p className="font-bold text-present">نُزّل الاختبار على هذا الجوال ✓</p>
+      <div className="space-y-1.5">
+        <p className="font-semibold text-ink">يوم الاختبار في الفصل (دون إنترنت):</p>
+        {app ? (
+          <p className="text-ink">اضغط <b>أيقونة البوابة على الشاشة الرئيسية</b> — نفس الأيقونة التي نزّلت منها الآن — فتظهر صفحة الاختبار.</p>
+        ) : (
+          <>
+            <p className="text-ink">افتح <b>{ios ? "Safari" : "المتصفح نفسه"}</b> واكتب هذا العنوان، فتظهر صفحة الاختبار:</p>
+            <div className="flex items-center gap-2">
+              <bdi dir="ltr" className="flex-1 rounded-card border border-present/30 bg-paper px-3 py-2 text-center font-bold text-ink">{addr}</bdi>
+              <button type="button" className="btn-ghost shrink-0" onClick={copy}>{copied ? "نُسخ ✓" : "نسخ"}</button>
+            </div>
+          </>
+        )}
+        <p className="text-ink">ثم امسح <b>مفتاح الفتح</b> من السبورة أو اكتبه، فيبدأ وقتك. وبعد التسليم اعرض <b>رمز التسليم</b> على معلمك ليمسحه.</p>
+      </div>
+
+      {!app && !ios && (
+        <div className="space-y-1.5 rounded-card bg-paper px-3 py-2.5">
+          <p className="font-semibold text-ink">الأسهل: أضف البوابة إلى الشاشة الرئيسية</p>
+          {canInstall
+            ? <button type="button" className="btn-primary w-full" onClick={install}>إضافة إلى الشاشة الرئيسية</button>
+            : <p className="text-xs text-muted">من قائمة المتصفح <b>⋮</b> اختر «إضافة إلى الشاشة الرئيسية» أو «تثبيت التطبيق».</p>}
+          <p className="text-xs text-muted">في الحصة اضغط الأيقونة فتظهر صفحة الاختبار مباشرة.</p>
+        </div>
+      )}
+      {!app && ios && (
+        <p className="rounded-card bg-warning-light px-3 py-2 text-xs leading-relaxed text-late">
+          في iPhone: الاختبار محفوظ في <b>Safari</b> فافتحه منه في الحصة. لا تضف البوابة إلى الشاشة الرئيسية الآن؛ فالأيقونة الجديدة
+          لا ترى ما نزّلته في Safari. ولتسهيل الوصول أضف العنوان إلى المفضلة: زر المشاركة ← «إضافة إلى المفضلة».
+        </p>
+      )}
+
+      <p className="text-xs text-muted">الأسئلة مقفلة على جوالك حتى الحصة. لا تحذف بيانات المتصفح ولا تستخدم التصفح الخفي.</p>
+      <a href="/offline-quiz" className="btn-ghost inline-flex">تجربة صفحة الاختبار الآن</a>
+    </div>
+  );
+}
+
 export default function OfflineQuizDownload({ quizId, info, online, onDone }) {
   const [local, setLocal] = useState(undefined);   // الحزمة المحفوظة على هذا الجهاز
   const [busy, setBusy] = useState(false);
@@ -47,21 +112,15 @@ export default function OfflineQuizDownload({ quizId, info, online, onDone }) {
   return (
     <div className="mt-4 space-y-3">
       {fresh ? (
-        <div className="space-y-2 rounded-card bg-present/10 px-3 py-3 text-sm leading-relaxed">
-          <p className="font-bold text-present">نُزّل الاختبار على هذا الجوال ✓</p>
-          <ol className="list-decimal space-y-1 pr-5 text-ink">
-            <li>في الحصة افتح البوابة من هذا المتصفح نفسه، <b>ولو دون إنترنت</b>، فتظهر صفحة الاختبار.</li>
-            <li>امسح <b>مفتاح الفتح</b> الذي يعرضه معلمك على السبورة، أو اكتبه، فيبدأ وقتك.</li>
-            <li>بعد التسليم اعرض <b>رمز التسليم</b> على معلمك ليمسحه، فتُرصد درجتك.</li>
-          </ol>
-          <p className="text-xs text-muted">الأسئلة مقفلة على جوالك حتى الحصة. لا تحذف بيانات المتصفح قبل الاختبار.</p>
-          <a href="/offline-quiz" className="btn-ghost inline-flex">تجربة صفحة الاختبار</a>
-        </div>
+        <Downloaded />
       ) : (
         <>
           <div className="rounded-card bg-mint-tint px-3 py-2.5 text-sm leading-relaxed text-ink">
             <p className="font-bold">هذا الاختبار يؤدّى في الحصة دون إنترنت</p>
             <p className="mt-1">نزّله الآن على جوالك وأنت متصل. يبقى مقفلًا حتى يعرض معلمك مفتاح الفتح في الحصة.</p>
+            {isIos() && !isApp() && (
+              <p className="mt-1.5 text-xs text-late">في iPhone: إن كنت تفتح البوابة عادةً من أيقونتها على الشاشة الرئيسية فنزّل الاختبار من داخلها لا من Safari.</p>
+            )}
           </div>
           {local && <p className="rounded-card bg-warning-light px-3 py-2 text-xs text-late">أعاد المعلم تجهيز الاختبار بعد تنزيلك له — نزّله من جديد.</p>}
           {notYet ? (

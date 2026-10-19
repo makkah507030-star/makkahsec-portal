@@ -55,7 +55,7 @@ begin
   if v_users is null or array_length(v_users, 1) is null then return 0; end if;
   v_body := coalesce(qz.subject_name || ' — ', '') || case when qz.mode = 'offline' then
             'نزّل الاختبار على جوالك وأنت متصل بالإنترنت قبل حصة الاختبار (آخر موعد ' ||
-            to_char(p_closes at time zone 'Asia/Riyadh', 'YYYY/MM/DD') || ')، ثم أدِّه في الحصة دون إنترنت بمفتاح يعرضه معلمك.'
+            to_char(p_closes at time zone 'Asia/Riyadh', 'YYYY/MM/DD') || ')، وفي الحصة افتح makkahsec.com/offline-quiz دون إنترنت وأدِّه بمفتاح يعرضه معلمك.'
             else 'متاح من ' || to_char(p_opens at time zone 'Asia/Riyadh', 'YYYY/MM/DD HH12:MI') ||
             case when to_char(p_opens at time zone 'Asia/Riyadh', 'AM') = 'AM' then ' ص' else ' م' end ||
             ' حتى ' || to_char(p_closes at time zone 'Asia/Riyadh', 'YYYY/MM/DD HH12:MI') ||

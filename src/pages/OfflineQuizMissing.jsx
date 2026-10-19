@@ -8,7 +8,7 @@ export default function OfflineQuizMissing() {
       <p className="text-base font-bold text-ink">لا يوجد اختبار منزّل على هذا الجهاز</p>
       <p className="text-muted">
         افتح الاختبار من إشعاره أو من «الاختبارات الإلكترونية» في الصفحة الرئيسية، واضغط «تنزيل الاختبار على جوالي» وأنت متصل
-        بالإنترنت. إن كنت نزّلته فافتح البوابة من المتصفح أو التطبيق نفسه الذي نزّلته منه.
+        بالإنترنت. إن كنت نزّلته فافتح makkahsec.com/offline-quiz من المتصفح نفسه الذي نزّلته منه، أو من أيقونة البوابة إن نزّلته منها.
       </p>
       <Link to="/" className="btn-primary inline-flex">الرئيسية</Link>
     </div>
