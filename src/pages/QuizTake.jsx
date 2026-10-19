@@ -6,6 +6,8 @@ import { fmtDateTime } from "../lib/dates";
 import { groupQuestions } from "../lib/omrLayout.js";
 import Loader from "../components/Loader.jsx";
 import { useSession } from "../lib/session.jsx";
+import { shuffled } from "../lib/offlineQuiz.js";
+import OfflineQuizDownload from "../components/OfflineQuizDownload.jsx";
 
 /* =====================================================================
    الاختبار الإلكتروني — صفحة الطالب (/quiz/:id).
@@ -36,19 +38,6 @@ const clock = (ms) => {
   const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
   const p = (n) => String(n).padStart(2, "0");
   return h ? `${h}:${p(m)}:${p(x)}` : `${p(m)}:${p(x)}`;
-};
-
-// ترتيب ثابت لكل طالب وسؤال يختلف من طالب لآخر؛ القيمة المحفوظة تبقى رقم الخيار الأصلي
-const shuffled = (n, seed) => {
-  let h = 2166136261;
-  for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
-  const idx = Array.from({ length: n }, (_, i) => i);
-  for (let i = n - 1; i > 0; i--) {
-    h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;
-    const j = h % (i + 1);
-    [idx[i], idx[j]] = [idx[j], idx[i]];
-  }
-  return idx;
 };
 
 // علامة مائية متكررة باسم الطالب وهويته تغطي الصفحة
@@ -108,6 +97,13 @@ export default function QuizTake() {
   }, [id, apply]);
 
   useEffect(() => { load(); }, [load]);
+
+  // الاختبار دون إنترنت (supabase/quiz_offline_2.sql): يُنزَّل هنا ولا يُبدأ من البوابة
+  const [off, setOff] = useState(undefined);   // undefined = تحميل
+  const loadOff = useCallback(() => {
+    supabase.rpc("quiz_offline_available", { p_quiz: id }).then(({ data: d }) => setOff(d ?? null));
+  }, [id]);
+  useEffect(() => { loadOff(); }, [loadOff]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -266,6 +262,29 @@ export default function QuizTake() {
         <p className="font-semibold text-ink">هذا الاختبار غير مُسند إليك</p>
         <p className="mt-1 text-sm text-muted">الاختبار الإلكتروني يظهر فقط للطلاب الذين اختارهم المعلم.</p>
         <Link to="/" className="btn-primary mt-4 inline-flex">الرئيسية</Link>
+      </Box>
+    );
+  }
+
+  if (off === undefined && (state === "upcoming" || state === "open")) return <Box><Loader compact /></Box>;
+  if (off?.offline && (state === "upcoming" || state === "open" || state === "closed")) {
+    return (
+      <Box>
+        {head}
+        <dl className="mt-4 grid gap-2 text-sm">
+          <Row k="آخر موعد للتنزيل">{fmtDateTime(data.online.closes_at)}</Row>
+          <Row k="المدة"><bdi className="num">{data.online.duration_min}</bdi> دقيقة من فتحه في الحصة</Row>
+        </dl>
+        {data.quiz?.instructions && (
+          <p className="mt-3 whitespace-pre-line rounded-card bg-canvas px-3 py-2 text-sm text-ink">{data.quiz.instructions}</p>
+        )}
+        {state === "closed" ? (
+          <p className="mt-4 rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">انتهى وقت هذا الاختبار.</p>
+        ) : off.available ? (
+          <OfflineQuizDownload quizId={id} info={off} online={data.online} onDone={loadOff} />
+        ) : (
+          <p className="mt-4 rounded-card bg-warning/10 px-3 py-2 text-sm text-warning">لم يجهّز المعلم الاختبار للتنزيل بعد — عُد لاحقًا.</p>
+        )}
       </Box>
     );
   }

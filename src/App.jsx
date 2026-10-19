@@ -23,6 +23,8 @@ const FollowUpLog2 = lazy(() => import("./pages/teacher/FollowUpLog2.jsx"));
 const FollowUpLog3 = lazy(() => import("./pages/teacher/FollowUpLog3.jsx"));
 const Lab = lazy(() => import("./pages/lab/Lab.jsx"));
 const LabGradeLink = lazy(() => import("./pages/lab/LabGradeLink.jsx"));
+const OfflineGradeLink = lazy(() => import("./pages/OfflineGradeLink.jsx"));
+const OfflineQuizMissing = lazy(() => import("./pages/OfflineQuizMissing.jsx"));
 const TeacherPermissions = lazy(() => import("./pages/admin/TeacherPermissions.jsx"));
 const NotificationsReview = lazy(() => import("./pages/admin/NotificationsReview.jsx"));
 const TeacherNotify = lazy(() => import("./pages/teacher/TeacherNotify.jsx"));
@@ -196,6 +198,9 @@ export default function App() {
           <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
           {/* رمز درجة من ملف المعمل: يُرصد بعد الدخول */}
           <Route path="/lab/g/:code" element={<LabGradeLink />} />
+          {/* رمز تسليم الاختبار دون إنترنت: يُرصد بعد الدخول */}
+          <Route path="/q/g/:code" element={<OfflineGradeLink />} />
+          <Route path="/offline-quiz" element={<OfflineQuizMissing />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -445,6 +450,8 @@ export default function App() {
           {/* معمل الحاسب الآلي — لمعلمي التقنية الرقمية المخوّلين ولمسؤولي المعمل */}
           <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
           <Route path="/lab/g/:code" element={<LabGradeLink />} />
+          <Route path="/q/g/:code" element={<OfflineGradeLink />} />
+          <Route path="/offline-quiz" element={<OfflineQuizMissing />} />
           {(effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r))) ||
            (effectiveRole === "teacher" && grantedTabs.has("computer_lab")) ? (
             <Route path="/lab" element={<Lab />} />

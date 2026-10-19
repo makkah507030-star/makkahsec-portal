@@ -8,7 +8,7 @@ import { supabase } from "../lib/supabase";
 
 const KIND_LABEL = { mcq: "اختيار من متعدد", truefalse: "صح وخطأ", match: "مزاوجة", fill: "أكمل الفراغ",
   order: "رتّب", short: "أجب باختصار", essay: "مقالي" };
-const MODE_LABEL = { paper: "ورقي", omr: "تصحيح آلي", online: "إلكتروني" };
+const MODE_LABEL = { paper: "ورقي", omr: "تصحيح آلي", online: "إلكتروني", offline: "دون إنترنت" };
 const preview = (t) => String(t ?? "").replace(/\s+/g, " ").trim().slice(0, 90) || "(بلا نص)";
 
 /* allowed: أنماط الأسئلة المسموحة في الاختبار الحالي؛ listening: هل يقبل أسئلة الاستماع */

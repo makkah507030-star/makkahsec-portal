@@ -25,7 +25,7 @@ export default function QuizPublish({ q, onChange }) {
   // الإلكتروني الذي اختار معلمه «النتيجة فور التسليم» ظاهرٌ دون نشر
   const [immediate, setImmediate] = useState(false);
   useEffect(() => {
-    if (q.mode !== "online") return;
+    if (q.mode !== "online" && q.mode !== "offline") return;
     supabase.from("quiz_online").select("show_result").eq("quiz_id", q.id).maybeSingle()
       .then(({ data }) => setImmediate(!!data?.show_result));
   }, [q.id, q.mode]);

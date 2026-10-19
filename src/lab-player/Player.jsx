@@ -4,16 +4,19 @@
 //   من خريطة الجلوس، ثم يؤدّي الدرس، وفي النهاية يعرض رمز QR بدرجته موقّعًا بمفتاح الحصة.
 // • الملف الدائم (mode: "install"): يُثبَّت على الأجهزة ويفتح الحصة برمز (InstallPlayer).
 // • نسخة العرض (mode: "present"): الدرس على السبورة لجهاز المعلم.
+// • الاختبار دون إنترنت (mode: "oq"): صفحة تُحفظ على جوال الطالب (OfflineQuiz).
 // التقدم محفوظ على الجهاز (localStorage) لكل حصة وجهاز وطلاب، فلا يضيع بإعادة الفتح.
 import { useState } from "react";
 import { lessonById } from "../lab-content/index.js";
 import LessonPresenter from "../pages/lab/lessons/LessonPresenter.jsx";
 import { resultCode } from "../lib/labSign.js";
 import InstallPlayer from "./InstallPlayer.jsx";
+import OfflineQuiz from "./OfflineQuiz.jsx";
 import { store, Header, DeviceGrid, NamePicker, LessonRun } from "./shared.jsx";
 
 export default function Player({ data }) {
   if (data.mode === "install") return <InstallPlayer data={data} />;
+  if (data.mode === "oq") return <OfflineQuiz data={data} />;
   const lesson = lessonById(data.lesson);
   if (data.mode === "present" && lesson) return <LessonPresenter lesson={lesson} />;
   return <SessionPlayer data={data} lesson={lesson} />;

@@ -40,7 +40,7 @@ const KINDS = [
 ];
 const ORDER_MAX = 8;
 
-// أربعة أنواع منفصلة — ولكل نوع قسمه في قائمة الاختبارات
+// خمسة أنواع منفصلة — ولكل نوع قسمه في قائمة الاختبارات
 const MODES = [
   { key: "paper", title: "اختبار ورقي", short: "ورقي", icon: "✎", chip: "bg-excused/10 text-excused",
     desc: "ورقة تقليدية بستة أنماط منها المقالي وأكمل الفراغ. تتوزّع على أكثر من صفحة، وتُطبع بأسماء الطلاب، ويُرصد مجموعها يدويًا." },
@@ -48,6 +48,8 @@ const MODES = [
     desc: "ورقة ببطاقة تظليل، تُصحَّح بالكاميرا أو برصد الإجابات. ثلاثة أنماط: اختيار من متعدد، وصح وخطأ، ومزاوجة، بلا حدّ لعدد الأسئلة." },
   { key: "online", title: "اختبار إلكتروني", short: "إلكتروني", icon: "⌁", chip: "bg-warning/10 text-warning",
     desc: "يؤديه الطالب من جواله في وقت تحدّده، ويُصحَّح آليًا فور تسليمه. ثلاثة أنماط: اختيار من متعدد، وصح وخطأ، ومزاوجة." },
+  { key: "offline", title: "اختبار دون إنترنت", short: "دون إنترنت", icon: "⇣", chip: "bg-warning/10 text-warning",
+    desc: "إلكتروني للفصل بلا إنترنت: ينزّله الطالب على جواله مقفلًا، ويفتحه في الحصة بمفتاح تعرضه على السبورة، ثم تمسح رمز تسليمه بجوالك فيُصحَّح ويُرصد." },
   { key: "external", title: "اختبار من خارج البوابة", short: "من خارج البوابة", icon: "⇪", chip: "bg-canvas text-ink",
     desc: "اختبار أعددته وطبّقته خارج البوابة. أدخل بياناته ودرجته الكلية، ثم ارصد مجموع كل طالب، فيدخل في التحليل والخطط والشواهد." },
 ];
@@ -78,7 +80,7 @@ const STATUS = {
 
 // الإلكتروني لا يُطبع: «جاهز» بدل «جاهز للطباعة»
 const statusLabel = (q) =>
-  q.status === "ready" && q.mode === "online" ? "جاهز للإطلاق"
+  q.status === "ready" && (q.mode === "online" || q.mode === "offline") ? "جاهز للإطلاق"
   : q.status === "ready" && q.mode === "external" ? "جاهز للرصد" : (STATUS[q.status] ?? STATUS.draft).t;
 
 const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "ك", "ل", "م", "ن"];
@@ -330,7 +332,7 @@ function NewQuiz({ uid, onDone }) {
     <section className="card space-y-4 p-4">
       <div>
         <label className="text-xs text-muted">نوع الاختبار</label>
-        <div className="mt-1.5 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-1.5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {MODES.map((m) => {
             const on = f.mode === m.key;
             return (
@@ -506,7 +508,9 @@ function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
   const symbolLib = symbolLibraryFor(q.subject_name);
   // الاختبار الورقي: عدد صفحاته وأين تبدأ كل صفحة، وما يُطبع الآن
   const paper = q.mode === "paper";
-  const online = q.mode === "online";
+  // دون إنترنت: إلكتروني في أسئلته ونشره، ويختلف في طريقة الأداء (OnlineQuizPanel)
+  const offline = q.mode === "offline";
+  const online = q.mode === "online" || offline;
   const external = q.mode === "external";   // من خارج البوابة: بلا أسئلة، يُرصد مجموعه فقط
   const omr = !paper && !online && !external;
   // سؤال الاستماع: للاختبار الإلكتروني باللغة الإنجليزية (supabase/quiz_listening_1.sql)

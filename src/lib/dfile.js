@@ -77,9 +77,9 @@ export const ACTIVITY_PRESETS = {
 export const ACTIVITY_LABEL = { class: "الأنشطة الصفية", extra: "الأنشطة اللاصفية" };
 export const actTotal = (list) => (list ?? []).reduce((a, x) => a + (Number(x.n) || 0), 0);
 
-export const MODE_LABEL ={ online: "إلكتروني", omr: "ورقي بتصحيح آلي", paper: "ورقي", external: "من خارج البوابة" };
-export const MODE_ORDER = ["online", "omr", "paper", "external"];
-export const MODE_COLOR = { online: "var(--e04)", omr: "var(--e03)", paper: "var(--e05)", external: "var(--e09)" };
+export const MODE_LABEL ={ online: "إلكتروني", offline: "دون إنترنت", omr: "ورقي بتصحيح آلي", paper: "ورقي", external: "من خارج البوابة" };
+export const MODE_ORDER = ["online", "offline", "omr", "paper", "external"];
+export const MODE_COLOR = { online: "var(--e04)", offline: "var(--e07)", omr: "var(--e03)", paper: "var(--e05)", external: "var(--e09)" };
 export const PERIOD_LABEL = { diagnostic: "تشخيصي", period1: "الفترة الأولى", period2: "الفترة الثانية" };
 
 /* شرائح التقدير (gradeBands.js): b5 ممتاز … b1 ضعيف (أقل من 60) */
