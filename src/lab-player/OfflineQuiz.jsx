@@ -43,7 +43,11 @@ export default function OfflineQuiz({ data }) {
     listPackages().then((l) => {
       l.sort((a, b) => (b.downloaded_at ?? "").localeCompare(a.downloaded_at ?? ""));
       setRecs(l);
-      if (l.length === 1) setPick(l[0]);
+      // الرابط يحدد الاختبار: /offline-quiz?q=… أو رابط الاختبار نفسه /quiz/… (يعرض sw.js هذه الصفحة بدلها دون إنترنت)
+      const want = new URLSearchParams(location.search).get("q") ?? location.pathname.match(/^\/quiz\/([^/?#]+)/)?.[1];
+      const hit = want && l.find((r) => r.quiz_id === want);
+      if (hit) setPick(hit);
+      else if (l.length === 1) setPick(l[0]);
     }).catch(() => setRecs([]));
   }, []);
 

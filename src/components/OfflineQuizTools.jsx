@@ -38,6 +38,10 @@ export default function OfflineQuizTools({ quiz, viewOnly, onChanged }) {
   const [err, setErr] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [scan, setScan] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // رابط واحد للطالب: يفتح صفحة التنزيل وهو متصل، ويفتح الاختبار نفسه في الحصة دون إنترنت
+  const link = `${location.origin}/quiz/${quiz.id}`;
+  const copyLink = () => navigator.clipboard?.writeText(link).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
 
   const load = async () => {
     const { data, error } = await supabase.rpc("quiz_offline_status", { p_quiz: quiz.id });
@@ -80,6 +84,9 @@ export default function OfflineQuizTools({ quiz, viewOnly, onChanged }) {
             <div className="flex flex-wrap gap-2">
               <button className="btn-primary flex-1" onClick={() => setShowKey(true)}>عرض مفتاح الفتح على السبورة</button>
               <button className="btn-primary flex-1" onClick={() => setScan(true)}>مسح رموز التسليم</button>
+              <button className="rounded-pill border border-mint-light bg-paper px-3 py-1.5 text-xs font-semibold text-mint-deep" onClick={copyLink}>
+                {copied ? "نُسخ الرابط ✓" : "نسخ رابط الاختبار للطلاب"}
+              </button>
               <button className="rounded-pill border border-line px-3 py-1.5 text-xs text-muted" disabled={busy} onClick={build}>
                 {busy ? "جارٍ التجهيز…" : "إعادة التجهيز بعد تعديل الأسئلة"}
               </button>

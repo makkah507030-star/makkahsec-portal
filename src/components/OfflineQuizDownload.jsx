@@ -19,7 +19,7 @@ if (typeof window !== "undefined") {
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvent = e; });
 }
 
-function Downloaded() {
+function Downloaded({ quizId }) {
   const addr = `${location.host}/offline-quiz`;
   const ios = isIos(), app = isApp();
   const [canInstall, setCanInstall] = useState(!!installEvent);
@@ -37,13 +37,16 @@ function Downloaded() {
       <p className="font-bold text-present">نُزّل الاختبار على هذا الجوال ✓</p>
       <div className="space-y-1.5">
         <p className="font-semibold text-ink">يوم الاختبار في الفصل (دون إنترنت):</p>
+        <p className="text-ink">
+          اضغط <b>رابط الاختبار نفسه</b> الذي فتحت منه هذه الصفحة (الإشعار أو الرابط المرسل لك)، ولو دون إنترنت، فيفتح الاختبار مباشرة.
+        </p>
         {app ? (
-          <p className="text-ink">اضغط <b>أيقونة البوابة على الشاشة الرئيسية</b> — نفس الأيقونة التي نزّلت منها الآن — فتظهر صفحة الاختبار.</p>
+          <p className="text-xs text-muted">أو اضغط <b>أيقونة البوابة على الشاشة الرئيسية</b> — نفس الأيقونة التي نزّلت منها الآن.</p>
         ) : (
           <>
-            <p className="text-ink">افتح <b>{ios ? "Safari" : "المتصفح نفسه"}</b> واكتب هذا العنوان، فتظهر صفحة الاختبار:</p>
+            <p className="text-xs text-muted">أو افتح <b>{ios ? "Safari" : "المتصفح نفسه"}</b> واكتب هذا العنوان:</p>
             <div className="flex items-center gap-2">
-              <bdi dir="ltr" className="flex-1 rounded-card border border-present/30 bg-paper px-3 py-2 text-center font-bold text-ink">{addr}</bdi>
+              <a href="/offline-quiz" dir="ltr" className="flex-1 rounded-card border border-present/30 bg-paper px-3 py-2 text-center font-bold text-ink">{addr}</a>
               <button type="button" className="btn-ghost shrink-0" onClick={copy}>{copied ? "نُسخ ✓" : "نسخ"}</button>
             </div>
           </>
@@ -67,8 +70,9 @@ function Downloaded() {
         </p>
       )}
 
-      <p className="text-xs text-muted">الأسئلة مقفلة على جوالك حتى الحصة. لا تحذف بيانات المتصفح ولا تستخدم التصفح الخفي.</p>
-      <a href="/offline-quiz" className="btn-ghost inline-flex">تجربة صفحة الاختبار الآن</a>
+      <p className="text-xs text-muted">افتح الرابط في Safari أو Chrome لا داخل تطبيق آخر. والأسئلة مقفلة على جوالك حتى الحصة؛ لا تحذف بيانات المتصفح ولا تستخدم التصفح الخفي.</p>
+      <a href={`/offline-quiz?q=${quizId}`} className="btn-primary flex w-full justify-center">فتح الاختبار (للتجربة الآن)</a>
+      <p className="text-center text-[11px] text-muted">يفتح الاختبار مقفلًا؛ لا يبدأ وقتك إلا بمفتاح المعلم في الحصة.</p>
     </div>
   );
 }
@@ -112,7 +116,7 @@ export default function OfflineQuizDownload({ quizId, info, online, onDone }) {
   return (
     <div className="mt-4 space-y-3">
       {fresh ? (
-        <Downloaded />
+        <Downloaded quizId={quizId} />
       ) : (
         <>
           <div className="rounded-card bg-mint-tint px-3 py-2.5 text-sm leading-relaxed text-ink">
