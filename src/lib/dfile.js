@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { countAr } from "./arabicCount.js";
 
 /* =====================================================================
    ملف المعلم الرقمي — تقرير تفاعلي يفعّله المعلم ويعرضه للزائر برابط ثابت
@@ -112,7 +113,7 @@ export function sentences(d, s) {
   if (d?.plc_led > 0) out.push({ key: "plc", icon: "users", t: "قدّم لقاءً لزملائه في مجتمع التعلم." });
   if (d?.ontime >= 90) out.push({ key: "ontime", icon: "ok", t: `منتظم في تحضير حصصه: ${pc(d.ontime)} منها في يومها.` });
   const modes = new Set((d?.quizzes ?? []).map((q) => q.mode));
-  if (modes.size >= 3) out.push({ key: "modes", icon: "ok", t: `نوّع أدوات التقويم: ${modes.size} أنواع في ${d.quizzes.length} اختبارًا.` });
+  if (modes.size >= 3) out.push({ key: "modes", icon: "ok", t: `نوّع أدوات التقويم: ${countAr(modes.size, "evalType")} في ${countAr(d.quizzes.length, "quiz", { acc: true })}.` });
   if (d?.subs >= 10) out.push({ key: "subs", icon: "users", t: `غطّى ${d.subs} حصة انتظار لزملائه.` });
   if (d?.guardian_msgs >= 20) out.push({ key: "guardian", icon: "users", t: `تواصل مع أولياء الأمور ${d.guardian_msgs} مرة هذا العام.` });
   return out;

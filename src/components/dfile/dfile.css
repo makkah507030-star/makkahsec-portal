@@ -107,6 +107,7 @@
 .dfile .df-dist small { font-size: 11.5px; color: color-mix(in srgb, var(--c), var(--ink) 25%); font-weight: 600; white-space: nowrap; }
 .dfile .df-cls { align-items: start; }
 .dfile .df-cls > span { line-height: 22px; }
+.dfile .df-cq { margin: 4px 0 0; font-size: 11.5px; line-height: 1.7; color: var(--muted); }
 .dfile .df-qlist { list-style: none; margin: 0; padding: 0; display: grid; }
 .dfile .df-qlist li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
 .dfile .df-qlist li:first-child { border-top: 0; }

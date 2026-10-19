@@ -1,9 +1,10 @@
 // src/App.jsx
 import { Suspense, lazy, useEffect } from "react";
-import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
 import { useTeacherHiddenTabs } from "./lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "./lib/useTeacherGrantedTabs.js";
+import { LAB_MANAGER_ROLES } from "./lib/lab.js";
 import Layout from "./components/Layout.jsx";
 import FollowUpTabs from "./components/FollowUpTabs.jsx";
 import Login from "./pages/Login.jsx";
@@ -20,6 +21,8 @@ const TeacherRecords = lazy(() => import("./pages/teacher/TeacherRecords.jsx"));
 const FollowUpLog = lazy(() => import("./pages/teacher/FollowUpLog.jsx"));
 const FollowUpLog2 = lazy(() => import("./pages/teacher/FollowUpLog2.jsx"));
 const FollowUpLog3 = lazy(() => import("./pages/teacher/FollowUpLog3.jsx"));
+const Lab = lazy(() => import("./pages/lab/Lab.jsx"));
+const LabGradeLink = lazy(() => import("./pages/lab/LabGradeLink.jsx"));
 const TeacherPermissions = lazy(() => import("./pages/admin/TeacherPermissions.jsx"));
 const NotificationsReview = lazy(() => import("./pages/admin/NotificationsReview.jsx"));
 const TeacherNotify = lazy(() => import("./pages/teacher/TeacherNotify.jsx"));
@@ -40,6 +43,7 @@ const Guides = lazy(() => import("./pages/Guides.jsx"));
 const GuidesAdmin = lazy(() => import("./pages/admin/GuidesAdmin.jsx"));
 const NewsArticle = lazy(() => import("./pages/NewsArticle.jsx"));
 const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
+const ScoutTeam = lazy(() => import("./pages/admin/ScoutTeam.jsx"));
 const NotificationsAdmin = lazy(() => import("./pages/admin/NotificationsAdmin.jsx"));
 const AttendanceOverview = lazy(() => import("./pages/admin/AttendanceOverview.jsx"));
 const StudentAffairs = lazy(() => import("./pages/student-affairs/index.jsx"));
@@ -136,6 +140,14 @@ export default function App() {
   // تحديث الـ Service Worker عند فتح التطبيق ليصل أحدث إصدار للجهاز
   useEffect(() => { ensureServiceWorker(); }, []);
 
+  // وجهة محفوظة قبل الدخول (رمز QR لجهاز المعمل) — تُفتح مرة واحدة بعد الدخول
+  useEffect(() => {
+    if (!session || !profile) return;
+    let target = null;
+    try { target = sessionStorage.getItem("mk_after_login"); sessionStorage.removeItem("mk_after_login"); } catch { /* تجاهل */ }
+    if (target) navigate(target, { replace: true });
+  }, [session, profile, navigate]);
+
   // عند الضغط على إشعار الجوال، يطلب Service Worker فتح صفحة الإشعار عبر رسالة —
   // ننتقل داخليًا (بلا إعادة تحميل) فتبقى الجلسة محفوظة ولا يعود للرئيسية.
   useEffect(() => {
@@ -180,6 +192,10 @@ export default function App() {
           {/* فتح إشعار قبل استعادة الجلسة → لصفحة الدخول بدل الرئيسية بصمت */}
           <Route path="/notify/:id" element={<Navigate to="/login" replace />} />
           <Route path="/notifications-me" element={<Navigate to="/login" replace />} />
+          {/* رمز QR على خلفية جهاز المعمل: يُحفظ البلاغ المطلوب ويُفتح بعد الدخول */}
+          <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
+          {/* رمز درجة من ملف المعمل: يُرصد بعد الدخول */}
+          <Route path="/lab/g/:code" element={<LabGradeLink />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -323,6 +339,7 @@ export default function App() {
               {can("students") && <Route path="/exams-admin" element={<ExamsAdmin />} />}
               {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
               {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
+              {can("scouts") && <Route path="/scouts" element={<ScoutTeam />} />}
               {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
               {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
               {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
@@ -425,6 +442,13 @@ export default function App() {
            (effectiveRole === "teacher" && grantedTabs.has("permissions")) ? (
             <Route path="/permissions" element={<PermissionRequestPage />} />
           ) : null}
+          {/* معمل الحاسب الآلي — لمعلمي التقنية الرقمية المخوّلين ولمسؤولي المعمل */}
+          <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
+          <Route path="/lab/g/:code" element={<LabGradeLink />} />
+          {(effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r))) ||
+           (effectiveRole === "teacher" && grantedTabs.has("computer_lab")) ? (
+            <Route path="/lab" element={<Lab />} />
+          ) : null}
           {/* الأخبار للمعلمين المخوّلين — مسودات فقط، الصفحة نفسها تفرض هذا القيد */}
           {effectiveRole === "teacher" && grantedTabs.has("news") ? (
             <Route path="/news-admin" element={<NewsAdmin />} />
@@ -489,4 +513,18 @@ export default function App() {
       </Suspense>
     </Layout>
   );
+}
+
+// رابط رمز QR على خلفية جهاز المعمل أو ملصقه (/lab/r/5) ← صفحة البلاغ والجهاز محدد.
+// قبل الدخول يُحفظ الرابط في الجلسة، ويُفتح بعد تسجيل الدخول مباشرة.
+function LabReportRedirect() {
+  const { seat } = useParams();
+  const { session } = useSession();
+  // 0 = لوحة البلاغ العامة في المعمل: يُختار الجهاز من الرسم
+  const target = `/lab?report=${Number(seat) || 0}`;
+  if (!session) {
+    try { sessionStorage.setItem("mk_after_login", target); } catch { /* تجاهل */ }
+    return <Navigate to="/login" replace />;
+  }
+  return <Navigate to={target} replace />;
 }

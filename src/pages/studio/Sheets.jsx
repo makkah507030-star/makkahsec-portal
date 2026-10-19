@@ -79,7 +79,7 @@ export function Decor() {
   );
 }
 
-function Head({ theme, year }) {
+export function Head({ theme, year }) {
   if (theme === "official") {
     return (
       <>
@@ -105,7 +105,7 @@ function Head({ theme, year }) {
   );
 }
 
-function Foot() {
+export function Foot() {
   return (
     <div className="stu-foot">
       <span>بوابة مكة الثانوية الرقمية · استوديو البوابة</span>
