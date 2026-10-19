@@ -142,6 +142,7 @@ const ADMIN_GROUPS = [
       { to: "/site-metrics", label: "مؤشرات الموقع", techOnly: true, icon: "eye" },
       { to: "/usage-report", label: "إحصائية الاستخدام", techOnly: true, icon: "trend" },
       { to: "/audit-log", label: "سجل العمليات", techOnly: true, icon: "list" },
+      { to: "/quizzes", label: "اختبارات المعلمين", techOnly: true, icon: "quiz", kw: "اطلاع اختبارات اسئلة المعلمين" },
       { to: "/quiz-marks", label: "التصحيح والدرجات", techOnly: true, icon: "target", kw: "اطلاع درجات اختبارات المعلمين" },
       { to: "/quiz-analytics", label: "تحليل النتائج", techOnly: true, icon: "pie", kw: "احصاء اختبارات" },
       { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },

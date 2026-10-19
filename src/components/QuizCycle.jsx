@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, createContext, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
@@ -40,6 +40,9 @@ const STAGES = [
 ];
 
 const r1 = (x) => Math.round(x * 10) / 10;
+
+// اطلاع الدعم الفني: تظهر المراحل والخطط والنتائج، وتختفي أزرار الاعتماد والتعديل والإنشاء
+const ReadOnlyCtx = createContext(false);
 
 function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, parentId = null }) {
   const [picked, setPicked] = useState(() => new Set((plan?.students ?? suggested).map((s) => s.id)));
@@ -123,6 +126,7 @@ function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, pare
 }
 
 function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
+  const ro = useContext(ReadOnlyCtx);
   const [note, setNote] = useState("");
   const [asking, setAsking] = useState(false);
   const done = plan.status === "done";
@@ -170,8 +174,8 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
       {done && plan.done_note && <p className="mt-1 text-sm text-muted">ملاحظة التنفيذ: {plan.done_note}</p>}
       <div className="mt-2 flex flex-wrap gap-3 text-sm">
         <button className="text-mint-deep underline" onClick={print}>طباعة الخطة</button>
-        {!done && <button className="text-ink underline" onClick={onEdit}>تعديل</button>}
-        {!done && !asking && <button className="text-mint-deep underline" onClick={() => setAsking(true)}>تم التنفيذ</button>}
+        {!done && !ro && <button className="text-ink underline" onClick={onEdit}>تعديل</button>}
+        {!done && !asking && !ro && <button className="text-mint-deep underline" onClick={() => setAsking(true)}>تم التنفيذ</button>}
       </div>
       {asking && (
         <div className="mt-2 space-y-2">
@@ -198,6 +202,7 @@ const VERIFY_MODE_HINT = {
 
 /* التحقق من أثر خطة علاجية نُفّذت: اختبار تحقق لطلابها، والقياس آلي بعد رصده */
 function VerifyBox({ q, p, subs, vq, last, onPlan2, onChanged }) {
+  const ro = useContext(ReadOnlyCtx);
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -220,10 +225,10 @@ function VerifyBox({ q, p, subs, vq, last, onPlan2, onChanged }) {
 
   // القياس آلي حين يُرصد كل طلاب الخطة (أو يُسجَّل غيابهم)
   useEffect(() => {
-    if (auto.current || p.measured_at || !p.verify_quiz_id || !graded || settled < ids.size) return;
+    if (ro || auto.current || p.measured_at || !p.verify_quiz_id || !graded || settled < ids.size) return;
     auto.current = true;
     measure();
-  }, [p.measured_at, p.verify_quiz_id, graded, settled, ids.size, measure]);
+  }, [ro, p.measured_at, p.verify_quiz_id, graded, settled, ids.size, measure]);
 
   const create = async () => {
     setBusy(true); setErr("");
@@ -281,7 +286,7 @@ function VerifyBox({ q, p, subs, vq, last, onPlan2, onChanged }) {
           )}
           {im.below > 0 && (p.round > 1
             ? <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-xs text-absent">بقي <span className="num">{im.below}</span> دون 60% بعد الخطة الثانية، ووصل المدير إشعار بهم.</p>
-            : last && <button className="btn-primary" onClick={onPlan2}>إعداد الخطة العلاجية الثانية · دعم أعلى ({countAr(im.below + (im.missing ?? 0), "student")})</button>)}
+            : last && !ro && <button className="btn-primary" onClick={onPlan2}>إعداد الخطة العلاجية الثانية · دعم أعلى ({countAr(im.below + (im.missing ?? 0), "student")})</button>)}
         </>
       ) : p.verify_quiz_id ? (
         <>
@@ -290,10 +295,13 @@ function VerifyBox({ q, p, subs, vq, last, onPlan2, onChanged }) {
             يُقاس الأثر آليًا حين يكتمل الرصد.
           </p>
           <div className="flex flex-wrap gap-2">
-            <button className="btn-ghost" onClick={() => navigate(`/quizzes?q=${p.verify_quiz_id}`)}>فتح اختبار التحقق</button>
-            {graded > 0 && settled < ids.size && <button className="btn-primary" disabled={busy} onClick={() => measure()}>قياس الأثر بمن رُصد</button>}
+            <button className="btn-ghost" onClick={() => navigate(`/quizzes?q=${p.verify_quiz_id}${
+              new URLSearchParams(location.search).get("t") ? `&t=${new URLSearchParams(location.search).get("t")}` : ""}`)}>فتح اختبار التحقق</button>
+            {graded > 0 && settled < ids.size && !ro && <button className="btn-primary" disabled={busy} onClick={() => measure()}>قياس الأثر بمن رُصد</button>}
           </div>
         </>
+      ) : ro ? (
+        <p className="text-muted">لم يُنشأ اختبار التحقق لهذه الخطة بعد.</p>
       ) : (
         <>
           <p className="text-muted">
@@ -323,7 +331,7 @@ function VerifyBox({ q, p, subs, vq, last, onPlan2, onChanged }) {
   );
 }
 
-export default function QuizCycle({ q, questionsCount, teacherName, onChange }) {
+export default function QuizCycle({ q, questionsCount, teacherName, onChange, viewOnly = false }) {
   const [subs, setSubs] = useState(null);
   const [plans, setPlans] = useState([]);
   const [editing, setEditing] = useState(null);   // remedial | enrichment | remedial2
@@ -441,7 +449,9 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
     mark: "صحّح الاختبار وارصد الدرجات من «التصحيح والدرجات».",
   };
 
+  const ro = viewOnly;
   return (
+    <ReadOnlyCtx.Provider value={ro}>
     <section className="no-print card space-y-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-bold text-ink">دورة الاختبار</h2>
@@ -472,7 +482,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
       {current >= 0 && stageNote[STAGES[current].key] && (
         <div className="flex flex-wrap items-center gap-2 rounded-sm2 bg-canvas px-3 py-2 text-sm text-muted">
           <p className="flex-1">{stageNote[STAGES[current].key]}</p>
-          {STAGES[current].key === "mark" && (
+          {STAGES[current].key === "mark" && !ro && (
             <Link className="btn-primary shrink-0 px-4 py-1.5 text-xs" to={`/quiz-marks?q=${q.id}`}>
               الذهاب إلى التصحيح والدرجات
             </Link>
@@ -489,7 +499,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
           <p className="text-muted">راجع التحليل التفصيلي والفقرات، ثم اعتمده لتنتقل إلى الخطة.</p>
           <div className="flex flex-wrap gap-2">
             <Link className="btn-ghost" to="/quiz-analytics">فتح تحليل النتائج</Link>
-            <button className="btn-primary" onClick={approveAnalysis} disabled={busy}>اعتماد التحليل</button>
+            {!ro && <button className="btn-primary" onClick={approveAnalysis} disabled={busy}>اعتماد التحليل</button>}
           </div>
           <EvidenceTags items={["e10_01", "e10_02"]} />
         </div>
@@ -526,7 +536,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
                                onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />;
             }
             if (p) return <PlanCard key={k} q={q} plan={p} teacherName={teacherName} onEdit={() => setEditing(k)} onChanged={load} />;
-            if (done.close) return null;
+            if (done.close || ro) return null;
             const required = k === "remedial" && needPlan;
             return (
               <button key={k} className={required ? "btn-primary" : "btn-ghost"} onClick={() => setEditing(k)}>
@@ -553,7 +563,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
               </span>
             ))}
           </div>
-          {!honored && (
+          {!honored && !ro && (
             <div className="flex flex-wrap items-center gap-3">
               <button className="btn-primary" onClick={() => navigate("/forms", { state: { honor: {
                 quiz: q.title, reason: `لتفوقه في ${q.title}`,
@@ -567,7 +577,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
         </div>
       )}
 
-      {done.verify && !done.close && (
+      {done.verify && !done.close && !ro && (
         <div className="flex flex-wrap items-center gap-3 rounded-sm2 bg-mint-tint p-3 text-sm">
           <p className="flex-1 text-mint-deep">اكتملت المراحل. أغلق الدورة ليُحفظ تقرير الاختبار في ملف شواهدك.</p>
           <button className="btn-primary" onClick={closeCycle} disabled={busy}>إغلاق الدورة</button>
@@ -579,5 +589,6 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange }) 
         </p>
       )}
     </section>
+    </ReadOnlyCtx.Provider>
   );
 }

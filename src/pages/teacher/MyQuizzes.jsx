@@ -20,6 +20,7 @@ import SymbolsToolbar from "../../components/SymbolsToolbar.jsx";
 import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
 import { useBackStep } from "../../lib/backStep.js";
+import QuizTeacherPicker, { useQuizTeacher } from "../../components/QuizTeacherPicker.jsx";
 
 /* =====================================================================
    اختباراتي — اختبارات المعلم.
@@ -83,8 +84,11 @@ const LETTERS = ["أ", "ب", "ج", "د", "هـ", "و", "ز", "ح", "ط", "ي", "
 const ORDINALS = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن"];
 
 export default function MyQuizzes() {
-  const { session, profile } = useSession();
-  const uid = session?.user?.id;
+  const { session } = useSession();
+  // الدعم الفني: اختبارات المعلم المختار، للاطلاع فقط (QuizTeacherPicker)
+  const t = useQuizTeacher();
+  const ro = t.viewOnly;
+  const uid = ro ? t.teacherId : session?.user?.id;
 
   const [list, setList] = useState(null);
   const [openId, setOpenId] = useState(null);
@@ -98,34 +102,39 @@ export default function MyQuizzes() {
     const { data } = await supabase.from("quizzes")
       .select("*").eq("teacher_id", uid).order("created_at", { ascending: false });
     setList(data ?? []);
+    if (ro) return;
     // صور بطاقات الإجابة تُحذف بنهاية الفصل
     loadActiveTerm().then(({ year, term }) => year && purgeOldQuizCards(data, year, term));
   };
 
-  useEffect(() => { if (uid) load(); }, [uid, linkedId]);
+  useEffect(() => { if (uid) load(); else setList(ro ? [] : null); }, [uid, linkedId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (linkedId) setOpenId(linkedId); }, [linkedId]);
 
   const open = (list ?? []).find((q) => q.id === openId);
   const close = () => { setOpenId(null); if (linkedId) setParams({}, { replace: true }); load(); };
-  useBackStep(!!open, close, "اختباراتي");
+  useBackStep(!!open, close, ro ? "اختبارات المعلمين" : "اختباراتي");
   if (open) {
-    return <QuizEditor key={open.id} quiz={open} uid={uid} onBack={close} />;
+    return <QuizEditor key={open.id} quiz={open} uid={uid} onBack={close} viewOnly={ro} teacherName={ro ? t.teacherName : undefined} />;
   }
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-lg font-bold text-ink">اختباراتي</h1>
+          <h1 className="text-lg font-bold text-ink">{ro ? "اختبارات المعلمين" : "اختباراتي"}</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            أربعة أنواع: ورقي، وورقي بتصحيح آلي، وإلكتروني، ومن خارج البوابة. تُرصد درجاتها في كشف المادة،
-            والنموذج الواحد يُسند لأكثر من فصل.
+            {ro ? "اطلاع على اختبارات المعلم كاملة: الأسئلة والإجابات والفصول والدورة والإطلاق، دون تعديل."
+              : "أربعة أنواع: ورقي، وورقي بتصحيح آلي، وإلكتروني، ومن خارج البوابة. تُرصد درجاتها في كشف المادة، والنموذج الواحد يُسند لأكثر من فصل."}
           </p>
         </div>
-        <button className="btn-primary shrink-0" onClick={() => setCreating((v) => !v)}>
-          {creating ? "إغلاق" : "اختبار جديد"}
-        </button>
+        {!ro && (
+          <button className="btn-primary shrink-0" onClick={() => setCreating((v) => !v)}>
+            {creating ? "إغلاق" : "اختبار جديد"}
+          </button>
+        )}
       </div>
+
+      <QuizTeacherPicker t={t} />
 
       {msg && (
         <p className={`rounded-sm2 px-3 py-2 text-sm ${
@@ -141,9 +150,9 @@ export default function MyQuizzes() {
       )}
 
       {!list && <Loader compact />}
-      {list?.length === 0 && (
+      {list?.length === 0 && (!ro || uid) && (
         <p className="card px-4 py-8 text-center text-sm text-muted">
-          لا اختبارات بعد. ابدأ بـ«اختبار جديد».
+          {ro ? "لا اختبارات لهذا المعلم." : "لا اختبارات بعد. ابدأ بـ«اختبار جديد»."}
         </p>
       )}
 
@@ -185,7 +194,7 @@ export default function MyQuizzes() {
                       </span>
                     )}
                   </div>
-                  <button onClick={async () => {
+                  {!ro && <button onClick={async () => {
                             if (!window.confirm(
                               `حذف «${q.title}» نهائيًا؟\n\nسيُحذف معه كل أسئلته ودرجات الطلاب.`)) return;
                             await removeQuizCards(q.id);
@@ -198,7 +207,7 @@ export default function MyQuizzes() {
                          stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" />
                     </svg>
-                  </button>
+                  </button>}
                 </div>
               </div>
             </div>
@@ -475,8 +484,14 @@ function NewQuiz({ uid, onDone }) {
 }
 
 /* --------------------------- محرّر الاختبار --------------------------- */
-function QuizEditor({ quiz, uid, onBack }) {
+/* اطلاع فقط: يعطّل كل الحقول والأزرار داخله (fieldset disabled) */
+function ReadOnly({ on, children }) {
+  return on ? <fieldset disabled className="m-0 min-w-0 space-y-5 border-0 p-0">{children}</fieldset> : children;
+}
+
+function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
   const { profile } = useSession();
+  const tName = teacherName ?? profile?.full_name ?? "";
   const [printing, setPrinting] = useState(null);
   // هل تتّسع الورقة في صفحة واحدة؟ تقيسها نسخة غير مرئية تتحدّث مع كل تعديل
   const [fit, setFit] = useState(null);
@@ -780,7 +795,7 @@ function QuizEditor({ quiz, uid, onBack }) {
       <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <button onClick={onBack}
                 className="rounded-pill border border-line px-4 py-1.5 text-sm text-muted hover:bg-canvas">
-          ← اختباراتي
+          ← {viewOnly ? "اختبارات المعلمين" : "اختباراتي"}
         </button>
         <div className="flex items-center gap-2">
           {paper && (questions?.length ?? 0) > 0 && (
@@ -823,7 +838,7 @@ function QuizEditor({ quiz, uid, onBack }) {
       {paper && (questions?.length ?? 0) > 0 && (
         <div aria-hidden="true"
              style={{ position: "fixed", top: 0, left: -10000, visibility: "hidden", pointerEvents: "none" }}>
-          <PaperExam quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
+          <PaperExam quiz={q} questions={questions} teacherName={tName}
                      images={images} copies={[]} onLayout={setLayout} />
         </div>
       )}
@@ -831,7 +846,7 @@ function QuizEditor({ quiz, uid, onBack }) {
         <QuizPrintArea>
           {/* نسخة لكل ورقة، ولكل نسخة نموذجها (أ أو ب) */}
           {paperPrint.copies.map((c, i) => (
-            <PaperExam key={i} quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
+            <PaperExam key={i} quiz={q} questions={questions} teacherName={tName}
                        images={images} copies={[c]} model={c.model ?? null} answerKey={paperPrint.answerKey} />
           ))}
         </QuizPrintArea>
@@ -841,7 +856,7 @@ function QuizEditor({ quiz, uid, onBack }) {
       {omr && (questions?.length ?? 0) > 0 && (
         <div aria-hidden="true"
              style={{ position: "fixed", top: 0, left: -10000, visibility: "hidden", pointerEvents: "none" }}>
-          <QuizPaper quiz={q} questions={questions} teacherName={profile?.full_name ?? ""}
+          <QuizPaper quiz={q} questions={questions} teacherName={tName}
                      images={images} onFit={setFit} />
         </div>
       )}
@@ -850,24 +865,32 @@ function QuizEditor({ quiz, uid, onBack }) {
       {printing && (
         <QuizPrintArea>
           {printing.copies.map((c, i) => (
-            <QuizPaper key={i} quiz={q} questions={questions} {...c} teacherName={profile?.full_name ?? ""} images={images} />
+            <QuizPaper key={i} quiz={q} questions={questions} {...c} teacherName={tName} images={images} />
           ))}
         </QuizPrintArea>
       )}
 
+      {viewOnly && (
+        <p className="no-print rounded-card border border-line bg-canvas px-4 py-2.5 text-sm text-muted">
+          اطلاع فقط: {tName ? `اختبار ${tName}` : "اختبار المعلم"} كما يراه، ولا يُحفظ أي تعديل.
+        </p>
+      )}
+
+      <ReadOnly on={viewOnly}>
       <QuizDetails q={q} onSaved={(fields) => { setQ((x) => ({ ...x, ...fields })); setMsg({ ok: true, text: "حُفظت بيانات الاختبار." }); }} />
+      </ReadOnly>
 
       {q.period === "verify" && <VerifyBanner q={q} />}
 
       {/* دورة الاختبار: التشخيصي والفترتان فقط، والنهائي له نظامه */}
       {CYCLE_PERIODS.includes(q.period) && (
-        <QuizCycle q={q} questionsCount={questions?.length ?? 0} teacherName={profile?.full_name}
+        <QuizCycle q={q} questionsCount={questions?.length ?? 0} teacherName={tName} viewOnly={viewOnly}
                    onChange={(fields) => setQ((x) => ({ ...x, ...fields }))} />
       )}
 
       {/* نشر النتيجة والتغذية الراجعة: بعد بدء الرصد، أو بعد إطلاق الإلكتروني */}
       {(["marking", "closed"].includes(q.status) || (online && q.status === "ready")) && (
-        <QuizPublish q={q} onChange={(fields) => setQ((x) => ({ ...x, ...fields }))} />
+        <ReadOnly on={viewOnly}><QuizPublish q={q} onChange={(fields) => setQ((x) => ({ ...x, ...fields }))} /></ReadOnly>
       )}
 
       {external && (
@@ -876,7 +899,7 @@ function QuizEditor({ quiz, uid, onBack }) {
             اختبار من خارج البوابة: أسند فصوله، ثم ارصد مجموع كل طالب من الدرجة الكلية
             (<span className="num">{q.total_marks}</span>). بعدها تكمل دورة الاختبار: التحليل والخطة والتكريم.
           </p>
-          {!CYCLE_PERIODS.includes(q.period) && (
+          {!CYCLE_PERIODS.includes(q.period) && !viewOnly && (
             <Link className="btn-primary shrink-0 px-4 py-1.5 text-xs" to={`/quiz-marks?q=${q.id}`}>رصد الدرجات</Link>
           )}
         </div>
@@ -910,6 +933,7 @@ function QuizEditor({ quiz, uid, onBack }) {
       )}
 
       {tab === "questions" && (
+        <ReadOnly on={viewOnly}>
         <div className="no-print space-y-3">
           <div className={`rounded-card border px-4 py-3 ${
             marksUsed === Number(q.total_marks)
@@ -927,7 +951,7 @@ function QuizEditor({ quiz, uid, onBack }) {
             )}
           </div>
 
-          {symbolLib && <SymbolsToolbar key={symbolLib.key} library={symbolLib} containerRef={questionsRef} />}
+          {symbolLib && !viewOnly && <SymbolsToolbar key={symbolLib.key} library={symbolLib} containerRef={questionsRef} />}
 
           <div ref={questionsRef} className="space-y-3">
             {paper
@@ -965,7 +989,7 @@ function QuizEditor({ quiz, uid, onBack }) {
               )}
           </div>
 
-          <div className="card p-4">
+          {!viewOnly && <div className="card p-4">
             <p className="text-xs text-muted">إضافة سؤال</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {kinds.map((k) => {
@@ -987,9 +1011,9 @@ function QuizEditor({ quiz, uid, onBack }) {
                 : "لا حدّ لعدد الأسئلة: إذا امتلأت الصفحة الأولى انتقل الباقي إلى صفحة ثانية، وتأتي بطاقة الإجابة كاملة في آخر صفحة."}
             </p>
             {omr && (questions?.length ?? 0) > 0 && fit && <OmrPagesNote fit={fit} className="mt-2" />}
-          </div>
+          </div>}
 
-          {q.status === "draft" && (questions?.length ?? 0) > 0 && (
+          {q.status === "draft" && (questions?.length ?? 0) > 0 && !viewOnly && (
             <button className="btn-primary w-full" onClick={() => setStatus("ready")}>
               {online ? "اعتماد الاختبار — ثم أطلقه من «الإطلاق والمتابعة»" : "اعتماد الاختبار وجعله جاهزًا"}
             </button>
@@ -1000,9 +1024,10 @@ function QuizEditor({ quiz, uid, onBack }) {
             ]} />
           )}
         </div>
+        </ReadOnly>
       )}
 
-      <div className="no-print flex justify-end">
+      {!viewOnly && <div className="no-print flex justify-end">
         <button onClick={removeQuiz}
                 className="flex items-center gap-1.5 rounded-pill border border-absent/40 px-4 py-1.5 text-xs font-semibold text-absent transition-colors hover:bg-absent hover:text-white">
           <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5"
@@ -1011,13 +1036,14 @@ function QuizEditor({ quiz, uid, onBack }) {
           </svg>
           حذف الاختبار
         </button>
-      </div>
+      </div>}
 
       {paper && tab === "paper" && (
         <PaperTab quiz={q} questions={questions ?? []} linked={linked} layout={layout} images={images}
-                  teacherName={profile?.full_name ?? ""}
+                  teacherName={tName}
                   onOpts={async (paper_opts) => {
                     setQ((x) => ({ ...x, paper_opts }));
+                    if (viewOnly) return;   // اطلاع: خيارات الورقة للمعاينة دون حفظ
                     const { error } = await supabase.from("quizzes").update({ paper_opts }).eq("id", q.id);
                     if (error) setMsg({ ok: false, text: setupHint(error) });
                   }}
@@ -1025,18 +1051,19 @@ function QuizEditor({ quiz, uid, onBack }) {
       )}
 
       {(online || legacyOnline) && tab === "online" && (
-        <div className="no-print">
-          <OnlineQuizPanel quiz={q} linked={linked} questionsCount={questions?.length ?? 0}
+        <div className="no-print"><ReadOnly on={viewOnly}>
+          <OnlineQuizPanel quiz={q} viewOnly={viewOnly} linked={linked} questionsCount={questions?.length ?? 0}
                            marksOk={marksUsed === Number(q.total_marks)}
                            audioMissing={listening && listenQs.length > 0 && !q.listening_audio}
                            onStatus={(status, silent) => {
                              if (silent) setQ((x) => ({ ...x, status }));
                              else setStatus(status);
                            }} />
-        </div>
+        </ReadOnly></div>
       )}
 
       {tab === "classes" && (
+        <ReadOnly on={viewOnly}>
         <section className="no-print card p-4">
           <p className="text-sm font-semibold text-ink">الفصول المسند إليها الاختبار</p>
           <p className="mt-0.5 text-xs text-muted">
@@ -1059,6 +1086,7 @@ function QuizEditor({ quiz, uid, onBack }) {
             )}
           </div>
         </section>
+        </ReadOnly>
       )}
     </div>
   );

@@ -29,7 +29,7 @@ const nextFive = () => {
 };
 const mins = (ms) => Math.max(0, Math.ceil(ms / 60000));
 
-export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk, onStatus, audioMissing = false }) {
+export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk, onStatus, audioMissing = false, viewOnly = false }) {
   const [online, setOnline] = useState(undefined);   // undefined = تحميل، null = غير منشور
   const [assigns, setAssigns] = useState([]);
   const [subs, setSubs] = useState({});
@@ -53,7 +53,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   };
 
   const load = async () => {
-    await supabase.rpc("refresh_online_quiz", { p_quiz: quiz.id });   // تسليم من انتهى وقته
+    if (!viewOnly) await supabase.rpc("refresh_online_quiz", { p_quiz: quiz.id });   // تسليم من انتهى وقته (لا في الاطلاع)
     const [{ data: o, error: e1 }, { data: a }, { data: s }] = await Promise.all([
       supabase.from("quiz_online").select("*").eq("quiz_id", quiz.id).maybeSingle(),
       supabase.from("quiz_assignments")
