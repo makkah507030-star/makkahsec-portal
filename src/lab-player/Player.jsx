@@ -3,10 +3,12 @@
 // المكتب، فتظهر أسماء الجالسين عليه من خريطة الجلوس، ثم يؤدّي الدرس، وفي النهاية يعرض
 // رمز QR بدرجته موقّعًا بمفتاح الحصة، فيمسحه المعلم من البوابة.
 // التقدم محفوظ على الجهاز (localStorage) لكل حصة وجهاز وطلاب، فلا يضيع بإعادة الفتح.
+// ونسخة العرض (mode: "present") تفتح الدرس على السبورة لجهاز المعلم.
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { lessonById } from "../lab-content/index.js";
 import LessonPlayer, { lessonScore } from "../pages/lab/lessons/LessonPlayer.jsx";
+import LessonPresenter from "../pages/lab/lessons/LessonPresenter.jsx";
 import { resultCode } from "../lib/labSign.js";
 import logoIcon from "../assets/icon-mint.png";
 
@@ -21,6 +23,9 @@ export default function Player({ data }) {
   const whoKey = `mkl:${data.code}:who`;
   const [who, setWho] = useState(() => store.get(whoKey, null));   // { seat, students: [idx] }
   const saveWho = (w) => { store.set(whoKey, w); setWho(w); };
+
+  // نسخة العرض لجهاز المعلم: الدرس على السبورة، بلا طلاب ولا رصد
+  if (data.mode === "present" && lesson) return <LessonPresenter lesson={lesson} />;
 
   return (
     <div className="mx-auto min-h-screen max-w-3xl space-y-4 p-4 sm:p-6">
