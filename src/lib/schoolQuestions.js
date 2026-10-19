@@ -21,10 +21,19 @@ const addMin = (hm, m) => {
 };
 const nums = (n, deltas) => uniq(deltas.map((d) => n + d).filter((x) => x > 0)).map(String);
 
+// الاسم الأول واسم العائلة فقط (أوضح على السبورة): «سلطان علي يحي هزازي» ← «سلطان هزازي»
+export const shortName = (n) => {
+  const w = String(n ?? "").replace(/[-–—]/g, " ").split(/\s+/).filter((x) => x && !["بن", "ابن"].includes(x));
+  return w.length > 2 ? `${w[0]} ${w[w.length - 1]}` : w.join(" ");
+};
+const named = (f) => ({ ...f,
+  teachers: (f.teachers ?? []).map((t) => ({ ...t, name: shortName(t.name) })),
+  admins: (f.admins ?? []).map((a) => ({ ...a, name: shortName(a.name) })) });
+
 let cache = null;
 /** معلومات المدرسة مرة واحدة لكل تحميل للصفحة؛ null إن تعذّرت (دون إنترنت مثلًا) */
 export function loadSchoolFacts() {
-  cache ??= supabase.rpc("act_school_facts").then(({ data, error }) => (error ? null : data)).catch(() => null);
+  cache ??= supabase.rpc("act_school_facts").then(({ data, error }) => (error || !data ? null : named(data))).catch(() => null);
   return cache;
 }
 
