@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { todayDow, todayISO, todayLabel, GRADE_NAMES, STATUS } from "../../lib/schoolTime";
@@ -366,6 +367,15 @@ export default function SubstitutePeriod() {
           {msg.text}
         </p>
       )}
+
+      {/* حقيبة حصص الانتظار (src/pages/activities): نشاط ترفيهي جاهز لحصة الانتظار */}
+      <Link to="/activities?tab=waiting"
+            className="flex items-center gap-3 rounded-card border border-mint-light bg-paper px-4 py-3 transition-colors hover:bg-mint-tint">
+        <span className="text-2xl">🎮</span>
+        <span className="flex-1 text-sm"><b className="text-ink">حقيبة حصص الانتظار</b>
+          <span className="block text-xs text-muted">ألعاب على السبورة، ورياضة وحركة، وتقنية — جاهزة لحصتك</span></span>
+        <span className="text-mint-deep">←</span>
+      </Link>
 
       {candidates === null ? (
         <Loader />

@@ -78,6 +78,7 @@ const ADMIN_GROUPS = [
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
+      { to: "/activities", label: "بنك الأنشطة", roles: ["deputy_academic", "principal", "tech_support"], icon: "sparkles", kw: "حقيبة حصص الانتظار الأنشطة الصفية العاب" },
     ],
   },
   {
@@ -162,6 +163,7 @@ const TEACHER_GROUPS = [
     items: [
       { to: "/attendance",  label: "الحضور والغياب اليومي", tabKey: "attendance", icon: "userCheck", kw: "تحضير" },
       { to: "/substitute",  label: "حصص الانتظار",          tabKey: "substitute", icon: "swap" },
+      { to: "/activities",  label: "الأنشطة والألعاب",       icon: "sparkles", kw: "حقيبة الانتظار الأنشطة الصفية دوري المادة كأس حروف مسابقة مؤقت" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
     ],

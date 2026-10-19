@@ -22,6 +22,7 @@ const FollowUpLog = lazy(() => import("./pages/teacher/FollowUpLog.jsx"));
 const FollowUpLog2 = lazy(() => import("./pages/teacher/FollowUpLog2.jsx"));
 const FollowUpLog3 = lazy(() => import("./pages/teacher/FollowUpLog3.jsx"));
 const Lab = lazy(() => import("./pages/lab/Lab.jsx"));
+const Activities = lazy(() => import("./pages/activities/Activities.jsx"));
 const LabGradeLink = lazy(() => import("./pages/lab/LabGradeLink.jsx"));
 const OfflineGradeLink = lazy(() => import("./pages/OfflineGradeLink.jsx"));
 const OfflineQuizMissing = lazy(() => import("./pages/OfflineQuizMissing.jsx"));
@@ -455,6 +456,11 @@ export default function App() {
           {(effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r))) ||
            (effectiveRole === "teacher" && grantedTabs.has("computer_lab")) ? (
             <Route path="/lab" element={<Lab />} />
+          ) : null}
+          {/* الأنشطة: حقيبة الانتظار والأنشطة الصفية وأدوات الصف — للمعلمين، ويديرها وكيل الشؤون التعليمية */}
+          {effectiveRole === "teacher" ||
+           (effectiveRole === "admin" && ["deputy_academic", "principal", "tech_support"].some((r) => adminRoles.includes(r))) ? (
+            <Route path="/activities" element={<Activities />} />
           ) : null}
           {/* الأخبار للمعلمين المخوّلين — مسودات فقط، الصفحة نفسها تفرض هذا القيد */}
           {effectiveRole === "teacher" && grantedTabs.has("news") ? (
