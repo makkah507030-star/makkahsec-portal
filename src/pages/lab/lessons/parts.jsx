@@ -25,8 +25,8 @@ export function Figure({ figure }) {
     return <p className="rounded-card border-r-4 border-mint-deep bg-mint-tint px-4 py-3 text-sm text-ink">{figure.text}</p>;
   }
   if (figure.type === "table") {
-    // جداول الأرقام والرموز (قيم الخانات، الرموز الستة عشرية) تُقرأ من اليسار كالأعداد نفسها
-    const ltr = figure.head.every((h) => /^[0-9A-F]+$/.test(String(h)));
+    // الجداول بلا عناوين عربية (قيم الخانات، الرموز الستة عشرية، جداول الحقيقة) تُقرأ من اليسار
+    const ltr = figure.dir === "ltr" || (figure.dir !== "rtl" && figure.head.every((h) => !/[\u0600-\u06FF]/.test(String(h))));
     return (
       <div className="overflow-x-auto" dir={ltr ? "ltr" : undefined}>
         <table className="w-full border-collapse text-center text-sm">
