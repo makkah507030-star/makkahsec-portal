@@ -64,7 +64,7 @@ export default function ActivityBank({ kind, teacher }) {
     <div className="space-y-4">
       {kind === "waiting" && (
         <div className="rounded-card bg-mint-tint px-4 py-3 text-sm leading-relaxed text-ink">
-          <b>حصة الانتظار للترفيه:</b> أنشطة تخفف عن الطلاب ضغط الحصص — ألعاب على السبورة، ورياضة وحركة، وتقنية. اختر واحدة وابدأ خلال دقيقة.
+          <b>حصة الانتظار للترفيه:</b> أنشطة تخفف عن الطلاب ضغط الحصص — ألعاب على السبورة، وتقنية، وألغاز. اختر واحدة وابدأ خلال دقيقة.
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">

@@ -2,10 +2,9 @@
 // بنك الأنشطة (supabase/activities_1.sql و_2): أقسام الحقيبة والأنشطة الصفية، والوسائط.
 import { supabase } from "./supabase";
 
-// حقيبة حصص الانتظار: الترفيه أولًا، والألعاب والرياضة والتقنية في المقدمة
+// حقيبة حصص الانتظار: الترفيه أولًا، والألعاب والتقنية في المقدمة
 export const WAITING_SECTIONS = [
   { key: "games",   label: "ألعاب إلكترونية", emoji: "🎮", tint: "from-[#3E6350] to-[#2C4A3B]" },
-  { key: "sports",  label: "رياضة وحركة",     emoji: "⚽", tint: "from-[#2F6E8F] to-[#1F4E66]" },
   { key: "tech",    label: "تقنية",           emoji: "💻", tint: "from-[#5B4A8F] to-[#3E3266]" },
   { key: "puzzles", label: "ألغاز وتفكير",    emoji: "🧩", tint: "from-[#8F6A2F] to-[#664B1F]" },
   { key: "culture", label: "مسابقات وثقافة",  emoji: "🏆", tint: "from-[#8F3F3F] to-[#662C2C]" },
