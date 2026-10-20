@@ -72,12 +72,17 @@ const dayOf = (s) => DAYS[new Date(`${s}T12:00:00Z`).getUTCDay()];
 
 export default function StudyWeekCard({ className = "" }) {
   const [w, setW] = useState(undefined);
+  const [open, setOpen] = useState(false);   // أحداث الأسبوع مطوية حتى الضغط على البطاقة
   useEffect(() => { loadStudyWeek().then(setW).catch(() => setW(null)); }, []);
   if (!w || !w.n) return null;
 
   const pct = w.total ? Math.min(100, Math.round((w.n / w.total) * 100)) : null;
+  const evN = w.events?.length ?? 0;
+  const toggle = () => evN && setOpen((x) => !x);
   return (
-    <section className={`card flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3.5 ${className}`}>
+    <section className={`card flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3.5 ${evN ? "cursor-pointer" : ""} ${className}`}
+             onClick={toggle} role={evN ? "button" : undefined} aria-expanded={evN ? open : undefined} tabIndex={evN ? 0 : undefined}
+             onKeyDown={(e) => { if (evN && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(); } }}>
       <div className="flex items-center gap-3">
         <div className="grid h-12 w-12 shrink-0 place-items-center rounded-card bg-mint-tint text-mint-deep">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
@@ -116,7 +121,14 @@ export default function StudyWeekCard({ className = "" }) {
           </div>
         </div>
       )}
-      {w.events?.length > 0 && (
+      {evN > 0 && (
+        <span className={`chip gap-1 ${open ? "bg-mint-deep text-white" : "bg-mint-tint text-mint-deep"}`}>
+          أحداث الأسبوع <span className="num">({evN})</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+               className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+        </span>
+      )}
+      {open && evN > 0 && (
         <ul className="basis-full space-y-1.5 border-t border-line pt-3">
           {w.events.map((e) => {
             const k = KIND[e.kind] ?? KIND.event;
