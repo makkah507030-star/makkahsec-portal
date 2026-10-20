@@ -5,6 +5,11 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { CMP, SECS, SKILLS, SOURCE, fromRow, loadBank } from "../../qudrat-content/index.js";
+import { LETTERS, OptText, Passage, Stem, pctOf } from "./shared.jsx";
+import { isoDay } from "../../lib/qudratPlan.js";
+import QudratPlan from "./QudratPlan.jsx";
+import QudratMock from "./QudratMock.jsx";
+import QudratResults from "./QudratResults.jsx";
 
 /* =====================================================================
    مركز التدريب — القدرات العامة (الدفعة الأولى): التدريب الحر بالمهارة.
@@ -14,9 +19,7 @@ import { CMP, SECS, SKILLS, SOURCE, fromRow, loadBank } from "../../qudrat-conte
    مفتوح لكل الصفوف ولكل حساب (supabase/qudrat_1.sql).
    ===================================================================== */
 
-const LETTERS = ["أ", "ب", "ج", "د"];
 const ROUND = 10;
-const pctOf = (c, t) => (t ? Math.round((c / t) * 100) : 0);
 const shuffle = (a) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 const levelOf = (p, t) => (!t ? { t: "لم تبدأ بعد", c: "text-faint" } : t < 5 ? { t: "تدرّب أكثر لنقيس مستواك", c: "text-faint" } : p >= 85 ? { t: "متمكن", c: "text-present" }
   : p >= 65 ? { t: "جيد", c: "text-mint-deep" } : p >= 45 ? { t: "يحتاج تدريبًا", c: "text-late" } : { t: "ابدأ من الأساس", c: "text-absent" });
@@ -26,12 +29,6 @@ const CHEER = ["إجابة صحيحة، أحسنت!", "ممتاز، استمر!"
 const LEARN = ["لا بأس، الخطأ هنا خطوة للتعلّم.", "راجع طريقة الحل، وستجده أسهل في المرة القادمة.", "قريب! تأمّل الحل جيدًا.", "كل خطأ تفهمه درجة تكسبها في الاختبار."];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
-/* نص فيه **كلمة** بخط عريض كما في الأصل */
-function Rich({ text }) {
-  return String(text ?? "").split(/(\*\*[^*]+\*\*)/).map((p, i) =>
-    p.startsWith("**") ? <b key={i} className="font-bold text-ink underline decoration-mint decoration-2 underline-offset-4">{p.slice(2, -2)}</b> : p);
-}
-
 export default function Qudrat() {
   const { session, effectiveRole, adminRoles } = useSession();
   const uid = session?.user?.id;
@@ -39,14 +36,21 @@ export default function Qudrat() {
   const [log, setLog] = useState([]);       // إجابات الحساب: { qkey, sec, skill, correct }
   const [err, setErr] = useState("");
   const [round, setRound] = useState(null); // { title, list }
+  const [plan, setPlan] = useState(null);
+  const [mocks, setMocks] = useState([]);   // الأحدث أولًا
+  const [mock, setMock] = useState(false);  // شاشة الاختبار المحاكي
 
   useEffect(() => {
     (async () => {
-      const [official, { data: tq }, { data: ans, error }] = await Promise.all([
+      const [official, { data: tq }, { data: ans, error }, { data: pl }, { data: mk }] = await Promise.all([
         loadBank(),
         supabase.from("qudrat_questions").select("*").eq("published", true),
-        supabase.from("qudrat_answers").select("qkey, sec, skill, correct").eq("user_id", uid).order("created_at").limit(5000),
+        supabase.from("qudrat_answers").select("qkey, sec, skill, correct, mode, created_at").eq("user_id", uid).order("created_at").limit(5000),
+        supabase.from("qudrat_plans").select("*").eq("user_id", uid).maybeSingle(),
+        supabase.from("qudrat_mocks").select("*").eq("user_id", uid).order("created_at", { ascending: false }).limit(50),
       ]);
+      setPlan(pl ?? null);
+      setMocks(mk ?? []);
       if (error) setErr(/qudrat_answers/.test(error.message) ? "المركز غير مفعّل بعد: يلزم تشغيل ملف supabase/qudrat_1.sql." : error.message);
       setBank([...official, ...(tq ?? []).map(fromRow)]);
       setLog(ans ?? []);
@@ -66,17 +70,26 @@ export default function Qudrat() {
   if (!bank) return <Loader />;
 
   // جولة تدريب: ما لم يُحَل أولًا، ثم ما أُخطئ فيه، ثم الباقي
-  const start = (title, pool) => {
+  const start = (title, pool, n = ROUND) => {
     const fresh = shuffle(pool.filter((q) => !last.has(q.key)));
     const wrong = shuffle(pool.filter((q) => last.get(q.key) === false));
     const rest = shuffle(pool.filter((q) => last.get(q.key) === true));
-    const list = [...fresh, ...wrong, ...rest].slice(0, ROUND);
+    const list = [...fresh, ...wrong, ...rest].slice(0, n);
     // أسئلة القطعة الواحدة متتالية ليُقرأ النص مرة
     list.sort((a, b) => (a.passage?.key ?? a.key).localeCompare(b.passage?.key ?? b.key) || (a.n ?? 0) - (b.n ?? 0));
     setRound({ title, list, id: Date.now() });
     window.scrollTo(0, 0);
   };
-  const onAnswer = (row) => setLog((l) => [...l, row]);
+  const onAnswer = (row) => setLog((l) => [...l, { ...row, created_at: new Date().toISOString() }]);
+  // مهمة اليوم من الخطة
+  const startDay = (d) => {
+    if (d.kind === "mock") return setMock(true);
+    const wrong = bank.filter((q) => last.get(q.key) === false);
+    if (d.review || d.kind === "rest") return start(d.kind === "rest" ? "مراجعة خفيفة" : "مراجعة ما أخطأت فيه", wrong.length ? wrong : bank, d.count);
+    start("مهمة اليوم", bank.filter((q) => d.skills.includes(q.skill)), d.count);
+  };
+  if (mock) return <QudratMock uid={uid} bank={bank} mocks={mocks} onExit={() => { setMock(false); window.scrollTo(0, 0); }}
+                               onDone={(m) => setMocks((x) => [m, ...x])} />;
 
   if (round) return <Practice key={round.id} round={round} onAnswer={onAnswer} onExit={() => setRound(null)}
                               onRetry={(list) => setRound({ title: "إعادة ما أخطأت فيه", list, id: Date.now() })} />;
@@ -84,6 +97,9 @@ export default function Qudrat() {
   const isStaff = effectiveRole === "teacher" || (effectiveRole === "admin" && ["principal", "deputy_academic", "tech_support"].some((r) => adminRoles.includes(r)));
   const wrongNow = bank.filter((q) => last.get(q.key) === false);
   const p = pctOf(correct, total);
+  const today = isoDay();
+  const doneToday = log.filter((r) => r.mode !== "mock" && isoDay(r.created_at) === today).length;
+  const mockOpen = (() => { try { return !!localStorage.getItem(`qudrat.mock.${uid}`); } catch { return false; } })();
 
   return (
     <div className="space-y-5">
@@ -108,6 +124,14 @@ export default function Qudrat() {
         </div>
       </header>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
+      {mockOpen && (
+        <button className="card flex w-full items-center justify-between border-late/40 bg-late/5 px-4 py-3 text-right" onClick={() => setMock(true)}>
+          <span className="font-semibold text-ink">لديك اختبار محاكٍ لم يكتمل</span>
+          <span className="chip bg-late text-white">أكمله</span>
+        </button>
+      )}
+
+      <QudratPlan uid={uid} plan={plan} bySkill={bySkill} doneToday={doneToday} onSaved={setPlan} onStart={startDay} />
 
       <div className="flex flex-wrap gap-2">
         <button className="btn-primary" onClick={() => start("تدريب شامل", bank)}>تدريب شامل · <span className="num">{ROUND}</span> أسئلة</button>
@@ -116,6 +140,7 @@ export default function Qudrat() {
             أعد ما أخطأت فيه <span className="chip bg-absent/10 text-absent num">{wrongNow.length}</span>
           </button>
         )}
+        <button className="btn-ghost" onClick={() => setMock(true)}>اختبار محاكٍ كامل</button>
         {isStaff && <Link to="/qudrat/questions" className="btn-ghost">أسئلة المعلمين</Link>}
       </div>
 
@@ -154,6 +179,8 @@ export default function Qudrat() {
           </section>
         );
       })}
+
+      <QudratResults mocks={mocks} refreshKey={`${mocks.length}-${Math.floor(total / 10)}`} />
     </div>
   );
 }
@@ -211,20 +238,7 @@ function Practice({ round, onAnswer, onExit, onRetry }) {
         ))}
       </div>
 
-      {q.passage && (
-        <section className="card overflow-hidden">
-          <button className="flex w-full items-center justify-between px-4 py-2.5 text-right" onClick={() => setShowPassage((x) => !x)}>
-            <span className="text-sm font-bold text-ink">{q.passage.title ? `القطعة: ${q.passage.title}` : "المعطيات"}</span>
-            <span className="text-xs text-mint-deep">{showPassage ? "إخفاء" : "إظهار"}</span>
-          </button>
-          {showPassage && (
-            <div className="max-h-[50vh] space-y-2.5 overflow-y-auto border-t border-line/60 px-4 py-3 text-[15px] leading-loose text-ink">
-              {q.passage.text.map((p, k) => <p key={k}><Rich text={p} /></p>)}
-              {q.passage.img && <img src={q.passage.img} alt="" className="mx-auto max-h-80 rounded-sm2 bg-white p-2" />}
-            </div>
-          )}
-        </section>
-      )}
+      {q.passage && <Passage passage={q.passage} open={showPassage} onToggle={() => setShowPassage((x) => !x)} />}
 
       <section className="card px-4 py-4 sm:px-5">
         <div className="mb-3 flex flex-wrap items-center gap-1.5">
@@ -232,16 +246,7 @@ function Practice({ round, onAnswer, onExit, onRetry }) {
           <span className="chip bg-canvas text-ink">{sk?.t ?? q.skill}</span>
           <span className="text-[11px] text-faint">{q.setTitle}</span>
         </div>
-        <p className="text-[17px] font-semibold leading-loose text-ink"><Rich text={q.q} /></p>
-        {q.img && <img src={q.img} alt="شكل السؤال" className="mx-auto mt-3 max-h-72 rounded-sm2 bg-white p-2" />}
-        {q.cmp && (
-          <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-sm2 border border-line text-center">
-            <p className="border-b border-l border-line bg-canvas py-1.5 text-xs font-semibold text-muted">القيمة الأولى</p>
-            <p className="border-b border-line bg-canvas py-1.5 text-xs font-semibold text-muted">القيمة الثانية</p>
-            <p className="border-l border-line px-2 py-3 text-lg font-bold text-ink">{q.cmp[0]}</p>
-            <p className="px-2 py-3 text-lg font-bold text-ink">{q.cmp[1]}</p>
-          </div>
-        )}
+        <Stem q={q} />
 
         {!done && (
           <div className="mt-3 flex flex-wrap gap-2">
@@ -265,7 +270,7 @@ function Practice({ round, onAnswer, onExit, onRetry }) {
                       className={`flex items-center gap-3 rounded-sm2 border-2 px-3 py-2.5 text-right transition-colors ${state}`}>
                 <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-bold ${
                   done && k === q.a ? "bg-present text-white" : done && k === sel ? "bg-absent text-white" : sel === k ? "bg-mint-deep text-white" : "bg-canvas text-ink"}`}>{LETTERS[k]}</span>
-                <span className="text-[15.5px] text-ink">{o}</span>
+                <OptText text={o} />
               </button>
             );
           })}

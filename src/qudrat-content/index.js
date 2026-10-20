@@ -83,6 +83,7 @@ export function loadBank() {
       const g = q.group ? x.groups?.[q.group] : null;
       return {
         ...q, key: `${x.code}-${q.n}`, set: x.code, setTitle: x.title,
+        part: x.sections?.find((p) => q.n >= p.from && q.n <= p.to)?.no ?? 1,
         img: q.img ? `/qudrat/${q.img}` : null,
         passage: g ? { key: `${x.code}:${q.group}`, title: g.title ?? null,
                        text: Array.isArray(g.text) ? g.text : g.text ? [g.text] : [],
@@ -98,5 +99,11 @@ export const fromRow = (r) => ({
   q: r.q, o: r.o, a: r.a, hint: r.hint, method: r.method, cmp: r.cmp?.length === 2 ? r.cmp : null, img: null,
   passage: r.passage ? { key: `t:${r.id}`, title: null, text: r.passage.split(/\n+/), img: null } : null,
 });
+
+// الاختبارات الكاملة للمحاكاة: أربعة أقسام، لكل قسم 24 سؤالًا و25 دقيقة
+export const MOCK_SETS = [
+  { code: "GATSFT", t: "الاختبار التجريبي (علمي)", parts: 4, minutes: 25 },
+  { code: "GATAFT", t: "الاختبار التجريبي (نظري)", parts: 4, minutes: 25 },
+];
 
 export const CMP = ["القيمة الأولى أكبر من الثانية", "القيمة الثانية أكبر من الأولى", "القيمتان متساويتان", "المعطيات غير كافية"];
