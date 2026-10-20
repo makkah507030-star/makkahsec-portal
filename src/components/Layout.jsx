@@ -80,6 +80,7 @@ const ADMIN_GROUPS = [
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
       { to: "/activities", label: "بنك الأنشطة", roles: ["deputy_academic", "principal", "tech_support"], icon: "sparkles", kw: "حقيبة حصص الانتظار الأنشطة الصفية العاب" },
+      { to: "/qudrat", label: "مركز التدريب (القدرات)", roles: ["principal", "deputy_academic", "tech_support"], icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة" },
     ],
   },
   {
@@ -193,6 +194,7 @@ const TEACHER_GROUPS = [
       { to: "/quizzes",        label: "اختباراتي",         icon: "quiz" },
       { to: "/quiz-marks",     label: "التصحيح والدرجات",  icon: "target", kw: "تصحيح الي" },
       { to: "/quiz-analytics", label: "تحليل النتائج",     icon: "pie" },
+      { to: "/qudrat",         label: "مركز التدريب",      icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة" },
     ],
   },
   {
@@ -230,6 +232,8 @@ const BASIC_GROUPS = [
     items: [
       { to: "/", label: "الرئيسية", icon: "home" },
       { to: "/exams", label: "جداول الاختبارات", icon: "calendar" },
+      // مركز التدريب (القدرات) — للطالب وحده من هذه القائمة، لا لولي الأمر
+      { to: "/qudrat", label: "مركز التدريب", icon: "target", studentOnly: true, kw: "قياس قدرات تحصيلي" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
     ],
   },
@@ -247,12 +251,12 @@ const FOOTER = [
 const BOTTOM = {
   admin:    ["/", "/students", "/permissions", "/forms", "/forms-review", "/my-documents"],
   teacher:  ["/", "/attendance", "/records", "/forms", "/quizzes", "/my-documents"],
-  student:  ["/", "/exams", "/my-documents"],
+  student:  ["/", "/qudrat", "/exams", "/my-documents"],
   guardian: ["/", "/exams", "/my-documents"],
 };
 const BOTTOM_LABEL = {
   "/students": "الطلاب", "/permissions": "الاستئذان", "/forms": "النماذج", "/forms-review": "الاعتماد",
-  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي",
+  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي", "/qudrat": "التدريب",
 };
 
 /* البحث: توحيد الهمزات والتاء المربوطة والألف المقصورة وحذف التشكيل */
@@ -376,6 +380,7 @@ export default function Layout({ children }) {
   // هل يظهر الرابط لهذا المستخدم؟
   const visible = (i) => {
     if (i.staffOnly && !isStaff) return false;
+    if (i.studentOnly && effectiveRole !== "student") return false;
     if (isAdmin) {
       if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
       if (i.roles && !i.roles.some((r) => adminRoles.includes(r))) return false;

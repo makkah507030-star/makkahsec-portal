@@ -86,6 +86,8 @@ const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
 const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
 const PerformanceAdmin = lazy(() => import("./pages/performance/PerformanceAdmin.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
+const Qudrat = lazy(() => import("./pages/qudrat/Qudrat.jsx"));
+const QudratQuestions = lazy(() => import("./pages/qudrat/QudratQuestions.jsx"));
 const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
 const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
@@ -513,6 +515,9 @@ export default function App() {
           <Route path="/quiz-analytics" element={<QuizAnalytics />} />
           {/* الاختبار الإلكتروني — يؤدّيه الطالب المُسند إليه (الصفحة تتحقق) */}
           <Route path="/quiz/:id" element={<QuizTake />} />
+          {/* مركز التدريب (القدرات) — لكل الصفوف ولكل حساب عدا ولي الأمر، وأسئلة المعلمين للمعلم والإدارة */}
+          {effectiveRole !== "guardian" && <Route path="/qudrat" element={<Qudrat />} />}
+          {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qudrat/questions" element={<QudratQuestions />} />}
           <Route path="/referral/:id" element={<ReferralView />} />
           {/* نماذج السلوك والمواظبة — الإصدار للإدارة والموجهين، والنموذج لصاحبه وولي أمره */}
           <Route path="/behavior" element={<BehaviorForms />} />
