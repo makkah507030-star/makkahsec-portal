@@ -11,6 +11,8 @@ import { weekWord } from "../lib/dfile.js";
    (الأحد) ونهايته (الخميس) بالهجري والميلادي، ومن كم أسبوعًا إن وُجدت
    «نهاية فصل». الأسبوع الذي تغطيه إجازة كاملة لا يُعدّ، ويظهر مكانه اسمها
    (بالطريقة نفسها في dfile_week لملف المعلم الرقمي).
+   وتحته ما يقع في الأسبوع من التقويم: إجازة يوم أو أكثر، وحدث (مثل يوم
+   التأسيس)، واختبارات، وبداية فصل أو نهايته، بأيامها.
    التقويم يقرؤه الجميع (calendar_public_read)، فتعمل للزائر قبل الدخول.
    ===================================================================== */
 
@@ -24,8 +26,7 @@ let cache = null;   // يُحسب مرة لكل تحميل للبوابة
 export async function loadStudyWeek(today = todayISO()) {
   if (cache?.today === today) return cache.value;
   const { data } = await supabase.from("academic_calendar")
-    .select("title, kind, start_date, end_date").eq("is_active", true)
-    .in("kind", ["term_start", "term_end", "holiday"]);
+    .select("title, kind, start_date, end_date").eq("is_active", true);
   const rows = data ?? [];
   const start = rows.filter((r) => r.kind === "term_start" && r.start_date <= today)
     .map((r) => r.start_date).sort().pop();
@@ -44,12 +45,30 @@ export async function loadStudyWeek(today = todayISO()) {
         total += 1;
       }
       const off = offWeek(cur);
-      value = { n, from: cur, to: addDays(cur, 4), total: end ? total : null, holiday: off?.title ?? null };
+      const to = addDays(cur, 4);
+      // ما يقع في أيام الأسبوع (الأحد إلى الخميس)، عدا الإجازة التي تغطيه كله
+      const events = rows
+        .filter((r) => r !== off && r.start_date <= to && (r.end_date ?? r.start_date) >= cur)
+        .map((r) => ({ title: r.title, kind: r.kind,
+                       from: r.start_date < cur ? cur : r.start_date,
+                       to: (r.end_date ?? r.start_date) > to ? to : (r.end_date ?? r.start_date) }))
+        .sort((a, b) => a.from.localeCompare(b.from));
+      value = { n, from: cur, to, total: end ? total : null, holiday: off?.title ?? null, events };
     }
   }
   cache = { today, value };
   return value;
 }
+
+const KIND = {
+  holiday: { t: "إجازة", c: "bg-absent/10 text-absent" },
+  event: { t: "مناسبة", c: "bg-excused/10 text-excused" },
+  exam: { t: "اختبارات", c: "bg-late/10 text-late" },
+  term_start: { t: "بداية الفصل", c: "bg-present/10 text-present" },
+  term_end: { t: "نهاية الفصل", c: "bg-present/10 text-present" },
+};
+const DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+const dayOf = (s) => DAYS[new Date(`${s}T12:00:00Z`).getUTCDay()];
 
 export default function StudyWeekCard({ className = "" }) {
   const [w, setW] = useState(undefined);
@@ -96,6 +115,23 @@ export default function StudyWeekCard({ className = "" }) {
             <div className="h-full rounded-full bg-mint-deep" style={{ width: `${pct}%` }} />
           </div>
         </div>
+      )}
+      {w.events?.length > 0 && (
+        <ul className="basis-full space-y-1.5 border-t border-line pt-3">
+          {w.events.map((e) => {
+            const k = KIND[e.kind] ?? KIND.event;
+            return (
+              <li key={`${e.kind}${e.title}${e.from}`} className="flex flex-wrap items-center gap-2 text-sm">
+                <span className={`chip ${k.c}`}>{k.t}</span>
+                <span className="font-semibold text-ink">{e.title}</span>
+                <span className="text-xs text-muted">
+                  {e.from === e.to ? <>{dayOf(e.from)} <span className="num">{fmtHijri(e.from)}</span></>
+                    : <>من {dayOf(e.from)} <span className="num">{fmtHijri(e.from)}</span> إلى {dayOf(e.to)} <span className="num">{fmtHijri(e.to)}</span></>}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );
