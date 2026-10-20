@@ -18,7 +18,7 @@ const LETTERS = ["أ", "ب", "ج", "د"];
 const ROUND = 10;
 const pctOf = (c, t) => (t ? Math.round((c / t) * 100) : 0);
 const shuffle = (a) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
-const levelOf = (p, t) => (t < 5 ? { t: "ابدأ التدريب", c: "text-faint" } : p >= 85 ? { t: "متمكن", c: "text-present" }
+const levelOf = (p, t) => (!t ? { t: "لم تبدأ بعد", c: "text-faint" } : t < 5 ? { t: "تدرّب أكثر لنقيس مستواك", c: "text-faint" } : p >= 85 ? { t: "متمكن", c: "text-present" }
   : p >= 65 ? { t: "جيد", c: "text-mint-deep" } : p >= 45 ? { t: "يحتاج تدريبًا", c: "text-late" } : { t: "ابدأ من الأساس", c: "text-absent" });
 
 // عبارات التحفيز بعد كل إجابة
@@ -110,7 +110,7 @@ export default function Qudrat() {
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 
       <div className="flex flex-wrap gap-2">
-        <button className="btn-primary" onClick={() => start("تدريب شامل", bank)}>تدريب شامل (<span className="num">{ROUND}</span> أسئلة)</button>
+        <button className="btn-primary" onClick={() => start("تدريب شامل", bank)}>تدريب شامل · <span className="num">{ROUND}</span> أسئلة</button>
         {wrongNow.length > 0 && (
           <button className="btn-ghost" onClick={() => start("إعادة ما أخطأت فيه", wrongNow)}>
             أعد ما أخطأت فيه <span className="chip bg-absent/10 text-absent num">{wrongNow.length}</span>
@@ -207,7 +207,7 @@ function Practice({ round, onAnswer, onExit, onRetry }) {
       </div>
       <div className="flex gap-1">
         {list.map((_, k) => (
-          <span key={k} className={`h-1.5 flex-1 rounded-full ${k < res.length ? (res[k].correct ? "bg-present" : "bg-absent") : k === i ? "bg-mint" : "bg-canvas"}`} />
+          <span key={k} className={`h-1.5 flex-1 rounded-full ${k < res.length ? (res[k].correct ? "bg-present" : "bg-absent") : k === i ? "bg-mint" : "bg-line"}`} />
         ))}
       </div>
 
