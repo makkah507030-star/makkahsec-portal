@@ -31,7 +31,8 @@ export function useReferralSigs(r) {
   const [urls, setUrls] = useState(() => cache.get(key)?.urls ?? null);
 
   useEffect(() => {
-    if (!r?.id || !FIELDS.some((f) => r[f] && !isUrl(r[f]))) { setUrls(null); return; }
+    // الحقل الفارغ يُطلب أيضًا: الدالة تستكمله بالتوقيع الحالي لصاحب المرحلة
+    if (!r?.id || !FIELDS.some((f) => !isUrl(r[f]))) { setUrls(null); return; }
     const hit = cache.get(key);
     if (hit && Date.now() - hit.at < 9 * 60000) { setUrls(hit.urls); return; }
     let alive = true;
@@ -46,7 +47,7 @@ export function useReferralSigs(r) {
   if (!r) return r;
   const out = { ...r };
   FIELDS.forEach((f) => {
-    if (r[f] && !isUrl(r[f])) out[f] = urls?.[f] ?? null;   // مسار تخزين ← رابط موقّت
+    if (!isUrl(r[f])) out[f] = urls?.[f] ?? null;   // مسار تخزين أو فارغ ← رابط موقّت
   });
   return out;
 }
