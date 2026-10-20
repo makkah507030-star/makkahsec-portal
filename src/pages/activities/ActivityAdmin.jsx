@@ -10,7 +10,7 @@ import { activeYear } from "../../lib/performance.js";
 import { Cover, CardView } from "./ActivityBank.jsx";
 
 const EMPTY = { kind: "waiting", section: "games", title: "", summary: "", duration_min: 45, goals: "", materials: "",
-  steps: [{ min: 5, text: "" }], grades: [], subject: "", video_url: "", cover_path: null, images: [], game: "", game_data: null, published: true };
+  steps: [{ min: 5, text: "" }], grades: [], subject: "", video_url: "", cover_path: null, images: [], game: "", game_data: null, published: true, emoji: "" };
 
 // أسئلة الألعاب نصًّا: مسابقة الفرق «السؤال | خيار | خيار* | خيار» (* الصحيح)، وحروف «الحرف | السؤال | الجواب»
 const quizToText = (d) => (d?.questions ?? []).map((q) => [q.q, ...q.options.map((o, k) => (k === q.answer ? `${o}*` : o))].join(" | ")).join("\n");
@@ -57,7 +57,7 @@ export default function ActivityAdmin() {
     const rows = [...w, ...c].filter((x) => !have.has(x.seed)).map((x, i) => ({
       kind: x.kind, section: x.section, title: x.title, summary: x.summary, duration_min: x.duration_min, goals: x.goals,
       materials: x.materials, steps: x.steps ?? [], grades: x.grades ?? [], game: x.game || null, game_data: x.game_data ?? null,
-      seed_key: x.seed, sort: i, published: true }));
+      emoji: x.emoji ?? null, seed_key: x.seed, sort: i, published: true }));
     const { error } = rows.length ? await supabase.from("activity_cards").insert(rows) : { error: null };
     setBusy(false);
     setMsg(error ? { ok: false, t: error.message } : { ok: true, t: rows.length ? `استُوردت ${rows.length} بطاقة جاهزة ونُشرت للمعلمين.` : "البطاقات الجاهزة مستوردة من قبل." });
@@ -142,7 +142,7 @@ export default function ActivityAdmin() {
                 <p className="text-[11px] text-muted">{s ? `نُفّذ ${s.n} · 👍 ${s.up} · 👎 ${s.down}` : "لم يُنفَّذ بعد"}</p>
               </button>
               <Switch on={c.published} onChange={(v) => setActive([c.id], v)} />
-              <button type="button" className="text-xs text-mint-deep underline" onClick={() => setForm({ ...EMPTY, ...c, subject: c.subject ?? "", video_url: c.video_url ?? "", game: c.game ?? "" })}>تعديل</button>
+              <button type="button" className="text-xs text-mint-deep underline" onClick={() => setForm({ ...EMPTY, ...c, subject: c.subject ?? "", video_url: c.video_url ?? "", game: c.game ?? "", emoji: c.emoji ?? "" })}>تعديل</button>
               <button type="button" className="text-xs text-absent underline" onClick={() => remove(c)}>حذف</button>
             </div>
           );
@@ -260,7 +260,7 @@ function Editor({ init, onClose }) {
     const row = { kind: f.kind, section: f.section, title: f.title.trim(), summary: f.summary || null, duration_min: Number(f.duration_min) || null,
       goals: f.goals || null, materials: f.materials || null, steps: f.steps.filter((s) => s.text?.trim()).map((s) => ({ min: Number(s.min) || null, text: s.text.trim() })),
       grades: f.grades, subject: f.kind === "class" ? f.subject || null : null, video_url: f.video_url || null, cover_path: f.cover_path,
-      images: f.images, game: f.game || null, game_data, published: f.published, updated_at: new Date().toISOString() };
+      images: f.images, game: f.game || null, game_data, published: f.published, emoji: f.emoji?.trim() || null, updated_at: new Date().toISOString() };
     setBusy(true); setErr("");
     const { error } = f.id ? await supabase.from("activity_cards").update(row).eq("id", f.id) : await supabase.from("activity_cards").insert(row);
     setBusy(false);
@@ -273,6 +273,7 @@ function Editor({ init, onClose }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <L t="القسم"><select className="field" value={f.section} onChange={(e) => set("section", e.target.value)}>
           {sectionsOf(f.kind).map((s) => <option key={s.key} value={s.key}>{s.emoji} {s.label}</option>)}</select></L>
+        <L t="أيقونة البطاقة (رمز تعبيري واحد، مثل 🎯 أو 🧪)"><input className="field text-xl" maxLength={8} placeholder={sectionMeta(f.kind, f.section).emoji} value={f.emoji ?? ""} onChange={(e) => set("emoji", e.target.value)} /></L>
         <L t="المدة (دقيقة)"><input type="number" className="field num" value={f.duration_min ?? ""} onChange={(e) => set("duration_min", e.target.value)} /></L>
         <L t="العنوان" className="sm:col-span-2"><input className="field" value={f.title} onChange={(e) => set("title", e.target.value)} /></L>
         <L t="وصف مختصر" className="sm:col-span-2"><input className="field" value={f.summary ?? ""} onChange={(e) => set("summary", e.target.value)} /></L>
