@@ -3,6 +3,7 @@
 // وعرض البطاقة بخطواتها وصورها ورابط الفيديو، وتشغيل اللعبة على السبورة، وتسجيل التنفيذ.
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { GAMES, mediaUrl, sectionMeta, sectionsOf, youtubeId } from "../../lib/activities.js";
 import Loader from "../../components/Loader.jsx";
@@ -32,6 +33,10 @@ export default function ActivityBank({ kind, teacher }) {
   const [used, setUsed] = useState(new Set());
   const float = useFloatWindow();
   const [floatCard, setFloatCard] = useState(null);
+  // عدّاد الاستخدام على كل بطاقة: للدعم الفني وحده (قاعدة «activity uses read admin» تسمح له بالقراءة)
+  const { effectiveRole, adminRoles } = useSession();
+  const isTech = effectiveRole === "admin" && adminRoles.includes("tech_support");
+  const [usage, setUsage] = useState({});   // card_id → { n, up, down }
   const openFloat = async (card) => { if (await float.open(card.title, 400, 600)) setFloatCard(card); };
 
   useEffect(() => {
@@ -44,6 +49,15 @@ export default function ActivityBank({ kind, teacher }) {
     supabase.from("classes").select("id, class_no, grade").eq("is_active", true).order("grade").order("class_no")
       .then(({ data }) => setClasses(data ?? []));
   }, [kind]);
+
+  useEffect(() => {
+    if (!isTech) return;
+    supabase.from("activity_uses").select("card_id, rating").then(({ data }) => {
+      const m = {};
+      (data ?? []).forEach((u) => { const x = (m[u.card_id] ??= { n: 0, up: 0, down: 0 }); x.n++; if (u.rating === 1) x.up++; if (u.rating === -1) x.down++; });
+      setUsage(m);
+    });
+  }, [isTech]);
 
   useEffect(() => {
     if (!forClass) { setUsed(new Set()); return; }
@@ -94,6 +108,13 @@ export default function ActivityBank({ kind, teacher }) {
                   <Cover card={c} />
                   {c.game && <span className="absolute right-2 top-2 rounded-pill bg-white/95 px-2 py-0.5 text-[11px] font-bold text-mint-deep">▶ {GAMES[c.game]}</span>}
                   {used.has(c.id) && <span className="absolute left-2 top-2 rounded-pill bg-black/60 px-2 py-0.5 text-[11px] text-white">قُدّمت لهذا الفصل</span>}
+                  {isTech && (
+                    <span className="absolute bottom-2 left-2 rounded-pill bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-ink shadow-sm" title="يراه الدعم الفني وحده">
+                      نُفّذ <span className="num">{usage[c.id]?.n ?? 0}</span>
+                      {usage[c.id]?.up ? <> · 👍 <span className="num">{usage[c.id].up}</span></> : null}
+                      {usage[c.id]?.down ? <> · 👎 <span className="num">{usage[c.id].down}</span></> : null}
+                    </span>
+                  )}
                 </div>
                 <div className="space-y-1 p-3">
                   <p className="font-bold text-ink">{c.title}</p>
