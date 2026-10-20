@@ -5,6 +5,7 @@ import CalendarTimeline from "../components/CalendarTimeline.jsx";
 import NewsSlider from "../components/NewsSlider.jsx";
 import TrialBanner from "../components/TrialBanner.jsx";
 import ExamCountdown from "../components/ExamCountdown.jsx";
+import StudyWeekCard from "../components/StudyWeekCard.jsx";
 
 const SECTIONS = [
   {
@@ -117,6 +118,7 @@ export default function Landing() {
 
       {/* العد التنازلي للاختبارات النهائية */}
       <div className="mx-auto max-w-6xl px-5 pt-10">
+        <StudyWeekCard className="mb-4" />
         <ExamCountdown variant="card" />
       </div>
 

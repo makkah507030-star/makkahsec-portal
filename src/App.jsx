@@ -41,6 +41,7 @@ const NotificationView = lazy(() => import("./pages/NotificationView.jsx"));
 const NotificationsList = lazy(() => import("./pages/NotificationsList.jsx"));
 const NotifyGuide = lazy(() => import("./pages/NotifyGuide.jsx"));
 import Landing from "./pages/Landing.jsx";
+import StudyWeekCard from "./components/StudyWeekCard.jsx";
 const NewsList = lazy(() => import("./pages/NewsList.jsx"));
 const Guides = lazy(() => import("./pages/Guides.jsx"));
 const GuidesAdmin = lazy(() => import("./pages/admin/GuidesAdmin.jsx"));
@@ -312,6 +313,8 @@ export default function App() {
                 {effectiveRole === "teacher" && <HolidayBanner />}
                 {/* بطاقة يوم المعلم لكل حساب له سجل معلم — تظهر في أسبوع المناسبة فقط */}
                 <TeacherDayCard />
+                {/* الأسبوع الدراسي الحالي بتاريخي بدايته ونهايته — لكل حساب */}
+                <StudyWeekCard />
                 {home}
               </div>
             }
