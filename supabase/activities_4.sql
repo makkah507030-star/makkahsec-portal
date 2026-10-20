@@ -3,6 +3,8 @@
 -- يُشغَّل بعد activities_1 و_2. تكرار التنفيذ آمن.
 -- =====================================================================
 
+alter table public.activity_cards add column if not exists emoji text;   -- أيقونة البطاقة (إن شُغّل الجزء 1 قبل إضافتها)
+
 -- تفاصيل البنود الآلية 4-2 و8-4 و9-5: كل نشاط نُفّذ (بتاريخه وفصله وتقييمه)، ونقاط دوري المادة وكأسها
 create or replace function public.perf_activity_details(p_uid uuid, p_year text, p_item text)
 returns table (r_title text, r_detail text, r_at timestamptz)

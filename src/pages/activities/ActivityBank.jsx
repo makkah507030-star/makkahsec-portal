@@ -10,13 +10,21 @@ import GameHost from "./games/GameHost.jsx";
 import { FloatPortal, canPin, useFloatWindow } from "./FloatWindow.jsx";
 import { Timer } from "./ClassTools.jsx";
 
+// غلاف البطاقة بلا صورة: أيقونة النشاط الملوّنة في دائرة بيضاء على لون قسمه الفاتح
 export function Cover({ card, className = "h-28" }) {
   const meta = sectionMeta(card.kind, card.section);
   const img = mediaUrl(card.cover_path);
+  const small = /\bh-(1[0-6]|[0-9])\b/.test(className);   // مصغّرات قائمة الإدارة
   return img ? <img src={img} alt="" className={`${className} w-full object-cover`} />
     : (
-      <div className={`${className} grid w-full place-items-center bg-gradient-to-br ${meta.tint}`}>
-        <span className="text-5xl drop-shadow">{card.emoji ?? meta.emoji}</span>
+      <div className={`${className} relative grid w-full place-items-center overflow-hidden ${meta.soft}`}>
+        {!small && <>
+          <span className="absolute -left-6 -top-8 h-24 w-24 rounded-full bg-white/50" />
+          <span className="absolute -bottom-10 -right-4 h-28 w-28 rounded-full bg-white/40" />
+        </>}
+        <span className={`relative grid place-items-center rounded-full bg-white ring-2 ${meta.ring} ${small ? "h-8 w-8 text-lg" : "h-[4.5rem] w-[4.5rem] text-4xl shadow-sm"}`}>
+          {card.emoji || meta.emoji}
+        </span>
       </div>
     );
 }
