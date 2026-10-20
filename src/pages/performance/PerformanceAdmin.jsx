@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { activeYear, loadAutoCounts, loadPerfReference } from "../../lib/performance";
 import { useSession } from "../../lib/session.jsx";
-import { fmtDate } from "../../lib/dates";
 import PerformanceFile from "../../components/PerformanceFile.jsx";
 import { ReviewEditor } from "../../components/PerformanceReview.jsx";
 import Loader from "../../components/Loader.jsx";
@@ -13,52 +12,12 @@ import { useBackStep } from "../../lib/backStep.js";
    تقييم الأداء الوظيفي — لمدير المدرسة، وللدعم الفني للمتابعة الفنية:
    • قائمة المعلمين مع عدد البنود التي شواهدها متوفرة، وملف كل معلم للاطلاع.
    • تقييم المعلم بمرحلتيه (للمدير وحده).
-   • دورات الاختبار غير المكتملة لكل معلم.
+   (دورات الاختبار غير المكتملة انتقلت إلى «متابعة دورات الاختبار»: admin/QuizCycles.jsx)
    ===================================================================== */
-
-const PERIOD_LABEL = { diagnostic: "تشخيصي", period1: "الفترة الأولى", period2: "الفترة الثانية" };
-
-function OpenCycles({ teachers }) {
-  const [rows, setRows] = useState(null);
-  useEffect(() => {
-    (async () => {
-      const year = await activeYear();
-      const { data, error } = await supabase.rpc("perf_open_cycles", { p_year: year });
-      setRows(error ? [] : data ?? []);
-    })();
-  }, []);
-  if (rows === null) return <Loader />;
-  const names = Object.fromEntries(teachers.map((t) => [t.user_id, t.full_name]));
-  const groups = Object.entries(rows.reduce((m, r) => ((m[r.teacher_user_id] ??= []).push(r), m), {}))
-    .sort((a, b) => b[1].length - a[1].length);
-  if (!groups.length) return <p className="card px-4 py-6 text-center text-sm text-muted">لا دورات اختبار مفتوحة. كل الدورات مكتملة.</p>;
-  return (
-    <div className="space-y-3">
-      {groups.map(([uid, list]) => (
-        <section key={uid} className="card overflow-hidden">
-          <p className="flex items-center justify-between border-b border-line/60 px-4 py-2.5">
-            <span className="font-bold text-ink">{names[uid] ?? "معلم"}</span>
-            <span className="chip bg-warning-light text-warning">مفتوحة <span className="num mr-1">{list.length}</span></span>
-          </p>
-          <div className="divide-y divide-line/60">
-            {list.map((r) => (
-              <div key={r.quiz_id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 text-sm">
-                <span className="min-w-0 flex-1 text-ink">{r.title}</span>
-                <span className="text-xs text-muted">{PERIOD_LABEL[r.period] ?? ""} · {fmtDate(r.created_at)}</span>
-                <span className="chip w-32 justify-center bg-canvas text-ink">عند: {r.stage}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
 
 export default function PerformanceAdmin() {
   const { adminRoles } = useSession();
   const principal = adminRoles.includes("principal");
-  const [tab, setTab] = useState("files");
   const [fileTab, setFileTab] = useState("file");
   const [teachers, setTeachers] = useState(null);
   const [counts, setCounts] = useState({});
@@ -129,11 +88,6 @@ export default function PerformanceAdmin() {
         </p>
       </div>
       {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}
-      <div className="flex flex-wrap gap-2">
-        <button className={pill(tab === "files")} onClick={() => setTab("files")}>ملفات المعلمين</button>
-        <button className={pill(tab === "cycles")} onClick={() => setTab("cycles")}>الدورات غير المكتملة</button>
-      </div>
-      {tab === "cycles" ? <OpenCycles teachers={teachers} /> : <>
       <input className="field max-w-sm" placeholder="ابحث باسم المعلم…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="card divide-y divide-line/60">
         {shown.map((t) => {
@@ -154,7 +108,6 @@ export default function PerformanceAdmin() {
         })}
         {shown.length === 0 && <p className="px-4 py-3 text-sm text-faint">لا نتائج.</p>}
       </div>
-      </>}
     </div>
   );
 }

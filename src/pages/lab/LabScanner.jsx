@@ -3,7 +3,7 @@
 // لكل رمز جديد، ولا يكرر الرمز نفسه قبل 4 ثوانٍ.
 import { useEffect, useRef, useState } from "react";
 
-export default function LabScanner({ onCode }) {
+export default function LabScanner({ onCode, deniedText }) {
   const video = useRef(null);
   const cb = useRef(onCode);
   const [err, setErr] = useState(null);
@@ -39,7 +39,7 @@ export default function LabScanner({ onCode }) {
         tick();
       } catch (e) {
         if (alive) setErr(e?.name === "NotAllowedError"
-          ? "لم يُسمح باستخدام الكاميرا. اسمح بها من إعدادات المتصفح، أو امسح الرمز بكاميرا الجوال فيفتح رابط الرصد."
+          ? deniedText ?? "لم يُسمح باستخدام الكاميرا. اسمح بها من إعدادات المتصفح، أو امسح الرمز بكاميرا الجوال فيفتح رابط الرصد."
           : "تعذّر تشغيل الكاميرا: " + (e?.message ?? e));
       }
     })();

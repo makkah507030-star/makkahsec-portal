@@ -22,7 +22,10 @@ const FollowUpLog = lazy(() => import("./pages/teacher/FollowUpLog.jsx"));
 const FollowUpLog2 = lazy(() => import("./pages/teacher/FollowUpLog2.jsx"));
 const FollowUpLog3 = lazy(() => import("./pages/teacher/FollowUpLog3.jsx"));
 const Lab = lazy(() => import("./pages/lab/Lab.jsx"));
+const Activities = lazy(() => import("./pages/activities/Activities.jsx"));
 const LabGradeLink = lazy(() => import("./pages/lab/LabGradeLink.jsx"));
+const OfflineGradeLink = lazy(() => import("./pages/OfflineGradeLink.jsx"));
+const OfflineQuizMissing = lazy(() => import("./pages/OfflineQuizMissing.jsx"));
 const TeacherPermissions = lazy(() => import("./pages/admin/TeacherPermissions.jsx"));
 const NotificationsReview = lazy(() => import("./pages/admin/NotificationsReview.jsx"));
 const TeacherNotify = lazy(() => import("./pages/teacher/TeacherNotify.jsx"));
@@ -50,6 +53,7 @@ const StudentAffairs = lazy(() => import("./pages/student-affairs/index.jsx"));
 const PeriodAttendance = lazy(() => import("./pages/admin/PeriodAttendance.jsx"));
 const SubstituteReport = lazy(() => import("./pages/admin/SubstituteReport.jsx"));
 const NoorGrades = lazy(() => import("./pages/admin/NoorGrades.jsx"));
+const QuizCycles = lazy(() => import("./pages/admin/QuizCycles.jsx"));
 const SchoolReport = lazy(() => import("./pages/admin/SchoolReport.jsx"));
 const ResultsAdmin = lazy(() => import("./pages/admin/ResultsAdmin.jsx"));
 const GeneralScheduleMaster = lazy(() => import("./pages/admin/GeneralScheduleMaster.jsx"));
@@ -196,6 +200,9 @@ export default function App() {
           <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
           {/* رمز درجة من ملف المعمل: يُرصد بعد الدخول */}
           <Route path="/lab/g/:code" element={<LabGradeLink />} />
+          {/* رمز تسليم الاختبار دون إنترنت: يُرصد بعد الدخول */}
+          <Route path="/q/g/:code" element={<OfflineGradeLink />} />
+          <Route path="/offline-quiz" element={<OfflineQuizMissing />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -372,6 +379,8 @@ export default function App() {
               {(can("import") || can("reports")) && <Route path="/substitute-report" element={<SubstituteReport />} />}
               {(isTechSupport || adminRoles.includes("principal") || adminRoles.includes("deputy_academic")) &&
                 <Route path="/noor-grades" element={<NoorGrades />} />}
+              {(isTechSupport || adminRoles.includes("principal") || adminRoles.includes("deputy_academic")) &&
+                <Route path="/quiz-cycles" element={<QuizCycles />} />}
               {can("results") && (
                 <Route
                   path="/results-admin"
@@ -445,9 +454,16 @@ export default function App() {
           {/* معمل الحاسب الآلي — لمعلمي التقنية الرقمية المخوّلين ولمسؤولي المعمل */}
           <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
           <Route path="/lab/g/:code" element={<LabGradeLink />} />
+          <Route path="/q/g/:code" element={<OfflineGradeLink />} />
+          <Route path="/offline-quiz" element={<OfflineQuizMissing />} />
           {(effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r))) ||
            (effectiveRole === "teacher" && grantedTabs.has("computer_lab")) ? (
             <Route path="/lab" element={<Lab />} />
+          ) : null}
+          {/* الأنشطة: حقيبة الانتظار والأنشطة الصفية وأدوات الصف — للمعلمين، ويديرها وكيل الشؤون التعليمية */}
+          {effectiveRole === "teacher" ||
+           (effectiveRole === "admin" && ["deputy_academic", "principal", "tech_support"].some((r) => adminRoles.includes(r))) ? (
+            <Route path="/activities" element={<Activities />} />
           ) : null}
           {/* الأخبار للمعلمين المخوّلين — مسودات فقط، الصفحة نفسها تفرض هذا القيد */}
           {effectiveRole === "teacher" && grantedTabs.has("news") ? (

@@ -11,6 +11,7 @@ import { classText, isoOf, shortDate } from "../../lib/lab.js";
 import { LESSONS, lessonById } from "../../lab-content/index.js";
 import { buildLabFile, downloadText } from "./labFile.js";
 import LabScanner from "./LabScanner.jsx";
+import { InstallPanel, RoomOpen } from "./LabRoom.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -51,6 +52,7 @@ export default function LabSessions({ lab, canCreate }) {
     if (error) setMsg({ ok: false, text: "تعذّر الحذف: " + error.message }); else load();
   };
 
+  if (view === "room") return <RoomOpen lab={lab} onClose={() => { setView(null); load(); }} />;
   if (view === "new") return <NewSession lab={lab} onCancel={() => setView(null)} onCreated={(f) => { download(f); setView(null); load(); }} />;
   if (view?.scan) return <ScanView onClose={() => { setView(null); load(); }} />;
   if (view?.results) return <Results session={view.results} onClose={() => { setView(null); load(); }} />;
@@ -60,12 +62,13 @@ export default function LabSessions({ lab, canCreate }) {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-base font-bold text-ink">حصص الطلاب</p>
-          <p className="text-xs text-muted">ملف يعمل على أجهزة المعمل دون إنترنت، ودرجات تُرصد بمسح رمز كل طالب.</p>
+          <p className="text-xs text-muted">يفتح الطلاب الحصة برمز في ملف المعمل دون إنترنت، وتُرصد درجاتهم بمسح رمز كل طالب.</p>
         </div>
         {canCreate && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-primary py-2" onClick={() => setView("room")}>فتح حصة برمز</button>
             <button type="button" className="btn-ghost py-2" onClick={() => setView({ scan: true })}>مسح الدرجات</button>
-            <button type="button" className="btn-primary py-2" onClick={() => setView("new")}>ملف حصة جديد</button>
+            <button type="button" className="btn-ghost py-2" onClick={() => setView("new")}>ملف حصة</button>
           </div>
         )}
       </div>
@@ -90,6 +93,7 @@ export default function LabSessions({ lab, canCreate }) {
               ))}
             </ul>
           )}
+      {canCreate && <InstallPanel lab={lab} />}
     </div>
   );
 }

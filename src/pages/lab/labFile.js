@@ -27,7 +27,7 @@ export async function buildLabFile(data) {
   return `<!doctype html>
 <html lang="ar" dir="rtl"><head><meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>معمل الحاسب الآلي · فصل ${data.class_no}</title>
+<title>${data.title ?? `معمل الحاسب الآلي · فصل ${data.class_no}`}</title>
 <style>${css2}</style>
 <script>window.__LAB__ = ${json};</script>
 </head><body><div id="root"></div>

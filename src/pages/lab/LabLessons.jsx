@@ -5,6 +5,9 @@ import { useState } from "react";
 import { LESSONS, lessonById } from "../../lab-content/index.js";
 import LessonPlayer, { lessonScore } from "./lessons/LessonPlayer.jsx";
 import LabSessions from "./LabSessions.jsx";
+import LessonPresenter from "./lessons/LessonPresenter.jsx";
+import { buildLabFile, downloadText } from "./labFile.js";
+import { notify } from "../../lib/notice";
 
 const KEY = (id) => `lab-preview:${id}`;
 const load = (id) => { try { return JSON.parse(localStorage.getItem(KEY(id)) || "{}"); } catch { return {}; } };
@@ -14,15 +17,29 @@ export default function LabLessons({ lab, canCreate }) {
   const [openId, setOpenId] = useState(null);
   const [progress, setProgress] = useState({});
   const [round, setRound] = useState(0);   // يزيد عند مسح التقدم فيبدأ المشغّل من جديد
+  const [presenting, setPresenting] = useState(false);
   const lesson = openId && lessonById(openId);
 
   const open = (id) => { setProgress(load(id)); setOpenId(id); window.scrollTo({ top: 0 }); };
   const onProgress = (sid, score) => setProgress((p) => { const n = { ...p, [sid]: score }; save(openId, n); return n; });
   const reset = () => { save(openId, {}); setProgress({}); setRound((r) => r + 1); window.scrollTo({ top: 0 }); };
 
+  // نسخة العرض المنزّلة: ملف واحد يفتحه المعلم على جهاز السبورة دون إنترنت
+  const downloadPresent = async () => {
+    try {
+      const html = await buildLabFile({ mode: "present", lesson: lesson.id, title: `عرض: ${lesson.lesson.title}` });
+      downloadText(html, `عرض-${lesson.lesson.title}.html`);
+    } catch (e) { notify({ ok: false, text: "تعذّر تجهيز الملف: " + e.message }); }
+  };
+
+  if (lesson && presenting) return <LessonPresenter lesson={lesson} onExit={() => setPresenting(false)} />;
   if (lesson) {
     return (
       <LessonPlayer key={`${lesson.id}:${round}`} lesson={lesson} progress={progress}
+                    actions={<>
+                      <button type="button" className="btn-primary py-2" onClick={() => setPresenting(true)}>عرض على السبورة</button>
+                      <button type="button" className="btn-ghost py-2" onClick={downloadPresent}>تنزيل نسخة العرض</button>
+                    </>}
                     onProgress={onProgress} onExit={() => setOpenId(null)}
                     footer={<button type="button" className="text-xs text-muted underline" onClick={reset}>مسح تقدّمي في هذا الدرس (تجربة المعلم)</button>} />
     );

@@ -16,7 +16,7 @@ import { quietly } from "../../lib/notice.js";
 import PrincipalSign from "../../components/PrincipalSign.jsx";
 import { fmtDate } from "../../lib/dates";
 
-const MODE_NAME = { online: "إلكتروني", paper: "ورقي", external: "من خارج البوابة", omr: "تصحيح آلي" };
+const MODE_NAME = { online: "إلكتروني", offline: "دون إنترنت", paper: "ورقي", external: "من خارج البوابة", omr: "تصحيح آلي" };
 import { PRINCIPAL_NAME } from "../../lib/exportUtils.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
 import QuizTeacherPicker, { useQuizTeacher } from "../../components/QuizTeacherPicker.jsx";
@@ -91,7 +91,7 @@ export default function QuizMarks() {
   // «س١: ف٢» — حتى يطابق الرصدُ اليدوي ما بيد المعلم تمامًا، لا ترتيبَ الإضافة
   // الورقي ومن خارج البوابة: يُرصد مجموع الطالب مباشرة
   const isPaper = quiz?.mode === "paper" || quiz?.mode === "external";
-  const isOnline = quiz?.mode === "online";   // لا بطاقة تظليل، فلا تصحيح بالكاميرا
+  const isOnline = quiz?.mode === "online" || quiz?.mode === "offline";   // لا بطاقة تظليل، فلا تصحيح بالكاميرا
   const ordered = useMemo(() => {
     const KIND = { mcq: "اختر الإجابة الصحيحة", truefalse: "صح أو خطأ", match: "المزاوجة" };
     return groupQuestions(questions).flatMap((g, gi) =>
@@ -225,7 +225,7 @@ export default function QuizMarks() {
             <option value="">اختر الاختبار…</option>
             {(quizzes ?? []).map((q) => (
               <option key={q.id} value={q.id}>
-                {q.mode === "paper" ? "📝 " : q.mode === "online" ? "📱 " : q.mode === "external" ? "⇪ " : ""}{q.title} — {q.subject_name ?? ""}
+                {q.mode === "paper" ? "📝 " : q.mode === "online" || q.mode === "offline" ? "📱 " : q.mode === "external" ? "⇪ " : ""}{q.title} — {q.subject_name ?? ""}
                 {" · "}{MODE_NAME[q.mode] ?? "تصحيح آلي"} · {fmtDate(q.created_at)} · {sheets[q.id] ? `${sheets[q.id]} ورقة` : "بلا أوراق"}
               </option>
             ))}

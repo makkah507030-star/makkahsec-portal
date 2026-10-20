@@ -20,7 +20,7 @@ export function lessonScore(lesson, progress) {
   };
 }
 
-export default function LessonPlayer({ lesson, progress, onProgress, onExit, footer }) {
+export default function LessonPlayer({ lesson, progress, onProgress, onExit, footer, actions }) {
   const first = lesson.stations.findIndex((s) => progress[s.id] == null);
   const [i, setI] = useState(first === -1 ? lesson.stations.length : first);
   const st = lesson.stations[i];
@@ -42,7 +42,10 @@ export default function LessonPlayer({ lesson, progress, onProgress, onExit, foo
             {lesson.draft && <span className="chip mr-2 bg-warning-light align-middle text-late">مسودة</span>}
           </h2>
         </div>
-        {onExit && <button type="button" className="btn-ghost py-2" onClick={onExit}>كل الدروس</button>}
+        <div className="flex flex-wrap gap-2">
+          {actions}
+          {onExit && <button type="button" className="btn-ghost py-2" onClick={onExit}>كل الدروس</button>}
+        </div>
       </div>
 
       {/* شريط المحطات */}

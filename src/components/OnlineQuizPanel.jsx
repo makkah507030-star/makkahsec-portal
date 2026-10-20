@@ -5,6 +5,8 @@ import { fmtDateTime } from "../lib/dates";
 import { GRADE_NAMES } from "../lib/schoolTime";
 import Loader from "./Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
+import OfflineQuizTools, { OfflineQuizIntro } from "./OfflineQuizTools.jsx";
+import { buildOfflinePackage } from "../lib/offlineQuizBuild.js";
 
 /* =====================================================================
    تبويب «اختبار إلكتروني» في محرّر الاختبار (للمعلم).
@@ -15,6 +17,8 @@ import { useNotice } from "../lib/useNotice.js";
    • بعد النشر: متابعة حيّة لمن بدأ ومن سلّم ودرجته، مع التذكير والإغلاق والتعديل.
    • بعد الإغلاق: «إعادة فتح لمن لم يختبر» تفتحه من الآن حتى موعد جديد وتُشعر من لم يبدأ فقط.
    • التسليم يُصحَّح آليًا ويظهر في «التصحيح والدرجات» وكشف الرصد كالورقي.
+   • «دون إنترنت» (mode = offline): النشر نفسه، وموعد الفتح بداية التنزيل، والإغلاق آخر
+     موعد للتنزيل والمسح. يؤدّيه الطالب في الحصة بلا اتصال (OfflineQuizTools).
    ===================================================================== */
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -29,7 +33,7 @@ const nextFive = () => {
 };
 const mins = (ms) => Math.max(0, Math.ceil(ms / 60000));
 
-export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk, onStatus, audioMissing = false }) {
+export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk, onStatus, audioMissing = false, viewOnly = false }) {
   const [online, setOnline] = useState(undefined);   // undefined = تحميل، null = غير منشور
   const [assigns, setAssigns] = useState([]);
   const [subs, setSubs] = useState({});
@@ -40,6 +44,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   const [msg, setMsg] = useNotice(null);
   const [tick, setTick] = useState(Date.now());
   const [planIds, setPlanIds] = useState(null);      // اختبار التحقق: طلاب خطته العلاجية وحدهم
+  const offline = quiz.mode === "offline";
 
   useEffect(() => {
     if (!quiz.verify_plan_id) return;
@@ -53,11 +58,11 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   };
 
   const load = async () => {
-    await supabase.rpc("refresh_online_quiz", { p_quiz: quiz.id });   // تسليم من انتهى وقته
+    if (!viewOnly) await supabase.rpc("refresh_online_quiz", { p_quiz: quiz.id });   // تسليم من انتهى وقته (لا في الاطلاع)
     const [{ data: o, error: e1 }, { data: a }, { data: s }] = await Promise.all([
       supabase.from("quiz_online").select("*").eq("quiz_id", quiz.id).maybeSingle(),
       supabase.from("quiz_assignments")
-        .select("id, student_id, class_id, started_at, deadline_at, submitted_at, notified_at, students(full_name)")
+        .select(`id, student_id, class_id, started_at, deadline_at, submitted_at, notified_at, ${offline ? "offline_at, " : ""}students(full_name)`)
         .eq("quiz_id", quiz.id),
       supabase.from("quiz_submissions").select("student_id, score, absent").eq("quiz_id", quiz.id),
     ]);
@@ -144,6 +149,13 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     setBusy(false);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
     if (quiz.status === "draft") onStatus?.("ready", true);
+    // دون إنترنت: أول نشر يجهّز الحزمة المشفّرة مباشرة
+    if (offline && !online) {
+      setBusy(true);
+      try { await buildOfflinePackage(quiz); }
+      catch (e) { setMsg({ ok: false, text: `نُشر الاختبار، وتعذّر تجهيزه للتنزيل: ${e.message ?? e} — جرّب «تجهيز الاختبار للتنزيل».` }); setBusy(false); setForm(null); load(); return; }
+      setBusy(false);
+    }
     setForm(null);
     setMsg({ ok: true, text: n
       ? `${renotify ? "أُرسل التذكير" : "نُشر الاختبار وأُرسل الإشعار"} إلى ${n === 1 ? "طالب واحد" : n === 2 ? "طالبين" : `${n} ${n <= 10 ? "طلاب" : "طالبًا"}`} في الجرس وعلى الجوال.`
@@ -209,12 +221,14 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     if (!form) {
       return (
         <section className="card space-y-3 p-4">
-          <p className="text-sm font-semibold text-ink">إجراء الاختبار إلكترونيًا</p>
-          <p className="text-xs leading-relaxed text-muted">
+          <p className="text-sm font-semibold text-ink">{offline ? "إجراء الاختبار دون إنترنت" : "إجراء الاختبار إلكترونيًا"}</p>
+          {offline ? (
+            <OfflineQuizIntro open />
+          ) : <p className="text-xs leading-relaxed text-muted">
             يؤدّي الطلاب الاختبار من البوابة على الجوال أو الحاسب بدل الورقة: يصلهم إشعار في الجرس وعلى الجوال
             برابط الاختبار، ولكلٍّ منهم وقت محدّد يبدأ من لحظة دخوله، ويُصحَّح آليًا فور التسليم وتنتقل درجته
             إلى «التصحيح والدرجات» وكشف الرصد.
-          </p>
+          </p>}
           {box(msg)}
           {blockers.length > 0 ? (
             <ul className="list-disc space-y-1 pr-5 text-sm text-warning">
@@ -227,7 +241,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
                   مجموع درجات الأسئلة لا يساوي درجة الاختبار — راجع تبويب «الأسئلة» قبل النشر.
                 </p>
               )}
-              <button className="btn-primary w-full" onClick={openForm}>إعداد الاختبار الإلكتروني</button>
+              <button className="btn-primary w-full" onClick={openForm}>{offline ? "إعداد الاختبار دون إنترنت" : "إعداد الاختبار الإلكتروني"}</button>
             </>
           )}
         </section>
@@ -243,13 +257,13 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
 
     return (
       <section className="card space-y-4 p-4">
-        <p className="text-sm font-semibold text-ink">{online ? "تعديل الاختبار الإلكتروني" : "إعداد الاختبار الإلكتروني"}</p>
+        <p className="text-sm font-semibold text-ink">{online ? "تعديل مواعيد الاختبار وطلابه" : offline ? "إعداد الاختبار دون إنترنت" : "إعداد الاختبار الإلكتروني"}</p>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-xs text-muted">يُفتح
+          <label className="block text-xs text-muted">{offline ? "يُتاح التنزيل من" : "يُفتح"}
             <input type="datetime-local" className="field mt-1" value={form.opens} onChange={(e) => setF("opens", e.target.value)} />
           </label>
-          <label className="block text-xs text-muted">يُغلق
+          <label className="block text-xs text-muted">{offline ? "آخر موعد للتنزيل ومسح التسليم" : "يُغلق"}
             <input type="datetime-local" className="field mt-1" value={form.closes} onChange={(e) => setF("closes", e.target.value)} />
           </label>
           <label className="block text-xs text-muted">مدة الاختبار لكل طالب (دقيقة)
@@ -258,11 +272,12 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
           </label>
           <label className="flex items-center gap-2 self-end rounded-sm2 border border-line px-3 py-2.5 text-sm text-ink">
             <input type="checkbox" checked={form.show} onChange={(e) => setF("show", e.target.checked)} />
-            إظهار الدرجة للطالب فور التسليم
+            {offline ? "إظهار الدرجة للطالب في البوابة بعد المسح" : "إظهار الدرجة للطالب فور التسليم"}
           </label>
         </div>
         <p className="text-[11px] leading-relaxed text-faint">
-          يبدأ الطالب متى شاء بين موعدي الفتح والإغلاق، ووقته يبدأ من لحظة دخوله ولا يتجاوز موعد الإغلاق.
+          {offline ? "اجعل آخر موعد بعد حصة الاختبار، فمن لم يُمسح رمزه حتى آخر موعد يُسجَّل غائبًا. وقت الطالب يبدأ حين يفتح الاختبار بمفتاح السبورة."
+            : "يبدأ الطالب متى شاء بين موعدي الفتح والإغلاق، ووقته يبدأ من لحظة دخوله ولا يتجاوز موعد الإغلاق."}
         </p>
 
         <div className="space-y-3">
@@ -318,37 +333,39 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   const now = tick;
   const opens = new Date(online.opens_at).getTime();
   const closes = new Date(online.closes_at).getTime();
-  const phase = now < opens ? ["لم يُفتح بعد", "bg-canvas text-muted"]
-    : now < closes ? ["مفتوح الآن", "bg-mint-deep text-white"] : ["مُغلق", "bg-present/10 text-present"];
+  const phase = now < opens ? [offline ? "لم يُتح التنزيل بعد" : "لم يُفتح بعد", "bg-canvas text-muted"]
+    : now < closes ? [offline ? "متاح للتنزيل" : "مفتوح الآن", "bg-mint-deep text-white"] : ["مُغلق", "bg-present/10 text-present"];
 
   const rowState = (a) => {
     const sub = subs[a.student_id];
-    if (a.submitted_at) return { t: "سلّم", c: "text-present", score: sub?.score };
+    if (a.submitted_at) return { t: offline ? "رُصد" : "سلّم", c: "text-present", score: sub?.score };
+    if (offline && !(sub?.absent && now >= closes)) return a.offline_at ? { t: "نزّله", c: "text-mint-deep" } : { t: "لم ينزّله", c: "text-muted" };
     if (a.started_at) return { t: `يؤدّيه الآن — بقي ${mins(new Date(a.deadline_at).getTime() - now)} د`, c: "text-warning" };
     // بعد إعادة الفتح يبقى سجل الغياب القديم حتى يختبر، فلا يُعرض «غائب» والاختبار مفتوح
     if (sub?.absent && now >= closes) return { t: "غائب", c: "text-absent" };
     return { t: now >= closes ? "لم يبدأ" : "لم يبدأ بعد", c: "text-muted" };
   };
   const done = assigns.filter((a) => a.submitted_at).length;
-  const going = assigns.filter((a) => a.started_at && !a.submitted_at).length;
+  const going = assigns.filter((a) => (offline ? a.offline_at : a.started_at) && !a.submitted_at).length;
   const missed = now >= closes ? assigns.filter((a) => !a.started_at) : [];
 
   return (
     <section className="card space-y-4 p-4">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="flex-1 text-sm font-semibold text-ink">الاختبار الإلكتروني</p>
+        <p className="flex-1 text-sm font-semibold text-ink">{offline ? "الاختبار دون إنترنت" : "الاختبار الإلكتروني"}</p>
         <span className={`chip ${phase[1]}`}>{phase[0]}</span>
       </div>
 
       <dl className="grid gap-1.5 text-xs text-muted sm:grid-cols-2">
-        <div>يُفتح: <span className="text-ink">{fmtDateTime(online.opens_at)}</span></div>
-        <div>يُغلق: <span className="text-ink">{fmtDateTime(online.closes_at)}</span></div>
+        <div>{offline ? "التنزيل من" : "يُفتح"}: <span className="text-ink">{fmtDateTime(online.opens_at)}</span></div>
+        <div>{offline ? "آخر موعد" : "يُغلق"}: <span className="text-ink">{fmtDateTime(online.closes_at)}</span></div>
         <div>المدة: <bdi className="num text-ink">{online.duration_min}</bdi> دقيقة لكل طالب</div>
         <div>النتيجة للطالب: <span className="text-ink">{online.show_result ? "فور التسليم" : "بعد اعتمادك"}</span></div>
       </dl>
 
       <div className="grid grid-cols-3 gap-2 text-center">
-        {[["سلّم", `${done}/${assigns.length}`], ["يؤدّيه الآن", going], ["لم يبدأ", assigns.length - done - going]]
+        {(offline ? [["رُصد", `${done}/${assigns.length}`], ["نزّله ولم يُرصد", going], ["لم ينزّله", assigns.length - done - going]]
+          : [["سلّم", `${done}/${assigns.length}`], ["يؤدّيه الآن", going], ["لم يبدأ", assigns.length - done - going]])
           .map(([k, v]) => (
             <div key={k} className="rounded-card bg-canvas px-2 py-2">
               <p className="num text-base font-bold text-ink">{v}</p>
@@ -356,6 +373,8 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
             </div>
           ))}
       </div>
+
+      {offline && <OfflineQuizTools quiz={quiz} viewOnly={viewOnly} onChanged={load} />}
 
       {box(msg)}
 
@@ -396,7 +415,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
         {now < closes && (
           <>
             <button className="rounded-pill border border-mint-light bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep"
-                    disabled={busy} onClick={remind}>تذكير من لم يسلّم</button>
+                    disabled={busy} onClick={remind}>{offline ? "تذكير بالتنزيل" : "تذكير من لم يسلّم"}</button>
             <button className="rounded-pill border border-absent/40 px-3 py-1.5 text-xs font-semibold text-absent hover:bg-absent hover:text-white"
                     disabled={busy} onClick={closeNow}>إغلاق الآن</button>
           </>

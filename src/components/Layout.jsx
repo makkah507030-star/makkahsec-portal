@@ -75,9 +75,17 @@ const ADMIN_GROUPS = [
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "swap" },
       { to: "/noor-grades",       label: "متابعة رصد الدرجات", roles: ["principal", "deputy_academic", "tech_support"], icon: "clipboard", kw: "نور الفترات" },
+      { to: "/quiz-cycles",       label: "متابعة دورات الاختبار", roles: ["principal", "deputy_academic", "tech_support"], icon: "refresh", kw: "الدورات غير المكتملة اختبارات خطة علاجية" },
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
+      { to: "/activities", label: "بنك الأنشطة", roles: ["deputy_academic", "principal", "tech_support"], icon: "sparkles", kw: "حقيبة حصص الانتظار الأنشطة الصفية العاب" },
+    ],
+  },
+  {
+    // تظهر لمن يُسمح له بأحد معاملها فقط (المجموعة الفارغة تُخفى)
+    title: "المعامل والمختبرات",
+    items: [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
     ],
   },
@@ -136,6 +144,7 @@ const ADMIN_GROUPS = [
       { to: "/site-metrics", label: "مؤشرات الموقع", techOnly: true, icon: "eye" },
       { to: "/usage-report", label: "إحصائية الاستخدام", techOnly: true, icon: "trend" },
       { to: "/audit-log", label: "سجل العمليات", techOnly: true, icon: "list" },
+      { to: "/quizzes", label: "اختبارات المعلمين", techOnly: true, icon: "quiz", kw: "اطلاع اختبارات اسئلة المعلمين" },
       { to: "/quiz-marks", label: "التصحيح والدرجات", techOnly: true, icon: "target", kw: "اطلاع درجات اختبارات المعلمين" },
       { to: "/quiz-analytics", label: "تحليل النتائج", techOnly: true, icon: "pie", kw: "احصاء اختبارات" },
       { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
@@ -155,8 +164,14 @@ const TEACHER_GROUPS = [
     items: [
       { to: "/attendance",  label: "الحضور والغياب اليومي", tabKey: "attendance", icon: "userCheck", kw: "تحضير" },
       { to: "/substitute",  label: "حصص الانتظار",          tabKey: "substitute", icon: "swap" },
+      { to: "/activities",  label: "الأنشطة والألعاب",       icon: "sparkles", kw: "حقيبة الانتظار الأنشطة الصفية دوري المادة كأس حروف مسابقة مؤقت" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
+    ],
+  },
+  {
+    title: "المعامل والمختبرات",
+    items: [
       { to: "/lab",         label: "معمل الحاسب الآلي",     extraTabKey: "computer_lab", icon: "monitor", kw: "حجز اجهزة تقنية رقمية" },
     ],
   },

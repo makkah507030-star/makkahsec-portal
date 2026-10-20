@@ -58,3 +58,24 @@ self.addEventListener("notificationclick", (event) => {
     })()
   );
 });
+
+/* ===================================================================
+   الاختبار دون إنترنت (src/lib/offlineQuiz.js): صفحة الاختبار محفوظة على جوال الطالب
+   بعد تنزيله. تُعرض على /offline-quiz دائمًا، وبدل أي صفحة من البوابة تعذّر فتحها
+   لانقطاع الإنترنت. ما عدا ذلك يمرّ إلى الشبكة كما هو.
+   =================================================================== */
+const OQ_CACHE = "mk-offline-quiz";
+const OQ_PAGE = "/offline-quiz";
+
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.mode !== "navigate" || req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  const cached = () => caches.open(OQ_CACHE).then((c) => c.match(OQ_PAGE));
+  if (url.pathname === OQ_PAGE) {
+    event.respondWith(cached().then((r) => r || fetch(req)));
+    return;
+  }
+  event.respondWith(fetch(req).catch(() => cached().then((r) => r || Response.error())));
+});
