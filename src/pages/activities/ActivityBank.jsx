@@ -159,6 +159,7 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
   const [cls, setCls] = useState(defaultClass);
   const [done, setDone] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [ask, setAsk] = useState(false);   // بعد الخروج من اللعبة: تذكير بتسجيل التنفيذ ليُحتسب شاهدًا
   const meta = sectionMeta(card.kind, card.section);
   const yt = youtubeId(card.video_url);
 
@@ -166,11 +167,26 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
     setBusy(true);
     const { error } = await supabase.from("activity_uses").insert({ card_id: card.id, class_id: cls || null, context: card.kind, rating });
     setBusy(false);
-    setDone(error ? { ok: false, t: error.message } : { ok: true, t: "سُجّل التنفيذ ✓ — يظهر شاهدًا في تقرير الاستخدام." });
+    setDone(error ? { ok: false, t: error.message } : { ok: true, t: "سُجّل التنفيذ ✓ — يُحتسب في شواهد ملف أدائك." });
     if (!error) onUsed?.(cls);
   };
 
-  if (game) return <GameHost card={card} onClose={() => setGame(false)} />;
+  if (game) return <GameHost card={card} onClose={() => { setGame(false); if (teacher && !done) setAsk(true); }} />;
+
+  const record = (
+    <>
+      <select className="field text-sm" value={cls} onChange={(e) => setCls(e.target.value)}>
+        <option value="">الفصل (اختياري)</option>
+        {classes.map((c) => <option key={c.id} value={c.id}>{GRADE_NAMES[c.grade] ?? ""} — {c.class_no}</option>)}
+      </select>
+      {done ? <p className={`text-sm ${done.ok ? "text-present" : "text-absent"}`}>{done.t}</p> : (
+        <div className="flex gap-2">
+          <button type="button" className="btn-primary flex-1" disabled={busy} onClick={() => markUsed(1)}>👍 نُفّذ وأعجبني</button>
+          <button type="button" className="btn-ghost flex-1" disabled={busy} onClick={() => markUsed(-1)}>👎 نُفّذ ولم يناسب</button>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-3 sm:p-6" onClick={onClose}>
@@ -224,21 +240,22 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
           )}
           {teacher && (
             <div className="space-y-2 rounded-card border border-line p-3">
-              <p className="text-sm font-semibold text-ink">نفّذت هذا النشاط؟</p>
-              <select className="field text-sm" value={cls} onChange={(e) => setCls(e.target.value)}>
-                <option value="">الفصل (اختياري)</option>
-                {classes.map((c) => <option key={c.id} value={c.id}>{GRADE_NAMES[c.grade] ?? ""} — {c.class_no}</option>)}
-              </select>
-              {done ? <p className={`text-sm ${done.ok ? "text-present" : "text-absent"}`}>{done.t}</p> : (
-                <div className="flex gap-2">
-                  <button type="button" className="btn-primary flex-1" disabled={busy} onClick={() => markUsed(1)}>👍 نُفّذ وأعجبني</button>
-                  <button type="button" className="btn-ghost flex-1" disabled={busy} onClick={() => markUsed(-1)}>👎 نُفّذ ولم يناسب</button>
-                </div>
-              )}
+              <p className="text-sm font-semibold text-ink">نفّذت هذا النشاط؟ <span className="text-xs font-normal text-muted">سجّله ليُحتسب في شواهد ملف أدائك</span></p>
+              {record}
             </div>
           )}
         </div>
       </div>
+      {ask && (
+        <div className="fixed inset-0 z-[55] grid place-items-center bg-black/50 p-4" onClick={(e) => { e.stopPropagation(); setAsk(false); }}>
+          <div className="card w-full max-w-sm space-y-3 p-4" onClick={(e) => e.stopPropagation()} dir="rtl">
+            <p className="font-bold text-ink">سجّل تنفيذ «{card.title}»</p>
+            <p className="text-sm text-muted">ليُحتسب لك شاهدًا في ملف الأداء (الأنشطة المتنوعة). اختر الفصل وقيّم النشاط.</p>
+            {record}
+            <button type="button" className="w-full text-center text-sm text-muted underline" onClick={() => setAsk(false)}>{done?.ok ? "إغلاق" : "لاحقًا"}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

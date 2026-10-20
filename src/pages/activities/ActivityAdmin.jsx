@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GAMES, MEDIA_BUCKET, mediaUrl, sectionMeta, sectionsOf } from "../../lib/activities.js";
 import Loader from "../../components/Loader.jsx";
+import { activeYear } from "../../lib/performance.js";
 import { Cover, CardView } from "./ActivityBank.jsx";
 
 const EMPTY = { kind: "waiting", section: "games", title: "", summary: "", duration_min: 45, goals: "", materials: "",
@@ -82,6 +83,15 @@ export default function ActivityAdmin() {
   if (!cards) return <Loader compact />;
   if (form) return <Editor init={form} onClose={(saved) => { setForm(null); if (saved) { setMsg({ ok: true, t: "حُفظت البطاقة." }); load(); } }} />;
 
+  const tabsBar = (
+    <div className="inline-flex rounded-card border border-line bg-paper p-1">
+      {[["waiting", "حقيبة الانتظار"], ["class", "الأنشطة الصفية"], ["usage", "استخدام المعلمين"]].map(([k, l]) => (
+        <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-pill px-4 py-1.5 text-[13px] ${kind === k ? "bg-mint-deep font-semibold text-white" : "text-muted"}`}>{l}</button>
+      ))}
+    </div>
+  );
+  if (kind === "usage") return <div className="space-y-4">{tabsBar}<UsageReport /></div>;
+
   const all = cards.filter((c) => c.kind === kind);
   const list = all.filter((c) => show === "all" || (show === "on") === c.published);
   const groups = [...sectionsOf(kind).map((s) => s.key), ...new Set(all.map((c) => c.section))]
@@ -101,11 +111,7 @@ export default function ActivityAdmin() {
       </div>
       {msg && <p className={`rounded-card px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.t}</p>}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-card border border-line bg-paper p-1">
-          {[["waiting", "حقيبة الانتظار"], ["class", "الأنشطة الصفية"]].map(([k, l]) => (
-            <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-pill px-4 py-1.5 text-[13px] ${kind === k ? "bg-mint-deep font-semibold text-white" : "text-muted"}`}>{l}</button>
-          ))}
-        </div>
+        {tabsBar}
         <button type="button" className="btn-primary" onClick={() => setForm({ ...EMPTY, kind, section: sectionsOf(kind)[0].key, duration_min: kind === "waiting" ? 45 : 10 })}>+ بطاقة جديدة</button>
         <button type="button" className="btn-ghost" disabled={busy} onClick={importSeed}>{busy ? "جارٍ الاستيراد…" : "استيراد البطاقات الجاهزة"}</button>
         <select className="field ms-auto w-auto py-1.5 text-sm" value={show} onChange={(e) => setShow(e.target.value)}>
@@ -145,6 +151,70 @@ export default function ActivityAdmin() {
         );
       })}
       {view && <CardView card={view} onClose={() => setView(null)} />}
+    </div>
+  );
+}
+
+// تقرير الوكيل: استخدام كل معلم للأنشطة في العام الدراسي، وهو ما يُحتسب في شواهد أدائه
+// (أيام لا مرات: 4-2 الصفية، و8-4 كل نشاط ونقاط الدوري، و9-5 التعاونية) — supabase/activities_4.sql
+function UsageReport() {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState("");
+  const [sort, setSort] = useState("days");
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.rpc("act_usage_report", { p_year: await activeYear() });
+      if (error) setErr(/act_usage_report/.test(error.message) ? "التقرير يحتاج تشغيل supabase/activities_4.sql." : error.message);
+      setRows(data ?? []);
+    })();
+  }, []);
+  const list = useMemo(() => {
+    const m = new Map();   // معلم واحد لكل حساب
+    (rows ?? []).forEach((r) => { if (!m.has(r.user_id) || r.days > m.get(r.user_id).days) m.set(r.user_id, r); });
+    return [...m.values()].filter((r) => !q.trim() || (r.name ?? "").includes(q.trim()))
+      .sort((a, b) => (sort === "name" ? (a.name ?? "").localeCompare(b.name ?? "", "ar") : (b[sort] ?? 0) - (a[sort] ?? 0) || (a.name ?? "").localeCompare(b.name ?? "", "ar")));
+  }, [rows, sort, q]);
+  if (!rows) return <Loader compact />;
+  const users = list.filter((r) => r.days > 0).length;
+  const cols = [["days", "أيام الأنشطة"], ["class_days", "صفية (4-2)"], ["waiting_days", "انتظار"], ["coop_days", "تعاونية (9-5)"], ["league_days", "الدوري والكأس"], ["uses", "مرات التنفيذ"]];
+  return (
+    <div className="space-y-3">
+      {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
+      <div className="grid gap-2 sm:grid-cols-3">
+        {[["معلمون استخدموا الأنشطة", users, list.length], ["أيام أنشطة (للكل)", list.reduce((n, r) => n + r.days, 0)], ["لم يستخدموها بعد", list.length - users]].map(([k, v, of]) => (
+          <div key={k} className="card p-3 text-center"><p className="text-2xl font-bold text-ink"><span className="num">{v}</span>
+            {of != null && <span className="text-sm font-normal text-muted"> من <span className="num">{of}</span></span>}</p><p className="text-xs text-muted">{k}</p></div>
+        ))}
+      </div>
+      <p className="text-xs text-muted">يُحتسب اليوم مرة واحدة مهما تعدّدت أنشطته، وهي الأرقام نفسها التي تظهر شواهدَ في ملف أداء المعلم: 4-2 تنويع الاستراتيجيات، و8-4 الأنشطة المتنوعة (كل نشاط ونقاط الدوري)، و9-5 العمل بالمجموعات.</p>
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <input className="field w-auto flex-1 py-1.5 text-sm sm:max-w-xs" placeholder="بحث باسم المعلم…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <button type="button" className="btn-ghost py-1.5 text-sm" onClick={() => window.print()}>طباعة</button>
+      </div>
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-canvas text-xs text-muted">
+            <tr>
+              <th className="cursor-pointer p-2 text-start" onClick={() => setSort("name")}>المعلم{sort === "name" ? " ▾" : ""}</th>
+              {cols.map(([k, l]) => <th key={k} className="cursor-pointer whitespace-nowrap p-2" onClick={() => setSort(k)}>{l}{sort === k ? " ▾" : ""}</th>)}
+              <th className="whitespace-nowrap p-2">👍</th>
+              <th className="whitespace-nowrap p-2">آخر نشاط</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line/60">
+            {list.map((r) => (
+              <tr key={r.user_id} className={r.days ? "" : "text-muted"}>
+                <td className="p-2 font-semibold">{r.name ?? "—"}</td>
+                {cols.map(([k]) => <td key={k} className={`num p-2 text-center ${k === "days" && r.days ? "font-bold text-mint-deep" : ""}`}>{r[k] || "—"}</td>)}
+                <td className="num p-2 text-center">{r.likes || "—"}</td>
+                <td className="num whitespace-nowrap p-2 text-center text-xs">{r.last_on ? new Date(r.last_on).toLocaleDateString("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "short" }) : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!list.length && <p className="p-6 text-center text-sm text-muted">لا معلمين.</p>}
+      </div>
     </div>
   );
 }
