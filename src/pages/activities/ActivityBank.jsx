@@ -50,7 +50,8 @@ export default function ActivityBank({ kind, teacher }) {
     supabase.rpc("activity_class_used", { p_class: forClass }).then(({ data }) => setUsed(new Set((data ?? []).map((x) => x.activity_class_used ?? x))));
   }, [forClass]);
 
-  const secs = sectionsOf(kind);
+  // الأقسام التي فيها بطاقات مفعّلة فقط: القسم المعطّل كله لا يظهر للمعلمين
+  const secs = useMemo(() => sectionsOf(kind).filter((s) => (cards ?? []).some((c) => c.section === s.key)), [kind, cards]);
   const list = useMemo(() => {
     const t = q.trim();
     const order = (c) => secs.findIndex((s) => s.key === c.section);
@@ -64,7 +65,7 @@ export default function ActivityBank({ kind, teacher }) {
     <div className="space-y-4">
       {kind === "waiting" && (
         <div className="rounded-card bg-mint-tint px-4 py-3 text-sm leading-relaxed text-ink">
-          <b>حصة الانتظار للترفيه:</b> أنشطة تخفف عن الطلاب ضغط الحصص — ألعاب على السبورة، ورياضة وحركة، وتقنية. اختر واحدة وابدأ خلال دقيقة.
+          <b>حصة الانتظار للترفيه:</b> أنشطة تخفف عن الطلاب ضغط الحصص{secs.length ? ` — ${secs.map((s) => s.label).join("، و")}` : ""}. اختر واحدة وابدأ خلال دقيقة.
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
