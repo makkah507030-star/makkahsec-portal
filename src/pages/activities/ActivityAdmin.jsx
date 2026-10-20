@@ -1,6 +1,7 @@
 // src/pages/activities/ActivityAdmin.jsx
 // إدارة بنك الأنشطة (وكيل الشؤون التعليمية): استيراد البطاقات الجاهزة، وإضافة البطاقات
-// وتعديلها بصورها وروابط الفيديو وأسئلة الألعاب، والنشر والإخفاء، وتقرير الاستخدام.
+// وتعديلها بصورها وروابط الفيديو وأسئلة الألعاب، وتفعيلها وتعطيلها (بطاقةً أو قسمًا كاملًا)
+// فتبقى المعطّلة محفوظة للاستفادة منها لاحقًا، وتقرير الاستخدام.
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GAMES, MEDIA_BUCKET, mediaUrl, sectionMeta, sectionsOf } from "../../lib/activities.js";
@@ -30,6 +31,7 @@ export default function ActivityAdmin() {
   const [view, setView] = useState(null);
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [show, setShow] = useState("all");   // كل البطاقات، أو المفعّلة، أو المعطّلة
 
   const load = async () => {
     const [{ data, error }, { data: u }] = await Promise.all([
@@ -61,7 +63,14 @@ export default function ActivityAdmin() {
     load();
   };
 
-  const toggle = async (c) => { await supabase.from("activity_cards").update({ published: !c.published, updated_at: new Date().toISOString() }).eq("id", c.id); load(); };
+  // التفعيل والتعطيل: المعطّلة تختفي عن المعلمين وتبقى بكل محتواها وسجل استخدامها
+  const setActive = async (ids, on) => {
+    if (!ids.length) return;
+    setCards((cs) => cs.map((c) => (ids.includes(c.id) ? { ...c, published: on } : c)));
+    const { error } = await supabase.from("activity_cards").update({ published: on, updated_at: new Date().toISOString() }).in("id", ids);
+    if (error) setMsg({ ok: false, t: error.message });
+    load();
+  };
   const remove = async (c) => {
     if (!window.confirm(`حذف «${c.title}»؟ يُحذف معه سجل استخدامه.`)) return;
     await supabase.from("activity_cards").delete().eq("id", c.id);
@@ -73,14 +82,21 @@ export default function ActivityAdmin() {
   if (!cards) return <Loader compact />;
   if (form) return <Editor init={form} onClose={(saved) => { setForm(null); if (saved) { setMsg({ ok: true, t: "حُفظت البطاقة." }); load(); } }} />;
 
-  const list = cards.filter((c) => c.kind === kind);
+  const all = cards.filter((c) => c.kind === kind);
+  const list = all.filter((c) => show === "all" || (show === "on") === c.published);
+  const groups = [...sectionsOf(kind).map((s) => s.key), ...new Set(all.map((c) => c.section))]
+    .filter((k, i, a) => a.indexOf(k) === i)
+    .map((k) => ({ meta: sectionMeta(kind, k), items: list.filter((c) => c.section === k), whole: all.filter((c) => c.section === k) }))
+    .filter((g) => g.items.length);
   const totalUses = uses.length;
+  const onOf = (k) => [cards.filter((c) => c.kind === k && c.published).length, cards.filter((c) => c.kind === k).length];
   return (
     <div className="space-y-4">
       <div className="grid gap-2 sm:grid-cols-4">
-        {[["بطاقات الحقيبة", cards.filter((c) => c.kind === "waiting").length], ["الأنشطة الصفية", cards.filter((c) => c.kind === "class").length],
-          ["مرات التنفيذ", totalUses], ["أعجب المعلمين", uses.filter((u) => u.rating === 1).length]].map(([k, v]) => (
-          <div key={k} className="card p-3 text-center"><p className="num text-2xl font-bold text-ink">{v}</p><p className="text-xs text-muted">{k}</p></div>
+        {[["بطاقات الحقيبة المفعّلة", ...onOf("waiting")], ["الأنشطة الصفية المفعّلة", ...onOf("class")],
+          ["مرات التنفيذ", totalUses], ["أعجب المعلمين", uses.filter((u) => u.rating === 1).length]].map(([k, v, of]) => (
+          <div key={k} className="card p-3 text-center"><p className="text-2xl font-bold text-ink"><span className="num">{v}</span>
+            {of != null && <span className="text-sm font-normal text-muted"> من <span className="num">{of}</span></span>}</p><p className="text-xs text-muted">{k}</p></div>
         ))}
       </div>
       {msg && <p className={`rounded-card px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.t}</p>}
@@ -92,27 +108,57 @@ export default function ActivityAdmin() {
         </div>
         <button type="button" className="btn-primary" onClick={() => setForm({ ...EMPTY, kind, section: sectionsOf(kind)[0].key, duration_min: kind === "waiting" ? 45 : 10 })}>+ بطاقة جديدة</button>
         <button type="button" className="btn-ghost" disabled={busy} onClick={importSeed}>{busy ? "جارٍ الاستيراد…" : "استيراد البطاقات الجاهزة"}</button>
+        <select className="field ms-auto w-auto py-1.5 text-sm" value={show} onChange={(e) => setShow(e.target.value)}>
+          <option value="all">كل البطاقات</option><option value="on">المفعّلة</option><option value="off">المعطّلة</option>
+        </select>
       </div>
-      <div className="card divide-y divide-line/60">
-        {!list.length && <p className="p-6 text-center text-sm text-muted">لا بطاقات بعد — ابدأ بـ«استيراد البطاقات الجاهزة».</p>}
-        {list.map((c) => {
-          const s = stats[c.id], meta = sectionMeta(c.kind, c.section);
+      <p className="text-xs text-muted">البطاقة المعطّلة تختفي عن المعلمين وتبقى محفوظة بمحتواها وسجل استخدامها، فتُفعَّل متى احتجتها. ويمكن تعطيل قسم كامل من زر القسم.</p>
+      {!all.length && <p className="card p-6 text-center text-sm text-muted">لا بطاقات بعد — ابدأ بـ«استيراد البطاقات الجاهزة».</p>}
+      {all.length > 0 && !groups.length && <p className="card p-6 text-center text-sm text-muted">لا بطاقات {show === "on" ? "مفعّلة" : "معطّلة"}.</p>}
+      {groups.map(({ meta, items, whole }) => {
+        const on = whole.filter((c) => c.published).length;
+        return (
+      <div key={meta.key} className="card divide-y divide-line/60">
+        <div className="flex flex-wrap items-center gap-2 bg-canvas/60 px-3 py-2">
+          <p className="flex-1 text-sm font-bold text-ink">{meta.emoji} {meta.label} <span className="text-xs font-normal text-muted">· مفعّلة {on} من {whole.length}</span></p>
+          {on < whole.length && <button type="button" className="chip bg-present/10 text-present" onClick={() => setActive(whole.filter((c) => !c.published).map((c) => c.id), true)}>تفعيل القسم كله</button>}
+          {on > 0 && <button type="button" className="chip bg-absent/10 text-absent" onClick={() => {
+            if (window.confirm(`تعطيل قسم «${meta.label}» كله؟ تختفي بطاقاته (${on}) عن المعلمين وتبقى محفوظة لتفعيلها لاحقًا.`)) setActive(whole.filter((c) => c.published).map((c) => c.id), false);
+          }}>تعطيل القسم كله</button>}
+        </div>
+        {items.map((c) => {
+          const s = stats[c.id];
           return (
-            <div key={c.id} className="flex items-center gap-3 p-2.5">
-              <div className="h-12 w-16 shrink-0 overflow-hidden rounded-[6px]"><Cover card={c} className="h-12" /></div>
+            <div key={c.id} className={`flex items-center gap-3 p-2.5 ${c.published ? "" : "bg-canvas/40"}`}>
+              <div className={`h-12 w-16 shrink-0 overflow-hidden rounded-[6px] ${c.published ? "" : "opacity-40 grayscale"}`}><Cover card={c} className="h-12" /></div>
               <button type="button" className="min-w-0 flex-1 text-start" onClick={() => setView(c)}>
-                <p className="truncate text-sm font-semibold text-ink">{c.title} {c.game && <span className="text-[11px] text-mint-deep">▶ {GAMES[c.game]}</span>}</p>
-                <p className="text-[11px] text-muted">{meta.emoji} {meta.label}{s ? ` · نُفّذ ${s.n} · 👍 ${s.up} · 👎 ${s.down}` : " · لم يُنفَّذ بعد"}</p>
+                <p className={`truncate text-sm font-semibold ${c.published ? "text-ink" : "text-muted"}`}>{c.title} {c.game && <span className="text-[11px] text-mint-deep">▶ {GAMES[c.game]}</span>}</p>
+                <p className="text-[11px] text-muted">{s ? `نُفّذ ${s.n} · 👍 ${s.up} · 👎 ${s.down}` : "لم يُنفَّذ بعد"}</p>
               </button>
-              <button type="button" onClick={() => toggle(c)} className={`chip shrink-0 ${c.published ? "bg-present/10 text-present" : "bg-canvas text-muted"}`}>{c.published ? "منشورة" : "مخفية"}</button>
+              <Switch on={c.published} onChange={(v) => setActive([c.id], v)} />
               <button type="button" className="text-xs text-mint-deep underline" onClick={() => setForm({ ...EMPTY, ...c, subject: c.subject ?? "", video_url: c.video_url ?? "", game: c.game ?? "" })}>تعديل</button>
               <button type="button" className="text-xs text-absent underline" onClick={() => remove(c)}>حذف</button>
             </div>
           );
         })}
       </div>
+        );
+      })}
       {view && <CardView card={view} onClose={() => setView(null)} />}
     </div>
+  );
+}
+
+// مفتاح التفعيل: مفعّلة تظهر للمعلمين، ومعطّلة محفوظة دون أن تظهر
+function Switch({ on, onChange }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)}
+            className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold" title={on ? "اضغط للتعطيل" : "اضغط للتفعيل"}>
+      <span className={on ? "text-present" : "text-muted"}>{on ? "مفعّلة" : "معطّلة"}</span>
+      <span className={`relative h-5 w-9 rounded-full transition-colors ${on ? "bg-present" : "bg-line"}`}>
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? "right-0.5" : "right-[18px]"}`} />
+      </span>
+    </button>
   );
 }
 
@@ -215,7 +261,7 @@ function Editor({ init, onClose }) {
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.published} onChange={(e) => set("published", e.target.checked)} /> منشورة للمعلمين</label>
+      <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.published} onChange={(e) => set("published", e.target.checked)} /> مفعّلة (تظهر للمعلمين)</label>
       {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       <div className="flex gap-2">
         <button type="button" className="btn-primary flex-1" disabled={busy} onClick={save}>{busy ? "جارٍ الحفظ…" : "حفظ"}</button>
