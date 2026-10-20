@@ -8,6 +8,7 @@ import { signatureByName } from "../lib/userSignatures";
 import { loadPrincipalSignature, loadSchoolStamp } from "../lib/principalSignature";
 import { academicYearLabel } from "./studio/lib";
 import { eventsReportPages, eventPhase, STAGE_AR } from "./EventsReportDoc.jsx";
+import { eventDateRange, lastDay } from "../lib/eventDates.js";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
@@ -68,7 +69,7 @@ export default function EventsReports() {
     // الأحداث الملغاة لا تظهر في التقارير أصلًا
     let list = (rows ?? []).filter((e) => !e.cancelled_at);
     if (scope === "mine") list = list.filter((e) => e.organizer_id === uid);
-    if (from) list = list.filter((e) => e.event_date >= from);
+    if (from) list = list.filter((e) => lastDay(e) >= from);   // الممتد يدخل ما دامت فترته تمسّ المدى
     if (to) list = list.filter((e) => e.event_date <= to);
     return list;
   }, [rows, scope, uid, from, to]);
@@ -187,7 +188,7 @@ export default function EventsReports() {
                 })()}
               </div>
               <p className="num mt-1 text-xs text-faint">
-                {e.serial} · {fmtG(e.event_date)}
+                {e.serial} · {eventDateRange(e, fmtG)}
                 {e.venue ? ` · ${e.venue}` : ""}
                 {e.organizer_name ? ` · ${e.organizer_name}` : ""}
               </p>

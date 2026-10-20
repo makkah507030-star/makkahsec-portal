@@ -3,6 +3,7 @@ import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
 import slogan from "../assets/national-day-slogan.webp";
 import { fmtDate, noEra, stripBidi } from "../lib/dates";
+import { eventDateRange, isRange } from "../lib/eventDates.js";
 
 /* =====================================================================
    شهادة الحدث — ورقة A4 أفقية، شهادة لكل طالب.
@@ -29,15 +30,14 @@ export const DEFAULT_CERT_TITLE = "شهادة مشاركة";
 
 /** تاريخ الحدث نصًا: 17/04/1448 - 28/09/2026 */
 function eventDateText(e) {
-  const d = e?.event_date ? `${e.event_date}T12:00:00` : null;
-  return d ? stripBidi(fmtDate(d)) : "";
+  return stripBidi(eventDateRange(e, (d) => fmtDate(`${d}T12:00:00`)));   // الممتد: «من … إلى …»
 }
 
 /* الصيغة الرسمية بقيم الحدث الفعلية — نص عادي بلا متغيرات.
    السطر التمهيدي، ثم اسم الطالب بارزًا (تلقائي)، ثم نص الشهادة، ثم الختام. */
 export function officialCert(e) {
   const when = eventDateText(e);
-  const at = `«${e?.title ?? ""}» المُقام${when ? ` بتاريخ ${when}` : ""}`;
+  const at = `«${e?.title ?? ""}» المُقام${when ? (isRange(e) ? ` في الفترة ${when}` : ` بتاريخ ${when}`) : ""}`;
   return isNationalDay(e)
     ? {
         intro: "تشهد مدرسة مكة الثانوية بأن الطالب",
