@@ -13,6 +13,7 @@ import EventCertificate, {
 } from "../components/EventCertificate.jsx";
 import GuestCertificate, { forTask } from "../components/GuestCertificate.jsx";
 import { fmtDate, stripBidi } from "../lib/dates";
+import { eventDateRange, endDatePatch, isRange } from "../lib/eventDates.js";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { loadPeriodTimes, toMinutes, fmtTime } from "../lib/periodTimes.js";
@@ -46,6 +47,42 @@ const fmtG = (s) => {
   const p = (n) => String(n).padStart(2, "0");
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 };
+// تاريخ الحدث أو فترته الممتدة
+const fmtE = (e) => eventDateRange(e, fmtG) || "—";
+
+/* حقول الموعد: من تاريخ وإلى تاريخ (اختياري للأحداث الممتدة)، ومن الساعة وإلى الساعة */
+function DateFields({ f, setF }) {
+  const badEnd = !!(f.end_date && f.end_date < f.event_date);
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-4">
+        <div>
+          <label className="text-xs text-muted">من تاريخ</label>
+          <input type="date" className="field num mt-1 w-full" value={f.event_date}
+                 onChange={(x) => setF((v) => ({ ...v, event_date: x.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs text-muted">إلى تاريخ <span className="text-faint">(للحدث الممتد)</span></label>
+          <input type="date" className={`field num mt-1 w-full ${badEnd ? "border-absent" : ""}`} value={f.end_date ?? ""}
+                 min={f.event_date || undefined}
+                 onChange={(x) => setF((v) => ({ ...v, end_date: x.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs text-muted">من الساعة</label>
+          <input type="time" className="field num mt-1 w-full" value={f.start_time}
+                 onChange={(x) => setF((v) => ({ ...v, start_time: x.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs text-muted">إلى الساعة</label>
+          <input type="time" className="field num mt-1 w-full" value={f.end_time}
+                 onChange={(x) => setF((v) => ({ ...v, end_time: x.target.value }))} />
+        </div>
+      </div>
+      {badEnd && <p className="-mt-2 text-[11px] text-absent">«إلى تاريخ» قبل «من تاريخ».</p>}
+      {!badEnd && <p className="-mt-2 text-[11px] text-faint">اترك «إلى تاريخ» فارغًا للحدث في يوم واحد، واملأه للحدث الممتد أيامًا أو شهورًا.</p>}
+    </>
+  );
+}
 
 export default function Events() {
   const { session, profile, adminRoles } = useSession();
@@ -141,7 +178,7 @@ export default function Events() {
                 </span>
               </div>
               <p className="num mt-1 text-xs text-faint">
-                {e.serial} · {fmtG(e.event_date)}
+                {e.serial} · {fmtE(e)}
                 {e.category ? ` · ${e.category}` : ""}
                 {e.organizer_name ? ` · ${e.organizer_name}` : ""}
               </p>
@@ -161,7 +198,7 @@ export default function Events() {
 function NewEvent({ uid, profile, roles, onDone }) {
   const [cats, setCats] = useState([]);
   const [f, setF] = useState({
-    title: "", category: "", event_date: todayISO(),
+    title: "", category: "", event_date: todayISO(), end_date: "",
     start_time: "", end_time: "", venue: "", description: "", goals: "",
   });
   const [busy, setBusy] = useState(false);
@@ -175,7 +212,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
   }, []);
 
   const save = async () => {
-    if (f.title.trim().length < 3 || !f.event_date) return;
+    if (f.title.trim().length < 3 || !f.event_date || (f.end_date && f.end_date < f.event_date)) return;
     setBusy(true);
     const { data: serial } = await supabase.rpc("next_event_serial");
     const roleLabel = roles.length ? (ADMIN_ROLE_LABEL[roles[0]] ?? "") : "معلم";
@@ -185,6 +222,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
       title: f.title.trim(),
       category: f.category || null,
       event_date: f.event_date,
+      ...endDatePatch(f),
       start_time: f.start_time || null,
       end_time: f.end_time || null,
       venue: f.venue.trim() || null,
@@ -227,23 +265,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
-          <label className="text-xs text-muted">تاريخ التنفيذ</label>
-          <input type="date" className="field num mt-1 w-full" value={f.event_date}
-                 onChange={(e) => setF((x) => ({ ...x, event_date: e.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs text-muted">من الساعة</label>
-          <input type="time" className="field num mt-1 w-full" value={f.start_time}
-                 onChange={(e) => setF((x) => ({ ...x, start_time: e.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs text-muted">إلى الساعة</label>
-          <input type="time" className="field num mt-1 w-full" value={f.end_time}
-                 onChange={(e) => setF((x) => ({ ...x, end_time: e.target.value }))} />
-        </div>
-      </div>
+      <DateFields f={f} setF={setF} />
 
       <div>
         <label className="text-xs text-muted">مكان التنفيذ</label>
@@ -265,7 +287,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
       </div>
 
       <button className="btn-primary w-full" onClick={save}
-              disabled={busy || f.title.trim().length < 3 || !f.event_date}>
+              disabled={busy || f.title.trim().length < 3 || !f.event_date || (f.end_date && f.end_date < f.event_date)}>
         {busy ? "جارٍ الحفظ…" : "حفظ والانتقال لاختيار الطلاب"}
       </button>
     </section>
@@ -353,7 +375,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
       <div>
         <h1 className="text-lg font-bold text-ink">{e.title}</h1>
         <p className="num mt-1 text-xs text-muted">
-          {fmtG(e.event_date)}
+          {fmtE(e)}
           {e.venue ? ` · ${e.venue}` : ""}
           {e.category ? ` · ${e.category}` : ""}
         </p>
@@ -455,7 +477,7 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
         if (!doc?.recipient_user_id) continue;
         const { data: nid } = await supabase.rpc("send_notification", {
           p_title: "إلغاء فعالية",
-          p_body: `نعتذر عن إلغاء «${e.title}» المقرر ${fmtG(e.event_date)}، ` +
+          p_body: `نعتذر عن إلغاء «${e.title}» المقرر ${fmtE(e)}، ` +
                   `فلا حاجة لمشاركة ${p.student_name} فيها. السبب: ${reason.trim()}`,
           p_kind: "general", p_link: null,
           p_roles: null, p_user_ids: [doc.recipient_user_id],
@@ -518,7 +540,7 @@ function CancelEvent({ e, parts, patch, reload, onMsg, byName, onDone }) {
 function StageInfo({ e, parts, patch, onNext }) {
   const [cats, setCats] = useState([]);
   const init = () => ({
-    title: e.title ?? "", category: e.category ?? "", event_date: e.event_date ?? "",
+    title: e.title ?? "", category: e.category ?? "", event_date: e.event_date ?? "", end_date: e.end_date ?? "",
     description: e.description ?? "", goals: e.goals ?? "", venue: e.venue ?? "",
     start_time: String(e.start_time ?? "").slice(0, 5), end_time: String(e.end_time ?? "").slice(0, 5),
   });
@@ -538,10 +560,10 @@ function StageInfo({ e, parts, patch, onNext }) {
   const sentConsents = (parts ?? []).filter((p) => p.consent_sent_at).length;
   const raised = (parts ?? []).some((p) => p.permission_id);
   const was = init();
-  const timingChanged = f.event_date !== was.event_date || f.start_time !== was.start_time || f.end_time !== was.end_time;
+  const timingChanged = f.event_date !== was.event_date || f.end_date !== was.end_date || f.start_time !== was.start_time || f.end_time !== was.end_time;
   const changed = JSON.stringify(f) !== JSON.stringify(was);
   const badTime = !!(f.start_time && f.end_time && f.start_time >= f.end_time);
-  const valid = f.title.trim().length >= 3 && !!f.event_date && !badTime;
+  const valid = f.title.trim().length >= 3 && !!f.event_date && !badTime && !(f.end_date && f.end_date < f.event_date);
 
   const save = async (next) => {
     if (!valid) return;
@@ -564,6 +586,7 @@ function StageInfo({ e, parts, patch, onNext }) {
       title: f.title.trim(),
       category: f.category || null,
       event_date: f.event_date,
+      ...endDatePatch(f, was),
       start_time: f.start_time || null,
       end_time: f.end_time || null,
       venue: f.venue.trim() || null,
@@ -605,23 +628,7 @@ function StageInfo({ e, parts, patch, onNext }) {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
-          <label className="text-xs text-muted">تاريخ التنفيذ</label>
-          <input type="date" className="field num mt-1 w-full" value={f.event_date}
-                 onChange={(x) => setF((v) => ({ ...v, event_date: x.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs text-muted">من الساعة</label>
-          <input type="time" className="field num mt-1 w-full" value={f.start_time}
-                 onChange={(x) => setF((v) => ({ ...v, start_time: x.target.value }))} />
-        </div>
-        <div>
-          <label className="text-xs text-muted">إلى الساعة</label>
-          <input type="time" className="field num mt-1 w-full" value={f.end_time}
-                 onChange={(x) => setF((v) => ({ ...v, end_time: x.target.value }))} />
-        </div>
-      </div>
+      <DateFields f={f} setF={setF} />
       <p className="-mt-2 text-[11px] text-faint">من وقت الحدث تُحسب حصص الاستئذان، ويعود الطلاب لفصولهم تلقائيًا بعده.</p>
       {badTime && <p className="-mt-2 text-xs text-absent">وقت النهاية يجب أن يكون بعد وقت البداية.</p>}
 
@@ -859,7 +866,7 @@ function StageConsent({ e, parts, reload, onNext, uid, organizerName }) {
       const { data: nid } = await supabase.rpc("send_notification", {
         p_title: "موافقة على مشاركة في فعالية",
         p_body: `صدر لك نموذج موافقة على مشاركة ${p.student_name} في «${e.title}»` +
-                ` يوم ${fmtG(e.event_date)}. افتحه للموافقة والتوقيع.`,
+                (isRange(e) ? ` ${fmtE(e)}` : ` يوم ${fmtG(e.event_date)}`) + `. افتحه للموافقة والتوقيع.`,
         p_kind: "general", p_link: `/doc/${doc.id}`,
         p_roles: null, p_user_ids: [g.user_id], p_grade: null, p_class_no: null, p_is_auto: true,
       });
@@ -1208,7 +1215,7 @@ function StagePermission({ e, parts, uid, reload, onNext }) {
 
       <div className="rounded-sm2 bg-mint-tint px-3 py-2.5 text-sm text-mint-deep">
         <span className="num font-bold">{approved.length}</span> طالبًا وافق أولياؤهم
-        · التاريخ <span className="num">{fmtG(e.event_date)}</span>
+        · {isRange(e) ? "يوم الاستئذان" : "التاريخ"} <span className="num">{fmtG(e.event_date)}</span>
         {req && <> · الاستئذان: {scopeText}</>}
       </div>
 
@@ -1657,7 +1664,7 @@ function guestCertProps(e, g, i, sigUrl, school) {
     name: g.name, entity: guestEntity(g),
     text: guestText(g),
     activity: e.title,
-    dateText: e.event_date ? stripBidi(fmtDate(`${e.event_date}T12:00:00`)) : "",
+    dateText: e.event_date ? stripBidi(eventDateRange(e, (d) => fmtDate(`${d}T12:00:00`))) : "",
     closing: "سائلين الله له دوام التوفيق والسداد",
     serial: `${e.serial}-G${String(i + 1).padStart(2, "0")}`,
     issuer: { url: sigUrl, name: e.organizer_name, role: e.organizer_role || "منفّذ البرنامج" },

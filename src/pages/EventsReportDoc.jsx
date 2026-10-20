@@ -2,6 +2,7 @@
 import { fmtDate } from "../lib/dates";
 import { todayISO } from "../lib/schoolTime";
 import { PRINCIPAL_NAME } from "../lib/exportUtils.js";
+import { eventDateRange, isRange } from "../lib/eventDates.js";
 import {
   S, n, countAr, pct, dmy, paginate, Ring, Bars, StackedColumns, Legend, Kpis, Highlights, Box, Signs, Page, Cover, IC,
 } from "../components/report/ReportKit.jsx";
@@ -88,7 +89,7 @@ function EventCard({ e, c, photo }) {
       <div className="bd">
         <h4>{e.title}</h4>
         <div className="mt">
-          <span>التاريخ <b className="num">{dmy(e.event_date)}</b></span>
+          <span>التاريخ <b className="num">{eventDateRange(e, dmy)}</b></span>
           <span>الحضور <b className="num">{c.attended}</b></span>
           <span>الشهادات <b className="num">{c.certs}</b></span>
         </div>
@@ -210,7 +211,7 @@ export function eventsReportPages({ events, counts, photos = {}, news = [], scop
                 <tr key={e.id}>
                   <td className="c num">{start + j + 1}</td>
                   <td>{e.title}{e.category && <span style={{ display: "block", fontSize: 10, color: "var(--mr-ink2)" }}>{e.category}{e.venue ? ` · ${e.venue}` : ""}</span>}</td>
-                  <td className="c num">{dmy(e.event_date)}</td><td style={{ fontSize: 10.5 }}>{e.organizer_name || "—"}</td>
+                  <td className="c num">{dmy(e.event_date)}{isRange(e) && <><br />إلى {dmy(e.end_date)}</>}</td><td style={{ fontSize: 10.5 }}>{e.organizer_name || "—"}</td>
                   <td className="c num">{m.c(e).attended}</td><td className="c num">{m.c(e).certs}</td>
                   <td className="c">{(() => {
                     const p = m.ph(e);

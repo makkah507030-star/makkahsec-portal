@@ -26,6 +26,8 @@ export const shortName = (n) => {
   const w = String(n ?? "").replace(/[-–—]/g, " ").split(/\s+/).filter((x) => x && !["بن", "ابن"].includes(x));
   return w.length > 2 ? `${w[0]} ${w[w.length - 1]}` : w.join(" ");
 };
+// الأسماء تُعرض في الخيارات والإجابات مسبوقة بـ«الأستاذ» احترامًا (والحرف الأول في «حروف» من الاسم نفسه)
+const T = (n) => `الأستاذ ${n}`;
 const named = (f) => ({ ...f,
   teachers: (f.teachers ?? []).map((t) => ({ ...t, name: shortName(t.name) })),
   admins: (f.admins ?? []).map((a) => ({ ...a, name: shortName(a.name) })) });
@@ -47,13 +49,13 @@ export function schoolQuiz(f) {
   for (const sub of shuffle(subjects).slice(0, 6)) {
     const who = teachers.filter((t) => t.subjects.includes(sub)).map((t) => t.name);
     const q = Math.random() < 0.5 ? `من معلمي مادة «${sub}» في مدرستنا؟` : `أي هؤلاء يدرّس مادة «${sub}» في مدرستنا؟`;
-    out.push(mcq(q, shuffle(who)[0], names.filter((n) => !who.includes(n))));
+    out.push(mcq(q, T(shuffle(who)[0]), names.filter((n) => !who.includes(n)).map(T)));
   }
   for (const t of shuffle(teachers).slice(0, 3)) {
     out.push(mcq(`الأستاذ ${t.name} يدرّس في مدرستنا مادة:`, shuffle(t.subjects)[0], subjects.filter((s) => !t.subjects.includes(s))));
   }
   for (const a of f.admins ?? []) {
-    if (ROLE[a.role]) out.push(mcq(`من ${ROLE[a.role]} في مدرسة مكة الثانوية؟`, a.name, [...names, ...(f.admins ?? []).map((x) => x.name)].filter((n) => n !== a.name)));
+    if (ROLE[a.role]) out.push(mcq(`من ${ROLE[a.role]} في مدرسة مكة الثانوية؟`, T(a.name), [...names, ...(f.admins ?? []).map((x) => x.name)].filter((n) => n !== a.name).map(T)));
   }
   for (const [g, n] of Object.entries(f.classes ?? {})) {
     out.push(mcq(`كم عدد فصول ${GRADE_NAMES[g] ?? `الصف ${g}`} في مدرستنا؟`, String(n), nums(n, [-2, -1, 1, 2])));
@@ -90,8 +92,8 @@ export function schoolHuroof(f) {
   for (const [s, list] of Object.entries(bySub)) {
     const byL = {};
     list.forEach((n) => (byL[letterOf(n)] ??= []).push(n));
-    for (const [l, ns] of Object.entries(byL)) add(l, `معلم «${s}» في مدرستنا يبدأ اسمه بهذا الحرف، من هو؟`, ns.join(" أو "));
+    for (const [l, ns] of Object.entries(byL)) add(l, `معلم «${s}» في مدرستنا يبدأ اسمه بهذا الحرف، من هو؟`, ns.map(T).join(" أو "));
   }
-  for (const a of f.admins ?? []) if (ROLE[a.role]) add(letterOf(a.name), `${ROLE[a.role]} في مدرستنا يبدأ اسمه بهذا الحرف، من هو؟`, a.name);
+  for (const a of f.admins ?? []) if (ROLE[a.role]) add(letterOf(a.name), `${ROLE[a.role]} في مدرستنا يبدأ اسمه بهذا الحرف، من هو؟`, T(a.name));
   return m;
 }
