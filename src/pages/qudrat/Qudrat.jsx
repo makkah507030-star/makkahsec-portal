@@ -10,6 +10,7 @@ import { isoDay } from "../../lib/qudratPlan.js";
 import QudratPlan from "./QudratPlan.jsx";
 import QudratMock from "./QudratMock.jsx";
 import QudratResults from "./QudratResults.jsx";
+import { AskButton, MyAsks } from "./AskTeacher.jsx";
 
 /* =====================================================================
    مركز التدريب — القدرات العامة (الدفعة الأولى): التدريب الحر بالمهارة.
@@ -95,6 +96,7 @@ export default function Qudrat() {
                               onRetry={(list) => setRound({ title: "إعادة ما أخطأت فيه", list, id: Date.now() })} />;
 
   const isStaff = effectiveRole === "teacher" || (effectiveRole === "admin" && ["principal", "deputy_academic", "tech_support"].some((r) => adminRoles.includes(r)));
+  const isManager = effectiveRole === "admin" && ["principal", "deputy_academic", "tech_support"].some((r) => adminRoles.includes(r));
   const wrongNow = bank.filter((q) => last.get(q.key) === false);
   const p = pctOf(correct, total);
   const today = isoDay();
@@ -131,6 +133,7 @@ export default function Qudrat() {
         </button>
       )}
 
+      <MyAsks uid={uid} />
       <QudratPlan uid={uid} plan={plan} bySkill={bySkill} doneToday={doneToday} onSaved={setPlan} onStart={startDay} />
 
       <div className="flex flex-wrap gap-2">
@@ -142,6 +145,8 @@ export default function Qudrat() {
         )}
         <button className="btn-ghost" onClick={() => setMock(true)}>اختبار محاكٍ كامل</button>
         {isStaff && <Link to="/qudrat/questions" className="btn-ghost">أسئلة المعلمين</Link>}
+        {isStaff && <Link to="/qudrat/asks" className="btn-ghost">أسئلة الطلاب</Link>}
+        {isManager && <Link to="/qudrat/admin" className="btn-ghost">لوحة المتابعة</Link>}
       </div>
 
       {Object.entries(SECS).map(([sec, S]) => {
@@ -289,6 +294,7 @@ function Practice({ round, onAnswer, onExit, onRetry }) {
                 <p className="mt-1 text-sm leading-loose text-ink">{q.method}</p>
               </div>
             )}
+            <AskButton key={q.key} q={q} />
             {saveErr && <p className="text-xs text-absent">{saveErr}</p>}
             <button className="btn-primary w-full" onClick={next}>{i + 1 < list.length ? "السؤال التالي" : "عرض النتيجة"}</button>
           </div>

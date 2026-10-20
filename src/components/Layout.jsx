@@ -80,7 +80,7 @@ const ADMIN_GROUPS = [
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
       { to: "/activities", label: "بنك الأنشطة", roles: ["deputy_academic", "principal", "tech_support"], icon: "sparkles", kw: "حقيبة حصص الانتظار الأنشطة الصفية العاب" },
-      { to: "/qudrat", label: "مركز التدريب (القدرات)", roles: ["principal", "deputy_academic", "tech_support"], icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة" },
+      { to: "/qudrat/admin", label: "متابعة التدريب (القدرات)", roles: ["principal", "deputy_academic", "tech_support"], icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة مركز", also: ["/qudrat"] },
     ],
   },
   {
@@ -194,7 +194,8 @@ const TEACHER_GROUPS = [
       { to: "/quizzes",        label: "اختباراتي",         icon: "quiz" },
       { to: "/quiz-marks",     label: "التصحيح والدرجات",  icon: "target", kw: "تصحيح الي" },
       { to: "/quiz-analytics", label: "تحليل النتائج",     icon: "pie" },
-      { to: "/qudrat",         label: "مركز التدريب",      icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة" },
+      { to: "/qudrat",         label: "مركز التدريب",      icon: "target", exact: true, kw: "قياس قدرات تحصيلي تدريب اسئلة" },
+      { to: "/qudrat/asks",    label: "أسئلة الطلاب (القدرات)", icon: "chat", kw: "قدرات استفسار طالب" },
     ],
   },
   {
@@ -401,8 +402,8 @@ export default function Layout({ children }) {
   const footer = FOOTER.filter(visible);
 
   const isActive = (i) =>
-    i.to === "/"
-      ? path === "/"
+    i.to === "/" || i.exact
+      ? path === i.to
       : [i.to, ...(i.also ?? [])].some((t) => path === t || path.startsWith(t + "/"));
 
   /* ---------- أقسام القائمة: قسم واحد مفتوح في كل مرة ----------
