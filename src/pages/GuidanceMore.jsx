@@ -5,10 +5,8 @@ import { supabase } from "../lib/supabase";
 import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
 import { fmtDate, fmtDateTime } from "../lib/dates";
 import { shrinkImage } from "../lib/imageResize.js";
-import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
 import Loader from "../components/Loader.jsx";
-import logoIcon from "../assets/icon-mint.png";
-import moeLogo from "../assets/moe-logo.png";
+import PlanReport from "./guidance/PlanReport.jsx";
 
 /* =====================================================================
    التوجيه الطلابي — بقية الصفحة (supabase/guidance_3.sql و guidance_4.sql):
@@ -35,9 +33,15 @@ const REQ_STATUS = {
   done: { t: "تمت المقابلة", c: "bg-present/10 text-present" },
   declined: { t: "اعتذر الموجه", c: "bg-canvas text-muted" },
 };
+// لون كل نوع برنامج: الشريط الجانبي وشارة النوع
+const KIND_STYLE = {
+  awareness: { border: "border-r-excused", chip: "bg-excused/10 text-excused" },
+  preventive: { border: "border-r-present", chip: "bg-present/10 text-present" },
+  developmental: { border: "border-r-late", chip: "bg-late/10 text-late" },
+  remedial: { border: "border-r-absent", chip: "bg-absent/10 text-absent" },
+};
 const pill = (on) => `rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
-const logos = () => ({ logoUrl: new URL(logoIcon, window.location.origin).href, moeLogoUrl: new URL(moeLogo, window.location.origin).href });
 const setupErr = (e, file) => (/guidance_|schema cache|relation/i.test(e?.message ?? "")
   ? `لم يُفعَّل هذا القسم بعد: يلزم تشغيل ملف supabase/${file}.` : e?.message);
 
@@ -82,12 +86,24 @@ export function Programs({ grade, me }) {
   const [busy, setBusy] = useState(false);
 
   const [linkFor, setLinkFor] = useState(null);   // { p, events }
+  const [view, setView] = useState("list");       // list | report (تقرير الخطة)
+  const [kindF, setKindF] = useState("all");
+  const [statusF, setStatusF] = useState("all");
+  const [thumbs, setThumbs] = useState({});        // مسار الصورة ← رابط موقّت للمصغّرة
   const navigate = useNavigate();
   const { session, profile, adminRoles } = useSession();
 
   const load = () => loadPrograms(grade)
     .then(({ data, error }) => { if (error) setErr(setupErr(error, "guidance_3.sql")); setRows(data ?? []); });
   useEffect(() => { load(); }, [grade]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  // مصغّرات صور التنفيذ بطلب واحد
+  useEffect(() => {
+    const paths = (rows ?? []).flatMap((p) => (p.status === "done" ? p.photos ?? [] : []));
+    if (!paths.length) return;
+    supabase.storage.from(BUCKET).createSignedUrls(paths, 3600)
+      .then(({ data }) => setThumbs(Object.fromEntries(paths.map((x, i) => [x, data?.[i]?.signedUrl ?? null]))));
+  }, [rows]);
 
   // تنفيذ البرنامج حدثًا: يُنشأ الحدث ببيانات البرنامج ويُربط به، ثم يُفتح في «الأحداث»
   const runAsEvent = async (p) => {
@@ -168,32 +184,71 @@ export function Programs({ grade, me }) {
     load();
   };
 
-  const printPlan = () => printReport({
-    title: "الخطة الإرشادية",
-    subtitle: `${GRADE_NAMES[grade] ?? ""} · ${rows.length} برنامجًا · نُفّذ ${rows.filter((r) => programState(r).done).length}`,
-    headers: ["م", "البرنامج", "نوعه", "الفئة المستهدفة", "الموعد", "التنفيذ", "المستفيدون"],
-    rows: rows.map((r, i) => { const st = programState(r); return [i + 1, r.title, PROGRAM_KIND[r.kind], r.target ?? "—",
-      r.planned_date ? fmtDate(r.planned_date + "T00:00:00") : "—",
-      st.done ? `نُفّذ ${st.date ? fmtDate(st.date + "T00:00:00") : ""}${st.ev ? ` · حدث ${st.ev.serial}` : ""}`
-        : st.ev ? `حدث ${st.ev.serial} · ${EV_STAGE[st.ev.stage] ?? ""}` : "لم يُنفَّذ", st.beneficiaries ?? "—"]; }),
-    signatures: [{ title: "الموجه الطلابي", name: me ?? "" }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
-    ...logos(),
-  });
+  // البرامج بحالها، والإحصاء، والتصفية
+  const list = (rows ?? []).map((p) => ({ ...p, st: programState(p) }));
+  const doneN = list.filter((p) => p.st.done).length;
+  const benN = list.reduce((a, p) => a + (p.st.done ? Number(p.st.beneficiaries ?? 0) : 0), 0);
+  const ratio = list.length ? Math.round((doneN / list.length) * 100) : 0;
+  const shown = list.filter((p) => (kindF === "all" || p.kind === kindF)
+    && (statusF === "all" || (statusF === "done" ? p.st.done : !p.st.done)));
 
   if (!rows) return <Loader />;
+  if (view === "report") {
+    return <PlanReport grade={grade} me={me} rows={list} bucket={BUCKET} PROGRAM_KIND={PROGRAM_KIND} EV_STAGE={EV_STAGE}
+                       onBack={() => setView("list")} />;
+  }
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
-      <div className="flex flex-wrap gap-2">
-        <button className="btn-primary px-4 py-1.5 text-xs" onClick={() => setNf({ title: "", kind: "awareness", target: "", planned_date: "" })}>+ برنامج</button>
-        {rows.length > 0 && <button className="btn-ghost px-4 py-1.5 text-xs" onClick={printPlan}>طباعة الخطة</button>}
-      </div>
+
+      {/* لوحة الخطة: الأرقام ونسبة التنفيذ */}
+      <section className="card overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 bg-gradient-to-l from-mint-tint to-paper px-4 py-3">
+          <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
+            <p className="text-base font-bold text-ink">الخطة الإرشادية · {GRADE_NAMES[grade] ?? ""}</p>
+            <p className="text-xs text-muted">برامج الصف بموعدها، وتوثيق تنفيذها بالمستفيدين والأثر والصور.</p>
+          </div>
+          <button className="btn-primary px-4 py-1.5 text-xs" onClick={() => setNf({ title: "", kind: "awareness", target: "", planned_date: "" })}>+ برنامج</button>
+          {list.length > 0 && <button className="btn-ghost px-4 py-1.5 text-xs" onClick={() => setView("report")}>تقرير الخطة وطباعتها</button>}
+        </div>
+        <div className="grid grid-cols-2 gap-px bg-line sm:grid-cols-4">
+          {[["برامج الخطة", list.length, "text-ink"], ["نُفّذ", doneN, "text-present"],
+            ["لم يُنفَّذ", list.length - doneN, "text-late"], ["المستفيدون", benN, "text-excused"]].map(([t, v, c]) => (
+            <div key={t} className="bg-paper px-4 py-3 text-center">
+              <p className={`num text-2xl font-bold ${c}`}>{v}</p>
+              <p className="text-[11.5px] text-muted">{t}</p>
+            </div>
+          ))}
+        </div>
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between text-xs text-muted">
+            <span>نسبة تنفيذ الخطة</span><span className="num font-bold text-mint-deep">{ratio}%</span>
+          </div>
+          <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-canvas">
+            <div className="h-full rounded-full bg-mint-deep transition-all" style={{ width: `${ratio}%` }} />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <button className={pill(kindF === "all")} onClick={() => setKindF("all")}>كل الأنواع</button>
+            {Object.entries(PROGRAM_KIND).map(([k, t]) => {
+              const c = list.filter((p) => p.kind === k).length;
+              return c ? <button key={k} className={pill(kindF === k)} onClick={() => setKindF(k)}>{t} <span className="num">({c})</span></button> : null;
+            })}
+            <span className="mx-1 w-px self-stretch bg-line" />
+            {[["all", "الكل"], ["done", "المنفّذة"], ["pending", "غير المنفّذة"]].map(([k, t]) => (
+              <button key={k} className={pill(statusF === k)} onClick={() => setStatusF(k)}>{t}</button>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {nf && (
-        <section className="card space-y-2 p-4">
+        <section className="card space-y-3 p-4">
           <p className="font-semibold text-ink">برنامج جديد</p>
-          <div className="flex flex-wrap gap-1.5">
-            {PRESETS.map(([t, k]) => <button key={t} type="button" className={pill(nf.title === t)} onClick={() => setNf((x) => ({ ...x, title: t, kind: k }))}>{t}</button>)}
+          <div>
+            <p className="mb-1.5 text-xs text-muted">برامج جاهزة</p>
+            <div className="flex flex-wrap gap-1.5">
+              {PRESETS.map(([t, k]) => <button key={t} type="button" className={pill(nf.title === t)} onClick={() => setNf((x) => ({ ...x, title: t, kind: k }))}>{t}</button>)}
+            </div>
           </div>
           <input className="field w-full" value={nf.title} placeholder="عنوان البرنامج" onChange={(e) => setNf((x) => ({ ...x, title: e.target.value }))} />
           <div className="flex flex-wrap gap-1.5">
@@ -210,39 +265,87 @@ export function Programs({ grade, me }) {
         </section>
       )}
 
-      {rows.length === 0 && !nf ? <p className="card px-4 py-6 text-center text-sm text-muted">لا برامج في خطة الصف بعد.</p> : (
-        <div className="card divide-y divide-line overflow-hidden">
-          {rows.map((p) => { const st = programState(p); return (
-            <div key={p.id} className="px-4 py-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-ink">{p.title}</p>
-                  <p className="text-xs text-muted">{PROGRAM_KIND[p.kind]}{p.target ? ` · ${p.target}` : ""}
-                    {p.planned_date ? <> · <span className="num">{fmtDate(p.planned_date + "T00:00:00")}</span></> : ""}</p>
+      {list.length === 0 && !nf ? (
+        <div className="card px-6 py-10 text-center">
+          <p className="text-3xl">🗂️</p>
+          <p className="mt-2 text-sm font-semibold text-ink">لا برامج في خطة الصف بعد</p>
+          <p className="mt-1 text-xs text-muted">أضف برامج الخطة من «+ برنامج»، ومنها برامج جاهزة بضغطة.</p>
+        </div>
+      ) : shown.length === 0 ? (
+        <p className="card px-4 py-6 text-center text-sm text-muted">لا برامج بهذه التصفية.</p>
+      ) : (
+        <div className="space-y-3">
+          {shown.map((p) => { const st = p.st; const kc = KIND_STYLE[p.kind] ?? KIND_STYLE.awareness; return (
+            <article key={p.id} className={`card overflow-hidden border-r-4 ${kc.border}`}>
+              <div className="px-4 pb-3 pt-3.5">
+                <div className="flex flex-wrap items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className={`chip ${kc.chip}`}>{PROGRAM_KIND[p.kind]}</span>
+                      {st.done ? <span className="chip bg-present/10 text-present">✓ نُفّذ</span>
+                        : st.ev ? <span className="chip bg-excused/10 text-excused">الحدث: {EV_STAGE[st.ev.stage] ?? st.ev.stage}</span>
+                        : <span className="chip bg-canvas text-muted">لم يُنفَّذ</span>}
+                    </div>
+                    <h3 className="mt-1.5 text-[15px] font-bold leading-snug text-ink">{p.title}</h3>
+                  </div>
+                  <button className="text-xs text-faint hover:text-absent" title="حذف البرنامج" onClick={() => remove(p)}>حذف</button>
                 </div>
-                {st.done && <span className="chip gap-1 whitespace-nowrap bg-present/10 text-present">نُفّذ{st.beneficiaries ? <><span>·</span><span className="num">{st.beneficiaries}</span><span>مستفيدًا</span></> : ""}</span>}
-                {st.ev ? (
-                  <>
-                    {!st.done && <span className="chip bg-excused/10 text-excused">الحدث: {EV_STAGE[st.ev.stage] ?? st.ev.stage}</span>}
-                    <button className="text-xs font-semibold text-mint-deep underline" onClick={() => navigate(`/events?open=${st.ev.id}`)}>
-                      فتح الحدث <span className="num">{st.ev.serial}</span></button>
-                    {!st.done && <button className="text-xs text-muted underline"
-                            onClick={async () => { await supabase.from("guidance_programs").update({ event_id: null }).eq("id", p.id); load(); }}>إلغاء الربط</button>}
-                  </>
-                ) : !st.done && (
-                  <>
-                    <button className="rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white" disabled={busy}
-                            onClick={() => runAsEvent(p)}>تنفيذه حدثًا</button>
-                    <button className="rounded-pill border border-mint-deep px-3 py-1 text-xs font-semibold text-mint-deep"
-                            onClick={() => openLink(p)}>ربط بحدث نُفّذ</button>
-                    <button className="text-xs text-muted underline"
-                            onClick={() => setDoneFor({ p, done_date: todayISO(), beneficiaries: "", outcome: "", files: [] })}>توثيق يدوي</button>
-                  </>
+
+                <dl className="mt-2.5 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                  {[["الفئة المستهدفة", p.target || "—"],
+                    ["الموعد في الخطة", p.planned_date ? fmtDate(p.planned_date + "T00:00:00") : "—"],
+                    ["تاريخ التنفيذ", st.date ? fmtDate(st.date + "T00:00:00") : "—"],
+                    ["المستفيدون", st.beneficiaries ?? "—"]].map(([k, v]) => (
+                    <div key={k} className="rounded-sm2 bg-canvas px-2.5 py-1.5">
+                      <dt className="text-[10.5px] text-faint">{k}</dt>
+                      <dd className="num break-words text-[12px] font-semibold leading-snug text-ink">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+
+                {p.status === "done" && p.outcome && (
+                  <p className="mt-2.5 whitespace-pre-line text-[13px] leading-relaxed text-ink">
+                    <span className="font-semibold text-mint-deep">الأثر والملاحظات: </span>{p.outcome}
+                  </p>
                 )}
-                <button className="text-xs text-absent underline" onClick={() => remove(p)}>حذف</button>
+                {p.status === "done" && p.photos?.length > 0 && (
+                  <div className="mt-2.5 flex gap-2">
+                    {p.photos.map((ph, i) => (
+                      <button key={ph} onClick={() => openPhoto(ph)} title={`صورة ${i + 1}`}
+                              className="h-20 w-28 overflow-hidden rounded-sm2 border border-line bg-canvas">
+                        {thumbs[ph] ? <img src={thumbs[ph]} alt="" className="h-full w-full object-cover" />
+                                    : <span className="text-xs text-muted">صورة {i + 1}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* الإجراءات */}
+              {(st.ev || !st.done) && (
+                <div className="flex flex-wrap items-center gap-2 border-t border-line bg-canvas/50 px-4 py-2">
+                  {st.ev ? (
+                    <>
+                      <button className="text-xs font-semibold text-mint-deep underline" onClick={() => navigate(`/events?open=${st.ev.id}`)}>
+                        فتح الحدث <span className="num">{st.ev.serial}</span></button>
+                      {!st.done && <button className="text-xs text-muted underline"
+                              onClick={async () => { await supabase.from("guidance_programs").update({ event_id: null }).eq("id", p.id); load(); }}>إلغاء الربط</button>}
+                    </>
+                  ) : (
+                    <>
+                      <button className="rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white" disabled={busy}
+                              onClick={() => runAsEvent(p)}>تنفيذه حدثًا</button>
+                      <button className="rounded-pill border border-mint-deep bg-paper px-3 py-1 text-xs font-semibold text-mint-deep"
+                              onClick={() => openLink(p)}>ربط بحدث نُفّذ</button>
+                      <button className="rounded-pill border border-line bg-paper px-3 py-1 text-xs font-semibold text-muted"
+                              onClick={() => setDoneFor({ p, done_date: todayISO(), beneficiaries: "", outcome: "", files: [] })}>توثيق يدوي</button>
+                    </>
+                  )}
+                </div>
+              )}
+
               {linkFor?.p.id === p.id && (
-                <div className="mt-2 space-y-1.5 rounded-sm2 bg-canvas p-3">
+                <div className="space-y-1.5 border-t border-line bg-canvas p-3">
                   <p className="text-xs font-semibold text-ink">اختر الحدث الذي نُفّذ فيه البرنامج</p>
                   {linkFor.events.length === 0 && <p className="text-xs text-muted">لا أحداث تراها.</p>}
                   <div className="max-h-56 divide-y divide-line overflow-y-auto rounded-sm2 border border-line bg-white">
@@ -257,20 +360,19 @@ export function Programs({ grade, me }) {
                   <button className="btn-ghost px-4 py-1.5 text-xs" onClick={() => setLinkFor(null)}>إلغاء</button>
                 </div>
               )}
-              {p.status === "done" && (p.outcome || p.photos?.length > 0) && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted">
-                  {p.outcome && <span className="flex-1">{p.outcome}</span>}
-                  {(p.photos ?? []).map((ph, i) => <button key={ph} className="text-mint-deep underline" onClick={() => openPhoto(ph)}>صورة {i + 1}</button>)}
-                </div>
-              )}
               {doneFor?.p.id === p.id && (
-                <div className="mt-2 space-y-2 rounded-sm2 bg-canvas p-3">
+                <div className="space-y-2 border-t border-line bg-canvas p-3">
+                  <p className="text-xs font-semibold text-ink">توثيق تنفيذ البرنامج</p>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <input type="date" className="field num" value={doneFor.done_date} onChange={(e) => setDoneFor((x) => ({ ...x, done_date: e.target.value }))} />
-                    <input className="field num" inputMode="numeric" value={doneFor.beneficiaries} placeholder="عدد المستفيدين"
-                           onChange={(e) => setDoneFor((x) => ({ ...x, beneficiaries: e.target.value.replace(/\D/g, "") }))} />
+                    <label className="text-[11px] text-muted">تاريخ التنفيذ
+                      <input type="date" className="field num mt-0.5" value={doneFor.done_date} onChange={(e) => setDoneFor((x) => ({ ...x, done_date: e.target.value }))} />
+                    </label>
+                    <label className="text-[11px] text-muted">عدد المستفيدين
+                      <input className="field num mt-0.5" inputMode="numeric" value={doneFor.beneficiaries} placeholder="مثل: 30"
+                             onChange={(e) => setDoneFor((x) => ({ ...x, beneficiaries: e.target.value.replace(/\D/g, "") }))} />
+                    </label>
                   </div>
-                  <textarea className="field w-full" rows={2} value={doneFor.outcome} placeholder="الأثر والملاحظات"
+                  <textarea className="field w-full" rows={3} value={doneFor.outcome} placeholder="الأثر والملاحظات: نتائج القياس، وما تحقق من أهداف البرنامج…"
                             onChange={(e) => setDoneFor((x) => ({ ...x, outcome: e.target.value }))} />
                   <label className="block text-xs text-muted">صور التنفيذ (حتى {MAX_PHOTOS})
                     <input type="file" accept="image/*" multiple className="mt-1 block text-xs"
@@ -282,7 +384,7 @@ export function Programs({ grade, me }) {
                   </div>
                 </div>
               )}
-            </div>
+            </article>
           ); })}
         </div>
       )}
