@@ -128,9 +128,16 @@ export default function StudyWeekCard({ className = "" }) {
                className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
         </span>
       )}
-      {open && evN > 0 && (
-        <ul className="basis-full space-y-1.5 border-t border-line pt-3">
-          {w.events.map((e) => {
+      {open && evN > 0 && <WeekEvents events={w.events} className="basis-full border-t border-line pt-3" />}
+    </section>
+  );
+}
+
+/* أحداث الأسبوع من التقويم بأيامها (للبطاقة والشارة) */
+function WeekEvents({ events, className = "" }) {
+  return (
+    <ul className={`space-y-1.5 ${className}`}>
+          {events.map((e) => {
             const k = KIND[e.kind] ?? KIND.event;
             return (
               <li key={`${e.kind}${e.title}${e.from}`} className="flex flex-wrap items-center gap-2 text-sm">
@@ -144,7 +151,36 @@ export default function StudyWeekCard({ className = "" }) {
             );
           })}
         </ul>
-      )}
-    </section>
+  );
+}
+
+/* شارة الأسبوع الدراسي لرأس الرئيسيات (HeaderChips) بدل البطاقة الكاملة — لا تزاحم بطاقات الرئيسية.
+   تفتح أحداث الأسبوع تحتها بالضغط إن وُجدت. */
+export function StudyWeekChip() {
+  const [w, setW] = useState(undefined);
+  const [open, setOpen] = useState(false);
+  useEffect(() => { loadStudyWeek().then(setW).catch(() => setW(null)); }, []);
+  if (!w || !w.n) return null;
+  const evN = w.events?.length ?? 0;
+  return (
+    <div>
+      <button type="button" onClick={() => evN && setOpen((x) => !x)} aria-expanded={evN ? open : undefined}
+              className={`flex w-full flex-wrap items-center gap-x-1.5 rounded-pill border border-mint-light bg-paper px-3 py-1 text-xs text-mint-deep ${evN ? "" : "cursor-default"}`}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+             className="h-3.5 w-3.5 shrink-0"><path d="M3 5h18v16H3zM3 10h18M8 3v4M16 3v4" /></svg>
+        {w.holiday ? <b className="font-bold">{w.holiday}</b>
+          : <span>الأسبوع الدراسي <b className="font-bold">{weekWord(w.n)}</b></span>}
+        <span className="opacity-50">·</span>
+        <span className="opacity-80"><span className="num">{fmtHijri(w.from).slice(0, 5)}</span> إلى <span className="num">{fmtHijri(w.to).slice(0, 5)}</span></span>
+        {evN > 0 && (
+          <span className="flex items-center gap-0.5 rounded-pill bg-mint-tint px-1.5 font-semibold">
+            أحداث <span className="num">{evN}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"
+                 className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}><path d="M6 9l6 6 6-6" /></svg>
+          </span>
+        )}
+      </button>
+      {open && evN > 0 && <WeekEvents events={w.events} className="card mt-1.5 px-3 py-2.5" />}
+    </div>
   );
 }

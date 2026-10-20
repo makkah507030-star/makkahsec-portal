@@ -2,16 +2,18 @@ import { nextHoliday } from "../lib/schoolTime";
 import { fmtHijri } from "../lib/dates";
 import { countAr } from "../lib/arabicCount";
 import ExamCountdown from "./ExamCountdown.jsx";
+import { StudyWeekChip } from "./StudyWeekCard.jsx";
 
 /* =====================================================================
-   شارات رأس الرئيسية: الإجازة القادمة (بلون بطاقة الإجازة) فوق شارة
-   الاختبارات النهائية. كل شارة تختفي وحدها حين لا موعد قادم لها،
+   شارات رأس الرئيسية: الأسبوع الدراسي وأحداثه، ثم الإجازة القادمة (بلون
+   بطاقة الإجازة)، ثم الاختبارات النهائية. كل شارة تختفي وحدها حين لا موعد قادم لها،
    وأثناء الإجازة نفسها تتولاها بطاقة الإجازة.
    ===================================================================== */
 // الشارتان بعرض واحد: العمود بعرض أطولهما، وكل شارة تمتد لعرضه
 export default function HeaderChips() {
   return (
     <div className="inline-flex max-w-full flex-col gap-1.5">
+      <StudyWeekChip />
       <NextHolidayChip />
       <ExamCountdown />
     </div>
