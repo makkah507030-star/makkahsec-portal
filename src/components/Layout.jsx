@@ -145,6 +145,7 @@ const ADMIN_GROUPS = [
       { to: "/login-log", label: "سجل الدخول والخروج", perm: "login_log", icon: "door" },
       { to: "/site-metrics", label: "مؤشرات الموقع", techOnly: true, icon: "eye" },
       { to: "/usage-report", label: "إحصائية الاستخدام", techOnly: true, icon: "trend" },
+      { to: "/ai-usage", label: "تقرير المساعد الذكي", techOnly: true, icon: "sparkles", kw: "Claude تكلفة توليد أسئلة" },
       { to: "/audit-log", label: "سجل العمليات", techOnly: true, icon: "list" },
       { to: "/quizzes", label: "اختبارات المعلمين", techOnly: true, icon: "quiz", kw: "اطلاع اختبارات اسئلة المعلمين" },
       { to: "/quiz-marks", label: "التصحيح والدرجات", techOnly: true, icon: "target", kw: "اطلاع درجات اختبارات المعلمين" },
