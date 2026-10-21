@@ -31,7 +31,7 @@ export default function QudratAdmin() {
       const [{ data, error }, { data: s }, { count }] = await Promise.all([
         supabase.rpc("qudrat_admin_students"),
         supabase.rpc("qudrat_admin_skills"),
-        supabase.from("qudrat_asks").select("id", { count: "exact", head: true }).is("reply", null),
+        supabase.from("qudrat_asks").select("id", { count: "exact", head: true }).is("replied_at", null),
       ]);
       if (error) setErr(/qudrat_admin/.test(error.message) ? "اللوحة غير مفعّلة بعد: يلزم تشغيل ملف supabase/qudrat_4.sql." : error.message);
       setSt(data ?? []); setSk(s ?? []); setOpenAsks(count ?? 0);

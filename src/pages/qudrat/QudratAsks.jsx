@@ -6,12 +6,14 @@ import { fmtHijri } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import { CMP, SECS, SKILLS, loadBank } from "../../qudrat-content/index.js";
 import { LETTERS, Stem } from "./shared.jsx";
+import { VoicePlayer, VoiceRecorder, uploadVoice } from "./Voice.jsx";
 
 /* =====================================================================
    أسئلة الطلاب في مركز التدريب (القدرات): يرى المعلم ما وصله من طلاب فصوله
    (الكمي لمعلم الرياضيات، واللفظي لمعلم اللغة العربية)، ومعه السؤال الأصلي
    وإجابته وطريقة حله، فيرد ويصل الرد إلى الطالب بإشعار. والمدير ووكيل
    الشؤون التعليمية والدعم الفني يرون الكل، ومنه ما لم يُحدَّد له معلم.
+   والرد نص أو تسجيل صوتي أو كلاهما (qudrat_5.sql).
    ===================================================================== */
 
 export default function QudratAsks() {
@@ -39,9 +41,10 @@ export default function QudratAsks() {
   };
   useEffect(() => { load(); }, []);
 
-  const list = useMemo(() => (rows ?? []).filter((r) => (tab === "open" ? !r.reply : !!r.reply)), [rows, tab]);
+  // الرد الصوتي وحده يترك النص فارغًا، فالعبرة بوقت الرد
+  const list = useMemo(() => (rows ?? []).filter((r) => (tab === "open" ? !r.replied_at : !!r.replied_at)), [rows, tab]);
   if (rows === null) return <Loader />;
-  const openN = rows.filter((r) => !r.reply).length;
+  const openN = rows.filter((r) => !r.replied_at).length;
   const pill = (on) => `rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium ${on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
   return (
@@ -61,7 +64,7 @@ export default function QudratAsks() {
       ) : (
         <div className="space-y-3">
           {list.map((r) => <AskCard key={r.id} r={r} st={names.s?.[r.student_id]} teacher={names.t?.[r.teacher_id]} q={bank[r.qkey]}
-                                     onReplied={(reply) => setRows((l) => l.map((x) => (x.id === r.id ? { ...x, reply, replied_at: new Date().toISOString() } : x)))} />)}
+                                     onReplied={(v) => setRows((l) => l.map((x) => (x.id === r.id ? { ...x, ...v, replied_at: new Date().toISOString() } : x)))} />)}
         </div>
       )}
     </div>
@@ -71,14 +74,18 @@ export default function QudratAsks() {
 function AskCard({ r, st, teacher, q, onReplied }) {
   const [show, setShow] = useState(false);
   const [text, setText] = useState("");
+  const [voice, setVoice] = useState(null);   // { blob, secs, ext }
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const send = async () => {
     setBusy(true); setErr("");
-    const { error } = await supabase.rpc("qudrat_reply", { p_id: r.id, p_reply: text });
+    try {
+      const audio = voice ? await uploadVoice(r.id, voice) : null;
+      const { error } = await supabase.rpc("qudrat_reply", { p_id: r.id, p_reply: text, p_audio: audio, p_secs: voice?.secs ?? null });
+      if (error) throw new Error(/qudrat_reply/.test(error.message) && voice ? "الرد الصوتي غير مفعّل بعد: يلزم تشغيل ملف supabase/qudrat_5.sql." : error.message);
+      onReplied({ reply: text.trim(), reply_audio: audio, reply_secs: voice?.secs ?? null });
+    } catch (e) { setErr(e.message); }
     setBusy(false);
-    if (error) return setErr(error.message);
-    onReplied(text.trim());
   };
   const opts = q ? (q.cmp ? CMP : q.o) : null;
   return (
@@ -106,13 +113,17 @@ function AskCard({ r, st, teacher, q, onReplied }) {
         </div>
       )}
       <p className="text-[15px] leading-relaxed text-ink">{r.body}</p>
-      {r.reply ? (
-        <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-sm leading-relaxed text-ink"><b className="text-mint-deep">الرد: </b>{r.reply}</p>
+      {r.replied_at ? (
+        <div className="space-y-2 rounded-sm2 bg-mint-tint px-3 py-2 text-sm leading-relaxed text-ink">
+          {r.reply && <p><b className="text-mint-deep">الرد: </b>{r.reply}</p>}
+          {r.reply_audio && <VoicePlayer path={r.reply_audio} secs={r.reply_secs} />}
+        </div>
       ) : (
         <div className="space-y-2">
-          <textarea className="field min-h-[4.5rem]" value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب شرحك للطالب…" />
+          <textarea className="field min-h-[4.5rem]" value={text} onChange={(e) => setText(e.target.value)} placeholder="اكتب شرحك للطالب، أو سجّله بصوتك، أو كليهما…" />
+          <VoiceRecorder onChange={setVoice} disabled={busy} />
           {err && <p className="text-xs text-absent">{err}</p>}
-          <button className="btn-primary" disabled={busy || text.trim().length < 2} onClick={send}>{busy ? "جاري الإرسال…" : "أرسل الرد"}</button>
+          <button className="btn-primary" disabled={busy || (text.trim().length < 2 && !voice)} onClick={send}>{busy ? "جاري الإرسال…" : "أرسل الرد"}</button>
         </div>
       )}
     </section>
