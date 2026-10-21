@@ -70,7 +70,14 @@ export default function Referrals() {
   const load = async () => {
     const { data } = await supabase.from("student_referrals")
       .select("*").order("created_at", { ascending: false }).limit(200);
-    setRows(data ?? []);
+    // رقم هوية الطالب للبطاقة (لا يُحفظ في الإحالة): من سجل الطلاب لمن يحق له قراءته
+    const ids = [...new Set((data ?? []).map((r) => r.student_id).filter(Boolean))];
+    const nid = {};
+    for (let i = 0; i < ids.length; i += 150) {
+      const { data: st } = await supabase.from("students").select("id, national_id").in("id", ids.slice(i, i + 150));
+      (st ?? []).forEach((x) => { nid[x.id] = x.national_id; });
+    }
+    setRows((data ?? []).map((r) => ({ ...r, student_nid: nid[r.student_id] ?? null })));
   };
 
   useEffect(() => { load(); }, [uid]);
@@ -1140,10 +1147,14 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
     <div className="card p-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-ink">{r.student_name}</p>
-          <p className="num mt-0.5 text-xs text-faint">
-            {r.serial} · {r.class_label}{r.subject ? ` · ${r.subject}` : ""}
-            {r.period_no ? ` · الحصة ${r.period_no}` : ""}
+          <p className="truncate text-sm font-semibold text-ink">
+            {r.student_name}
+            {r.student_nid && <span className="num mr-2 text-xs font-normal text-muted">{r.student_nid}</span>}
+          </p>
+          {/* السطر عربي الاتجاه، والأرقام وحدها لاتينية (num) — فلا يتبدّل ترتيب أجزائه */}
+          <p className="mt-0.5 text-xs text-faint">
+            <span className="num">{r.serial}</span> · {r.class_label}{r.subject ? ` · ${r.subject}` : ""}
+            {r.period_no ? <> · الحصة <span className="num">{r.period_no}</span></> : ""}
             {r.kind === "behavior" && ` · مخالفة سلوكية — الدرجة ${degreeName(r.violation_degree)}`}
             {r.kind === "missing" && " · طالب مفقود"}
           </p>
