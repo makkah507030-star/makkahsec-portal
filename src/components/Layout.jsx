@@ -756,14 +756,6 @@ export default function Layout({ children }) {
         {/* أسفل القائمة: الحساب والمساعدة */}
         <div className={`space-y-0.5 border-t border-line py-2 ${iconOnly ? "px-2" : "px-3"}`}>
           {footer.map((i) => navItem(i, { iconOnly }))}
-          {!iconOnly && (
-            <p className="px-3 pt-1 text-[10.5px] leading-relaxed text-faint">
-              {RIGHTS_LINE}
-              <span className="block">
-                <Link to="/terms" className="hover:text-mint-deep">الشروط</Link> · <Link to="/privacy" className="hover:text-mint-deep">الخصوصية</Link>
-              </span>
-            </p>
-          )}
           {desktop && (
             <button type="button" onClick={() => setCollapsedSaved(!collapsed)}
                     title={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
@@ -846,6 +838,10 @@ export default function Layout({ children }) {
           {/* الزر العائم فوق الشريط السفلي: مسافة إضافية أسفل الصفحة كي لا يغطي آخر المحتوى */}
           <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-6 lg:pb-5 ${showBack ? "pb-36" : "pb-24"}`}>
             <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
+            {/* سطر الحقوق أسفل كل صفحة، بعيدًا عن أزرار القائمة */}
+            <footer className="mx-auto mt-10 max-w-5xl border-t border-line pt-3 text-center text-[11px] leading-relaxed text-faint print:hidden">
+              {RIGHTS_LINE} · <Link to="/terms" className="hover:text-mint-deep">الشروط</Link> · <Link to="/privacy" className="hover:text-mint-deep">الخصوصية</Link>
+            </footer>
           </main>
           {isStaff && <QuickNote />}
         </div>
