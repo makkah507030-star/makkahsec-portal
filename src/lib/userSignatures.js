@@ -56,6 +56,13 @@ async function loadAll() {
     const url = links?.[i]?.signedUrl;
     if (url) out.set(normName(nameBy.get(s.user_id)), url);
   });
+  // توقيعي باسمي في جدول المعلمين أيضًا: كشوف المعلم (رصد الدرجات وسجل المتابعة) تكتب اسمه من
+  // جدول المعلمين، وقد يختلف عن اسم حسابه (ثلاثي ورباعي أو بإملاء آخر) فيضيع توقيعه
+  const mine = out.get(normName(nameBy.get(user.id)));
+  if (mine) {
+    const { data: t } = await supabase.from("teachers").select("full_name").eq("user_id", user.id).maybeSingle();
+    if (normName(t?.full_name)) out.set(normName(t.full_name), mine);
+  }
   return out;
 }
 

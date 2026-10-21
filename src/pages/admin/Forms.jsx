@@ -432,7 +432,20 @@ export default function Forms({ view = "issue", openKey = null }) {
   // تكريم المتفوقين من دورة الاختبار: { students: [{ id, full_name }], reason, quiz }
   const location = useLocation();
   const [honor, setHonor] = useState(() => location.state?.honor ?? null);
-  const { session, profile, adminRoles, isTeacher } = useSession();
+  const { session, profile, adminRoles, isTeacher, effectiveRole } = useSession();
+  // صفة المُصدِر تحت توقيعه: للمعلم الذي يحمل دورًا إداريًا أيضًا (مثل معلم الكيمياء وبرنامج جلوب)
+  // يختار الصفة؛ والافتراضي يتبع الواجهة التي يعمل بها (المعلم أو الإدارة)
+  const myRoles = (adminRoles ?? []).filter((r) => r !== "admin");
+  const [spec, setSpec] = useState("");
+  const [issueAs, setIssueAs] = useState(null);   // null = حسب الواجهة الحالية
+  useEffect(() => {
+    if (!isTeacher || !session?.user?.id) return;
+    supabase.from("teachers").select("specialization").eq("user_id", session.user.id).maybeSingle()
+      .then(({ data }) => setSpec((data?.specialization ?? "").trim()));
+  }, [isTeacher, session?.user?.id]);
+  const teacherLabel = spec ? `معلم ${spec.replace(/^معلم\s+/, "")}` : "المعلم";
+  const asTeacher = !myRoles.length || (isTeacher && (issueAs ?? (effectiveRole === "teacher" ? "teacher" : "admin")) === "teacher");
+  const issuerRole = asTeacher ? teacherLabel : myRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و");
   const isManager = (adminRoles ?? []).some((r) => r === "tech_support" || r === "principal");
   const isApprover = (adminRoles ?? []).includes("principal");
   const usage = useUsageCounts();
@@ -1002,11 +1015,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     if (se) { setSaving(false); setMsg({ ok: false, text: `تعذّر إصدار الرقم: ${se.message}` }); return; }
 
     const usesIssuer = picked.signature_source === "issuer" || picked.signature_source === "both";
-    // صفة المُصدِر كما تُطبع تحت توقيعه — مسمّاه الوظيفي الفعلي
-    const roles = (adminRoles ?? []).filter((r) => r !== "admin");
-    const issuerRole = roles.length
-      ? roles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و")
-      : "المعلم";
+    // صفة المُصدِر كما تُطبع تحت توقيعه: issuerRole (أعلى المكوّن) — مسمّاه الوظيفي أو صفته معلمًا
     const row = {
       template_id: picked.id,
       serial,
@@ -1374,9 +1383,9 @@ export default function Forms({ view = "issue", openKey = null }) {
   /* ---------------- تعبئة نموذج ---------------- */
   if (picked) {
     // المعاينة قبل الإصدار: اسم المُصدِر وصفته كما سيُطبعان
-    const previewRoles = (adminRoles ?? []).filter((r) => r !== "admin");
     const d = issued ?? { serial: null, signature_name: profile?.full_name, signature_source: picked.signature_source,
-                          signature_role: previewRoles.length ? previewRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و") : "المعلم" };
+                          signature_role: issuerRole };
+    const usesIssuerNow = picked.signature_source === "issuer" || picked.signature_source === "both";
     const selfNow = !issued && !editing && (chosen.length
       ? chosen.some((c) => isSelfTarget(c, c.full_name, session.user.id, profile?.full_name))
       : isSelfTarget(null, values.recipient, session.user.id, profile?.full_name));
@@ -1423,6 +1432,19 @@ export default function Forms({ view = "issue", openKey = null }) {
 
         <div className="no-print grid min-w-0 gap-4 lg:grid-cols-[320px,minmax(0,1fr)]">
           <section className="card min-w-0 space-y-3 p-4">
+            {isTeacher && myRoles.length > 0 && usesIssuerNow && !issued && (
+              <div>
+                <p className="text-xs text-muted">أُصدره بصفتي</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {[["teacher", teacherLabel], ["admin", myRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و")]].map(([k, l]) => (
+                    <button key={k} type="button" onClick={() => setIssueAs(k)}
+                      className={`rounded-pill px-3 py-1.5 text-xs font-semibold ${
+                        (asTeacher ? "teacher" : "admin") === k ? "bg-mint-deep text-white" : "border border-line text-muted hover:bg-canvas"}`}>{l}</button>
+                  ))}
+                </div>
+                <p className="mt-1 text-[11px] text-faint">تُطبع الصفة تحت توقيعك في المستند.</p>
+              </div>
+            )}
             {(picked.presets ?? []).length > 0 && (
               <div>
                 <p className="text-xs text-muted">صيغ جاهزة — اضغط إحداها لتعبئة السبب</p>

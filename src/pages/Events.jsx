@@ -196,6 +196,7 @@ export default function Events() {
 
 /* --------------------------- حدث جديد --------------------------- */
 function NewEvent({ uid, profile, roles, onDone }) {
+  const { effectiveRole } = useSession();
   const [cats, setCats] = useState([]);
   const [f, setF] = useState({
     title: "", category: "", event_date: todayISO(), end_date: "",
@@ -215,7 +216,8 @@ function NewEvent({ uid, profile, roles, onDone }) {
     if (f.title.trim().length < 3 || !f.event_date || (f.end_date && f.end_date < f.event_date)) return;
     setBusy(true);
     const { data: serial } = await supabase.rpc("next_event_serial");
-    const roleLabel = roles.length ? (ADMIN_ROLE_LABEL[roles[0]] ?? "") : "معلم";
+    // صفة المنظّم: بواجهة المعلم «معلم» ولو حمل دورًا إداريًا (مثل برنامج جلوب)، وإلا مسمّاه الإداري
+    const roleLabel = roles.length && effectiveRole !== "teacher" ? (ADMIN_ROLE_LABEL[roles[0]] ?? "") : "معلم";
 
     const { data, error } = await supabase.from("school_events").insert({
       serial,
