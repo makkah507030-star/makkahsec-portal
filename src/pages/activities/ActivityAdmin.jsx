@@ -4,6 +4,7 @@
 // فتبقى المعطّلة محفوظة للاستفادة منها لاحقًا، وتقرير الاستخدام.
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { useBackStep } from "../../lib/backStep";
 import { GAMES, MEDIA_BUCKET, mediaUrl, sectionMeta, sectionsOf } from "../../lib/activities.js";
 import Loader from "../../components/Loader.jsx";
 import { activeYear } from "../../lib/performance.js";
@@ -166,6 +167,7 @@ function UsageReport() {
   const [cardsBy, setCardsBy] = useState({});   // البطاقات التي استخدمها كل معلم (activities_6.sql)
   const [open, setOpen] = useState(null);
   const [report, setReport] = useState(false);
+  useBackStep(report, () => setReport(false), "رجوع إلى استخدام المعلمين");
   useEffect(() => {
     (async () => {
       const year = await activeYear();

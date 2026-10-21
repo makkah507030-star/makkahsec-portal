@@ -2,6 +2,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { useBackStep } from "../lib/backStep";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { todayISO, todayDow, GRADE_NAMES } from "../lib/schoolTime";
 import { currentPeriodNo, loadPeriodTimes } from "../lib/periodTimes";
@@ -63,6 +64,8 @@ export default function Referrals() {
       : ["inbox", "all"].includes(params.get("tab")) ? params.get("tab") : isTeacher ? "new" : "inbox");
   const [msg, setMsg] = useNotice(null);
   const [viewing, setViewing] = useState(null);
+  // ملف الإحالة يُفتح داخل الصفحة: زر الرجوع يغلقه بدل مغادرة الصفحة
+  useBackStep(!!viewing, () => setViewing(null), "رجوع إلى الإحالات");
 
   const load = async () => {
     const { data } = await supabase.from("student_referrals")
@@ -1144,6 +1147,12 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
             {r.kind === "behavior" && ` · مخالفة سلوكية — الدرجة ${degreeName(r.violation_degree)}`}
             {r.kind === "missing" && " · طالب مفقود"}
           </p>
+          {/* صاحب الإحالة: المعلم في إحالة الحصة، ومن أنشأها في المخالفة والمفقود */}
+          {r.teacher_name && (
+            <p className="mt-0.5 text-xs text-muted">
+              {r.kind === "behavior" || r.kind === "missing" ? "أنشأها" : "المعلم"}: <span className="font-semibold text-ink">{r.teacher_name}</span>
+            </p>
+          )}
         </div>
         <Sticker flag={r.flag} />
         {stage.group === "done" && <span className={`chip shrink-0 ${st.c}`}>{st.t}</span>}
