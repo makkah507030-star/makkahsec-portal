@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { describeEdgeError } from "../lib/edgeError.js";
+import { countAr } from "../lib/arabicCount.js";
 
 const KINDS = [
   { key: "mcq", label: "اختيار من متعدد", def: 5 },
@@ -13,6 +14,8 @@ const KINDS = [
 ];
 const LEVELS = [["easy", "سهل"], ["mixed", "متدرج"], ["hard", "متقدم"]];
 const LETTERS = ["أ", "ب", "ج", "د"];
+// عدد الأسئلة مفعولًا به: «ولّد سؤالًا واحدًا / سؤالين / 10 أسئلة / 12 سؤالًا»
+const qAcc = (n) => (n === 1 ? "سؤالًا واحدًا" : countAr(n, "question", { acc: true }));
 
 // الملف base64 بلا مقدمة data:
 const toBase64 = (file) => new Promise((ok, fail) => {
@@ -69,7 +72,7 @@ export default function QuizGenerate({ quiz, allowed, nextOrder, onDone, onClose
     const { data, error } = await supabase.from("quiz_questions").insert(rows).select();
     setBusy(false);
     if (error) { setErr(error.message); return; }
-    onDone(data ?? [], { ok: true, text: `أُضيف ${rows.length} سؤالًا من المساعد الذكي. راجعها وعدّل ما تحتاج.` });
+    onDone(data ?? [], { ok: true, text: `أُضيف إلى الاختبار من المساعد الذكي: ${countAr(rows.length, "question")}. راجعها وعدّل ما تحتاج.` });
   };
 
   const toggle = (i) => setPicked((p) => { const n = new Set(p); if (n.has(i)) n.delete(i); else n.add(i); return n; });
@@ -118,14 +121,14 @@ export default function QuizGenerate({ quiz, allowed, nextOrder, onDone, onClose
           {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
           <button type="button" className="btn-primary w-full"
                   disabled={busy || (!text.trim() && !file) || total < 1 || total > 30 || left === 0} onClick={generate}>
-            {busy ? "جارٍ التوليد… قد يستغرق دقيقة" : left === 0 ? "بلغت حدّك الشهري" : `ولّد ${total} سؤالًا`}
+            {busy ? "جارٍ التوليد… قد يستغرق دقيقة" : left === 0 ? "بلغت حدّك الشهري" : `ولّد ${qAcc(total)}`}
           </button>
           {total > 30 && <p className="text-xs text-absent">الحد 30 سؤالًا في الطلب الواحد.</p>}
         </>
       ) : (
         <>
           <p className="text-sm text-ink">
-            ولّد المساعد <bdi className="num">{items.length}</bdi> سؤالًا. <b>راجع كل سؤال</b> واختر ما تضيفه، ثم عدّله في الاختبار كأي سؤال.
+            ولّد المساعد {qAcc(items.length)}. <b>راجع كل سؤال</b> واختر ما تضيفه، ثم عدّله في الاختبار كأي سؤال.
           </p>
           <div className="space-y-2">
             {items.map((q, i) => (

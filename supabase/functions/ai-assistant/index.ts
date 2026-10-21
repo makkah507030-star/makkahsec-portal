@@ -81,7 +81,8 @@ Deno.serve(async (req) => {
 
     // الحصة الشهرية (بتوقيت مكة)
     const { data: quota } = await userClient.rpc("ai_my_quota");
-    if (quota && quota.used >= quota.limit) return json({ error: `بلغت حدّك الشهري (${quota.limit} طلبًا). يتجدد أول الشهر القادم.` }, 429);
+    const reqs = (n: number) => (n === 1 ? "طلب واحد" : n === 2 ? "طلبان" : n >= 3 && n <= 10 ? `${n} طلبات` : `${n} طلبًا`);
+    if (quota && quota.used >= quota.limit) return json({ error: `بلغت حدّك الشهري (${reqs(quota.limit)}). يتجدد أول الشهر القادم.` }, 429);
 
     // المدخلات
     const title = clean(body.lesson?.title).slice(0, 200);
