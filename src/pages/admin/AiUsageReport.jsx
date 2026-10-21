@@ -18,7 +18,8 @@ const MONTHS = [0, 1, 2].map((k) => ({
   k, from: monthStart(k), to: monthStart(k - 1),
   label: k === 0 ? "هذا الشهر" : k === 1 ? "الشهر الماضي" : monthStart(k).toLocaleDateString("ar-SA-u-ca-gregory-nu-latn", { month: "long", year: "numeric" }),
 }));
-const usd = (v) => `${Number(v || 0).toFixed(2)}$`;
+// مبالغ Haiku صغيرة جدًا للطلب الواحد، فتظهر بثلاث منازل تحت الدولار
+const usd = (v) => { const n = Number(v || 0); return `${n.toFixed(n >= 1 || n === 0 ? 2 : 3)}$`; };
 
 export default function AiUsageReport() {
   const [m, setM] = useState(0);

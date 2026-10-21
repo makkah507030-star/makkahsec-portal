@@ -7,7 +7,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Anthropic from "npm:@anthropic-ai/sdk";
 
-const MODEL = Deno.env.get("AI_MODEL") || "claude-opus-5-5";
+// Claude Haiku 5.5 باختيار المدرسة (الأقل تكلفة)، ويتغير بسرّ AI_MODEL دون تعديل الكود
+const MODEL = Deno.env.get("AI_MODEL") || "claude-haiku-5-5";
 // أسعار التقدير لكل مليون وحدة (إدخال، إخراج) بالدولار
 const PRICE: Record<string, [number, number]> = {
   "claude-opus-5-5": [4, 20], "claude-sonnet-5-5": [2, 10], "claude-haiku-5-5": [0.1, 0.5],
@@ -126,7 +127,7 @@ Deno.serve(async (req) => {
       file && !text && "محتوى الدرس في الملف المرفق.",
     ].filter(Boolean).join("\n\n");
 
-    const content: Anthropic.Beta.BetaContentBlockParam[] = [];
+    const content: Anthropic.ContentBlockParam[] = [];
     if (file) {
       content.push(file.media_type === "application/pdf"
         ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: file.data } }
@@ -135,15 +136,13 @@ Deno.serve(async (req) => {
     content.push({ type: "text", text: ask });
 
     const client = new Anthropic();
-    const res = await client.beta.messages.create({
+    const res = await client.messages.create({
       model: MODEL,
       max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",                          // إن اعتذر النموذج يُعاد الطلب على نموذج بديل في الخادم
       output_config: { effort: "medium", format: { type: "json_schema", schema: SCHEMA } },
       system,
       messages: [{ role: "user", content }],
-    } as Anthropic.Beta.MessageCreateParamsNonStreaming);
+    } as Anthropic.MessageCreateParamsNonStreaming);
 
     if (res.stop_reason === "refusal") return json({ error: "اعتذر المساعد عن هذا المحتوى. جرّب نصًا آخر من الدرس." }, 422);
     if (res.stop_reason === "max_tokens") return json({ error: "الطلب أطول من المسموح. قلّل عدد الأسئلة." }, 422);
@@ -175,8 +174,9 @@ Deno.serve(async (req) => {
     }).filter(Boolean);
 
     const model = res.model || MODEL;
-    const [pi, po] = PRICE[model] ?? PRICE[MODEL] ?? [0, 0];
     const inTok = res.usage.input_tokens ?? 0, outTok = res.usage.output_tokens ?? 0;
+    // Haiku 5.5: سعر أعلى إن زاد الطلب على 100 ألف وحدة (صفحات PDF كثيرة)
+    const [pi, po] = model === "claude-haiku-5-5" && inTok > 100000 ? [0.5, 2.5] : PRICE[model] ?? PRICE[MODEL] ?? [0, 0];
     const cost = (inTok * pi + outTok * po) / 1e6;
     await admin.from("ai_usage").insert({ user_id: actor.id, task: "quiz_questions", ref_id: quiz.id, model,
       input_tokens: inTok, output_tokens: outTok, cost_usd: Number(cost.toFixed(4)), items: questions.length });
