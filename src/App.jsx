@@ -86,10 +86,12 @@ const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
 const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
 const PerformanceAdmin = lazy(() => import("./pages/performance/PerformanceAdmin.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
+const Legal = lazy(() => import("./pages/Legal.jsx"));
 const Qudrat = lazy(() => import("./pages/qudrat/Qudrat.jsx"));
 const QudratQuestions = lazy(() => import("./pages/qudrat/QudratQuestions.jsx"));
 const QudratAsks = lazy(() => import("./pages/qudrat/QudratAsks.jsx"));
 const QudratAdmin = lazy(() => import("./pages/qudrat/QudratAdmin.jsx"));
+const QudratReport = lazy(() => import("./pages/qudrat/QudratReport.jsx"));
 const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
 const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
@@ -195,6 +197,9 @@ export default function App() {
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/contact" element={<Feedback />} />
           <Route path="/login" element={<Login />} />
+          {/* شروط الاستخدام وحقوق الملكية، وسياسة الخصوصية: عامتان قبل الدخول وبعده */}
+          <Route path="/terms" element={<Legal kind="terms" />} />
+          <Route path="/privacy" element={<Legal kind="privacy" />} />
           {/* دليل تفعيل الإشعارات صفحة عامة لا تحتاج تسجيل دخول */}
           <Route path="/notify-guide" element={<NotifyGuide />} />
           {/* فتح إشعار قبل استعادة الجلسة → لصفحة الدخول بدل الرئيسية بصمت */}
@@ -523,6 +528,7 @@ export default function App() {
           {/* أسئلة الطلاب لمعلم المادة، ولوحة المتابعة للإدارة؛ القاعدة تفرض من يرى ماذا */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qudrat/asks" element={<QudratAsks />} />}
           {effectiveRole === "admin" && <Route path="/qudrat/admin" element={<QudratAdmin />} />}
+          {effectiveRole === "admin" && <Route path="/qudrat/report" element={<QudratReport />} />}
           <Route path="/referral/:id" element={<ReferralView />} />
           {/* نماذج السلوك والمواظبة — الإصدار للإدارة والموجهين، والنموذج لصاحبه وولي أمره */}
           <Route path="/behavior" element={<BehaviorForms />} />
@@ -531,6 +537,8 @@ export default function App() {
           <Route path="/behavior/:id" element={<BehaviorFormView />} />
           {/* دليل الاستخدام — يعرض لكل مستخدم ما يخصّ دوره */}
           <Route path="/help" element={<Help />} />
+          <Route path="/terms" element={<Legal kind="terms" />} />
+          <Route path="/privacy" element={<Legal kind="privacy" />} />
           <Route path="/notify-guide" element={<NotifyGuide />} />
           <Route path="/ticket/:id" element={<TicketDetail />} />
           <Route path="/guides" element={<Guides />} />

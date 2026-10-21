@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { OWNER_NAME, RIGHTS_YEAR } from "../lib/legal";
 import logoFull from "../assets/logo-full-mint.png";
 import logoIcon from "../assets/icon-mint.png";
 import CalendarTimeline from "../components/CalendarTimeline.jsx";
@@ -214,10 +215,14 @@ export default function Landing() {
         <div className="border-t border-line px-5 py-3 text-center text-[11px] text-faint">
           جميع الحقوق محفوظة{" "}
           <bdi dir="ltr" className="num">
-            © 2026
+            © {RIGHTS_YEAR}
           </bdi>{" "}
-          لمدرسة مكة الثانوية | تم التصميم والتطوير بواسطة محمد بن حسن
-          الحازمي / محضر معمل حاسب آلي
+          {OWNER_NAME} — تصميم البوابة وتطويرها، وتُستخدم في مدرسة مكة الثانوية
+          <span className="mt-1 block">
+            <Link to="/terms" className="hover:text-mint-deep hover:underline">شروط الاستخدام</Link>
+            {" · "}
+            <Link to="/privacy" className="hover:text-mint-deep hover:underline">سياسة الخصوصية</Link>
+          </span>
         </div>
       </footer>
     </div>

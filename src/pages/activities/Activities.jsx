@@ -13,6 +13,8 @@ export default function Activities() {
   const { effectiveRole, adminRoles } = useSession();
   const manager = effectiveRole === "admin" && ["deputy_academic", "tech_support"].some((r) => adminRoles.includes(r));
   const teacher = effectiveRole === "teacher";
+  // الاطلاع على دوري المادة وكأسها في كل الفصول (activities_5.sql): للتقييم والمساعدة
+  const viewer = effectiveRole === "admin" && ["tech_support", "principal", "deputy_academic"].some((r) => adminRoles.includes(r));
   const tabs = [
     { key: "waiting", label: "حقيبة حصص الانتظار" },
     { key: "class", label: "الأنشطة الصفية" },
@@ -42,7 +44,7 @@ export default function Activities() {
         ))}
       </div>
       {(tab === "waiting" || tab === "class") && <ActivityBank key={tab} kind={tab} teacher={teacher} />}
-      {tab === "tools" && <ClassTools teacher={teacher} />}
+      {tab === "tools" && <ClassTools teacher={teacher} viewer={viewer} />}
       {tab === "admin" && <ActivityAdmin />}
     </div>
   );

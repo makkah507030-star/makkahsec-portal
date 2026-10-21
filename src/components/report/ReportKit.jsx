@@ -36,6 +36,13 @@ export const IC = {
 // ألوان السلاسل (مُتحقَّق منها لعمى الألوان): أخضر، أزرق، ذهبي، وردي — بترتيب ثابت
 export const S = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
 
+/* لون رسم SVG بقيمته الفعلية: صورة الطباعة وملف PDF (html-to-image في studio/raster.js)
+   لا تحل متغيرات CSS في خصائص SVG (fill وstroke)، فتظهر الأعمدة سوداء والحلقات بلا لون.
+   القيم نفسها في report.css (.mr) */
+const HEX = { "var(--s1)": "#1F8A5B", "var(--s2)": "#3A72B5", "var(--s3)": "#B07F1A", "var(--s4)": "#B4506A",
+              "var(--mr-deep)": "#3E6350", "var(--mr-mint)": "#89D7AD", "var(--mr-gold)": "#B8912F" };
+const paint = (c) => HEX[c] ?? c;
+
 export const n = (v) => Number(v ?? 0).toLocaleString("en-US");
 export const pct = (a, b) => (b ? Math.round((a / b) * 100) : null);
 export const dmy = (s) => (s ? `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}` : "—");
@@ -101,7 +108,7 @@ export function Ring({ value, label, sub, color = S[0], size }) {
       <svg viewBox="0 0 92 92" style={size ? { width: size, height: size } : undefined}>
         <circle cx="46" cy="46" r={r} fill="none" stroke="#EAF2ED" strokeWidth="9" />
         {value != null && value > 0 && (
-          <circle cx="46" cy="46" r={r} fill="none" stroke={color} strokeWidth="9" strokeLinecap="round"
+          <circle cx="46" cy="46" r={r} fill="none" stroke={paint(color)} strokeWidth="9" strokeLinecap="round"
                   strokeDasharray={`${(c * Math.min(v, 100)) / 100} ${c}`} transform="rotate(-90 46 46)" />
         )}
         <text x="46" y="52" textAnchor="middle" fontSize="19" fontWeight="700" fill="currentColor"
@@ -124,7 +131,7 @@ export function Donut({ parts, total, label, size = 150 }) {
         const len = (p.v / sum) * c;
         const gap = arr.length > 1 ? 2.5 : 0;
         const el = (
-          <circle key={i} cx="75" cy="75" r={r} fill="none" stroke={p.c} strokeWidth={w}
+          <circle key={i} cx="75" cy="75" r={r} fill="none" stroke={paint(p.c)} strokeWidth={w}
                   strokeDasharray={`${Math.max(len - gap, 0.1)} ${c}`} strokeDashoffset={-acc} transform="rotate(-90 75 75)" />
         );
         acc += len;
@@ -197,7 +204,7 @@ export function StackedColumns({ cols, series, height = 138, width = 640 }) {
               if (!v) return null;
               const y1 = y(base + v), y0 = y(base);
               base += v;
-              return <rect key={s.k} x={cx - bw / 2} y={y1} width={bw} height={Math.max(y0 - y1 - 2, 1)} rx="3" fill={s.c} />;
+              return <rect key={s.k} x={cx - bw / 2} y={y1} width={bw} height={Math.max(y0 - y1 - 2, 1)} rx="3" fill={paint(s.c)} />;
             })}
             {total > 0 && <text x={cx} y={y(total) - 5} textAnchor="middle" fontSize="12" fontWeight="700" fill="currentColor" fontFamily={F}>{total}</text>}
             <text x={cx} y={H - (col.sub ? 18 : 5)} textAnchor="middle" fontSize="11.5" fontWeight="600" fill="currentColor" fontFamily={F}>{col.label}</text>
@@ -224,7 +231,7 @@ export function GroupedColumns({ cols, series, current, height = 150, width = 64
       <Axis Wd={Wd} left={left} y={y} ymax={ymax} step={step} />
       {cols.map((col, i) => {
         const cx = Wd - (i + 0.5) * slot;
-        const cur = col.key === current;
+        const cur = current != null && col.key === current;
         const groupW = series.length * (bw + 2);
         return (
           <g key={col.key ?? i}>
@@ -235,7 +242,7 @@ export function GroupedColumns({ cols, series, current, height = 150, width = 64
               const x = cx + groupW / 2 - (j + 1) * (bw + 2) + 1;
               return v > 0 ? (
                 <g key={s.k}>
-                  <rect x={x} y={y(v)} width={bw} height={y(0) - y(v)} rx="3" fill={s.c} />
+                  <rect x={x} y={y(v)} width={bw} height={y(0) - y(v)} rx="3" fill={paint(s.c)} />
                   <text x={x + bw / 2} y={y(v) - 4} textAnchor="middle" fontSize="10.5" fontWeight="700" fill="currentColor" fontFamily={F}>{v}</text>
                 </g>
               ) : null;

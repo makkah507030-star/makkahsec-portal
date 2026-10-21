@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { fmtHijri } from "../../lib/dates";
 import { SECS, SKILLS } from "../../qudrat-content/index.js";
+import { VoicePlayer } from "./Voice.jsx";
 
 /* =====================================================================
    سؤال المعلم في مركز التدريب (القدرات): الطالب يسأل عن سؤال لم يفهم حله،
@@ -47,10 +48,10 @@ export function MyAsks({ uid }) {
       .then(({ data }) => setRows(data ?? []));
   }, [uid]);
   if (!rows?.length) return null;
-  const fresh = rows.filter((r) => r.reply && !r.seen).length;
+  const fresh = rows.filter((r) => r.replied_at && !r.seen).length;
   const toggle = () => {
     setOpen((x) => !x);
-    if (!open && fresh) { supabase.rpc("qudrat_seen"); setRows((l) => l.map((r) => ({ ...r, seen: r.seen || !!r.reply }))); }
+    if (!open && fresh) { supabase.rpc("qudrat_seen"); setRows((l) => l.map((r) => ({ ...r, seen: r.seen || !!r.replied_at }))); }
   };
   return (
     <section className="card overflow-hidden">
@@ -69,9 +70,12 @@ export function MyAsks({ uid }) {
               </div>
               {r.q_text && <p className="line-clamp-2 text-xs text-muted">السؤال: {r.q_text}</p>}
               <p className="text-ink">{r.body}</p>
-              {r.reply
-                ? <p className="rounded-sm2 bg-mint-tint px-3 py-2 leading-relaxed text-ink"><b className="text-mint-deep">رد المعلم: </b>{r.reply}</p>
-                : <p className="text-xs text-late">بانتظار رد المعلم</p>}
+              {r.replied_at ? (
+                <div className="space-y-2 rounded-sm2 bg-mint-tint px-3 py-2 leading-relaxed text-ink">
+                  {r.reply && <p><b className="text-mint-deep">رد المعلم: </b>{r.reply}</p>}
+                  {r.reply_audio && <VoicePlayer path={r.reply_audio} secs={r.reply_secs} />}
+                </div>
+              ) : <p className="text-xs text-late">بانتظار رد المعلم</p>}
             </div>
           ))}
         </div>

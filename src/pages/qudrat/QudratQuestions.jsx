@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { useBackStep } from "../../lib/backStep";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { SECS, SKILLS } from "../../qudrat-content/index.js";
@@ -23,6 +24,7 @@ export default function QudratQuestions() {
   const [rows, setRows] = useState(null);
   const [names, setNames] = useState({});
   const [form, setForm] = useState(null);   // null = القائمة
+  useBackStep(!!form, () => setForm(null), "رجوع إلى الأسئلة");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 

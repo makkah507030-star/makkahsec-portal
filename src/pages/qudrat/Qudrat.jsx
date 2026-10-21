@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { useBackStep } from "../../lib/backStep";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { CMP, SECS, SKILLS, SOURCE, fromRow, loadBank } from "../../qudrat-content/index.js";
@@ -40,6 +41,9 @@ export default function Qudrat() {
   const [plan, setPlan] = useState(null);
   const [mocks, setMocks] = useState([]);   // الأحدث أولًا
   const [mock, setMock] = useState(false);  // شاشة الاختبار المحاكي
+  // التدريب والاختبار المحاكي يُفتحان داخل الصفحة: زر الرجوع يعيد إلى المركز
+  useBackStep(!!round, () => setRound(null), "رجوع إلى المركز");
+  useBackStep(mock, () => setMock(false), "رجوع إلى المركز");
 
   useEffect(() => {
     (async () => {

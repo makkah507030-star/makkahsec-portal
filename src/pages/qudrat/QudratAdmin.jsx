@@ -31,7 +31,7 @@ export default function QudratAdmin() {
       const [{ data, error }, { data: s }, { count }] = await Promise.all([
         supabase.rpc("qudrat_admin_students"),
         supabase.rpc("qudrat_admin_skills"),
-        supabase.from("qudrat_asks").select("id", { count: "exact", head: true }).is("reply", null),
+        supabase.from("qudrat_asks").select("id", { count: "exact", head: true }).is("replied_at", null),
       ]);
       if (error) setErr(/qudrat_admin/.test(error.message) ? "اللوحة غير مفعّلة بعد: يلزم تشغيل ملف supabase/qudrat_4.sql." : error.message);
       setSt(data ?? []); setSk(s ?? []); setOpenAsks(count ?? 0);
@@ -64,7 +64,10 @@ export default function QudratAdmin() {
           <h1 className="text-lg font-bold text-ink">متابعة التدريب على القدرات</h1>
           <p className="mt-1 text-sm text-muted">نشاط الطلاب في مركز التدريب ومستوى المدرسة في كل مهارة.</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+        <Link to="/qudrat/report" className="btn-primary">تقرير المتابعة الشهري</Link>
         <Link to="/qudrat/asks" className="btn-ghost">أسئلة الطلاب {openAsks > 0 && <span className="chip bg-absent text-white num">{openAsks}</span>}</Link>
+        </div>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 

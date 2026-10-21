@@ -1,6 +1,7 @@
 // src/components/Layout.jsx
 import { useState, useEffect, useMemo, useRef } from "react";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { RIGHTS_LINE } from "../lib/legal";
+import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { useMyDepartment, headLabel } from "../lib/plc";
@@ -80,7 +81,7 @@ const ADMIN_GROUPS = [
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
       { to: "/activities", label: "بنك الأنشطة", roles: ["deputy_academic", "principal", "tech_support"], icon: "sparkles", kw: "حقيبة حصص الانتظار الأنشطة الصفية العاب" },
-      { to: "/qudrat/admin", label: "متابعة التدريب (القدرات)", roles: ["principal", "deputy_academic", "tech_support"], icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة مركز", also: ["/qudrat"] },
+      { to: "/qudrat/admin", label: "متابعة التدريب (القدرات)", roles: ["principal", "deputy_academic", "tech_support"], icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة مركز تقرير", also: ["/qudrat"] },
     ],
   },
   {
@@ -755,6 +756,14 @@ export default function Layout({ children }) {
         {/* أسفل القائمة: الحساب والمساعدة */}
         <div className={`space-y-0.5 border-t border-line py-2 ${iconOnly ? "px-2" : "px-3"}`}>
           {footer.map((i) => navItem(i, { iconOnly }))}
+          {!iconOnly && (
+            <p className="px-3 pt-1 text-[10.5px] leading-relaxed text-faint">
+              {RIGHTS_LINE}
+              <span className="block">
+                <Link to="/terms" className="hover:text-mint-deep">الشروط</Link> · <Link to="/privacy" className="hover:text-mint-deep">الخصوصية</Link>
+              </span>
+            </p>
+          )}
           {desktop && (
             <button type="button" onClick={() => setCollapsedSaved(!collapsed)}
                     title={collapsed ? "توسيع القائمة" : "طيّ القائمة"}

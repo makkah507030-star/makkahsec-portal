@@ -4,6 +4,9 @@
 // • دوري المادة (أفراد) وكأس المادة (مجموعات): نقاط تتجمع حتى نهاية الفصل الدراسي،
 //   فيُتوَّج بطل الدوري وبطل الكأس. بين طلاب الفصل فقط (supabase/activities_2.sql).
 // • المؤقت.
+// وللدعم الفني والمدير ووكيل الشؤون التعليمية «متابعة الدوري والكأس» في كل الفصول، اطلاعًا
+// فقط مع سجل المنح (supabase/activities_5.sql).
+import { fmtDate } from "../../lib/dates";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
@@ -23,7 +26,7 @@ const shuffle = (a) => { const x = [...a]; for (let i = x.length - 1; i > 0; i--
 const MEDAL = ["🥇", "🥈", "🥉"];
 const classLabel = (c) => (c ? `فصل ${GRADE_NAMES[c.grade] ?? ""} ${c.class_no}`.replace(/\s+/g, " ") : "");
 
-export default function ClassTools({ teacher = true }) {
+export default function ClassTools({ teacher = true, viewer = false }) {
   const [mine, setMine] = useState(null);
   const [sel, setSel] = useState("");
   const [tool, setTool] = useState("pick");
@@ -55,6 +58,7 @@ export default function ClassTools({ teacher = true }) {
     load();
   };
 
+  if (!teacher && viewer) return <LeagueOverview />;
   if (!mine) return <Loader compact />;
   if (!mine.length) {
     return (
@@ -182,7 +186,7 @@ function Picker({ students, big, onPoints }) {
   );
 }
 
-function League({ students, big, compact, cert, onPoints }) {
+function League({ students, big, compact, cert, onPoints, readOnly }) {
   const [who, setWho] = useState(null);
   const [print, setPrint] = useState(false);
   const [reason, setReason] = useState("");
@@ -195,8 +199,8 @@ function League({ students, big, compact, cert, onPoints }) {
           <thead><tr className="border-b border-line bg-canvas text-right text-xs text-muted"><th className="w-12 p-2">#</th><th className="p-2">الطالب</th><th className="p-2 text-center">النقاط</th></tr></thead>
           <tbody>
             {rows.map((s, i) => (
-              <tr key={s.id} onClick={() => !big && setWho(s)}
-                  className={`border-b border-line/50 ${!big ? "cursor-pointer hover:bg-canvas" : ""} ${who?.id === s.id ? "bg-mint-tint" : ""}`}>
+              <tr key={s.id} onClick={() => !big && !readOnly && setWho(s)}
+                  className={`border-b border-line/50 ${!big && !readOnly ? "cursor-pointer hover:bg-canvas" : ""} ${who?.id === s.id ? "bg-mint-tint" : ""}`}>
                 <td className="num p-2 text-center">{s.points > 0 && i < 3 ? MEDAL[i] : rank(i) != null ? i + 1 : ""}</td>
                 <td className="p-2 font-medium text-ink">{s.name}</td>
                 <td className="num p-2 text-center font-bold text-ink">{s.points}</td>
@@ -207,8 +211,8 @@ function League({ students, big, compact, cert, onPoints }) {
       </div>
       {!big && (
         <div className="card h-fit space-y-3 p-4">
-          <p className="text-sm font-semibold text-ink">منح نقاط</p>
-          {who ? (
+          <p className="text-sm font-semibold text-ink">{readOnly ? "دوري المادة" : "منح نقاط"}</p>
+          {readOnly ? <p className="text-xs text-muted">اطلاع فقط: النقاط يمنحها معلم المادة.</p> : who ? (
             <>
               <p className="text-base font-bold text-mint-deep">{who.name}</p>
               <input className="field text-sm" placeholder="السبب (اختياري): إجابة متميزة، واجب…" value={reason} onChange={(e) => setReason(e.target.value)} />
@@ -229,7 +233,7 @@ function League({ students, big, compact, cert, onPoints }) {
   );
 }
 
-function Cup({ board, cid, sid, big, cert, reload, onPoints }) {
+function Cup({ board, cid, sid, big, cert, reload, onPoints, readOnly }) {
   const [print, setPrint] = useState(false);
   const groups = [...board.groups].sort((a, b) => b.points - a.points);
   const [edit, setEdit] = useState(!board.groups.length);
@@ -251,7 +255,9 @@ function Cup({ board, cid, sid, big, cert, reload, onPoints }) {
 
   return (
     <div className="space-y-3">
-      {!big && (edit ? (
+      {readOnly ? (!board.groups.length ? <p className="card p-4 text-center text-sm text-muted">لم تُكوَّن مجموعات الكأس لهذا الفصل بعد.</p>
+        : groups[0]?.points > 0 && <button type="button" className="btn-ghost py-1 text-sm" onClick={() => setPrint(true)}>🏆 شهادات بطل الكأس ({groups[0].name})</button>)
+      : !big && (edit ? (
         <div className="card flex flex-wrap items-end gap-3 p-4">
           <label className="text-xs text-muted">عدد المجموعات
             <input type="number" min={2} max={8} className="field num mt-1 w-24" value={n} onChange={(e) => setN(Math.max(2, Math.min(8, Number(e.target.value) || 2)))} />
@@ -273,14 +279,116 @@ function Cup({ board, cid, sid, big, cert, reload, onPoints }) {
           <div key={g.id} className="card space-y-2 p-4" style={{ borderTop: `6px solid ${g.color ?? "#3E6350"}` }}>
             <div className="flex items-center gap-2">
               <span className="text-2xl">{g.points > 0 && i < 3 ? MEDAL[i] : ""}</span>
-              {big ? <p className="flex-1 text-2xl font-bold text-ink">{g.name}</p>
+              {big || readOnly ? <p className={`flex-1 font-bold text-ink ${big ? "text-2xl" : "text-lg"}`}>{g.name}</p>
                 : <input className="min-w-0 flex-1 bg-transparent text-lg font-bold text-ink outline-none" defaultValue={g.name} onBlur={(e) => e.target.value !== g.name && rename(g, e.target.value)} />}
               <span className={`num font-bold text-ink ${big ? "text-5xl" : "text-3xl"}`}>{g.points}</span>
             </div>
-            <PointButtons size={big ? "lg" : "sm"} onPoints={(p) => onPoints(g, p)} />
+            {!readOnly && <PointButtons size={big ? "lg" : "sm"} onPoints={(p) => onPoints(g, p)} />}
             {!big && <p className="text-[11px] leading-relaxed text-muted">{g.members.map((m) => names[m]).filter(Boolean).join("، ")}</p>}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* متابعة الدوري والكأس للدعم الفني والمدير ووكيل الشؤون التعليمية: كل الفصول والمواد التي فيها
+   نقاط أو مجموعات في الفصل الدراسي الحالي، ولكل منها اللوحة والسجل. اطلاع فقط. */
+function LeagueOverview() {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState("");
+  const [q, setQ] = useState("");
+  const [cur, setCur] = useState(null);
+  const [board, setBoard] = useState(null);
+  const [log, setLog] = useState([]);
+  const [tab, setTab] = useState("league");
+  useEffect(() => {
+    supabase.rpc("act_league_overview").then(({ data, error }) => {
+      if (error) setErr(/act_league_overview/.test(error.message) ? "المتابعة تحتاج تشغيل supabase/activities_5.sql." : error.message);
+      setRows(data ?? []);
+    });
+  }, []);
+  useEffect(() => {
+    if (!cur) return;
+    setBoard(null); setLog([]);
+    const a = { p_class: cur.class_id, p_subject: cur.subject_id };
+    supabase.rpc("act_league_board", a).then(({ data, error }) => (error ? setErr(error.message) : setBoard(data)));
+    supabase.rpc("act_league_log", a).then(({ data }) => setLog(data ?? []));
+  }, [cur]);
+  const list = useMemo(() => (rows ?? []).filter((r) => !q.trim() || `${r.class_no} ${r.subject ?? ""} ${r.teachers ?? ""}`.includes(q.trim())), [rows, q]);
+  if (!rows) return <Loader compact />;
+  const when = (t) => (t ? fmtDate(t) : "—");
+
+  if (cur) {
+    const cert = { subject: cur.subject, classLabel: classLabel(cur) };
+    return (
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" className="btn-ghost py-1.5 text-sm" onClick={() => setCur(null)}>→ كل الفصول</button>
+          <p className="flex-1 font-bold text-ink">{classLabel(cur)} · {cur.subject} <span className="text-xs font-normal text-muted">· {cur.teachers || "—"}</span></p>
+          <div className="flex gap-1">
+            {[["league", "🏅 الدوري"], ["cup", "🏆 الكأس"], ["log", "📋 سجل المنح"]].map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setTab(k)}
+                className={`rounded-pill px-3 py-1.5 text-xs font-semibold ${tab === k ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`}>{l}</button>
+            ))}
+          </div>
+        </div>
+        {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
+        {!board ? <Loader compact /> : tab === "league" ? <League students={board.students} cert={cert} readOnly />
+          : tab === "cup" ? <Cup board={board} cert={cert} readOnly /> : (
+          <div className="card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-line bg-canvas text-right text-xs text-muted">
+                <th className="p-2">التاريخ</th><th className="p-2">الطالب أو المجموعة</th><th className="p-2 text-center">النقاط</th><th className="p-2">السبب</th><th className="p-2">منحها</th></tr></thead>
+              <tbody className="divide-y divide-line/50">
+                {log.map((r, i) => (
+                  <tr key={i}>
+                    <td className="num whitespace-nowrap p-2 text-xs text-muted">{when(r.given_at)}</td>
+                    <td className="p-2">{r.cup ? "🏆 " : ""}{r.target ?? "—"}</td>
+                    <td className={`num p-2 text-center font-bold ${r.points < 0 ? "text-absent" : "text-ink"}`}>{r.points > 0 ? `+${r.points}` : r.points}</td>
+                    <td className="p-2 text-xs text-muted">{r.reason || "—"}</td>
+                    <td className="p-2 text-xs text-muted">{r.by_name || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {!log.length && <p className="p-6 text-center text-sm text-muted">لم تُمنح نقاط بعد.</p>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-card bg-mint-tint px-4 py-3 text-sm leading-relaxed text-ink">
+        <b>متابعة دوري المادة وكأسها:</b> كل الفصول التي يستخدم معلموها الدوري أو الكأس في هذا الفصل الدراسي، للتقييم ومساعدة المعلمين.
+        اطلاع فقط؛ النقاط يمنحها معلم المادة. ونشاط كل معلم في الحقيبة والأنشطة الصفية في «إدارة البنك» ← «استخدام المعلمين».
+      </div>
+      {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
+      <input className="field w-full py-1.5 text-sm sm:max-w-xs" placeholder="بحث بالفصل أو المادة أو المعلم…" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead><tr className="border-b border-line bg-canvas text-right text-xs text-muted">
+            <th className="p-2">الفصل</th><th className="p-2">المادة</th><th className="p-2">المعلم</th>
+            <th className="p-2 text-center">المنح</th><th className="p-2 text-center">مجموع النقاط</th><th className="p-2 text-center">طلاب حصلوا عليها</th>
+            <th className="p-2 text-center">مجموعات الكأس</th><th className="p-2">آخر منح</th></tr></thead>
+          <tbody className="divide-y divide-line/50">
+            {list.map((r) => (
+              <tr key={`${r.class_id}|${r.subject_id}`} onClick={() => { setTab("league"); setCur(r); }} className="cursor-pointer hover:bg-canvas">
+                <td className="whitespace-nowrap p-2 font-semibold text-ink">{GRADE_NAMES[r.grade] ?? ""} — {r.class_no}</td>
+                <td className="p-2">{r.subject ?? "—"}</td>
+                <td className="p-2 text-xs text-muted">{r.teachers || "—"}</td>
+                <td className="num p-2 text-center">{r.grants}</td>
+                <td className="num p-2 text-center font-bold text-mint-deep">{r.total}</td>
+                <td className="num p-2 text-center">{r.students}</td>
+                <td className="num p-2 text-center">{r.groups || "—"}</td>
+                <td className="num whitespace-nowrap p-2 text-xs text-muted">{when(r.last_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!list.length && <p className="p-6 text-center text-sm text-muted">{rows.length ? "لا نتائج." : "لم يستخدم أي معلم الدوري أو الكأس في هذا الفصل الدراسي بعد."}</p>}
       </div>
     </div>
   );

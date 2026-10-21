@@ -23,7 +23,6 @@ export default function LabSeating({ lab, canEdit }) {
   const [saved, setSaved] = useState("");           // نسخة المحفوظ للمقارنة
   const [picked, setPicked] = useState(null);       // الطالب المختار للنقل
   const [openSeat, setOpenSeat] = useState(null);   // الجهاز المفتوح تفاصيله
-  const [perDevice, setPerDevice] = useState(1);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useNotice(null);
 
@@ -77,7 +76,8 @@ export default function LabSeating({ lab, canEdit }) {
     setOpenSeat(d.seat_no === openSeat ? null : d.seat_no);
   };
 
-  // توزيع تلقائي بالترتيب الأبجدي على الأجهزة العاملة، والعدد على الجهاز يزيد عند الحاجة
+  // توزيع تلقائي بالترتيب الأبجدي على كل الأجهزة العاملة بالتساوي: جهاز لكل طالب ما كفت الأجهزة،
+  // وإلا طالبان على بعضها وطالب على الباقي (الفرق بين الأجهزة طالب واحد على الأكثر)، فلا يبقى جهاز فارغ
   const autoFill = async () => {
     if (students.some((s) => s.seat_no != null)) {
       const ok = await confirmDanger({
@@ -88,10 +88,15 @@ export default function LabSeating({ lab, canEdit }) {
       if (!ok) return;
     }
     if (!working.length) { setMsg({ ok: false, text: "لا توجد أجهزة تعمل للتوزيع عليها." }); return; }
-    const k = Math.max(perDevice, Math.ceil(students.length / working.length));
-    setStudents((list) => list.map((s, i) => ({ ...s, seat_no: working[Math.floor(i / k)]?.seat_no ?? null })));
+    const N = students.length, D = working.length;
+    const base = Math.floor(N / D), extra = N % D;   // أول extra جهازًا عليها طالب زائد
+    const seatOf = [];
+    working.forEach((d, j) => { for (let k = 0; k < base + (j < extra ? 1 : 0); k++) seatOf.push(d.seat_no); });
+    setStudents((list) => list.map((s, i) => ({ ...s, seat_no: seatOf[i] ?? null })));
     setPicked(null); setOpenSeat(null);
-    if (k > perDevice) setMsg({ ok: true, text: `عدد الطلاب أكبر من الأجهزة العاملة، فوُزّع ${k} على الجهاز.` });
+    setMsg({ ok: true, text: N <= D
+      ? `وُزّع ${N} طالبًا على ${N} جهازًا، طالب على كل جهاز.`
+      : `وُزّع ${N} طالبًا على كل الأجهزة العاملة (${D}): ${extra ? `${base + 1} على ${extra} منها، و${base} على ${D - extra}` : `${base} على كل جهاز`}.` });
   };
 
   const clearAll = () => { setStudents((list) => list.map((s) => ({ ...s, seat_no: null }))); setPicked(null); };
@@ -147,12 +152,6 @@ export default function LabSeating({ lab, canEdit }) {
         </div>
         {students && canEdit && (
           <div className="flex flex-wrap items-end gap-2">
-            <div>
-              <label className="label" htmlFor="seat-k">على الجهاز</label>
-              <select id="seat-k" className="field py-2" value={perDevice} onChange={(e) => setPerDevice(Number(e.target.value))}>
-                {[1, 2, 3].map((n) => <option key={n} value={n}>{n === 1 ? "طالب واحد" : n === 2 ? "طالبان" : "3 طلاب"}</option>)}
-              </select>
-            </div>
             <button type="button" className="btn-ghost py-2" onClick={autoFill}>توزيع تلقائي</button>
             <button type="button" className="btn-ghost py-2 text-muted" onClick={clearAll}>إفراغ</button>
           </div>
