@@ -7,7 +7,7 @@
 create table if not exists public.ai_usage (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null,
-  task          text not null,              -- quiz_questions، ولاحقًا lesson_plan وslides
+  task          text not null,              -- quiz_questions (توليد أسئلة الاختبار)
   ref_id        uuid,                       -- الاختبار أو الدرس المرتبط
   model         text,
   input_tokens  int,
