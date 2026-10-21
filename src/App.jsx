@@ -97,6 +97,7 @@ const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const Guidance = lazy(() => import("./pages/Guidance.jsx"));
 const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx"));
+const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
 const StudentNotes = lazy(() => import("./pages/StudentNotes.jsx"));
 const StudentDropouts = lazy(() => import("./pages/StudentDropouts.jsx"));
 const EthicsCode = lazy(() => import("./pages/EthicsCode.jsx"));
@@ -493,6 +494,8 @@ export default function App() {
           <Route path="/guidance" element={<Guidance />} />
           {/* ملف الطالب الشامل — الصفحة تحصر الطلاب في صفوف المستخدم، والدوال تفرض الصلاحية */}
           {effectiveRole === "admin" && <Route path="/student-file" element={<StudentFile />} />}
+          {/* صفحات الأقسام العامة لقائمة الإدارة — تعرض ما تعرضه القائمة للمستخدم فقط */}
+          {effectiveRole === "admin" && <Route path="/s/:key" element={<SectionHub />} />}
           {/* استمارة توضيح مستوى الطالب — للمعلم سطره، وللتوجيه والوكيل، ولولي الأمر نسخته */}
           <Route path="/inquiry/:id" element={<GuidanceInquiry />} />
           {/* ملاحظات الطلاب — الصفحة تتحقق من الدور، والقاعدة تفرض من يكتب كل نوع */}

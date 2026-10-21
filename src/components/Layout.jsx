@@ -10,6 +10,7 @@ import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
 import { STUDENT_FILE_ROLES } from "./StudentFileLink.jsx";
+import { NavContext } from "../lib/navContext.js";
 import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
 import IdleLogout from "./IdleLogout.jsx";
@@ -155,6 +156,22 @@ const ADMIN_GROUPS = [
       { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
     ],
   },
+];
+
+/* الأقسام العامة لقائمة الإدارة: كل قسم يجمع أقسامًا من ADMIN_GROUPS بعناوينها، ويفتح
+   صفحة بطاقاتها (/s/:key، pages/SectionHub.jsx). القسم الذي يبقى فيه رابط واحد للمستخدم
+   يفتح الرابط مباشرة. أي قسم جديد في ADMIN_GROUPS يُضاف عنوانه هنا. */
+const SECTIONS = [
+  { key: "students", title: "الطلاب", icon: "users", hint: "شؤون الطلاب والسلوك والمواظبة والتوجيه",
+    groups: ["شؤون الطلاب", "السلوك والمواظبة", "التوجيه الطلابي"] },
+  { key: "academic", title: "الشؤون التعليمية", icon: "book", hint: "الجداول والرصد والاختبارات والأنشطة والمعامل",
+    groups: ["الشؤون التعليمية", "المعامل والمختبرات"] },
+  { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والشهادات والأداء الوظيفي والتطوير المهني",
+    groups: ["النماذج", "الأداء الوظيفي"] },
+  { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأدلة والأحداث",
+    groups: ["التواصل والمحتوى"] },
+  { key: "settings", title: "الإعدادات والدعم الفني", icon: "sliders", hint: "الحسابات والصلاحيات والتقويم والاستيراد والدعم",
+    groups: ["إعدادات المدرسة", "الدعم الفني"] },
 ];
 
 const TEACHER_GROUPS = [
@@ -405,10 +422,36 @@ export default function Layout({ children }) {
   }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs]);
   const footer = FOOTER.filter(visible);
 
+  // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
+  const sections = useMemo(() => (!isAdmin ? [] : SECTIONS
+    .map((x) => ({ ...x, groups: groups.filter((g) => x.groups.includes(g.title)) }))
+    .map((x) => ({ ...x, items: x.groups.flatMap((g) => g.items) }))
+    .filter((x) => x.items.length)), [isAdmin, groups]);
+  const topItems = isAdmin ? groups.find((g) => !g.title)?.items ?? [] : [];
+
   const isActive = (i) =>
     i.to === "/" || i.exact
       ? path === i.to
       : [i.to, ...(i.also ?? [])].some((t) => path === t || path.startsWith(t + "/"));
+
+  /* ---------- «الأكثر استخدامًا» (الإدارة): أكثر خمس صفحات يفتحها المستخدم ----------
+     تُعدّ في متصفحه وحده، وتظهر الصفحة بعد فتحها مرتين. */
+  const usageKey = `nav.usage.${effectiveRole}`;
+  const [usage, setUsage] = useState(() => store.get(usageKey, {}));
+  const sectionItems = sections.flatMap((x) => x.items);
+  useEffect(() => {
+    const hit = sectionItems.find(isActive);
+    if (!hit) return;
+    setUsage((u) => { const n = { ...u, [hit.to]: (u[hit.to] ?? 0) + 1 }; store.set(usageKey, n); return n; });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path, sections.length]);
+  const frequent = Object.entries(usage).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1])
+    .map(([to]) => sectionItems.find((i) => i.to === to)).filter(Boolean).slice(0, 5);
+  const sectionTo = (x) => (x.items.length === 1 ? x.items[0].to : `/s/${x.key}`);
+  const sectionNav = (x, iconOnly) => navItem({ to: sectionTo(x), label: x.title, icon: x.icon }, {
+    iconOnly, active: path === `/s/${x.key}` || x.items.some(isActive),
+    badge: x.items.reduce((a, i) => a + badgeOf(i.to), 0),
+  });
 
   /* ---------- أقسام القائمة: قسم واحد مفتوح في كل مرة ----------
      الانتقال إلى صفحة في قسم آخر يفتح قسمها ويطوي الباقي تلقائيًا، وفتح قسم
@@ -650,9 +693,9 @@ export default function Layout({ children }) {
   );
 
   /* ---------- رابط في القائمة ---------- */
-  const navItem = (i, { iconOnly, sub } = {}) => {
-    const active = isActive(i);
-    const n = badgeOf(i.to);
+  const navItem = (i, { iconOnly, sub, active: act, badge } = {}) => {
+    const active = act ?? isActive(i);
+    const n = badge ?? badgeOf(i.to);
     return (
       <NavLink
         key={i.to}
@@ -734,6 +777,20 @@ export default function Layout({ children }) {
             ) : (
               <p className="px-3 py-6 text-center text-[13px] text-muted">لا توجد صفحة بهذا الاسم</p>
             )
+          ) : isAdmin ? (
+            <>
+              <div className="space-y-0.5">{topItems.map((i) => navItem(i, { iconOnly }))}</div>
+              {frequent.length > 0 && (
+                <div className={iconOnly ? "mt-2 border-t border-line pt-2" : "mt-3"}>
+                  {!iconOnly && <p className="mb-1 px-3 py-1.5 text-[12px] font-bold text-muted">الأكثر استخدامًا</p>}
+                  <div className="space-y-0.5">{frequent.map((i) => navItem(i, { iconOnly }))}</div>
+                </div>
+              )}
+              <div className={iconOnly ? "mt-2 border-t border-line pt-2" : "mt-3"}>
+                {!iconOnly && <p className="mb-1 px-3 py-1.5 text-[12px] font-bold text-muted">الأقسام</p>}
+                <div className="space-y-0.5">{sections.map((x) => sectionNav(x, iconOnly))}</div>
+              </div>
+            </>
           ) : (
             groups.map((g, gi) => {
               const isOpen = !g.title || openGroups.has(g.title);
@@ -851,7 +908,9 @@ export default function Layout({ children }) {
 
           {/* الزر العائم فوق الشريط السفلي: مسافة إضافية أسفل الصفحة كي لا يغطي آخر المحتوى */}
           <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-6 lg:pb-5 ${showBack ? "pb-36" : "pb-24"}`}>
-            <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
+            <NavContext.Provider value={{ sections, badgeOf }}>
+              <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
+            </NavContext.Provider>
             {/* سطر الحقوق أسفل كل صفحة، بعيدًا عن أزرار القائمة */}
             <footer className="mx-auto mt-10 max-w-5xl border-t border-line pt-3 text-center text-[11px] leading-relaxed text-faint print:hidden">
               {RIGHTS_LINE} · <Link to="/terms" className="hover:text-mint-deep">الشروط</Link> · <Link to="/privacy" className="hover:text-mint-deep">الخصوصية</Link>
