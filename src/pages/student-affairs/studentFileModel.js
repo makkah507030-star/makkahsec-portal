@@ -8,11 +8,11 @@ import { WARNING_STAGES } from "../../lib/officialAttendance";
 import { STATUS as REF_STATUS, OPEN_STATUSES } from "../../lib/referrals.js";
 
 export const TONE = {
-  ok:   { t: "سليم",   bar: "bg-present", text: "text-present", soft: "bg-present/10", ring: "#2E8B57" },
-  warn: { t: "انتباه", bar: "bg-late",    text: "text-late",    soft: "bg-late/10",    ring: "#C08A1E" },
-  bad:  { t: "ملاحظات", bar: "bg-absent",  text: "text-absent",  soft: "bg-absent/10",  ring: "#B02A2A" },
-  info: { t: "",       bar: "bg-mint-deep", text: "text-mint-deep", soft: "bg-mint-tint", ring: "#3E6350" },
-  none: { t: "لا بيانات", bar: "bg-line", text: "text-muted",  soft: "bg-canvas",     ring: "#C9D3CE" },
+  ok:   { t: "سليم",   long: "وضع سليم",       bar: "bg-present", text: "text-present", soft: "bg-present/10", ring: "#2E8B57" },
+  warn: { t: "انتباه", long: "يحتاج انتباهًا", bar: "bg-late",    text: "text-late",    soft: "bg-late/10",    ring: "#C08A1E" },
+  bad:  { t: "ملاحظات", long: "يحتاج متابعة", bar: "bg-absent",  text: "text-absent",  soft: "bg-absent/10",  ring: "#B02A2A" },
+  info: { t: "",       long: "",               bar: "bg-mint-deep", text: "text-mint-deep", soft: "bg-mint-tint", ring: "#3E6350" },
+  none: { t: "لا بيانات", long: "لا بيانات كافية", bar: "bg-line", text: "text-muted",  soft: "bg-canvas",     ring: "#C9D3CE" },
 };
 
 const WEEKDAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];

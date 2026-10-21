@@ -6,6 +6,7 @@
    والدعم الفني وموجّه صف الطالب. الحدود والحالات في studentFileModel.js.
    ===================================================================== */
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
@@ -42,6 +43,9 @@ export default function StudentFile() {
   const seesAll = (adminRoles ?? []).some((r) => EDIT_ROLES.includes(r));
   const myGrades = [1, 2, 3].filter((g) => seesAll || (adminRoles ?? []).includes(`counselor_${g}`));
   const [all, setAll] = useState(null);
+  // ?id=… من رابط اسم الطالب في الإحالات والإنذارات ونماذج السلوك والتوجيه
+  const [params] = useSearchParams();
+  const linkedId = params.get("id");
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState(null);
   const [from, setFrom] = useState(null);
@@ -53,6 +57,12 @@ export default function StudentFile() {
       .select("student_id, full_name, class_no, grade").order("student_id", { ascending: true }))
       .then((r) => setAll(r.filter((s) => myGrades.includes(s.grade)).sort(byName()))).catch(() => setAll([]));
   }, [myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const s = linkedId && all?.find((x) => x.student_id === linkedId);
+    if (s) { setPicked(s); setQ(s.full_name); }
+  }, [linkedId, all]);
+  const linkedMissing = linkedId && all && !all.some((x) => x.student_id === linkedId);
 
   const matches = useMemo(() => {
     const t = q.trim();
@@ -88,6 +98,7 @@ export default function StudentFile() {
         </>}
       </div>
 
+      {linkedMissing && !picked && <Note tone="warn">هذا الطالب ليس ضمن الطلاب المتاح لك فتح ملفاتهم.</Note>}
       {!picked ? <Note>اختر طالبًا لعرض ملفه الشامل: المواظبة والسلوك والإحالات والتحصيل والإنجازات والتواصل مع ولي أمره، في الفترة المختارة (الفصل الدراسي الحالي افتراضيًا).</Note>
         : from && <FileBody s={picked} from={from} to={to} />}
     </div>
@@ -203,16 +214,20 @@ function Ring({ score, tone }) {
   const T = TONE[tone];
   const r = 30, c = 2 * Math.PI * r;
   return (
-    <div className="relative h-20 w-20" title="مؤشر الحالة العام من المؤشرات الثمانية">
-      <svg viewBox="0 0 72 72" className="h-20 w-20 -rotate-90">
-        <circle cx="36" cy="36" r={r} fill="none" stroke="#E6ECE9" strokeWidth="7" />
-        <circle cx="36" cy="36" r={r} fill="none" stroke={T.ring} strokeWidth="7" strokeLinecap="round"
-          strokeDasharray={c} strokeDashoffset={c * (1 - (score ?? 0) / 100)} />
-      </svg>
-      <div className="absolute inset-0 grid place-items-center text-center leading-tight">
-        <div><p className={`num text-lg font-bold ${T.text}`}>{score ?? "—"}</p>
-          <p className={`text-[10px] font-semibold ${T.text}`}>{T.t || "الحالة"}</p></div>
+    <div className="flex flex-col items-center" title="يُحسب من المؤشرات الثمانية: سليم 2، انتباه 1، ملاحظات 0">
+      <p className="mb-1 text-[11px] text-muted">مؤشر الحالة</p>
+      <div className="relative h-20 w-20">
+        <svg viewBox="0 0 72 72" className="h-20 w-20 -rotate-90">
+          <circle cx="36" cy="36" r={r} fill="none" stroke="#E6ECE9" strokeWidth="7" />
+          <circle cx="36" cy="36" r={r} fill="none" stroke={T.ring} strokeWidth="7" strokeLinecap="round"
+            strokeDasharray={c} strokeDashoffset={c * (1 - (score ?? 0) / 100)} />
+        </svg>
+        <div className="absolute inset-0 grid place-items-center text-center leading-tight">
+          <div><p className={`num text-lg font-bold ${T.text}`}>{score ?? "—"}</p>
+            <p className="text-[9px] text-faint">من 100</p></div>
+        </div>
       </div>
+      <p className={`mt-1 whitespace-nowrap text-[11px] font-semibold ${T.text}`}>{T.long}</p>
     </div>
   );
 }
@@ -584,7 +599,7 @@ function printFile({ s, st, m, data, from, to, fp, kpis }) {
       ${kv("الصف / الفصل", `${GRADE_NAMES[st.grade ?? s.grade] ?? s.grade} / ${st.class_no ?? s.class_no}`)}
       ${kv("ولي الأمر", g ? `${g.name}${g.mobile ? ` — ${g.mobile}` : ""}` : "غير مسجّل")}
       ${kv("الفترة", `${day(from)} — ${day(to)}`)}
-      ${kv("مؤشر الحالة العام", m.score == null ? "—" : `${m.score} من 100 (${TONE[m.overall].t})`)}
+      ${kv("مؤشر الحالة العام", m.score == null ? "—" : `${m.score} من 100 — ${TONE[m.overall].long}`)}
     </table>
     <div class="stat-tiles" style="margin-top:12px">${kpis.map(tile).join("")}</div>
     ${head("نقاط تحتاج انتباهًا", m.alerts.length)}

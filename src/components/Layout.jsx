@@ -9,6 +9,7 @@ import { useTeacherHiddenTabs } from "../lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
+import { STUDENT_FILE_ROLES } from "./StudentFileLink.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
 import IdleLogout from "./IdleLogout.jsx";
@@ -44,7 +45,7 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/students",    label: "كشوف الطلاب",    perm: "students",    icon: "users" },
       // ملف الطالب الشامل — والموجه يرى طلاب صفه وحده (sf_can)
-      { to: "/student-file", label: "ملف الطالب", roles: ["principal", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], icon: "idcard", kw: "ملف شامل سجل الطالب غياب سلوك إحالات درجات شهادات" },
+      { to: "/student-file", label: "ملف الطالب", roles: STUDENT_FILE_ROLES, icon: "idcard", kw: "ملف شامل سجل الطالب غياب سلوك إحالات درجات شهادات" },
       { to: "/student-admission", label: "قبول طالب", roles: ["principal", "tech_support"], icon: "userPlus" },
       { to: "/student-certificate", label: "تعريف طالب منتظم", perm: "students", icon: "idcard" },
       { to: "/permissions", label: "الاستئذان", perm: "permissions", icon: "ticket", kw: "خروج" },

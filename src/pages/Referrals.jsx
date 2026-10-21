@@ -11,6 +11,7 @@ import ViolationPicker from "../components/ViolationPicker.jsx";
 import StudentPicker from "../components/StudentPicker.jsx";
 import { degreeName, typeLabel } from "../lib/behavior";
 import Loader from "../components/Loader.jsx";
+import StudentFileLink from "../components/StudentFileLink.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { fmtDate } from "../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
@@ -1148,7 +1149,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-ink">
-            {r.student_name}
+            <StudentFileLink id={r.student_id}>{r.student_name}</StudentFileLink>
             {r.student_nid && <span className="num mr-2 text-xs font-normal text-muted">{r.student_nid}</span>}
           </p>
           {/* السطر عربي الاتجاه، والأرقام وحدها لاتينية (num) — فلا يتبدّل ترتيب أجزائه */}

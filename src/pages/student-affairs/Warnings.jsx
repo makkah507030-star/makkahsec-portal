@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
+import StudentFileLink from "../../components/StudentFileLink.jsx";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
 import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
@@ -194,6 +195,7 @@ export default function Warnings() {
                 </div>
               </button>
 
+              {open === s.student_id && <div className="mt-2"><StudentFileLink id={s.student_id} pill /></div>}
               {open === s.student_id && (
                 <StudentActions s={s} from={from} to={to}
                   onIssue={(stage) => issueAndPrint(s, stage)}

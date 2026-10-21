@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import ReferralSheet, { ReferralPrintArea, sheetPages } from "../components/ReferralSheet.jsx";
 import Loader from "../components/Loader.jsx";
+import StudentFileLink from "../components/StudentFileLink.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import PresetChips from "../components/PresetChips.jsx";
 import { PRESETS_GUARDIAN, notifyDeputies, notifyUsers } from "../lib/referrals";
@@ -115,7 +116,7 @@ export default function ReferralView() {
       <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <h1 className="truncate text-lg font-bold text-ink">
-            {r.kind === "behavior" ? "إشعار بمشكلة سلوكية" : "إحالة"} — {r.student_name}</h1>
+            {r.kind === "behavior" ? "إشعار بمشكلة سلوكية" : "إحالة"} — <StudentFileLink id={r.student_id}>{r.student_name}</StudentFileLink></h1>
           <p className="num mt-0.5 text-xs text-faint">{r.serial}</p>
         </div>
         <button className="btn-primary" onClick={() => window.print()}>طباعة / حفظ PDF</button>

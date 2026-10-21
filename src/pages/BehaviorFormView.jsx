@@ -5,6 +5,7 @@ import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import Loader from "../components/Loader.jsx";
+import StudentFileLink from "../components/StudentFileLink.jsx";
 import BehaviorSheet, { FORM_KINDS, weekday } from "../components/BehaviorSheet.jsx";
 import { ReferralPrintArea } from "../components/ReferralSheet.jsx";
 import { loadStamp } from "./BehaviorForms.jsx";
@@ -82,7 +83,7 @@ export default function BehaviorFormView() {
       <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <h1 className="flex items-center gap-2 text-lg font-bold text-ink">
-            <span className="truncate">{k.title} — {f.student_name}</span><Sticker flag={f.flag} />
+            <span className="truncate">{k.title} — <StudentFileLink id={f.student_id}>{f.student_name}</StudentFileLink></span><Sticker flag={f.flag} />
           </h1>
           <p className="num mt-0.5 text-xs text-faint">{f.serial}</p>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
+import StudentFileLink from "../components/StudentFileLink.jsx";
 import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
 import { fmtDate } from "../lib/dates";
 import { WARNING_STAGES, loadRangeStart, loadFingerprintPublic } from "../lib/officialAttendance";
@@ -164,7 +165,7 @@ function EarlyWarning({ grade, onOpen }) {
             <div key={r.student_id} className="card flex flex-col gap-2 p-3">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-ink">{r.full_name}</p>
+                  <p className="truncate text-sm font-semibold text-ink"><StudentFileLink id={r.student_id}>{r.full_name}</StudentFileLink></p>
                   <p className="text-[11px] text-muted">فصل <span className="num">{r.class_no}</span>{r.health ? " · لديه ملاحظة صحية" : ""}</p>
                 </div>
                 <button onClick={() => onOpen(r)}
