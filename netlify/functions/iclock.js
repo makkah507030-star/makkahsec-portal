@@ -58,13 +58,13 @@ function setClockCommand() {
 }
 
 /**
- * وقت استلام الخادم بتوقيت الرياض — لا نعتمد على ساعة الجهاز نفسه.
+ * وقت استلام الخادم بتوقيت الرياض: يحدد «اليوم» الذي تُقبل بصماته.
  *
- * سبب هذا القرار: جهاز البصمة الحالي بلا بطارية داخلية (RTC)، فتُعاد
- * ساعته تلقائيًا لتاريخ افتراضي خاطئ (غالبًا سنة 2000) عند كل انقطاع
- * كهرباء — وهذا يحدث يوميًا في هذه المدرسة (الجهاز يُطفأ آخر اليوم).
- * فبدل رفض كل البصمات بسبب "فترة زمنية غير صالحة"، نعتمد لحظة وصول
- * الطلب لخادمنا، إلا إذا كان تاريخ الجهاز هو اليوم (ساعته مضبوطة من الخادم).
+ * أُصلحت بطارية ساعة الجهاز (RTC)، فصار تاريخ البصمة ووقتها في الجهاز
+ * صحيحين حتى بعد انقطاع الكهرباء، فيُعتمد وقت الجهاز نفسه. وتُهمَل كل بصمة
+ * تاريخها غير اليوم: البصمات المخزّنة أثناء انقطاع الإنترنت تصل حين يعود
+ * الاتصال، ولا تُحسب على يوم وصولها (كانت تُسجَّل بوقت الوصول قبل الإصلاح).
+ * ومزامنة الساعة من الخادم كل ساعة باقية احتياطًا.
  */
 function riyadhNow() {
   const fmt = new Intl.DateTimeFormat("en-CA", {
@@ -219,32 +219,33 @@ async function handle(event, admin) {
       // ==========================================================
 
       // صيغة السطر: PIN <tab> DateTime <tab> Status <tab> Verify ...
-      // وقت البصمة: وقت الجهاز إن كان تاريخه اليوم ووقته معقولًا (ساعته
-      // مضبوطة من الخادم)، وإلا وقت استلام الخادم. هذا يحفظ الوقت الصحيح
-      // حين يرسل الجهاز بصمات متأخرة (انقطاع اتصال أو إعادة إرسال سجله).
+      // وقت البصمة هو وقت الجهاز (ساعته ببطارية ومضبوطة)، ولا تُقبل إلا بصمة
+      // تاريخها اليوم: ما خُزّن في أيام سابقة (انقطاع الإنترنت) يُهمَل ولا يُحسب
+      // على يوم وصوله. وما يبدو بعد لحظة الوصول بأكثر من دقيقتين خطأ فيُهمَل.
       const { attendDate, punchTime } = riyadhNow();
       const serverMs = punchTime.getTime();
       const rawUids = [];
       const timeByUid = new Map(); // رقم المستخدم → أبكر وقت بصمة (ms)
+      let oldPunches = 0;
       for (const line of lines) {
         const parts = line.split("\t");
         if (parts.length < 2) continue;
         const uid = String(parts[0]).trim();
         if (!uid) continue;
         rawUids.push(uid);
-        let ms = serverMs;
         const dt = String(parts[1]).trim();
-        if (dt.startsWith(attendDate)) {
-          const dev = new Date(dt.replace(" ", "T") + TZ_OFFSET).getTime();
-          // ساعة الجهاز قد تسبق الحقيقة بثوانٍ (سُجّل حتى 25 ثانية): لا نأخذ وقتًا بعد
-          // لحظة الوصول، فلا تُرفض بصمة وصلت قبل بداية الحصة الأولى لأن الجهاز «متقدّم»
-          if (!isNaN(dev) && dev <= serverMs + 2 * 60000 && dev >= serverMs - 12 * 3600000) ms = Math.min(dev, serverMs);
-        }
+        if (!dt.startsWith(attendDate)) { oldPunches += 1; continue; }
+        const dev = new Date(dt.replace(" ", "T") + TZ_OFFSET).getTime();
+        if (isNaN(dev) || dev > serverMs + 2 * 60000) { oldPunches += 1; continue; }
+        // ساعة الجهاز قد تسبق الحقيقة بثوانٍ: لا نأخذ وقتًا بعد لحظة الوصول، فلا تُرفض
+        // بصمة وصلت قبل بداية الحصة الأولى لأن الجهاز «متقدّم»
+        const ms = Math.min(dev, serverMs);
         if (!timeByUid.has(uid) || ms < timeByUid.get(uid)) timeByUid.set(uid, ms);
       }
+      if (oldPunches) console.log(`iclock: ${oldPunches} punches ignored (not dated today ${attendDate})`);
 
       // لا بصمات صالحة — نؤكّد الاستلام فورًا كي لا يعيد الجهاز الإرسال
-      if (!rawUids.length) return text("OK: 0");
+      if (!timeByUid.size) return text(`OK: ${rawUids.length}`);
 
       const riyadhMin = (ms) => {
         const d = new Date(ms + 3 * 3600000);
