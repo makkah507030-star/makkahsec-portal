@@ -349,7 +349,7 @@ const Badge = ({ n, dot, at = "-top-0.5 -left-1" }) => (n > 0
   : null);
 
 export default function Layout({ children }) {
-  const { session, profile, adminRoles, signOut, can, effectiveRole, dualRole, switchView } = useSession();
+  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
@@ -507,19 +507,30 @@ export default function Layout({ children }) {
       ? `معلم · ${spec}`
       : ROLE_LABEL[effectiveRole] ?? "";
 
-  // زر التبديل بين واجهة الإدارة وواجهة المعلم — يظهر فقط لمن يجمع الدورين
+  // التبديل بين واجهات الحساب: الإدارة والمعلم و«أبنائي» — يظهر لمن له أكثر من واجهة.
+  // بواجهتين زر واحد ينقل إلى الأخرى، وبثلاث قائمة مختصرة
+  const VIEW_LABEL = { admin: "واجهة الإدارة", teacher: "واجهة المعلم", guardian: "أبنائي" };
   const ViewSwitch = () => {
-    if (!dualRole) return null;
-    const toTeacher = isAdmin; // في واجهة الإدارة → ننتقل لواجهة المعلم
+    if (!views || views.length < 2) return null;
+    const go = (v) => { switchView(v); navigate("/"); };
+    const cls = "flex shrink-0 items-center gap-1.5 rounded-pill border border-mint-deep bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep transition-colors hover:bg-mint-light sm:px-3.5";
+    if (views.length === 2) {
+      const other = views.find((v) => v !== effectiveRole) ?? views[0];
+      return (
+        <button onClick={() => go(other)} title="التبديل بين واجهات حسابك" className={cls}>
+          <Icon name="swap" className="h-4 w-4" />
+          <span className="hidden sm:inline">{VIEW_LABEL[other]}</span>
+        </button>
+      );
+    }
     return (
-      <button
-        onClick={() => { switchView(toTeacher ? "teacher" : "admin"); navigate("/"); }}
-        title="التبديل بين واجهة الإدارة وواجهة المعلم"
-        className="flex shrink-0 items-center gap-1.5 rounded-pill border border-mint-deep bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep transition-colors hover:bg-mint-light sm:px-3.5"
-      >
+      <label className={`${cls} cursor-pointer`} title="التبديل بين واجهات حسابك">
         <Icon name="swap" className="h-4 w-4" />
-        <span className="hidden sm:inline">{toTeacher ? "واجهة المعلم" : "واجهة الإدارة"}</span>
-      </button>
+        <select value={effectiveRole} onChange={(e) => go(e.target.value)}
+                className="max-w-[7.5rem] cursor-pointer bg-transparent text-xs font-semibold text-mint-deep outline-none">
+          {views.map((v) => <option key={v} value={v}>{VIEW_LABEL[v]}</option>)}
+        </select>
+      </label>
     );
   };
 

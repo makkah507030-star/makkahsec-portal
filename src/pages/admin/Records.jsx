@@ -9,6 +9,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
 import { byName } from "../../lib/sortAr.js";
+import StaffChildren from "./StaffChildren.jsx";
 
 const TRACK_LABEL = { common_year: "السنة المشتركة", general_track: "المسار العام" };
 const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
@@ -17,6 +18,7 @@ const TABS = [
   { key: "students", label: "الطلاب" },
   { key: "teachers", label: "المعلمون" },
   { key: "guardians", label: "أولياء الأمور" },
+  { key: "staffKids", label: "أبناء المنسوبين" },
   { key: "admins", label: "حسابات الإدارة" },
 ];
 
@@ -66,6 +68,7 @@ export default function Records() {
       {tab === "students" && <StudentsTab year={year} yearLabel={yearLabel} />}
       {tab === "teachers" && <TeachersTab />}
       {tab === "guardians" && <GuardiansTab />}
+      {tab === "staffKids" && <StaffChildren />}
       {tab === "admins" && <AdminAccountsTab />}
     </div>
   );
