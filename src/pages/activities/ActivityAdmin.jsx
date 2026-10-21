@@ -1,14 +1,16 @@
 // src/pages/activities/ActivityAdmin.jsx
 // إدارة بنك الأنشطة (وكيل الشؤون التعليمية): استيراد البطاقات الجاهزة، وإضافة البطاقات
-// وتعديلها بصورها وروابط الفيديو وأسئلة الألعاب، والنشر والإخفاء، وتقرير الاستخدام.
+// وتعديلها بصورها وروابط الفيديو وأسئلة الألعاب، وتفعيلها وتعطيلها (بطاقةً أو قسمًا كاملًا)
+// فتبقى المعطّلة محفوظة للاستفادة منها لاحقًا، وتقرير الاستخدام.
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { GAMES, MEDIA_BUCKET, mediaUrl, sectionMeta, sectionsOf } from "../../lib/activities.js";
 import Loader from "../../components/Loader.jsx";
+import { activeYear } from "../../lib/performance.js";
 import { Cover, CardView } from "./ActivityBank.jsx";
 
 const EMPTY = { kind: "waiting", section: "games", title: "", summary: "", duration_min: 45, goals: "", materials: "",
-  steps: [{ min: 5, text: "" }], grades: [], subject: "", video_url: "", cover_path: null, images: [], game: "", game_data: null, published: true };
+  steps: [{ min: 5, text: "" }], grades: [], subject: "", video_url: "", cover_path: null, images: [], game: "", game_data: null, published: true, emoji: "" };
 
 // أسئلة الألعاب نصًّا: مسابقة الفرق «السؤال | خيار | خيار* | خيار» (* الصحيح)، وحروف «الحرف | السؤال | الجواب»
 const quizToText = (d) => (d?.questions ?? []).map((q) => [q.q, ...q.options.map((o, k) => (k === q.answer ? `${o}*` : o))].join(" | ")).join("\n");
@@ -30,6 +32,7 @@ export default function ActivityAdmin() {
   const [view, setView] = useState(null);
   const [msg, setMsg] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [show, setShow] = useState("all");   // كل البطاقات، أو المفعّلة، أو المعطّلة
 
   const load = async () => {
     const [{ data, error }, { data: u }] = await Promise.all([
@@ -54,14 +57,21 @@ export default function ActivityAdmin() {
     const rows = [...w, ...c].filter((x) => !have.has(x.seed)).map((x, i) => ({
       kind: x.kind, section: x.section, title: x.title, summary: x.summary, duration_min: x.duration_min, goals: x.goals,
       materials: x.materials, steps: x.steps ?? [], grades: x.grades ?? [], game: x.game || null, game_data: x.game_data ?? null,
-      seed_key: x.seed, sort: i, published: true }));
+      emoji: x.emoji ?? null, seed_key: x.seed, sort: i, published: true }));
     const { error } = rows.length ? await supabase.from("activity_cards").insert(rows) : { error: null };
     setBusy(false);
     setMsg(error ? { ok: false, t: error.message } : { ok: true, t: rows.length ? `استُوردت ${rows.length} بطاقة جاهزة ونُشرت للمعلمين.` : "البطاقات الجاهزة مستوردة من قبل." });
     load();
   };
 
-  const toggle = async (c) => { await supabase.from("activity_cards").update({ published: !c.published, updated_at: new Date().toISOString() }).eq("id", c.id); load(); };
+  // التفعيل والتعطيل: المعطّلة تختفي عن المعلمين وتبقى بكل محتواها وسجل استخدامها
+  const setActive = async (ids, on) => {
+    if (!ids.length) return;
+    setCards((cs) => cs.map((c) => (ids.includes(c.id) ? { ...c, published: on } : c)));
+    const { error } = await supabase.from("activity_cards").update({ published: on, updated_at: new Date().toISOString() }).in("id", ids);
+    if (error) setMsg({ ok: false, t: error.message });
+    load();
+  };
   const remove = async (c) => {
     if (!window.confirm(`حذف «${c.title}»؟ يُحذف معه سجل استخدامه.`)) return;
     await supabase.from("activity_cards").delete().eq("id", c.id);
@@ -73,46 +83,152 @@ export default function ActivityAdmin() {
   if (!cards) return <Loader compact />;
   if (form) return <Editor init={form} onClose={(saved) => { setForm(null); if (saved) { setMsg({ ok: true, t: "حُفظت البطاقة." }); load(); } }} />;
 
-  const list = cards.filter((c) => c.kind === kind);
+  const tabsBar = (
+    <div className="inline-flex rounded-card border border-line bg-paper p-1">
+      {[["waiting", "حقيبة الانتظار"], ["class", "الأنشطة الصفية"], ["usage", "استخدام المعلمين"]].map(([k, l]) => (
+        <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-pill px-4 py-1.5 text-[13px] ${kind === k ? "bg-mint-deep font-semibold text-white" : "text-muted"}`}>{l}</button>
+      ))}
+    </div>
+  );
+  if (kind === "usage") return <div className="space-y-4">{tabsBar}<UsageReport /></div>;
+
+  const all = cards.filter((c) => c.kind === kind);
+  const list = all.filter((c) => show === "all" || (show === "on") === c.published);
+  const groups = [...sectionsOf(kind).map((s) => s.key), ...new Set(all.map((c) => c.section))]
+    .filter((k, i, a) => a.indexOf(k) === i)
+    .map((k) => ({ meta: sectionMeta(kind, k), items: list.filter((c) => c.section === k), whole: all.filter((c) => c.section === k) }))
+    .filter((g) => g.items.length);
   const totalUses = uses.length;
+  const onOf = (k) => [cards.filter((c) => c.kind === k && c.published).length, cards.filter((c) => c.kind === k).length];
   return (
     <div className="space-y-4">
       <div className="grid gap-2 sm:grid-cols-4">
-        {[["بطاقات الحقيبة", cards.filter((c) => c.kind === "waiting").length], ["الأنشطة الصفية", cards.filter((c) => c.kind === "class").length],
-          ["مرات التنفيذ", totalUses], ["أعجب المعلمين", uses.filter((u) => u.rating === 1).length]].map(([k, v]) => (
-          <div key={k} className="card p-3 text-center"><p className="num text-2xl font-bold text-ink">{v}</p><p className="text-xs text-muted">{k}</p></div>
+        {[["بطاقات الحقيبة المفعّلة", ...onOf("waiting")], ["الأنشطة الصفية المفعّلة", ...onOf("class")],
+          ["مرات التنفيذ", totalUses], ["أعجب المعلمين", uses.filter((u) => u.rating === 1).length]].map(([k, v, of]) => (
+          <div key={k} className="card p-3 text-center"><p className="text-2xl font-bold text-ink"><span className="num">{v}</span>
+            {of != null && <span className="text-sm font-normal text-muted"> من <span className="num">{of}</span></span>}</p><p className="text-xs text-muted">{k}</p></div>
         ))}
       </div>
       {msg && <p className={`rounded-card px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.t}</p>}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-card border border-line bg-paper p-1">
-          {[["waiting", "حقيبة الانتظار"], ["class", "الأنشطة الصفية"]].map(([k, l]) => (
-            <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-pill px-4 py-1.5 text-[13px] ${kind === k ? "bg-mint-deep font-semibold text-white" : "text-muted"}`}>{l}</button>
-          ))}
-        </div>
+        {tabsBar}
         <button type="button" className="btn-primary" onClick={() => setForm({ ...EMPTY, kind, section: sectionsOf(kind)[0].key, duration_min: kind === "waiting" ? 45 : 10 })}>+ بطاقة جديدة</button>
         <button type="button" className="btn-ghost" disabled={busy} onClick={importSeed}>{busy ? "جارٍ الاستيراد…" : "استيراد البطاقات الجاهزة"}</button>
+        <select className="field ms-auto w-auto py-1.5 text-sm" value={show} onChange={(e) => setShow(e.target.value)}>
+          <option value="all">كل البطاقات</option><option value="on">المفعّلة</option><option value="off">المعطّلة</option>
+        </select>
       </div>
-      <div className="card divide-y divide-line/60">
-        {!list.length && <p className="p-6 text-center text-sm text-muted">لا بطاقات بعد — ابدأ بـ«استيراد البطاقات الجاهزة».</p>}
-        {list.map((c) => {
-          const s = stats[c.id], meta = sectionMeta(c.kind, c.section);
+      <p className="text-xs text-muted">البطاقة المعطّلة تختفي عن المعلمين وتبقى محفوظة بمحتواها وسجل استخدامها، فتُفعَّل متى احتجتها. ويمكن تعطيل قسم كامل من زر القسم.</p>
+      {!all.length && <p className="card p-6 text-center text-sm text-muted">لا بطاقات بعد — ابدأ بـ«استيراد البطاقات الجاهزة».</p>}
+      {all.length > 0 && !groups.length && <p className="card p-6 text-center text-sm text-muted">لا بطاقات {show === "on" ? "مفعّلة" : "معطّلة"}.</p>}
+      {groups.map(({ meta, items, whole }) => {
+        const on = whole.filter((c) => c.published).length;
+        return (
+      <div key={meta.key} className="card divide-y divide-line/60">
+        <div className="flex flex-wrap items-center gap-2 bg-canvas/60 px-3 py-2">
+          <p className="flex-1 text-sm font-bold text-ink">{meta.emoji} {meta.label} <span className="text-xs font-normal text-muted">· مفعّلة {on} من {whole.length}</span></p>
+          {on < whole.length && <button type="button" className="chip bg-present/10 text-present" onClick={() => setActive(whole.filter((c) => !c.published).map((c) => c.id), true)}>تفعيل القسم كله</button>}
+          {on > 0 && <button type="button" className="chip bg-absent/10 text-absent" onClick={() => {
+            if (window.confirm(`تعطيل قسم «${meta.label}» كله؟ تختفي بطاقاته (${on}) عن المعلمين وتبقى محفوظة لتفعيلها لاحقًا.`)) setActive(whole.filter((c) => c.published).map((c) => c.id), false);
+          }}>تعطيل القسم كله</button>}
+        </div>
+        {items.map((c) => {
+          const s = stats[c.id];
           return (
-            <div key={c.id} className="flex items-center gap-3 p-2.5">
-              <div className="h-12 w-16 shrink-0 overflow-hidden rounded-[6px]"><Cover card={c} className="h-12" /></div>
+            <div key={c.id} className={`flex items-center gap-3 p-2.5 ${c.published ? "" : "bg-canvas/40"}`}>
+              <div className={`h-12 w-16 shrink-0 overflow-hidden rounded-[6px] ${c.published ? "" : "opacity-40 grayscale"}`}><Cover card={c} className="h-12" /></div>
               <button type="button" className="min-w-0 flex-1 text-start" onClick={() => setView(c)}>
-                <p className="truncate text-sm font-semibold text-ink">{c.title} {c.game && <span className="text-[11px] text-mint-deep">▶ {GAMES[c.game]}</span>}</p>
-                <p className="text-[11px] text-muted">{meta.emoji} {meta.label}{s ? ` · نُفّذ ${s.n} · 👍 ${s.up} · 👎 ${s.down}` : " · لم يُنفَّذ بعد"}</p>
+                <p className={`truncate text-sm font-semibold ${c.published ? "text-ink" : "text-muted"}`}>{c.title} {c.game && <span className="text-[11px] text-mint-deep">▶ {GAMES[c.game]}</span>}</p>
+                <p className="text-[11px] text-muted">{s ? `نُفّذ ${s.n} · 👍 ${s.up} · 👎 ${s.down}` : "لم يُنفَّذ بعد"}</p>
               </button>
-              <button type="button" onClick={() => toggle(c)} className={`chip shrink-0 ${c.published ? "bg-present/10 text-present" : "bg-canvas text-muted"}`}>{c.published ? "منشورة" : "مخفية"}</button>
-              <button type="button" className="text-xs text-mint-deep underline" onClick={() => setForm({ ...EMPTY, ...c, subject: c.subject ?? "", video_url: c.video_url ?? "", game: c.game ?? "" })}>تعديل</button>
+              <Switch on={c.published} onChange={(v) => setActive([c.id], v)} />
+              <button type="button" className="text-xs text-mint-deep underline" onClick={() => setForm({ ...EMPTY, ...c, subject: c.subject ?? "", video_url: c.video_url ?? "", game: c.game ?? "", emoji: c.emoji ?? "" })}>تعديل</button>
               <button type="button" className="text-xs text-absent underline" onClick={() => remove(c)}>حذف</button>
             </div>
           );
         })}
       </div>
+        );
+      })}
       {view && <CardView card={view} onClose={() => setView(null)} />}
     </div>
+  );
+}
+
+// تقرير الوكيل: استخدام كل معلم للأنشطة في العام الدراسي، وهو ما يُحتسب في شواهد أدائه
+// (أيام لا مرات: 4-2 الصفية، و8-4 كل نشاط ونقاط الدوري، و9-5 التعاونية) — supabase/activities_4.sql
+function UsageReport() {
+  const [rows, setRows] = useState(null);
+  const [err, setErr] = useState("");
+  const [sort, setSort] = useState("days");
+  const [q, setQ] = useState("");
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.rpc("act_usage_report", { p_year: await activeYear() });
+      if (error) setErr(/act_usage_report/.test(error.message) ? "التقرير يحتاج تشغيل supabase/activities_4.sql." : error.message);
+      setRows(data ?? []);
+    })();
+  }, []);
+  const list = useMemo(() => {
+    const m = new Map();   // معلم واحد لكل حساب
+    (rows ?? []).forEach((r) => { if (!m.has(r.user_id) || r.days > m.get(r.user_id).days) m.set(r.user_id, r); });
+    return [...m.values()].filter((r) => !q.trim() || (r.name ?? "").includes(q.trim()))
+      .sort((a, b) => (sort === "name" ? (a.name ?? "").localeCompare(b.name ?? "", "ar") : (b[sort] ?? 0) - (a[sort] ?? 0) || (a.name ?? "").localeCompare(b.name ?? "", "ar")));
+  }, [rows, sort, q]);
+  if (!rows) return <Loader compact />;
+  const users = list.filter((r) => r.days > 0).length;
+  const cols = [["days", "أيام الأنشطة"], ["class_days", "صفية (4-2)"], ["waiting_days", "انتظار"], ["coop_days", "تعاونية (9-5)"], ["league_days", "الدوري والكأس"], ["uses", "مرات التنفيذ"]];
+  return (
+    <div className="space-y-3">
+      {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
+      <div className="grid gap-2 sm:grid-cols-3">
+        {[["معلمون استخدموا الأنشطة", users, list.length], ["أيام أنشطة (للكل)", list.reduce((n, r) => n + r.days, 0)], ["لم يستخدموها بعد", list.length - users]].map(([k, v, of]) => (
+          <div key={k} className="card p-3 text-center"><p className="text-2xl font-bold text-ink"><span className="num">{v}</span>
+            {of != null && <span className="text-sm font-normal text-muted"> من <span className="num">{of}</span></span>}</p><p className="text-xs text-muted">{k}</p></div>
+        ))}
+      </div>
+      <p className="text-xs text-muted">يُحتسب اليوم مرة واحدة مهما تعدّدت أنشطته، وهي الأرقام نفسها التي تظهر شواهدَ في ملف أداء المعلم: 4-2 تنويع الاستراتيجيات، و8-4 الأنشطة المتنوعة (كل نشاط ونقاط الدوري)، و9-5 العمل بالمجموعات.</p>
+      <div className="flex flex-wrap items-center gap-2 print:hidden">
+        <input className="field w-auto flex-1 py-1.5 text-sm sm:max-w-xs" placeholder="بحث باسم المعلم…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <button type="button" className="btn-ghost py-1.5 text-sm" onClick={() => window.print()}>طباعة</button>
+      </div>
+      <div className="card overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-canvas text-xs text-muted">
+            <tr>
+              <th className="cursor-pointer p-2 text-start" onClick={() => setSort("name")}>المعلم{sort === "name" ? " ▾" : ""}</th>
+              {cols.map(([k, l]) => <th key={k} className="cursor-pointer whitespace-nowrap p-2" onClick={() => setSort(k)}>{l}{sort === k ? " ▾" : ""}</th>)}
+              <th className="whitespace-nowrap p-2">👍</th>
+              <th className="whitespace-nowrap p-2">آخر نشاط</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line/60">
+            {list.map((r) => (
+              <tr key={r.user_id} className={r.days ? "" : "text-muted"}>
+                <td className="p-2 font-semibold">{r.name ?? "—"}</td>
+                {cols.map(([k]) => <td key={k} className={`num p-2 text-center ${k === "days" && r.days ? "font-bold text-mint-deep" : ""}`}>{r[k] || "—"}</td>)}
+                <td className="num p-2 text-center">{r.likes || "—"}</td>
+                <td className="num whitespace-nowrap p-2 text-center text-xs">{r.last_on ? new Date(r.last_on).toLocaleDateString("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "short" }) : "—"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!list.length && <p className="p-6 text-center text-sm text-muted">لا معلمين.</p>}
+      </div>
+    </div>
+  );
+}
+
+// مفتاح التفعيل: مفعّلة تظهر للمعلمين، ومعطّلة محفوظة دون أن تظهر
+function Switch({ on, onChange }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)}
+            className="flex shrink-0 items-center gap-1.5 text-[11px] font-semibold" title={on ? "اضغط للتعطيل" : "اضغط للتفعيل"}>
+      <span className={on ? "text-present" : "text-muted"}>{on ? "مفعّلة" : "معطّلة"}</span>
+      <span className={`relative h-5 w-9 rounded-full transition-colors ${on ? "bg-present" : "bg-line"}`}>
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? "right-0.5" : "right-[18px]"}`} />
+      </span>
+    </button>
   );
 }
 
@@ -144,7 +260,7 @@ function Editor({ init, onClose }) {
     const row = { kind: f.kind, section: f.section, title: f.title.trim(), summary: f.summary || null, duration_min: Number(f.duration_min) || null,
       goals: f.goals || null, materials: f.materials || null, steps: f.steps.filter((s) => s.text?.trim()).map((s) => ({ min: Number(s.min) || null, text: s.text.trim() })),
       grades: f.grades, subject: f.kind === "class" ? f.subject || null : null, video_url: f.video_url || null, cover_path: f.cover_path,
-      images: f.images, game: f.game || null, game_data, published: f.published, updated_at: new Date().toISOString() };
+      images: f.images, game: f.game || null, game_data, published: f.published, emoji: f.emoji?.trim() || null, updated_at: new Date().toISOString() };
     setBusy(true); setErr("");
     const { error } = f.id ? await supabase.from("activity_cards").update(row).eq("id", f.id) : await supabase.from("activity_cards").insert(row);
     setBusy(false);
@@ -157,6 +273,7 @@ function Editor({ init, onClose }) {
       <div className="grid gap-3 sm:grid-cols-2">
         <L t="القسم"><select className="field" value={f.section} onChange={(e) => set("section", e.target.value)}>
           {sectionsOf(f.kind).map((s) => <option key={s.key} value={s.key}>{s.emoji} {s.label}</option>)}</select></L>
+        <L t="أيقونة البطاقة (رمز تعبيري واحد، مثل 🎯 أو 🧪)"><input className="field text-xl" maxLength={8} placeholder={sectionMeta(f.kind, f.section).emoji} value={f.emoji ?? ""} onChange={(e) => set("emoji", e.target.value)} /></L>
         <L t="المدة (دقيقة)"><input type="number" className="field num" value={f.duration_min ?? ""} onChange={(e) => set("duration_min", e.target.value)} /></L>
         <L t="العنوان" className="sm:col-span-2"><input className="field" value={f.title} onChange={(e) => set("title", e.target.value)} /></L>
         <L t="وصف مختصر" className="sm:col-span-2"><input className="field" value={f.summary ?? ""} onChange={(e) => set("summary", e.target.value)} /></L>
@@ -215,7 +332,7 @@ function Editor({ init, onClose }) {
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.published} onChange={(e) => set("published", e.target.checked)} /> منشورة للمعلمين</label>
+      <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.published} onChange={(e) => set("published", e.target.checked)} /> مفعّلة (تظهر للمعلمين)</label>
       {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       <div className="flex gap-2">
         <button type="button" className="btn-primary flex-1" disabled={busy} onClick={save}>{busy ? "جارٍ الحفظ…" : "حفظ"}</button>

@@ -274,14 +274,18 @@ function DutyIndicators({ uid, year }) {
 
 /* الشواهد التي حُسب منها عدّاد البند الآلي: للمعلم في ملفه، وللمدير ليقيّمها.
    تُجمع حسب نوعها (العنوان) مع عدد مراته وآخرها، وتُفتح المجموعة لرؤية تفاصيلها. */
+const ACT_ITEMS = ["e04_02", "e08_04", "e09_05"];
+
 function AutoDetails({ uid, year, itemKey }) {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [openG, setOpenG] = useState(null);   // المجموعة المفتوحة تفاصيلها
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.rpc("perf_auto_details", { p_uid: uid, p_year: year, p_item: itemKey });
-      if (error) setErr(error.message?.includes("perf_auto_details") ? "عرض التفاصيل غير مفعّل بعد في قاعدة البيانات." : "تعذّر تحميل التفاصيل.");
+      // بنود الأنشطة لها دالتها (supabase/activities_4.sql)
+      const fn = ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : "perf_auto_details";
+      const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year, p_item: itemKey });
+      if (error) setErr(error.message?.includes(fn) ? "عرض التفاصيل غير مفعّل بعد في قاعدة البيانات." : "تعذّر تحميل التفاصيل.");
       setRows(data ?? []);
     })();
   }, [uid, year, itemKey]);

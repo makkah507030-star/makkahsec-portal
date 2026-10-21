@@ -3,6 +3,7 @@
 // وعرض البطاقة بخطواتها وصورها ورابط الفيديو، وتشغيل اللعبة على السبورة، وتسجيل التنفيذ.
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { GAMES, mediaUrl, sectionMeta, sectionsOf, youtubeId } from "../../lib/activities.js";
 import Loader from "../../components/Loader.jsx";
@@ -10,13 +11,21 @@ import GameHost from "./games/GameHost.jsx";
 import { FloatPortal, canPin, useFloatWindow } from "./FloatWindow.jsx";
 import { Timer } from "./ClassTools.jsx";
 
+// غلاف البطاقة بلا صورة: أيقونة النشاط الملوّنة في دائرة بيضاء على لون قسمه الفاتح
 export function Cover({ card, className = "h-28" }) {
   const meta = sectionMeta(card.kind, card.section);
   const img = mediaUrl(card.cover_path);
+  const small = /\bh-(1[0-6]|[0-9])\b/.test(className);   // مصغّرات قائمة الإدارة
   return img ? <img src={img} alt="" className={`${className} w-full object-cover`} />
     : (
-      <div className={`${className} grid w-full place-items-center bg-gradient-to-br ${meta.tint}`}>
-        <span className="text-5xl drop-shadow">{card.emoji ?? meta.emoji}</span>
+      <div className={`${className} relative grid w-full place-items-center overflow-hidden ${meta.soft}`}>
+        {!small && <>
+          <span className="absolute -left-6 -top-8 h-24 w-24 rounded-full bg-white/50" />
+          <span className="absolute -bottom-10 -right-4 h-28 w-28 rounded-full bg-white/40" />
+        </>}
+        <span className={`relative grid place-items-center rounded-full bg-white ring-2 ${meta.ring} ${small ? "h-8 w-8 text-lg" : "h-[4.5rem] w-[4.5rem] text-4xl shadow-sm"}`}>
+          {card.emoji || meta.emoji}
+        </span>
       </div>
     );
 }
@@ -32,6 +41,10 @@ export default function ActivityBank({ kind, teacher }) {
   const [used, setUsed] = useState(new Set());
   const float = useFloatWindow();
   const [floatCard, setFloatCard] = useState(null);
+  // عدّاد الاستخدام على كل بطاقة: للدعم الفني وحده (قاعدة «activity uses read admin» تسمح له بالقراءة)
+  const { effectiveRole, adminRoles } = useSession();
+  const isTech = effectiveRole === "admin" && adminRoles.includes("tech_support");
+  const [usage, setUsage] = useState({});   // card_id → { n, up, down }
   const openFloat = async (card) => { if (await float.open(card.title, 400, 600)) setFloatCard(card); };
 
   useEffect(() => {
@@ -46,11 +59,21 @@ export default function ActivityBank({ kind, teacher }) {
   }, [kind]);
 
   useEffect(() => {
+    if (!isTech) return;
+    supabase.from("activity_uses").select("card_id, rating").then(({ data }) => {
+      const m = {};
+      (data ?? []).forEach((u) => { const x = (m[u.card_id] ??= { n: 0, up: 0, down: 0 }); x.n++; if (u.rating === 1) x.up++; if (u.rating === -1) x.down++; });
+      setUsage(m);
+    });
+  }, [isTech]);
+
+  useEffect(() => {
     if (!forClass) { setUsed(new Set()); return; }
     supabase.rpc("activity_class_used", { p_class: forClass }).then(({ data }) => setUsed(new Set((data ?? []).map((x) => x.activity_class_used ?? x))));
   }, [forClass]);
 
-  const secs = sectionsOf(kind);
+  // الأقسام التي فيها بطاقات مفعّلة فقط: القسم المعطّل كله لا يظهر للمعلمين
+  const secs = useMemo(() => sectionsOf(kind).filter((s) => (cards ?? []).some((c) => c.section === s.key)), [kind, cards]);
   const list = useMemo(() => {
     const t = q.trim();
     const order = (c) => secs.findIndex((s) => s.key === c.section);
@@ -64,7 +87,7 @@ export default function ActivityBank({ kind, teacher }) {
     <div className="space-y-4">
       {kind === "waiting" && (
         <div className="rounded-card bg-mint-tint px-4 py-3 text-sm leading-relaxed text-ink">
-          <b>حصة الانتظار للترفيه:</b> أنشطة تخفف عن الطلاب ضغط الحصص — ألعاب على السبورة، ورياضة وحركة، وتقنية. اختر واحدة وابدأ خلال دقيقة.
+          <b>حصة الانتظار للترفيه:</b> أنشطة تخفف عن الطلاب ضغط الحصص{secs.length ? ` — ${secs.map((s) => s.label).join("، و")}` : ""}. اختر واحدة وابدأ خلال دقيقة.
         </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
@@ -94,6 +117,13 @@ export default function ActivityBank({ kind, teacher }) {
                   <Cover card={c} />
                   {c.game && <span className="absolute right-2 top-2 rounded-pill bg-white/95 px-2 py-0.5 text-[11px] font-bold text-mint-deep">▶ {GAMES[c.game]}</span>}
                   {used.has(c.id) && <span className="absolute left-2 top-2 rounded-pill bg-black/60 px-2 py-0.5 text-[11px] text-white">قُدّمت لهذا الفصل</span>}
+                  {isTech && (
+                    <span className="absolute bottom-2 left-2 rounded-pill bg-white/95 px-2 py-0.5 text-[11px] font-semibold text-ink shadow-sm" title="يراه الدعم الفني وحده">
+                      نُفّذ <span className="num">{usage[c.id]?.n ?? 0}</span>
+                      {usage[c.id]?.up ? <> · 👍 <span className="num">{usage[c.id].up}</span></> : null}
+                      {usage[c.id]?.down ? <> · 👎 <span className="num">{usage[c.id].down}</span></> : null}
+                    </span>
+                  )}
                 </div>
                 <div className="space-y-1 p-3">
                   <p className="font-bold text-ink">{c.title}</p>
@@ -158,6 +188,7 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
   const [cls, setCls] = useState(defaultClass);
   const [done, setDone] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [ask, setAsk] = useState(false);   // بعد الخروج من اللعبة: تذكير بتسجيل التنفيذ ليُحتسب شاهدًا
   const meta = sectionMeta(card.kind, card.section);
   const yt = youtubeId(card.video_url);
 
@@ -165,11 +196,26 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
     setBusy(true);
     const { error } = await supabase.from("activity_uses").insert({ card_id: card.id, class_id: cls || null, context: card.kind, rating });
     setBusy(false);
-    setDone(error ? { ok: false, t: error.message } : { ok: true, t: "سُجّل التنفيذ ✓ — يظهر شاهدًا في تقرير الاستخدام." });
+    setDone(error ? { ok: false, t: error.message } : { ok: true, t: "سُجّل التنفيذ ✓ — يُحتسب في شواهد ملف أدائك." });
     if (!error) onUsed?.(cls);
   };
 
-  if (game) return <GameHost card={card} onClose={() => setGame(false)} />;
+  if (game) return <GameHost card={card} onClose={() => { setGame(false); if (teacher && !done) setAsk(true); }} />;
+
+  const record = (
+    <>
+      <select className="field text-sm" value={cls} onChange={(e) => setCls(e.target.value)}>
+        <option value="">الفصل (اختياري)</option>
+        {classes.map((c) => <option key={c.id} value={c.id}>{GRADE_NAMES[c.grade] ?? ""} — {c.class_no}</option>)}
+      </select>
+      {done ? <p className={`text-sm ${done.ok ? "text-present" : "text-absent"}`}>{done.t}</p> : (
+        <div className="flex gap-2">
+          <button type="button" className="btn-primary flex-1" disabled={busy} onClick={() => markUsed(1)}>👍 نُفّذ وأعجبني</button>
+          <button type="button" className="btn-ghost flex-1" disabled={busy} onClick={() => markUsed(-1)}>👎 نُفّذ ولم يناسب</button>
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-3 sm:p-6" onClick={onClose}>
@@ -223,21 +269,22 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
           )}
           {teacher && (
             <div className="space-y-2 rounded-card border border-line p-3">
-              <p className="text-sm font-semibold text-ink">نفّذت هذا النشاط؟</p>
-              <select className="field text-sm" value={cls} onChange={(e) => setCls(e.target.value)}>
-                <option value="">الفصل (اختياري)</option>
-                {classes.map((c) => <option key={c.id} value={c.id}>{GRADE_NAMES[c.grade] ?? ""} — {c.class_no}</option>)}
-              </select>
-              {done ? <p className={`text-sm ${done.ok ? "text-present" : "text-absent"}`}>{done.t}</p> : (
-                <div className="flex gap-2">
-                  <button type="button" className="btn-primary flex-1" disabled={busy} onClick={() => markUsed(1)}>👍 نُفّذ وأعجبني</button>
-                  <button type="button" className="btn-ghost flex-1" disabled={busy} onClick={() => markUsed(-1)}>👎 نُفّذ ولم يناسب</button>
-                </div>
-              )}
+              <p className="text-sm font-semibold text-ink">نفّذت هذا النشاط؟ <span className="text-xs font-normal text-muted">سجّله ليُحتسب في شواهد ملف أدائك</span></p>
+              {record}
             </div>
           )}
         </div>
       </div>
+      {ask && (
+        <div className="fixed inset-0 z-[55] grid place-items-center bg-black/50 p-4" onClick={(e) => { e.stopPropagation(); setAsk(false); }}>
+          <div className="card w-full max-w-sm space-y-3 p-4" onClick={(e) => e.stopPropagation()} dir="rtl">
+            <p className="font-bold text-ink">سجّل تنفيذ «{card.title}»</p>
+            <p className="text-sm text-muted">ليُحتسب لك شاهدًا في ملف الأداء (الأنشطة المتنوعة). اختر الفصل وقيّم النشاط.</p>
+            {record}
+            <button type="button" className="w-full text-center text-sm text-muted underline" onClick={() => setAsk(false)}>{done?.ok ? "إغلاق" : "لاحقًا"}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

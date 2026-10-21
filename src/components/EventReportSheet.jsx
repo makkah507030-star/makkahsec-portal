@@ -2,6 +2,7 @@
 import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
 import { fmtDate } from "../lib/dates";
+import { eventDateRange } from "../lib/eventDates.js";
 import BidiDate from "./BidiDate.jsx";
 
 /* =====================================================================
@@ -89,11 +90,11 @@ function Time12({ t }) {
 }
 
 export default function EventReportSheet({ event: e, stats, attended, photos, sigUrl, stampUrl, principalName, principalUrl }) {
-  const date = e?.event_date ? `${e.event_date}T12:00:00` : null;
+  const date = eventDateRange(e, (d) => fmtDate(`${d}T12:00:00`));   // يوم أو فترة ممتدة
   const info = [
     ["رقم الحدث", <span className="num">{e.serial}</span>],
     ["التصنيف", e.category || "—"],
-    ["التاريخ", date ? fmtDate(date) : "—"],
+    ["التاريخ", date || "—"],
     ["الوقت", e.start_time
       ? <>من <Time12 t={e.start_time} />{e.end_time && <> إلى <Time12 t={e.end_time} /></>}</>
       : "—"],

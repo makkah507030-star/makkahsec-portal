@@ -30,6 +30,8 @@ create table if not exists public.activity_cards (
   updated_at  timestamptz not null default now()
 );
 
+alter table public.activity_cards add column if not exists emoji text;   -- أيقونة البطاقة (رمز تعبيري)
+
 create table if not exists public.activity_uses (
   id        uuid primary key default gen_random_uuid(),
   card_id   uuid not null references public.activity_cards(id) on delete cascade,
