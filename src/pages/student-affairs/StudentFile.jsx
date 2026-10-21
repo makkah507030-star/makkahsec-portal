@@ -37,6 +37,10 @@ const day = (d) => (d ? fmtDate(String(d).slice(0, 10) + "T12:00:00") : "—");
 const SCHOOL_DAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس"];
 
 export default function StudentFile() {
+  const { adminRoles } = useSession();
+  // الموجه يرى طلاب صفه وحده؛ المدير والوكيل والدعم الفني كل الصفوف (مطابق لـ guidance_can)
+  const seesAll = (adminRoles ?? []).some((r) => EDIT_ROLES.includes(r));
+  const myGrades = [1, 2, 3].filter((g) => seesAll || (adminRoles ?? []).includes(`counselor_${g}`));
   const [all, setAll] = useState(null);
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState(null);
@@ -47,8 +51,8 @@ export default function StudentFile() {
     loadRangeStart(todayISO()).then((d) => setFrom(d ?? todayISO().slice(0, 8) + "01"));
     fetchAllPaged(() => supabase.from("v_active_students")
       .select("student_id, full_name, class_no, grade").order("student_id", { ascending: true }))
-      .then((r) => setAll(r.sort(byName()))).catch(() => setAll([]));
-  }, []);
+      .then((r) => setAll(r.filter((s) => myGrades.includes(s.grade)).sort(byName()))).catch(() => setAll([]));
+  }, [myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const matches = useMemo(() => {
     const t = q.trim();
@@ -58,6 +62,10 @@ export default function StudentFile() {
 
   return (
     <div className="space-y-4">
+      <div>
+        <h1 className="text-lg font-bold text-ink">ملف الطالب</h1>
+        <p className="text-sm text-muted">كل ما يتعلق بالطالب في صفحة واحدة، بمؤشرات تكشف ما يحتاج متابعة بنظرة.</p>
+      </div>
       <div className="flex flex-wrap items-end gap-3">
         <div className="relative min-w-[16rem] flex-1">
           <input value={q} onChange={(e) => { setQ(e.target.value); setPicked(null); }}

@@ -1,7 +1,7 @@
 // src/pages/student-affairs/studentFileModel.js
 /* =====================================================================
    نموذج ملف الطالب الشامل: يحوّل ما تعيده الدوال الثلاث (supabase/student_file_1..3.sql)
-   إلى مؤشرات بحالة لونية (سليم/انتباه/خلل)، ونقاط تحتاج انتباهًا، وسجل زمني موحّد.
+   إلى مؤشرات بحالة لونية (سليم/انتباه/ملاحظات)، ونقاط تحتاج انتباهًا، وسجل زمني موحّد.
    الحدود هنا وحدها، فيسهل ضبطها.
    ===================================================================== */
 import { WARNING_STAGES } from "../../lib/officialAttendance";
@@ -10,7 +10,7 @@ import { STATUS as REF_STATUS, OPEN_STATUSES } from "../../lib/referrals.js";
 export const TONE = {
   ok:   { t: "سليم",   bar: "bg-present", text: "text-present", soft: "bg-present/10", ring: "#2E8B57" },
   warn: { t: "انتباه", bar: "bg-late",    text: "text-late",    soft: "bg-late/10",    ring: "#C08A1E" },
-  bad:  { t: "خلل",    bar: "bg-absent",  text: "text-absent",  soft: "bg-absent/10",  ring: "#B02A2A" },
+  bad:  { t: "ملاحظات", bar: "bg-absent",  text: "text-absent",  soft: "bg-absent/10",  ring: "#B02A2A" },
   info: { t: "",       bar: "bg-mint-deep", text: "text-mint-deep", soft: "bg-mint-tint", ring: "#3E6350" },
   none: { t: "لا بيانات", bar: "bg-line", text: "text-muted",  soft: "bg-canvas",     ring: "#C9D3CE" },
 };
@@ -82,12 +82,12 @@ export function buildModel(att, con, aca, today) {
       tone: certs.length || attended.length || leaguePts ? "info" : "none" },
   ];
 
-  // مؤشر الحالة العام: سليم=2، انتباه=1، خلل=0 من المؤشرات ذات الحكم
+  // مؤشر الحالة العام: سليم=2، انتباه=1، ملاحظات=0 من المؤشرات ذات الحكم
   const judged = kpis.filter((k) => ["ok", "warn", "bad"].includes(k.tone));
   const score = judged.length ? Math.round((100 * judged.reduce((a, k) => a + (k.tone === "ok" ? 2 : k.tone === "warn" ? 1 : 0), 0)) / (2 * judged.length)) : null;
   const overall = score == null ? "none" : score >= 80 ? "ok" : score >= 55 ? "warn" : "bad";
 
-  // نقاط تحتاج انتباهًا: أهم ما يكشف الخلل، الأشد أولًا
+  // نقاط تحتاج انتباهًا: أهم ما يستدعي المتابعة، الأشد أولًا
   const alerts = [];
   const add = (tone, text) => alerts.push({ tone, text });
   if (att?.student?.dropout && att.student.dropout.status !== "returned") add("bad", "مسجّل في سجل الطلاب المنقطعين");
