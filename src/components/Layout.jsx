@@ -80,7 +80,7 @@ const ADMIN_GROUPS = [
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
       { to: "/activities", label: "بنك الأنشطة", roles: ["deputy_academic", "principal", "tech_support"], icon: "sparkles", kw: "حقيبة حصص الانتظار الأنشطة الصفية العاب" },
-      { to: "/qudrat/admin", label: "متابعة التدريب (القدرات)", roles: ["principal", "deputy_academic", "tech_support"], icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة مركز", also: ["/qudrat"] },
+      { to: "/qudrat/admin", label: "متابعة التدريب (القدرات)", roles: ["principal", "deputy_academic", "tech_support"], icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة مركز تقرير", also: ["/qudrat"] },
     ],
   },
   {

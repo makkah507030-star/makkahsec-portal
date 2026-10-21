@@ -90,6 +90,7 @@ const Qudrat = lazy(() => import("./pages/qudrat/Qudrat.jsx"));
 const QudratQuestions = lazy(() => import("./pages/qudrat/QudratQuestions.jsx"));
 const QudratAsks = lazy(() => import("./pages/qudrat/QudratAsks.jsx"));
 const QudratAdmin = lazy(() => import("./pages/qudrat/QudratAdmin.jsx"));
+const QudratReport = lazy(() => import("./pages/qudrat/QudratReport.jsx"));
 const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
 const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
@@ -523,6 +524,7 @@ export default function App() {
           {/* أسئلة الطلاب لمعلم المادة، ولوحة المتابعة للإدارة؛ القاعدة تفرض من يرى ماذا */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qudrat/asks" element={<QudratAsks />} />}
           {effectiveRole === "admin" && <Route path="/qudrat/admin" element={<QudratAdmin />} />}
+          {effectiveRole === "admin" && <Route path="/qudrat/report" element={<QudratReport />} />}
           <Route path="/referral/:id" element={<ReferralView />} />
           {/* نماذج السلوك والمواظبة — الإصدار للإدارة والموجهين، والنموذج لصاحبه وولي أمره */}
           <Route path="/behavior" element={<BehaviorForms />} />
