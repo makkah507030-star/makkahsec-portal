@@ -6,7 +6,7 @@
 -- رد المعلم المسند إليه السؤال، أو الإدارة (المدير ووكيل الشؤون التعليمية والدعم الفني)
 create or replace function public.qudrat_reply(p_id uuid, p_reply text)
 returns void language plpgsql security definer set search_path = public as $$
-declare a qudrat_asks; nid uuid;
+declare a public.qudrat_asks; nid uuid;
 begin
   select * into a from qudrat_asks where id = p_id;
   if a.id is null then raise exception 'السؤال غير موجود'; end if;
