@@ -189,12 +189,15 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
   const [done, setDone] = useState(null);
   const [busy, setBusy] = useState(false);
   const [ask, setAsk] = useState(false);   // بعد الخروج من اللعبة: تذكير بتسجيل التنفيذ ليُحتسب شاهدًا
+  const [note, setNote] = useState("");     // ملاحظة اختيارية تظهر في التقرير الشامل للبطاقات (activities_6.sql)
   const meta = sectionMeta(card.kind, card.section);
   const yt = youtubeId(card.video_url);
 
   const markUsed = async (rating) => {
     setBusy(true);
-    const { error } = await supabase.from("activity_uses").insert({ card_id: card.id, class_id: cls || null, context: card.kind, rating });
+    const row = { card_id: card.id, class_id: cls || null, context: card.kind, rating };
+    if (note.trim()) row.note = note.trim().slice(0, 300);   // تُرسل حين تُكتب فقط، فلا يتعطل التسجيل قبل تشغيل الملف
+    const { error } = await supabase.from("activity_uses").insert(row);
     setBusy(false);
     setDone(error ? { ok: false, t: error.message } : { ok: true, t: "سُجّل التنفيذ ✓ — يُحتسب في شواهد ملف أدائك." });
     if (!error) onUsed?.(cls);
@@ -208,6 +211,10 @@ export function CardView({ card, teacher, classes = [], defaultClass = "", onUse
         <option value="">الفصل (اختياري)</option>
         {classes.map((c) => <option key={c.id} value={c.id}>{GRADE_NAMES[c.grade] ?? ""} — {c.class_no}</option>)}
       </select>
+      {!done && (
+        <textarea className="field min-h-[3.5rem] text-sm" maxLength={300} value={note} onChange={(e) => setNote(e.target.value)}
+                  placeholder="ملاحظتك على النشاط (اختياري): ما الذي نجح، أو ما يحتاج تعديلًا…" />
+      )}
       {done ? <p className={`text-sm ${done.ok ? "text-present" : "text-absent"}`}>{done.t}</p> : (
         <div className="flex gap-2">
           <button type="button" className="btn-primary flex-1" disabled={busy} onClick={() => markUsed(1)}>👍 نُفّذ وأعجبني</button>

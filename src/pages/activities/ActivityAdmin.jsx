@@ -8,6 +8,7 @@ import { GAMES, MEDIA_BUCKET, mediaUrl, sectionMeta, sectionsOf } from "../../li
 import Loader from "../../components/Loader.jsx";
 import { activeYear } from "../../lib/performance.js";
 import { Cover, CardView } from "./ActivityBank.jsx";
+import ActivityReport from "./ActivityReport.jsx";
 
 const EMPTY = { kind: "waiting", section: "games", title: "", summary: "", duration_min: 45, goals: "", materials: "",
   steps: [{ min: 5, text: "" }], grades: [], subject: "", video_url: "", cover_path: null, images: [], game: "", game_data: null, published: true, emoji: "" };
@@ -162,10 +163,18 @@ function UsageReport() {
   const [err, setErr] = useState("");
   const [sort, setSort] = useState("days");
   const [q, setQ] = useState("");
+  const [cardsBy, setCardsBy] = useState({});   // البطاقات التي استخدمها كل معلم (activities_6.sql)
+  const [open, setOpen] = useState(null);
+  const [report, setReport] = useState(false);
   useEffect(() => {
     (async () => {
-      const { data, error } = await supabase.rpc("act_usage_report", { p_year: await activeYear() });
+      const year = await activeYear();
+      const [{ data, error }, { data: cr }] = await Promise.all([
+        supabase.rpc("act_usage_report", { p_year: year }),
+        supabase.rpc("act_cards_report", { p_year: year }),
+      ]);
       if (error) setErr(/act_usage_report/.test(error.message) ? "التقرير يحتاج تشغيل supabase/activities_4.sql." : error.message);
+      setCardsBy(Object.fromEntries((cr?.teachers ?? []).map((t) => [t.uid, t.cards])));
       setRows(data ?? []);
     })();
   }, []);
@@ -176,6 +185,7 @@ function UsageReport() {
       .sort((a, b) => (sort === "name" ? (a.name ?? "").localeCompare(b.name ?? "", "ar") : (b[sort] ?? 0) - (a[sort] ?? 0) || (a.name ?? "").localeCompare(b.name ?? "", "ar")));
   }, [rows, sort, q]);
   if (!rows) return <Loader compact />;
+  if (report) return <ActivityReport teachers={list.length} onBack={() => setReport(false)} />;
   const users = list.filter((r) => r.days > 0).length;
   const cols = [["days", "أيام الأنشطة"], ["class_days", "صفية (4-2)"], ["waiting_days", "انتظار"], ["coop_days", "تعاونية (9-5)"], ["league_days", "الدوري والكأس"], ["uses", "مرات التنفيذ"]];
   return (
@@ -191,6 +201,7 @@ function UsageReport() {
       <div className="flex flex-wrap items-center gap-2 print:hidden">
         <input className="field w-auto flex-1 py-1.5 text-sm sm:max-w-xs" placeholder="بحث باسم المعلم…" value={q} onChange={(e) => setQ(e.target.value)} />
         <button type="button" className="btn-ghost py-1.5 text-sm" onClick={() => window.print()}>طباعة</button>
+        <button type="button" className="btn-primary py-1.5 text-sm" onClick={() => setReport(true)}>التقرير الشامل للبطاقات</button>
       </div>
       <div className="card overflow-x-auto">
         <table className="w-full text-sm">
@@ -203,14 +214,36 @@ function UsageReport() {
             </tr>
           </thead>
           <tbody className="divide-y divide-line/60">
-            {list.map((r) => (
-              <tr key={r.user_id} className={r.days ? "" : "text-muted"}>
-                <td className="p-2 font-semibold">{r.name ?? "—"}</td>
+            {list.map((r) => {
+              const used = cardsBy[r.user_id] ?? [];
+              const isOpen = open === r.user_id;
+              return [
+              <tr key={r.user_id} className={`${r.days ? "" : "text-muted"} ${used.length ? "cursor-pointer hover:bg-canvas" : ""}`}
+                  onClick={() => used.length && setOpen(isOpen ? null : r.user_id)}>
+                <td className="p-2 font-semibold">
+                  {r.name ?? "—"}
+                  {used.length > 0 && <span className="mr-2 text-xs font-normal text-mint-deep">{isOpen ? "▴" : "▾"} {used.length === 1 ? "بطاقة واحدة" : used.length === 2 ? "بطاقتان"
+                    : <><span className="num">{used.length}</span> {used.length <= 10 ? "بطاقات" : "بطاقة"}</>}</span>}
+                </td>
                 {cols.map(([k]) => <td key={k} className={`num p-2 text-center ${k === "days" && r.days ? "font-bold text-mint-deep" : ""}`}>{r[k] || "—"}</td>)}
                 <td className="num p-2 text-center">{r.likes || "—"}</td>
                 <td className="num whitespace-nowrap p-2 text-center text-xs">{r.last_on ? new Date(r.last_on).toLocaleDateString("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "short" }) : "—"}</td>
-              </tr>
-            ))}
+              </tr>,
+              isOpen && (
+                <tr key={`${r.user_id}-cards`} className="bg-mint-tint/40">
+                  <td colSpan={cols.length + 3} className="p-2.5">
+                    <div className="flex flex-wrap gap-1.5">
+                      {used.map((c) => (
+                        <span key={c.title} className="chip bg-white text-ink ring-1 ring-line">
+                          {c.title}{c.n > 1 && <span className="mr-1 text-mint-deep">· {c.n === 2 ? "مرتان" : <><span className="num">{c.n}</span> {c.n <= 10 ? "مرات" : "مرة"}</>}</span>}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ),
+              ];
+            })}
           </tbody>
         </table>
         {!list.length && <p className="p-6 text-center text-sm text-muted">لا معلمين.</p>}
