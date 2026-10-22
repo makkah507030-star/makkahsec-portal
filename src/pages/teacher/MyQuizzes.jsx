@@ -7,6 +7,7 @@ import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
 import QuizPaper, { QuizPrintArea } from "../../components/QuizPaper.jsx";
 import OnlineQuizPanel from "../../components/OnlineQuizPanel.jsx";
 import QuizImport from "../../components/QuizImport.jsx";
+import QuizGenerate from "../../components/QuizGenerate.jsx";
 import PaperExam from "../../components/PaperExam.jsx";
 import { PAPER_KINDS, BLANK, BLANK_RE, LINES, MODEL_LABEL, groupPaper, paperOpts } from "../../lib/paperExam.js";
 import { shrinkImage } from "../../lib/imageResize.js";
@@ -519,6 +520,7 @@ function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
   const [paperPrint, setPaperPrint] = useState(null);   // { copies, answerKey }
   const kinds = paper ? PAPER_KINDS.filter((k) => !k.hidden) : KINDS;
   const [importing, setImporting] = useState(false);   // استيراد أسئلة من اختبار آخر
+  const [generating, setGenerating] = useState(false); // توليد أسئلة بالمساعد الذكي (supabase/functions/ai-assistant)
 
   // اختبار «تصحيح آلي» قديم سبق نشره إلكترونيًا يبقى تبويبه، فلا تضيع نتائجه
   const [legacyOnline, setLegacyOnline] = useState(false);
@@ -1007,14 +1009,32 @@ function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
                         }} />
           )}
 
+          {generating && !viewOnly && (
+            <QuizGenerate quiz={q} allowed={(paper ? PAPER_KINDS : KINDS).map((k) => k.key)}
+                          nextOrder={(questions?.length ?? 0) + 1}
+                          onClose={() => setGenerating(false)}
+                          onDone={(rows, m) => {
+                            if (rows.length) setQuestions((prev) => [...(prev ?? []), ...rows]);
+                            setMsg(m);
+                            setGenerating(false);
+                          }} />
+          )}
+
           {!viewOnly && <div className="card p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-muted">إضافة سؤال</p>
-              {!importing && (
-                <button type="button" className="text-xs font-semibold text-mint-deep underline" onClick={() => setImporting(true)}>
-                  استيراد أسئلة من اختبار آخر
-                </button>
-              )}
+              <div className="flex flex-wrap gap-3">
+                {!generating && (
+                  <button type="button" className="text-xs font-semibold text-mint-deep underline" onClick={() => { setImporting(false); setGenerating(true); }}>
+                    ✨ توليد أسئلة بالمساعد الذكي
+                  </button>
+                )}
+                {!importing && (
+                  <button type="button" className="text-xs font-semibold text-mint-deep underline" onClick={() => { setGenerating(false); setImporting(true); }}>
+                    استيراد أسئلة من اختبار آخر
+                  </button>
+                )}
+              </div>
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {kinds.map((k) => {
