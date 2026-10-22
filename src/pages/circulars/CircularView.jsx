@@ -65,7 +65,15 @@ export default function CircularView() {
         const { data: links } = await supabase.storage.from("form-assets").createSignedUrls(paths, 3600);
         (links ?? []).forEach((l, i) => { if (l?.signedUrl) urls.set(paths[i], l.signedUrl); });
       }
-      setRecs((all ?? []).map((r) => ({ ...r, sigUrl: urls.get(r.ack_sig) ?? null }))
+      // صفة المنسوب في الكشف: معلم أو إداري بحسب حسابه
+      const staffIds = (all ?? []).filter((r) => r.kind === "staff").map((r) => r.user_id);
+      const roleBy = new Map();
+      for (let i = 0; i < staffIds.length; i += 150) {
+        const { data: us } = await supabase.from("users").select("id, role").in("id", staffIds.slice(i, i + 150));
+        (us ?? []).forEach((u) => roleBy.set(u.id, u.role));
+      }
+      setRecs((all ?? []).map((r) => ({ ...r, sigUrl: urls.get(r.ack_sig) ?? null,
+        roleT: r.kind === "guardian" ? "ولي أمر" : roleBy.get(r.user_id) === "admin" ? "إداري" : "معلم" }))
         .sort((a, b) => String(a.name).localeCompare(String(b.name), "ar")));
     }
   };
@@ -184,7 +192,7 @@ function Tracking({ c, recs, onChange, setMsg }) {
   };
 
   const HEAD = ["م", "الاسم", "الصفة", "فتحه", c.needs_ack ? "أقرّ بالاطلاع" : "الحالة", "التوقيع"];
-  const kindT = (r) => (r.kind === "guardian" ? "ولي أمر" : "منسوب");
+  const kindT = (r) => r.roleT ?? (r.kind === "guardian" ? "ولي أمر" : "معلم");
   // خانة التوقيع: صورة توقيع المنسوب الذي أقرّ، أو «أقرّ إلكترونيًا»، وإلا فارغة للتوقيع باليد
   const sigCell = (r) => (r.sigUrl ? `<img src="${r.sigUrl}" alt="" style="height:30px;max-width:110px;object-fit:contain" />`
     : r.ack_at ? "✓ أقرّ إلكترونيًا" : "");
