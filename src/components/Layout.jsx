@@ -789,16 +789,17 @@ export default function Layout({ children }) {
           ) : isAdmin ? (
             <>
               <div className="space-y-0.5">{topItems.map((i) => navItem(i, { iconOnly }))}</div>
-              {frequent.length > 0 && (
-                <div className={iconOnly ? "mt-2 border-t border-line pt-2" : "mt-3"}>
-                  {!iconOnly && <p className="mb-1 px-3 py-1.5 text-[12px] font-bold text-muted">الأكثر استخدامًا</p>}
-                  <div className="space-y-0.5">{frequent.map((i) => navItem(i, { iconOnly }))}</div>
-                </div>
-              )}
               <div className={iconOnly ? "mt-2 border-t border-line pt-2" : "mt-3"}>
                 {!iconOnly && <p className="mb-1 px-3 py-1.5 text-[12px] font-bold text-muted">الأقسام</p>}
                 <div className="space-y-0.5">{sections.map((x) => sectionNav(x, iconOnly))}</div>
               </div>
+              {/* «الأكثر استخدامًا» بعد الأقسام، في صندوق بلون ذهبي يميّزه عنها */}
+              {frequent.length > 0 && (
+                <div className={`mt-3 rounded-card border border-[#EADFBF] bg-[#FCF5E6] ${iconOnly ? "p-1" : "p-1.5"}`}>
+                  {!iconOnly && <p className="mb-1 px-3 py-1 text-[12px] font-bold text-[#8A6A1F]">الأكثر استخدامًا</p>}
+                  <div className="space-y-0.5">{frequent.map((i) => navItem(i, { iconOnly }))}</div>
+                </div>
+              )}
             </>
           ) : (
             groups.map((g, gi) => {
