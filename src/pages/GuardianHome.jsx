@@ -11,6 +11,7 @@ import HolidayBanner from "../components/HolidayBanner.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
+import OfficialLinks from "../components/OfficialLinks.jsx";
 import TasksBox from "../components/TasksBox.jsx";
 import QuizResults from "../components/QuizResults.jsx";
 import { useSession } from "../lib/session.jsx";
@@ -254,6 +255,7 @@ export default function GuardianHome() {
           </section>
 
           <GuidanceRequestCard key={`g-${active?.id}`} studentId={active?.id} requester="guardian" />
+          <OfficialLinks />
         </>
       )}
     </div>

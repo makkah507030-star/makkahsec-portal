@@ -12,6 +12,7 @@ import ExamDayCard from "../components/ExamDayCard.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
+import OfficialLinks from "../components/OfficialLinks.jsx";
 import TasksBox from "../components/TasksBox.jsx";
 import OnlineQuizzesCard from "../components/OnlineQuizzesCard.jsx";
 import LabSeatCard from "../components/LabSeatCard.jsx";
@@ -223,6 +224,7 @@ export default function StudentHome() {
       </section>
 
       <GuidanceRequestCard studentId={me.id} requester="student" />
+      <OfficialLinks />
     </div>
   );
 }
