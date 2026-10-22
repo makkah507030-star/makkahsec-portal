@@ -279,26 +279,33 @@ export default function NoorGrades() {
       m.set(k, g);
     }
     const groups = [...m.values()].sort((a, b) => a.subject.localeCompare(b.subject, "ar") || a.teacher.localeCompare(b.teacher, "ar"));
+    // كل فصل شارة واضحة: المتأخر كليًا بإطار وردي، والجزئي بإطار أزرق متقطع وكلمة «جزئي»
+    const chip = (r) => r.st === "partial"
+      ? `<span style="display:inline-block;margin:2px;padding:2px 8px;border:1.5px dashed #3F6B99;border-radius:6px;background:#EAF1FA;color:#2C527A;font-weight:700;white-space:nowrap">${classCode(r.grade, r.class_no)} <small style="font-weight:600">جزئي</small></span>`
+      : `<span style="display:inline-block;margin:2px;padding:2px 8px;border:1.5px solid #E7B9B9;border-radius:6px;background:#FBEDED;color:#8E2F2F;font-weight:700;white-space:nowrap">${classCode(r.grade, r.class_no)}</span>`;
     const rows = groups.map((g, i) => {
       g.list.sort((a, b) => a.class_no - b.class_no);
       const oldest = g.list.reduce((a, r) => (r.due_date < a ? r.due_date : a), g.list[0].due_date);
       const allCont = g.list.every((r) => r.cont);
       const days = Math.max(...g.list.map((r) => r.tm.d ?? 0));
       const late = days > 5;
+      const notes = [...new Set(g.list.filter((r) => r.st === "partial" && r.note).map((r) => r.note.replace(/\n/g, "، ")))];
       return [
-        i + 1, g.subject, g.teacher,
-        g.list.map((r) => `${classCode(r.grade, r.class_no)}${r.st === "partial" ? " (جزئي)" : ""}`).join("، "),
-        allCont ? `${fmtHijri(oldest)} (تقويم مستمر)` : fmtHijri(oldest),
-        late ? `<b style="color:#A23B3B">${days} · متأخر</b>` : days,
+        i + 1, `<b>${g.subject}</b>`, `<span style="white-space:nowrap">${g.teacher}</span>`,
+        `<div style="line-height:1.9">${g.list.map(chip).join("")}</div>`
+          + (notes.length ? `<div style="margin-top:3px;font-size:10px;color:#2C527A">الناقص: ${notes.join(" · ")}</div>` : ""),
+        `<b style="font-size:14px">${g.list.length}</b>`,
+        `<span style="white-space:nowrap">${fmtHijri(oldest)}</span>${allCont ? `<div style="font-size:10px;color:#6B6B6B">تقويم مستمر</div>` : ""}`,
+        late ? `<b style="color:#A23B3B;font-size:14px">${days}</b><div style="font-size:10px;font-weight:700;color:#A23B3B">متأخر</div>` : `<b style="font-size:14px">${days}</b>`,
       ];
     });
     printReport({
       title: `كشف المتابعة: درجات لم تُرصد في نور · ${GRADE_NAMES[gradeF] ?? ""}`,
       subtitle: `${term?.title ?? ""} · حتى ${stamp}`
         + (term?.grading_deadline ? ` · نهاية الرصد ${weekday(term.grading_deadline)} ${fmtHijri(term.grading_deadline)}` : ""),
-      headers: ["م", "المادة", "المعلم", "الفصول غير المرصودة", "تاريخ الاختبار", "الأيام منذ الاختبار"],
-      rows,
-      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. «جزئي»: رُصد بعض الفصل. الأيام لأقدم اختبار في الصف، ومواد التقويم المستمر من آخر يوم اختبارات.`,
+      headers: ["م", "المادة", "المعلم", "الفصول غير المرصودة", "عددها", "تاريخ الاختبار", "الأيام منذ الاختبار"],
+      rows, landscape: true,
+      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. الشارة الوردية: فصل لم يُرصد، والزرقاء المتقطعة «جزئي»: رُصد بعضه، وتحتها الناقص. الأيام لأقدم اختبار في الصف، ومواد التقويم المستمر من آخر يوم اختبارات.`,
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       signatures: [{ title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
