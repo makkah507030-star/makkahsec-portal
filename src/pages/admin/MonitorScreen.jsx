@@ -55,12 +55,12 @@ function useMonitor() {
     const start = new Date(date + "T00:00:00").toISOString();
     const week = new Date(new Date(date + "T12:00:00").getTime() + 7 * 864e5).toISOString().slice(0, 10);
     (async () => {
-      const [day, pt, trend, sub, perms, refsToday, refsOpen, behavior, duty, supervision, events, quizzes, lab, notes, nextEvents, nextQuizzes] = await Promise.all([
+      const [day, pt, trend, perms, refsToday, refsOpen, behavior, duty, supervision, events, quizzes, lab, notes, nextEvents, nextQuizzes,
+             toGuardians, absenceNotes, invites, guardianForms, circs] = await Promise.all([
         todayOff() ? null : loadDay(date).catch(() => null),
         loadPeriodTimes().then((r) => r.rows).catch(() => []),
         supabase.from("official_attendance_days").select("attend_date, official_pct, late_count")
           .lt("attend_date", date).order("attend_date", { ascending: false }).limit(10),
-        countOf(supabase.from("substitute_periods").select("id", { count: "exact", head: true }).eq("attend_date", date)),
         supabase.from("permission_requests").select("id, permission_request_students(student_id)").eq("request_date", date),
         countOf(supabase.from("student_referrals").select("id", { count: "exact", head: true }).eq("referral_date", date)),
         countOf(supabase.from("student_referrals").select("id", { count: "exact", head: true }).in("status", OPEN_STATUSES)),
@@ -70,21 +70,33 @@ function useMonitor() {
         supabase.from("school_events").select("title, category, event_date, end_date, start_time, venue")
           .lte("event_date", date).neq("stage", "draft").is("cancelled_at", null).order("event_date", { ascending: false }).limit(30),
         countOf(supabase.from("quizzes").select("id", { count: "exact", head: true }).eq("exam_date", date).neq("status", "draft")),
-        countOf(supabase.from("lab_bookings").select("id", { count: "exact", head: true }).eq("booking_date", date)),
+        supabase.from("lab_bookings").select("period_no, lesson, labs(name), teachers(full_name), classes(grade, class_no)")
+          .eq("booking_date", date).order("period_no"),
         countOf(supabase.from("notifications").select("id", { count: "exact", head: true }).gte("created_at", start)),
         supabase.from("school_events").select("title, category, event_date, start_time").gt("event_date", date).lte("event_date", week)
           .neq("stage", "draft").is("cancelled_at", null).order("event_date", { ascending: true }).limit(6),
         countOf(supabase.from("quizzes").select("id", { count: "exact", head: true }).gt("exam_date", date).lte("exam_date", week).neq("status", "draft")),
+        // التواصل مع أولياء الأمور: ما وصلهم من إشعارات، وإشعارات الغياب، والدعوات والمقابلات، والتعاميم
+        countOf(supabase.from("notification_recipients").select("notification_id, notifications!inner(created_at), users!inner(role)", { count: "exact", head: true })
+          .gte("notifications.created_at", start).eq("users.role", "guardian")),
+        countOf(supabase.from("official_absence_notified").select("student_id", { count: "exact", head: true }).eq("attend_date", date)),
+        countOf(supabase.from("behavior_forms").select("id", { count: "exact", head: true }).in("kind", ["invite", "notice"]).gte("created_at", start)),
+        countOf(supabase.from("form_documents").select("id, form_templates!inner(key)", { count: "exact", head: true })
+          .in("form_templates.key", ["guidance_guardian_call", "guidance_guardian_meeting"]).gte("created_at", start)),
+        countOf(supabase.from("circulars").select("id", { count: "exact", head: true }).gte("sent_at", start)),
       ]);
       if (!live) return;
       const permStudents = new Set((perms.data ?? []).flatMap((p) => (p.permission_request_students ?? []).map((x) => x.student_id)));
       setD({
-        date, day, pt, trend: [...(trend.data ?? [])].reverse(), sub,
+        date, day, pt, trend: [...(trend.data ?? [])].reverse(),
         perms: { requests: (perms.data ?? []).length, students: permStudents.size },
         refsToday, refsOpen, behavior,
-        duty: [...(duty.data ?? []).flatMap((r) => [r.name_a, r.name_b]), ...(supervision.data ?? []).map((r) => r.person_name)].filter(Boolean),
+        // المناوبون، ثم المعلمون المشرفون، ثم المشرف المتابع (يُميَّز بلونه)
+        duty: [...(duty.data ?? []).flatMap((r) => [r.name_a, r.name_b]).filter(Boolean).map((n) => ({ n, k: "duty" })),
+               ...(supervision.data ?? []).filter((r) => r.person_name).map((r) => ({ n: r.person_name, k: r.kind === "supervisor" ? "sup" : "teacher" }))],
         events: (events.data ?? []).filter((e) => e.event_date === date || (e.end_date && e.end_date >= date)),
-        quizzes, lab, notes, nextEvents: nextEvents.data ?? [], nextQuizzes, at: new Date(),
+        quizzes, lab: lab.error ? null : lab.data ?? [], notes,
+        comm: { toGuardians, absenceNotes, invites, guardianForms, circs }, nextEvents: nextEvents.data ?? [], nextQuizzes, at: new Date(),
       });
     })();
     return () => { live = false; };
@@ -169,7 +181,7 @@ export default function MonitorScreen() {
           {off && <p className="rounded-card bg-[var(--m-track)] px-4 py-3 text-center text-[var(--m-sub)]">{off.title} — {off.body}</p>}
 
           {/* الصف الأول: الأرقام الكبرى */}
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
             <Big title="نسبة الحضور اليوم" value={m.pct == null ? "—" : `${m.pct}%`} color={toneOf(m.pct)} ring={m.pct}
               sub={m.yPct != null ? `أمس ${m.yPct}% · متوسط الأيام العشرة ${m.avg}%` : "—"} />
             <Big title="الغياب" value={m.absent} color={m.absent ? C.bad : C.ok} icon="userX"
@@ -178,17 +190,18 @@ export default function MonitorScreen() {
               sub={m.fp ? (m.lateTop ? `أكثرها: ${m.lateTop}` : "لا تأخر") : "البصمة مقفلة"} />
             <Big title="التحضير في الحصص" value={m.mark.total ? `${m.mark.pct}%` : "—"} color={toneOf(m.mark.pct)} icon="clipboard"
               sub={m.mark.total ? `${m.mark.done} من ${m.mark.total} حصة حتى الآن` : "لم تبدأ الحصص"} />
-            <Big title="حصص الانتظار" value={d.sub ?? "—"} color={C.info} icon="swap" sub="حصة مغطاة اليوم" />
             <Big title="الاستئذان" value={d.perms.students} color={d.perms.students ? C.warn : C.ok} icon="ticket"
               sub={`طالبًا في ${d.perms.requests} طلب`} />
           </div>
 
           {/* الصف الثاني: الرسوم */}
           <div className="grid gap-3 xl:grid-cols-3">
-            <Panel title="الحضور حسب الفصول" className="xl:col-span-2">
+            <Panel title="الحضور حسب الفصول" className="xl:col-span-2"
+              note="الحضور الرسمي لكل فصل حُضّر: الحاضر من حضر الحصة الأولى أو الثانية، والغائب من غاب عنهما معًا.">
               {m.classes.length ? <ClassBars rows={m.classes} /> : <Dim>لا تحضير بعد اليوم.</Dim>}
             </Panel>
-            <Panel title="اتجاه الحضور: آخر الأيام الدراسية">
+            <Panel title="اتجاه الحضور: آخر الأيام الدراسية"
+              note="النسبة الرسمية المعتمدة لآخر عشرة أيام دراسية، والنقطة الكبيرة نسبة اليوم حتى الآن.">
               {m.series.length > 1 ? <Trend points={m.series} /> : <Dim>لا أيام معتمدة كافية.</Dim>}
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {m.grades.map((g) => (
@@ -207,22 +220,24 @@ export default function MonitorScreen() {
               <Mini rows={[["إحالات اليوم", d.refsToday], ["إحالات قيد المتابعة", d.refsOpen, d.refsOpen ? C.warn : C.ok], ["نماذج سلوك اليوم", d.behavior]]} />
             </Panel>
             <Panel title="المناوبة والإشراف" icon="whistle">
-              {d.duty.length ? <ul className="space-y-1.5 text-sm">{[...new Set(d.duty)].slice(0, 6).map((n) => <li key={n} className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full" style={{ background: C.mint }} />{n}</li>)}</ul>
-                : <Dim>لا مناوبين مسجّلين اليوم.</Dim>}
+              {d.duty.length ? <DutyList rows={d.duty} /> : <Dim>لا مناوبين مسجّلين اليوم.</Dim>}
             </Panel>
             <Panel title="اليوم في المدرسة" icon="calendar">
-              <Mini rows={[["اختبارات مجدولة", d.quizzes], ["حجوزات المعمل", d.lab], ["فعاليات جارية", d.events.length]]} />
+              <Mini rows={[["اختبارات مجدولة", d.quizzes], ["حجوزات المعمل", d.lab?.length], ["فعاليات جارية", d.events.length]]} />
               {d.events.slice(0, 2).map((e) => <p key={e.title} className="mt-2 truncate text-xs text-[var(--m-sub)]">• {e.title}</p>)}
+              {d.lab?.length > 0 && <LabList rows={d.lab} />}
             </Panel>
             <Panel title="التواصل" icon="bell">
-              <Mini rows={[["إشعارات اليوم", d.notes]]} />
+              <Mini rows={[["إشعارات البوابة اليوم", d.notes], ["وصلت أولياء الأمور", d.comm.toGuardians],
+                ["إشعارات غياب لأولياء الأمور", d.comm.absenceNotes], ["دعوات وإشعارات سلوكية", d.comm.invites],
+                ["استدعاء أو مقابلة ولي أمر", d.comm.guardianForms], ["تعاميم أُرسلت", d.comm.circs]].filter((r) => r[1] != null)} small />
             </Panel>
           </div>
 
           {/* الصف الرابع: التحضير حسب الحصة، والخط الزمني لليوم، والقادم */}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Panel title="التحضير حسب الحصة" icon="clipboard">
-              {m.byPeriod.length ? <PeriodBars rows={m.byPeriod} /> : <Dim>لا جدول لليوم.</Dim>}
+              {m.byPeriod.length ? <PeriodBars rows={m.byPeriod} mark={m.mark} /> : <Dim>لا جدول لليوم.</Dim>}
             </Panel>
             <Panel title="اليوم الدراسي" icon="clock" className="md:col-span-2">
               {(d.pt ?? []).length ? <DayLine rows={d.pt} clock={clock} /> : <Dim>لا أوقات للحصص.</Dim>}
@@ -343,25 +358,26 @@ function Donut({ v, color }) {
   );
 }
 
-function Panel({ title, icon, children, className = "" }) {
+function Panel({ title, icon, note, children, className = "" }) {
   return (
     <section className={`min-w-0 rounded-[18px] border-[1.5px] border-[var(--m-line)] bg-[var(--m-card)] backdrop-blur-sm p-4 ${className}`}>
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--m-sub)]">
         {icon && <Icon name={icon} className="h-4 w-4 text-[var(--m-faint)]" />}{title}
       </h2>
       {children}
+      {note && <p className="mt-3 border-t border-[var(--m-line)] pt-2 text-[11px] leading-snug text-[var(--m-faint)]">{note}</p>}
     </section>
   );
 }
 const Dim = ({ children }) => <p className="py-6 text-center text-sm text-[var(--m-faint)]">{children}</p>;
 
-function Mini({ rows }) {
+function Mini({ rows, small }) {
   return (
-    <div className="space-y-2">
+    <div className={small ? "space-y-1.5" : "space-y-2"}>
       {rows.map(([l, v, c]) => (
         <div key={l} className="flex items-baseline justify-between gap-2">
-          <span className="text-sm text-[var(--m-sub)]">{l}</span>
-          <span className="num text-2xl font-bold" style={{ color: c ?? "var(--m-text)" }}>{v ?? "—"}</span>
+          <span className={`${small ? "text-[13px]" : "text-sm"} text-[var(--m-sub)]`}>{l}</span>
+          <span className={`num ${small ? "text-xl" : "text-2xl"} font-bold`} style={{ color: c ?? "var(--m-text)" }}>{v ?? "—"}</span>
         </div>
       ))}
     </div>
@@ -373,14 +389,14 @@ function ClassBars({ rows }) {
   const groups = [1, 2, 3].map((g) => rows.filter((r) => r.grade === g)).filter((x) => x.length);
   return (
     <div className="space-y-3">
-      <div className="flex items-end gap-4 overflow-x-auto pb-1">
+      <div className="flex items-end gap-3 overflow-hidden">
         {groups.map((list) => (
-          <div key={list[0].grade} className="min-w-0 shrink-0" style={{ flexGrow: list.length, flexBasis: 0, minWidth: `${list.length * 2.2}rem` }}>
-            <div className="flex h-40 items-end gap-1.5">
+          <div key={list[0].grade} className="min-w-0 shrink-0" style={{ flexGrow: list.length, flexBasis: 0 }}>
+            <div className="flex h-32 items-end gap-1">
               {list.map((r) => (
-                <div key={r.class_no} className="flex min-w-[1.75rem] max-w-[4rem] flex-1 flex-col items-center gap-1" title={`فصل ${r.class_no}: ${r.pct}%`}>
+                <div key={r.class_no} className="flex min-w-0 max-w-[3.5rem] flex-1 flex-col items-center gap-1" title={`فصل ${r.class_no}: ${r.pct}%`}>
                   <span className="num text-[10px] text-[var(--m-sub)]">{Math.round(r.pct)}</span>
-                  <div className="w-full rounded-t-[4px]" style={{ height: `${Math.max(4, ((r.pct - 50) / 50) * 120)}px`, background: toneOf(r.pct) }} />
+                  <div className="w-full rounded-t-[4px]" style={{ height: `${Math.max(4, ((r.pct - 50) / 50) * 96)}px`, background: toneOf(r.pct) }} />
                   <span className="num text-[10px] text-[var(--m-faint)]">{r.class_no}</span>
                 </div>
               ))}
@@ -398,19 +414,67 @@ function ClassBars({ rows }) {
 }
 
 /* التحضير حسب الحصة: عمود لكل حصة بنسبة الفصول المحضَّرة؛ الحصة التي لم تبدأ باهتة */
-function PeriodBars({ rows }) {
+function PeriodBars({ rows, mark }) {
   return (
+    <div>
+    <p className="mb-2 flex items-baseline justify-between text-xs text-[var(--m-sub)]">
+      <span>نسبة الرصد حتى الآن</span>
+      <span><b className="num text-lg" style={{ color: toneOf(mark.pct) }}>{mark.total ? `${Math.round(mark.pct)}%` : "—"}</b>
+        {mark.total > 0 && <span className="num"> · {mark.done} من {mark.total}</span>}</span>
+    </p>
     <div className="flex h-36 items-end justify-between gap-1.5">
       {rows.map((p) => (
         <div key={p.no} className="flex flex-1 flex-col items-center gap-1" title={`الحصة ${p.no}: ${p.done} من ${p.total}`}>
-          <span className="num text-[10px] text-[var(--m-sub)]">{p.started ? `${Math.round(p.pct)}%` : "—"}</span>
+          <span className="num text-[11px] font-bold" style={{ color: p.started ? toneOf(p.pct === 100 ? 100 : p.pct >= 90 ? 92 : 50) : "var(--m-faint)" }}>{p.started ? `${Math.round(p.pct)}%` : "—"}</span>
+          <span className="num text-[9.5px] text-[var(--m-faint)]">{p.started ? `${p.done}/${p.total}` : ""}</span>
           <div className="flex h-24 w-full max-w-[2.5rem] items-end overflow-hidden rounded-t-[4px] bg-[var(--m-track)]">
             {p.started && <div className="w-full" style={{ height: `${Math.max(4, p.pct)}%`, background: toneOf(p.pct === 100 ? 100 : p.pct >= 90 ? 92 : 50) }} />}
           </div>
-          <span className="num text-[11px] text-[var(--m-sub)]">{p.no}</span>
+          <span className="text-[11px] text-[var(--m-sub)]">ح {p.no}</span>
         </div>
       ))}
     </div>
+    </div>
+  );
+}
+
+// اسم الفاصل في الخط الزمني بكلمته الأولى (الاصطفاف الصباحي ← الاصطفاف) ليتسع مربعه
+const shortLabel = (l) => String(l ?? "").trim().split(/\s+/)[0];
+
+/* المناوبة والإشراف: المناوب، والمعلم المشرف، والمشرف المتابع بلون مميز وشارة */
+const DUTY_TAG = { duty: ["مناوب", C.mint], teacher: ["إشراف", C.info], sup: ["مشرف متابع", "var(--m-gold)"] };
+function DutyList({ rows }) {
+  const seen = new Set();
+  const list = rows.filter((r) => !seen.has(r.k + r.n) && seen.add(r.k + r.n));
+  return (
+    <ul className="space-y-1.5 text-sm">
+      {list.slice(0, 7).map((r) => {
+        const [t, c] = DUTY_TAG[r.k];
+        return (
+          <li key={r.k + r.n} className="flex items-center gap-2" style={r.k === "sup" ? { color: c, fontWeight: 700 } : undefined}>
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: c }} />
+            <span className="min-w-0 flex-1 truncate">{r.n}</span>
+            <span className="shrink-0 rounded-pill px-2 py-0.5 text-[10px] font-semibold" style={{ color: c, border: `1px solid ${c}` }}>{t}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/* حجوزات المعمل اليوم: الحصة والفصل والمعلم (بلا أسماء طلاب) */
+function LabList({ rows }) {
+  return (
+    <ul className="mt-2 space-y-1 border-t border-[var(--m-line)] pt-2 text-xs">
+      {rows.slice(0, 4).map((r, i) => (
+        <li key={i} className="flex items-center gap-1.5 truncate">
+          <span className="shrink-0 rounded-[4px] bg-[var(--m-track)] px-1.5 font-bold">ح {r.period_no}</span>
+          {r.classes && <span className="num shrink-0 text-[var(--m-sub)]">{r.classes.grade}/{r.classes.class_no}</span>}
+          <span className="min-w-0 truncate">{r.teachers?.full_name?.split(" ").filter((_, j, a) => j === 0 || j === a.length - 1).join(" ") ?? ""}</span>
+        </li>
+      ))}
+      {rows.length > 4 && <li className="text-[var(--m-faint)]">و{rows.length - 4} غيرها</li>}
+    </ul>
   );
 }
 
@@ -431,11 +495,11 @@ function DayLine({ rows, clock }) {
             const a = toMinutes(r.start_time), b = toMinutes(r.end_time);
             const cur = now >= a && now <= b, past = now > b, per = r.kind === "period";
             return (
-              <div key={i} className="flex min-w-0 flex-col items-center justify-center rounded-[6px] text-[11px] font-semibold"
-                style={{ flexGrow: b - a, flexBasis: 0, background: cur ? "var(--m-accent)" : per ? "var(--m-track)" : "transparent",
+              <div key={i} className="flex min-w-0 flex-col items-center justify-center overflow-hidden rounded-[6px] text-[11px] font-semibold"
+                style={{ flexGrow: b - a, flexBasis: 0, minWidth: per ? 0 : "3.6rem", background: cur ? "var(--m-accent)" : per ? "var(--m-track)" : "transparent",
                   border: per ? "none" : "1.5px dashed var(--m-line)", color: cur ? "var(--m-on)" : "var(--m-sub)", opacity: past && !cur ? 0.5 : 1 }}
                 title={`${r.label ?? ""} ${fmt(r.start_time)}–${fmt(r.end_time)}`}>
-                <span className="truncate px-0.5">{per ? r.period_no : (r.label ?? "")}</span>
+                <span className="block w-full truncate px-0.5 text-center">{per ? r.period_no : shortLabel(r.label)}</span>
               </div>
             );
           })}
