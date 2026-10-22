@@ -10,6 +10,8 @@ import { fmtDateTime } from "../lib/dates";
 import { NOOR_NOTE } from "../lib/periodNotice";
 
 function Notice({ n, open, onToggle }) {
+  // أصناف التقويم كما وردت في المواد، بترتيب ظهورها
+  const kinds = [...new Set(n.subjects.flatMap((s) => (s.parts ?? []).map((p) => p.label)))];
   const extra = [["المواظبة", n.attendance], ["السلوك المتميز", n.behavior_excellent], ["السلوك الإيجابي", n.behavior_positive]]
     .filter(([, v]) => v != null);
   return (
@@ -22,24 +24,28 @@ function Notice({ n, open, onToggle }) {
       </button>
       {open && (
         <div className="mt-3 space-y-3">
+          {/* جدول كإشعار نور: المادة ومجموعها من العظمى، ثم عمود لكل صنف من أصناف التقويم */}
           <div className="overflow-x-auto rounded-sm2 border border-line">
-            <table className="w-full text-sm">
-              <thead className="bg-mint-tint/60 text-[11px] text-mint-deep">
-                <tr><th className="px-3 py-2 text-right font-semibold">المادة</th>
-                  <th className="px-3 py-2 text-right font-semibold">تفاصيل الدرجة</th>
-                  <th className="px-3 py-2 text-center font-semibold">الدرجة</th></tr>
+            <table className="w-full min-w-[34rem] text-sm">
+              <thead className="bg-mint-tint/60 text-[11px] leading-snug text-mint-deep">
+                <tr>
+                  <th className="sticky right-0 min-w-[8rem] bg-mint-tint px-3 py-2 text-right font-semibold">المادة</th>
+                  <th className="bg-mint-tint px-3 py-2 text-center font-semibold">المجموع</th>
+                  {kinds.map((k) => <th key={k} className="min-w-[5rem] px-2 py-2 text-center font-medium">{k}</th>)}
+                </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {n.subjects.map((s) => (
-                  <tr key={s.name}>
-                    <td className="px-3 py-2 font-medium text-ink">{s.name}</td>
-                    <td className="px-3 py-2 text-[11px] leading-relaxed text-muted">
-                      {s.parts?.map((p) => <span key={p.label} className="block">{p.label}: <span className="num font-semibold text-ink">{p.value}</span></span>)}
-                      {s.note && <span className="block text-warning">{s.note}</span>}
-                    </td>
-                    <td className="num whitespace-nowrap px-3 py-2 text-center font-bold text-ink">{s.total}<span className="text-xs font-normal text-muted"> / {s.max}</span></td>
-                  </tr>
-                ))}
+                {n.subjects.map((s) => {
+                  const v = Object.fromEntries((s.parts ?? []).map((p) => [p.label, p.value]));
+                  return (
+                    <tr key={s.name}>
+                      <td className="sticky right-0 min-w-[8rem] bg-white px-3 py-2 font-medium text-ink">{s.name}
+                        {s.note && <span className="block text-[11px] font-normal text-warning">{s.note}</span>}</td>
+                      <td className="num whitespace-nowrap bg-mint-tint/30 px-3 py-2 text-center font-bold text-ink">{s.total}<span className="text-xs font-normal text-muted"> / {s.max}</span></td>
+                      {kinds.map((k) => <td key={k} className="num px-2 py-2 text-center text-ink">{v[k] ?? <span className="text-faint">—</span>}</td>)}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

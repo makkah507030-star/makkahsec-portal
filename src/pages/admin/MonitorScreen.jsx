@@ -17,6 +17,8 @@ import { Icon } from "../../components/Layout.jsx";
 import iconMint from "../../assets/icon-mint.png";
 import iconWhite from "../../assets/icon-white.png";
 import { academicYearLabel } from "../studio/lib";
+import { loadStudyWeek } from "../../components/StudyWeekCard.jsx";
+import { weekWord } from "../../lib/dfile.js";
 
 // ألوان الحالة من هوية البوابة (index.css)، وتتبدّل قيمها بالوضع الفاتح أو الداكن (THEMES)
 const C = { ok: "var(--m-ok)", warn: "var(--m-warn)", bad: "var(--m-bad)", info: "var(--m-info)", mint: "var(--m-accent)", dim: "var(--m-faint)" };
@@ -97,6 +99,10 @@ export default function MonitorScreen() {
   const [theme, setTheme] = useState(savedTheme);
   const flipTheme = () => { const t = theme === "dark" ? "light" : "dark"; setTheme(t); try { localStorage.setItem("monitor.theme", t); } catch { /* لا شيء */ } };
   const [clock, setClock] = useState(new Date());
+  // الأسبوع الدراسي (كبطاقة الرئيسية): رقمه من بداية الفصل، أو اسم الإجازة التي تغطيه
+  const [week, setWeek] = useState(null);
+  const today = todayISO();
+  useEffect(() => { loadStudyWeek(today).then(setWeek).catch(() => setWeek(null)); }, [today]);
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 15000); return () => clearInterval(t); }, []);
   useEffect(() => {
     const onFs = () => { if (!document.fullscreenElement) setFull(false); };
@@ -130,6 +136,12 @@ export default function MonitorScreen() {
         </div>
         <span className="hidden rounded-pill border-[1.5px] px-4 py-1 text-sm font-semibold sm:inline" style={{ borderColor: "var(--m-pill)", color: "var(--m-accent)" }}>
           <span className="num">{academicYearLabel()}</span></span>
+        {week && (week.n > 0 || week.holiday) && (
+          <span className="rounded-pill px-4 py-1.5 text-center text-sm font-bold" style={{ background: "var(--m-track)", color: "var(--m-head)" }}>
+            {week.holiday ?? <>الأسبوع <span style={{ color: "var(--m-accent)" }}>{weekWord(week.n)}</span>
+              {week.total ? <span className="mr-1 text-xs font-medium text-[var(--m-sub)]">من <span className="num">{week.total}</span></span> : null}</>}
+          </span>
+        )}
         <div className="text-center">
           <p className="text-3xl font-bold tracking-wide sm:text-4xl"><Clock t={clock} /></p>
           <p className="text-xs text-[var(--m-sub)]">{WEEKDAYS[clock.getDay()]} · <span className="num">{fmtHijri(clock)}</span> هـ · <span className="num">{fmtGreg(clock)}</span> م</p>
