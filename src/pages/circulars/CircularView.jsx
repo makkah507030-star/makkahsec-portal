@@ -4,7 +4,8 @@
    • المستفيد (منسوب أو ولي أمر): التعميم بملفه والمطلوب وموعده، ويُسجَّل فتحه تلقائيًا، وزر
      «اطّلعت على التعميم» إن تطلّب الإقرار.
    • مدير التعاميم: نسب الاطلاع، والمستفيدون بحالاتهم، وتذكير من لم يطّلع، وإضافة مستفيدين،
-     وكشف الاطلاع المطبوع للتوقيع وExcel، وإغلاق المتابعة، والحذف.
+     وكشف الاطلاع المطبوع بتوقيع كل منسوب أقرّ (من «توقيعي»، supabase/circulars_3.sql) وExcel،
+     وإغلاق المتابعة، والحذف.
    ===================================================================== */
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -35,6 +36,7 @@ export default function CircularView() {
   const [c, setC] = useState(undefined);
   const [mine, setMine] = useState(null);
   const [recs, setRecs] = useState([]);
+  const [hasSig, setHasSig] = useState(true);
   const [msg, setMsg] = useState(params.get("sent") ? { ok: true, text: "أُرسل التعميم، ووصل المستفيدين إشعار به." } : null);
 
   const load = async () => {
@@ -49,9 +51,22 @@ export default function CircularView() {
       refreshNavBadges(true);
     }
     setMine(me ?? null);
+    // توقيعي: للمنسوب المستفيد، ليُنبَّه إن لم يرفع توقيعه قبل الإقرار
+    if (me?.kind === "staff") {
+      const { data: sig } = await supabase.from("user_signatures").select("path").eq("user_id", uid).maybeSingle();
+      setHasSig(!!sig?.path);
+    }
     if (manager) {
       const { data: all } = await supabase.from("circular_recipients").select("*").eq("circular_id", id);
-      setRecs((all ?? []).sort((a, b) => String(a.name).localeCompare(String(b.name), "ar")));
+      // صور توقيعات من أقرّ من المنسوبين (supabase/circulars_3.sql)
+      const paths = [...new Set((all ?? []).map((r) => r.ack_sig).filter(Boolean))];
+      const urls = new Map();
+      if (paths.length) {
+        const { data: links } = await supabase.storage.from("form-assets").createSignedUrls(paths, 3600);
+        (links ?? []).forEach((l, i) => { if (l?.signedUrl) urls.set(paths[i], l.signedUrl); });
+      }
+      setRecs((all ?? []).map((r) => ({ ...r, sigUrl: urls.get(r.ack_sig) ?? null }))
+        .sort((a, b) => String(a.name).localeCompare(String(b.name), "ar")));
     }
   };
   useEffect(() => { load(); }, [id, uid, manager]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -108,7 +123,12 @@ export default function CircularView() {
         {mine && c.needs_ack && (
           mine.ack_at
             ? <p className="rounded-sm2 bg-success/10 px-3 py-2 text-sm text-success">أقررت بالاطلاع على هذا التعميم في <span className="num">{fmtDateTime(mine.ack_at)}</span>.</p>
-            : <button className="btn-primary w-full" onClick={ack}>اطّلعت على التعميم</button>
+            : <div className="space-y-1.5">
+                <button className="btn-primary w-full" onClick={ack}>اطّلعت على التعميم</button>
+                {mine.kind === "staff" && (hasSig
+                  ? <p className="text-center text-[11px] text-muted">يظهر توقيعك من «توقيعي» في سجل التوقيع على التعاميم.</p>
+                  : <p className="text-center text-[11px] text-warning">لم ترفع توقيعك بعد: ارفعه من <Link to="/my-signature" className="underline">«توقيعي»</Link> قبل الإقرار ليظهر في سجل التوقيع على التعاميم.</p>)}
+              </div>
         )}
       </article>
 
@@ -165,8 +185,11 @@ function Tracking({ c, recs, onChange, setMsg }) {
 
   const HEAD = ["م", "الاسم", "الصفة", "فتحه", c.needs_ack ? "أقرّ بالاطلاع" : "الحالة", "التوقيع"];
   const kindT = (r) => (r.kind === "guardian" ? "ولي أمر" : "منسوب");
+  // خانة التوقيع: صورة توقيع المنسوب الذي أقرّ، أو «أقرّ إلكترونيًا»، وإلا فارغة للتوقيع باليد
+  const sigCell = (r) => (r.sigUrl ? `<img src="${r.sigUrl}" alt="" style="height:30px;max-width:110px;object-fit:contain" />`
+    : r.ack_at ? "✓ أقرّ إلكترونيًا" : "");
   const line = (r, i) => [i + 1, r.name ?? "—", kindT(r), r.read_at ? fmtDateTime(r.read_at) : "—",
-    c.needs_ack ? (r.ack_at ? fmtDateTime(r.ack_at) : "—") : recStatus(r, false).t, ""];
+    c.needs_ack ? (r.ack_at ? fmtDateTime(r.ack_at) : "—") : recStatus(r, false).t, sigCell(r)];
   const printSheet = () => printReport({
     title: "كشف الاطلاع على تعميم",
     subtitle: `قيد ${circNo(c)} · ${c.subject}`,
@@ -229,6 +252,7 @@ function Tracking({ c, recs, onChange, setMsg }) {
                 <div key={r.user_id} className="flex flex-wrap items-center gap-2 px-3 py-2">
                   <span className="min-w-0 flex-1 truncate text-sm text-ink">{r.name ?? "—"}
                     <span className="mr-2 text-[11px] text-muted">{kindT(r)}</span></span>
+                  {r.sigUrl && <img src={r.sigUrl} alt="توقيعه" className="h-7 max-w-[90px] object-contain" />}
                   {r.remind_count > 0 && <span className="text-[11px] text-faint">ذُكّر {countAr(r.remind_count, "time")}</span>}
                   {(c.needs_ack ? r.ack_at ?? r.read_at : r.read_at) && <span className="num text-[11px] text-muted">{fmtDateTime(c.needs_ack ? r.ack_at ?? r.read_at : r.read_at)}</span>}
                   <span className={`chip ${st.c}`}>{st.t}</span>
