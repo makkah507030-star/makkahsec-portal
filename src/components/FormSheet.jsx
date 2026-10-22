@@ -246,8 +246,19 @@ function Frame({ theme }) {
   );
 }
 
+/* «شهادة حضور — ورشة تدريبية» (supabase/form_training_attendance.sql) بتصميم الشهادات نفسه */
+const isAttendanceCert = (template) => template?.key === "training_attendance";
+// «، والتي عُقدت لمدة (5) ساعات تدريبية» بالعدد الصحيح نحويًا
+function hoursText(h) {
+  const n = Number(String(h ?? "").replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+  if (!n) return "";
+  const w = n === 1 ? "ساعة تدريبية واحدة" : n === 2 ? "ساعتين تدريبيتين" : n <= 10 ? `(${n}) ساعات تدريبية` : `(${n}) ساعة تدريبية`;
+  return `، والتي عُقدت لمدة ${w}`;
+}
+
 function Certificate(p) {
   const { v, doc, template } = p;
+  const att = isAttendanceCert(template);
   const theme = v.theme || "classic";
   const t = CERT_THEMES.find((x) => x.key === theme) ?? CERT_THEMES[0];
   const accent = t.accent;
@@ -271,26 +282,39 @@ function Certificate(p) {
             <div className="mb-3 flex justify-center"><Medal color={accent} /></div>
           )}
 
-          <h1 className="text-[38px] font-bold leading-none text-mint-deep">شهادة شكر وتقدير</h1>
+          <h1 className="text-[38px] font-bold leading-none text-mint-deep">{att ? "شهادة حضور" : "شهادة شكر وتقدير"}</h1>
           <div className="mt-2.5 flex items-center gap-2">
             <span className="h-px w-16" style={{ background: accent, opacity: .45, ...INK }} />
             <span className="h-1.5 w-1.5 rotate-45" style={{ background: accent, ...INK }} />
             <span className="h-px w-16" style={{ background: accent, opacity: .45, ...INK }} />
           </div>
 
-          <p className="mt-7 text-[15px] text-muted">تتقدّم مدرسة مكة الثانوية بالشكر والتقدير إلى</p>
-          <p className="mt-2 text-[32px] font-bold leading-tight text-ink">{v.recipient || "…"}</p>
-          {(v.class_label || v.job) && (
-            <p className="mt-1 text-[14px] text-mint-hover">{v.class_label || v.job}</p>
-          )}
+          {att ? (<>
+            <p className="mt-7 text-[15px] text-muted">تشهد مدرسة مكة الثانوية بأن الأستاذ/</p>
+            <p className="mt-2 text-[32px] font-bold leading-tight text-ink">{v.recipient || "…"}</p>
+            {v.national_id && <p className="mt-1 text-[14px] text-mint-hover">هوية وطنية: <span className="num">{v.national_id}</span></p>}
+            <p className="mx-auto mt-4 max-w-[64ch] text-[15.5px] leading-[2.1] text-ink">
+              قد حضر ورشة تدريبية بعنوان: <b className="text-mint-deep">«{v.workshop || "…"}»</b>
+              {v.program ? ` ${v.program}` : ""}{hoursText(v.hours)}{v.reason ? `، ${v.reason}` : "."}
+            </p>
+            <p className="mt-4 text-[16px] font-semibold" style={{ color: accent }}>
+              {v.closing || "وقد أُعطيت هذه الشهادة تقديرًا لمشاركته والتزامه خلال فترة التدريب."}
+            </p>
+          </>) : (<>
+            <p className="mt-7 text-[15px] text-muted">تتقدّم مدرسة مكة الثانوية بالشكر والتقدير إلى</p>
+            <p className="mt-2 text-[32px] font-bold leading-tight text-ink">{v.recipient || "…"}</p>
+            {(v.class_label || v.job) && (
+              <p className="mt-1 text-[14px] text-mint-hover">{v.class_label || v.job}</p>
+            )}
 
-          <p className="mx-auto mt-4 max-w-[58ch] text-[15.5px] leading-[2.1] text-ink">
-            {v.reason || "…"}
-          </p>
+            <p className="mx-auto mt-4 max-w-[58ch] text-[15.5px] leading-[2.1] text-ink">
+              {v.reason || "…"}
+            </p>
 
-          <p className="mt-4 text-[16px] font-semibold" style={{ color: accent }}>
-            {v.closing || "مع تمنياتنا له بالتوفيق والسداد"}
-          </p>
+            <p className="mt-4 text-[16px] font-semibold" style={{ color: accent }}>
+              {v.closing || "مع تمنياتنا له بالتوفيق والسداد"}
+            </p>
+          </>)}
 
           <p className="num mt-3 text-[13px] text-muted">{v.date || ""}</p>
         </div>
