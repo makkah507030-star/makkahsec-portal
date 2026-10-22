@@ -13,17 +13,24 @@ import { loadPeriodTimes, toMinutes, currentSlot } from "../../lib/periodTimes";
 import { loadDay, summarize } from "../../lib/officialAttendance";
 import { OPEN_STATUSES } from "../../lib/referrals.js";
 import { Icon } from "../../components/Layout.jsx";
-import logoIcon from "../../assets/icon-mint.png";
+import iconMint from "../../assets/icon-mint.png";
+import iconWhite from "../../assets/icon-white.png";
+import { academicYearLabel } from "../studio/lib";
 
 // ألوان الحالة من هوية البوابة (index.css)، وتتبدّل قيمها بالوضع الفاتح أو الداكن (THEMES)
 const C = { ok: "var(--m-ok)", warn: "var(--m-warn)", bad: "var(--m-bad)", info: "var(--m-info)", mint: "var(--m-accent)", dim: "var(--m-faint)" };
+// النسختان الفاتحة والغامقة من هوية استوديو البوابة (studio/studio.css: .stu-light و.stu-dark)
 const THEMES = {
-  light: { "--m-bg": "#F4F4F4", "--m-card": "#FFFFFF", "--m-line": "#DCDFDD", "--m-track": "#EDF0EE", "--m-text": "#101010",
-           "--m-sub": "#6B6B6B", "--m-faint": "#A9A9A9", "--m-ok": "#4E7D66", "--m-warn": "#9A7B22", "--m-bad": "#A23B3B",
-           "--m-info": "#3F6B99", "--m-accent": "#3E6350", "--m-head": "#3E6350" },
-  dark:  { "--m-bg": "#111513", "--m-card": "#1B201D", "--m-line": "#3A433E", "--m-track": "#2A322E", "--m-text": "#E9EEEB",
-           "--m-sub": "#A3ADA7", "--m-faint": "#737E78", "--m-ok": "#4E8C6C", "--m-warn": "#A8872D", "--m-bad": "#BE5050",
-           "--m-info": "#4678AA", "--m-accent": "#89D7AD", "--m-head": "#89D7AD" },
+  light: { "--m-bg": "radial-gradient(ellipse 90% 55% at 95% 0%, #DDF3E6 0%, transparent 60%), linear-gradient(160deg, #F2FAF5 0%, #F8FBF9 45%, #EDF6F0 100%)",
+           "--m-lines": "rgba(62,99,80,.04)", "--m-shape": "rgba(62,99,80,.07)", "--m-blob": "rgba(137,215,173,.4)",
+           "--m-card": "rgba(255,255,255,.85)", "--m-line": "#D5E7DC", "--m-track": "#E1EEE6", "--m-text": "#1C3328",
+           "--m-sub": "#5E7268", "--m-faint": "#8FA398", "--m-ok": "#3E8A62", "--m-warn": "#B8912F", "--m-bad": "#A23B3B",
+           "--m-info": "#3F6B99", "--m-accent": "#3E8A62", "--m-head": "#1C3328", "--m-gold": "#B8912F", "--m-pill": "rgba(62,99,80,.35)" },
+  dark:  { "--m-bg": "radial-gradient(ellipse 90% 55% at 95% 0%, #2f5240 0%, transparent 60%), linear-gradient(160deg, #284836 0%, #193326 42%, #12261c 72%, #0e1f17 100%)",
+           "--m-lines": "rgba(255,255,255,.03)", "--m-shape": "rgba(120,170,140,.14)", "--m-blob": "rgba(96,150,118,.3)",
+           "--m-card": "rgba(255,255,255,.05)", "--m-line": "rgba(255,255,255,.14)", "--m-track": "rgba(255,255,255,.1)", "--m-text": "#FFFFFF",
+           "--m-sub": "#A9BCB1", "--m-faint": "#7E9488", "--m-ok": "#89D7AD", "--m-warn": "#D9B45A", "--m-bad": "#E58A7E",
+           "--m-info": "#9CC0E6", "--m-accent": "#89D7AD", "--m-head": "#FFFFFF", "--m-gold": "#D9B45A", "--m-pill": "rgba(255,255,255,.3)" },
 };
 const savedTheme = () => { try { return localStorage.getItem("monitor.theme") === "dark" ? "dark" : "light"; } catch { return "light"; } };
 const WEEKDAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -101,14 +108,23 @@ export default function MonitorScreen() {
   const slot = d ? currentSlot(d.pt, clock) : null;
 
   return (
-    <div dir="rtl" className={`${full ? "fixed inset-0 z-[70] overflow-auto" : "-mx-4 -mt-5 sm:-mx-6"} min-h-full bg-[var(--m-bg)] p-4 text-[var(--m-text)] sm:p-6`} style={THEMES[theme]}>
-      {/* الترويسة */}
-      <header className="flex flex-wrap items-center gap-4 border-b border-[var(--m-line)] pb-4">
-        <img src={logoIcon} alt="" className="h-12 w-12 rounded-card bg-[var(--m-track)] p-1.5" />
+    <div dir="rtl" className={`${full ? "fixed inset-0 z-[70] overflow-auto" : "relative -mx-4 -mt-5 sm:-mx-6"} isolate min-h-full p-4 text-[var(--m-text)] sm:p-6`} style={{ ...THEMES[theme], background: "var(--m-bg)" }}>
+      {/* زخارف الهوية كما في أوراق الاستوديو: خطوط مائلة، وهالة، ومكعبان */}
+      <div aria-hidden className={`pointer-events-none ${full ? "fixed" : "absolute"} inset-0 -z-10 overflow-hidden`}>
+        <div className="absolute inset-0" style={{ background: "repeating-linear-gradient(135deg, var(--m-lines) 0 1.5px, transparent 1.5px 22px)" }} />
+        <div className="absolute h-[520px] w-[520px] rounded-full" style={{ background: "var(--m-blob)", filter: "blur(110px)", left: 80, top: 260 }} />
+        <div className="absolute h-[440px] w-[440px] rounded-[76px]" style={{ background: "var(--m-shape)", transform: "rotate(32deg) skewX(-14deg)", filter: "blur(3px)", left: -230, bottom: -150 }} />
+        <div className="absolute h-[440px] w-[440px] rounded-[76px] opacity-70" style={{ background: "var(--m-shape)", transform: "rotate(32deg) skewX(-14deg)", filter: "blur(3px)", left: -190, bottom: -300 }} />
+      </div>
+      {/* الترويسة: شريط البوابة كما في الاستوديو */}
+      <header className="flex flex-wrap items-center gap-4 pb-3">
+        <img src={theme === "dark" ? iconWhite : iconMint} alt="" className="h-12 w-12 object-contain" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-[var(--m-head)] sm:text-2xl">مدرسة مكة الثانوية</h1>
-          <p className="text-sm text-[var(--m-sub)]">شاشة المتابعة اليومية</p>
+          <h1 className="text-lg font-bold text-[var(--m-head)] sm:text-2xl">بوابة مكة الثانوية الرقمية</h1>
+          <p className="text-sm text-[var(--m-sub)]">مدرسة مكة الثانوية · <span className="font-semibold text-[var(--m-accent)]">شاشة المتابعة اليومية</span></p>
         </div>
+        <span className="hidden rounded-pill border-[1.5px] px-4 py-1 text-sm font-semibold sm:inline" style={{ borderColor: "var(--m-pill)", color: "var(--m-accent)" }}>
+          <span className="num">{academicYearLabel()}</span></span>
         <div className="text-center">
           <p className="text-3xl font-bold tracking-wide sm:text-4xl"><Clock t={clock} /></p>
           <p className="text-xs text-[var(--m-sub)]">{WEEKDAYS[clock.getDay()]} · <span className="num">{fmtHijri(clock)}</span> هـ · <span className="num">{fmtGreg(clock)}</span> م</p>
@@ -127,6 +143,7 @@ export default function MonitorScreen() {
         </div>
       </header>
 
+      <div className="h-[1.5px]" style={{ background: "linear-gradient(90deg, transparent, var(--m-gold), transparent)" }} />
       {!d ? <p className="py-24 text-center text-[var(--m-sub)]">جارٍ تحميل بيانات اليوم…</p> : (
         <div className="mt-5 space-y-5">
           {off && <p className="rounded-card bg-[var(--m-track)] px-4 py-3 text-center text-[var(--m-sub)]">{off.title} — {off.body}</p>}
@@ -182,8 +199,10 @@ export default function MonitorScreen() {
             </Panel>
           </div>
 
-          <p className="text-center text-[11px] text-[var(--m-faint)]">
-            آخر تحديث <Clock t={d.at} /> · تتحدّث الشاشة كل دقيقة · أرقام إجمالية بلا أسماء طلاب
+          <p className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--m-line)] pt-3 text-[11px] text-[var(--m-faint)]">
+            <span>بوابة مكة الثانوية الرقمية · <span className="num font-semibold text-[var(--m-accent)]">makkahsec.com</span></span>
+            <span>
+            آخر تحديث <Clock t={d.at} /> · تتحدّث الشاشة كل دقيقة · أرقام إجمالية بلا أسماء طلاب</span>
           </p>
         </div>
       )}
@@ -258,7 +277,7 @@ function SlotPill({ slot, clock }) {
 
 function Big({ title, value, sub, color, icon, ring }) {
   return (
-    <div className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-card border border-[var(--m-line)] bg-[var(--m-card)] shadow-card p-4">
+    <div className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-[18px] border-[1.5px] border-[var(--m-line)] bg-[var(--m-card)] backdrop-blur-sm p-4">
       <span className="absolute inset-x-0 top-0 h-1" style={{ background: color }} />
       <div className="flex items-center justify-between gap-2 text-sm text-[var(--m-sub)]">
         <span>{title}</span>
@@ -285,7 +304,7 @@ function Donut({ v, color }) {
 
 function Panel({ title, icon, children, className = "" }) {
   return (
-    <section className={`min-w-0 rounded-card border border-[var(--m-line)] bg-[var(--m-card)] shadow-card p-4 ${className}`}>
+    <section className={`min-w-0 rounded-[18px] border-[1.5px] border-[var(--m-line)] bg-[var(--m-card)] backdrop-blur-sm p-4 ${className}`}>
       <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--m-sub)]">
         {icon && <Icon name={icon} className="h-4 w-4 text-[var(--m-faint)]" />}{title}
       </h2>
