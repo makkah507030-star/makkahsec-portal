@@ -324,18 +324,15 @@ export const isGuestCert = (template) => template?.key === "guest_appreciation";
 /* اتجاه الورقة: شهادة الضيوف عمودية دائمًا أيًّا كان المحفوظ في القالب */
 export const sheetLandscape = (template) => !isGuestCert(template) && template?.orientation === "landscape";
 
+/* تصدر باسم مدير المدرسة وتوقيعه وحده أيًّا كان مُصدِرها (الوكيل أو الدعم الفني أو غيرهما) */
 function GuestCert(p) {
-  const { v, doc, template } = p;
-  const src = template.signature_source;
+  const { v, doc } = p;
   return (
     <GuestCertificateBody
       name={v.recipient} entity={v.entity}
       text={v.reason} activity={v.activity} dateText={v.date} closing={v.closing}
       serial={doc?.serial}
-      issuer={src === "issuer" || src === "both"
-        ? { url: p.sigUrl, name: doc?.signature_name, role: doc?.signature_role } : null}
-      principal={src === "principal" || src === "both"
-        ? { url: p.principalSigUrl, name: p.principalName } : null}
+      principal={{ url: p.principalSigUrl, name: p.principalName }}
       stampUrl={p.stampUrl}
     />
   );

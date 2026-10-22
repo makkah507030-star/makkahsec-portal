@@ -132,11 +132,11 @@ function TopBand({ serial }) {
  * متن الشهادة — يملأ الورقة التي يوضع فيها: A4 عمودية (210×297 مم).
  * name: اسم الضيف · entity: جهته · text: نص الشكر
  * activity: البرنامج أو الحدث · dateText: تاريخه · closing: الخاتمة
- * issuer: {url,name,role} يمينًا · principal: {url,name} يسارًا · stampUrl وسطًا
+ * principal: {url,name} توقيع مدير المدرسة وحده (تصدر باسمه أيًّا كان مُصدِرها)، والختم بجواره
  */
 export function GuestCertificateBody({
   name, entity, text, activity, dateText, closing, serial,
-  issuer, principal, stampUrl,
+  principal, stampUrl,
 }) {
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "#fff",
@@ -217,17 +217,10 @@ export function GuestCertificateBody({
           </p>
         </div>
 
-        {/* التواقيع: المُصدِر يمينًا، والختم وسطًا، والمدير يسارًا */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "end", gap: "2mm" }}>
-          <div style={{ justifySelf: "start" }}>
-            {issuer && <Sign url={issuer.url} name={issuer.name} role={issuer.role || "منفّذ البرنامج"} />}
-          </div>
-          <div style={{ justifySelf: "center", minHeight: "20mm" }}>
-            {stampUrl && <img src={stampUrl} alt="" style={{ height: "20mm", width: "auto", opacity: 0.9 }} />}
-          </div>
-          <div style={{ justifySelf: "end" }}>
-            {principal && <Sign url={principal.url} name={principal.name} role="مدير المدرسة" />}
-          </div>
+        {/* التوقيع: مدير المدرسة وحده، والختم بجواره */}
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-end", gap: "8mm" }}>
+          {principal && <Sign url={principal.url} name={principal.name} role="مدير المدرسة" />}
+          {stampUrl && <img src={stampUrl} alt="" style={{ height: "20mm", width: "auto", opacity: 0.9 }} />}
         </div>
 
         <div style={{ marginTop: "3mm", display: "flex", justifyContent: "center", fontSize: "9pt" }}>

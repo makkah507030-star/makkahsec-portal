@@ -1717,7 +1717,7 @@ export default function Forms({ view = "issue", openKey = null }) {
               </p>
             )}
 
-            {picked.signature_source !== "none" && !mySig &&
+            {picked.signature_source !== "none" && !mySig && !isGuestCert(picked) &&
              (picked.signature_source === "issuer" || picked.signature_source === "both") && (
               <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs text-warning">
                 لم ترفع توقيعك بعد. سيصدر المستند بلا توقيع — ارفعه من صفحة «توقيعي».

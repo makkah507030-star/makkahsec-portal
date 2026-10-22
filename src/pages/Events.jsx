@@ -1630,7 +1630,7 @@ function StageCertificates({ e, parts, patch, isSupport, onNext }) {
         </div>
       </section>
 
-      <GuestCertificates e={e} patch={patch} sigUrl={sigUrl} school={school} />
+      <GuestCertificates e={e} patch={patch} school={school} />
 
       <button className="btn-primary w-full" onClick={async () => { await save(); onNext(); }}>
         المتابعة للتقرير
@@ -1661,7 +1661,7 @@ const guestEntity = (g) => (isGuardian(g)
   ? (g.student?.trim() ? `ولي أمر الطالب/ ${g.student.trim()}` : "ولي أمر طالب")
   : g.entity);
 
-function guestCertProps(e, g, i, sigUrl, school) {
+function guestCertProps(e, g, i, school) {
   return {
     name: g.name, entity: guestEntity(g),
     text: guestText(g),
@@ -1669,13 +1669,12 @@ function guestCertProps(e, g, i, sigUrl, school) {
     dateText: e.event_date ? stripBidi(eventDateRange(e, (d) => fmtDate(`${d}T12:00:00`))) : "",
     closing: "سائلين الله له دوام التوفيق والسداد",
     serial: `${e.serial}-G${String(i + 1).padStart(2, "0")}`,
-    issuer: { url: sigUrl, name: e.organizer_name, role: e.organizer_role || "منفّذ البرنامج" },
     principal: { url: school.principalUrl, name: school.principalName },
     stampUrl: school.stampUrl,
   };
 }
 
-function GuestCertificates({ e, patch, sigUrl, school }) {
+function GuestCertificates({ e, patch, school }) {
   const [list, setList] = useState(() => (Array.isArray(e.guests) ? e.guests : []));
   const [open, setOpen] = useState(list.length > 0);
   const [saveErr, setSaveErr] = useState(false);
@@ -1800,7 +1799,7 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
         <div className="space-y-2">
           <p className="text-xs font-semibold text-ink">معاينة</p>
           <CertPreview portrait>
-            <GuestCertificate {...guestCertProps(e, ready[0], 0, sigUrl, school)} />
+            <GuestCertificate {...guestCertProps(e, ready[0], 0, school)} />
           </CertPreview>
         </div>
       )}
@@ -1825,7 +1824,7 @@ function GuestCertificates({ e, patch, sigUrl, school }) {
         <PrintPortal id="ev-guest" margin="0"
                      extraCss="#ev-guest .sheet { page-break-after: always; } #ev-guest .sheet:last-child { page-break-after: auto; }">
           {printing.map((g) => (
-            <GuestCertificate key={g.id} {...guestCertProps(e, g, ready.indexOf(g), sigUrl, school)} />
+            <GuestCertificate key={g.id} {...guestCertProps(e, g, ready.indexOf(g), school)} />
           ))}
         </PrintPortal>
       )}
