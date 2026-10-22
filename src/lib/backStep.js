@@ -1,4 +1,6 @@
 // src/lib/backStep.js
+// Copyright © 2026 محمد بن حسن الحازمي — جميع الحقوق محفوظة (انظر LICENSE).
+// Author: محمد بن حسن الحازمي
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 /* =====================================================================

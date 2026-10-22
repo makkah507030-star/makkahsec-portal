@@ -1,4 +1,6 @@
 // src/App.jsx
+// Copyright © 2026 محمد بن حسن الحازمي — جميع الحقوق محفوظة (انظر LICENSE).
+// Author: محمد بن حسن الحازمي
 import { Suspense, lazy, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
