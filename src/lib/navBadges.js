@@ -306,7 +306,7 @@ async function load() {
       items: qRound2.map((x) => qItem(x, ` · ${countAr(Number(x.impact.below), "student")}`)) },
     { key: "perfAck", n: perfAck, to: "/my-performance", label: "تقييم أداء ينتظر اطلاعك", tone: "warning", icon: "award" },
     { key: "referrals", n: refDeputy.length + refCounselor.length, to: "/referrals", label: "إحالات تنتظر إجراءك", tone: "warning", icon: "send",
-      items: [...refDeputy, ...refCounselor].map((r) => ({ id: r.id, to: "/referrals", title: r.student_name ?? "", flag: r.flag ?? null })) },
+      items: [...refDeputy, ...refCounselor].map((r) => ({ id: r.id, to: `/referrals?tab=inbox&open=${r.id}`, title: r.student_name ?? "", flag: r.flag ?? null })) },
     { key: "dropouts", n: dropouts.length, to: "/dropouts?tab=new", label: "بلاغات طلاب منقطعين تنتظر إجراءك",
       tone: "warning", icon: "userX",
       items: dropouts.map((r) => ({ id: r.id, to: "/dropouts?tab=new", title: r.student_name ?? "" })) },

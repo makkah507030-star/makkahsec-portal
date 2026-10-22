@@ -58,7 +58,9 @@ export default function Referrals() {
   const isTeacher = effectiveRole === "teacher";
 
   const [rows, setRows] = useState(null);
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  // ?open=<id> من «بانتظار إجرائك»: تُعرض تلك الإحالة وحدها مفتوحة، مع زر لعرض الكل
+  const openId = params.get("open");
   const [tab, setTab] = useState(
     params.get("tab") === "follow" && isDeputy ? "follow"
       : params.get("tab") === "behavior" && isDeputy ? "behavior"
@@ -98,6 +100,11 @@ export default function Referrals() {
     (rows ?? []).filter((r) => OPEN_STATUSES.includes(r.status))
       .sort((a, b) => new Date(stageOf(a).since) - new Date(stageOf(b).since)),
   [rows]);
+
+  const listed = tab === "inbox" ? mine : rows ?? [];
+  const focused = openId ? (rows ?? []).find((r) => r.id === openId) ?? null : null;
+  const shown = focused && (tab === "inbox" || tab === "all") ? [focused] : listed;
+  const showAll = () => { params.delete("open"); setParams(params, { replace: true }); };
 
   const pill = (on) =>
     `rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -164,11 +171,18 @@ export default function Referrals() {
             <ReportBar list={rows} title="سجل الإحالات" />
           )}
           {!rows && <Loader compact />}
-          {(tab === "inbox" ? mine : rows ?? []).length === 0 && rows && (
+          {focused && (
+            <div className="flex flex-wrap items-center gap-2 rounded-sm2 bg-mint-tint/60 px-3 py-2 text-xs text-mint-deep">
+              <span>تعرض الإحالة التي اخترتها وحدها.</span>
+              <button className="mr-auto font-semibold underline" onClick={showAll}>
+                عرض كل الإحالات{tab === "inbox" && mine.length > 1 ? ` (${mine.length})` : ""}</button>
+            </div>
+          )}
+          {shown.length === 0 && rows && (
             <p className="card px-4 py-6 text-sm text-muted">لا إحالات هنا.</p>
           )}
-          {(tab === "inbox" ? mine : rows ?? []).map((r) => (
-            <ReferralRow key={r.id} r={r} uid={uid} profile={profile} roles={roles}
+          {shown.map((r) => (
+            <ReferralRow key={r.id} r={r} uid={uid} profile={profile} roles={roles} focus={r.id === openId}
                          isDeputy={isDeputy} isCounselor={isCounselor}
                          onOpen={setViewing} onChange={(t) => { setMsg(t); load(); }} />
           ))}
@@ -923,9 +937,10 @@ function ReportBar({ list, title }) {
 }
 
 /* --------------------------- صف الإحالة --------------------------- */
-function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, onChange }) {
+function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, onChange, focus = false }) {
   const [flag, setFlag] = useState(r.flag ?? null);
-  const [open, setOpen] = useState(false);
+  // المفتوحة من «بانتظار إجرائك» تبدأ بلوحة الإجراء مفتوحة
+  const [open, setOpen] = useState(focus);
   const [note, setNote] = useState("");
   const [counselor, setCounselor] = useState("");
   const [counselors, setCounselors] = useState([]);
@@ -1137,6 +1152,8 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
   // ③ قرار الوكيل: أول وصولها، أو بعد إعادة الموجه
   const deciding = isDeputy && r.status === "with_deputy" && !r.counselor_at;
   const teacherTurn = r.teacher_id === uid && r.status === "returned_to_teacher";
+  // لوحة الإجراء لصاحب الدور وحده (المفتوحة من «بانتظار إجرائك» لا تفتح لغيره)
+  const isOpen = open && (deputyTurn || counselorTurn || teacherTurn);
   // يحذف المعلم إحالته ما لم يُتخذ فيها إجراء: لم يحوّلها الوكيل ولم يصلها الموجه أو ولي الأمر
   const teacherCanDelete = r.teacher_id === uid && !r.deputy_at && !r.counselor_id && !r.counselor_at &&
     !r.closed_at && ["with_deputy", "returned_to_teacher"].includes(r.status);
@@ -1145,7 +1162,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
   const late = isLate(r);
 
   return (
-    <div className="card p-3">
+    <div className={`card p-3 ${focus ? "ring-2 ring-mint-light" : ""}`}>
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-ink">
@@ -1179,9 +1196,9 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
           </button>
         )}
         {(deputyTurn || counselorTurn || teacherTurn) && (
-          <button onClick={() => { setOpen((v) => !v); setNote(""); }}
+          <button onClick={() => { setOpen(!isOpen); setNote(""); }}
                   className="shrink-0 rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white">
-            {open ? "إغلاق" : teacherTurn ? "استكمال التوثيق" : counselorTurn ? "إجراء الموجه"
+            {isOpen ? "إغلاق" : teacherTurn ? "استكمال التوثيق" : counselorTurn ? "إجراء الموجه"
               : r.status === "with_guardian" ? "متابعة ولي الأمر" : deciding ? "قرار الوكيل" : "اعتماد"}
           </button>
         )}
@@ -1215,7 +1232,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
         </p>
       )}
 
-      {open && teacherTurn && (
+      {isOpen && teacherTurn && (
         <div className="mt-3 space-y-2 rounded-sm2 bg-mint-tint/50 p-3">
           {r.ref_type && r.ref_type !== "behavior" && (
             <AcademicDocs uid={uid} student={{ id: r.student_id, full_name: r.student_name }}
@@ -1232,7 +1249,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
         </div>
       )}
 
-      {open && !teacherTurn && (
+      {isOpen && !teacherTurn && (
         <div className="mt-3 space-y-2 rounded-sm2 bg-mint-tint/50 p-3">
           {/* بطاقات بحسب المرحلة: الموجه، أو الوكيل محوِّلًا، أو مراجعًا لإجراء الموجه */}
           <PresetChips value={note} onChange={setNote}
