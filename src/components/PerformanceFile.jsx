@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { signatureByName } from "../lib/userSignatures";
 import { loadPrincipalSignature } from "../lib/principalSignature";
+import SadeedLink from "./SadeedLink";
 import ReportViewer from "./report/ReportViewer.jsx";
 import { perfReportPages } from "./PerfReportDoc.jsx";
 import {
@@ -393,6 +394,7 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                       <span className="font-semibold text-mint-deep">كيف أجمعه؟ </span>{ITEM_HINT[it.key]}
                     </p>
                   )}
+                  {!readOnly && it.key === "e02_09" && <SadeedLink />}
                 </div>
                 {!el.evaluator_only && (
                   <span className={`chip w-28 justify-center ${st.ok ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>
