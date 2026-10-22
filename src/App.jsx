@@ -101,6 +101,7 @@ const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
 const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
 const Nominations = lazy(() => import("./pages/nominations/Nominations.jsx"));
 const Opportunities = lazy(() => import("./pages/nominations/Opportunities.jsx"));
+const QuestionBank = lazy(() => import("./pages/teacher/QuestionBank.jsx"));
 const StudentNotes = lazy(() => import("./pages/StudentNotes.jsx"));
 const StudentDropouts = lazy(() => import("./pages/StudentDropouts.jsx"));
 const EthicsCode = lazy(() => import("./pages/EthicsCode.jsx"));
@@ -505,6 +506,8 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/nominations" element={<Nominations />} />}
           {effectiveRole === "admin" && <Route path="/nominations/:id" element={<Nominations />} />}
           {(effectiveRole === "student" || effectiveRole === "guardian") && <Route path="/opportunities" element={<Opportunities />} />}
+          {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
+          {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}
           {/* استمارة توضيح مستوى الطالب — للمعلم سطره، وللتوجيه والوكيل، ولولي الأمر نسخته */}
           <Route path="/inquiry/:id" element={<GuidanceInquiry />} />
           {/* ملاحظات الطلاب — الصفحة تتحقق من الدور، والقاعدة تفرض من يكتب كل نوع */}
