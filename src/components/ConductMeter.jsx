@@ -3,11 +3,15 @@
    مؤشر السلوك — في رئيسية الطالب وولي الأمر (supabase/conduct_meter.sql). تقديري من سجل البوابة
    منذ بداية العام: السلوك الإيجابي من 80 بعد حسم المخالفات بدرجاتها، ومعه الجوانب الإيجابية.
    الدرجة الرسمية تُرصد في نور نهاية العام. لا يظهر نص المخالفة ولا شيء من التوجيه.
+   وأسفله رابط «قواعد السلوك والمواظبة» ليعود إليها الطالب وولي أمره.
    ===================================================================== */
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { DEGREES } from "../lib/behavior.js";
+
+// قواعد السلوك والمواظبة لطلبة التعليم العام — الإصدار الخامس 1447هـ (public/docs/behavior)
+const RULES_PDF = "/docs/behavior/behavior-rules-1447.pdf";
 
 const level = (s) =>
   s >= 80 ? { t: "سلوك مثالي", c: "#3E8A62", msg: "لا مخالفات مسجلة هذا العام. أحسنت، استمر على ذلك." }
@@ -95,6 +99,19 @@ export default function ConductMeter({ studentId }) {
           </ul>
         )}
       </div>
+
+      <a href={RULES_PDF} target="_blank" rel="noopener noreferrer"
+         className="flex items-center gap-3 border-t border-line px-4 py-3 transition hover:bg-canvas">
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-mint-tint text-mint-deep">
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2zM4 5v16M8 7h6M8 11h6" /></svg>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-ink">قواعد السلوك والمواظبة لطلبة التعليم العام</span>
+          <span className="block text-[11px] text-muted">الإصدار الخامس <span className="num">1447</span>هـ: المخالفات بدرجاتها، والحسم، وفرص التعويض</span>
+        </span>
+        <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-faint" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+      </a>
     </section>
   );
 }
