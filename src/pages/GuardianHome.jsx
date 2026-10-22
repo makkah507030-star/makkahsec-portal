@@ -8,6 +8,7 @@ import { loadFingerprintPublic } from "../lib/officialAttendance";
 import HeaderChips from "../components/HeaderChips.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
 import HolidayBanner from "../components/HolidayBanner.jsx";
+import PeriodNoticeCard from "../components/PeriodNoticeCard.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
@@ -186,6 +187,8 @@ export default function GuardianHome() {
           <AttendanceLog key={active?.id} studentId={active?.id} fp={fp} />
 
           <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
+
+          <PeriodNoticeCard key={`pn-${active?.id}`} studentId={active?.id} />
 
           <ResultsCard key={active?.id} studentId={active?.id} />
 
