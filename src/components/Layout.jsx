@@ -20,6 +20,7 @@ import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 import { useBackSteps, goBack } from "../lib/backStep.js";
 import { savedTheme, saveTheme, applyTheme } from "../lib/theme.js";
+import { EvidenceDock } from "./EvidenceTags.jsx";
 
 /* =====================================================================
    القائمة الجانبية — مرتبة من العمل اليومي إلى الإعدادات، وفي أسفلها
@@ -930,6 +931,8 @@ export default function Layout({ children }) {
           <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-6 lg:pb-5 ${showBack ? "pb-36" : "pb-24"}`}>
             <NavContext.Provider value={{ sections, badgeOf }}>
               <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
+              {/* صندوق شواهد ملف الأداء: آخر كل صفحة فيها إجراء يُحتسب شاهدًا (EvidenceTags) */}
+              <EvidenceDock />
             </NavContext.Provider>
             {/* سطر الحقوق أسفل كل صفحة، بعيدًا عن أزرار القائمة */}
             <footer className="mx-auto mt-10 max-w-5xl border-t border-line pt-3 text-center text-[11px] leading-relaxed text-faint print:hidden">
