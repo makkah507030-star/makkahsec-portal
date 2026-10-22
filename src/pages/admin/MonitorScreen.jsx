@@ -55,7 +55,7 @@ function useMonitor() {
     const start = new Date(date + "T00:00:00").toISOString();
     const week = new Date(new Date(date + "T12:00:00").getTime() + 7 * 864e5).toISOString().slice(0, 10);
     (async () => {
-      const [day, pt, trend, perms, refsToday, refsOpen, behavior, duty, supervision, events, quizzes, lab, notes, nextEvents, nextQuizzes,
+      const [day, pt, trend, perms, refsToday, refsOpen, behavior, duty, supervision, events, quizzes, notes, nextEvents, nextQuizzes,
              toGuardians, absenceNotes, invites, guardianForms, circs] = await Promise.all([
         todayOff() ? null : loadDay(date).catch(() => null),
         loadPeriodTimes().then((r) => r.rows).catch(() => []),
@@ -70,8 +70,6 @@ function useMonitor() {
         supabase.from("school_events").select("title, category, event_date, end_date, start_time, venue")
           .lte("event_date", date).neq("stage", "draft").is("cancelled_at", null).order("event_date", { ascending: false }).limit(30),
         countOf(supabase.from("quizzes").select("id", { count: "exact", head: true }).eq("exam_date", date).neq("status", "draft")),
-        supabase.from("lab_bookings").select("period_no, lesson, labs(name), teachers(full_name), classes(grade, class_no)")
-          .eq("booking_date", date).order("period_no"),
         countOf(supabase.from("notifications").select("id", { count: "exact", head: true }).gte("created_at", start)),
         supabase.from("school_events").select("title, category, event_date, start_time").gt("event_date", date).lte("event_date", week)
           .neq("stage", "draft").is("cancelled_at", null).order("event_date", { ascending: true }).limit(6),
@@ -95,7 +93,7 @@ function useMonitor() {
         duty: [...(duty.data ?? []).flatMap((r) => [r.name_a, r.name_b]).filter(Boolean).map((n) => ({ n, k: "duty" })),
                ...(supervision.data ?? []).filter((r) => r.person_name).map((r) => ({ n: r.person_name, k: r.kind === "supervisor" ? "sup" : "teacher" }))],
         events: (events.data ?? []).filter((e) => e.event_date === date || (e.end_date && e.end_date >= date)),
-        quizzes, lab: lab.error ? null : lab.data ?? [], notes,
+        quizzes, notes,
         comm: { toGuardians, absenceNotes, invites, guardianForms, circs }, nextEvents: nextEvents.data ?? [], nextQuizzes, at: new Date(),
       });
     })();
@@ -223,9 +221,8 @@ export default function MonitorScreen() {
               {d.duty.length ? <DutyList rows={d.duty} /> : <Dim>لا مناوبين مسجّلين اليوم.</Dim>}
             </Panel>
             <Panel title="اليوم في المدرسة" icon="calendar">
-              <Mini rows={[["اختبارات مجدولة", d.quizzes], ["حجوزات المعمل", d.lab?.length], ["فعاليات جارية", d.events.length]]} />
+              <Mini rows={[["اختبارات مجدولة", d.quizzes], ["فعاليات جارية", d.events.length]]} />
               {d.events.slice(0, 2).map((e) => <p key={e.title} className="mt-2 truncate text-xs text-[var(--m-sub)]">• {e.title}</p>)}
-              {d.lab?.length > 0 && <LabList rows={d.lab} />}
             </Panel>
             <Panel title="التواصل" icon="bell">
               <Mini rows={[["إشعارات البوابة اليوم", d.notes], ["وصلت أولياء الأمور", d.comm.toGuardians],
@@ -458,22 +455,6 @@ function DutyList({ rows }) {
           </li>
         );
       })}
-    </ul>
-  );
-}
-
-/* حجوزات المعمل اليوم: الحصة والفصل والمعلم (بلا أسماء طلاب) */
-function LabList({ rows }) {
-  return (
-    <ul className="mt-2 space-y-1 border-t border-[var(--m-line)] pt-2 text-xs">
-      {rows.slice(0, 4).map((r, i) => (
-        <li key={i} className="flex items-center gap-1.5 truncate">
-          <span className="shrink-0 rounded-[4px] bg-[var(--m-track)] px-1.5 font-bold">ح {r.period_no}</span>
-          {r.classes && <span className="num shrink-0 text-[var(--m-sub)]">{r.classes.grade}/{r.classes.class_no}</span>}
-          <span className="min-w-0 truncate">{r.teachers?.full_name?.split(" ").filter((_, j, a) => j === 0 || j === a.length - 1).join(" ") ?? ""}</span>
-        </li>
-      ))}
-      {rows.length > 4 && <li className="text-[var(--m-faint)]">و{rows.length - 4} غيرها</li>}
     </ul>
   );
 }
