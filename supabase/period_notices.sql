@@ -3,7 +3,7 @@
 -- الطالب وولي أمره المواد المرصودة فقط بأجزائها مع «آخر تحديث». يُعاد الرفع كلما اكتمل رصد،
 -- فيُستبدل إشعار كل طالب تغيّرت درجاته ويصله وولي أمره إشعار، ويُسجَّل كل رفع في سجل.
 -- المجموع والنسبة (من المواد المرصودة) لتقرير المتفوقين في الإدارة، ولا يظهران للطالب.
--- تكرار التنفيذ آمن.
+-- يُشغَّل بعد student_file_1.sql. تكرار التنفيذ آمن.
 -- =====================================================================
 
 create table if not exists public.period_notices (
@@ -40,6 +40,9 @@ create policy period_notices_own on public.period_notices for select to authenti
   using (published and (exists (select 1 from students s where s.id = student_id and s.user_id = auth.uid())
     or exists (select 1 from guardian_student gs join guardians g on g.id = gs.guardian_id
                where gs.student_id = period_notices.student_id and g.user_id = auth.uid())));
+-- ملف الطالب: من يراه (sf_can من student_file_1.sql: الموجه لطلاب صفه) يقرأ إشعاراته، ولو لم يكن حسابه إداريًا
+drop policy if exists period_notices_file on public.period_notices;
+create policy period_notices_file on public.period_notices for select to authenticated using (public.sf_can(student_id));
 drop policy if exists period_notice_log_admin on public.period_notice_log;
 create policy period_notice_log_admin on public.period_notice_log for select to authenticated using (public.is_admin());
 grant select, insert, update, delete on public.period_notices to authenticated;

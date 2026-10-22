@@ -9,7 +9,7 @@ import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
 import { NOOR_NOTE } from "../lib/periodNotice";
 
-function Notice({ n, open, onToggle }) {
+function Notice({ n, open, onToggle, staff }) {
   // أصناف التقويم كما وردت في المواد، بترتيب ظهورها
   const kinds = [...new Set(n.subjects.flatMap((s) => (s.parts ?? []).map((p) => p.label)))];
   const extra = [["المواظبة", n.attendance], ["السلوك المتميز", n.behavior_excellent], ["السلوك الإيجابي", n.behavior_positive]]
@@ -19,6 +19,9 @@ function Notice({ n, open, onToggle }) {
       <button type="button" onClick={onToggle} className="flex w-full flex-wrap items-center gap-2 text-right">
         <span className="text-sm font-semibold text-ink">{n.title}</span>
         {n.term && <span className="chip bg-canvas text-muted">{n.term}</span>}
+        {/* في ملف الطالب للإدارة: المجموع والنسبة من المواد المرصودة، وحالة النشر */}
+        {staff && n.pct != null && <span className="chip gap-1 bg-mint-tint text-mint-deep">المجموع <bdi dir="ltr" className="num">{n.total} / {n.max_total}</bdi> · <bdi dir="ltr" className="num">{n.pct}%</bdi></span>}
+        {staff && !n.published && <span className="chip bg-absent/10 text-absent">مخفي عن الطالب</span>}
         <span className="mr-auto text-[11px] text-muted">آخر تحديث: <span className="num">{fmtDateTime(n.updated_at)}</span></span>
         <span className="text-xs text-mint-deep">{open ? "إخفاء" : "عرض"}</span>
       </button>
@@ -66,7 +69,8 @@ function Notice({ n, open, onToggle }) {
   );
 }
 
-export default function PeriodNoticeCard({ studentId }) {
+/* staff: في ملف الطالب — يظهر المجموع والنسبة والمخفي أيضًا */
+export default function PeriodNoticeCard({ studentId, staff = false }) {
   const [rows, setRows] = useState(null);
   const [open, setOpen] = useState(null);
 
@@ -74,15 +78,18 @@ export default function PeriodNoticeCard({ studentId }) {
     if (!studentId) return;
     (async () => {
       const { data: y } = await supabase.from("settings").select("value").eq("key", "active_year").maybeSingle();
-      const { data } = await supabase.from("period_notices")
-        .select("id, title, term, subjects, attendance, behavior_excellent, behavior_positive, updated_at")
-        .eq("student_id", studentId).eq("academic_year", y?.value ?? "").eq("published", true)
-        .order("updated_at", { ascending: false });
+      let q = supabase.from("period_notices")
+        .select(`id, title, term, subjects, attendance, behavior_excellent, behavior_positive, updated_at${staff ? ", total, max_total, pct, published" : ""}`)
+        .eq("student_id", studentId).eq("academic_year", y?.value ?? "");
+      if (!staff) q = q.eq("published", true);
+      const { data } = await q.order("updated_at", { ascending: false });
       setRows(data ?? []); setOpen(data?.[0]?.id ?? null);
     })();
-  }, [studentId]);
+  }, [studentId, staff]);
 
-  if (!rows?.length) return null;
+  if (!rows?.length) return staff && rows ? (
+    <p className="card px-4 py-3 text-xs text-muted">درجات الفترة: لم يُرفع إشعار فترة لهذا الطالب هذا العام.</p>
+  ) : null;
   return (
     <section className="card overflow-hidden">
       <div className="border-b border-line px-4 py-3">
@@ -90,7 +97,7 @@ export default function PeriodNoticeCard({ studentId }) {
         <p className="text-[11px] text-muted">المواد التي اكتمل رصدها في نور، وتُحدَّث كلما رُصدت مواد أخرى.</p>
       </div>
       <div className="divide-y divide-line">
-        {rows.map((n) => <Notice key={n.id} n={n} open={open === n.id} onToggle={() => setOpen(open === n.id ? null : n.id)} />)}
+        {rows.map((n) => <Notice key={n.id} n={n} staff={staff} open={open === n.id} onToggle={() => setOpen(open === n.id ? null : n.id)} />)}
       </div>
     </section>
   );

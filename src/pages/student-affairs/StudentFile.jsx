@@ -22,6 +22,7 @@ import { STATUS as REF_STATUS } from "../../lib/referrals.js";
 import { levelLabel } from "../../lib/guidanceInquiry.js";
 import { NOTE_KINDS } from "../../lib/studentNotes.js";
 import { TONE, buildModel } from "./studentFileModel.js";
+import PeriodNoticeCard from "../../components/PeriodNoticeCard.jsx";
 
 // من يعدّل حضور الحصص (supabase/class_attendance_staff_edit.sql)
 const EDIT_ROLES = ["principal", "tech_support", "deputy_students"];
@@ -156,6 +157,9 @@ function FileBody({ s, from, to }) {
         <Achievements m={m} aca={data.aca} scout={st.scout} />
         <Contact m={m} con={data.con} st={st} />
       </div>
+
+      {/* إشعار الفترة من نور كما يراه الطالب، ومعه المجموع والنسبة للإدارة */}
+      <PeriodNoticeCard studentId={s.student_id} staff />
 
       {canEdit && <PeriodEdit sid={s.student_id} from={from} to={to} uid={session?.user?.id ?? null}
         onSaved={() => setReload((n) => n + 1)} />}
