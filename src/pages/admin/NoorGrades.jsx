@@ -282,7 +282,7 @@ export default function NoorGrades() {
     // كل فصل شارة واضحة: المتأخر كليًا بإطار وردي، والجزئي بإطار أزرق متقطع وكلمة «جزئي»
     const chip = (r) => r.st === "partial"
       ? `<span style="display:inline-block;margin:2px;padding:2px 8px;border:1.5px dashed #3F6B99;border-radius:6px;background:#EAF1FA;color:#2C527A;font-weight:700;white-space:nowrap">${classCode(r.grade, r.class_no)} <small style="font-weight:600">جزئي</small></span>`
-      : `<span style="display:inline-block;margin:2px;padding:2px 8px;border:1.5px solid #E7B9B9;border-radius:6px;background:#FBEDED;color:#8E2F2F;font-weight:700;white-space:nowrap">${classCode(r.grade, r.class_no)}</span>`;
+      : `<span style="display:inline-block;margin:2px;padding:2px 8px;border:1.5px solid #B02A2A;border-radius:6px;background:#F8D7D7;color:#8E1F1F;font-weight:700;white-space:nowrap">${classCode(r.grade, r.class_no)}</span>`;
     const rows = groups.map((g, i) => {
       g.list.sort((a, b) => a.class_no - b.class_no);
       const oldest = g.list.reduce((a, r) => (r.due_date < a ? r.due_date : a), g.list[0].due_date);
@@ -305,7 +305,7 @@ export default function NoorGrades() {
         + (term?.grading_deadline ? ` · نهاية الرصد ${weekday(term.grading_deadline)} ${fmtHijri(term.grading_deadline)}` : ""),
       headers: ["م", "المادة", "المعلم", "الفصول غير المرصودة", "عددها", "تاريخ الاختبار", "الأيام منذ الاختبار"],
       rows, landscape: true,
-      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. الشارة الوردية: فصل لم يُرصد، والزرقاء المتقطعة «جزئي»: رُصد بعضه، وتحتها الناقص. الأيام لأقدم اختبار في الصف، ومواد التقويم المستمر من آخر يوم اختبارات.`,
+      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. الشارة الحمراء: فصل لم يُرصد، والزرقاء المتقطعة «جزئي»: رُصد بعضه، وتحتها الناقص. الأيام لأقدم اختبار في الصف، ومواد التقويم المستمر من آخر يوم اختبارات.`,
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       signatures: [{ title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
