@@ -309,13 +309,13 @@ async function load() {
       items: [...refDeputy, ...refCounselor].map((r) => ({ id: r.id, to: `/referrals?tab=inbox&open=${r.id}`, title: r.student_name ?? "", flag: r.flag ?? null })) },
     { key: "dropouts", n: dropouts.length, to: "/dropouts?tab=new", label: "بلاغات طلاب منقطعين تنتظر إجراءك",
       tone: "warning", icon: "userX",
-      items: dropouts.map((r) => ({ id: r.id, to: "/dropouts?tab=new", title: r.student_name ?? "" })) },
+      items: dropouts.map((r) => ({ id: r.id, to: `/dropouts?tab=new&open=${r.id}`, title: r.student_name ?? "" })) },
     { key: "guidance", n: guidance, to: `/guidance?tab=requests${myGrades.length === 1 ? `&grade=${myGrades[0]}` : ""}`,
       label: "طلبات مقابلة جديدة", tone: "warning", icon: "heart" },
 
     // الاعتماد
     { key: "toApprove", n: toApprove.length, to: "/forms-review", label: "نماذج تنتظر اعتمادك", tone: "warning", icon: "inbox",
-      items: toApprove.map((d) => ({ id: d.id, to: "/forms-review", title: [d.title, d.recipient].filter(Boolean).join(" · "), flag: d.flag ?? null })) },
+      items: toApprove.map((d) => ({ id: d.id, to: `/forms-review?open=${d.id}`, title: [d.title, d.recipient].filter(Boolean).join(" · "), flag: d.flag ?? null })) },
     { key: "events", n: events, to: "/forms-review", label: "تقارير أحداث تنتظر الاعتماد", tone: "warning", icon: "sparkles" },
     { key: "plcPending", n: plcPending.length, to: "/plc?tab=pending",
       items: items(plcPending, "/plc", (r) => `جلسة ${r.head_name ?? ""}`),

@@ -450,7 +450,9 @@ export default function Forms({ view = "issue", openKey = null }) {
   const isApprover = (adminRoles ?? []).includes("principal");
   const usage = useUsageCounts();
 
-  const [tab, setTab] = useState(review ? "replies" : "issue");
+  // ?open=<id> من «بانتظار إجرائك»: يُعرض ذلك المستند وحده في «اعتماد النماذج»، مع زر لعرض الكل
+  const openDocId = review ? new URLSearchParams(location.search).get("open") : null;
+  const [tab, setTab] = useState(review ? (openDocId ? "approve" : "replies") : "issue");
   const [fQ, setFQ] = useState("");
   const [fTpl, setFTpl] = useState("");
   const [fStatus, setFStatus] = useState("");
@@ -1829,7 +1831,8 @@ export default function Forms({ view = "issue", openKey = null }) {
   // العاجل أولًا (الترتيب مستقر فيبقى الأحدث فالأقدم داخل كل ملصق)
   const byFlag = (a, b) => flagRank(a.flag) - flagRank(b.flag);
   const shownReplies = replies.filter(matchFilter).sort(byFlag);
-  const shownPending = pending.filter(matchFilter).sort(byFlag);
+  const focusedDoc = openDocId ? pending.find((d) => d.id === openDocId) ?? null : null;
+  const shownPending = focusedDoc ? [focusedDoc] : pending.filter(matchFilter).sort(byFlag);
   // ما يُعتمد جماعيًا: الإفادات الواصلة، والمستندات بانتظار الاعتماد
   const selectable = tab === "replies"
     ? shownReplies.filter((d) => d.status === "replied")
@@ -2403,7 +2406,13 @@ export default function Forms({ view = "issue", openKey = null }) {
               {msg.text}
             </p>
           )}
-          {pending.length > 0 && filterBar(pending)}
+          {focusedDoc ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-sm2 bg-mint-tint/60 px-3 py-2 text-xs text-mint-deep">
+              <span>يعرض المستند الذي اخترته وحده.</span>
+              <button className="mr-auto font-semibold underline" onClick={() => navigate(location.pathname, { replace: true })}>
+                عرض كل المستندات ({pending.length})</button>
+            </div>
+          ) : pending.length > 0 && filterBar(pending)}
           {rejectFor && (
             <div className="card space-y-2 border-absent/30 p-4">
               <p className="text-sm font-semibold text-ink">
