@@ -712,6 +712,7 @@ export default function Layout({ children }) {
         end={i.to === "/"}
         onClick={() => reopenPage(i)}
         title={iconOnly ? i.label : undefined}
+        aria-label={iconOnly ? i.label : undefined}
         aria-current={active ? "page" : undefined}
         className={`relative flex items-center gap-3 rounded-sm2 text-[13.5px] transition-colors ${
           iconOnly ? "justify-center px-0 py-2.5" : "px-3 py-2"
@@ -834,17 +835,19 @@ export default function Layout({ children }) {
           )}
         </nav>
 
-        {/* أسفل القائمة: الحساب والمساعدة */}
-        <div className={`space-y-0.5 border-t border-line py-2 ${iconOnly ? "px-2" : "px-3"}`}>
-          {footer.map((i) => navItem(i, { iconOnly }))}
+        {/* أسفل القائمة: الحساب والمساعدة — صف أيقونات واحد يظهر اسم كلٍّ منها عند الوقوف عليه،
+            وفي القائمة المطوية عمود أيقونات كما هي */}
+        <div className={`border-t border-line py-2 ${iconOnly ? "space-y-0.5 px-2" : "flex items-center gap-1 px-3"}`}>
+          {footer.map((i) => iconOnly ? navItem(i, { iconOnly }) : (
+            <div key={i.to} className="min-w-0 flex-1">{navItem(i, { iconOnly: true })}</div>
+          ))}
           {desktop && (
             <button type="button" onClick={() => setCollapsedSaved(!collapsed)}
-                    title={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
-                    className={`flex w-full items-center gap-3 rounded-sm2 py-2 text-[13px] font-medium text-faint hover:bg-canvas hover:text-ink ${
-                      iconOnly ? "justify-center" : "px-3"
+                    title={collapsed ? "توسيع القائمة" : "طيّ القائمة"} aria-label={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
+                    className={`flex items-center justify-center rounded-sm2 py-2.5 text-faint hover:bg-canvas hover:text-ink ${
+                      iconOnly ? "w-full" : "min-w-0 flex-1"
                     }`}>
               <Icon name={collapsed ? "panelOpen" : "panel"} className="h-[18px] w-[18px]" />
-              {!iconOnly && <span>طيّ القائمة</span>}
             </button>
           )}
         </div>
