@@ -7,7 +7,8 @@
    ===================================================================== */
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { todayISO, todayOff, GRADE_NAMES } from "../../lib/schoolTime";
+import { todayISO, todayOff, nextHoliday, GRADE_NAMES } from "../../lib/schoolTime";
+import { EXAM_DATE } from "../../components/ExamCountdown.jsx";
 import { fmtHijri, fmtGreg } from "../../lib/dates";
 import { loadPeriodTimes, toMinutes, currentSlot } from "../../lib/periodTimes";
 import { loadDay, summarize } from "../../lib/officialAttendance";
@@ -25,12 +26,12 @@ const THEMES = {
            "--m-lines": "rgba(62,99,80,.04)", "--m-shape": "rgba(62,99,80,.07)", "--m-blob": "rgba(137,215,173,.4)",
            "--m-card": "rgba(255,255,255,.85)", "--m-line": "#D5E7DC", "--m-track": "#E1EEE6", "--m-text": "#1C3328",
            "--m-sub": "#5E7268", "--m-faint": "#8FA398", "--m-ok": "#3E8A62", "--m-warn": "#B8912F", "--m-bad": "#A23B3B",
-           "--m-info": "#3F6B99", "--m-accent": "#3E8A62", "--m-head": "#1C3328", "--m-gold": "#B8912F", "--m-pill": "rgba(62,99,80,.35)" },
+           "--m-info": "#3F6B99", "--m-accent": "#3E8A62", "--m-head": "#1C3328", "--m-gold": "#B8912F", "--m-pill": "rgba(62,99,80,.35)", "--m-on": "#FFFFFF" },
   dark:  { "--m-bg": "radial-gradient(ellipse 90% 55% at 95% 0%, #2f5240 0%, transparent 60%), linear-gradient(160deg, #284836 0%, #193326 42%, #12261c 72%, #0e1f17 100%)",
            "--m-lines": "rgba(255,255,255,.03)", "--m-shape": "rgba(120,170,140,.14)", "--m-blob": "rgba(96,150,118,.3)",
            "--m-card": "rgba(255,255,255,.05)", "--m-line": "rgba(255,255,255,.14)", "--m-track": "rgba(255,255,255,.1)", "--m-text": "#FFFFFF",
            "--m-sub": "#A9BCB1", "--m-faint": "#7E9488", "--m-ok": "#89D7AD", "--m-warn": "#D9B45A", "--m-bad": "#E58A7E",
-           "--m-info": "#9CC0E6", "--m-accent": "#89D7AD", "--m-head": "#FFFFFF", "--m-gold": "#D9B45A", "--m-pill": "rgba(255,255,255,.3)" },
+           "--m-info": "#9CC0E6", "--m-accent": "#89D7AD", "--m-head": "#FFFFFF", "--m-gold": "#D9B45A", "--m-pill": "rgba(255,255,255,.3)", "--m-on": "#193326" },
 };
 const savedTheme = () => { try { return localStorage.getItem("monitor.theme") === "dark" ? "dark" : "light"; } catch { return "light"; } };
 const WEEKDAYS = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
@@ -50,8 +51,9 @@ function useMonitor() {
     const date = todayISO();
     const dow = new Date(date + "T12:00:00").getDay();
     const start = new Date(date + "T00:00:00").toISOString();
+    const week = new Date(new Date(date + "T12:00:00").getTime() + 7 * 864e5).toISOString().slice(0, 10);
     (async () => {
-      const [day, pt, trend, sub, perms, refsToday, refsOpen, behavior, duty, supervision, events, quizzes, lab, notes] = await Promise.all([
+      const [day, pt, trend, sub, perms, refsToday, refsOpen, behavior, duty, supervision, events, quizzes, lab, notes, nextEvents, nextQuizzes] = await Promise.all([
         todayOff() ? null : loadDay(date).catch(() => null),
         loadPeriodTimes().then((r) => r.rows).catch(() => []),
         supabase.from("official_attendance_days").select("attend_date, official_pct, late_count")
@@ -68,6 +70,9 @@ function useMonitor() {
         countOf(supabase.from("quizzes").select("id", { count: "exact", head: true }).eq("exam_date", date).neq("status", "draft")),
         countOf(supabase.from("lab_bookings").select("id", { count: "exact", head: true }).eq("booking_date", date)),
         countOf(supabase.from("notifications").select("id", { count: "exact", head: true }).gte("created_at", start)),
+        supabase.from("school_events").select("title, category, event_date, start_time").gt("event_date", date).lte("event_date", week)
+          .neq("stage", "draft").is("cancelled_at", null).order("event_date", { ascending: true }).limit(6),
+        countOf(supabase.from("quizzes").select("id", { count: "exact", head: true }).gt("exam_date", date).lte("exam_date", week).neq("status", "draft")),
       ]);
       if (!live) return;
       const permStudents = new Set((perms.data ?? []).flatMap((p) => (p.permission_request_students ?? []).map((x) => x.student_id)));
@@ -77,7 +82,7 @@ function useMonitor() {
         refsToday, refsOpen, behavior,
         duty: [...(duty.data ?? []).flatMap((r) => [r.name_a, r.name_b]), ...(supervision.data ?? []).map((r) => r.person_name)].filter(Boolean),
         events: (events.data ?? []).filter((e) => e.event_date === date || (e.end_date && e.end_date >= date)),
-        quizzes, lab, notes, at: new Date(),
+        quizzes, lab, notes, nextEvents: nextEvents.data ?? [], nextQuizzes, at: new Date(),
       });
     })();
     return () => { live = false; };
@@ -199,6 +204,19 @@ export default function MonitorScreen() {
             </Panel>
           </div>
 
+          {/* الصف الرابع: التحضير حسب الحصة، والخط الزمني لليوم، والقادم */}
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <Panel title="التحضير حسب الحصة" icon="clipboard">
+              {m.byPeriod.length ? <PeriodBars rows={m.byPeriod} /> : <Dim>لا جدول لليوم.</Dim>}
+            </Panel>
+            <Panel title="اليوم الدراسي" icon="clock" className="md:col-span-2">
+              {(d.pt ?? []).length ? <DayLine rows={d.pt} clock={clock} /> : <Dim>لا أوقات للحصص.</Dim>}
+            </Panel>
+            <Panel title="القادم" icon="calendar">
+              <Upcoming d={d} />
+            </Panel>
+          </div>
+
           <p className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--m-line)] pt-3 text-[11px] text-[var(--m-faint)]">
             <span>بوابة مكة الثانوية الرقمية · <span className="num font-semibold text-[var(--m-accent)]">makkahsec.com</span></span>
             <span>
@@ -238,6 +256,14 @@ function model(d) {
   const doneIds = new Set(d.day?.markedIds ?? []);
   const done = due.filter((r) => doneIds.has(r.id)).length;
 
+  // التحضير حسب الحصة: الفصول المجدولة في كل حصة، وكم حُضّر منها
+  const byPeriod = (d.pt ?? []).filter((p) => p.kind === "period" && p.period_no != null)
+    .sort((a, b) => a.period_no - b.period_no).map((p) => {
+      const list = (d.day?.schedule ?? []).filter((r) => r.period_no === p.period_no);
+      const n = list.filter((r) => doneIds.has(r.id)).length;
+      return { no: p.period_no, total: list.length, done: n, pct: pctOf(n, list.length), started: started.has(p.period_no) };
+    }).filter((p) => p.total);
+
   const series = d.trend.filter((t) => t.official_pct != null).map((t) => ({ d: t.attend_date, v: Number(t.official_pct) }));
   const pct = marked ? s.pct : null;
   if (pct != null) series.push({ d: d.date, v: pct, today: true });
@@ -248,7 +274,7 @@ function model(d) {
     conflicts: rows.filter((r) => r.conflict).length, fp, late: late.length,
     lateTop: lateTopE ? `${GRADE_NAMES[lateTopE[0].split("/")[0]]?.replace(" الثانوي", "") ?? ""} / ${lateTopE[0].split("/")[1]} (${lateTopE[1]})` : null,
     mark: { total: due.length, done, pct: pctOf(done, due.length) },
-    classes, series,
+    classes, series, byPeriod,
     yPct: past.length ? Math.round(past.at(-1) * 10) / 10 : null,
     avg: past.length ? Math.round((past.reduce((a, v) => a + v, 0) / past.length) * 10) / 10 : null,
     grades: [1, 2, 3].map((g) => ({ grade: g, pct: marked ? s.by_grade[g]?.pct ?? null : null })),
@@ -352,6 +378,82 @@ function ClassBars({ rows }) {
         {[[C.ok, "95% فأكثر"], [C.warn, "90–95%"], [C.bad, "أقل من 90%"]].map(([c, t]) => (
           <span key={t} className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-[3px]" style={{ background: c }} />{t}</span>))}
       </div>
+    </div>
+  );
+}
+
+/* التحضير حسب الحصة: عمود لكل حصة بنسبة الفصول المحضَّرة؛ الحصة التي لم تبدأ باهتة */
+function PeriodBars({ rows }) {
+  return (
+    <div className="flex h-36 items-end justify-between gap-1.5">
+      {rows.map((p) => (
+        <div key={p.no} className="flex flex-1 flex-col items-center gap-1" title={`الحصة ${p.no}: ${p.done} من ${p.total}`}>
+          <span className="num text-[10px] text-[var(--m-sub)]">{p.started ? `${Math.round(p.pct)}%` : "—"}</span>
+          <div className="flex h-24 w-full max-w-[2.5rem] items-end overflow-hidden rounded-t-[4px] bg-[var(--m-track)]">
+            {p.started && <div className="w-full" style={{ height: `${Math.max(4, p.pct)}%`, background: toneOf(p.pct === 100 ? 100 : p.pct >= 90 ? 92 : 50) }} />}
+          </div>
+          <span className="num text-[11px] text-[var(--m-sub)]">{p.no}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* الخط الزمني لليوم: الحصص والفسح بعرض مدتها، والجاري مضيء، والماضي خافت */
+function DayLine({ rows, clock }) {
+  const list = [...rows].filter((r) => toMinutes(r.start_time) != null && toMinutes(r.end_time) != null)
+    .sort((a, b) => toMinutes(a.start_time) - toMinutes(b.start_time));
+  if (!list.length) return <Dim>لا أوقات للحصص.</Dim>;
+  const s0 = toMinutes(list[0].start_time), s1 = toMinutes(list.at(-1).end_time);
+  const now = clock.getHours() * 60 + clock.getMinutes();
+  const fmt = (t) => { const v = toMinutes(t); const h = Math.floor(v / 60); return `${h % 12 || 12}:${String(v % 60).padStart(2, "0")}`; };
+  const pos = Math.min(1, Math.max(0, (now - s0) / (s1 - s0)));
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="relative">
+        <div className="flex h-12 gap-[3px]">
+          {list.map((r, i) => {
+            const a = toMinutes(r.start_time), b = toMinutes(r.end_time);
+            const cur = now >= a && now <= b, past = now > b, per = r.kind === "period";
+            return (
+              <div key={i} className="flex min-w-0 flex-col items-center justify-center rounded-[6px] text-[11px] font-semibold"
+                style={{ flexGrow: b - a, flexBasis: 0, background: cur ? "var(--m-accent)" : per ? "var(--m-track)" : "transparent",
+                  border: per ? "none" : "1.5px dashed var(--m-line)", color: cur ? "var(--m-on)" : "var(--m-sub)", opacity: past && !cur ? 0.5 : 1 }}
+                title={`${r.label ?? ""} ${fmt(r.start_time)}–${fmt(r.end_time)}`}>
+                <span className="truncate px-0.5">{per ? r.period_no : (r.label ?? "")}</span>
+              </div>
+            );
+          })}
+        </div>
+        {now >= s0 && now <= s1 && <span className="absolute -top-1.5 bottom-[-6px] w-[2px] rounded-full" style={{ right: `${pos * 100}%`, background: "var(--m-gold)" }} />}
+      </div>
+      <div className="flex justify-between text-[11px] text-[var(--m-sub)]">
+        <span>البداية <span className="num">{fmt(list[0].start_time)}</span></span>
+        <span>{now < s0 ? "لم يبدأ اليوم الدراسي" : now > s1 ? "انتهى اليوم الدراسي" : "الخط الذهبي: الآن"}</span>
+        <span>النهاية <span className="num">{fmt(list.at(-1).end_time)}</span></span>
+      </div>
+    </div>
+  );
+}
+
+/* القادم: فعاليات الأسبوع واختباراته، والعدّ للإجازة القادمة والاختبارات النهائية */
+function Upcoming({ d }) {
+  const h = nextHoliday();
+  const exam = Math.ceil((EXAM_DATE.getTime() - Date.now()) / 864e5);
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        {h && <div className="rounded-sm2 bg-[var(--m-track)] px-2 py-1.5 text-center">
+          <p className="num text-xl font-bold" style={{ color: "var(--m-accent)" }}>{h.days}</p>
+          <p className="truncate text-[10px] text-[var(--m-sub)]">يومًا لـ{h.name}</p></div>}
+        {exam > 0 && <div className="rounded-sm2 bg-[var(--m-track)] px-2 py-1.5 text-center">
+          <p className="num text-xl font-bold" style={{ color: "var(--m-gold)" }}>{exam}</p>
+          <p className="text-[10px] text-[var(--m-sub)]">يومًا للاختبارات النهائية</p></div>}
+      </div>
+      <p className="text-xs text-[var(--m-sub)]">اختبارات الأسبوع القادم: <b className="num text-[var(--m-text)]">{d.nextQuizzes ?? 0}</b></p>
+      {d.nextEvents.length ? d.nextEvents.slice(0, 3).map((e) => (
+        <p key={e.title + e.event_date} className="truncate text-xs"><span className="num text-[var(--m-sub)]">{WEEKDAYS[new Date(e.event_date + "T12:00:00").getDay()]}</span> · {e.title}</p>
+      )) : <p className="text-xs text-[var(--m-faint)]">لا فعاليات هذا الأسبوع.</p>}
     </div>
   );
 }
