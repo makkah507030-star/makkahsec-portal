@@ -1,11 +1,11 @@
-// src/pages/qudrat/Voice.jsx
+// src/components/Voice.jsx
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { supabase } from "../lib/supabase";
 
 /* =====================================================================
-   الرد الصوتي في مركز التدريب (القدرات): المعلم يسجّل شرحه من المتصفح
-   (الحاسب أو الجوال) ويسمعه قبل الإرسال، والطالب يسمعه تحت سؤاله.
-   التسجيل في المخزن الخاص qudrat-voice/<رقم السؤال>/ (qudrat_5.sql).
+   التسجيل الصوتي من المتصفح (الحاسب أو الجوال)، يُسمع قبل الإرسال ويُرفع إلى مخزن خاص.
+   • مركز التدريب (القدرات): رد المعلم الصوتي — qudrat-voice/<رقم السؤال>/ (qudrat_5.sql).
+   • طلبات مقابلة الموجه: رسائل الموجه وولي الأمر — guidance-voice/<رقم الطلب>/ (guidance_6.sql).
    ===================================================================== */
 
 export const VOICE_BUCKET = "qudrat-voice";
@@ -16,7 +16,7 @@ const pickType = () => ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "au
   .find((t) => window.MediaRecorder?.isTypeSupported?.(t)) ?? "";
 
 /* المسجّل: يعيد { blob, secs, ext } عبر onChange، أو null عند الحذف */
-export function VoiceRecorder({ onChange, disabled }) {
+export function VoiceRecorder({ onChange, disabled, label = "سجّل ردًا صوتيًا" }) {
   const [state, setState] = useState("idle");   // idle | rec | done
   const [secs, setSecs] = useState(0);
   const [url, setUrl] = useState(null);
@@ -63,7 +63,7 @@ export function VoiceRecorder({ onChange, disabled }) {
                 className="flex items-center gap-2 rounded-pill border border-mint-deep/40 bg-mint-tint px-3.5 py-1.5 text-sm font-semibold text-mint-deep hover:bg-mint-tint/70">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
             <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM19 11a7 7 0 0 1-14 0M12 18v3" /></svg>
-          سجّل ردًا صوتيًا
+          {label}
         </button>
       )}
       {state === "rec" && (
@@ -84,27 +84,28 @@ export function VoiceRecorder({ onChange, disabled }) {
   );
 }
 
-/* رفع التسجيل في مجلد السؤال، ويعيد مساره */
-export async function uploadVoice(askId, { blob, ext }) {
-  const path = `${askId}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from(VOICE_BUCKET).upload(path, blob, { contentType: blob.type, upsert: false });
-  if (error) throw new Error(/bucket/i.test(error.message) ? "الرد الصوتي غير مفعّل بعد: يلزم تشغيل ملف supabase/qudrat_5.sql." : error.message);
+/* رفع التسجيل في مجلد السؤال أو الطلب، ويعيد مساره */
+export async function uploadVoice(folder, { blob, ext }, bucket = VOICE_BUCKET) {
+  const path = `${folder}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, blob, { contentType: blob.type, upsert: false });
+  if (error) throw new Error(/bucket/i.test(error.message)
+    ? `التسجيل الصوتي غير مفعّل بعد: يلزم تشغيل ملف supabase/${bucket === VOICE_BUCKET ? "qudrat_5" : "guidance_6"}.sql.` : error.message);
   return path;
 }
 
 /* المشغّل: رابط مؤقت للتسجيل الخاص */
-export function VoicePlayer({ path, secs }) {
+export function VoicePlayer({ path, secs, bucket = VOICE_BUCKET, label = "رد صوتي" }) {
   const [url, setUrl] = useState(null);
   const [err, setErr] = useState(false);
   useEffect(() => {
     let live = true;
-    supabase.storage.from(VOICE_BUCKET).createSignedUrl(path, 3600)
+    supabase.storage.from(bucket).createSignedUrl(path, 3600)
       .then(({ data, error }) => { if (live) { setUrl(data?.signedUrl ?? null); setErr(!!error); } });
     return () => { live = false; };
-  }, [path]);
+  }, [path, bucket]);
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold text-mint-deep">🎙️ رد صوتي{secs ? <> · <span className="num">{mmss(secs)}</span></> : null}</span>
+      <span className="text-xs font-semibold text-mint-deep">🎙️ {label}{secs ? <> · <span className="num">{mmss(secs)}</span></> : null}</span>
       {url ? <audio src={url} controls preload="metadata" className="h-10 max-w-full flex-1" />
         : <span className="text-xs text-muted">{err ? "تعذّر تحميل التسجيل." : "جارٍ التحميل…"}</span>}
     </div>

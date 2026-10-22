@@ -6,7 +6,7 @@ import { fmtHijri } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import { CMP, SECS, SKILLS, loadBank } from "../../qudrat-content/index.js";
 import { LETTERS, Stem } from "./shared.jsx";
-import { VoicePlayer, VoiceRecorder, uploadVoice } from "./Voice.jsx";
+import { VoicePlayer, VoiceRecorder, uploadVoice } from "../../components/Voice.jsx";
 
 /* =====================================================================
    أسئلة الطلاب في مركز التدريب (القدرات): يرى المعلم ما وصله من طلاب فصوله
