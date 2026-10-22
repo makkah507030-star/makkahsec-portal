@@ -24,14 +24,14 @@ function Notice({ n, open, onToggle }) {
       </button>
       {open && (
         <div className="mt-3 space-y-3">
-          {/* جدول كإشعار نور: المادة ومجموعها من العظمى، ثم عمود لكل صنف من أصناف التقويم */}
+          {/* جدول كإشعار نور: المادة، ثم عمود لكل صنف من أصناف التقويم، والمجموع من العظمى آخرًا */}
           <div className="overflow-x-auto rounded-sm2 border border-line">
             <table className="w-full min-w-[34rem] text-sm">
               <thead className="bg-mint-tint/60 text-[11px] leading-snug text-mint-deep">
                 <tr>
                   <th className="sticky right-0 min-w-[8rem] bg-mint-tint px-3 py-2 text-right font-semibold">المادة</th>
-                  <th className="bg-mint-tint px-3 py-2 text-center font-semibold">المجموع</th>
                   {kinds.map((k) => <th key={k} className="min-w-[5rem] px-2 py-2 text-center font-medium">{k}</th>)}
+                  <th className="bg-mint-tint px-3 py-2 text-center font-semibold">المجموع</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -41,8 +41,8 @@ function Notice({ n, open, onToggle }) {
                     <tr key={s.name}>
                       <td className="sticky right-0 min-w-[8rem] bg-white px-3 py-2 font-medium text-ink">{s.name}
                         {s.note && <span className="block text-[11px] font-normal text-warning">{s.note}</span>}</td>
-                      <td className="num whitespace-nowrap bg-mint-tint/30 px-3 py-2 text-center font-bold text-ink">{s.total}<span className="text-xs font-normal text-muted"> / {s.max}</span></td>
                       {kinds.map((k) => <td key={k} className="num px-2 py-2 text-center text-ink">{v[k] ?? <span className="text-faint">—</span>}</td>)}
+                      <td className="num whitespace-nowrap bg-mint-tint/30 px-3 py-2 text-center font-bold text-ink">{s.total}<span className="text-xs font-normal text-muted"> / {s.max}</span></td>
                     </tr>
                   );
                 })}
