@@ -7,6 +7,7 @@ import { printReport, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exp
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import PresetChips from "../../components/PresetChips.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 
 /* =====================================================================
@@ -72,6 +73,16 @@ function enrich(r, lastExamDay, examSubjects, contSet, today) {
   return { ...r, cont, due_date, st: r.status ?? "none", tm: timing({ exam_date: due_date }, today) };
 }
 
+// صيغ جاهزة لملاحظة الرصد الجزئي (تُضاف سطرًا، ويمكن الجمع والتعديل)
+const PARTIAL_PRESETS = [
+  "لم يتم رصد المهام الأدائية",
+  "بعض الطلاب ليس لديهم درجات",
+  "لم يتم رصد التقويمات التحريرية والشفهية",
+  "لم يتم رصد المشاركة والتفاعل الصفي",
+  "لم يتم رصد الواجبات",
+  "لم يتم رصد درجات الاختبار",
+];
+
 export default function NoorGrades() {
   const { profile } = useSession();
   const [terms, setTerms] = useState(null);
@@ -83,6 +94,7 @@ export default function NoorGrades() {
   const [busy, setBusy] = useState(null);
   const [contSet, setContSet] = useState(() => new Set());   // مواد علّمها الوكيل تقويمًا مستمرًا
   const [sel, setSel] = useState(null);      // الخانة المفتوحة تفاصيلها (slot_id)
+  const [noteFor, setNoteFor] = useState(null);   // نافذة «ما الناقص؟» للرصد الجزئي: { r, note }
   const [view, setView] = useState("subject");   // subject: كما في كشف نور، grade: نظرة عامة بالصف
   const [brush, setBrush] = useState("detail");  // detail أو حالة تُطبَّق بالضغط على الخانة
   const [subKey, setSubKey] = useState(null);    // المادة المفتوحة في العرض حسب المادة
@@ -146,8 +158,7 @@ export default function NoorGrades() {
   // من لوحة التفاصيل: الجزئي يُسأل فيه عن الناقص
   const setStatus = (r, status) => {
     if (status !== "partial") return applyStatus([r], status);
-    const note = window.prompt("ما الناقص في رصد هذا الفصل؟ (اختياري)", r.note ?? "");
-    if (note !== null) applyStatus([r], status, note);
+    setNoteFor({ r, note: r.note ?? "" });
   };
 
   // تعليم المادة تقويمًا مستمرًا أو إلغاؤه (لكل معرّفاتها في الصف)
@@ -379,6 +390,20 @@ export default function NoorGrades() {
 
   return (
     <div className="space-y-4">
+      {noteFor && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setNoteFor(null)}>
+          <div className="card w-full max-w-md space-y-3 p-4" onClick={(e) => e.stopPropagation()}>
+            <p className="font-semibold text-ink">ما الناقص في رصد هذا الفصل؟ <span className="text-xs font-normal text-muted">(اختياري)</span></p>
+            <textarea className="field w-full" rows={3} autoFocus value={noteFor.note}
+                      onChange={(e) => setNoteFor((x) => ({ ...x, note: e.target.value }))} />
+            <PresetChips items={PARTIAL_PRESETS} value={noteFor.note} onChange={(v) => setNoteFor((x) => ({ ...x, note: v }))} />
+            <div className="flex gap-2">
+              <button className="btn-primary" onClick={() => { applyStatus([noteFor.r], "partial", noteFor.note); setNoteFor(null); }}>حفظ</button>
+              <button className="btn-ghost" onClick={() => setNoteFor(null)}>إلغاء</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div>
         <h1 className="text-lg font-bold text-ink">متابعة رصد الدرجات في نظام نور</h1>
         <p className="mt-0.5 text-sm text-muted">
