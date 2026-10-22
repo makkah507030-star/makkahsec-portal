@@ -48,6 +48,9 @@ const NewsArticle = lazy(() => import("./pages/NewsArticle.jsx"));
 const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
 const ScoutTeam = lazy(() => import("./pages/admin/ScoutTeam.jsx"));
 const NotificationsAdmin = lazy(() => import("./pages/admin/NotificationsAdmin.jsx"));
+const Circulars = lazy(() => import("./pages/circulars/Circulars.jsx"));
+const CircularView = lazy(() => import("./pages/circulars/CircularView.jsx"));
+const MyCirculars = lazy(() => import("./pages/circulars/MyCirculars.jsx"));
 const AttendanceOverview = lazy(() => import("./pages/admin/AttendanceOverview.jsx"));
 const StudentAffairs = lazy(() => import("./pages/student-affairs/index.jsx"));
 const PeriodAttendance = lazy(() => import("./pages/admin/PeriodAttendance.jsx"));
@@ -502,6 +505,10 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/s/:key" element={<SectionHub />} />}
           {/* شاشة المتابعة اليومية — للمدير والوكيلين والدعم الفني (عنصر القائمة يحصرها، والقاعدة تفرض ما يُقرأ) */}
           {effectiveRole === "admin" && <Route path="/monitor" element={<MonitorScreen />} />}
+          {/* التعاميم: الإدارة لصاحب الصلاحية، وصفحة التعميم وتعاميمي للمنسوبين وأولياء الأمور */}
+          {effectiveRole === "admin" && can("circulars") && <Route path="/circulars" element={<Circulars />} />}
+          {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/circulars/:id" element={<CircularView />} />}
+          {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/my-circulars" element={<MyCirculars />} />}
           {/* الترشيحات: إعلانات التقديم للإدارة، و«فرص المشاركة» للطالب وولي الأمر — القاعدة تفرض الصلاحيات */}
           {effectiveRole === "admin" && <Route path="/nominations" element={<Nominations />} />}
           {effectiveRole === "admin" && <Route path="/nominations/:id" element={<Nominations />} />}

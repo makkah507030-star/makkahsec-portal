@@ -106,6 +106,7 @@ const ADMIN_GROUPS = [
       { to: "/forms",        label: "إصدار النماذج", icon: "certificate", kw: "شهادات" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
+      { to: "/my-circulars", label: "تعاميمي", icon: "circular", kw: "تعميم اطلاع" },
       { to: "/plc",          label: "التطوير المهني", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "مجتمع التعلم" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "sliders" },
     ],
@@ -122,6 +123,7 @@ const ADMIN_GROUPS = [
   {
     title: "التواصل والمحتوى",
     items: [
+      { to: "/circulars",      label: "التعاميم", perm: "circulars", icon: "circular", kw: "تعميم وارد داخلي اطلاع ارشفة تذكير" },
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell", kw: "رسائل" },
       { to: "/notifications-review", label: "اعتماد الإشعارات", techOnly: true, icon: "check" },
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
@@ -232,6 +234,7 @@ const TEACHER_GROUPS = [
       { to: "/forms",        label: "النماذج والشهادات",  icon: "certificate" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
+      { to: "/my-circulars", label: "تعاميمي",            icon: "circular", kw: "تعميم اطلاع" },
       { to: "/plc",          label: "التطوير المهني",     icon: "users", kw: "مجتمع التعلم المهني" },
     ],
   },
@@ -264,6 +267,8 @@ const BASIC_GROUPS = [
       // مركز التدريب (القدرات) — للطالب وحده من هذه القائمة، لا لولي الأمر
       { to: "/qudrat", label: "مركز التدريب", icon: "target", studentOnly: true, kw: "قياس قدرات تحصيلي" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
+      // التعاميم تصل أولياء الأمور لا الطلاب
+      { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
     ],
@@ -332,6 +337,7 @@ export function Icon({ name, className = "h-[18px] w-[18px]" }) {
     book:   "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z",
     help:   "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4M12 17.5h.01",
     bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+    circular: "M7 3h7l5 5v13H7zM14 3v5h5M10 12h6M10 16h6M4 7v14h3",
     check:  "M20 6 9 17l-5-5",
     megaphone: "M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H10l9 4V5l-9 4H5a2 2 0 0 0-2 2Zm7-2v6",
     wrench: "M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2Z",
@@ -412,6 +418,7 @@ export default function Layout({ children }) {
   const visible = (i) => {
     if (i.staffOnly && !isStaff) return false;
     if (i.studentOnly && effectiveRole !== "student") return false;
+    if (i.guardianOnly && effectiveRole !== "guardian") return false;
     if (isAdmin) {
       if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
       if (i.roles && !i.roles.some((r) => adminRoles.includes(r))) return false;
