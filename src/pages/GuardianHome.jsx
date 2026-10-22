@@ -8,9 +8,12 @@ import { loadFingerprintPublic } from "../lib/officialAttendance";
 import HeaderChips from "../components/HeaderChips.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
 import HolidayBanner from "../components/HolidayBanner.jsx";
+import ConductMeter from "../components/ConductMeter.jsx";
+import PeriodNoticeCard from "../components/PeriodNoticeCard.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
+import OfficialLinks from "../components/OfficialLinks.jsx";
 import TasksBox from "../components/TasksBox.jsx";
 import QuizResults from "../components/QuizResults.jsx";
 import { useSession } from "../lib/session.jsx";
@@ -186,6 +189,10 @@ export default function GuardianHome() {
 
           <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
 
+          <ConductMeter key={`cm-${active?.id}`} studentId={active?.id} />
+
+          <PeriodNoticeCard key={`pn-${active?.id}`} studentId={active?.id} />
+
           <ResultsCard key={active?.id} studentId={active?.id} />
 
           <QuizResults key={`q-${active?.id}`} studentId={active?.id} compact />
@@ -254,6 +261,7 @@ export default function GuardianHome() {
           </section>
 
           <GuidanceRequestCard key={`g-${active?.id}`} studentId={active?.id} requester="guardian" />
+          <OfficialLinks />
         </>
       )}
     </div>

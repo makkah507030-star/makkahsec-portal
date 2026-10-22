@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
+import StudentFileLink from "../components/StudentFileLink.jsx";
 import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
 import { fmtDate } from "../lib/dates";
 import { WARNING_STAGES, loadRangeStart, loadFingerprintPublic } from "../lib/officialAttendance";
@@ -34,7 +35,7 @@ const pill = (on) => `rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium trans
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
 export default function Guidance() {
-  const { adminRoles, profile } = useSession();
+  const { adminRoles, profile, effectiveRole } = useSession();
   const seesAll = adminRoles.some((r) => ["principal", "deputy_students", "tech_support"].includes(r));
   const myGrades = [1, 2, 3].filter((g) => seesAll || adminRoles.includes(`counselor_${g}`));
   // ?tab=requests&grade=2 من صندوق «بانتظار إجرائك»
@@ -76,6 +77,10 @@ export default function Guidance() {
         <button className={pill(tab === "programs")} onClick={() => setTab("programs")}>الخطة والبرامج</button>
         <button className={pill(tab === "requests")} onClick={() => setTab("requests")}>طلبات المقابلة</button>
         <button className={pill(tab === "report")} onClick={() => setTab("report")}>التقرير الشهري</button>
+        {effectiveRole === "admin" && <Link to="/student-file" className={`${pill(false)} inline-flex items-center gap-1 border-mint-light text-mint-deep`}>
+          ملف الطالب
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M7 17 17 7M9 7h8v8" /></svg>
+        </Link>}
         <button className="btn-primary mr-auto px-4 py-1.5 text-xs" onClick={() => setNewCase({ source: "other" })}>+ حالة جديدة</button>
       </div>
 
@@ -164,7 +169,7 @@ function EarlyWarning({ grade, onOpen }) {
             <div key={r.student_id} className="card flex flex-col gap-2 p-3">
               <div className="flex items-start gap-2">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-ink">{r.full_name}</p>
+                  <p className="truncate text-sm font-semibold text-ink"><StudentFileLink id={r.student_id}>{r.full_name}</StudentFileLink></p>
                   <p className="text-[11px] text-muted">فصل <span className="num">{r.class_no}</span>{r.health ? " · لديه ملاحظة صحية" : ""}</p>
                 </div>
                 <button onClick={() => onOpen(r)}
@@ -211,7 +216,7 @@ function NewCase({ init, grade, me, onClose, onSaved }) {
   return (
     <section className="card space-y-3 border-mint-deep/40 p-4">
       <p className="font-semibold text-ink">حالة إرشادية جديدة</p>
-      <StudentPicker value={student} onChange={setStudent} />
+      <StudentPicker value={student} onChange={setStudent} grades={grade ? [grade] : undefined} />
       <div className="flex flex-wrap gap-1.5">
         {Object.entries(SOURCE).map(([k, t]) => <button key={k} type="button" className={pill(source === k)} onClick={() => setSource(k)}>{t}</button>)}
       </div>

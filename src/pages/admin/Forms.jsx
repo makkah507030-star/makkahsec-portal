@@ -432,12 +432,27 @@ export default function Forms({ view = "issue", openKey = null }) {
   // تكريم المتفوقين من دورة الاختبار: { students: [{ id, full_name }], reason, quiz }
   const location = useLocation();
   const [honor, setHonor] = useState(() => location.state?.honor ?? null);
-  const { session, profile, adminRoles, isTeacher } = useSession();
+  const { session, profile, adminRoles, isTeacher, effectiveRole } = useSession();
+  // صفة المُصدِر تحت توقيعه: للمعلم الذي يحمل دورًا إداريًا أيضًا (مثل معلم الكيمياء وبرنامج جلوب)
+  // يختار الصفة؛ والافتراضي يتبع الواجهة التي يعمل بها (المعلم أو الإدارة)
+  const myRoles = (adminRoles ?? []).filter((r) => r !== "admin");
+  const [spec, setSpec] = useState("");
+  const [issueAs, setIssueAs] = useState(null);   // null = حسب الواجهة الحالية
+  useEffect(() => {
+    if (!isTeacher || !session?.user?.id) return;
+    supabase.from("teachers").select("specialization").eq("user_id", session.user.id).maybeSingle()
+      .then(({ data }) => setSpec((data?.specialization ?? "").trim()));
+  }, [isTeacher, session?.user?.id]);
+  const teacherLabel = spec ? `معلم ${spec.replace(/^معلم\s+/, "")}` : "المعلم";
+  const asTeacher = !myRoles.length || (isTeacher && (issueAs ?? (effectiveRole === "teacher" ? "teacher" : "admin")) === "teacher");
+  const issuerRole = asTeacher ? teacherLabel : myRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و");
   const isManager = (adminRoles ?? []).some((r) => r === "tech_support" || r === "principal");
   const isApprover = (adminRoles ?? []).includes("principal");
   const usage = useUsageCounts();
 
-  const [tab, setTab] = useState(review ? "replies" : "issue");
+  // ?open=<id> من «بانتظار إجرائك»: يُعرض ذلك المستند وحده في «اعتماد النماذج»، مع زر لعرض الكل
+  const openDocId = review ? new URLSearchParams(location.search).get("open") : null;
+  const [tab, setTab] = useState(review ? (openDocId ? "approve" : "replies") : "issue");
   const [fQ, setFQ] = useState("");
   const [fTpl, setFTpl] = useState("");
   const [fStatus, setFStatus] = useState("");
@@ -630,6 +645,12 @@ export default function Forms({ view = "issue", openKey = null }) {
       const { data: me } = await supabase.from("teachers")
         .select("id").eq("user_id", session.user.id).maybeSingle();
 
+      // الموجه الطلابي يرى فصول صفوفه كلها (ولو كان معلمًا أيضًا)، مع فصول تدريسه
+      const myGrades = (adminRoles ?? []).map((r) => /^counselor_(\d)$/.exec(r)?.[1]).filter(Boolean).map(Number);
+      const gradeClasses = myGrades.length
+        ? (await supabase.from("classes").select("id, class_no, grade").in("grade", myGrades).order("class_no")).data ?? []
+        : [];
+
       if (me) {
         const { data } = await supabase.from("schedule")
           .select("class_id, classes(class_no, grade)")
@@ -638,13 +659,33 @@ export default function Forms({ view = "issue", openKey = null }) {
           .eq("term", Number(m.active_term ?? 1));
         const uniq = {};
         (data ?? []).forEach((r) => { if (r.class_id) uniq[r.class_id] = r.classes; });
-        setClasses(Object.entries(uniq).map(([id, c]) => ({ id, ...c })));
+        gradeClasses.forEach(({ id, ...c }) => { uniq[id] = c; });
+        setClasses(Object.entries(uniq).map(([id, c]) => ({ id, ...c }))
+          .sort((a, b) => a.grade - b.grade || a.class_no - b.class_no));
       } else if (isManager || (adminRoles ?? []).length) {
         const { data } = await supabase.from("classes").select("id, class_no, grade").order("class_no");
         setClasses(data ?? []);
       }
     })();
   }, [picked, session, adminRoles, isManager]);
+
+  // البحث بالاسم في طلاب الفصول المتاحة للمستخدم وحدها (لمن لا يعرف فصل الطالب)
+  const [nameQ, setNameQ] = useState("");
+  const [nameHits, setNameHits] = useState(null);
+  useEffect(() => {
+    const term = nameQ.trim();
+    if (term.length < 2 || !classes.length) { setNameHits(null); return; }
+    const t = setTimeout(async () => {
+      const { data } = await supabase.from("student_enrollment")
+        .select("class_id, students!inner(id, full_name, user_id, national_id)")
+        .in("class_id", classes.map((c) => c.id)).eq("status", "active")
+        .ilike("students.full_name", `%${term}%`).limit(30);
+      setNameHits((data ?? []).filter((r) => r.students)
+        .map((r) => ({ ...r.students, cls: classes.find((c) => c.id === r.class_id) }))
+        .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar")));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [nameQ, classes]);
 
   useEffect(() => {
     (async () => {
@@ -1002,11 +1043,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     if (se) { setSaving(false); setMsg({ ok: false, text: `تعذّر إصدار الرقم: ${se.message}` }); return; }
 
     const usesIssuer = picked.signature_source === "issuer" || picked.signature_source === "both";
-    // صفة المُصدِر كما تُطبع تحت توقيعه — مسمّاه الوظيفي الفعلي
-    const roles = (adminRoles ?? []).filter((r) => r !== "admin");
-    const issuerRole = roles.length
-      ? roles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و")
-      : "المعلم";
+    // صفة المُصدِر كما تُطبع تحت توقيعه: issuerRole (أعلى المكوّن) — مسمّاه الوظيفي أو صفته معلمًا
     const row = {
       template_id: picked.id,
       serial,
@@ -1374,9 +1411,9 @@ export default function Forms({ view = "issue", openKey = null }) {
   /* ---------------- تعبئة نموذج ---------------- */
   if (picked) {
     // المعاينة قبل الإصدار: اسم المُصدِر وصفته كما سيُطبعان
-    const previewRoles = (adminRoles ?? []).filter((r) => r !== "admin");
     const d = issued ?? { serial: null, signature_name: profile?.full_name, signature_source: picked.signature_source,
-                          signature_role: previewRoles.length ? previewRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و") : "المعلم" };
+                          signature_role: issuerRole };
+    const usesIssuerNow = picked.signature_source === "issuer" || picked.signature_source === "both";
     const selfNow = !issued && !editing && (chosen.length
       ? chosen.some((c) => isSelfTarget(c, c.full_name, session.user.id, profile?.full_name))
       : isSelfTarget(null, values.recipient, session.user.id, profile?.full_name));
@@ -1423,6 +1460,19 @@ export default function Forms({ view = "issue", openKey = null }) {
 
         <div className="no-print grid min-w-0 gap-4 lg:grid-cols-[320px,minmax(0,1fr)]">
           <section className="card min-w-0 space-y-3 p-4">
+            {isTeacher && myRoles.length > 0 && usesIssuerNow && !issued && (
+              <div>
+                <p className="text-xs text-muted">أُصدره بصفتي</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {[["teacher", teacherLabel], ["admin", myRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و")]].map(([k, l]) => (
+                    <button key={k} type="button" onClick={() => setIssueAs(k)}
+                      className={`rounded-pill px-3 py-1.5 text-xs font-semibold ${
+                        (asTeacher ? "teacher" : "admin") === k ? "bg-mint-deep text-white" : "border border-line text-muted hover:bg-canvas"}`}>{l}</button>
+                  ))}
+                </div>
+                <p className="mt-1 text-[11px] text-faint">تُطبع الصفة تحت توقيعك في المستند.</p>
+              </div>
+            )}
             {(picked.presets ?? []).length > 0 && (
               <div>
                 <p className="text-xs text-muted">صيغ جاهزة — اضغط إحداها لتعبئة السبب</p>
@@ -1551,14 +1601,38 @@ export default function Forms({ view = "issue", openKey = null }) {
                   </div>
                 ) : f.type === "student" ? (
                   <div className="mt-1 space-y-2">
+                    <input className="field w-full" value={nameQ} onChange={(e) => setNameQ(e.target.value)}
+                           placeholder="ابحث باسم الطالب (من طلابك) أو اختر الفصل" />
+                    {nameHits && (
+                      <div className="max-h-56 overflow-y-auto rounded-sm2 border border-line">
+                        {nameHits.map((st) => {
+                          const on = chosen.some((x) => x.id === st.id);
+                          return (
+                            <button key={st.id} type="button" onClick={() => toggleStudent(st)}
+                              className={`flex w-full items-center gap-2 border-b border-line px-3 py-2 text-right text-sm last:border-b-0 ${
+                                on ? "bg-mint-tint text-mint-deep" : "text-ink hover:bg-canvas"}`}>
+                              <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border text-[10px] ${
+                                on ? "border-mint-deep bg-mint-deep text-white" : "border-line"}`}>
+                                {on ? "✓" : ""}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate">{st.full_name}</span>
+                              <span className="shrink-0 text-[11px] text-faint">{GRADE_NAMES[st.cls?.grade] ?? ""} · فصل <span className="num">{st.cls?.class_no}</span></span>
+                            </button>
+                          );
+                        })}
+                        {nameHits.length === 0 && <p className="px-3 py-3 text-xs text-muted">لا طالب بهذا الاسم في فصولك.</p>}
+                      </div>
+                    )}
+                    {!nameHits && (
                     <select className="field w-full" value={classId} onChange={(e) => setClassId(e.target.value)}>
                       <option value="">اختر الفصل…</option>
                       {classes.map((c) => (
-                        <option key={c.id} value={c.id}>فصل {c.class_no}</option>
+                        <option key={c.id} value={c.id}>{new Set(classes.map((x) => x.grade)).size > 1 ? `${GRADE_NAMES[c.grade] ?? ""} — ` : ""}فصل {c.class_no}</option>
                       ))}
                     </select>
+                    )}
 
-                    {classId && (
+                    {classId && !nameHits && (
                       <div className="max-h-56 overflow-y-auto rounded-sm2 border border-line">
                         {students.map((st) => {
                           const on = chosen.some((x) => x.id === st.id);
@@ -1645,7 +1719,7 @@ export default function Forms({ view = "issue", openKey = null }) {
               </p>
             )}
 
-            {picked.signature_source !== "none" && !mySig &&
+            {picked.signature_source !== "none" && !mySig && !isGuestCert(picked) &&
              (picked.signature_source === "issuer" || picked.signature_source === "both") && (
               <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs text-warning">
                 لم ترفع توقيعك بعد. سيصدر المستند بلا توقيع — ارفعه من صفحة «توقيعي».
@@ -1757,7 +1831,8 @@ export default function Forms({ view = "issue", openKey = null }) {
   // العاجل أولًا (الترتيب مستقر فيبقى الأحدث فالأقدم داخل كل ملصق)
   const byFlag = (a, b) => flagRank(a.flag) - flagRank(b.flag);
   const shownReplies = replies.filter(matchFilter).sort(byFlag);
-  const shownPending = pending.filter(matchFilter).sort(byFlag);
+  const focusedDoc = openDocId ? pending.find((d) => d.id === openDocId) ?? null : null;
+  const shownPending = focusedDoc ? [focusedDoc] : pending.filter(matchFilter).sort(byFlag);
   // ما يُعتمد جماعيًا: الإفادات الواصلة، والمستندات بانتظار الاعتماد
   const selectable = tab === "replies"
     ? shownReplies.filter((d) => d.status === "replied")
@@ -2331,7 +2406,13 @@ export default function Forms({ view = "issue", openKey = null }) {
               {msg.text}
             </p>
           )}
-          {pending.length > 0 && filterBar(pending)}
+          {focusedDoc ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-sm2 bg-mint-tint/60 px-3 py-2 text-xs text-mint-deep">
+              <span>يعرض المستند الذي اخترته وحده.</span>
+              <button className="mr-auto font-semibold underline" onClick={() => navigate(location.pathname, { replace: true })}>
+                عرض كل المستندات ({pending.length})</button>
+            </div>
+          ) : pending.length > 0 && filterBar(pending)}
           {rejectFor && (
             <div className="card space-y-2 border-absent/30 p-4">
               <p className="text-sm font-semibold text-ink">

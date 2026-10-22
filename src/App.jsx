@@ -96,6 +96,12 @@ const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
 const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const Guidance = lazy(() => import("./pages/Guidance.jsx"));
+const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx"));
+const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
+const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
+const Nominations = lazy(() => import("./pages/nominations/Nominations.jsx"));
+const Opportunities = lazy(() => import("./pages/nominations/Opportunities.jsx"));
+const QuestionBank = lazy(() => import("./pages/teacher/QuestionBank.jsx"));
 const StudentNotes = lazy(() => import("./pages/StudentNotes.jsx"));
 const StudentDropouts = lazy(() => import("./pages/StudentDropouts.jsx"));
 const EthicsCode = lazy(() => import("./pages/EthicsCode.jsx"));
@@ -490,6 +496,18 @@ export default function App() {
           {/* إحالة الطالب — الشاشة للمعلم والإدارة، والملف لصاحبه وولي أمره */}
           <Route path="/referrals" element={<Referrals />} />
           <Route path="/guidance" element={<Guidance />} />
+          {/* ملف الطالب الشامل — الصفحة تحصر الطلاب في صفوف المستخدم، والدوال تفرض الصلاحية */}
+          {effectiveRole === "admin" && <Route path="/student-file" element={<StudentFile />} />}
+          {/* صفحات الأقسام العامة لقائمة الإدارة — تعرض ما تعرضه القائمة للمستخدم فقط */}
+          {effectiveRole === "admin" && <Route path="/s/:key" element={<SectionHub />} />}
+          {/* شاشة المتابعة اليومية — للمدير والوكيلين والدعم الفني (عنصر القائمة يحصرها، والقاعدة تفرض ما يُقرأ) */}
+          {effectiveRole === "admin" && <Route path="/monitor" element={<MonitorScreen />} />}
+          {/* الترشيحات: إعلانات التقديم للإدارة، و«فرص المشاركة» للطالب وولي الأمر — القاعدة تفرض الصلاحيات */}
+          {effectiveRole === "admin" && <Route path="/nominations" element={<Nominations />} />}
+          {effectiveRole === "admin" && <Route path="/nominations/:id" element={<Nominations />} />}
+          {(effectiveRole === "student" || effectiveRole === "guardian") && <Route path="/opportunities" element={<Opportunities />} />}
+          {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
+          {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}
           {/* استمارة توضيح مستوى الطالب — للمعلم سطره، وللتوجيه والوكيل، ولولي الأمر نسخته */}
           <Route path="/inquiry/:id" element={<GuidanceInquiry />} />
           {/* ملاحظات الطلاب — الصفحة تتحقق من الدور، والقاعدة تفرض من يكتب كل نوع */}

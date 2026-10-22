@@ -41,6 +41,8 @@ export function SessionProvider({ children }) {
   const [loading, setLoading] = useState(true);
   // دعم الدور المزدوج (معلم + إداري): هل للمستخدم سجل معلّم أيضًا؟ وأي واجهة نشطة الآن؟
   const [isTeacher, setIsTeacher] = useState(false);
+  // المعلم أو الإداري الذي له أبناء في المدرسة مربوطون بحسابه (guardians.user_id): واجهة «أبنائي»
+  const [hasChildren, setHasChildren] = useState(false);
   const [view, setViewState] = useState(null);
 
   const loadProfile = useCallback(async (userId) => {
@@ -49,11 +51,12 @@ export function SessionProvider({ children }) {
       setAdminRoles([]);
       setPermissions([]);
       setIsTeacher(false);
+      setHasChildren(false);
       setViewState(null);
       return;
     }
     // بيانات الحساب وسجل المعلم والأدوار معًا بدل التتابع — أقل انتظارًا عند فتح البوابة
-    const [{ data: u }, { data: tRow }, { data: roleRows }] = await Promise.all([
+    const [{ data: u }, { data: tRow }, { data: roleRows }, , { data: gRow }] = await Promise.all([
       traced("بيانات الحساب", supabase
         .from("users")
         .select("id, username, full_name, role, is_active, must_change_pw")
@@ -62,6 +65,7 @@ export function SessionProvider({ children }) {
       traced("سجل المعلم", supabase.from("teachers").select("id").eq("user_id", userId).maybeSingle()),
       traced("الأدوار الإدارية", supabase.from("admin_roles").select("role_type").eq("user_id", userId)),
       loadCustomRoles(),   // أسماء الأدوار المخصّصة قبل عرض أي شاشة
+      traced("الأبناء", supabase.from("guardians").select("id").eq("user_id", userId).eq("is_active", true).maybeSingle()),
     ]);
 
     setProfile(u ?? null);
@@ -70,14 +74,16 @@ export function SessionProvider({ children }) {
     // الشخص الذي يجمع بين مهمة إدارية ومهمة تدريس، فينتقل بين الواجهتين.
     const teacherRec = !!tRow;
     setIsTeacher(teacherRec);
+    const kids = !!gRow && ["admin", "teacher"].includes(u?.role);
+    setHasChildren(kids);
 
-    // المستخدم المزدوج (دوره الأساسي إداري وله سجل معلّم): نهيّئ الواجهة
-    // النشطة من آخر اختيار محفوظ، وإلا نبدأ بواجهة الإدارة (دوره المسجّل)،
-    // مع إتاحة زر التبديل لواجهة المعلم.
-    if (u?.role === "admin" && teacherRec) {
+    // صاحب أكثر من واجهة (إداري ومعلّم، أو موظف له أبناء): نهيّئ الواجهة النشطة من آخر
+    // اختيار محفوظ، وإلا نبدأ بدوره المسجّل، مع إتاحة التبديل بين واجهاته.
+    const avail = viewsOf(u?.role, teacherRec, kids);
+    if (avail.length > 1) {
       let saved = null;
       try { saved = localStorage.getItem("mk_view_" + userId); } catch { /* تجاهل */ }
-      setViewState(saved === "admin" || saved === "teacher" ? saved : "admin");
+      setViewState(avail.includes(saved) ? saved : u.role);
     } else {
       setViewState(null);
     }
@@ -171,10 +177,12 @@ export function SessionProvider({ children }) {
 
   // الدور المزدوج: إداري + معلّم في حساب واحد
   const dualRole = profile?.role === "admin" && isTeacher;
-  // الواجهة الفعّالة للعرض: للمزدوج تتبع اختياره، ولغيره دوره الأساسي
-  const effectiveRole = dualRole ? (view ?? "teacher") : profile?.role;
+  // واجهات المستخدم المتاحة: الإدارة، والمعلم، و«أبنائي» (واجهة ولي الأمر) لمن رُبط به أبناؤه
+  const views = viewsOf(profile?.role, isTeacher, hasChildren);
+  // الواجهة الفعّالة للعرض: لصاحب أكثر من واجهة تتبع اختياره، ولغيره دوره الأساسي
+  const effectiveRole = views.length > 1 ? (view ?? profile?.role) : profile?.role;
   const switchView = (v) => {
-    if (!dualRole || (v !== "admin" && v !== "teacher")) return;
+    if (!views.includes(v)) return;
     setViewState(v);
     try { localStorage.setItem("mk_view_" + (session?.user?.id ?? ""), v); } catch { /* تجاهل */ }
   };
@@ -192,7 +200,7 @@ export function SessionProvider({ children }) {
       value={{
         session, profile, adminRoles, permissions, loading,
         signOut, hasAdminRole, can, isSuper,
-        isTeacher, dualRole, effectiveRole, view, switchView,
+        isTeacher, dualRole, hasChildren, views, effectiveRole, view, switchView,
         reload: () => loadProfile(session?.user?.id),
       }}
     >
@@ -213,6 +221,15 @@ export const ROLE_LABEL = {
   student: "الطالب",
   guardian: "ولي الأمر",
 };
+
+/** واجهات الحساب: دوره المسجّل، والمعلم لمن له سجل معلّم وهو إداري، و«أبنائي» لموظف رُبط به أبناؤه */
+function viewsOf(role, teacher, kids) {
+  if (!role) return [];
+  const v = [role];
+  if (role === "admin" && teacher) v.push("teacher");
+  if (kids && (role === "admin" || role === "teacher")) v.push("guardian");
+  return v;
+}
 
 export const ADMIN_ROLE_LABEL = {
   principal:       "مدير المدرسة",

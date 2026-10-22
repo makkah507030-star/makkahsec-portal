@@ -15,7 +15,7 @@ export let PRINCIPAL_NAME = "عبدالله بن حسن سلمان الفيفي"
 export let STUDENT_DEPUTY_NAME = "فهد بن نايف ماطر المعبدي";
 
 // وكيل الشؤون التعليمية
-export let ACADEMIC_DEPUTY_NAME = "فهد بن سعود حضرواي";
+export let ACADEMIC_DEPUTY_NAME = "فهد بن سعود حضراوي";
 
 // مسؤول الدعم الفني للبوابة — يظهر في تقارير مركز الدعم والمساندة
 export let TECH_SUPPORT_NAME = "محمد بن حسن الحازمي";

@@ -4,19 +4,22 @@ import { supabase } from "../lib/supabase";
 import { GRADE_NAMES } from "../lib/schoolTime";
 import { byName } from "../lib/sortAr.js";
 
-/* بحث عن طالب نشط بالاسم واختياره — value: { student_id, full_name, class_no, grade } */
+/* بحث عن طالب نشط بالاسم واختياره — value: { student_id, full_name, class_no, grade }
+   grades: يقصر البحث على صفوف بعينها (الموجه يرى طلاب صفه وحدهم) */
 export const studentClassLabel = (s) => (s ? `${GRADE_NAMES[s.grade] ?? ""} — فصل ${s.class_no}` : "");
 
-export default function StudentPicker({ value, onChange }) {
+export default function StudentPicker({ value, onChange, grades }) {
   const [q, setQ] = useState("");
   const [found, setFound] = useState(null);
 
   const search = async () => {
     const term = q.trim();
     if (term.length < 2) return;
-    const { data } = await supabase.from("v_active_students")
+    let query = supabase.from("v_active_students")
       .select("student_id, full_name, class_no, grade")
       .ilike("full_name", `%${term}%`).order("full_name").limit(25);
+    if (grades?.length) query = query.in("grade", grades);
+    const { data } = await query;
     setFound((data ?? []).sort(byName()));
   };
 

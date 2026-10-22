@@ -9,9 +9,12 @@ import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from 
 import { loadFingerprintPublic } from "../lib/officialAttendance";
 import HeaderChips from "../components/HeaderChips.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
+import ConductMeter from "../components/ConductMeter.jsx";
+import PeriodNoticeCard from "../components/PeriodNoticeCard.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
+import OfficialLinks from "../components/OfficialLinks.jsx";
 import TasksBox from "../components/TasksBox.jsx";
 import OnlineQuizzesCard from "../components/OnlineQuizzesCard.jsx";
 import LabSeatCard from "../components/LabSeatCard.jsx";
@@ -188,6 +191,10 @@ export default function StudentHome() {
 
       <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
 
+      <ConductMeter studentId={me.id} />
+
+      <PeriodNoticeCard studentId={me.id} />
+
       <ResultsCard studentId={me.id} />
 
       <QuizResults studentId={me.id} compact />
@@ -223,6 +230,7 @@ export default function StudentHome() {
       </section>
 
       <GuidanceRequestCard studentId={me.id} requester="student" />
+      <OfficialLinks />
     </div>
   );
 }

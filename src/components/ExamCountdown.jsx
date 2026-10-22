@@ -4,7 +4,7 @@ import { countAr } from "../lib/arabicCount";
 
 // موعد الاختبارات النهائية للفصل الدراسي الأول
 // الأحد 25/07/1448 = الأحد 03/01/2027 (تم التحقق من التطابق)
-const EXAM_DATE = new Date("2027-01-03T00:00:00+03:00");
+export const EXAM_DATE = new Date("2027-01-03T00:00:00+03:00");
 
 const daysLeft = () => {
   const ms = EXAM_DATE.getTime() - Date.now();
