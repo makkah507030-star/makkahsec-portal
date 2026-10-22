@@ -344,6 +344,8 @@ export async function loadDay(date) {
     date, rows, dayStart, orphans, unmarked, fingerprint,
     // جدول اليوم كاملًا (المادة والمعلم لكل حصة في كل فصل) — للتقارير المفصلة
     schedule: schedRes.data ?? [],
+    // حصص الجدول التي رُصد فيها التحضير اليوم (لنسبة التزام التحضير في غرفة العمليات)
+    markedIds: [...marked],
     punchCount: punches.length,
     hasData: attendance.length > 0 || punches.length > 0,
   };

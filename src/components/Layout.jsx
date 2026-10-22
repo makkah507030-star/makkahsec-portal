@@ -38,6 +38,8 @@ const ADMIN_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home" },
+      // شاشة المتابعة — الوضع اليومي في شاشة كاملة (أرقام بلا أسماء طلاب، تصلح للعرض أمام الضيوف)
+      { to: "/monitor", label: "شاشة المتابعة", roles: ["principal", "deputy_students", "deputy_academic", "tech_support"], icon: "monitor", kw: "داشبورد لوحة الوضع اليومي حضور تلفزيون عرض" },
       { to: "/school-report", label: "التقرير الشهري للمدرسة", roles: ["principal", "tech_support"], icon: "chart", kw: "تقرير شهري خلاصة" },
     ],
   },
