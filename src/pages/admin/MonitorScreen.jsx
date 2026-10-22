@@ -128,25 +128,28 @@ export default function MonitorScreen() {
         <div className="absolute h-[440px] w-[440px] rounded-[76px] opacity-70" style={{ background: "var(--m-shape)", transform: "rotate(32deg) skewX(-14deg)", filter: "blur(3px)", left: -190, bottom: -300 }} />
       </div>
       {/* الترويسة: شريط البوابة كما في الاستوديو */}
-      <header className="flex flex-wrap items-center gap-4 pb-3">
-        <img src={theme === "dark" ? iconWhite : iconMint} alt="" className="h-12 w-12 object-contain" />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-bold text-[var(--m-head)] sm:text-2xl">بوابة مكة الثانوية الرقمية</h1>
-          <p className="text-sm text-[var(--m-sub)]">مدرسة مكة الثانوية · <span className="font-semibold text-[var(--m-accent)]">شاشة المتابعة اليومية</span></p>
+      {/* الرأس ثلاثة أعمدة: الهوية والعام والأسبوع يمينًا، والساعة في المنتصف، والحصة والأزرار يسارًا */}
+      <header className="grid grid-cols-1 items-center gap-4 pb-3 lg:grid-cols-[1fr_auto_1fr]">
+        <div className="flex min-w-0 flex-wrap items-center gap-4">
+          <img src={theme === "dark" ? iconWhite : iconMint} alt="" className="h-12 w-12 object-contain" />
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-[var(--m-head)] sm:text-2xl">بوابة مكة الثانوية الرقمية</h1>
+            <p className="text-sm text-[var(--m-sub)]">مدرسة مكة الثانوية · <span className="font-semibold text-[var(--m-accent)]">شاشة المتابعة اليومية</span></p>
+          </div>
+          <span className="hidden rounded-pill border-[1.5px] px-4 py-1 text-sm font-semibold sm:inline" style={{ borderColor: "var(--m-pill)", color: "var(--m-accent)" }}>
+            <span className="num">{academicYearLabel()}</span></span>
+          {week && (week.n > 0 || week.holiday) && (
+            <span className="rounded-pill px-4 py-1.5 text-center text-sm font-bold" style={{ background: "var(--m-track)", color: "var(--m-head)" }}>
+              {week.holiday ?? <>الأسبوع <span style={{ color: "var(--m-accent)" }}>{weekWord(week.n)}</span>
+                {week.total ? <span className="mr-1 text-xs font-medium text-[var(--m-sub)]">من <span className="num">{week.total}</span></span> : null}</>}
+            </span>
+          )}
         </div>
-        <span className="hidden rounded-pill border-[1.5px] px-4 py-1 text-sm font-semibold sm:inline" style={{ borderColor: "var(--m-pill)", color: "var(--m-accent)" }}>
-          <span className="num">{academicYearLabel()}</span></span>
-        {week && (week.n > 0 || week.holiday) && (
-          <span className="rounded-pill px-4 py-1.5 text-center text-sm font-bold" style={{ background: "var(--m-track)", color: "var(--m-head)" }}>
-            {week.holiday ?? <>الأسبوع <span style={{ color: "var(--m-accent)" }}>{weekWord(week.n)}</span>
-              {week.total ? <span className="mr-1 text-xs font-medium text-[var(--m-sub)]">من <span className="num">{week.total}</span></span> : null}</>}
-          </span>
-        )}
         <div className="text-center">
-          <p className="text-3xl font-bold tracking-wide sm:text-4xl"><Clock t={clock} /></p>
-          <p className="text-xs text-[var(--m-sub)]">{WEEKDAYS[clock.getDay()]} · <span className="num">{fmtHijri(clock)}</span> هـ · <span className="num">{fmtGreg(clock)}</span> م</p>
+          <p className="text-4xl font-bold tracking-wide sm:text-5xl"><Clock t={clock} /></p>
+          <p className="mt-1 text-xs text-[var(--m-sub)] sm:text-sm">{WEEKDAYS[clock.getDay()]} · <span className="num">{fmtHijri(clock)}</span> هـ · <span className="num">{fmtGreg(clock)}</span> م</p>
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-center gap-2 lg:items-end">
           <SlotPill slot={slot} clock={clock} />
           <div className="flex gap-1.5">
           <button onClick={flipTheme} title="تغيير الخلفية" className="flex items-center gap-1.5 rounded-pill border border-[var(--m-line)] px-3 py-1 text-xs text-[var(--m-sub)] hover:bg-[var(--m-track)]">
