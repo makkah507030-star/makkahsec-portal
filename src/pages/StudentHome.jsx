@@ -9,6 +9,7 @@ import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from 
 import { loadFingerprintPublic } from "../lib/officialAttendance";
 import HeaderChips from "../components/HeaderChips.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
+import ConductMeter from "../components/ConductMeter.jsx";
 import PeriodNoticeCard from "../components/PeriodNoticeCard.jsx";
 import ResultsCard from "../components/ResultsCard.jsx";
 import AttendanceLog from "../components/AttendanceLog.jsx";
@@ -189,6 +190,8 @@ export default function StudentHome() {
       <AttendanceLog key={me.id} studentId={me.id} fp={fp} />
 
       <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
+
+      <ConductMeter studentId={me.id} />
 
       <PeriodNoticeCard studentId={me.id} />
 
