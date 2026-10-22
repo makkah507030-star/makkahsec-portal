@@ -91,6 +91,9 @@ function NewInquiry({ grade, onClose }) {
 
   const classes = useMemo(() => [...new Set((students ?? []).map((s) => s.class_no))].sort((a, b) => a - b), [students]);
   const inClass = (students ?? []).filter((s) => String(s.class_no) === classNo);
+  // البحث بالاسم في طلاب الصف وحده، لمن لا يعرف فصل الطالب
+  const [q, setQ] = useState("");
+  const hits = q.trim().length >= 2 ? (students ?? []).filter((s) => s.full_name.includes(q.trim())).slice(0, 20) : null;
 
   useEffect(() => {
     setTeachers(null); setErr("");
@@ -118,6 +121,21 @@ function NewInquiry({ grade, onClose }) {
     <section className="card space-y-3 border-mint-deep/40 p-4">
       <p className="font-semibold text-ink">استمارة توضيح مستوى الطالب التحصيلي والسلوكي</p>
       {!students ? <Loader /> : (
+        <div className="space-y-2">
+        <input className="field w-full" value={q} onChange={(e) => setQ(e.target.value)}
+               placeholder="ابحث باسم الطالب، أو اختر الفصل ثم الطالب" />
+        {hits && (
+          <div className="max-h-56 divide-y divide-line overflow-y-auto rounded-sm2 border border-line">
+            {hits.length === 0 && <p className="px-3 py-3 text-xs text-muted">لا طالب بهذا الاسم في صفك.</p>}
+            {hits.map((s) => (
+              <button key={s.student_id} type="button" onClick={() => { setClassNo(String(s.class_no)); setStudentId(s.student_id); setQ(""); }}
+                      className="flex w-full items-center justify-between px-3 py-2 text-right hover:bg-canvas">
+                <span className="text-sm text-ink">{s.full_name}</span>
+                <span className="text-xs text-muted">فصل <span className="num">{s.class_no}</span></span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="grid gap-2 sm:grid-cols-[10rem_1fr]">
           <select className="field" value={classNo} onChange={(e) => { setClassNo(e.target.value); setStudentId(""); }}>
             <option value="">الفصل</option>
@@ -127,6 +145,7 @@ function NewInquiry({ grade, onClose }) {
             <option value="">الطالب</option>
             {inClass.map((s) => <option key={s.student_id} value={s.student_id}>{s.full_name}</option>)}
           </select>
+        </div>
         </div>
       )}
 

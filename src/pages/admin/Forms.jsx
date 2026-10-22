@@ -643,6 +643,12 @@ export default function Forms({ view = "issue", openKey = null }) {
       const { data: me } = await supabase.from("teachers")
         .select("id").eq("user_id", session.user.id).maybeSingle();
 
+      // الموجه الطلابي يرى فصول صفوفه كلها (ولو كان معلمًا أيضًا)، مع فصول تدريسه
+      const myGrades = (adminRoles ?? []).map((r) => /^counselor_(\d)$/.exec(r)?.[1]).filter(Boolean).map(Number);
+      const gradeClasses = myGrades.length
+        ? (await supabase.from("classes").select("id, class_no, grade").in("grade", myGrades).order("class_no")).data ?? []
+        : [];
+
       if (me) {
         const { data } = await supabase.from("schedule")
           .select("class_id, classes(class_no, grade)")
@@ -651,13 +657,33 @@ export default function Forms({ view = "issue", openKey = null }) {
           .eq("term", Number(m.active_term ?? 1));
         const uniq = {};
         (data ?? []).forEach((r) => { if (r.class_id) uniq[r.class_id] = r.classes; });
-        setClasses(Object.entries(uniq).map(([id, c]) => ({ id, ...c })));
+        gradeClasses.forEach(({ id, ...c }) => { uniq[id] = c; });
+        setClasses(Object.entries(uniq).map(([id, c]) => ({ id, ...c }))
+          .sort((a, b) => a.grade - b.grade || a.class_no - b.class_no));
       } else if (isManager || (adminRoles ?? []).length) {
         const { data } = await supabase.from("classes").select("id, class_no, grade").order("class_no");
         setClasses(data ?? []);
       }
     })();
   }, [picked, session, adminRoles, isManager]);
+
+  // البحث بالاسم في طلاب الفصول المتاحة للمستخدم وحدها (لمن لا يعرف فصل الطالب)
+  const [nameQ, setNameQ] = useState("");
+  const [nameHits, setNameHits] = useState(null);
+  useEffect(() => {
+    const term = nameQ.trim();
+    if (term.length < 2 || !classes.length) { setNameHits(null); return; }
+    const t = setTimeout(async () => {
+      const { data } = await supabase.from("student_enrollment")
+        .select("class_id, students!inner(id, full_name, user_id, national_id)")
+        .in("class_id", classes.map((c) => c.id)).eq("status", "active")
+        .ilike("students.full_name", `%${term}%`).limit(30);
+      setNameHits((data ?? []).filter((r) => r.students)
+        .map((r) => ({ ...r.students, cls: classes.find((c) => c.id === r.class_id) }))
+        .sort((a, b) => a.full_name.localeCompare(b.full_name, "ar")));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [nameQ, classes]);
 
   useEffect(() => {
     (async () => {
@@ -1573,14 +1599,38 @@ export default function Forms({ view = "issue", openKey = null }) {
                   </div>
                 ) : f.type === "student" ? (
                   <div className="mt-1 space-y-2">
+                    <input className="field w-full" value={nameQ} onChange={(e) => setNameQ(e.target.value)}
+                           placeholder="ابحث باسم الطالب (من طلابك) أو اختر الفصل" />
+                    {nameHits && (
+                      <div className="max-h-56 overflow-y-auto rounded-sm2 border border-line">
+                        {nameHits.map((st) => {
+                          const on = chosen.some((x) => x.id === st.id);
+                          return (
+                            <button key={st.id} type="button" onClick={() => toggleStudent(st)}
+                              className={`flex w-full items-center gap-2 border-b border-line px-3 py-2 text-right text-sm last:border-b-0 ${
+                                on ? "bg-mint-tint text-mint-deep" : "text-ink hover:bg-canvas"}`}>
+                              <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-[4px] border text-[10px] ${
+                                on ? "border-mint-deep bg-mint-deep text-white" : "border-line"}`}>
+                                {on ? "✓" : ""}
+                              </span>
+                              <span className="min-w-0 flex-1 truncate">{st.full_name}</span>
+                              <span className="shrink-0 text-[11px] text-faint">{GRADE_NAMES[st.cls?.grade] ?? ""} · فصل <span className="num">{st.cls?.class_no}</span></span>
+                            </button>
+                          );
+                        })}
+                        {nameHits.length === 0 && <p className="px-3 py-3 text-xs text-muted">لا طالب بهذا الاسم في فصولك.</p>}
+                      </div>
+                    )}
+                    {!nameHits && (
                     <select className="field w-full" value={classId} onChange={(e) => setClassId(e.target.value)}>
                       <option value="">اختر الفصل…</option>
                       {classes.map((c) => (
-                        <option key={c.id} value={c.id}>فصل {c.class_no}</option>
+                        <option key={c.id} value={c.id}>{new Set(classes.map((x) => x.grade)).size > 1 ? `${GRADE_NAMES[c.grade] ?? ""} — ` : ""}فصل {c.class_no}</option>
                       ))}
                     </select>
+                    )}
 
-                    {classId && (
+                    {classId && !nameHits && (
                       <div className="max-h-56 overflow-y-auto rounded-sm2 border border-line">
                         {students.map((st) => {
                           const on = chosen.some((x) => x.id === st.id);
