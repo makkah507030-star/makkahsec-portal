@@ -50,6 +50,8 @@ const ADMIN_GROUPS = [
       // ملف الطالب الشامل — والموجه يرى طلاب صفه وحده (sf_can)
       { to: "/student-file", label: "ملف الطالب", roles: STUDENT_FILE_ROLES, icon: "idcard", kw: "ملف شامل سجل الطالب غياب سلوك إحالات درجات شهادات" },
       { to: "/student-admission", label: "قبول طالب", roles: ["principal", "tech_support"], icon: "userPlus" },
+      // الترشيحات — لكل إداري ومن له دور إداري؛ يدير كلٌّ إعلاناته (supabase/nominations_1.sql)
+      { to: "/nominations", label: "الترشيحات", icon: "megaphone", kw: "تقديم انضمام لجنة اعلامية كشافة مقابلة مرشحين اعلان" },
       { to: "/student-certificate", label: "تعريف طالب منتظم", perm: "students", icon: "idcard" },
       { to: "/permissions", label: "الاستئذان", perm: "permissions", icon: "ticket", kw: "خروج" },
       { to: "/dropouts", label: "الطلاب المنقطعون", roles: ["principal", "deputy_students", "tech_support"], icon: "userX", kw: "انقطاع طي قيد سفر" },
@@ -259,6 +261,8 @@ const BASIC_GROUPS = [
       // مركز التدريب (القدرات) — للطالب وحده من هذه القائمة، لا لولي الأمر
       { to: "/qudrat", label: "مركز التدريب", icon: "target", studentOnly: true, kw: "قياس قدرات تحصيلي" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
+      // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
+      { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
     ],
   },
 ];
