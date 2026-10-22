@@ -175,7 +175,7 @@ function Item({ r, bad, selectable, checked, onCheck, mine }) {
           </div>
           <div className="flex flex-wrap items-center gap-2 border-t border-line/60 pt-1.5 text-[11px]">
             <span className="font-semibold text-ink">أضافه: {teacherName(r.owner_name)}</span>
-            {r.uses > 0 && <span className="text-muted">· استُخدم <span className="num">{r.uses}</span> مرة</span>}
+            {r.uses > 0 && <span className="text-muted">· استفاد منه الزملاء <span className="num">{r.uses}</span> مرة</span>}
             {mine && <span className={`chip ${r.shared ? "bg-present/10 text-present" : "bg-canvas text-muted"}`}>{r.shared ? "مشارك" : "خاص بي"}</span>}
             {bad && <span className="text-late">· {bad}</span>}
           </div>

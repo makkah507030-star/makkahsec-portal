@@ -18,11 +18,11 @@ begin
   return n;
 end $$;
 
--- عدّ مرات نسخ السؤال من البنك إلى اختبار
+-- عدّ مرات استفادة الزملاء: نسخ السؤال المشارك إلى اختبار معلم آخر (لا يُعدّ استخدام صاحبه)
 create or replace function public.qbank_used(p_ids uuid[]) returns void
 language sql security definer set search_path = public as $$
   update qbank set uses = uses + 1
-   where id = any(p_ids) and (owner_id = auth.uid() or shared) and public.qbank_staff();
+   where id = any(p_ids) and shared and owner_id <> auth.uid() and public.qbank_staff();
 $$;
 
 -- المواد الموجودة في البنك (لقائمة التصفية)
