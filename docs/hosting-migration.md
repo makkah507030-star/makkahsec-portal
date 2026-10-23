@@ -21,3 +21,41 @@
 5. يسري التغيير خلال دقائق (TTL Auto = 5 دقائق في Cloudflare).
 
 موقع Netlify لا يُحذف ولا يُلغى اشتراكه طوال أسبوع التجربة على الأقل.
+
+## كيف تعمل البوابة على المنصتين أثناء الانتقال
+
+- **الدوال:** منطقها كله باقٍ في `netlify/functions/`. وكل ملف في `api/` يستورد دالته من هناك
+  ويشغّلها على Vercel عبر `api/_adapter.js`، فلا نسختان من الكود.
+- **المسارات القديمة تبقى:** `vercel.json` يحوّل `/.netlify/functions/*` إلى `/api/*`، و`/iclock/*`
+  إلى دالة البصمة، فلا يتغيّر شيء في الواجهة ولا في وسيط البصمة.
+- **الدوال المجدولة على منصة واحدة فقط:** المفتاح `cron_host` في جدول `settings`
+  (`netlify/lib/cronHost.js`). القيمة الافتراضية `netlify`. التحويل بسطر SQL دون نشر:
+
+```sql
+insert into public.settings (key, value) values ('cron_host', 'vercel')
+on conflict (key) do update set value = excluded.value;
+```
+
+  وللرجوع تُكتب `'netlify'` بدل `'vercel'`.
+
+## متغيرات البيئة في Vercel (Settings ← Environment Variables)
+
+تُنسخ قيمها من Netlify ← Site configuration ← Environment variables:
+
+| المتغير | ملاحظة |
+|---|---|
+| `VITE_SUPABASE_URL`، `VITE_SUPABASE_ANON_KEY` | للبناء (الواجهة) |
+| `SUPABASE_URL`، `SUPABASE_SERVICE_ROLE_KEY` | للدوال — سرّية |
+| `VAPID_PUBLIC_KEY`، `VAPID_PRIVATE_KEY`، `VAPID_SUBJECT` | الإشعارات — نفس القيم وإلا بطلت الاشتراكات |
+| `PUSH_INTERNAL_SECRET` | بين الدوال المجدولة ودالة الإشعارات |
+| `SUPABASE_ACCESS_TOKEN`، `SUPABASE_PROJECT_REF` | لصفحة مؤشرات الموقع (اختياري) |
+| `CRON_SECRET` | جديد: نص عشوائي طويل، يحمي الدوال المجدولة |
+
+## ترتيب التحويل
+
+1. تجربة رابط المعاينة من Vercel (الدخول، التحضير، الإشعارات، المستندات).
+2. دمج الدفعة في `main` فيبني Vercel نسخة الإنتاج.
+3. ربط النطاق في Vercel (Settings ← Domains) وأخذ القيم الجديدة.
+4. Cloudflare: تعديل سجلي `A` و`www` إلى قيم Vercel (رماديان، DNS only).
+5. SQL: `cron_host` = `'vercel'`.
+6. تجربة البصمة صباحًا وإشعار تجريبي.

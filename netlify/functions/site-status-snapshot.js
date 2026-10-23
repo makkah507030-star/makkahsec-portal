@@ -7,8 +7,10 @@
 // =====================================================================
 
 import { adminClient, buildSnapshot } from "./site-metrics.js";
+import { cronAllowed, skipped } from "../lib/cronHost.js";
 
 export const handler = async () => {
+  if (!(await cronAllowed())) return skipped();
   try {
     const row = await buildSnapshot(adminClient(), "scheduled");
     return { statusCode: 200, body: JSON.stringify({ ok: true, day: row.day, verdict: row.verdict }) };
