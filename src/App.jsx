@@ -100,6 +100,7 @@ const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const Guidance = lazy(() => import("./pages/Guidance.jsx"));
 const StudentRequests = lazy(() => import("./pages/StudentRequests.jsx"));
+const MyWeek = lazy(() => import("./pages/MyWeek.jsx"));
 const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx"));
 const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
 const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
@@ -529,6 +530,7 @@ export default function App() {
             <Route path="/ethics-report" element={<EthicsReport />} />}
           {/* جداول الاختبارات: العرض للجميع، والإدارة بصلاحية */}
           <Route path="/exams" element={<ExamSchedules />} />
+          <Route path="/my-week" element={<MyWeek />} />
           {/* الأحداث والمناسبات — لكل معلم وإداري */}
           <Route path="/events" element={<Events />} />
           <Route path="/events-reports" element={<EventsReports />} />

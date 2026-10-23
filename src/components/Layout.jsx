@@ -265,6 +265,7 @@ const BASIC_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home" },
+      { to: "/my-week", label: "الجدول الأسبوعي", icon: "table", kw: "حصص جدول الدراسي" },
       { to: "/exams", label: "جداول الاختبارات", icon: "calendar" },
       // مركز التدريب (القدرات) — للطالب وحده من هذه القائمة، لا لولي الأمر
       { to: "/qudrat", label: "مركز التدريب", icon: "target", studentOnly: true, kw: "قياس قدرات تحصيلي" },
@@ -290,11 +291,11 @@ const BOTTOM = {
   admin:    ["/", "/students", "/permissions", "/forms", "/forms-review", "/my-documents"],
   teacher:  ["/", "/attendance", "/records", "/forms", "/quizzes", "/my-documents"],
   student:  ["/", "/qudrat", "/exams", "/my-documents"],
-  guardian: ["/", "/exams", "/my-documents"],
+  guardian: ["/", "/my-week", "/exams", "/my-documents"],
 };
 const BOTTOM_LABEL = {
   "/students": "الطلاب", "/permissions": "الاستئذان", "/forms": "النماذج", "/forms-review": "الاعتماد",
-  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي", "/qudrat": "التدريب",
+  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي", "/qudrat": "التدريب", "/my-week": "الجدول",
 };
 
 /* البحث: توحيد الهمزات والتاء المربوطة والألف المقصورة وحذف التشكيل */
