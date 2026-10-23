@@ -8,6 +8,7 @@ import QuizPaper, { QuizPrintArea } from "../../components/QuizPaper.jsx";
 import OnlineQuizPanel from "../../components/OnlineQuizPanel.jsx";
 import QuizImport from "../../components/QuizImport.jsx";
 import QuizGenerate from "../../components/QuizGenerate.jsx";
+import QBankBrowser from "../../components/QBankBrowser.jsx";
 import PaperExam from "../../components/PaperExam.jsx";
 import { PAPER_KINDS, BLANK, BLANK_RE, LINES, MODEL_LABEL, groupPaper, paperOpts } from "../../lib/paperExam.js";
 import { shrinkImage } from "../../lib/imageResize.js";
@@ -521,6 +522,7 @@ function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
   const kinds = paper ? PAPER_KINDS.filter((k) => !k.hidden) : KINDS;
   const [importing, setImporting] = useState(false);   // استيراد أسئلة من اختبار آخر
   const [generating, setGenerating] = useState(false); // توليد أسئلة بالمساعد الذكي (supabase/functions/ai-assistant)
+  const [banking, setBanking] = useState(false);       // إضافة أسئلة من بنك الأسئلة
 
   // اختبار «تصحيح آلي» قديم سبق نشره إلكترونيًا يبقى تبويبه، فلا تضيع نتائجه
   const [legacyOnline, setLegacyOnline] = useState(false);
@@ -1020,17 +1022,34 @@ function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
                           }} />
           )}
 
+          {banking && !viewOnly && (
+            <QBankBrowser mode="pick" uid={uid} quiz={q} listening={listening}
+                          allowed={(paper ? PAPER_KINDS : KINDS).map((k) => k.key)}
+                          nextOrder={(questions?.length ?? 0) + 1}
+                          onClose={() => setBanking(false)}
+                          onDone={(rows, m) => {
+                            if (rows.length) setQuestions((prev) => [...(prev ?? []), ...rows]);
+                            setMsg(m);
+                            if (m.ok) setBanking(false);
+                          }} />
+          )}
+
           {!viewOnly && <div className="card p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-muted">إضافة سؤال</p>
               <div className="flex flex-wrap gap-3">
                 {!generating && (
-                  <button type="button" className="text-xs font-semibold text-mint-deep underline" onClick={() => { setImporting(false); setGenerating(true); }}>
+                  <button type="button" className="text-xs font-semibold text-mint-deep underline" onClick={() => { setImporting(false); setBanking(false); setGenerating(true); }}>
                     ✨ توليد أسئلة بالمساعد الذكي
                   </button>
                 )}
+                {!banking && (
+                  <button type="button" className="text-xs font-semibold text-mint-deep underline" onClick={() => { setImporting(false); setGenerating(false); setBanking(true); }}>
+                    إضافة من بنك الأسئلة
+                  </button>
+                )}
                 {!importing && (
-                  <button type="button" className="text-xs font-semibold text-mint-deep underline" onClick={() => { setGenerating(false); setImporting(true); }}>
+                  <button type="button" className="text-xs font-semibold text-mint-deep underline" onClick={() => { setGenerating(false); setBanking(false); setImporting(true); }}>
                     استيراد أسئلة من اختبار آخر
                   </button>
                 )}

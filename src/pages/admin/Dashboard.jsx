@@ -31,8 +31,9 @@ import { fmtDate, noEra } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import { notifyUsers } from "../../lib/referrals";
-import HeaderChips from "../../components/HeaderChips.jsx";
 import DutyCard from "../../components/DutyCard.jsx";
+import HomeBanners from "../../components/HomeBanners.jsx";
+import StaffHeader from "../../components/StaffHeader.jsx";
 import TasksBox from "../../components/TasksBox.jsx";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
@@ -121,11 +122,9 @@ export default function Dashboard() {
       .join(" · ");
     return (
       <div className="space-y-5">
-        <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-          <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
-          <HeaderChips />
-        </header>
+        <StaffHeader kicker={todayLabel()} />
         <HolidayBanner />
+        <HomeBanners />
         <TasksBox />
         <DutyCard />
         <section className="card px-6 py-12 text-center">
@@ -153,17 +152,11 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-        <div>
-          <h1 className="text-xl font-bold text-ink">{todayLabel()}</h1>
-          <p className="mt-0.5 text-sm text-muted">
-            العام <span className="num">{noEra(d.yearLabel)}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}
-          </p>
-        </div>
-        <HeaderChips />
-      </header>
+      <StaffHeader kicker={<>{todayLabel()} · العام <span className="num">{noEra(d.yearLabel)}</span> · الفصل الدراسي {TERM_LABEL[d.term] ?? d.term}</>} />
 
       <HolidayBanner />
+
+      <HomeBanners />
 
       <TasksBox />
 

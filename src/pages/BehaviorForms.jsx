@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
+import StudentFileLink from "../components/StudentFileLink.jsx";
 import { todayISO } from "../lib/schoolTime";
 import { fmtDate } from "../lib/dates";
 import { useNotice } from "../lib/useNotice.js";
@@ -526,7 +527,7 @@ function Log({ rows, onOpen }) {
           <div key={r.id} className="card p-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">{FORM_KINDS[r.kind]?.short} — {r.student_name}</p>
+                <p className="truncate text-sm font-semibold text-ink">{FORM_KINDS[r.kind]?.short} — <StudentFileLink id={r.student_id}>{r.student_name}</StudentFileLink></p>
                 <p className="num mt-0.5 text-xs text-faint">
                   {r.serial} · {r.class_label}
                   {r.violation_degree ? ` · الدرجة ${degreeName(r.violation_degree)}` : ""}

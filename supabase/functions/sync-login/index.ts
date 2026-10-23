@@ -67,6 +67,9 @@ Deno.serve(async (req) => {
 
     // 2) حساب موجود: يُنقل للرقم الجديد إن تغيّر — في جدول المستخدمين أو في بريد الدخول نفسه
     const user = (await admin.from("users").select("username, role").eq("id", rec.user_id).maybeSingle()).data as any;
+    // سجل مربوط بحساب من نوع آخر (ولي أمر مربوط بحساب معلم أو إداري له أبناء في المدرسة):
+    // لا يُمسّ دخول ذلك الحساب ولا اسمه
+    if (body.table === "guardians" && user && user.role !== "guardian") return json({ ok: true, skipped: "مربوط بحساب موظف" });
     const authEmail = String((await admin.auth.admin.getUserById(rec.user_id)).data?.user?.email ?? "").toLowerCase();
     if (user && String(user.username ?? "").trim() === username && authEmail === email.toLowerCase()) {
       await admin.from("users").update({ full_name: fullName }).eq("id", rec.user_id);

@@ -9,6 +9,8 @@ import { useTeacherHiddenTabs } from "../lib/useTeacherHiddenTabs.js";
 import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
+import { STUDENT_FILE_ROLES } from "./StudentFileLink.jsx";
+import { NavContext } from "../lib/navContext.js";
 import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
 import IdleLogout from "./IdleLogout.jsx";
@@ -18,6 +20,7 @@ import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 import { useBackSteps, goBack } from "../lib/backStep.js";
 import { savedTheme, saveTheme, applyTheme } from "../lib/theme.js";
+import { EvidenceDock } from "./EvidenceTags.jsx";
 
 /* =====================================================================
    القائمة الجانبية — مرتبة من العمل اليومي إلى الإعدادات، وفي أسفلها
@@ -31,11 +34,13 @@ import { savedTheme, saveTheme, applyTheme } from "../lib/theme.js";
 
 const COUNSEL = ["principal", "tech_support", "deputy_students", "counselor_1", "counselor_2", "counselor_3"];
 
-const ADMIN_GROUPS = [
+export const ADMIN_GROUPS = [
   {
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home" },
+      // شاشة المتابعة — الوضع اليومي في شاشة كاملة (أرقام بلا أسماء طلاب، تصلح للعرض أمام الضيوف)
+      { to: "/monitor", label: "شاشة المتابعة", roles: ["principal", "deputy_students", "deputy_academic", "tech_support"], icon: "monitor", kw: "داشبورد لوحة الوضع اليومي حضور تلفزيون عرض" },
       { to: "/school-report", label: "التقرير الشهري للمدرسة", roles: ["principal", "tech_support"], icon: "chart", kw: "تقرير شهري خلاصة" },
     ],
   },
@@ -43,7 +48,11 @@ const ADMIN_GROUPS = [
     title: "شؤون الطلاب",
     items: [
       { to: "/students",    label: "كشوف الطلاب",    perm: "students",    icon: "users" },
+      // ملف الطالب الشامل — والموجه يرى طلاب صفه وحده (sf_can)
+      { to: "/student-file", label: "ملف الطالب", roles: STUDENT_FILE_ROLES, icon: "idcard", kw: "ملف شامل سجل الطالب غياب سلوك إحالات درجات شهادات" },
       { to: "/student-admission", label: "قبول طالب", roles: ["principal", "tech_support"], icon: "userPlus" },
+      // الترشيحات — لكل إداري ومن له دور إداري؛ يدير كلٌّ إعلاناته (supabase/nominations_1.sql)
+      { to: "/nominations", label: "الترشيحات", icon: "megaphone", kw: "تقديم انضمام لجنة اعلامية كشافة مقابلة مرشحين اعلان" },
       { to: "/student-certificate", label: "تعريف طالب منتظم", perm: "students", icon: "idcard" },
       { to: "/permissions", label: "الاستئذان", perm: "permissions", icon: "ticket", kw: "خروج" },
       { to: "/dropouts", label: "الطلاب المنقطعون", roles: ["principal", "deputy_students", "tech_support"], icon: "userX", kw: "انقطاع طي قيد سفر" },
@@ -57,6 +66,8 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/referrals", label: "إحالة طالب", roles: COUNSEL, icon: "send", kw: "موجه" },
       { to: "/behavior", label: "نماذج السلوك والمواظبة", roles: COUNSEL, icon: "flag", kw: "مخالفات غياب" },
+      { to: "/absence-excuses", label: "أعذار الغياب", roles: ["principal", "deputy_students", "clerk", "clerk_2", "tech_support"], icon: "idcard", kw: "عذر غياب طبي تقرير مرضي ولي أمر" },
+      { to: "/student-requests", label: "طلبات التواصل مع الوكيل", roles: ["principal", "deputy_students", "tech_support"], icon: "send", kw: "مقابلة ولي أمر طالب سؤال استفسار وكيل" },
       { to: "/student-affairs", label: "تقارير شؤون الطلاب", perm: "reports", icon: "chart", kw: "غياب" },
     ],
   },
@@ -76,6 +87,7 @@ const ADMIN_GROUPS = [
       { to: "/schedule-import",   label: "استيراد الجدول الذكي", perm: "import", icon: "upload" },
       { to: "/substitute-report", label: "تقرير حصص الانتظار", anyPerm: ["import", "reports"], icon: "swap" },
       { to: "/noor-grades",       label: "متابعة رصد الدرجات", roles: ["principal", "deputy_academic", "tech_support"], icon: "clipboard", kw: "نور الفترات" },
+      { to: "/qbank",             label: "بنك الأسئلة", roles: ["principal", "deputy_academic", "tech_support"], icon: "database", kw: "اسئلة مشاركة اختبار مواد" },
       { to: "/quiz-cycles",       label: "متابعة دورات الاختبار", roles: ["principal", "deputy_academic", "tech_support"], icon: "refresh", kw: "الدورات غير المكتملة اختبارات خطة علاجية" },
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
@@ -97,6 +109,7 @@ const ADMIN_GROUPS = [
       { to: "/forms",        label: "إصدار النماذج", icon: "certificate", kw: "شهادات" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
+      { to: "/my-circulars", label: "تعاميمي", icon: "circular", kw: "تعميم اطلاع" },
       { to: "/plc",          label: "التطوير المهني", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "مجتمع التعلم" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "sliders" },
     ],
@@ -113,9 +126,11 @@ const ADMIN_GROUPS = [
   {
     title: "التواصل والمحتوى",
     items: [
+      { to: "/circulars",      label: "التعاميم", perm: "circulars", icon: "circular", kw: "تعميم وارد داخلي اطلاع ارشفة تذكير" },
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell", kw: "رسائل" },
       { to: "/notifications-review", label: "اعتماد الإشعارات", techOnly: true, icon: "check" },
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
+      { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
@@ -152,6 +167,22 @@ const ADMIN_GROUPS = [
       { to: "/maintenance", label: "وضع الصيانة", techOnly: true, icon: "wrench" },
     ],
   },
+];
+
+/* الأقسام العامة لقائمة الإدارة: كل قسم يجمع أقسامًا من ADMIN_GROUPS بعناوينها، ويفتح
+   صفحة بطاقاتها (/s/:key، pages/SectionHub.jsx). القسم الذي يبقى فيه رابط واحد للمستخدم
+   يفتح الرابط مباشرة. أي قسم جديد في ADMIN_GROUPS يُضاف عنوانه هنا. */
+const SECTIONS = [
+  { key: "students", title: "الطلاب", icon: "users", hint: "شؤون الطلاب والسلوك والمواظبة والتوجيه",
+    groups: ["شؤون الطلاب", "السلوك والمواظبة", "التوجيه الطلابي"] },
+  { key: "academic", title: "الشؤون التعليمية", icon: "book", hint: "الجداول والرصد والاختبارات والأنشطة والمعامل",
+    groups: ["الشؤون التعليمية", "المعامل والمختبرات"] },
+  { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والشهادات والأداء الوظيفي والتطوير المهني",
+    groups: ["النماذج", "الأداء الوظيفي"] },
+  { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأدلة والأحداث",
+    groups: ["التواصل والمحتوى"] },
+  { key: "settings", title: "الإعدادات والدعم الفني", icon: "sliders", hint: "الحسابات والصلاحيات والتقويم والاستيراد والدعم",
+    groups: ["إعدادات المدرسة", "الدعم الفني"] },
 ];
 
 const TEACHER_GROUPS = [
@@ -193,6 +224,8 @@ const TEACHER_GROUPS = [
     items: [
       { to: "/exams",          label: "جداول الاختبارات", icon: "calendar" },
       { to: "/quizzes",        label: "اختباراتي",         icon: "quiz" },
+      // بنك الأسئلة — أسئلة المعلم تدخله تلقائيًا، ويشاركها مع المعلمين (supabase/qbank_1.sql)
+      { to: "/qbank",          label: "بنك الأسئلة",       icon: "database", kw: "اسئلة مشاركة اختبار مواد" },
       { to: "/quiz-marks",     label: "التصحيح والدرجات",  icon: "target", kw: "تصحيح الي" },
       { to: "/quiz-analytics", label: "تحليل النتائج",     icon: "pie" },
       { to: "/qudrat",         label: "مركز التدريب",      icon: "target", exact: true, kw: "قياس قدرات تحصيلي تدريب اسئلة" },
@@ -205,6 +238,7 @@ const TEACHER_GROUPS = [
       { to: "/forms",        label: "النماذج والشهادات",  icon: "certificate" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
+      { to: "/my-circulars", label: "تعاميمي",            icon: "circular", kw: "تعميم اطلاع" },
       { to: "/plc",          label: "التطوير المهني",     icon: "users", kw: "مجتمع التعلم المهني" },
     ],
   },
@@ -233,10 +267,15 @@ const BASIC_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home" },
+      { to: "/my-week", label: "الجدول الأسبوعي", icon: "table", kw: "حصص جدول الدراسي" },
       { to: "/exams", label: "جداول الاختبارات", icon: "calendar" },
       // مركز التدريب (القدرات) — للطالب وحده من هذه القائمة، لا لولي الأمر
       { to: "/qudrat", label: "مركز التدريب", icon: "target", studentOnly: true, kw: "قياس قدرات تحصيلي" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
+      // التعاميم تصل أولياء الأمور لا الطلاب
+      { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
+      // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
+      { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
     ],
   },
 ];
@@ -254,11 +293,11 @@ const BOTTOM = {
   admin:    ["/", "/students", "/permissions", "/forms", "/forms-review", "/my-documents"],
   teacher:  ["/", "/attendance", "/records", "/forms", "/quizzes", "/my-documents"],
   student:  ["/", "/qudrat", "/exams", "/my-documents"],
-  guardian: ["/", "/exams", "/my-documents"],
+  guardian: ["/", "/my-week", "/exams", "/my-documents"],
 };
 const BOTTOM_LABEL = {
   "/students": "الطلاب", "/permissions": "الاستئذان", "/forms": "النماذج", "/forms-review": "الاعتماد",
-  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي", "/qudrat": "التدريب",
+  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي", "/qudrat": "التدريب", "/my-week": "الجدول",
 };
 
 /* البحث: توحيد الهمزات والتاء المربوطة والألف المقصورة وحذف التشكيل */
@@ -303,6 +342,7 @@ export function Icon({ name, className = "h-[18px] w-[18px]" }) {
     book:   "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z",
     help:   "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4M12 17.5h.01",
     bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+    circular: "M7 3h7l5 5v13H7zM14 3v5h5M10 12h6M10 16h6M4 7v14h3",
     check:  "M20 6 9 17l-5-5",
     megaphone: "M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H10l9 4V5l-9 4H5a2 2 0 0 0-2 2Zm7-2v6",
     wrench: "M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2Z",
@@ -349,7 +389,7 @@ const Badge = ({ n, dot, at = "-top-0.5 -left-1" }) => (n > 0
   : null);
 
 export default function Layout({ children }) {
-  const { session, profile, adminRoles, signOut, can, effectiveRole, dualRole, switchView } = useSession();
+  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
@@ -383,7 +423,10 @@ export default function Layout({ children }) {
   const visible = (i) => {
     if (i.staffOnly && !isStaff) return false;
     if (i.studentOnly && effectiveRole !== "student") return false;
+    if (i.guardianOnly && effectiveRole !== "guardian") return false;
     if (isAdmin) {
+      // أخفاها مدير المدرسة لأدوار المستخدم من «الصلاحيات ← ظهور الصفحات»
+      if (hiddenNav?.has(i.to)) return false;
       if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
       if (i.roles && !i.roles.some((r) => adminRoles.includes(r))) return false;
       if (i.manageForms) return adminRoles.includes("tech_support") || adminRoles.includes("principal");
@@ -399,13 +442,39 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav]);
   const footer = FOOTER.filter(visible);
+
+  // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
+  const sections = useMemo(() => (!isAdmin ? [] : SECTIONS
+    .map((x) => ({ ...x, groups: groups.filter((g) => x.groups.includes(g.title)) }))
+    .map((x) => ({ ...x, items: x.groups.flatMap((g) => g.items) }))
+    .filter((x) => x.items.length)), [isAdmin, groups]);
+  const topItems = isAdmin ? groups.find((g) => !g.title)?.items ?? [] : [];
 
   const isActive = (i) =>
     i.to === "/" || i.exact
       ? path === i.to
       : [i.to, ...(i.also ?? [])].some((t) => path === t || path.startsWith(t + "/"));
+
+  /* ---------- «الأكثر استخدامًا» (الإدارة): أكثر خمس صفحات يفتحها المستخدم ----------
+     تُعدّ في متصفحه وحده، وتظهر الصفحة بعد فتحها مرتين. */
+  const usageKey = `nav.usage.${effectiveRole}`;
+  const [usage, setUsage] = useState(() => store.get(usageKey, {}));
+  const sectionItems = sections.flatMap((x) => x.items);
+  useEffect(() => {
+    const hit = sectionItems.find(isActive);
+    if (!hit) return;
+    setUsage((u) => { const n = { ...u, [hit.to]: (u[hit.to] ?? 0) + 1 }; store.set(usageKey, n); return n; });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path, sections.length]);
+  const frequent = Object.entries(usage).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1])
+    .map(([to]) => sectionItems.find((i) => i.to === to)).filter(Boolean).slice(0, 5);
+  const sectionTo = (x) => (x.items.length === 1 ? x.items[0].to : `/s/${x.key}`);
+  const sectionNav = (x, iconOnly) => navItem({ to: sectionTo(x), label: x.title, icon: x.icon }, {
+    iconOnly, active: path === `/s/${x.key}` || x.items.some(isActive),
+    badge: x.items.reduce((a, i) => a + badgeOf(i.to), 0),
+  });
 
   /* ---------- أقسام القائمة: قسم واحد مفتوح في كل مرة ----------
      الانتقال إلى صفحة في قسم آخر يفتح قسمها ويطوي الباقي تلقائيًا، وفتح قسم
@@ -507,19 +576,30 @@ export default function Layout({ children }) {
       ? `معلم · ${spec}`
       : ROLE_LABEL[effectiveRole] ?? "";
 
-  // زر التبديل بين واجهة الإدارة وواجهة المعلم — يظهر فقط لمن يجمع الدورين
+  // التبديل بين واجهات الحساب: الإدارة والمعلم و«أبنائي» — يظهر لمن له أكثر من واجهة.
+  // بواجهتين زر واحد ينقل إلى الأخرى، وبثلاث قائمة مختصرة
+  const VIEW_LABEL = { admin: "واجهة الإدارة", teacher: "واجهة المعلم", guardian: "أبنائي" };
   const ViewSwitch = () => {
-    if (!dualRole) return null;
-    const toTeacher = isAdmin; // في واجهة الإدارة → ننتقل لواجهة المعلم
+    if (!views || views.length < 2) return null;
+    const go = (v) => { switchView(v); navigate("/"); };
+    const cls = "flex shrink-0 items-center gap-1.5 rounded-pill border border-mint-deep bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep transition-colors hover:bg-mint-light sm:px-3.5";
+    if (views.length === 2) {
+      const other = views.find((v) => v !== effectiveRole) ?? views[0];
+      return (
+        <button onClick={() => go(other)} title="التبديل بين واجهات حسابك" className={cls}>
+          <Icon name="swap" className="h-4 w-4" />
+          <span className="hidden sm:inline">{VIEW_LABEL[other]}</span>
+        </button>
+      );
+    }
     return (
-      <button
-        onClick={() => { switchView(toTeacher ? "teacher" : "admin"); navigate("/"); }}
-        title="التبديل بين واجهة الإدارة وواجهة المعلم"
-        className="flex shrink-0 items-center gap-1.5 rounded-pill border border-mint-deep bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep transition-colors hover:bg-mint-light sm:px-3.5"
-      >
+      <label className={`${cls} cursor-pointer`} title="التبديل بين واجهات حسابك">
         <Icon name="swap" className="h-4 w-4" />
-        <span className="hidden sm:inline">{toTeacher ? "واجهة المعلم" : "واجهة الإدارة"}</span>
-      </button>
+        <select value={effectiveRole} onChange={(e) => go(e.target.value)}
+                className="max-w-[7.5rem] cursor-pointer bg-transparent text-xs font-semibold text-mint-deep outline-none">
+          {views.map((v) => <option key={v} value={v}>{VIEW_LABEL[v]}</option>)}
+        </select>
+      </label>
     );
   };
 
@@ -636,9 +716,9 @@ export default function Layout({ children }) {
   );
 
   /* ---------- رابط في القائمة ---------- */
-  const navItem = (i, { iconOnly, sub } = {}) => {
-    const active = isActive(i);
-    const n = badgeOf(i.to);
+  const navItem = (i, { iconOnly, sub, active: act, badge } = {}) => {
+    const active = act ?? isActive(i);
+    const n = badge ?? badgeOf(i.to);
     return (
       <NavLink
         key={i.to}
@@ -646,6 +726,7 @@ export default function Layout({ children }) {
         end={i.to === "/"}
         onClick={() => reopenPage(i)}
         title={iconOnly ? i.label : undefined}
+        aria-label={iconOnly ? i.label : undefined}
         aria-current={active ? "page" : undefined}
         className={`relative flex items-center gap-3 rounded-sm2 text-[13.5px] transition-colors ${
           iconOnly ? "justify-center px-0 py-2.5" : "px-3 py-2"
@@ -720,6 +801,21 @@ export default function Layout({ children }) {
             ) : (
               <p className="px-3 py-6 text-center text-[13px] text-muted">لا توجد صفحة بهذا الاسم</p>
             )
+          ) : isAdmin ? (
+            <>
+              <div className="space-y-0.5">{topItems.map((i) => navItem(i, { iconOnly }))}</div>
+              <div className={iconOnly ? "mt-2 border-t border-line pt-2" : "mt-3"}>
+                {!iconOnly && <p className="mb-1 px-3 py-1.5 text-[12px] font-bold text-muted">الأقسام</p>}
+                <div className="space-y-0.5">{sections.map((x) => sectionNav(x, iconOnly))}</div>
+              </div>
+              {/* «الأكثر استخدامًا» بعد الأقسام، في صندوق بلون ذهبي يميّزه عنها */}
+              {frequent.length > 0 && (
+                <div className={`mt-3 rounded-card border border-[#EADFBF] bg-[#FCF5E6] ${iconOnly ? "p-1" : "p-1.5"}`}>
+                  {!iconOnly && <p className="mb-1 px-3 py-1 text-[12px] font-bold text-[#8A6A1F]">الأكثر استخدامًا</p>}
+                  <div className="space-y-0.5">{frequent.map((i) => navItem(i, { iconOnly }))}</div>
+                </div>
+              )}
+            </>
           ) : (
             groups.map((g, gi) => {
               const isOpen = !g.title || openGroups.has(g.title);
@@ -753,17 +849,19 @@ export default function Layout({ children }) {
           )}
         </nav>
 
-        {/* أسفل القائمة: الحساب والمساعدة */}
-        <div className={`space-y-0.5 border-t border-line py-2 ${iconOnly ? "px-2" : "px-3"}`}>
-          {footer.map((i) => navItem(i, { iconOnly }))}
+        {/* أسفل القائمة: الحساب والمساعدة — صف أيقونات واحد يظهر اسم كلٍّ منها عند الوقوف عليه،
+            وفي القائمة المطوية عمود أيقونات كما هي */}
+        <div className={`border-t border-line py-2 ${iconOnly ? "space-y-0.5 px-2" : "flex items-center gap-1 px-3"}`}>
+          {footer.map((i) => iconOnly ? navItem(i, { iconOnly }) : (
+            <div key={i.to} className="min-w-0 flex-1">{navItem(i, { iconOnly: true })}</div>
+          ))}
           {desktop && (
             <button type="button" onClick={() => setCollapsedSaved(!collapsed)}
-                    title={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
-                    className={`flex w-full items-center gap-3 rounded-sm2 py-2 text-[13px] font-medium text-faint hover:bg-canvas hover:text-ink ${
-                      iconOnly ? "justify-center" : "px-3"
+                    title={collapsed ? "توسيع القائمة" : "طيّ القائمة"} aria-label={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
+                    className={`flex items-center justify-center rounded-sm2 py-2.5 text-faint hover:bg-canvas hover:text-ink ${
+                      iconOnly ? "w-full" : "min-w-0 flex-1"
                     }`}>
               <Icon name={collapsed ? "panelOpen" : "panel"} className="h-[18px] w-[18px]" />
-              {!iconOnly && <span>طيّ القائمة</span>}
             </button>
           )}
         </div>
@@ -837,7 +935,11 @@ export default function Layout({ children }) {
 
           {/* الزر العائم فوق الشريط السفلي: مسافة إضافية أسفل الصفحة كي لا يغطي آخر المحتوى */}
           <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-6 lg:pb-5 ${showBack ? "pb-36" : "pb-24"}`}>
-            <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
+            <NavContext.Provider value={{ sections, badgeOf }}>
+              <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
+              {/* صندوق شواهد ملف الأداء: آخر كل صفحة فيها إجراء يُحتسب شاهدًا (EvidenceTags) */}
+              <EvidenceDock />
+            </NavContext.Provider>
             {/* سطر الحقوق أسفل كل صفحة، بعيدًا عن أزرار القائمة */}
             <footer className="mx-auto mt-10 max-w-5xl border-t border-line pt-3 text-center text-[11px] leading-relaxed text-faint print:hidden">
               {RIGHTS_LINE} · <Link to="/terms" className="hover:text-mint-deep">الشروط</Link> · <Link to="/privacy" className="hover:text-mint-deep">الخصوصية</Link>

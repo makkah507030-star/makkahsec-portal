@@ -8,8 +8,20 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import PeriodNoticesAdmin from "./PeriodNoticesAdmin.jsx";
+import TopStudents from "./TopStudents.jsx";
 
 const REPORT_TYPES = ["period1", "period2", "final"];
+
+/* أقسام الصفحة: إشعار الفترة من نور (Excel)، والنتائج بملفات PDF، وتقرير المتفوقين */
+const VIEWS = [
+  { key: "notice", t: "إشعار الفترة", d: "درجات المواد المرصودة من نور (Excel)",
+    icon: "M4 5h16v14H4zM4 10h16M10 10v9" },
+  { key: "pdf", t: "النتائج والشهادات", d: "ملفات PDF بالمعدل والترتيب",
+    icon: "M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6" },
+  { key: "top", t: "الطلاب المتفوقون", d: "تقرير بالمجموع والنسبة وفلترة كاملة",
+    icon: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3" },
+];
 
 function Banner({ err, msg }) {
   if (!err && !msg) return null;
@@ -22,6 +34,7 @@ function Banner({ err, msg }) {
 
 export default function ResultsAdmin() {
   const { profile } = useSession();
+  const [view, setView] = useState("notice");
   const [reportType, setReportType] = useState("period1");
   const [year, setYear] = useState("");
   const [students, setStudents] = useState([]); // {id, national_id, full_name}
@@ -299,13 +312,39 @@ export default function ResultsAdmin() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-bold text-ink">نتائج الطلاب</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
-          ارفع ملفات النتائج PDF كما هي من نظام نور — يتم ربطها تلقائيًا برقم الهوية داخل كل
-          ملف. تبقى النتائج مخفية عن الطلاب وأولياء الأمور حتى تضغط «نشر».
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-lg font-bold text-ink">نتائج الطلاب</h1>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            ما يصدر من نظام نور يُرفع هنا كما هو، ويُطابق كل طالب برقم هويته، ثم يُنشر للطالب وولي أمره.
+          </p>
+        </div>
+        <span className="num rounded-pill bg-canvas px-3 py-1 text-xs text-muted">العام الدراسي: {year || "—"}</span>
       </div>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        {VIEWS.map((v) => (
+          <button key={v.key} type="button" onClick={() => setView(v.key)}
+            className={`flex items-center gap-3 rounded-card border p-3 text-right transition ${
+              view === v.key ? "border-mint-deep bg-mint-tint/60 shadow-card" : "border-line bg-white hover:border-mint-light"}`}>
+            <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${view === v.key ? "bg-mint-deep text-white" : "bg-mint-tint text-mint-deep"}`}>
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={v.icon} /></svg>
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-ink">{v.t}</span>
+              <span className="block text-[11px] text-muted">{v.d}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {view === "notice" && <PeriodNoticesAdmin year={year} students={students} />}
+      {view === "top" && <TopStudents year={year} />}
+      {view === "pdf" && (<>
+      <p className="text-sm leading-relaxed text-muted">
+        ارفع ملفات النتائج PDF كما هي من نظام نور — يتم ربطها تلقائيًا برقم الهوية داخل كل
+        ملف. تبقى النتائج مخفية عن الطلاب وأولياء الأمور حتى تضغط «نشر».
+      </p>
 
       <Banner err={err} msg={msg} />
 
@@ -317,9 +356,6 @@ export default function ResultsAdmin() {
             {REPORT_TYPE_LABEL[t]}
           </button>
         ))}
-        <span className="num mr-auto rounded-pill bg-canvas px-3 py-1 text-xs text-muted">
-          العام الدراسي: {year || "—"}
-        </span>
       </div>
 
       {/* رفع ملفات جديدة */}
@@ -461,6 +497,7 @@ export default function ResultsAdmin() {
           </div>
         )}
       </section>
+      </>)}
     </div>
   );
 }

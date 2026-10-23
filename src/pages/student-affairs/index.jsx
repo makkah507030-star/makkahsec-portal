@@ -16,7 +16,6 @@ const PeriodReports = lazy(() => import("./PeriodReports.jsx"));
 const DetailedReports = lazy(() => import("./DetailedReports.jsx"));
 const Statistics = lazy(() => import("./Statistics.jsx"));
 const Warnings = lazy(() => import("./Warnings.jsx"));
-const StudentFile = lazy(() => import("./StudentFile.jsx"));
 const MonthlyAffairs = lazy(() => import("./MonthlyAffairs.jsx"));
 const Devices = lazy(() =>
   import("../admin/AttendanceOverview.jsx").then((m) => ({ default: m.DevicesTab })));
@@ -39,13 +38,9 @@ const GROUPS = [
     tabs: [{ key: "warnings", label: "الإنذارات والمحاضر" }] },
   { title: "التقرير الشهري", hint: "تقرير مصمّم بغلاف ورسوم: الحضور والتأخر والإنذارات والإحالات", access: "warnings",
     tabs: [{ key: "monthly", label: "التقرير الشهري" }] },
-  { title: "التراكمي", hint: "النسب على الفصل وملف كل طالب", access: "super",
-    note: "للمدير والدعم الفني · ملف الطالب لوكيل شؤون الطلاب أيضًا",
-    tabs: [
-      { key: "stats", label: "الإحصاء والنسب" },
-      // ملف الطالب وفيه «تعديل حضور الحصص» — لوكيل شؤون الطلاب أيضًا
-      { key: "student", label: "ملف الطالب", access: "warnings" },
-    ] },
+  // ملف الطالب صار صفحة مستقلة في القائمة (/student-file)
+  { title: "التراكمي", hint: "النسب على الفصل", access: "super",
+    tabs: [{ key: "stats", label: "الإحصاء والنسب" }] },
   { title: "الأجهزة", hint: "حالة أجهزة البصمة وتغطيتها", access: "super",
     tabs: [{ key: "devices", label: "أجهزة البصمة" }] },
 ];
@@ -121,7 +116,6 @@ export default function StudentAffairs() {
         {tab === "stats" && <Statistics />}
         {tab === "warnings" && <Warnings />}
         {tab === "monthly" && <MonthlyAffairs />}
-        {tab === "student" && <StudentFile />}
         {tab === "devices" && <Devices />}
       </Suspense>
     </div>

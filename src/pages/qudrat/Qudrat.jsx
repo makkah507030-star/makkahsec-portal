@@ -14,6 +14,7 @@ import QudratPlan from "./QudratPlan.jsx";
 import QudratMock from "./QudratMock.jsx";
 import QudratResults from "./QudratResults.jsx";
 import { AskButton, MyAsks } from "./AskTeacher.jsx";
+import SadeedGuide from "./SadeedGuide.jsx";
 
 /* =====================================================================
    مركز التدريب — القدرات العامة (الدفعة الأولى): التدريب الحر بالمهارة.
@@ -140,6 +141,7 @@ export default function Qudrat() {
       )}
 
       <MyAsks uid={uid} />
+      {!isStaff && <SadeedGuide />}
       <QudratPlan uid={uid} plan={plan} bySkill={bySkill} doneToday={doneToday} onSaved={setPlan} onStart={startDay} />
 
       <div className="flex flex-wrap gap-2">

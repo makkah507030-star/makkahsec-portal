@@ -4,9 +4,12 @@ import { useSession } from "../lib/session.jsx";
 import { activeYear, elementColor, loadAutoCounts, loadPerfReference } from "../lib/performance.js";
 
 /* =====================================================================
-   بطاقات «الشاهد» تحت الإجراءات التي تُحتسب شاهدًا آليًا في ملف الأداء
-   الوظيفي (perf_auto_counts): رقم العنصر والبند واسمه مختصرًا بلون العنصر،
-   وبالضغط يظهر اسماهما كاملين ورصيد المعلم في البند. للمعلمين فقط.
+   بطاقات «الشاهد» للإجراءات التي تُحتسب شاهدًا آليًا في ملف الأداء الوظيفي
+   (perf_auto_counts): رقم العنصر والبند واسمه مختصرًا بلون العنصر، وبالضغط يظهر
+   اسماهما كاملين ورصيد المعلم في البند. للمعلمين فقط.
+   تضع الصفحة <EvidenceTags items> بجانب إجرائها كما كانت، لكنها لا تُرسم هناك:
+   تُسجَّل بنودها، ويجمعها <EvidenceDock> (في Layout) في صندوق واحد ثابت آخر الصفحة،
+   فلا تتبعثر البطاقات بين أجزاء الصفحة، وتتغير مع حالتها (علاجية أو إثرائية…).
    ===================================================================== */
 
 // أسماء مختصرة للبطاقة؛ الاسم الكامل من perf_items عند الضغط
@@ -50,7 +53,35 @@ const loadMyCounts = (uid) => {
   return countsCache;
 };
 
-export default function EvidenceTags({ items, className = "" }) {
+/* سجلّ البنود المعروضة الآن: لكل EvidenceTags مُثبَّتة بنودها، ويُرسم اتحادها في EvidenceDock */
+const registry = new Map();
+const listeners = new Set();
+const emit = () => listeners.forEach((f) => f());
+
+export default function EvidenceTags({ items }) {
+  const key = (items ?? []).join(",");
+  useEffect(() => {
+    const id = Symbol("evidence");
+    registry.set(id, key ? key.split(",") : []);
+    emit();
+    return () => { registry.delete(id); emit(); };
+  }, [key]);
+  return null;
+}
+
+/* صندوق شواهد الصفحة: آخر كل صفحة فيها إجراء يُحتسب شاهدًا */
+export function EvidenceDock() {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const f = () => force((n) => n + 1);
+    listeners.add(f);
+    return () => listeners.delete(f);
+  }, []);
+  const items = [...new Set([...registry.values()].flat())].sort();
+  return <EvidenceBoxView items={items} />;
+}
+
+function EvidenceBoxView({ items }) {
   const { isTeacher, session } = useSession();
   const [open, setOpen] = useState(null);
   const [ref, setRef] = useState(null);
@@ -80,8 +111,9 @@ export default function EvidenceTags({ items, className = "" }) {
   const color = open && elementColor(open.slice(0, 3));
 
   return (
-    <div className={`no-print rounded-card border border-line bg-canvas/60 px-3 py-2.5 ${className}`}>
-      <p className="mb-2 text-xs font-semibold text-muted">الشواهد التي تحصل عليها بعد التنفيذ</p>
+    <section className="no-print mx-auto mt-6 max-w-5xl rounded-card border border-mint-light bg-mint-tint/40 px-4 py-3">
+      <p className="text-sm font-bold text-mint-deep">شواهد ملف الأداء الوظيفي في هذه الصفحة</p>
+      <p className="mb-2 text-[11px] text-muted">تُحتسب لك تلقائيًا بعد تنفيذ إجراءاتها. اضغط البطاقة لتفاصيل البند ورصيدك فيه.</p>
       <div className="flex flex-wrap gap-1.5">
         {keys.map((k) => {
           const p = parts(k);
@@ -110,6 +142,6 @@ export default function EvidenceTags({ items, className = "" }) {
           </p>
         </div>
       )}
-    </div>
+    </section>
   );
 }

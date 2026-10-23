@@ -80,6 +80,9 @@ export default function StudentDropouts() {
       ];
   const tab = tabs.some((t) => t.key === params.get("tab")) ? params.get("tab") : tabs[0].key;
   const after = () => { load(); refreshNavBadges(true); };
+  // ?open=<id> من «بانتظار إجرائك»: يُعرض ذلك البلاغ وحده، مع زر لعرض الكل
+  const openId = params.get("open");
+  const focused = openId && tab === "new" ? by("reported").find((r) => r.id === openId) ?? null : null;
 
   return (
     <div className="space-y-4">
@@ -110,7 +113,14 @@ export default function StudentDropouts() {
 
       {tab === "report" && <ReportForm isManager={isManager} onDone={() => { after(); setParams({ tab: isManager ? "new" : "mine" }); }} />}
       {tab !== "report" && list === null && <Loader />}
-      {tab === "new" && list && <Cards rows={by("reported")} manage onChange={after}
+      {focused && (
+        <div className="flex flex-wrap items-center gap-2 rounded-sm2 bg-mint-tint/60 px-3 py-2 text-xs text-mint-deep">
+          <span>يعرض البلاغ الذي اخترته وحده.</span>
+          <button className="mr-auto font-semibold underline" onClick={() => setParams({ tab: "new" }, { replace: true })}>
+            عرض كل البلاغات ({by("reported").length})</button>
+        </div>
+      )}
+      {tab === "new" && list && <Cards rows={focused ? [focused] : by("reported")} manage onChange={after}
         empty="لا بلاغات جديدة." />}
       {tab === "out" && list && <Cards rows={by("withdrawn")} manage onChange={after} search
         empty="لا يوجد طلاب مطوية قيودهم." />}

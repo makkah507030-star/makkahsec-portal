@@ -50,6 +50,9 @@ const NewsArticle = lazy(() => import("./pages/NewsArticle.jsx"));
 const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
 const ScoutTeam = lazy(() => import("./pages/admin/ScoutTeam.jsx"));
 const NotificationsAdmin = lazy(() => import("./pages/admin/NotificationsAdmin.jsx"));
+const Circulars = lazy(() => import("./pages/circulars/Circulars.jsx"));
+const CircularView = lazy(() => import("./pages/circulars/CircularView.jsx"));
+const MyCirculars = lazy(() => import("./pages/circulars/MyCirculars.jsx"));
 const AttendanceOverview = lazy(() => import("./pages/admin/AttendanceOverview.jsx"));
 const StudentAffairs = lazy(() => import("./pages/student-affairs/index.jsx"));
 const PeriodAttendance = lazy(() => import("./pages/admin/PeriodAttendance.jsx"));
@@ -98,6 +101,16 @@ const DutyCard = lazy(() => import("./components/DutyCard.jsx"));
 const DutyAdmin = lazy(() => import("./pages/admin/DutyAdmin.jsx"));
 const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const Guidance = lazy(() => import("./pages/Guidance.jsx"));
+const StudentRequests = lazy(() => import("./pages/StudentRequests.jsx"));
+const MyWeek = lazy(() => import("./pages/MyWeek.jsx"));
+const AbsenceExcuses = lazy(() => import("./pages/AbsenceExcuses.jsx"));
+const BannersAdmin = lazy(() => import("./pages/banners/BannersAdmin.jsx"));
+const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx"));
+const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
+const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
+const Nominations = lazy(() => import("./pages/nominations/Nominations.jsx"));
+const Opportunities = lazy(() => import("./pages/nominations/Opportunities.jsx"));
+const QuestionBank = lazy(() => import("./pages/teacher/QuestionBank.jsx"));
 const StudentNotes = lazy(() => import("./pages/StudentNotes.jsx"));
 const StudentDropouts = lazy(() => import("./pages/StudentDropouts.jsx"));
 const EthicsCode = lazy(() => import("./pages/EthicsCode.jsx"));
@@ -126,11 +139,12 @@ const MaintenanceAdmin = lazy(() => import("./pages/admin/MaintenanceAdmin.jsx")
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
 import { useHolidays } from "./lib/useHolidays.js";
-const HeaderChips = lazy(() => import("./components/HeaderChips.jsx"));
 const ExamDayCard = lazy(() => import("./components/ExamDayCard.jsx"));
 const TeacherTodayCard = lazy(() => import("./components/TeacherTodayCard.jsx"));
 const TasksBox = lazy(() => import("./components/TasksBox.jsx"));
 import HolidayBanner from "./components/HolidayBanner.jsx";
+import HomeBanners from "./components/HomeBanners.jsx";
+import StaffHeader from "./components/StaffHeader.jsx";
 import TeacherDayCard from "./components/TeacherDayCard.jsx";
 import Loader from "./components/Loader.jsx";
 
@@ -294,7 +308,7 @@ export default function App() {
   // الرئيسية للمعلم ملخص يومه، والتحضير صفحة مستقلة (/attendance) تفتحها بطاقة «يومي» بضغطة
   const teacherHome = (
     <div className="space-y-5">
-      <HeaderChips />
+      <StaffHeader />
       {/* بطاقة يوم الاختبار تظهر في أيامه فقط، فتتقدّم على غيرها */}
       <ExamDayCard />
       {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
@@ -323,6 +337,7 @@ export default function App() {
                 {effectiveRole === "teacher" && <HolidayBanner />}
                 {/* بطاقة يوم المعلم لكل حساب له سجل معلم — تظهر في أسبوع المناسبة فقط */}
                 <TeacherDayCard />
+                {effectiveRole === "teacher" && <HomeBanners />}
                 {home}
               </div>
             }
@@ -361,6 +376,7 @@ export default function App() {
               {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
               {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
               {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
+              {can("banners") && <Route path="/banners-admin" element={<BannersAdmin />} />}
               {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
               {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
               {isTechSupport && <Route path="/usage-report" element={<UsageReport />} />}
@@ -492,6 +508,24 @@ export default function App() {
           {/* إحالة الطالب — الشاشة للمعلم والإدارة، والملف لصاحبه وولي أمره */}
           <Route path="/referrals" element={<Referrals />} />
           <Route path="/guidance" element={<Guidance />} />
+          {effectiveRole === "admin" && <Route path="/student-requests" element={<StudentRequests />} />}
+          {effectiveRole === "admin" && <Route path="/absence-excuses" element={<AbsenceExcuses />} />}
+          {/* ملف الطالب الشامل — الصفحة تحصر الطلاب في صفوف المستخدم، والدوال تفرض الصلاحية */}
+          {effectiveRole === "admin" && <Route path="/student-file" element={<StudentFile />} />}
+          {/* صفحات الأقسام العامة لقائمة الإدارة — تعرض ما تعرضه القائمة للمستخدم فقط */}
+          {effectiveRole === "admin" && <Route path="/s/:key" element={<SectionHub />} />}
+          {/* شاشة المتابعة اليومية — للمدير والوكيلين والدعم الفني (عنصر القائمة يحصرها، والقاعدة تفرض ما يُقرأ) */}
+          {effectiveRole === "admin" && <Route path="/monitor" element={<MonitorScreen />} />}
+          {/* التعاميم: الإدارة لصاحب الصلاحية، وصفحة التعميم وتعاميمي للمنسوبين وأولياء الأمور */}
+          {effectiveRole === "admin" && can("circulars") && <Route path="/circulars" element={<Circulars />} />}
+          {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/circulars/:id" element={<CircularView />} />}
+          {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/my-circulars" element={<MyCirculars />} />}
+          {/* الترشيحات: إعلانات التقديم للإدارة، و«فرص المشاركة» للطالب وولي الأمر — القاعدة تفرض الصلاحيات */}
+          {effectiveRole === "admin" && <Route path="/nominations" element={<Nominations />} />}
+          {effectiveRole === "admin" && <Route path="/nominations/:id" element={<Nominations />} />}
+          {(effectiveRole === "student" || effectiveRole === "guardian") && <Route path="/opportunities" element={<Opportunities />} />}
+          {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
+          {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}
           {/* استمارة توضيح مستوى الطالب — للمعلم سطره، وللتوجيه والوكيل، ولولي الأمر نسخته */}
           <Route path="/inquiry/:id" element={<GuidanceInquiry />} />
           {/* ملاحظات الطلاب — الصفحة تتحقق من الدور، والقاعدة تفرض من يكتب كل نوع */}
@@ -504,6 +538,7 @@ export default function App() {
             <Route path="/ethics-report" element={<EthicsReport />} />}
           {/* جداول الاختبارات: العرض للجميع، والإدارة بصلاحية */}
           <Route path="/exams" element={<ExamSchedules />} />
+          <Route path="/my-week" element={<MyWeek />} />
           {/* الأحداث والمناسبات — لكل معلم وإداري */}
           <Route path="/events" element={<Events />} />
           <Route path="/events-reports" element={<EventsReports />} />

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { fmtHijri } from "../../lib/dates";
 import { SECS, SKILLS } from "../../qudrat-content/index.js";
-import { VoicePlayer } from "./Voice.jsx";
+import { VoicePlayer } from "../../components/Voice.jsx";
 
 /* =====================================================================
    سؤال المعلم في مركز التدريب (القدرات): الطالب يسأل عن سؤال لم يفهم حله،

@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { signatureByName } from "../lib/userSignatures";
 import { loadPrincipalSignature } from "../lib/principalSignature";
+import SadeedLink from "./SadeedLink";
 import ReportViewer from "./report/ReportViewer.jsx";
 import { perfReportPages } from "./PerfReportDoc.jsx";
 import {
@@ -283,7 +284,8 @@ function AutoDetails({ uid, year, itemKey }) {
   useEffect(() => {
     (async () => {
       // بنود الأنشطة لها دالتها (supabase/activities_4.sql)
-      const fn = ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : "perf_auto_details";
+      // وبند الإنتاج المعرفي من بنك الأسئلة (supabase/qbank_3.sql)
+      const fn = ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
       const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year, p_item: itemKey });
       if (error) setErr(error.message?.includes(fn) ? "عرض التفاصيل غير مفعّل بعد في قاعدة البيانات." : "تعذّر تحميل التفاصيل.");
       setRows(data ?? []);
@@ -392,6 +394,7 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                       <span className="font-semibold text-mint-deep">كيف أجمعه؟ </span>{ITEM_HINT[it.key]}
                     </p>
                   )}
+                  {!readOnly && it.key === "e02_09" && <SadeedLink />}
                 </div>
                 {!el.evaluator_only && (
                   <span className={`chip w-28 justify-center ${st.ok ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>

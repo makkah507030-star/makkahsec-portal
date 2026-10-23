@@ -6,6 +6,8 @@ import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
 import { fmtDate, fmtDateTime } from "../lib/dates";
 import { shrinkImage } from "../lib/imageResize.js";
 import Loader from "../components/Loader.jsx";
+import GuidanceThread, { GUIDANCE_VOICE } from "../components/GuidanceThread.jsx";
+import { VoiceRecorder, uploadVoice } from "../components/Voice.jsx";
 import PlanReport from "./guidance/PlanReport.jsx";
 
 /* =====================================================================
@@ -30,6 +32,7 @@ const PRESETS = [
 const REQ_STATUS = {
   new: { t: "جديد", c: "bg-warning-light text-warning" },
   scheduled: { t: "تحدد موعده", c: "bg-excused/10 text-excused" },
+  replied: { t: "تم الرد", c: "bg-mint-tint text-mint-deep" },
   done: { t: "تمت المقابلة", c: "bg-present/10 text-present" },
   declined: { t: "اعتذر الموجه", c: "bg-canvas text-muted" },
 };
@@ -393,16 +396,27 @@ export function Programs({ grade, me }) {
 }
 
 /* ------------------------------ طلبات المقابلة ------------------------------ */
-export function Requests({ grade }) {
+// من يُطلب: موجه الصف، أو وكيل شؤون الطلاب (supabase/deputy_requests.sql)
+const TARGET = { counselor: "الموجه الطلابي", deputy: "وكيل شؤون الطلاب" };
+const targetOf = (r) => r.target ?? "counselor";
+
+export function Requests({ grade, target = "counselor" }) {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [edit, setEdit] = useState(null);   // { id, at, reply }
   const [busy, setBusy] = useState(false);
+  const [chat, setChat] = useState(null);   // الطلب المفتوحة محادثته
 
-  const load = () => supabase.from("guidance_requests").select("*, students(full_name)").eq("grade", grade)
-    .order("created_at", { ascending: false })
-    .then(({ data, error }) => { if (error) setErr(setupErr(error, "guidance_4.sql")); setRows(data ?? []); });
-  useEffect(() => { load(); }, [grade]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const load = () => {
+    let q = supabase.from("guidance_requests").select("*, students(full_name)");
+    if (target === "counselor") q = q.eq("grade", grade);
+    return q.order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) setErr(setupErr(error, "guidance_4.sql"));
+        setRows((data ?? []).filter((r) => targetOf(r) === target));
+      });
+  };
+  useEffect(() => { load(); }, [grade, target]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async (r, status) => {
     setBusy(true);
@@ -418,7 +432,7 @@ export function Requests({ grade }) {
   return (
     <div className="space-y-3">
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
-      <p className="text-xs text-muted">يطلب الطالب أو ولي أمره المقابلة من حسابه، فيصلك إشعار، ويصلهم إشعار بالموعد أو الرد.</p>
+      <p className="text-xs text-muted">يطلب الطالب أو ولي أمره المقابلة من حسابه: حضورية بموعد، أو عن بعد بسؤال أو استفسار بلا موعد. فيصلك إشعار، وترد بموعد أو برسالة نصية أو صوتية.</p>
       {rows.length === 0 ? <p className="card px-4 py-6 text-center text-sm text-muted">لا طلبات.</p> : (
         <div className="card divide-y divide-line overflow-hidden">
           {rows.map((r) => (
@@ -426,28 +440,32 @@ export function Requests({ grade }) {
               <div className="flex flex-wrap items-center gap-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-ink">{r.students?.full_name}
-                    <span className="mr-1 text-xs font-normal text-muted">· {r.requester === "guardian" ? "ولي الأمر" : "الطالب"} · <span className="num">{fmtDate(r.created_at)}</span></span></p>
+                    <span className="mr-1 text-xs font-normal text-muted">· {r.requester === "guardian" ? "ولي الأمر" : "الطالب"} · <span className="num">{fmtDate(r.created_at)}</span></span>
+                    <span className={`chip mr-1 ${r.mode === "remote" ? "bg-excused/10 text-excused" : "bg-canvas text-muted"}`}>{r.mode === "remote" ? "عن بعد" : "حضورية"}</span></p>
                   <p className="mt-0.5 text-sm text-ink">{r.reason}</p>
                   {r.preferred && <p className="text-xs text-muted">الوقت المفضل: {r.preferred}</p>}
                   {r.appointment_at && <p className="text-xs text-excused">الموعد: <span className="num">{fmtDateTime(r.appointment_at)}</span></p>}
                   {r.reply && <p className="text-xs text-muted">الرد: {r.reply}</p>}
                 </div>
-                <span className={`chip ${REQ_STATUS[r.status].c}`}>{REQ_STATUS[r.status].t}</span>
-                {r.status !== "done" && r.status !== "declined" && (
+                <span className={`chip ${(REQ_STATUS[r.status] ?? REQ_STATUS.new).c}`}>{(REQ_STATUS[r.status] ?? REQ_STATUS.new).t}</span>
+                <button className="rounded-pill border border-mint-deep px-3 py-1 text-xs font-semibold text-mint-deep"
+                        onClick={() => setChat(chat === r.id ? null : r.id)}>{chat === r.id ? "إخفاء المحادثة" : r.mode === "remote" ? "الرد والمحادثة" : "المحادثة"}</button>
+                {r.status !== "done" && r.status !== "declined" && r.mode !== "remote" && (
                   <button className="rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white"
                           onClick={() => setEdit({ id: r.id, at: "", reply: r.reply ?? "" })}>
                     {r.status === "new" ? "تحديد الموعد" : "تعديل"}
                   </button>
                 )}
-                {r.status === "scheduled" && (
+                {(r.status === "scheduled" || (r.mode === "remote" && r.status !== "done" && r.status !== "declined")) && (
                   <button className="rounded-pill border border-present px-3 py-1 text-xs font-semibold text-present" disabled={busy}
-                          onClick={() => save(r, "done")}>تمت المقابلة</button>
+                          onClick={() => save(r, "done")}>{r.mode === "remote" ? "إغلاق الطلب" : "تمت المقابلة"}</button>
                 )}
               </div>
+              {chat === r.id && <div className="mt-2"><GuidanceThread requestId={r.id} side="counselor" voice staffLabel={TARGET[target]} closed={r.status === "done" || r.status === "declined"} onSent={load} /></div>}
               {edit?.id === r.id && (
                 <div className="mt-2 space-y-2 rounded-sm2 bg-canvas p-3">
                   <input type="datetime-local" className="field num" value={edit.at} onChange={(e) => setEdit((x) => ({ ...x, at: e.target.value }))} />
-                  <input className="field w-full" value={edit.reply} placeholder="ملاحظة لصاحب الطلب (مثل: مكتب الموجه الطلابي)"
+                  <input className="field w-full" value={edit.reply} placeholder={`ملاحظة لصاحب الطلب (مثل: مكتب ${TARGET[target]})`}
                          onChange={(e) => setEdit((x) => ({ ...x, reply: e.target.value }))} />
                   <div className="flex flex-wrap gap-2">
                     <button className="btn-primary" disabled={busy || !edit.at} onClick={() => save(r, "scheduled")}>إرسال الموعد</button>
@@ -465,28 +483,48 @@ export function Requests({ grade }) {
 }
 
 /* --------------------- طلب مقابلة من حساب الطالب أو ولي أمره --------------------- */
-export function GuidanceRequestCard({ studentId, requester = "student" }) {
+export function GuidanceRequestCard({ studentId, requester = "student", target = "counselor" }) {
+  const who = TARGET[target];
+  const deputy = target === "deputy";
   const [rows, setRows] = useState(null);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [preferred, setPreferred] = useState("");
+  const [mode, setMode] = useState("inperson");
+  const [rec, setRec] = useState(null);
+  const [chat, setChat] = useState(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const voice = requester === "guardian";   // الرسائل الصوتية للموجه وولي الأمر
 
-  const load = () => supabase.from("guidance_requests").select("id, reason, status, appointment_at, reply, created_at")
-    .eq("student_id", studentId).order("created_at", { ascending: false }).limit(3)
-    .then(({ data, error }) => setRows(error ? null : data ?? []));
+  // select("*"): قبل تشغيل deputy_requests.sql لا عمود target، وتُعدّ طلباته كلها للموجه
+  const load = () => supabase.from("guidance_requests").select("*")
+    .eq("student_id", studentId).order("created_at", { ascending: false }).limit(12)
+    .then(({ data, error }) => {
+      if (error) { setRows(null); return; }
+      const mine = (data ?? []).filter((r) => targetOf(r) === target);
+      // بطاقة الوكيل تظهر بعد تشغيل ملفها فقط (حين يظهر العمود target)
+      setRows(deputy && data?.length && !("target" in data[0]) ? null : mine.slice(0, 3));
+    });
   useEffect(() => { if (studentId) load(); }, [studentId]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (rows === null) return null;   // قبل تشغيل ملف SQL لا تظهر البطاقة
   const send = async () => {
     setBusy(true); setMsg("");
-    const { error } = await supabase.from("guidance_requests").insert({
-      student_id: studentId, requester, reason: reason.trim(), preferred: preferred || null,
-    });
+    const row = { student_id: studentId, requester, reason: reason.trim() || "رسالة صوتية", preferred: mode === "remote" ? null : preferred || null };
+    if (deputy) row.target = "deputy";
+    if (mode === "remote") row.mode = "remote";   // بلا العمود قبل تشغيل guidance_6.sql
+    const { data, error } = await supabase.from("guidance_requests").insert(row).select("id").single();
+    if (!error && rec) {
+      try {
+        const path = await uploadVoice(data.id, rec, GUIDANCE_VOICE);
+        await supabase.from("guidance_messages").insert({ request_id: data.id, audio_path: path, audio_secs: rec.secs });
+      } catch (e) { setMsg(`أُرسل الطلب، وتعذّر رفع الرسالة الصوتية: ${e.message}`); }
+    }
     setBusy(false);
     if (error) { setMsg(error.message); return; }
-    setOpen(false); setReason(""); setPreferred(""); setMsg("أُرسل طلبك إلى الموجه الطلابي، وسيصلك إشعار بالموعد.");
+    setOpen(false); setReason(""); setPreferred(""); setRec(null);
+    setMsg(mode === "remote" ? `أُرسل سؤالك إلى ${who}، وسيصلك إشعار برده.` : `أُرسل طلبك إلى ${who}، وسيصلك إشعار بالموعد.`);
     load();
   };
 
@@ -494,22 +532,32 @@ export function GuidanceRequestCard({ studentId, requester = "student" }) {
     <section className="card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-ink">الموجه الطلابي</p>
-          <p className="text-xs text-muted">{requester === "guardian" ? "اطلب موعدًا لمقابلة موجه صف ابنك." : "تحتاج من يسمعك؟ اطلب مقابلة موجه صفك، وطلبك لا يراه غيره."}</p>
+          <p className="text-sm font-bold text-ink">{who}</p>
+          <p className="text-xs text-muted">{deputy
+            ? (requester === "guardian" ? "للغياب والتأخر والاستئذان والسلوك وشؤون ابنك المدرسية: اطلب موعدًا أو اسأل عن بعد." : "للغياب والاستئذان والسلوك وشؤونك المدرسية: اطلب مقابلة الوكيل أو اسأله عن بعد.")
+            : requester === "guardian" ? "اطلب موعدًا لمقابلة موجه صف ابنك." : "تحتاج من يسمعك؟ اطلب مقابلة موجه صفك، وطلبك لا يراه غيره."}</p>
         </div>
         {!open && <button className="btn-primary px-4 py-1.5 text-xs" onClick={() => setOpen(true)}>طلب مقابلة</button>}
       </div>
       {open && (
         <div className="mt-3 space-y-2">
-          <textarea className="field w-full" rows={3} value={reason} placeholder="موضوع المقابلة باختصار"
-                    onChange={(e) => setReason(e.target.value)} />
           <div className="flex flex-wrap gap-1.5">
-            {["أي وقت", "الفسحة", "بعد الحصة الأخيرة", "بداية اليوم الدراسي"].map((t) => (
-              <button key={t} type="button" className={pill(preferred === t)} onClick={() => setPreferred(t)}>{t}</button>
-            ))}
+            <button type="button" className={pill(mode === "inperson")} onClick={() => setMode("inperson")}>مقابلة حضورية بموعد</button>
+            <button type="button" className={pill(mode === "remote")} onClick={() => setMode("remote")}>عن بعد: سؤال أو استفسار</button>
           </div>
+          <textarea className="field w-full" rows={3} value={reason}
+                    placeholder={mode === "remote" ? `اكتب سؤالك أو استفسارك لـ${who}` : "موضوع المقابلة باختصار"}
+                    onChange={(e) => setReason(e.target.value)} />
+          {mode === "inperson" ? (
+            <div className="flex flex-wrap gap-1.5">
+              {["أي وقت", "الفسحة", "بعد الحصة الأخيرة", "بداية اليوم الدراسي"].map((t) => (
+                <button key={t} type="button" className={pill(preferred === t)} onClick={() => setPreferred(t)}>{t}</button>
+              ))}
+            </div>
+          ) : <p className="text-[11px] text-faint">يرد {deputy ? "الوكيل" : "الموجه"} برسالة نصية{voice ? " أو صوتية" : ""} دون موعد، وتتابع المحادثة من هنا.</p>}
+          {voice && mode === "remote" && <VoiceRecorder onChange={setRec} disabled={busy} label="أو سجّل رسالة صوتية" />}
           <div className="flex gap-2">
-            <button className="btn-primary" disabled={busy || !reason.trim()} onClick={send}>إرسال</button>
+            <button className="btn-primary" disabled={busy || (!reason.trim() && !rec)} onClick={send}>إرسال</button>
             <button className="btn-ghost" onClick={() => setOpen(false)}>إلغاء</button>
           </div>
         </div>
@@ -520,9 +568,13 @@ export function GuidanceRequestCard({ studentId, requester = "student" }) {
           {rows.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-2 rounded-sm2 border border-line px-3 py-2 text-xs">
               <span className="min-w-0 flex-1 truncate text-ink">{r.reason}</span>
+              {r.mode === "remote" && <span className="chip bg-excused/10 text-excused">عن بعد</span>}
               {r.appointment_at && r.status === "scheduled" && <span className="num text-excused">{fmtDateTime(r.appointment_at)}</span>}
-              <span className={`chip ${REQ_STATUS[r.status].c}`}>{REQ_STATUS[r.status].t}</span>
+              <span className={`chip ${(REQ_STATUS[r.status] ?? REQ_STATUS.new).c}`}>{(REQ_STATUS[r.status] ?? REQ_STATUS.new).t}</span>
+              <button type="button" className="text-mint-deep underline" onClick={() => setChat(chat === r.id ? null : r.id)}>{chat === r.id ? "إخفاء" : "المحادثة"}</button>
               {r.reply && <span className="w-full text-muted">{r.reply}</span>}
+              {chat === r.id && <div className="w-full pt-1"><GuidanceThread requestId={r.id} side="requester" voice={voice} staffLabel={who}
+                closed={r.status === "done" || r.status === "declined"} onSent={load} /></div>}
             </li>
           ))}
         </ul>

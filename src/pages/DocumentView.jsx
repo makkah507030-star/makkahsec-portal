@@ -59,7 +59,7 @@ function SheetPreview({ landscape, children }) {
 export default function DocumentView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { session, profile } = useSession();
+  const { session, profile, effectiveRole } = useSession();
   const [reply, setReply] = useState({});
   const [sending, setSending] = useState(false);
   const [msg, setMsg] = useNotice(null);
@@ -69,7 +69,7 @@ export default function DocumentView() {
   const [ackChecked, setAckChecked] = useState(false);
 
   // ولي الأمر يقرّ بلا توقيع إلكتروني — الإقرار باسمه وتاريخه يكفي
-  const isGuardianReply = profile?.role === "guardian";
+  const isGuardianReply = effectiveRole === "guardian";   // ولي الأمر، أو موظف بواجهة «أبنائي»
   const [doc, setDoc] = useState(null);
   const [assets, setAssets] = useState({});
   const [error, setError] = useState("");

@@ -1,7 +1,7 @@
 // src/pages/studio/Access.jsx
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { GENERAL_ROLES, SPECIFIC_ROLES } from "../../lib/formRoles";
+import { GENERAL_ROLES, specificRoles } from "../../lib/formRoles";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
@@ -83,7 +83,7 @@ export default function Access({ rules, onSaved }) {
               </div>
               {openKey === t.key && (
                 <div className="flex flex-wrap gap-1.5 rounded-sm2 bg-canvas p-2">
-                  {SPECIFIC_ROLES.map((r) => (
+                  {specificRoles().map((r) => (
                     <button key={r.key} className={chip(roles.includes(r.key))} onClick={() => toggle(t.key, r.key)}>
                       {r.label}
                     </button>

@@ -7,6 +7,7 @@ import { printReport, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exp
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import PresetChips from "../../components/PresetChips.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 
 /* =====================================================================
@@ -72,6 +73,13 @@ function enrich(r, lastExamDay, examSubjects, contSet, today) {
   return { ...r, cont, due_date, st: r.status ?? "none", tm: timing({ exam_date: due_date }, today) };
 }
 
+// صيغ جاهزة لملاحظة الرصد الجزئي (تُضاف سطرًا، ويمكن الجمع والتعديل)
+const PARTIAL_PRESETS = [
+  "لم يتم رصد المهام الأدائية",
+  "بعض الطلاب ليس لديهم درجات",
+  "لم يتم رصد التقويمات التحريرية والشفهية",
+];
+
 export default function NoorGrades() {
   const { profile } = useSession();
   const [terms, setTerms] = useState(null);
@@ -83,6 +91,7 @@ export default function NoorGrades() {
   const [busy, setBusy] = useState(null);
   const [contSet, setContSet] = useState(() => new Set());   // مواد علّمها الوكيل تقويمًا مستمرًا
   const [sel, setSel] = useState(null);      // الخانة المفتوحة تفاصيلها (slot_id)
+  const [noteFor, setNoteFor] = useState(null);   // نافذة «ما الناقص؟» للرصد الجزئي: { r, note }
   const [view, setView] = useState("subject");   // subject: كما في كشف نور، grade: نظرة عامة بالصف
   const [brush, setBrush] = useState("detail");  // detail أو حالة تُطبَّق بالضغط على الخانة
   const [subKey, setSubKey] = useState(null);    // المادة المفتوحة في العرض حسب المادة
@@ -146,8 +155,7 @@ export default function NoorGrades() {
   // من لوحة التفاصيل: الجزئي يُسأل فيه عن الناقص
   const setStatus = (r, status) => {
     if (status !== "partial") return applyStatus([r], status);
-    const note = window.prompt("ما الناقص في رصد هذا الفصل؟ (اختياري)", r.note ?? "");
-    if (note !== null) applyStatus([r], status, note);
+    setNoteFor({ r, note: r.note ?? "" });
   };
 
   // تعليم المادة تقويمًا مستمرًا أو إلغاؤه (لكل معرّفاتها في الصف)
@@ -271,26 +279,33 @@ export default function NoorGrades() {
       m.set(k, g);
     }
     const groups = [...m.values()].sort((a, b) => a.subject.localeCompare(b.subject, "ar") || a.teacher.localeCompare(b.teacher, "ar"));
+    // كل فصل شارة واضحة: المتأخر كليًا بإطار وردي، والجزئي بإطار أزرق متقطع وكلمة «جزئي»
+    const chip = (r) => r.st === "partial"
+      ? `<span style="display:inline-block;margin:2px;padding:2px 8px;border:1.5px dashed #3F6B99;border-radius:6px;background:#EAF1FA;color:#2C527A;font-weight:700;white-space:nowrap">${classCode(r.grade, r.class_no)} <small style="font-weight:600">جزئي</small></span>`
+      : `<span style="display:inline-block;margin:2px;padding:2px 8px;border:1.5px solid #B02A2A;border-radius:6px;background:#F8D7D7;color:#8E1F1F;font-weight:700;white-space:nowrap">${classCode(r.grade, r.class_no)}</span>`;
     const rows = groups.map((g, i) => {
       g.list.sort((a, b) => a.class_no - b.class_no);
       const oldest = g.list.reduce((a, r) => (r.due_date < a ? r.due_date : a), g.list[0].due_date);
       const allCont = g.list.every((r) => r.cont);
       const days = Math.max(...g.list.map((r) => r.tm.d ?? 0));
       const late = days > 5;
+      const notes = [...new Set(g.list.filter((r) => r.st === "partial" && r.note).map((r) => r.note.replace(/\n/g, "، ")))];
       return [
-        i + 1, g.subject, g.teacher,
-        g.list.map((r) => `${classCode(r.grade, r.class_no)}${r.st === "partial" ? " (جزئي)" : ""}`).join("، "),
-        allCont ? `${fmtHijri(oldest)} (تقويم مستمر)` : fmtHijri(oldest),
-        late ? `<b style="color:#A23B3B">${days} · متأخر</b>` : days,
+        i + 1, `<b>${g.subject}</b>`, `<span style="white-space:nowrap">${g.teacher}</span>`,
+        `<div style="line-height:1.9">${g.list.map(chip).join("")}</div>`
+          + (notes.length ? `<div style="margin-top:3px;font-size:10px;color:#2C527A">الناقص: ${notes.join(" · ")}</div>` : ""),
+        `<b style="font-size:14px">${g.list.length}</b>`,
+        `<span style="white-space:nowrap">${fmtHijri(oldest)}</span>${allCont ? `<div style="font-size:10px;color:#6B6B6B">تقويم مستمر</div>` : ""}`,
+        late ? `<b style="color:#A23B3B;font-size:14px">${days}</b><div style="font-size:10px;font-weight:700;color:#A23B3B">متأخر</div>` : `<b style="font-size:14px">${days}</b>`,
       ];
     });
     printReport({
       title: `كشف المتابعة: درجات لم تُرصد في نور · ${GRADE_NAMES[gradeF] ?? ""}`,
       subtitle: `${term?.title ?? ""} · حتى ${stamp}`
         + (term?.grading_deadline ? ` · نهاية الرصد ${weekday(term.grading_deadline)} ${fmtHijri(term.grading_deadline)}` : ""),
-      headers: ["م", "المادة", "المعلم", "الفصول غير المرصودة", "تاريخ الاختبار", "الأيام منذ الاختبار"],
-      rows,
-      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. «جزئي»: رُصد بعض الفصل. الأيام لأقدم اختبار في الصف، ومواد التقويم المستمر من آخر يوم اختبارات.`,
+      headers: ["م", "المادة", "المعلم", "الفصول غير المرصودة", "عددها", "تاريخ الاختبار", "الأيام منذ الاختبار"],
+      rows, landscape: true,
+      note: `عدد الفصول التي حلّ موعد اختبارها ولم يكتمل رصدها: ${pend.length}. الشارة الحمراء: فصل لم يُرصد، والزرقاء المتقطعة «جزئي»: رُصد بعضه، وتحتها الناقص. الأيام لأقدم اختبار في الصف، ومواد التقويم المستمر من آخر يوم اختبارات.`,
       logoUrl: new URL(logoIcon, window.location.origin).href,
       moeLogoUrl: new URL(moeLogo, window.location.origin).href,
       signatures: [{ title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
@@ -379,6 +394,20 @@ export default function NoorGrades() {
 
   return (
     <div className="space-y-4">
+      {noteFor && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setNoteFor(null)}>
+          <div className="card w-full max-w-md space-y-3 p-4" onClick={(e) => e.stopPropagation()}>
+            <p className="font-semibold text-ink">ما الناقص في رصد هذا الفصل؟ <span className="text-xs font-normal text-muted">(اختياري)</span></p>
+            <textarea className="field w-full" rows={3} autoFocus value={noteFor.note}
+                      onChange={(e) => setNoteFor((x) => ({ ...x, note: e.target.value }))} />
+            <PresetChips items={PARTIAL_PRESETS} value={noteFor.note} onChange={(v) => setNoteFor((x) => ({ ...x, note: v }))} />
+            <div className="flex gap-2">
+              <button className="btn-primary" onClick={() => { applyStatus([noteFor.r], "partial", noteFor.note); setNoteFor(null); }}>حفظ</button>
+              <button className="btn-ghost" onClick={() => setNoteFor(null)}>إلغاء</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div>
         <h1 className="text-lg font-bold text-ink">متابعة رصد الدرجات في نظام نور</h1>
         <p className="mt-0.5 text-sm text-muted">
