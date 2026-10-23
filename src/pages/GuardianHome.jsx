@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
+import { todayDow, todayLabel } from "../lib/schoolTime";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from "../lib/periodTimes";
 import { loadFingerprintPublic } from "../lib/officialAttendance";
-import HeaderChips from "../components/HeaderChips.jsx";
+import StudentHeader, { cleanName } from "../components/StudentHeader.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
 import HolidayBanner from "../components/HolidayBanner.jsx";
 import ConductMeter from "../components/ConductMeter.jsx";
@@ -141,23 +141,13 @@ export default function GuardianHome() {
                   : "border border-line bg-white text-muted hover:bg-canvas"
               }`}
             >
-              {c.full_name}
+              {cleanName(c.full_name)}
             </button>
           ))}
         </div>
       )}
 
-      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-        <div>
-          <h1 className="text-xl font-bold text-ink">{active?.full_name}</h1>
-          {info && (
-            <p className="mt-0.5 text-sm text-muted">
-              {GRADE_NAMES[info.grade] ?? ""} · فصل <span className="num">{info.class_no}</span>
-            </p>
-          )}
-        </div>
-        <HeaderChips />
-      </header>
+      <StudentHeader name={active?.full_name} grade={info?.grade} classNo={info?.class_no} guardian />
 
       <HolidayBanner />
 

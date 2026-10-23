@@ -9,7 +9,7 @@ import { EXCUSE_KIND, EXCUSE_STATUS, dayLabel, deciderText, openExcuseFile } fro
 /* =====================================================================
    أعذار الغياب — لوكيل شؤون الطلاب والمساعدَين الإداريَّين 1 و2 (ومعهم المدير والدعم الفني):
    يرفعها الطالب أو ولي أمره، فيقبلها الوكيل فيصير غياب أيامها «غائب بعذر» آليًا،
-   أو يرفضها بسبب يصل صاحبها. (supabase/absence_excuses_1..2.sql)
+   أو يرفضها بسبب يصل المستفيد. (supabase/absence_excuses_1..2.sql)
    ===================================================================== */
 export default function AbsenceExcuses() {
   const [tab, setTab] = useState("pending");
@@ -35,14 +35,14 @@ export default function AbsenceExcuses() {
 
   const decide = async (r, accept) => {
     const n = (note[r.id] ?? "").trim();
-    if (!accept && !n) { setMsg({ ok: false, text: "اكتب سبب عدم قبول العذر ليصل صاحبه." }); return; }
+    if (!accept && !n) { setMsg({ ok: false, text: "اكتب سبب عدم قبول العذر ليصل المستفيد." }); return; }
     setBusy(r.id); setMsg(null);
     const { data, error } = await supabase.rpc("absence_excuse_decide", { p_id: r.id, p_accept: accept, p_note: n || null });
     setBusy(null);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
     setMsg({ ok: true, text: accept
       ? `قُبل عذر ${r.students?.full_name ?? ""}${data ? `، وصار غياب ${data === 1 ? "يوم" : `${data} أيام`} معتمد «غائب بعذر»` : ""}.`
-      : `لم يُقبل عذر ${r.students?.full_name ?? ""}، ووصل صاحبه السبب.` });
+      : `لم يُقبل عذر ${r.students?.full_name ?? ""}، ووصل السبب إلى المستفيد.` });
     load();
   };
 
@@ -52,7 +52,7 @@ export default function AbsenceExcuses() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">أعذار الغياب</h1>
-        <p className="mt-1 text-sm text-muted">يرفعها الطالب أو ولي أمره من سجل غيابه. القبول يجعل غياب أيامها «غائب بعذر» آليًا، والرفض يحتاج سببًا يصل صاحبه.</p>
+        <p className="mt-1 text-sm text-muted">يرفعها الطالب أو ولي أمره من سجل غيابه. القبول يجعل غياب أيامها «غائب بعذر» آليًا، والرفض يحتاج سببًا يصل المستفيد.</p>
       </div>
       <div className="flex gap-1.5">
         <button className={pill(tab === "pending")} onClick={() => setTab("pending")}>بانتظار القرار</button>
@@ -87,7 +87,7 @@ export default function AbsenceExcuses() {
                 )}
                 {r.status === "pending" ? (
                   <div className="flex flex-wrap items-center gap-2 border-t border-line pt-2">
-                    <input className="field min-w-0 flex-1 basis-60" placeholder="ملاحظة لصاحب العذر (إلزامية عند عدم القبول)"
+                    <input className="field min-w-0 flex-1 basis-60" placeholder="ملاحظة للمستفيد (إلزامية عند عدم القبول)"
                            value={note[r.id] ?? ""} onChange={(e) => setNote((x) => ({ ...x, [r.id]: e.target.value }))} />
                     <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy === r.id} onClick={() => decide(r, true)}>قبول العذر</button>
                     <button className="rounded-pill border border-absent/50 px-4 py-1.5 text-xs font-semibold text-absent hover:bg-absent/5"

@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
-import { todayDow, todayLabel, GRADE_NAMES } from "../lib/schoolTime";
+import { todayDow, todayLabel } from "../lib/schoolTime";
 import HolidayBanner from "../components/HolidayBanner.jsx";
 import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from "../lib/periodTimes";
 import { loadFingerprintPublic } from "../lib/officialAttendance";
-import HeaderChips from "../components/HeaderChips.jsx";
+import StudentHeader from "../components/StudentHeader.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
 import ConductMeter from "../components/ConductMeter.jsx";
 import PeriodNoticeCard from "../components/PeriodNoticeCard.jsx";
@@ -116,15 +116,7 @@ export default function StudentHome() {
 
   return (
     <div className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-        <div>
-          <h1 className="text-xl font-bold text-ink">{me.full_name}</h1>
-          <p className="mt-0.5 text-sm text-muted">
-            {GRADE_NAMES[me.grade] ?? ""} · فصل <span className="num">{me.class_no}</span>
-          </p>
-        </div>
-        <HeaderChips />
-      </header>
+      <StudentHeader name={me.full_name} grade={me.grade} classNo={me.class_no} />
 
       <HolidayBanner />
 
