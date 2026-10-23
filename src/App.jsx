@@ -102,6 +102,7 @@ const Guidance = lazy(() => import("./pages/Guidance.jsx"));
 const StudentRequests = lazy(() => import("./pages/StudentRequests.jsx"));
 const MyWeek = lazy(() => import("./pages/MyWeek.jsx"));
 const AbsenceExcuses = lazy(() => import("./pages/AbsenceExcuses.jsx"));
+const BannersAdmin = lazy(() => import("./pages/banners/BannersAdmin.jsx"));
 const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx"));
 const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
 const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
@@ -141,6 +142,7 @@ const ExamDayCard = lazy(() => import("./components/ExamDayCard.jsx"));
 const TeacherTodayCard = lazy(() => import("./components/TeacherTodayCard.jsx"));
 const TasksBox = lazy(() => import("./components/TasksBox.jsx"));
 import HolidayBanner from "./components/HolidayBanner.jsx";
+import HomeBanners from "./components/HomeBanners.jsx";
 import TeacherDayCard from "./components/TeacherDayCard.jsx";
 import Loader from "./components/Loader.jsx";
 
@@ -333,6 +335,7 @@ export default function App() {
                 {effectiveRole === "teacher" && <HolidayBanner />}
                 {/* بطاقة يوم المعلم لكل حساب له سجل معلم — تظهر في أسبوع المناسبة فقط */}
                 <TeacherDayCard />
+                {effectiveRole === "teacher" && <HomeBanners />}
                 {home}
               </div>
             }
@@ -371,6 +374,7 @@ export default function App() {
               {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
               {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
               {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
+              {can("banners") && <Route path="/banners-admin" element={<BannersAdmin />} />}
               {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
               {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
               {isTechSupport && <Route path="/usage-report" element={<UsageReport />} />}

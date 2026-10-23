@@ -5,6 +5,7 @@ import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from "../lib/periodTimes";
 import { loadFingerprintPublic } from "../lib/officialAttendance";
 import StudentHeader, { cleanName } from "../components/StudentHeader.jsx";
+import HomeBanners from "../components/HomeBanners.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
 import HolidayBanner from "../components/HolidayBanner.jsx";
 import ConductMeter from "../components/ConductMeter.jsx";
@@ -148,6 +149,9 @@ export default function GuardianHome() {
       )}
 
       <StudentHeader name={active?.full_name} grade={info?.grade} classNo={info?.class_no} guardian />
+
+      {/* إعلانات الفرص والمناسبات */}
+      <HomeBanners />
 
       <HolidayBanner />
 

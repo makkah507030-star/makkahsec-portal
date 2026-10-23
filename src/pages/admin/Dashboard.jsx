@@ -33,6 +33,7 @@ import { markedScheduleIds } from "../../lib/attendanceHelpers";
 import { notifyUsers } from "../../lib/referrals";
 import HeaderChips from "../../components/HeaderChips.jsx";
 import DutyCard from "../../components/DutyCard.jsx";
+import HomeBanners from "../../components/HomeBanners.jsx";
 import TasksBox from "../../components/TasksBox.jsx";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
@@ -126,6 +127,7 @@ export default function Dashboard() {
           <HeaderChips />
         </header>
         <HolidayBanner />
+        <HomeBanners />
         <TasksBox />
         <DutyCard />
         <section className="card px-6 py-12 text-center">
@@ -164,6 +166,8 @@ export default function Dashboard() {
       </header>
 
       <HolidayBanner />
+
+      <HomeBanners />
 
       <TasksBox />
 

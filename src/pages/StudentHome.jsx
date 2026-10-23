@@ -7,6 +7,7 @@ import ColorLegend, { ATTENDANCE_LEGEND } from "../components/ColorLegend.jsx";
 import { loadPeriodTimes, byPeriodNo, currentPeriodNo, fmtRange, fmtTime } from "../lib/periodTimes";
 import { loadFingerprintPublic } from "../lib/officialAttendance";
 import StudentHeader from "../components/StudentHeader.jsx";
+import HomeBanners from "../components/HomeBanners.jsx";
 import ExamDayCard from "../components/ExamDayCard.jsx";
 import ConductMeter from "../components/ConductMeter.jsx";
 import PeriodNoticeCard from "../components/PeriodNoticeCard.jsx";
@@ -117,6 +118,9 @@ export default function StudentHome() {
   return (
     <div className="space-y-5">
       <StudentHeader name={me.full_name} grade={me.grade} classNo={me.class_no} />
+
+      {/* إعلانات الفرص والمناسبات */}
+      <HomeBanners />
 
       <HolidayBanner />
 
