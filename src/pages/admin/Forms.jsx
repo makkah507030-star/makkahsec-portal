@@ -1203,7 +1203,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     setRejectFor(null); setRejectNote("");
     if (status === "approved") {
       const n = await sendApproved([doc]);
-      setMsg({ ok: true, text: n ? `اعتُمد المستند ${doc.serial} وأُرسل لصاحبه.` : `اعتُمد المستند ${doc.serial}.` });
+      setMsg({ ok: true, text: n ? `اعتُمد المستند ${doc.serial} وأُرسل للمستفيد.` : `اعتُمد المستند ${doc.serial}.` });
     }
     loadDocs();
   };
@@ -1230,8 +1230,8 @@ export default function Forms({ view = "issue", openKey = null }) {
     setMsg(fail.length
       ? { ok: false, text: `أُرسل ${countAr(ok.length, "document")}، وتعذّر ${countAr(fail.length, "document")}: ${fail[0].r.text}` }
       : { ok: true, text: remind
-          ? `أُرسل التذكير لأصحاب ${countAr(ok.length, "document")} على البوابة والجوال.`
-          : `أُرسل ${countAr(ok.length, "document")} لأصحابها على البوابة والجوال.` });
+          ? `أُرسل التذكير ${toWhom(ok.length)} في ${countAr(ok.length, "document")} على البوابة والجوال.`
+          : `أُرسل ${countAr(ok.length, "document")} ${toWhom(ok.length)} على البوابة والجوال.` });
     loadDocs();
   };
 
@@ -1774,7 +1774,7 @@ export default function Forms({ view = "issue", openKey = null }) {
             {!issued && !editing && needsApproval && !needsReply && chosen.some((c) => c.uid ?? c.user_id) && (
               <label className="flex items-start gap-2 rounded-sm2 border border-line bg-canvas px-3 py-2 text-xs leading-relaxed text-ink">
                 <input type="checkbox" className="mt-0.5" checked={sendOnApprove} onChange={(e) => setSendOnApprove(e.target.checked)} />
-                <span>أرسله لصاحبه تلقائيًا فور اعتماد المدير <span className="text-faint">(إشعار على البوابة والجوال)</span></span>
+                <span>أرسله للمستفيد تلقائيًا فور اعتماد المدير <span className="text-faint">(إشعار على البوابة والجوال)</span></span>
               </label>
             )}
 
@@ -1905,7 +1905,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     setSel(new Set());
     const fail = chosenDocs.length - ok;
     setMsg({ ok: fail === 0, text: fail === 0
-      ? `اعتُمد ${ok} ${tab === "replies" ? "وأُغلقت، وهي في الأرشيف" : "مستند"}${sent ? `، وأُرسل ${countAr(sent, "document")} لأصحابها` : ""}.`
+      ? `اعتُمد ${ok} ${tab === "replies" ? "وأُغلقت، وهي في الأرشيف" : "مستند"}${sent ? `، وأُرسل ${countAr(sent, "document")} ${toWhom(sent)}` : ""}.`
       : `اعتُمد ${ok}، وتعذّر ${fail} — حسابك لا يملك صلاحية اعتمادها.` });
     loadDocs();
   };
@@ -2525,7 +2525,10 @@ export default function Forms({ view = "issue", openKey = null }) {
   );
 }
 
-/* بعد الإصدار مباشرة: كم مستندًا يُرسل لأصحابه، وزر الإرسال الآن بدل الذهاب للأرشيف.
+// «للمستفيد» لمستند واحد، و«للمستفيدين» لأكثر
+const toWhom = (n) => (n === 1 ? "للمستفيد" : "للمستفيدين");
+
+/* بعد الإصدار مباشرة: كم مستندًا يُرسل للمستفيدين، وزر الإرسال الآن بدل الذهاب للأرشيف.
    ما يحتاج ردًّا يُرسل آليًا عند الإصدار، وما ينتظر الاعتماد يُرسل بعده إن طلب المُصدِر ذلك. */
 export function SendPanel({ batch, busy, onSend }) {
   const ready = batch.filter((d) => d.recipient_user_id && ["issued", "approved"].includes(d.status));
@@ -2539,17 +2542,17 @@ export function SendPanel({ batch, busy, onSend }) {
       {unsent.length > 0 ? (
         <>
           <p className="text-ink">
-            جاهز للإرسال: <b>{countAr(unsent.length, "document")}</b> لأصحابها
-            {toStudents ? " ولأولياء أمورهم" : ""}، بإشعار على البوابة والجوال.
+            جاهز للإرسال: <b>{countAr(unsent.length, "document")}</b> {toWhom(unsent.length)}
+            {toStudents ? (unsent.length === 1 ? " ولولي أمره" : " ولأولياء أمورهم") : ""}، بإشعار على البوابة والجوال.
           </p>
           <button className="btn-primary w-full" disabled={busy} onClick={() => onSend(unsent)}>
             {busy ? "جارٍ الإرسال…" : unsent.length > 1 ? `إرسال الآن (${unsent.length})` : "إرسال الآن"}
           </button>
         </>
       ) : ready.length > 0 && (
-        <p className="font-semibold text-present">✓ أُرسل {countAr(ready.length, "document")} لأصحابها.</p>
+        <p className="font-semibold text-present">✓ أُرسل {countAr(ready.length, "document")} {toWhom(ready.length)}.</p>
       )}
-      {later > 0 && <p className="text-mint-deep">سيُرسل {countAr(later, "document")} لأصحابها تلقائيًا فور اعتماد المدير.</p>}
+      {later > 0 && <p className="text-mint-deep">سيُرسل {countAr(later, "document")} {toWhom(later)} تلقائيًا فور اعتماد المدير.</p>}
       {noAccount > 0 && (
         <p className="text-warning">{countAr(noAccount, "document")} لمستفيد بلا حساب في البوابة: اطبعه وسلّمه يدويًا.</p>
       )}
