@@ -101,6 +101,7 @@ const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const Guidance = lazy(() => import("./pages/Guidance.jsx"));
 const StudentRequests = lazy(() => import("./pages/StudentRequests.jsx"));
 const MyWeek = lazy(() => import("./pages/MyWeek.jsx"));
+const AbsenceExcuses = lazy(() => import("./pages/AbsenceExcuses.jsx"));
 const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx"));
 const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
 const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
@@ -502,6 +503,7 @@ export default function App() {
           <Route path="/referrals" element={<Referrals />} />
           <Route path="/guidance" element={<Guidance />} />
           {effectiveRole === "admin" && <Route path="/student-requests" element={<StudentRequests />} />}
+          {effectiveRole === "admin" && <Route path="/absence-excuses" element={<AbsenceExcuses />} />}
           {/* ملف الطالب الشامل — الصفحة تحصر الطلاب في صفوف المستخدم، والدوال تفرض الصلاحية */}
           {effectiveRole === "admin" && <Route path="/student-file" element={<StudentFile />} />}
           {/* صفحات الأقسام العامة لقائمة الإدارة — تعرض ما تعرضه القائمة للمستخدم فقط */}

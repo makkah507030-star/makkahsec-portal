@@ -174,7 +174,7 @@ export default function StudentHome() {
         </section>
       )}
 
-      <AttendanceLog key={me.id} studentId={me.id} fp={fp} />
+      <AttendanceLog key={me.id} studentId={me.id} fp={fp} excuse />
 
       <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
 

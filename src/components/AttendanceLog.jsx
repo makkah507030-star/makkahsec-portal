@@ -5,6 +5,7 @@ import { todayISO } from "../lib/schoolTime";
 import { loadRangeStart } from "../lib/officialAttendance";
 import Loader from "./Loader.jsx";
 import { countAr } from "../lib/arabicCount.js";
+import { useExcuses, ExcuseForm, ExcuseList, EXCUSE_STATUS } from "./AbsenceExcuse.jsx";
 
 /* =====================================================================
    سجل الحضور للطالب وولي أمره (supabase/student_attendance_log.sql):
@@ -27,11 +28,17 @@ const PERIOD = {
 const SHOW_DAYS = 7;   // آخر الأيام أولًا، والباقي بـ«عرض كل الأيام» حتى لا تطول الصفحة
 const dayName = (d) => new Date(`${d}T12:00:00`).toLocaleDateString("ar-SA", { weekday: "long" });
 
-export default function AttendanceLog({ studentId, fp }) {
+// excuse: يظهر «تقديم عذر» للطالب وولي أمره (أعذار الغياب لوكيل شؤون الطلاب)
+export default function AttendanceLog({ studentId, fp, excuse = false }) {
   const [rows, setRows] = useState(null);
   const [from, setFrom] = useState(null);
   const [err, setErr] = useState("");
   const [all, setAll] = useState(false);
+  const ex = useExcuses(excuse ? studentId : null);
+  const [excFor, setExcFor] = useState(null);   // اليوم الذي فُتح له نموذج العذر
+  // أيام غياب بلا عذر: غياب رسمي، أو يوم لم يُعتمد وفيه حصص غياب
+  const absentDay = (r) => r.official === "absent" || (!r.approved && (r.periods ?? []).some((p) => p.status === "absent"));
+  const canExcuse = (r) => excuse && ex.list && absentDay(r) && !(ex.byDay[r.attend_date] && ex.byDay[r.attend_date].status !== "rejected");
 
   useEffect(() => {
     if (!studentId) return;
@@ -94,6 +101,12 @@ export default function AttendanceLog({ studentId, fp }) {
           {from && <p className="num text-[11px] text-faint">منذ {fmtHijri(from)} — الفصل الدراسي الحالي</p>}
         </div>
         {err && <p className="px-4 py-3 text-sm text-absent">{err}</p>}
+        {excFor && rows && (
+          <ExcuseForm studentId={studentId} initial={excFor}
+                      days={rows.filter(canExcuse).map((r) => r.attend_date)}
+                      onCancel={() => setExcFor(null)}
+                      onDone={() => { setExcFor(null); ex.reload(); }} />
+        )}
         {!rows ? <div className="p-4"><Loader compact /></div> : rows.length === 0 ? (
           <p className="px-4 py-5 text-sm text-muted">السجل نظيف — لا غياب ولا تأخر في هذا الفصل.</p>
         ) : (
@@ -122,6 +135,17 @@ export default function AttendanceLog({ studentId, fp }) {
                       <td className="px-3 py-2.5">
                         {off ? <span className={`chip whitespace-nowrap ${off.c}`}>{off.t}</span>
                           : <span className="text-xs text-faint">لم يُعتمد بعد</span>}
+                        {excuse && ex.byDay[r.attend_date] && (
+                          <span className={`chip mt-1 block w-fit whitespace-nowrap ${EXCUSE_STATUS[ex.byDay[r.attend_date].status]?.c}`}>
+                            {EXCUSE_STATUS[ex.byDay[r.attend_date].status]?.t}
+                          </span>
+                        )}
+                        {canExcuse(r) && (
+                          <button onClick={() => setExcFor(r.attend_date)}
+                                  className="mt-1 block whitespace-nowrap text-[11px] font-semibold text-mint-deep underline">
+                            تقديم عذر
+                          </button>
+                        )}
                       </td>
                       {showMorning && (
                         <td className="px-3 py-2.5">
@@ -162,6 +186,7 @@ export default function AttendanceLog({ studentId, fp }) {
             )}
           </div>
         )}
+        {excuse && <ExcuseList list={ex.list} />}
         <p className="border-t border-line bg-canvas/60 px-4 py-2.5 text-[11.5px] leading-relaxed text-muted">
           <b className="text-ink">الغياب الرسمي</b> يُحسب فيه الطالب غائبًا يومًا كاملًا، ويُرصد في نظام نور.{" "}
           <b className="text-ink">غياب الحصص</b> يُعدّ بالحصة: كل حصة سُجّل فيها غائبًا، ومنها حصص أيام الغياب الرسمي.

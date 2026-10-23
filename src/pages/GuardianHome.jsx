@@ -171,7 +171,7 @@ export default function GuardianHome() {
       ) : (
         <>
 
-          <AttendanceLog key={active?.id} studentId={active?.id} fp={fp} />
+          <AttendanceLog key={active?.id} studentId={active?.id} fp={fp} excuse />
 
           <ColorLegend items={ATTENDANCE_LEGEND.slice(1)} />
 
