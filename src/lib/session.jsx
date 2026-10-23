@@ -37,6 +37,8 @@ export function SessionProvider({ children }) {
   const sessionRef = useRef(null);
   const [profile, setProfile] = useState(null);
   const [adminRoles, setAdminRoles] = useState([]);
+  // صفحات القائمة المخفية: ما أخفته كل أدوار المستخدم («hide:/مسار» في role_permissions)
+  const [hiddenNav, setHiddenNav] = useState(() => new Set());
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
   // دعم الدور المزدوج (معلم + إداري): هل للمستخدم سجل معلّم أيضًا؟ وأي واجهة نشطة الآن؟
@@ -95,14 +97,20 @@ export function SessionProvider({ children }) {
       // صلاحية كاملة للمدير والدعم الفني
       if (list.some((r) => SUPER_ROLES.includes(r))) {
         setPermissions(["*"]);
+        setHiddenNav(new Set());
       } else if (list.length) {
         const { data: perms } = await traced("الصلاحيات", supabase
           .from("role_permissions")
-          .select("permission")
+          .select("role_type, permission")
           .in("role_type", list));
-        setPermissions([...new Set((perms ?? []).map((p) => p.permission))]);
+        const rows = perms ?? [];
+        setPermissions([...new Set(rows.filter((p) => !p.permission.startsWith("hide:")).map((p) => p.permission))]);
+        // تُخفى الصفحة إن أخفاها كل دور يحمله المستخدم (من يجمع دورين يرى ما يظهر لأحدهما)
+        const hid = list.map((r) => new Set(rows.filter((p) => p.role_type === r && p.permission.startsWith("hide:")).map((p) => p.permission.slice(5))));
+        setHiddenNav(new Set([...hid[0]].filter((x) => hid.every((h) => h.has(x)))));
       } else {
         setPermissions([]);
+        setHiddenNav(new Set());
       }
     } else {
       setAdminRoles([]);
@@ -198,7 +206,7 @@ export function SessionProvider({ children }) {
   return (
     <SessionContext.Provider
       value={{
-        session, profile, adminRoles, permissions, loading,
+        session, profile, adminRoles, permissions, loading, hiddenNav,
         signOut, hasAdminRole, can, isSuper,
         isTeacher, dualRole, hasChildren, views, effectiveRole, view, switchView,
         reload: () => loadProfile(session?.user?.id),

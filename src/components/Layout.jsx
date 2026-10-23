@@ -34,7 +34,7 @@ import { EvidenceDock } from "./EvidenceTags.jsx";
 
 const COUNSEL = ["principal", "tech_support", "deputy_students", "counselor_1", "counselor_2", "counselor_3"];
 
-const ADMIN_GROUPS = [
+export const ADMIN_GROUPS = [
   {
     title: null,
     items: [
@@ -389,7 +389,7 @@ const Badge = ({ n, dot, at = "-top-0.5 -left-1" }) => (n > 0
   : null);
 
 export default function Layout({ children }) {
-  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView } = useSession();
+  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
@@ -425,6 +425,8 @@ export default function Layout({ children }) {
     if (i.studentOnly && effectiveRole !== "student") return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
     if (isAdmin) {
+      // أخفاها مدير المدرسة لأدوار المستخدم من «الصلاحيات ← ظهور الصفحات»
+      if (hiddenNav?.has(i.to)) return false;
       if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
       if (i.roles && !i.roles.some((r) => adminRoles.includes(r))) return false;
       if (i.manageForms) return adminRoles.includes("tech_support") || adminRoles.includes("principal");
@@ -440,7 +442,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
