@@ -261,6 +261,7 @@ export default function GuardianHome() {
           </section>
 
           <GuidanceRequestCard key={`g-${active?.id}`} studentId={active?.id} requester="guardian" />
+          <GuidanceRequestCard key={`d-${active?.id}`} studentId={active?.id} requester="guardian" target="deputy" />
           <OfficialLinks />
         </>
       )}

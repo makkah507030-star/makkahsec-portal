@@ -104,7 +104,7 @@ async function load() {
   const [
     returned, toApprove, replies, events, toReply, refDeputy, refCounselor, notif,
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
-    plcBack, pdBack, xvBack, perfAck, guidance,
+    plcBack, pdBack, xvBack, perfAck, guidance, deputyReq,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
     giTeacher, giDeputy, giCounselor, giGuardian, dropouts, ethicsAck, onlineQuizzes, myNotes,
     goals, goalsLate, qPlans, qPlansLate, circs,
@@ -139,6 +139,7 @@ async function load() {
     staff ? rowsOf(supabase.from("exchange_visits").select("id").eq("status", "returned").eq("visitor_user_id", uid).limit(50)) : noRows,
     staff ? count(head("perf_reviews").eq("teacher_user_id", uid).not("sent_at", "is", null).is("ack_at", null)) : none,
     myGrades.length ? count(head("guidance_requests").eq("status", "new").in("grade", myGrades)) : none,
+    has("deputy_students") ? count(head("guidance_requests").eq("status", "new").eq("target", "deputy")) : none,
 
     // ولي الأمر: نماذج السلوك والإحالات التي تنتظر إقراره، والطالب: تعهداته
     isGuardian ? rowsFlag((f) => supabase.from("behavior_forms").select(`id, kind, student_name${f}`)
@@ -318,6 +319,7 @@ async function load() {
       items: dropouts.map((r) => ({ id: r.id, to: `/dropouts?tab=new&open=${r.id}`, title: r.student_name ?? "" })) },
     { key: "guidance", n: guidance, to: `/guidance?tab=requests${myGrades.length === 1 ? `&grade=${myGrades[0]}` : ""}`,
       label: "طلبات مقابلة جديدة", tone: "warning", icon: "heart" },
+    { key: "deputyReq", n: deputyReq, to: "/student-requests", label: "طلبات تواصل جديدة من الطلاب وأولياء الأمور", tone: "warning", icon: "send" },
 
     // الاعتماد
     { key: "toApprove", n: toApprove.length, to: "/forms-review", label: "نماذج تنتظر اعتمادك", tone: "warning", icon: "inbox",
@@ -390,6 +392,7 @@ async function load() {
     "/notebook": myNotes.length,
     "/my-circulars": circPending.length,
     "/guidance": guidance + giDeputy.length + giReady.length,
+    "/student-requests": deputyReq,
     "/": behaviorGuardian.length + refGuardian.length + pledges.length + giGuardian.length + quizzesDue.length,
     _tasks: tasks,
     _ready: true,

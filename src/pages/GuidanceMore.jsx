@@ -396,17 +396,27 @@ export function Programs({ grade, me }) {
 }
 
 /* ------------------------------ طلبات المقابلة ------------------------------ */
-export function Requests({ grade }) {
+// من يُطلب: موجه الصف، أو وكيل شؤون الطلاب (supabase/deputy_requests.sql)
+const TARGET = { counselor: "الموجه الطلابي", deputy: "وكيل شؤون الطلاب" };
+const targetOf = (r) => r.target ?? "counselor";
+
+export function Requests({ grade, target = "counselor" }) {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [edit, setEdit] = useState(null);   // { id, at, reply }
   const [busy, setBusy] = useState(false);
   const [chat, setChat] = useState(null);   // الطلب المفتوحة محادثته
 
-  const load = () => supabase.from("guidance_requests").select("*, students(full_name)").eq("grade", grade)
-    .order("created_at", { ascending: false })
-    .then(({ data, error }) => { if (error) setErr(setupErr(error, "guidance_4.sql")); setRows(data ?? []); });
-  useEffect(() => { load(); }, [grade]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const load = () => {
+    let q = supabase.from("guidance_requests").select("*, students(full_name)");
+    if (target === "counselor") q = q.eq("grade", grade);
+    return q.order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) setErr(setupErr(error, "guidance_4.sql"));
+        setRows((data ?? []).filter((r) => targetOf(r) === target));
+      });
+  };
+  useEffect(() => { load(); }, [grade, target]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async (r, status) => {
     setBusy(true);
@@ -451,11 +461,11 @@ export function Requests({ grade }) {
                           onClick={() => save(r, "done")}>{r.mode === "remote" ? "إغلاق الطلب" : "تمت المقابلة"}</button>
                 )}
               </div>
-              {chat === r.id && <div className="mt-2"><GuidanceThread requestId={r.id} side="counselor" voice closed={r.status === "done" || r.status === "declined"} onSent={load} /></div>}
+              {chat === r.id && <div className="mt-2"><GuidanceThread requestId={r.id} side="counselor" voice staffLabel={TARGET[target]} closed={r.status === "done" || r.status === "declined"} onSent={load} /></div>}
               {edit?.id === r.id && (
                 <div className="mt-2 space-y-2 rounded-sm2 bg-canvas p-3">
                   <input type="datetime-local" className="field num" value={edit.at} onChange={(e) => setEdit((x) => ({ ...x, at: e.target.value }))} />
-                  <input className="field w-full" value={edit.reply} placeholder="ملاحظة لصاحب الطلب (مثل: مكتب الموجه الطلابي)"
+                  <input className="field w-full" value={edit.reply} placeholder={`ملاحظة لصاحب الطلب (مثل: مكتب ${TARGET[target]})`}
                          onChange={(e) => setEdit((x) => ({ ...x, reply: e.target.value }))} />
                   <div className="flex flex-wrap gap-2">
                     <button className="btn-primary" disabled={busy || !edit.at} onClick={() => save(r, "scheduled")}>إرسال الموعد</button>
@@ -473,7 +483,9 @@ export function Requests({ grade }) {
 }
 
 /* --------------------- طلب مقابلة من حساب الطالب أو ولي أمره --------------------- */
-export function GuidanceRequestCard({ studentId, requester = "student" }) {
+export function GuidanceRequestCard({ studentId, requester = "student", target = "counselor" }) {
+  const who = TARGET[target];
+  const deputy = target === "deputy";
   const [rows, setRows] = useState(null);
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -485,15 +497,22 @@ export function GuidanceRequestCard({ studentId, requester = "student" }) {
   const [busy, setBusy] = useState(false);
   const voice = requester === "guardian";   // الرسائل الصوتية للموجه وولي الأمر
 
-  const load = () => supabase.from("guidance_requests").select("id, reason, status, mode, appointment_at, reply, created_at")
-    .eq("student_id", studentId).order("created_at", { ascending: false }).limit(3)
-    .then(({ data, error }) => setRows(error ? null : data ?? []));
+  // select("*"): قبل تشغيل deputy_requests.sql لا عمود target، وتُعدّ طلباته كلها للموجه
+  const load = () => supabase.from("guidance_requests").select("*")
+    .eq("student_id", studentId).order("created_at", { ascending: false }).limit(12)
+    .then(({ data, error }) => {
+      if (error) { setRows(null); return; }
+      const mine = (data ?? []).filter((r) => targetOf(r) === target);
+      // بطاقة الوكيل تظهر بعد تشغيل ملفها فقط (حين يظهر العمود target)
+      setRows(deputy && data?.length && !("target" in data[0]) ? null : mine.slice(0, 3));
+    });
   useEffect(() => { if (studentId) load(); }, [studentId]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (rows === null) return null;   // قبل تشغيل ملف SQL لا تظهر البطاقة
   const send = async () => {
     setBusy(true); setMsg("");
     const row = { student_id: studentId, requester, reason: reason.trim() || "رسالة صوتية", preferred: mode === "remote" ? null : preferred || null };
+    if (deputy) row.target = "deputy";
     if (mode === "remote") row.mode = "remote";   // بلا العمود قبل تشغيل guidance_6.sql
     const { data, error } = await supabase.from("guidance_requests").insert(row).select("id").single();
     if (!error && rec) {
@@ -505,7 +524,7 @@ export function GuidanceRequestCard({ studentId, requester = "student" }) {
     setBusy(false);
     if (error) { setMsg(error.message); return; }
     setOpen(false); setReason(""); setPreferred(""); setRec(null);
-    setMsg(mode === "remote" ? "أُرسل سؤالك إلى الموجه الطلابي، وسيصلك إشعار برده." : "أُرسل طلبك إلى الموجه الطلابي، وسيصلك إشعار بالموعد.");
+    setMsg(mode === "remote" ? `أُرسل سؤالك إلى ${who}، وسيصلك إشعار برده.` : `أُرسل طلبك إلى ${who}، وسيصلك إشعار بالموعد.`);
     load();
   };
 
@@ -513,8 +532,10 @@ export function GuidanceRequestCard({ studentId, requester = "student" }) {
     <section className="card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold text-ink">الموجه الطلابي</p>
-          <p className="text-xs text-muted">{requester === "guardian" ? "اطلب موعدًا لمقابلة موجه صف ابنك." : "تحتاج من يسمعك؟ اطلب مقابلة موجه صفك، وطلبك لا يراه غيره."}</p>
+          <p className="text-sm font-bold text-ink">{who}</p>
+          <p className="text-xs text-muted">{deputy
+            ? (requester === "guardian" ? "للغياب والتأخر والاستئذان والسلوك وشؤون ابنك المدرسية: اطلب موعدًا أو اسأل عن بعد." : "للغياب والاستئذان والسلوك وشؤونك المدرسية: اطلب مقابلة الوكيل أو اسأله عن بعد.")
+            : requester === "guardian" ? "اطلب موعدًا لمقابلة موجه صف ابنك." : "تحتاج من يسمعك؟ اطلب مقابلة موجه صفك، وطلبك لا يراه غيره."}</p>
         </div>
         {!open && <button className="btn-primary px-4 py-1.5 text-xs" onClick={() => setOpen(true)}>طلب مقابلة</button>}
       </div>
@@ -525,7 +546,7 @@ export function GuidanceRequestCard({ studentId, requester = "student" }) {
             <button type="button" className={pill(mode === "remote")} onClick={() => setMode("remote")}>عن بعد: سؤال أو استفسار</button>
           </div>
           <textarea className="field w-full" rows={3} value={reason}
-                    placeholder={mode === "remote" ? "اكتب سؤالك أو استفسارك للموجه" : "موضوع المقابلة باختصار"}
+                    placeholder={mode === "remote" ? `اكتب سؤالك أو استفسارك لـ${who}` : "موضوع المقابلة باختصار"}
                     onChange={(e) => setReason(e.target.value)} />
           {mode === "inperson" ? (
             <div className="flex flex-wrap gap-1.5">
@@ -533,7 +554,7 @@ export function GuidanceRequestCard({ studentId, requester = "student" }) {
                 <button key={t} type="button" className={pill(preferred === t)} onClick={() => setPreferred(t)}>{t}</button>
               ))}
             </div>
-          ) : <p className="text-[11px] text-faint">يرد الموجه برسالة نصية{voice ? " أو صوتية" : ""} دون موعد، وتتابع المحادثة من هنا.</p>}
+          ) : <p className="text-[11px] text-faint">يرد {deputy ? "الوكيل" : "الموجه"} برسالة نصية{voice ? " أو صوتية" : ""} دون موعد، وتتابع المحادثة من هنا.</p>}
           {voice && mode === "remote" && <VoiceRecorder onChange={setRec} disabled={busy} label="أو سجّل رسالة صوتية" />}
           <div className="flex gap-2">
             <button className="btn-primary" disabled={busy || (!reason.trim() && !rec)} onClick={send}>إرسال</button>
@@ -552,7 +573,7 @@ export function GuidanceRequestCard({ studentId, requester = "student" }) {
               <span className={`chip ${(REQ_STATUS[r.status] ?? REQ_STATUS.new).c}`}>{(REQ_STATUS[r.status] ?? REQ_STATUS.new).t}</span>
               <button type="button" className="text-mint-deep underline" onClick={() => setChat(chat === r.id ? null : r.id)}>{chat === r.id ? "إخفاء" : "المحادثة"}</button>
               {r.reply && <span className="w-full text-muted">{r.reply}</span>}
-              {chat === r.id && <div className="w-full pt-1"><GuidanceThread requestId={r.id} side="requester" voice={voice}
+              {chat === r.id && <div className="w-full pt-1"><GuidanceThread requestId={r.id} side="requester" voice={voice} staffLabel={who}
                 closed={r.status === "done" || r.status === "declined"} onSent={load} /></div>}
             </li>
           ))}
