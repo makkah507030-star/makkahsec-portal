@@ -479,6 +479,8 @@ export default function Forms({ view = "issue", openKey = null }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useNotice(null);
   const [issued, setIssued] = useState(null);      // المستند بعد الحفظ
+  const [sendOnApprove, setSendOnApprove] = useState(true);  // إرسال المستند لصاحبه آليًا فور اعتماده
+  const [sendBusy, setSendBusy] = useState(false);
   const [flag, setFlag] = useState(null);          // ملصق المستند: عاجل/سري/للاطلاع والتوجيه (lib/flags.js)
 
   const [docs, setDocs] = useState([]);
@@ -1087,6 +1089,7 @@ export default function Forms({ view = "issue", openKey = null }) {
           : await studentInfo(st).catch(() => null);
         if (info) own = autoFill(picked.fields, info, values, { overwrite: true });
       }
+      const pendingNow = self || row.status === "pending";
       rows.push({
         ...row,
         ...(self ? { status: "pending" } : {}),
@@ -1099,7 +1102,8 @@ export default function Forms({ view = "issue", openKey = null }) {
               recipient: st.full_name,
               ...(st.job ? { job: st.job } : {}),
               ...(/^[tu]-/.test(String(st.id)) ? {} : { student_id: st.id }) }
-          : values), ...(self ? { self_issued: true } : {}) },
+          : values), ...(self ? { self_issued: true } : {}),
+          ...(pendingNow && st && (st.uid ?? st.user_id) && sendOnApprove ? { send_on_approve: true } : {}) },
       });
     }
 
@@ -1197,6 +1201,10 @@ export default function Forms({ view = "issue", openKey = null }) {
       return;
     }
     setRejectFor(null); setRejectNote("");
+    if (status === "approved") {
+      const n = await sendApproved([doc]);
+      setMsg({ ok: true, text: n ? `اعتُمد المستند ${doc.serial} وأُرسل لصاحبه.` : `اعتُمد المستند ${doc.serial}.` });
+    }
     loadDocs();
   };
 
@@ -1207,6 +1215,32 @@ export default function Forms({ view = "issue", openKey = null }) {
     if (error) { setMsg({ ok: false, text: `تعذّر الحذف: ${error.message}` }); return; }
     setMsg({ ok: true, text: `حُذف المستند ${d.serial}.` });
     loadDocs(); loadReturned();
+  };
+
+  // إرسال عدة مستندات (بعد الإصدار، أو كل غير المرسل والتذكير من الأرشيف) — واحدًا تلو الآخر
+  const sendMany = async (list, remind = false) => {
+    if (!list.length || sendBusy) return;
+    setSendBusy(true); setMsg(null);
+    const ok = [], fail = [];
+    for (const d of list) { const r = await notifyRecipient(d); (r.ok ? ok : fail).push({ d, r }); }
+    setSendBusy(false);
+    const now = new Date().toISOString();
+    setBatch((b) => b.map((x) => (ok.some((o) => o.d.id === x.id) ? { ...x, sent_at: now } : x)));
+    setIssued((x) => (x && ok.some((o) => o.d.id === x.id) ? { ...x, sent_at: now } : x));
+    setMsg(fail.length
+      ? { ok: false, text: `أُرسل ${countAr(ok.length, "document")}، وتعذّر ${countAr(fail.length, "document")}: ${fail[0].r.text}` }
+      : { ok: true, text: remind
+          ? `أُرسل التذكير لأصحاب ${countAr(ok.length, "document")} على البوابة والجوال.`
+          : `أُرسل ${countAr(ok.length, "document")} لأصحابها على البوابة والجوال.` });
+    loadDocs();
+  };
+
+  // بعد الاعتماد: ما طلب مُصدِره إرساله فور اعتماده يُرسل آليًا
+  const sendApproved = async (list) => {
+    const due = list.filter((d) => d.data?.send_on_approve && d.recipient_user_id && !d.sent_at);
+    let n = 0;
+    for (const d of due) if ((await notifyRecipient({ ...d, status: "approved" })).ok) n += 1;
+    return n;
   };
 
   // إرسال المستند للمستفيد: إشعار داخل البوابة (جرس) وإشعار على الجوال
@@ -1737,6 +1771,13 @@ export default function Forms({ view = "issue", openKey = null }) {
               <FlagPicker value={flag} onChange={setFlag} />
             )}
 
+            {!issued && !editing && needsApproval && !needsReply && chosen.some((c) => c.uid ?? c.user_id) && (
+              <label className="flex items-start gap-2 rounded-sm2 border border-line bg-canvas px-3 py-2 text-xs leading-relaxed text-ink">
+                <input type="checkbox" className="mt-0.5" checked={sendOnApprove} onChange={(e) => setSendOnApprove(e.target.checked)} />
+                <span>أرسله لصاحبه تلقائيًا فور اعتماد المدير <span className="text-faint">(إشعار على البوابة والجوال)</span></span>
+              </label>
+            )}
+
             <EvidenceBox items={evPicked} />
             {/* الشهادة لطالب تُحتسب آليًا في ملف أداء المعلم (البند 5-10) */}
             {picked?.category === "certificate" && <EvidenceTags items={["e05_10"]} />}
@@ -1768,6 +1809,8 @@ export default function Forms({ view = "issue", openKey = null }) {
                 وفعّل <b>طباعة الخلفيات</b> ليظهر الشعاران بلونيهما.
               </p>
             )}
+
+            {issued && <SendPanel batch={batch.length ? batch : [issued]} busy={sendBusy} onSend={sendMany} />}
 
             {issued && <SendToFile doc={issued} />}
 
@@ -1848,19 +1891,21 @@ export default function Forms({ view = "issue", openKey = null }) {
     if (!confirm(`اعتماد ${chosenDocs.length} ${tab === "replies" ? "إفادة وإغلاقها" : "مستند"}؟`)) return;
     setBulkBusy(true); setMsg(null);
     let ok = 0;
+    const done = [];
     for (const d of chosenDocs) {
       const patch = tab === "replies"
         ? { status: "issued", decision_note: null, data: { ...d.data, ...(decision[d.id] ?? {}), decided_at: new Date().toISOString() } }
         : { status: "approved", decision_note: null, approved_by: session.user.id,
             approved_at: new Date().toISOString() };
       const { data } = await supabase.from("form_documents").update(patch).eq("id", d.id).select("id");
-      if (data?.length) ok += 1;
+      if (data?.length) { ok += 1; done.push(d); }
     }
+    const sent = tab === "replies" ? 0 : await sendApproved(done);
     setBulkBusy(false);
     setSel(new Set());
     const fail = chosenDocs.length - ok;
     setMsg({ ok: fail === 0, text: fail === 0
-      ? `اعتُمد ${ok} ${tab === "replies" ? "وأُغلقت، وهي في الأرشيف" : "مستند"}.`
+      ? `اعتُمد ${ok} ${tab === "replies" ? "وأُغلقت، وهي في الأرشيف" : "مستند"}${sent ? `، وأُرسل ${countAr(sent, "document")} لأصحابها` : ""}.`
       : `اعتُمد ${ok}، وتعذّر ${fail} — حسابك لا يملك صلاحية اعتمادها.` });
     loadDocs();
   };
@@ -2320,6 +2365,8 @@ export default function Forms({ view = "issue", openKey = null }) {
             </p>
           )}
           <FormsArchive docs={docs} more={docs.length >= docLimit ? () => setDocLimit(docLimit + 200) : null}
+                        busy={sendBusy}
+                        bulk={{ unsent: (l) => sendMany(l), ack: (l) => sendMany(l, true) }}
                         renderRow={(d) => (
               <div key={d.id} className="flex items-center gap-2 px-2 py-1 hover:bg-canvas">
                 <button onClick={() => openDoc(d)}
@@ -2344,12 +2391,14 @@ export default function Forms({ view = "issue", openKey = null }) {
                 </button>
                 {d.recipient_user_id && ["issued", "approved", "awaiting_reply"].includes(d.status) && (
                   <button onClick={() => sendToRecipient(d)}
-                          title={d.sent_at ? "أُرسل سابقًا — يمكن إعادة الإرسال" : "إرسال إشعار للمستفيد"}
+                          title={d.sent_at ? "أُرسل سابقًا — اضغط لإعادة الإرسال أو التذكير" : "إرسال إشعار للمستفيد"}
                           className={`shrink-0 rounded-pill border px-2.5 py-1 text-xs ${
                             d.sent_at
                               ? "border-line text-muted hover:bg-canvas"
                               : "border-mint-deep text-mint-deep hover:bg-mint-tint"}`}>
-                    {d.sent_at ? "أُرسل" : "إرسال للمستفيد"}
+                    {!d.sent_at ? "إرسال للمستفيد"
+                      : ["issued", "approved"].includes(d.status) && (d.form_templates?.fields ?? []).some((f) => f.type === "rubric" || f.ack) && !d.data?.ack_at
+                        ? "تذكير" : "أُرسل ↻"}
                   </button>
                 )}
                 {isManager && (
@@ -2472,6 +2521,39 @@ export default function Forms({ view = "issue", openKey = null }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/* بعد الإصدار مباشرة: كم مستندًا يُرسل لأصحابه، وزر الإرسال الآن بدل الذهاب للأرشيف.
+   ما يحتاج ردًّا يُرسل آليًا عند الإصدار، وما ينتظر الاعتماد يُرسل بعده إن طلب المُصدِر ذلك. */
+export function SendPanel({ batch, busy, onSend }) {
+  const ready = batch.filter((d) => d.recipient_user_id && ["issued", "approved"].includes(d.status));
+  const unsent = ready.filter((d) => !d.sent_at);
+  const noAccount = batch.filter((d) => !d.recipient_user_id && ["issued", "approved"].includes(d.status)).length;
+  const later = batch.filter((d) => d.status === "pending" && d.data?.send_on_approve).length;
+  if (!ready.length && !later && !noAccount) return null;
+  const toStudents = ready.some((d) => d.student_id);
+  return (
+    <div className="space-y-2 rounded-sm2 border border-mint/40 bg-mint-tint/60 px-3 py-2.5 text-xs leading-relaxed">
+      {unsent.length > 0 ? (
+        <>
+          <p className="text-ink">
+            جاهز للإرسال: <b>{countAr(unsent.length, "document")}</b> لأصحابها
+            {toStudents ? " ولأولياء أمورهم" : ""}، بإشعار على البوابة والجوال.
+          </p>
+          <button className="btn-primary w-full" disabled={busy} onClick={() => onSend(unsent)}>
+            {busy ? "جارٍ الإرسال…" : unsent.length > 1 ? `إرسال الآن (${unsent.length})` : "إرسال الآن"}
+          </button>
+        </>
+      ) : ready.length > 0 && (
+        <p className="font-semibold text-present">✓ أُرسل {countAr(ready.length, "document")} لأصحابها.</p>
+      )}
+      {later > 0 && <p className="text-mint-deep">سيُرسل {countAr(later, "document")} لأصحابها تلقائيًا فور اعتماد المدير.</p>}
+      {noAccount > 0 && (
+        <p className="text-warning">{countAr(noAccount, "document")} لمستفيد بلا حساب في البوابة: اطبعه وسلّمه يدويًا.</p>
+      )}
+      <p className="text-faint">تتابع الاطلاع وتعيد الإرسال أو تذكّر من «الأرشيف».</p>
     </div>
   );
 }

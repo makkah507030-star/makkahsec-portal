@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { countAr } from "../lib/arabicCount.js";
 
 /* =====================================================================
    أرشيف النماذج — بدل قائمة واحدة تطول كل يوم:
@@ -34,7 +35,7 @@ function periodOf(created) {
   return { key: label, label };
 }
 
-export default function FormsArchive({ docs, renderRow, more }) {
+export default function FormsArchive({ docs, renderRow, more, bulk, busy: sending }) {
   const [q, setQ] = useState("");
   const [form, setForm] = useState("");
   const [follow, setFollow] = useState("");
@@ -106,6 +107,17 @@ export default function FormsArchive({ docs, renderRow, more }) {
           </button>
         )}
       </div>
+
+      {/* إجراء جماعي على المرشَّح: إرسال كل غير المرسل، أو تذكير كل من لم يطّلع */}
+      {bulk?.[follow] && list.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-mint/40 bg-mint-tint/60 px-3 py-2 text-sm">
+          <span className="text-ink">{follow === "unsent" ? "مستندات صدرت ولم تُرسل لأصحابها" : "أُرسلت ولم يطّلع أصحابها بعد"}: <b className="num">{list.length}</b></span>
+          <button className="btn-primary px-4 py-1.5 text-xs" disabled={sending}
+                  onClick={() => window.confirm(`${follow === "unsent" ? "إرسال" : "تذكير أصحاب"} ${countAr(list.length, "document")}؟`) && bulk[follow](list)}>
+            {sending ? "جارٍ الإرسال…" : follow === "unsent" ? `إرسال الكل (${list.length})` : `تذكير الكل (${list.length})`}
+          </button>
+        </div>
+      )}
 
       {groups.length === 0 && (
         <p className="card px-4 py-6 text-sm text-muted">{docs.length ? "لا نتائج مطابقة." : "لا مستندات بعد."}</p>
