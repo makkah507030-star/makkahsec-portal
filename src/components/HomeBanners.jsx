@@ -79,8 +79,8 @@ export function Banner({ b, preview = false }) {
          style={{ background: t.bg, borderColor: t.border, color: t.text }}>
       <StudioDecor t={t} />
       {img && (
-        <div className="p-3 pb-0 sm:order-2 sm:w-[46%] sm:shrink-0 sm:p-3 sm:pr-0">
-          <img src={img} alt="" loading="lazy" className="aspect-[16/8] h-full w-full rounded-card object-cover shadow-card sm:aspect-auto sm:min-h-[180px]" />
+        <div className="p-3 pb-0 sm:order-2 sm:w-[46%] sm:shrink-0 sm:self-center sm:p-3 sm:pr-0">
+          <img src={img} alt="" loading="lazy" className="aspect-[2/1] w-full rounded-card object-cover shadow-card" />
         </div>
       )}
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 p-4 sm:p-5">

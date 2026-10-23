@@ -6,6 +6,7 @@ import {
   CUSTOM_SLOTS, EXTERNAL_ROLES, loadCustomRoles,
 } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
+import { ADMIN_GROUPS } from "../../components/Layout.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
@@ -531,7 +532,7 @@ const PERM_GROUPS = [
   { title: "الشؤون التعليمية",
     keys: ["schedules", "import", "calendar"] },
   { title: "المحتوى والتواصل",
-    keys: ["news", "guides", "notifications", "feedback"] },
+    keys: ["circulars", "banners", "news", "guides", "notifications", "feedback"] },
   { title: "النشاط",
     keys: ["scouts"] },
   { title: "الحسابات والنظام",
@@ -553,6 +554,28 @@ const PRESETS = [
 ];
 
 const permByKey = Object.fromEntries(PERMISSIONS.map((p) => [p.key, p]));
+// كل صلاحية تظهر في لوحتها: ما لم يُذكر في الأقسام أعلاه يُجمع في «أخرى»
+const PERM_SECTIONS = (() => {
+  const listed = new Set(PERM_GROUPS.flatMap((g) => g.keys));
+  const rest = PERMISSIONS.map((p) => p.key).filter((k) => !listed.has(k));
+  return rest.length ? [...PERM_GROUPS, { title: "أخرى", keys: rest }] : PERM_GROUPS;
+})();
+
+/* ظهور صفحات القائمة لكل دور: «hide:/مسار» في role_permissions يُخفي الصفحة (والظهور هو الأصل).
+   وما لا يتاح للدور أصلًا (لأدوار بعينها، أو يحتاج صلاحية غير ممنوحة) يُعرض معطّلًا بسببه. */
+const HIDE = "hide:";
+const isHide = (k) => k.startsWith(HIDE);
+const NAV_SECTIONS = ADMIN_GROUPS.map((g) => ({ title: g.title ?? "عام", items: g.items.filter((i) => i.to !== "/") }))
+  .filter((g) => g.items.length);
+function navReason(i, role, sel) {
+  if (i.techOnly) return "للدعم الفني فقط";
+  if (i.manageForms) return "للمدير والدعم الفني";
+  if (i.roles && !i.roles.includes(role)) return "لأدوار محددة فقط";
+  if (i.hideForRoles?.includes(role)) return "لا يظهر لهذا الدور";
+  if (i.perm && !sel.has(i.perm)) return `يحتاج صلاحية «${permByKey[i.perm]?.label ?? i.perm}»`;
+  if (i.anyPerm && !i.anyPerm.some((p) => sel.has(p))) return `يحتاج صلاحية «${i.anyPerm.map((p) => permByKey[p]?.label ?? p).join("» أو «")}»`;
+  return null;
+}
 
 function RolePermissions() {
   const [map, setMap] = useState(null);        // role -> Set(permissions)
@@ -670,7 +693,8 @@ function RolePermissions() {
                     {ADMIN_ROLE_LABEL[r] ?? r}
                   </span>
                   <span className="num block text-[11px] text-faint">
-                    {(map[r]?.size ?? 0)} صلاحية
+                    {[...(map[r] ?? [])].filter((k) => !isHide(k)).length} صلاحية
+                    {[...(map[r] ?? [])].some(isHide) && <> · {[...map[r]].filter(isHide).length} صفحة مخفية</>}
                   </span>
                 </span>
                 {role === r && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-mint-deep" />}
@@ -689,15 +713,15 @@ function RolePermissions() {
                 <div>
                   <h2 className="text-sm font-bold text-ink">{ADMIN_ROLE_LABEL[role] ?? role}</h2>
                   <p className="num text-xs text-muted">
-                    المحدّد: {sel.size} من {PERMISSIONS.length}
+                    المحدّد: {[...sel].filter((k) => !isHide(k)).length} من {PERMISSIONS.length}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  <button onClick={() => setSel(new Set(PERMISSIONS.map((p) => p.key)))}
+                  <button onClick={() => setSel(new Set([...PERMISSIONS.map((p) => p.key), ...[...sel].filter(isHide)]))}
                           className="rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
                     الكل
                   </button>
-                  <button onClick={() => setSel(new Set())}
+                  <button onClick={() => setSel(new Set([...sel].filter(isHide)))}
                           className="rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
                     مسح
                   </button>
@@ -709,7 +733,7 @@ function RolePermissions() {
                 <p className="text-[11px] font-semibold text-faint">قالب جاهز</p>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {PRESETS.map((pr) => (
-                    <button key={pr.key} onClick={() => setSel(new Set(pr.perms))}
+                    <button key={pr.key} onClick={() => setSel(new Set([...pr.perms, ...[...sel].filter(isHide)]))}
                             className="rounded-pill bg-white px-3 py-1 text-xs font-medium text-mint-deep ring-1 ring-mint-light hover:bg-mint-tint">
                       {pr.label}
                     </button>
@@ -736,7 +760,7 @@ function RolePermissions() {
               </div>
 
               {/* الصلاحيات بأقسامها */}
-              {PERM_GROUPS.map((g) => {
+              {PERM_SECTIONS.map((g) => {
                 const keys = g.keys.filter((k) => permByKey[k]);
                 if (!keys.length) return null;
                 const all = keys.every((k) => sel.has(k));
@@ -774,6 +798,58 @@ function RolePermissions() {
                   </div>
                 );
               })}
+
+              {/* ظهور الصفحات: تحديد مخصص لكل صفحة في القائمة وبطاقات الأقسام */}
+              <details className="rounded-card border border-line">
+                <summary className="cursor-pointer list-none px-3.5 py-3">
+                  <span className="text-sm font-bold text-ink">ظهور الصفحات في القائمة</span>
+                  <span className="mr-2 num text-[11px] text-faint">({[...sel].filter(isHide).length} مخفية)</span>
+                  <span className="block text-[11px] leading-snug text-muted">
+                    حدّد بدقة ما يظهر لهذا الدور من صفحات القائمة وبطاقات الأقسام وما لا يظهر، فوق الصلاحيات أعلاه.
+                  </span>
+                </summary>
+                <div className="space-y-3 border-t border-line p-3">
+                  {NAV_SECTIONS.map((g) => {
+                    const open = g.items.filter((i) => !navReason(i, role, sel));
+                    const allOn = open.every((i) => !sel.has(HIDE + i.to));
+                    return (
+                      <div key={g.title}>
+                        <div className="mb-1.5 flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold text-faint">{g.title}</p>
+                          {open.length > 0 && (
+                            <button className="text-[11px] font-medium text-mint-deep hover:underline"
+                                    onClick={() => setSel((prev) => { const n = new Set(prev); open.forEach((i) => (allOn ? n.add(HIDE + i.to) : n.delete(HIDE + i.to))); return n; })}>
+                              {allOn ? "إخفاء القسم" : "إظهار القسم"}
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid gap-1.5 sm:grid-cols-2">
+                          {g.items.map((i) => {
+                            const why = navReason(i, role, sel);
+                            const on = !why && !sel.has(HIDE + i.to);
+                            return (
+                              <label key={i.to} className={`flex items-center justify-between gap-2 rounded-sm2 border px-3 py-2 ${
+                                why ? "cursor-not-allowed border-line bg-canvas opacity-60" : on ? "cursor-pointer border-mint-light bg-mint-tint/40" : "cursor-pointer border-line"}`}>
+                                <span className="min-w-0">
+                                  <span className="block truncate text-[13px] text-ink">{i.label}</span>
+                                  {why && <span className="block text-[10.5px] leading-tight text-faint">{why}</span>}
+                                </span>
+                                <span className="flex shrink-0 items-center gap-1.5">
+                                  <span className={`text-[11px] ${on ? "text-mint-deep" : "text-faint"}`}>{why ? "غير متاحة" : on ? "تظهر" : "مخفية"}</span>
+                                  <input type="checkbox" disabled={!!why} checked={on} onChange={() => toggle(HIDE + i.to)} />
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <p className="text-[11px] leading-relaxed text-faint">
+                    الإخفاء يخص القائمة وبطاقات الأقسام. ومن يجمع أكثر من دور تظهر له الصفحة إن ظهرت لأحد أدواره.
+                  </p>
+                </div>
+              </details>
 
               {msg && (
                 <p className={`rounded-sm2 px-3 py-2 text-sm ${
