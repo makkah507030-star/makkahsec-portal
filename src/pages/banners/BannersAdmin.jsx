@@ -1,7 +1,7 @@
 // src/pages/banners/BannersAdmin.jsx
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { shrinkImage } from "../../lib/imageResize";
+import { normalizeImage } from "../../lib/imageResize";
 import { todayISO } from "../../lib/schoolTime";
 import { fmtGreg } from "../../lib/dates";
 import { BANNER_BUCKET, BANNER_KIND, AUDIENCE, LINK_PAGES, isExternal, bannersSetupMsg } from "../../lib/banners.js";
@@ -13,6 +13,24 @@ import Loader from "../../components/Loader.jsx";
    فرصة أو مناسبة أو إعلان عام، بصورة وعنوان ووصف، ورابط اختياري (صفحة في البوابة أو
    رابط خارجي)، ولمن تظهر، وفي أي صفوف، ومدة عرضها. ويُعبّأ من فرصة ترشيح أو حدث قائم.
    ===================================================================== */
+
+// مقاس صورة الإعلان الإلزامي: عرضية 2:1، تُضبط على 1200 × 600 بالضبط قبل الرفع
+const BANNER_W = 1200, BANNER_H = 600;
+const imageSize = (file) => new Promise((ok) => {
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => { ok({ w: img.width, h: img.height }); URL.revokeObjectURL(url); };
+  img.onerror = () => { ok(null); URL.revokeObjectURL(url); };
+  img.src = url;
+});
+// يُقبل ما قارب المقاس (نسبة 1.6 إلى 2.5 وعرض 900 فأكثر) ويُضبط عليه؛ وغيره يُرفض برسالة
+async function checkBanner(file) {
+  const s = await imageSize(file);
+  if (!s) return "تعذّرت قراءة الصورة؛ اختر صورة JPG أو PNG.";
+  const r = s.w / s.h;
+  if (r < 1.6 || r > 2.5) return `الصورة ليست بالمقاس المطلوب (عرضها ${s.w} وارتفاعها ${s.h}). صمّمها بعرض ${BANNER_W} وارتفاع ${BANNER_H} بكسل.`;
+  if (s.w < 900) return `الصورة صغيرة (عرضها ${s.w} بكسل) فتظهر باهتة. صمّمها بعرض ${BANNER_W} وارتفاع ${BANNER_H} بكسل.`;
+  return null;
+}
 
 const blank = () => ({ kind: "opportunity", title: "", body: "", image_path: null, link: "", link_label: "",
   linkType: "none", audience: ["student", "guardian"], grades: [], starts_on: todayISO(), ends_on: "", is_active: true, sort: 0 });
@@ -75,7 +93,7 @@ export default function BannersAdmin() {
     setBusy(true); setMsg(null);
     let image_path = edit.image_path;
     if (file) {
-      const img = await shrinkImage(file, 1600, 0.85, { jpeg: true });
+      const img = await normalizeImage(file, BANNER_W, BANNER_H, 0.86);
       image_path = `${crypto.randomUUID()}.jpg`;
       const { error } = await supabase.storage.from(BANNER_BUCKET).upload(image_path, img, { contentType: "image/jpeg" });
       if (error) { setBusy(false); setMsg({ ok: false, text: `تعذّر رفع الصورة: ${error.message}` }); return; }
@@ -133,10 +151,20 @@ export default function BannersAdmin() {
             </div>
             <input className="field w-full" placeholder="العنوان" value={edit.title} onChange={(e) => set("title", e.target.value)} maxLength={80} />
             <textarea className="field w-full" rows={2} placeholder="وصف مختصر (اختياري)" value={edit.body} onChange={(e) => set("body", e.target.value)} maxLength={180} />
-            <label className="block text-xs text-muted">الصورة (عرضية؛ تُصغَّر تلقائيًا)
-              <input type="file" accept="image/*" className="mt-1 block text-xs"
-                     onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); setPreview(f ? URL.createObjectURL(f) : null); }} />
+            <label className="block text-xs text-muted">الصورة
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="mt-1 block text-xs"
+                     onChange={async (e) => {
+                       const f = e.target.files?.[0] ?? null; e.target.value = "";
+                       if (!f) return;
+                       const bad = await checkBanner(f);
+                       if (bad) { setMsg({ ok: false, text: bad }); return; }
+                       setMsg(null); setFile(f); setPreview(URL.createObjectURL(f));
+                     }} />
             </label>
+            <p className="-mt-1.5 rounded-sm2 bg-canvas px-2.5 py-1.5 text-[11px] leading-relaxed text-muted">
+              المقاس المطلوب: عرض <b className="num text-ink">{BANNER_W}</b> وارتفاع <b className="num text-ink">{BANNER_H}</b> بكسل (العرض ضعف الارتفاع)، JPG أو PNG.
+              ضع الشعار والكتابة في الوسط بعيدًا عن الحواف، ولا تكتب العنوان داخل الصورة.
+            </p>
 
             <div className="space-y-1.5">
               <p className="text-xs text-muted">عند الضغط على البطاقة</p>
