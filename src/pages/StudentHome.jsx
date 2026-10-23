@@ -16,11 +16,10 @@ import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
 import OfficialLinks from "../components/OfficialLinks.jsx";
 import TasksBox from "../components/TasksBox.jsx";
-import OnlineQuizzesCard from "../components/OnlineQuizzesCard.jsx";
+import MyQuizzesCard from "../components/MyQuizzesCard.jsx";
 import LabSeatCard from "../components/LabSeatCard.jsx";
 import LabRulesCard from "../components/LabRulesCard.jsx";
 import BehaviorAckCard from "../components/BehaviorAckCard.jsx";
-import QuizResults from "../components/QuizResults.jsx";
 import Loader from "../components/Loader.jsx";
 
 export default function StudentHome() {
@@ -149,7 +148,8 @@ export default function StudentHome() {
       <BehaviorAckCard />
       <LabRulesCard />
 
-      <OnlineQuizzesCard />
+      {/* الاختبارات الإلكترونية ونتائجها في جدول واحد */}
+      <MyQuizzesCard studentId={me.id} />
 
       <LabSeatCard />
 
@@ -196,8 +196,6 @@ export default function StudentHome() {
       <PeriodNoticeCard studentId={me.id} />
 
       <ResultsCard studentId={me.id} />
-
-      <QuizResults studentId={me.id} compact />
 
       {/* الجدول الأسبوعي الكامل */}
       <section className="card overflow-hidden">
