@@ -8,7 +8,7 @@ import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import SignatureCleaner from "../../components/SignatureCleaner.jsx";
 import {
-  ALWAYS_ROLES, GENERAL_ROLES, SPECIFIC_ROLES, roleLabel, suggestRoles,
+  ALWAYS_ROLES, GENERAL_ROLES, specificRoles, roleLabel, suggestRoles,
 } from "../../lib/formRoles";
 
 /* =====================================================================
@@ -39,7 +39,7 @@ function RolePicker({ value, onToggle }) {
         </p>
       )}
       <div className={`flex flex-wrap gap-1.5 ${wide ? "opacity-50" : ""}`}>
-        {SPECIFIC_ROLES.map(chip)}
+        {specificRoles().map(chip)}
       </div>
       <p className="text-[11px] text-faint">المدير والدعم الفني يصلان لكل النماذج دائمًا.</p>
     </div>
@@ -48,8 +48,8 @@ function RolePicker({ value, onToggle }) {
 
 /* توزيع الصلاحيات حسب الدور: اختر دورًا فترى كل النماذج وتفعّل ما يخصّه */
 function ByRole({ rows, onToggle }) {
-  const [role, setRole] = useState(SPECIFIC_ROLES[0]?.key ?? "");
-  const all = [...GENERAL_ROLES, ...SPECIFIC_ROLES];
+  const [role, setRole] = useState(specificRoles()[0]?.key ?? "");
+  const all = [...GENERAL_ROLES, ...specificRoles()];
   const count = (k) => rows.filter((r) => (r.allowed_roles ?? []).includes(k)).length;
   return (
     <section className="card space-y-3 p-4">

@@ -11,7 +11,7 @@ import { VoiceRecorder, VoicePlayer, uploadVoice } from "./Voice.jsx";
 export const GUIDANCE_VOICE = "guidance-voice";
 
 /* side: طرف المستخدم (counselor | requester)؛ voice: هل يرسل رسالة صوتية؛ closed: الطلب مغلق */
-export default function GuidanceThread({ requestId, side, voice, closed, onSent }) {
+export default function GuidanceThread({ requestId, side, voice, closed, onSent, staffLabel = "الموجه الطلابي" }) {
   const [rows, setRows] = useState(null);
   const [text, setText] = useState("");
   const [rec, setRec] = useState(null);
@@ -50,7 +50,7 @@ export default function GuidanceThread({ requestId, side, voice, closed, onSent 
             return (
               <li key={m.id} className={`flex ${mine ? "justify-start" : "justify-end"}`}>
                 <div className={`max-w-[85%] space-y-1 rounded-card px-3 py-2 text-sm ${mine ? "bg-mint-tint text-ink" : "border border-line bg-white text-ink"}`}>
-                  <p className="text-[11px] font-semibold text-muted">{m.side === "counselor" ? "الموجه الطلابي" : m.sender_name ?? "صاحب الطلب"}
+                  <p className="text-[11px] font-semibold text-muted">{m.side === "counselor" ? staffLabel : m.sender_name ?? "صاحب الطلب"}
                     <span className="num mr-2 font-normal text-faint">{fmtDateTime(m.created_at)}</span></p>
                   {m.body && <p className="whitespace-pre-line leading-relaxed">{m.body}</p>}
                   {m.audio_path && <VoicePlayer path={m.audio_path} secs={m.audio_secs} bucket={GUIDANCE_VOICE} label="رسالة صوتية" />}

@@ -4,6 +4,8 @@ import { fmtHijri, fmtGreg } from "../lib/dates";
 import { todayISO } from "../lib/schoolTime";
 import { loadRangeStart } from "../lib/officialAttendance";
 import Loader from "./Loader.jsx";
+import { countAr } from "../lib/arabicCount.js";
+import { useExcuses, ExcuseForm, ExcuseList, EXCUSE_STATUS } from "./AbsenceExcuse.jsx";
 
 /* =====================================================================
    سجل الحضور للطالب وولي أمره (supabase/student_attendance_log.sql):
@@ -23,12 +25,20 @@ const PERIOD = {
   late:    { t: "متأخر",  c: "bg-late/10 text-late" },
   excused: { t: "مستأذن", c: "bg-excused/10 text-excused" },
 };
+const SHOW_DAYS = 7;   // آخر الأيام أولًا، والباقي بـ«عرض كل الأيام» حتى لا تطول الصفحة
 const dayName = (d) => new Date(`${d}T12:00:00`).toLocaleDateString("ar-SA", { weekday: "long" });
 
-export default function AttendanceLog({ studentId, fp }) {
+// excuse: يظهر «تقديم عذر» للطالب وولي أمره (أعذار الغياب لوكيل شؤون الطلاب)
+export default function AttendanceLog({ studentId, fp, excuse = false }) {
   const [rows, setRows] = useState(null);
   const [from, setFrom] = useState(null);
   const [err, setErr] = useState("");
+  const [all, setAll] = useState(false);
+  const ex = useExcuses(excuse ? studentId : null);
+  const [excFor, setExcFor] = useState(null);   // اليوم الذي فُتح له نموذج العذر
+  // أيام غياب بلا عذر: غياب رسمي، أو يوم لم يُعتمد وفيه حصص غياب
+  const absentDay = (r) => r.official === "absent" || (!r.approved && (r.periods ?? []).some((p) => p.status === "absent"));
+  const canExcuse = (r) => excuse && ex.list && absentDay(r) && !(ex.byDay[r.attend_date] && ex.byDay[r.attend_date].status !== "rejected");
 
   useEffect(() => {
     if (!studentId) return;
@@ -69,8 +79,8 @@ export default function AttendanceLog({ studentId, fp }) {
   const cards = [
     { k: "official", t: "أيام الغياب الرسمي", c: "text-absent" },
     { k: "excused",  t: "أيام الغياب بعذر",   c: "text-excused" },
-    { k: "periods",  t: "حصص غاب عنها",      c: "text-absent" },
-    { k: "late",     t: "حصص تأخر عنها",      c: "text-late" },
+    { k: "periods",  t: "حصص الغياب",          c: "text-absent" },
+    { k: "late",     t: "حصص التأخر",          c: "text-late" },
     ...(showMorning ? [{ k: "morning", t: "أيام التأخر الصباحي", c: "text-late" }] : []),
   ];
 
@@ -91,6 +101,12 @@ export default function AttendanceLog({ studentId, fp }) {
           {from && <p className="num text-[11px] text-faint">منذ {fmtHijri(from)} — الفصل الدراسي الحالي</p>}
         </div>
         {err && <p className="px-4 py-3 text-sm text-absent">{err}</p>}
+        {excFor && rows && (
+          <ExcuseForm studentId={studentId} initial={excFor}
+                      days={rows.filter(canExcuse).map((r) => r.attend_date)}
+                      onCancel={() => setExcFor(null)}
+                      onDone={() => { setExcFor(null); ex.reload(); }} />
+        )}
         {!rows ? <div className="p-4"><Loader compact /></div> : rows.length === 0 ? (
           <p className="px-4 py-5 text-sm text-muted">السجل نظيف — لا غياب ولا تأخر في هذا الفصل.</p>
         ) : (
@@ -105,8 +121,11 @@ export default function AttendanceLog({ studentId, fp }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {rows.map((r) => {
+                {(all ? rows : rows.slice(0, SHOW_DAYS)).map((r) => {
                   const off = r.approved ? OFFICIAL[r.official] : null;
+                  // يوم غياب رسمي غاب فيه عن حصصه كلها: شارة واحدة بدل شارة لكل حصة
+                  const ps = r.periods ?? [];
+                  const wholeDay = r.official === "absent" && ps.length > 1 && ps.every((p) => p.status === "absent");
                   return (
                     <tr key={r.attend_date} className="align-top">
                       <td className="whitespace-nowrap px-4 py-2.5">
@@ -116,6 +135,17 @@ export default function AttendanceLog({ studentId, fp }) {
                       <td className="px-3 py-2.5">
                         {off ? <span className={`chip whitespace-nowrap ${off.c}`}>{off.t}</span>
                           : <span className="text-xs text-faint">لم يُعتمد بعد</span>}
+                        {excuse && ex.byDay[r.attend_date] && (
+                          <span className={`chip mt-1 block w-fit whitespace-nowrap ${EXCUSE_STATUS[ex.byDay[r.attend_date].status]?.c}`}>
+                            {EXCUSE_STATUS[ex.byDay[r.attend_date].status]?.t}
+                          </span>
+                        )}
+                        {canExcuse(r) && (
+                          <button onClick={() => setExcFor(r.attend_date)}
+                                  className="mt-1 block whitespace-nowrap text-[11px] font-semibold text-mint-deep underline">
+                            تقديم عذر
+                          </button>
+                        )}
                       </td>
                       {showMorning && (
                         <td className="px-3 py-2.5">
@@ -127,7 +157,12 @@ export default function AttendanceLog({ studentId, fp }) {
                         </td>
                       )}
                       <td className="px-3 py-2.5">
-                        {(r.periods ?? []).length === 0 ? <span className="text-xs text-faint">—</span> : (
+                        {ps.length === 0 ? <span className="text-xs text-faint">—</span> : wholeDay ? (
+                          <span className={`chip whitespace-nowrap ${PERIOD.absent.c}`}
+                                title={ps.map((p) => `ح${p.p}${p.subject ? ` ${p.subject}` : ""}`).join("، ")}>
+                            غائب عن الحصص كلها ({countAr(ps.length, "period")})
+                          </span>
+                        ) : (
                           <div className="flex flex-wrap gap-1">
                             {r.periods.map((p, i) => (
                               <span key={i} className={`chip gap-1 whitespace-nowrap ${PERIOD[p.status]?.c ?? ""}`}>
@@ -143,8 +178,15 @@ export default function AttendanceLog({ studentId, fp }) {
                 })}
               </tbody>
             </table>
+            {rows.length > SHOW_DAYS && (
+              <button onClick={() => setAll((v) => !v)}
+                      className="w-full border-t border-line py-2.5 text-xs font-semibold text-mint-deep hover:bg-canvas">
+                {all ? "عرض آخر الأيام فقط" : `عرض كل الأيام (${rows.length})`}
+              </button>
+            )}
           </div>
         )}
+        {excuse && <ExcuseList list={ex.list} />}
         <p className="border-t border-line bg-canvas/60 px-4 py-2.5 text-[11.5px] leading-relaxed text-muted">
           <b className="text-ink">الغياب الرسمي</b> يُحسب فيه الطالب غائبًا يومًا كاملًا، ويُرصد في نظام نور.{" "}
           <b className="text-ink">غياب الحصص</b> يُعدّ بالحصة: كل حصة سُجّل فيها غائبًا، ومنها حصص أيام الغياب الرسمي.

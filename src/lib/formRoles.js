@@ -17,7 +17,9 @@ export const GENERAL_ROLES = [
   { key: "teacher", label: "المعلمون" },
 ];
 
-export const SPECIFIC_ROLES = ASSIGNABLE_ROLES
+/* الأدوار الإدارية المحددة — تُحسب عند العرض لا عند تحميل الملف، لأن الأدوار المخصّصة
+   (المساعد الإداري 5 مثلًا) تُضاف إلى ASSIGNABLE_ROLES بعد الإقلاع (loadCustomRoles) */
+export const specificRoles = () => ASSIGNABLE_ROLES
   .filter((r) => !ALWAYS_ROLES.includes(r))
   .map((r) => ({ key: r, label: ADMIN_ROLE_LABEL[r] ?? r }));
 

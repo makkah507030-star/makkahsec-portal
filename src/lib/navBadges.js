@@ -104,10 +104,10 @@ async function load() {
   const [
     returned, toApprove, replies, events, toReply, refDeputy, refCounselor, notif,
     plcSign, pdSign, xvHost, plcPending, pdPending, xvPending,
-    plcBack, pdBack, xvBack, perfAck, guidance,
+    plcBack, pdBack, xvBack, perfAck, guidance, deputyReq, excuses,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
     giTeacher, giDeputy, giCounselor, giGuardian, dropouts, ethicsAck, onlineQuizzes, myNotes,
-    goals, goalsLate, qPlans, qPlansLate,
+    goals, goalsLate, qPlans, qPlansLate, circs,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? rowsFlag((f) => supabase.from("form_documents").select(`id, title, recipient${f}`)
@@ -139,6 +139,8 @@ async function load() {
     staff ? rowsOf(supabase.from("exchange_visits").select("id").eq("status", "returned").eq("visitor_user_id", uid).limit(50)) : noRows,
     staff ? count(head("perf_reviews").eq("teacher_user_id", uid).not("sent_at", "is", null).is("ack_at", null)) : none,
     myGrades.length ? count(head("guidance_requests").eq("status", "new").in("grade", myGrades)) : none,
+    has("deputy_students") ? count(head("guidance_requests").eq("status", "new").eq("target", "deputy")) : none,
+    has("deputy_students", "clerk", "clerk_2") ? count(head("absence_excuses").eq("status", "pending")) : none,
 
     // ولي الأمر: نماذج السلوك والإحالات التي تنتظر إقراره، والطالب: تعهداته
     isGuardian ? rowsFlag((f) => supabase.from("behavior_forms").select(`id, kind, student_name${f}`)
@@ -198,7 +200,13 @@ async function load() {
     has("principal") ? rowsOf(supabase.from("quiz_plans").select(`id, quiz_id, done_at, ${QP_QUIZ}`)
       .eq("kind", "remedial").eq("status", "done").is("measured_at", null)
       .lt("done_at", new Date(Date.now() - VERIFY_LATE_DAYS * 864e5).toISOString()).limit(100)) : noRows,
+
+    // التعاميم: ما وصلك ولم تطّلع عليه (أو لم تقرّ به إن تطلّب الإقرار) ومتابعته مفتوحة (supabase/circulars_*.sql)
+    staff || isGuardian ? rowsOf(supabase.from("circular_recipients")
+      .select("circular_id, read_at, ack_at, circulars!inner(subject, needs_ack, priority, closed_at)")
+      .eq("user_id", uid).is("circulars.closed_at", null).is("ack_at", null).limit(100)) : noRows,
   ]);
+  const circPending = circs.filter((r) => (r.circulars?.needs_ack ? !r.ack_at : !r.read_at));
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
   const plcToSign = unsigned(plcSign, "plc_signatures");
@@ -312,6 +320,8 @@ async function load() {
       items: dropouts.map((r) => ({ id: r.id, to: `/dropouts?tab=new&open=${r.id}`, title: r.student_name ?? "" })) },
     { key: "guidance", n: guidance, to: `/guidance?tab=requests${myGrades.length === 1 ? `&grade=${myGrades[0]}` : ""}`,
       label: "طلبات مقابلة جديدة", tone: "warning", icon: "heart" },
+    { key: "excuses", n: excuses, to: "/absence-excuses", label: "أعذار غياب بانتظار قرارك", tone: "warning", icon: "idcard" },
+    { key: "deputyReq", n: deputyReq, to: "/student-requests", label: "طلبات تواصل جديدة من الطلاب وأولياء الأمور", tone: "warning", icon: "send" },
 
     // الاعتماد
     { key: "toApprove", n: toApprove.length, to: "/forms-review", label: "نماذج تنتظر اعتمادك", tone: "warning", icon: "inbox",
@@ -352,6 +362,10 @@ async function load() {
       items: myNotes.map((x) => ({ id: x.id, to: `/notebook?n=${x.id}`,
         title: `${noteTitle(x)}${dueState(x) === "overdue" ? " · متأخرة" : x.due_time ? ` · ${x.due_time.slice(0, 5)}` : ""}` })) },
 
+    { key: "circulars", n: circPending.length, to: "/my-circulars", label: "تعاميم تنتظر اطلاعك", tone: "warning", icon: "circular",
+      items: circPending.map((r) => ({ id: r.circular_id, to: `/circulars/${r.circular_id}`, title: r.circulars?.subject ?? "تعميم",
+        flag: r.circulars?.priority === "urgent" ? "urgent" : null })) },
+
     // للعلم
     { key: "replies", n: replies, to: "/forms-review", label: "إفادات وصلت على نماذجك", tone: "mint", icon: "inbox" },
   ].filter((t) => t.n > 0).map((t) => {
@@ -378,7 +392,10 @@ async function load() {
     "/dropouts": dropouts.length,
     "/ethics": ethicsDue,
     "/notebook": myNotes.length,
+    "/my-circulars": circPending.length,
     "/guidance": guidance + giDeputy.length + giReady.length,
+    "/student-requests": deputyReq,
+    "/absence-excuses": excuses,
     "/": behaviorGuardian.length + refGuardian.length + pledges.length + giGuardian.length + quizzesDue.length,
     _tasks: tasks,
     _ready: true,

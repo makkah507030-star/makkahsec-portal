@@ -34,6 +34,12 @@ const daysTo = (s) => {
   return Math.round((new Date(s + "T00:00:00") - new Date(todayISO() + "T00:00:00")) / 86400000);
 };
 
+// جدول انتهى: مضى آخر يوم فيه، فيُطوى في «الجداول المنتهية» بدل أن يظهر أولًا
+const isEnded = (t) => !!t.end_date && t.end_date < todayISO();
+// يُفتح على الجاري أو أقرب قادم، ولا شيء إن انتهت كلها
+const currentKind = (terms) =>
+  [...terms].filter((t) => !isEnded(t)).sort((a, b) => String(a.start_date ?? "").localeCompare(String(b.start_date ?? "")))[0]?.kind ?? "";
+
 export default function ExamSchedules() {
   const { session, effectiveRole } = useSession();
   const uid = session?.user?.id;
@@ -43,6 +49,7 @@ export default function ExamSchedules() {
   const [scope, setScope] = useState(null);      // { classId, grade, label }
   const [scopes, setScopes] = useState([]);      // لولي الأمر: أبناؤه
   const [kind, setKind] = useState("period1");
+  const [showPast, setShowPast] = useState(false);
   const [printing, setPrinting] = useState(null);
   const [deputy, setDeputy] = useState("");
   const [deputySig, setDeputySig] = useState(null);
@@ -69,7 +76,7 @@ export default function ExamSchedules() {
 
       const ctx = await loadExamContext(uid, effectiveRole);
       setTerms(ctx.terms);
-      if (ctx.terms.length) setKind(ctx.terms[0].kind);
+      setKind(currentKind(ctx.terms));
       setScopes(ctx.scopes); setScope(ctx.scopes[0] ?? null);
     })();
   }, [uid, effectiveRole]);
@@ -110,6 +117,10 @@ export default function ExamSchedules() {
     );
   }
 
+  const live = terms.filter((t) => !isEnded(t));
+  const past = terms.filter(isEnded);
+  const ended = !!term && isEnded(term);
+
   const soon = slots.map((s) => daysTo(s.exam_date)).filter((n) => n !== null && n >= 0);
   const nearest = soon.length ? Math.min(...soon) : null;
 
@@ -120,15 +131,43 @@ export default function ExamSchedules() {
         <p className="mt-1 text-sm text-muted">الجداول المعتمدة من إدارة المدرسة.</p>
       </div>
 
-      <div className="no-print flex flex-wrap gap-1.5">
-        {terms.map((t) => (
+      <div className="no-print flex flex-wrap items-center gap-1.5">
+        {live.map((t) => (
           <button key={t.kind} className={pill(kind === t.kind)} onClick={() => setKind(t.kind)}>
             {t.title}
           </button>
         ))}
+        {past.length > 0 && (
+          <button onClick={() => { const open = !showPast; setShowPast(open); if (!open && ended) setKind(currentKind(terms)); }}
+                  className="rounded-pill px-3 py-1.5 text-xs text-muted underline-offset-2 hover:underline">
+            {showPast ? "إخفاء الجداول المنتهية" : `الجداول المنتهية (${past.length})`}
+          </button>
+        )}
       </div>
+      {showPast && past.length > 0 && (
+        <div className="no-print flex flex-wrap gap-1.5 rounded-card border border-dashed border-line bg-canvas px-3 py-2">
+          <span className="self-center text-xs text-faint">منتهية:</span>
+          {past.map((t) => (
+            <button key={t.kind} className={`${pill(kind === t.kind)} opacity-80`} onClick={() => setKind(t.kind)}>
+              {t.title}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {scopes.length > 1 && (
+      {!term ? (
+        <div className="card px-6 py-10 text-center">
+          <p className="font-semibold text-ink">لا اختبارات قادمة حاليًا</p>
+          <p className="mt-1.5 text-sm text-muted">سيظهر الجدول هنا فور اعتماده من الإدارة.</p>
+        </div>
+      ) : (<>
+      {ended && (
+        <p className="no-print rounded-sm2 bg-canvas px-3 py-2 text-xs text-muted">
+          هذا الجدول منتهٍ، ويبقى هنا للاطلاع والطباعة.
+        </p>
+      )}
+
+      {term && scopes.length > 1 && (
         <div className="no-print -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
           {scopes.map((s) => (
             <button key={s.key}
@@ -140,7 +179,7 @@ export default function ExamSchedules() {
         </div>
       )}
 
-      {scope?.subjects?.length > 0 && (
+      {term && scope?.subjects?.length > 0 && (
         <p className="no-print text-xs text-muted">
           موادك في هذا الفصل: <b className="text-ink">{scope.subjects.map((x) => x.name).filter(Boolean).join("، ")}</b>
         </p>
@@ -210,6 +249,7 @@ export default function ExamSchedules() {
           طباعة / حفظ PDF
         </button>
       )}
+      </>)}
 
       {printing && (
         <div className="hidden print:block">

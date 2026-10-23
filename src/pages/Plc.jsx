@@ -21,6 +21,7 @@ import {
   useMyDepartment, headLabel, loadDeptTeachers, photoUrl, plcNotify,
 } from "../lib/plc";
 import { byName } from "../lib/sortAr.js";
+import NiepdLink from "../components/NiepdLink.jsx";
 
 /* =====================================================================
    التطوير المهني ← تقرير جلسة مجتمع التعلم المهني (src/lib/plc.js).
@@ -112,6 +113,8 @@ function SessionList() {
           مدير المدرسة. والمعتمدة تُضاف لكل من وقّع في سجل التطوير المهني (البند 2-6).
         </p>
       </div>
+
+      <NiepdLink />
 
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 

@@ -20,6 +20,7 @@ import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 import { useBackSteps, goBack } from "../lib/backStep.js";
 import { savedTheme, saveTheme, applyTheme } from "../lib/theme.js";
+import { EvidenceDock } from "./EvidenceTags.jsx";
 
 /* =====================================================================
    القائمة الجانبية — مرتبة من العمل اليومي إلى الإعدادات، وفي أسفلها
@@ -65,6 +66,8 @@ const ADMIN_GROUPS = [
     items: [
       { to: "/referrals", label: "إحالة طالب", roles: COUNSEL, icon: "send", kw: "موجه" },
       { to: "/behavior", label: "نماذج السلوك والمواظبة", roles: COUNSEL, icon: "flag", kw: "مخالفات غياب" },
+      { to: "/absence-excuses", label: "أعذار الغياب", roles: ["principal", "deputy_students", "clerk", "clerk_2", "tech_support"], icon: "idcard", kw: "عذر غياب طبي تقرير مرضي ولي أمر" },
+      { to: "/student-requests", label: "طلبات التواصل مع الوكيل", roles: ["principal", "deputy_students", "tech_support"], icon: "send", kw: "مقابلة ولي أمر طالب سؤال استفسار وكيل" },
       { to: "/student-affairs", label: "تقارير شؤون الطلاب", perm: "reports", icon: "chart", kw: "غياب" },
     ],
   },
@@ -106,6 +109,7 @@ const ADMIN_GROUPS = [
       { to: "/forms",        label: "إصدار النماذج", icon: "certificate", kw: "شهادات" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
+      { to: "/my-circulars", label: "تعاميمي", icon: "circular", kw: "تعميم اطلاع" },
       { to: "/plc",          label: "التطوير المهني", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "مجتمع التعلم" },
       { to: "/forms-admin",  label: "إدارة النماذج", manageForms: true, icon: "sliders" },
     ],
@@ -122,9 +126,11 @@ const ADMIN_GROUPS = [
   {
     title: "التواصل والمحتوى",
     items: [
+      { to: "/circulars",      label: "التعاميم", perm: "circulars", icon: "circular", kw: "تعميم وارد داخلي اطلاع ارشفة تذكير" },
       { to: "/notifications",  label: "الإشعارات", perm: "notifications", icon: "bell", kw: "رسائل" },
       { to: "/notifications-review", label: "اعتماد الإشعارات", techOnly: true, icon: "check" },
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
+      { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
@@ -232,6 +238,7 @@ const TEACHER_GROUPS = [
       { to: "/forms",        label: "النماذج والشهادات",  icon: "certificate" },
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
+      { to: "/my-circulars", label: "تعاميمي",            icon: "circular", kw: "تعميم اطلاع" },
       { to: "/plc",          label: "التطوير المهني",     icon: "users", kw: "مجتمع التعلم المهني" },
     ],
   },
@@ -260,10 +267,13 @@ const BASIC_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home" },
+      { to: "/my-week", label: "الجدول الأسبوعي", icon: "table", kw: "حصص جدول الدراسي" },
       { to: "/exams", label: "جداول الاختبارات", icon: "calendar" },
       // مركز التدريب (القدرات) — للطالب وحده من هذه القائمة، لا لولي الأمر
       { to: "/qudrat", label: "مركز التدريب", icon: "target", studentOnly: true, kw: "قياس قدرات تحصيلي" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
+      // التعاميم تصل أولياء الأمور لا الطلاب
+      { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
     ],
@@ -283,11 +293,11 @@ const BOTTOM = {
   admin:    ["/", "/students", "/permissions", "/forms", "/forms-review", "/my-documents"],
   teacher:  ["/", "/attendance", "/records", "/forms", "/quizzes", "/my-documents"],
   student:  ["/", "/qudrat", "/exams", "/my-documents"],
-  guardian: ["/", "/exams", "/my-documents"],
+  guardian: ["/", "/my-week", "/exams", "/my-documents"],
 };
 const BOTTOM_LABEL = {
   "/students": "الطلاب", "/permissions": "الاستئذان", "/forms": "النماذج", "/forms-review": "الاعتماد",
-  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي", "/qudrat": "التدريب",
+  "/records": "السجلات", "/attendance": "التحضير", "/quizzes": "اختباراتي", "/exams": "الاختبارات", "/my-documents": "نماذجي", "/qudrat": "التدريب", "/my-week": "الجدول",
 };
 
 /* البحث: توحيد الهمزات والتاء المربوطة والألف المقصورة وحذف التشكيل */
@@ -332,6 +342,7 @@ export function Icon({ name, className = "h-[18px] w-[18px]" }) {
     book:   "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v15H6.5A2.5 2.5 0 0 0 4 19.5zM4 19.5A2.5 2.5 0 0 1 6.5 17H20v5H6.5A2.5 2.5 0 0 1 4 19.5z",
     help:   "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4M12 17.5h.01",
     bell:   "M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0",
+    circular: "M7 3h7l5 5v13H7zM14 3v5h5M10 12h6M10 16h6M4 7v14h3",
     check:  "M20 6 9 17l-5-5",
     megaphone: "M3 11v2a2 2 0 0 0 2 2h1l2 6h2l-1.5-6H10l9 4V5l-9 4H5a2 2 0 0 0-2 2Zm7-2v6",
     wrench: "M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.6 2.6-2-2Z",
@@ -412,6 +423,7 @@ export default function Layout({ children }) {
   const visible = (i) => {
     if (i.staffOnly && !isStaff) return false;
     if (i.studentOnly && effectiveRole !== "student") return false;
+    if (i.guardianOnly && effectiveRole !== "guardian") return false;
     if (isAdmin) {
       if (i.hideForRoles?.some((r) => adminRoles.includes(r))) return false;
       if (i.roles && !i.roles.some((r) => adminRoles.includes(r))) return false;
@@ -712,6 +724,7 @@ export default function Layout({ children }) {
         end={i.to === "/"}
         onClick={() => reopenPage(i)}
         title={iconOnly ? i.label : undefined}
+        aria-label={iconOnly ? i.label : undefined}
         aria-current={active ? "page" : undefined}
         className={`relative flex items-center gap-3 rounded-sm2 text-[13.5px] transition-colors ${
           iconOnly ? "justify-center px-0 py-2.5" : "px-3 py-2"
@@ -789,16 +802,17 @@ export default function Layout({ children }) {
           ) : isAdmin ? (
             <>
               <div className="space-y-0.5">{topItems.map((i) => navItem(i, { iconOnly }))}</div>
-              {frequent.length > 0 && (
-                <div className={iconOnly ? "mt-2 border-t border-line pt-2" : "mt-3"}>
-                  {!iconOnly && <p className="mb-1 px-3 py-1.5 text-[12px] font-bold text-muted">الأكثر استخدامًا</p>}
-                  <div className="space-y-0.5">{frequent.map((i) => navItem(i, { iconOnly }))}</div>
-                </div>
-              )}
               <div className={iconOnly ? "mt-2 border-t border-line pt-2" : "mt-3"}>
                 {!iconOnly && <p className="mb-1 px-3 py-1.5 text-[12px] font-bold text-muted">الأقسام</p>}
                 <div className="space-y-0.5">{sections.map((x) => sectionNav(x, iconOnly))}</div>
               </div>
+              {/* «الأكثر استخدامًا» بعد الأقسام، في صندوق بلون ذهبي يميّزه عنها */}
+              {frequent.length > 0 && (
+                <div className={`mt-3 rounded-card border border-[#EADFBF] bg-[#FCF5E6] ${iconOnly ? "p-1" : "p-1.5"}`}>
+                  {!iconOnly && <p className="mb-1 px-3 py-1 text-[12px] font-bold text-[#8A6A1F]">الأكثر استخدامًا</p>}
+                  <div className="space-y-0.5">{frequent.map((i) => navItem(i, { iconOnly }))}</div>
+                </div>
+              )}
             </>
           ) : (
             groups.map((g, gi) => {
@@ -833,17 +847,19 @@ export default function Layout({ children }) {
           )}
         </nav>
 
-        {/* أسفل القائمة: الحساب والمساعدة */}
-        <div className={`space-y-0.5 border-t border-line py-2 ${iconOnly ? "px-2" : "px-3"}`}>
-          {footer.map((i) => navItem(i, { iconOnly }))}
+        {/* أسفل القائمة: الحساب والمساعدة — صف أيقونات واحد يظهر اسم كلٍّ منها عند الوقوف عليه،
+            وفي القائمة المطوية عمود أيقونات كما هي */}
+        <div className={`border-t border-line py-2 ${iconOnly ? "space-y-0.5 px-2" : "flex items-center gap-1 px-3"}`}>
+          {footer.map((i) => iconOnly ? navItem(i, { iconOnly }) : (
+            <div key={i.to} className="min-w-0 flex-1">{navItem(i, { iconOnly: true })}</div>
+          ))}
           {desktop && (
             <button type="button" onClick={() => setCollapsedSaved(!collapsed)}
-                    title={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
-                    className={`flex w-full items-center gap-3 rounded-sm2 py-2 text-[13px] font-medium text-faint hover:bg-canvas hover:text-ink ${
-                      iconOnly ? "justify-center" : "px-3"
+                    title={collapsed ? "توسيع القائمة" : "طيّ القائمة"} aria-label={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
+                    className={`flex items-center justify-center rounded-sm2 py-2.5 text-faint hover:bg-canvas hover:text-ink ${
+                      iconOnly ? "w-full" : "min-w-0 flex-1"
                     }`}>
               <Icon name={collapsed ? "panelOpen" : "panel"} className="h-[18px] w-[18px]" />
-              {!iconOnly && <span>طيّ القائمة</span>}
             </button>
           )}
         </div>
@@ -919,6 +935,8 @@ export default function Layout({ children }) {
           <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-6 lg:pb-5 ${showBack ? "pb-36" : "pb-24"}`}>
             <NavContext.Provider value={{ sections, badgeOf }}>
               <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
+              {/* صندوق شواهد ملف الأداء: آخر كل صفحة فيها إجراء يُحتسب شاهدًا (EvidenceTags) */}
+              <EvidenceDock />
             </NavContext.Provider>
             {/* سطر الحقوق أسفل كل صفحة، بعيدًا عن أزرار القائمة */}
             <footer className="mx-auto mt-10 max-w-5xl border-t border-line pt-3 text-center text-[11px] leading-relaxed text-faint print:hidden">

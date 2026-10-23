@@ -16,6 +16,7 @@ import { useMyDepartment, loadDeptTeachers, plcNotify } from "../lib/plc";
 import { PD_KINDS, PD_KIND_KEYS, PD_STATUS, PD_BUCKET, PD_MAX_FILES, pdStages, pdMissing } from "../lib/pd";
 import { HeadTag, useRoles, Chips, StageBar, C } from "./Plc.jsx";
 import { byName } from "../lib/sortAr.js";
+import NiepdLink from "../components/NiepdLink.jsx";
 
 /* =====================================================================
    التطوير المهني ← نماذج سجل التطوير المهني (src/lib/pd.js).
@@ -95,6 +96,8 @@ function ReportList() {
           وثّق مشاركتك، ويعتمدها وكيل الشؤون التعليمية، فتُضاف إلى سجل التطوير المهني في «شواهد الأداء الوظيفي».
         </p>
       </div>
+      <NiepdLink />
+
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 
       {isTeacher && (
