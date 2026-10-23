@@ -1,4 +1,6 @@
 // src/components/report/ReportKit.jsx
+// Copyright © 2026 محمد بن حسن الحازمي — جميع الحقوق محفوظة (انظر LICENSE).
+// Author: محمد بن حسن الحازمي
 import iconMint from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { Decor, ICONS } from "../../pages/studio/Sheets.jsx";

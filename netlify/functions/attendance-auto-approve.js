@@ -19,6 +19,7 @@
 // =====================================================================
 
 import { createClient } from "@supabase/supabase-js";
+import { cronAllowed, skipped } from "../lib/cronHost.js";
 
 const KSA = 3 * 60 * 60 * 1000;
 const BUFFER_MIN = 10;               // مهلة بعد نهاية الحصة قبل الاعتماد
@@ -227,6 +228,7 @@ async function notify(db, title, body) {
 /* ------------------------- التشغيل ------------------------- */
 
 export const handler = async () => {
+  if (!(await cronAllowed())) return skipped();
   const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
