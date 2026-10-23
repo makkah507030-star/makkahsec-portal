@@ -69,8 +69,8 @@ export default function AttendanceLog({ studentId, fp }) {
   const cards = [
     { k: "official", t: "أيام الغياب الرسمي", c: "text-absent" },
     { k: "excused",  t: "أيام الغياب بعذر",   c: "text-excused" },
-    { k: "periods",  t: "حصص غاب عنها",      c: "text-absent" },
-    { k: "late",     t: "حصص تأخر عنها",      c: "text-late" },
+    { k: "periods",  t: "حصص الغياب",          c: "text-absent" },
+    { k: "late",     t: "حصص التأخر",          c: "text-late" },
     ...(showMorning ? [{ k: "morning", t: "أيام التأخر الصباحي", c: "text-late" }] : []),
   ];
 
