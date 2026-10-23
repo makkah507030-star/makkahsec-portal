@@ -4,6 +4,7 @@ import { fmtHijri, fmtGreg } from "../lib/dates";
 import { todayISO } from "../lib/schoolTime";
 import { loadRangeStart } from "../lib/officialAttendance";
 import Loader from "./Loader.jsx";
+import { countAr } from "../lib/arabicCount.js";
 
 /* =====================================================================
    سجل الحضور للطالب وولي أمره (supabase/student_attendance_log.sql):
@@ -23,12 +24,14 @@ const PERIOD = {
   late:    { t: "متأخر",  c: "bg-late/10 text-late" },
   excused: { t: "مستأذن", c: "bg-excused/10 text-excused" },
 };
+const SHOW_DAYS = 7;   // آخر الأيام أولًا، والباقي بـ«عرض كل الأيام» حتى لا تطول الصفحة
 const dayName = (d) => new Date(`${d}T12:00:00`).toLocaleDateString("ar-SA", { weekday: "long" });
 
 export default function AttendanceLog({ studentId, fp }) {
   const [rows, setRows] = useState(null);
   const [from, setFrom] = useState(null);
   const [err, setErr] = useState("");
+  const [all, setAll] = useState(false);
 
   useEffect(() => {
     if (!studentId) return;
@@ -105,8 +108,11 @@ export default function AttendanceLog({ studentId, fp }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {rows.map((r) => {
+                {(all ? rows : rows.slice(0, SHOW_DAYS)).map((r) => {
                   const off = r.approved ? OFFICIAL[r.official] : null;
+                  // يوم غياب رسمي غاب فيه عن حصصه كلها: شارة واحدة بدل شارة لكل حصة
+                  const ps = r.periods ?? [];
+                  const wholeDay = r.official === "absent" && ps.length > 1 && ps.every((p) => p.status === "absent");
                   return (
                     <tr key={r.attend_date} className="align-top">
                       <td className="whitespace-nowrap px-4 py-2.5">
@@ -127,7 +133,12 @@ export default function AttendanceLog({ studentId, fp }) {
                         </td>
                       )}
                       <td className="px-3 py-2.5">
-                        {(r.periods ?? []).length === 0 ? <span className="text-xs text-faint">—</span> : (
+                        {ps.length === 0 ? <span className="text-xs text-faint">—</span> : wholeDay ? (
+                          <span className={`chip whitespace-nowrap ${PERIOD.absent.c}`}
+                                title={ps.map((p) => `ح${p.p}${p.subject ? ` ${p.subject}` : ""}`).join("، ")}>
+                            غائب عن الحصص كلها ({countAr(ps.length, "period")})
+                          </span>
+                        ) : (
                           <div className="flex flex-wrap gap-1">
                             {r.periods.map((p, i) => (
                               <span key={i} className={`chip gap-1 whitespace-nowrap ${PERIOD[p.status]?.c ?? ""}`}>
@@ -143,6 +154,12 @@ export default function AttendanceLog({ studentId, fp }) {
                 })}
               </tbody>
             </table>
+            {rows.length > SHOW_DAYS && (
+              <button onClick={() => setAll((v) => !v)}
+                      className="w-full border-t border-line py-2.5 text-xs font-semibold text-mint-deep hover:bg-canvas">
+                {all ? "عرض آخر الأيام فقط" : `عرض كل الأيام (${rows.length})`}
+              </button>
+            )}
           </div>
         )}
         <p className="border-t border-line bg-canvas/60 px-4 py-2.5 text-[11.5px] leading-relaxed text-muted">
