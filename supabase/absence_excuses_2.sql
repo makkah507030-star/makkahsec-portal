@@ -7,7 +7,7 @@
 
 create or replace function public.absence_excuse_decide(p_id uuid, p_accept boolean, p_note text default null)
 returns int language plpgsql security definer set search_path = public as $$
-declare e absence_excuses; who text; n int := 0; nid uuid; yr text;
+declare e absence_excuses; who text; rl text; n int := 0; nid uuid; yr text;
 begin
   if not public.excuse_manager() then raise exception 'غير مصرّح'; end if;
   select * into e from absence_excuses where id = p_id for update;
@@ -15,9 +15,12 @@ begin
   if e.status <> 'pending' then raise exception 'اتُّخذ القرار في هذا العذر'; end if;
   if not p_accept and coalesce(trim(p_note), '') = '' then raise exception 'اكتب سبب عدم القبول'; end if;
   who := (select full_name from users where id = auth.uid());
+  -- صفته كما تظهر مع القرار: أول ما يملكه بهذا الترتيب
+  select r.role_type::text into rl from admin_roles r where r.user_id = auth.uid()
+   order by array_position(array['deputy_students', 'clerk', 'clerk_2', 'principal', 'tech_support'], r.role_type::text) nulls last limit 1;
 
   update absence_excuses set status = case when p_accept then 'accepted' else 'rejected' end,
-         decision_note = nullif(trim(p_note), ''), decided_by_name = who, decided_at = now()
+         decision_note = nullif(trim(p_note), ''), decided_by_name = who, decided_by_role = rl, decided_at = now()
    where id = p_id;
 
   if p_accept then

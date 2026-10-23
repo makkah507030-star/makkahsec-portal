@@ -4,10 +4,10 @@ import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
 import { GRADE_NAMES } from "../lib/schoolTime";
 import Loader from "../components/Loader.jsx";
-import { EXCUSE_KIND, EXCUSE_STATUS, dayLabel, openExcuseFile } from "../components/AbsenceExcuse.jsx";
+import { EXCUSE_KIND, EXCUSE_STATUS, dayLabel, deciderText, openExcuseFile } from "../components/AbsenceExcuse.jsx";
 
 /* =====================================================================
-   أعذار الغياب — لوكيل شؤون الطلاب (ومعه المدير والدعم الفني):
+   أعذار الغياب — لوكيل شؤون الطلاب والمساعدَين الإداريَّين 1 و2 (ومعهم المدير والدعم الفني):
    يرفعها الطالب أو ولي أمره، فيقبلها الوكيل فيصير غياب أيامها «غائب بعذر» آليًا،
    أو يرفضها بسبب يصل صاحبها. (supabase/absence_excuses_1..2.sql)
    ===================================================================== */
@@ -95,7 +95,7 @@ export default function AbsenceExcuses() {
                   </div>
                 ) : (
                   <p className="border-t border-line pt-2 text-xs text-muted">
-                    {r.decided_by_name ?? ""} · <span className="num">{r.decided_at ? fmtDateTime(r.decided_at) : ""}</span>
+                    {deciderText(r)} · <span className="num">{r.decided_at ? fmtDateTime(r.decided_at) : ""}</span>
                     {r.decision_note && <> · {r.decision_note}</>}
                   </p>
                 )}

@@ -140,7 +140,7 @@ async function load() {
     staff ? count(head("perf_reviews").eq("teacher_user_id", uid).not("sent_at", "is", null).is("ack_at", null)) : none,
     myGrades.length ? count(head("guidance_requests").eq("status", "new").in("grade", myGrades)) : none,
     has("deputy_students") ? count(head("guidance_requests").eq("status", "new").eq("target", "deputy")) : none,
-    has("deputy_students") ? count(head("absence_excuses").eq("status", "pending")) : none,
+    has("deputy_students", "clerk", "clerk_2") ? count(head("absence_excuses").eq("status", "pending")) : none,
 
     // ولي الأمر: نماذج السلوك والإحالات التي تنتظر إقراره، والطالب: تعهداته
     isGuardian ? rowsFlag((f) => supabase.from("behavior_forms").select(`id, kind, student_name${f}`)

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtHijri, fmtGreg, fmtDateTime } from "../lib/dates";
+import { ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 
 /* =====================================================================
    أعذار الغياب (supabase/absence_excuses_1..2.sql): يرفعها الطالب أو ولي أمره من
@@ -17,6 +18,9 @@ export const EXCUSE_STATUS = {
 };
 const dayName = (d) => new Date(`${d}T12:00:00`).toLocaleDateString("ar-SA", { weekday: "long" });
 export const dayLabel = (d) => `${dayName(d)} ${fmtHijri(d)}`;
+// متخذ القرار باسمه وصفته: «فلان (المساعد الإداري 1)»
+export const deciderText = (e) => [e.decided_by_name, e.decided_by_role && `(${ADMIN_ROLE_LABEL[e.decided_by_role] ?? e.decided_by_role})`]
+  .filter(Boolean).join(" ");
 
 /* أعذار الطالب، وخريطة اليوم ← آخر عذر له؛ null قبل تشغيل ملف SQL */
 export function useExcuses(studentId) {
@@ -67,7 +71,7 @@ export function ExcuseForm({ studentId, days, initial, onDone, onCancel }) {
 
   return (
     <div className="space-y-2.5 border-b border-line bg-mint-tint/40 px-4 py-3">
-      <p className="text-sm font-semibold text-ink">تقديم عذر غياب لوكيل شؤون الطلاب</p>
+      <p className="text-sm font-semibold text-ink">تقديم عذر غياب لشؤون الطلاب</p>
       <div>
         <p className="mb-1 text-xs text-muted">أيام الغياب</p>
         <div className="flex flex-wrap gap-1.5">
@@ -95,7 +99,7 @@ export function ExcuseForm({ studentId, days, initial, onDone, onCancel }) {
         </button>
         <button className="btn-ghost" onClick={onCancel}>إلغاء</button>
       </div>
-      <p className="text-[11px] text-faint">عند قبول الوكيل يصير غياب هذه الأيام «غائب بعذر»، ويصلك إشعار بالقرار.</p>
+      <p className="text-[11px] text-faint">عند قبول العذر يصير غياب هذه الأيام «غائب بعذر»، ويصلك إشعار بالقرار.</p>
     </div>
   );
 }
@@ -116,8 +120,12 @@ export function ExcuseList({ list }) {
                 <span className="text-faint"> · {EXCUSE_KIND[e.kind] ?? ""}</span>
               </span>
               <span className={`chip ${st.c}`}>{st.t}</span>
-              {e.decision_note && <span className="w-full text-muted">ملاحظة الوكيل: {e.decision_note}</span>}
-              {e.decided_at && <span className="num w-full text-[10.5px] text-faint">{fmtDateTime(e.decided_at)}</span>}
+              {e.decision_note && <span className="w-full text-muted">الملاحظة: {e.decision_note}</span>}
+              {e.decided_at && (
+                <span className="w-full text-[10.5px] text-faint">
+                  {deciderText(e) && <>القرار: {deciderText(e)} · </>}<span className="num">{fmtDateTime(e.decided_at)}</span>
+                </span>
+              )}
             </li>
           );
         })}
