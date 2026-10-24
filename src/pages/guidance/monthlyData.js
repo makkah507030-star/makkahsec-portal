@@ -4,6 +4,7 @@ import { todayISO } from "../../lib/schoolTime";
 import { loadRangeStart, loadFingerprintPublic } from "../../lib/officialAttendance";
 import { reasonsOf } from "../../lib/guidanceWarning";
 import { loadPrograms, programState, BUCKET } from "../GuidanceMore.jsx";
+import { eventReach } from "../../lib/eventAudience.js";
 
 /* =====================================================================
    بيانات التقرير الشهري للموجه الطلابي — كل أعماله في الشهر لصفه:
@@ -44,7 +45,7 @@ export async function loadMonthly({ grade, month, uid, isCounselor }) {
       .or(`and(deputy_at.gte.${b.from},deputy_at.lt.${b.to}),and(counselor_at.gte.${b.from},counselor_at.lt.${b.to})`)),
     quiet(supabase.from("student_referrals").select("id", { count: "exact", head: true }).eq("grade", grade)
       .in("status", ["with_counselor", "returned_to_counselor"])),
-    uid ? quiet(supabase.from("school_events").select("id, title, event_date, stage, cancelled_at, event_participants(count)")
+    uid ? quiet(supabase.from("school_events").select("*, event_participants(count)")
       .eq("organizer_id", uid).gte("event_date", b.from).lt("event_date", b.to).is("cancelled_at", null)) : { data: [] },
     quiet(supabase.from("admin_roles").select("user_id, users(full_name)").eq("role_type", `counselor_${grade}`).limit(1).maybeSingle()),
     quiet(supabase.from("settings").select("key, value").in("key", ["active_year", "active_term"])),
@@ -143,7 +144,11 @@ export async function loadMonthly({ grade, month, uid, isCounselor }) {
       behavior: refsIn.filter((x) => x.kind === "behavior").length,
     },
     forms: { total: formRows.length, by: Object.entries(formsBy).sort((a, c) => c[1] - a[1]) },
-    events: (events.data ?? []).map((e) => ({ ...e, participants: e.event_participants?.[0]?.count ?? 0 })),
+    // المشاركون: المسمَّون، وفئات الحدث للمدرسة كلها (lib/eventAudience.js)
+    events: (events.data ?? []).map((e) => {
+      const named = e.event_participants?.[0]?.count ?? 0;
+      return { ...e, participants: eventReach(e, { total: named, attended: named }).attended };
+    }),
     weeks, trend,
   };
 }
