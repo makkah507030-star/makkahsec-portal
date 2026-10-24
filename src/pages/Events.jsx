@@ -21,7 +21,7 @@ import { sendPush } from "../lib/pushSend.js";
 import { countAr } from "../lib/arabicCount.js";
 import { cmpAr } from "../lib/sortAr.js";
 import { useBackStep } from "../lib/backStep.js";
-import { AUDIENCE, GRADES, audienceOf, audienceLabel, audiencePlace, scopeOf, scopePlace, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
+import { AUDIENCE, GRADES, audienceOf, audienceLabel, audienceTitle, scopeOf, scopePlace, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -182,7 +182,7 @@ export default function Events() {
                 {e.serial} · {fmtE(e)}
                 {e.category ? ` · ${e.category}` : ""}
                 {e.organizer_name ? ` · ${e.organizer_name}` : ""}
-                {audienceOf(e).length ? ` · ${audiencePlace(e)}: ${audienceLabel(e)}` : ""}
+                {audienceOf(e).length ? ` · ${audienceTitle(e)}: ${audienceLabel(e)}` : ""}
               </p>
               <div className="mt-2.5 h-1.5 overflow-hidden rounded-pill bg-canvas">
                 <div className={`h-full rounded-pill transition-all ${cancelled ? "bg-line" : "bg-mint-deep"}`}
@@ -246,7 +246,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
     setBusy(false);
     if (error) { onDone(null, { ok: false, text: error.message }); return; }
     onDone(data.id, { ok: true, text: f.audience.length
-      ? `أُنشئ الحدث ${serial} ${scopePlace(f.scope)}. أضف المكرَّمين بالاسم إن وُجدوا، ثم تابع.`
+      ? `أُنشئ الحدث ${serial} ${f.audience.some((k) => k === "students" || k === "guardians") ? `حدثًا عامًا ${scopePlace(f.scope)}` : "حدثًا عامًا"}. أضف المكرَّمين بالاسم إن وُجدوا، ثم تابع.`
       : `أُنشئ الحدث ${serial}. انتقل لاختيار الطلاب.` });
   };
 
@@ -340,7 +340,7 @@ function AudiencePicker({ value, onChange, scope = {}, onScope }) {
 
   return (
     <div>
-      <label className="text-xs text-muted">حدث عام (اختياري): المدرسة كلها أو صف معين</label>
+      <label className="text-xs text-muted">حدث عام (اختياري): جميع الصفوف أو صف معين</label>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
         {AUDIENCE.map((a) => (
           <button key={a.k} type="button" onClick={() => toggle(a.k)} className={chip(value.includes(a.k))}>
@@ -353,7 +353,7 @@ function AudiencePicker({ value, onChange, scope = {}, onScope }) {
         <div className="mt-2.5 space-y-2 rounded-sm2 border border-line bg-canvas/60 p-3">
           <p className="text-xs text-muted">الطلاب وأولياء الأمور من:</p>
           <div className="flex flex-wrap gap-1.5">
-            <button type="button" onClick={() => onScope({})} className={chip(!scope.grade)}>المدرسة كلها</button>
+            <button type="button" onClick={() => onScope({})} className={chip(!scope.grade)}>جميع الصفوف</button>
             {Object.entries(GRADES).map(([g, t]) => (
               <button key={g} type="button" onClick={() => onScope({ grade: Number(g) })}
                       className={chip(scope.grade === Number(g))}>الصف {t}</button>
@@ -511,7 +511,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
       {!cancelled && skip && (step === 2 || step === 3) && (
         <section className="card space-y-3 p-4">
           <p className="text-sm leading-relaxed text-ink">
-            الحدث {audiencePlace(e)} ({audienceLabel(e)})، فلا يحتاج موافقة أولياء الأمور ولا استئذانًا.
+            {audienceTitle(e)} ({audienceLabel(e)})، فلا يحتاج موافقة أولياء الأمور ولا استئذانًا.
           </p>
           <button className="btn-primary w-full" onClick={() => advance("attendance")}>المتابعة لكشف الحضور</button>
         </section>
@@ -842,7 +842,7 @@ function StageParticipants({ e, parts, reload, skip, onNext }) {
     <div className="space-y-3">
       {aud.length > 0 && (
         <section className="card space-y-2 border-[#CCF2DB] bg-mint-tint/50 p-4">
-          <p className="text-sm font-semibold text-ink">حدث عام {audiencePlace(e)}</p>
+          <p className="text-sm font-semibold text-ink">{audienceTitle(e)}</p>
           <div className="flex flex-wrap gap-1.5">
             {AUDIENCE.filter((a) => aud.includes(a.k)).map((a) => (
               <span key={a.k} className="chip bg-white text-mint-deep">

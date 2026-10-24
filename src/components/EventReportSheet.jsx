@@ -4,7 +4,7 @@ import logoIcon from "../assets/icon-mint.png";
 import { fmtDate } from "../lib/dates";
 import { eventDateRange } from "../lib/eventDates.js";
 import BidiDate from "./BidiDate.jsx";
-import { audienceLabel, audiencePlace } from "../lib/eventAudience.js";
+import { audienceLabel, audienceTitle } from "../lib/eventAudience.js";
 
 /* =====================================================================
    تقرير تنفيذ الحدث — ورقة A4 عمودية بهوية المدرسة.
@@ -141,7 +141,7 @@ export default function EventReportSheet({ event: e, stats, attended, staff = []
           {audienceLabel(e) && (
             <tr>
               <td colSpan={2} style={cell}>
-                <span style={{ color: "#6B7A72" }}>حدث عام {audiencePlace(e)}: </span>{audienceLabel(e)}
+                <span style={{ color: "#6B7A72" }}>{audienceTitle(e)}: </span>{audienceLabel(e)}
               </td>
             </tr>
           )}

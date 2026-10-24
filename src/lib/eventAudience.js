@@ -23,9 +23,9 @@ export const scopeOf = (e) => {
   const s = e?.audience_scope ?? {};
   return s.grade ? { grade: Number(s.grade), classes: (s.classes ?? []).map(Number) } : {};
 };
-/** «المدرسة كلها» أو «الصف الأول الثانوي» أو «الفصول 101، 102» */
+/** «جميع الصفوف» أو «الصف الأول الثانوي» أو «الفصول 101، 102» */
 export const scopeText = (scope) =>
-  !scope?.grade ? "المدرسة كلها"
+  !scope?.grade ? "جميع الصفوف"
   : scope.classes?.length ? `${scope.classes.length > 1 ? "الفصول" : "الفصل"} ${scope.classes.join("، ")}`
   : `الصف ${GRADES[scope.grade]}`;
 const massKinds = (e) => audienceOf(e).filter((k) => k === "students" || k === "guardians");
@@ -34,13 +34,16 @@ export const audienceLabel = (e) => {
   const t = audienceOf(e).map((k) => AUDIENCE.find((a) => a.k === k).t).join("، ");
   return massKinds(e).length && scopeOf(e).grade ? `${t} (${scopeText(scopeOf(e))})` : t;
 };
-/** «للمدرسة كلها» أو «للصف الأول الثانوي» أو «لفصول 101، 102» */
+/** «لجميع الصفوف» أو «للصف الأول الثانوي» أو «لفصول 101، 102» */
 export function scopePlace(sc) {
-  if (!sc?.grade) return "للمدرسة كلها";
+  if (!sc?.grade) return "لجميع الصفوف";
   if (!sc.classes?.length) return `للصف ${GRADES[sc.grade]}`;
   return `${sc.classes.length > 1 ? "لفصول" : "للفصل"} ${sc.classes.join("، ")}`;
 }
-export const audiencePlace = (e) => scopePlace(massKinds(e).length ? scopeOf(e) : {});
+/** نطاق الحدث العام إن كان فيه طلاب أو أولياء أمور، وإلا فارغ (حدث للمعلمين أو الإدارة) */
+export const audiencePlace = (e) => (massKinds(e).length ? scopePlace(scopeOf(e)) : "");
+/** «حدث عام لجميع الصفوف» أو «حدث عام للصف الأول الثانوي» أو «حدث عام» */
+export const audienceTitle = (e) => ["حدث عام", audiencePlace(e)].filter(Boolean).join(" ");
 
 /** الفئات التي يُسجَّل حضورها بالاسم وتصدر لها الشهادات: المعلمون والإدارة */
 export const staffKinds = (e) => audienceOf(e).filter((k) => k === "teachers" || k === "admin");
