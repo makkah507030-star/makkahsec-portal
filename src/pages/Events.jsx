@@ -21,7 +21,7 @@ import { sendPush } from "../lib/pushSend.js";
 import { countAr } from "../lib/arabicCount.js";
 import { cmpAr } from "../lib/sortAr.js";
 import { useBackStep } from "../lib/backStep.js";
-import { AUDIENCE, audienceOf, audienceLabel, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
+import { AUDIENCE, GRADES, audienceOf, audienceLabel, audiencePlace, scopeOf, scopePlace, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -182,7 +182,7 @@ export default function Events() {
                 {e.serial} · {fmtE(e)}
                 {e.category ? ` · ${e.category}` : ""}
                 {e.organizer_name ? ` · ${e.organizer_name}` : ""}
-                {audienceOf(e).length ? ` · للمدرسة كلها: ${audienceLabel(e)}` : ""}
+                {audienceOf(e).length ? ` · ${audiencePlace(e)}: ${audienceLabel(e)}` : ""}
               </p>
               <div className="mt-2.5 h-1.5 overflow-hidden rounded-pill bg-canvas">
                 <div className={`h-full rounded-pill transition-all ${cancelled ? "bg-line" : "bg-mint-deep"}`}
@@ -202,7 +202,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
   const [cats, setCats] = useState([]);
   const [f, setF] = useState({
     title: "", category: "", event_date: todayISO(), end_date: "",
-    start_time: "", end_time: "", venue: "", description: "", goals: "", audience: [],
+    start_time: "", end_time: "", venue: "", description: "", goals: "", audience: [], scope: {},
   });
   const [busy, setBusy] = useState(false);
 
@@ -234,6 +234,8 @@ function NewEvent({ uid, profile, roles, onDone }) {
       goals: f.goals.trim() || null,
       // يُرسل العمود عند اختيار فئة فقط، فلا يتعطّل إنشاء الأحداث العادية قبل تشغيل events_audience_1.sql
       ...(f.audience.length ? { audience: f.audience } : {}),
+      // نطاق الطلاب وأولياء الأمور: صف أو فصول منه (events_audience_3.sql)
+      ...(f.scope.grade ? { audience_scope: f.scope } : {}),
       organizer_id: uid,
       organizer_name: profile?.full_name ?? "",
       organizer_role: roleLabel,
@@ -244,7 +246,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
     setBusy(false);
     if (error) { onDone(null, { ok: false, text: error.message }); return; }
     onDone(data.id, { ok: true, text: f.audience.length
-      ? `أُنشئ الحدث ${serial} للمدرسة كلها. أضف المكرَّمين بالاسم إن وُجدوا، ثم تابع.`
+      ? `أُنشئ الحدث ${serial} ${scopePlace(f.scope)}. أضف المكرَّمين بالاسم إن وُجدوا، ثم تابع.`
       : `أُنشئ الحدث ${serial}. انتقل لاختيار الطلاب.` });
   };
 
@@ -294,7 +296,8 @@ function NewEvent({ uid, profile, roles, onDone }) {
                   onChange={(e) => setF((x) => ({ ...x, goals: e.target.value }))} />
       </div>
 
-      <AudiencePicker value={f.audience} onChange={(audience) => setF((x) => ({ ...x, audience }))} />
+      <AudiencePicker value={f.audience} onChange={(audience) => setF((x) => ({ ...x, audience }))}
+                      scope={f.scope} onScope={(scope) => setF((x) => ({ ...x, scope }))} />
 
       <button className="btn-primary w-full" onClick={save}
               disabled={busy || f.title.trim().length < 3 || !f.event_date || (f.end_date && f.end_date < f.event_date)}>
@@ -304,33 +307,74 @@ function NewEvent({ uid, profile, roles, onDone }) {
   );
 }
 
-/* «حدث للمدرسة كلها»: فئة أو أكثر يُحسب أفرادها آليًا، دون اختيار أسمائهم */
-function AudiencePicker({ value, onChange }) {
+/* «حدث عام»: فئة أو أكثر يُحسب أفرادها آليًا، دون اختيار أسمائهم.
+   الطلاب وأولياء الأمور للمدرسة كلها، أو لصف معين بكل فصوله أو بفصول منه. */
+function AudiencePicker({ value, onChange, scope = {}, onScope }) {
   const [counts, setCounts] = useState(null);
+  const [classes, setClasses] = useState([]);
+  const scopeKey = JSON.stringify(scope);
   useEffect(() => {
-    supabase.rpc("ev_audience_count", { p_audience: AUDIENCE.map((a) => a.k) })
+    supabase.rpc("ev_audience_count", { p_audience: AUDIENCE.map((a) => a.k), ...(scope.grade ? { p_scope: scope } : {}) })
       .then(({ data }) => setCounts(data ?? null));
+  }, [scopeKey]);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    (async () => {
+      const { data: st } = await supabase.from("settings").select("value").eq("key", "active_year").maybeSingle();
+      const { data } = await supabase.from("classes").select("class_no, grade")
+        .eq("academic_year", st?.value ?? "").eq("is_active", true).order("class_no");
+      setClasses(data ?? []);
+    })();
   }, []);
   const toggle = (k) => onChange(value.includes(k) ? value.filter((x) => x !== k) : [...value, k]);
   const hasStaff = value.includes("teachers") || value.includes("admin");
   const hasMass = value.includes("students") || value.includes("guardians");
+  const ofGrade = classes.filter((c) => c.grade === scope.grade);
+  const picked = scope.classes ?? [];
+  const toggleClass = (no) => {
+    const next = picked.includes(no) ? picked.filter((x) => x !== no) : [...picked, no].sort((a, b) => a - b);
+    // اختيار كل الفصول واحدًا واحدًا = الصف كله
+    onScope(next.length && next.length < ofGrade.length ? { grade: scope.grade, classes: next } : { grade: scope.grade });
+  };
+  const chip = (on) => `rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+    on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
   return (
     <div>
-      <label className="text-xs text-muted">حدث للمدرسة كلها (اختياري)</label>
+      <label className="text-xs text-muted">حدث عام (اختياري): المدرسة كلها أو صف معين</label>
       <div className="mt-1.5 flex flex-wrap gap-1.5">
         {AUDIENCE.map((a) => (
-          <button key={a.k} type="button" onClick={() => toggle(a.k)}
-            className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
-              value.includes(a.k) ? "bg-mint-deep text-white"
-                                  : "border border-line bg-white text-muted hover:bg-canvas"}`}>
+          <button key={a.k} type="button" onClick={() => toggle(a.k)} className={chip(value.includes(a.k))}>
             {value.includes(a.k) ? "✓ " : ""}{a.t}
             {counts && <span className="num mr-1 opacity-75">({counts[a.k] ?? 0})</span>}
           </button>
         ))}
       </div>
+      {hasMass && onScope && (
+        <div className="mt-2.5 space-y-2 rounded-sm2 border border-line bg-canvas/60 p-3">
+          <p className="text-xs text-muted">الطلاب وأولياء الأمور من:</p>
+          <div className="flex flex-wrap gap-1.5">
+            <button type="button" onClick={() => onScope({})} className={chip(!scope.grade)}>المدرسة كلها</button>
+            {Object.entries(GRADES).map(([g, t]) => (
+              <button key={g} type="button" onClick={() => onScope({ grade: Number(g) })}
+                      className={chip(scope.grade === Number(g))}>الصف {t}</button>
+            ))}
+          </div>
+          {scope.grade > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" onClick={() => onScope({ grade: scope.grade })} className={chip(!picked.length)}>
+                كل فصول الصف
+              </button>
+              {ofGrade.map((c) => (
+                <button key={c.class_no} type="button" onClick={() => toggleClass(c.class_no)}
+                        className={`num ${chip(picked.includes(c.class_no))}`}>{c.class_no}</button>
+              ))}
+            </div>
+          )}
+          {scope.grade > 0 && <p className="text-[11px] text-faint">الحدث {scopePlace(scope)}، والأعداد أعلاه لهذا النطاق.</p>}
+        </div>
+      )}
       <div className="mt-1.5 space-y-0.5 text-[11px] leading-relaxed text-faint">
-        {!value.length && <p>اختر فئة أو أكثر إن كان الحدث لها كلها، فتُحسب في التقارير دون اختيار أسمائها.</p>}
+        {!value.length && <p>اختر فئة أو أكثر إن كان الحدث لها كلها أو لصف معين، فتُحسب في التقارير دون اختيار أسمائها. ولطلاب محددين بالاسم اتركها فارغة واخترهم في الخطوة التالية.</p>}
         {hasMass && <p>الطلاب وأولياء الأمور: لا يحتاج الحدث موافقة ولا استئذانًا، ولا تصدر لهم شهادات جماعية. المكرَّمون منهم يُضافون بالاسم.</p>}
         {hasStaff && <p>المعلمون والإدارة: يُحدَّد من حضر منهم في كشف الحضور، وتصدر الشهادات لهم.</p>}
       </div>
@@ -436,7 +480,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
           const active = i === step;
           return (
             <button key={s.key} onClick={() => reached && setStep(i)} disabled={!reached}
-              title={skipped ? "لا تلزم في حدث للمدرسة كلها" : undefined}
+              title={skipped ? "لا تلزم في الحدث العام" : undefined}
               className={`flex shrink-0 items-center gap-1.5 rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
                 active ? "bg-mint-deep text-white"
                 : reached ? "border border-mint-light bg-mint-tint text-mint-deep"
@@ -467,7 +511,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
       {!cancelled && skip && (step === 2 || step === 3) && (
         <section className="card space-y-3 p-4">
           <p className="text-sm leading-relaxed text-ink">
-            الحدث للمدرسة كلها ({audienceLabel(e)})، فلا يحتاج موافقة أولياء الأمور ولا استئذانًا.
+            الحدث {audiencePlace(e)} ({audienceLabel(e)})، فلا يحتاج موافقة أولياء الأمور ولا استئذانًا.
           </p>
           <button className="btn-primary w-full" onClick={() => advance("attendance")}>المتابعة لكشف الحضور</button>
         </section>
@@ -600,7 +644,7 @@ function StageInfo({ e, parts, patch, onNext }) {
     title: e.title ?? "", category: e.category ?? "", event_date: e.event_date ?? "", end_date: e.end_date ?? "",
     description: e.description ?? "", goals: e.goals ?? "", venue: e.venue ?? "",
     start_time: String(e.start_time ?? "").slice(0, 5), end_time: String(e.end_time ?? "").slice(0, 5),
-    audience: audienceOf(e),
+    audience: audienceOf(e), scope: scopeOf(e),
   });
   const [f, setF] = useState(init);
   const [busy, setBusy] = useState(false);
@@ -651,6 +695,7 @@ function StageInfo({ e, parts, patch, onNext }) {
       description: f.description.trim() || null,
       goals: f.goals.trim() || null,
       // من سُجّل حضوره من فئة أُزيلت يُحذف معها
+      ...(JSON.stringify(f.scope) !== JSON.stringify(was.scope) ? { audience_scope: f.scope } : {}),
       ...(JSON.stringify(f.audience) !== JSON.stringify(was.audience) ? {
         audience: f.audience,
         audience_attended: (e.audience_attended ?? []).filter((x) =>
@@ -720,7 +765,8 @@ function StageInfo({ e, parts, patch, onNext }) {
         <textarea rows={2} className="field mt-1 w-full" value={f.goals}
                   onChange={(x) => setF((v) => ({ ...v, goals: x.target.value }))} />
       </div>
-      <AudiencePicker value={f.audience} onChange={(audience) => setF((v) => ({ ...v, audience }))} />
+      <AudiencePicker value={f.audience} onChange={(audience) => setF((v) => ({ ...v, audience }))}
+                      scope={f.scope} onScope={(scope) => setF((v) => ({ ...v, scope }))} />
       <p className="text-[11px] text-faint">عنوان الشهادة وقالبها ونصّها تُضبط في مرحلة «الشهادات».</p>
 
       <div className="flex flex-wrap gap-2">
@@ -796,7 +842,7 @@ function StageParticipants({ e, parts, reload, skip, onNext }) {
     <div className="space-y-3">
       {aud.length > 0 && (
         <section className="card space-y-2 border-[#CCF2DB] bg-mint-tint/50 p-4">
-          <p className="text-sm font-semibold text-ink">حدث للمدرسة كلها</p>
+          <p className="text-sm font-semibold text-ink">حدث عام {audiencePlace(e)}</p>
           <div className="flex flex-wrap gap-1.5">
             {AUDIENCE.filter((a) => aud.includes(a.k)).map((a) => (
               <span key={a.k} className="chip bg-white text-mint-deep">

@@ -15,8 +15,32 @@ export const AUDIENCE = [
 const KEYS = AUDIENCE.map((a) => a.k);
 
 export const audienceOf = (e) => (e?.audience ?? []).filter((k) => KEYS.includes(k));
-export const audienceLabel = (e) =>
-  audienceOf(e).map((k) => AUDIENCE.find((a) => a.k === k).t).join("، ");
+
+/* نطاق الطلاب وأولياء الأمور (school_events.audience_scope — events_audience_3.sql):
+   {} المدرسة كلها، {grade} صف كامل، {grade, classes:[101, 102]} فصول منه */
+export const GRADES = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
+export const scopeOf = (e) => {
+  const s = e?.audience_scope ?? {};
+  return s.grade ? { grade: Number(s.grade), classes: (s.classes ?? []).map(Number) } : {};
+};
+/** «المدرسة كلها» أو «الصف الأول الثانوي» أو «الفصول 101، 102» */
+export const scopeText = (scope) =>
+  !scope?.grade ? "المدرسة كلها"
+  : scope.classes?.length ? `${scope.classes.length > 1 ? "الفصول" : "الفصل"} ${scope.classes.join("، ")}`
+  : `الصف ${GRADES[scope.grade]}`;
+const massKinds = (e) => audienceOf(e).filter((k) => k === "students" || k === "guardians");
+
+export const audienceLabel = (e) => {
+  const t = audienceOf(e).map((k) => AUDIENCE.find((a) => a.k === k).t).join("، ");
+  return massKinds(e).length && scopeOf(e).grade ? `${t} (${scopeText(scopeOf(e))})` : t;
+};
+/** «للمدرسة كلها» أو «للصف الأول الثانوي» أو «لفصول 101، 102» */
+export function scopePlace(sc) {
+  if (!sc?.grade) return "للمدرسة كلها";
+  if (!sc.classes?.length) return `للصف ${GRADES[sc.grade]}`;
+  return `${sc.classes.length > 1 ? "لفصول" : "للفصل"} ${sc.classes.join("، ")}`;
+}
+export const audiencePlace = (e) => scopePlace(massKinds(e).length ? scopeOf(e) : {});
 
 /** الفئات التي يُسجَّل حضورها بالاسم وتصدر لها الشهادات: المعلمون والإدارة */
 export const staffKinds = (e) => audienceOf(e).filter((k) => k === "teachers" || k === "admin");
