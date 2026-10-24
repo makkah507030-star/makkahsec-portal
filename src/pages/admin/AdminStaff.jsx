@@ -95,19 +95,25 @@ function Members() {
     setSaving(true);
     setMsg(null);
     try {
+      // الدالة تستبدل أدوار الحساب كلها، فرقم هوية لحساب قائم تُضاف أدواره الجديدة إلى أدواره
+      // السابقة ولا تحلّ محلها (كي لا يفقد الدعم الفني دوره حين يُضاف له دور المعمل مثلًا)
+      const existing = list.find((a) => a.username === nationalId.trim());
+      const all = existing ? [...new Set([...existing.roles, ...roles])] : Array.from(roles);
       const { data: { session } } = await supabase.auth.getSession();
       const { data, error } = await supabase.functions.invoke("create-admin-account", {
         body: {
           full_name: fullName.trim(),
           national_id: nationalId.trim(),
-          admin_roles: Array.from(roles),
+          admin_roles: all,
         },
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setMsg({ ok: true, text: `حُفظ حساب ${data.full_name}.` });
+      setMsg({ ok: true, text: existing
+        ? `أُضيف الدور إلى حساب ${data.full_name} القائم، وبقيت أدواره السابقة. أدواره الآن: ${all.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join("، ")}.`
+        : `حُفظ حساب ${data.full_name}.` });
       setFullName(""); setNationalId(""); setRoles(new Set());
       await load();
     } catch (e) {
