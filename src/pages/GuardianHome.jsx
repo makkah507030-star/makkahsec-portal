@@ -148,7 +148,7 @@ export default function GuardianHome() {
         </div>
       )}
 
-      <StudentHeader name={active?.full_name} grade={info?.grade} classNo={info?.class_no} guardian />
+      <StudentHeader name={active?.full_name} grade={info?.grade} classNo={info?.class_no} studentId={active?.id} guardian />
 
       {/* إعلانات الفرص والمناسبات */}
       <HomeBanners />

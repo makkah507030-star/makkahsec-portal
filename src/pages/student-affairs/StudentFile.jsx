@@ -117,11 +117,12 @@ function FileBody({ s, from, to }) {
     let live = true;
     setData(null);
     const args = { p_student: s.student_id, p_from: from, p_to: to };
-    Promise.all(["student_file_attendance", "student_file_conduct", "student_file_academic"]
-      .map((f) => supabase.rpc(f, args))).then(([a, c, k]) => {
+    Promise.all(["student_file_attendance", "student_file_conduct", "student_file_academic", "student_file_guardian"]
+      .map((f) => supabase.rpc(f, args))).then(([a, c, k, g]) => {
         if (!live) return;
         const err = a.error ?? c.error ?? k.error;
-        setData(err ? { err } : { att: a.data, con: c.data, aca: k.data });
+        // تواصل ولي الأمر عبر البوابة (student_file_4.sql)؛ قبل تشغيله يبقى null
+        setData(err ? { err } : { att: a.data, con: c.data, aca: k.data, gd: g.error ? null : g.data });
       });
     return () => { live = false; };
   }, [s, from, to, reload]);
@@ -155,7 +156,7 @@ function FileBody({ s, from, to }) {
         <Referrals m={m} con={data.con} />
         <Academic m={m} aca={data.aca} />
         <Achievements m={m} aca={data.aca} scout={st.scout} />
-        <Contact m={m} con={data.con} st={st} />
+        <Contact gd={data.gd} st={st} />
       </div>
 
       {/* إشعار الفترة من نور كما يراه الطالب، ومعه المجموع والنسبة للإدارة */}
@@ -180,11 +181,16 @@ function Header({ st, s, m, notes, onPrint }) {
     health.length > 0 && { t: "ملاحظة صحية", c: "bg-excused/10 text-excused" },
     st.scout && { t: "عضو الفريق الكشفي", c: "bg-mint-tint text-mint-deep" },
   ].filter(Boolean);
-  const initials = (st.full_name ?? s.full_name).split(" ").slice(0, 2).map((w) => w[0]).join(" ");
   return (
     <section className="card flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-card bg-mint-deep text-lg font-bold text-white">{initials}</div>
+        {/* رمز الطالب: قبعة تخرج فوق شخص */}
+        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-card bg-mint-deep text-white" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3 3 7l9 4 9-4-9-4Z" /><path d="M7 9v3.2c0 1.2 2.2 2.3 5 2.3s5-1.1 5-2.3V9" /><path d="M21 7v4" />
+            <path d="M5.5 21c.9-2.6 3.5-4.2 6.5-4.2s5.6 1.6 6.5 4.2" />
+          </svg>
+        </div>
         <div className="min-w-0 space-y-1">
           <h2 className="text-lg font-bold leading-snug text-ink">{st.full_name ?? s.full_name}</h2>
           <p className="text-xs text-muted">
@@ -542,22 +548,61 @@ function Achievements({ m, aca, scout }) {
   );
 }
 
-const SMS_TYPES = { absence: "غياب", late: "تأخر", warning: "إنذار", behavior: "سلوك", referral: "إحالة", other: "أخرى" };
-function Contact({ m, con, st }) {
-  const sms = con?.sms ?? { total: 0, sent: 0, types: {} };
-  const forms = m.behavior.filter((b) => b.kind !== "incident" && b.kind !== "statement");
-  const refAck = m.referrals.filter((r) => r.ack).length;
+/* تقييم متابعة ولي الأمر من نسبة رده على ما يحتاج ردًّا أو إقرارًا في البوابة */
+function guardianRating(gd) {
+  if (!gd) return null;
+  const need = gd.items?.length ?? 0;
+  const replied = (gd.items ?? []).filter((i) => i.replied).length;
+  const rate = need ? Math.round((100 * replied) / need) : null;
+  const r = !gd.accounts ? { t: "لا حساب لولي الأمر في البوابة", c: "bg-absent/10 text-absent", bar: "bg-absent" }
+    : rate == null ? { t: "لا يوجد ما يحتاج ردًّا في الفترة", c: "bg-canvas text-muted", bar: "bg-faint" }
+    : rate >= 80 ? { t: "متابع لابنه", c: "bg-present/10 text-present", bar: "bg-present" }
+    : rate >= 50 ? { t: "متابع جزئيًا", c: "bg-late/10 text-late", bar: "bg-late" }
+    : { t: "غير متابع", c: "bg-absent/10 text-absent", bar: "bg-absent" };
+  return { ...r, need, replied, rate };
+}
+
+/* التواصل مع ولي الأمر عن طريق البوابة وحدها (student_file_4.sql) */
+function Contact({ gd, st }) {
+  if (!gd) {
+    return (
+      <Section title="التواصل مع ولي الأمر" icon="chat" wide>
+        <Empty>تحتاج تشغيل supabase/student_file_4.sql لعرض تواصل ولي الأمر عبر البوابة.</Empty>
+      </Section>
+    );
+  }
+  const R = guardianRating(gd);
+  const readPct = gd.notif_total ? Math.round((100 * gd.notif_read) / gd.notif_total) : null;
   return (
-    <Section title="التواصل مع ولي الأمر" icon="chat" wide>
-      <div className="grid grid-cols-3 gap-2">
-        <Stat v={sms.total} l="رسائل" />
-        <Stat v={sms.total ? `${Math.round((100 * sms.sent) / sms.total)}%` : "—"} l="وصلت" c={sms.total && sms.sent < sms.total ? "text-late" : "text-present"} />
-        <Stat v={`${forms.filter((b) => b.ack).length + refAck}/${forms.length + m.referrals.length}`} l="اطّلع عليها" />
+    <Section title="التواصل مع ولي الأمر عبر البوابة" icon="chat" wide>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`chip text-xs font-semibold ${R.c}`}>{R.t}</span>
+        {R.rate != null && <span className="text-xs text-muted">بناءً على ردّه على ما يحتاج ردًّا: <b className="num text-ink">{R.rate}%</b></span>}
       </div>
-      {Object.keys(sms.types ?? {}).length > 0
-        ? <Bars rows={Object.entries(sms.types).map(([k, v]) => [SMS_TYPES[k] ?? k, v])} color="bg-mint-deep" />
-        : <Empty>لا رسائل في الفترة.</Empty>}
-      {!st.guardian?.mobile && <p className="rounded-sm2 bg-absent/10 px-3 py-1.5 text-xs text-absent">لا رقم جوال لولي الأمر، فلا تصله الرسائل ولا الإشعارات.</p>}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Stat v={gd.notif_total} l="إشعارات وصلت" />
+        <Stat v={readPct != null ? `${readPct}%` : "—"} l={`قرأها (${gd.notif_read})`} c={readPct != null && readPct < 50 ? "text-late" : "text-ink"} />
+        <Stat v={R.need} l="تحتاج ردًّا" />
+        <Stat v={R.need ? `${R.replied} (${R.rate}%)` : "—"} l="ردّ عليها" c={R.rate != null && R.rate < 50 ? "text-absent" : R.rate != null && R.rate < 80 ? "text-late" : "text-present"} />
+      </div>
+      {R.need > 0 && (
+        <>
+          <div className="h-2 overflow-hidden rounded-full bg-canvas"><div className={`h-full ${R.bar}`} style={{ width: `${R.rate}%` }} /></div>
+          <ul className="divide-y divide-line text-sm">
+            {gd.items.map((i, k) => (
+              <li key={k} className="flex flex-wrap items-center gap-2 py-1.5">
+                <span className="min-w-0 flex-1 text-ink">{i.title}</span>
+                <span className="num text-[11px] text-muted">{day(String(i.d).slice(0, 10))}</span>
+                <span className={`text-[11px] font-semibold ${i.replied ? "text-present" : "text-absent"}`}>{i.replied ? "ردّ ✓" : "لم يرد"}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className="text-[11px] text-faint">
+        التواصل عن طريق البوابة وحدها: الإشعارات تصل حساب ولي الأمر{st.guardian?.name ? ` (${st.guardian.name})` : ""}، وما يحتاج ردًّا هو نماذج التعهد والدعوة والإشعار،
+        والإحالات، واستفسارات الموجه، والتعاميم التي تطلب الإقرار. التقييم: 80% فأكثر متابع، ومن 50% متابع جزئيًا، ودونها غير متابع.
+      </p>
     </Section>
   );
 }
@@ -623,7 +668,7 @@ function printFile({ s, st, m, data, from, to, fp, kpis }) {
     ${m.result ? head("نتيجة نور") + `<p>المعدل ${m.result.average ?? "—"}${m.result.rank_class ? ` · ترتيبه في الفصل ${m.result.rank_class} من ${m.result.class_count}` : ""}${m.result.rank_grade ? ` · وفي الصف ${m.result.rank_grade} من ${m.result.grade_count}` : ""}</p>` : ""}
     ${block("الشهادات والنماذج", m.docs.map((d) => [d.title, d.category === "certificate" ? "شهادة" : "نموذج", day(d.d), d.by ?? ""]), ["العنوان", "النوع", "التاريخ", "المُصدِر"], "لا شهادات في الفترة.")}
     ${block("الفعاليات", m.events.map((e) => [e.title, e.category ?? "", day(e.d), e.attended ? "حضر" : "لم يحضر"]), ["الفعالية", "الفئة", "التاريخ", "الحضور"], "لا مشاركات في الفترة.")}
-    ${head("التواصل مع ولي الأمر")}<p>رسائل نصية: ${con.sms?.total ?? 0} (وصل منها ${con.sms?.sent ?? 0})</p>
+    ${(() => { const R = guardianRating(data.gd); return R ? head("التواصل مع ولي الأمر عبر البوابة") + `<p>${R.t} · إشعارات وصلت: ${data.gd.notif_total} (قرأ ${data.gd.notif_read}) · تحتاج ردًّا: ${R.need} · ردّ: ${R.replied}${R.rate != null ? ` (${R.rate}%)` : ""}</p>` : ""; })()}
     ${aca.league?.length ? block("نقاط دوري المواد", aca.league.map((l) => [l.subject ?? "—", l.points]), ["المادة", "النقاط"], "") : ""}`;
 
   printReport({

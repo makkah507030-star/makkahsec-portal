@@ -1,4 +1,6 @@
 // src/App.jsx
+// Copyright © 2026 محمد بن حسن الحازمي — جميع الحقوق محفوظة (انظر LICENSE).
+// Author: محمد بن حسن الحازمي
 import { Suspense, lazy, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useSession } from "./lib/session.jsx";
@@ -106,6 +108,12 @@ const BannersAdmin = lazy(() => import("./pages/banners/BannersAdmin.jsx"));
 const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx"));
 const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
 const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
+const AchievementCenter = lazy(() => import("./pages/achievement/AchievementCenter.jsx"));
+const AchForm = lazy(() => import("./pages/achievement/AchForm.jsx"));
+const Qiyas = lazy(() => import("./pages/achievement/Qiyas.jsx"));
+const MyQiyas = lazy(() => import("./pages/achievement/MyQiyas.jsx"));
+const AchCommittee = lazy(() => import("./pages/achievement/AchCommittee.jsx"));
+const AchFormsList = lazy(() => import("./pages/achievement/AchForm.jsx").then((m) => ({ default: m.AchFormsList })));
 const Nominations = lazy(() => import("./pages/nominations/Nominations.jsx"));
 const Opportunities = lazy(() => import("./pages/nominations/Opportunities.jsx"));
 const QuestionBank = lazy(() => import("./pages/teacher/QuestionBank.jsx"));
@@ -514,6 +522,14 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/s/:key" element={<SectionHub />} />}
           {/* شاشة المتابعة اليومية — للمدير والوكيلين والدعم الفني (عنصر القائمة يحصرها، والقاعدة تفرض ما يُقرأ) */}
           {effectiveRole === "admin" && <Route path="/monitor" element={<MonitorScreen />} />}
+          {/* مركز تحليل النتائج — الصفحة تتحقق من الدور (وكيل الشؤون التعليمية والموجهون…) */}
+          <Route path="/achievement" element={<AchievementCenter />} />
+          <Route path="/qiyas" element={<Qiyas />} />
+          <Route path="/my-qiyas" element={<MyQiyas />} />
+          <Route path="/ach-committee" element={<AchCommittee />} />
+          {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
+          <Route path="/ach-forms" element={<AchFormsList />} />
+          <Route path="/ach-forms/:id" element={<AchForm />} />
           {/* التعاميم: الإدارة لصاحب الصلاحية، وصفحة التعميم وتعاميمي للمنسوبين وأولياء الأمور */}
           {effectiveRole === "admin" && can("circulars") && <Route path="/circulars" element={<Circulars />} />}
           {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/circulars/:id" element={<CircularView />} />}

@@ -117,7 +117,7 @@ export default function StudentHome() {
 
   return (
     <div className="space-y-5">
-      <StudentHeader name={me.full_name} grade={me.grade} classNo={me.class_no} />
+      <StudentHeader name={me.full_name} grade={me.grade} classNo={me.class_no} studentId={me.id} />
 
       {/* إعلانات الفرص والمناسبات */}
       <HomeBanners />

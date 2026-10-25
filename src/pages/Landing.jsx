@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { OWNER_NAME, RIGHTS_YEAR } from "../lib/legal";
+import { OWNER_NAME, PORTAL_VERSION, RIGHTS_YEAR } from "../lib/legal";
 import logoFull from "../assets/logo-full-mint.png";
 import logoIcon from "../assets/icon-mint.png";
 import CalendarTimeline from "../components/CalendarTimeline.jsx";
@@ -223,6 +223,7 @@ export default function Landing() {
             {" · "}
             <Link to="/privacy" className="hover:text-mint-deep hover:underline">سياسة الخصوصية</Link>
           </span>
+          <span className="mt-1 block font-medium text-mint-deep">{PORTAL_VERSION}</span>
         </div>
       </footer>
     </div>

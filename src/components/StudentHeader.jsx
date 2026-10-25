@@ -1,5 +1,7 @@
 // src/components/StudentHeader.jsx
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { supabase } from "../lib/supabase";
+import { rankOf } from "../lib/scoutLeader.js";
 import HeaderChips from "./HeaderChips.jsx";
 import { GRADE_NAMES } from "../lib/schoolTime";
 import { useStudioTheme, StudioDecor } from "../lib/studioTheme.jsx";
@@ -72,7 +74,10 @@ export function NameCard({ name, kicker, chips = [], icon = "student", avatar = 
             <h1 className="text-lg font-bold leading-snug sm:text-xl">{cleanName(name) || "—"}</h1>
             {chips.length > 0 && (
               <p className="mt-1.5 flex flex-wrap gap-1.5">
-                {chips.map((c, i) => (
+                {chips.map((c, i) => c.scout ? (
+                  <span key={i} className="chip gap-1 border font-semibold" title="الفريق الكشفي"
+                        style={{ background: `${c.color}1F`, borderColor: c.color, color: c.color }}>{c.t}</span>
+                ) : (
                   <span key={i} className="chip gap-1 border" style={{ background: t.pill, borderColor: t.pillB, color: c.strong ? t.accent : t.sub }}>{c.t}</span>
                 ))}
               </p>
@@ -85,10 +90,21 @@ export function NameCard({ name, kicker, chips = [], icon = "student", avatar = 
   );
 }
 
-export default function StudentHeader({ name, grade, classNo, guardian = false }) {
+export default function StudentHeader({ name, grade, classNo, studentId = null, guardian = false }) {
+  // شارة الفريق الكشفي ورتبته (supabase/scouts_3.sql) — وسم خاص في البطاقة لعضو الفريق
+  const [scout, setScout] = useState(null);
+  useEffect(() => {
+    setScout(null);
+    if (!studentId) return;
+    supabase.rpc("scout_badge", { p_student: studentId }).then(({ data }) => setScout(data ?? null));
+  }, [studentId]);
+  const rank = rankOf(scout?.rank);
   return (
     <NameCard name={name} icon="student" kicker={guardian ? "ابنك" : null}
               chips={[grade && { t: GRADE_NAMES[grade] ?? `الصف ${grade}`, strong: true },
-                      classNo && { t: <>فصل <span className="num">{classNo}</span></> }].filter(Boolean)} />
+                      classNo && { t: <>فصل <span className="num">{classNo}</span></> },
+                      scout && { scout: true, color: rank?.color ?? "#3E8A62",
+                                 t: <><span aria-hidden="true">⚜</span> {rank ? rank.t : "عضو الفريق الكشفي"}</> },
+              ].filter(Boolean)} />
   );
 }

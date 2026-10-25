@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
+import { isScoutRole } from "../../lib/scoutLeader.js";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import { jpegsToPdf } from "./pdf";
@@ -10,7 +11,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { trackUsage, useUsageCounts } from "../../lib/usage.js";
 import UsageBadge from "../../components/UsageBadge.jsx";
-import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, Rollup, Thanks, Notice, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
+import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, ScoutCards, Rollup, Thanks, Notice, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
 import { SECTIONS, TEMPLATES, templateOf, sheetDims, SOCIAL_FORMATS } from "./templates";
 import {
   THEMES, toWestern, useFontsReady, academicYearLabel, TERM_LABEL, ROLE_DEPT, classRange,
@@ -109,6 +110,7 @@ export function SheetFor({ tpl, theme, orient, data }) {
   if (tpl.sheet === "seats") return <Seats theme={theme} d={data} />;
   if (tpl.sheet === "sign") return <Sign theme={theme} orient={orient} d={data} />;
   if (tpl.sheet === "badge") return <Badges theme={theme} d={data} />;
+  if (tpl.sheet === "scoutcard") return <ScoutCards theme={theme} d={data} />;
   if (tpl.sheet === "rollup") return <Rollup theme={theme} d={data} />;
   if (tpl.sheet === "thanks") return <Thanks theme={theme} d={data} />;
   if (tpl.sheet === "notice") return <Notice theme={theme} d={data} />;
@@ -159,7 +161,9 @@ export default function Studio() {
 
   /* قوالب القسم المسموحة للمستخدم. والقالب الممنوح لدور خارج أقسامه
      (مثل غلاف المعلم لرائد النشاط) يظهر في أول قسم يراه. */
-  const list = TEMPLATES.filter((t) => allowed(t) &&
+  // قالب خاص بأدوار بعينها: بطاقة الكشاف للقائد الكشفي ونائبه (lib/scoutLeader.js)
+  const onlyOk = (t) => !t.only || isSuper || (t.only === "scouts" && (adminRoles ?? []).some(isScoutRole));
+  const list = TEMPLATES.filter((t) => allowed(t) && onlyOk(t) &&
     (t.sections.includes(current) || (!t.sections.some(sectionOk) && current === sections[0]?.key)));
 
   return withAssets(

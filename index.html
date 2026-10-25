@@ -19,6 +19,8 @@
             Object.keys(localStorage).some(function (k) { return /^sb-.*-auth-token$/.test(k); })) {
           document.documentElement.classList.add("dark");
         }
+        // الشكل الكلاسيكي لمن اختاره (src/lib/theme.js)، والهوية الرسمية هي الافتراضية
+        if (localStorage.getItem("mk-style") === "classic") document.documentElement.classList.add("classic");
       } catch (e) { /* التخزين ممنوع: الوضع الفاتح */ }
     </script>
 

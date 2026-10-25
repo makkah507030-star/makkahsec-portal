@@ -16,6 +16,22 @@
   --shadow-card: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px -14px rgba(0,0,0,.22);
 }
 
+/* الهوية الرسمية الفاتحة (استوديو البوابة ← الهوية) على الشاشة، وهي الافتراضية:
+   نصوص خضراء داكنة، وخلفية مخضرة، وحدود خضراء فاتحة، وخط ذهبي تحت الشريط العلوي.
+   html.classic يعيد الشكل الكلاسيكي أعلاه (src/lib/theme.js). والورقة (.sheet) والطباعة على
+   ألوانها الأصلية، والداكن بعده فيغلبه. */
+@media screen {
+  html:not(.classic) {
+    --c-ink: 28 51 40;        --c-muted: 94 114 104;    --c-faint: 150 172 160;
+    --c-line: 213 231 220;    --c-canvas: 242 250 245;  --c-mint-tint: 232 247 238;
+  }
+  html:not(.classic) .sheet {
+    --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 169 169 169;
+    --c-line: 195 195 195;    --c-canvas: 244 244 244;  --c-mint-tint: 237 250 242;
+  }
+  html:not(.classic):not(.dark) .brand-rule { border-bottom: 2px solid #B8912F; }
+}
+
 @media screen {
   html.dark {
     color-scheme: dark;

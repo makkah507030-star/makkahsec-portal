@@ -6,6 +6,7 @@ import { fitSize, fitTitle, bodySize, classCode, classShort, GRADE_OPTIONS } fro
 import { ROLLUP_SIZES } from "./templates";
 import { useStudioAssets } from "./assets";
 import "./studio.css";
+import Fleur from "../../components/Fleur.jsx";
 
 /* =====================================================================
    أوراق استوديو البوابة — كل ورقة بمقاس A4 الحقيقي (96dpi)، وتُستخدم كما هي
@@ -549,6 +550,53 @@ export function Badges({ theme = "light", d }) {
         ))}
       </div>
       <p className="note">بطاقات 5.4 × 8.6 سم · قصّ على الخط المتقطع</p>
+    </div>
+  );
+}
+
+/* ----------------------------- بطاقة الكشاف ----------------------------- */
+// زهرة الزنبق: رمز الحركة الكشفية العالمي
+const FLEUR = <Fleur />;
+
+export function ScoutCards({ theme = "light", d }) {
+  const cards = Array.from({ length: 10 }, (_, i) => (d.cards ?? [d])[i] ?? null);
+  return (
+    <div className={`stu stu-scouts stu-${theme} stu-portrait sheet`}>
+      <div className="grid">
+        {cards.map((c, i) => (
+          <div key={i} className={`stu-scout${c ? "" : " empty"}`}>
+            {c && (
+              <div className="in">
+                <i className="lines" />
+                <div className="emb">{FLEUR}</div>
+                <div className="body">
+                  <div className="top">
+                    <img src={iconWhite} alt="" className="logo-w" />
+                    <img src={iconMint} alt="" className="logo-m" />
+                    <span>الفريق الكشفي · مدرسة مكة الثانوية</span>
+                  </div>
+                  <p className="kick">بطاقة كشاف</p>
+                  {(() => {
+                    const t = fitTitle(c.name, { max: 17, min: 11, width: 178 });
+                    return <div className={`nm${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{c.name || "اسم الكشاف"}</div>;
+                  })()}
+                  <span className="rk" style={{ "--rk": c.color }}>
+                    <i>{FLEUR}</i>{c.rank}
+                  </span>
+                  {c.cls && <div className="cl">{c.cls}</div>}
+                </div>
+                <div className="ph">{c.photo ? <img src={c.photo} alt="" /> : <span className="ph-e">{FLEUR}</span>}</div>
+                <div className="ft">
+                  <span className="num">No. {String(c.no ?? 1).padStart(3, "0")}</span>
+                  <span className="num">{d.year}</span>
+                  <span className="site">makkahsec.com</span>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="note">بطاقات 8.6 × 5.4 سم · قصّ على الخط المتقطع</p>
     </div>
   );
 }

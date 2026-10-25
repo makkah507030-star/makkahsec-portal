@@ -1,6 +1,6 @@
 -- ملف المعلم الرقمي (الجزء 3): أرقام التقرير دون أسماء طلاب. dfile_data_core للحساب (لا يُستدعى مباشرة)،
 -- وdfile_data للمعلم والمدير والدعم الفني، وdfile_public (الجزء 5) للزائر. opinions من الجزء 6.
--- يُنفَّذ بعد الجزأين 1 و2. تكرار التنفيذ آمن.
+-- يُنفَّذ بعد الجزأين 1 و2 وبعد events_audience_2.sql (دالة ev_reach). تكرار التنفيذ آمن.
 
 create or replace function public.dfile_data_core(p_uid uuid)
 returns jsonb language plpgsql stable security definer set search_path = public as $$
@@ -62,7 +62,7 @@ begin
                 where d.recipient_user_id = p_uid and ft.key = 'teacher_support_visit'
                   and d.status not in ('draft', 'pending', 'rejected') and d.created_at >= y0),
     'events', (select coalesce(jsonb_agg(jsonb_build_object('title', e.title, 'date', e.event_date,
-                 'n', (select count(*) from public.event_participants p where p.event_id = e.id and p.attended is not false))
+                 'n', public.ev_reach(e.id))
                  order by e.event_date desc), '[]')
                  from public.school_events e where e.organizer_id = p_uid and e.stage = 'approved'
                   and e.cancelled_at is null and e.event_date >= y0::date),

@@ -9,10 +9,11 @@ import { loadPrincipalSignature, loadSchoolStamp } from "../lib/principalSignatu
 import { academicYearLabel } from "./studio/lib";
 import { eventsReportPages, eventPhase, STAGE_AR } from "./EventsReportDoc.jsx";
 import { eventDateRange, lastDay } from "../lib/eventDates.js";
+import { eventReach, listCerts } from "../lib/eventAudience.js";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
-   • المنظّم يرى ما نفّذه، والإدارة ترى كل الأحداث.
+   • المنظّم يرى ما نفّذه، والإدارة ورائد النشاط يرون كل الأحداث.
    • تقرير مصمّم بهوية استوديو البوابة (EventsReportDoc.jsx): غلاف وملخص
      بالمؤشرات والرسوم، وأبرز الأحداث بصورها، وسجل الأحداث والتوقيعات.
    ===================================================================== */
@@ -30,7 +31,7 @@ export default function EventsReports() {
   const uid = session?.user?.id;
   const roles = adminRoles ?? [];
   const isManager = roles.some((r) =>
-    ["principal", "tech_support", "deputy_students", "deputy_academic"].includes(r));
+    ["principal", "tech_support", "deputy_students", "deputy_academic", "activity_leader"].includes(r));
 
   const [rows, setRows] = useState(null);
   const [counts, setCounts] = useState({});
@@ -60,6 +61,14 @@ export default function EventsReports() {
         if (p.attended) x.attended++;
         if (p.cert_issued_at) x.certs++;
         if (p.consent_at) x.consent++;
+      });
+      // حدث للمدرسة كلها: المرشّحون والحاضرون بفئاته (lib/eventAudience.js)،
+      // و named عدد المسمَّين وحدهم أساسًا لنسبة الموافقات
+      (data ?? []).forEach((e) => {
+        const x = c[e.id] ?? { total: 0, attended: 0, certs: 0, consent: 0 };
+        const r = eventReach(e, x);
+        // الشهادات: الطلاب من cert_issued_at، والمعلمون والإدارة والضيوف من cert_at
+        c[e.id] = { ...x, named: x.total, total: r.nominated, attended: r.attended, certs: x.certs + listCerts(e) };
       });
       setCounts(c);
     })();
@@ -159,7 +168,7 @@ export default function EventsReports() {
       ) : (
         <>
       <div className="no-print grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[["الأحداث المنفّذة", totals.events], ["الطلاب المشاركون", totals.students],
+        {[["الأحداث المنفّذة", totals.events], ["المستفيدون", totals.students],
           ["الشهادات الصادرة", totals.certs], ["المعتمدة", totals.approved]].map(([t, v]) => (
           <div key={t} className="card px-4 py-3 text-center">
             <p className="num text-2xl font-bold text-mint-deep">{v}</p>

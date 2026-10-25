@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { loadAffairsMonthly, monthBounds } from "../student-affairs/monthlyData";
 import { eventPhase } from "../EventsReportDoc.jsx";
 import { loadPrograms, programState } from "../GuidanceMore.jsx";
+import { eventReach, listCerts } from "../../lib/eventAudience.js";
 
 /* =====================================================================
    بيانات التقرير الشهري للمدرسة (لمدير المدرسة والدعم الفني): خلاصة الشهر
@@ -13,6 +14,11 @@ import { loadPrograms, programState } from "../GuidanceMore.jsx";
 
 const quiet = (p) => Promise.resolve(p).then((r) => (r?.error ? { data: null } : r)).catch(() => ({ data: null }));
 const count = (rows, k) => rows.reduce((o, r) => { o[r[k]] = (o[r[k]] ?? 0) + 1; return o; }, {});
+// الحاضرون في الحدث: الطلاب بالاسم، وفئات الحدث للمدرسة كلها (lib/eventAudience.js)
+const reachOf = (e) => {
+  const named = (e.event_participants ?? []).filter((p) => p.attended).length;
+  return eventReach(e, { total: named, attended: named }).attended;
+};
 
 export async function loadSchoolMonthly(month) {
   const b = monthBounds(month);
@@ -28,7 +34,7 @@ export async function loadSchoolMonthly(month) {
     // البرامج الإرشادية للصفوف الثلاثة بأحداثها: المنفَّذ يدويًا أو باعتماد حدثه (programState)
     Promise.all([1, 2, 3].map((g) => quiet(loadPrograms(g)))).then((rs) => ({ data: rs.flatMap((r) => r.data ?? []) })),
     quiet(inM(supabase.from("guidance_requests").select("id, status"), "created_at")),
-    quiet(inM(supabase.from("school_events").select("id, title, category, event_date, stage, cancelled_at, event_participants(attended)").is("cancelled_at", null), "event_date")),
+    quiet(inM(supabase.from("school_events").select("*, event_participants(attended, cert_issued_at)").is("cancelled_at", null), "event_date")),
     // التطوير المهني: كل ما تجاوز المسودة، ويُؤرَّخ بتاريخ النشاط نفسه (data.date) لا باعتماده —
     // فيُجلب ما أُنشئ في الأشهر الأربعة السابقة ويُصفّى بتاريخه في الشهر
     quiet(supabase.from("pd_reports").select("id, kind, status, data, attendees, created_at").neq("status", "draft").gte("created_at", recent).lt("created_at", b.to)),
@@ -81,9 +87,11 @@ export async function loadSchoolMonthly(month) {
     events: {
       total: E.length, approved: E.filter((e) => e.stage === "approved").length, upcoming: upcomingEvents,
       news: (news.data ?? []).map((x) => ({ title: x.title, date: String(x.published_at).slice(0, 10) })),
-      attended: E.reduce((a, e) => a + (e.event_participants ?? []).filter((p) => p.attended).length, 0),
-      top: [...E].sort((a, c) => (c.event_participants ?? []).filter((p) => p.attended).length - (a.event_participants ?? []).filter((p) => p.attended).length)
-        .slice(0, 5).map((e) => ({ title: e.title, date: e.event_date, attended: (e.event_participants ?? []).filter((p) => p.attended).length })),
+      attended: E.reduce((a, e) => a + reachOf(e), 0),
+      // الشهادات المطبوعة: الطلاب، والمعلمون والإدارة والضيوف
+      certs: E.reduce((a, e) => a + (e.event_participants ?? []).filter((p) => p.cert_issued_at).length + listCerts(e), 0),
+      top: [...E].sort((a, c) => reachOf(c) - reachOf(a))
+        .slice(0, 5).map((e) => ({ title: e.title, date: e.event_date, attended: reachOf(e) })),
     },
     pd: (() => {
       const R = (pd.data ?? []).filter(actIn), P = (plc.data ?? []).filter(actIn), V = (visits.data ?? []).filter(actIn);

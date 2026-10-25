@@ -1,4 +1,6 @@
 // src/components/report/ReportKit.jsx
+// Copyright © 2026 محمد بن حسن الحازمي — جميع الحقوق محفوظة (انظر LICENSE).
+// Author: محمد بن حسن الحازمي
 import iconMint from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { Decor, ICONS } from "../../pages/studio/Sheets.jsx";
@@ -65,6 +67,7 @@ const W = {
   event: ["حدث واحد", "حدثان", "أحداث", "حدثًا", "حدثين"],
   cert: ["شهادة واحدة", "شهادتان", "شهادات", "شهادة", "شهادتين"],
   nominee: ["مرشح واحد", "مرشحان", "مرشحون", "مرشحًا", "مرشحين", "مرشحين"],
+  beneficiary: ["مستفيد واحد", "مستفيدان", "مستفيدون", "مستفيدًا", "مستفيدين", "مستفيدين"],
   quiz: ["اختبار واحد", "اختباران", "اختبارات", "اختبارًا", "اختبارين"],
   sheet: ["ورقة واحدة", "ورقتان", "أوراق", "ورقة", "ورقتين"],
   record: ["سجل واحد", "سجلان", "سجلات", "سجلًا", "سجلين"],
@@ -408,6 +411,9 @@ export function Page({ theme, doc, page, total, sec, children }) {
    c = { year, tag: [أيقونة، نص], title, sub, badge: { main, sub }, side: { main, sub },
          rows: [[أيقونة، المفتاح، القيمة]], note: [أيقونة، نص], strip: [[عدد، وصف]], foot } */
 export function Cover({ theme, c }) {
+  // السطر الفرعي الطويل (كاسم معلم رباعي) يصغر ليتسع، ويلتف إن بقي أطول من السطر، فلا يُقص
+  const subLen = String(c.sub ?? "").length;
+  const subFit = c.subSize ? { size: c.subSize } : subLen > 26 ? { size: Math.max(24, Math.round((38 * 26) / subLen)), wrap: subLen > 38 } : {};
   return (
     <div className={`stu stu-cover stu-portrait stu-${theme} mr mr-cover sheet`}>
       <Decor />
@@ -433,7 +439,7 @@ export function Cover({ theme, c }) {
         <div className="hero">
           <div><span className="stu-tag">{IC[c.tag[0]]}{c.tag[1]}</span></div>
           <h1 className="stu-h1" style={c.titleSize ? { fontSize: c.titleSize } : undefined}>{c.title}</h1>
-          <span className="stu-sub" style={c.subSize ? { fontSize: c.subSize } : undefined}>{c.sub}</span>
+          <span className={`stu-sub${subFit.wrap ? " wrap" : ""}`} style={subFit.size ? { fontSize: subFit.size } : undefined}>{c.sub}</span>
           <div className="stu-grule" />
           {c.badge && (
             <div className="month">

@@ -87,9 +87,9 @@ export default function Referrals() {
 
   const mine = useMemo(() => {
     const all = rows ?? [];
-    // من جمع الدورين يرى وارد الاثنين
+    // من جمع الدورين يرى وارد الاثنين. إقرار ولي الأمر يغلق الإحالة (guardian_replied)، فلا تبقى بانتظار الوكيل
     if (isDeputy || isCounselor) return all.filter((r) =>
-      (isDeputy && ["with_deputy", "guardian_replied"].includes(r.status)) ||
+      (isDeputy && r.status === "with_deputy") ||
       (isCounselor && ["with_counselor", "returned_to_counselor"].includes(r.status) &&
        r.counselor_id === uid));
     return all.filter((r) => r.teacher_id === uid);

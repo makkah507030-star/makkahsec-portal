@@ -57,7 +57,7 @@ export function quizReportPages({ r, teacher, scopeLine, year, term, theme = "li
   const attend = kpi.sheets + kpi.absent;
   return [
     <Cover key="cover" theme={theme} c={{
-      year, tag: ["chart", "تحليل النتائج"], title: "تحليل نتائج", sub: `الاختبارات · ${teacher}`, titleSize: 86,
+      year, tag: ["chart", "تحليل النتائج"], title: "تحليل نتائج الاختبارات", sub: teacher, titleSize: 60,
       badge: { main: p1(kpi.avg), sub: "متوسط الأداء" }, side: { main: `${kpi.excel}% تفوق`, sub: "أوراق 90٪ فأكثر" },
       rows: [["user", "المعلم", teacher || "—"], ["book", "النطاق", scopeLine || "كل الاختبارات في الفصل الدراسي"],
              ["table", "الفصول", countAr(perClass.length, "cls")], ["calendar", "الفصل الدراسي", `${term} · ${fmtDate(new Date())}`]],
