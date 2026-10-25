@@ -19,7 +19,7 @@ import { loadPrincipalSignature } from "../lib/principalSignature.js";
 import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
 import { useBackSteps, goBack } from "../lib/backStep.js";
-import { savedTheme, saveTheme, applyTheme } from "../lib/theme.js";
+import { savedTheme, saveTheme, applyTheme, savedStyle, saveStyle } from "../lib/theme.js";
 import { EvidenceDock } from "./EvidenceTags.jsx";
 
 /* =====================================================================
@@ -328,6 +328,7 @@ export function Icon({ name, className = "h-[18px] w-[18px]" }) {
     news:   "M4 5h12v14H4zM16 8h4v9a2 2 0 0 1-4 0zM7 9h6M7 12h6M7 15h4",
     chat:   "M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4Z",
     upload: "M12 16V4m-5 5 5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
+    palette: "M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-.9-.6-1.4-.6-2.2 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4c0-4.7-4-8.6-9-8.6ZM7.5 11.5h.01M10 7.5h.01M15 7.5h.01",
     monitor: "M3 4h18v12H3zM8 21h8M12 16v5",
     grid:   "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
     table:  "M3 4h18v16H3zM3 9h18M3 14.5h18M9 4v16",
@@ -401,6 +402,8 @@ export default function Layout({ children }) {
   // الوضع الداكن للطالب وحده (lib/theme.js)، ويزول عند الخروج أو لغير الطالب
   const isStudentView = effectiveRole === "student";
   const [dark, setDark] = useState(() => savedTheme() === "dark");
+  // الشكل: الهوية الرسمية (الافتراضية) أو الكلاسيكي، لكل المستخدمين (lib/theme.js)
+  const [style, setStyle] = useState(savedStyle);
   useEffect(() => {
     applyTheme(isStudentView && dark);
     return () => applyTheme(false);
@@ -855,6 +858,15 @@ export default function Layout({ children }) {
           {footer.map((i) => iconOnly ? navItem(i, { iconOnly }) : (
             <div key={i.to} className="min-w-0 flex-1">{navItem(i, { iconOnly: true })}</div>
           ))}
+          <button type="button"
+                  onClick={() => { const next = style === "classic" ? "official" : "classic"; saveStyle(next); setStyle(next); }}
+                  title={style === "classic" ? "التبديل إلى الهوية الرسمية" : "التبديل إلى الشكل الكلاسيكي"}
+                  className={`flex w-full items-center gap-3 rounded-sm2 py-2 text-[13px] font-medium text-faint hover:bg-canvas hover:text-ink ${
+                    iconOnly ? "justify-center" : "px-3"
+                  }`}>
+            <Icon name="palette" className="h-[18px] w-[18px]" />
+            {!iconOnly && <span>{style === "classic" ? "الهوية الرسمية" : "الشكل الكلاسيكي"}</span>}
+          </button>
           {desktop && (
             <button type="button" onClick={() => setCollapsedSaved(!collapsed)}
                     title={collapsed ? "توسيع القائمة" : "طيّ القائمة"} aria-label={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
@@ -876,7 +888,7 @@ export default function Layout({ children }) {
       <TrialBanner />
 
       {/* شريط علوي للجوال */}
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-white/95 px-4 py-3 backdrop-blur lg:hidden print:hidden">
+      <header className="brand-rule sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-line bg-white/95 px-4 py-3 backdrop-blur lg:hidden print:hidden">
         {/* زر القائمة العلوي يُستغنى عنه بزر «المزيد» في الشريط السفلي — يبقى فقط إن لم يظهر الشريط */}
         {bottomItems.length === 0 && (
           <button onClick={() => setOpen(true)} aria-label="القائمة"
@@ -926,7 +938,7 @@ export default function Layout({ children }) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           {/* شريط علوي — سطح المكتب */}
-          <header className="sticky top-0 z-20 hidden h-[4.5rem] border-b border-line bg-white/95 backdrop-blur lg:block print:hidden">
+          <header className="brand-rule sticky top-0 z-20 hidden h-[4.5rem] border-b border-line bg-white/95 backdrop-blur lg:block print:hidden">
             <div className="mx-auto flex h-full max-w-5xl items-center justify-between gap-3 px-6">
               <UserInline />
               <Actions />

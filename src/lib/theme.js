@@ -19,6 +19,19 @@ export function applyTheme(dark) {
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? BAR.dark : BAR.light);
 }
 
+/* الشكل: الهوية الرسمية الفاتحة هي الافتراضية، و«الشكل الكلاسيكي» (الرمادي) اختيار لمن يفضّله.
+   يُحفظ في الجهاز ويُطبَّق بصنف classic على <html>، والألوان في src/index.css. */
+const STYLE_KEY = "mk-style";
+
+export function savedStyle() {
+  try { return localStorage.getItem(STYLE_KEY) === "classic" ? "classic" : "official"; } catch { return "official"; }
+}
+
+export function saveStyle(style) {
+  try { localStorage.setItem(STYLE_KEY, style); } catch { /* يبقى للجلسة الحالية */ }
+  document.documentElement.classList.toggle("classic", style === "classic");
+}
+
 export function saveTheme(theme) {
   try { localStorage.setItem(KEY, theme); } catch { /* المتصفح يمنع التخزين: يبقى للجلسة الحالية */ }
   applyTheme(theme === "dark");
