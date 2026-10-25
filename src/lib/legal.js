@@ -5,4 +5,6 @@
 export const OWNER_NAME = "محمد بن حسن الحازمي";
 export const PORTAL_NAME = "بوابة مكة الثانوية الرقمية";
 export const RIGHTS_YEAR = "2026";
+// إصدار البوابة (docs/release-v1.md): يظهر أسفل الصفحات وفي الصفحة العامة
+export const PORTAL_VERSION = "الإصدار الأول · v1.0";
 export const RIGHTS_LINE = `جميع الحقوق محفوظة © ${RIGHTS_YEAR} ${OWNER_NAME}`;

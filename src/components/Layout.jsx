@@ -1,6 +1,6 @@
 // src/components/Layout.jsx
 import { useState, useEffect, useMemo, useRef } from "react";
-import { RIGHTS_LINE } from "../lib/legal";
+import { RIGHTS_LINE, PORTAL_VERSION } from "../lib/legal";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
@@ -987,6 +987,7 @@ export default function Layout({ children }) {
             {/* سطر الحقوق أسفل كل صفحة، بعيدًا عن أزرار القائمة */}
             <footer className="mx-auto mt-10 max-w-5xl border-t border-line pt-3 text-center text-[11px] leading-relaxed text-faint print:hidden">
               {RIGHTS_LINE} · <Link to="/terms" className="hover:text-mint-deep">الشروط</Link> · <Link to="/privacy" className="hover:text-mint-deep">الخصوصية</Link>
+              <span className="mt-0.5 block text-[10.5px]">بوابة مكة الثانوية الرقمية · {PORTAL_VERSION}</span>
             </footer>
           </main>
           {isStaff && <QuickNote />}
