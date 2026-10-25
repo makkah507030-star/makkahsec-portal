@@ -6,6 +6,7 @@ import { fitSize, fitTitle, bodySize, classCode, classShort, GRADE_OPTIONS } fro
 import { ROLLUP_SIZES } from "./templates";
 import { useStudioAssets } from "./assets";
 import "./studio.css";
+import Fleur from "../../components/Fleur.jsx";
 
 /* =====================================================================
    أوراق استوديو البوابة — كل ورقة بمقاس A4 الحقيقي (96dpi)، وتُستخدم كما هي
@@ -555,12 +556,7 @@ export function Badges({ theme = "light", d }) {
 
 /* ----------------------------- بطاقة الكشاف ----------------------------- */
 // زهرة الزنبق: رمز الحركة الكشفية العالمي
-const FLEUR = (
-  <svg viewBox="0 0 64 64" aria-hidden="true">
-    <path fill="currentColor" d="M32 3c-7 8-10 17-6.5 27.5C21 25 13.5 22.5 8 27c5.5-.6 9.4 2.4 10.2 7.6L26 36.4l-7.8 1.8c-.8 5.2-4.7 8.2-10.2 7.6 5.5 4.5 13 2 17.5-3.5-.6 5.3-3.4 9.2-7.5 11.7h28c-4.1-2.5-6.9-6.4-7.5-11.7C43 47.8 50.5 50.3 56 45.8c-5.5.6-9.4-2.4-10.2-7.6L38 36.4l7.8-1.8c.8-5.2 4.7-8.2 10.2-7.6-5.5-4.5-13-2-17.5 3.5C42 20 39 11 32 3Z" />
-    <rect x="20" y="33.6" width="24" height="5.6" rx="2.8" fill="currentColor" />
-  </svg>
-);
+const FLEUR = <Fleur />;
 
 export function ScoutCards({ theme = "light", d }) {
   const cards = Array.from({ length: 10 }, (_, i) => (d.cards ?? [d])[i] ?? null);

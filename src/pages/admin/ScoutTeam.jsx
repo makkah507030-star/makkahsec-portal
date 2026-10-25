@@ -15,6 +15,8 @@ import logoIcon from "../../assets/icon-mint.png";
 import { useScoutLeader, SCOUT_RANKS, rankOf, SCOUTS_URL } from "../../lib/scoutLeader.js";
 import { usePrincipalSignature } from "../../lib/principalSignature.js";
 import { PRINCIPAL_NAME } from "../../lib/signers.js";
+import { cleanMobile } from "../../lib/importer";
+import Fleur from "../../components/Fleur.jsx";
 
 /* =====================================================================
    الفريق الكشفي (supabase/scouts_1.sql):
@@ -23,6 +25,38 @@ import { PRINCIPAL_NAME } from "../../lib/signers.js";
    ===================================================================== */
 
 const classLabel = (c) => (c ? `${GRADE_NAMES[c.grade] ?? ""} · فصل ${c.class_no}` : "—");
+// 966XXXXXXXXX ← 05XXXXXXXX للعرض
+const localMobile = (m) => (m?.startsWith("966") ? "0" + m.slice(3) : m ?? "");
+
+const WA_ICON = (
+  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-3.5 w-3.5" fill="currentColor">
+    <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1.1 2.7.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z" />
+  </svg>
+);
+
+// خانة جوال: الرقم، ثم زرا اتصال وواتساب للتواصل العاجل وخارج الدوام
+function Phone({ mobile }) {
+  if (!mobile) return <span className="text-faint">—</span>;
+  return (
+    <span className="flex flex-wrap items-center gap-1.5">
+      <a href={`tel:+${mobile}`} className="num font-medium text-ink hover:text-mint-deep" dir="ltr">{localMobile(mobile)}</a>
+      <a href={`https://wa.me/${mobile}`} target="_blank" rel="noopener noreferrer" title="مراسلة على واتساب"
+         className="inline-flex items-center gap-1 rounded-pill bg-[#25D366]/12 px-2 py-0.5 text-[11px] font-semibold text-[#128C7E] hover:bg-[#25D366]/20">
+        {WA_ICON}واتساب
+      </a>
+    </span>
+  );
+}
+
+function Cell({ label, children }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[10.5px] font-medium text-faint">{label}</p>
+      <div className="mt-0.5 text-[12.5px] text-ink">{children}</div>
+    </div>
+  );
+}
+
 const GOV = ["المملكة العربية السعودية", "وزارة التعليم", "الإدارة العامة للتعليم بمنطقة مكة المكرمة"];
 
 export default function ScoutTeam() {
@@ -36,6 +70,7 @@ export default function ScoutTeam() {
   const [busy, setBusy] = useState(null);       // student_id قيد الإضافة أو الحذف
   const [msg, setMsg] = useNotice(null);
   const [printing, setPrinting] = useState(false);
+  const [mobEdit, setMobEdit] = useState(null); // { id, v } جوال الطالب قيد التعديل
   // توقيعا الكشف: القائد الكشفي (scouts_2.sql) ومدير المدرسة
   const leader = useScoutLeader();
   const principal = usePrincipalSignature();
@@ -51,7 +86,8 @@ export default function ScoutTeam() {
       const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
       return { id: r.student_id, full_name: r.students?.full_name ?? "—", national_id: r.students?.national_id,
                grade: en?.classes?.grade, class_no: en?.classes?.class_no, added_at: r.added_at, added_by_name: r.added_by_name,
-               rank: r.rank ?? null, rank_at: r.rank_at ?? null, mobile: mobileOf[r.student_id] ?? null };
+               rank: r.rank ?? null, rank_at: r.rank_at ?? null, mobile: mobileOf[r.student_id] ?? null,
+               student_mobile: r.student_mobile ?? null };
     }).sort(byClassName()));
   };
 
@@ -118,6 +154,23 @@ export default function ScoutTeam() {
     load();
   };
 
+  // جوال الطالب نفسه (scouts_4.sql) للتواصل العاجل وخارج الدوام
+  const saveMobile = async (m) => {
+    const raw = mobEdit?.v?.trim() ?? "";
+    const mobile = raw ? cleanMobile(raw) : null;
+    if (raw && !mobile) { setMsg({ ok: false, text: "رقم الجوال غير صحيح؛ اكتبه بصيغة 05XXXXXXXX." }); return; }
+    setBusy(m.id);
+    const { error } = await supabase.from("scout_members").update({ student_mobile: mobile }).eq("student_id", m.id);
+    setBusy(null);
+    if (error) {
+      setMsg({ ok: false, text: /student_mobile/.test(error.message) ? "جوال الطالب يحتاج تشغيل supabase/scouts_4.sql مرة واحدة." : error.message });
+      return;
+    }
+    setMobEdit(null);
+    setMsg({ ok: true, text: mobile ? `حُفظ جوال ${m.full_name}.` : `حُذف جوال ${m.full_name}.` });
+    load();
+  };
+
   const shown = useMemo(() => {
     const t = q.trim();
     return t ? (members ?? []).filter((m) => m.full_name.includes(t) || (m.national_id ?? "").includes(t)) : members ?? [];
@@ -137,7 +190,7 @@ export default function ScoutTeam() {
 
       <a href={SCOUTS_URL} target="_blank" rel="noopener noreferrer"
          className="card flex items-center gap-3 px-4 py-3 transition-colors hover:border-mint-light hover:bg-mint-tint/50">
-        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-mint-tint text-xl text-mint-deep">⚜</span>
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-mint-tint text-mint-deep"><Fleur className="h-6 w-6" /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-ink">جمعية الكشافة العربية السعودية</span>
           <span className="block text-xs text-muted">الأنظمة والبرامج والمناهج والشارات — الموقع الرسمي</span>
@@ -198,22 +251,44 @@ export default function ScoutTeam() {
             {members.length === 0 && <p className="px-4 py-6 text-sm text-muted">لا أعضاء بعد. اختر فصلًا وأضف الطلاب.</p>}
             <div className="divide-y divide-line">
               {shown.map((m) => (
-                <div key={m.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">{m.full_name}</p>
-                    <p className="text-[11.5px] text-faint">
-                      {m.grade ? classLabel(m) : "غير مسجّل في فصل"} · <span className="num" dir="ltr">{m.national_id}</span>
-                      {m.mobile && <> · <a href={`tel:+${m.mobile}`} className="num text-mint-deep" dir="ltr">{m.mobile}</a></>}
-                    </p>
+                <div key={m.id} className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{m.full_name}</p>
+                    <select className="field !h-8 w-auto !py-0 text-xs" value={m.rank ?? ""} disabled={busy === m.id}
+                            onChange={(e) => setRank(m, e.target.value)} title="الرتبة الكشفية"
+                            style={m.rank ? { color: rankOf(m.rank)?.color, fontWeight: 600 } : undefined}>
+                      <option value="">بلا رتبة</option>
+                      {SCOUT_RANKS.map((r) => <option key={r.k} value={r.k}>{r.t}</option>)}
+                    </select>
+                    <button onClick={() => remove(m)} disabled={busy === m.id}
+                            className="shrink-0 text-xs font-medium text-absent hover:underline">حذف</button>
                   </div>
-                  <select className="field !h-8 w-auto !py-0 text-xs" value={m.rank ?? ""} disabled={busy === m.id}
-                          onChange={(e) => setRank(m, e.target.value)} title="الرتبة الكشفية"
-                          style={m.rank ? { color: rankOf(m.rank)?.color, fontWeight: 600 } : undefined}>
-                    <option value="">بلا رتبة</option>
-                    {SCOUT_RANKS.map((r) => <option key={r.k} value={r.k}>{r.t}</option>)}
-                  </select>
-                  <button onClick={() => remove(m)} disabled={busy === m.id}
-                          className="shrink-0 text-xs font-medium text-absent hover:underline">حذف</button>
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-sm2 border border-line bg-canvas px-3 py-2.5 sm:grid-cols-4">
+                    <Cell label="الصف والفصل">{m.grade ? classLabel(m) : <span className="text-faint">غير مسجّل في فصل</span>}</Cell>
+                    <Cell label="رقم الهوية"><span className="num" dir="ltr">{m.national_id ?? "—"}</span></Cell>
+                    <Cell label="جوال الطالب">
+                      {mobEdit?.id === m.id ? (
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <input className="field num !h-7 w-full max-w-[8.5rem] !px-2 !py-0 text-xs" dir="ltr" inputMode="tel" autoFocus
+                                 value={mobEdit.v} placeholder="05XXXXXXXX"
+                                 onChange={(e) => setMobEdit({ id: m.id, v: e.target.value })}
+                                 onKeyDown={(e) => { if (e.key === "Enter") saveMobile(m); if (e.key === "Escape") setMobEdit(null); }} />
+                          <button onClick={() => saveMobile(m)} disabled={busy === m.id}
+                                  className="text-[11px] font-semibold text-mint-deep">حفظ</button>
+                          <button onClick={() => setMobEdit(null)} className="text-[11px] text-muted">إلغاء</button>
+                        </span>
+                      ) : (
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          {m.student_mobile && <Phone mobile={m.student_mobile} />}
+                          <button onClick={() => setMobEdit({ id: m.id, v: localMobile(m.student_mobile) })}
+                                  className="text-[11px] font-semibold text-mint-deep hover:underline">
+                            {m.student_mobile ? "تعديل" : "+ إضافة"}
+                          </button>
+                        </span>
+                      )}
+                    </Cell>
+                    <Cell label="جوال ولي الأمر"><Phone mobile={m.mobile} /></Cell>
+                  </div>
                 </div>
               ))}
             </div>
@@ -245,7 +320,7 @@ export default function ScoutTeam() {
             <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
               <thead>
                 <tr>
-                  {["م", "اسم الطالب", "رقم الهوية", "الصف والفصل", "الرتبة", "جوال ولي الأمر"].map((h) => (
+                  {["م", "اسم الطالب", "رقم الهوية", "الصف والفصل", "الرتبة", "جوال الطالب", "جوال ولي الأمر"].map((h) => (
                     <th key={h} style={{ border: "1px solid #d8e4dc", padding: "6px 8px", background: "#EEF6F1",
                       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{h}</th>
                   ))}
@@ -259,7 +334,8 @@ export default function ScoutTeam() {
                     <td className="num" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{m.national_id}</td>
                     <td style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{m.grade ? classLabel(m) : "—"}</td>
                     <td style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{rankOf(m.rank)?.t ?? "—"}</td>
-                    <td className="num" dir="ltr" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{m.mobile ?? "—"}</td>
+                    <td className="num" dir="ltr" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{localMobile(m.student_mobile) || "—"}</td>
+                    <td className="num" dir="ltr" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{localMobile(m.mobile) || "—"}</td>
                   </tr>
                 ))}
               </tbody>
