@@ -42,6 +42,23 @@ export const classShort = (c) => String(c);
 
 const TERM_NO = { "الفصل الأول": 1, "الفصل الثاني": 2, "الفصل الثالث": 3 };
 export const termOf = (key) => TERM_NO[(key ?? "").split("|")[0]?.trim()] ?? 1;
+export const termName = (key) => (key ?? "").split("|")[0]?.trim() || "—";
+
+/* الأقسام الرئيسية للتحليل في كل فصل دراسي: الفترة الأولى والثانية والاختبار النهائي.
+   لونها درجات من لون واحد (الأفتح للأقدم) لأنها مرتّبة زمنيًا. */
+export const PERIODS = [
+  { k: "p1", t: "الفترة الأولى", color: "#86BCC2" },
+  { k: "p2", t: "الفترة الثانية", color: "#3D8791" },
+  { k: "final", t: "الاختبار النهائي", color: "#0F4F58" },
+];
+export const periodOf = (key) => {
+  const t = (key ?? "").split("|")[1] ?? key ?? "";
+  if (/نهائ|نهاية/.test(t)) return "final";
+  if (/ثاني|ثانية/.test(t)) return "p2";
+  if (/أول|اول/.test(t)) return "p1";
+  return null;
+};
+
 export const noticeTitle = (key) => {
   const [term, title] = (key ?? "").split("|");
   return `${title ?? key} — ${term ?? ""}`.trim();

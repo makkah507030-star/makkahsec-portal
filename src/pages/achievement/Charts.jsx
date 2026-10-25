@@ -150,7 +150,7 @@ export function Heat({ rows, cols, get, onPick }) {
       </table>
       <div className="mt-2 flex items-center gap-2 text-[11px] text-faint">
         <span>40%</span>
-        <span className="h-2 w-28 rounded-full" style={{ background: "linear-gradient(to left, #0F5560, #EAF3F4)" }} />
+        <span className="h-2 w-28 rounded-full" style={{ background: "linear-gradient(to left, #EAF3F4, #0F5560)" }} />
         <span>100%</span>
         <span className="ms-3">▼ دون {WEAK}%</span>
       </div>

@@ -5,7 +5,7 @@
    • وكيل الشؤون التعليمية والمدير والدعم الفني ووكيل شؤون الطلاب: المدرسة كلها.
    • الموجه الطلابي: صفه وحده (counselor_N للصف N).
    ===================================================================== */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useSession } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
@@ -13,10 +13,10 @@ import { cmpAr } from "../../lib/sortAr.js";
 import { fmtDateTime } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import {
-  loadNoticeKeys, loadAchievement, noticeTitle, stats, groupBy, studentSummaries, runChecks, weakTeachers,
+  loadNoticeKeys, loadAchievement, noticeTitle, termName, periodOf, PERIODS, stats, groupBy, studentSummaries, runChecks, weakTeachers,
   SEV, WEAK, bandOf, ACH_ALL,
 } from "../../lib/achievement";
-import { DistStrip, HBars, Histogram, Heat, Stat, pctTxt } from "./Charts.jsx";
+import { DistStrip, HBars, Histogram, Heat, Stat, pctTxt, useTip as useTipLocal } from "./Charts.jsx";
 
 
 const TABS = [
@@ -39,6 +39,7 @@ export default function AchievementCenter() {
   const [keys, setKeys] = useState(null);
   const [year, setYear] = useState("");
   const [key, setKey] = useState("");
+  const cache = useRef(new Map());              // بيانات كل إشعار حُمّل: للمقارنة بين الفترات
   const [data, setData] = useState(null);
   const [err, setErr] = useState("");
   const [grade, setGrade] = useState(0);        // 0 = كل الصفوف المتاحة
@@ -51,8 +52,29 @@ export default function AchievementCenter() {
   useEffect(() => {
     if (!key) return;
     setData(null);
-    loadAchievement(year, key).then(setData).catch((e) => setErr(e.message));
+    const load = (k) => cache.current.get(k) ?? cache.current.set(k, loadAchievement(year, k)).get(k);
+    load(key).then(setData).catch((e) => setErr(e.message));
   }, [key, year]);
+
+  // الفصل الدراسي، وأقسامه الرئيسية: الفترة الأولى والثانية والاختبار النهائي
+  const term = termName(key);
+  const terms = useMemo(() => [...new Set((keys ?? []).map((k) => termName(k.key)))], [keys]);
+  const termKeys = useMemo(() => (keys ?? []).filter((k) => termName(k.key) === term), [keys, term]);
+  const keyOfPeriod = (p) => termKeys.find((k) => periodOf(k.key) === p);   // الأحدث أولًا
+  const others = termKeys.filter((k) => !periodOf(k.key));
+
+  // مقارنة الفترات المرفوعة في الفصل نفسه
+  const [trend, setTrend] = useState(null);     // [{ p, recs }]
+  useEffect(() => {
+    setTrend(null);
+    const ks = PERIODS.map((p) => ({ p, k: keyOfPeriod(p.k) })).filter((x) => x.k);
+    if (ks.length < 2) return;
+    let live = true;
+    Promise.all(ks.map(({ p, k }) => (cache.current.get(k.key) ?? cache.current.set(k.key, loadAchievement(year, k.key)).get(k.key))
+      .then((d) => ({ p, recs: d.recs }))))
+      .then((r) => live && setTrend(r)).catch(() => {});
+    return () => { live = false; };
+  }, [termKeys, year]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // السجلات في نطاق المستخدم والمرشّحات
   const scoped = useMemo(() => (data?.recs ?? []).filter((r) => myGrades.includes(r.grade)), [data, myGrades.join()]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -89,9 +111,12 @@ export default function AchievementCenter() {
         <>
           {/* المرشّحات في صف واحد أعلى الرسوم */}
           <div className="card flex flex-wrap items-center gap-2 p-3">
-            <select className="field w-auto text-sm" value={key} onChange={(e) => setKey(e.target.value)}>
-              {keys.map((k) => <option key={k.key} value={k.key}>{noticeTitle(k.key)}</option>)}
-            </select>
+            {terms.length > 1 && (
+              <select className="field w-auto text-sm" value={term}
+                      onChange={(e) => setKey(keys.find((k) => termName(k.key) === e.target.value)?.key ?? "")}>
+                {terms.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            )}
             {dataGrades.length > 1 && (
               <select className="field w-auto text-sm" value={grade} onChange={(e) => { setGrade(Number(e.target.value)); setSubject(""); }}>
                 <option value={0}>كل الصفوف</option>
@@ -102,8 +127,31 @@ export default function AchievementCenter() {
               <option value="">كل المواد</option>
               {subjects.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
-            <span className="ms-auto text-[11px] text-faint">آخر تحديث: {fmtDateTime(keys.find((k) => k.key === key)?.last)}</span>
+            <span className="ms-auto text-[11px] text-faint">{term} · آخر تحديث: {fmtDateTime(keys.find((k) => k.key === key)?.last)}</span>
           </div>
+
+          {/* الأقسام الرئيسية: الفترة الأولى والثانية والاختبار النهائي */}
+          <div className="grid grid-cols-3 gap-2">
+            {PERIODS.map((p) => {
+              const k = keyOfPeriod(p.k);
+              const on = k && k.key === key;
+              return (
+                <button key={p.k} disabled={!k} onClick={() => k && setKey(k.key)}
+                        className={`rounded-card border px-3 py-3 text-start transition ${on ? "border-mint-deep bg-mint-deep text-white shadow-card"
+                          : k ? "border-line bg-white hover:border-mint-light" : "cursor-not-allowed border-dashed border-line bg-canvas/60"}`}>
+                  <span className={`block text-sm font-bold ${on ? "text-white" : k ? "text-ink" : "text-faint"}`}>{p.t}</span>
+                  <span className={`mt-0.5 block text-[11px] ${on ? "text-white/80" : "text-faint"}`}>
+                    {k ? `${k.count} طالبًا · ${fmtDateTime(k.last)}` : "لم يُرفع بعد"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {others.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {others.map((k) => <button key={k.key} onClick={() => setKey(k.key)} className={chip(k.key === key)}>{noticeTitle(k.key)}</button>)}
+            </div>
+          )}
 
           {missingGrades.length > 0 && (
             <p className="rounded-sm2 border border-line bg-white px-3 py-2 text-[12.5px] text-muted">
@@ -120,7 +168,8 @@ export default function AchievementCenter() {
             ))}
           </div>
 
-          {!data ? <Loader /> : tab === "dash" ? <Dashboard recs={recs} checks={shownChecks} classSize={data.classSize} grade={grade} subject={subject}
+          {!data ? <Loader /> : tab === "dash" ? <Dashboard recs={recs} checks={shownChecks} classSize={data.classSize}
+                                                              trend={trend?.map((t) => ({ ...t, recs: t.recs.filter((r) => myGrades.includes(r.grade) && (!grade || r.grade === grade)) }))} grade={grade} subject={subject}
                                                               onSubject={setSubject} onNotes={() => setTab("notes")} />
             : tab === "notes" ? <Notes checks={shownChecks} />
             : <Students recs={recs} />}
@@ -133,7 +182,7 @@ export default function AchievementCenter() {
 /* ------------------------------------------------------------------ */
 /* لوحة التحليل                                                       */
 /* ------------------------------------------------------------------ */
-function Dashboard({ recs, checks, classSize, subject, onSubject, onNotes }) {
+function Dashboard({ recs, checks, classSize, trend, subject, onSubject, onNotes }) {
   const s = useMemo(() => stats(recs), [recs]);
   const studs = useMemo(() => studentSummaries(recs), [recs]);
   const bySubject = useMemo(() => [...groupBy(recs, (r) => r.subject)].map(([k, rs]) => {
@@ -215,6 +264,8 @@ function Dashboard({ recs, checks, classSize, subject, onSubject, onNotes }) {
         </section>
       </div>
 
+      {trend?.length > 1 && <PeriodTrend trend={trend} subject={subject} />}
+
       {!subject && heat.cols.length > 1 && (
         <section className="card p-4">
           <h2 className="text-sm font-semibold text-ink">خريطة الفصول والمواد</h2>
@@ -223,6 +274,56 @@ function Dashboard({ recs, checks, classSize, subject, onSubject, onNotes }) {
         </section>
       )}
     </div>
+  );
+}
+
+/* مقارنة الفترات: متوسط الاختبارات لكل مادة (أو لكل فصل في المادة المختارة) في كل فترة */
+function PeriodTrend({ trend, subject }) {
+  const [bind, tip] = useTipLocal();
+  const keyFn = subject ? (r) => `${GRADE_NAMES[r.grade]?.split(" ")[0] ?? ""} ${r.class_no}` : (r) => r.subject;
+  const rows = useMemo(() => {
+    const per = trend.map(({ p, recs }) => ({ p, m: new Map([...groupBy(recs.filter((r) => !subject || r.subject === subject), keyFn)].map(([k, rs]) => [k, stats(rs)])) }));
+    const labels = [...new Set(per.flatMap((x) => [...x.m.keys()]))].sort(cmpAr);
+    return labels.map((l) => ({ l, vals: per.map((x) => ({ p: x.p, s: x.m.get(l) })) }));
+  }, [trend, subject]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const overall = trend.map(({ p, recs }) => ({ p, s: stats(recs.filter((r) => !subject || r.subject === subject)) }));
+  return (
+    <section className="card p-4">
+      <h2 className="text-sm font-semibold text-ink">تطوّر المتوسط بين الفترات{subject ? ` · ${subject}` : ""}</h2>
+      <p className="mb-3 text-[11.5px] text-muted">متوسط درجات الاختبارات في كل فترة مرفوعة من الفصل نفسه</p>
+      <div className="mb-4 flex flex-wrap gap-4">
+        {overall.map(({ p, s }, i) => (
+          <div key={p.k} className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-[3px]" style={{ background: p.color }} />
+            <span className="text-[12.5px] text-muted">{p.t}</span>
+            <span className="num text-sm font-bold text-ink">{pctTxt(s.avg)}</span>
+            {i > 0 && overall[i - 1].s.avg != null && s.avg != null && (
+              <span className={`num text-[11.5px] font-semibold ${s.avg >= overall[i - 1].s.avg ? "text-present" : "text-absent"}`}>
+                {s.avg >= overall[i - 1].s.avg ? "▲" : "▼"} {Math.abs(Math.round((s.avg - overall[i - 1].s.avg) * 10) / 10)}
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2.5">
+        {rows.map(({ l, vals }) => (
+          <div key={l} className="grid grid-cols-[minmax(84px,26%)_1fr] items-center gap-2">
+            <span className="truncate text-[12.5px] text-ink">{l}</span>
+            <div className="space-y-[2px]">
+              {vals.map(({ p, s }) => (
+                <div key={p.k} className="flex items-center gap-2 outline-none" {...bind(<><b>{l}</b> · {p.t}<br />المتوسط {pctTxt(s?.avg)}{s ? ` · ${s.n} درجة` : ""}</>)}>
+                  <span className="relative h-2.5 flex-1 rounded-[4px] bg-canvas">
+                    {s?.avg != null && <span className="absolute inset-y-0 start-0 rounded-e-[4px]" style={{ width: `${Math.min(100, s.avg)}%`, background: p.color }} />}
+                  </span>
+                  <span className="num w-11 text-end text-[11px] text-muted">{s?.avg != null ? `${s.avg}%` : "—"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {tip}
+    </section>
   );
 }
 
