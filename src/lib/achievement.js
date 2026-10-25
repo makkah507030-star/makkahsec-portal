@@ -7,6 +7,7 @@
    • المهام الأدائية تُحلَّل منفصلة في الفحوصات وحدها (تدنٍّ أو فجوة مع الاختبارات).
    • المادة التي لم يُرصد جزء اختباراتها بعد لا تدخل التحليل.
    ===================================================================== */
+import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import { cmpAr } from "./sortAr.js";
 import { GRADE_NAMES } from "./schoolTime";
@@ -314,4 +315,19 @@ export function weakTeachers(checks) {
     });
   });
   return [...m.values()].filter((x) => x.checks.some((c) => c.sev === "critical") || x.checks.filter((c) => c.sev === "warning").length >= 2);
+}
+
+/* عضوية لجنة التحصيل (supabase/ach_committee.sql): تُقرأ مرة واحدة في الجلسة */
+let memberCache = { uid: null, p: null };
+export function loadAchMember(uid) {
+  if (!uid) return Promise.resolve(false);
+  if (memberCache.uid !== uid) {
+    memberCache = { uid, p: supabase.rpc("ach_is_member").then(({ data }) => !!data, () => false) };
+  }
+  return memberCache.p;
+}
+export function useAchMember(uid) {
+  const [m, setM] = useState(false);
+  useEffect(() => { let live = true; loadAchMember(uid).then((v) => live && setM(v)); return () => { live = false; }; }, [uid]);
+  return m;
 }

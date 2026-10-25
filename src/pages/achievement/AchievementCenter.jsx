@@ -14,7 +14,7 @@ import { fmtDateTime } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import {
   loadNoticeKeys, loadAchievement, noticeTitle, termName, periodOf, PERIODS, stats, groupBy, studentSummaries, runChecks, weakTeachers,
-  SEV, WEAK, bandOf, ACH_ALL,
+  SEV, WEAK, bandOf, ACH_ALL, useAchMember,
 } from "../../lib/achievement";
 import { supabase } from "../../lib/supabase";
 import { buildFormRows, syncForms, setupMsg as formsSetup, isSetupErr } from "../../lib/achForms";
@@ -34,8 +34,10 @@ const chip = (on) => `rounded-pill px-3 py-1.5 text-xs font-semibold transition 
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
 export default function AchievementCenter() {
-  const { adminRoles = [] } = useSession();
-  const seesAll = adminRoles.some((r) => ACH_ALL.includes(r));
+  const { adminRoles = [], profile } = useSession();
+  const member = useAchMember(profile?.id);     // أعضاء لجنة التحصيل: المدرسة كلها للاطلاع
+  const seesAll = member || adminRoles.some((r) => ACH_ALL.includes(r));
+  const canSync = adminRoles.some((r) => ["principal", "deputy_academic", "tech_support", "counselor_1", "counselor_2", "counselor_3"].includes(r));
   const myGrades = [1, 2, 3].filter((g) => seesAll || adminRoles.includes(`counselor_${g}`));
   const [params, setParams] = useSearchParams();
   const tab = TABS.some((t) => t.k === params.get("tab")) ? params.get("tab") : "dash";
@@ -95,7 +97,7 @@ export default function AchievementCenter() {
     let live = true;
     setForms(null); setFormsErr("");
     (async () => {
-      if (periodOf(key)) await syncForms(year, key, buildFormRows(scoped, checks)).catch((e) => { if (isSetupErr(e)) setFormsErr(formsSetup); });
+      if (canSync && periodOf(key)) await syncForms(year, key, buildFormRows(scoped, checks)).catch((e) => { if (isSetupErr(e)) setFormsErr(formsSetup); });
       const { data: fs, error } = await supabase.from("ach_forms").select("*").eq("academic_year", year).eq("report_key", key);
       if (!live) return;
       if (error) { setFormsErr(isSetupErr(error) ? formsSetup : error.message); setForms([]); return; }

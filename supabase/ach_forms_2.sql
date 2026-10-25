@@ -10,14 +10,14 @@ create or replace function public.ach_ev(p_action text, p_note text default null
   select jsonb_build_array(jsonb_build_object('at', now(), 'by', public.ach_me(), 'action', p_action, 'note', p_note));
 $$;
 
--- المسودات من تحليل المركز: تُضاف الجديدة، وتُحدَّث لقطة المسودة، وتُحذف مسودة زال ضعفها.
+-- المسودات من تحليل المركز (يكتبها موجه الصف والوكيل والمدير والدعم الفني): تُضاف الجديدة، وتُحدَّث لقطة المسودة، وتُحذف مسودة زال ضعفها.
 -- ومعها التذكير الآلي لمن تجاوز المهلة (مرة كل يومين).
 create or replace function public.ach_sync(p_year text, p_key text, p_rows jsonb)
 returns jsonb language plpgsql security definer set search_path = public as $$
 declare r jsonb; n_new int := 0; n_rem int := 0; f record; keep text[] := '{}'; v_ins boolean;
 begin
   for r in select * from jsonb_array_elements(p_rows) loop
-    continue when not public.ach_can_grade((r->>'grade')::int);
+    continue when not public.ach_can_send((r->>'grade')::int);
     keep := keep || ((r->>'grade') || '|' || (r->>'subject') || '|' || (r->>'teacher_id'));
     insert into ach_forms (academic_year, report_key, grade, subject, teacher_id, teacher_user, teacher_name, classes, log)
     values (p_year, p_key, (r->>'grade')::int, r->>'subject', (r->>'teacher_id')::uuid, (r->>'teacher_user')::uuid,
@@ -29,11 +29,11 @@ begin
     if v_ins then n_new := n_new + 1; end if;
     v_ins := null;
   end loop;
-  delete from ach_forms where academic_year = p_year and report_key = p_key and status = 'draft' and public.ach_can_grade(grade)
+  delete from ach_forms where academic_year = p_year and report_key = p_key and status = 'draft' and public.ach_can_send(grade)
     and not ((grade::text || '|' || subject || '|' || teacher_id::text) = any(keep));
 
   for f in select * from ach_forms where status in ('sent', 'returned') and due_on < current_date and teacher_user is not null
-             and (reminded_at is null or reminded_at < now() - interval '2 days') and public.ach_can_grade(grade) loop
+             and (reminded_at is null or reminded_at < now() - interval '2 days') and public.ach_can_send(grade) loop
     perform public.send_notification('تذكير: نموذج ملاحظة التحصيل في ' || f.subject,
       'تجاوز النموذج مهلة الرد. أكمل أسباب الضعف والخطة العلاجية.', 'general', '/ach-forms/' || f.id, null, array[f.teacher_user], null, null, true);
     update ach_forms set reminded_at = now(), log = log || public.ach_ev('تذكير آلي بتجاوز المهلة') where id = f.id;
