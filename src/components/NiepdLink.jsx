@@ -31,10 +31,9 @@ export default function NiepdLink() {
         {EXT}
       </a>
       <a href={GUIDE} target="_blank" rel="noopener noreferrer" className={card}>
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mint-tint text-mint-deep">
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5Z" /><path d="M4 19a2 2 0 0 1 2-2h13M9 7h6M9 10.5h6" /></svg>
-        </span>
+        {logo
+          ? <img src="/brands/niepd.png" alt="المعهد الوطني للتطوير المهني التعليمي" className="h-11 w-auto shrink-0 object-contain" onError={() => setLogo(false)} />
+          : <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mint-tint text-xs font-bold text-mint-deep">الدليل</span>}
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-ink">دليل اعتماد وتنفيذ أنشطة التطوير المهني التعليمي</span>
           <span className="block text-[11px] leading-snug text-muted">من المعهد (الإصدار 1): أنواع الأنشطة الخمسة عشر، ومستويات اعتمادها وشروطها ومعاييرها، لاحتساب نقاط التطوير المهني للترقية.</span>
