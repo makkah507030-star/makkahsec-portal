@@ -1,8 +1,8 @@
 // src/pages/achievement/MyQiyas.jsx
 /* =====================================================================
    نتائج قياس للطالب (/my-qiyas) — supabase/qiyas_results.sql و _2.
-   النتيجة خاصة بالطالب ولا تصل المدرسة من قياس، فيُدخلها هنا بصورة إثباتها (صورة الشاشة
-   أو شهادة النتيجة)، فتتحقق منها لجنة التحصيل. ولولي الأمر عرض نتائج أبنائه.
+   تسجّل المدرسة النتيجة رسميًا من تقرير المركز، وللطالب اختياريًا إدخالها هنا فتُضاف مباشرة،
+   مع صورة النتيجة إن شاء. ولولي الأمر عرض نتائج أبنائه.
    ===================================================================== */
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
@@ -17,7 +17,7 @@ const TESTS = [
 ];
 const STATUS = {
   pending: { t: "بانتظار التحقق", c: "bg-warning/10 text-warning" },
-  verified: { t: "معتمدة", c: "bg-present/10 text-present" },
+  verified: { t: "مسجّلة", c: "bg-present/10 text-present" },
   rejected: { t: "لم تُعتمد", c: "bg-absent/10 text-absent" },
 };
 
@@ -41,7 +41,6 @@ export default function MyQiyas() {
   const submit = async () => {
     const score = Number(form.score);
     if (!(score >= 0 && score <= 100) || form.score === "") { setMsg({ ok: false, text: "اكتب الدرجة من 0 إلى 100." }); return; }
-    if (!form.file && !form.id) { setMsg({ ok: false, text: "أرفق صورة النتيجة من حسابك في قياس لتتحقق منها اللجنة." }); return; }
     setBusy(true); setMsg(null);
     let path = null;
     if (form.file) {
@@ -54,7 +53,7 @@ export default function MyQiyas() {
       p_taken_on: form.taken_on || null, p_proof: path });
     setBusy(false);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
-    setForm(null); setMsg({ ok: true, text: "أُرسلت نتيجتك، وتظهر معتمدة بعد تحقق لجنة التحصيل." }); load();
+    setForm(null); setMsg({ ok: true, text: "أُضيفت نتيجتك." }); load();
   };
 
   if (!rows) return <Loader />;
@@ -64,7 +63,7 @@ export default function MyQiyas() {
         <h1 className="text-lg font-bold text-ink">نتائج قياس</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           {isStudent
-            ? "نتائجك في القدرات والتحصيلي واختبار STEP: تسجّلها المدرسة رسميًا متى وصلها تقرير المركز، ولك اختياريًا إدخالها الآن مع صورة النتيجة من حسابك في قياس لتتحقق منها لجنة التحصيل وتدعمك مبكرًا."
+            ? "نتائجك في القدرات والتحصيلي واختبار STEP: تسجّلها المدرسة رسميًا متى وصلها تقرير المركز، ولك اختياريًا إدخالها الآن لتتابعك لجنة التحصيل وتدعمك مبكرًا."
             : "نتائج أبنائك في اختبارات قياس كما أدخلوها، وحالة تحقق لجنة التحصيل منها."}
         </p>
       </div>
@@ -88,11 +87,11 @@ export default function MyQiyas() {
             <label className="text-[11.5px] text-muted">المحاولة<input className="field mt-1 w-full" value={form.attempt} onChange={(e) => setForm({ ...form, attempt: e.target.value })} /></label>
             <label className="text-[11.5px] text-muted">تاريخ الاختبار (اختياري)<input type="date" className="field mt-1 w-full" value={form.taken_on} onChange={(e) => setForm({ ...form, taken_on: e.target.value })} /></label>
           </div>
-          <label className="block text-[11.5px] text-muted">صورة النتيجة من حسابك في قياس (صورة أو PDF، حتى 5 ميجابايت)
+          <label className="block text-[11.5px] text-muted">صورة النتيجة من حسابك في قياس (اختيارية · صورة أو PDF حتى 5 ميجابايت)
             <input type="file" accept="image/*,application/pdf" className="mt-1 block text-sm" onChange={(e) => setForm({ ...form, file: e.target.files?.[0] ?? null })} />
           </label>
           <div className="flex gap-2">
-            <button onClick={submit} disabled={busy} className="rounded-pill bg-mint-deep px-4 py-2 text-xs font-semibold text-white">{busy ? "…" : "إرسال للتحقق"}</button>
+            <button onClick={submit} disabled={busy} className="rounded-pill bg-mint-deep px-4 py-2 text-xs font-semibold text-white">{busy ? "…" : "حفظ النتيجة"}</button>
             <button onClick={() => setForm(null)} className="rounded-pill border border-line bg-white px-4 py-2 text-xs text-muted">إلغاء</button>
           </div>
         </section>
@@ -112,9 +111,9 @@ export default function MyQiyas() {
               </span>
             </span>
             <span className={`chip text-[11px] font-semibold ${STATUS[r.status].c}`}>{r.source === "official" ? "رسمية من تقرير المركز" : STATUS[r.status].t}</span>
-            {isStudent && r.status === "rejected" && r.source === "student" && (
+            {isStudent && r.source === "student" && (
               <button onClick={() => setForm({ id: r.id, test: r.test, attempt: r.attempt, score: String(r.score), taken_on: r.taken_on ?? "", file: null })}
-                      className="text-xs font-semibold text-mint-deep">تصحيح</button>
+                      className="text-xs font-semibold text-mint-deep">تعديل</button>
             )}
           </div>
         ))}

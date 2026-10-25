@@ -3,8 +3,8 @@
    مركز التحصيل ← اختبارات قياس: القدرات والتحصيلي وSTEP (supabase/qiyas_results.sql و _2).
    • الرسمي: تقرير يصل المدرسة من المركز ترفعه اللجنة بملف Excel، أو نتيجة طالب واحد (تُعتمد مباشرة،
      وتستبدل ما أدخله الطالب للمحاولة نفسها).
-   • اختياريًا: يُدخل الطالب نتيجته من حسابه («نتائج قياس») بصورة إثباتها، فتظهر هنا «بانتظار التحقق»
-     لتعتمدها اللجنة أو ترفضها بسبب يصله.
+   • اختياريًا: يُدخل الطالب نتيجته من حسابه («نتائج قياس») فتُضاف مباشرة دون تحقق. وقسم «بانتظار
+     التحقق» يظهر إن فُعّل التحقق لاحقًا (qiyas_submit بحالة pending).
    • التحليل على المعتمد وحده: أعلى درجة لكل طالب، والمتوسط والتوزيع والفصول، ومن لم يُدخل بعد.
    ===================================================================== */
 import { useEffect, useMemo, useState } from "react";
@@ -22,7 +22,7 @@ const TESTS = [
   { k: "tahsili", t: "التحصيلي", d: "الاختبار التحصيلي للتخصصات العلمية" },
   { k: "step", t: "STEP", d: "اختبار كفايات اللغة الإنجليزية" },
 ];
-const SRC = { official: "تقرير المركز", staff: "اللجنة", student: "الطالب (متحقَّق)" };
+const SRC = { official: "تقرير المركز", staff: "اللجنة", student: "الطالب" };
 const setupMsg = "اختبارات قياس تحتاج تشغيل supabase/qiyas_results.sql في Supabase ← SQL Editor.";
 const chip = (on) => `rounded-pill px-3 py-1.5 text-xs font-semibold transition ${on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
@@ -75,8 +75,8 @@ export default function Qiyas() {
       <div>
         <h1 className="text-lg font-bold text-ink">اختبارات قياس: القدرات والتحصيلي واختبار STEP</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          ترفع اللجنة تقرير المركز الرسمي متى وصل المدرسة، وللطالب اختياريًا إدخال نتيجته من حسابه («نتائج قياس») بصورة
-          إثباتها لتتحقق منها اللجنة. ويدخل التحليل المعتمد وحده: أعلى درجة لكل طالب، ومتوسط الفصول، ومن لم تُسجَّل نتيجته بعد.
+          ترفع اللجنة تقرير المركز الرسمي متى وصل المدرسة، وللطالب اختياريًا إدخال نتيجته من حسابه («نتائج قياس») فتُضاف
+          مباشرة. والتحليل بأعلى درجة لكل طالب، ومتوسط الفصول، ومن لم تُسجَّل نتيجته بعد.
         </p>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
@@ -174,12 +174,12 @@ function Analysis({ best, test, students }) {
     return t ? l.filter((b) => b.full_name.includes(t) || (b.national_id ?? "").includes(t)) : l;
   }, [best, q]);
 
-  if (!best.length) return <div className="card px-6 py-10 text-center text-sm text-muted">لا نتائج {test.t} معتمدة بعد. يُدخلها الطلاب من حساباتهم في «نتائج قياس».</div>;
+  if (!best.length) return <div className="card px-6 py-10 text-center text-sm text-muted">لا نتائج {test.t} مسجّلة بعد: ترفعها اللجنة من تقرير المركز، أو يُدخلها الطلاب من «نتائج قياس».</div>;
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="متوسط الدرجات" value={s.avg ?? "—"} sub={`الوسيط ${s.median ?? "—"} · من 100`} />
-        <Stat label="نتائج معتمدة" value={s.n} sub={missing != null ? `${missing} من طلاب الثالث لم تُعتمد لهم نتيجة بعد` : "أعلى درجة لكل طالب"} />
+        <Stat label="نتائج مسجّلة" value={s.n} sub={missing != null ? `${missing} من طلاب الثالث لم تُسجَّل لهم نتيجة بعد` : "أعلى درجة لكل طالب"} />
         <Stat label="90 فأكثر" value={pctTxt(s.exPct)} sub={`${s.ex} طالبًا`} />
         <Stat label="أعلى درجة" value={s.max ?? "—"} sub={`أدنى درجة ${s.min ?? "—"}`} />
       </div>

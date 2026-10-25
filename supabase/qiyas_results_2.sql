@@ -1,9 +1,9 @@
 -- =====================================================================
--- نتائج قياس — الجزء 2 من 2: إدخال الطالب نتيجته بإثباتها، وتحقق اللجنة، ومخزن الإثباتات.
+-- نتائج قياس — الجزء 2 من 2: إدخال الطالب نتيجته (تُضاف مباشرة)، وتحقق اللجنة عند الحاجة، ومخزن الإثباتات.
 -- يُنفَّذ بعد qiyas_results.sql. تكرار التنفيذ آمن.
 -- =====================================================================
 
--- الطالب يُدخل نتيجته اختياريًا (أو يصحّحها) فتعود «بانتظار التحقق»، ولا تستبدل نتيجة رسمية
+-- الطالب يُدخل نتيجته اختياريًا (أو يصحّحها) فتُضاف مباشرة دون تحقق، ولا تستبدل نتيجة رسمية
 create or replace function public.qiyas_submit(p_test text, p_attempt text, p_score numeric, p_taken_on date, p_proof text)
 returns uuid language plpgsql security definer set search_path = public as $$
 declare v_sid uuid; v_id uuid; v_year text;
@@ -15,9 +15,9 @@ begin
   select value into v_year from settings where key = 'active_year';
   insert into qiyas_results (student_id, test, attempt, score, taken_on, academic_year, source, status, proof_path, uploader_name)
   values (v_sid, p_test, coalesce(nullif(trim(p_attempt), ''), 'المحاولة الأولى'), p_score, p_taken_on, coalesce(v_year, ''),
-          'student', 'pending', p_proof, (select full_name from users where id = auth.uid()))
+          'student', 'verified', p_proof, (select full_name from users where id = auth.uid()))
   on conflict (student_id, test, attempt) do update set score = excluded.score, taken_on = excluded.taken_on,
-    proof_path = coalesce(excluded.proof_path, qiyas_results.proof_path), status = 'pending', source = 'student',
+    proof_path = coalesce(excluded.proof_path, qiyas_results.proof_path), status = 'verified', source = 'student',
     reject_reason = null, verified_by_name = null, verified_at = null, updated_at = now()
     where qiyas_results.source = 'student'
   returning id into v_id;
@@ -25,7 +25,7 @@ begin
   return v_id;
 end $$;
 
--- تحقق اللجنة أو الوكيل: اعتماد، أو رفض بسبب يصل الطالب
+-- تحقق اللجنة أو الوكيل (غير مستعمل الآن، لتفعيل التحقق لاحقًا): اعتماد، أو رفض بسبب يصل الطالب
 create or replace function public.qiyas_verify(p_id uuid, p_ok boolean, p_reason text) returns void
 language plpgsql security definer set search_path = public as $$
 declare r qiyas_results; v_user uuid;
