@@ -467,25 +467,31 @@ function DayLine({ rows, clock }) {
   const s0 = toMinutes(list[0].start_time), s1 = toMinutes(list.at(-1).end_time);
   const now = clock.getHours() * 60 + clock.getMinutes();
   const fmt = (t) => { const v = toMinutes(t); const h = Math.floor(v / 60); return `${h % 12 || 12}:${String(v % 60).padStart(2, "0")}`; };
-  const pos = Math.min(1, Math.max(0, (now - s0) / (s1 - s0)));
+  // الخط الذهبي داخل الفترة الجارية بنسبة ما مضى منها: عرض المربعات لا يتناسب مع المدة تمامًا
+  // (للفواصل عرض أدنى، وبينها مسافات)، فلا يصح حسابه من اليوم كله. وبين فترتين يقف عند بداية التالية.
+  const at = now >= s0 && now <= s1
+    ? list.findIndex((r) => now <= toMinutes(r.end_time)) : -1;
+  const frac = at < 0 ? 0 : Math.min(1, Math.max(0,
+    (now - toMinutes(list[at].start_time)) / Math.max(1, toMinutes(list[at].end_time) - toMinutes(list[at].start_time))));
   return (
     <div className="space-y-3 pt-2">
-      <div className="relative">
-        <div className="flex h-12 gap-[3px]">
-          {list.map((r, i) => {
-            const a = toMinutes(r.start_time), b = toMinutes(r.end_time);
-            const cur = now >= a && now <= b, past = now > b, per = r.kind === "period";
-            return (
-              <div key={i} className="flex min-w-0 flex-col items-center justify-center overflow-hidden rounded-[6px] text-[11px] font-semibold"
-                style={{ flexGrow: b - a, flexBasis: 0, minWidth: per ? 0 : "3.6rem", background: cur ? "var(--m-accent)" : per ? "var(--m-track)" : "transparent",
+      <div className="flex h-12 gap-[3px]">
+        {list.map((r, i) => {
+          const a = toMinutes(r.start_time), b = toMinutes(r.end_time);
+          const cur = now >= a && now <= b, past = now > b, per = r.kind === "period";
+          return (
+            <div key={i} className="relative min-w-0" style={{ flexGrow: b - a, flexBasis: 0, minWidth: per ? 0 : "3.6rem" }}>
+              <div className="flex h-full flex-col items-center justify-center overflow-hidden rounded-[6px] text-[11px] font-semibold"
+                style={{ background: cur ? "var(--m-accent)" : per ? "var(--m-track)" : "transparent",
                   border: per ? "none" : "1.5px dashed var(--m-line)", color: cur ? "var(--m-on)" : "var(--m-sub)", opacity: past && !cur ? 0.5 : 1 }}
                 title={`${r.label ?? ""} ${fmt(r.start_time)}–${fmt(r.end_time)}`}>
                 <span className="block w-full truncate px-0.5 text-center">{per ? r.period_no : shortLabel(r.label)}</span>
               </div>
-            );
-          })}
-        </div>
-        {now >= s0 && now <= s1 && <span className="absolute -top-1.5 bottom-[-6px] w-[2px] rounded-full" style={{ right: `${pos * 100}%`, background: "var(--m-gold)" }} />}
+              {i === at && <span className="absolute -top-1.5 bottom-[-6px] z-10 w-[2px] rounded-full"
+                                 style={{ right: `calc(${frac * 100}% - 1px)`, background: "var(--m-gold)" }} />}
+            </div>
+          );
+        })}
       </div>
       <div className="flex justify-between text-[11px] text-[var(--m-sub)]">
         <span>البداية <span className="num">{fmt(list[0].start_time)}</span></span>
