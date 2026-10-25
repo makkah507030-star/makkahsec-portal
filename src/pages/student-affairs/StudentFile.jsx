@@ -180,11 +180,16 @@ function Header({ st, s, m, notes, onPrint }) {
     health.length > 0 && { t: "ملاحظة صحية", c: "bg-excused/10 text-excused" },
     st.scout && { t: "عضو الفريق الكشفي", c: "bg-mint-tint text-mint-deep" },
   ].filter(Boolean);
-  const initials = (st.full_name ?? s.full_name).split(" ").slice(0, 2).map((w) => w[0]).join(" ");
   return (
     <section className="card flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
-        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-card bg-mint-deep text-lg font-bold text-white">{initials}</div>
+        {/* رمز الطالب: قبعة تخرج فوق شخص */}
+        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-card bg-mint-deep text-white" aria-hidden="true">
+          <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3 3 7l9 4 9-4-9-4Z" /><path d="M7 9v3.2c0 1.2 2.2 2.3 5 2.3s5-1.1 5-2.3V9" /><path d="M21 7v4" />
+            <path d="M5.5 21c.9-2.6 3.5-4.2 6.5-4.2s5.6 1.6 6.5 4.2" />
+          </svg>
+        </div>
         <div className="min-w-0 space-y-1">
           <h2 className="text-lg font-bold leading-snug text-ink">{st.full_name ?? s.full_name}</h2>
           <p className="text-xs text-muted">
