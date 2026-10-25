@@ -756,8 +756,27 @@ export default function Layout({ children }) {
     const iconOnly = desktop && collapsed;
     return (
       <>
-        {/* البحث */}
-        <div className={`border-b border-line ${iconOnly ? "px-3 py-3" : "px-3 py-3"}`}>
+        {/* الشكل ثم البحث */}
+        <div className={`space-y-2 border-b border-line ${iconOnly ? "px-3 py-3" : "px-3 py-3"}`}>
+          {/* شكل البوابة: الهوية الرسمية (الافتراضية) أو الكلاسيكي (lib/theme.js) */}
+          {iconOnly ? (
+            <button type="button" title={style === "classic" ? "التبديل إلى الهوية الرسمية" : "التبديل إلى الشكل الكلاسيكي"}
+                    onClick={() => { const next = style === "classic" ? "official" : "classic"; saveStyle(next); setStyle(next); }}
+                    className="grid h-9 w-full place-items-center rounded-sm2 text-muted hover:bg-canvas hover:text-ink">
+              <Icon name="palette" />
+            </button>
+          ) : (
+            <div className="grid grid-cols-2 gap-1 rounded-sm2 border border-line bg-canvas/60 p-1" role="group" aria-label="شكل البوابة">
+              {[["official", "الهوية الرسمية"], ["classic", "الكلاسيكي"]].map(([k, t]) => (
+                <button key={k} type="button" aria-pressed={style === k}
+                        onClick={() => { saveStyle(k); setStyle(k); }}
+                        className={`rounded-[6px] py-1.5 text-xs font-semibold transition-colors ${
+                          style === k ? "bg-mint-deep text-white" : "text-muted hover:bg-white hover:text-ink"}`}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
           {iconOnly ? (
             <button type="button" title="بحث في القائمة (Ctrl+K)"
                     onClick={() => { setCollapsedSaved(false); setTimeout(() => searchRef.current?.focus(), 0); }}
@@ -858,15 +877,6 @@ export default function Layout({ children }) {
           {footer.map((i) => iconOnly ? navItem(i, { iconOnly }) : (
             <div key={i.to} className="min-w-0 flex-1">{navItem(i, { iconOnly: true })}</div>
           ))}
-          <button type="button"
-                  onClick={() => { const next = style === "classic" ? "official" : "classic"; saveStyle(next); setStyle(next); }}
-                  title={style === "classic" ? "التبديل إلى الهوية الرسمية" : "التبديل إلى الشكل الكلاسيكي"}
-                  className={`flex w-full items-center gap-3 rounded-sm2 py-2 text-[13px] font-medium text-faint hover:bg-canvas hover:text-ink ${
-                    iconOnly ? "justify-center" : "px-3"
-                  }`}>
-            <Icon name="palette" className="h-[18px] w-[18px]" />
-            {!iconOnly && <span>{style === "classic" ? "الهوية الرسمية" : "الشكل الكلاسيكي"}</span>}
-          </button>
           {desktop && (
             <button type="button" onClick={() => setCollapsedSaved(!collapsed)}
                     title={collapsed ? "توسيع القائمة" : "طيّ القائمة"} aria-label={collapsed ? "توسيع القائمة" : "طيّ القائمة"}
