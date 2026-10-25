@@ -289,6 +289,8 @@ const BASIC_GROUPS = [
       { to: "/exams", label: "جداول الاختبارات", icon: "calendar" },
       // مركز التدريب (القدرات) — للطالب وحده من هذه القائمة، لا لولي الأمر
       { to: "/qudrat", label: "مركز التدريب", icon: "target", studentOnly: true, kw: "قياس قدرات تحصيلي" },
+      // نتائج قياس: يُدخلها الطالب بإثباتها، ويطّلع عليها ولي الأمر (pages/achievement/MyQiyas.jsx)
+      { to: "/my-qiyas", label: "نتائج قياس", icon: "award", kw: "قدرات تحصيلي step درجة" },
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
       // التعاميم تصل أولياء الأمور لا الطلاب
       { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },

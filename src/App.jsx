@@ -111,6 +111,7 @@ const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
 const AchievementCenter = lazy(() => import("./pages/achievement/AchievementCenter.jsx"));
 const AchForm = lazy(() => import("./pages/achievement/AchForm.jsx"));
 const Qiyas = lazy(() => import("./pages/achievement/Qiyas.jsx"));
+const MyQiyas = lazy(() => import("./pages/achievement/MyQiyas.jsx"));
 const AchCommittee = lazy(() => import("./pages/achievement/AchCommittee.jsx"));
 const AchFormsList = lazy(() => import("./pages/achievement/AchForm.jsx").then((m) => ({ default: m.AchFormsList })));
 const Nominations = lazy(() => import("./pages/nominations/Nominations.jsx"));
@@ -524,6 +525,7 @@ export default function App() {
           {/* مركز التحصيل الدراسي — الصفحة تتحقق من الدور (وكيل الشؤون التعليمية والموجهون…) */}
           <Route path="/achievement" element={<AchievementCenter />} />
           <Route path="/qiyas" element={<Qiyas />} />
+          <Route path="/my-qiyas" element={<MyQiyas />} />
           <Route path="/ach-committee" element={<AchCommittee />} />
           {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
           <Route path="/ach-forms" element={<AchFormsList />} />

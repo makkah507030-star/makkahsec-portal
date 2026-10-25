@@ -1,9 +1,11 @@
 // src/pages/achievement/Qiyas.jsx
 /* =====================================================================
-   مركز التحصيل ← اختبارات قياس: القدرات والتحصيلي وSTEP (supabase/qiyas_results.sql).
-   • الرفع: ملف Excel من قياس أو كشف المدرسة؛ يُكتشف عمود الهوية وعمود الدرجة تلقائيًا
-     (ويمكن تغييره)، ويطابَق كل طالب برقم هويته، مع معاينة قبل الحفظ. أو إدخال طالب واحد.
-   • التحليل: أعلى درجة لكل طالب، والمتوسط والتوزيع والفصول، والأعلى، ومن لم يختبر بعد.
+   مركز التحصيل ← اختبارات قياس: القدرات والتحصيلي وSTEP (supabase/qiyas_results.sql و _2).
+   النتيجة خاصة بالطالب ولا تصل المدرسة من قياس:
+   • يُدخلها الطالب من حسابه («نتائج قياس») بصورة إثباتها، فتظهر هنا «بانتظار التحقق»
+     لتعتمدها اللجنة أو ترفضها بسبب يصله.
+   • وللجنة إدخال نتيجة يقدّمها الطالب، أو كشف Excel جمعته المدرسة من الطلاب (تُعتمد مباشرة).
+   • التحليل على المعتمد وحده: أعلى درجة لكل طالب، والمتوسط والتوزيع والفصول، ومن لم يُدخل بعد.
    ===================================================================== */
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
@@ -41,7 +43,7 @@ export default function Qiyas() {
     const y = st?.value ?? "";
     setYear(y);
     const [{ data, error }, { data: vs }] = await Promise.all([
-      supabase.from("qiyas_results").select("id, student_id, test, attempt, score, taken_on, created_at").limit(20000),
+      supabase.from("qiyas_results").select("id, student_id, test, attempt, score, taken_on, status, source, proof_path, reject_reason, created_at").limit(20000),
       supabase.from("v_active_students").select("student_id, full_name, national_id, grade, class_no").eq("academic_year", y).eq("status", "active").limit(5000),
     ]);
     if (error) { setErr(/qiyas_results/.test(error.message) ? setupMsg : error.message); setRows([]); return; }
@@ -53,7 +55,7 @@ export default function Qiyas() {
   // أعلى درجة لكل طالب في الاختبار المختار، لطلاب الصفوف المتاحة
   const best = useMemo(() => {
     const m = new Map();
-    (rows ?? []).filter((r) => r.test === test).forEach((r) => {
+    (rows ?? []).filter((r) => r.test === test && r.status === "verified").forEach((r) => {
       const s = stu.get(r.student_id);
       if (!s || !myGrades.includes(s.grade)) return;
       const x = m.get(r.student_id);
@@ -72,8 +74,8 @@ export default function Qiyas() {
       <div>
         <h1 className="text-lg font-bold text-ink">اختبارات قياس: القدرات والتحصيلي واختبار STEP</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          نتائج اختبارات هيئة تقويم التعليم والتدريب لطلاب المدرسة: تُرفع بملف Excel ويطابَق كل طالب برقم هويته،
-          فيظهر تحليلها بأعلى درجة لكل طالب، ومتوسط الفصول، ومن لم يختبر بعد.
+          نتيجة قياس خاصة بالطالب ولا تصل المدرسة، فيُدخلها الطالب من حسابه («نتائج قياس») بصورة إثباتها، وتتحقق منها
+          اللجنة هنا. ويدخل التحليل المعتمد وحده: أعلى درجة لكل طالب، ومتوسط الفصول، ومن لم يُدخل نتيجته بعد.
         </p>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
@@ -81,13 +83,14 @@ export default function Qiyas() {
 
       <div className="grid grid-cols-3 gap-2">
         {TESTS.map((t) => {
-          const n = new Set((rows ?? []).filter((r) => r.test === t.k).map((r) => r.student_id)).size;
+          const n = new Set((rows ?? []).filter((r) => r.test === t.k && r.status === "verified").map((r) => r.student_id)).size;
+          const p = (rows ?? []).filter((r) => r.test === t.k && r.status === "pending").length;
           const on = t.k === test;
           return (
             <button key={t.k} onClick={() => setTest(t.k)}
                     className={`rounded-card border px-3 py-3 text-start transition ${on ? "border-mint-deep bg-mint-deep text-white shadow-card" : "border-line bg-white hover:border-mint-light"}`}>
               <span className={`block text-sm font-bold ${on ? "text-white" : "text-ink"}`}>{t.t}</span>
-              <span className={`mt-0.5 block text-[11px] ${on ? "text-white/80" : "text-faint"}`}>{n ? `${n} طالبًا` : "لا نتائج بعد"}</span>
+              <span className={`mt-0.5 block text-[11px] ${on ? "text-white/80" : "text-faint"}`}>{n ? `${n} طالبًا` : "لا نتائج بعد"}{p ? ` · ${p} بانتظار التحقق` : ""}</span>
             </button>
           );
         })}
@@ -95,14 +98,62 @@ export default function Qiyas() {
 
       {canWrite && !err && (
         <div className="flex gap-2">
-          <button onClick={() => setUpload(!upload)} className={chip(upload)}>{upload ? "إغلاق الرفع" : `رفع نتائج ${T.t}`}</button>
+          <button onClick={() => setUpload(!upload)} className={chip(upload)}>{upload ? "إغلاق الإدخال" : `إدخال نتائج ${T.t} من اللجنة`}</button>
         </div>
       )}
       {upload && <Upload test={T} year={year} students={students} me={profile?.full_name}
                          onDone={(text) => { setUpload(false); setMsg({ ok: true, text }); load(); }} setMsg={setMsg} />}
 
+      {!err && <Pending rows={(rows ?? []).filter((r) => r.test === test && r.status === "pending" && myGrades.includes(stu.get(r.student_id)?.grade))}
+                        stu={stu} canWrite={canWrite} onChange={load} setMsg={setMsg} />}
+
       {!err && <Analysis best={best} test={T} students={students.filter((s) => myGrades.includes(s.grade))} />}
     </div>
+  );
+}
+
+/* بانتظار التحقق: ما أدخله الطلاب بإثباته */
+function Pending({ rows, stu, canWrite, onChange, setMsg }) {
+  const [reason, setReason] = useState({});
+  const [busy, setBusy] = useState(null);
+  if (!rows.length) return null;
+  const proof = async (path) => {
+    const { data } = await supabase.storage.from("qiyas-proofs").createSignedUrl(path, 300);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank", "noopener");
+  };
+  const verify = async (r, ok) => {
+    setBusy(r.id);
+    const { error } = await supabase.rpc("qiyas_verify", { p_id: r.id, p_ok: ok, p_reason: reason[r.id] ?? "" });
+    setBusy(null);
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    onChange();
+  };
+  return (
+    <section className="card overflow-hidden">
+      <h2 className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">بانتظار التحقق <span className="num text-muted">({rows.length})</span></h2>
+      <div className="divide-y divide-line">
+        {rows.map((r) => {
+          const s = stu.get(r.student_id);
+          return (
+            <div key={r.id} className="flex flex-wrap items-center gap-2 px-4 py-2.5">
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-ink">{s?.full_name} <span className="num text-[12px] font-bold text-mint-deep">· {r.score}</span></span>
+                <span className="block text-[11.5px] text-muted">{GRADE_NAMES[s?.grade]?.split(" ")[0]} · {s?.class_no} · {r.attempt}</span>
+              </span>
+              {r.proof_path ? <button onClick={() => proof(r.proof_path)} className="text-xs font-semibold text-mint-deep">عرض الإثبات</button>
+                            : <span className="text-[11px] text-absent">بلا إثبات</span>}
+              {canWrite && (
+                <>
+                  <input className="field !h-8 w-40 text-xs" value={reason[r.id] ?? ""} onChange={(e) => setReason({ ...reason, [r.id]: e.target.value })} placeholder="سبب الرفض" />
+                  <button onClick={() => verify(r, true)} disabled={busy === r.id} className="rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white">اعتماد</button>
+                  <button onClick={() => verify(r, false)} disabled={busy === r.id} className="rounded-pill border border-line px-3 py-1 text-xs text-absent">رفض</button>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -122,12 +173,12 @@ function Analysis({ best, test, students }) {
     return t ? l.filter((b) => b.full_name.includes(t) || (b.national_id ?? "").includes(t)) : l;
   }, [best, q]);
 
-  if (!best.length) return <div className="card px-6 py-10 text-center text-sm text-muted">لا نتائج {test.t} مرفوعة بعد.</div>;
+  if (!best.length) return <div className="card px-6 py-10 text-center text-sm text-muted">لا نتائج {test.t} معتمدة بعد. يُدخلها الطلاب من حساباتهم في «نتائج قياس».</div>;
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="متوسط الدرجات" value={s.avg ?? "—"} sub={`الوسيط ${s.median ?? "—"} · من 100`} />
-        <Stat label="عدد المختبرين" value={s.n} sub={missing != null ? `${missing} من طلاب الثالث لم يختبروا بعد` : "أعلى درجة لكل طالب"} />
+        <Stat label="نتائج معتمدة" value={s.n} sub={missing != null ? `${missing} من طلاب الثالث لم تُعتمد لهم نتيجة بعد` : "أعلى درجة لكل طالب"} />
         <Stat label="90 فأكثر" value={pctTxt(s.exPct)} sub={`${s.ex} طالبًا`} />
         <Stat label="أعلى درجة" value={s.max ?? "—"} sub={`أدنى درجة ${s.min ?? "—"}`} />
       </div>
@@ -210,13 +261,14 @@ function Upload({ test, year, students, me, onDone, setMsg }) {
   const save = async (list) => {
     setBusy(true);
     const payload = list.map(({ s, score }) => ({ student_id: s.student_id, test: test.k, attempt: attempt.trim() || "المحاولة الأولى",
-      score, academic_year: year, uploader_name: me ?? null, updated_at: new Date().toISOString() }));
+      score, academic_year: year, uploader_name: me ?? null, source: "staff", status: "verified", reject_reason: null,
+      verified_by_name: me ?? null, verified_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
     for (let i = 0; i < payload.length; i += 500) {
       const { error } = await supabase.from("qiyas_results").upsert(payload.slice(i, i + 500), { onConflict: "student_id,test,attempt" });
       if (error) { setBusy(false); setMsg({ ok: false, text: /qiyas_results/.test(error.message) ? setupMsg : error.message }); return; }
     }
     setBusy(false);
-    onDone(`حُفظت نتائج ${test.t} لـ ${payload.length} طالبًا (${attempt}).`);
+    onDone(`حُفظت نتائج ${test.t} لـ ${payload.length} طالبًا (${attempt}) معتمدة.`);
   };
 
   const saveOne = () => {
@@ -231,8 +283,8 @@ function Upload({ test, year, students, me, onDone, setMsg }) {
     <section className="card space-y-4 p-4">
       <div className="grid gap-2 sm:grid-cols-[1fr_220px]">
         <div>
-          <p className="text-sm font-semibold text-ink">رفع نتائج {test.t} بملف Excel</p>
-          <p className="mt-0.5 text-[11.5px] text-muted">من موقع قياس أو كشف المدرسة: يكفي عمود رقم الهوية وعمود الدرجة. تُستبدل نتيجة الطالب للمحاولة نفسها إن رُفعت من قبل.</p>
+          <p className="text-sm font-semibold text-ink">كشف Excel جمعته المدرسة من الطلاب ({test.t})</p>
+          <p className="mt-0.5 text-[11.5px] text-muted">يكفي عمود رقم الهوية وعمود الدرجة، وتُعتمد مباشرة. تُستبدل نتيجة الطالب للمحاولة نفسها إن أُدخلت من قبل.</p>
         </div>
         <label className="text-[11.5px] text-muted">المحاولة أو الفترة<input className="field mt-1 w-full text-sm" value={attempt} onChange={(e) => setAttempt(e.target.value)} /></label>
       </div>
