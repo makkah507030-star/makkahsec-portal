@@ -4,7 +4,7 @@ import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
 import { GRADE_NAMES } from "../lib/schoolTime";
 import Loader from "../components/Loader.jsx";
-import { EXCUSE_KIND, EXCUSE_STATUS, dayLabel, deciderText, openExcuseFile } from "../components/AbsenceExcuse.jsx";
+import { EXCUSE_KIND, EXCUSE_STATUS, dayLabel, deciderText, openExcuseFile, caseOf, REPLY_CARDS, fillReply, ExcuseGuide } from "../components/AbsenceExcuse.jsx";
 
 /* =====================================================================
    أعذار الغياب — لوكيل شؤون الطلاب والمساعدَين الإداريَّين 1 و2 (ومعهم المدير والدعم الفني):
@@ -54,6 +54,7 @@ export default function AbsenceExcuses() {
         <h1 className="text-lg font-bold text-ink">أعذار الغياب</h1>
         <p className="mt-1 text-sm text-muted">يرفعها الطالب أو ولي أمره من سجل غيابه. القبول يجعل غياب أيامها «غائب بعذر» آليًا، والرفض يحتاج سببًا يصل المستفيد.</p>
       </div>
+      <ExcuseGuide />
       <div className="flex gap-1.5">
         <button className={pill(tab === "pending")} onClick={() => setTab("pending")}>بانتظار القرار</button>
         <button className={pill(tab === "done")} onClick={() => setTab("done")}>السجل</button>
@@ -74,11 +75,12 @@ export default function AbsenceExcuses() {
                       {c && <span className="mr-1 text-xs font-normal text-muted">· {GRADE_NAMES[c.grade] ?? ""} / <span className="num">{c.class_no}</span></span>}</p>
                     <p className="text-xs text-muted">من {r.requester === "guardian" ? "ولي الأمر" : "الطالب"} · <span className="num">{fmtDateTime(r.created_at)}</span></p>
                   </div>
-                  <span className="chip bg-canvas text-muted">{EXCUSE_KIND[r.kind] ?? ""}</span>
+                  <span className="chip bg-canvas text-muted">{caseOf(r.case_key) ? `الحالة ${caseOf(r.case_key).n}` : EXCUSE_KIND[r.kind] ?? ""}</span>
                   {r.status !== "pending" && <span className={`chip ${st.c}`}>{st.short}</span>}
                 </div>
                 <p className="text-sm text-ink"><span className="text-muted">الأيام: </span>{(r.dates ?? []).map(dayLabel).join("، ")}</p>
                 {r.reason && <p className="text-sm text-ink"><span className="text-muted">السبب: </span>{r.reason}</p>}
+                {caseOf(r.case_key)?.proof && <p className="text-xs text-muted">الإثبات المطلوب: <b className="text-ink">{caseOf(r.case_key).proof}</b>{caseOf(r.case_key).note && ` · ${caseOf(r.case_key).note}`}</p>}
                 {r.file_path && (
                   <button className="text-xs font-semibold text-mint-deep underline"
                           onClick={() => openExcuseFile(r.file_path).catch((e) => setMsg({ ok: false, text: e.message }))}>
@@ -86,12 +88,25 @@ export default function AbsenceExcuses() {
                   </button>
                 )}
                 {r.status === "pending" ? (
-                  <div className="flex flex-wrap items-center gap-2 border-t border-line pt-2">
+                  <div className="space-y-2 border-t border-line pt-2">
+                  {/* بطاقات رد جاهزة: الضغط يضع النص في الملاحظة */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {REPLY_CARDS.accept.map((t) => (
+                      <button key={t} type="button" onClick={() => setNote((x) => ({ ...x, [r.id]: fillReply(t, caseOf(r.case_key)) }))}
+                              className="rounded-pill border border-excused/30 bg-excused/5 px-2.5 py-1 text-[11px] text-excused hover:bg-excused/10">✓ {fillReply(t, caseOf(r.case_key))}</button>
+                    ))}
+                    {REPLY_CARDS.reject.map((t) => (
+                      <button key={t} type="button" onClick={() => setNote((x) => ({ ...x, [r.id]: fillReply(t, caseOf(r.case_key)) }))}
+                              className="rounded-pill border border-absent/25 bg-absent/5 px-2.5 py-1 text-[11px] text-absent hover:bg-absent/10">✕ {fillReply(t, caseOf(r.case_key))}</button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
                     <input className="field min-w-0 flex-1 basis-60" placeholder="ملاحظة للمستفيد (إلزامية عند عدم القبول)"
                            value={note[r.id] ?? ""} onChange={(e) => setNote((x) => ({ ...x, [r.id]: e.target.value }))} />
                     <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy === r.id} onClick={() => decide(r, true)}>قبول العذر</button>
                     <button className="rounded-pill border border-absent/50 px-4 py-1.5 text-xs font-semibold text-absent hover:bg-absent/5"
                             disabled={busy === r.id} onClick={() => decide(r, false)}>عدم القبول</button>
+                  </div>
                   </div>
                 ) : (
                   <p className="border-t border-line pt-2 text-xs text-muted">
