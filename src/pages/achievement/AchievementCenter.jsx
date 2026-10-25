@@ -1,6 +1,6 @@
 // src/pages/achievement/AchievementCenter.jsx
 /* =====================================================================
-   مركز التحصيل الدراسي (src/lib/achievement.js): تحليل «إشعار الفترة» على درجات الاختبارات
+   مركز تحليل النتائج (src/lib/achievement.js): تحليل «إشعار الفترة» على درجات الاختبارات
    وحدها، بلوحة ورسوم، وفحوصات جماعية آلية في صفحة «الملاحظات»، وقوائم الطلاب.
    • وكيل الشؤون التعليمية والمدير والدعم الفني ووكيل شؤون الطلاب: المدرسة كلها.
    • الموجه الطلابي: صفه وحده (counselor_N للصف N).
@@ -111,13 +111,13 @@ export default function AchievementCenter() {
   const missingGrades = data ? myGrades.filter((g) => !dataGrades.includes(g)) : [];
   const shownChecks = useMemo(() => checks.filter((c) => (!grade || c.grade === grade) && (!subject || !c.subject || c.subject === subject)), [checks, grade, subject]);
 
-  if (!myGrades.length) return <p className="card px-4 py-6 text-sm text-muted">مركز التحصيل الدراسي لوكيل الشؤون التعليمية والموجهين الطلابيين ووكيل شؤون الطلاب ومدير المدرسة.</p>;
+  if (!myGrades.length) return <p className="card px-4 py-6 text-sm text-muted">مركز تحليل النتائج لوكيل الشؤون التعليمية والموجهين الطلابيين ووكيل شؤون الطلاب ومدير المدرسة.</p>;
   if (!keys) return <Loader />;
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-lg font-bold text-ink">مركز التحصيل الدراسي</h1>
+        <h1 className="text-lg font-bold text-ink">مركز تحليل النتائج</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           تحليل نتائج الطلاب من «إشعار الفترة» المنشور في «نتائج الطلاب»، على <b className="text-ink">درجات الاختبارات وحدها</b> دون
           المهام الأدائية والمشاركة، مع فحوصات جماعية آلية ترصد مواضع الخلل.

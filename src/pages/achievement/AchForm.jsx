@@ -369,7 +369,7 @@ export function AchFormsList() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">نماذج ملاحظة التحصيل</h1>
-        <p className="mt-1 text-sm text-muted">نماذج يرسلها الموجه الطلابي من مركز التحصيل حين يرصد ضعفًا واضحًا في نتائج فصولك، لتكتب أسبابه والخطة العلاجية.</p>
+        <p className="mt-1 text-sm text-muted">نماذج يرسلها الموجه الطلابي من مركز تحليل النتائج حين يرصد ضعفًا واضحًا في نتائج فصولك، لتكتب أسبابه والخطة العلاجية.</p>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       {mine.length === 0 && !err && <p className="card px-4 py-8 text-center text-sm text-muted">لا نماذج لك.</p>}

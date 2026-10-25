@@ -522,7 +522,7 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/s/:key" element={<SectionHub />} />}
           {/* شاشة المتابعة اليومية — للمدير والوكيلين والدعم الفني (عنصر القائمة يحصرها، والقاعدة تفرض ما يُقرأ) */}
           {effectiveRole === "admin" && <Route path="/monitor" element={<MonitorScreen />} />}
-          {/* مركز التحصيل الدراسي — الصفحة تتحقق من الدور (وكيل الشؤون التعليمية والموجهون…) */}
+          {/* مركز تحليل النتائج — الصفحة تتحقق من الدور (وكيل الشؤون التعليمية والموجهون…) */}
           <Route path="/achievement" element={<AchievementCenter />} />
           <Route path="/qiyas" element={<Qiyas />} />
           <Route path="/my-qiyas" element={<MyQiyas />} />

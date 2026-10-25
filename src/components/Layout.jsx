@@ -98,10 +98,10 @@ export const ADMIN_GROUPS = [
     ],
   },
   {
-    // مركز التحصيل الدراسي (pages/achievement): تحليل إشعار الفترة والملاحظات الآلية
+    // مركز تحليل النتائج (pages/achievement): تحليل إشعار الفترة والملاحظات الآلية
     title: "التحصيل الدراسي",
     items: [
-      { to: "/achievement", label: "مركز التحصيل الدراسي", roles: ["principal", "deputy_academic", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], orMember: true, icon: "chart", kw: "تحليل النتائج درجات اختبارات ضعف متعثرين خطة علاجية" },
+      { to: "/achievement", label: "مركز تحليل النتائج", roles: ["principal", "deputy_academic", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], orMember: true, icon: "chart", kw: "تحليل النتائج درجات اختبارات ضعف متعثرين خطة علاجية" },
       { to: "/qiyas", label: "اختبارات قياس", roles: ["principal", "deputy_academic", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], orMember: true, icon: "target", kw: "قدرات تحصيلي ستيب step قياس نتائج" },
       { to: "/ach-committee", label: "لجنة التحصيل", roles: ["principal", "deputy_academic", "deputy_students", "tech_support"], orMember: true, icon: "users", kw: "لجنة محاضر اجتماعات قرارات" },
     ],
@@ -240,10 +240,10 @@ const TEACHER_GROUPS = [
       { to: "/qbank",          label: "بنك الأسئلة",       icon: "database", kw: "اسئلة مشاركة اختبار مواد" },
       { to: "/quiz-marks",     label: "التصحيح والدرجات",  icon: "target", kw: "تصحيح الي" },
       { to: "/quiz-analytics", label: "تحليل النتائج",     icon: "pie" },
-      // نماذج ملاحظة التحصيل من مركز التحصيل الدراسي (pages/achievement/AchForm.jsx)
+      // نماذج ملاحظة التحصيل من مركز تحليل النتائج (pages/achievement/AchForm.jsx)
       { to: "/ach-forms",      label: "ملاحظات التحصيل",   icon: "chart", kw: "خطة علاجية ضعف نتائج موجه" },
       // لأعضاء لجنة التحصيل من المعلمين (supabase/ach_committee.sql)
-      { to: "/achievement",    label: "مركز التحصيل الدراسي", achMember: true, icon: "chart", kw: "تحليل النتائج" },
+      { to: "/achievement",    label: "مركز تحليل النتائج", achMember: true, icon: "chart", kw: "تحليل النتائج" },
       { to: "/qiyas",          label: "اختبارات قياس",      achMember: true, icon: "target", kw: "قدرات تحصيلي step" },
       { to: "/ach-committee",  label: "لجنة التحصيل",       achMember: true, icon: "users", kw: "محاضر" },
       { to: "/qudrat",         label: "مركز التدريب",      icon: "target", exact: true, kw: "قياس قدرات تحصيلي تدريب اسئلة" },
