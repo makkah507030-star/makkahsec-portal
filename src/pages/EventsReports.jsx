@@ -13,7 +13,7 @@ import { eventReach, listCerts } from "../lib/eventAudience.js";
 
 /* =====================================================================
    تقارير الأحداث والمناسبات.
-   • المنظّم يرى ما نفّذه، والإدارة ترى كل الأحداث.
+   • المنظّم يرى ما نفّذه، والإدارة ورائد النشاط يرون كل الأحداث.
    • تقرير مصمّم بهوية استوديو البوابة (EventsReportDoc.jsx): غلاف وملخص
      بالمؤشرات والرسوم، وأبرز الأحداث بصورها، وسجل الأحداث والتوقيعات.
    ===================================================================== */
@@ -31,7 +31,7 @@ export default function EventsReports() {
   const uid = session?.user?.id;
   const roles = adminRoles ?? [];
   const isManager = roles.some((r) =>
-    ["principal", "tech_support", "deputy_students", "deputy_academic"].includes(r));
+    ["principal", "tech_support", "deputy_students", "deputy_academic", "activity_leader"].includes(r));
 
   const [rows, setRows] = useState(null);
   const [counts, setCounts] = useState({});
