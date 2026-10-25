@@ -12,7 +12,6 @@
 // =====================================================================
 
 import { createClient } from "@supabase/supabase-js";
-import { cronAllowed, skipped } from "../lib/cronHost.js";
 
 const KSA = 3 * 60 * 60 * 1000;
 
@@ -38,7 +37,6 @@ const ksaDow = (d = ksaNow()) => {
 };
 
 export const handler = async () => {
-  if (!(await cronAllowed())) return skipped();
   const db = admin();
   const today = ksaDate();
 
