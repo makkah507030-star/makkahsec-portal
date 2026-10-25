@@ -140,7 +140,10 @@ export async function loadAchievement(year, key) {
     cache.set(k, list);
     return list;
   };
-  return { recs, students: enr, teacherOf };
+  // عدد طلاب كل فصل: لقياس اكتمال الرصد
+  const classSize = new Map();
+  enr.forEach((s) => { const k = classId.get(`${s.grade}|${s.class_no}`); if (k) classSize.set(k, (classSize.get(k) ?? 0) + 1); });
+  return { recs, students: enr, teacherOf, classSize };
 }
 
 /* ---------------------------------------------------------------- */
@@ -197,7 +200,9 @@ export const SEV = {
 };
 
 /* كل ملاحظة: { id, sev, kind, title, detail, grade, class_no, class_id, subject, teachers[], metric, rec } */
-export function runChecks(recs, teacherOf) {
+export const COVER_MIN = 0.7;   // دون هذه النسبة من طلاب الفصل: الرصد غير مكتمل فلا يُحكم على المتوسط
+
+export function runChecks(recs, teacherOf, classSize = new Map()) {
   const out = [];
   const bySubjGrade = groupBy(recs, (r) => `${r.grade}|${r.subject}`);
   const gradeAvg = new Map([...bySubjGrade].map(([k, rs]) => [k, stats(rs).avg]));
@@ -207,7 +212,13 @@ export function runChecks(recs, teacherOf) {
     const s = stats(rs);
     const { grade, class_no, class_id, subject } = rs[0];
     const base = { grade, class_no, class_id, subject, teachers: teacherOf(class_id, subject), n: s.n };
-    if (s.n >= MIN_N) {
+    const size = classSize.get(class_id) ?? 0;
+    const partial = size > 0 && s.n / size < COVER_MIN;
+    if (partial) push({ ...base, sev: "info", kind: "incomplete", metric: Math.round((s.n / size) * 100),
+      title: "رصد درجات الاختبارات غير مكتمل",
+      detail: `رُصدت درجات ${s.n} من ${size} طالبًا (${Math.round((s.n / size) * 100)}%)، فلا يُحكم على مستوى الفصل حتى يكتمل.`,
+      rec: "متابعة المعلم لإكمال الرصد في نور، ثم إعادة رفع إشعار الفترة." });
+    if (s.n >= MIN_N && !partial) {
       if (s.avg < VERY_LOW) push({ ...base, sev: "critical", kind: "low_avg", metric: s.avg,
         title: "متوسط الفصل في الاختبارات متدنٍّ جدًا",
         detail: `متوسط الاختبارات ${s.avg}% (${s.weak} من ${s.n} دون ${WEAK}%).`,

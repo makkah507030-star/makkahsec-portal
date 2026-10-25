@@ -58,7 +58,10 @@ export default function AchievementCenter() {
   const scoped = useMemo(() => (data?.recs ?? []).filter((r) => myGrades.includes(r.grade)), [data, myGrades.join()]);  // eslint-disable-line react-hooks/exhaustive-deps
   const recs = useMemo(() => scoped.filter((r) => (!grade || r.grade === grade) && (!subject || r.subject === subject)), [scoped, grade, subject]);
   const subjects = useMemo(() => [...new Set(scoped.filter((r) => !grade || r.grade === grade).map((r) => r.subject))].sort(cmpAr), [scoped, grade]);
-  const checks = useMemo(() => (data ? runChecks(scoped, data.teacherOf) : []), [scoped, data]);
+  const checks = useMemo(() => (data ? runChecks(scoped, data.teacherOf, data.classSize) : []), [scoped, data]);
+  // الصفوف التي رُفع لها الإشعار، والتي لم يُرفع لها بعد
+  const dataGrades = useMemo(() => myGrades.filter((g) => scoped.some((r) => r.grade === g)), [scoped, myGrades.join()]);  // eslint-disable-line react-hooks/exhaustive-deps
+  const missingGrades = data ? myGrades.filter((g) => !dataGrades.includes(g)) : [];
   const shownChecks = useMemo(() => checks.filter((c) => (!grade || c.grade === grade) && (!subject || !c.subject || c.subject === subject)), [checks, grade, subject]);
 
   if (!myGrades.length) return <p className="card px-4 py-6 text-sm text-muted">مركز التحصيل الدراسي لوكيل الشؤون التعليمية والموجهين الطلابيين ووكيل شؤون الطلاب ومدير المدرسة.</p>;
@@ -89,10 +92,10 @@ export default function AchievementCenter() {
             <select className="field w-auto text-sm" value={key} onChange={(e) => setKey(e.target.value)}>
               {keys.map((k) => <option key={k.key} value={k.key}>{noticeTitle(k.key)}</option>)}
             </select>
-            {myGrades.length > 1 && (
+            {dataGrades.length > 1 && (
               <select className="field w-auto text-sm" value={grade} onChange={(e) => { setGrade(Number(e.target.value)); setSubject(""); }}>
                 <option value={0}>كل الصفوف</option>
-                {myGrades.map((g) => <option key={g} value={g}>{GRADE_NAMES[g]}</option>)}
+                {dataGrades.map((g) => <option key={g} value={g}>{GRADE_NAMES[g]}</option>)}
               </select>
             )}
             <select className="field w-auto text-sm" value={subject} onChange={(e) => setSubject(e.target.value)}>
@@ -102,6 +105,13 @@ export default function AchievementCenter() {
             <span className="ms-auto text-[11px] text-faint">آخر تحديث: {fmtDateTime(keys.find((k) => k.key === key)?.last)}</span>
           </div>
 
+          {missingGrades.length > 0 && (
+            <p className="rounded-sm2 border border-line bg-white px-3 py-2 text-[12.5px] text-muted">
+              لم يُرفع إشعار هذه الفترة بعد في <b className="text-ink">{missingGrades.map((g) => GRADE_NAMES[g]).join(" و")}</b>؛
+              {dataGrades.length ? " فالتحليل الآن على " + dataGrades.map((g) => GRADE_NAMES[g]).join(" و") + " وحده، ويُضاف غيره تلقائيًا عند رفعه." : " ويظهر التحليل تلقائيًا عند رفعه."}
+            </p>
+          )}
+
           <div className="flex flex-wrap gap-2">
             {TABS.map((t) => (
               <button key={t.k} onClick={() => setTab(t.k)} className={chip(tab === t.k)}>
@@ -110,7 +120,7 @@ export default function AchievementCenter() {
             ))}
           </div>
 
-          {!data ? <Loader /> : tab === "dash" ? <Dashboard recs={recs} checks={shownChecks} grade={grade} subject={subject}
+          {!data ? <Loader /> : tab === "dash" ? <Dashboard recs={recs} checks={shownChecks} classSize={data.classSize} grade={grade} subject={subject}
                                                               onSubject={setSubject} onNotes={() => setTab("notes")} />
             : tab === "notes" ? <Notes checks={shownChecks} />
             : <Students recs={recs} />}
@@ -123,7 +133,7 @@ export default function AchievementCenter() {
 /* ------------------------------------------------------------------ */
 /* لوحة التحليل                                                       */
 /* ------------------------------------------------------------------ */
-function Dashboard({ recs, checks, subject, onSubject, onNotes }) {
+function Dashboard({ recs, checks, classSize, subject, onSubject, onNotes }) {
   const s = useMemo(() => stats(recs), [recs]);
   const studs = useMemo(() => studentSummaries(recs), [recs]);
   const bySubject = useMemo(() => [...groupBy(recs, (r) => r.subject)].map(([k, rs]) => {
@@ -142,6 +152,17 @@ function Dashboard({ recs, checks, subject, onSubject, onNotes }) {
   const teachers = useMemo(() => new Set(weakTeachers(checks).map((x) => x.teacher.teacher_id)).size, [checks]);
   const multi = studs.filter((x) => x.weakSubjects.length >= 3).length;
 
+  // اكتمال رصد الاختبارات في كل مادة: من رُصدت درجته من طلاب الفصول المرفوعة
+  const coverage = useMemo(() => {
+    const classes = [...new Set(recs.map((r) => r.class_id))];
+    const total = classes.reduce((t, c) => t + (classSize.get(c) ?? 0), 0);
+    return [...groupBy(recs.filter((r) => r.testPct != null), (r) => r.subject)].map(([k, rs]) => {
+      const n = new Set(rs.map((r) => r.sid)).size;
+      return { key: k, label: k, n, total, value: total ? Math.round((n / total) * 100) : null };
+    }).sort((a, b) => a.value - b.value);
+  }, [recs, classSize]);
+  const partial = coverage.filter((c) => c.value != null && c.value < 90);
+
   if (!s.n) return <div className="card px-6 py-10 text-center text-sm text-muted">لا درجات اختبارات مرصودة في هذا النطاق بعد.</div>;
 
   return (
@@ -159,6 +180,17 @@ function Dashboard({ recs, checks, subject, onSubject, onNotes }) {
         <h2 className="mb-3 text-sm font-semibold text-ink">توزيع التقديرات في الاختبارات</h2>
         <DistStrip dist={s.dist} n={s.n} />
       </section>
+
+      {partial.length > 0 && (
+        <section className="card p-4">
+          <h2 className="text-sm font-semibold text-ink">اكتمال رصد الاختبارات</h2>
+          <p className="mb-3 text-[11.5px] text-muted">
+            نسبة من رُصدت درجة اختباراته من طلاب الفصول المرفوعة · المواد غير المكتملة يتغيّر تحليلها بعد اكتمال الرصد وإعادة رفع الإشعار
+          </p>
+          <HBars rows={partial.map((c) => ({ ...c, tip: `${c.n} من ${c.total} طالبًا` }))} refLine={70}
+                 note="الخط الرأسي: 70% · دونه لا تُفحص الفصول في المادة ويظهر لها «رصد غير مكتمل»" />
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="card p-4">
@@ -199,7 +231,7 @@ function Dashboard({ recs, checks, subject, onSubject, onNotes }) {
 /* ------------------------------------------------------------------ */
 const KIND_T = {
   low_avg: "متوسط متدنٍّ", many_weak: "نسبة ضعف كبيرة", no_top: "لا تقدير مرتفع", gap_peers: "فارق عن الفصول",
-  low_perf: "المهام الأدائية", perf_gap: "فجوة الأدائية والاختبار", subject_grade: "ضعف المادة في الصف", multi_weak: "تعثر متعدد",
+  incomplete: "رصد غير مكتمل", low_perf: "المهام الأدائية", perf_gap: "فجوة الأدائية والاختبار", subject_grade: "ضعف المادة في الصف", multi_weak: "تعثر متعدد",
 };
 
 function Notes({ checks }) {

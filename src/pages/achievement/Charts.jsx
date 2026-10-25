@@ -56,7 +56,7 @@ export function DistStrip({ dist, n }) {
 }
 
 /* أعمدة أفقية: متوسط كل عنصر مع خط مرجعي عند حد الضعف */
-export function HBars({ rows, refLine = WEAK, onPick, unit = "%" }) {
+export function HBars({ rows, refLine = WEAK, onPick, unit = "%", note }) {
   const [bind, tip] = useTip();
   if (!rows.length) return <p className="text-sm text-muted">لا بيانات.</p>;
   return (
@@ -74,7 +74,7 @@ export function HBars({ rows, refLine = WEAK, onPick, unit = "%" }) {
           <span className="num w-12 text-end text-[12px] font-semibold text-ink">{r.value ?? "—"}{r.value != null ? unit : ""}</span>
         </button>
       ))}
-      <p className="pt-1 text-[11px] text-faint">الخط الرأسي: حد الضعف {refLine}% · البرتقالي دونه</p>
+      <p className="pt-1 text-[11px] text-faint">{note ?? `الخط الرأسي: حد الضعف ${refLine}% · البرتقالي دونه`}</p>
       {tip}
     </div>
   );
