@@ -55,6 +55,9 @@ function useMonitor() {
     const start = new Date(date + "T00:00:00").toISOString();
     const week = new Date(new Date(date + "T12:00:00").getTime() + 7 * 864e5).toISOString().slice(0, 10);
     (async () => {
+      // الأعداد كاملة من monitor_counts.sql لكل من تظهر له الشاشة؛ وقبل تشغيله تُقرأ بصلاحيات الحساب
+      const { data: mc } = await supabase.rpc("monitor_counts", { p_date: date });
+      const ev = (k) => ({ data: mc[k] });
       const [day, pt, trend, perms, refsToday, refsOpen, behavior, duty, supervision, events, quizzes, notes, nextEvents, nextQuizzes,
              toGuardians, absenceNotes, invites, guardianForms, circs] = await Promise.all([
         todayOff() ? null : loadDay(date).catch(() => null),
@@ -62,26 +65,26 @@ function useMonitor() {
         supabase.from("official_attendance_days").select("attend_date, official_pct, late_count")
           .lt("attend_date", date).order("attend_date", { ascending: false }).limit(10),
         supabase.from("permission_requests").select("id, permission_request_students(student_id)").eq("request_date", date),
-        countOf(supabase.from("student_referrals").select("id", { count: "exact", head: true }).eq("referral_date", date)),
-        countOf(supabase.from("student_referrals").select("id", { count: "exact", head: true }).in("status", OPEN_STATUSES)),
-        countOf(supabase.from("behavior_forms").select("id", { count: "exact", head: true }).gte("created_at", start)),
+        mc ? mc.refsToday : countOf(supabase.from("student_referrals").select("id", { count: "exact", head: true }).eq("referral_date", date)),
+        mc ? mc.refsOpen : countOf(supabase.from("student_referrals").select("id", { count: "exact", head: true }).in("status", OPEN_STATUSES)),
+        mc ? mc.behavior : countOf(supabase.from("behavior_forms").select("id", { count: "exact", head: true }).gte("created_at", start)),
         supabase.from("duty_roster").select("name_a, name_b").eq("duty_date", date),
         supabase.from("supervision_duty").select("person_name, kind").eq("day_of_week", dow),
-        supabase.from("school_events").select("title, category, event_date, end_date, start_time, venue")
+        mc ? ev("events") : supabase.from("school_events").select("title, category, event_date, end_date, start_time, venue")
           .lte("event_date", date).neq("stage", "draft").is("cancelled_at", null).order("event_date", { ascending: false }).limit(30),
-        countOf(supabase.from("quizzes").select("id", { count: "exact", head: true }).eq("exam_date", date).neq("status", "draft")),
-        countOf(supabase.from("notifications").select("id", { count: "exact", head: true }).gte("created_at", start)),
-        supabase.from("school_events").select("title, category, event_date, start_time").gt("event_date", date).lte("event_date", week)
+        mc ? mc.quizzes : countOf(supabase.from("quizzes").select("id", { count: "exact", head: true }).eq("exam_date", date).neq("status", "draft")),
+        mc ? mc.notes : countOf(supabase.from("notifications").select("id", { count: "exact", head: true }).gte("created_at", start)),
+        mc ? ev("nextEvents") : supabase.from("school_events").select("title, category, event_date, start_time").gt("event_date", date).lte("event_date", week)
           .neq("stage", "draft").is("cancelled_at", null).order("event_date", { ascending: true }).limit(6),
-        countOf(supabase.from("quizzes").select("id", { count: "exact", head: true }).gt("exam_date", date).lte("exam_date", week).neq("status", "draft")),
+        mc ? mc.nextQuizzes : countOf(supabase.from("quizzes").select("id", { count: "exact", head: true }).gt("exam_date", date).lte("exam_date", week).neq("status", "draft")),
         // التواصل مع أولياء الأمور: ما وصلهم من إشعارات، وإشعارات الغياب، والدعوات والمقابلات، والتعاميم
-        countOf(supabase.from("notification_recipients").select("notification_id, notifications!inner(created_at), users!inner(role)", { count: "exact", head: true })
+        mc ? mc.toGuardians : countOf(supabase.from("notification_recipients").select("notification_id, notifications!inner(created_at), users!inner(role)", { count: "exact", head: true })
           .gte("notifications.created_at", start).eq("users.role", "guardian")),
-        countOf(supabase.from("official_absence_notified").select("student_id", { count: "exact", head: true }).eq("attend_date", date)),
-        countOf(supabase.from("behavior_forms").select("id", { count: "exact", head: true }).in("kind", ["invite", "notice"]).gte("created_at", start)),
-        countOf(supabase.from("form_documents").select("id, form_templates!inner(key)", { count: "exact", head: true })
+        mc ? mc.absenceNotes : countOf(supabase.from("official_absence_notified").select("student_id", { count: "exact", head: true }).eq("attend_date", date)),
+        mc ? mc.invites : countOf(supabase.from("behavior_forms").select("id", { count: "exact", head: true }).in("kind", ["invite", "notice"]).gte("created_at", start)),
+        mc ? mc.guardianForms : countOf(supabase.from("form_documents").select("id, form_templates!inner(key)", { count: "exact", head: true })
           .in("form_templates.key", ["guidance_guardian_call", "guidance_guardian_meeting"]).gte("created_at", start)),
-        countOf(supabase.from("circulars").select("id", { count: "exact", head: true }).gte("sent_at", start)),
+        mc ? mc.circs : countOf(supabase.from("circulars").select("id", { count: "exact", head: true }).gte("sent_at", start)),
       ]);
       if (!live) return;
       const permStudents = new Set((perms.data ?? []).flatMap((p) => (p.permission_request_students ?? []).map((x) => x.student_id)));
