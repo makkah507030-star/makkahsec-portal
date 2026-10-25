@@ -32,7 +32,7 @@ export default function MyQiyas() {
 
   const load = async () => {
     const { data, error } = await supabase.from("qiyas_results")
-      .select("id, test, attempt, score, taken_on, status, reject_reason, students(full_name)").order("created_at", { ascending: false });
+      .select("id, test, attempt, score, taken_on, status, source, reject_reason, students(full_name)").order("created_at", { ascending: false });
     if (error) { setErr(/qiyas_results/.test(error.message) ? "الخدمة غير مفعّلة بعد." : error.message); setRows([]); return; }
     setRows(data ?? []);
   };
@@ -64,7 +64,7 @@ export default function MyQiyas() {
         <h1 className="text-lg font-bold text-ink">نتائج قياس</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           {isStudent
-            ? "نتيجتك في القدرات والتحصيلي واختبار STEP خاصة بك ولا تصل المدرسة من قياس. أدخلها هنا مع صورة النتيجة من حسابك في قياس، لتتابعك لجنة التحصيل وتدعمك في التدريب."
+            ? "نتائجك في القدرات والتحصيلي واختبار STEP: تسجّلها المدرسة رسميًا متى وصلها تقرير المركز، ولك اختياريًا إدخالها الآن مع صورة النتيجة من حسابك في قياس لتتحقق منها لجنة التحصيل وتدعمك مبكرًا."
             : "نتائج أبنائك في اختبارات قياس كما أدخلوها، وحالة تحقق لجنة التحصيل منها."}
         </p>
       </div>
@@ -73,7 +73,7 @@ export default function MyQiyas() {
 
       {isStudent && !form && !err && (
         <button onClick={() => setForm({ test: "qudrat", attempt: "المحاولة الأولى", score: "", taken_on: "", file: null })}
-                className="rounded-pill bg-mint-deep px-4 py-2 text-sm font-semibold text-white">+ إدخال نتيجة</button>
+                className="rounded-pill bg-mint-deep px-4 py-2 text-sm font-semibold text-white">+ إدخال نتيجتي (اختياري)</button>
       )}
       {form && (
         <section className="card space-y-3 p-4">
@@ -111,8 +111,8 @@ export default function MyQiyas() {
                 {r.status === "rejected" && r.reject_reason && <> · السبب: {r.reject_reason}</>}
               </span>
             </span>
-            <span className={`chip text-[11px] font-semibold ${STATUS[r.status].c}`}>{STATUS[r.status].t}</span>
-            {isStudent && r.status === "rejected" && (
+            <span className={`chip text-[11px] font-semibold ${STATUS[r.status].c}`}>{r.source === "official" ? "رسمية من تقرير المركز" : STATUS[r.status].t}</span>
+            {isStudent && r.status === "rejected" && r.source === "student" && (
               <button onClick={() => setForm({ id: r.id, test: r.test, attempt: r.attempt, score: String(r.score), taken_on: r.taken_on ?? "", file: null })}
                       className="text-xs font-semibold text-mint-deep">تصحيح</button>
             )}

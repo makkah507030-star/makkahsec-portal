@@ -1,10 +1,10 @@
 // src/pages/achievement/Qiyas.jsx
 /* =====================================================================
    مركز التحصيل ← اختبارات قياس: القدرات والتحصيلي وSTEP (supabase/qiyas_results.sql و _2).
-   النتيجة خاصة بالطالب ولا تصل المدرسة من قياس:
-   • يُدخلها الطالب من حسابه («نتائج قياس») بصورة إثباتها، فتظهر هنا «بانتظار التحقق»
+   • الرسمي: تقرير يصل المدرسة من المركز ترفعه اللجنة بملف Excel، أو نتيجة طالب واحد (تُعتمد مباشرة،
+     وتستبدل ما أدخله الطالب للمحاولة نفسها).
+   • اختياريًا: يُدخل الطالب نتيجته من حسابه («نتائج قياس») بصورة إثباتها، فتظهر هنا «بانتظار التحقق»
      لتعتمدها اللجنة أو ترفضها بسبب يصله.
-   • وللجنة إدخال نتيجة يقدّمها الطالب، أو كشف Excel جمعته المدرسة من الطلاب (تُعتمد مباشرة).
    • التحليل على المعتمد وحده: أعلى درجة لكل طالب، والمتوسط والتوزيع والفصول، ومن لم يُدخل بعد.
    ===================================================================== */
 import { useEffect, useMemo, useState } from "react";
@@ -22,6 +22,7 @@ const TESTS = [
   { k: "tahsili", t: "التحصيلي", d: "الاختبار التحصيلي للتخصصات العلمية" },
   { k: "step", t: "STEP", d: "اختبار كفايات اللغة الإنجليزية" },
 ];
+const SRC = { official: "تقرير المركز", staff: "اللجنة", student: "الطالب (متحقَّق)" };
 const setupMsg = "اختبارات قياس تحتاج تشغيل supabase/qiyas_results.sql في Supabase ← SQL Editor.";
 const chip = (on) => `rounded-pill px-3 py-1.5 text-xs font-semibold transition ${on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
@@ -59,7 +60,7 @@ export default function Qiyas() {
       const s = stu.get(r.student_id);
       if (!s || !myGrades.includes(s.grade)) return;
       const x = m.get(r.student_id);
-      if (!x || Number(r.score) > x.score) m.set(r.student_id, { ...s, score: Number(r.score), attempts: (x?.attempts ?? 0) + 1, attempt: r.attempt });
+      if (!x || Number(r.score) > x.score) m.set(r.student_id, { ...s, score: Number(r.score), attempts: (x?.attempts ?? 0) + 1, attempt: r.attempt, source: r.source });
       else x.attempts++;
     });
     return [...m.values()];
@@ -74,8 +75,8 @@ export default function Qiyas() {
       <div>
         <h1 className="text-lg font-bold text-ink">اختبارات قياس: القدرات والتحصيلي واختبار STEP</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          نتيجة قياس خاصة بالطالب ولا تصل المدرسة، فيُدخلها الطالب من حسابه («نتائج قياس») بصورة إثباتها، وتتحقق منها
-          اللجنة هنا. ويدخل التحليل المعتمد وحده: أعلى درجة لكل طالب، ومتوسط الفصول، ومن لم يُدخل نتيجته بعد.
+          ترفع اللجنة تقرير المركز الرسمي متى وصل المدرسة، وللطالب اختياريًا إدخال نتيجته من حسابه («نتائج قياس») بصورة
+          إثباتها لتتحقق منها اللجنة. ويدخل التحليل المعتمد وحده: أعلى درجة لكل طالب، ومتوسط الفصول، ومن لم تُسجَّل نتيجته بعد.
         </p>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
@@ -98,7 +99,7 @@ export default function Qiyas() {
 
       {canWrite && !err && (
         <div className="flex gap-2">
-          <button onClick={() => setUpload(!upload)} className={chip(upload)}>{upload ? "إغلاق الإدخال" : `إدخال نتائج ${T.t} من اللجنة`}</button>
+          <button onClick={() => setUpload(!upload)} className={chip(upload)}>{upload ? "إغلاق" : `رفع تقرير ${T.t} الرسمي أو إدخال نتيجة`}</button>
         </div>
       )}
       {upload && <Upload test={T} year={year} students={students} me={profile?.full_name}
@@ -201,7 +202,7 @@ function Analysis({ best, test, students }) {
         <div className="max-h-[480px] overflow-auto">
           <table className="w-full text-[12.5px]">
             <thead className="sticky top-0 bg-canvas text-muted"><tr>
-              {["م", "الطالب", "الفصل", "أعلى درجة", "المحاولات"].map((h) => <th key={h} className="px-3 py-2 text-start font-medium">{h}</th>)}
+              {["م", "الطالب", "الفصل", "أعلى درجة", "المصدر", "المحاولات"].map((h) => <th key={h} className="px-3 py-2 text-start font-medium">{h}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-line">
               {list.map((b, i) => (
@@ -210,6 +211,7 @@ function Analysis({ best, test, students }) {
                   <td className="px-3 py-1.5 font-medium text-ink">{b.full_name}</td>
                   <td className="px-3 py-1.5 text-muted">{GRADE_NAMES[b.grade]?.split(" ")[0]} · {b.class_no}</td>
                   <td className="num px-3 py-1.5 font-semibold text-ink">{b.score}</td>
+                  <td className="px-3 py-1.5 text-[11.5px] text-muted">{SRC[b.source] ?? "—"}</td>
                   <td className="num px-3 py-1.5 text-muted">{b.attempts}</td>
                 </tr>
               ))}
@@ -258,10 +260,10 @@ function Upload({ test, year, students, me, onDone, setMsg }) {
     return { ok, bad };
   }, [sheet, idCol, scoreCol, byNid]);
 
-  const save = async (list) => {
+  const save = async (list, source) => {
     setBusy(true);
     const payload = list.map(({ s, score }) => ({ student_id: s.student_id, test: test.k, attempt: attempt.trim() || "المحاولة الأولى",
-      score, academic_year: year, uploader_name: me ?? null, source: "staff", status: "verified", reject_reason: null,
+      score, academic_year: year, uploader_name: me ?? null, source, status: "verified", reject_reason: null,
       verified_by_name: me ?? null, verified_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
     for (let i = 0; i < payload.length; i += 500) {
       const { error } = await supabase.from("qiyas_results").upsert(payload.slice(i, i + 500), { onConflict: "student_id,test,attempt" });
@@ -276,15 +278,15 @@ function Upload({ test, year, students, me, onDone, setMsg }) {
     const score = Number(one.score);
     if (!s) { setMsg({ ok: false, text: "رقم الهوية غير مطابق لطالب في المدرسة." }); return; }
     if (!(score >= 0 && score <= 100)) { setMsg({ ok: false, text: "الدرجة من 0 إلى 100." }); return; }
-    save([{ s, score }]);
+    save([{ s, score }], "staff");
   };
 
   return (
     <section className="card space-y-4 p-4">
       <div className="grid gap-2 sm:grid-cols-[1fr_220px]">
         <div>
-          <p className="text-sm font-semibold text-ink">كشف Excel جمعته المدرسة من الطلاب ({test.t})</p>
-          <p className="mt-0.5 text-[11.5px] text-muted">يكفي عمود رقم الهوية وعمود الدرجة، وتُعتمد مباشرة. تُستبدل نتيجة الطالب للمحاولة نفسها إن أُدخلت من قبل.</p>
+          <p className="text-sm font-semibold text-ink">تقرير المركز الرسمي ({test.t}) بملف Excel</p>
+          <p className="mt-0.5 text-[11.5px] text-muted">متى وصل المدرسة تقرير من المركز: يكفي عمود رقم الهوية وعمود الدرجة. يُعتمد مباشرة، ويستبدل ما أدخله الطالب للمحاولة نفسها.</p>
         </div>
         <label className="text-[11.5px] text-muted">المحاولة أو الفترة<input className="field mt-1 w-full text-sm" value={attempt} onChange={(e) => setAttempt(e.target.value)} /></label>
       </div>
@@ -305,12 +307,12 @@ function Upload({ test, year, students, me, onDone, setMsg }) {
         <div className="space-y-2">
           <p className="text-[12.5px] text-ink">مطابق: <b className="num">{preview.ok.length}</b> · غير مطابق أو بلا درجة: <b className="num text-absent">{preview.bad.length}</b></p>
           {preview.bad.length > 0 && <p className="text-[11.5px] text-muted">أمثلة: {preview.bad.slice(0, 6).map((b) => `${b.nid} (${b.why})`).join("، ")}</p>}
-          <button onClick={() => save(preview.ok)} disabled={busy || !preview.ok.length}
+          <button onClick={() => save(preview.ok, "official")} disabled={busy || !preview.ok.length}
                   className="rounded-pill bg-mint-deep px-4 py-2 text-xs font-semibold text-white">{busy ? "…" : `حفظ ${preview.ok.length} نتيجة`}</button>
         </div>
       )}
       <div className="border-t border-line pt-3">
-        <p className="mb-2 text-[12.5px] font-semibold text-ink">أو إدخال طالب واحد</p>
+        <p className="mb-2 text-[12.5px] font-semibold text-ink">أو إدخال نتيجة طالب واحد (يقدّمها الطالب أو من التقرير)</p>
         <div className="flex flex-wrap gap-2">
           <input className="field num w-44 text-sm" dir="ltr" value={one.nid} onChange={(e) => setOne({ ...one, nid: e.target.value })} placeholder="رقم الهوية" />
           <input className="field num w-28 text-sm" dir="ltr" inputMode="decimal" value={one.score} onChange={(e) => setOne({ ...one, score: e.target.value })} placeholder="الدرجة" />

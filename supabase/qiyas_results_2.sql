@@ -3,7 +3,7 @@
 -- يُنفَّذ بعد qiyas_results.sql. تكرار التنفيذ آمن.
 -- =====================================================================
 
--- الطالب يُدخل نتيجته (أو يصحّحها) فتعود «بانتظار التحقق»
+-- الطالب يُدخل نتيجته اختياريًا (أو يصحّحها) فتعود «بانتظار التحقق»، ولا تستبدل نتيجة رسمية
 create or replace function public.qiyas_submit(p_test text, p_attempt text, p_score numeric, p_taken_on date, p_proof text)
 returns uuid language plpgsql security definer set search_path = public as $$
 declare v_sid uuid; v_id uuid; v_year text;
@@ -19,7 +19,9 @@ begin
   on conflict (student_id, test, attempt) do update set score = excluded.score, taken_on = excluded.taken_on,
     proof_path = coalesce(excluded.proof_path, qiyas_results.proof_path), status = 'pending', source = 'student',
     reject_reason = null, verified_by_name = null, verified_at = null, updated_at = now()
+    where qiyas_results.source = 'student'
   returning id into v_id;
+  if v_id is null then raise exception 'نتيجتك في هذه المحاولة مسجّلة رسميًا من تقرير المركز'; end if;
   return v_id;
 end $$;
 

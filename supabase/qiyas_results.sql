@@ -1,8 +1,8 @@
 -- =====================================================================
 -- مركز التحصيل: نتائج اختبارات هيئة تقويم التعليم (القدرات والتحصيلي وSTEP) — الجزء 1 من 2.
--- النتيجة خاصة بالطالب ولا تصل المدرسة من قياس، فيُدخلها الطالب من حسابه مع صورة إثباتها،
--- وتتحقق منها لجنة التحصيل أو الوكيل، ولا يدخل التحليل إلا ما تُحقّق منه. ويمكن للجنة إدخال
--- نتيجة يقدّمها الطالب بنفسه فتُعتمد مباشرة. يُنفَّذ بعد ach_committee.sql. تكرار التنفيذ آمن.
+-- المصدر الرسمي: تقرير يصل المدرسة من المركز فترفعه اللجنة (official) أو تُدخل نتيجة يقدّمها الطالب
+-- (staff)، وتُعتمد مباشرة. وللطالب اختياريًا إدخال نتيجته من حسابه بصورة إثباتها (student) فتتحقق
+-- منها اللجنة، ولا تستبدل نتيجة رسمية. يدخل التحليل المعتمد وحده. بعد ach_committee.sql. تكرار التنفيذ آمن.
 -- =====================================================================
 
 create table if not exists public.qiyas_results (
@@ -13,7 +13,7 @@ create table if not exists public.qiyas_results (
   score numeric not null check (score >= 0 and score <= 100),
   taken_on date,
   academic_year text not null,
-  source text not null default 'student' check (source in ('student', 'staff')),
+  source text not null default 'student' check (source in ('student', 'staff', 'official')),
   status text not null default 'pending' check (status in ('pending', 'verified', 'rejected')),
   proof_path text,                              -- صورة الإثبات في مخزن qiyas-proofs
   reject_reason text, verified_by_name text, verified_at timestamptz,
