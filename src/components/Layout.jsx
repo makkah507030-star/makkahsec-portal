@@ -97,6 +97,13 @@ export const ADMIN_GROUPS = [
     ],
   },
   {
+    // مركز التحصيل الدراسي (pages/achievement): تحليل إشعار الفترة والملاحظات الآلية
+    title: "التحصيل الدراسي",
+    items: [
+      { to: "/achievement", label: "مركز التحصيل الدراسي", roles: ["principal", "deputy_academic", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], icon: "chart", kw: "تحليل النتائج درجات اختبارات ضعف متعثرين خطة علاجية" },
+    ],
+  },
+  {
     // تظهر لمن يُسمح له بأحد معاملها فقط (المجموعة الفارغة تُخفى)
     title: "المعامل والمختبرات",
     items: [
@@ -177,6 +184,8 @@ const SECTIONS = [
     groups: ["شؤون الطلاب", "السلوك والمواظبة", "التوجيه الطلابي"] },
   { key: "academic", title: "الشؤون التعليمية", icon: "book", hint: "الجداول والرصد والاختبارات والأنشطة والمعامل",
     groups: ["الشؤون التعليمية", "المعامل والمختبرات"] },
+  { key: "achievement", title: "التحصيل الدراسي", icon: "chart", hint: "تحليل النتائج والملاحظات والخطط العلاجية واختبارات قياس",
+    groups: ["التحصيل الدراسي"] },
   { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والشهادات والأداء الوظيفي والتطوير المهني",
     groups: ["النماذج", "الأداء الوظيفي"] },
   { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأدلة والأحداث",
