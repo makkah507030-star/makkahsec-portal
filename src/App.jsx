@@ -109,6 +109,8 @@ const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx")
 const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
 const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
 const AchievementCenter = lazy(() => import("./pages/achievement/AchievementCenter.jsx"));
+const AchForm = lazy(() => import("./pages/achievement/AchForm.jsx"));
+const AchFormsList = lazy(() => import("./pages/achievement/AchForm.jsx").then((m) => ({ default: m.AchFormsList })));
 const Nominations = lazy(() => import("./pages/nominations/Nominations.jsx"));
 const Opportunities = lazy(() => import("./pages/nominations/Opportunities.jsx"));
 const QuestionBank = lazy(() => import("./pages/teacher/QuestionBank.jsx"));
@@ -519,6 +521,9 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/monitor" element={<MonitorScreen />} />}
           {/* مركز التحصيل الدراسي — الصفحة تتحقق من الدور (وكيل الشؤون التعليمية والموجهون…) */}
           {effectiveRole === "admin" && <Route path="/achievement" element={<AchievementCenter />} />}
+          {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
+          <Route path="/ach-forms" element={<AchFormsList />} />
+          <Route path="/ach-forms/:id" element={<AchForm />} />
           {/* التعاميم: الإدارة لصاحب الصلاحية، وصفحة التعميم وتعاميمي للمنسوبين وأولياء الأمور */}
           {effectiveRole === "admin" && can("circulars") && <Route path="/circulars" element={<Circulars />} />}
           {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/circulars/:id" element={<CircularView />} />}

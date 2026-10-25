@@ -16,6 +16,9 @@ import {
   loadNoticeKeys, loadAchievement, noticeTitle, termName, periodOf, PERIODS, stats, groupBy, studentSummaries, runChecks, weakTeachers,
   SEV, WEAK, bandOf, ACH_ALL,
 } from "../../lib/achievement";
+import { supabase } from "../../lib/supabase";
+import { buildFormRows, syncForms, setupMsg as formsSetup, isSetupErr } from "../../lib/achForms";
+import { FormsTab, DeputyReport } from "./FormsTab.jsx";
 import { DistStrip, HBars, Histogram, Heat, Stat, pctTxt, useTip as useTipLocal } from "./Charts.jsx";
 
 
@@ -23,6 +26,8 @@ const TABS = [
   { k: "dash", t: "لوحة التحليل" },
   { k: "notes", t: "الملاحظات" },
   { k: "students", t: "الطلاب" },
+  { k: "forms", t: "النماذج والخطط" },
+  { k: "report", t: "تقرير الوكيل" },
 ];
 
 const chip = (on) => `rounded-pill px-3 py-1.5 text-xs font-semibold transition ${
@@ -81,6 +86,24 @@ export default function AchievementCenter() {
   const recs = useMemo(() => scoped.filter((r) => (!grade || r.grade === grade) && (!subject || r.subject === subject)), [scoped, grade, subject]);
   const subjects = useMemo(() => [...new Set(scoped.filter((r) => !grade || r.grade === grade).map((r) => r.subject))].sort(cmpAr), [scoped, grade]);
   const checks = useMemo(() => (data ? runChecks(scoped, data.teacherOf, data.classSize) : []), [scoped, data]);
+
+  // نماذج ملاحظة التحصيل: تُنشأ مسوداتها آليًا من التحليل عند الفتح، ثم تُقرأ
+  const [forms, setForms] = useState(null);
+  const [formsErr, setFormsErr] = useState("");
+  useEffect(() => {
+    if (!data || !key) return;
+    let live = true;
+    setForms(null); setFormsErr("");
+    (async () => {
+      if (periodOf(key)) await syncForms(year, key, buildFormRows(scoped, checks)).catch((e) => { if (isSetupErr(e)) setFormsErr(formsSetup); });
+      const { data: fs, error } = await supabase.from("ach_forms").select("*").eq("academic_year", year).eq("report_key", key);
+      if (!live) return;
+      if (error) { setFormsErr(isSetupErr(error) ? formsSetup : error.message); setForms([]); return; }
+      setForms(fs ?? []);
+    })();
+    return () => { live = false; };
+  }, [data]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const shownForms = useMemo(() => forms?.filter((f) => (!grade || f.grade === grade) && (!subject || f.subject === subject)), [forms, grade, subject]);
   // الصفوف التي رُفع لها الإشعار، والتي لم يُرفع لها بعد
   const dataGrades = useMemo(() => myGrades.filter((g) => scoped.some((r) => r.grade === g)), [scoped, myGrades.join()]);  // eslint-disable-line react-hooks/exhaustive-deps
   const missingGrades = data ? myGrades.filter((g) => !dataGrades.includes(g)) : [];
@@ -164,6 +187,7 @@ export default function AchievementCenter() {
             {TABS.map((t) => (
               <button key={t.k} onClick={() => setTab(t.k)} className={chip(tab === t.k)}>
                 {t.t}{t.k === "notes" && shownChecks.length > 0 && <span className="num ms-1.5 opacity-80">({shownChecks.length})</span>}
+                {t.k === "forms" && shownForms?.length > 0 && <span className="num ms-1.5 opacity-80">({shownForms.length})</span>}
               </button>
             ))}
           </div>
@@ -172,6 +196,8 @@ export default function AchievementCenter() {
                                                               trend={trend?.map((t) => ({ ...t, recs: t.recs.filter((r) => myGrades.includes(r.grade) && (!grade || r.grade === grade)) }))} grade={grade} subject={subject}
                                                               onSubject={setSubject} onNotes={() => setTab("notes")} />
             : tab === "notes" ? <Notes checks={shownChecks} />
+            : tab === "forms" ? <FormsTab forms={shownForms} err={formsErr} />
+            : tab === "report" ? <DeputyReport forms={shownForms} keyName={key} checks={shownChecks} />
             : <Students recs={recs} />}
         </>
       )}

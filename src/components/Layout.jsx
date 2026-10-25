@@ -237,6 +237,8 @@ const TEACHER_GROUPS = [
       { to: "/qbank",          label: "بنك الأسئلة",       icon: "database", kw: "اسئلة مشاركة اختبار مواد" },
       { to: "/quiz-marks",     label: "التصحيح والدرجات",  icon: "target", kw: "تصحيح الي" },
       { to: "/quiz-analytics", label: "تحليل النتائج",     icon: "pie" },
+      // نماذج ملاحظة التحصيل من مركز التحصيل الدراسي (pages/achievement/AchForm.jsx)
+      { to: "/ach-forms",      label: "ملاحظات التحصيل",   icon: "chart", kw: "خطة علاجية ضعف نتائج موجه" },
       { to: "/qudrat",         label: "مركز التدريب",      icon: "target", exact: true, kw: "قياس قدرات تحصيلي تدريب اسئلة" },
       { to: "/qudrat/asks",    label: "أسئلة الطلاب (القدرات)", icon: "chat", kw: "قدرات استفسار طالب" },
     ],
