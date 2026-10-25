@@ -12,7 +12,7 @@ import PrintPortal from "../../components/PrintPortal.jsx";
 import { printThen } from "../../lib/print.js";
 import moeLogo from "../../assets/moe-logo.png";
 import logoIcon from "../../assets/icon-mint.png";
-import { useScoutLeader } from "../../lib/scoutLeader.js";
+import { useScoutLeader, SCOUT_RANKS, rankOf, SCOUTS_URL } from "../../lib/scoutLeader.js";
 import { usePrincipalSignature } from "../../lib/principalSignature.js";
 import { PRINCIPAL_NAME } from "../../lib/signers.js";
 
@@ -42,12 +42,16 @@ export default function ScoutTeam() {
 
   const load = async () => {
     const { data, error } = await supabase.from("scout_members")
-      .select("student_id, added_at, added_by_name, students(full_name, national_id, student_enrollment(status, classes(grade, class_no)))");
+      .select("*, students(full_name, national_id, student_enrollment(status, classes(grade, class_no)))");
     if (error) { setMissing(true); setMembers([]); return; }
+    // جوال ولي الأمر للتواصل (scouts_3.sql)؛ وقبل تشغيله يبقى الكشف بلا جوال
+    const { data: mob } = await supabase.rpc("scout_roster");
+    const mobileOf = Object.fromEntries((mob ?? []).map((x) => [x.student_id, x.mobile]));
     setMembers((data ?? []).map((r) => {
       const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
       return { id: r.student_id, full_name: r.students?.full_name ?? "—", national_id: r.students?.national_id,
-               grade: en?.classes?.grade, class_no: en?.classes?.class_no, added_at: r.added_at, added_by_name: r.added_by_name };
+               grade: en?.classes?.grade, class_no: en?.classes?.class_no, added_at: r.added_at, added_by_name: r.added_by_name,
+               rank: r.rank ?? null, rank_at: r.rank_at ?? null, mobile: mobileOf[r.student_id] ?? null };
     }).sort(byClassName()));
   };
 
@@ -98,6 +102,22 @@ export default function ScoutTeam() {
     load();
   };
 
+  // إسناد الرتبة الكشفية (scouts_3.sql) بتاريخ اليوم واسم من أسندها
+  const setRank = async (m, rank) => {
+    setBusy(m.id);
+    const { error } = await supabase.from("scout_members").update({
+      rank: rank || null, rank_at: rank ? new Date().toISOString().slice(0, 10) : null,
+      rank_by_name: rank ? profile?.full_name ?? null : null,
+    }).eq("student_id", m.id);
+    setBusy(null);
+    if (error) {
+      setMsg({ ok: false, text: /rank/.test(error.message) ? "إسناد الرتب يحتاج تشغيل supabase/scouts_3.sql مرة واحدة." : error.message });
+      return;
+    }
+    setMsg({ ok: true, text: rank ? `أُسندت رتبة «${rankOf(rank).t}» إلى ${m.full_name}.` : `أُزيلت رتبة ${m.full_name}.` });
+    load();
+  };
+
   const shown = useMemo(() => {
     const t = q.trim();
     return t ? (members ?? []).filter((m) => m.full_name.includes(t) || (m.national_id ?? "").includes(t)) : members ?? [];
@@ -110,9 +130,20 @@ export default function ScoutTeam() {
       <div>
         <h1 className="text-lg font-bold text-ink">الفريق الكشفي</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          أعضاء الفريق الكشفي بالمدرسة من كل الفصول: أضف الطالب من فصله، واحذفه من الكشف متى شئت.
+          أعضاء الفريق الكشفي بالمدرسة من كل الفصول: أضف الطالب من فصله، وأسند له رتبته الكشفية لمرحلة
+          الكشاف المتقدم (المرحلة الثانوية)، فتظهر شارتها في بطاقته بحسابه.
         </p>
       </div>
+
+      <a href={SCOUTS_URL} target="_blank" rel="noopener noreferrer"
+         className="card flex items-center gap-3 px-4 py-3 transition-colors hover:border-mint-light hover:bg-mint-tint/50">
+        <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-mint-tint text-xl text-mint-deep">⚜</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-ink">جمعية الكشافة العربية السعودية</span>
+          <span className="block text-xs text-muted">الأنظمة والبرامج والمناهج والشارات — الموقع الرسمي</span>
+        </span>
+        <span className="shrink-0 text-xs font-semibold text-mint-deep">زيارة الموقع ←</span>
+      </a>
 
       {missing ? (
         <div className="card px-6 py-10 text-center text-sm text-muted">
@@ -172,8 +203,15 @@ export default function ScoutTeam() {
                     <p className="truncate text-sm font-medium text-ink">{m.full_name}</p>
                     <p className="text-[11.5px] text-faint">
                       {m.grade ? classLabel(m) : "غير مسجّل في فصل"} · <span className="num" dir="ltr">{m.national_id}</span>
+                      {m.mobile && <> · <a href={`tel:+${m.mobile}`} className="num text-mint-deep" dir="ltr">{m.mobile}</a></>}
                     </p>
                   </div>
+                  <select className="field !h-8 w-auto !py-0 text-xs" value={m.rank ?? ""} disabled={busy === m.id}
+                          onChange={(e) => setRank(m, e.target.value)} title="الرتبة الكشفية"
+                          style={m.rank ? { color: rankOf(m.rank)?.color, fontWeight: 600 } : undefined}>
+                    <option value="">بلا رتبة</option>
+                    {SCOUT_RANKS.map((r) => <option key={r.k} value={r.k}>{r.t}</option>)}
+                  </select>
                   <button onClick={() => remove(m)} disabled={busy === m.id}
                           className="shrink-0 text-xs font-medium text-absent hover:underline">حذف</button>
                 </div>
@@ -207,7 +245,7 @@ export default function ScoutTeam() {
             <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
               <thead>
                 <tr>
-                  {["م", "اسم الطالب", "رقم الهوية", "الصف والفصل"].map((h) => (
+                  {["م", "اسم الطالب", "رقم الهوية", "الصف والفصل", "الرتبة", "جوال ولي الأمر"].map((h) => (
                     <th key={h} style={{ border: "1px solid #d8e4dc", padding: "6px 8px", background: "#EEF6F1",
                       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{h}</th>
                   ))}
@@ -220,6 +258,8 @@ export default function ScoutTeam() {
                     <td style={{ border: "1px solid #d8e4dc", padding: "5px 8px" }}>{m.full_name}</td>
                     <td className="num" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{m.national_id}</td>
                     <td style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{m.grade ? classLabel(m) : "—"}</td>
+                    <td style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{rankOf(m.rank)?.t ?? "—"}</td>
+                    <td className="num" dir="ltr" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{m.mobile ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

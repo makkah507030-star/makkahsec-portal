@@ -44,3 +44,15 @@ export function useScoutLeader(enabled = true) {
   }, [enabled]);
   return leader;
 }
+
+/* الرتب الكشفية لمرحلة الكشاف المتقدم — المرحلة الثانوية — في جمعية الكشافة العربية
+   السعودية (supabase/scouts_3.sql). رتب المراحل الأصغر (الأشبال والكشافة) لا تُسند هنا. */
+export const SCOUT_RANKS = [
+  { k: "beginner", t: "كشاف متقدم مبتدئ", short: "مبتدئ", color: "#5E7268" },
+  { k: "second",   t: "كشاف ثانٍ",         short: "كشاف ثانٍ", color: "#3E8A62" },
+  { k: "first",    t: "كشاف أول",          short: "كشاف أول",  color: "#B8912F" },
+];
+export const rankOf = (k) => SCOUT_RANKS.find((r) => r.k === k) ?? null;
+
+/** موقع جمعية الكشافة العربية السعودية — للقائد الكشفي ونائبه */
+export const SCOUTS_URL = "https://www.scouts.org.sa/ar/";

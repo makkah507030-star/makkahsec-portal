@@ -553,6 +553,58 @@ export function Badges({ theme = "light", d }) {
   );
 }
 
+/* ----------------------------- بطاقة الكشاف ----------------------------- */
+// زهرة الزنبق: رمز الحركة الكشفية العالمي
+const FLEUR = (
+  <svg viewBox="0 0 64 64" aria-hidden="true">
+    <path fill="currentColor" d="M32 3c-7 8-10 17-6.5 27.5C21 25 13.5 22.5 8 27c5.5-.6 9.4 2.4 10.2 7.6L26 36.4l-7.8 1.8c-.8 5.2-4.7 8.2-10.2 7.6 5.5 4.5 13 2 17.5-3.5-.6 5.3-3.4 9.2-7.5 11.7h28c-4.1-2.5-6.9-6.4-7.5-11.7C43 47.8 50.5 50.3 56 45.8c-5.5.6-9.4-2.4-10.2-7.6L38 36.4l7.8-1.8c.8-5.2 4.7-8.2 10.2-7.6-5.5-4.5-13-2-17.5 3.5C42 20 39 11 32 3Z" />
+    <rect x="20" y="33.6" width="24" height="5.6" rx="2.8" fill="currentColor" />
+  </svg>
+);
+
+export function ScoutCards({ theme = "light", d }) {
+  const cards = Array.from({ length: 10 }, (_, i) => (d.cards ?? [d])[i] ?? null);
+  return (
+    <div className={`stu stu-scouts stu-${theme} stu-portrait sheet`}>
+      <div className="grid">
+        {cards.map((c, i) => (
+          <div key={i} className={`stu-scout${c ? "" : " empty"}`}>
+            {c && (
+              <div className="in">
+                <i className="lines" />
+                <div className="emb">{FLEUR}</div>
+                <div className="body">
+                  <div className="top">
+                    <img src={iconWhite} alt="" className="logo-w" />
+                    <img src={iconMint} alt="" className="logo-m" />
+                    <span>الفريق الكشفي · مدرسة مكة الثانوية</span>
+                  </div>
+                  <p className="kick">بطاقة كشاف</p>
+                  {(() => {
+                    const t = fitTitle(c.name, { max: 17, min: 11, width: 178 });
+                    return <div className={`nm${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{c.name || "اسم الكشاف"}</div>;
+                  })()}
+                  <span className="rk" style={{ "--rk": c.color }}>
+                    <i>{FLEUR}</i>{c.rank}
+                  </span>
+                  {c.cls && <div className="cl">{c.cls}</div>}
+                </div>
+                <div className="ph">{c.photo ? <img src={c.photo} alt="" /> : <span className="ph-e">{FLEUR}</span>}</div>
+                <div className="ft">
+                  <span className="num">No. {String(c.no ?? 1).padStart(3, "0")}</span>
+                  <span className="num">{d.year}</span>
+                  <span className="site">makkahsec.com</span>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="note">بطاقات 8.6 × 5.4 سم · قصّ على الخط المتقطع</p>
+    </div>
+  );
+}
+
 /* ----------------------------- رول أب المناسبات ----------------------------- */
 export function Rollup({ theme = "light", d }) {
   const { w, h } = ROLLUP_SIZES[d.size] ?? ROLLUP_SIZES["85x200"];

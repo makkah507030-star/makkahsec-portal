@@ -1,7 +1,8 @@
 // src/pages/studio/templates.js
 import { COLORS } from "../../lib/dfile.js";
 import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode, classShort, iconFor, signIconFor } from "./lib";
-import { loadSchedule, loadStudents, loadStaff, shortName } from "./data";
+import { loadSchedule, loadStudents, loadStaff, loadScouts, shortName } from "./data";
+import { SCOUT_RANKS, rankOf } from "../../lib/scoutLeader.js";
 import { DAY_NAMES, GRADE_NAMES } from "../../lib/schoolTime";
 
 /* =====================================================================
@@ -367,6 +368,29 @@ export const TEMPLATES = [
     view: (d) => ({ ...d, cards: badgeCards(d, {})[0] }),
     pages: (d, c) => badgeCards(d, c).map((cards) => ({ ...d, cards })),
   },
+  {
+    key: "scout-card",
+    sections: ["admin"],
+    only: "scouts",                     // للقائد الكشفي ونائبه وحدهما (Studio.jsx)
+    sheet: "scoutcard",
+    batch: true,
+    defaultTheme: "dark",
+    title: "بطاقة الكشاف",
+    desc: "بطاقة عضوية للفريق الكشفي (8.6 × 5.4 سم) بالاسم والرتبة الكشفية والفصل وصورة اختيارية — 10 بطاقات في الورقة، ولكل أعضاء الفريق دفعة واحدة.",
+    load: loadScouts,
+    fields: [
+      { name: "name", label: "اسم الكشاف", max: 40 },
+      { name: "rank", label: "الرتبة الكشفية", type: "choice", options: ["عضو الفريق الكشفي", ...SCOUT_RANKS.map((r) => r.t)] },
+      { name: "cls", label: "الصف والفصل", max: 30 },
+      { name: "photo", label: "الصورة (اختيارية)", type: "photo" },
+      { name: "scope", label: "الطباعة", type: "opts",
+        options: (d, c) => [["one", "بطاقة واحدة"], ["page", "ورقة كاملة (10 نسخ)"], ["all", `كل أعضاء الفريق (${c.scouts?.length ?? 0})`]] },
+    ],
+    defaults: (c) => ({ name: "", rank: SCOUT_RANKS[2].t, cls: "", photo: "", scope: "one", year: c.year }),
+    sample: () => ({ name: "اسم الكشاف", cls: "الأول الثانوي · 101" }),
+    view: (d) => ({ ...d, cards: scoutCards(d, {})[0] }),
+    pages: (d, c) => scoutCards(d, c).map((cards) => ({ ...d, cards })),
+  },
   /* ============================ المناسبات والطالب ============================ */
   {
     key: "rollup",
@@ -559,6 +583,23 @@ function seatPages(d, c) {
 }
 
 /* ----------------------------- بطاقات التعريف ----------------------------- */
+/* بطاقات الكشافة: 10 في الورقة. الرتبة بنصها ولونها (lib/scoutLeader.js)، والرقم ترتيب العضو */
+function scoutCards(d, c) {
+  const colorOf = (t) => SCOUT_RANKS.find((r) => r.t === t)?.color ?? "#3E8A62";
+  const me = { name: d.name, rank: d.rank, color: colorOf(d.rank), cls: d.cls, photo: d.photo, no: 1 };
+  if (d.scope === "page") return [Array.from({ length: 10 }, () => me)];
+  if (d.scope === "all" && c.scouts?.length) {
+    const all = c.scouts.map((x, i) => {
+      const r = rankOf(x.rank);
+      return { name: x.full_name, rank: r?.t ?? "عضو الفريق الكشفي", color: r?.color ?? "#3E8A62", cls: x.cls, no: i + 1 };
+    });
+    const out = [];
+    for (let i = 0; i < all.length; i += 10) out.push(all.slice(i, i + 10));
+    return out;
+  }
+  return [[me]];
+}
+
 function badgeCards(d, c) {
   const me = { name: d.name, role: d.role, dept: d.dept, photo: d.photo };
   if (d.scope === "page") return [Array.from({ length: 9 }, () => me)];
