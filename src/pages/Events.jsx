@@ -22,6 +22,7 @@ import { countAr } from "../lib/arabicCount.js";
 import { cmpAr } from "../lib/sortAr.js";
 import { useBackStep } from "../lib/backStep.js";
 import { AUDIENCE, GRADES, audienceOf, audienceLabel, audienceTitle, scopeOf, scopePlace, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
+import { useScoutLeader, issuesAsScout } from "../lib/scoutLeader.js";
 
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
@@ -199,6 +200,7 @@ export default function Events() {
 /* --------------------------- حدث جديد --------------------------- */
 function NewEvent({ uid, profile, roles, onDone }) {
   const { effectiveRole } = useSession();
+  const scoutLeader = useScoutLeader(issuesAsScout(roles));
   const [cats, setCats] = useState([]);
   const [f, setF] = useState({
     title: "", category: "", event_date: todayISO(), end_date: "",
@@ -218,8 +220,11 @@ function NewEvent({ uid, profile, roles, onDone }) {
     if (f.title.trim().length < 3 || !f.event_date || (f.end_date && f.end_date < f.event_date)) return;
     setBusy(true);
     const { data: serial } = await supabase.rpc("next_event_serial");
-    // صفة المنظّم: بواجهة المعلم «معلم» ولو حمل دورًا إداريًا (مثل برنامج جلوب)، وإلا مسمّاه الإداري
-    const roleLabel = roles.length && effectiveRole !== "teacher" ? (ADMIN_ROLE_LABEL[roles[0]] ?? "") : "معلم";
+    // صفة المنظّم: بواجهة المعلم «معلم» ولو حمل دورًا إداريًا (مثل برنامج جلوب)، وإلا مسمّاه الإداري.
+    // وأدوار الكشافة كلها (كنائب القائد) تُنظّم باسم القائد الكشفي وصفته (lib/scoutLeader.js)
+    const asScout = effectiveRole !== "teacher" && issuesAsScout(roles) && !!scoutLeader;
+    const roleLabel = asScout ? scoutLeader.label
+      : roles.length && effectiveRole !== "teacher" ? (ADMIN_ROLE_LABEL[roles[0]] ?? "") : "معلم";
 
     const { data, error } = await supabase.from("school_events").insert({
       serial,
@@ -237,7 +242,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
       // نطاق الطلاب وأولياء الأمور: صف أو فصول منه (events_audience_3.sql)
       ...(f.scope.grade ? { audience_scope: f.scope } : {}),
       organizer_id: uid,
-      organizer_name: profile?.full_name ?? "",
+      organizer_name: asScout ? scoutLeader.full_name : profile?.full_name ?? "",
       organizer_role: roleLabel,
       cert_template: isNationalDay({ title: f.title, category: f.category }) ? "national" : "classic",
       stage: "participants",
@@ -1636,19 +1641,24 @@ const signedUrl = async (p) =>
   (p ? (await supabase.storage.from("form-assets").createSignedUrl(p, 3600)).data?.signedUrl ?? null : null);
 
 /** توقيع منظّم الحدث، وختم المدرسة وتوقيع المدير — للشهادات والتقرير */
-function useEventSignatures(organizerId) {
+function useEventSignatures(e) {
+  const organizerId = e?.organizer_id;
   const [sigUrl, setSigUrl] = useState(null);
   const [school, setSchool] = useState({});
+  // حدث نظّمه نائب القائد الكشفي باسم القائد: الشهادات بتوقيع القائد (lib/scoutLeader.js)
+  const scoutLeader = useScoutLeader();
+  const byLeader = !!scoutLeader && e?.organizer_role === scoutLeader.label && organizerId !== scoutLeader.user_id;
 
   // توقيع المنظّم يظهر لمن أنشأ الحدث (سياسات التوقيع تمنع قراءة توقيع غيره)
   useEffect(() => {
     (async () => {
+      if (byLeader) { setSigUrl(scoutLeader.sig_url); return; }
       if (!organizerId) return;
       const { data: sig } = await supabase.from("user_signatures")
         .select("path").eq("user_id", organizerId).maybeSingle();
       setSigUrl(await signedUrl(sig?.path));
     })();
-  }, [organizerId]);
+  }, [organizerId, byLeader]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     (async () => {
@@ -1694,7 +1704,7 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
   // الصيغة الرسمية لا تُحفظ نصًا، فتبقى متابعة لعنوان الحدث وتاريخه إن تغيّرا
   const certText = isOfficial ? null : JSON.stringify(text);
   const [saveErr, setSaveErr] = useState(false);
-  const { sigUrl, school } = useEventSignatures(e.organizer_id);
+  const { sigUrl, school } = useEventSignatures(e);
   const [printing, setPrinting] = useState(null);   // الشهادات المُعدّة للطباعة
 
   const attended = useMemo(() => (parts ?? []).filter((p) => p.attended === true), [parts]);
@@ -2145,7 +2155,7 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useNotice(null, "error");
   const [printing, setPrinting] = useState(false);
-  const { sigUrl, school } = useEventSignatures(e.organizer_id);
+  const { sigUrl, school } = useEventSignatures(e);
 
   const approved = e.stage === "approved";
   const submitted = !!e.report_submitted_at;

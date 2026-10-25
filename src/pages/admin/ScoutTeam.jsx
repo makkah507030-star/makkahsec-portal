@@ -12,6 +12,9 @@ import PrintPortal from "../../components/PrintPortal.jsx";
 import { printThen } from "../../lib/print.js";
 import moeLogo from "../../assets/moe-logo.png";
 import logoIcon from "../../assets/icon-mint.png";
+import { useScoutLeader } from "../../lib/scoutLeader.js";
+import { usePrincipalSignature } from "../../lib/principalSignature.js";
+import { PRINCIPAL_NAME } from "../../lib/signers.js";
 
 /* =====================================================================
    الفريق الكشفي (supabase/scouts_1.sql):
@@ -33,6 +36,9 @@ export default function ScoutTeam() {
   const [busy, setBusy] = useState(null);       // student_id قيد الإضافة أو الحذف
   const [msg, setMsg] = useNotice(null);
   const [printing, setPrinting] = useState(false);
+  // توقيعا الكشف: القائد الكشفي (scouts_2.sql) ومدير المدرسة
+  const leader = useScoutLeader();
+  const principal = usePrincipalSignature();
 
   const load = async () => {
     const { data, error } = await supabase.from("scout_members")
@@ -177,6 +183,12 @@ export default function ScoutTeam() {
         </>
       )}
 
+      {/* تحميل التوقيعين مسبقًا فيظهران في الطباعة فورًا */}
+      <div className="hidden">
+        {leader?.sig_url && <img src={leader.sig_url} alt="" />}
+        {principal.url && <img src={principal.url} alt="" />}
+      </div>
+
       {printing && (
         <PrintPortal id="scouts-print" margin="12mm 14mm">
           <div dir="rtl" className="text-ink" style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: 12.5 }}>
@@ -212,7 +224,22 @@ export default function ScoutTeam() {
                 ))}
               </tbody>
             </table>
-            <p className="mt-10 text-center text-[10px] text-faint">صدر من بوابة مكة الثانوية الرقمية · makkahsec.com</p>
+            <div className="mt-10 grid grid-cols-2 gap-10 text-center text-[12px]" style={{ breakInside: "avoid" }}>
+              {[
+                ["القائد الكشفي", leader?.full_name, leader?.sig_url],
+                ["مدير المدرسة", principal.name || PRINCIPAL_NAME, principal.url],
+              ].map(([role, name, url]) => (
+                <div key={role}>
+                  <p className="font-bold text-mint-deep">{role}</p>
+                  <p className="mt-1">{name || "...................................."}</p>
+                  <div className="mx-auto mt-1 flex h-14 items-center justify-center">
+                    {url ? <img src={url} alt="" className="max-h-14 max-w-[150px] object-contain" />
+                         : <span className="text-faint">التوقيع: ....................</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-8 text-center text-[10px] text-faint">صدر من بوابة مكة الثانوية الرقمية · makkahsec.com</p>
           </div>
         </PrintPortal>
       )}

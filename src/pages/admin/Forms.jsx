@@ -3,6 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
+import { useScoutLeader, issuesAsScout } from "../../lib/scoutLeader.js";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import DateField, { TimeField, rangeDays, formatBoth } from "../../components/DateField.jsx";
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
@@ -445,7 +446,11 @@ export default function Forms({ view = "issue", openKey = null }) {
   }, [isTeacher, session?.user?.id]);
   const teacherLabel = spec ? `معلم ${spec.replace(/^معلم\s+/, "")}` : "المعلم";
   const asTeacher = !myRoles.length || (isTeacher && (issueAs ?? (effectiveRole === "teacher" ? "teacher" : "admin")) === "teacher");
-  const issuerRole = asTeacher ? teacherLabel : myRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و");
+  // مخرجات الكشافة (lib/scoutLeader.js): من أدواره كلها كشفية (كنائب القائد) يُصدر باسم القائد الكشفي وتوقيعه وصفته
+  const scoutLeader = useScoutLeader(issuesAsScout(myRoles));
+  const asScout = !asTeacher && issuesAsScout(myRoles) && !!scoutLeader;
+  const issuerRole = asScout ? scoutLeader.label
+    : asTeacher ? teacherLabel : myRoles.map((r) => ADMIN_ROLE_LABEL[r] ?? r).join(" و");
   const isManager = (adminRoles ?? []).some((r) => r === "tech_support" || r === "principal");
   const isApprover = (adminRoles ?? []).includes("principal");
   const usage = useUsageCounts();
@@ -1057,8 +1062,8 @@ export default function Forms({ view = "issue", openKey = null }) {
             : picked.requires_approval ? "pending" : "issued",
       hijri_year: year,
       created_by: session.user.id,
-      signature_path: usesIssuer ? mySig : null,
-      signature_name: usesIssuer ? (profile?.full_name ?? profile?.username ?? "") : null,
+      signature_path: usesIssuer ? (asScout ? scoutLeader.sig_path : mySig) : null,
+      signature_name: usesIssuer ? (asScout ? scoutLeader.full_name : profile?.full_name ?? profile?.username ?? "") : null,
       signature_role: usesIssuer ? issuerRole : null,
       stamp_path: picked.show_stamp ? (assets.stamp ?? null) : null,
       // بلا ملصق لا يُرسل العمود، فيعمل الإصدار قبل تشغيل supabase/flags.sql
@@ -1445,7 +1450,7 @@ export default function Forms({ view = "issue", openKey = null }) {
   /* ---------------- تعبئة نموذج ---------------- */
   if (picked) {
     // المعاينة قبل الإصدار: اسم المُصدِر وصفته كما سيُطبعان
-    const d = issued ?? { serial: null, signature_name: profile?.full_name, signature_source: picked.signature_source,
+    const d = issued ?? { serial: null, signature_name: asScout ? scoutLeader.full_name : profile?.full_name, signature_source: picked.signature_source,
                           signature_role: issuerRole };
     const usesIssuerNow = picked.signature_source === "issuer" || picked.signature_source === "both";
     const selfNow = !issued && !editing && (chosen.length
@@ -1472,7 +1477,7 @@ export default function Forms({ view = "issue", openKey = null }) {
             <PrintArea landscape={sheetLandscape(picked)}>
               {printable.map((b) => (
                 <FormSheet key={b.id} template={picked} values={b.data} doc={b}
-                           sigUrl={urls.sig}
+                           sigUrl={asScout ? scoutLeader.sig_url : urls.sig}
                            stampUrl={picked.show_stamp ? urls.stamp : null}
                            principalSigUrl={urls.principal}
                            principalName={assets.principal_name}
@@ -1753,10 +1758,16 @@ export default function Forms({ view = "issue", openKey = null }) {
               </p>
             )}
 
-            {picked.signature_source !== "none" && !mySig && !isGuestCert(picked) &&
+            {picked.signature_source !== "none" && !(asScout ? scoutLeader.sig_path : mySig) && !isGuestCert(picked) &&
              (picked.signature_source === "issuer" || picked.signature_source === "both") && (
               <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs text-warning">
-                لم ترفع توقيعك بعد. سيصدر المستند بلا توقيع — ارفعه من صفحة «توقيعي».
+                {asScout ? "لم يرفع القائد الكشفي توقيعه بعد. سيصدر المستند بلا توقيع — يرفعه من صفحة «توقيعي»."
+                         : "لم ترفع توقيعك بعد. سيصدر المستند بلا توقيع — ارفعه من صفحة «توقيعي»."}
+              </p>
+            )}
+            {asScout && (picked.signature_source === "issuer" || picked.signature_source === "both") && (
+              <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">
+                يصدر باسم {scoutLeader.label} ({scoutLeader.full_name}) وتوقيعه، كبقية مخرجات الفريق الكشفي.
               </p>
             )}
 
@@ -1842,7 +1853,7 @@ export default function Forms({ view = "issue", openKey = null }) {
             <SheetPreview landscape={sheetLandscape(picked)}>
               <FormSheet
                 template={picked} values={values} doc={d}
-                sigUrl={showSign ? urls.sig : null}
+                sigUrl={showSign ? (asScout ? scoutLeader.sig_url : urls.sig) : null}
                 stampUrl={showSign && picked.show_stamp ? urls.stamp : null}
                 principalSigUrl={showSign ? urls.principal : null}
                 principalName={assets.principal_name}
