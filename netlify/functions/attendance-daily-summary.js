@@ -23,6 +23,26 @@ const ksaDow = () => {
 // من يصله الملخّص
 const ADMIN_ROLES = ["principal", "deputy_academic", "deputy_students", "tech_support"];
 
+// معرّفات الحصص المحضَّرة في تاريخ (كما في src/lib/attendanceHelpers.js).
+// أي خطأ يُرمى فلا يُرسل ملخّص خاطئ.
+async function markedScheduleIds(db, date) {
+  const rpc = await db.rpc("marked_schedule_ids", { p_date: date });
+  if (!rpc.error && Array.isArray(rpc.data)) {
+    return new Set(rpc.data.map((r) => (typeof r === "string" ? r : r.schedule_id)));
+  }
+  // احتياطي: جلب على دفعات لتجاوز حدّ 1000 صف
+  const set = new Set();
+  for (let from = 0; from < 60000; from += 1000) {
+    const { data: page, error } = await db.from("class_attendance")
+      .select("schedule_id").eq("attend_date", date)
+      .order("id", { ascending: true }).range(from, from + 999);
+    if (error) throw new Error(error.message);
+    (page || []).forEach((r) => set.add(r.schedule_id));
+    if (!page || page.length < 1000) break;
+  }
+  return set;
+}
+
 export const handler = async () => {
   const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -46,17 +66,18 @@ export const handler = async () => {
     if (hol && hol.length) return { statusCode: 200, body: "holiday" };
 
     // حصص اليوم
-    const { data: sched } = await db.from("schedule")
+    const { data: sched, error: schedErr } = await db.from("schedule")
       .select("id, period_no, classes(class_no), teachers(full_name)")
       .eq("academic_year", s.active_year ?? "")
       .eq("term", Number(s.active_term ?? 1))
       .eq("day_of_week", dow);
+    if (schedErr) throw new Error(schedErr.message);
     if (!sched || !sched.length) return { statusCode: 200, body: "no classes" };
 
-    const ids = sched.map((r) => r.id);
-    const { data: done } = await db.from("class_attendance")
-      .select("schedule_id").eq("attend_date", today).in("schedule_id", ids);
-    const doneSet = new Set((done || []).map((r) => r.schedule_id));
+    // الحصص المحضَّرة اليوم: دالة marked_schedule_ids تعيد المعرّفات المميّزة.
+    // كان الاستعلام السابق يقرأ صفًا لكل طالب مع .in لـ 196 معرّفًا، فيُقصّ عند
+    // 1000 صف أو يفشل الطلب لطول الرابط، ويُتجاهَل الخطأ فيظهر «حُضّرت 0».
+    const doneSet = await markedScheduleIds(db, today);
 
     const missing = sched.filter((r) => !doneSet.has(r.id));
     const total = sched.length;
