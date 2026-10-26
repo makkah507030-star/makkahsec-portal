@@ -11,11 +11,20 @@ import { EXCUSE_KIND, EXCUSE_STATUS, dayLabel, deciderText, openExcuseFile, case
    يرفعها الطالب أو ولي أمره، فيقبلها الوكيل فيصير غياب أيامها «غائب بعذر» آليًا،
    أو يرفضها بسبب يصل المستفيد. (supabase/absence_excuses_1..2.sql)
    ===================================================================== */
+// زرّا بطاقات الرد الجاهزة: القبول وعدم القبول
+const REPLY_GROUPS = [
+  { k: "accept", t: "ردود القبول", icon: "✓", btn: "border-excused/30 bg-excused/5 text-excused hover:bg-excused/10", on: "bg-excused/10",
+    card: "border-excused/30 bg-excused/5 text-excused hover:bg-excused/10" },
+  { k: "reject", t: "ردود عدم القبول", icon: "✕", btn: "border-absent/25 bg-absent/5 text-absent hover:bg-absent/10", on: "bg-absent/10",
+    card: "border-absent/25 bg-absent/5 text-absent hover:bg-absent/10" },
+];
+
 export default function AbsenceExcuses() {
   const [tab, setTab] = useState("pending");
   const [rows, setRows] = useState(null);
   const [cls, setCls] = useState({});        // الطالب ← صفه وفصله
   const [note, setNote] = useState({});
+  const [cards, setCards] = useState({});    // العذر ← مجموعة البطاقات المفتوحة (accept أو reject)
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState(null);
 
@@ -89,17 +98,33 @@ export default function AbsenceExcuses() {
                 )}
                 {r.status === "pending" ? (
                   <div className="space-y-2 border-t border-line pt-2">
-                  {/* بطاقات رد جاهزة: الضغط يضع النص في الملاحظة */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {REPLY_CARDS.accept.map((t) => (
-                      <button key={t} type="button" onClick={() => setNote((x) => ({ ...x, [r.id]: fillReply(t, caseOf(r.case_key)) }))}
-                              className="rounded-pill border border-excused/30 bg-excused/5 px-2.5 py-1 text-[11px] text-excused hover:bg-excused/10">✓ {fillReply(t, caseOf(r.case_key))}</button>
-                    ))}
-                    {REPLY_CARDS.reject.map((t) => (
-                      <button key={t} type="button" onClick={() => setNote((x) => ({ ...x, [r.id]: fillReply(t, caseOf(r.case_key)) }))}
-                              className="rounded-pill border border-absent/25 bg-absent/5 px-2.5 py-1 text-[11px] text-absent hover:bg-absent/10">✕ {fillReply(t, caseOf(r.case_key))}</button>
+                  {/* بطاقات رد جاهزة في زرّين مطويين متساويين: الضغط على بطاقة يضع نصها في الملاحظة */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {REPLY_GROUPS.map((g) => (
+                      <button key={g.k} type="button" aria-expanded={cards[r.id] === g.k}
+                              onClick={() => setCards((x) => ({ ...x, [r.id]: x[r.id] === g.k ? null : g.k }))}
+                              className={`flex items-center justify-between gap-2 rounded-sm2 border px-3 py-2 text-xs font-semibold ${g.btn} ${cards[r.id] === g.k ? g.on : ""}`}>
+                        <span>{g.icon} {g.t} <span className="num font-normal opacity-70">({REPLY_CARDS[g.k].length})</span></span>
+                        <span className="text-[10px]">{cards[r.id] === g.k ? "▲" : "▼"}</span>
+                      </button>
                     ))}
                   </div>
+                  {cards[r.id] && (() => {
+                    const g = REPLY_GROUPS.find((x) => x.k === cards[r.id]);
+                    return (
+                      <div className="grid auto-rows-fr grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                        {REPLY_CARDS[g.k].map((t) => {
+                          const text = fillReply(t, caseOf(r.case_key));
+                          return (
+                            <button key={t} type="button" onClick={() => { setNote((x) => ({ ...x, [r.id]: text })); setCards((x) => ({ ...x, [r.id]: null })); }}
+                                    className={`flex h-full items-start gap-1.5 rounded-sm2 border px-3 py-2 text-start text-[12px] leading-relaxed ${g.card}`}>
+                              <span className="shrink-0">{g.icon}</span><span>{text}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                   <div className="flex flex-wrap items-center gap-2">
                     <input className="field min-w-0 flex-1 basis-60" placeholder="ملاحظة للمستفيد (إلزامية عند عدم القبول)"
                            value={note[r.id] ?? ""} onChange={(e) => setNote((x) => ({ ...x, [r.id]: e.target.value }))} />

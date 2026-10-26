@@ -92,9 +92,10 @@ function useMonitor() {
         date, day, pt, trend: [...(trend.data ?? [])].reverse(),
         perms: { requests: (perms.data ?? []).length, students: permStudents.size },
         refsToday, refsOpen, behavior,
-        // المناوبون، ثم المعلمون المشرفون، ثم المشرف المتابع (يُميَّز بلونه)
-        duty: [...(duty.data ?? []).flatMap((r) => [r.name_a, r.name_b]).filter(Boolean).map((n) => ({ n, k: "duty" })),
-               ...(supervision.data ?? []).filter((r) => r.person_name).map((r) => ({ n: r.person_name, k: r.kind === "supervisor" ? "sup" : "teacher" }))],
+        // المناوبة منفصلة عن الإشراف اليومي؛ والإشراف: المشرفون المتابعون ثم المعلمون، بلا تكرار
+        duty: [...new Set((duty.data ?? []).flatMap((r) => [r.name_a, r.name_b]).filter(Boolean))],
+        sup: uniqNames((supervision.data ?? []).filter((r) => r.kind === "supervisor")),
+        supT: uniqNames((supervision.data ?? []).filter((r) => r.kind !== "supervisor")),
         events: (events.data ?? []).filter((e) => e.event_date === date || (e.end_date && e.end_date >= date)),
         quizzes, notes,
         comm: { toGuardians, absenceNotes, invites, guardianForms, circs }, nextEvents: nextEvents.data ?? [], nextQuizzes, at: new Date(),
@@ -215,14 +216,21 @@ export default function MonitorScreen() {
             </Panel>
           </div>
 
-          {/* الصف الثالث: ما يجري الآن */}
+          {/* الصف الثالث: الانضباط، والإشراف اليومي (المشرفون أعلاه)، والمناوبة */}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Panel title="الانضباط" icon="flag">
               <Mini rows={[["إحالات اليوم", d.refsToday], ["إحالات قيد المتابعة", d.refsOpen, d.refsOpen ? C.warn : C.ok], ["نماذج سلوك اليوم", d.behavior]]} />
             </Panel>
-            <Panel title="المناوبة والإشراف" icon="whistle">
-              {d.duty.length ? <DutyList rows={d.duty} /> : <Dim>لا مناوبين مسجّلين اليوم.</Dim>}
+            <Panel title="الإشراف اليومي" icon="whistle" className="md:col-span-2">
+              {d.sup.length || d.supT.length ? <SupervisionList sup={d.sup} teachers={d.supT} /> : <Dim>لا إشراف مسجّل اليوم.</Dim>}
             </Panel>
+            <Panel title="المناوبة" icon="whistle">
+              {d.duty.length ? <DutyList names={d.duty} /> : <Dim>لا مناوبين مسجّلين اليوم.</Dim>}
+            </Panel>
+          </div>
+
+          {/* الصف الرابع: اليوم في المدرسة، والتواصل، والتحضير حسب الحصة، والقادم */}
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Panel title="اليوم في المدرسة" icon="calendar">
               <Mini rows={[["اختبارات مجدولة", d.quizzes], ["فعاليات جارية", d.events.length]]} />
               {d.events.slice(0, 2).map((e) => <p key={e.title} className="mt-2 truncate text-xs text-[var(--m-sub)]">• {e.title}</p>)}
@@ -232,20 +240,18 @@ export default function MonitorScreen() {
                 ["إشعارات غياب لأولياء الأمور", d.comm.absenceNotes], ["دعوات وإشعارات سلوكية", d.comm.invites],
                 ["استدعاء أو مقابلة ولي أمر", d.comm.guardianForms], ["تعاميم أُرسلت", d.comm.circs]].filter((r) => r[1] != null)} small />
             </Panel>
-          </div>
-
-          {/* الصف الرابع: التحضير حسب الحصة، والخط الزمني لليوم، والقادم */}
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Panel title="التحضير حسب الحصة" icon="clipboard">
               {m.byPeriod.length ? <PeriodBars rows={m.byPeriod} mark={m.mark} /> : <Dim>لا جدول لليوم.</Dim>}
-            </Panel>
-            <Panel title="اليوم الدراسي" icon="clock" className="md:col-span-2">
-              {(d.pt ?? []).length ? <DayLine rows={d.pt} clock={clock} /> : <Dim>لا أوقات للحصص.</Dim>}
             </Panel>
             <Panel title="القادم" icon="calendar">
               <Upcoming d={d} />
             </Panel>
           </div>
+
+          {/* الصف الخامس: الخط الزمني لليوم بعرض الشاشة */}
+          <Panel title="اليوم الدراسي" icon="clock">
+            {(d.pt ?? []).length ? <DayLine rows={d.pt} clock={clock} /> : <Dim>لا أوقات للحصص.</Dim>}
+          </Panel>
 
           <p className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--m-line)] pt-3 text-[11px] text-[var(--m-faint)]">
             <span>بوابة مكة الثانوية الرقمية · <span className="num font-semibold text-[var(--m-accent)]">makkahsec.com</span></span>
@@ -441,23 +447,50 @@ function PeriodBars({ rows, mark }) {
 // اسم الفاصل في الخط الزمني بكلمته الأولى (الاصطفاف الصباحي ← الاصطفاف) ليتسع مربعه
 const shortLabel = (l) => String(l ?? "").trim().split(/\s+/)[0];
 
-/* المناوبة والإشراف: المناوب، والمعلم المشرف، والمشرف المتابع بلون مميز وشارة */
-const DUTY_TAG = { duty: ["مناوب", C.mint], teacher: ["إشراف", C.info], sup: ["مشرف متابع", "var(--m-gold)"] };
-function DutyList({ rows }) {
-  const seen = new Set();
-  const list = rows.filter((r) => !seen.has(r.k + r.n) && seen.add(r.k + r.n));
+// أسماء الإشراف بلا تكرار، بترتيبها الأبجدي
+const uniqNames = (rows) => [...new Set(rows.map((r) => r.person_name?.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ar"));
+
+/* الإشراف اليومي: المشرفون المتابعون أعلى البطاقة بلون مميز، ثم كل المعلمين المشرفين بلا حد للعدد */
+function SupervisionList({ sup, teachers }) {
+  return (
+    <div className="space-y-3">
+      {sup.length > 0 && (
+        <div className="rounded-sm2 px-3 py-2.5" style={{ background: "var(--m-track)", borderInlineStart: "3px solid var(--m-gold)" }}>
+          <p className="mb-1.5 text-[11px] font-semibold" style={{ color: "var(--m-gold)" }}>{sup.length > 1 ? "المشرفون المتابعون" : "المشرف المتابع"}</p>
+          <div className="flex flex-wrap gap-x-5 gap-y-1">
+            {sup.map((n) => <span key={n} className="text-base font-bold" style={{ color: "var(--m-gold)" }}>{n}</span>)}
+          </div>
+        </div>
+      )}
+      {teachers.length > 0 && (
+        <div>
+          <p className="mb-1.5 flex items-baseline justify-between text-[11px] text-[var(--m-sub)]">
+            <span>المعلمون المشرفون</span><span className="num">{teachers.length}</span>
+          </p>
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-3">
+            {teachers.map((n) => (
+              <li key={n} className="flex min-w-0 items-center gap-2">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: C.info }} />
+                <span className="min-w-0 leading-snug">{n}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* المناوبة: مناوبو اليوم من جدول المناوبة */
+function DutyList({ names }) {
   return (
     <ul className="space-y-1.5 text-sm">
-      {list.slice(0, 7).map((r) => {
-        const [t, c] = DUTY_TAG[r.k];
-        return (
-          <li key={r.k + r.n} className="flex items-center gap-2" style={r.k === "sup" ? { color: c, fontWeight: 700 } : undefined}>
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: c }} />
-            <span className="min-w-0 flex-1 truncate">{r.n}</span>
-            <span className="shrink-0 rounded-pill px-2 py-0.5 text-[10px] font-semibold" style={{ color: c, border: `1px solid ${c}` }}>{t}</span>
-          </li>
-        );
-      })}
+      {names.map((n) => (
+        <li key={n} className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: C.mint }} />
+          <span className="min-w-0 flex-1 leading-snug">{n}</span>
+        </li>
+      ))}
     </ul>
   );
 }
