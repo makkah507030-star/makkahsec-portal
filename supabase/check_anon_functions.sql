@@ -14,5 +14,5 @@ select p.proname as "الدالة",
  where p.pronamespace = 'public'::regnamespace and p.prosecdef
    and has_function_privilege('anon', p.oid, 'EXECUTE')
    and p.prorettype <> 'trigger'::regtype
- order by 3 desc, 4 desc, 5, 1;
+ order by 3, 4, 5, 1;   -- «بلا فحص» ثم «تعدّل» ثم «قائمة» أولًا (ترتيب الحروف)
 -- نهاية الجزء 1
