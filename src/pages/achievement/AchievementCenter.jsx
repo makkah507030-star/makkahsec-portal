@@ -14,7 +14,7 @@ import { fmtDateTime } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import {
   loadNoticeKeys, loadAchievement, noticeTitle, termName, periodOf, PERIODS, stats, groupBy, studentSummaries, runChecks, weakTeachers,
-  SEV, WEAK, bandOf, ACH_ALL, useAchMember,
+  SEV, KIND_T, WEAK, bandOf, ACH_ALL, useAchMember,
 } from "../../lib/achievement";
 import { supabase } from "../../lib/supabase";
 import { buildFormRows, syncForms, setupMsg as formsSetup, isSetupErr } from "../../lib/achForms";
@@ -203,7 +203,8 @@ export default function AchievementCenter() {
                                                               onSubject={setSubject} onNotes={() => setTab("notes")} />
             : tab === "notes" ? <Notes checks={shownChecks} />
             : tab === "forms" ? <FormsTab forms={shownForms} err={formsErr} />
-            : tab === "report" ? <DeputyReport forms={shownForms} keyName={key} checks={shownChecks} />
+            : tab === "report" ? <DeputyReport forms={shownForms} keyName={key} checks={shownChecks} recs={recs}
+                                                             scope={[(grade ? [grade] : dataGrades).map((g) => GRADE_NAMES[g]).join(" و"), subject].filter(Boolean).join(" · ")} />
             : <Students recs={recs} />}
         </>
       )}
@@ -362,11 +363,6 @@ function PeriodTrend({ trend, subject }) {
 /* ------------------------------------------------------------------ */
 /* الملاحظات: نتائج الفحوصات الجماعية                                 */
 /* ------------------------------------------------------------------ */
-const KIND_T = {
-  low_avg: "متوسط متدنٍّ", many_weak: "نسبة ضعف كبيرة", no_top: "لا تقدير مرتفع", gap_peers: "فارق عن الفصول",
-  incomplete: "رصد غير مكتمل", low_perf: "المهام الأدائية", perf_gap: "فجوة الأدائية والاختبار", subject_grade: "ضعف المادة في الصف", multi_weak: "تعثر متعدد",
-};
-
 function Notes({ checks }) {
   const [sev, setSev] = useState("");
   const [kind, setKind] = useState("");

@@ -2,21 +2,22 @@
 /* =====================================================================
    مركز تحليل النتائج ← «النماذج والخطط» و«تقرير الوكيل» لإشعار الفترة المختار (src/lib/achForms.js).
    • النماذج: كل نموذج بحالته ومهلته، وترشيح بالحالة، والضغط يفتحه.
-   • التقرير: أرقام المتابعة كلها لوكيل الشؤون التعليمية، بالمواد والمعلمين، قابل للطباعة.
+   • التقرير: أرقام المتابعة كلها لوكيل الشؤون التعليمية بالمواد والمعلمين، و«التقرير الرسمي»
+     بغلاف وصفحات A4 بالهوية (AchReportDoc.jsx) للطباعة وملف PDF.
    ===================================================================== */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
 import { cmpAr } from "../../lib/sortAr.js";
-import { noticeTitle } from "../../lib/achievement";
 import { FORM_STATUS, isOverdue } from "../../lib/achForms";
 import { StatusChip } from "./AchForm.jsx";
 import { Stat } from "./Charts.jsx";
-import PrintPortal from "../../components/PrintPortal.jsx";
-import { printThen } from "../../lib/print.js";
-import moeLogo from "../../assets/moe-logo.png";
-import logoIcon from "../../assets/icon-mint.png";
+import ReportViewer from "../../components/report/ReportViewer.jsx";
+import { loadPrincipalSignature, loadSchoolStamp } from "../../lib/principalSignature";
+import { academicYearLabel } from "../studio/lib";
+import { termName, noticeTitle } from "../../lib/achievement";
+import { achReportPages } from "./AchReportDoc.jsx";
 
 const chip = (on) => `rounded-pill px-3 py-1.5 text-xs font-semibold transition ${
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
@@ -58,8 +59,17 @@ export function FormsTab({ forms, err }) {
 }
 
 /* تقرير وكيل الشؤون التعليمية */
-export function DeputyReport({ forms, keyName, checks }) {
-  const [printing, setPrinting] = useState(false);
+export function DeputyReport({ forms, keyName, checks, recs, scope }) {
+  const [official, setOfficial] = useState(false);
+  const [theme, setTheme] = useState("light");
+  const [sigs, setSigs] = useState({});
+  useEffect(() => {
+    if (!official) return;
+    Promise.all([loadPrincipalSignature(), loadSchoolStamp()]).then(([p, st]) => setSigs({ principal: p?.url ?? null, stamp: st }));
+  }, [official]);
+  const pages = useMemo(() => (official && forms ? achReportPages({
+    recs, checks, forms, keyName, scope, year: academicYearLabel(), term: termName(keyName), theme, sigs,
+  }) : null), [official, recs, checks, forms, keyName, scope, theme, sigs]);
   const s = useMemo(() => {
     const all = forms ?? [];
     const by = (k) => all.filter((f) => f.status === k).length;
@@ -130,25 +140,16 @@ export function DeputyReport({ forms, keyName, checks }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold text-ink">تقرير متابعة التحصيل · {noticeTitle(keyName)}</h2>
-        {s.total > 0 && <button onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
-                className="ms-auto rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mint-deep">طباعة التقرير</button>}
+        <div className="ms-auto flex gap-1.5">
+          <button onClick={() => setOfficial(false)} className={chip(!official)}>الملخص</button>
+          <button onClick={() => setOfficial(true)} className={chip(official)}>التقرير الرسمي (طباعة / PDF)</button>
+        </div>
       </div>
-      {body(false)}
-      {printing && (
-        <PrintPortal id="ach-report" margin="12mm 12mm">
-          <div dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: 12 }}>
-            <div className="flex items-start justify-between">
-              <div className="text-[11px] leading-[1.8]"><div>المملكة العربية السعودية · وزارة التعليم</div><div className="font-bold text-mint-deep">مدرسة مكة الثانوية · الشؤون التعليمية</div></div>
-              <div className="flex gap-3"><img src={moeLogo} alt="" className="h-9" /><img src={logoIcon} alt="" className="h-9" /></div>
-            </div>
-            <h1 className="my-4 text-center text-[16px] font-bold text-mint-deep">تقرير متابعة التحصيل الدراسي · {noticeTitle(keyName)}</h1>
-            {body(true)}
-            <div className="mt-10 text-center text-[12px]"><p className="font-bold text-mint-deep">وكيل الشؤون التعليمية</p><p className="mt-6 text-faint">التوقيع: ....................</p></div>
-          </div>
-        </PrintPortal>
-      )}
+      {official
+        ? <ReportViewer id="ach-report" pages={pages} theme={theme} setTheme={setTheme} fileTitle={`تقرير متابعة التحصيل - ${noticeTitle(keyName)}`} />
+        : body(false)}
     </div>
   );
 }

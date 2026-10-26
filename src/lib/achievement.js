@@ -217,6 +217,12 @@ export const SEV = {
   info: { t: "للمتابعة", rank: 2, c: "#2C5079", bg: "#E9F1FB" },
 };
 
+// نوع كل ملاحظة باسم قصير (صفحة الملاحظات والتقرير)
+export const KIND_T = {
+  low_avg: "متوسط متدنٍّ", many_weak: "نسبة ضعف كبيرة", no_top: "لا تقدير مرتفع", gap_peers: "فارق عن الفصول",
+  incomplete: "رصد غير مكتمل", low_perf: "المهام الأدائية", perf_gap: "فجوة الأدائية والاختبار", subject_grade: "ضعف المادة في الصف", multi_weak: "تعثر متعدد",
+};
+
 /* كل ملاحظة: { id, sev, kind, title, detail, grade, class_no, class_id, subject, teachers[], metric, rec } */
 export const COVER_MIN = 0.7;   // دون هذه النسبة من طلاب الفصل: الرصد غير مكتمل فلا يُحكم على المتوسط
 
