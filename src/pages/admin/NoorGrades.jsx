@@ -9,6 +9,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import PresetChips from "../../components/PresetChips.jsx";
 import { countAr } from "../../lib/arabicCount.js";
+import { readMarksReport, marksStatus, normAr } from "../../lib/noorMarksReport.js";
 
 /* =====================================================================
    متابعة رصد درجات الفترات في نظام نور — لوكيل الشؤون التعليمية والدعم الفني
@@ -19,7 +20,10 @@ import { countAr } from "../../lib/arabicCount.js";
    • عرضان: «حسب المادة» (الأساس، يطابق كشف نور: المادة ← صفوفها ← فصولها) و«حسب الصف».
      إدخال سريع: تُختار حالة ثم تُضغط الخانات، أو تُطبَّق على كل فصول الصف.
    • الحالة لكل فصل: تم الرصد، أو رصد جزئي (لم يكتمل الفصل)، أو لم يرصد.
-     يدخلها الوكيل أو الدعم الفني يدويًا بعد مراجعة نور، ولا إجراء على المعلم.
+     يدخلها الوكيل أو الدعم الفني يدويًا بعد مراجعة نور، ولا إجراء على المعلم،
+     أو تُستخرج آليًا من «كشف رصد درجات مادة» المصدَّر من نور بصيغة Excel
+     (lib/noorMarksReport.js): يُرفع الملف فتُعرض الحالات المستخرجة وملاحظات الناقص
+     للمراجعة، ولا يُحفظ شيء قبل «اعتماد».
    • لون الخانة للحالة (أخضر تم، أزرق جزئي، وردي لم يرصد)، ورقمها الأيام منذ
      الاختبار بلون المهلة: حتى يومين أخضر، ومن 3 إلى 5 برتقالي، وبعدها أحمر متأخر.
    ===================================================================== */
@@ -92,6 +96,7 @@ export default function NoorGrades() {
   const [contSet, setContSet] = useState(() => new Set());   // مواد علّمها الوكيل تقويمًا مستمرًا
   const [sel, setSel] = useState(null);      // الخانة المفتوحة تفاصيلها (slot_id)
   const [noteFor, setNoteFor] = useState(null);   // نافذة «ما الناقص؟» للرصد الجزئي: { r, note }
+  const [imp, setImp] = useState(null);           // معاينة كشوف الرصد المرفوعة: { items, missing, skipped, err }
   const [view, setView] = useState("subject");   // subject: كما في كشف نور، grade: نظرة عامة بالصف
   const [brush, setBrush] = useState("detail");  // detail أو حالة تُطبَّق بالضغط على الخانة
   const [subKey, setSubKey] = useState(null);    // المادة المفتوحة في العرض حسب المادة
@@ -267,6 +272,47 @@ export default function NoorGrades() {
   const now = new Date();
   const stamp = `${weekday(today)} ${fmtHijri(today)} الساعة ${new Intl.DateTimeFormat("ar-SA", { hour: "numeric", minute: "2-digit", numberingSystem: "latn" }).format(now)}`;
 
+  // كشوف الرصد من نور (Excel): كل ورقة فصل، تُطابق بالصف ورمز الفصل واسم المادة
+  const sameSubject = (a, b) => {
+    const x = normAr(baseSubject(a)), y = normAr(baseSubject(b));
+    return x === y || x.includes(y) || y.includes(x);
+  };
+  const onReports = async (files) => {
+    if (!files.length || !term) return;
+    if (!["period1", "period2"].includes(term.kind)) { setImp({ err: "اختر الفترة الأولى أو الثانية أولًا." }); return; }
+    setImp({ loading: true });
+    const items = [], missing = [];
+    let skipped = 0;
+    try {
+      for (const f of files) {
+        const r = await readMarksReport(f);
+        skipped += r.skipped;
+        for (const sh of r.sheets) {
+          const m = marksStatus(sh, term.kind);
+          const code = sh.grade * 100 + sh.classNo;
+          const hits = all.filter((x) => x.grade === sh.grade && classCode(x.grade, x.class_no) === code && sameSubject(x.subject_name, sh.subject));
+          if (!m || !hits.length) { missing.push({ ...sh, code, why: !m ? "لا طلاب أو لا بنود لهذه الفترة" : "المادة أو الفصل غير موجود في الجدول الدراسي" }); continue; }
+          hits.forEach((x) => items.push({ r: x, to: m.status, note: m.note, code, subject: sh.subject,
+            changed: x.st !== m.status || (m.status === "partial" && (x.note ?? "") !== (m.note ?? "")) }));
+        }
+      }
+    } catch (e) {
+      setImp({ err: `تعذّرت قراءة الملف: ${e.message ?? e}. ارفع «كشف رصد درجات مادة» من نور بصيغة Excel.` });
+      return;
+    }
+    items.sort((a, b) => a.r.grade - b.r.grade || a.subject.localeCompare(b.subject, "ar") || a.code - b.code);
+    setImp({ items, missing, skipped });
+  };
+  const applyReports = async () => {
+    const todo = imp.items.filter((x) => x.changed);
+    const groups = new Map();
+    todo.forEach((x) => { const k = `${x.to}|${x.note ?? ""}`; groups.set(k, [...(groups.get(k) ?? []), x]); });
+    for (const list of groups.values()) await applyStatus(list.map((x) => x.r), list[0].to, list[0].note);
+    const g = todo[0]?.r.grade ?? imp.items[0]?.r.grade;
+    if (g && !gradeF) setGradeF(g);
+    setImp(null);
+  };
+
   // كشف الطباعة: مواد الصف المختار ومعلموها الذين حلّ موعد اختبارهم ولم يكتمل رصدهم
   const print = () => {
     const pend = scoped.filter((r) => r.st !== "done" && isDue(r));
@@ -392,8 +438,63 @@ export default function NoorGrades() {
     </div>
   );
 
+  const impModal = imp && (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => !imp.loading && setImp(null)}>
+      <div className="card flex max-h-[88vh] w-full max-w-3xl flex-col gap-3 p-4" onClick={(e) => e.stopPropagation()}>
+        <p className="font-semibold text-ink">كشوف الرصد من نور · {term?.title}</p>
+        {imp.loading ? <Loader /> : imp.err ? <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{imp.err}</p> : (<>
+          <p className="text-xs text-muted">
+            الحالة مستخرجة من درجات الفترة في كل ورقة: مكتملة لكل الطلاب «تم الرصد»، وبعضها «رصد جزئي» بملاحظة الناقص، ولا شيء «لم يرصد».
+            و«غائب» درجة مرصودة. راجعها ثم اعتمد.
+          </p>
+          <div className="flex flex-wrap gap-2 text-xs">
+            {["done", "partial", "none"].map((k) => (
+              <span key={k} className={`chip gap-1 ${STATUS[k].cell}`}>{STATUS[k].t}: <b className="num">{imp.items.filter((x) => x.to === k).length}</b></span>
+            ))}
+            <span className="chip gap-1 bg-canvas">تغيّر: <b className="num">{imp.items.filter((x) => x.changed).length}</b> من <span className="num">{imp.items.length}</span></span>
+          </div>
+          <div className="min-h-0 flex-1 overflow-auto rounded-sm2 border border-line">
+            <table className="w-full text-[12.5px]">
+              <thead className="sticky top-0 bg-canvas text-muted"><tr>
+                <th className="px-3 py-2 text-start font-semibold">المادة</th><th className="px-3 py-2 text-center font-semibold">الفصل</th>
+                <th className="px-3 py-2 text-center font-semibold">الحالية</th><th className="px-3 py-2 text-center font-semibold">من الكشف</th>
+                <th className="px-3 py-2 text-start font-semibold">الناقص</th>
+              </tr></thead>
+              <tbody className="divide-y divide-line">
+                {imp.items.map((x) => (
+                  <tr key={x.r.slot_id} className={x.changed ? "" : "opacity-50"}>
+                    <td className="px-3 py-2 font-semibold text-ink">{x.r.subject_name}</td>
+                    <td className="num px-3 py-2 text-center">{x.code}</td>
+                    <td className="px-3 py-2 text-center"><span className={`chip text-[11px] ${STATUS[x.r.st].cell}`}>{STATUS[x.r.st].t}</span></td>
+                    <td className="px-3 py-2 text-center"><span className={`chip text-[11px] font-semibold ${STATUS[x.to].cell}`}>{STATUS[x.to].t}</span></td>
+                    <td className="whitespace-pre-line px-3 py-2 text-[11.5px] text-excused">{x.note ?? ""}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {(imp.missing.length > 0 || imp.skipped > 0) && (
+            <p className="rounded-sm2 bg-warning-light px-3 py-2 text-xs text-warning">
+              {imp.missing.map((m) => `${m.subject} · ${m.code}: ${m.why}`).join("، ")}
+              {imp.skipped > 0 && `${imp.missing.length ? " · " : ""}أوراق ليست كشف رصد: ${imp.skipped}`}
+            </p>
+          )}
+        </>)}
+        <div className="flex gap-2">
+          {!imp.loading && !imp.err && (
+            <button className="btn-primary" disabled={busy === "bulk" || !imp.items.some((x) => x.changed)} onClick={applyReports}>
+              اعتماد التغييرات ({imp.items.filter((x) => x.changed).length})
+            </button>
+          )}
+          {!imp.loading && <button className="btn-ghost" onClick={() => setImp(null)}>إغلاق</button>}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="space-y-4">
+      {impModal}
       {noteFor && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setNoteFor(null)}>
           <div className="card w-full max-w-md space-y-3 p-4" onClick={(e) => e.stopPropagation()}>
@@ -463,6 +564,20 @@ export default function NoorGrades() {
           {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}
           {!rows ? <Loader /> : !err && (
             <>
+              {/* رفع كشوف الرصد من نور: تُستخرج حالة كل فصل آليًا */}
+              <label className="card flex cursor-pointer flex-wrap items-center gap-3 border-dashed p-3 hover:bg-canvas/60">
+                <span className="grid h-9 w-9 place-items-center rounded-sm2 bg-mint-tint text-mint-deep">⇪</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-ink">رفع كشوف رصد الدرجات من نور (Excel)</span>
+                  <span className="block text-xs text-muted">
+                    «كشف رصد درجات مادة» لكل مادة في صف، ويمكن اختيار عدة ملفات معًا. تُستخرج حالة كل فصل في {term?.title ?? "الفترة"} وملاحظات الناقص، وتُعرض للمراجعة قبل الحفظ.
+                  </span>
+                </span>
+                <span className="btn-primary px-4 py-1.5 text-xs">اختيار الملفات</span>
+                <input type="file" accept=".xlsx,.xls" multiple className="hidden"
+                       onChange={(e) => { onReports([...e.target.files]); e.target.value = ""; }} />
+              </label>
+
               {/* اختيار الصف أولًا: الصفحة فارغة حتى يُختار */}
               <div className="grid grid-cols-3 gap-2">
                 {[1, 2, 3].map((g) => {
