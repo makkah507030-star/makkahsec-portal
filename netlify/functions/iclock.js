@@ -133,6 +133,19 @@ async function handle(event, admin) {
   // كل طلب بلا رقم تسلسلي يُرفض
   if (!sn) return text("ERROR: missing SN", 400);
 
+  // الرقم التسلسلي مطبوع على الجهاز ويُرسل بلا تشفير، فمن يعرفه يستطيع إرسال بصمات مزيّفة.
+  // ICLOCK_ALLOWED_IPS (في Netlify ← Environment variables): عناوين IP المدرسة مفصولة بفواصل،
+  // فيُرفض ما سواها. إن لم يُضبط يبقى القبول بالرقم التسلسلي وحده كما كان.
+  const allowed = (process.env.ICLOCK_ALLOWED_IPS || "").split(",").map((x) => x.trim()).filter(Boolean);
+  if (allowed.length) {
+    const h = event.headers || {};
+    const ip = (h["x-nf-client-connection-ip"] || h["x-forwarded-for"] || "").split(",")[0].trim();
+    if (!allowed.includes(ip)) {
+      console.warn(`iclock: rejected IP ${ip} for SN ${sn}`);
+      return text("ERROR: forbidden", 403);
+    }
+  }
+
   // تسجيل تشخيصي — يظهر في Netlify Logs، يفيد عند أي التباس مستقبلي
   console.log(`iclock: SN received = "${sn}" (length: ${sn.length}) | path=${path}`);
 

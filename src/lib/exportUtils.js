@@ -8,6 +8,19 @@ import {
 } from "./signers";
 export { PRINCIPAL_NAME, STUDENT_DEPUTY_NAME, ACADEMIC_DEPUTY_NAME, TECH_SUPPORT_NAME };
 
+/** تهريب نص لإدراجه في HTML التقارير المطبوعة: printReport يُدرج الخلايا كما هي (بعضها HTML مقصود)،
+ *  فكل نص يكتبه مستخدم أو زائر — خاصة غير المسجّل (سجل الدخول، تذاكر الدعم) — يُمرَّر بها
+ *  قبل الطباعة، وإلا نُفّذت أي شيفرة فيه بصلاحية من يطبع. */
+export const escHtml = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+/** خلية HTML مقصودة في printReport (شارة، صورة توقيع…) تُدرج كما هي. وكل ما سواها من الخلايا
+ *  والعناوين ورؤوس الأعمدة والتواقيع والغلاف يُهرَّب تلقائيًا. القيم داخل rawHtml وأقسام html
+ *  الجاهزة يهرّبها صاحبها بـ escHtml. والملاحظة (note) تبقى HTML كما هي. */
+export const rawHtml = (html) => ({ __html: String(html ?? "") });
+const isRaw = (c) => c != null && typeof c === "object" && "__html" in c;
+const cellHtml = (c) => (isRaw(c) ? c.__html : escHtml(c));
+
 // المكتبات الثقيلة تُجلب عند التصدير أو الطباعة فقط، لا مع فتح الصفحة:
 // xlsx-js-style: نسخة مجانية من SheetJS تدعم تنسيق الخلايا
 // (مكتبة xlsx الأساسية تتجاهل الألوان والخطوط بصمت)
@@ -311,8 +324,8 @@ export async function printReport(opts) {
       .map(
         (sg, i) => `
     <div class="sign-box">
-      <p class="sign-title">${sg.title}</p>
-      <p class="sign-name">${sg.name}</p>
+      <p class="sign-title">${escHtml(sg.title)}</p>
+      <p class="sign-name">${escHtml(sg.name)}</p>
       ${isPrincipal(sg) && principalSig?.url
         ? `<img class="sign-img" src="${principalSig.url}" alt="" />`
         : otherSigs[i]
@@ -342,14 +355,14 @@ export async function printReport(opts) {
     ${headBlock}
 
     <div class="cover-body">
-      <h1>${cover.title ?? title}</h1>
-      ${cover.subtitle ? `<p class="cover-sub">${cover.subtitle}</p>` : ""}
+      <h1>${escHtml(cover.title ?? title)}</h1>
+      ${cover.subtitle ? `<p class="cover-sub">${escHtml(cover.subtitle)}</p>` : ""}
 
       <div class="cover-card">
         ${(cover.rows ?? [])
           .map(
             (r) => `
-        <div class="crow"><span class="k">${r[0]}:</span><span class="v">${r[1] ?? ""}</span></div>`
+        <div class="crow"><span class="k">${escHtml(r[0])}:</span><span class="v">${cellHtml(r[1])}</span></div>`
           )
           .join("")}
       </div>
@@ -358,14 +371,14 @@ export async function printReport(opts) {
         cover.groups?.length
           ? `
       <div class="cover-list">
-        <p class="cover-list-title">${cover.groupsTitle ?? "المواد والفصول"}</p>
+        <p class="cover-list-title">${escHtml(cover.groupsTitle ?? "المواد والفصول")}</p>
         <table class="mini">
           <thead><tr><th>م</th><th>المادة</th><th>الصف</th><th>الفصل</th></tr></thead>
           <tbody>
             ${cover.groups
               .map(
                 (g, i) => `
-            <tr><td>${i + 1}</td><td>${g.subject}</td><td>${g.grade}</td><td>${g.class_no}</td></tr>`
+            <tr><td>${i + 1}</td><td>${escHtml(g.subject)}</td><td>${escHtml(g.grade)}</td><td>${escHtml(g.class_no)}</td></tr>`
               )
               .join("")}
           </tbody>
@@ -374,7 +387,7 @@ export async function printReport(opts) {
           : ""
       }
 
-      ${cover.year ? `<p class="cover-year">${cover.year}</p>` : ""}
+      ${cover.year ? `<p class="cover-year">${escHtml(cover.year)}</p>` : ""}
     </div>
 
     <div class="cover-foot">
@@ -392,16 +405,16 @@ export async function printReport(opts) {
             (hr) =>
               `<tr>${hr
                 .map((c) =>
-                  typeof c === "object"
+                  c && typeof c === "object" && !isRaw(c)
                     ? `<th${c.cls ? ` class="${c.cls}"` : ""}${
                         c.colspan ? ` colspan="${c.colspan}"` : ""
-                      }${c.rowspan ? ` rowspan="${c.rowspan}"` : ""}>${c.text ?? ""}</th>`
-                    : `<th>${c}</th>`
+                      }${c.rowspan ? ` rowspan="${c.rowspan}"` : ""}>${cellHtml(c.text)}</th>`
+                    : `<th>${cellHtml(c)}</th>`
                 )
                 .join("")}</tr>`
           )
           .join("")
-      : `<tr>${(hFlat ?? []).map((h) => `<th>${h}</th>`).join("")}</tr>`;
+      : `<tr>${(hFlat ?? []).map((h) => `<th>${cellHtml(h)}</th>`).join("")}</tr>`;
 
   const buildBody = (bRows) =>
     (bRows ?? [])
@@ -409,11 +422,11 @@ export async function printReport(opts) {
         (r) =>
           `<tr>${r
             .map((c) =>
-              c && typeof c === "object"
+              c && typeof c === "object" && !isRaw(c)
                 ? `<td${c.cls ? ` class="${c.cls}"` : ""}${
                     c.colspan ? ` colspan="${c.colspan}"` : ""
-                  }>${c.text ?? ""}</td>`
-                : `<td>${c ?? ""}</td>`
+                  }>${cellHtml(c.text)}</td>`
+                : `<td>${cellHtml(c)}</td>`
             )
             .join("")}</tr>`
       )
@@ -431,8 +444,8 @@ export async function printReport(opts) {
     ${headBlock}
 
     <div class="meta">
-      <span class="m-title">${sec.title ?? title}</span>
-      ${sec.subtitle ? `<span class="m-sub">${sec.subtitle}</span>` : ""}
+      <span class="m-title">${escHtml(sec.title ?? title)}</span>
+      ${sec.subtitle ? `<span class="m-sub">${escHtml(sec.subtitle)}</span>` : ""}
     </div>
 
     ${sec.html ?? ""}
@@ -821,7 +834,7 @@ export async function printReport(opts) {
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8" />
-<title>${title}</title>
+<title>${escHtml(title)}</title>
 <style>${EXPORT_FONT_CSS}</style>
 <style>${css}</style>
 </head>

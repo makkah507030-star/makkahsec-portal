@@ -657,7 +657,10 @@ export default function Forms({ view = "issue", openKey = null }) {
         ? (await supabase.from("classes").select("id, class_no, grade").in("grade", myGrades).order("class_no")).data ?? []
         : [];
 
-      if (me) {
+      // في واجهة الإدارة: صاحب الدور الإداري يرى كل الفصول ولو كان معلمًا (مثل برنامج جلوب)، إلا الموجه فصفوفه
+      const allClasses = effectiveRole === "admin" && (adminRoles ?? []).length > 0 && !myGrades.length;
+
+      if (me && !allClasses) {
         const { data } = await supabase.from("schedule")
           .select("class_id, classes(class_no, grade)")
           .eq("teacher_id", me.id)
@@ -673,7 +676,7 @@ export default function Forms({ view = "issue", openKey = null }) {
         setClasses(data ?? []);
       }
     })();
-  }, [picked, session, adminRoles, isManager]);
+  }, [picked, session, adminRoles, isManager, effectiveRole]);
 
   // البحث بالاسم في طلاب الفصول المتاحة للمستخدم وحدها (لمن لا يعرف فصل الطالب)
   const [nameQ, setNameQ] = useState("");

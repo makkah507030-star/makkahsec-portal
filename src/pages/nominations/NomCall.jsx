@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
-import { printReport, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { printReport, escHtml as e, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { STAGE, RULES, ruleList, callStatus, totalScore, maxScore, notifyInterviews, notifyResults } from "../../lib/nominations.js";
 import { logos } from "../student-affairs/shared.jsx";
 import StudentFileLink from "../../components/StudentFileLink.jsx";
@@ -295,12 +295,13 @@ function Decision({ call, apps, reload, say }) {
 }
 
 function printMinutes(call, ranked) {
-  const head = (call.criteria ?? []).map((k) => `<th>${k.name} (${k.max})</th>`).join("");
-  const rows = ranked.map((a, i) => `<tr><td>${i + 1}</td><td>${a.name}</td><td>${cls(a)}</td>${(call.criteria ?? []).map((k) => `<td>${a.scores?.[k.id] ?? "—"}</td>`).join("")}
-    <td><b>${totalScore(a.scores, call.criteria)}</b></td><td>${STAGE[a.stage]?.t ?? ""}</td></tr>`).join("");
+  // المحضر HTML جاهز (sections.html): القيم من البيانات تُهرَّب بـ e
+  const head = (call.criteria ?? []).map((k) => `<th>${e(k.name)} (${e(k.max)})</th>`).join("");
+  const rows = ranked.map((a, i) => `<tr><td>${i + 1}</td><td>${e(a.name)}</td><td>${e(cls(a))}</td>${(call.criteria ?? []).map((k) => `<td>${e(a.scores?.[k.id] ?? "—")}</td>`).join("")}
+    <td><b>${e(totalScore(a.scores, call.criteria))}</b></td><td>${e(STAGE[a.stage]?.t ?? "")}</td></tr>`).join("");
   const html = `
-    <table class="kv"><tr><th>الإعلان</th><td>${call.title}</td></tr><tr><th>الجهة</th><td>${call.unit ?? "—"}</td></tr>
-      <tr><th>المقاعد</th><td>${call.seats} والاحتياط ${call.reserve}</td></tr>
+    <table class="kv"><tr><th>الإعلان</th><td>${e(call.title)}</td></tr><tr><th>الجهة</th><td>${e(call.unit ?? "—")}</td></tr>
+      <tr><th>المقاعد</th><td>${e(call.seats)} والاحتياط ${e(call.reserve)}</td></tr>
       <tr><th>فترة التقديم</th><td>${day(call.opens_on)} — ${day(call.closes_on)}</td></tr></table>
     <p class="sec-h">نتائج المقابلات والقرار <span class="c">(${ranked.length})</span></p>
     <table><thead><tr><th>م</th><th>الطالب</th><th>الصف/الفصل</th>${head}<th>المجموع (${maxScore(call.criteria)})</th><th>القرار</th></tr></thead><tbody>${rows}</tbody></table>`;

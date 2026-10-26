@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase, initialPassword } from "../../lib/supabase";
+import { supabase } from "../../lib/supabase";
 import { describeEdgeError } from "../../lib/edgeError.js";
 import { ROLE_LABEL } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
@@ -20,6 +20,8 @@ export default function PasswordReset() {
   const [confirming, setConfirming] = useState(null); // صف المستخدم
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useNotice(null);
+  const [issued, setIssued] = useState(null);   // { name, username, password } الكلمة المؤقتة تظهر مرة واحدة
+  const [copied, setCopied] = useState(false);
 
   const search = async () => {
     const term = q.trim();
@@ -58,10 +60,8 @@ export default function PasswordReset() {
       if (error) throw new Error(await describeEdgeError(error));
       if (data?.error) throw new Error(data.error);
 
-      setMsg({
-        ok: true,
-        text: `أُعيدت كلمة مرور ${data.full_name} إلى: ${data.password ?? initialPassword(data.username)} — سيُطلب تغييرها عند أول دخول.`,
-      });
+      setIssued({ name: data.full_name, username: data.username, password: data.password });
+      setCopied(false);
       setConfirming(null);
       await search();
     } catch (e) {
@@ -76,8 +76,9 @@ export default function PasswordReset() {
       <div>
         <h1 className="text-lg font-bold text-ink">استعادة كلمة المرور</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          تُعاد كلمة المرور إلى اسم المستخدم نفسه (رقم الهوية أو الجوال)، والرقم الأقصر من 6 خانات
-          يُكمَّل بأصفار من اليسار حتى 10 خانات، ويُطلب من المستخدم تغييرها عند أول دخول.
+          تُعاد كلمة المرور إلى <b className="text-ink">كلمة مؤقتة عشوائية</b> تظهر هنا مرة واحدة لتسلّمها لصاحبها،
+          ويُطلب منه تغييرها بكلمة من اختياره عند أول دخول. <b className="text-ink">الطالب تُسلَّم له حضوريًا فقط</b>،
+          والمعلم وولي الأمر بعد التحقق من هويتهما بالتواصل معهما.
         </p>
       </div>
 
@@ -98,6 +99,27 @@ export default function PasswordReset() {
           </button>
         </div>
       </section>
+
+      {issued && (
+        <section className="card border-2 border-mint-deep/40 p-4">
+          <p className="text-sm text-ink">
+            كلمة المرور المؤقتة لـ <b>{issued.name}</b> <span className="num text-muted">({issued.username})</span>
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <span className="num select-all rounded-sm2 bg-canvas px-4 py-2 text-2xl font-bold tracking-wider text-ink" dir="ltr">
+              {issued.password}
+            </span>
+            <button className="btn-ghost text-sm" onClick={() => {
+              navigator.clipboard?.writeText(issued.password).then(() => setCopied(true), () => {});
+            }}>{copied ? "نُسخت ✓" : "نسخ"}</button>
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            لا تظهر مرة أخرى بعد إغلاق هذا الصندوق. انتبه للأحرف الكبيرة والصغيرة. يدخل بها صاحب الحساب
+            مرة واحدة، ثم تطلب منه البوابة كلمة جديدة.
+          </p>
+          <button className="mt-2 text-xs text-muted underline" onClick={() => setIssued(null)}>إغلاق</button>
+        </section>
+      )}
 
       {msg && (
         <p className={`rounded-card px-4 py-3 text-sm leading-relaxed ${
@@ -142,7 +164,7 @@ export default function PasswordReset() {
 
                     {confirming?.id !== u.id && (
                       <button
-                        onClick={() => { setConfirming(u); setMsg(null); }}
+                        onClick={() => { setConfirming(u); setMsg(null); setIssued(null); }}
                         className="shrink-0 rounded-sm2 border border-line px-3 py-1.5 text-xs font-medium text-muted hover:border-mint-light hover:text-mint-deep"
                       >
                         إعادة تعيين
@@ -153,8 +175,8 @@ export default function PasswordReset() {
                   {confirming?.id === u.id && (
                     <div className="mt-3 rounded-sm2 bg-warning-light/60 p-3">
                       <p className="text-sm leading-relaxed text-ink">
-                        ستُعاد كلمة مرور <b>{u.full_name ?? u.username}</b> إلى{" "}
-                        <b className="num">{initialPassword(u.username)}</b>. هل تريد المتابعة؟
+                        ستُعاد كلمة مرور <b>{u.full_name ?? u.username}</b> إلى كلمة مؤقتة عشوائية
+                        تظهر لك بعد التنفيذ. هل تريد المتابعة؟
                       </p>
                       <div className="mt-3 flex gap-2">
                         <button className="btn-primary" onClick={() => reset(u)} disabled={busy}>

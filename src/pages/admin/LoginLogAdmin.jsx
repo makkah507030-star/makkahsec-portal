@@ -125,6 +125,7 @@ export default function LoginLogAdmin() {
     const tableRows = filtered.map((r, i) => [
       i + 1,
       fmtDateTime(r.created_at),
+      // سجل الدخول يكتب فيه غير المسجّل: printReport يهرّب الخانات كلها
       r.national_id || "—",
       r.full_name || "—",
       ROLE_LABEL[r.role] ?? "غير معروف",

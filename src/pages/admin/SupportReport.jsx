@@ -94,6 +94,7 @@ export default function SupportReport() {
     const ticketRows = (rows ?? []).map((r, i) => [
       i + 1,
       fmtDateTime(r.created_at),
+      // التذاكر يرسلها الزائر غير المسجّل أيضًا: printReport يهرّب الخانات كلها
       CAT_LABEL[r.category] ?? r.category,
       r.role_label || "—",
       STATUS_LABEL[r.status] ?? r.status,

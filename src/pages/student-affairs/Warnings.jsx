@@ -8,7 +8,7 @@ import { useSession } from "../../lib/session.jsx";
 import StudentFileLink from "../../components/StudentFileLink.jsx";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
-import { printReport, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { printReport, escHtml, exportStyledExcel, STUDENT_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { WARNING_STAGES, loadRangeStart, loadActiveTerm, isMissingTable } from "../../lib/officialAttendance";
 import {
@@ -275,7 +275,8 @@ async function printMinutes(s, stage, { from, to, done, issuedOn }) {
   const nid = st?.national_id ?? "..................";
   const gradeName = GRADE_NAMES[s.grade] ?? `الصف ${s.grade}`;
   const when = `${weekdayOf(issuedOn)} ${fmtDate(issuedOn + "T12:00:00")}`;
-  const who = `الطالب / <b>${s.full_name}</b> — رقم الهوية (<span class="num">${nid}</span>) — ${gradeName} فصل (<span class="num">${s.class_no}</span>)`;
+  // المحضر HTML جاهز (sections.html): القيم من البيانات تُهرَّب
+  const who = `الطالب / <b>${escHtml(s.full_name)}</b> — رقم الهوية (<span class="num">${escHtml(nid)}</span>) — ${escHtml(gradeName)} فصل (<span class="num">${escHtml(s.class_no)}</span>)`;
   const days = `<b>(<span class="num">${s.days}</span>) ${s.days >= 3 && s.days <= 10 ? "أيام" : "يومًا"}</b>`;
   const period = `خلال الفترة من ${fmtDate(from + "T00:00:00")} إلى ${fmtDate(to + "T00:00:00")}`;
   const prev = (k) => done?.[k] ? `بتاريخ ${fmtDate(done[k].issued_on + "T12:00:00")}` : "";

@@ -8,7 +8,7 @@ import { countAr } from "../lib/arabicCount.js";
 import { byName } from "../lib/sortAr.js";
 import { useNotice } from "../lib/useNotice.js";
 import { refreshNavBadges } from "../lib/navBadges.js";
-import { printReport, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
+import { printReport, rawHtml, escHtml, exportStyledExcel, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../lib/exportUtils";
 import Loader from "../components/Loader.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
@@ -114,9 +114,9 @@ const remindText = (name) => [
   "makkahsec.com",
 ].join("\n");
 
-// خانة التوقيع في التقرير المطبوع (خانات printReport نصّ HTML)
+// خانة التوقيع في التقرير المطبوع: صورة (HTML مقصود عبر rawHtml) أو نص
 const sigCell = (url) => url
-  ? `<img src="${url}" alt="توقيع" style="height:34px;max-width:120px;object-fit:contain" />`
+  ? rawHtml(`<img src="${escHtml(url)}" alt="توقيع" style="height:34px;max-width:120px;object-fit:contain" />`)
   : "✓ أقرّ إلكترونيًا";
 
 export function EthicsReport() {

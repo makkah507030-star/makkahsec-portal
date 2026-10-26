@@ -8,7 +8,7 @@ import { supabase } from "../../lib/supabase";
 import { useNotice } from "../../lib/useNotice.js";
 import Loader from "../../components/Loader.jsx";
 import { DAY_NAMES, PERIODS_PER_DAY, todayISO } from "../../lib/schoolTime";
-import { printReport, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { printReport, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME, escHtml } from "../../lib/exportUtils";
 import { addDays, parseISO, weekStart, shortDate, classText } from "../../lib/lab.js";
 import { cmpAr } from "../../lib/sortAr.js";
 import logoIcon from "../../assets/icon-mint.png";
@@ -17,14 +17,14 @@ import moeLogo from "../../assets/moe-logo.png";
 const dowOf = (iso) => parseISO(iso).getDay() + 1;   // الأحد = 1
 const monthStart = (iso) => `${iso.slice(0, 8)}01`;
 
-// عناصر التقرير المطبوع — أصناف printReport نفسها (stat-tiles وbar-chart)
+// عناصر التقرير المطبوع — أصناف printReport نفسها (stat-tiles وbar-chart)، والقيم مهرّبة (أسماء المعلمين والفصول)
 const tilesHtml = (tiles) => `<div class="stat-tiles">${tiles
-  .map((t) => `<div class="stat-tile"><p class="v">${t.value}</p><p class="l">${t.label}</p></div>`).join("")}</div>`;
-const headingHtml = (t) => `<p style="margin:12px 0 6px;font-size:11.5px;font-weight:700;color:#3E6350;">${t}</p>`;
+  .map((t) => `<div class="stat-tile"><p class="v">${escHtml(t.value)}</p><p class="l">${escHtml(t.label)}</p></div>`).join("")}</div>`;
+const headingHtml = (t) => `<p style="margin:12px 0 6px;font-size:11.5px;font-weight:700;color:#3E6350;">${escHtml(t)}</p>`;
 const barsHtml = (items) => {
   const max = Math.max(1, ...items.map((i) => i.count));
   return `<div class="bar-chart">${items.map((it) => `<div class="bar-row">
-    <div class="bl"><span>${it.label}</span><span class="n">${it.count}</span></div>
+    <div class="bl"><span>${escHtml(it.label)}</span><span class="n">${escHtml(it.count)}</span></div>
     <div class="bar-track"><div class="bar-fill" style="width:${Math.round((it.count / max) * 100)}%;background:#3E6350"></div></div>
   </div>`).join("")}</div>`;
 };

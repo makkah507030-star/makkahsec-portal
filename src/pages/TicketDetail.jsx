@@ -6,6 +6,29 @@ import { fmtDateTime } from "../lib/dates";
 import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 
+/* مرفقات التذاكر في مخزن خاص (supabase/security_fix_5.sql): يُحفظ مسار الملف، ويُعرض برابط مؤقت
+   لا يفتحه إلا صاحب التذكرة والدعم الفني. المرفقات القديمة حُفظت روابطَ عامة، فيُستخرج منها المسار. */
+const BUCKET = "ticket-attachments";
+const pathOf = (v) => (/^https?:/.test(v ?? "") ? decodeURIComponent(String(v).split(`/${BUCKET}/`)[1] ?? "") : v);
+
+function Attachment({ value }) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    const path = pathOf(value);
+    if (!path) return;
+    let live = true;
+    supabase.storage.from(BUCKET).createSignedUrl(path, 3600)
+      .then(({ data }) => { if (live) setUrl(data?.signedUrl ?? null); });
+    return () => { live = false; };
+  }, [value]);
+  if (!url) return <p className="mt-2 text-[11px] text-faint">مرفق…</p>;
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="mt-2 block">
+      <img src={url} alt="مرفق" className="max-h-56 rounded-sm2 border border-line object-cover" />
+    </a>
+  );
+}
+
 const CAT_LABEL = {
   login: "مشكلة في الدخول",
   bug: "مشكلة تقنية",
@@ -68,14 +91,14 @@ export default function TicketDetail() {
       const ext = file.name.split(".").pop() || "jpg";
       const path = `${id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error: upErr } = await supabase.storage
-        .from("ticket-attachments")
+        .from(BUCKET)
         .upload(path, file, { cacheControl: "3600", upsert: false });
       if (upErr) {
         setSending(false);
         setError("تعذّر رفع الصورة: " + upErr.message);
         return;
       }
-      attachment_url = supabase.storage.from("ticket-attachments").getPublicUrl(path).data.publicUrl;
+      attachment_url = path;   // المسار لا الرابط العام: يُعرض برابط مؤقت (Attachment)
     }
 
     const senderRole = isSupport ? "support" : "user";
@@ -215,15 +238,7 @@ export default function TicketDetail() {
                   {m.sender_role === "support" ? "فريق الدعم الفني" : "صاحب الطلب"}
                 </p>
                 {m.message && <p className="mt-1 whitespace-pre-wrap">{m.message}</p>}
-                {m.attachment_url && (
-                  <a href={m.attachment_url} target="_blank" rel="noreferrer" className="mt-2 block">
-                    <img
-                      src={m.attachment_url}
-                      alt="مرفق"
-                      className="max-h-56 rounded-sm2 border border-line object-cover"
-                    />
-                  </a>
-                )}
+                {m.attachment_url && <Attachment value={m.attachment_url} />}
                 <p className="mt-1.5 text-[11px] text-faint">{fmtDateTime(m.created_at)}</p>
               </div>
             </div>
