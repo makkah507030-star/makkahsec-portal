@@ -14,7 +14,7 @@ import {
    الغلاف ← ملخص النتائج ← المواد الدراسية ← الملاحظات الآلية ← نماذج الملاحظة
    والخطط العلاجية ← التوصيات والاعتماد. يأخذ ما في مركز تحليل النتائج للإشعار المختار
    ونطاقه (الصف والمادة)، وتنقسم الجداول الطويلة على صفحات.
-   • نسخة الموجه الطلابي (counselor): طلاب صفه وحده، ويُضاف قسم «الطلاب» بأسماء المتعثرين
+   • تقرير الصف (counselor): باسم الصف لا الموجه، لطلاب صف الموجه وحده، ويُضاف قسم «الطلاب» بأسماء المتعثرين
      ومواد ضعفهم والمتفوقين ومتوسط كل فصل، وتوقّعها الموجه ووكيل الشؤون التعليمية.
    ===================================================================== */
 
@@ -97,7 +97,8 @@ export function achReportPages({ recs, checks, forms, keyName, scope, year, term
   const x = summary(recs, checks, forms);
   const { st, subjects, grades, fs, sev } = x;
   const title = noticeTitle(keyName);
-  const doc = { title: counselor ? "تقرير الموجه الطلابي · متابعة التحصيل" : "تقرير متابعة التحصيل الدراسي", meta: [title, scope], foot: "مركز تحليل النتائج" };
+  const gradeName = counselor ? `الصف ${counselor.grades.map((g) => GRADE_NAMES[g]).join(" و")}` : "";
+  const doc = { title: counselor ? `تقرير ${gradeName} · متابعة التحصيل` : "تقرير متابعة التحصيل الدراسي", meta: [title, scope], foot: "مركز تحليل النتائج" };
 
   // طلاب الموجه: المتعثرون (مادة فأكثر دون الحد) والمتفوقون (متوسط 90% فأكثر)، ومتوسط كل فصل
   const studs = counselor ? studentSummaries(recs) : [];
@@ -336,11 +337,11 @@ export function achReportPages({ recs, checks, forms, keyName, scope, year, term
   let no = 0;
   return [
     <Cover key="cover" theme={theme} c={{
-      year, tag: ["chart", "مركز تحليل النتائج"], title: counselor ? "تحصيل طلاب الصف" : "متابعة التحصيل الدراسي", titleSize: 64, sub: title,
+      year, tag: ["chart", counselor ? "متابعة التحصيل الدراسي" : "مركز تحليل النتائج"], title: counselor ? gradeName : "متابعة التحصيل الدراسي", titleSize: 64, sub: title,
       badge: { main: p1(st.avg), sub: "متوسط الاختبارات" }, side: { main: `${p1(st.weakPct)} دون ${WEAK}%`, sub: `${p1(st.exPct)} بلغوا 90% فأكثر` },
       rows: counselor
-        ? [["user", "الموجه الطلابي", counselor.name || "—"], ["cap", "الصف", counselor.grades.map((g) => GRADE_NAMES[g]).join(" و")],
-           ["table", "الفصول", `${countAr(x.classes, "cls")} · ${countAr(subjects.length, "subject")}`], ["calendar", "الفصل الدراسي", `${term} · ${fmtDate(new Date())}`]]
+        ? [["cap", "الصف", counselor.grades.map((g) => GRADE_NAMES[g]).join(" و")], ["book", "المواد", countAr(subjects.length, "subject")],
+           ["table", "الفصول", countAr(x.classes, "cls")], ["calendar", "الفصل الدراسي", `${term} · ${fmtDate(new Date())}`]]
         : [["cap", "النطاق", scope], ["book", "المواد", countAr(subjects.length, "subject")],
            ["table", "الفصول", countAr(x.classes, "cls")], ["calendar", "الفصل الدراسي", `${term} · ${fmtDate(new Date())}`]],
       note: ["check", "تحليل درجات الاختبارات من إشعار الفترة المنشور، دون المهام الأدائية والمشاركة."],

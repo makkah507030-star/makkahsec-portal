@@ -182,11 +182,11 @@ export function DeputyReport({ forms, keyName, checks, recs, scope, counselor = 
       </div>
       {official
         ? <ReportViewer id="ach-report" pages={pages} theme={theme} setTheme={setTheme}
-            fileTitle={`${who ? `تقرير الموجه الطلابي${pick ? ` - ${GRADE_NAMES[pick]}` : ""}` : "تقرير متابعة التحصيل"} - ${noticeTitle(keyName)}`}
+            fileTitle={`${who ? `تقرير الصف ${who.grades.map((g) => GRADE_NAMES[g]).join(" و")}` : "تقرير متابعة التحصيل"} - ${noticeTitle(keyName)}`}
             controls={!counselor && all && grades.length > 0 && (
               <select className="field w-auto text-sm" value={pick} onChange={(e) => setPick(Number(e.target.value))}>
                 <option value={0}>تقرير وكيل الشؤون التعليمية</option>
-                {grades.map((g) => <option key={g} value={g}>تقرير موجه {GRADE_NAMES[g]}{names[g] ? ` · ${names[g]}` : ""}</option>)}
+                {grades.map((g) => <option key={g} value={g}>تقرير الصف {GRADE_NAMES[g]}</option>)}
               </select>
             )} />
         : body}

@@ -196,7 +196,7 @@ export default function AchievementCenter() {
           <div className="flex flex-wrap gap-2">
             {TABS.map((t) => (
               <button key={t.k} onClick={() => setTab(t.k)} className={chip(tab === t.k)}>
-                {t.k === "report" && counselor ? "تقرير الموجه" : t.t}{t.k === "notes" && shownChecks.length > 0 && <span className="num ms-1.5 opacity-80">({shownChecks.length})</span>}
+                {t.k === "report" && counselor ? "تقرير الصف" : t.t}{t.k === "notes" && shownChecks.length > 0 && <span className="num ms-1.5 opacity-80">({shownChecks.length})</span>}
                 {t.k === "forms" && shownForms?.length > 0 && <span className="num ms-1.5 opacity-80">({shownForms.length})</span>}
               </button>
             ))}
