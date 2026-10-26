@@ -18,7 +18,7 @@ import QuickNote from "./QuickNote.jsx";
 import { loadPrincipalSignature } from "../lib/principalSignature.js";
 import { loadSigners } from "../lib/signers.js";
 import { useNavBadges, refreshNavBadges } from "../lib/navBadges.js";
-import { useAchMember } from "../lib/achievement";
+import { useAchMember, useAchOpen, ACH_GATE_ROLES } from "../lib/achievement";
 import { useBackSteps, goBack } from "../lib/backStep.js";
 import { savedTheme, saveTheme, applyTheme, savedStyle, saveStyle } from "../lib/theme.js";
 import { EvidenceDock } from "./EvidenceTags.jsx";
@@ -101,7 +101,7 @@ export const ADMIN_GROUPS = [
     // مركز تحليل النتائج (pages/achievement): تحليل إشعار الفترة والملاحظات الآلية
     title: "التحصيل الدراسي",
     items: [
-      { to: "/achievement", label: "مركز تحليل النتائج", roles: ["principal", "deputy_academic", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], orMember: true, icon: "chart", kw: "تحليل النتائج درجات اختبارات ضعف متعثرين خطة علاجية" },
+      { to: "/achievement", label: "مركز تحليل النتائج", roles: ["principal", "deputy_academic", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], orMember: true, icon: "chart", achGate: true, kw: "تحليل النتائج درجات اختبارات ضعف متعثرين خطة علاجية" },
       { to: "/qiyas", label: "اختبارات قياس", roles: ["principal", "deputy_academic", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], orMember: true, icon: "target", kw: "قدرات تحصيلي ستيب step قياس نتائج" },
       { to: "/ach-committee", label: "لجنة التحصيل", roles: ["principal", "deputy_academic", "deputy_students", "tech_support"], orMember: true, icon: "users", kw: "لجنة محاضر اجتماعات قرارات" },
     ],
@@ -241,9 +241,9 @@ const TEACHER_GROUPS = [
       { to: "/quiz-marks",     label: "التصحيح والدرجات",  icon: "target", kw: "تصحيح الي" },
       { to: "/quiz-analytics", label: "تحليل النتائج",     icon: "pie" },
       // نماذج ملاحظة التحصيل من مركز تحليل النتائج (pages/achievement/AchForm.jsx)
-      { to: "/ach-forms",      label: "ملاحظات التحصيل",   icon: "chart", kw: "خطة علاجية ضعف نتائج موجه" },
+      { to: "/ach-forms",      label: "ملاحظات التحصيل",   icon: "chart", achGate: true, kw: "خطة علاجية ضعف نتائج موجه" },
       // لأعضاء لجنة التحصيل من المعلمين (supabase/ach_committee.sql)
-      { to: "/achievement",    label: "مركز تحليل النتائج", achMember: true, icon: "chart", kw: "تحليل النتائج" },
+      { to: "/achievement",    label: "مركز تحليل النتائج", achMember: true, icon: "chart", achGate: true, kw: "تحليل النتائج" },
       { to: "/qiyas",          label: "اختبارات قياس",      achMember: true, icon: "target", kw: "قدرات تحصيلي step" },
       { to: "/ach-committee",  label: "لجنة التحصيل",       achMember: true, icon: "users", kw: "محاضر" },
       { to: "/qudrat",         label: "مركز التدريب",      icon: "target", exact: true, kw: "قياس قدرات تحصيلي تدريب اسئلة" },
@@ -442,12 +442,19 @@ export default function Layout({ children }) {
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const achMember = useAchMember(session?.user?.id);
+  const [achOpen] = useAchOpen();
 
   // هل يظهر الرابط لهذا المستخدم؟
   const visible = (i) => {
     if (i.staffOnly && !isStaff) return false;
     if (i.studentOnly && effectiveRole !== "student") return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
+    // مركز تحليل النتائج وما حوله: مخفيّ حتى يُفتح، إلا رابط المركز نفسه
+    // يبقى لمن يملك فتحه (الوكيل/المدير/الدعم) ليدخل ويفتحه.
+    if (i.achGate && achOpen === false) {
+      const canOpen = isAdmin && i.to === "/achievement" && ACH_GATE_ROLES.some((r) => adminRoles.includes(r));
+      if (!canOpen) return false;
+    }
     if (isAdmin) {
       // أخفاها مدير المدرسة لأدوار المستخدم من «الصلاحيات ← ظهور الصفحات»
       if (hiddenNav?.has(i.to)) return false;
@@ -467,7 +474,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)

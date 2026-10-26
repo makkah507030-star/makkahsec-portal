@@ -109,6 +109,7 @@ const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx")
 const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
 const MonitorScreen = lazy(() => import("./pages/admin/MonitorScreen.jsx"));
 const AchievementCenter = lazy(() => import("./pages/achievement/AchievementCenter.jsx"));
+import AchGate from "./pages/achievement/AchGate.jsx";
 const AchForm = lazy(() => import("./pages/achievement/AchForm.jsx"));
 const Qiyas = lazy(() => import("./pages/achievement/Qiyas.jsx"));
 const MyQiyas = lazy(() => import("./pages/achievement/MyQiyas.jsx"));
@@ -522,14 +523,15 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/s/:key" element={<SectionHub />} />}
           {/* شاشة المتابعة اليومية — للمدير والوكيلين والدعم الفني (عنصر القائمة يحصرها، والقاعدة تفرض ما يُقرأ) */}
           {effectiveRole === "admin" && <Route path="/monitor" element={<MonitorScreen />} />}
-          {/* مركز تحليل النتائج — الصفحة تتحقق من الدور (وكيل الشؤون التعليمية والموجهون…) */}
-          <Route path="/achievement" element={<AchievementCenter />} />
+          {/* مركز تحليل النتائج — الصفحة تتحقق من الدور (وكيل الشؤون التعليمية والموجهون…)
+              وبوابة AchGate تُبقيه مغلقًا حتى اكتمال رصد الدرجات */}
+          <Route path="/achievement" element={<AchGate><AchievementCenter /></AchGate>} />
           <Route path="/qiyas" element={<Qiyas />} />
           <Route path="/my-qiyas" element={<MyQiyas />} />
           <Route path="/ach-committee" element={<AchCommittee />} />
           {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
-          <Route path="/ach-forms" element={<AchFormsList />} />
-          <Route path="/ach-forms/:id" element={<AchForm />} />
+          <Route path="/ach-forms" element={<AchGate><AchFormsList /></AchGate>} />
+          <Route path="/ach-forms/:id" element={<AchGate><AchForm /></AchGate>} />
           {/* التعاميم: الإدارة لصاحب الصلاحية، وصفحة التعميم وتعاميمي للمنسوبين وأولياء الأمور */}
           {effectiveRole === "admin" && can("circulars") && <Route path="/circulars" element={<Circulars />} />}
           {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/circulars/:id" element={<CircularView />} />}
