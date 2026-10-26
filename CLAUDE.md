@@ -29,6 +29,7 @@
   فيكلّف 30 رصيدًا بدل 15. الرصيد يومها 235.7 (496 نشرة إنتاج = 7,440 رصيدًا). الحل: إيقاف البناء في
   Netlify (Site configuration ← Build & deploy ← Continuous deployment ← Stop builds) والإبقاء على
   GitHub Actions وحده. لا يُعاد تفعيل بناء Netlify من المستودع، ولا يُوافَق على طلبات «Pending Review».
+  **نُفّذ في 26 أكتوبر 2026:** Build status = Stopped. بعد أول دمج يُتحقق أن في Deploys نشرة Production واحدة («GitHub Actions …»).
 - **معاينات طلبات الدمج (Deploy Previews) لا تُحتسب** في الفاتورة؛ المحتسب «Production deploys»
   وحده، فالرفع إلى فرع طلب مفتوح لا يكلف شيئًا.
 - **الموقع التجريبي موقوف مؤقتًا (منذ 17 أكتوبر 2026):** كان أكبر مستهلك للرصيد (458 نشرة
