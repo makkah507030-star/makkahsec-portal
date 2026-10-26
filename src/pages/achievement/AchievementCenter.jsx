@@ -209,7 +209,8 @@ export default function AchievementCenter() {
             : tab === "forms" ? <FormsTab forms={shownForms} err={formsErr} />
             : tab === "report" ? <DeputyReport forms={shownForms} keyName={key} checks={shownChecks} recs={recs}
                                                              scope={[(counselor ? counselor.grades : grade ? [grade] : dataGrades).map((g) => GRADE_NAMES[g]).join(" و"), subject].filter(Boolean).join(" · ")}
-                                                             counselor={counselor} />
+                                                             counselor={counselor} grades={dataGrades}
+                                                             all={counselor ? null : { recs: scoped, checks, forms }} />
             : <Students recs={recs} />}
         </>
       )}

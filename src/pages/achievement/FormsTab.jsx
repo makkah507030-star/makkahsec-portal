@@ -7,6 +7,7 @@
    ===================================================================== */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
 import { cmpAr } from "../../lib/sortAr.js";
@@ -63,17 +64,29 @@ export function FormsTab({ forms, err }) {
 }
 
 /* تقرير وكيل الشؤون التعليمية */
-export function DeputyReport({ forms, keyName, checks, recs, scope, counselor = null }) {
+/* all = { recs, checks, forms } للصفوف كلها دون ترشيح الصف: منها تقرير أي موجه يختاره الوكيل والمدير،
+   grades: الصفوف المرفوع لها الإشعار */
+export function DeputyReport({ forms, keyName, checks, recs, scope, counselor = null, all = null, grades = [] }) {
   const [official, setOfficial] = useState(false);
   const [theme, setTheme] = useState("light");
   const [sigs, setSigs] = useState({});
+  const [pick, setPick] = useState(0);            // 0 = تقرير الوكيل، وإلا تقرير موجه هذا الصف
+  const [names, setNames] = useState({});         // اسم موجه كل صف
   useEffect(() => {
     if (!official) return;
     Promise.all([loadPrincipalSignature(), loadSchoolStamp()]).then(([p, st]) => setSigs({ principal: p?.url ?? null, stamp: st }));
-  }, [official]);
-  const pages = useMemo(() => (official && forms ? achReportPages({
-    recs, checks, forms, keyName, scope, year: academicYearLabel(), term: termName(keyName), theme, sigs, counselor,
-  }) : null), [official, recs, checks, forms, keyName, scope, theme, sigs, counselor]);
+    if (!counselor && all) {
+      supabase.from("admin_roles").select("role_type, users(full_name)").in("role_type", ["counselor_1", "counselor_2", "counselor_3"])
+        .then(({ data }) => setNames(Object.fromEntries((data ?? []).map((r) => [Number(r.role_type.slice(-1)), r.users?.full_name ?? ""]))));
+    }
+  }, [official]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // الموجه نفسه، أو الموجه الذي اختاره الوكيل والمدير (بطلاب صفه كلهم)
+  const who = counselor ?? (pick && all ? { name: names[pick] ?? "", grades: [pick] } : null);
+  const src = !counselor && who ? all : { recs, checks, forms };
+  const pages = useMemo(() => (official && src.forms ? achReportPages({
+    ...src, keyName, scope: !counselor && who ? GRADE_NAMES[pick] : scope,
+    year: academicYearLabel(), term: termName(keyName), theme, sigs, counselor: who,
+  }) : null), [official, src.recs, src.checks, src.forms, keyName, scope, theme, sigs, who?.name, pick]);   // eslint-disable-line react-hooks/exhaustive-deps
   const s = useMemo(() => {
     const all = forms ?? [];
     const by = (k) => all.filter((f) => f.status === k).length;
@@ -168,7 +181,14 @@ export function DeputyReport({ forms, keyName, checks, recs, scope, counselor = 
         </div>
       </div>
       {official
-        ? <ReportViewer id="ach-report" pages={pages} theme={theme} setTheme={setTheme} fileTitle={`${counselor ? "تقرير الموجه الطلابي" : "تقرير متابعة التحصيل"} - ${noticeTitle(keyName)}`} />
+        ? <ReportViewer id="ach-report" pages={pages} theme={theme} setTheme={setTheme}
+            fileTitle={`${who ? `تقرير الموجه الطلابي${pick ? ` - ${GRADE_NAMES[pick]}` : ""}` : "تقرير متابعة التحصيل"} - ${noticeTitle(keyName)}`}
+            controls={!counselor && all && grades.length > 0 && (
+              <select className="field w-auto text-sm" value={pick} onChange={(e) => setPick(Number(e.target.value))}>
+                <option value={0}>تقرير وكيل الشؤون التعليمية</option>
+                {grades.map((g) => <option key={g} value={g}>تقرير موجه {GRADE_NAMES[g]}{names[g] ? ` · ${names[g]}` : ""}</option>)}
+              </select>
+            )} />
         : body}
     </div>
   );
