@@ -188,7 +188,7 @@ export default function Attendance() {
       const covering = (perms ?? []).filter((p) => {
         const r = p.permission_requests;
         if (!r) return false;
-        // من سجّل المعلم عودته من حصة سابقة أو هذه الحصة لم يعد مستأذنًا
+        // من سجّلت الإدارة عودته («عاد للفصل») من حصة سابقة أو هذه الحصة لم يعد مستأذنًا
         const ret = retMap[p.student_id];
         if (ret && active.period_no >= ret.from_period) return false;
         if (r.scope === "day") return true;
