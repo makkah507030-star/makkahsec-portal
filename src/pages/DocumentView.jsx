@@ -9,6 +9,7 @@ import Loader from "../components/Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import { ReplyFilesEditor, ReplyFilesList, REPLY_BUCKET } from "../components/ReplyFiles.jsx";
 import Sticker from "../components/Sticker.jsx";
+import SendToFile from "../components/SendToFile.jsx";
 
 /* =====================================================================
    عرض مستند صادر لصاحبه: الطالب أو المنسوب أو ولي أمر الطالب،
@@ -231,6 +232,9 @@ export default function DocumentView() {
           <span className="chip bg-warning/10 text-warning">بانتظار الاعتماد</span>
         )}
       </div>
+
+      {/* المنسوب صاحب الشهادة يرسلها إلى ملف شواهد أدائه (SendToFile يضبط الظهور) */}
+      <div className="no-print max-w-md"><SendToFile doc={doc} /></div>
 
       {ackTurn && (
         <section className="no-print card space-y-3 border-mint-deep/30 p-4">

@@ -3,7 +3,8 @@ import { useSession } from "../lib/session.jsx";
 import { loadPerfReference, sendFormToFile } from "../lib/performance";
 
 /* =====================================================================
-   «إرسال إلى ملف الشواهد» — يظهر للمعلم على نموذج صادر من إصداره.
+   «إرسال إلى ملف الشواهد» — يظهر للمعلم على نموذج صادر من إصداره، وعلى
+   الشهادة الصادرة باسمه (حضور ورشة، شكر وتقدير) ليحتسبها شاهدًا في ملفه.
    يختار البند؛ أول إرسال يصبح شاهد البند، وما بعده يزيد عداده.
    في بنود سجل التطوير المهني يُضاف كل نموذج مشاركةً مستقلة.
    ===================================================================== */
@@ -18,7 +19,11 @@ export default function SendToFile({ doc }) {
   const [msg, setMsg] = useState(null);
 
   const teacher = isTeacher || profile?.role === "teacher";
-  const mine = doc?.created_by === session?.user?.id && !DONE.includes(doc?.status);
+  const uid = session?.user?.id;
+  // المُصدِر: أي نموذج من إصداره. المستلِم: الشهادة الصادرة باسمه فقط.
+  const isCert = doc?.form_templates?.category === "certificate";
+  const mine = !DONE.includes(doc?.status) &&
+    (doc?.created_by === uid || (doc?.recipient_user_id === uid && isCert));
 
   useEffect(() => {
     if (!teacher || !mine) return;
