@@ -4,7 +4,7 @@
 -- صار يكتب فيها:
 --   ١) من يملك صلاحية «الاستئذان» (والمدير والدعم الفني دائمًا)؛
 --   ٢) أصحاب الأدوار الأساسية (وكلاء، موجهون، مساعدون…) الذين تظهر لهم لوحة الغائبين؛
---   ٣) القائد الكشفي ونائبه (الأدوار المخصّصة في اسمها «كشف»)، في كل الأيام؛
+--   ٣) القائد الكشفي وحده في كل الأيام (لا نائبه ولا بقية أدوار الكشافة)؛
 --   ٤) منظّم حدث في يوم حدثه (خطوة الاستئذان والعودة في الأحداث، مثل برنامج جلوب).
 -- الحسابات المساندة (مختبر، إعلام، رياضة…) لا تكتب إلا في يوم حدث تنظّمه، والمعلم لا يكتب.
 -- مخوّلو الاستئذان (permission_grantors): يعدّلهم من يملك صلاحية «الاستئذان».
@@ -15,13 +15,15 @@ returns boolean language sql stable security definer set search_path = public as
   select public.is_admin() and (
     public.has_permission('permissions')
     -- دور أساسي (غير الحسابات المساندة في لوحة التحكم)
-    or exists (select 1 from public.admin_roles ar where ar.user_id = auth.uid()
-                and ar.role_type::text <> all (array['activity_leader', 'media_portal', 'gifted_program',
-                    'globe_program', 'student_voice', 'makkah_sport', 'safety_security', 'health_counselor',
-                    'science_labs', 'computer_lab']))
-    -- القائد الكشفي ونائبه
+    or exists (select 1 from public.admin_roles ar left join public.custom_roles c on c.role_type = ar.role_type
+                where ar.user_id = auth.uid()
+                  and ar.role_type::text <> all (array['activity_leader', 'media_portal', 'gifted_program',
+                      'globe_program', 'student_voice', 'makkah_sport', 'safety_security', 'health_counselor',
+                      'science_labs', 'computer_lab'])
+                  and coalesce(c.label, '') not like '%كشف%')   -- أدوار الكشافة: القائد وحده أدناه
+    -- القائد الكشفي (كما في scout_leader: لا نائبه)
     or exists (select 1 from public.admin_roles ar join public.custom_roles c on c.role_type = ar.role_type
-                where ar.user_id = auth.uid() and c.label like '%كشف%')
+                where ar.user_id = auth.uid() and c.label like '%القائد الكشفي%' and c.label not like '%نائب%')
     -- منظّم حدث في يومه
     or (p_date is not null and exists (select 1 from public.school_events e
                                         where e.organizer_id = auth.uid() and e.event_date = p_date)));
