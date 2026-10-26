@@ -1,7 +1,13 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// كلمة المرور الأولية = اسم المستخدم، والرقم الأقصر من 6 خانات يُكمَّل بأصفار حتى 10 (15660 ← 0000015660)
-const initialPassword = (u) => (/^\d+$/.test(u) && u.length < 6 ? u.padStart(10, "0") : u);
+// كلمة مرور مؤقتة عشوائية (كانت رقم الهوية فيبقى الحساب مكشوفًا حتى يغيّرها صاحبه):
+// 8 رموز بلا الملتبسة (O/0، I/l/1) في مقطعين، مثل K7mQ-42Tq، ويُطلب تغييرها عند أول دخول
+const ABC = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+const tempPassword = () => {
+  const b = crypto.getRandomValues(new Uint32Array(8));
+  const s = Array.from(b, (x) => ABC[x % ABC.length]).join("");
+  return `${s.slice(0, 4)}-${s.slice(4)}`;
+};
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -40,7 +46,7 @@ Deno.serve(async (req) => {
     const tr = (await admin.from("admin_roles").select("role_type").eq("user_id", userId)).data || [];
     const targetIsPrincipal = tr.some((r) => r.role_type === "principal");
 
-    const password = initialPassword(String(target.username ?? "").trim());
+    const password = tempPassword();
     const pwRes = await admin.auth.admin.updateUserById(userId, { password });
     if (pwRes.error) return json({ error: pwRes.error.message }, 400);
 
@@ -51,7 +57,7 @@ Deno.serve(async (req) => {
       // بجلسة المنفّذ: يملأ الخادم اسمه وأدواره (supabase/audit_log.sql)، وفشل التسجيل لا يلغي العملية
       await userClient.from("audit_log").insert({
         action: "إعادة كلمة مرور حساب المدير", level: "high", path: "/password-reset",
-        details: [`أُعيدت كلمة مرور ${target.full_name || target.username} إلى كلمة المرور الأولية`],
+        details: [`أُعيدت كلمة مرور ${target.full_name || target.username} إلى كلمة مؤقتة عشوائية`],
       });
     }
 
