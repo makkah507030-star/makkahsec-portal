@@ -43,6 +43,10 @@ async function markedScheduleIds(db, date) {
   return set;
 }
 
+// صياغة العدد: حصة واحدة، حصتان، 3 حصص، 11 حصة
+const periodsCount = (n) =>
+  n === 1 ? "حصة واحدة" : n === 2 ? "حصتان" : n <= 10 ? `${n} حصص` : `${n} حصة`;
+
 export const handler = async () => {
   const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -84,16 +88,16 @@ export const handler = async () => {
     const marked = total - missing.length;
     const pct = total ? Math.round((marked / total) * 100) : 0;
 
-    // تجميع الحصص غير المحضَّرة بحسب المعلم
+    // عدد الحصص غير المحضَّرة لكل معلم (التفاصيل في صفحة متابعة التحضير)
     const byTeacher = {};
     missing.forEach((r) => {
       const name = r.teachers?.full_name ?? "غير محدّد";
-      (byTeacher[name] ??= []).push(`ح${r.period_no}${r.classes?.class_no ? `/${r.classes.class_no}` : ""}`);
+      byTeacher[name] = (byTeacher[name] ?? 0) + 1;
     });
 
     const lines = Object.entries(byTeacher)
-      .sort((a, b) => b[1].length - a[1].length)
-      .map(([name, list]) => `• ${name}: ${list.join("، ")}`);
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, n]) => `• ${name}: ${periodsCount(n)}`);
 
     const body = missing.length === 0
       ? `اكتمل تحضير جميع حصص اليوم (${total} حصة). أحسنتم.`
