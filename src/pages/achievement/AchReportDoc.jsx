@@ -3,7 +3,7 @@ import { fmtDate } from "../../lib/dates";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { cmpAr } from "../../lib/sortAr.js";
 import { PRINCIPAL_NAME, ACADEMIC_DEPUTY_NAME } from "../../lib/exportUtils";
-import { stats, groupBy, weakTeachers, BANDS, bandOf, SEV, KIND_T, WEAK, noticeTitle } from "../../lib/achievement";
+import { stats, groupBy, studentSummaries, weakTeachers, BANDS, bandOf, SEV, KIND_T, WEAK, noticeTitle } from "../../lib/achievement";
 import { FORM_STATUS, isOverdue } from "../../lib/achForms";
 import {
   S, n, countAr, pct, dmy, paginate, Ring, Donut, DonutLegend, Bars, Split, Kpis, Highlights, Box, Signs, Page, Cover,
@@ -14,6 +14,8 @@ import {
    الغلاف ← ملخص النتائج ← المواد الدراسية ← الملاحظات الآلية ← نماذج الملاحظة
    والخطط العلاجية ← التوصيات والاعتماد. يأخذ ما في مركز تحليل النتائج للإشعار المختار
    ونطاقه (الصف والمادة)، وتنقسم الجداول الطويلة على صفحات.
+   • نسخة الموجه الطلابي (counselor): طلاب صفه وحده، ويُضاف قسم «الطلاب» بأسماء المتعثرين
+     ومواد ضعفهم والمتفوقين ومتوسط كل فصل، وتوقّعها الموجه ووكيل الشؤون التعليمية.
    ===================================================================== */
 
 // النسبة معزولة الاتجاه (LRI…PDI) فلا تنقلب علامة % أول السطر العربي
@@ -68,15 +70,16 @@ function highlights(x) {
   return out.slice(0, 5);
 }
 
-function recommendations(x) {
+function recommendations(x, multi, counselor) {
   const { sev, fs, subjects, incomplete, st } = x;
   const out = [];
+  if (multi) out.push(`دراسة حالة الطلاب المتعثرين في ثلاث مواد فأكثر (${n(multi)})، والتواصل مع أولياء أمورهم، وإحالة من يحتاج منهم.`);
   const low = subjects.filter((s) => s.avg != null && s.avg < 65).map((s) => s.sub);
   if (low.length) out.push(`اجتماع أقسام المواد الأدنى متوسطًا (${low.slice(0, 4).join("، ")}) لمراجعة توزيع المنهج والاختبارات، وخطة علاجية على مستوى الصف.`);
   if (sev.critical) out.push("متابعة الفصول ذات الملاحظات الحرجة بزيارات صفية، وتشخيص المهارات غير المتقنة، وإعادة التقويم بعد التدخل.");
-  if (fs.draft) out.push(`إرسال نماذج الملاحظة التي لم يرسلها الموجهون بعد إلى المعلمين (${n(fs.draft)}).`);
+  if (fs.draft) out.push(counselor ? `إرسال نماذج الملاحظة المتبقية إلى المعلمين (${n(fs.draft)}).` : `إرسال نماذج الملاحظة التي لم يرسلها الموجهون بعد إلى المعلمين (${n(fs.draft)}).`);
   if (fs.overdue) out.push(`متابعة المعلمين الذين تجاوزوا مهلة الرد على نماذج الملاحظة (${n(fs.overdue)}).`);
-  if (fs.forwarded) out.push(`اعتماد الخطط العلاجية التي رفعها الموجهون (${n(fs.forwarded)}).`);
+  if (fs.forwarded && !counselor) out.push(`اعتماد الخطط العلاجية التي رفعها الموجهون (${n(fs.forwarded)}).`);
   if (incomplete) out.push("إكمال رصد الدرجات في نور للفصول غير المكتملة، ثم إعادة رفع إشعار الفترة.");
   if (st.ex) out.push("تكريم الطلاب المتفوقين، وبرامج إثرائية لهم.");
   out.push("إشعار أولياء أمور الطلاب المتعثرين بالخطط العلاجية ومتابعة أثرها في الفترة التالية.");
@@ -85,11 +88,24 @@ function recommendations(x) {
 
 /** أوراق التقرير بالترتيب — كل ورقة عنصر مستقل
  *  recs/checks/forms: ما في مركز التحليل للنطاق المختار، keyName: الإشعار، scope: نص النطاق */
-export function achReportPages({ recs, checks, forms, keyName, scope, year, term, theme = "light", sigs = {} }) {
+export function achReportPages({ recs, checks, forms, keyName, scope, year, term, theme = "light", sigs = {}, counselor = null }) {
+  // نسخة الموجه: طلاب صفوفه وحدها مهما كان النطاق المعروض
+  if (counselor) {
+    const inG = (g) => counselor.grades.includes(g);
+    recs = recs.filter((r) => inG(r.grade)); checks = checks.filter((c) => inG(c.grade)); forms = forms.filter((f) => inG(f.grade));
+  }
   const x = summary(recs, checks, forms);
   const { st, subjects, grades, fs, sev } = x;
   const title = noticeTitle(keyName);
-  const doc = { title: "تقرير متابعة التحصيل الدراسي", meta: [title, scope], foot: "مركز تحليل النتائج" };
+  const doc = { title: counselor ? "تقرير الموجه الطلابي · متابعة التحصيل" : "تقرير متابعة التحصيل الدراسي", meta: [title, scope], foot: "مركز تحليل النتائج" };
+
+  // طلاب الموجه: المتعثرون (مادة فأكثر دون الحد) والمتفوقون (متوسط 90% فأكثر)، ومتوسط كل فصل
+  const studs = counselor ? studentSummaries(recs) : [];
+  const weakStuds = studs.filter((s) => s.weakSubjects.length).sort((a, b) => b.weakSubjects.length - a.weakSubjects.length || a.avg - b.avg || cmpAr(a.name, b.name));
+  const multi = weakStuds.filter((s) => s.weakSubjects.length >= 3).length;
+  const topStuds = studs.filter((s) => s.avg >= 90).sort((a, b) => b.avg - a.avg || cmpAr(a.name, b.name));
+  const classRows = counselor ? [...groupBy(recs, (r) => r.class_id)].map(([, rs]) => ({ g: rs[0].grade, no: rs[0].class_no, ...stats(rs) }))
+    .sort((a, b) => a.g - b.g || a.no - b.no) : [];
 
   // الجداول الطويلة على صفحات
   const subjPages = paginate(subjects, () => 1, ROWS, ROWS);
@@ -99,7 +115,7 @@ export function achReportPages({ recs, checks, forms, keyName, scope, year, term
   const formPages = formRows.length ? paginate(formRows, () => 1, 13, 22) : [[]];
 
   const specs = [];   // [مفتاح، القسم، المحتوى]
-  specs.push(["sum", { no: 1, title: "ملخص النتائج", sub: "درجات الاختبارات وحدها دون المهام الأدائية والمشاركة" }, (
+  specs.push(["sum", { title: "ملخص النتائج", sub: "درجات الاختبارات وحدها دون المهام الأدائية والمشاركة" }, (
     <>
       <Kpis items={[
         { ic: "users", t: "الطلاب", v: x.students, s: `${countAr(x.classes, "cls")} · ${countAr(subjects.length, "subject")}`, c: S[0] },
@@ -166,13 +182,66 @@ export function achReportPages({ recs, checks, forms, keyName, scope, year, term
     </table>
   );
   if (subjects.length <= SUBJ_ONE) {
-    specs.push(["subj", { no: 2, title: "المواد الدراسية", sub: "متوسط كل مادة وتقديراتها وملاحظاتها ونماذجها" }, <>{subjBars}{subjTable(subjects)}</>]);
+    specs.push(["subj", { title: "المواد الدراسية", sub: "متوسط كل مادة وتقديراتها وملاحظاتها ونماذجها" }, <>{subjBars}{subjTable(subjects)}</>]);
   } else {
-    specs.push(["subj", { no: 2, title: "المواد الدراسية", sub: "متوسط كل مادة في الاختبارات مرتّبة من الأعلى" }, subjBars]);
-    subjPages.forEach((list, i) => specs.push([`subjt${i}`, i ? { no: 2, title: "تفصيل المواد (تتمة)" } : { no: 2, title: "تفصيل المواد", sub: "الطلاب والتقديرات والملاحظات والنماذج لكل مادة" }, subjTable(list)]));
+    specs.push(["subj", { title: "المواد الدراسية", sub: "متوسط كل مادة في الاختبارات مرتّبة من الأعلى" }, subjBars]);
+    subjPages.forEach((list, i) => specs.push([`subjt${i}`, i ? { title: "تفصيل المواد (تتمة)" } : { title: "تفصيل المواد", sub: "الطلاب والتقديرات والملاحظات والنماذج لكل مادة" }, subjTable(list)]));
   }
 
-  notePages.forEach((list, i) => specs.push([`notes${i}`, i ? { no: 3, title: "الملاحظات الآلية (تتمة)" } : { no: 3, title: "الملاحظات الآلية", sub: "ما رصده الفحص الجماعي على مستوى الفصل والمادة" }, (
+  if (counselor) {
+    const first = classRows.length > 6 ? 13 : 17, rest = 28;
+    const wPages = weakStuds.length ? paginate(weakStuds, () => 1, first, rest) : [[]];
+    // أدنى ثلاث مواد، والباقي عددًا (يتسع السطر الواحد)
+    const subjLine = (s) => s.weakSubjects.slice(0, 3).map((w) => `${w.subject} ${p1(w.pct)}`).join(" · ")
+      + (s.weakSubjects.length > 3 ? ` · و${s.weakSubjects.length - 3} أخرى` : "");
+    wPages.forEach((list, i) => specs.push([`weak${i}`, i ? { title: "الطلاب المتعثرون (تتمة)" } : { title: "الطلاب المتعثرون", sub: `من نزل في مادة أو أكثر دون ${WEAK}%، الأكثر مواد أولًا` }, (
+      <>
+        {!i && (
+          <>
+            <Kpis items={[
+              { ic: "users", t: "متعثرون في مادة فأكثر", v: weakStuds.length, s: `من ${countAr(studs.length, "student", "g")}`, c: S[3] },
+              { ic: "alert", t: "في ثلاث مواد فأكثر", v: multi, s: "تستدعي دراسة حالة", c: S[2] },
+              { ic: "chart", t: `متوسطهم دون ${WEAK}%`, v: studs.filter((s) => s.avg < WEAK).length, s: "في الاختبارات كلها", c: S[1] },
+              { ic: "trophy", t: "المتفوقون", v: topStuds.length, s: "متوسط 90% فأكثر", c: S[0] },
+            ]} />
+            <Box icon="table" title="متوسط الفصول" aside="في الاختبارات">
+              <Bars wide max={100} items={classRows.map((c) => ({ t: `${GRADE_NAMES[c.g]} · ${c.no}`, v: c.avg ?? 0, c: bandOf(c.avg)?.color,
+                note: p1(c.avg) }))} />
+            </Box>
+          </>
+        )}
+        {weakStuds.length ? (
+          <table className="mr-table">
+            <thead><tr><th className="c" style={{ width: 26 }}>م</th><th style={{ width: 215 }}>الطالب</th><th className="c" style={{ width: 52 }}>الفصل</th>
+              <th className="c" style={{ width: 58 }}>المتوسط</th><th className="c" style={{ width: 44 }}>المواد</th><th>مواد الضعف ونسبها</th></tr></thead>
+            <tbody>{list.map((s, k) => (
+              <tr key={s.sid}>
+                <td className="c num">{(i ? first + (i - 1) * rest : 0) + k + 1}</td>
+                <td style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 215 }}>{s.name}</td>
+                <td className="c num">{s.class_no}</td>
+                <td className="c num" style={{ color: s.avg < WEAK ? "#A23B3B" : undefined, fontWeight: 700 }}>{p1(s.avg)}</td>
+                <td className="c num" style={{ color: s.weakSubjects.length >= 3 ? "#A23B3B" : undefined, fontWeight: 700 }}>{s.weakSubjects.length}</td>
+                <td style={{ fontSize: 10.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 230 }}>{subjLine(s)}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        ) : <div className="mr-empty">لا طلاب متعثرون في هذا النطاق.</div>}
+      </>
+    )]));
+    if (topStuds.length) {
+      paginate(topStuds, () => 1, ROWS + 2, ROWS + 2).forEach((list, i) => specs.push([`top${i}`, i ? { title: "المتفوقون (تتمة)" } : { title: "المتفوقون", sub: "متوسطهم في الاختبارات 90% فأكثر، للتكريم والبرامج الإثرائية" }, (
+        <table className="mr-table">
+          <thead><tr><th className="c" style={{ width: 30 }}>م</th><th>الطالب</th><th className="c" style={{ width: 80 }}>الفصل</th><th className="c" style={{ width: 80 }}>المتوسط</th><th className="c" style={{ width: 80 }}>المواد</th></tr></thead>
+          <tbody>{list.map((s, k) => (
+            <tr key={s.sid}><td className="c num">{i * (ROWS + 2) + k + 1}</td><td style={{ fontWeight: 600 }}>{s.name}</td>
+              <td className="c num">{s.class_no}</td><td className="c num" style={{ fontWeight: 700 }}>{p1(s.avg)}</td><td className="c num">{s.subjects}</td></tr>
+          ))}</tbody>
+        </table>
+      )]));
+    }
+  }
+
+  notePages.forEach((list, i) => specs.push([`notes${i}`, i ? { title: "الملاحظات الآلية (تتمة)" } : { title: "الملاحظات الآلية", sub: "ما رصده الفحص الجماعي على مستوى الفصل والمادة" }, (
     <>
       {!i && (
         <>
@@ -203,7 +272,7 @@ export function achReportPages({ recs, checks, forms, keyName, scope, year, term
     </>
   )]));
 
-  formPages.forEach((list, i) => specs.push([`forms${i}`, i ? { no: 4, title: "نماذج الملاحظة (تتمة)" } : { no: 4, title: "نماذج الملاحظة والخطط العلاجية", sub: "من الموجه إلى المعلم ثم اعتماد وكيل الشؤون التعليمية" }, (
+  formPages.forEach((list, i) => specs.push([`forms${i}`, i ? { title: "نماذج الملاحظة (تتمة)" } : { title: "نماذج الملاحظة والخطط العلاجية", sub: "من الموجه إلى المعلم ثم اعتماد وكيل الشؤون التعليمية" }, (
     <>
       {!i && (
         <>
@@ -242,17 +311,20 @@ export function achReportPages({ recs, checks, forms, keyName, scope, year, term
     </>
   )]));
 
-  specs.push(["end", { no: 5, title: "التوصيات والاعتماد", sub: "مقترحة آليًا من نتائج التحليل، ولوكيل الشؤون التعليمية تعديلها" }, (
+  specs.push(["end", { title: "التوصيات والاعتماد", sub: counselor ? "مقترحة آليًا من نتائج تحليل طلاب الصف" : "مقترحة آليًا من نتائج التحليل، ولوكيل الشؤون التعليمية تعديلها" }, (
     <>
       <Box icon="spark" title="التوصيات" tint>
         <ul style={{ listStyle: "none", display: "grid", gap: 7, fontSize: 12.5, lineHeight: 1.75 }}>
-          {recommendations(x).map((t, i) => <li key={i} style={{ display: "flex", gap: 8 }}><b className="num" style={{ color: "var(--mr-acc)" }}>{i + 1}.</b><span>{t}</span></li>)}
+          {recommendations(x, counselor ? multi : 0, !!counselor).map((t, i) => <li key={i} style={{ display: "flex", gap: 8 }}><b className="num" style={{ color: "var(--mr-acc)" }}>{i + 1}.</b><span>{t}</span></li>)}
         </ul>
       </Box>
-      <Box icon="pen" title="ملاحظات وكيل الشؤون التعليمية وتوجيهاته">
+      <Box icon="pen" title={counselor ? "ملاحظات الموجه الطلابي" : "ملاحظات وكيل الشؤون التعليمية وتوجيهاته"}>
         <div className="mr-lines">{[0, 1, 2, 3, 4].map((i) => <i key={i} />)}</div>
       </Box>
-      <Signs stamp={sigs.stamp} people={[
+      <Signs stamp={sigs.stamp} people={counselor ? [
+        { title: "الموجه الطلابي", name: counselor.name },
+        { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME, sig: sigs.deputy },
+      ] : [
         { title: "وكيل الشؤون التعليمية", name: ACADEMIC_DEPUTY_NAME, sig: sigs.deputy },
         { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal },
       ]} />
@@ -261,16 +333,25 @@ export function achReportPages({ recs, checks, forms, keyName, scope, year, term
 
   const total = specs.length + 1;
   const common = { theme, doc, total };
+  let no = 0;
   return [
     <Cover key="cover" theme={theme} c={{
-      year, tag: ["chart", "مركز تحليل النتائج"], title: "متابعة التحصيل الدراسي", titleSize: 64, sub: title,
+      year, tag: ["chart", "مركز تحليل النتائج"], title: counselor ? "تحصيل طلاب الصف" : "متابعة التحصيل الدراسي", titleSize: 64, sub: title,
       badge: { main: p1(st.avg), sub: "متوسط الاختبارات" }, side: { main: `${p1(st.weakPct)} دون ${WEAK}%`, sub: `${p1(st.exPct)} بلغوا 90% فأكثر` },
-      rows: [["cap", "النطاق", scope], ["book", "المواد", countAr(subjects.length, "subject")],
-             ["table", "الفصول", countAr(x.classes, "cls")], ["calendar", "الفصل الدراسي", `${term} · ${fmtDate(new Date())}`]],
+      rows: counselor
+        ? [["user", "الموجه الطلابي", counselor.name || "—"], ["cap", "الصف", counselor.grades.map((g) => GRADE_NAMES[g]).join(" و")],
+           ["table", "الفصول", `${countAr(x.classes, "cls")} · ${countAr(subjects.length, "subject")}`], ["calendar", "الفصل الدراسي", `${term} · ${fmtDate(new Date())}`]]
+        : [["cap", "النطاق", scope], ["book", "المواد", countAr(subjects.length, "subject")],
+           ["table", "الفصول", countAr(x.classes, "cls")], ["calendar", "الفصل الدراسي", `${term} · ${fmtDate(new Date())}`]],
       note: ["check", "تحليل درجات الاختبارات من إشعار الفترة المنشور، دون المهام الأدائية والمشاركة."],
-      strip: [[x.students, "الطلاب"], [p1(st.avg), "المتوسط"], [sev.critical, "ملاحظات حرجة"], [fs.total, "نماذج الملاحظة"]],
+      strip: counselor
+        ? [[x.students, "الطلاب"], [p1(st.avg), "المتوسط"], [weakStuds.length, "متعثرون"], [topStuds.length, "متفوقون"]]
+        : [[x.students, "الطلاب"], [p1(st.avg), "المتوسط"], [sev.critical, "ملاحظات حرجة"], [fs.total, "نماذج الملاحظة"]],
       foot: "مركز تحليل النتائج",
     }} />,
-    ...specs.map(([k, sec, body], i) => <Page key={k} {...common} page={i + 2} sec={sec}>{body}</Page>),
+    ...specs.map(([k, sec, body], i) => {
+      if (!/\(تتمة\)$/.test(sec.title)) no += 1;   // التتمة برقم قسمها
+      return <Page key={k} {...common} page={i + 2} sec={{ ...sec, no }}>{body}</Page>;
+    }),
   ];
 }

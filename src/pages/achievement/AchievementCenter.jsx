@@ -40,6 +40,10 @@ export default function AchievementCenter() {
   const seesAll = member || adminRoles.some((r) => ACH_ALL.includes(r));
   const canSync = adminRoles.some((r) => ["principal", "deputy_academic", "tech_support", "counselor_1", "counselor_2", "counselor_3"].includes(r));
   const myGrades = [1, 2, 3].filter((g) => seesAll || adminRoles.includes(`counselor_${g}`));
+  // الموجه الطلابي (دون دور إداري يرى المدرسة): تقريره لطلاب صفه وحده بتوقيعه
+  const counselorGrades = [1, 2, 3].filter((g) => adminRoles.includes(`counselor_${g}`));
+  const counselor = useMemo(() => (counselorGrades.length && !adminRoles.some((r) => ACH_ALL.includes(r))
+    ? { name: profile?.full_name ?? "", grades: counselorGrades } : null), [counselorGrades.join(), adminRoles.join(), profile?.full_name]);  // eslint-disable-line react-hooks/exhaustive-deps
   const [params, setParams] = useSearchParams();
   const tab = TABS.some((t) => t.k === params.get("tab")) ? params.get("tab") : "dash";
   const setTab = (k) => setParams((p) => { p.set("tab", k); return p; }, { replace: true });
@@ -192,7 +196,7 @@ export default function AchievementCenter() {
           <div className="flex flex-wrap gap-2">
             {TABS.map((t) => (
               <button key={t.k} onClick={() => setTab(t.k)} className={chip(tab === t.k)}>
-                {t.t}{t.k === "notes" && shownChecks.length > 0 && <span className="num ms-1.5 opacity-80">({shownChecks.length})</span>}
+                {t.k === "report" && counselor ? "تقرير الموجه" : t.t}{t.k === "notes" && shownChecks.length > 0 && <span className="num ms-1.5 opacity-80">({shownChecks.length})</span>}
                 {t.k === "forms" && shownForms?.length > 0 && <span className="num ms-1.5 opacity-80">({shownForms.length})</span>}
               </button>
             ))}
@@ -204,7 +208,8 @@ export default function AchievementCenter() {
             : tab === "notes" ? <Notes checks={shownChecks} />
             : tab === "forms" ? <FormsTab forms={shownForms} err={formsErr} />
             : tab === "report" ? <DeputyReport forms={shownForms} keyName={key} checks={shownChecks} recs={recs}
-                                                             scope={[(grade ? [grade] : dataGrades).map((g) => GRADE_NAMES[g]).join(" و"), subject].filter(Boolean).join(" · ")} />
+                                                             scope={[(counselor ? counselor.grades : grade ? [grade] : dataGrades).map((g) => GRADE_NAMES[g]).join(" و"), subject].filter(Boolean).join(" · ")}
+                                                             counselor={counselor} />
             : <Students recs={recs} />}
         </>
       )}

@@ -63,7 +63,7 @@ export function FormsTab({ forms, err }) {
 }
 
 /* تقرير وكيل الشؤون التعليمية */
-export function DeputyReport({ forms, keyName, checks, recs, scope }) {
+export function DeputyReport({ forms, keyName, checks, recs, scope, counselor = null }) {
   const [official, setOfficial] = useState(false);
   const [theme, setTheme] = useState("light");
   const [sigs, setSigs] = useState({});
@@ -72,8 +72,8 @@ export function DeputyReport({ forms, keyName, checks, recs, scope }) {
     Promise.all([loadPrincipalSignature(), loadSchoolStamp()]).then(([p, st]) => setSigs({ principal: p?.url ?? null, stamp: st }));
   }, [official]);
   const pages = useMemo(() => (official && forms ? achReportPages({
-    recs, checks, forms, keyName, scope, year: academicYearLabel(), term: termName(keyName), theme, sigs,
-  }) : null), [official, recs, checks, forms, keyName, scope, theme, sigs]);
+    recs, checks, forms, keyName, scope, year: academicYearLabel(), term: termName(keyName), theme, sigs, counselor,
+  }) : null), [official, recs, checks, forms, keyName, scope, theme, sigs, counselor]);
   const s = useMemo(() => {
     const all = forms ?? [];
     const by = (k) => all.filter((f) => f.status === k).length;
@@ -99,7 +99,7 @@ export function DeputyReport({ forms, keyName, checks, recs, scope }) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="نماذج الملاحظة" value={s.total} sub={`${s.excluded} مستبعد`} />
         <Stat label="بانتظار المعلمين" value={s.waitingTeacher} sub={`${s.overdue} تجاوز المهلة`} tone={s.overdue ? "bad" : null} />
-        <Stat label="بانتظار اعتمادك" value={s.forwarded} sub={`${s.replied} عند الموجهين للمراجعة`} />
+        <Stat label={counselor ? "بانتظار اعتماد الوكيل" : "بانتظار اعتمادك"} value={s.forwarded} sub={`${s.replied} عند الموجهين للمراجعة`} />
         <Stat label="خطط معتمدة" value={s.approved} sub={`وصلت ${s.guardians} من أولياء الأمور`} />
       </div>
       <p className="text-[12px] text-muted">
@@ -168,7 +168,7 @@ export function DeputyReport({ forms, keyName, checks, recs, scope }) {
         </div>
       </div>
       {official
-        ? <ReportViewer id="ach-report" pages={pages} theme={theme} setTheme={setTheme} fileTitle={`تقرير متابعة التحصيل - ${noticeTitle(keyName)}`} />
+        ? <ReportViewer id="ach-report" pages={pages} theme={theme} setTheme={setTheme} fileTitle={`${counselor ? "تقرير الموجه الطلابي" : "تقرير متابعة التحصيل"} - ${noticeTitle(keyName)}`} />
         : body}
     </div>
   );
