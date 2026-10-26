@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { fmtDateTime } from "../../lib/dates";
-import { printReport, PRINCIPAL_NAME, TECH_SUPPORT_NAME } from "../../lib/exportUtils";
+import { printReport, escHtml, PRINCIPAL_NAME, TECH_SUPPORT_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
@@ -125,12 +125,13 @@ export default function LoginLogAdmin() {
     const tableRows = filtered.map((r, i) => [
       i + 1,
       fmtDateTime(r.created_at),
-      r.national_id || "—",
-      r.full_name || "—",
+      // سجل الدخول يكتب فيه غير المسجّل (محاولة الدخول): تهريب كل ما يأتي منه
+      escHtml(r.national_id || "—"),
+      escHtml(r.full_name || "—"),
       ROLE_LABEL[r.role] ?? "غير معروف",
       r.event_type === "logout" ? "خروج" : "دخول",
       r.success ? "ناجحة" : "فاشلة",
-      r.reason || "—",
+      escHtml(r.reason || "—"),
     ]);
 
     const overviewHtml =
