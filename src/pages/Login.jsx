@@ -225,8 +225,12 @@ export default function Login() {
               </p>
             </div>
 
-            <p className="mt-3 text-center text-[11px] leading-relaxed text-muted">
-              نسيت كلمة المرور؟ راجع إدارة المدرسة لإعادة تعيينها.
+            {/* نموذج الدعم مفتوحًا على «مشكلة في الدخول»: يتواصل الدعم الفني ويعيد التعيين بكلمة مؤقتة */}
+            <p className="mt-3 text-center text-[11.5px] leading-relaxed text-muted">
+              <Link to="/contact?type=login" className="font-semibold text-mint-deep underline underline-offset-2">
+                نسيت كلمة المرور؟
+              </Link>{" "}
+              أرسل طلبًا للدعم الفني، ويتواصل معك لإعادة تعيينها.
             </p>
           </form>
 
