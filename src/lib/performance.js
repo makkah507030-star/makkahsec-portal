@@ -4,7 +4,8 @@ import { loadActiveTerm } from "./officialAttendance.js";
 
 /* =====================================================================
    ملف الأداء الوظيفي للمعلم — البيانات المشتركة بين صفحة المعلم وصفحة المدير
-   وزر «إرسال إلى ملف الشواهد» في النماذج (supabase/teacher_performance.sql).
+   (supabase/teacher_performance.sql). أُلغي زر «إرسال إلى ملف الشواهد» من النماذج:
+   الشواهد تُجمع تلقائيًا، وبطاقات البنود تشرح مصدر كل شاهد.
    • البند العادي: شاهد واحد وعداد (use_count).
    • بنود سجل التطوير المهني (is_record): كل مشاركة شاهد مستقل، والعدد = عددها.
    • «أداء الواجبات الوظيفية» للمقيِّم فقط: لا شواهد له.
@@ -182,13 +183,6 @@ export async function openEvidenceFile(path) {
   else window.location.href = data.signedUrl;
 }
 
-/** يرسل مستندًا صادرًا إلى ملف الشواهد؛ يعيد قيمة العداد بعد الإرسال */
-export async function sendFormToFile(docId, itemKey) {
-  const year = await activeYear();
-  const { data, error } = await supabase.rpc("perf_send_form", { p_doc: docId, p_item: itemKey, p_year: year });
-  if (error) throw error;
-  return data;
-}
 
 /* «كيف أجمعه؟» — تلميح مختصر لكل بند: من أين يأتي شاهده في البوابة، أو ماذا يُرفع.
    مأخوذ من ربط الشواهد الآلي (perf_auto_counts) وأدلة البوابة المنشورة. */

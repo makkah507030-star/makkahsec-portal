@@ -70,9 +70,16 @@ export function stageOf(r) {
    ⑤ ولي الأمر ⑥ الإغلاق — تُحسب من أعمدة الإحالة نفسها
    ===================================================================== */
 
-// يُذكَّر ولي الأمر بعد يومين، ويغلق الوكيل الملف دون رده بعد خمسة أيام
+// يُذكَّر ولي الأمر بعد يومين، وتُغلق الإحالة تلقائيًا دون رده بعد أسبوع
+// (supabase/referrals_auto_close.sql: الدالة referrals_auto_close، والمدة فيها 7 أيام أيضًا)
 export const REMIND_DAYS = 2;
-export const NO_REPLY_DAYS = 5;
+export const NO_REPLY_DAYS = 7;
+
+/* إغلاق ما مضى عليه أسبوع عند ولي الأمر دون رد: يُستدعى مرة في الجلسة عند تحميل البوابة
+   وصفحة الإحالات، فلا تظهر في المتابعة والإجراءات. قبل تشغيل ملف SQL لا يفعل شيئًا. */
+let autoClose = null;
+export const autoCloseReferrals = () =>
+  (autoClose ??= supabase.rpc("referrals_auto_close").then(() => {}, () => {}));
 
 /** أعادها الموجه للوكيل: عادت للوكيل ومعها ملاحظة ولم يكتب الموجه إجراءه */
 export const returnedByCounselor = (r) =>

@@ -9,7 +9,6 @@ import DateField, { TimeField, rangeDays, formatBoth } from "../../components/Da
 import FormReport, { ReportPrintArea } from "../../components/FormReport.jsx";
 import EvidenceBox from "../../components/EvidenceBox.jsx";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
-import SendToFile from "../../components/SendToFile.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 import { useEvidence } from "../../lib/evidence.js";
 import FormSheet, { PrintArea, SHEET_PX, CERT_THEMES, sheetLandscape, isGuestCert } from "../../components/FormSheet.jsx";
@@ -1415,7 +1414,6 @@ export default function Forms({ view = "issue", openKey = null }) {
               : <span className="text-xs text-muted">لا يُطبع قبل الاعتماد</span>}
           </div>
         </div>
-        <div className="no-print max-w-md"><SendToFile doc={d} /></div>
         <div className="no-print">
           <SheetPreview landscape={sheetLandscape(viewing.template)}>
             <FormSheet template={viewing.template} values={d.data} doc={d}
@@ -1822,8 +1820,6 @@ export default function Forms({ view = "issue", openKey = null }) {
             )}
 
             {issued && <SendPanel batch={batch.length ? batch : [issued]} busy={sendBusy} onSend={sendMany} />}
-
-            {issued && <SendToFile doc={issued} />}
 
             {issued && printable.length > 0 && (
               <button className="w-full rounded-sm2 border border-line py-2 text-sm text-mint-deep hover:bg-canvas"

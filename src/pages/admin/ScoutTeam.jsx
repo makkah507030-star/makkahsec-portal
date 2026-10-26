@@ -80,7 +80,10 @@ export default function ScoutTeam() {
       .select("*, students(full_name, national_id, student_enrollment(status, classes(grade, class_no)))");
     if (error) { setMissing(true); setMembers([]); return; }
     // جوال ولي الأمر للتواصل (scouts_3.sql)؛ وقبل تشغيله يبقى الكشف بلا جوال
-    const { data: mob } = await supabase.rpc("scout_roster");
+    const { data: mob, error: mobErr } = await supabase.rpc("scout_roster");
+    if (mobErr) setMsg({ ok: false, text: /scout_roster|function|schema cache/i.test(mobErr.message)
+      ? "جوال ولي الأمر يحتاج تشغيل supabase/scouts_3.sql مرة واحدة في Supabase ← SQL Editor."
+      : `تعذّر جلب جوالات أولياء الأمور: ${mobErr.message}` });
     const mobileOf = Object.fromEntries((mob ?? []).map((x) => [x.student_id, x.mobile]));
     setMembers((data ?? []).map((r) => {
       const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
@@ -303,7 +306,7 @@ export default function ScoutTeam() {
       </div>
 
       {printing && (
-        <PrintPortal id="scouts-print" margin="12mm 14mm">
+        <PrintPortal id="scouts-print" landscape margin="12mm 14mm">
           <div dir="rtl" className="text-ink" style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: 12.5 }}>
             <div className="flex items-start justify-between gap-4">
               <div className="text-[11px] font-medium leading-[1.9]">

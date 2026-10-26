@@ -2,21 +2,27 @@
 /* =====================================================================
    مركز تحليل النتائج ← «النماذج والخطط» و«تقرير الوكيل» لإشعار الفترة المختار (src/lib/achForms.js).
    • النماذج: كل نموذج بحالته ومهلته، وترشيح بالحالة، والضغط يفتحه.
-   • التقرير: أرقام المتابعة كلها لوكيل الشؤون التعليمية، بالمواد والمعلمين، قابل للطباعة.
+   • التقرير: أرقام المتابعة كلها لوكيل الشؤون التعليمية بالمواد والمعلمين، و«التقرير الرسمي»
+     بغلاف وصفحات A4 بالهوية (AchReportDoc.jsx) للطباعة وملف PDF.
    ===================================================================== */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
 import { cmpAr } from "../../lib/sortAr.js";
-import { noticeTitle } from "../../lib/achievement";
 import { FORM_STATUS, isOverdue } from "../../lib/achForms";
 import { StatusChip } from "./AchForm.jsx";
 import { Stat } from "./Charts.jsx";
-import PrintPortal from "../../components/PrintPortal.jsx";
-import { printThen } from "../../lib/print.js";
-import moeLogo from "../../assets/moe-logo.png";
-import logoIcon from "../../assets/icon-mint.png";
+import ReportViewer from "../../components/report/ReportViewer.jsx";
+import { loadPrincipalSignature, loadSchoolStamp } from "../../lib/principalSignature";
+import { academicYearLabel } from "../studio/lib";
+import { termName, noticeTitle } from "../../lib/achievement";
+import { achReportPages } from "./AchReportDoc.jsx";
+
+// خلايا جداول التقرير على الشاشة
+const TH = "px-3 py-2.5 text-[12px] font-semibold";
+const TD = "px-3 py-2.5 align-middle";
 
 const chip = (on) => `rounded-pill px-3 py-1.5 text-xs font-semibold transition ${
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
@@ -58,8 +64,29 @@ export function FormsTab({ forms, err }) {
 }
 
 /* تقرير وكيل الشؤون التعليمية */
-export function DeputyReport({ forms, keyName, checks }) {
-  const [printing, setPrinting] = useState(false);
+/* all = { recs, checks, forms } للصفوف كلها دون ترشيح الصف: منها تقرير أي موجه يختاره الوكيل والمدير،
+   grades: الصفوف المرفوع لها الإشعار */
+export function DeputyReport({ forms, keyName, checks, recs, scope, counselor = null, all = null, grades = [] }) {
+  const [official, setOfficial] = useState(false);
+  const [theme, setTheme] = useState("light");
+  const [sigs, setSigs] = useState({});
+  const [pick, setPick] = useState(0);            // 0 = تقرير الوكيل، وإلا تقرير موجه هذا الصف
+  const [names, setNames] = useState({});         // اسم موجه كل صف
+  useEffect(() => {
+    if (!official) return;
+    Promise.all([loadPrincipalSignature(), loadSchoolStamp()]).then(([p, st]) => setSigs({ principal: p?.url ?? null, stamp: st }));
+    if (!counselor && all) {
+      supabase.from("admin_roles").select("role_type, users(full_name)").in("role_type", ["counselor_1", "counselor_2", "counselor_3"])
+        .then(({ data }) => setNames(Object.fromEntries((data ?? []).map((r) => [Number(r.role_type.slice(-1)), r.users?.full_name ?? ""]))));
+    }
+  }, [official]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // الموجه نفسه، أو الموجه الذي اختاره الوكيل والمدير (بطلاب صفه كلهم)
+  const who = counselor ?? (pick && all ? { name: names[pick] ?? "", grades: [pick] } : null);
+  const src = !counselor && who ? all : { recs, checks, forms };
+  const pages = useMemo(() => (official && src.forms ? achReportPages({
+    ...src, keyName, scope: !counselor && who ? GRADE_NAMES[pick] : scope,
+    year: academicYearLabel(), term: termName(keyName), theme, sigs, counselor: who,
+  }) : null), [official, src.recs, src.checks, src.forms, keyName, scope, theme, sigs, who?.name, pick]);   // eslint-disable-line react-hooks/exhaustive-deps
   const s = useMemo(() => {
     const all = forms ?? [];
     const by = (k) => all.filter((f) => f.status === k).length;
@@ -80,75 +107,89 @@ export function DeputyReport({ forms, keyName, checks }) {
   if (!forms) return null;
   const crit = checks.filter((c) => c.sev === "critical").length;
 
-  const body = (print) => (
+  const body = (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="نماذج الملاحظة" value={s.total} sub={`${s.excluded} مستبعد`} />
         <Stat label="بانتظار المعلمين" value={s.waitingTeacher} sub={`${s.overdue} تجاوز المهلة`} tone={s.overdue ? "bad" : null} />
-        <Stat label="بانتظار اعتمادك" value={s.forwarded} sub={`${s.replied} عند الموجهين للمراجعة`} />
+        <Stat label={counselor ? "بانتظار اعتماد الوكيل" : "بانتظار اعتمادك"} value={s.forwarded} sub={`${s.replied} عند الموجهين للمراجعة`} />
         <Stat label="خطط معتمدة" value={s.approved} sub={`وصلت ${s.guardians} من أولياء الأمور`} />
       </div>
       <p className="text-[12px] text-muted">
         الملاحظات الحرجة في هذه الفترة: <b className="num text-ink">{crit}</b> · الطلاب المتعثرون في فصول النماذج: <b className="num text-ink">{s.students}</b>
         {s.draft > 0 && <> · <b className="text-warning">لم يرسلها الموجهون بعد: <span className="num">{s.draft}</span></b></>}
       </p>
-      <section className={print ? "" : "card overflow-hidden"}>
-        <h3 className={`text-sm font-semibold text-ink ${print ? "mb-2" : "border-b border-line px-4 py-2.5"}`}>المواد</h3>
-        <table className="w-full text-[12px]">
-          <thead className="bg-canvas text-muted"><tr>
-            {["المادة", "النماذج", "الفصول", "الطلاب المتعثرون", "قيد الإجراء", "معتمدة"].map((h) => <th key={h} className="px-3 py-2 text-start font-medium">{h}</th>)}
-          </tr></thead>
-          <tbody className="divide-y divide-line">
-            {s.subjects.map((r) => (
-              <tr key={r.sub}><td className="px-3 py-1.5 font-medium text-ink">{r.sub}</td>
-                {[r.n, r.classes, r.students, r.pending, r.approved].map((v, i) => <td key={i} className="num px-3 py-1.5">{v}</td>)}</tr>
-            ))}
-          </tbody>
-        </table>
+      <section className="card overflow-hidden">
+        <h3 className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">المواد</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] table-fixed text-[12.5px]">
+            <colgroup><col className="w-[28%]" />{[0, 1, 2, 3, 4].map((i) => <col key={i} />)}</colgroup>
+            <thead className="bg-canvas text-muted"><tr>
+              <th className={`${TH} text-start`}>المادة</th>
+              {["النماذج", "الفصول", "الطلاب المتعثرون", "قيد الإجراء", "معتمدة"].map((h) => <th key={h} className={`${TH} text-center`}>{h}</th>)}
+            </tr></thead>
+            <tbody className="divide-y divide-line">
+              {s.subjects.map((r) => (
+                <tr key={r.sub} className="hover:bg-canvas/50">
+                  <td className={`${TD} font-semibold text-ink`}>{r.sub}</td>
+                  {[r.n, r.classes, r.students, r.pending, r.approved].map((v, i) => <td key={i} className={`${TD} num text-center`}>{v}</td>)}
+                </tr>
+              ))}
+            </tbody>
+            {s.subjects.length > 1 && (
+              <tfoot className="border-t-2 border-line bg-canvas/60 font-bold text-ink"><tr>
+                <td className={TD}>المجموع</td>
+                {["n", "classes", "students", "pending", "approved"].map((k) => <td key={k} className={`${TD} num text-center`}>{s.subjects.reduce((a, r) => a + r[k], 0)}</td>)}
+              </tr></tfoot>
+            )}
+          </table>
+        </div>
       </section>
-      <section className={print ? "" : "card overflow-hidden"}>
-        <h3 className={`text-sm font-semibold text-ink ${print ? "mb-2 mt-4" : "border-b border-line px-4 py-2.5"}`}>النماذج وحالتها</h3>
-        <table className="w-full text-[12px]">
-          <thead className="bg-canvas text-muted"><tr>
-            {["المعلم", "المادة", "الصف والفصول", "الحالة", "المهلة"].map((h) => <th key={h} className="px-3 py-2 text-start font-medium">{h}</th>)}
-          </tr></thead>
-          <tbody className="divide-y divide-line">
-            {s.rows.map((f) => (
-              <tr key={f.id}>
-                <td className="px-3 py-1.5 text-ink">{print ? f.teacher_name : <Link to={`/ach-forms/${f.id}`} className="hover:text-mint-deep">{f.teacher_name}</Link>}</td>
-                <td className="px-3 py-1.5">{f.subject}</td>
-                <td className="px-3 py-1.5">{GRADE_NAMES[f.grade]?.split(" ")[0]} · {f.classes.map((c) => c.class_no).join("، ")}</td>
-                <td className="px-3 py-1.5">{FORM_STATUS[f.status].t}{isOverdue(f) ? " · متأخر" : ""}</td>
-                <td className="num px-3 py-1.5">{["sent", "returned"].includes(f.status) ? fmtDate(f.due_on) : "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <section className="card overflow-hidden">
+        <h3 className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">النماذج وحالتها</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px] table-fixed text-[12.5px]">
+            <colgroup><col className="w-[24%]" /><col className="w-[15%]" /><col className="w-[21%]" /><col className="w-[19%]" /><col /></colgroup>
+            <thead className="bg-canvas text-muted"><tr>
+              <th className={`${TH} text-start`}>المعلم</th><th className={`${TH} text-start`}>المادة</th><th className={`${TH} text-start`}>الصف والفصول</th>
+              <th className={`${TH} text-center`}>الحالة</th><th className={`${TH} text-center`}>المهلة</th>
+            </tr></thead>
+            <tbody className="divide-y divide-line">
+              {s.rows.map((f) => (
+                <tr key={f.id} className="hover:bg-canvas/50">
+                  <td className={`${TD} font-semibold text-ink`}><Link to={`/ach-forms/${f.id}`} className="hover:text-mint-deep">{f.teacher_name}</Link></td>
+                  <td className={TD}>{f.subject}</td>
+                  <td className={`${TD} num`}>{GRADE_NAMES[f.grade]?.split(" ")[0]} · {f.classes.map((c) => c.class_no).join("، ")}</td>
+                  <td className={`${TD} text-center`}><StatusChip f={f} /></td>
+                  <td className={`${TD} num whitespace-nowrap text-center`}>{["sent", "returned"].includes(f.status) ? fmtDate(f.due_on) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center">
+      <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold text-ink">تقرير متابعة التحصيل · {noticeTitle(keyName)}</h2>
-        {s.total > 0 && <button onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
-                className="ms-auto rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mint-deep">طباعة التقرير</button>}
+        <div className="ms-auto flex gap-1.5">
+          <button onClick={() => setOfficial(false)} className={chip(!official)}>الملخص</button>
+          <button onClick={() => setOfficial(true)} className={chip(official)}>التقرير الرسمي (طباعة / PDF)</button>
+        </div>
       </div>
-      {body(false)}
-      {printing && (
-        <PrintPortal id="ach-report" margin="12mm 12mm">
-          <div dir="rtl" style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", fontSize: 12 }}>
-            <div className="flex items-start justify-between">
-              <div className="text-[11px] leading-[1.8]"><div>المملكة العربية السعودية · وزارة التعليم</div><div className="font-bold text-mint-deep">مدرسة مكة الثانوية · الشؤون التعليمية</div></div>
-              <div className="flex gap-3"><img src={moeLogo} alt="" className="h-9" /><img src={logoIcon} alt="" className="h-9" /></div>
-            </div>
-            <h1 className="my-4 text-center text-[16px] font-bold text-mint-deep">تقرير متابعة التحصيل الدراسي · {noticeTitle(keyName)}</h1>
-            {body(true)}
-            <div className="mt-10 text-center text-[12px]"><p className="font-bold text-mint-deep">وكيل الشؤون التعليمية</p><p className="mt-6 text-faint">التوقيع: ....................</p></div>
-          </div>
-        </PrintPortal>
-      )}
+      {official
+        ? <ReportViewer id="ach-report" pages={pages} theme={theme} setTheme={setTheme}
+            fileTitle={`${who ? `تقرير الصف ${who.grades.map((g) => GRADE_NAMES[g]).join(" و")}` : "تقرير متابعة التحصيل"} - ${noticeTitle(keyName)}`}
+            controls={!counselor && all && grades.length > 0 && (
+              <select className="field w-auto text-sm" value={pick} onChange={(e) => setPick(Number(e.target.value))}>
+                <option value={0}>تقرير وكيل الشؤون التعليمية</option>
+                {grades.map((g) => <option key={g} value={g}>تقرير الصف {GRADE_NAMES[g]}</option>)}
+              </select>
+            )} />
+        : body}
     </div>
   );
 }

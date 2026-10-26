@@ -14,11 +14,12 @@ import { fmtDateTime } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import {
   loadNoticeKeys, loadAchievement, noticeTitle, termName, periodOf, PERIODS, stats, groupBy, studentSummaries, runChecks, weakTeachers,
-  SEV, WEAK, bandOf, ACH_ALL, useAchMember,
+  SEV, KIND_T, WEAK, bandOf, ACH_ALL, useAchMember,
 } from "../../lib/achievement";
 import { supabase } from "../../lib/supabase";
 import { buildFormRows, syncForms, setupMsg as formsSetup, isSetupErr } from "../../lib/achForms";
 import { FormsTab, DeputyReport } from "./FormsTab.jsx";
+import { AchGateSwitch } from "./AchGate.jsx";
 import { DistStrip, HBars, Histogram, Heat, Stat, pctTxt, useTip as useTipLocal } from "./Charts.jsx";
 
 
@@ -39,6 +40,10 @@ export default function AchievementCenter() {
   const seesAll = member || adminRoles.some((r) => ACH_ALL.includes(r));
   const canSync = adminRoles.some((r) => ["principal", "deputy_academic", "tech_support", "counselor_1", "counselor_2", "counselor_3"].includes(r));
   const myGrades = [1, 2, 3].filter((g) => seesAll || adminRoles.includes(`counselor_${g}`));
+  // الموجه الطلابي (دون دور إداري يرى المدرسة): تقريره لطلاب صفه وحده بتوقيعه
+  const counselorGrades = [1, 2, 3].filter((g) => adminRoles.includes(`counselor_${g}`));
+  const counselor = useMemo(() => (counselorGrades.length && !adminRoles.some((r) => ACH_ALL.includes(r))
+    ? { name: profile?.full_name ?? "", grades: counselorGrades } : null), [counselorGrades.join(), adminRoles.join(), profile?.full_name]);  // eslint-disable-line react-hooks/exhaustive-deps
   const [params, setParams] = useSearchParams();
   const tab = TABS.some((t) => t.k === params.get("tab")) ? params.get("tab") : "dash";
   const setTab = (k) => setParams((p) => { p.set("tab", k); return p; }, { replace: true });
@@ -116,13 +121,16 @@ export default function AchievementCenter() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-bold text-ink">مركز تحليل النتائج</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
-          تحليل نتائج الطلاب من «إشعار الفترة» المنشور في «نتائج الطلاب»، على <b className="text-ink">درجات الاختبارات وحدها</b> دون
-          المهام الأدائية والمشاركة، مع فحوصات جماعية آلية ترصد مواضع الخلل.
-          {!seesAll && <> يظهر لك {myGrades.map((g) => GRADE_NAMES[g]).join(" و")}.</>}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-bold text-ink">مركز تحليل النتائج</h1>
+          <p className="mt-1 text-sm leading-relaxed text-muted">
+            تحليل نتائج الطلاب من «إشعار الفترة» المنشور في «نتائج الطلاب»، على <b className="text-ink">درجات الاختبارات وحدها</b> دون
+            المهام الأدائية والمشاركة، مع فحوصات جماعية آلية ترصد مواضع الخلل.
+            {!seesAll && <> يظهر لك {myGrades.map((g) => GRADE_NAMES[g]).join(" و")}.</>}
+          </p>
+        </div>
+        <AchGateSwitch />
       </div>
 
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
@@ -188,7 +196,7 @@ export default function AchievementCenter() {
           <div className="flex flex-wrap gap-2">
             {TABS.map((t) => (
               <button key={t.k} onClick={() => setTab(t.k)} className={chip(tab === t.k)}>
-                {t.t}{t.k === "notes" && shownChecks.length > 0 && <span className="num ms-1.5 opacity-80">({shownChecks.length})</span>}
+                {t.k === "report" && counselor ? "تقرير الصف" : t.t}{t.k === "notes" && shownChecks.length > 0 && <span className="num ms-1.5 opacity-80">({shownChecks.length})</span>}
                 {t.k === "forms" && shownForms?.length > 0 && <span className="num ms-1.5 opacity-80">({shownForms.length})</span>}
               </button>
             ))}
@@ -199,7 +207,10 @@ export default function AchievementCenter() {
                                                               onSubject={setSubject} onNotes={() => setTab("notes")} />
             : tab === "notes" ? <Notes checks={shownChecks} />
             : tab === "forms" ? <FormsTab forms={shownForms} err={formsErr} />
-            : tab === "report" ? <DeputyReport forms={shownForms} keyName={key} checks={shownChecks} />
+            : tab === "report" ? <DeputyReport forms={shownForms} keyName={key} checks={shownChecks} recs={recs}
+                                                             scope={[(counselor ? counselor.grades : grade ? [grade] : dataGrades).map((g) => GRADE_NAMES[g]).join(" و"), subject].filter(Boolean).join(" · ")}
+                                                             counselor={counselor} grades={dataGrades}
+                                                             all={counselor ? null : { recs: scoped, checks, forms }} />
             : <Students recs={recs} />}
         </>
       )}
@@ -358,11 +369,6 @@ function PeriodTrend({ trend, subject }) {
 /* ------------------------------------------------------------------ */
 /* الملاحظات: نتائج الفحوصات الجماعية                                 */
 /* ------------------------------------------------------------------ */
-const KIND_T = {
-  low_avg: "متوسط متدنٍّ", many_weak: "نسبة ضعف كبيرة", no_top: "لا تقدير مرتفع", gap_peers: "فارق عن الفصول",
-  incomplete: "رصد غير مكتمل", low_perf: "المهام الأدائية", perf_gap: "فجوة الأدائية والاختبار", subject_grade: "ضعف المادة في الصف", multi_weak: "تعثر متعدد",
-};
-
 function Notes({ checks }) {
   const [sev, setSev] = useState("");
   const [kind, setKind] = useState("");

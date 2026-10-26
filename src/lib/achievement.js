@@ -217,6 +217,12 @@ export const SEV = {
   info: { t: "للمتابعة", rank: 2, c: "#2C5079", bg: "#E9F1FB" },
 };
 
+// نوع كل ملاحظة باسم قصير (صفحة الملاحظات والتقرير)
+export const KIND_T = {
+  low_avg: "متوسط متدنٍّ", many_weak: "نسبة ضعف كبيرة", no_top: "لا تقدير مرتفع", gap_peers: "فارق عن الفصول",
+  incomplete: "رصد غير مكتمل", low_perf: "المهام الأدائية", perf_gap: "فجوة الأدائية والاختبار", subject_grade: "ضعف المادة في الصف", multi_weak: "تعثر متعدد",
+};
+
 /* كل ملاحظة: { id, sev, kind, title, detail, grade, class_no, class_id, subject, teachers[], metric, rec } */
 export const COVER_MIN = 0.7;   // دون هذه النسبة من طلاب الفصل: الرصد غير مكتمل فلا يُحكم على المتوسط
 
@@ -330,4 +336,24 @@ export function useAchMember(uid) {
   const [m, setM] = useState(false);
   useEffect(() => { let live = true; loadAchMember(uid).then((v) => live && setM(v)); return () => { live = false; }; }, [uid]);
   return m;
+}
+
+/* بوابة المركز: مغلق افتراضيًا حتى اكتمال رصد الدرجات، فلا تُعرض تحليلات
+   ولا تصدر أعمال بدرجات ناقصة. يفتحه وكيل الشؤون التعليمية أو المدير أو
+   الدعم الفني من داخل المركز (settings.ach_center_enabled = "true"). */
+export async function loadAchOpen() {
+  const { data } = await supabase.from("settings").select("value").eq("key", "ach_center_enabled").maybeSingle();
+  return data?.value === "true";
+}
+export async function setAchOpen(open) {
+  const { error } = await supabase.from("settings").upsert(
+    { key: "ach_center_enabled", value: open ? "true" : "false" }, { onConflict: "key" });
+  if (error) throw error;
+}
+/* من يملك فتح/إغلاق المركز (ومن يصل إليه وهو مغلق ليفتحه) */
+export const ACH_GATE_ROLES = ["principal", "deputy_academic", "tech_support"];
+export function useAchOpen() {
+  const [open, setOpen] = useState(null);   // null = جارٍ التحميل
+  useEffect(() => { let live = true; loadAchOpen().then((v) => live && setOpen(v)); return () => { live = false; }; }, []);
+  return [open, setOpen];
 }
