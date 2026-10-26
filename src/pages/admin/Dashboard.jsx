@@ -582,7 +582,7 @@ function MissingStudentsBox({ date }) {
           <p className="text-sm font-bold text-absent">طلاب مفقودون خلال اليوم</p>
           {/* شارات الفصول مطوية مع القائمة: تظهر بالضغط على الصندوق أو العدد */}
           <p className="mt-0.5 text-xs text-muted">
-            {groups.length > 0 && !expanded && <><span className="num font-semibold text-ink">{groups.length}</span> فصل · </>}
+            {groups.length > 0 && !expanded && <><span className="num font-semibold text-ink">{countAr(groups.length, "cls")}</span> · </>}
             {expanded ? "اضغط لطيّ القائمة" : "اضغط العدد لعرض الفصول والطلاب"}
           </p>
         </div>
@@ -599,7 +599,7 @@ function MissingStudentsBox({ date }) {
       {expanded && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-absent/15 bg-white/60 px-5 py-2.5">
           <p className="text-xs text-muted">
-            <span className="num font-semibold text-ink">{groups.length}</span> فصل ·
+            <span className="num font-semibold text-ink">{countAr(groups.length, "cls")}</span> ·
             اضغط اسم الطالب للتفاصيل والإجراء
           </p>
           <button onClick={() => printMissing(null)}
