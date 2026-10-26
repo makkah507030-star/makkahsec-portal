@@ -580,18 +580,11 @@ function MissingStudentsBox({ date }) {
               className="flex w-full items-center justify-between gap-3 px-5 py-4 text-right">
         <div>
           <p className="text-sm font-bold text-absent">طلاب مفقودون خلال اليوم</p>
-          {groups.length > 0 ? (
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {groups.map((g) => (
-                <span key={g.key} className="inline-flex items-center gap-1.5 rounded-pill border border-absent/20 bg-white py-0.5 pl-0.5 pr-2 text-[11px] text-ink">
-                  {g.short}
-                  <span className="num grid h-4 min-w-4 place-items-center rounded-full bg-absent px-1 text-[10px] font-bold text-white">{g.rows.length}</span>
-                </span>
-              ))}
-            </div>
-          ) : (
-            <p className="mt-0.5 text-xs text-muted">اضغط لعرض القائمة والتفاصيل</p>
-          )}
+          {/* شارات الفصول مطوية مع القائمة: تظهر بالضغط على الصندوق أو العدد */}
+          <p className="mt-0.5 text-xs text-muted">
+            {groups.length > 0 && !expanded && <><span className="num font-semibold text-ink">{groups.length}</span> فصل · </>}
+            {expanded ? "اضغط لطيّ القائمة" : "اضغط العدد لعرض الفصول والطلاب"}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="num text-2xl font-bold text-absent">{rows.length}</span>
@@ -616,10 +609,24 @@ function MissingStudentsBox({ date }) {
         </div>
       )}
 
+      {/* شارات الفصول: الضغط على شارة ينقل إلى طلاب فصلها في القائمة */}
+      {expanded && groups.length > 0 && (
+        <div className="flex flex-wrap gap-1 border-t border-absent/15 bg-white/60 px-5 py-2.5">
+          {groups.map((g) => (
+            <button key={g.key} type="button"
+                    onClick={() => document.getElementById(`missing-${g.key}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+                    className="inline-flex items-center gap-1.5 rounded-pill border border-absent/20 bg-white py-0.5 pl-0.5 pr-2 text-[11px] text-ink hover:bg-absent/5">
+              {g.short}
+              <span className="num grid h-4 min-w-4 place-items-center rounded-full bg-absent px-1 text-[10px] font-bold text-white">{g.rows.length}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {expanded && (
         <div className="max-h-[32rem] overflow-y-auto border-t border-absent/15">
           {groups.map((g) => (
-            <div key={g.key} className="border-b border-absent/15 last:border-0">
+            <div key={g.key} id={`missing-${g.key}`} className="scroll-mt-0 border-b border-absent/15 last:border-0">
               <div className="sticky top-0 z-[1] flex items-center justify-between gap-2 bg-[#FBF1F1] px-5 py-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <span className="num grid h-6 min-w-6 place-items-center rounded-full bg-absent px-1.5 text-[11px] font-bold text-white">{g.rows.length}</span>
