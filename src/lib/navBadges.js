@@ -1,7 +1,7 @@
 // src/lib/navBadges.js
 import { useEffect, useState } from "react";
 import { supabase } from "./supabase";
-import { stageOf, isLate, STAGE_COLS } from "./referrals.js";
+import { stageOf, isLate, STAGE_COLS, autoCloseReferrals } from "./referrals.js";
 import { fmtHijri, fmtDateTime } from "./dates.js";
 import { todayISO } from "./schoolTime.js";
 import { countAr } from "./arabicCount.js";
@@ -96,6 +96,7 @@ async function load() {
   const isManager = has("principal", "tech_support");
   const isAcademic = has("deputy_academic", "tech_support");      // معتمد التطوير المهني
   const myGrades = [1, 2, 3].filter((g) => roles.includes(`counselor_${g}`));
+  if (staff) await autoCloseReferrals();   // قبل العدّ: لا تُحسب إحالة انتهت مهلة ولي الأمر فيها
   const none = Promise.resolve(0);
   const noRows = Promise.resolve([]);
 

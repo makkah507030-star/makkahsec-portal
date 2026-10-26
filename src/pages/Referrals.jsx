@@ -21,6 +21,7 @@ import { useUsageCounts } from "../lib/usage.js";
 import UsageBadge from "../components/UsageBadge.jsx";
 import {
   STATUS, OPEN_STATUSES, LATE_DAYS, stageOf, daysSince, daysLabel, isLate, chainOf, returnedByCounselor, REMIND_DAYS, NO_REPLY_DAYS, notifyUsers,
+  autoCloseReferrals,
   PRESETS_TEACHER_DONE, PRESETS_BEHAVIOR_NOTE, PRESETS_DEPUTY_TRANSFER, PRESETS_COUNSELOR, PRESETS_DEPUTY_REVIEW,
   REF_TYPES, ACADEMIC_ITEMS, academicItemDone, docsSummary, refTypeLabel, notifyDeputies,
 } from "../lib/referrals";
@@ -71,6 +72,7 @@ export default function Referrals() {
   useBackStep(!!viewing, () => setViewing(null), "رجوع إلى الإحالات");
 
   const load = async () => {
+    await autoCloseReferrals();   // ما مضى عليه أسبوع عند ولي الأمر دون رد يُغلق قبل العرض
     const { data } = await supabase.from("student_referrals")
       .select("*").order("created_at", { ascending: false }).limit(200);
     // رقم هوية الطالب للبطاقة (لا يُحفظ في الإحالة): من سجل الطلاب لمن يحق له قراءته
@@ -1123,13 +1125,6 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
       : { ok: true, text: `حُذفت الإحالة ${r.serial}.` });
   };
 
-  // ⑤ بعد رد ولي الأمر: تنتهي المتابعة وتُحفظ في السجل
-  const archive = async () => {
-    act({ status: "archived",
-          ...(r.status === "with_guardian" ? { close_note: [r.close_note, "انتهت المتابعة دون رد ولي الأمر."].filter(Boolean).join("\n") } : {}) },
-      "انتهت متابعة الإحالة وحُفظت في السجل.");
-  };
-
   // ⑤ب لم يرد ولي الأمر: تذكيره مرة أخرى
   const remindGuardian = async () => {
     setBusy(true);
@@ -1328,25 +1323,19 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
             </div>
           )}
 
-          {/* لم يرد ولي الأمر: تذكيره، أو إنهاء المتابعة بعد التواصل معه هاتفيًا */}
+          {/* لم يرد ولي الأمر: تذكيره، وتُغلق تلقائيًا دون رده بعد أسبوع (autoCloseReferrals) */}
           {isDeputy && r.status === "with_guardian" && (
             <div className="space-y-2 rounded-card border border-warning/30 bg-warning/5 p-3">
               <p className="text-xs leading-relaxed text-muted">
                 لم يؤكد ولي الأمر استلامها بعد ({daysLabel(daysSince(r.closed_at))}).
                 {daysSince(r.closed_at) < REMIND_DAYS ? ` يُذكَّر بعد ${REMIND_DAYS === 2 ? "يومين" : `${REMIND_DAYS} أيام`} من الإرسال.` : ""}
-                {daysSince(r.closed_at) < NO_REPLY_DAYS ? ` ويُغلق الملف دون رده بعد ${NO_REPLY_DAYS} أيام.` : ""}
+                {daysSince(r.closed_at) < NO_REPLY_DAYS ? ` وتُغلق الإحالة تلقائيًا دون رده بعد ${NO_REPLY_DAYS} أيام من الإرسال.` : ""}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button disabled={busy} onClick={remindGuardian}
                         className="rounded-pill border border-warning/40 px-4 py-1.5 text-sm font-semibold text-warning hover:bg-warning/5">
                   تذكير ولي الأمر
                 </button>
-                {daysSince(r.closed_at) >= NO_REPLY_DAYS && (
-                  <button disabled={busy} onClick={archive}
-                          className="rounded-pill border border-line px-4 py-1.5 text-sm font-semibold text-muted hover:bg-canvas">
-                    إغلاق الملف دون رده
-                  </button>
-                )}
               </div>
             </div>
           )}
