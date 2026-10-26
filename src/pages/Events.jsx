@@ -197,6 +197,36 @@ export default function Events() {
   );
 }
 
+/* التصنيف: بطاقات القائمة العامة (الإعدادات ← event_categories)، و«تصنيف آخر…» يكتب فيه
+   المنظّم تصنيفًا خاصًا بحدثه لا يرد في القائمة، فيُحفظ للحدث وحده ولا يُضاف إلى القائمة */
+const pill = (on) => `rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
+  on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
+export function CategoryPicker({ cats, value, onChange }) {
+  const custom = !!value && !cats.includes(value);
+  const [open, setOpen] = useState(false);
+  const typing = open || custom;
+  return (
+    <div>
+      <label className="text-xs text-muted">التصنيف</label>
+      <div className="mt-1.5 flex flex-wrap gap-1.5">
+        {cats.map((c) => (
+          <button key={c} type="button" onClick={() => { setOpen(false); onChange(value === c ? "" : c); }}
+                  className={pill(value === c)}>{c}</button>
+        ))}
+        <button type="button" onClick={() => { setOpen(!typing); if (typing) onChange(""); }}
+                className={`${pill(typing)} ${typing ? "" : "border-dashed"}`}>
+          {typing ? "تصنيف آخر ×" : "+ تصنيف آخر…"}
+        </button>
+      </div>
+      {typing && (
+        <input className="field mt-2 w-full sm:w-80" autoFocus={open} maxLength={40} value={custom ? value : ""}
+               placeholder="اكتب تصنيف الحدث، مثل: مبادرة تطوعية"
+               onChange={(e) => onChange(e.target.value.replace(/\|/g, ""))} />
+      )}
+    </div>
+  );
+}
+
 /* --------------------------- حدث جديد --------------------------- */
 function NewEvent({ uid, profile, roles, onDone }) {
   const { effectiveRole } = useSession();
@@ -229,7 +259,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
     const { data, error } = await supabase.from("school_events").insert({
       serial,
       title: f.title.trim(),
-      category: f.category || null,
+      category: f.category.trim() || null,
       event_date: f.event_date,
       ...endDatePatch(f),
       start_time: f.start_time || null,
@@ -266,19 +296,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
                onChange={(e) => setF((x) => ({ ...x, title: e.target.value }))} />
       </div>
 
-      <div>
-        <label className="text-xs text-muted">التصنيف</label>
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {cats.map((c) => (
-            <button key={c} type="button" onClick={() => setF((x) => ({ ...x, category: c }))}
-              className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
-                f.category === c ? "bg-mint-deep text-white"
-                                 : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-              {c}
-            </button>
-          ))}
-        </div>
-      </div>
+      <CategoryPicker cats={cats} value={f.category} onChange={(c) => setF((x) => ({ ...x, category: c }))} />
 
       <DateFields f={f} setF={setF} />
 
@@ -691,7 +709,7 @@ function StageInfo({ e, parts, patch, onNext }) {
     setBusy(true);
     const ok = await patch({
       title: f.title.trim(),
-      category: f.category || null,
+      category: f.category.trim() || null,
       event_date: f.event_date,
       ...endDatePatch(f, was),
       start_time: f.start_time || null,
@@ -726,21 +744,7 @@ function StageInfo({ e, parts, patch, onNext }) {
                onChange={(x) => setF((v) => ({ ...v, title: x.target.value }))} />
       </div>
 
-      {cats.length > 0 && (
-        <div>
-          <label className="text-xs text-muted">التصنيف</label>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {cats.map((c) => (
-              <button key={c} type="button" onClick={() => setF((v) => ({ ...v, category: c }))}
-                className={`rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
-                  f.category === c ? "bg-mint-deep text-white"
-                                   : "border border-line bg-white text-muted hover:bg-canvas"}`}>
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      <CategoryPicker cats={cats} value={f.category} onChange={(c) => setF((v) => ({ ...v, category: c }))} />
 
       <DateFields f={f} setF={setF} />
       <p className="-mt-2 text-[11px] text-faint">من وقت الحدث تُحسب حصص الاستئذان، ويعود الطلاب لفصولهم تلقائيًا بعده.</p>
