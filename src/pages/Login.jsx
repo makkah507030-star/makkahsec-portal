@@ -230,7 +230,7 @@ export default function Login() {
               <Link to="/contact?type=login" className="font-semibold text-mint-deep underline underline-offset-2">
                 نسيت كلمة المرور؟
               </Link>{" "}
-              أرسل طلبًا للدعم الفني، ويتواصل معك لإعادة تعيينها.
+              الطالب يراجع الدعم الفني في المدرسة حضوريًا، والمعلم وولي الأمر يرسلان طلبًا ويُتواصل معهما.
             </p>
           </form>
 

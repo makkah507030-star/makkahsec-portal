@@ -295,6 +295,15 @@ export default function Feedback() {
                     </button>
                   ))}
                 </div>
+                {/* نسيان كلمة المرور: لا تُرسل عن بعد لمن لا يُتحقق من هويته */}
+                {!session && category === "login" && (
+                  <p className={`mt-2 rounded-sm2 px-3 py-2 text-xs leading-relaxed ${
+                    guestRole === "طالب" ? "bg-warning-light text-warning" : "bg-mint-tint text-mint-deep"}`}>
+                    {guestRole === "طالب"
+                      ? "كلمة مرور الطالب تُسلَّم حضوريًا فقط: راجع الدعم الفني في المدرسة. ولا تُرسل عن بعد."
+                      : "يتواصل معك الدعم الفني على جوالك للتحقق من هويتك قبل إعادة تعيين كلمة المرور."}
+                  </p>
+                )}
               </div>
 
               <div>
