@@ -15,12 +15,6 @@ select 'evidence_participation.sql',
                      and element = 'التفاعل مع المجتمع المهني') = 2
             then 'منفّذ' else 'لم يُنفَّذ' end
 union all
-select 'perf_send_form_recipient.sql',
-       case when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-                          where n.nspname = 'public' and p.proname = 'perf_send_form'
-                            and p.prosrc like '%recipient_user_id is distinct from auth.uid()%')
-            then 'منفّذ' else 'لم يُنفَّذ' end
-union all
 select 'perf_cert_auto.sql',
        case when to_regclass('public.cert_auto_evidence') is not null
              and exists (select 1 from pg_trigger where tgname = 'cert_auto_to_file' and not tgisinternal)
