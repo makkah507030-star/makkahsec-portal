@@ -19,6 +19,10 @@ import { academicYearLabel } from "../studio/lib";
 import { termName, noticeTitle } from "../../lib/achievement";
 import { achReportPages } from "./AchReportDoc.jsx";
 
+// خلايا جداول التقرير على الشاشة
+const TH = "px-3 py-2.5 text-[12px] font-semibold";
+const TD = "px-3 py-2.5 align-middle";
+
 const chip = (on) => `rounded-pill px-3 py-1.5 text-xs font-semibold transition ${
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
@@ -90,7 +94,7 @@ export function DeputyReport({ forms, keyName, checks, recs, scope }) {
   if (!forms) return null;
   const crit = checks.filter((c) => c.sev === "critical").length;
 
-  const body = (print) => (
+  const body = (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="نماذج الملاحظة" value={s.total} sub={`${s.excluded} مستبعد`} />
@@ -102,38 +106,54 @@ export function DeputyReport({ forms, keyName, checks, recs, scope }) {
         الملاحظات الحرجة في هذه الفترة: <b className="num text-ink">{crit}</b> · الطلاب المتعثرون في فصول النماذج: <b className="num text-ink">{s.students}</b>
         {s.draft > 0 && <> · <b className="text-warning">لم يرسلها الموجهون بعد: <span className="num">{s.draft}</span></b></>}
       </p>
-      <section className={print ? "" : "card overflow-hidden"}>
-        <h3 className={`text-sm font-semibold text-ink ${print ? "mb-2" : "border-b border-line px-4 py-2.5"}`}>المواد</h3>
-        <table className="w-full text-[12px]">
-          <thead className="bg-canvas text-muted"><tr>
-            {["المادة", "النماذج", "الفصول", "الطلاب المتعثرون", "قيد الإجراء", "معتمدة"].map((h) => <th key={h} className="px-3 py-2 text-start font-medium">{h}</th>)}
-          </tr></thead>
-          <tbody className="divide-y divide-line">
-            {s.subjects.map((r) => (
-              <tr key={r.sub}><td className="px-3 py-1.5 font-medium text-ink">{r.sub}</td>
-                {[r.n, r.classes, r.students, r.pending, r.approved].map((v, i) => <td key={i} className="num px-3 py-1.5">{v}</td>)}</tr>
-            ))}
-          </tbody>
-        </table>
+      <section className="card overflow-hidden">
+        <h3 className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">المواد</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] table-fixed text-[12.5px]">
+            <colgroup><col className="w-[28%]" />{[0, 1, 2, 3, 4].map((i) => <col key={i} />)}</colgroup>
+            <thead className="bg-canvas text-muted"><tr>
+              <th className={`${TH} text-start`}>المادة</th>
+              {["النماذج", "الفصول", "الطلاب المتعثرون", "قيد الإجراء", "معتمدة"].map((h) => <th key={h} className={`${TH} text-center`}>{h}</th>)}
+            </tr></thead>
+            <tbody className="divide-y divide-line">
+              {s.subjects.map((r) => (
+                <tr key={r.sub} className="hover:bg-canvas/50">
+                  <td className={`${TD} font-semibold text-ink`}>{r.sub}</td>
+                  {[r.n, r.classes, r.students, r.pending, r.approved].map((v, i) => <td key={i} className={`${TD} num text-center`}>{v}</td>)}
+                </tr>
+              ))}
+            </tbody>
+            {s.subjects.length > 1 && (
+              <tfoot className="border-t-2 border-line bg-canvas/60 font-bold text-ink"><tr>
+                <td className={TD}>المجموع</td>
+                {["n", "classes", "students", "pending", "approved"].map((k) => <td key={k} className={`${TD} num text-center`}>{s.subjects.reduce((a, r) => a + r[k], 0)}</td>)}
+              </tr></tfoot>
+            )}
+          </table>
+        </div>
       </section>
-      <section className={print ? "" : "card overflow-hidden"}>
-        <h3 className={`text-sm font-semibold text-ink ${print ? "mb-2 mt-4" : "border-b border-line px-4 py-2.5"}`}>النماذج وحالتها</h3>
-        <table className="w-full text-[12px]">
-          <thead className="bg-canvas text-muted"><tr>
-            {["المعلم", "المادة", "الصف والفصول", "الحالة", "المهلة"].map((h) => <th key={h} className="px-3 py-2 text-start font-medium">{h}</th>)}
-          </tr></thead>
-          <tbody className="divide-y divide-line">
-            {s.rows.map((f) => (
-              <tr key={f.id}>
-                <td className="px-3 py-1.5 text-ink">{print ? f.teacher_name : <Link to={`/ach-forms/${f.id}`} className="hover:text-mint-deep">{f.teacher_name}</Link>}</td>
-                <td className="px-3 py-1.5">{f.subject}</td>
-                <td className="px-3 py-1.5">{GRADE_NAMES[f.grade]?.split(" ")[0]} · {f.classes.map((c) => c.class_no).join("، ")}</td>
-                <td className="px-3 py-1.5">{FORM_STATUS[f.status].t}{isOverdue(f) ? " · متأخر" : ""}</td>
-                <td className="num px-3 py-1.5">{["sent", "returned"].includes(f.status) ? fmtDate(f.due_on) : "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <section className="card overflow-hidden">
+        <h3 className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">النماذج وحالتها</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px] table-fixed text-[12.5px]">
+            <colgroup><col className="w-[24%]" /><col className="w-[15%]" /><col className="w-[21%]" /><col className="w-[19%]" /><col /></colgroup>
+            <thead className="bg-canvas text-muted"><tr>
+              <th className={`${TH} text-start`}>المعلم</th><th className={`${TH} text-start`}>المادة</th><th className={`${TH} text-start`}>الصف والفصول</th>
+              <th className={`${TH} text-center`}>الحالة</th><th className={`${TH} text-center`}>المهلة</th>
+            </tr></thead>
+            <tbody className="divide-y divide-line">
+              {s.rows.map((f) => (
+                <tr key={f.id} className="hover:bg-canvas/50">
+                  <td className={`${TD} font-semibold text-ink`}><Link to={`/ach-forms/${f.id}`} className="hover:text-mint-deep">{f.teacher_name}</Link></td>
+                  <td className={TD}>{f.subject}</td>
+                  <td className={`${TD} num`}>{GRADE_NAMES[f.grade]?.split(" ")[0]} · {f.classes.map((c) => c.class_no).join("، ")}</td>
+                  <td className={`${TD} text-center`}><StatusChip f={f} /></td>
+                  <td className={`${TD} num whitespace-nowrap text-center`}>{["sent", "returned"].includes(f.status) ? fmtDate(f.due_on) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   );
@@ -149,7 +169,7 @@ export function DeputyReport({ forms, keyName, checks, recs, scope }) {
       </div>
       {official
         ? <ReportViewer id="ach-report" pages={pages} theme={theme} setTheme={setTheme} fileTitle={`تقرير متابعة التحصيل - ${noticeTitle(keyName)}`} />
-        : body(false)}
+        : body}
     </div>
   );
 }
