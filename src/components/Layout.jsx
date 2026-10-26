@@ -1001,11 +1001,12 @@ export default function Layout({ children }) {
         </div>
       </div>
 
-      {/* زر رجوع عائم — الجوال: قريبًا من الإبهام */}
+      {/* زر رجوع عائم — الجوال: قريبًا من الإبهام، ويرتفع فوق شريط إجراء الصفحة إن وُجد (.mobile-action-bar) */}
       {showBack && (
         <button type="button" onClick={onBack}
                 className={`fixed right-4 z-30 flex items-center gap-1.5 rounded-pill bg-mint-deep py-2.5 pl-4 pr-3 text-sm font-semibold text-white shadow-lg hover:bg-mint-hover lg:hidden print:hidden ${
-                  bottomItems.length > 0 ? "bottom-[calc(5rem+env(safe-area-inset-bottom))]" : "bottom-6"}`}>
+                  bottomItems.length > 0 ? "bottom-[calc(5rem+env(safe-area-inset-bottom))]" : "bottom-6"
+                } [body:has(.mobile-action-bar)_&]:bottom-[calc(9.5rem+env(safe-area-inset-bottom))]`}>
           <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none"
                stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12h14M13 6l6 6-6 6" />

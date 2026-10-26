@@ -531,9 +531,11 @@ export default function Attendance() {
       )}
 
       {/* زر الحفظ ثابت أسفل الشاشة في كل المقاسات (الجوال فوق شريط التنقل، والحاسب
-          والآيباد ملتصق بأسفل الصفحة) — فلا يحتاج المعلم النزول لآخر القائمة */}
-      <div className="fixed inset-x-0 bottom-14 z-30 border-t border-line bg-paper/95 p-3 backdrop-blur
-                      sm:sticky sm:bottom-3 sm:inset-x-auto sm:rounded-card sm:border sm:shadow-[0_10px_30px_-18px_rgba(16,16,16,.45)]">
+          والآيباد ملتصق بأسفل الصفحة) — فلا يحتاج المعلم النزول لآخر القائمة.
+          على الجوال فوق شريط التنقل بارتفاعه كاملًا مع منطقة الإيماءات أسفل iPhone، وفي طبقة
+          أعلى منه؛ وزر «رجوع» العائم يرتفع فوقه (mobile-action-bar في Layout.jsx) */}
+      <div className="mobile-action-bar fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 border-t border-line bg-paper/95 p-3 backdrop-blur
+                      sm:sticky sm:bottom-3 sm:z-30 sm:inset-x-auto sm:rounded-card sm:border sm:shadow-[0_10px_30px_-18px_rgba(16,16,16,.45)]">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
           <button className="btn-primary w-full sm:w-auto" onClick={save}
                   disabled={saving || !students.length || activeLocked}>
@@ -543,7 +545,7 @@ export default function Attendance() {
           </button>
         </div>
       </div>
-      <div className="h-16 sm:hidden" />
+      <div className="h-20 sm:hidden" />
     </div>
   );
 }
