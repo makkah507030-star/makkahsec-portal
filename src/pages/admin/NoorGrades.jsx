@@ -3,7 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate, fmtHijri } from "../../lib/dates";
 import { GRADE_NAMES, todayISO } from "../../lib/schoolTime";
-import { printReport, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { printReport, rawHtml, escHtml, ACADEMIC_DEPUTY_NAME, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
@@ -336,13 +336,14 @@ export default function NoorGrades() {
       const days = Math.max(...g.list.map((r) => r.tm.d ?? 0));
       const late = days > 5;
       const notes = [...new Set(g.list.filter((r) => r.st === "partial" && r.note).map((r) => r.note.replace(/\n/g, "، ")))];
+      // خانات HTML مقصودة (rawHtml)، والنصوص داخلها مهرّبة (الملاحظة قد تأتي من كشف Excel)
       return [
-        i + 1, `<b>${g.subject}</b>`, `<span style="white-space:nowrap">${g.teacher}</span>`,
-        `<div style="line-height:1.9">${g.list.map(chip).join("")}</div>`
-          + (notes.length ? `<div style="margin-top:3px;font-size:10px;color:#2C527A">الناقص: ${notes.join(" · ")}</div>` : ""),
-        `<b style="font-size:14px">${g.list.length}</b>`,
-        `<span style="white-space:nowrap">${fmtHijri(oldest)}</span>${allCont ? `<div style="font-size:10px;color:#6B6B6B">تقويم مستمر</div>` : ""}`,
-        late ? `<b style="color:#A23B3B;font-size:14px">${days}</b><div style="font-size:10px;font-weight:700;color:#A23B3B">متأخر</div>` : `<b style="font-size:14px">${days}</b>`,
+        i + 1, rawHtml(`<b>${escHtml(g.subject)}</b>`), rawHtml(`<span style="white-space:nowrap">${escHtml(g.teacher)}</span>`),
+        rawHtml(`<div style="line-height:1.9">${g.list.map(chip).join("")}</div>`
+          + (notes.length ? `<div style="margin-top:3px;font-size:10px;color:#2C527A">الناقص: ${escHtml(notes.join(" · "))}</div>` : "")),
+        rawHtml(`<b style="font-size:14px">${g.list.length}</b>`),
+        rawHtml(`<span style="white-space:nowrap">${fmtHijri(oldest)}</span>${allCont ? `<div style="font-size:10px;color:#6B6B6B">تقويم مستمر</div>` : ""}`),
+        rawHtml(late ? `<b style="color:#A23B3B;font-size:14px">${days}</b><div style="font-size:10px;font-weight:700;color:#A23B3B">متأخر</div>` : `<b style="font-size:14px">${days}</b>`),
       ];
     });
     printReport({

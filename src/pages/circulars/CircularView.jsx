@@ -12,7 +12,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate, fmtDateTime } from "../../lib/dates";
-import { printReport, exportStyledExcel, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { printReport, rawHtml, escHtml, exportStyledExcel, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { confirmDanger } from "../../lib/danger";
 import { refreshNavBadges } from "../../lib/navBadges.js";
 import { countAr } from "../../lib/arabicCount.js";
@@ -194,7 +194,7 @@ function Tracking({ c, recs, onChange, setMsg }) {
   const HEAD = ["م", "الاسم", "الصفة", "فتحه", c.needs_ack ? "أقرّ بالاطلاع" : "الحالة", "التوقيع"];
   const kindT = (r) => r.roleT ?? (r.kind === "guardian" ? "ولي أمر" : "معلم");
   // خانة التوقيع: صورة توقيع المنسوب الذي أقرّ، أو «أقرّ إلكترونيًا»، وإلا فارغة للتوقيع باليد
-  const sigCell = (r) => (r.sigUrl ? `<img src="${r.sigUrl}" alt="" style="height:30px;max-width:110px;object-fit:contain" />`
+  const sigCell = (r) => (r.sigUrl ? rawHtml(`<img src="${escHtml(r.sigUrl)}" alt="" style="height:30px;max-width:110px;object-fit:contain" />`)
     : r.ack_at ? "✓ أقرّ إلكترونيًا" : "");
   const line = (r, i) => [i + 1, r.name ?? "—", kindT(r), r.read_at ? fmtDateTime(r.read_at) : "—",
     c.needs_ack ? (r.ack_at ? fmtDateTime(r.ack_at) : "—") : recStatus(r, false).t, sigCell(r)];

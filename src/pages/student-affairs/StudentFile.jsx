@@ -10,7 +10,7 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
-import { printReport } from "../../lib/exportUtils";
+import { printReport, escHtml } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { loadRangeStart, WARNING_STAGES } from "../../lib/officialAttendance";
 import { SIGNS, logos, DateInput, Note, Loading, weekdayOf, useFingerprint } from "./shared.jsx";
@@ -633,11 +633,13 @@ function Timeline({ items }) {
 /* ——— الطباعة: الملف كاملًا بهوية البوابة ——— */
 function printFile({ s, st, m, data, from, to, fp, kpis }) {
   const COLOR = { ok: "#2E8B57", warn: "#9A6B12", bad: "#B02A2A", info: "#3E6350", none: "#7A8781" };
-  const kv = (k, v) => `<tr><th>${k}</th><td>${v ?? "—"}</td></tr>`;
-  const tile = (k) => `<div class="stat-tile" style="border-top:3px solid ${COLOR[k.tone]}"><div class="v" style="color:${COLOR[k.tone]}">${k.value}</div><div class="l">${k.label}</div><div class="l" style="font-size:9px">${k.sub}</div></div>`;
+  // الملف HTML جاهز (sections.html): كل قيمة من البيانات تُهرَّب (فيه نص أعذار ولي الأمر والمخالفات والإحالات)
+  const esc = escHtml;
+  const kv = (k, v) => `<tr><th>${k}</th><td>${esc(v ?? "—")}</td></tr>`;
+  const tile = (k) => `<div class="stat-tile" style="border-top:3px solid ${COLOR[k.tone]}"><div class="v" style="color:${COLOR[k.tone]}">${esc(k.value)}</div><div class="l">${esc(k.label)}</div><div class="l" style="font-size:9px">${esc(k.sub)}</div></div>`;
   const head = (t, n) => `<p class="sec-h">${t}${n != null ? ` <span class="c">(${n})</span>` : ""}</p>`;
   const table = (hs, rows, cls = "") => `<table class="${cls}"><thead><tr>${hs.map((h) => `<th>${h}</th>`).join("")}</tr></thead>
-    <tbody>${rows.map((r, i) => `<tr><td>${i + 1}</td>${r.map((c) => `<td>${c ?? ""}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    <tbody>${rows.map((r, i) => `<tr><td>${i + 1}</td>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
   const block = (t, rows, hs, emptyT, cls) => head(t, rows.length) + (rows.length ? table(["م", ...hs], rows, cls) : `<p class="empty">${emptyT}</p>`);
   const g = st.guardian;
   const att = data.att ?? {}, con = data.con ?? {}, aca = data.aca ?? {};
@@ -652,7 +654,7 @@ function printFile({ s, st, m, data, from, to, fp, kpis }) {
     </table>
     <div class="stat-tiles" style="margin-top:12px">${kpis.map(tile).join("")}</div>
     ${head("نقاط تحتاج انتباهًا", m.alerts.length)}
-    ${m.alerts.length ? `<ul>${m.alerts.map((a) => `<li style="color:${COLOR[a.tone]}">${a.text}</li>`).join("")}</ul>` : `<p class="empty">لا ملاحظات تستدعي التدخل.</p>`}
+    ${m.alerts.length ? `<ul>${m.alerts.map((a) => `<li style="color:${COLOR[a.tone]}">${esc(a.text)}</li>`).join("")}</ul>` : `<p class="empty">لا ملاحظات تستدعي التدخل.</p>`}
     ${block("الإنذارات", m.warnings.map((w) => [STAGE[w.stage]?.label ?? w.stage, day(w.on), w.days ?? "—", w.by ?? ""]), ["الإنذار", "التاريخ", "أيام الغياب", "أصدره"], "لا إنذارات.", "danger")}
     ${block("الغياب الرسمي", [...m.absent, ...m.excusedDays].sort((a, b) => a.d.localeCompare(b.d)).map((d) =>
       [`${weekdayOf(d.d)} ${day(d.d)}`, d.s === "absent" ? "غائب بلا عذر" : "غائب بعذر", d.punched ? "بصم ولم يحضر الحصص" : ""]), ["اليوم والتاريخ", "الحالة", "ملاحظة"], "لا غياب رسمي في الفترة.")}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { fmtDateTime } from "../../lib/dates";
-import { printReport, escHtml, PRINCIPAL_NAME, TECH_SUPPORT_NAME } from "../../lib/exportUtils";
+import { printReport, PRINCIPAL_NAME, TECH_SUPPORT_NAME } from "../../lib/exportUtils";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
@@ -94,13 +94,13 @@ export default function SupportReport() {
     const ticketRows = (rows ?? []).map((r, i) => [
       i + 1,
       fmtDateTime(r.created_at),
-      // التذاكر يرسلها الزائر غير المسجّل أيضًا: تهريب كل ما يأتي منها
-      escHtml(CAT_LABEL[r.category] ?? r.category),
-      escHtml(r.role_label || "—"),
-      escHtml(STATUS_LABEL[r.status] ?? r.status),
-      escHtml(r.national_id || "—"),
-      escHtml(r.name || "—"),
-      escHtml((r.message || "").slice(0, 70)),
+      // التذاكر يرسلها الزائر غير المسجّل أيضًا: printReport يهرّب الخانات كلها
+      CAT_LABEL[r.category] ?? r.category,
+      r.role_label || "—",
+      STATUS_LABEL[r.status] ?? r.status,
+      r.national_id || "—",
+      r.name || "—",
+      (r.message || "").slice(0, 70),
     ]);
 
     const overviewHtml =

@@ -869,8 +869,7 @@ function FollowUp({ list, rows, onOpen, onChange, ...rowProps }) {
 }
 
 /* ------------------ تقرير المتابعة (طباعة / Excel) ------------------ */
-const escHtml = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
-  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+// خانات الطباعة يهرّبها printReport نفسه
 
 const REPORT_HEADERS = [
   "م", "رقم الإحالة", "الطالب", "الفصل", "سبب الإحالة", "المعلم",
@@ -913,7 +912,7 @@ function ReportBar({ list, title }) {
   const print = () => printReport({
     title, subtitle: summary(), headers: REPORT_HEADERS, note, signatures, landscape: true,
     rows: reportRows(list).map(({ late, cells }) => cells.map((c, k) =>
-      k === 9 && late ? { text: escHtml(c), cls: "st-absent" } : escHtml(c))),
+      k === 9 && late ? { text: c, cls: "st-absent" } : c)),
     logoUrl: new URL(logoIcon, window.location.origin).href,
     moeLogoUrl: new URL(moeLogo, window.location.origin).href,
   });
