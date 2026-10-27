@@ -44,7 +44,7 @@ const r1 = (x) => Math.round(x * 10) / 10;
 // اطلاع الدعم الفني: تظهر المراحل والخطط والنتائج، وتختفي أزرار الاعتماد والتعديل والإنشاء
 const ReadOnlyCtx = createContext(false);
 
-function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, parentId = null }) {
+function PlanForm({ q, kind, plan, suggested, current, onSaved, onCancel, round = 1, parentId = null }) {
   const [picked, setPicked] = useState(() => new Set((plan?.students ?? suggested).map((s) => s.id)));
   const [skills, setSkills] = useState(plan?.skills ?? "");
   const [procedures, setProcedures] = useState(plan?.procedures ?? "");
@@ -54,8 +54,10 @@ function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, pare
   const [err, setErr] = useState("");
   const pool = useMemo(() => {
     const m = new Map([...(plan?.students ?? []), ...suggested].map((s) => [s.id, s]));
-    return [...m.values()];
-  }, [plan, suggested]);
+    // النسبة الحالية لا المحفوظة في الخطة (قد تتغير بعد تحديث التحليل)
+    return [...m.values()].map((s) => (current?.has(s.id) ? { ...s, avg: current.get(s.id) } : s));
+  }, [plan, suggested, current]);
+  const inGroup = useMemo(() => new Set(suggested.map((s) => s.id)), [suggested]);
 
   const save = async () => {
     setErr("");
@@ -95,6 +97,7 @@ function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, pare
                 <input type="checkbox" checked={picked.has(s.id)}
                        onChange={() => setPicked((p) => { const n = new Set(p); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); return n; })} />
                 <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                {round === 1 && !inGroup.has(s.id) && <span className="text-[11px] text-warning">خارج الفئة</span>}
                 <span className="num text-xs text-muted">{s.avg}%</span>
               </label>
             ))}
@@ -171,6 +174,7 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
       <p className="mt-1 text-sm text-muted">
         {countAr(plan.students?.length ?? 0, "student")} · {plan.skills}
       </p>
+      {plan.procedures && <p className="mt-1 text-sm text-muted">الإجراءات: {plan.procedures}</p>}
       {done && plan.done_note && <p className="mt-1 text-sm text-muted">ملاحظة التنفيذ: {plan.done_note}</p>}
       <div className="mt-2 flex flex-wrap gap-3 text-sm">
         <button className="text-mint-deep underline" onClick={print}>طباعة الخطة</button>
@@ -386,6 +390,11 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange, vi
     top: graded.filter((s) => s.avg >= EXCEL_PCT).sort((a, b) => b.avg - a.avg),
   }), [graded]);
   const snap = q.analysis ?? live;
+  // رُصد طلاب أو تغيّرت النسب بعد اعتماد التحليل: الخطط تقترح من لقطة قديمة
+  const ids = (l) => (l ?? []).map((s) => s.id).sort().join();
+  const stale = !!q.analysis && (Number(q.analysis.graded) !== live.graded
+    || ids(q.analysis.support) !== ids(live.support) || ids(q.analysis.top) !== ids(live.top));
+  const currentPct = useMemo(() => new Map(graded.map((s) => [s.id, s.avg])), [graded]);
 
   if (subs === null) return null;
 
@@ -507,6 +516,16 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange, vi
 
       {done.analysis && (
         <div className="space-y-3">
+          {stale && !done.close && (
+            <div className="flex flex-wrap items-center gap-2 rounded-sm2 bg-warning/10 px-3 py-2 text-sm text-warning">
+              <p className="flex-1">
+                تغيّر الرصد بعد اعتماد التحليل: صُحّح الآن <span className="num">{live.graded}</span> طالبًا
+                (يحتاج دعمًا <span className="num">{live.support.length}</span> · المتفوقون <span className="num">{live.top.length}</span>)،
+                والخطط تقترح من التحليل المعتمد. حدّثه ثم راجع الخطط.
+              </p>
+              {!ro && <button className="btn-primary shrink-0 px-4 py-1.5 text-xs" onClick={approveAnalysis} disabled={busy}>تحديث التحليل</button>}
+            </div>
+          )}
           {!needPlan && (
             <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-sm text-mint-deep">
               لا يوجد من يحتاج دعمًا، فلا تلزم خطة علاجية. الخطة الإثرائية اختيارية.
@@ -515,7 +534,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange, vi
           {rounds("remedial").map((p) => (
             <div key={p.id} className="space-y-2">
               {editing === "remedial" && p === lastRem
-                ? <PlanForm q={q} kind="remedial" plan={p} round={p.round ?? 1} suggested={snap.support ?? []}
+                ? <PlanForm current={currentPct} q={q} kind="remedial" plan={p} round={p.round ?? 1} suggested={snap.support ?? []}
                             onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
                 : <PlanCard q={q} plan={p} teacherName={teacherName} onEdit={() => setEditing("remedial")} onChanged={load} />}
               {p.status === "done" && !(q.cycle_closed_at && !p.measured_at) && (
@@ -525,7 +544,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange, vi
             </div>
           ))}
           {editing === "remedial2" && needRound2 && (
-            <PlanForm q={q} kind="remedial" round={2} parentId={lastRem.id} suggested={round2Students}
+            <PlanForm current={currentPct} q={q} kind="remedial" round={2} parentId={lastRem.id} suggested={round2Students}
                       onCancel={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />
           )}
           {["remedial", "enrichment"].map((k) => {
