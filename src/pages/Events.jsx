@@ -6,7 +6,8 @@ import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { GRADE_NAMES, todayISO, PERIODS_PER_DAY } from "../lib/schoolTime";
 import PrintPortal from "../components/PrintPortal.jsx";
 import { printThen } from "../lib/print.js";
-import EventReportSheet from "../components/EventReportSheet.jsx";
+import ReportViewer from "../components/report/ReportViewer.jsx";
+import { eventReportPages } from "./EventReportDoc.jsx";
 import { normalizeImage } from "../lib/imageResize.js";
 import EventCertificate, {
   CERT_TEMPLATES, DEFAULT_CERT_TITLE, certPresets, isNationalDay, officialCert, readCert,
@@ -2158,7 +2159,8 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
   const [photoUrls, setPhotoUrls] = useState({});   // المسار ← رابط موقّع
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useNotice(null, "error");
-  const [printing, setPrinting] = useState(false);
+  const [printing, setPrinting] = useState(false);   // عرض التقرير المصمّم للطباعة
+  const [theme, setTheme] = useState("light");
   const { sigUrl, school } = useEventSignatures(e);
 
   const approved = e.stage === "approved";
@@ -2199,8 +2201,6 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [f.report_photos]);
-
-  usePrintWhenReady("ev-report-sheet", printing, () => setPrinting(false));
 
   const save = async (next = f, okText = "حُفظ التقرير.") => {
     const ok = await patch(next, okText);
@@ -2263,6 +2263,11 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
   );
 
   const photos = f.report_photos.map((p) => photoUrls[p]).filter(Boolean);
+  // التقرير بهوية البوابة (EventReportDoc): يُبنى عند فتحه فقط
+  const pages = useMemo(() => (printing ? eventReportPages({
+    e: { ...e, ...f }, stats, attended, staff: staffIn, photos, theme,
+    sigs: { organizer: sigUrl, principal: school.principalUrl, principalName: school.principalName, stamp: school.stampUrl },
+  }) : null), [printing, e, f, stats, attended, staffIn, photos, theme, sigUrl, school]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="space-y-4">
@@ -2343,7 +2348,7 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
           )}
           <button className="flex-1 rounded-pill border border-line py-2 text-sm text-ink hover:bg-canvas"
                   onClick={async () => { if (!locked) await save(f, null); setPrinting(true); }}>
-            طباعة / حفظ PDF
+            عرض التقرير وطباعته
           </button>
         </div>
         {!locked && (
@@ -2363,11 +2368,13 @@ function StageReport({ e, parts, patch, onMsg, onSubmitted }) {
       </section>
 
       {printing && (
-        <PrintPortal id="ev-report-sheet" margin="10mm 14mm">
-          <EventReportSheet event={{ ...e, ...f }} stats={stats} attended={attended} staff={staffIn} photos={photos}
-                            sigUrl={sigUrl} stampUrl={school.stampUrl} principalName={school.principalName}
-                            principalUrl={approved ? school.principalUrl : null} />
-        </PrintPortal>
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-ink">تقرير تنفيذ الحدث بهوية البوابة</p>
+            <button className="text-sm text-muted underline" onClick={() => setPrinting(false)}>إغلاق</button>
+          </div>
+          <ReportViewer id="ev-report-print" pages={pages} theme={theme} setTheme={setTheme} fileTitle={`تقرير ${e.title}`} />
+        </section>
       )}
     </div>
   );

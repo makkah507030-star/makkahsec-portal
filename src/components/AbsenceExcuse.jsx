@@ -97,7 +97,7 @@ export async function openExcuseFile(path) {
 /* نموذج رفع العذر: الأيام (من أيام الغياب بلا عذر)، والنوع، والسبب، والمرفق */
 export function ExcuseForm({ studentId, days, initial, onDone, onCancel }) {
   const [picked, setPicked] = useState(() => new Set(initial ? [initial] : []));
-  const [caseKey, setCaseKey] = useState(null);      // من EXCUSE_CASES أو "other"
+  const [caseKey, setCaseKey] = useState(null);      // من EXCUSE_CASES وحدها (الأعذار الرسمية)
   const [reason, setReason] = useState("");
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -142,7 +142,7 @@ export function ExcuseForm({ studentId, days, initial, onDone, onCancel }) {
       <div>
         <p className="mb-1 text-xs text-muted">حالة العذر (من الأعذار المقبولة رسميًا) — مع إحضار ما يثبتها</p>
         <div className="grid gap-1.5 sm:grid-cols-2">
-          {[...EXCUSE_CASES, { k: "other", t: "ظرف آخر لا يرد في القائمة", proof: "ما يثبت الظرف إن وُجد", note: "يقدّره وكيل شؤون الطلاب" }].map((c) => {
+          {EXCUSE_CASES.map((c) => {
             const on = caseKey === c.k;
             return (
               <button key={c.k} type="button" onClick={() => setCaseKey(c.k)}
@@ -163,12 +163,30 @@ export function ExcuseForm({ studentId, days, initial, onDone, onCancel }) {
       </label>
       {err && <p className="text-xs text-absent">{err}</p>}
       <div className="flex gap-2">
-        <button className="btn-primary" disabled={busy || !picked.size || !caseKey || (caseKey === "other" ? !reason.trim() && !file : !file && caseOf(caseKey)?.proof)} onClick={send}>
+        <button className="btn-primary" disabled={busy || !picked.size || !caseKey || (!file && caseOf(caseKey)?.proof)} onClick={send}>
           {busy ? "جارٍ الإرسال…" : "إرسال العذر"}
         </button>
         <button className="btn-ghost" onClick={onCancel}>إلغاء</button>
       </div>
       <p className="text-[11px] text-faint">عند قبول العذر يصير غياب هذه الأيام «غائب بعذر»، ويصلك إشعار بالقرار.</p>
+    </div>
+  );
+}
+
+/* بطاقات اختيار حالة العذر من الأعذار الرسمية */
+export function CasePicker({ value, onChange }) {
+  return (
+    <div className="grid gap-1.5 sm:grid-cols-2">
+      {EXCUSE_CASES.map((c) => {
+        const on = value === c.k;
+        return (
+          <button key={c.k} type="button" onClick={() => onChange(c.k)}
+                  className={`rounded-sm2 border px-3 py-2 text-start transition ${on ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-white hover:border-mint-light"}`}>
+            <span className={`block text-[12.5px] font-semibold ${on ? "text-white" : "text-ink"}`}><span className="num">{c.n}. </span>{c.t}</span>
+            {c.proof && <span className={`block text-[11px] ${on ? "text-white/85" : "text-muted"}`}>الإثبات: {c.proof}</span>}
+          </button>
+        );
+      })}
     </div>
   );
 }

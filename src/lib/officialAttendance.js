@@ -113,7 +113,7 @@ export function finalStatus({ periods, official }) {
  *  { student_id, full_name, class_no, grade, periods, punch, punched,
  *    official, final, conflict, noPunch, isLate, lateMinutes }
  */
-export function computeDay({ students, attendance, punches, excusedIds, scheduleByClass, dayStart, noPunchLate = false }) {
+export function computeDay({ students, attendance, punches, excusedIds, scheduleByClass, dayStart, noPunchLate = false, lateFix = null }) {
   const periodsBy = new Map();
   (attendance ?? []).forEach((r) => {
     const no = r.schedule?.period_no;
@@ -140,6 +140,12 @@ export function computeDay({ students, attendance, punches, excusedIds, schedule
     // لم يبصم وحضر الحصة الأولى أو الثانية: متأخر بلا وقت (البصمة أُغلقت مع
     // بداية الحصة الأولى). من غاب عنهما غائب رسميًا فلا يُضاف له تأخر.
     const lateNoTime = noPunchLate && !punch && official === "present";
+    // تصحيح التأخر من مركز تصحيح الحضور يتقدّم على البصمة
+    const fix = lateFix?.get(s.student_id);
+    if (fix) {
+      late.isLate = fix.mode === "late";
+      late.minutes = fix.mode === "late" ? fix.minutes || 1 : 0;
+    }
     return {
       ...s,
       periods,
@@ -149,9 +155,10 @@ export function computeDay({ students, attendance, punches, excusedIds, schedule
       final,
       conflict: official === "absent" && !!punch,     // بصم ولم يحضر الحصتين
       noPunch: official === "present" && !punch,      // حضر الحصص بلا بصمة
-      isLate: late.isLate || lateNoTime,
+      isLate: fix ? late.isLate : late.isLate || lateNoTime,
       lateMinutes: late.minutes,
-      lateNoTime,
+      lateNoTime: fix ? false : lateNoTime,
+      lateFix: fix?.mode ?? null,
     };
   });
 }
@@ -258,7 +265,7 @@ export async function loadTermStart(today) {
   return data?.[0]?.start_date ?? null;
 }
 
-const dowOf = (date) => {
+export const dowOf = (date) => {
   const d = new Date(`${date}T12:00:00`).getDay() + 1; // الأحد = 1
   return d >= 1 && d <= 5 ? d : 0;
 };
@@ -278,7 +285,7 @@ export async function loadDay(date) {
   const dow = dowOf(date);
   const { year, term } = await loadActiveTerm();
 
-  const [students, attendance, allPunches, excRes, { rows: ptimes }, schedRes, fingerprint, fpSince] = await Promise.all([
+  const [students, attendance, allPunches, excRes, { rows: ptimes }, schedRes, fingerprint, fpSince, lateRes] = await Promise.all([
     activeStudents(),
     fetchAllPaged(() =>
       supabase.from("class_attendance")
@@ -299,6 +306,8 @@ export async function loadDay(date) {
       : Promise.resolve({ data: [] }),
     loadFingerprintEnabled(),
     loadFingerprintSince(),
+    // تصحيح التأخر (supabase/attendance_fix_1.sql) — فارغ إن لم يُشغَّل الملف
+    supabase.from("attendance_late_overrides").select("student_id, mode, minutes").eq("attend_date", date),
   ]);
   // البصمة المقفلة (مرحلة تجربة) لا تدخل في أي حساب
   const punches = fingerprint ? allPunches : [];
@@ -322,6 +331,7 @@ export async function loadDay(date) {
     dayStart,
     // يوم بلا أي بصمة (عطل الجهاز) أو قبل فتح البصمة: لا يُحسب أحد متأخرًا بلا وقت
     noPunchLate: fingerprint && punches.length > 0 && (!fpSince || date >= fpSince),
+    lateFix: new Map((lateRes?.data ?? []).map((r) => [r.student_id, r])),
   });
 
   // سجلات تحضير لم يعد جدولها موجودًا (مثلًا بعد إعادة استيراد الجدول) — لا تُحتسب
@@ -369,8 +379,9 @@ export function isMissingTable(error) {
 }
 
 /** اعتماد الغياب الرسمي لليوم (أو إعادة اعتماده) */
-export async function approveDay(date, rows, { retroactive = false } = {}) {
-  const { year, term } = await loadActiveTerm();
+export async function approveDay(date, rows, { retroactive = false, year: y = null, term: t = null } = {}) {
+  // إعادة اعتماد يوم سابق تُبقي عامه وفصله المحفوظين
+  const { year, term } = y && t ? { year: y, term: t } : await loadActiveTerm();
   const sum = summarize(rows, "official");
   const marks = rows
     .filter((r) => r.official !== "present" || r.isLate)
@@ -411,6 +422,19 @@ export async function saveFinal(date, rows) {
     p_mode: "final",
   });
   if (error) throw error;
+}
+
+/**
+ * إعادة احتساب يوم معتمد بعد تصحيح من مركز تصحيح الحضور: الغياب الرسمي والتأخر
+ * (مع بقاء التصحيحات اليدوية)، ثم النسبة المكتملة إن حُفظت. يعيد false لليوم غير المعتمد.
+ */
+export async function recomputeDay(date) {
+  const { day } = await loadApproval(date);
+  if (!day) return false;
+  const { rows } = await loadDay(date);
+  await approveDay(date, rows, { retroactive: !!day.retroactive, year: day.academic_year, term: day.term });
+  if (day.final_at) await saveFinal(date, rows);
+  return true;
 }
 
 /** تصحيح حالة طالب بعد الاعتماد */

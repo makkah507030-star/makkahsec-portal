@@ -6,7 +6,7 @@
    والدعم الفني وموجّه صف الطالب. الحدود والحالات في studentFileModel.js.
    ===================================================================== */
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
@@ -26,13 +26,6 @@ import PeriodNoticeCard from "../../components/PeriodNoticeCard.jsx";
 
 // من يعدّل حضور الحصص (supabase/class_attendance_staff_edit.sql)
 const EDIT_ROLES = ["principal", "tech_support", "deputy_students"];
-
-const P_STATUS = {
-  present: { t: "حاضر",   c: "text-present" },
-  absent:  { t: "غائب",   c: "text-absent" },
-  late:    { t: "متأخر",  c: "text-late" },
-  excused: { t: "مستأذن", c: "text-excused" },
-};
 
 const STAGE = Object.fromEntries(WARNING_STAGES.map((s) => [s.key, s]));
 const day = (d) => (d ? fmtDate(String(d).slice(0, 10) + "T12:00:00") : "—");
@@ -108,10 +101,8 @@ export default function StudentFile() {
 
 function FileBody({ s, from, to }) {
   const [data, setData] = useState(null);
-  const [reload, setReload] = useState(0);
   const fp = useFingerprint();
-  const { adminRoles, session } = useSession();
-  const canEdit = (adminRoles ?? []).some((r) => EDIT_ROLES.includes(r));
+  const { can } = useSession();
 
   useEffect(() => {
     let live = true;
@@ -125,7 +116,7 @@ function FileBody({ s, from, to }) {
         setData(err ? { err } : { att: a.data, con: c.data, aca: k.data, gd: g.error ? null : g.data });
       });
     return () => { live = false; };
-  }, [s, from, to, reload]);
+  }, [s, from, to]);
 
   const m = useMemo(() => data && !data.err ? buildModel(data.att, data.con, data.aca, todayISO()) : null, [data]);
 
@@ -162,8 +153,17 @@ function FileBody({ s, from, to }) {
       {/* إشعار الفترة من نور كما يراه الطالب، ومعه المجموع والنسبة للإدارة */}
       <PeriodNoticeCard studentId={s.student_id} staff />
 
-      {canEdit && <PeriodEdit sid={s.student_id} from={from} to={to} uid={session?.user?.id ?? null}
-        onSaved={() => setReload((n) => n + 1)} />}
+      {/* التعديل في مركز تصحيح الحضور وحده (المكان الرسمي)، مع إعادة احتساب اليوم */}
+      {can("attendance_fix") && (
+        <Link to={`/student-affairs?tab=fix&sid=${s.student_id}`}
+              className="card flex items-center justify-between gap-2 p-4 text-sm font-semibold text-ink hover:bg-canvas">
+          <span className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-sm2 bg-mint-tint text-mint-deep"><Icon name="edit" className="h-4 w-4" /></span>
+            تصحيح حضور الطالب
+          </span>
+          <span className="text-xs text-mint-deep">مركز تصحيح الحضور ←</span>
+        </Link>
+      )}
 
       <Timeline items={m.timeline} />
     </div>
@@ -680,95 +680,3 @@ function printFile({ s, st, m, data, from, to, fp, kpis }) {
   });
 }
 
-/* تعديل حضور الحصص — للإدارة: إلغاء غياب حصة أو تغيير نوعه بعد انتهاء وقتها
-   (ومنها حصص الانتظار التي لا يعود المعلم إليها). لا يُضاف غياب جديد من هنا،
-   فلا يصل ولي الأمر أي إشعار بسبب التعديل. */
-function PeriodEdit({ sid, from, to, uid, onSaved }) {
-  const [open, setOpen] = useState(false);
-  const [periods, setPeriods] = useState(null);
-  const [draft, setDraft] = useState({});
-  const [busy, setBusy] = useState(null);
-  const [msg, setMsg] = useState(null);
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    if (!open) return;
-    setPeriods(null);
-    fetchAllPaged(() => supabase.from("class_attendance")
-      .select("id, attend_date, status, updated_at, schedule(period_no, subjects(name))")
-      .eq("student_id", sid).in("status", ["absent", "late", "excused"])
-      .gte("attend_date", from).lte("attend_date", to)
-      .order("id", { ascending: true })).then(setPeriods).catch(() => setPeriods([]));
-  }, [open, sid, from, to, tick]);
-
-  const rows = [...(periods ?? [])].sort((a, b) =>
-    b.attend_date.localeCompare(a.attend_date) ||
-    (a.schedule?.period_no ?? 0) - (b.schedule?.period_no ?? 0));
-
-  // الحالة الحالية، ثم ما يُسمح بالتغيير إليه (بلا «غائب» لمن ليس غائبًا)
-  const options = (cur) => [cur, ...["present", "late", "excused"].filter((k) => k !== cur)];
-
-  const save = async (p) => {
-    const next = draft[p.id];
-    if (!next || next === p.status) return;
-    setBusy(p.id); setMsg(null);
-    const { error } = await supabase.from("class_attendance")
-      .update({ status: next, updated_by: uid, updated_at: new Date().toISOString() })
-      .eq("id", p.id);
-    setBusy(null);
-    if (error) { setMsg({ ok: false, text: `تعذّر الحفظ: ${error.message}` }); return; }
-    setMsg({ ok: true, text: `عُدّلت حصة ${p.schedule?.period_no ?? ""} يوم ${day(p.attend_date)} إلى «${P_STATUS[next].t}».` });
-    setDraft((d) => { const n = { ...d }; delete n[p.id]; return n; });
-    setTick((n) => n + 1);
-    onSaved();
-  };
-
-  return (
-    <section className="card p-4">
-      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-sm font-semibold text-ink">
-        <span className="flex items-center gap-2"><span className="grid h-7 w-7 place-items-center rounded-sm2 bg-mint-tint text-mint-deep"><Icon name="edit" className="h-4 w-4" /></span>
-          تعديل حضور الحصص</span>
-        <span className="text-xs text-mint-deep">{open ? "إخفاء" : "فتح"}</span>
-      </button>
-      {open && <div className="mt-3 space-y-2">
-        <p className="text-xs leading-relaxed text-muted">
-          لإلغاء غياب حصة أو تغيير نوعه بعد انتهاء وقتها — ومنها حصص الانتظار. التعديل لا يُرسل
-          أي إشعار لولي الأمر، ويُسجَّل باسمك ووقته.
-        </p>
-        {!periods ? <Loading /> : rows.length === 0 ? <p className="text-sm text-muted">لا غياب ولا تأخر حصص في الفترة المختارة.</p> : (
-          <div className="divide-y divide-line">
-            {rows.map((p) => {
-              const val = draft[p.id] ?? p.status;
-              const dirty = val !== p.status;
-              return (
-                <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                  <div className="min-w-0 text-sm">
-                    <span className="text-ink">{weekdayOf(p.attend_date)} <span className="num">{day(p.attend_date)}</span></span>
-                    <span className="text-muted"> · الحصة <span className="num">{p.schedule?.period_no ?? "—"}</span> · {p.schedule?.subjects?.name ?? "—"}</span>
-                    {p.updated_at && <span className="text-[11px] text-faint"> · مُعدَّلة</span>}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select value={val} disabled={busy === p.id}
-                            onChange={(e) => setDraft((d) => ({ ...d, [p.id]: e.target.value }))}
-                            className={`rounded-sm2 border border-line bg-white px-2 py-1 text-sm font-medium ${P_STATUS[val]?.c ?? ""}`}>
-                      {options(p.status).map((k) => <option key={k} value={k}>{P_STATUS[k].t}</option>)}
-                    </select>
-                    {dirty && (
-                      <button onClick={() => save(p)} disabled={busy === p.id} className="btn-primary px-3 py-1 text-xs">
-                        {busy === p.id ? "…" : "حفظ"}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {msg && (
-          <p className={`rounded-sm2 px-3 py-2 text-sm ${
-            msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.text}</p>
-        )}
-      </div>}
-    </section>
-  );
-}

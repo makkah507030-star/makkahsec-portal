@@ -534,7 +534,7 @@ const editableRoles = () => ASSIGNABLE_ROLES.filter(
 // تجميع الصلاحيات بأقسام البوابة
 const PERM_GROUPS = [
   { title: "شؤون الطلاب",
-    keys: ["students", "records", "results", "reports", "permissions", "home_stats"] },
+    keys: ["students", "records", "results", "reports", "attendance_fix", "permissions", "home_stats"] },
   { title: "الشؤون التعليمية",
     keys: ["schedules", "import", "calendar"] },
   { title: "المحتوى والتواصل",

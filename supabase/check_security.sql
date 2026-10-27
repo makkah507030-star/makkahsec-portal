@@ -41,11 +41,12 @@ anonins as (
 ),
 -- ٥) مخازن ملفات عامة
 pubb as (select string_agg(id, '، ') as b from storage.buckets where public),
--- ٦) حسابات لم تُفعَّل بعد (كلمة مرورها الأولية رقم الهوية)
+-- ٦) حسابات لم يدخل بها أحد قط (من نظام الدخول نفسه؛ activated_at وlast_login في users
+--    لا يُعتمد عليهما: الأول يُسجَّل منذ إضافته فقط، والثاني لا يحدّثه شيء)
 inact as (
   select string_agg(role::text || ': ' || n, ' · ') as s from (
-    select role, count(*) n from public.users
-     where is_active and activated_at is null and last_login is null group by role) x
+    select u.role, count(*) n from public.users u join auth.users a on a.id = u.id
+     where u.is_active and a.last_sign_in_at is null group by u.role) x
 )
 select '١) تعديل المستخدم دوره بنفسه (users.role)' as "البند",
        case when has_pol and not has_upd_trigger and col_upd then 'خطر: السياسة موجودة بلا حارس'
@@ -56,5 +57,5 @@ union all select '٣) دوال مرتفعة الصلاحية متاحة لغير
        n || ' دالة' || coalesce(' · منها الحساسة: ' || risky, ' · لا حساسة منها') from anonfn
 union all select '٤) جداول يكتب فيها غير المسجّل بلا شرط', coalesce(t, 'لا شيء') from anonins
 union all select '٥) مخازن ملفات عامة', coalesce(b, 'لا شيء') from pubb
-union all select '٦) حسابات لم تُفعَّل (كلمة المرور = رقم الهوية)', coalesce(s, 'لا شيء') from inact;
+union all select '٦) حسابات لم يُدخل بها قط', coalesce(s, 'لا شيء') from inact;
 -- نهاية الجزء 1

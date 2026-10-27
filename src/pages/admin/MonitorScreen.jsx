@@ -467,11 +467,12 @@ function SupervisionList({ sup, teachers }) {
           <p className="mb-1.5 flex items-baseline justify-between text-[11px] text-[var(--m-sub)]">
             <span>المعلمون المشرفون</span><span className="num">{teachers.length}</span>
           </p>
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-3">
+          {/* عمودان وكل اسم في سطر واحد (كانت الأسماء الرباعية تنكسر في ثلاثة أعمدة) */}
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[13px]">
             {teachers.map((n) => (
               <li key={n} className="flex min-w-0 items-center gap-2">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: C.info }} />
-                <span className="min-w-0 leading-snug">{n}</span>
+                <span className="min-w-0 truncate whitespace-nowrap leading-snug" title={n}>{n}</span>
               </li>
             ))}
           </ul>
