@@ -6,16 +6,16 @@ import { useSession } from "../lib/session.jsx";
 import { byName } from "../lib/sortAr.js";
 
 /* =====================================================================
-   اطلاع الدعم الفني على «التصحيح والدرجات» و«تحليل النتائج»:
+   اطلاع الدعم الفني ومدير المدرسة على «اختباراتي» و«التصحيح والدرجات» و«تحليل النتائج»:
    يختار المعلم فتظهر اختباراته ودرجاتها كما يراها المعلم، للاطلاع فقط
    (لا رصد ولا إعادة تصحيح)، لمتابعة الإجراءات ومعرفة موضع خلل الإحصاء.
-   القراءة تسمح بها سياسات الاختبارات أصلًا لـ tech_support.
+   القراءة تسمح بها سياسات الاختبارات أصلًا لـ tech_support وprincipal.
    المعلم المختار في الرابط (?t=) فيبقى عند التحديث.
    ===================================================================== */
 
 export function useQuizTeacher() {
   const { session, profile, adminRoles, effectiveRole } = useSession();
-  const isTech = effectiveRole === "admin" && (adminRoles ?? []).includes("tech_support");
+  const isTech = effectiveRole === "admin" && (adminRoles ?? []).some((r) => r === "tech_support" || r === "principal");
   const [params, setParams] = useSearchParams();
   const [teachers, setTeachers] = useState(null);
 
