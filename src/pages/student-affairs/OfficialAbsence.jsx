@@ -1,5 +1,6 @@
 // الغياب الرسمي: يُحسب بعد الحصة الثانية، ويعتمده الوكيل، ويحق له تصحيحه لاحقًا
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { todayISO, STATUS } from "../../lib/schoolTime";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate, fmtDateTime, fmtTime12 } from "../../lib/dates";
@@ -30,9 +31,9 @@ export default function OfficialAbsence({ initialDate }) {
   const [view, setView] = useState("absent");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useNotice(null);
-  const [editing, setEditing] = useState(null);
   // تحويل الغياب إلى «بعذر» أو إعادته «بدون عذر»: الوكيل والمساعد الإداري 1 و 2 (والمدير والدعم الفني)
-  const { hasAdminRole } = useSession();
+  const { hasAdminRole, can } = useSession();
+  const canFix = can("attendance_fix");
   const canExcuse = hasAdminRole("deputy_students", "clerk", "clerk_2", "principal", "tech_support");
   const [picked, setPicked] = useState(() => new Set());   // المحدَّدون للتحويل دفعة واحدة
 
@@ -317,21 +318,15 @@ export default function OfficialAbsence({ initialDate }) {
                           {r.shown === "absent" ? "بعذر" : "بدون عذر"}
                         </button>
                       )}
-                      {day && (
-                        <button onClick={() => setEditing(editing === r.student_id ? null : r.student_id)}
+                      {/* التصحيح من مركز تصحيح الحضور وحده: الحصص والتأخر والحالة مع إعادة الاحتساب */}
+                      {canFix && (
+                        <Link to={`/student-affairs?tab=fix&date=${date}&sid=${r.student_id}`}
                           className="rounded-sm2 border border-line px-2 py-1 text-xs text-muted hover:bg-canvas">
                           تصحيح
-                        </button>
+                        </Link>
                       )}
                     </div>
                   </div>
-                  {editing === r.student_id && (
-                    <OverrideForm row={r} busy={busy} canExcuse={canExcuse}
-                      onSave={(status, note) => run(async () => {
-                        await overrideMark(date, r, status, note);
-                        setEditing(null);
-                      }, "حُفظ التصحيح وأُعيد احتساب النسبة.")} />
-                  )}
                 </div>
               ))}
             </div>
@@ -375,27 +370,6 @@ export default function OfficialAbsence({ initialDate }) {
 }
 
 const periodWord = (s) => (s ? STATUS[s]?.label ?? s : "—");
-
-function OverrideForm({ row, busy, canExcuse, onSave }) {
-  const [status, setStatus] = useState(row.shown === "present" ? "absent" : "present");
-  const [note, setNote] = useState("");
-  return (
-    <div className="mt-2 flex flex-wrap items-center gap-2 rounded-sm2 bg-gray-tint p-2">
-      <select value={status} onChange={(e) => setStatus(e.target.value)}
-        className="rounded-sm2 border border-line bg-white px-2 py-1.5 text-sm">
-        <option value="present">حاضر</option>
-        <option value="absent">غائب</option>
-        {(canExcuse || row.shown === "excused") && <option value="excused">غائب بعذر</option>}
-      </select>
-      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="سبب التصحيح (مثال: خطأ في التحضير)"
-        className="min-w-0 flex-1 rounded-sm2 border border-line bg-white px-2 py-1.5 text-sm" />
-      <button onClick={() => onSave(status, note)} disabled={busy}
-        className="rounded-sm2 bg-mint-deep px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50">
-        حفظ
-      </button>
-    </div>
-  );
-}
 
 /** الحصص الأولى والثانية التي لم يرصدها معلموها — سبب «لم يُحضَّر» */
 function UnmarkedPeriods({ date, list }) {

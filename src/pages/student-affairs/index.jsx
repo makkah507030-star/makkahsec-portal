@@ -17,6 +17,7 @@ const DetailedReports = lazy(() => import("./DetailedReports.jsx"));
 const Statistics = lazy(() => import("./Statistics.jsx"));
 const Warnings = lazy(() => import("./Warnings.jsx"));
 const MonthlyAffairs = lazy(() => import("./MonthlyAffairs.jsx"));
+const AttendanceFix = lazy(() => import("./AttendanceFix.jsx"));
 const Devices = lazy(() =>
   import("../admin/AttendanceOverview.jsx").then((m) => ({ default: m.DevicesTab })));
 
@@ -34,6 +35,8 @@ const GROUPS = [
       { key: "periods", label: "غياب الحصص" },
       { key: "detailed", label: "تقارير مفصلة" },
     ] },
+  { title: "تصحيح الحضور", hint: "المكان الرسمي لتعديل غياب الحصص والتأخر الصباحي والغياب الرسمي، مع إعادة الاحتساب", access: "fix",
+    tabs: [{ key: "fix", label: "تصحيح حضور طالب" }] },
   { title: "الإنذارات", hint: "إنذارات الغياب ومحاضرها والتحويل لدراسة الحالة", access: "warnings",
     tabs: [{ key: "warnings", label: "الإنذارات والمحاضر" }] },
   { title: "التقرير الشهري", hint: "تقرير مصمّم بغلاف ورسوم: الحضور والتأخر والإنذارات والإحالات", access: "warnings",
@@ -45,13 +48,13 @@ const GROUPS = [
     tabs: [{ key: "devices", label: "أجهزة البصمة" }] },
 ];
 
-const ACCESS_NOTE = { warnings: "للوكيل والمدير والدعم الفني", super: "للمدير والدعم الفني" };
+const ACCESS_NOTE = { warnings: "للوكيل والمدير والدعم الفني", super: "للمدير والدعم الفني", fix: "بصلاحية «تصحيح الحضور»" };
 
 export default function StudentAffairs() {
-  const { isSuper, adminRoles } = useSession();
+  const { isSuper, adminRoles, can } = useSession();
   const isDeputy = (adminRoles ?? []).includes("deputy_students");
   const allowed = (access) =>
-    access === "all" || isSuper || (access === "warnings" && isDeputy);
+    access === "all" || isSuper || (access === "warnings" && isDeputy) || (access === "fix" && can("attendance_fix"));
   const groups = GROUPS
     .map((g) => ({ ...g, tabs: g.tabs.filter((t) => allowed(t.access ?? g.access)) }))
     .filter((g) => g.tabs.length > 0);
@@ -117,6 +120,7 @@ export default function StudentAffairs() {
         {tab === "warnings" && <Warnings />}
         {tab === "monthly" && <MonthlyAffairs />}
         {tab === "devices" && <Devices />}
+        {tab === "fix" && <AttendanceFix />}
       </Suspense>
     </div>
   );

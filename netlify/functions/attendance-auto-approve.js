@@ -104,7 +104,7 @@ async function fetchAll(makeQuery) {
 }
 
 async function computeToday(db, date, sched, pt, fingerprint, fpSince) {
-  const [students, attendance, allPunches, exc] = await Promise.all([
+  const [students, attendance, allPunches, exc, ovr] = await Promise.all([
     fetchAll(() => db.from("v_active_students")
       .select("student_id, full_name, class_no, grade").order("student_id", { ascending: true })),
     fetchAll(() => db.from("class_attendance")
@@ -113,7 +113,10 @@ async function computeToday(db, date, sched, pt, fingerprint, fpSince) {
     fetchAll(() => db.from("daily_attendance")
       .select("student_id, punch_time").eq("attend_date", date).order("student_id", { ascending: true })),
     db.from("excused_absences").select("student_id").lte("date_from", date).gte("date_to", date),
+    // تصحيح التأخر من مركز تصحيح الحضور (supabase/attendance_fix_1.sql) — يُتجاهل إن لم يُشغَّل
+    db.from("attendance_late_overrides").select("student_id, mode, minutes").eq("attend_date", date),
   ]);
+  const lateFix = new Map(((ovr && ovr.data) || []).map((r) => [r.student_id, r]));
 
   // البصمة المقفلة (مرحلة تجربة) لا تدخل في أي حساب
   const punches = fingerprint ? allPunches : [];
@@ -157,9 +160,13 @@ async function computeToday(db, date, sched, pt, fingerprint, fpSince) {
     // لم يبصم وحضر الحصة الأولى أو الثانية: متأخر بلا وقت (البصمة أُغلقت مع
     // بداية الحصة الأولى). من غاب عنهما غائب رسميًا فلا يُضاف له تأخر.
     const lateNoTime = noPunchLate && !punch && official === "present";
+    // التصحيح اليدوي يتقدّم على البصمة: waive يلغي التأخر، late يسجّله بدقائقه
+    const fix = lateFix.get(s.student_id);
+    const isLate = fix ? fix.mode === "late" : lateMinutes > 0 || lateNoTime;
+    if (fix) lateMinutes = fix.mode === "late" ? fix.minutes || 1 : 0;
     return {
       ...s, official, final: finalStatus(periods, official),
-      punched: !!punch, punch, isLate: lateMinutes > 0 || lateNoTime, lateMinutes,
+      punched: !!punch, punch, isLate, lateMinutes,
     };
   });
   return { rows, hasData: attendance.length > 0 || punches.length > 0 };
