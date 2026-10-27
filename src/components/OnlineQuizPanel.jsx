@@ -216,8 +216,6 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     const blockers = [
       !questionsCount && "أضف أسئلة الاختبار أولًا.",
       !linked.length && "أسند الاختبار لفصل من تبويب «الفصول» أولًا.",
-      // التصحيح الآلي بدرجات الأسئلة والنسب بالدرجة الكلية: اختلافهما يقلب التحليل والخطط
-      !!questionsCount && !marksOk && "مجموع درجات الأسئلة لا يساوي درجة الاختبار: عدّل درجات الأسئلة أو الدرجة الكلية أولًا.",
     ].filter(Boolean);
 
     if (!form) {
@@ -238,6 +236,11 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
             </ul>
           ) : (
             <>
+              {!marksOk && (
+                <p className="rounded-sm2 bg-warning/10 px-3 py-2 text-xs text-warning">
+                  مجموع درجات الأسئلة لا يساوي درجة الاختبار — راجع تبويب «الأسئلة» قبل النشر.
+                </p>
+              )}
               <button className="btn-primary w-full" onClick={openForm}>{offline ? "إعداد الاختبار دون إنترنت" : "إعداد الاختبار الإلكتروني"}</button>
             </>
           )}
