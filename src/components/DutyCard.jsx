@@ -13,7 +13,15 @@ import { fmtDate } from "../lib/dates";
    • في يوم مناوبة المنسوب أو إشرافه يظهر تنبيه بارز أعلى الصندوق.
    • personal (حساب المعلم): ما يخصّه فقط — التنبيه، ومناوبته القادمة وأيام
      إشرافه، بلا قوائم الجميع. ولا يظهر الصندوق إن لم تكن له مهمة.
+   • المشرف المتابع في يوم إشرافه: زر واتساب بجانب كل معلم مشرف معه يفتح تذكيرًا
+     جاهزًا (الجوالات من supervision_mobiles في supabase/supervision_whatsapp.sql).
    ===================================================================== */
+
+// الجوال بصيغة دولية لرابط واتساب (05xxxxxxxx ← 9665xxxxxxxx)
+const waNumber = (m) => {
+  const d = String(m ?? "").replace(/\D/g, "");
+  return d.startsWith("05") ? `966${d.slice(1)}` : d.startsWith("5") ? `966${d}` : d;
+};
 
 const fmtG = (iso) => {
   if (!iso) return "";
@@ -39,8 +47,10 @@ const EYE = <><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circ
 const CAL = <><rect x="3" y="4" width="18" height="17" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>;
 const BELL = <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0" /></>;
 
-/** اسم في قائمة اليوم — يُميَّز صاحب الحساب */
-function Person({ name, me, tone = "mint" }) {
+const WA = <path d="M3 21l1.65-3.8A9 9 0 1 1 7.8 20.4L3 21Z" />;
+
+/** اسم في قائمة اليوم — يُميَّز صاحب الحساب، ومعه رابط تذكير واتساب إن وُجد */
+function Person({ name, me, tone = "mint", wa = null }) {
   const look = me
     ? "border-mint-deep bg-mint-deep text-white"
     : tone === "amber"
@@ -50,6 +60,12 @@ function Person({ name, me, tone = "mint" }) {
     <span title={name} className={`flex min-w-0 items-center justify-center gap-1.5 rounded-pill border px-3 py-1.5 text-sm font-medium ${look}`}>
       <span className="truncate">{name}</span>
       {me && <span className="shrink-0 rounded-pill bg-white/20 px-1.5 text-[10px] font-bold">أنت</span>}
+      {wa && (
+        <a href={wa} target="_blank" rel="noreferrer" title={`تذكير ${name} عبر واتساب`}
+           className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#25D366] text-white">
+          <Icon d={WA} className="h-3.5 w-3.5" />
+        </a>
+      )}
     </span>
   );
 }
@@ -81,6 +97,7 @@ function Block({ icon, title, hint, children }) {
 export default function DutyCard({ personal = false }) {
   const { session } = useSession();
   const [data, setData] = useState(null);
+  const [mobiles, setMobiles] = useState({});   // جوالات المعلمين المشرفين اليوم (للمشرف المتابع وحده)
   const dow = todayDow();
 
   useEffect(() => {
@@ -125,6 +142,14 @@ export default function DutyCard({ personal = false }) {
     })();
   }, [session, dow]);
 
+  // المشرف المتابع اليوم: جوالات المعلمين المشرفين معه لتذكيرهم
+  const followToday = !!data?.supToday?.some((r) => r.kind === "supervisor" && r.user_id === data.uid);
+  useEffect(() => {
+    if (!followToday) return;
+    supabase.rpc("supervision_mobiles", { p_dow: dow }).then(({ data: m }) =>
+      setMobiles(Object.fromEntries((m ?? []).map((x) => [x.user_id, x.mobile]))));
+  }, [followToday, dow]);
+
   if (!data || data.none) return null;
 
   const { uid } = data;
@@ -144,8 +169,22 @@ export default function DutyCard({ personal = false }) {
     .filter(Boolean);
 
   // لا يظهر الصندوق إن لم يكن هناك ما يُعرض إطلاقًا
-  if (!data.next && !supDays.length &&
+  if (!data.next && !supDays.length && !followToday &&
       (personal || (!todayDuty.length && !data.supToday.length))) return null;
+
+  // رسالة التذكير: تُفتح في واتساب مكتوبة ويمكن تعديلها قبل الإرسال
+  const myName = followers.find((r) => r.user_id === uid)?.person_name ?? "";
+  const waLink = (r) => {
+    const m = followToday && r.user_id && r.user_id !== uid && mobiles[r.user_id];
+    if (!m) return null;
+    const text = [
+      `السلام عليكم ورحمة الله وبركاته أ. ${r.person_name}`,
+      `نذكّرك بالإشراف اليومي اليوم ${DAY_NAMES[dow] ?? ""} في الفسحة وبداية اليوم.`,
+      "شاكرين تعاونك.",
+      myName && `${myName} — المشرف المتابع`,
+    ].filter(Boolean).join("\n");
+    return `https://api.whatsapp.com/send?phone=${waNumber(m)}&text=${encodeURIComponent(text)}`;
+  };
 
   const inDays = data.next ? daysBetween(data.next.duty_date) : null;
   const partner = myDuty
@@ -205,8 +244,8 @@ export default function DutyCard({ personal = false }) {
         )}
 
         {/* الإشراف اليومي حسب الجدول — شريط بعرض الصندوق */}
-        {!personal && dow > 0 && data.supToday.length > 0 && (
-          <Block icon={EYE} title="الإشراف اليومي" hint="حسب جدول الإشراف">
+        {(!personal || followToday) && dow > 0 && data.supToday.length > 0 && (
+          <Block icon={EYE} title="الإشراف اليومي" hint={followToday ? "ذكّرهم عبر واتساب" : "حسب جدول الإشراف"}>
             <div className="flex flex-col gap-3 md:flex-row md:items-stretch">
               {teachers.length > 0 && (
                 <div className="min-w-0 flex-1">
@@ -215,7 +254,7 @@ export default function DutyCard({ personal = false }) {
                   </p>
                   <Names>
                     {teachers.map((r, i) => (
-                      <Person key={i} name={r.person_name} me={r.user_id === uid} />
+                      <Person key={i} name={r.person_name} me={r.user_id === uid} wa={waLink(r)} />
                     ))}
                   </Names>
                 </div>
