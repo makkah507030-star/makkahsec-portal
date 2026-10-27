@@ -531,6 +531,20 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange, vi
               لا يوجد من يحتاج دعمًا، فلا تلزم خطة علاجية. الخطة الإثرائية اختيارية.
             </p>
           )}
+          {/* قبل إعداد الخطة: من يحتاج دعمًا ظاهرون بأسمائهم، فلا يُظنّ أن قائمة التكريم هي الخطة */}
+          {!plan("remedial") && (snap.support?.length ?? 0) > 0 && editing !== "remedial" && (
+            <div className="space-y-2 rounded-sm2 border border-absent/20 bg-absent/5 p-3 text-sm">
+              <p className="font-semibold text-ink">
+                يحتاجون دعمًا (دون 60%) · <span className="num">{snap.support.length}</span>
+                <span className="mr-1 text-xs font-normal text-muted">يدخلون الخطة العلاجية عند إعدادها</span>
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {snap.support.map((s) => (
+                  <span key={s.id} className="chip bg-white text-ink">{s.name} <span className="num mr-1 text-absent">{s.avg}%</span></span>
+                ))}
+              </div>
+            </div>
+          )}
           {rounds("remedial").map((p) => (
             <div key={p.id} className="space-y-2">
               {editing === "remedial" && p === lastRem
@@ -570,7 +584,7 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange, vi
       {done.analysis && topList.length > 0 && (
         <div className="space-y-2 rounded-sm2 border border-line/60 bg-paper p-3 text-sm">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="flex-1 font-semibold text-ink">تكريم المتفوقين</p>
+            <p className="flex-1 font-semibold text-ink">تكريم المتفوقين (90% فأكثر) <span className="text-xs font-normal text-muted">· غير الخطة العلاجية</span></p>
             <span className={`chip w-28 justify-center ${honored ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>
               {honored ? "تمّ التكريم" : "بانتظار التكريم"}
             </span>
