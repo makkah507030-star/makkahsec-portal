@@ -53,6 +53,8 @@ const ScoutReports = lazy(() => import("./pages/scouts/ScoutReports.jsx"));
 const MyScouts = lazy(() => import("./pages/scouts/MyScouts.jsx"));
 const GlobeTeam = lazy(() => import("./pages/admin/GlobeTeam.jsx"));
 const GiftedHub = lazy(() => import("./pages/gifted/GiftedHub.jsx"));
+const MediaGallery = lazy(() => import("./pages/media/MediaGallery.jsx"));
+const MediaStudio = lazy(() => import("./pages/media/MediaStudio.jsx"));
 const NotificationsAdmin = lazy(() => import("./pages/admin/NotificationsAdmin.jsx"));
 const Circulars = lazy(() => import("./pages/circulars/Circulars.jsx"));
 const CircularView = lazy(() => import("./pages/circulars/CircularView.jsx"));
@@ -407,6 +409,8 @@ export default function App() {
                 <Route path="/student-admission" element={<Forms key="admission" openKey="student_admission" />} />}
               <Route path="/my-signature" element={<MySignature />} />
               {/* استوديو البوابة — قوالب الهوية البصرية للطباعة والتصدير */}
+              <Route path="/media" element={<MediaGallery />} />
+              {can("media") && <Route path="/media-studio" element={<MediaStudio />} />}
               <Route path="/studio" element={<Studio />} />
               {(isTechSupport || adminRoles.includes("principal")) && (
                 <Route path="/forms-admin" element={<FormsAdmin />} />
@@ -485,6 +489,7 @@ export default function App() {
               <Route path="/forms-review" element={<Forms key="review" view="review" />} />
               <Route path="/my-signature" element={<MySignature />} />
               {/* استوديو البوابة — قوالب الهوية البصرية للطباعة والتصدير */}
+              <Route path="/media" element={<MediaGallery />} />
               <Route path="/studio" element={<Studio />} />
             </>
           )}
@@ -553,6 +558,7 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/nominations/:id" element={<Nominations />} />}
           {(effectiveRole === "student" || effectiveRole === "guardian") && <Route path="/opportunities" element={<Opportunities />} />}
           {effectiveRole === "student" && <Route path="/my-scouts" element={<MyScouts />} />}
+          <Route path="/media" element={<MediaGallery />} />
           {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}
           {/* استمارة توضيح مستوى الطالب — للمعلم سطره، وللتوجيه والوكيل، ولولي الأمر نسخته */}

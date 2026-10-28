@@ -144,6 +144,8 @@ export const ADMIN_GROUPS = [
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
+      { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
+      { to: "/media",          label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
       { to: "/events-reports", label: "تقارير الأحداث",     icon: "pie" },
@@ -280,6 +282,7 @@ const TEACHER_GROUPS = [
       { to: "/news-admin", label: "الأخبار والمقالات",  extraTabKey: "news", icon: "news" },
       { to: "/events",     label: "الأحداث والمناسبات", icon: "sparkles" },
       { to: "/studio",     label: "استوديو البوابة",    icon: "palette", kw: "تصميم" },
+      { to: "/media",      label: "معرض المدرسة",      icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
     ],
   },
 ];
@@ -300,6 +303,7 @@ const BASIC_GROUPS = [
       { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
+      { to: "/media", label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
       { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
     ],
