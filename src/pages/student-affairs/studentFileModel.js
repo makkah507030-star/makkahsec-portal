@@ -5,12 +5,13 @@
    الحدود هنا وحدها، فيسهل ضبطها.
    ===================================================================== */
 import { WARNING_STAGES } from "../../lib/officialAttendance";
-import { STATUS as REF_STATUS, OPEN_STATUSES, refTypeLabel, BEHAVIOR_STEPS, ACADEMIC_ITEMS } from "../../lib/referrals.js";
+import { STATUS as REF_STATUS, OPEN_STATUSES, BEHAVIOR_STEPS, ACADEMIC_ITEMS } from "../../lib/referrals.js";
 import { countAr } from "../../lib/arabicCount.js";
 
 /** إجراء المعلم بالعربية: نوعه (سلوكي/دراسي…) ونص خطوته بدل مفاتيح القاعدة (behavior، verbal) */
+const ACTION_KIND = { behavior: "إجراء سلوكي", academic: "إجراء دراسي", performance: "إجراء أدائي" };
 export const actionLabel = (a) => ({
-  kind: refTypeLabel(a.category) ? `إجراء ${refTypeLabel(a.category)}` : a.category && /^[a-z_]+$/.test(a.category) ? "إجراء" : a.category || "إجراء",
+  kind: ACTION_KIND[a.category] ?? (a.category && !/^[a-z_]+$/.test(a.category) ? a.category : "إجراء"),
   text: a.detail || [...BEHAVIOR_STEPS, ...ACADEMIC_ITEMS].find((x) => x.key === a.action)?.t || (/^[a-z_]+$/.test(a.action ?? "") ? "" : a.action) || "",
 });
 
