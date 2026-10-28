@@ -131,7 +131,7 @@ export const ADMIN_GROUPS = [
     items: [
       { to: "/performance",  label: "تقييم الأداء الوظيفي", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء" },
       { to: "/improve",      label: "خطط التطوير", icon: "target", kw: "حلقة التحسين توصيات متابعة أثر زيارة دعم" },
-      { to: "/dfiles-admin", label: "ملفات المعلمين الرقمية", roles: ["tech_support"], icon: "idcard", kw: "ملف رقمي إيقاف نقل تقاعد رمز" },
+      { to: "/dfiles-admin", label: "ملفات المعلمين الرقمية", roles: ["tech_support", "principal", "deputy_academic", "deputy_students"], icon: "idcard", kw: "ملف رقمي إيقاف نقل تقاعد رمز" },
       { to: "/dfile-opinions", label: "رأي الإدارة في ملفات المعلمين", roles: ["principal", "deputy_academic"], icon: "edit", kw: "ملف رقمي رأي توصية المعلم" },
     ],
   },

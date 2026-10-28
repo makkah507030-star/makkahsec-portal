@@ -411,7 +411,9 @@ export default function App() {
               )}
               {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة، وللدعم الفني للمتابعة الفنية */}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<PerformanceAdmin />} />}
-              {isTechSupport && <Route path="/dfiles-admin" element={<DfilesAdmin />} />}
+              {/* ملفات المعلمين الرقمية: إدارتها للدعم الفني، والاطلاع للمدير والوكيلين (teacher_dfile_9.sql) */}
+              {(isTechSupport || adminRoles.some((r) => ["principal", "deputy_academic", "deputy_students"].includes(r))) &&
+                <Route path="/dfiles-admin" element={<DfilesAdmin manage={isTechSupport} />} />}
               {(adminRoles.includes("principal") || adminRoles.includes("deputy_academic")) && <Route path="/dfile-opinions" element={<DfileOpinions />} />}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/school-report" element={<SchoolReport />} />}
               {can("reports") && <Route path="/student-affairs" element={<StudentAffairs />} />}

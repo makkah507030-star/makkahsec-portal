@@ -4,12 +4,13 @@ import { fmtDate } from "../../lib/dates.js";
 import { STOP_REASONS, dfileError, dfileLink } from "../../lib/dfile.js";
 
 /* =====================================================================
-   ملفات المعلمين الرقمية — للدعم الفني: إيقاف ملف المعلم عند نقله من المدرسة
+   ملفات المعلمين الرقمية — اطلاع للمدير ووكيل الشؤون التعليمية ووكيل شؤون الطلاب
+   (teacher_dfile_9.sql)، والإدارة للدعم الفني (manage): إيقاف ملف المعلم عند نقله من المدرسة
    أو تقاعده أو تحويله إلى عمل إداري، وإعادة تفعيله. المعلم لا يوقف ملفه بنفسه،
    وإيقافه يعطّل رابطه ورمزه فيرى الزائر «هذا الملف غير متاح».
    ===================================================================== */
 
-export default function DfilesAdmin() {
+export default function DfilesAdmin({ manage = true }) {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
@@ -36,8 +37,9 @@ export default function DfilesAdmin() {
       <div>
         <h1 className="text-lg font-bold text-ink">ملفات المعلمين الرقمية</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          يفعّل المعلم ملفه بنفسه، ويوقفه الدعم الفني فقط عند نقله من المدرسة أو تقاعده أو تحويله إلى عمل إداري.
-          الإيقاف يعطّل الرابط والرمز، ولا يحذف إعدادات المعلم.
+          {manage ? <>يفعّل المعلم ملفه بنفسه، ويوقفه الدعم الفني فقط عند نقله من المدرسة أو تقاعده أو تحويله إلى عمل إداري.
+          الإيقاف يعطّل الرابط والرمز، ولا يحذف إعدادات المعلم.</>
+            : "ملفات المعلمين الرقمية التي فعّلوها، وحالة كل ملف، ورابطه للاطلاع على محتواه. إيقاف الملف وإعادة تفعيله للدعم الفني."}
         </p>
       </div>
       {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}
@@ -58,9 +60,9 @@ export default function DfilesAdmin() {
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {!off && <a className="btn-ghost" href={dfileLink(r.code)} target="_blank" rel="noreferrer">فتح الملف</a>}
-                  {off
+                  {manage && (off
                     ? <button className="btn-ghost" onClick={() => set(r.teacher_user_id, { disabled_at: null, disabled_reason: null, disabled_by: null })}>إعادة التفعيل</button>
-                    : <button className="btn-ghost text-danger" onClick={() => setStopping({ uid: r.teacher_user_id, reason: STOP_REASONS[0] })}>إيقاف</button>}
+                    : <button className="btn-ghost text-danger" onClick={() => setStopping({ uid: r.teacher_user_id, reason: STOP_REASONS[0] })}>إيقاف</button>)}
                 </div>
                 {stopping?.uid === r.teacher_user_id && (
                   <div className="flex flex-wrap items-center gap-2 rounded-sm2 bg-canvas p-2">
