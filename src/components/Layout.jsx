@@ -306,6 +306,8 @@ const BASIC_GROUPS = [
       { to: "/media", label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
       { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
+      // فريقي الإعلامي — لعضو الفريق وحده (supabase/media_3.sql)
+      { to: "/my-media-team", label: "فريقي الإعلامي", icon: "palette", studentOnly: true, mediaMember: true, kw: "تصوير اعلامي لا يصور" },
     ],
   },
 ];
@@ -459,6 +461,12 @@ export default function Layout({ children }) {
     if (effectiveRole !== "student") { setScoutMember(false); return; }
     supabase.rpc("scout_my").then(({ data, error }) => setScoutMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
+  // عضوية الطالب في الفريق الإعلامي: تظهر له «فريقي الإعلامي»
+  const [mediaMember, setMediaMember] = useState(false);
+  useEffect(() => {
+    if (effectiveRole !== "student") { setMediaMember(false); return; }
+    supabase.rpc("media_team_my").then(({ data, error }) => setMediaMember(!error && !!data?.length));
+  }, [effectiveRole, session?.user?.id]);
   const [achOpen] = useAchOpen();
 
   // هل يظهر الرابط لهذا المستخدم؟
@@ -466,6 +474,7 @@ export default function Layout({ children }) {
     if (i.staffOnly && !isStaff) return false;
     if (i.studentOnly && effectiveRole !== "student") return false;
     if (i.scoutMember && !scoutMember) return false;
+    if (i.mediaMember && !mediaMember) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
     // مركز تحليل النتائج وما حوله: مخفيّ حتى يُفتح، إلا رابط المركز نفسه
     // يبقى لمن يملك فتحه (الوكيل/المدير/الدعم) ليدخل ويفتحه.
@@ -493,7 +502,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)

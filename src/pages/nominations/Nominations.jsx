@@ -46,7 +46,7 @@ const mediaTeam = () => ({
     { id: uid(), q: "هل لديك أعمال سابقة تستطيع عرضها في المقابلة؟", kind: "choice", options: ["نعم", "لا"] }],
   criteria: [{ id: "c1", name: "المهارة الفنية", max: 10 }, { id: "c2", name: "الأمانة والانضباط", max: 10 },
     { id: "c3", name: "العمل الجماعي", max: 10 }, { id: "c4", name: "الإبداع", max: 10 }],
-  staff_lead: "قائد الفريق الإعلامي",
+  staff_lead: "قائد الفريق الإعلامي", link_media: true,
 });
 const uid = () => Math.random().toString(36).slice(2, 8);
 
@@ -197,6 +197,7 @@ function CallEditor({ init, onClose }) {
       home_banner: !!f.home_banner, banner_image,
       // قيادة المعلمين (nominations_7.sql): لا يُرسل الحقل إلا عند استعماله، فلا يتعطل الحفظ قبل تشغيل الملف
       ...(f.staff_lead?.trim() || init.staff_lead ? { staff_lead: f.staff_lead?.trim() || null } : {}),
+      ...(f.link_media || init.link_media ? { link_media: !!f.link_media } : {}),      // media_3.sql
     };
     const q = f.id ? supabase.from("nom_calls").update(row).eq("id", f.id)
       : supabase.from("nom_calls").insert({ ...row, owner_name: profile?.full_name ?? "" });
@@ -288,6 +289,7 @@ function CallEditor({ init, onClose }) {
         <p className="text-[11px] text-faint">تُحسب من بيانات الفصل الدراسي الحالي، ولا يستطيع التقديم من لا تنطبق عليه.</p>
         <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.guardian_ok} onChange={(e) => set("guardian_ok", e.target.checked)} /> يشترط موافقة ولي الأمر من حسابه</label>
         <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.link_scouts} onChange={(e) => set("link_scouts", e.target.checked)} /> المقبولون يُضافون إلى الفريق الكشفي عند إعلان النتائج</label>
+        <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={!!f.link_media} onChange={(e) => set("link_media", e.target.checked)} /> المقبولون يُضافون إلى الفريق الإعلامي بفرعهم عند إعلان النتائج</label>
       </section>
 
       <section className="card space-y-3 p-4">

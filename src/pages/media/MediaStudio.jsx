@@ -9,6 +9,7 @@ import Loader from "../../components/Loader.jsx";
 import { useMedia, MediaGrid } from "./MediaGallery.jsx";
 import MediaViewer from "./MediaViewer.jsx";
 import NoPhotoList from "./NoPhotoList.jsx";
+import MediaTeam from "./MediaTeam.jsx";
 
 /* =====================================================================
    استوديو الوسائط (صلاحية «استوديو الوسائط»، supabase/media_1.sql): رفع صور المدرسة
@@ -27,7 +28,7 @@ export default function MediaStudio() {
   const [busy, setBusy] = useState(null);         // نص التقدم
   const [msg, setMsg] = useState(null);
   const [open, setOpen] = useState(null);
-  const [tab, setTab] = useState("items");       // items: المواد، consent: موافقات التصوير
+  const [tab, setTab] = useState("items");       // items: المواد، consent: موافقات التصوير، team: الفريق
   const albums = useMemo(() => [...new Set((rows ?? []).map((r) => r.album).filter(Boolean))], [rows]);
   if (!rows) return <Loader />;
   const toggle = (k, v) => setF((x) => ({ ...x, [k]: x[k].includes(v) ? x[k].filter((y) => y !== v) : [...x[k], v] }));
@@ -68,8 +69,9 @@ export default function MediaStudio() {
       <div className="flex gap-1.5">
         <button className={pill(tab === "items")} onClick={() => setTab("items")}>المواد</button>
         <button className={pill(tab === "consent")} onClick={() => setTab("consent")}>موافقات التصوير و«لا يُصوَّر»</button>
+        <button className={pill(tab === "team")} onClick={() => setTab("team")}>الفريق الإعلامي</button>
       </div>
-      {tab === "consent" ? <NoPhotoList /> : <>
+      {tab === "consent" ? <NoPhotoList /> : tab === "team" ? <MediaTeam /> : <>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 
       <section className="card space-y-3 p-4">

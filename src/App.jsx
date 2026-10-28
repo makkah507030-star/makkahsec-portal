@@ -51,6 +51,7 @@ const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
 const ScoutsHub = lazy(() => import("./pages/scouts/ScoutsHub.jsx"));
 const ScoutReports = lazy(() => import("./pages/scouts/ScoutReports.jsx"));
 const MyScouts = lazy(() => import("./pages/scouts/MyScouts.jsx"));
+const MyMediaTeam = lazy(() => import("./pages/media/MyMediaTeam.jsx"));
 const GlobeTeam = lazy(() => import("./pages/admin/GlobeTeam.jsx"));
 const GiftedHub = lazy(() => import("./pages/gifted/GiftedHub.jsx"));
 const MediaGallery = lazy(() => import("./pages/media/MediaGallery.jsx"));
@@ -560,6 +561,7 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/nominations/:id" element={<Nominations />} />}
           {(effectiveRole === "student" || effectiveRole === "guardian") && <Route path="/opportunities" element={<Opportunities />} />}
           {effectiveRole === "student" && <Route path="/my-scouts" element={<MyScouts />} />}
+          {effectiveRole === "student" && <Route path="/my-media-team" element={<MyMediaTeam />} />}
           <Route path="/media" element={<MediaGallery />} />
           {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}

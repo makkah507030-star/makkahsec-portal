@@ -7,6 +7,7 @@ import Loader from "../../components/Loader.jsx";
 /* =====================================================================
    قائمة «لا يُصوَّر» في استوديو الوسائط (supabase/media_2.sql): طلاب كل فصل بحالة موافقة
    أوليائهم على التصوير هذا العام. لا يُصوَّر إلا الموافَق عليه؛ ومن لم يردّ وليّه كمن رفض.
+   member: لعضو الفريق الإعلامي (media_3.sql)، من لا يُصوَّر وحده بلا أعداد ولا بيانات أولياء الأمور.
    ===================================================================== */
 
 const STATUS = {
@@ -17,7 +18,7 @@ const STATUS = {
 const GRADES = [[1, "الأول"], [2, "الثاني"], [3, "الثالث"]];
 const pill = (on) => `rounded-pill px-3 py-1 text-xs font-medium ${on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`;
 
-export default function NoPhotoList() {
+export default function NoPhotoList({ member = false }) {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [grade, setGrade] = useState(0);
@@ -52,19 +53,21 @@ export default function NoPhotoList() {
   return (
     <div className="space-y-3">
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
-      <p className="text-sm text-muted">لا يُصوَّر إلا من وافق وليّ أمره هذا العام. يسأل حساب ولي الأمر عن الموافقة في صفحته الرئيسة، ويستطيع تغييرها متى شاء.</p>
-      <div className="grid grid-cols-3 gap-2">
+      {!member && <p className="text-sm text-muted">لا يُصوَّر إلا من وافق وليّ أمره هذا العام. يسأل حساب ولي الأمر عن الموافقة في صفحته الرئيسة، ويستطيع تغييرها متى شاء.</p>}
+      {!member && <div className="grid grid-cols-3 gap-2">
         {["allowed", "denied", "none"].map((k) => (
           <div key={k} className="card px-3 py-2.5 text-center">
             <p className="num text-xl font-bold text-ink">{n[k]}</p>
             <p className="text-[11px] text-muted">{STATUS[k].t} · <span className="num">{Math.round((n[k] * 100) / total)}%</span></p>
           </div>
         ))}
-      </div>
+      </div>}
       <div className="flex flex-wrap items-center gap-1.5">
-        <button className={pill(view === "no")} onClick={() => setView("no")}>لا يُصوَّر ({n.denied + n.none})</button>
-        <button className={pill(view === "allowed")} onClick={() => setView("allowed")}>الموافقون ({n.allowed})</button>
-        <span className="mx-1 w-px self-stretch bg-line" />
+        {!member && <>
+          <button className={pill(view === "no")} onClick={() => setView("no")}>لا يُصوَّر ({n.denied + n.none})</button>
+          <button className={pill(view === "allowed")} onClick={() => setView("allowed")}>الموافقون ({n.allowed})</button>
+          <span className="mx-1 w-px self-stretch bg-line" />
+        </>}
         <button className={pill(!grade)} onClick={() => setGrade(0)}>كل الصفوف</button>
         {GRADES.map(([g, t]) => <button key={g} className={pill(grade === g)} onClick={() => setGrade(g)}>{t}</button>)}
         <input className="field ms-auto w-40 py-1 text-sm" value={q} placeholder="بحث بالاسم" onChange={(e) => setQ(e.target.value)} />
