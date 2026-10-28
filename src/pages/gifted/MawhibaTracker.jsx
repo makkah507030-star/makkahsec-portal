@@ -1,12 +1,13 @@
 // src/pages/gifted/MawhibaTracker.jsx
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { useSession, ROLE_PERSON_NAME } from "../../lib/session.jsx";
+import { useSession } from "../../lib/session.jsx";
 import { todayISO } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
 import { cleanMobile } from "../../lib/importer";
 import { byClassName } from "../../lib/sortAr.js";
-import { printReport, escHtml as e, PRINCIPAL_NAME } from "../../lib/exportUtils";
+import { printReport, escHtml as e } from "../../lib/exportUtils";
+import { PRINCIPAL_NAME, GIFTED_LEADER_NAME } from "../../lib/signers.js";
 import { logos } from "../student-affairs/shared.jsx";
 import Loader from "../../components/Loader.jsx";
 import { MAWHIBA, STATUS, FLOW, PAY, reached, waText, span } from "../../lib/gifted.js";
@@ -105,7 +106,7 @@ export default function MawhibaTracker() {
       <tr><th>المؤشرات</th><td>سجّل ${e(S.reg)} (${pct(S.reg, S.el)}%) · أكّد ${e(S.conf)} · اختُبر ${e(S.test)} · موهوب ${e(S.gifted)}</td></tr></table>
       <table><thead><tr><th>م</th><th>الطالب</th><th>الفصل</th><th>الحالة</th><th>الرسوم</th><th>موعد المقياس</th><th>الدرجة</th></tr></thead><tbody>${body}</tbody></table>`;
     printReport({ title: "متابعة مقياس موهبة", sections: [{ title: "متابعة البرنامج الوطني للكشف عن الموهوبين", subtitle: "طلاب الأول الثانوي", html }],
-      ...logos(), signatures: [{ title: "مسؤول برنامج الموهوبين", name: (ROLE_PERSON_NAME.gifted_program ?? "").replace(/^الأستاذ:\s*/, "") }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }] });
+      ...logos(), signatures: [{ title: "مسؤول برنامج الموهوبين", name: GIFTED_LEADER_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }] });
   };
 
   return (

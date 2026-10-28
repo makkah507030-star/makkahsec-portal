@@ -1,7 +1,7 @@
 // src/pages/gifted/GiftedReport.jsx
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { ROLE_PERSON_NAME } from "../../lib/session.jsx";
+import { GIFTED_LEADER_NAME } from "../../lib/signers.js";
 import { todayISO } from "../../lib/schoolTime";
 import { loadPrincipalSignature, loadSchoolStamp } from "../../lib/principalSignature";
 import { signatureByName } from "../../lib/userSignatures";
@@ -20,7 +20,8 @@ const readNotes = () => { try { return localStorage.getItem(NOTES_KEY) ?? ""; } 
 const writeNotes = (v) => { try { if (v) localStorage.setItem(NOTES_KEY, v); else localStorage.removeItem(NOTES_KEY); } catch { /* تخزين محجوب */ } };
 
 export default function GiftedReport({ onBack }) {
-  const leader = (ROLE_PERSON_NAME.gifted_program ?? "").replace(/^الأستاذ:\s*/, "");
+  // اسم الموقّع من «الإدارة ← أسماء الموقّعين»، وبه يُبحث عن توقيعه
+  const leader = GIFTED_LEADER_NAME;
   const [theme, setTheme] = useState("light");
   const [notes, setNotes] = useState(readNotes);
   const [data, setData] = useState(null);
