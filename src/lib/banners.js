@@ -27,3 +27,21 @@ export const LINK_PAGES = [
 export const bannerImage = (path) => (path ? supabase.storage.from(BANNER_BUCKET).getPublicUrl(path).data.publicUrl : null);
 export const isExternal = (link) => /^https?:\/\//i.test(link ?? "");
 export const bannersSetupMsg = "إعلانات الرئيسية تحتاج تشغيل supabase/home_banners.sql في Supabase ← SQL Editor.";
+
+// مقاس صورة الإعلان الإلزامي: عرضية 2:1، تُضبط على 1200 × 600 بالضبط قبل الرفع
+export const BANNER_W = 1200, BANNER_H = 600;
+const imageSize = (file) => new Promise((ok) => {
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => { ok({ w: img.width, h: img.height }); URL.revokeObjectURL(url); };
+  img.onerror = () => { ok(null); URL.revokeObjectURL(url); };
+  img.src = url;
+});
+// يُقبل ما قارب المقاس (نسبة 1.6 إلى 2.5 وعرض 900 فأكثر) ويُضبط عليه؛ وغيره يُرفض برسالة
+export async function checkBanner(file) {
+  const s = await imageSize(file);
+  if (!s) return "تعذّرت قراءة الصورة؛ اختر صورة JPG أو PNG.";
+  const r = s.w / s.h;
+  if (r < 1.6 || r > 2.5) return `الصورة ليست بالمقاس المطلوب (عرضها ${s.w} وارتفاعها ${s.h}). صمّمها بعرض ${BANNER_W} وارتفاع ${BANNER_H} بكسل.`;
+  if (s.w < 900) return `الصورة صغيرة (عرضها ${s.w} بكسل) فتظهر باهتة. صمّمها بعرض ${BANNER_W} وارتفاع ${BANNER_H} بكسل.`;
+  return null;
+}

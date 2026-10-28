@@ -14,6 +14,9 @@ import { callStatus, RULES, seatsText, branchesOf, lines } from "../../lib/nomin
 import Loader from "../../components/Loader.jsx";
 import { Icon } from "../../components/Layout.jsx";
 import NomCall from "./NomCall.jsx";
+import { Banner } from "../../components/HomeBanners.jsx";
+import { normalizeImage } from "../../lib/imageResize";
+import { BANNER_BUCKET, BANNER_W, BANNER_H, checkBanner } from "../../lib/banners.js";
 
 const day = (d) => (d ? fmtDate(d + "T12:00:00") : "—");
 const DEFAULT_CRITERIA = [
@@ -25,6 +28,7 @@ const blank = () => ({
   title: "", unit: "", body: "", tasks: "", special_terms: "", grades: [1, 2, 3], seats: 10, reserve: 3,
   opens_on: todayISO(), closes_on: "", rules: {}, questions: [], criteria: DEFAULT_CRITERIA,
   interview_place: "", slot_minutes: 10, guardian_ok: false, link_scouts: false, published: false, branches: [],
+  home_banner: true, banner_image: null,
 });
 const uid = () => Math.random().toString(36).slice(2, 8);
 
@@ -90,7 +94,7 @@ function CallList() {
                   <Link to={`/nominations/${c.id}`} className="btn-primary px-4 py-1.5 text-xs">المتقدمون والفرز</Link>
                   {!c.results_at && <button className="rounded-pill border border-line px-3 py-1.5 text-xs text-muted hover:bg-canvas" onClick={() => setEdit(c)}>تعديل</button>}
                   <button className="rounded-pill border border-line px-3 py-1.5 text-xs text-muted hover:bg-canvas"
-                    onClick={() => setEdit({ ...c, id: undefined, title: `${c.title} (نسخة)`, published: false, results_at: null, cancelled_at: null, opens_on: todayISO(), closes_on: "" })}>نسخ</button>
+                    onClick={() => setEdit({ ...c, id: undefined, title: `${c.title} (نسخة)`, published: false, results_at: null, cancelled_at: null, opens_on: todayISO(), closes_on: "", banner_image: null })}>نسخ</button>
                 </div>
               </div>
             );
@@ -129,6 +133,8 @@ function CallEditor({ init, onClose }) {
   const [f, setF] = useState(() => ({ ...init, branches: branchesOf(init), terms: lines(init.special_terms).length ? lines(init.special_terms) : [] }));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [file, setFile] = useState(null);       // صورة بطاقة الرئيسية قبل رفعها
+  const [preview, setPreview] = useState(null);
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const setRule = (k, v) => setF((x) => ({ ...x, rules: { ...x.rules, [k]: v === "" ? undefined : Number(v) } }));
   const setQ = (i, k, v) => setF((x) => ({ ...x, questions: x.questions.map((q, j) => (j === i ? { ...q, [k]: v } : q)) }));
@@ -150,6 +156,15 @@ function CallEditor({ init, onClose }) {
     const seats = open ? null : branches.length ? branches.reduce((a, b) => a + b.seats, 0) : Math.max(1, Number(f.seats) || 1);
     const reserve = open ? 0 : branches.length ? branches.reduce((a, b) => a + b.reserve, 0) : Number(f.reserve) || 0;
     setBusy(true); setErr("");
+    // صورة بطاقة الرئيسية (nominations_6.sql): تُضبط على مقاس الإعلانات وتُرفع في home-banners/nom/
+    let banner_image = f.home_banner ? f.banner_image ?? null : null;
+    if (file && f.home_banner) {
+      const img = await normalizeImage(file, BANNER_W, BANNER_H, 0.86);
+      const path = `nom/${crypto.randomUUID()}.jpg`;
+      const { error } = await supabase.storage.from(BANNER_BUCKET).upload(path, img, { contentType: "image/jpeg" });
+      if (error) { setBusy(false); setErr(`تعذّر رفع صورة البطاقة: ${error.message}`); return; }
+      banner_image = path;
+    }
     const row = {
       title: f.title.trim(), unit: f.unit || null, body: f.body || null, tasks: f.tasks || null, special_terms: f.terms.map((t) => t.trim()).filter(Boolean).join("\n") || null,
       grades: f.grades, seats, reserve, branches, opens_on: f.opens_on, closes_on: f.closes_on,
@@ -158,12 +173,16 @@ function CallEditor({ init, onClose }) {
       criteria: f.criteria.filter((c) => c.name.trim()).map((c) => ({ ...c, max: Number(c.max) || 10 })),
       interview_place: f.interview_place || null, slot_minutes: Number(f.slot_minutes) || 10,
       guardian_ok: f.guardian_ok, link_scouts: f.link_scouts, published: publish ?? f.published,
+      home_banner: !!f.home_banner, banner_image,
     };
     const q = f.id ? supabase.from("nom_calls").update(row).eq("id", f.id)
       : supabase.from("nom_calls").insert({ ...row, owner_name: profile?.full_name ?? "" });
     const { error } = await q;
     setBusy(false);
-    if (error) setErr(error.message); else onClose(true);
+    if (error) { setErr(error.message); return; }
+    // الصورة القديمة تُحذف إن استُبدلت أو أُزيلت (init: ما كان محفوظًا)
+    if (init.banner_image && init.banner_image !== banner_image && f.id) supabase.storage.from(BANNER_BUCKET).remove([init.banner_image]);
+    onClose(true);
   };
 
   return (
@@ -278,6 +297,40 @@ function CallEditor({ init, onClose }) {
             <button type="button" className="text-xs text-absent" onClick={() => set("criteria", f.criteria.filter((_, j) => j !== i))}>حذف</button>
           </div>
         ))}
+      </section>
+
+      <section className="card space-y-3 p-4">
+        <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <input type="checkbox" checked={!!f.home_banner} onChange={(e) => set("home_banner", e.target.checked)} />
+          عرض بطاقة في رئيسية الطلاب وأولياء الأمور
+        </label>
+        {f.home_banner && (
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="space-y-2 text-xs text-muted">
+              <p className="leading-relaxed">تظهر البطاقة لصفوف الإعلان من بداية التقديم إلى آخر موعده، وزرها «قدّم الآن» يفتح «فرص المشاركة».
+                وعند إعلان النتائج تصير «أُعلنت نتائج …» خمسة أيام، بلا أسماء.</p>
+              <label className="block">صورة البطاقة (اختيارية)
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="mt-1 block text-xs"
+                       onChange={async (e) => {
+                         const x = e.target.files?.[0] ?? null; e.target.value = "";
+                         if (!x) return;
+                         const bad = await checkBanner(x);
+                         if (bad) { setErr(bad); return; }
+                         setErr(""); setFile(x); setPreview(URL.createObjectURL(x));
+                       }} />
+              </label>
+              <p className="text-[11px] text-faint">المقاس: عرض <span className="num">{BANNER_W}</span> وارتفاع <span className="num">{BANNER_H}</span> بكسل، ولا تكتب العنوان داخل الصورة.</p>
+              {(preview || f.banner_image) && (
+                <button type="button" className="text-absent underline" onClick={() => { setFile(null); setPreview(null); set("banner_image", null); }}>إزالة الصورة</button>
+              )}
+            </div>
+            <div>
+              <p className="mb-1.5 text-xs text-muted">معاينة كما تظهر في الرئيسية</p>
+              <Banner preview b={{ kind: "opportunity", title: f.title || "عنوان الإعلان", body: (f.body ?? "").slice(0, 160),
+                image_path: preview ? null : f.banner_image, image_url: preview ?? undefined, link: "/opportunities", link_label: "قدّم الآن" }} />
+            </div>
+          </div>
+        )}
       </section>
 
       <div className="flex flex-wrap gap-2">
