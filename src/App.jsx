@@ -49,6 +49,7 @@ const GuidesAdmin = lazy(() => import("./pages/admin/GuidesAdmin.jsx"));
 const NewsArticle = lazy(() => import("./pages/NewsArticle.jsx"));
 const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
 const ScoutTeam = lazy(() => import("./pages/admin/ScoutTeam.jsx"));
+const GlobeTeam = lazy(() => import("./pages/admin/GlobeTeam.jsx"));
 const NotificationsAdmin = lazy(() => import("./pages/admin/NotificationsAdmin.jsx"));
 const Circulars = lazy(() => import("./pages/circulars/Circulars.jsx"));
 const CircularView = lazy(() => import("./pages/circulars/CircularView.jsx"));
@@ -380,6 +381,7 @@ export default function App() {
               {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
               {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
               {can("scouts") && <Route path="/scouts" element={<ScoutTeam />} />}
+              {can("globe") && <Route path="/globe" element={<GlobeTeam />} />}
               {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
               {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
               {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}

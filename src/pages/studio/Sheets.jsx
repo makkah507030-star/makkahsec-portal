@@ -3,10 +3,11 @@ import iconMint from "../../assets/icon-mint.png";
 import iconWhite from "../../assets/icon-white.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fitSize, fitTitle, bodySize, classCode, classShort, GRADE_OPTIONS } from "./lib";
-import { ROLLUP_SIZES } from "./templates";
+import { ROLLUP_SIZES, GLOBE_SPHERES } from "./templates";
 import { useStudioAssets } from "./assets";
 import "./studio.css";
 import Fleur from "../../components/Fleur.jsx";
+import GlobeMark from "../../components/GlobeMark.jsx";
 
 /* =====================================================================
    أوراق استوديو البوابة — كل ورقة بمقاس A4 الحقيقي (96dpi)، وتُستخدم كما هي
@@ -597,6 +598,77 @@ export function ScoutCards({ theme = "light", d }) {
         ))}
       </div>
       <p className="note">بطاقات 8.6 × 5.4 سم · قصّ على الخط المتقطع</p>
+    </div>
+  );
+}
+
+/* ----------------------------- بطاقة طالب جلوب ----------------------------- */
+// خطوط كنتورية كخرائط الرصد البيئي، تُرسم خلف البطاقة
+const CONTOURS = (
+  <svg viewBox="0 0 200 320" preserveAspectRatio="none" fill="none" stroke="currentColor" strokeWidth="0.8">
+    {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+      <path key={i} d={`M-10 ${40 + i * 38} C 40 ${20 + i * 38}, 70 ${70 + i * 38}, 110 ${48 + i * 38} S 180 ${22 + i * 38}, 215 ${52 + i * 38}`} />
+    ))}
+  </svg>
+);
+
+export function GlobeCards({ theme = "light", d }) {
+  const cards = Array.from({ length: 9 }, (_, i) => (d.cards ?? [d])[i] ?? null);
+  const spheres = GLOBE_SPHERES.filter((s) => s.k !== "all");
+  return (
+    <div className={`stu stu-globes stu-${theme} stu-portrait sheet`}>
+      <div className="grid">
+        {cards.map((c, i) => {
+          const all = !c?.sphere || c.sphere === GLOBE_SPHERES[0].t;
+          return (
+            <div key={i} className={`stu-globe${c ? "" : " empty"}`}>
+              {c && (
+                <div className="in">
+                  <div className="topo">{CONTOURS}</div>
+                  <div className="hd">
+                    <span className="sch">
+                      {theme === "official" && <img src={moeLogo} alt="" className="moe" />}
+                      <img src={iconWhite} alt="" className="logo-w" />
+                      <img src={iconMint} alt="" className="logo-m" />
+                      <span>مدرسة مكة<br />الثانوية</span>
+                    </span>
+                    <span className="gl">
+                      {d.logo ? <img src={d.logo} alt="" /> : <><GlobeMark className="gm" /><b>GLOBE</b></>}
+                    </span>
+                  </div>
+                  <div className="ph-wrap">
+                    <svg className="orbit" viewBox="0 0 150 150" fill="none">
+                      <ellipse cx="75" cy="75" rx="70" ry="26" transform="rotate(-24 75 75)" />
+                      <circle cx="16" cy="96" r="3.2" className="sat" />
+                    </svg>
+                    <div className="ph">{c.photo ? <img src={c.photo} alt="" /> : <GlobeMark className="ph-e" />}</div>
+                  </div>
+                  <p className="kick">برنامج جلوب البيئي العالمي</p>
+                  {(() => {
+                    const t = fitTitle(c.name, { max: 16, min: 11, width: 172 });
+                    return <div className={`nm${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{c.name || "اسم الطالب"}</div>;
+                  })()}
+                  {c.role && <span className="rl">{c.role}</span>}
+                  {c.cls && <div className="cl">{c.cls}</div>}
+                  <div className="sp">
+                    {spheres.map((s) => (
+                      <span key={s.k} className={all || s.t === c.sphere ? "on" : ""} style={{ "--sp": s.color }}>
+                        <i />{s.t.replace("الغلاف ", "").replace("الغطاء ", "")}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="ft">
+                    <span className="num">GL-{String(c.no ?? 1).padStart(3, "0")}</span>
+                    <span className="num geo">21.42°N · 39.83°E</span>
+                    <span className="num" dir="rtl">{d.year}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="note">بطاقات 5.4 × 8.6 سم · قصّ على الخط المتقطع · makkahsec.com</p>
     </div>
   );
 }

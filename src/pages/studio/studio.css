@@ -524,3 +524,88 @@
 .stu-official .stu-scout .ph { border-color: #3E6350; background: #fff; }
 .stu-official .stu-scout .ph-e { color: #CCF2DB; }
 .stu-official .stu-scout .ft { color: #3E6350; background: #fff; border-top-color: #CCF2DB; }
+
+/* ——— بطاقة طالب جلوب: 9 بطاقات طولية 54 × 86 مم ——— */
+.stu-globes { background: #fff; }
+.stu-globes .grid { position: absolute; top: 56px; left: 0; right: 0; display: grid; grid-template-columns: repeat(3, 204px);
+                    grid-auto-rows: 325px; justify-content: center; gap: 0; }
+.stu-globes .note { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; font-size: 11px; color: #9A9A9A; }
+.stu-globe { border: 1px dashed #BDBDBD; margin: -0.5px; padding: 6px; }
+.stu-globe.empty { border-color: transparent; }
+.stu-globe .in { position: relative; height: 100%; border-radius: 14px; overflow: hidden; color: #fff; text-align: center;
+                 background: radial-gradient(ellipse 90% 55% at 50% 36%, #1E6F8C 0%, transparent 70%),
+                             linear-gradient(170deg, #0C2A44 0%, #0A3B4A 55%, #0B2E25 100%);
+                 box-shadow: inset 0 0 0 1.5px rgba(217,180,90,.6), inset 0 0 0 5px rgba(12,42,68,.9), inset 0 0 0 5.8px rgba(217,180,90,.25); }
+.stu-globe .topo { position: absolute; inset: 0; color: rgba(217,180,90,.12); }
+.stu-globe .topo svg, .stu-globe .gm, .stu-globe .ph-e { display: block; }
+.stu-globe .topo svg { width: 100%; height: 100%; }
+.stu-globe .hd { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 12px 13px 0; }
+.stu-globe .sch { display: flex; align-items: center; gap: 5px; text-align: right; font-size: 8px; font-weight: 600; line-height: 1.25; color: #D9B45A; }
+.stu-globe .sch img { width: 17px; height: 17px; object-fit: contain; }
+.stu-globe .sch .moe { width: auto; height: 17px; }
+.stu-globe .logo-m { display: none; }
+.stu-globe .gl { display: flex; align-items: center; gap: 3px; color: #8FD3E8; }
+.stu-globe .gl img { max-width: 52px; max-height: 24px; object-fit: contain; }
+.stu-globe .gl .gm { width: 16px; height: 16px; }
+.stu-globe .gl b { font-size: 10px; font-weight: 800; letter-spacing: 1.4px; direction: ltr; }
+.stu-globe .ph-wrap { position: relative; width: 112px; height: 112px; margin: 10px auto 0; }
+.stu-globe .orbit { position: absolute; inset: -19px; width: 150px; height: 150px; stroke: rgba(217,180,90,.55); stroke-width: 1; }
+.stu-globe .orbit .sat { fill: #D9B45A; stroke: none; }
+.stu-globe .ph { position: absolute; inset: 10px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center;
+                 border: 2.5px solid #D9B45A; background: radial-gradient(circle at 35% 30%, #2A8AA8, #0C3550);
+                 box-shadow: 0 0 0 4px rgba(217,180,90,.15); }
+.stu-globe .ph img { width: 100%; height: 100%; object-fit: cover; }
+.stu-globe .ph-e { width: 46px; height: 46px; color: rgba(217,180,90,.7); }
+.stu-globe .kick { position: relative; margin-top: 9px; font-size: 8.5px; letter-spacing: .3px; color: #8FD3E8; }
+.stu-globe .nm { position: relative; margin: 3px 10px 0; font-weight: 700; line-height: 1.3; white-space: nowrap; }
+.stu-globe .nm.wrap { white-space: normal; }
+.stu-globe .rl { position: relative; display: inline-block; margin-top: 5px; padding: 2.5px 11px; border-radius: 999px;
+                 font-size: 9.5px; font-weight: 700; color: #0C2A44; background: linear-gradient(90deg, #E8C873, #C99B3A); }
+.stu-globe .cl { position: relative; margin-top: 4px; font-size: 9px; color: rgba(255,255,255,.72); }
+.stu-globe .sp { position: absolute; bottom: 30px; left: 9px; right: 9px; display: flex; justify-content: center; gap: 3px; }
+.stu-globe .sp span { display: inline-flex; align-items: center; gap: 2.5px; padding: 2px 4.5px; border-radius: 999px; font-size: 7px;
+                      color: rgba(255,255,255,.4); border: .8px solid rgba(255,255,255,.14); }
+.stu-globe .sp i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.25); }
+.stu-globe .sp .on { color: #fff; border-color: var(--sp); background: color-mix(in srgb, var(--sp) 22%, transparent); }
+.stu-globe .sp .on i { background: var(--sp); }
+.stu-globe .ft { position: absolute; bottom: 1.5px; left: 1.5px; right: 1.5px; height: 24px; border-radius: 0 0 12.5px 12.5px; padding: 0 12px; display: flex; align-items: center;
+                 justify-content: space-between; font-size: 7.5px; color: rgba(255,255,255,.7); direction: ltr;
+                 background: linear-gradient(90deg, rgba(217,180,90,.2), rgba(217,180,90,.06)); border-top: 1px solid rgba(217,180,90,.4); }
+.stu-globe .ft .geo { color: #D9B45A; letter-spacing: .3px; }
+/* الفاتحة: أبيض لؤلؤي بإطار أزرق ولمسات ذهبية */
+.stu-light .stu-globe .in { color: #0C2A44;
+  background: radial-gradient(ellipse 90% 55% at 50% 36%, #DDF1F7 0%, transparent 70%), linear-gradient(170deg, #FBFDFE, #F1F8F5);
+  box-shadow: inset 0 0 0 1.5px #0B5A7A, inset 0 0 0 5px #fff, inset 0 0 0 5.8px rgba(201,155,58,.45); }
+.stu-light .stu-globe .topo { color: rgba(11,90,122,.08); }
+.stu-light .stu-globe .sch { color: #0B5A7A; }
+.stu-light .stu-globe .logo-w { display: none; }
+.stu-light .stu-globe .logo-m { display: block; }
+.stu-light .stu-globe .gl, .stu-light .stu-globe .kick { color: #1E7FA3; }
+.stu-light .stu-globe .orbit { stroke: rgba(201,155,58,.7); }
+.stu-light .stu-globe .orbit .sat { fill: #C99B3A; }
+.stu-light .stu-globe .ph { border-color: #C99B3A; background: radial-gradient(circle at 35% 30%, #EAF6FA, #CFE8F0); }
+.stu-light .stu-globe .ph-e { color: rgba(11,90,122,.45); }
+.stu-light .stu-globe .rl { color: #fff; background: linear-gradient(90deg, #0B5A7A, #1E7FA3); }
+.stu-light .stu-globe .cl { color: #4F6672; }
+.stu-light .stu-globe .sp span { color: #9AAAB2; border-color: #DCE6EA; }
+.stu-light .stu-globe .sp i { background: #DCE6EA; }
+.stu-light .stu-globe .sp .on { color: #0C2A44; background: color-mix(in srgb, var(--sp) 16%, #fff); }
+.stu-light .stu-globe .ft { color: #0B5A7A; background: #EAF4F7; border-top-color: #CFE3EA; }
+.stu-light .stu-globe .ft .geo { color: #B08530; }
+/* الرسمية الموفّرة للحبر */
+.stu-official .stu-globe .in { color: #1C3328; background: #fff; box-shadow: inset 0 0 0 1.5px #3E6350; }
+.stu-official .stu-globe .topo { display: none; }
+.stu-official .stu-globe .sch, .stu-official .stu-globe .gl, .stu-official .stu-globe .kick { color: #3E6350; }
+.stu-official .stu-globe .logo-w { display: none; }
+.stu-official .stu-globe .logo-m { display: block; }
+.stu-official .stu-globe .orbit { stroke: #CCF2DB; }
+.stu-official .stu-globe .orbit .sat { fill: #3E6350; }
+.stu-official .stu-globe .ph { border-color: #3E6350; background: #fff; box-shadow: none; }
+.stu-official .stu-globe .ph-e { color: #CCF2DB; }
+.stu-official .stu-globe .rl { color: #3E6350; background: #fff; border: 1.2px solid #3E6350; }
+.stu-official .stu-globe .cl { color: #5E7268; }
+.stu-official .stu-globe .sp span { color: #A9B8B0; border-color: #E1EAE4; }
+.stu-official .stu-globe .sp i { background: #E1EAE4; }
+.stu-official .stu-globe .sp .on { color: #1C3328; background: #fff; }
+.stu-official .stu-globe .ft { color: #3E6350; background: #fff; border-top-color: #CCF2DB; }
+.stu-official .stu-globe .ft .geo { color: #3E6350; }

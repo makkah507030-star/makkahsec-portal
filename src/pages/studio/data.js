@@ -78,6 +78,20 @@ export function loadSchoolStamp() {
   return stampCache;
 }
 
+/* طلاب برنامج جلوب بفصولهم — لبطاقة طالب جلوب (globe_1.sql) */
+export async function loadGlobe() {
+  const { data } = await supabase.from("globe_members")
+    .select("*, students(full_name, student_enrollment(status, classes(grade, class_no)))");
+  const G = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
+  const globe = (data ?? []).map((r) => {
+    const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
+    return { full_name: r.students?.full_name ?? "",
+             grade: en?.classes?.grade, class_no: en?.classes?.class_no,
+             cls: en ? `${G[en.classes?.grade] ?? ""} · ${en.classes?.class_no ?? ""}` : "" };
+  }).filter((x) => x.full_name).sort(byClassName());
+  return { globe };
+}
+
 /* أعضاء الفريق الكشفي برتبهم وفصولهم — لبطاقة الكشاف (scouts_1.sql و scouts_3.sql) */
 export async function loadScouts() {
   const { data } = await supabase.from("scout_members")

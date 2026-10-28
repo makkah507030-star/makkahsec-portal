@@ -1,9 +1,19 @@
 // src/pages/studio/templates.js
 import { COLORS } from "../../lib/dfile.js";
 import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode, classShort, iconFor, signIconFor } from "./lib";
-import { loadSchedule, loadStudents, loadStaff, loadScouts, shortName } from "./data";
+import { loadSchedule, loadStudents, loadStaff, loadScouts, loadGlobe, shortName } from "./data";
 import { SCOUT_RANKS, rankOf } from "../../lib/scoutLeader.js";
 import { DAY_NAMES, GRADE_NAMES } from "../../lib/schoolTime";
+
+// برنامج جلوب: مجالاته البيئية الأربعة بألوانها، وصفات الطالب في بطاقته
+export const GLOBE_SPHERES = [
+  { k: "all", t: "كل المجالات", color: "#D9B45A" },
+  { k: "atmo", t: "الغلاف الجوي", color: "#5BB8E8" },
+  { k: "hydro", t: "الغلاف المائي", color: "#2F7FD6" },
+  { k: "bio", t: "الغطاء الحيوي", color: "#4CAF6A" },
+  { k: "pedo", t: "التربة", color: "#B8794A" },
+];
+const GLOBE_ROLES = ["باحث بيئي", "قائد فريق الرصد", "سفير جلوب", "عضو البرنامج"];
 
 /* =====================================================================
    قوالب استوديو البوابة: القسم الذي يظهر فيه كل قالب، وحقوله، وتعبئته
@@ -391,6 +401,31 @@ export const TEMPLATES = [
     view: (d) => ({ ...d, cards: scoutCards(d, {})[0] }),
     pages: (d, c) => scoutCards(d, c).map((cards) => ({ ...d, cards })),
   },
+  {
+    key: "globe-card",
+    sections: ["admin"],
+    only: "globe",                      // لمن يملك صلاحية «برنامج جلوب» (Studio.jsx)
+    sheet: "globecard",
+    batch: true,
+    defaultTheme: "dark",
+    title: "بطاقة طالب جلوب",
+    desc: "بطاقة عضوية طولية فاخرة لطلاب برنامج جلوب البيئي (5.4 × 8.6 سم) بشعار البرنامج والصورة والمجال البيئي — 9 بطاقات في الورقة، ولكل طلاب البرنامج دفعة واحدة.",
+    load: loadGlobe,
+    fields: [
+      { name: "name", label: "اسم الطالب", max: 40 },
+      { name: "role", label: "الصفة", type: "choice", options: GLOBE_ROLES },
+      { name: "sphere", label: "المجال البيئي", type: "choice", options: GLOBE_SPHERES.map((s) => s.t) },
+      { name: "cls", label: "الصف والفصل", max: 30 },
+      { name: "photo", label: "صورة الطالب (اختيارية)", type: "photo" },
+      { name: "logo", label: "شعار البرنامج (اختياري — PNG بخلفية شفافة أفضل)", type: "logo" },
+      { name: "scope", label: "الطباعة", type: "opts",
+        options: (d, c) => [["one", "بطاقة واحدة"], ["page", "ورقة كاملة (9 نسخ)"], ["all", `كل طلاب البرنامج (${c.globe?.length ?? 0})`]] },
+    ],
+    defaults: (c) => ({ name: "", role: GLOBE_ROLES[0], sphere: GLOBE_SPHERES[0].t, cls: "", photo: "", logo: "", scope: "one", year: c.year }),
+    sample: () => ({ name: "اسم الطالب", cls: "الثاني الثانوي · 3" }),
+    view: (d) => ({ ...d, cards: globeCards(d, {})[0] }),
+    pages: (d, c) => globeCards(d, c).map((cards) => ({ ...d, cards })),
+  },
   /* ============================ المناسبات والطالب ============================ */
   {
     key: "rollup",
@@ -595,6 +630,19 @@ function scoutCards(d, c) {
     });
     const out = [];
     for (let i = 0; i < all.length; i += 10) out.push(all.slice(i, i + 10));
+    return out;
+  }
+  return [[me]];
+}
+
+/* بطاقات جلوب: 9 طولية في الورقة، والرقم ترتيب الطالب */
+function globeCards(d, c) {
+  const me = { name: d.name, role: d.role, sphere: d.sphere, cls: d.cls, photo: d.photo, no: 1 };
+  if (d.scope === "page") return [Array.from({ length: 9 }, () => me)];
+  if (d.scope === "all" && c.globe?.length) {
+    const all = c.globe.map((x, i) => ({ name: x.full_name, role: d.role, sphere: d.sphere, cls: x.cls, no: i + 1 }));
+    const out = [];
+    for (let i = 0; i < all.length; i += 9) out.push(all.slice(i, i + 9));
     return out;
   }
   return [[me]];
