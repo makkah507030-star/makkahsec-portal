@@ -21,7 +21,7 @@ export let ACADEMIC_DEPUTY_NAME = "فهد بن سعود حضراوي";
 export let TECH_SUPPORT_NAME = "محمد بن حسن الحازمي";
 
 // مسؤولو البرامج — في كشوف برنامجي الموهوبين وجلوب وتقارير خططهما (وبحث توقيعهما بالاسم)
-export let GIFTED_LEADER_NAME = "فواز حامد سعيد الحارثي";
+export let GIFTED_LEADER_NAME = "فواز بن حامد الحارثي";
 export let GLOBE_LEADER_NAME = "عبدالله بن محمد بادابود";
 
 export const SIGNERS = [
