@@ -30,6 +30,8 @@ export default function MyScouts() {
   const color = p?.color ?? "#3E6350";
   const roster = me.roster ?? [];
   const statusOf = (r) => marks[r.id] ?? r[kind] ?? null;
+  // ما سجّله القائد أو نائبه معتمد لا يغيّره العريف (scouts_6.sql)
+  const locked = (r) => (r.locked ?? []).includes(kind);
   const dirty = Object.keys(marks).length;
 
   const saveName = async () => {
@@ -103,16 +105,19 @@ export default function MyScouts() {
           </div>
           {msg && <p className={`mx-4 mt-3 rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.t}</p>}
           <div className="flex justify-end px-4 pt-2">
-            <button className="text-xs font-semibold text-present" onClick={() => setMarks(Object.fromEntries(roster.map((r) => [r.id, "present"])))}>الكل حاضر</button>
+            <button className="text-xs font-semibold text-present" onClick={() => setMarks(Object.fromEntries(roster.filter((r) => !locked(r)).map((r) => [r.id, "present"])))}>الكل حاضر</button>
           </div>
           <div className="divide-y divide-line">
             {roster.map((r) => (
               <div key={r.id} className="flex flex-wrap items-center gap-2 px-4 py-2">
-                <p className="min-w-0 flex-1 truncate text-sm text-ink">{r.name}{["chief", "chief_deputy"].includes(me.post) && r.patrol && <span className="text-[11px] text-muted"> · {r.patrol}</span>}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-ink">{r.name}{["chief", "chief_deputy"].includes(me.post) && r.patrol && <span className="text-[11px] text-muted"> · {r.patrol}</span>}</p>
+                  {locked(r) && <p className="text-[10.5px] font-semibold text-mint-deep">🔒 اعتمده القائد</p>}
+                </div>
                 <div className="flex gap-1">
                   {Object.entries(ATT_STATUS).map(([k, s]) => (
-                    <button key={k} onClick={() => setMarks((x) => ({ ...x, [r.id]: k }))}
-                            className={`rounded-pill px-2.5 py-1 text-[11.5px] font-semibold ${statusOf(r) === k ? s.c : "border border-line bg-white text-muted"}`}>{s.t}</button>
+                    <button key={k} disabled={locked(r)} onClick={() => setMarks((x) => ({ ...x, [r.id]: k }))}
+                            className={`rounded-pill px-2.5 py-1 text-[11.5px] font-semibold ${statusOf(r) === k ? s.c : "border border-line bg-white text-muted"} ${locked(r) && statusOf(r) !== k ? "opacity-40" : ""}`}>{s.t}</button>
                   ))}
                 </div>
               </div>

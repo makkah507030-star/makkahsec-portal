@@ -40,7 +40,7 @@ export default function ScoutAttendance() {
 
   const loadTeamNow = () => loadTeam().then((t) => { setTeam(t); if (t.err) setMsg({ ok: false, t: t.err }); });
   useEffect(() => { loadTeamNow(); }, []);
-  const loadMarks = () => supabase.from("scout_attendance").select("student_id, status, by_name").eq("att_date", date).eq("kind", kind)
+  const loadMarks = () => supabase.from("scout_attendance").select("student_id, status, by_name, by_staff").eq("att_date", date).eq("kind", kind)
     .then(({ data }) => { setSaved(Object.fromEntries((data ?? []).map((r) => [r.student_id, r]))); setMarks({}); });
   useEffect(() => { setSaved(null); loadMarks(); }, [date, kind]);   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -97,7 +97,7 @@ export default function ScoutAttendance() {
                 <div key={m.id} className="flex flex-wrap items-center gap-2 px-4 py-2">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-ink">{m.name}{m.post !== "member" && <span className="text-[11px] font-semibold" style={{ color: g.color }}> · {POSTS[m.post].short}</span>}</p>
-                    {saved[m.id]?.by_name && !marks[m.id] && <p className="text-[10.5px] text-faint">سجّله: {saved[m.id].by_name}</p>}
+                    {saved[m.id]?.by_name && !marks[m.id] && <p className="text-[10.5px] text-faint">سجّله: {saved[m.id].by_name}{saved[m.id].by_staff ? " · معتمد" : " (العريف)"}</p>}
                   </div>
                   <div className="flex gap-1">
                     {Object.entries(ATT_STATUS).map(([k, s]) => (

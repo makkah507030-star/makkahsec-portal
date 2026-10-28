@@ -3,6 +3,7 @@
 -- • scout_attendance: تحضير الاصطفاف الصباحي (lineup) والفسحة (recess) لكل يوم.
 --   يحضّر القائد ونائبه الفريق كله في أي يوم، والعريف الأول ونائبه الفريق كله اليوم،
 --   وعريف الطليعة ونائبه طليعتهم اليوم (من حساب الطالب عبر scout_attend).
+--   وما سجّله القائد أو نائبه معتمد (by_staff): لا يغيّره العريف، ويعدّل القائد ما سجّله العريف.
 -- • scout_evals: التقييم الأسبوعي للطليعة وللعضو (للقائد ونائبه)، بمعايير من 10.
 -- يُنفَّذ في Supabase ← SQL Editor، وتكرار التنفيذ آمن.
 -- =====================================================================
@@ -15,6 +16,13 @@ create table if not exists public.scout_attendance (
   at timestamptz not null default now(),
   primary key (att_date, kind, student_id)
 );
+alter table public.scout_attendance add column if not exists by_staff boolean not null default false;
+-- من سجّل: القائد ونائبه (معتمد) أو العريف من حسابه
+create or replace function public.scout_att_by() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin new.by_staff := public.scout_staff(); return new; end $$;
+drop trigger if exists scout_att_by on public.scout_attendance;
+create trigger scout_att_by before insert or update on public.scout_attendance for each row execute function public.scout_att_by();
 
 create table if not exists public.scout_evals (
   id uuid primary key default gen_random_uuid(),
@@ -58,7 +66,8 @@ begin
                 from scout_members x join students s on s.id = x.student_id where m.patrol_id is not null and x.patrol_id = m.patrol_id),
     'roster', case when v_can then (select coalesce(jsonb_agg(jsonb_build_object('id', x.student_id, 'name', s.full_name, 'patrol', p.name,
         'lineup', (select a.status from scout_attendance a where a.att_date = v_today and a.kind = 'lineup' and a.student_id = x.student_id),
-        'recess', (select a.status from scout_attendance a where a.att_date = v_today and a.kind = 'recess' and a.student_id = x.student_id))
+        'recess', (select a.status from scout_attendance a where a.att_date = v_today and a.kind = 'recess' and a.student_id = x.student_id),
+        'locked', (select coalesce(jsonb_agg(a.kind), '[]') from scout_attendance a where a.att_date = v_today and a.student_id = x.student_id and a.by_staff))
         order by p.sort, p.name, s.full_name), '[]')
       from scout_members x join students s on s.id = x.student_id left join scout_patrols p on p.id = x.patrol_id
      where v_all or x.patrol_id = m.patrol_id) end);
@@ -79,18 +88,10 @@ begin
    where e->>'status' in ('present', 'absent', 'late', 'excused')
      and (m.post in ('chief', 'chief_deputy') or x.patrol_id = m.patrol_id)
   on conflict (att_date, kind, student_id) do update set status = excluded.status, by_user = excluded.by_user,
-    by_name = excluded.by_name, at = now();
+    by_name = excluded.by_name, at = now() where not scout_attendance.by_staff;
   get diagnostics n = row_count;
   return n;
 end $$;
-
--- جوال ولي الأمر في كشف الفريق للقائد ونائبه أيضًا
-create or replace function public.scout_roster() returns table (student_id uuid, mobile text)
-language sql stable security definer set search_path = public as $$
-  select m.student_id, (select g.mobile from guardian_student gs join guardians g on g.id = gs.guardian_id
-                         where gs.student_id = m.student_id and coalesce(g.mobile, '') <> '' order by g.is_active desc limit 1)
-    from scout_members m where public.scout_staff();
-$$;
 
 revoke all on function public.scout_my(), public.scout_attend(text, jsonb) from public, anon;
 grant execute on function public.scout_my(), public.scout_attend(text, jsonb) to authenticated;

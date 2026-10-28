@@ -79,6 +79,14 @@ create policy "scout files access" on storage.objects for all to authenticated
   using (bucket_id = 'scout-files' and public.scout_report_party())
   with check (bucket_id = 'scout-files' and public.scout_report_party());
 
+-- جوال ولي الأمر في كشف الفريق للقائد ونائبه
+create or replace function public.scout_roster() returns table (student_id uuid, mobile text)
+language sql stable security definer set search_path = public as $$
+  select m.student_id, (select g.mobile from guardian_student gs join guardians g on g.id = gs.guardian_id
+                         where gs.student_id = m.student_id and coalesce(g.mobile, '') <> '' order by g.is_active desc limit 1)
+    from scout_members m where public.scout_staff();
+$$;
+
 revoke all on function public.scout_report_party() from public, anon;
 grant execute on function public.scout_report_party() to authenticated;
 
