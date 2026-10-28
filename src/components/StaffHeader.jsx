@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { useSession, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 import { shrinkImage } from "../lib/imageResize";
 import { NameCard } from "./StudentHeader.jsx";
+import { TONES } from "./MediaPressCard.jsx";
 
 /* =====================================================================
    بطاقة الاسم للمعلم والإداري أعلى الرئيسية (بهوية الاستوديو كبطاقة الطالب):
@@ -53,7 +54,7 @@ export default function StaffHeader({ kicker = null }) {
   const chips = teacherView
     ? [{ t: "معلم", strong: true }, spec && { t: spec }].filter(Boolean)
     : adminRoles.map((r, i) => ({ t: ADMIN_ROLE_LABEL[r] ?? r, strong: i === 0 })).slice(0, 3);
-  if (media) chips.push({ badge: true, color: "#B8912F", title: "الفريق الإعلامي", t: <><span aria-hidden="true">◉</span> {media}</> });
+  if (media) chips.push({ badge: true, color: TONES.leader.base, title: "الفريق الإعلامي", t: <><span aria-hidden="true">◉</span> {media}</> });
 
   return (
     <div className="space-y-1">

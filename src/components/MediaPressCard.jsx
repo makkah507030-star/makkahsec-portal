@@ -9,7 +9,21 @@ import { fmtDate } from "../lib/dates";
    ===================================================================== */
 
 const G = { ink: "#1F3D2E", green: "#3E6350", gold: "#B8912F", goldL: "#D9B45A", paper: "#FBF8F0", line: "#E4DCC6", sub: "#6B6253" };
-const TARGET = 12;   // مقاعد قالب الفريق الإعلامي
+const TARGET = 12;
+
+// لون كل فئة: القائد بالأخضر الرسمي، ولكل فرع لونه (dark للترويسة، base للشارة والأشرطة)
+export const TONES = {
+  leader: { t: "القيادة",                 dark: "#1F3D2E", base: "#3E6350" },
+  photo:  { t: "التصوير الفوتوغرافي",      dark: "#1B3350", base: "#2F5D8A" },
+  video:  { t: "التصوير المرئي والمونتاج", dark: "#4A1824", base: "#8A2E40" },
+  write:  { t: "التحرير والكتابة",         dark: "#4A3216", base: "#8A6230" },
+  design: { t: "التصميم",                 dark: "#33224D", base: "#64478F" },
+  member: { t: "عضو",                     dark: "#1F3D2E", base: "#3E6350" },
+};
+/** فئة الفرع من اسمه (أسماء قالب الفريق الإعلامي أو ما يشبهها) */
+export const toneOf = (branch, staff = false) => TONES[staff ? "leader"
+  : /مونتاج|مرئي|فيديو/.test(branch ?? "") ? "video" : /فوتوغراف|تصوير/.test(branch ?? "") ? "photo"
+  : /تحرير|كتابة|أخبار/.test(branch ?? "") ? "write" : /تصميم/.test(branch ?? "") ? "design" : "member"];   // مقاعد قالب الفريق الإعلامي
 
 /** مؤشر القوة من 100: حجم الفريق إلى مقاعده (60) وأعماله المنشورة حتى 60 عملًا (40) */
 export const teamPower = (c) => Math.round(Math.min(1, (c.members ?? 0) / TARGET) * 60 + Math.min(1, (c.items ?? 0) / 60) * 40);
@@ -27,13 +41,14 @@ function Row({ k, v, num }) {
 // بطاقة طولية كبطاقات الهوية، والختم بجانب الصورة
 export default function MediaPressCard({ c, photo, year }) {
   const staff = c.kind === "staff";
+  const T = toneOf(c.role, staff);
   const no = `MT-${staff ? "L" : ""}${String(c.no ?? 1).padStart(3, "0")}`;
   return (
     <div className="mx-auto w-full max-w-[290px] select-none rounded-[12px] p-[5px] shadow-[0_6px_22px_rgba(31,61,46,.16)]"
-         style={{ background: G.paper, border: `1.5px solid ${G.green}`, fontFamily: '"IBM Plex Sans Arabic", Tahoma, sans-serif' }}>
+         style={{ background: G.paper, border: `1.5px solid ${T.base}`, fontFamily: '"IBM Plex Sans Arabic", Tahoma, sans-serif' }}>
       <div className="relative flex flex-col overflow-hidden rounded-[8px]" style={{ border: `1px solid ${G.gold}` }}>
         {/* ترويسة */}
-        <div className="px-3 pb-2.5 pt-3 text-center" style={{ background: G.ink }}>
+        <div className="px-3 pb-2.5 pt-3 text-center" style={{ background: `linear-gradient(160deg, ${T.base} -40%, ${T.dark} 55%)` }}>
           <div className="flex items-center justify-between">
             <p className="text-right text-[9px] leading-tight text-white/75">وزارة التعليم<br /><b className="text-[10px] text-white">مدرسة مكة الثانوية</b></p>
             <img src={iconWhite} alt="" className="h-6 w-6 object-contain" />
@@ -47,13 +62,13 @@ export default function MediaPressCard({ c, photo, year }) {
         <div className="relative flex flex-1 flex-col items-center px-4 pb-4 pt-4"
              style={{ backgroundImage: `repeating-linear-gradient(135deg, transparent 0 11px, ${G.line}44 11px 12px)` }}>
           <div className="grid h-[112px] w-[92px] place-items-center overflow-hidden rounded-[3px] bg-white p-[3px]"
-               style={{ border: `1.5px solid ${G.gold}`, boxShadow: `0 0 0 3px ${G.paper}, 0 0 0 4px ${G.green}55` }}>
+               style={{ border: `1.5px solid ${G.gold}`, boxShadow: `0 0 0 3px ${G.paper}, 0 0 0 4px ${T.base}55` }}>
             {photo ? <img src={photo} alt="" className="h-full w-full rounded-[2px] object-cover" />
-              : <svg viewBox="0 0 48 48" className="h-12 w-12" fill="none" stroke={G.green} strokeWidth="2.2" aria-hidden="true">
+              : <svg viewBox="0 0 48 48" className="h-12 w-12" fill="none" stroke={T.base} strokeWidth="2.2" aria-hidden="true">
                   <rect x="6" y="14" width="36" height="24" rx="4" /><circle cx="24" cy="26" r="7" /><path d="M17 14l3-5h8l3 5" /></svg>}
           </div>
           <p className="mt-3 max-w-full truncate text-center text-[15px] font-bold" style={{ color: G.ink }}>{c.name}</p>
-          <span className="mt-1 rounded-full px-3 py-[2px] text-[10.5px] font-semibold text-white" style={{ background: G.green }}>
+          <span className="mt-1 rounded-full px-3 py-[2px] text-[10.5px] font-semibold text-white" style={{ background: T.base }}>
             {staff ? c.role : "عضو الفريق الإعلامي"}</span>
           <div className="mt-3 w-full rounded-[6px] bg-white/80 px-2.5 py-0.5" style={{ border: `1px solid ${G.line}` }}>
             {!staff && <Row k="الفرع" v={c.role} />}
@@ -71,7 +86,7 @@ export default function MediaPressCard({ c, photo, year }) {
         {/* التذييل */}
         <div className="flex shrink-0 items-center justify-between px-3 py-1.5 text-[8.5px]" style={{ background: "#F3EEDF", borderTop: `1px solid ${G.gold}66`, color: G.sub }}>
           <span>للاستخدام داخل المدرسة</span>
-          <span className="num font-semibold" style={{ color: G.green }} dir="rtl">{year}</span>
+          <span className="num font-semibold" style={{ color: T.base }} dir="rtl">{year}</span>
         </div>
       </div>
     </div>
@@ -125,11 +140,12 @@ export function TeamStrength({ c }) {
             <p className="text-[11px]" style={{ color: G.sub }}>توزيع الفروع</p>
             {c.branches.map((b) => (
               <div key={b.name} className="flex items-center gap-2 text-[11px]">
-                <span className="w-[120px] shrink-0 truncate font-medium" style={{ color: G.ink }}>{b.name}</span>
+                <span className="flex w-[130px] shrink-0 items-center gap-1.5 truncate font-medium" style={{ color: G.ink }}>
+                  <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: toneOf(b.name).base }} />{b.name}</span>
                 <span className="h-[7px] flex-1 overflow-hidden rounded-full bg-white" style={{ border: `1px solid ${G.line}` }}>
-                  <span className="block h-full rounded-full" style={{ width: `${(b.n * 100) / max}%`, background: G.green }} />
+                  <span className="block h-full rounded-full" style={{ width: `${(b.n * 100) / max}%`, background: toneOf(b.name).base }} />
                 </span>
-                <span className="num w-5 text-center font-bold" style={{ color: G.green }}>{b.n}</span>
+                <span className="num w-5 text-center font-bold" style={{ color: toneOf(b.name).base }}>{b.n}</span>
               </div>
             ))}
           </div>
