@@ -13,6 +13,15 @@ export const POSTS = {
   member:        { t: "عضو",               short: "عضو" },
 };
 
+// ترتيب المناصب في الهيكل: العريف الأول، ثم نائبه تحته، ثم عرفاء الطلائع ونوابهم
+export const POST_ORDER = ["chief", "chief_deputy", "patrol_leader", "patrol_deputy", "member"];
+const postRank = (m) => POST_ORDER.indexOf(m.post);
+/** ترتيب الأعضاء بالهيكل: قيادة الفريق، ثم كل طليعة بترتيبها (عريفها ثم نائبه ثم أعضاؤها) */
+export const byHierarchy = (patrols) => {
+  const at = (m) => (m.post === "chief" || m.post === "chief_deputy" ? -1 : Math.max(0, patrols.findIndex((p) => p.id === m.patrol_id)));
+  return (a, b) => at(a) - at(b) || postRank(a) - postRank(b);
+};
+
 export const ATT_KIND = { lineup: "الاصطفاف الصباحي", recess: "الفسحة" };
 export const ATT_STATUS = {
   present: { t: "حاضر",  c: "bg-present text-white",  soft: "bg-present/10 text-present" },

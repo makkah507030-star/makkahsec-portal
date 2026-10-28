@@ -5,7 +5,7 @@ import { useSession } from "../../lib/session.jsx";
 import { todayISO } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
-import { POSTS, ATT_KIND, ATT_STATUS } from "../../lib/scouts.js";
+import { POSTS, ATT_KIND, ATT_STATUS, byHierarchy } from "../../lib/scouts.js";
 import { loadTeam } from "./data.js";
 
 /* =====================================================================
@@ -15,7 +15,7 @@ import { loadTeam } from "./data.js";
    ===================================================================== */
 
 export function groupByPatrol(members, patrols) {
-  const lead = members.filter((m) => ["chief", "chief_deputy"].includes(m.post));
+  const lead = members.filter((m) => ["chief", "chief_deputy"].includes(m.post)).sort(byHierarchy(patrols));
   const groups = [];
   if (lead.length) groups.push({ id: "lead", name: "قيادة الفريق", color: "#B8912F", list: lead });
   patrols.forEach((p) => {
@@ -49,7 +49,7 @@ export default function ScoutAttendance() {
   const statusOf = (id) => marks[id] ?? saved[id]?.status ?? null;
   const dirty = Object.keys(marks).length;
   const counts = Object.fromEntries(Object.keys(ATT_STATUS).map((k) => [k, team.members.filter((m) => statusOf(m.id) === k).length]));
-  const takers = team.members.filter((m) => m.post !== "member");
+  const takers = team.members.filter((m) => m.post !== "member").sort(byHierarchy(team.patrols));
 
   const save = async () => {
     setBusy(true); setMsg(null);
@@ -125,9 +125,9 @@ export default function ScoutAttendance() {
           <p className="mb-2 text-[11px] text-muted">العريف الأول ونائبه يحضّران الفريق كله، وعريف الطليعة ونائبه طليعتهم، لليوم فقط. أوقف الصلاحية لمن لا تريده يحضّر.</p>
           <div className="divide-y divide-line">
             {takers.map((m) => (
-              <label key={m.id} className="flex items-center gap-2 py-1.5 text-sm text-ink">
+              <label key={m.id} className={`flex items-center gap-2 py-1.5 text-sm text-ink ${m.post.endsWith("_deputy") ? "ps-4" : ""}`}>
                 <input type="checkbox" checked={m.can_attend} onChange={() => toggleTaker(m)} />
-                <span className="flex-1">{m.name}</span>
+                <span className={`flex-1 ${m.post.endsWith("_deputy") ? "ps-5 text-muted" : "font-semibold"}`}>{m.post.endsWith("_deputy") ? "↳ " : ""}{m.name}</span>
                 <span className="text-[11px] text-muted">{POSTS[m.post].t}{m.patrol_id ? ` · ${team.patrols.find((p) => p.id === m.patrol_id)?.name ?? ""}` : ""}</span>
               </label>
             ))}

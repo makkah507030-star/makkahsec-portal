@@ -86,10 +86,9 @@ export default function ScoutStructure() {
           <Stem />
           <Node title="نائب القائد" name={deputy?.full_name} tint="#F6F9F7" />
           <Stem />
-          <div className="grid grid-cols-2 gap-2">
-            <Node title={POSTS.chief.t} name={byPost("chief")?.name} color="#B8912F" tint="#FBF6EA" />
-            <Node title={POSTS.chief_deputy.t} name={byPost("chief_deputy")?.name} color="#B8912F" tint="#FDFAF2" />
-          </div>
+          <Node title={POSTS.chief.t} name={byPost("chief")?.name} color="#B8912F" tint="#FBF6EA" />
+          <Stem />
+          <Node title={POSTS.chief_deputy.t} name={byPost("chief_deputy")?.name} color="#B8912F" tint="#FDFAF2" />
           <Stem />
         </div>
         {patrols.length ? (
@@ -110,7 +109,7 @@ export default function ScoutStructure() {
       </section>
 
       {/* العريف الأول ونائبه */}
-      <section className="card grid gap-3 p-4 sm:grid-cols-2">
+      <section className="card space-y-3 p-4">
         {["chief", "chief_deputy"].map((post) => (
           <label key={post} className="text-xs font-medium text-muted">{POSTS[post].t}
             <select className="field mt-1 w-full" disabled={busy} value={byPost(post)?.id ?? ""}
@@ -118,10 +117,10 @@ export default function ScoutStructure() {
               <option value="">— اختر من أعضاء الفريق —</option>
               {members.filter((m) => m.post === post || (!m.patrol_id && m.post === "member")).map((m) => <option key={m.id} value={m.id}>{m.name} · {m.cls}</option>)}
             </select>
-            {byPost(post) && <button className="mt-1 text-[11px] text-absent" onClick={() => run(() => upd(byPost(post).id, { post: "member" }))}>إلغاء التعيين</button>}
+            {byPost(post) && <button className="mt-1 block text-[11px] text-absent" onClick={() => run(() => upd(byPost(post).id, { post: "member" }))}>إلغاء التعيين</button>}
           </label>
         ))}
-        <p className="text-[11px] text-faint sm:col-span-2">العريف الأول ونائبه على الفريق كله، فلا يكونان في طليعة. يحضّران الفريق كله من حسابيهما.</p>
+        <p className="text-[11px] text-faint">العريف الأول ثم نائبه تحته، وهما على الفريق كله، فلا يكونان في طليعة. يحضّران الفريق كله من حسابيهما.</p>
       </section>
 
       {/* الطلائع */}
