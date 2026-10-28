@@ -674,6 +674,68 @@ export function GlobeCards({ theme = "light", d }) {
   );
 }
 
+/* ----------------------------- بطاقة طالب موهوب ----------------------------- */
+// على بنية بطاقة جلوب الطولية بهوية برنامج الموهوبين: بنفسجي ملكي وذهب ونجمة، وحول الصورة
+// هالة من النجوم، وأسفلها مجالات موهبة الطالب
+const STAR = <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" /></svg>;
+
+export function GiftedCards({ theme = "light", d }) {
+  const cards = Array.from({ length: 9 }, (_, i) => (d.cards ?? [d])[i] ?? null);
+  return (
+    <div className={`stu stu-globes stu-${theme} stu-portrait sheet`}>
+      <div className="grid">
+        {cards.map((c, i) => {
+          const doms = (c?.domains ?? []).slice(0, 3);
+          return (
+            <div key={i} className={`stu-globe stu-gift${c ? "" : " empty"}`}>
+              {c && (
+                <div className="in">
+                  <div className="topo">{CONTOURS}</div>
+                  <div className="hd">
+                    <span className="sch">
+                      {theme === "official" && <img src={moeLogo} alt="" className="moe" />}
+                      <img src={iconWhite} alt="" className="logo-w" />
+                      <img src={iconMint} alt="" className="logo-m" />
+                      <span>مدرسة مكة<br />الثانوية</span>
+                    </span>
+                    <span className="gl">{d.logo ? <img src={d.logo} alt="" /> : <><i className="gm">{STAR}</i><b>موهوب</b></>}</span>
+                  </div>
+                  <div className="ph-wrap">
+                    <svg className="orbit" viewBox="0 0 150 150" fill="none">
+                      <circle cx="75" cy="75" r="66" strokeDasharray="2 7" />
+                      {[0, 60, 120, 180, 240, 300].map((deg) => (
+                        <circle key={deg} className="sat" r={deg % 120 ? 2 : 3.2}
+                                cx={75 + 66 * Math.cos((deg * Math.PI) / 180)} cy={75 + 66 * Math.sin((deg * Math.PI) / 180)} />
+                      ))}
+                    </svg>
+                    <div className="ph">{c.photo ? <img src={c.photo} alt="" /> : <i className="ph-e">{STAR}</i>}</div>
+                  </div>
+                  <p className="kick">برنامج الموهوبين</p>
+                  {(() => {
+                    const t = fitTitle(c.name, { max: 16, min: 11, width: 172 });
+                    return <div className={`nm${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{c.name || "اسم الطالب"}</div>;
+                  })()}
+                  {c.role && <span className="rl">{c.role}</span>}
+                  {c.cls && <div className="cl">{c.cls}</div>}
+                  <div className="sp">
+                    {(doms.length ? doms : ["موهبة", "إبداع", "تميّز"]).map((t) => <span key={t} className="on"><i />{t}</span>)}
+                  </div>
+                  <div className="ft">
+                    <span className="num">GF-{String(c.no ?? 1).padStart(3, "0")}</span>
+                    <span className="geo">مكة المكرمة</span>
+                    <span className="num" dir="rtl">{d.year}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="note">بطاقات 5.4 × 8.6 سم · قصّ على الخط المتقطع · makkahsec.com</p>
+    </div>
+  );
+}
+
 /* ----------------------------- رول أب المناسبات ----------------------------- */
 export function Rollup({ theme = "light", d }) {
   const { w, h } = ROLLUP_SIZES[d.size] ?? ROLLUP_SIZES["85x200"];

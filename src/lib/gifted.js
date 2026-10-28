@@ -69,6 +69,8 @@ export const GIFTED_DOMAINS = [
   { k: "innovation", t: "الابتكار وريادة الأعمال", color: "#C2602E" },
 ];
 export const domainOf = (k) => GIFTED_DOMAINS.find((d) => d.k === k) ?? GIFTED_DOMAINS[0];
+// صفات الطالب في بطاقته بالاستوديو
+export const GIFTED_ROLES = ["طالب موهوب", "موهوب · مقياس موهبة", "سفير الموهبة", "مبتكر"];
 export const SOURCE = { mawhiba: "مقياس موهبة", school: "ترشيح المدرسة" };
 
 export const GIFTED_KIND = { enrichment: "إثرائي", training: "تدريبي", competition: "مسابقة", visit: "زيارة" };

@@ -48,6 +48,8 @@ export function programPages({ cfg, programs, theme = "light", info, notes, sigs
   return [
     <KitCover key="cover" theme={theme} c={{
       year: info.year, tag: [cfg.tag, cfg.unit], title: cfg.title, sub: "وتقرير تنفيذها",
+      // العنوان الطويل يصغر ليتسع سطرًا واحدًا (كخطة برنامج الموهوبين)
+      titleSize: cfg.title.length > 15 ? Math.round((88 * 15) / cfg.title.length) : undefined,
       badge: { main: info.termLabel, sub: info.year }, side: { main: info.hijri, sub: "تاريخ الإصدار" },
       rows: [["user", cfg.signer, info.leader || "—"], ["users", cfg.membersLabel, countAr(info.members ?? 0, "student")],
              ["calendar", "تاريخ الإصدار", info.issued], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],

@@ -609,3 +609,34 @@
 .stu-official .stu-globe .sp .on { color: #1C3328; background: #fff; }
 .stu-official .stu-globe .ft { color: #3E6350; background: #fff; border-top-color: #CCF2DB; }
 .stu-official .stu-globe .ft .geo { color: #3E6350; }
+
+/* ——— بطاقة طالب موهوب: بنية بطاقة جلوب بهوية بنفسجية ذهبية ——— */
+.stu-gift .in { background: radial-gradient(ellipse 90% 55% at 50% 36%, #6A3FA8 0%, transparent 70%),
+                            linear-gradient(170deg, #26134A 0%, #3A1D66 55%, #1C1036 100%);
+                box-shadow: inset 0 0 0 1.5px rgba(217,180,90,.7), inset 0 0 0 5px rgba(38,19,74,.9), inset 0 0 0 5.8px rgba(217,180,90,.3); }
+.stu-gift .gl { color: #E8C873; }
+.stu-gift .gl .gm, .stu-gift .ph-e { display: block; }
+.stu-gift .gl .gm svg, .stu-gift .ph-e svg { width: 100%; height: 100%; display: block; }
+.stu-gift .gl b { letter-spacing: 0; font-size: 10.5px; }
+.stu-gift .ph { background: radial-gradient(circle at 35% 30%, #8A5CC7, #2E1656); }
+.stu-gift .orbit { stroke: rgba(217,180,90,.6); }
+.stu-gift .kick { color: #D6C2F2; }
+.stu-gift .rl { color: #26134A; }
+.stu-gift .sp span.on { color: #F4E7C4; border-color: rgba(217,180,90,.65); background: rgba(217,180,90,.14); font-size: 7.5px; padding: 2px 6px; }
+.stu-gift .sp span.on i { background: #D9B45A; }
+.stu-light .stu-gift .in { color: #2A1650; background: radial-gradient(ellipse 90% 55% at 50% 36%, #EFE6FA 0%, transparent 70%), linear-gradient(170deg, #FDFBFF, #F5F0FB);
+                           box-shadow: inset 0 0 0 1.5px #5B3A94, inset 0 0 0 5px #fff, inset 0 0 0 5.8px rgba(201,155,58,.5); }
+.stu-light .stu-gift .topo { color: rgba(91,58,148,.07); }
+.stu-light .stu-gift .sch, .stu-light .stu-gift .kick { color: #5B3A94; }
+.stu-light .stu-gift .gl { color: #B08530; }
+.stu-light .stu-gift .ph { background: radial-gradient(circle at 35% 30%, #F5EEFC, #E2D3F4); }
+.stu-light .stu-gift .ph-e { color: rgba(91,58,148,.45); }
+.stu-light .stu-gift .rl { color: #fff; background: linear-gradient(90deg, #5B3A94, #7A4FB5); }
+.stu-light .stu-gift .cl { color: #6A5A80; }
+.stu-light .stu-gift .sp span.on { color: #5B3A94; border-color: #D9C9EE; background: #F3ECFA; }
+.stu-light .stu-gift .sp span.on i { background: #B08530; }
+.stu-light .stu-gift .ft { color: #5B3A94; background: #F3ECFA; border-top-color: #E2D3F4; }
+.stu-light .stu-gift .ft .geo { color: #B08530; }
+.stu-official .stu-gift .gl, .stu-official .stu-gift .kick { color: #3E6350; }
+.stu-official .stu-gift .sp span.on { color: #1C3328; border-color: #CCF2DB; background: #fff; }
+.stu-official .stu-gift .sp span.on i { background: #3E6350; }

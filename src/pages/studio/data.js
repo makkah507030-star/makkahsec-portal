@@ -78,6 +78,20 @@ export function loadSchoolStamp() {
   return stampCache;
 }
 
+/* الطلاب الموهوبون بفصولهم ومجالاتهم — لبطاقة طالب موهوب (gifted_2.sql) */
+export async function loadGifted() {
+  const { data } = await supabase.from("gifted_members")
+    .select("*, students(full_name, student_enrollment(status, classes(grade, class_no)))");
+  const G = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
+  const gifted = (data ?? []).map((r) => {
+    const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
+    return { full_name: r.students?.full_name ?? "", domains: r.domains ?? [],
+             grade: en?.classes?.grade, class_no: en?.classes?.class_no,
+             cls: en ? `${G[en.classes?.grade] ?? ""} · ${en.classes?.class_no ?? ""}` : "" };
+  }).filter((x) => x.full_name).sort(byClassName());
+  return { gifted };
+}
+
 /* طلاب برنامج جلوب بفصولهم — لبطاقة طالب جلوب (globe_1.sql) */
 export async function loadGlobe() {
   const { data } = await supabase.from("globe_members")
