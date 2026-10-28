@@ -4,6 +4,7 @@
 --   المنسوبون) وفي أي صفوف، وإقرار الرافع بموافقات التصوير.
 -- • مخزن media-library خاص: لا رابط عام لأي ملف؛ يُعرض برابط موقّع ينتهي بعد دقائق،
 --   ولا يُصدَر الرابط إلا لمن يحق له رؤية المادة (banner_for_me من home_banners.sql).
+-- • tracked: مادة حساسة يظهر فوقها مربع صغير باسم المشاهد وفصله (media_viewer_tag).
 -- • صلاحية «استوديو الوسائط» (media) تُسند لدور «البوابة الإعلامية» هنا، والمدير والدعم الفني دائمًا.
 -- يُنفَّذ بعد home_banners.sql في Supabase ← SQL Editor، وتكرار التنفيذ آمن.
 -- =====================================================================
@@ -23,6 +24,7 @@ create table if not exists public.media_items (
   created_by uuid default auth.uid(), created_by_name text,
   created_at timestamptz not null default now()
 );
+alter table public.media_items add column if not exists tracked boolean not null default false;
 create index if not exists media_items_album on public.media_items (album, created_at desc);
 
 create or replace function public.media_manager() returns boolean
@@ -35,6 +37,14 @@ language sql stable security definer set search_path = public as $$
   select public.media_manager() or exists (
     select 1 from media_items m where (m.path = p_path or m.thumb = p_path)
        and m.published and public.banner_for_me(m.audience, m.grades));
+$$;
+
+-- سطر العلامة للمادة الحساسة: اسم المشاهد، وصفّه/فصله إن كان طالبًا
+create or replace function public.media_viewer_tag() returns text
+language sql stable security definer set search_path = public as $$
+  select u.full_name || coalesce(' · ' || (select v.grade || '/' || v.class_no from v_active_students v
+           join students s on s.id = v.student_id where s.user_id = u.id limit 1), '')
+    from users u where u.id = auth.uid();
 $$;
 
 alter table public.media_items enable row level security;
@@ -64,8 +74,8 @@ drop policy if exists "media library delete" on storage.objects;
 create policy "media library delete" on storage.objects for delete to authenticated
   using (bucket_id = 'media-library' and public.media_manager());
 
-revoke all on function public.media_manager(), public.media_can_see(text) from public, anon;
-grant execute on function public.media_manager(), public.media_can_see(text) to authenticated;
+revoke all on function public.media_manager(), public.media_can_see(text), public.media_viewer_tag() from public, anon;
+grant execute on function public.media_manager(), public.media_can_see(text), public.media_viewer_tag() to authenticated;
 
 -- للتحقق
 select count(*) as "المواد",

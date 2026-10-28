@@ -15,7 +15,7 @@ import MediaViewer from "./MediaViewer.jsx";
    وإخفاؤها وحذفها. لا يصدر لأي ملف رابط عام؛ العرض داخل البوابة برابط موقّع قصير العمر.
    ===================================================================== */
 
-const BLANK = { files: [], title: "", album: "", body: "", audience: ["student", "guardian", "staff"], grades: [], consent: false };
+const BLANK = { files: [], title: "", album: "", body: "", audience: ["student", "guardian", "staff"], grades: [], tracked: false, consent: false };
 const pill = (on) => `rounded-pill px-3 py-1 text-xs font-medium ${on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`;
 
 export default function MediaStudio() {
@@ -40,7 +40,7 @@ export default function MediaStudio() {
         const up = await uploadMedia(file);
         const { error } = await supabase.from("media_items").insert({
           ...up, title: f.files.length > 1 ? `${f.title.trim()} (${i + 1})` : f.title.trim(), album: f.album.trim() || null,
-          body: f.body.trim() || null, audience: f.audience, grades: f.grades, consent: true, created_by_name: profile?.full_name ?? null });
+          body: f.body.trim() || null, audience: f.audience, grades: f.grades, tracked: f.tracked, consent: true, created_by_name: profile?.full_name ?? null });
         if (error) { await supabase.storage.from(MEDIA_BUCKET).remove([up.path, up.thumb].filter(Boolean)); throw error; }
         n += 1;
       }
@@ -87,6 +87,10 @@ export default function MediaStudio() {
             {[[1, "الأول"], [2, "الثاني"], [3, "الثالث"]].map(([g, t]) => <button key={g} className={pill(f.grades.includes(g))} onClick={() => toggle("grades", g)}>{t}</button>)}
           </div>
         </div>
+        <label className="flex items-start gap-2 text-sm text-ink">
+          <input type="checkbox" className="mt-1" checked={f.tracked} onChange={(e) => setF({ ...f, tracked: e.target.checked })} />
+          <span>مادة حساسة: يظهر في زاويتها اسم المشاهد وفصله <span className="text-muted">(لتُعرف أي لقطة شاشة تسرّبت)</span></span>
+        </label>
         <label className="flex items-start gap-2 rounded-sm2 bg-late/10 px-3 py-2 text-sm text-ink">
           <input type="checkbox" className="mt-1" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} />
           <span>أقرّ بأن التصوير تمّ بإذن إدارة المدرسة وبأجهزتها، وأن لكل طالب يظهر في المواد موافقة ولي أمره على التصوير لهذا العام، ولكل منسوب يظهر فيها موافقته.</span>
@@ -102,6 +106,7 @@ export default function MediaStudio() {
             <div className="mt-1.5 flex items-center gap-2 text-[11px]">
               <button className="font-semibold text-mint-deep underline" onClick={() => flip(r)}>{r.published ? "إخفاء" : "نشر"}</button>
               <button className="text-absent" onClick={() => remove(r)}>حذف</button>
+              {r.tracked && <span className="rounded-pill bg-late/15 px-1.5 text-late">حساسة</span>}
               <span className="ms-auto truncate text-faint">{r.created_by_name}</span>
             </div>
           )} />

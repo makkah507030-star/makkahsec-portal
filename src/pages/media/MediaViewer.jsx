@@ -1,17 +1,33 @@
 // src/pages/media/MediaViewer.jsx
 import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 import { signedUrls, VIDEO_TTL } from "../../lib/media.js";
 import { fmtDate } from "../../lib/dates";
 
 /* =====================================================================
    عارض المادة داخل البوابة: الصورة أو المقطع برابط موقّع قصير العمر يُطلب عند الفتح،
-   بلا تنزيل ولا قائمة الزر الأيمن ولا سحب، وتحتها تحذير من النشر خارج البوابة.
+   بلا تنزيل ولا قائمة الزر الأيمن ولا سحب، وتحتها تحذير من النشر خارج البوابة. والمادة الحساسة
+   (tracked) يظهر في زاويتها مربع صغير باسم المشاهد وفصله، فيُعرف صاحب أي لقطة شاشة تسرّبت.
    ===================================================================== */
 
 const block = (e) => e.preventDefault();
 
+let tagOnce = null;   // سطر العلامة يُطلب مرة واحدة في الجلسة
+function useViewerTag(on) {
+  const [tag, setTag] = useState("");
+  useEffect(() => {
+    if (!on) return undefined;
+    let live = true;
+    tagOnce ??= supabase.rpc("media_viewer_tag").then(({ data }) => data ?? "");
+    tagOnce.then((t) => { if (live) setTag(t); });
+    return () => { live = false; };
+  }, [on]);
+  return tag;
+}
+
 export default function MediaViewer({ item, onClose, onPrev, onNext }) {
   const [url, setUrl] = useState(null);
+  const tag = useViewerTag(item.tracked);
   useEffect(() => {
     let live = true;
     setUrl(null);
@@ -43,6 +59,9 @@ export default function MediaViewer({ item, onClose, onPrev, onNext }) {
         {url && item.kind === "video" && (
           <video src={url} controls autoPlay playsInline controlsList="nodownload noplaybackrate" disablePictureInPicture
                  onDragStart={block} className="max-h-full max-w-full" />
+        )}
+        {url && item.tracked && tag && (
+          <span className="pointer-events-none absolute bottom-3 left-3 whitespace-nowrap rounded-md bg-black/40 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-[2px]">{tag}</span>
         )}
         {onPrev && <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-white" onClick={onPrev} aria-label="السابق">›</button>}
         {onNext && <button className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-white" onClick={onNext} aria-label="التالي">‹</button>}
