@@ -20,6 +20,7 @@ export default function MyScouts() {
   const [marks, setMarks] = useState({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [rename, setRename] = useState(null);   // اسم الطليعة الجديد (لعريفها)
   const load = () => supabase.rpc("scout_my").then(({ data, error }) => { setMe(error ? null : data); setMarks({}); });
   useEffect(() => { load(); }, []);
 
@@ -30,6 +31,14 @@ export default function MyScouts() {
   const roster = me.roster ?? [];
   const statusOf = (r) => marks[r.id] ?? r[kind] ?? null;
   const dirty = Object.keys(marks).length;
+
+  const saveName = async () => {
+    setBusy(true);
+    const { error } = await supabase.rpc("scout_patrol_rename", { p_name: rename });
+    setBusy(false);
+    if (error) { setMsg({ ok: false, t: error.message }); return; }
+    setRename(null); setMsg({ ok: true, t: "حُفظ اسم الطليعة." }); load();
+  };
 
   const save = async () => {
     setBusy(true); setMsg(null);
@@ -51,6 +60,20 @@ export default function MyScouts() {
             {p?.motto && <p className="text-xs text-white/80">«{p.motto}»</p>}
           </div>
         </div>
+        {p && me.post === "patrol_leader" && (
+          <div className="border-b border-line px-4 py-2.5">
+            {rename == null ? (
+              <button className="text-xs font-semibold text-mint-deep underline" onClick={() => setRename(p.name)}>تغيير اسم الطليعة</button>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <input className="field min-w-0 flex-1" value={rename} maxLength={40} autoFocus onChange={(e) => setRename(e.target.value)} placeholder="اسم الطليعة" />
+                <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy || rename.trim().length < 2} onClick={saveName}>حفظ</button>
+                <button className="text-xs text-muted" onClick={() => setRename(null)}>إلغاء</button>
+              </div>
+            )}
+          </div>
+        )}
+        {msg && !me.can_attend && <p className={`mx-4 mt-3 rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.t}</p>}
         {p && (
           <div className="space-y-3 p-4">
             {lines(p.tasks).length > 0 && (

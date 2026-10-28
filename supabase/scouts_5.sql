@@ -5,6 +5,7 @@
 -- • الهيكل: القائد ← النائب ← العريف الأول ← نائب العريف الأول ← عرفاء الطلائع، ولكل
 --   طليعة عريف ونائب عريف وأعضاء ومهام.
 -- • can_attend: صلاحية العريف في تحضير طليعته (يسحبها القائد).
+-- • اسم الطليعة يختاره القائد ونائبه، وعريفها من حسابه (scout_patrol_rename).
 -- يُنفَّذ في Supabase ← SQL Editor، وتكرار التنفيذ آمن.
 -- =====================================================================
 create or replace function public.scout_staff() returns boolean
@@ -73,8 +74,18 @@ drop policy if exists scout_patrols_write on public.scout_patrols;
 create policy scout_patrols_write on public.scout_patrols for all to authenticated
   using (public.scout_staff()) with check (public.scout_staff());
 
-revoke all on function public.scout_staff(), public.scout_staff_list() from public, anon;
-grant execute on function public.scout_staff(), public.scout_staff_list() to authenticated;
+-- عريف الطليعة يختار اسم طليعته من حسابه (والقائد ونائبه من صفحة الفريق)
+create or replace function public.scout_patrol_rename(p_name text) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if length(trim(coalesce(p_name, ''))) not between 2 and 40 then raise exception 'اكتب اسم الطليعة (2 إلى 40 حرفًا)'; end if;
+  update scout_patrols set name = trim(p_name) where id = (select sm.patrol_id from scout_members sm join students s on s.id = sm.student_id
+     where s.user_id = auth.uid() and sm.post = 'patrol_leader' limit 1);
+  if not found then raise exception 'تسمية الطليعة لعريفها'; end if;
+end $$;
+
+revoke all on function public.scout_staff(), public.scout_staff_list(), public.scout_patrol_rename(text) from public, anon;
+grant execute on function public.scout_staff(), public.scout_staff_list(), public.scout_patrol_rename(text) to authenticated;
 
 -- للتحقق
 select (select count(*) from public.scout_members) as "الأعضاء",
