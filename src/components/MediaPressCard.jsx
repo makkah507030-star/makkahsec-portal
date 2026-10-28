@@ -17,60 +17,60 @@ const LEVEL = [[85, "متميّز"], [60, "قوي"], [30, "متنامٍ"], [0, "
 
 function Row({ k, v, num }) {
   return (
-    <div className="flex items-baseline gap-2 border-b py-[5px]" style={{ borderColor: G.line }}>
-      <span className="w-[62px] shrink-0 text-[10.5px]" style={{ color: G.sub }}>{k}</span>
-      <span className={`min-w-0 flex-1 truncate text-[12.5px] font-semibold ${num ? "num" : ""}`} style={{ color: G.ink }}>{v}</span>
+    <div className="flex items-baseline justify-between gap-2 border-b py-[5px] last:border-0" style={{ borderColor: G.line }}>
+      <span className="shrink-0 text-[10.5px]" style={{ color: G.sub }}>{k}</span>
+      <span className={`min-w-0 truncate text-[12px] font-semibold ${num ? "num" : ""}`} style={{ color: G.ink }}>{v}</span>
     </div>
   );
 }
 
+// بطاقة طولية كبطاقات الهوية، والختم بجانب الصورة
 export default function MediaPressCard({ c, photo, year }) {
   const staff = c.kind === "staff";
   const no = `MT-${staff ? "L" : ""}${String(c.no ?? 1).padStart(3, "0")}`;
   return (
-    <div className="mx-auto w-full max-w-[420px] select-none rounded-[10px] p-[5px] shadow-[0_6px_22px_rgba(31,61,46,.16)]"
+    <div className="mx-auto w-full max-w-[290px] select-none rounded-[12px] p-[5px] shadow-[0_6px_22px_rgba(31,61,46,.16)]"
          style={{ background: G.paper, border: `1.5px solid ${G.green}`, fontFamily: '"IBM Plex Sans Arabic", Tahoma, sans-serif' }}>
-      <div className="relative overflow-hidden rounded-[6px]" style={{ border: `1px solid ${G.gold}` }}>
+      <div className="relative flex flex-col overflow-hidden rounded-[8px]" style={{ border: `1px solid ${G.gold}` }}>
         {/* ترويسة */}
-        <div className="flex items-center justify-between gap-2 px-3 py-2" style={{ background: G.ink }}>
-          <p className="text-[9.5px] leading-tight text-white/75">وزارة التعليم<br /><b className="text-[10.5px] text-white">مدرسة مكة الثانوية</b></p>
-          <div className="text-center">
-            <p className="text-[17px] font-bold tracking-[.12em]" style={{ color: G.goldL }}>بطاقة إعلامية</p>
-            <p className="text-[8px] font-semibold tracking-[.45em]" style={{ color: `${G.goldL}cc` }} dir="ltr">PRESS · MEDIA TEAM</p>
+        <div className="px-3 pb-2.5 pt-3 text-center" style={{ background: G.ink }}>
+          <div className="flex items-center justify-between">
+            <p className="text-right text-[9px] leading-tight text-white/75">وزارة التعليم<br /><b className="text-[10px] text-white">مدرسة مكة الثانوية</b></p>
+            <img src={iconWhite} alt="" className="h-6 w-6 object-contain" />
           </div>
-          <img src={iconWhite} alt="" className="h-7 w-7 object-contain" />
+          <p className="mt-2 text-[19px] font-bold tracking-[.12em]" style={{ color: G.goldL }}>بطاقة إعلامية</p>
+          <p className="text-[7.5px] font-semibold tracking-[.45em]" style={{ color: `${G.goldL}cc` }} dir="ltr">PRESS · MEDIA TEAM</p>
         </div>
-        <div className="h-[3px]" style={{ background: `linear-gradient(90deg, ${G.gold}, ${G.goldL}, ${G.gold})` }} />
+        <div className="h-[3px] shrink-0" style={{ background: `linear-gradient(90deg, ${G.gold}, ${G.goldL}, ${G.gold})` }} />
 
-        {/* الجسم */}
-        <div className="relative flex gap-3 px-3 pb-3 pt-3"
-             style={{ backgroundImage: `repeating-linear-gradient(0deg, transparent 0 22px, ${G.line}55 22px 23px)` }}>
-          <div className="shrink-0">
-            <div className="grid h-[104px] w-[86px] place-items-center overflow-hidden rounded-[3px] bg-white p-[3px]"
-                 style={{ border: `1.5px solid ${G.gold}`, boxShadow: `inset 0 0 0 1px ${G.line}` }}>
-              {photo ? <img src={photo} alt="" className="h-full w-full rounded-[2px] object-cover" />
-                : <svg viewBox="0 0 48 48" className="h-12 w-12" fill="none" stroke={G.green} strokeWidth="2.2" aria-hidden="true">
-                    <rect x="6" y="14" width="36" height="24" rx="4" /><circle cx="24" cy="26" r="7" /><path d="M17 14l3-5h8l3 5" /></svg>}
-            </div>
-            <p className="num mt-1.5 text-center text-[10px] font-bold tracking-wider" style={{ color: G.green }} dir="ltr">{no}</p>
+        {/* الصورة والاسم */}
+        <div className="relative flex flex-1 flex-col items-center px-4 pb-4 pt-4"
+             style={{ backgroundImage: `repeating-linear-gradient(135deg, transparent 0 11px, ${G.line}44 11px 12px)` }}>
+          <div className="grid h-[112px] w-[92px] place-items-center overflow-hidden rounded-[3px] bg-white p-[3px]"
+               style={{ border: `1.5px solid ${G.gold}`, boxShadow: `0 0 0 3px ${G.paper}, 0 0 0 4px ${G.green}55` }}>
+            {photo ? <img src={photo} alt="" className="h-full w-full rounded-[2px] object-cover" />
+              : <svg viewBox="0 0 48 48" className="h-12 w-12" fill="none" stroke={G.green} strokeWidth="2.2" aria-hidden="true">
+                  <rect x="6" y="14" width="36" height="24" rx="4" /><circle cx="24" cy="26" r="7" /><path d="M17 14l3-5h8l3 5" /></svg>}
           </div>
-          <div className="min-w-0 flex-1 pb-6">
-            <Row k="الاسم" v={c.name} />
-            <Row k="الصفة" v={staff ? c.role : "عضو الفريق الإعلامي"} />
+          <p className="mt-3 max-w-full truncate text-center text-[15px] font-bold" style={{ color: G.ink }}>{c.name}</p>
+          <span className="mt-1 rounded-full px-3 py-[2px] text-[10.5px] font-semibold text-white" style={{ background: G.green }}>
+            {staff ? c.role : "عضو الفريق الإعلامي"}</span>
+          <div className="mt-3 w-full rounded-[6px] bg-white/80 px-2.5 py-0.5" style={{ border: `1px solid ${G.line}` }}>
             {!staff && <Row k="الفرع" v={c.role} />}
             {c.cls && <Row k="الفصل" v={c.cls} num />}
+            <Row k="رقم البطاقة" v={<span dir="ltr">{no}</span>} num />
             <Row k="الإصدار" v={fmtDate(c.joined_at)} num />
           </div>
           {/* ختم «معتمد» */}
-          <div className="pointer-events-none absolute -bottom-1 left-3 grid h-[52px] w-[52px] -rotate-12 place-items-center rounded-full opacity-85"
-               style={{ border: `1.5px solid ${G.gold}`, boxShadow: `inset 0 0 0 3px ${G.paper}, inset 0 0 0 4px ${G.gold}88` }}>
-            <span className="text-center text-[8.5px] font-bold leading-tight" style={{ color: G.gold, background: G.paper }}>معتمد<br /><span className="text-[7px] font-semibold">الفريق الإعلامي</span></span>
+          <div className="pointer-events-none absolute left-3 top-[86px] grid h-[50px] w-[50px] -rotate-12 place-items-center rounded-full opacity-85"
+               style={{ border: `1.5px solid ${G.gold}`, boxShadow: `inset 0 0 0 3px ${G.paper}, inset 0 0 0 4px ${G.gold}88`, background: `${G.paper}cc` }}>
+            <span className="text-center text-[8px] font-bold leading-tight" style={{ color: G.gold }}>معتمد<br /><span className="text-[6.5px] font-semibold">الفريق الإعلامي</span></span>
           </div>
         </div>
 
         {/* التذييل */}
-        <div className="flex items-center justify-between px-3 py-1.5 text-[9px]" style={{ background: "#F3EEDF", borderTop: `1px solid ${G.gold}66`, color: G.sub }}>
-          <span>بوابة مكة الثانوية الرقمية · للاستخدام داخل المدرسة</span>
+        <div className="flex shrink-0 items-center justify-between px-3 py-1.5 text-[8.5px]" style={{ background: "#F3EEDF", borderTop: `1px solid ${G.gold}66`, color: G.sub }}>
+          <span>للاستخدام داخل المدرسة</span>
           <span className="num font-semibold" style={{ color: G.green }} dir="rtl">{year}</span>
         </div>
       </div>
