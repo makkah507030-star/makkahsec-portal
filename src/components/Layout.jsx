@@ -146,6 +146,7 @@ export const ADMIN_GROUPS = [
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
       { to: "/my-media-team",  label: "فريقي الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية قائد الفريق" },
+      { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
       { to: "/media",          label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
@@ -285,6 +286,7 @@ const TEACHER_GROUPS = [
       { to: "/studio",     label: "استوديو البوابة",    icon: "palette", kw: "تصميم" },
       { to: "/media",      label: "معرض المدرسة",      icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       { to: "/my-media-team", label: "فريقي الإعلامي",  icon: "palette", mediaMember: true, kw: "بطاقة اعلامية قائد الفريق" },
+      { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
     ],
   },
 ];
@@ -306,6 +308,7 @@ const BASIC_GROUPS = [
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
       { to: "/media", label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
+      { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
       // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
       { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
       // فريقي الإعلامي — لعضو الفريق وحده (supabase/media_3.sql)

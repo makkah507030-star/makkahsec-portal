@@ -1,5 +1,6 @@
 // src/pages/media/MediaStudio.jsx
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { confirmDanger } from "../../lib/danger";
@@ -70,6 +71,7 @@ export default function MediaStudio() {
         <button className={pill(tab === "items")} onClick={() => setTab("items")}>المواد</button>
         <button className={pill(tab === "consent")} onClick={() => setTab("consent")}>موافقات التصوير و«لا يُصوَّر»</button>
         <button className={pill(tab === "team")} onClick={() => setTab("team")}>الفريق الإعلامي</button>
+        <Link to="/media-contact?center=1" className={pill(false)}>طلبات التواصل ←</Link>
       </div>
       {tab === "consent" ? <NoPhotoList /> : tab === "team" ? <MediaTeam /> : <>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}

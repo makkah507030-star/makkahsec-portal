@@ -1,5 +1,6 @@
 // src/pages/media/MyMediaTeam.jsx
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { fmtDate } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
@@ -42,7 +43,8 @@ export default function MyMediaTeam() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">فريقي الإعلامي</h1>
-        <p className="mt-1 text-sm text-muted">{staff ? me.role : `فرع ${me.role}`} · منذ {fmtDate(me.joined_at)}</p>
+        <p className="mt-1 text-sm text-muted">{staff ? me.role : `فرع ${me.role}`} · منذ {fmtDate(me.joined_at)}
+          {staff && <> · <Link to="/media-contact?center=1" className="font-semibold text-mint-deep underline">طلبات التواصل مع المركز</Link></>}</p>
       </div>
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <MediaPressCard c={me} photo={photo} year={year} />
