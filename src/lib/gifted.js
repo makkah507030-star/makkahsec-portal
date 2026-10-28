@@ -55,3 +55,32 @@ export function waText(r, guardian) {
   }[r.status];
   return body ? `${head}\n${body}` : "";
 }
+
+/* ----------------------------- الطلاب الموهوبون والخطة ----------------------------- */
+// مجالات الموهبة (gifted_members.domains وخطة البرنامج)
+export const GIFTED_DOMAINS = [
+  { k: "all", t: "كل المجالات", color: "#7A4FB5" },
+  { k: "science", t: "العلوم", color: "#2F8F8A" },
+  { k: "math", t: "الرياضيات", color: "#3A72B5" },
+  { k: "tech", t: "التقنية والبرمجة", color: "#5B5FC7" },
+  { k: "language", t: "اللغة والأدب", color: "#B8912F" },
+  { k: "arts", t: "الفنون", color: "#B4506A" },
+  { k: "leadership", t: "القيادة", color: "#3E8A62" },
+  { k: "innovation", t: "الابتكار وريادة الأعمال", color: "#C2602E" },
+];
+export const domainOf = (k) => GIFTED_DOMAINS.find((d) => d.k === k) ?? GIFTED_DOMAINS[0];
+export const SOURCE = { mawhiba: "مقياس موهبة", school: "ترشيح المدرسة" };
+
+export const GIFTED_KIND = { enrichment: "إثرائي", training: "تدريبي", competition: "مسابقة", visit: "زيارة" };
+export const GIFTED_KIND_PLURAL = { enrichment: "الإثرائية", training: "التدريبية", competition: "المسابقات", visit: "الزيارات" };
+export const GIFTED_PRESETS = [
+  ["التعريف بالبرنامج الوطني للكشف عن الموهوبين", "enrichment"],
+  ["لقاء أولياء أمور الطلاب الموهوبين", "enrichment"],
+  ["التهيئة لمقياس موهبة", "training"],
+  ["برنامج إثرائي في التفكير الإبداعي", "enrichment"],
+  ["المشاركة في أولمبياد إبداع", "competition"],
+  ["المشاركة في الأولمبياد الوطني للعلوم والرياضيات", "competition"],
+  ["زيارة مركز علمي أو جامعة", "visit"],
+  ["ورشة في البرمجة والذكاء الاصطناعي", "training"],
+];
+export const GIFTED_BUCKET = "gifted-files";
