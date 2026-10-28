@@ -75,6 +75,11 @@ function ReportList() {
   const count = (k) => (rows ?? []).filter((r) => k === "sign" ? toSign(r) : k === "pending" && r.status === "pending").length;
 
   const create = async (kind) => {
+    // مسودة فارغة من النوع نفسه موجودة؟ تُفتح هي بدل إنشاء أخرى (كل ضغطة كانت تنشئ مسودة)
+    const blank = (rows ?? []).find((r) => r.owner_user_id === uid && r.kind === kind && r.status === "draft"
+      && !(r.attendees ?? []).length && !(r.files ?? []).length && !(r.pd_signatures ?? []).length
+      && Object.keys(r.data ?? {}).every((k) => k === "provider"));
+    if (blank) { navigate(`/pd/${blank.id}`); return; }
     const { year } = await loadActiveTerm();
     const { data, error } = await supabase.from("pd_reports").insert({
       kind, owner_user_id: uid, owner_name: profile?.full_name ?? "", academic_year: year,
