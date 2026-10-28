@@ -21,6 +21,7 @@ export default function StaffHeader({ kicker = null }) {
   const [ready, setReady] = useState(false);   // العمود موجود (بعد تشغيل ملف SQL)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [media, setMedia] = useState(null);     // قائد الفريق الإعلامي (supabase/media_4.sql)
 
   useEffect(() => {
     if (!uid) return;
@@ -32,6 +33,7 @@ export default function StaffHeader({ kicker = null }) {
     });
     if (teacherView) supabase.from("teachers").select("specialization").eq("user_id", uid).maybeSingle()
       .then(({ data }) => setSpec(data?.specialization ?? ""));
+    supabase.rpc("media_card_me").then(({ data }) => setMedia(data?.kind === "staff" ? data.role : null), () => {});
   }, [uid, teacherView]);
 
   const pick = async (file) => {
@@ -51,6 +53,7 @@ export default function StaffHeader({ kicker = null }) {
   const chips = teacherView
     ? [{ t: "معلم", strong: true }, spec && { t: spec }].filter(Boolean)
     : adminRoles.map((r, i) => ({ t: ADMIN_ROLE_LABEL[r] ?? r, strong: i === 0 })).slice(0, 3);
+  if (media) chips.push({ badge: true, color: "#B8912F", title: "الفريق الإعلامي", t: <><span aria-hidden="true">◉</span> {media}</> });
 
   return (
     <div className="space-y-1">

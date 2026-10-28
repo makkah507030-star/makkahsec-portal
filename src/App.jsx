@@ -561,7 +561,7 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/nominations/:id" element={<Nominations />} />}
           {(effectiveRole === "student" || effectiveRole === "guardian") && <Route path="/opportunities" element={<Opportunities />} />}
           {effectiveRole === "student" && <Route path="/my-scouts" element={<MyScouts />} />}
-          {effectiveRole === "student" && <Route path="/my-media-team" element={<MyMediaTeam />} />}
+          {effectiveRole !== "guardian" && <Route path="/my-media-team" element={<MyMediaTeam />} />}
           <Route path="/media" element={<MediaGallery />} />
           {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}

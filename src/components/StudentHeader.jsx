@@ -109,6 +109,13 @@ export default function StudentHeader({ name, grade, classNo, studentId = null, 
     if (!studentId) return;
     supabase.rpc("gifted_badge", { p_student: studentId }).then(({ data }) => setGifted(data ?? null), () => {});
   }, [studentId]);
+  // وسم الفريق الإعلامي (supabase/media_4.sql) بفرع العضو
+  const [media, setMedia] = useState(null);
+  useEffect(() => {
+    setMedia(null);
+    if (!studentId) return;
+    supabase.rpc("media_badge", { p_student: studentId }).then(({ data }) => setMedia(data ?? null), () => {});
+  }, [studentId]);
   const rank = rankOf(scout?.rank);
   const gDomain = gifted?.domains?.[0] ? domainOf(gifted.domains[0]) : null;
   return (
@@ -119,6 +126,8 @@ export default function StudentHeader({ name, grade, classNo, studentId = null, 
                                  t: <><span aria-hidden="true">⚜</span> {rank ? rank.t : "عضو الفريق الكشفي"}</> },
                       gifted && { badge: true, color: "#7A4FB5", title: gifted.source === "mawhiba" ? "اكتُشف في مقياس موهبة" : "برنامج الموهوبين",
                                   t: <><span aria-hidden="true">★</span> موهوب{gDomain ? ` · ${gDomain.t}` : ""}</> },
+                      media && { badge: true, color: "#B8912F", title: "الفريق الإعلامي",
+                                 t: <><span aria-hidden="true">◉</span> الفريق الإعلامي · {media}</> },
               ].filter(Boolean)} />
   );
 }

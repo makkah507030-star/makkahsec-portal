@@ -145,6 +145,7 @@ export const ADMIN_GROUPS = [
       { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
+      { to: "/my-media-team",  label: "فريقي الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية قائد الفريق" },
       { to: "/media",          label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
@@ -283,6 +284,7 @@ const TEACHER_GROUPS = [
       { to: "/events",     label: "الأحداث والمناسبات", icon: "sparkles" },
       { to: "/studio",     label: "استوديو البوابة",    icon: "palette", kw: "تصميم" },
       { to: "/media",      label: "معرض المدرسة",      icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
+      { to: "/my-media-team", label: "فريقي الإعلامي",  icon: "palette", mediaMember: true, kw: "بطاقة اعلامية قائد الفريق" },
     ],
   },
 ];
@@ -307,7 +309,7 @@ const BASIC_GROUPS = [
       // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
       { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
       // فريقي الإعلامي — لعضو الفريق وحده (supabase/media_3.sql)
-      { to: "/my-media-team", label: "فريقي الإعلامي", icon: "palette", studentOnly: true, mediaMember: true, kw: "تصوير اعلامي لا يصور" },
+      { to: "/my-media-team", label: "فريقي الإعلامي", icon: "palette", studentOnly: true, mediaMember: true, kw: "تصوير اعلامي لا يصور بطاقة" },
     ],
   },
 ];
@@ -461,11 +463,11 @@ export default function Layout({ children }) {
     if (effectiveRole !== "student") { setScoutMember(false); return; }
     supabase.rpc("scout_my").then(({ data, error }) => setScoutMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
-  // عضوية الطالب في الفريق الإعلامي: تظهر له «فريقي الإعلامي»
+  // عضوية الفريق الإعلامي للطالب وقائده من المعلمين: تظهر «فريقي الإعلامي» (media_4.sql)
   const [mediaMember, setMediaMember] = useState(false);
   useEffect(() => {
-    if (effectiveRole !== "student") { setMediaMember(false); return; }
-    supabase.rpc("media_team_my").then(({ data, error }) => setMediaMember(!error && !!data?.length));
+    if (effectiveRole === "guardian") { setMediaMember(false); return; }
+    supabase.rpc("media_card_me").then(({ data, error }) => setMediaMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
   const [achOpen] = useAchOpen();
 
