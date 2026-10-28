@@ -675,9 +675,23 @@ export function GlobeCards({ theme = "light", d }) {
 }
 
 /* ----------------------------- بطاقة طالب موهوب ----------------------------- */
-// على بنية بطاقة جلوب الطولية بهوية برنامج الموهوبين: بنفسجي ملكي وذهب ونجمة، وحول الصورة
-// هالة من النجوم، وأسفلها مجالات موهبة الطالب
-const STAR = <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z" /></svg>;
+// «النجمة الثمانية والمحراب»: نقش هندسي إسلامي من النجمة الثمانية، والصورة في إطار مقوّس
+// كالمحراب بقمته نجمة، وختم ذهبي يتداخل مع أسفله، والصفة بين خطين، والمجالات بفواصل ذهبية
+const STAR8 = "M12.00 1.00L15.14 4.42L19.78 4.22L19.58 8.86L23.00 12.00L19.58 15.14L19.78 19.78L15.14 19.58L12.00 23.00L8.86 19.58L4.22 19.78L4.42 15.14L1.00 12.00L4.42 8.86L4.22 4.22L8.86 4.42Z";   // نجمة ثمانية منتظمة (الخاتم)
+const GIFT_TILE = (
+  <svg className="pat" viewBox="0 0 200 320" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs>
+      <pattern id="gf-tile" width="40" height="40" patternUnits="userSpaceOnUse">
+        <g fill="none" stroke="currentColor" strokeWidth=".7">
+          <rect x="10" y="10" width="20" height="20" />
+          <rect x="10" y="10" width="20" height="20" transform="rotate(45 20 20)" />
+          <circle cx="20" cy="20" r="4" /><path d="M0 0l10 10M40 0L30 10M0 40l10-10M40 40L30 30" />
+        </g>
+      </pattern>
+    </defs>
+    <rect width="200" height="320" fill="url(#gf-tile)" />
+  </svg>
+);
 
 export function GiftedCards({ theme = "light", d }) {
   const cards = Array.from({ length: 9 }, (_, i) => (d.cards ?? [d])[i] ?? null);
@@ -687,43 +701,36 @@ export function GiftedCards({ theme = "light", d }) {
         {cards.map((c, i) => {
           const doms = (c?.domains ?? []).slice(0, 3);
           return (
-            <div key={i} className={`stu-globe stu-gift${c ? "" : " empty"}`}>
+            <div key={i} className={`stu-gcard${c ? "" : " empty"}`}>
               {c && (
                 <div className="in">
-                  <div className="topo">{CONTOURS}</div>
+                  {GIFT_TILE}
+                  <i className="veil" />
                   <div className="hd">
                     <span className="sch">
                       {theme === "official" && <img src={moeLogo} alt="" className="moe" />}
                       <img src={iconWhite} alt="" className="logo-w" />
                       <img src={iconMint} alt="" className="logo-m" />
-                      <span>مدرسة مكة<br />الثانوية</span>
+                      <span>مدرسة مكة الثانوية</span>
                     </span>
-                    <span className="gl">{d.logo ? <img src={d.logo} alt="" /> : <><i className="gm">{STAR}</i><b>موهوب</b></>}</span>
+                    {d.logo ? <img src={d.logo} alt="" className="lg" /> : <span className="yr">{d.year}</span>}
                   </div>
-                  <div className="ph-wrap">
-                    <svg className="orbit" viewBox="0 0 150 150" fill="none">
-                      <circle cx="75" cy="75" r="66" strokeDasharray="2 7" />
-                      {[0, 60, 120, 180, 240, 300].map((deg) => (
-                        <circle key={deg} className="sat" r={deg % 120 ? 2 : 3.2}
-                                cx={75 + 66 * Math.cos((deg * Math.PI) / 180)} cy={75 + 66 * Math.sin((deg * Math.PI) / 180)} />
-                      ))}
-                    </svg>
-                    <div className="ph">{c.photo ? <img src={c.photo} alt="" /> : <i className="ph-e">{STAR}</i>}</div>
+                  <div className="arch">
+                    <svg className="apex" viewBox="0 0 24 24"><path d={STAR8} /></svg>
+                    <div className="frame">{c.photo ? <img src={c.photo} alt="" /> : <svg className="ph-e" viewBox="0 0 24 24"><path d={STAR8} /></svg>}</div>
+                    <div className="seal"><svg viewBox="0 0 24 24"><path d={STAR8} /></svg><b>موهوب</b></div>
                   </div>
                   <p className="kick">برنامج الموهوبين</p>
                   {(() => {
-                    const t = fitTitle(c.name, { max: 16, min: 11, width: 172 });
+                    const t = fitTitle(c.name, { max: 15.5, min: 11, width: 170 });
                     return <div className={`nm${t.wrap ? " wrap" : ""}`} style={{ fontSize: t.size }}>{c.name || "اسم الطالب"}</div>;
                   })()}
-                  {c.role && <span className="rl">{c.role}</span>}
+                  {c.role && <div className="rl"><i />{c.role}<i /></div>}
                   {c.cls && <div className="cl">{c.cls}</div>}
-                  <div className="sp">
-                    {(doms.length ? doms : ["موهبة", "إبداع", "تميّز"]).map((t) => <span key={t} className="on"><i />{t}</span>)}
-                  </div>
+                  <div className="dm">{(doms.length ? doms : ["موهبة", "إبداع", "تميّز"]).map((t, k) => <span key={t}>{k > 0 && <em>◆</em>}{t}</span>)}</div>
                   <div className="ft">
                     <span className="num">GF-{String(c.no ?? 1).padStart(3, "0")}</span>
-                    <span className="geo">مكة المكرمة</span>
-                    <span className="num" dir="rtl">{d.year}</span>
+                    <span className="mt">فخر مكة الثانوية</span>
                   </div>
                 </div>
               )}
