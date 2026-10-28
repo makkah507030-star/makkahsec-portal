@@ -17,12 +17,16 @@ import { PRINCIPAL_NAME } from "../../lib/signers.js";
 import { ROLE_PERSON_NAME } from "../../lib/session.jsx";
 import { cleanMobile } from "../../lib/importer";
 import GlobeMark from "../../components/GlobeMark.jsx";
+import GlobePlan from "../globe/GlobePlan.jsx";
+import GlobeMonitor from "../globe/GlobeMonitor.jsx";
+import GlobeReport from "../globe/GlobeReport.jsx";
 
 /* =====================================================================
    طلاب برنامج جلوب البيئي العالمي (supabase/globe_1.sql):
    من له صلاحية «برنامج جلوب» (حساب البرنامج، والمدير والدعم الفني) يضيف
    طلاب البرنامج من أي فصل ويحذفهم، ويتواصل معهم ومع أولياء أمورهم بالواتساب،
    ويطبع كشفهم. وبطاقاتهم في الاستوديو (قالب «بطاقة جلوب»).
+   وتبويبا «خطة البرنامج» و«خطة الرصد» وتقريرهما في pages/globe.
    ===================================================================== */
 
 const classLabel = (c) => (c ? `${GRADE_NAMES[c.grade] ?? ""} · فصل ${c.class_no}` : "—");
@@ -74,6 +78,9 @@ export default function GlobeTeam() {
   const [msg, setMsg] = useNotice(null);
   const [printing, setPrinting] = useState(false);
   const [mobEdit, setMobEdit] = useState(null); // { id, v } جوال الطالب قيد التعديل
+  const [tab, setTabRaw] = useState("students"); // students | plan | monitor | report
+  const [prevTab, setPrevTab] = useState("plan");
+  const setTab = (t) => { if (t === "report") setPrevTab(tab); setTabRaw(t); };
   const [waText, setWaText] = useState("");     // نص جاهز يُفتح به الواتساب لكل طالب وولي أمر
   // توقيعا الكشف: منسق البرنامج ومدير المدرسة
   const leaderName = (ROLE_PERSON_NAME.globe_program ?? "").replace(/^الأستاذ:\s*/, "");
@@ -163,6 +170,7 @@ export default function GlobeTeam() {
   }, [members, q]);
 
   if (!members) return <Loader />;
+  if (tab === "report") return <GlobeReport leader={leaderName} members={members} onBack={() => setTab(prevTab)} />;
 
   return (
     <div className="space-y-5">
@@ -187,7 +195,17 @@ export default function GlobeTeam() {
         <span className="shrink-0 text-xs font-semibold text-mint-deep">زيارة الموقع ←</span>
       </a>
 
-      {missing ? (
+      <div className="flex gap-1 overflow-x-auto rounded-pill border border-line bg-paper p-1">
+        {[["students", `الطلاب (${members.length})`], ["plan", "خطة البرنامج"], ["monitor", "خطة الرصد"]].map(([k, t]) => (
+          <button key={k} onClick={() => setTab(k)}
+                  className={`flex-1 whitespace-nowrap rounded-pill px-3 py-1.5 text-[13px] font-semibold transition-colors ${
+                    tab === k ? "bg-mint-deep text-white" : "text-muted hover:bg-canvas"}`}>{t}</button>
+        ))}
+      </div>
+
+      {tab === "plan" && <GlobePlan me={profile?.full_name} onReport={() => setTab("report")} />}
+      {tab === "monitor" && <GlobeMonitor me={profile?.full_name} members={members} onReport={() => setTab("report")} />}
+      {tab === "students" && (missing ? (
         <div className="card px-6 py-10 text-center text-sm text-muted">
           الصفحة تحتاج تنفيذ ملف supabase/globe_1.sql في قاعدة البيانات مرة واحدة.
         </div>
@@ -285,7 +303,7 @@ export default function GlobeTeam() {
             </div>
           </section>
         </>
-      )}
+      ))}
 
       {/* تحميل توقيع المدير مسبقًا فيظهر في الطباعة فورًا */}
       <div className="hidden">

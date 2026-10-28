@@ -4,16 +4,7 @@ import { hijriToday, GRADE_OPTIONS, TRACK_LABEL, classCode, classShort, iconFor,
 import { loadSchedule, loadStudents, loadStaff, loadScouts, loadGlobe, shortName } from "./data";
 import { SCOUT_RANKS, rankOf } from "../../lib/scoutLeader.js";
 import { DAY_NAMES, GRADE_NAMES } from "../../lib/schoolTime";
-
-// برنامج جلوب: مجالاته البيئية الأربعة بألوانها، وصفات الطالب في بطاقته
-export const GLOBE_SPHERES = [
-  { k: "all", t: "كل المجالات", color: "#D9B45A" },
-  { k: "atmo", t: "الغلاف الجوي", color: "#5BB8E8" },
-  { k: "hydro", t: "الغلاف المائي", color: "#2F7FD6" },
-  { k: "bio", t: "الغطاء الحيوي", color: "#4CAF6A" },
-  { k: "pedo", t: "التربة", color: "#B8794A" },
-];
-const GLOBE_ROLES = ["باحث بيئي", "قائد فريق الرصد", "سفير جلوب", "عضو البرنامج"];
+import { GLOBE_SPHERES, GLOBE_ROLES } from "../../lib/globe.js";
 
 /* =====================================================================
    قوالب استوديو البوابة: القسم الذي يظهر فيه كل قالب، وحقوله، وتعبئته
