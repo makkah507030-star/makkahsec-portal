@@ -8,14 +8,13 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate } from "../../lib/dates";
-import { STAGE, RULES, ruleList, callStatus } from "../../lib/nominations.js";
+import { STAGE, RULES, ruleList, callStatus, seatsText, branchesOf, branchName, lines } from "../../lib/nominations.js";
 import Loader from "../../components/Loader.jsx";
 import { Icon } from "../../components/Layout.jsx";
 
 const day = (d) => (d ? fmtDate(String(d).slice(0, 10) + "T12:00:00") : "—");
 const when = (ts) => new Date(ts).toLocaleString("ar-SA-u-nu-latn-ca-gregory",
   { weekday: "long", day: "numeric", month: "numeric", hour: "numeric", minute: "2-digit" });
-const lines = (t) => (t ?? "").split("\n").map((s) => s.trim()).filter(Boolean);
 
 export default function Opportunities() {
   const { effectiveRole } = useSession();
@@ -70,9 +69,13 @@ function Terms({ c, e }) {
             </li>
           );
         })}</ul></div>}
-      {lines(c.special_terms).length > 0 && <div><p className="mb-1 text-xs font-semibold text-muted">شروط خاصة</p>
-        <ul className="list-inside list-disc space-y-0.5 text-ink">{lines(c.special_terms).map((t) => <li key={t}>{t}</li>)}</ul></div>}
-      <p className="text-xs text-muted">المقاعد <span className="num">{c.seats}</span> · آخر موعد للتقديم <span className="num">{day(c.closes_on)}</span>
+      {branchesOf(c).length > 0 && <div><p className="mb-1 text-xs font-semibold text-muted">فروع الإعلان</p>
+        <ul className="space-y-1">{branchesOf(c).map((b) => (
+          <li key={b.id} className="rounded-sm2 bg-canvas px-3 py-1.5 text-ink"><b>{b.name}</b>
+            <span className="text-xs text-muted"> · المقاعد <span className="num">{seatsText(b.seats)}</span></span>
+            {b.note && <span className="block text-xs text-muted">{b.note}</span>}</li>
+        ))}</ul></div>}
+      <p className="text-xs text-muted">المقاعد <span className="num">{seatsText(c.seats)}</span> · آخر موعد للتقديم <span className="num">{day(c.closes_on)}</span>
         {c.guardian_ok && " · يشترط موافقة ولي الأمر من حسابه"}</p>
     </div>
   );
@@ -81,14 +84,17 @@ function Terms({ c, e }) {
 function CallCard({ r, open, onOpen, reload }) {
   const c = r.call, e = r.eligibility;
   const [ans, setAns] = useState({});
-  const [ack, setAck] = useState(false);
+  const [ack, setAck] = useState({});           // إقرار الطالب بكل شرط خاص
+  const [branch, setBranch] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const needAck = lines(c.special_terms).length > 0;
-  const missing = (c.questions ?? []).some((q) => !String(ans[q.id] ?? "").trim());
+  const terms = lines(c.special_terms);
+  const branches = branchesOf(c);
+  const missing = (c.questions ?? []).some((q) => !String(ans[q.id] ?? "").trim())
+    || terms.some((_, i) => !ack[i]) || (branches.length > 0 && !branch);
   const apply = async () => {
     setBusy(true); setErr("");
-    const { error } = await supabase.rpc("nom_apply", { p_call: c.id, p_answers: ans });
+    const { error } = await supabase.rpc("nom_apply", { p_call: c.id, p_answers: ans, ...(branches.length ? { p_branch: branch } : {}) });
     setBusy(false);
     if (error) setErr(error.message); else reload();
   };
@@ -107,6 +113,16 @@ function CallCard({ r, open, onOpen, reload }) {
           <Terms c={c} e={e} />
           {e?.ok ? (
             <div className="space-y-3 rounded-sm2 bg-canvas/60 p-3">
+              {branches.length > 0 && (
+                <div className="text-xs font-medium text-muted">الفرع الذي تتقدم إليه
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {branches.map((b) => (
+                      <button key={b.id} type="button" onClick={() => setBranch(b.id)}
+                        className={`rounded-pill px-3 py-1 text-xs ${branch === b.id ? "bg-mint-deep text-white" : "border border-line bg-white text-ink"}`}>{b.name}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {(c.questions ?? []).map((q) => (
                 <label key={q.id} className="block text-xs font-medium text-muted">{q.q}
                   {q.kind === "choice" ? (
@@ -119,9 +135,18 @@ function CallCard({ r, open, onOpen, reload }) {
                   ) : <textarea className="field mt-1 min-h-[60px]" value={ans[q.id] ?? ""} onChange={(ev) => setAns({ ...ans, [q.id]: ev.target.value })} />}
                 </label>
               ))}
-              {needAck && <label className="flex items-start gap-2 text-sm text-ink"><input type="checkbox" className="mt-1" checked={ack} onChange={(ev) => setAck(ev.target.checked)} /> أقرّ بأن الشروط الخاصة تنطبق عليّ، وألتزم بالمهام إن قُبلت.</label>}
+              {terms.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-muted">شروط خاصة: أقرّ بأن كل شرط منها ينطبق عليّ</p>
+                  {terms.map((t, i) => (
+                    <label key={i} className="flex items-start gap-2 text-sm text-ink">
+                      <input type="checkbox" className="mt-1" checked={!!ack[i]} onChange={(ev) => setAck({ ...ack, [i]: ev.target.checked })} />{t}
+                    </label>
+                  ))}
+                </div>
+              )}
               {err && <p className="text-sm text-absent">{err}</p>}
-              <button className="btn-primary w-full" disabled={busy || missing || (needAck && !ack)} onClick={apply}>{busy ? "جارٍ التقديم…" : "تقديم الطلب"}</button>
+              <button className="btn-primary w-full" disabled={busy || missing} onClick={apply}>{busy ? "جارٍ التقديم…" : "تقديم الطلب"}</button>
             </div>
           ) : <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">لا يمكنك التقديم على هذا الإعلان لأن بعض شروطه لا تنطبق عليك حاليًا.</p>}
         </div>
@@ -155,7 +180,7 @@ function MyApp({ r, reload }) {
   return (
     <div className="card space-y-2 p-4">
       <div className="flex items-start justify-between gap-2">
-        <div><p className="font-semibold text-ink">{c.title}</p><p className="text-xs text-muted">قدّمت <span className="num">{day(a.created_at)}</span></p></div>
+        <div><p className="font-semibold text-ink">{c.title}{a.branch && <span className="font-normal text-muted"> — {branchName(c, a.branch)}</span>}</p><p className="text-xs text-muted">قدّمت <span className="num">{day(a.created_at)}</span></p></div>
         {canWithdraw && <button className="text-xs text-muted underline" onClick={async () => {
           if (window.confirm("الانسحاب من هذا الطلب؟")) { await supabase.rpc("nom_withdraw", { p_call: c.id }); reload(); }
         }}>انسحاب</button>}
@@ -175,7 +200,7 @@ function GuardianView() {
     <div className="space-y-2">
       {rows.map((r) => (
         <div key={r.app.id} className="card space-y-2 p-4">
-          <p className="font-semibold text-ink">{r.call.title} <span className="text-sm font-normal text-muted">— {r.student}</span></p>
+          <p className="font-semibold text-ink">{r.call.title}{r.app.branch && ` (${branchName(r.call, r.app.branch)})`} <span className="text-sm font-normal text-muted">— {r.student}</span></p>
           {r.call.body && <p className="text-sm text-muted">{r.call.body}</p>}
           <AppStatus c={r.call} a={r.app} />
           {r.call.guardian_ok && !r.app.guardian_ok_at && r.app.stage !== "withdrawn" && (

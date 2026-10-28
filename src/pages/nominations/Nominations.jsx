@@ -10,7 +10,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
-import { callStatus, RULES } from "../../lib/nominations.js";
+import { callStatus, RULES, seatsText, branchesOf, lines } from "../../lib/nominations.js";
 import Loader from "../../components/Loader.jsx";
 import { Icon } from "../../components/Layout.jsx";
 import NomCall from "./NomCall.jsx";
@@ -24,7 +24,7 @@ const DEFAULT_CRITERIA = [
 const blank = () => ({
   title: "", unit: "", body: "", tasks: "", special_terms: "", grades: [1, 2, 3], seats: 10, reserve: 3,
   opens_on: todayISO(), closes_on: "", rules: {}, questions: [], criteria: DEFAULT_CRITERIA,
-  interview_place: "", slot_minutes: 10, guardian_ok: false, link_scouts: false, published: false,
+  interview_place: "", slot_minutes: 10, guardian_ok: false, link_scouts: false, published: false, branches: [],
 });
 const uid = () => Math.random().toString(36).slice(2, 8);
 
@@ -79,12 +79,13 @@ function CallList() {
                   <span className={`chip shrink-0 ${st.c}`}>{st.t}</span>
                 </div>
                 <div className="grid grid-cols-4 gap-2 text-center">
-                  {[[c.seats, "مقعد"], [n.total ?? 0, "متقدم"], [n.shortlisted ?? 0, "للمقابلة"], [n.accepted ?? 0, "مقبول"]].map(([v, l]) => (
+                  {[[seatsText(c.seats), "مقعد"], [n.total ?? 0, "متقدم"], [n.shortlisted ?? 0, "للمقابلة"], [n.accepted ?? 0, "مقبول"]].map(([v, l]) => (
                     <div key={l} className="rounded-sm2 bg-canvas py-1.5"><p className="num text-lg font-bold text-ink">{v}</p><p className="text-[11px] text-muted">{l}</p></div>
                   ))}
                 </div>
                 <p className="text-xs text-muted">التقديم <span className="num">{day(c.opens_on)}</span> — <span className="num">{day(c.closes_on)}</span>
-                  {" · "}{c.grades.map((g) => GRADE_NAMES[g]?.replace(" الثانوي", "")).join("، ")}</p>
+                  {" · "}{c.grades.map((g) => GRADE_NAMES[g]?.replace(" الثانوي", "")).join("، ")}
+                  {branchesOf(c).length > 0 && <> · <span className="num">{branchesOf(c).length}</span> فروع</>}</p>
                 <div className="mt-auto flex flex-wrap gap-2">
                   <Link to={`/nominations/${c.id}`} className="btn-primary px-4 py-1.5 text-xs">المتقدمون والفرز</Link>
                   {!c.results_at && <button className="rounded-pill border border-line px-3 py-1.5 text-xs text-muted hover:bg-canvas" onClick={() => setEdit(c)}>تعديل</button>}
@@ -101,6 +102,22 @@ function CallList() {
 }
 
 /* ——— إنشاء الإعلان وتعديله ——— */
+// عدد المقاعد، أو «مفتوحة» بلا حد (فيُغلق الاحتياط تلقائيًا)
+function SeatsField({ seats, onChange }) {
+  const open = seats == null;
+  return (
+    <div className="text-xs font-medium text-muted">
+      <div className="flex items-center justify-between">عدد المقاعد
+        <label className="flex items-center gap-1 font-normal text-ink">
+          <input type="checkbox" checked={open} onChange={(e) => onChange(e.target.checked ? null : 10)} />مفتوحة
+        </label>
+      </div>
+      {open ? <p className="field mt-1 flex items-center text-muted">بلا حد</p>
+            : <input type="number" min="1" className="field mt-1" value={seats} onChange={(e) => onChange(e.target.value)} />}
+    </div>
+  );
+}
+
 // خارج المكوّن حتى لا تُعاد الحقول فيفقد المؤشر مكانه أثناء الكتابة
 const L = ({ t, children, hint }) => (
   <label className="block text-xs font-medium text-muted">{t}{children}{hint && <span className="mt-1 block text-[11px] font-normal text-faint">{hint}</span>}</label>
@@ -108,22 +125,34 @@ const L = ({ t, children, hint }) => (
 
 function CallEditor({ init, onClose }) {
   const { profile } = useSession();
-  const [f, setF] = useState(init);
+  // الشروط الخاصة: شرط في كل سطر يقرّ به الطالب؛ والفروع بمقاعدها (nominations_5.sql)
+  const [f, setF] = useState(() => ({ ...init, branches: branchesOf(init), terms: lines(init.special_terms).length ? lines(init.special_terms) : [] }));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
   const setRule = (k, v) => setF((x) => ({ ...x, rules: { ...x.rules, [k]: v === "" ? undefined : Number(v) } }));
   const setQ = (i, k, v) => setF((x) => ({ ...x, questions: x.questions.map((q, j) => (j === i ? { ...q, [k]: v } : q)) }));
+  const setT = (i, v) => setF((x) => ({ ...x, terms: x.terms.map((t, j) => (j === i ? v : t)) }));
+  const setB = (i, k, v) => setF((x) => ({ ...x, branches: x.branches.map((b, j) => (j === i ? { ...b, [k]: v } : b)) }));
   const setC = (i, k, v) => setF((x) => ({ ...x, criteria: x.criteria.map((q, j) => (j === i ? { ...q, [k]: v } : q)) }));
 
   const save = async (publish) => {
     if (!f.title.trim() || !f.closes_on) { setErr("اكتب عنوان الإعلان وآخر موعد للتقديم."); return; }
     if (f.closes_on < f.opens_on) { setErr("آخر موعد للتقديم قبل بدايته."); return; }
     if (!f.grades.length) { setErr("اختر صفًا واحدًا على الأقل."); return; }
+    const branches = f.branches.filter((b) => b.name.trim()).map((b) => ({
+      id: b.id, name: b.name.trim(), note: b.note?.trim() || undefined,
+      seats: b.seats == null ? null : Math.max(1, Number(b.seats) || 1),
+      reserve: b.seats == null ? 0 : Math.max(0, Number(b.reserve) || 0),
+    }));
+    // مع الفروع: مقاعد الإعلان مجموع مقاعد فروعه، ومفتوحة إن كان فيها فرع مفتوح
+    const open = branches.length ? branches.some((b) => b.seats == null) : f.seats == null;
+    const seats = open ? null : branches.length ? branches.reduce((a, b) => a + b.seats, 0) : Math.max(1, Number(f.seats) || 1);
+    const reserve = open ? 0 : branches.length ? branches.reduce((a, b) => a + b.reserve, 0) : Number(f.reserve) || 0;
     setBusy(true); setErr("");
     const row = {
-      title: f.title.trim(), unit: f.unit || null, body: f.body || null, tasks: f.tasks || null, special_terms: f.special_terms || null,
-      grades: f.grades, seats: Number(f.seats) || 1, reserve: Number(f.reserve) || 0, opens_on: f.opens_on, closes_on: f.closes_on,
+      title: f.title.trim(), unit: f.unit || null, body: f.body || null, tasks: f.tasks || null, special_terms: f.terms.map((t) => t.trim()).filter(Boolean).join("\n") || null,
+      grades: f.grades, seats, reserve, branches, opens_on: f.opens_on, closes_on: f.closes_on,
       rules: Object.fromEntries(Object.entries(f.rules ?? {}).filter(([, v]) => v != null && !Number.isNaN(v))),
       questions: f.questions.filter((q) => q.q.trim()).map((q) => ({ ...q, options: q.kind === "choice" ? (q.options ?? []).filter(Boolean) : undefined })),
       criteria: f.criteria.filter((c) => c.name.trim()).map((c) => ({ ...c, max: Number(c.max) || 10 })),
@@ -150,14 +179,33 @@ function CallEditor({ init, onClose }) {
         <L t="الجهة"><input className="field mt-1" value={f.unit ?? ""} onChange={(e) => set("unit", e.target.value)} placeholder="اللجنة الإعلامية / الفريق الكشفي / الإذاعة…" /></L>
         <div className="sm:col-span-2"><L t="وصف الدور"><textarea className="field mt-1 min-h-[70px]" value={f.body ?? ""} onChange={(e) => set("body", e.target.value)} /></L></div>
         <div className="sm:col-span-2"><L t="المهام والمطلوب من الطالب" hint="سطر لكل مهمة."><textarea className="field mt-1 min-h-[70px]" value={f.tasks ?? ""} onChange={(e) => set("tasks", e.target.value)} /></L></div>
-        <div className="sm:col-span-2"><L t="شروط خاصة (يقرّ بها الطالب عند التقديم)" hint="سطر لكل شرط، مثل: إجادة التصوير، الالتزام بالحضور بعد الدوام."><textarea className="field mt-1 min-h-[60px]" value={f.special_terms ?? ""} onChange={(e) => set("special_terms", e.target.value)} /></L></div>
+      </section>
+
+      <section className="card space-y-3 p-4">
+        <div className="flex items-center justify-between"><p className="text-sm font-semibold text-ink">شروطك الخاصة</p>
+          <button type="button" className="text-xs text-mint-deep underline" onClick={() => set("terms", [...f.terms, ""])}>+ شرط</button></div>
+        {!f.terms.length && <p className="text-xs text-faint">اختياري: شروط تضعها أنت، ويقرّ الطالب بكل شرط منها قبل التقديم، مثل: إجادة التصوير، أو الالتزام بالحضور بعد الدوام.</p>}
+        {f.terms.map((t, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span className="num w-5 text-center text-xs text-faint">{i + 1}</span>
+            <input className="field flex-1" value={t} onChange={(e) => setT(i, e.target.value)} placeholder="نص الشرط" />
+            <button type="button" className="text-xs text-absent" onClick={() => set("terms", f.terms.filter((_, j) => j !== i))}>حذف</button>
+          </div>
+        ))}
       </section>
 
       <section className="card space-y-3 p-4">
         <p className="text-sm font-semibold text-ink">المقاعد والمدة والفئة</p>
         <div className="grid gap-3 sm:grid-cols-4">
-          <L t="عدد المقاعد"><input type="number" min="1" className="field mt-1" value={f.seats} onChange={(e) => set("seats", e.target.value)} /></L>
-          <L t="الاحتياط"><input type="number" min="0" className="field mt-1" value={f.reserve} onChange={(e) => set("reserve", e.target.value)} /></L>
+          {f.branches.length ? (
+            <p className="rounded-sm2 bg-canvas px-3 py-2 text-xs text-muted sm:col-span-2">المقاعد والاحتياط لكل فرع في قسم «فروع الإعلان».</p>
+          ) : (
+            <>
+              <SeatsField seats={f.seats} onChange={(v) => setF((x) => ({ ...x, seats: v, reserve: v == null ? 0 : x.reserve }))} />
+              <L t="الاحتياط" hint={f.seats == null ? "يُغلق تلقائيًا مع المقاعد المفتوحة" : null}>
+                <input type="number" min="0" className="field mt-1" disabled={f.seats == null} value={f.seats == null ? 0 : f.reserve} onChange={(e) => set("reserve", e.target.value)} /></L>
+            </>
+          )}
           <L t="بداية التقديم"><input type="date" className="field mt-1" value={f.opens_on} onChange={(e) => set("opens_on", e.target.value)} /></L>
           <L t="آخر موعد للتقديم"><input type="date" className="field mt-1" value={f.closes_on ?? ""} onChange={(e) => set("closes_on", e.target.value)} /></L>
         </div>
@@ -167,6 +215,23 @@ function CallEditor({ init, onClose }) {
               className={`rounded-pill px-3 py-1 text-xs font-semibold ${f.grades.includes(g) ? "bg-mint-deep text-white" : "border border-line text-muted"}`}>{GRADE_NAMES[g]}</button>
           ))}
         </div>
+      </section>
+
+      <section className="card space-y-3 p-4">
+        <div className="flex items-center justify-between"><p className="text-sm font-semibold text-ink">فروع الإعلان</p>
+          <button type="button" className="text-xs text-mint-deep underline"
+                  onClick={() => set("branches", [...f.branches, { id: uid(), name: "", note: "", seats: null, reserve: 0 }])}>+ فرع</button></div>
+        {!f.branches.length && <p className="text-xs text-faint">اختياري: إن كان للإعلان فروع يختار الطالب واحدًا منها، مثل مسابقة القرآن الكريم: حفظ القرآن كاملًا، حفظ 10 أجزاء، حفظ 5 أجزاء. ولكل فرع مقاعده.</p>}
+        {f.branches.map((b, i) => (
+          <div key={b.id} className="grid gap-2 rounded-sm2 border border-line p-3 sm:grid-cols-4">
+            <L t={`الفرع ${i + 1}`}><input className="field mt-1" value={b.name} onChange={(e) => setB(i, "name", e.target.value)} placeholder="حفظ 10 أجزاء" /></L>
+            <SeatsField seats={b.seats} onChange={(v) => setF((x) => ({ ...x, branches: x.branches.map((y, j) => (j === i ? { ...y, seats: v, reserve: v == null ? 0 : y.reserve } : y)) }))} />
+            <L t="الاحتياط" hint={b.seats == null ? "يُغلق مع المقاعد المفتوحة" : null}>
+              <input type="number" min="0" className="field mt-1" disabled={b.seats == null} value={b.seats == null ? 0 : b.reserve ?? 0} onChange={(e) => setB(i, "reserve", e.target.value)} /></L>
+            <div className="flex items-end"><button type="button" className="text-xs text-absent" onClick={() => set("branches", f.branches.filter((_, j) => j !== i))}>حذف الفرع</button></div>
+            <input className="field sm:col-span-4" value={b.note ?? ""} onChange={(e) => setB(i, "note", e.target.value)} placeholder="وصف الفرع أو شرطه (اختياري)، مثل: من سورة البقرة إلى آخر سورة التوبة" />
+          </div>
+        ))}
       </section>
 
       <section className="card space-y-3 p-4">
