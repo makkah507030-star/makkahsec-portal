@@ -155,6 +155,7 @@ import { useHolidays } from "./lib/useHolidays.js";
 const ExamDayCard = lazy(() => import("./components/ExamDayCard.jsx"));
 const TeacherTodayCard = lazy(() => import("./components/TeacherTodayCard.jsx"));
 const TasksBox = lazy(() => import("./components/TasksBox.jsx"));
+const StaffCallsCard = lazy(() => import("./components/StaffCallsCard.jsx"));
 import HolidayBanner from "./components/HolidayBanner.jsx";
 import HomeBanners from "./components/HomeBanners.jsx";
 import StaffHeader from "./components/StaffHeader.jsx";
@@ -327,6 +328,7 @@ export default function App() {
       <ExamDayCard />
       {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
       <TasksBox />
+      <StaffCallsCard />
       <DutyCard personal />
     </div>
   );

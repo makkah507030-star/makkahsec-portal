@@ -14,6 +14,7 @@ import { STAGE, RULES, ruleList, callStatus, totalScore, maxScore, notifyIntervi
 import { logos } from "../student-affairs/shared.jsx";
 import StudentFileLink from "../../components/StudentFileLink.jsx";
 import Loader from "../../components/Loader.jsx";
+import { notifyUsers } from "../../lib/referrals.js";
 
 const day = (d) => (d ? fmtDate(String(d).slice(0, 10) + "T12:00:00") : "—");
 const when = (ts) => (ts ? new Date(ts).toLocaleString("ar-SA-u-nu-latn-ca-gregory",
@@ -67,7 +68,7 @@ export default function NomCall({ id }) {
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        {TABS.map(([k, t]) => (
+        {[...TABS, ...(call.staff_lead ? [["staff", "ترشّح المعلمين"]] : [])].map(([k, t]) => (
           <button key={k} onClick={() => { setTab(k); setMsg(null); }}
             className={`rounded-pill px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>{t}</button>
         ))}
@@ -77,6 +78,49 @@ export default function NomCall({ id }) {
       {tab === "apps" && <Applicants call={call} apps={apps} reload={load} say={say} />}
       {tab === "interviews" && <Interviews call={call} apps={active.filter((a) => a.interview_at)} reload={load} say={say} />}
       {tab === "decision" && <Decision call={call} apps={active} reload={load} say={say} />}
+      {tab === "staff" && <StaffLeads call={call} say={say} />}
+    </div>
+  );
+}
+
+/* ——— ترشّح المعلمين لقيادة الفريق (supabase/nominations_7.sql) ——— */
+const LEAD_STAGE = {
+  applied:  { t: "مترشّح", c: "bg-mint-tint text-mint-deep" },
+  accepted: { t: "مقبول", c: "bg-present/10 text-present" },
+  rejected: { t: "معتذر", c: "bg-absent/10 text-absent" },
+};
+function StaffLeads({ call, say }) {
+  const [rows, setRows] = useState(null);
+  const load = () => supabase.from("nom_staff_apps").select("*").eq("call_id", call.id).neq("stage", "withdrawn").order("created_at")
+    .then(({ data, error }) => { if (error) say(false, /nom_staff_apps|schema cache|relation/i.test(error.message) ? "يحتاج تشغيل supabase/nominations_7.sql." : error.message); setRows(data ?? []); });
+  useEffect(() => { load(); }, [call.id]);   // eslint-disable-line react-hooks/exhaustive-deps
+  if (!rows) return <Loader />;
+  const decide = async (r, stage) => {
+    const { error } = await supabase.from("nom_staff_apps").update({ stage, decided_at: new Date().toISOString() }).eq("id", r.id);
+    if (error) { say(false, error.message); return; }
+    await notifyUsers([r.user_id], `ترشّحك لـ«${call.staff_lead}»`, stage === "accepted"
+      ? `نبارك اختيارك ${call.staff_lead} في «${call.title}». سيتواصل معك ${call.owner_name || "صاحب الإعلان"} لبدء العمل.`
+      : `نشكر ترشّحك لـ«${call.staff_lead}» في «${call.title}». وقع الاختيار هذه المرة على زميل آخر، ونقدّر مبادرتك.`, "/");
+    say(true, stage === "accepted" ? `اختير ${r.full_name} ${call.staff_lead}، ووصله إشعار. أسند له دوره من شاشة الصلاحيات إن لزم.` : `أُبلغ ${r.full_name} بالاعتذار.`);
+    load();
+  };
+  if (!rows.length) return <p className="card px-4 py-8 text-center text-sm text-muted">لا مترشّحين لـ«{call.staff_lead}» بعد. يظهر الإعلان في رئيسية المعلمين والإداريين ما دام التقديم مفتوحًا.</p>;
+  return (
+    <div className="space-y-2">
+      {rows.map((r) => (
+        <div key={r.id} className="card space-y-2 p-4">
+          <div className="flex items-center gap-2">
+            <p className="min-w-0 flex-1 truncate font-semibold text-ink">{r.full_name}</p>
+            <span className={`chip ${LEAD_STAGE[r.stage]?.c}`}>{LEAD_STAGE[r.stage]?.t}</span>
+          </div>
+          {r.note && <p className="whitespace-pre-line text-sm leading-relaxed text-muted">{r.note}</p>}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-faint">ترشّح {day(r.created_at)}</span>
+            {r.stage !== "accepted" && <button className="btn-primary ms-auto px-3 py-1 text-xs" onClick={() => decide(r, "accepted")}>اختياره {call.staff_lead}</button>}
+            {r.stage === "applied" && <button className="rounded-pill border border-line px-3 py-1 text-muted hover:bg-canvas" onClick={() => decide(r, "rejected")}>اعتذار</button>}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
