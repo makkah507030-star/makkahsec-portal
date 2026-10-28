@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { rankOf } from "../lib/scoutLeader.js";
+import { domainOf } from "../lib/gifted.js";
 import HeaderChips from "./HeaderChips.jsx";
 import { GRADE_NAMES } from "../lib/schoolTime";
 import { useStudioTheme, StudioDecor } from "../lib/studioTheme.jsx";
@@ -74,7 +75,10 @@ export function NameCard({ name, kicker, chips = [], icon = "student", avatar = 
             <h1 className="text-lg font-bold leading-snug sm:text-xl">{cleanName(name) || "—"}</h1>
             {chips.length > 0 && (
               <p className="mt-1.5 flex flex-wrap gap-1.5">
-                {chips.map((c, i) => c.scout ? (
+                {chips.map((c, i) => c.badge ? (
+                  <span key={i} className="chip gap-1 border font-semibold" title={c.title}
+                        style={{ background: `${c.color}1F`, borderColor: c.color, color: c.color }}>{c.t}</span>
+                ) : c.scout ? (
                   <span key={i} className="chip gap-1 border font-semibold" title="الفريق الكشفي"
                         style={{ background: `${c.color}1F`, borderColor: c.color, color: c.color }}>{c.t}</span>
                 ) : (
@@ -98,13 +102,23 @@ export default function StudentHeader({ name, grade, classNo, studentId = null, 
     if (!studentId) return;
     supabase.rpc("scout_badge", { p_student: studentId }).then(({ data }) => setScout(data ?? null));
   }, [studentId]);
+  // وسم «موهوب» (supabase/gifted_2.sql) لمن في الطلاب الموهوبين، بمجال موهبته الأول إن حُدّد
+  const [gifted, setGifted] = useState(null);
+  useEffect(() => {
+    setGifted(null);
+    if (!studentId) return;
+    supabase.rpc("gifted_badge", { p_student: studentId }).then(({ data }) => setGifted(data ?? null), () => {});
+  }, [studentId]);
   const rank = rankOf(scout?.rank);
+  const gDomain = gifted?.domains?.[0] ? domainOf(gifted.domains[0]) : null;
   return (
     <NameCard name={name} icon="student" kicker={guardian ? "ابنك" : null}
               chips={[grade && { t: GRADE_NAMES[grade] ?? `الصف ${grade}`, strong: true },
                       classNo && { t: <>فصل <span className="num">{classNo}</span></> },
                       scout && { scout: true, color: rank?.color ?? "#3E8A62",
                                  t: <><span aria-hidden="true">⚜</span> {rank ? rank.t : "عضو الفريق الكشفي"}</> },
+                      gifted && { badge: true, color: "#7A4FB5", title: gifted.source === "mawhiba" ? "اكتُشف في مقياس موهبة" : "برنامج الموهوبين",
+                                  t: <><span aria-hidden="true">★</span> موهوب{gDomain ? ` · ${gDomain.t}` : ""}</> },
               ].filter(Boolean)} />
   );
 }

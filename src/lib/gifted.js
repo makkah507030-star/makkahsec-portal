@@ -1,0 +1,88 @@
+// src/lib/gifted.js
+/* =====================================================================
+   برنامج الموهوبين — البرنامج الوطني للكشف عن الموهوبين (مقياس موهبة للقدرات العقلية
+   المتعددة) بنسخته السابعة عشرة (supabase/gifted_1.sql). طلاب الأول الثانوي في المستوى
+   الثالث، ويُدخل المستوى مرة واحدة. المواعيد من دليل التسجيل في موقع موهبة.
+   ===================================================================== */
+
+export const MAWHIBA = {
+  edition: "السابعة عشرة",
+  grade: 1,                                   // الأول الثانوي
+  regFrom: "2026-10-01", regTo: "2026-12-28",  // التسجيل
+  testFrom: "2026-11-30", testTo: "2026-12-30", // تطبيق المقياس في مراكز قياس
+  fee: 200,                                   // ريال، ومجاني للترشيح المدعوم
+  url: "https://www.mawhiba.sa/discover-mawhiba/programs/national-program-for-gifted-identification/national-program-for-gifted-identification/",
+};
+
+// مراحل الطالب بالترتيب، ولكل مرحلة لونها
+export const STATUS = {
+  none:       { t: "لم يسجّل",       c: "bg-canvas text-muted",          bar: "#C9D3CD" },
+  registered: { t: "سجّل",           c: "bg-excused/10 text-excused",    bar: "#3A72B5" },
+  confirmed:  { t: "أكّد الحضور",     c: "bg-late/10 text-late",          bar: "#B8912F" },
+  tested:     { t: "اختُبر",          c: "bg-mint-tint text-mint-deep",   bar: "#3E8A62" },
+  gifted:     { t: "موهوب",          c: "bg-present/15 text-present",    bar: "#1F8A5B" },
+  not_gifted: { t: "لم يُكتشف",       c: "bg-canvas text-faint",          bar: "#8A9A91" },
+  prior:      { t: "اختُبر سابقًا",    c: "bg-canvas text-faint",          bar: "#AEB8B2" },
+};
+export const FLOW = ["none", "registered", "confirmed", "tested", "gifted", "not_gifted", "prior"];
+export const PAY = { paid: "دفع الرسوم", supported: "ترشيح مدعوم" };
+
+/** هل بلغ الطالب المرحلة (للنسب): المسجّل يشمل من أكّد ومن اختُبر ومن ظهرت نتيجته */
+const RANK = { none: 0, registered: 1, confirmed: 2, tested: 3, gifted: 4, not_gifted: 4 };
+export const reached = (status, step) => status !== "prior" && (RANK[status] ?? 0) >= RANK[step];
+
+const greg = (iso) => new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { weekday: "long", day: "numeric", month: "long" })
+  .format(new Date(`${iso}T12:00:00`)).replace("،", "");
+/** مدى تاريخين مختصر: 1 أكتوبر – 28 ديسمبر 2026 */
+export const span = (a, b) => {
+  const f = (iso, y) => new Intl.DateTimeFormat("ar-SA-u-ca-gregory-nu-latn", { day: "numeric", month: "long", ...(y ? { year: "numeric" } : {}) }).format(new Date(`${iso}T12:00:00`));
+  return `${f(a)} – ${f(b, true)}`;
+};
+
+/** رسالة الواتساب الجاهزة بحسب مرحلة الطالب، للطالب أو لولي أمره */
+export function waText(r, guardian) {
+  const who = guardian ? `ولي أمر الطالب ${r.name}` : `الطالب ${r.name}`;
+  const head = `${who}، السلام عليكم ورحمة الله.\nبرنامج الموهوبين بمدرسة مكة الثانوية:`;
+  const body = {
+    none: `نذكّر بالتسجيل في البرنامج الوطني للكشف عن الموهوبين (مقياس موهبة) عبر منصة موهبة قبل ${greg(MAWHIBA.regTo)}، وهي فرصة لاكتشاف القدرات والالتحاق ببرامج موهبة الإثرائية.`,
+    registered: "تم التسجيل في مقياس موهبة، ويبقى تأكيد الحضور ودفع الرسوم (أو تأكيد الترشيح المدعوم) من منصة موهبة.",
+    confirmed: r.test_date
+      ? `موعد مقياس موهبة يوم ${greg(r.test_date)}${r.test_center ? ` في ${r.test_center}` : ""}. نرجو الحضور مبكرًا مع إثبات الهوية، والنوم الكافي قبله. بالتوفيق.`
+      : "تم تأكيد الحضور في مقياس موهبة. نرجو متابعة موعد المقياس ومركزه في منصة موهبة وإبلاغنا به.",
+    tested: "نشكر المشاركة في مقياس موهبة، وتُعلن النتائج في منصة موهبة. بالتوفيق.",
+    gifted: "نبارك اكتشاف الطالب موهوبًا في البرنامج الوطني للكشف عن الموهوبين، ونتطلع لمشاركته في برامج موهبة الإثرائية.",
+    not_gifted: "نشكر المشاركة في مقياس موهبة، ونتطلع لمشاركة الطالب في برامج المدرسة الإثرائية.",
+  }[r.status];
+  return body ? `${head}\n${body}` : "";
+}
+
+/* ----------------------------- الطلاب الموهوبون والخطة ----------------------------- */
+// مجالات الموهبة (gifted_members.domains وخطة البرنامج)
+export const GIFTED_DOMAINS = [
+  { k: "all", t: "كل المجالات", color: "#7A4FB5" },
+  { k: "science", t: "العلوم", color: "#2F8F8A" },
+  { k: "math", t: "الرياضيات", color: "#3A72B5" },
+  { k: "tech", t: "التقنية والبرمجة", color: "#5B5FC7" },
+  { k: "language", t: "اللغة والأدب", color: "#B8912F" },
+  { k: "arts", t: "الفنون", color: "#B4506A" },
+  { k: "leadership", t: "القيادة", color: "#3E8A62" },
+  { k: "innovation", t: "الابتكار وريادة الأعمال", color: "#C2602E" },
+];
+export const domainOf = (k) => GIFTED_DOMAINS.find((d) => d.k === k) ?? GIFTED_DOMAINS[0];
+// صفات الطالب في بطاقته بالاستوديو
+export const GIFTED_ROLES = ["طالب موهوب", "موهوب · مقياس موهبة", "سفير الموهبة", "مبتكر"];
+export const SOURCE = { mawhiba: "مقياس موهبة", school: "ترشيح المدرسة" };
+
+export const GIFTED_KIND = { enrichment: "إثرائي", training: "تدريبي", competition: "مسابقة", visit: "زيارة" };
+export const GIFTED_KIND_PLURAL = { enrichment: "الإثرائية", training: "التدريبية", competition: "المسابقات", visit: "الزيارات" };
+export const GIFTED_PRESETS = [
+  ["التعريف بالبرنامج الوطني للكشف عن الموهوبين", "enrichment"],
+  ["لقاء أولياء أمور الطلاب الموهوبين", "enrichment"],
+  ["التهيئة لمقياس موهبة", "training"],
+  ["برنامج إثرائي في التفكير الإبداعي", "enrichment"],
+  ["المشاركة في أولمبياد إبداع", "competition"],
+  ["المشاركة في الأولمبياد الوطني للعلوم والرياضيات", "competition"],
+  ["زيارة مركز علمي أو جامعة", "visit"],
+  ["ورشة في البرمجة والذكاء الاصطناعي", "training"],
+];
+export const GIFTED_BUCKET = "gifted-files";

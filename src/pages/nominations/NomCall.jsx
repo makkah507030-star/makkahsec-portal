@@ -10,7 +10,7 @@ import { supabase } from "../../lib/supabase";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { fmtDate } from "../../lib/dates";
 import { printReport, escHtml as e, PRINCIPAL_NAME } from "../../lib/exportUtils";
-import { STAGE, RULES, ruleList, callStatus, totalScore, maxScore, notifyInterviews, notifyResults } from "../../lib/nominations.js";
+import { STAGE, RULES, ruleList, callStatus, totalScore, maxScore, notifyInterviews, notifyResults, seatsText, branchesOf, branchName, seatPools } from "../../lib/nominations.js";
 import { logos } from "../student-affairs/shared.jsx";
 import StudentFileLink from "../../components/StudentFileLink.jsx";
 import Loader from "../../components/Loader.jsx";
@@ -49,7 +49,9 @@ export default function NomCall({ id }) {
         <div className="min-w-0">
           <Link to="/nominations" className="text-xs text-muted underline">← الترشيحات</Link>
           <h1 className="mt-1 text-lg font-bold text-ink">{call.title}</h1>
-          <p className="text-sm text-muted">{call.unit || "—"} · المقاعد <span className="num">{call.seats}</span> والاحتياط <span className="num">{call.reserve}</span>
+          <p className="text-sm text-muted">{call.unit || "—"} · المقاعد <span className="num">{seatsText(call.seats)}</span>
+            {call.seats != null && <> والاحتياط <span className="num">{call.reserve}</span></>}
+            {branchesOf(call).length > 0 && <> · الفروع: {branchesOf(call).map((b) => b.name).join("، ")}</>}
             {" · "}التقديم حتى <span className="num">{day(call.closes_on)}</span></p>
           {ruleList(call.rules).length > 0 && <p className="mt-1 text-xs text-faint">الشروط: {ruleList(call.rules).map((k) => `${RULES[k].t} ${call.rules[k]}${RULES[k].unit}`).join(" · ")}</p>}
         </div>
@@ -59,7 +61,7 @@ export default function NomCall({ id }) {
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {[[active.length, "متقدم"], [active.filter((a) => a.interview_at).length, "مرشح للمقابلة"],
           [active.filter((a) => Object.keys(a.scores ?? {}).length).length, "قُيّم"],
-          [active.filter((a) => a.stage === "accepted").length, `مقبول من ${call.seats}`], [active.filter((a) => a.stage === "reserve").length, "احتياط"]].map(([v, l]) => (
+          [active.filter((a) => a.stage === "accepted").length, call.seats == null ? "مقبول" : `مقبول من ${call.seats}`], [active.filter((a) => a.stage === "reserve").length, "احتياط"]].map(([v, l]) => (
           <div key={l} className="card px-3 py-2 text-center"><p className="num text-xl font-bold text-ink">{v}</p><p className="text-[11px] text-muted">{l}</p></div>
         ))}
       </div>
@@ -84,7 +86,10 @@ function Applicants({ call, apps, reload, say }) {
   const [sel, setSel] = useState(new Set());
   const [open, setOpen] = useState(null);
   const [plan, setPlan] = useState(null);
-  const list = apps.filter((a) => a.stage !== "withdrawn");
+  const [br, setBr] = useState("all");            // تصفية بالفرع
+  const branches = branchesOf(call);
+  const all = apps.filter((a) => a.stage !== "withdrawn");
+  const list = br === "all" ? all : all.filter((a) => a.branch === br);
   const toggle = (id) => setSel((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const needOk = call.guardian_ok;
 
@@ -99,14 +104,22 @@ function Applicants({ call, apps, reload, say }) {
     setSel(new Set()); setPlan(null); reload();
   };
 
-  if (!list.length) return <p className="card px-4 py-8 text-center text-sm text-muted">لا متقدمين بعد. يظهر الإعلان للطلاب في «فرص المشاركة» ما دام التقديم مفتوحًا.</p>;
+  if (!all.length) return <p className="card px-4 py-8 text-center text-sm text-muted">لا متقدمين بعد. يظهر الإعلان للطلاب في «فرص المشاركة» ما دام التقديم مفتوحًا.</p>;
   return (
     <div className="space-y-3">
+      {branches.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {[["all", "كل الفروع", all.length], ...branches.map((b) => [b.id, b.name, all.filter((a) => a.branch === b.id).length])].map(([k, t, n]) => (
+            <button key={k} onClick={() => { setBr(k); setSel(new Set()); }}
+              className={`rounded-pill px-3 py-1 text-xs font-medium ${br === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>{t} <span className="num">({n})</span></button>
+          ))}
+        </div>
+      )}
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[720px] text-sm">
           <thead><tr className="bg-canvas text-right text-xs text-muted">
             <th className="p-2"><input type="checkbox" checked={sel.size === list.length} onChange={(e) => setSel(e.target.checked ? new Set(list.map((a) => a.id)) : new Set())} /></th>
-            <th className="p-2">الطالب</th><th className="p-2">الصف/الفصل</th><th className="p-2">الحضور</th><th className="p-2">أعلى مخالفة</th><th className="p-2">متوسط الاختبارات</th>
+            <th className="p-2">الطالب</th>{branches.length > 0 && <th className="p-2">الفرع</th>}<th className="p-2">الصف/الفصل</th><th className="p-2">الحضور</th><th className="p-2">أعلى مخالفة</th><th className="p-2">متوسط الاختبارات</th>
             {needOk && <th className="p-2">ولي الأمر</th>}<th className="p-2">الحالة</th><th className="p-2" />
           </tr></thead>
           <tbody className="divide-y divide-line/60">
@@ -153,6 +166,7 @@ function FragmentRow({ a, call, needOk, checked, onCheck, open, onOpen }) {
       <tr className={checked ? "bg-mint-tint/40" : ""}>
         <td className="p-2"><input type="checkbox" checked={checked} onChange={onCheck} /></td>
         <td className="p-2 font-semibold text-ink"><StudentFileLink id={a.student_id}>{a.name}</StudentFileLink></td>
+        {branchesOf(call).length > 0 && <td className="p-2 text-xs text-ink">{branchName(call, a.branch) || "—"}</td>}
         <td className="num p-2 text-muted">{cls(a)}</td>
         <td className="num p-2">{e.attend != null ? `${e.attend}%` : "—"}</td>
         <td className="num p-2">{e.max_degree || "لا يوجد"}</td>
@@ -162,7 +176,7 @@ function FragmentRow({ a, call, needOk, checked, onCheck, open, onOpen }) {
         <td className="p-2 text-left"><button className="text-xs text-mint-deep underline" onClick={onOpen}>{open ? "إخفاء" : "الإجابات"}</button></td>
       </tr>
       {open && (
-        <tr><td colSpan={needOk ? 9 : 8} className="bg-canvas/60 px-4 py-3 text-sm">
+        <tr><td colSpan={(needOk ? 9 : 8) + (branchesOf(call).length ? 1 : 0)} className="bg-canvas/60 px-4 py-3 text-sm">
           {(call.questions ?? []).length ? call.questions.map((q) => (
             <p key={q.id} className="mb-1"><span className="text-muted">{q.q}: </span><span className="text-ink">{a.answers?.[q.id] || "—"}</span></p>
           )) : <p className="text-muted">لا أسئلة في الإعلان.</p>}
@@ -200,7 +214,7 @@ function ScoreRow({ a, call, max, reload, say }) {
     <div className="card space-y-2 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm"><b className="text-ink"><StudentFileLink id={a.student_id}>{a.name}</StudentFileLink></b>
-          <span className="text-muted"> · {cls(a)} · <span className="num">{when(a.interview_at)}</span>{a.interview_place && ` · ${a.interview_place}`}</span></p>
+          <span className="text-muted"> · {cls(a)}{a.branch && ` · ${branchName(call, a.branch)}`} · <span className="num">{when(a.interview_at)}</span>{a.interview_place && ` · ${a.interview_place}`}</span></p>
         <span className="num text-sm font-bold text-mint-deep">{totalScore(sc, call.criteria)} / {max}</span>
       </div>
       <div className="flex flex-wrap items-end gap-2">
@@ -217,25 +231,35 @@ function ScoreRow({ a, call, max, reload, say }) {
   );
 }
 
-/* ——— القرار: ترتيب بالدرجة، واقتراح بحسب المقاعد، وإعلان النتائج ——— */
+/* ——— القرار: ترتيب بالدرجة، واقتراح بحسب المقاعد (لكل فرع إن كانت للإعلان فروع)، وإعلان النتائج.
+   المقاعد المفتوحة: يُقبل كل من اكتمل طلبه، ولا احتياط ——— */
 function Decision({ call, apps, reload, say }) {
   const ranked = useMemo(() => [...apps].filter((a) => a.stage !== "applied" || a.interview_at)
     .sort((a, b) => totalScore(b.scores, call.criteria) - totalScore(a.scores, call.criteria)), [apps, call]);
   const max = maxScore(call.criteria);
-  const accepted = apps.filter((a) => a.stage === "accepted").length;
   const published = !!call.results_at;
+  // من قدّم قبل إضافة الفروع يظهر في «بلا فرع»، ولا يشمله الاقتراح
+  const ids = new Set(branchesOf(call).map((b) => b.id));
+  const pools = [...seatPools(call), ...(ids.size ? [{ id: "none", name: "بلا فرع", seats: null, reserve: 0, manual: true }] : [])];
+  const inPool = (p) => (!ids.size ? ranked : p.id === "none" ? ranked.filter((a) => !ids.has(a.branch)) : ranked.filter((a) => a.branch === p.id));
 
   const setStage = async (ids, stage) => {
     const { error } = await supabase.rpc("nom_set_stage", { p_apps: ids, p_stage: stage });
     if (error) say(false, error.message); else reload();
   };
   const suggest = async () => {
-    const ok = ranked.filter((a) => !call.guardian_ok || a.guardian_ok_at);
-    const acc = ok.slice(0, call.seats), res = ok.slice(call.seats, call.seats + call.reserve);
-    const rest = ranked.filter((a) => !acc.includes(a) && !res.includes(a));
-    for (const [list, stage] of [[acc, "accepted"], [res, "reserve"], [rest, "rejected"]])
-      if (list.length) await supabase.rpc("nom_set_stage", { p_apps: list.map((a) => a.id), p_stage: stage });
-    say(true, `طُبّق الاقتراح: ${acc.length} مقبول و${res.length} احتياط. راجعه ثم أعلن النتائج.`);
+    let nAcc = 0, nRes = 0;
+    for (const p of pools.filter((x) => !x.manual)) {
+      const list = inPool(p);
+      const ok = list.filter((a) => !call.guardian_ok || a.guardian_ok_at);
+      const acc = p.seats == null ? ok : ok.slice(0, p.seats);
+      const res = p.seats == null ? [] : ok.slice(p.seats, p.seats + p.reserve);
+      const rest = list.filter((a) => !acc.includes(a) && !res.includes(a));
+      for (const [l, stage] of [[acc, "accepted"], [res, "reserve"], [rest, "rejected"]])
+        if (l.length) await supabase.rpc("nom_set_stage", { p_apps: l.map((a) => a.id), p_stage: stage });
+      nAcc += acc.length; nRes += res.length;
+    }
+    say(true, `طُبّق الاقتراح: ${nAcc} مقبول و${nRes} احتياط. راجعه ثم أعلن النتائج.`);
     reload();
   };
   const publish = async () => {
@@ -252,44 +276,58 @@ function Decision({ call, apps, reload, say }) {
     await notifyResults(call, [{ ...a, stage: "accepted" }]);
     say(true, `رُقّي ${a.name} من الاحتياط إلى مقبول وأُشعر هو وولي أمره.`);
   };
+  const planText = pools.filter((p) => !p.manual).map((p) => `${p.name ? `${p.name}: ` : ""}${p.seats == null ? "مقاعد مفتوحة" : `${p.seats} مقبول + ${p.reserve} احتياط`}`).join(" · ");
 
   if (!ranked.length) return <p className="card px-4 py-8 text-center text-sm text-muted">القرار بعد ترشيح المتقدمين للمقابلة وتقييمهم.</p>;
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         {!published && <button className="rounded-pill border border-mint-deep px-4 py-2 text-sm font-medium text-mint-deep hover:bg-mint-tint" onClick={suggest}>
-          اقتراح القرار بالدرجات ({call.seats} مقبول + {call.reserve} احتياط)</button>}
+          اقتراح القرار بالدرجات ({planText})</button>}
         {!published && <button className="btn-primary" onClick={publish}>إعلان النتائج</button>}
         <button className="rounded-pill border border-line px-4 py-2 text-sm text-muted hover:bg-canvas" onClick={() => printMinutes(call, ranked)}>طباعة محضر الترشيح</button>
-        <span className={`text-xs ${accepted > call.seats ? "text-absent" : "text-muted"}`}>المقبولون <span className="num">{accepted}</span> من <span className="num">{call.seats}</span> مقعدًا</span>
       </div>
       {call.guardian_ok && <p className="text-xs text-faint">الاقتراح يتجاوز من لم يوافق ولي أمره بعد.</p>}
-      <div className="card divide-y divide-line/60">
-        {ranked.map((a, i) => {
-          const s = STAGE[a.stage] ?? STAGE.applied;
-          return (
-            <div key={a.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
-              <span className="num w-6 text-center text-sm font-bold text-faint">{i + 1}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-ink"><StudentFileLink id={a.student_id}>{a.name}</StudentFileLink></p>
-                <p className="text-[11px] text-muted">{cls(a)}{a.interview_note && ` · ${a.interview_note}`}</p>
-              </div>
-              <span className="num text-sm font-bold text-mint-deep">{totalScore(a.scores, call.criteria)} / {max}</span>
-              {published ? (
-                <>
-                  <span className={`chip ${s.c}`}>{s.t}</span>
-                  {a.stage === "reserve" && <button className="text-xs text-mint-deep underline" onClick={() => promote(a)}>ترقية إلى مقبول</button>}
-                </>
-              ) : (
-                <select className={`rounded-sm2 border border-line bg-white px-2 py-1 text-xs font-semibold ${s.c}`} value={a.stage}
-                  onChange={(e) => setStage([a.id], e.target.value)}>
-                  {["shortlisted", "accepted", "reserve", "rejected"].map((k) => <option key={k} value={k}>{STAGE[k].t}</option>)}
-                </select>
-              )}
+      {pools.map((p) => {
+        const list = inPool(p);
+        if (ids.size && !list.length) return null;
+        const accepted = list.filter((a) => a.stage === "accepted").length;
+        return (
+          <div key={p.id ?? "all"} className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2 px-1">
+              {p.name && <p className="text-sm font-bold text-ink">{p.name}</p>}
+              <span className={`text-xs ${p.seats != null && accepted > p.seats ? "text-absent" : "text-muted"}`}>
+                المقبولون <span className="num">{accepted}</span>{p.seats == null ? " · المقاعد مفتوحة" : <> من <span className="num">{p.seats}</span> مقعدًا</>}</span>
             </div>
-          );
-        })}
-      </div>
+            <div className="card divide-y divide-line/60">
+              {list.map((a, i) => {
+                const s = STAGE[a.stage] ?? STAGE.applied;
+                return (
+                  <div key={a.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
+                    <span className="num w-6 text-center text-sm font-bold text-faint">{i + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-ink"><StudentFileLink id={a.student_id}>{a.name}</StudentFileLink></p>
+                      <p className="text-[11px] text-muted">{cls(a)}{a.interview_note && ` · ${a.interview_note}`}</p>
+                    </div>
+                    <span className="num text-sm font-bold text-mint-deep">{totalScore(a.scores, call.criteria)} / {max}</span>
+                    {published ? (
+                      <>
+                        <span className={`chip ${s.c}`}>{s.t}</span>
+                        {a.stage === "reserve" && <button className="text-xs text-mint-deep underline" onClick={() => promote(a)}>ترقية إلى مقبول</button>}
+                      </>
+                    ) : (
+                      <select className={`rounded-sm2 border border-line bg-white px-2 py-1 text-xs font-semibold ${s.c}`} value={a.stage}
+                        onChange={(e) => setStage([a.id], e.target.value)}>
+                        {["shortlisted", "accepted", ...(p.seats == null ? [] : ["reserve"]), "rejected"].map((k) => <option key={k} value={k}>{STAGE[k].t}</option>)}
+                      </select>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -297,14 +335,16 @@ function Decision({ call, apps, reload, say }) {
 function printMinutes(call, ranked) {
   // المحضر HTML جاهز (sections.html): القيم من البيانات تُهرَّب بـ e
   const head = (call.criteria ?? []).map((k) => `<th>${e(k.name)} (${e(k.max)})</th>`).join("");
-  const rows = ranked.map((a, i) => `<tr><td>${i + 1}</td><td>${e(a.name)}</td><td>${e(cls(a))}</td>${(call.criteria ?? []).map((k) => `<td>${e(a.scores?.[k.id] ?? "—")}</td>`).join("")}
+  const hasBr = branchesOf(call).length > 0;
+  const rows = ranked.map((a, i) => `<tr><td>${i + 1}</td><td>${e(a.name)}</td>${hasBr ? `<td>${e(branchName(call, a.branch) || "—")}</td>` : ""}<td>${e(cls(a))}</td>${(call.criteria ?? []).map((k) => `<td>${e(a.scores?.[k.id] ?? "—")}</td>`).join("")}
     <td><b>${e(totalScore(a.scores, call.criteria))}</b></td><td>${e(STAGE[a.stage]?.t ?? "")}</td></tr>`).join("");
   const html = `
     <table class="kv"><tr><th>الإعلان</th><td>${e(call.title)}</td></tr><tr><th>الجهة</th><td>${e(call.unit ?? "—")}</td></tr>
-      <tr><th>المقاعد</th><td>${e(call.seats)} والاحتياط ${e(call.reserve)}</td></tr>
+      <tr><th>المقاعد</th><td>${e(seatsText(call.seats))}${call.seats != null ? ` والاحتياط ${e(call.reserve)}` : ""}</td></tr>
+      ${hasBr ? `<tr><th>الفروع</th><td>${branchesOf(call).map((b) => `${e(b.name)} (${e(seatsText(b.seats))})`).join("، ")}</td></tr>` : ""}
       <tr><th>فترة التقديم</th><td>${day(call.opens_on)} — ${day(call.closes_on)}</td></tr></table>
     <p class="sec-h">نتائج المقابلات والقرار <span class="c">(${ranked.length})</span></p>
-    <table><thead><tr><th>م</th><th>الطالب</th><th>الصف/الفصل</th>${head}<th>المجموع (${maxScore(call.criteria)})</th><th>القرار</th></tr></thead><tbody>${rows}</tbody></table>`;
+    <table><thead><tr><th>م</th><th>الطالب</th>${hasBr ? "<th>الفرع</th>" : ""}<th>الصف/الفصل</th>${head}<th>المجموع (${maxScore(call.criteria)})</th><th>القرار</th></tr></thead><tbody>${rows}</tbody></table>`;
   printReport({
     title: `محضر الترشيح — ${call.title}`,
     sections: [{ title: `محضر الترشيح — ${call.title}`, subtitle: call.unit ?? "", html }],

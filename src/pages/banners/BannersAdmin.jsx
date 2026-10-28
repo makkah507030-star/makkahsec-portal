@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { normalizeImage } from "../../lib/imageResize";
 import { todayISO } from "../../lib/schoolTime";
 import { fmtGreg } from "../../lib/dates";
-import { BANNER_BUCKET, BANNER_KIND, AUDIENCE, LINK_PAGES, isExternal, bannersSetupMsg } from "../../lib/banners.js";
+import { BANNER_BUCKET, BANNER_KIND, AUDIENCE, LINK_PAGES, BANNER_W, BANNER_H, checkBanner, isExternal, bannersSetupMsg } from "../../lib/banners.js";
 import { Banner } from "../../components/HomeBanners.jsx";
 import Loader from "../../components/Loader.jsx";
 
@@ -13,24 +13,6 @@ import Loader from "../../components/Loader.jsx";
    فرصة أو مناسبة أو إعلان عام، بصورة وعنوان ووصف، ورابط اختياري (صفحة في البوابة أو
    رابط خارجي)، ولمن تظهر، وفي أي صفوف، ومدة عرضها. ويُعبّأ من فرصة ترشيح أو حدث قائم.
    ===================================================================== */
-
-// مقاس صورة الإعلان الإلزامي: عرضية 2:1، تُضبط على 1200 × 600 بالضبط قبل الرفع
-const BANNER_W = 1200, BANNER_H = 600;
-const imageSize = (file) => new Promise((ok) => {
-  const url = URL.createObjectURL(file), img = new Image();
-  img.onload = () => { ok({ w: img.width, h: img.height }); URL.revokeObjectURL(url); };
-  img.onerror = () => { ok(null); URL.revokeObjectURL(url); };
-  img.src = url;
-});
-// يُقبل ما قارب المقاس (نسبة 1.6 إلى 2.5 وعرض 900 فأكثر) ويُضبط عليه؛ وغيره يُرفض برسالة
-async function checkBanner(file) {
-  const s = await imageSize(file);
-  if (!s) return "تعذّرت قراءة الصورة؛ اختر صورة JPG أو PNG.";
-  const r = s.w / s.h;
-  if (r < 1.6 || r > 2.5) return `الصورة ليست بالمقاس المطلوب (عرضها ${s.w} وارتفاعها ${s.h}). صمّمها بعرض ${BANNER_W} وارتفاع ${BANNER_H} بكسل.`;
-  if (s.w < 900) return `الصورة صغيرة (عرضها ${s.w} بكسل) فتظهر باهتة. صمّمها بعرض ${BANNER_W} وارتفاع ${BANNER_H} بكسل.`;
-  return null;
-}
 
 const blank = () => ({ kind: "opportunity", title: "", body: "", image_path: null, link: "", link_label: "",
   linkType: "none", audience: ["student", "guardian"], grades: [], starts_on: todayISO(), ends_on: "", is_active: true, sort: 0 });
@@ -59,9 +41,10 @@ export default function BannersAdmin() {
     // مصادر التعبئة: فرص الترشيح المنشورة المفتوحة، والأحداث القادمة المعتمدة
     const t = todayISO();
     Promise.all([
-      supabase.from("nom_calls").select("id, title, body, closes_on, grades").eq("published", true).is("cancelled_at", null).gte("closes_on", t).limit(20),
+      supabase.from("nom_calls").select("*").eq("published", true).is("cancelled_at", null).gte("closes_on", t).limit(20),
       supabase.from("school_events").select("id, title, event_date, venue").gte("event_date", t).neq("stage", "draft").is("cancelled_at", null).order("event_date").limit(20),
-    ]).then(([a, b]) => setSources({ calls: a.data ?? [], events: b.data ?? [] }));
+    // الإعلان الذي له بطاقة تلقائية (nominations_6.sql) لا يُعرض للتعبئة
+    ]).then(([a, b]) => setSources({ calls: (a.data ?? []).filter((c) => !c.home_banner), events: b.data ?? [] }));
   }, []);
 
   const open = (b) => {
@@ -224,13 +207,15 @@ export default function BannersAdmin() {
                 <Banner preview b={b} />
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <span className={`chip ${st.c}`}>{st.t}</span>
+                  {b.nom_call_id && <span className="chip bg-[#B8912F]/10 text-[#8A6A1F]">من الترشيحات</span>}
                   <span className="text-muted">{b.audience.map((a) => AUDIENCE.find((x) => x[0] === a)?.[1]).filter(Boolean).join("، ")}
                     {b.grades?.length ? ` · الصف ${b.grades.join(" و")}` : ""}</span>
                   <span className="num text-faint">{fmtGreg(b.starts_on)}{b.ends_on ? ` ← ${fmtGreg(b.ends_on)}` : ""}</span>
                   <span className="flex-1" />
-                  <button className="text-mint-deep underline" onClick={() => open(b)}>تعديل</button>
+                  {/* بطاقة إعلان الترشيح تُعدَّل من الإعلان نفسه (nominations_6.sql)؛ ويبقى إيقافها وتفعيلها هنا */}
+                  {!b.nom_call_id && <button className="text-mint-deep underline" onClick={() => open(b)}>تعديل</button>}
                   <button className="text-muted underline" onClick={() => quick(b, { is_active: !b.is_active })}>{b.is_active ? "إيقاف" : "تفعيل"}</button>
-                  <button className="text-absent underline" onClick={() => remove(b)}>حذف</button>
+                  {!b.nom_call_id && <button className="text-absent underline" onClick={() => remove(b)}>حذف</button>}
                 </div>
               </article>
             );

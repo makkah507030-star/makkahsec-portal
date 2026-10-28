@@ -59,7 +59,7 @@ function Cell({ label, children }) {
 
 const GOV = ["المملكة العربية السعودية", "وزارة التعليم", "الإدارة العامة للتعليم بمنطقة مكة المكرمة"];
 
-export default function ScoutTeam() {
+export default function ScoutTeam({ embedded = false }) {
   const { profile } = useSession();
   const [members, setMembers] = useState(null);
   const [missing, setMissing] = useState(false);
@@ -183,13 +183,13 @@ export default function ScoutTeam() {
 
   return (
     <div className="space-y-5">
-      <div>
+      {!embedded && <div>
         <h1 className="text-lg font-bold text-ink">الفريق الكشفي</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           أعضاء الفريق الكشفي بالمدرسة من كل الفصول: أضف الطالب من فصله، وأسند له رتبته الكشفية لمرحلة
           الكشاف المتقدم (المرحلة الثانوية)، فتظهر شارتها في بطاقته بحسابه.
         </p>
-      </div>
+      </div>}
 
       <a href={SCOUTS_URL} target="_blank" rel="noopener noreferrer"
          className="card flex items-center gap-3 px-4 py-3 transition-colors hover:border-mint-light hover:bg-mint-tint/50">

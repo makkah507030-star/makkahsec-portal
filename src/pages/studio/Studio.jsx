@@ -11,7 +11,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { trackUsage, useUsageCounts } from "../../lib/usage.js";
 import UsageBadge from "../../components/UsageBadge.jsx";
-import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, ScoutCards, Rollup, Thanks, Notice, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
+import { RegisterCover, Divider, Spines, Circular, DoorSign, Social, ClassDoor, Timetable, Seats, Sign, Badges, ScoutCards, GlobeCards, GiftedCards, Rollup, Thanks, Notice, SPINE_SIZES, ICONS, ICON_LABEL } from "./Sheets.jsx";
 import { SECTIONS, TEMPLATES, templateOf, sheetDims, SOCIAL_FORMATS } from "./templates";
 import {
   THEMES, toWestern, useFontsReady, academicYearLabel, TERM_LABEL, ROLE_DEPT, classRange,
@@ -111,6 +111,8 @@ export function SheetFor({ tpl, theme, orient, data }) {
   if (tpl.sheet === "sign") return <Sign theme={theme} orient={orient} d={data} />;
   if (tpl.sheet === "badge") return <Badges theme={theme} d={data} />;
   if (tpl.sheet === "scoutcard") return <ScoutCards theme={theme} d={data} />;
+  if (tpl.sheet === "globecard") return <GlobeCards theme={theme} d={data} />;
+  if (tpl.sheet === "giftedcard") return <GiftedCards theme={theme} d={data} />;
   if (tpl.sheet === "rollup") return <Rollup theme={theme} d={data} />;
   if (tpl.sheet === "thanks") return <Thanks theme={theme} d={data} />;
   if (tpl.sheet === "notice") return <Notice theme={theme} d={data} />;
@@ -123,7 +125,7 @@ const galleryData = (tpl, ctx, section) =>
 
 /* ----------------------------- الصفحة ----------------------------- */
 export default function Studio() {
-  const { session, profile, adminRoles, isTeacher, isSuper } = useSession();
+  const { session, profile, adminRoles, isTeacher, isSuper, can } = useSession();
   const usage = useUsageCounts();
   const ctx = useStudioCtx();
   const [access, setAccess] = useState(null);     // بعد الحفظ من «إدارة القوالب» دون إعادة تحميل
@@ -161,8 +163,10 @@ export default function Studio() {
 
   /* قوالب القسم المسموحة للمستخدم. والقالب الممنوح لدور خارج أقسامه
      (مثل غلاف المعلم لرائد النشاط) يظهر في أول قسم يراه. */
-  // قالب خاص بأدوار بعينها: بطاقة الكشاف للقائد الكشفي ونائبه (lib/scoutLeader.js)
-  const onlyOk = (t) => !t.only || isSuper || (t.only === "scouts" && (adminRoles ?? []).some(isScoutRole));
+  // قالب خاص بأدوار بعينها: بطاقة الكشاف للقائد الكشفي ونائبه (lib/scoutLeader.js)،
+  // وبطاقة جلوب لمن يملك صلاحية «برنامج جلوب»
+  const onlyOk = (t) => !t.only || isSuper || (t.only === "scouts" && (adminRoles ?? []).some(isScoutRole))
+    || (t.only === "globe" && can("globe")) || (t.only === "gifted" && can("gifted"));
   const list = TEMPLATES.filter((t) => allowed(t) && onlyOk(t) &&
     (t.sections.includes(current) || (!t.sections.some(sectionOk) && current === sections[0]?.key)));
 

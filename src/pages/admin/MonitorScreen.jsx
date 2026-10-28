@@ -51,7 +51,8 @@ function useMonitor() {
   useEffect(() => {
     let live = true;
     const date = todayISO();
-    const dow = new Date(date + "T12:00:00").getDay();
+    // يوم الأسبوع بترقيم جدول الإشراف: الأحد = 1 … الخميس = 5 (كما في todayDow)
+    const dow = new Date(date + "T12:00:00").getDay() + 1;
     const start = new Date(date + "T00:00:00").toISOString();
     const week = new Date(new Date(date + "T12:00:00").getTime() + 7 * 864e5).toISOString().slice(0, 10);
     (async () => {

@@ -35,6 +35,19 @@ export function callStatus(c, today = todayISO()) {
   return { k: "closed", t: "أُغلق التقديم", c: "bg-late/10 text-late" };
 }
 
+/* المقاعد: رقم، أو فارغ = مفتوحة بلا حد (والاحتياط حينها صفر) — nominations_5.sql */
+export const seatsText = (seats) => (seats == null ? "مفتوحة" : String(seats));
+export const branchesOf = (c) => (Array.isArray(c?.branches) ? c.branches : []);
+export const branchName = (c, id) => branchesOf(c).find((b) => b.id === id)?.name ?? "";
+/** مجموعات القرار: فرع لكل مجموعة بمقاعده واحتياطه، أو الإعلان كله إن لم تكن له فروع */
+export const seatPools = (c) => {
+  const pool = (id, name, seats) => ({ id, name, seats: seats ?? null, reserve: seats == null ? 0 : Number(c.reserve) || 0 });
+  const br = branchesOf(c);
+  if (!br.length) return [pool(null, "", c.seats)];
+  return br.map((b) => ({ id: b.id, name: b.name, seats: b.seats ?? null, reserve: b.seats == null ? 0 : Number(b.reserve) || 0 }));
+};
+export const lines = (t) => (t ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
+
 export const totalScore = (scores, criteria) =>
   (criteria ?? []).reduce((a, k) => a + (Number(scores?.[k.id]) || 0), 0);
 export const maxScore = (criteria) => (criteria ?? []).reduce((a, k) => a + (Number(k.max) || 0), 0);
@@ -56,12 +69,13 @@ export async function notifyInterviews(call, apps) {
 /** إشعار النتيجة: كل طالب وولي أمره بنتيجته وحده */
 export async function notifyResults(call, apps) {
   const text = {
-    accepted: (n) => `نبارك قبول الطالب ${n} في «${call.title}». سيتواصل معه المسؤول لبدء المهام.`,
-    reserve: (n) => `الطالب ${n} في قائمة الاحتياط في «${call.title}»، وسيُبلَّغ إن شغر مقعد.`,
-    rejected: (n) => `نشكر الطالب ${n} على تقديمه في «${call.title}». لم يُقبل هذه المرة، ونتطلع لمشاركته في فرص قادمة.`,
+    accepted: (n, t) => `نبارك قبول الطالب ${n} في «${t}». سيتواصل معه المسؤول لبدء المهام.`,
+    reserve: (n, t) => `الطالب ${n} في قائمة الاحتياط في «${t}»، وسيُبلَّغ إن شغر مقعد.`,
+    rejected: (n, t) => `نشكر الطالب ${n} على تقديمه في «${t}». لم يُقبل هذه المرة، ونتطلع لمشاركته في فرص قادمة.`,
   };
   for (const a of apps) {
     const f = text[a.stage];
-    if (f) await notifyUsers(a.notify ?? [], `نتيجة الترشيح: ${call.title}`, f(a.name), "/opportunities");
+    const b = branchName(call, a.branch);
+    if (f) await notifyUsers(a.notify ?? [], `نتيجة الترشيح: ${call.title}`, f(a.name, b ? `${call.title} — ${b}` : call.title), "/opportunities");
   }
 }

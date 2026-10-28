@@ -48,7 +48,11 @@ const Guides = lazy(() => import("./pages/Guides.jsx"));
 const GuidesAdmin = lazy(() => import("./pages/admin/GuidesAdmin.jsx"));
 const NewsArticle = lazy(() => import("./pages/NewsArticle.jsx"));
 const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
-const ScoutTeam = lazy(() => import("./pages/admin/ScoutTeam.jsx"));
+const ScoutsHub = lazy(() => import("./pages/scouts/ScoutsHub.jsx"));
+const ScoutReports = lazy(() => import("./pages/scouts/ScoutReports.jsx"));
+const MyScouts = lazy(() => import("./pages/scouts/MyScouts.jsx"));
+const GlobeTeam = lazy(() => import("./pages/admin/GlobeTeam.jsx"));
+const GiftedHub = lazy(() => import("./pages/gifted/GiftedHub.jsx"));
 const NotificationsAdmin = lazy(() => import("./pages/admin/NotificationsAdmin.jsx"));
 const Circulars = lazy(() => import("./pages/circulars/Circulars.jsx"));
 const CircularView = lazy(() => import("./pages/circulars/CircularView.jsx"));
@@ -154,6 +158,7 @@ import HomeBanners from "./components/HomeBanners.jsx";
 import StaffHeader from "./components/StaffHeader.jsx";
 import TeacherDayCard from "./components/TeacherDayCard.jsx";
 import Loader from "./components/Loader.jsx";
+import { isScoutRole } from "./lib/scoutLeader.js";
 
 // الصفحات تُحمَّل عند فتحها فقط (lazy) لتخفيف التحميل الأول، وهذا ما يظهر لحظة جلبها
 const pageFallback = (
@@ -379,7 +384,12 @@ export default function App() {
               {can("students") && <Route path="/exams-admin" element={<ExamsAdmin />} />}
               {can("staff") && <Route path="/teacher-permissions" element={<TeacherPermissions />} />}
               {can("news") && <Route path="/news-admin" element={<NewsAdmin />} />}
-              {can("scouts") && <Route path="/scouts" element={<ScoutTeam />} />}
+              {/* الفريق الكشفي: من له الصلاحية والقائد ونائبه (أدوار «كشف»)؛ والبلاغات لوكيل شؤون الطلاب أيضًا */}
+              {(can("scouts") || adminRoles.some(isScoutRole)) && <Route path="/scouts" element={<ScoutsHub />} />}
+              {(can("scouts") || adminRoles.some(isScoutRole) || adminRoles.some((r) => ["deputy_students", "principal", "tech_support"].includes(r))) &&
+                <Route path="/scout-reports" element={<div className="space-y-4"><h1 className="text-lg font-bold text-ink">بلاغات الفريق الكشفي</h1><ScoutReports /></div>} />}
+              {can("globe") && <Route path="/globe" element={<GlobeTeam />} />}
+              {can("gifted") && <Route path="/gifted" element={<GiftedHub />} />}
               {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
               {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
               {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}
@@ -403,7 +413,9 @@ export default function App() {
               )}
               {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة، وللدعم الفني للمتابعة الفنية */}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<PerformanceAdmin />} />}
-              {isTechSupport && <Route path="/dfiles-admin" element={<DfilesAdmin />} />}
+              {/* ملفات المعلمين الرقمية: إدارتها للدعم الفني، والاطلاع للمدير والوكيلين (teacher_dfile_9.sql) */}
+              {(isTechSupport || adminRoles.some((r) => ["principal", "deputy_academic", "deputy_students"].includes(r))) &&
+                <Route path="/dfiles-admin" element={<DfilesAdmin manage={isTechSupport} />} />}
               {(adminRoles.includes("principal") || adminRoles.includes("deputy_academic")) && <Route path="/dfile-opinions" element={<DfileOpinions />} />}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/school-report" element={<SchoolReport />} />}
               {can("reports") && <Route path="/student-affairs" element={<StudentAffairs />} />}
@@ -540,6 +552,7 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/nominations" element={<Nominations />} />}
           {effectiveRole === "admin" && <Route path="/nominations/:id" element={<Nominations />} />}
           {(effectiveRole === "student" || effectiveRole === "guardian") && <Route path="/opportunities" element={<Opportunities />} />}
+          {effectiveRole === "student" && <Route path="/my-scouts" element={<MyScouts />} />}
           {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}
           {/* استمارة توضيح مستوى الطالب — للمعلم سطره، وللتوجيه والوكيل، ولولي الأمر نسخته */}
