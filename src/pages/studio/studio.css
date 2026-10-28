@@ -562,10 +562,10 @@
 .stu-globe .rl { position: relative; display: inline-block; margin-top: 5px; padding: 2.5px 11px; border-radius: 999px;
                  font-size: 9.5px; font-weight: 700; color: #0C2A44; background: linear-gradient(90deg, #E8C873, #C99B3A); }
 .stu-globe .cl { position: relative; margin-top: 4px; font-size: 9px; color: rgba(255,255,255,.72); }
-.stu-globe .sp { position: absolute; bottom: 30px; left: 9px; right: 9px; display: flex; justify-content: center; gap: 3px; }
-.stu-globe .sp span { display: inline-flex; align-items: center; gap: 2.5px; padding: 2px 4.5px; border-radius: 999px; font-size: 7px;
+.stu-globe .sp { position: absolute; bottom: 31px; left: 6px; right: 6px; display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.stu-globe .sp span { display: inline-flex; align-items: center; gap: 1.5px; padding: 2px 3px; border-radius: 999px; font-size: 6.6px;
                       color: rgba(255,255,255,.4); border: .8px solid rgba(255,255,255,.14); }
-.stu-globe .sp i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.25); }
+.stu-globe .sp i { width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,.25); }
 .stu-globe .sp .on { color: #fff; border-color: var(--sp); background: color-mix(in srgb, var(--sp) 22%, transparent); }
 .stu-globe .sp .on i { background: var(--sp); }
 .stu-globe .ft { position: absolute; bottom: 1.5px; left: 1.5px; right: 1.5px; height: 24px; border-radius: 0 0 12.5px 12.5px; padding: 0 12px; display: flex; align-items: center;

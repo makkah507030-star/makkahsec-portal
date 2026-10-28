@@ -654,7 +654,7 @@ export function GlobeCards({ theme = "light", d }) {
                   <div className="sp">
                     {spheres.map((s) => (
                       <span key={s.k} className={all || s.t === c.sphere ? "on" : ""} style={{ "--sp": s.color }}>
-                        <i />{s.t.replace("الغلاف ", "").replace("الغطاء ", "")}
+                        <i />{s.short}
                       </span>
                     ))}
                   </div>

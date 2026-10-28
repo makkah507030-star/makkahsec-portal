@@ -1,6 +1,6 @@
 // src/pages/globe/GlobeReportDoc.jsx
 import { PRINCIPAL_NAME } from "../../lib/exportUtils";
-import { GLOBE_KIND, GLOBE_SPHERES, sphereOf } from "../../lib/globe.js";
+import { GLOBE_KIND, GLOBE_SPHERES, GLOBE_MEANING, sphereOf } from "../../lib/globe.js";
 import {
   S, n, pct, dmy, countAr, paginate, Ring, Donut, DonutLegend, Bars, Kpis, Highlights, Box, Signs, Page,
   Cover as KitCover,
@@ -52,7 +52,7 @@ function Cover({ theme, info, s }) {
       badge: { main: "البرنامج والرصد", sub: info.termLabel }, side: { main: info.hijri, sub: "تاريخ الإصدار" },
       rows: [["user", "منسق البرنامج", info.leader || "—"], ["users", "طلاب البرنامج", countAr(info.members, "student")],
              ["calendar", "تاريخ الإصدار", info.issued], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],
-      note: ["lock", "يوثّق برامج الخطة وجلسات الرصد البيئي وما نُفّذ منها ورُفع إلى منصة GLOBE."],
+      note: ["globe", `GLOBE: ${GLOBE_MEANING} — يوثّق برامج الخطة وجلسات الرصد في ميادين البحث الخمسة وما رُفع إلى منصة GLOBE.`],
       strip: [[s.programs, "برامج الخطة"], [s.sessions, "جلسات الرصد"], [s.uploaded, "رُفعت إلى GLOBE"],
               [`${s.commit ?? 0}%`, "الالتزام بالرصد"]],
       foot: "برنامج جلوب البيئي العالمي",
@@ -76,15 +76,15 @@ function Summary({ theme, info, s, page, total }) {
   const kindParts = KIND_ORDER.map((k) => ({ t: GLOBE_KIND[k], v: s.byKind[k], c: KIND_COLOR[k] }));
   const prot = Object.entries(s.byProtocol).sort((a, b) => b[1] - a[1]).slice(0, 7);
   return (
-    <Page theme={theme} doc={docOf(info)} page={page} total={total} sec={{ no: 1, title: "ملخص الخطة", sub: "مؤشرات تنفيذ برامج جلوب وجلسات الرصد البيئي" }}>
+    <Page theme={theme} doc={docOf(info)} page={page} total={total} sec={{ no: 1, title: "ملخص الخطة", sub: "مؤشرات تنفيذ برامج جلوب وجلسات الرصد في ميادين البحث الخمسة" }}>
       <Kpis items={[
         { ic: "list", t: "برامج الخطة", v: s.programs, s: `نُفّذ ${n(s.pDone)} بنسبة ${pct(s.pDone, s.programs) ?? 0}%`, c: S[0] },
         { ic: "calendar", t: "جلسات الرصد", v: s.sessions, s: `نُفّذ منها ${n(s.oDone)}`, c: S[1] },
         { ic: "check", t: "رُفعت إلى GLOBE", v: s.uploaded, s: `من ${n(s.oDone)} جلسة منفّذة`, c: S[2] },
         { ic: "users", t: "المستفيدون", v: s.beneficiaries, s: "من البرامج المنفّذة", c: S[3] },
       ]} />
-      <Box icon="globe" title="الالتزام بالرصد في كل مجال (المنفّذ من الجلسات التي حل موعدها)">
-        <div className="mr-rings">
+      <Box icon="globe" title="الالتزام بالرصد في كل ميدان (المنفّذ من الجلسات التي حل موعدها)">
+        <div className="mr-rings" style={{ gridTemplateColumns: `repeat(${SPHERES.length}, 1fr)` }}>
           {SPHERES.map((sp) => {
             const b = s.bySphere[sp.k];
             return <Ring key={sp.k} value={b.due ? pct(b.done, b.due) : null} color={sp.color} label={sp.t}

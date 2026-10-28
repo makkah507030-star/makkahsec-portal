@@ -68,7 +68,7 @@ export default function GlobeReport({ leader, members, onBack }) {
       <div>
         <label className="text-xs text-muted">ملاحظات منسق البرنامج وتوصياته (تظهر في صفحة الاعتماد، وإن تُركت فارغة ظهرت أسطر للكتابة باليد)</label>
         <textarea className="field mt-1 w-full" rows={3} maxLength={700} value={notes}
-                  placeholder="مثل: انتظام رصد الغلاف الجوي يوميًا، والتوسع في رصد التربة في الفصل القادم…"
+                  placeholder="مثل: انتظام رصد الجو والمناخ يوميًا، والتوسع في رصد التربة في الفصل القادم…"
                   onChange={(e) => { setNotes(e.target.value); writeNotes(e.target.value); }} />
       </div>
     </ReportViewer>

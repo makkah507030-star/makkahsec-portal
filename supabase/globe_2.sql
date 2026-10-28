@@ -1,6 +1,8 @@
 -- =====================================================================
 -- برنامج جلوب (الجزء 2 من 2): خطة البرنامج وخطة الرصد — بعد الجزء 1.
 -- • globe_programs: برامج الخطة السنوية بموعدها، وتوثيق تنفيذها بالمستفيدين والأثر والصور.
+-- • ميادين البحث الخمسة: الجو والمناخ (atmo)، والماء (hydro)، والتربة (pedo)،
+--   وسطح الأرض والأحياء (bio)، والفينولوجيا (pheno).
 -- • globe_observations: جلسات الرصد البيئي بالبروتوكول والموعد والمكان والطلاب المكلّفين،
 --   وتوثيقها بالقراءات ورفعها إلى منصة GLOBE والصور.
 -- • مخزن globe-files للصور: <programs|observations>/<المعرّف>/…
@@ -11,7 +13,7 @@ create table if not exists public.globe_programs (
   id uuid primary key default gen_random_uuid(),
   title text not null check (length(trim(title)) > 0),
   kind text not null default 'awareness' check (kind in ('awareness', 'training', 'field', 'research')),
-  sphere text not null default 'all' check (sphere in ('all', 'atmo', 'hydro', 'bio', 'pedo')),
+  sphere text not null default 'all' check (sphere in ('all', 'atmo', 'hydro', 'pedo', 'bio', 'pheno')),
   target text,
   planned_date date,
   status text not null default 'planned' check (status in ('planned', 'done')),
@@ -26,7 +28,7 @@ create table if not exists public.globe_programs (
 
 create table if not exists public.globe_observations (
   id uuid primary key default gen_random_uuid(),
-  sphere text not null check (sphere in ('atmo', 'hydro', 'bio', 'pedo')),
+  sphere text not null check (sphere in ('atmo', 'hydro', 'pedo', 'bio', 'pheno')),
   protocol text not null check (length(trim(protocol)) > 0),
   obs_date date not null,
   obs_time text,
