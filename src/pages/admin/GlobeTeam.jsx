@@ -17,7 +17,6 @@ import { PRINCIPAL_NAME } from "../../lib/signers.js";
 import { ROLE_PERSON_NAME } from "../../lib/session.jsx";
 import { cleanMobile } from "../../lib/importer";
 import GlobeMark from "../../components/GlobeMark.jsx";
-import { GLOBE_FULL, GLOBE_MEANING } from "../../lib/globe.js";
 import GlobePlan from "../globe/GlobePlan.jsx";
 import GlobeMonitor from "../globe/GlobeMonitor.jsx";
 import GlobeReport from "../globe/GlobeReport.jsx";
@@ -191,8 +190,7 @@ export default function GlobeTeam() {
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#2E7D32]/10 text-[#2E7D32]"><GlobeMark className="h-6 w-6" /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-ink">برنامج GLOBE العالمي</span>
-          <span className="block text-xs text-muted">{GLOBE_MEANING} — الموقع الرسمي</span>
-          <span className="block text-[10.5px] text-faint" dir="ltr">{GLOBE_FULL}</span>
+          <span className="block text-xs text-muted">بروتوكولات الرصد البيئي ورفع البيانات — الموقع الرسمي</span>
         </span>
         <span className="shrink-0 text-xs font-semibold text-mint-deep">زيارة الموقع ←</span>
       </a>

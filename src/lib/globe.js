@@ -39,13 +39,6 @@ export const GLOBE_PRESETS = [
   ["يوم الأرض", "awareness"],
   ["مشروع بحثي بيئي للمسابقات", "research"],
   ["عرض نتائج الرصد في معرض المدرسة", "research"],
-  ["عرض بيانات الرصد برسوم بيانية ومقارنتها بمدارس أخرى", "research"],
-  ["التواصل مع العلماء عبر «ركن العلماء» ومناقشة النتائج", "research"],
-  ["ورشة تدريب المعلمين على آلية العمل في البرنامج", "training"],
 ];
 
 export const GLOBE_BUCKET = "globe-files";
-
-// اسم البرنامج: GLOBE اختصار لـ Global Learning and Observations to Benefit the Environment
-export const GLOBE_FULL = "Global Learning and Observations to Benefit the Environment";
-export const GLOBE_MEANING = "التعلم والملاحظات من أجل إفادة البيئة";

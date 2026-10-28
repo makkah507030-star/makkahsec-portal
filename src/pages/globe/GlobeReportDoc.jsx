@@ -1,6 +1,6 @@
 // src/pages/globe/GlobeReportDoc.jsx
 import { PRINCIPAL_NAME } from "../../lib/exportUtils";
-import { GLOBE_KIND, GLOBE_SPHERES, GLOBE_MEANING, sphereOf } from "../../lib/globe.js";
+import { GLOBE_KIND, GLOBE_SPHERES, sphereOf } from "../../lib/globe.js";
 import {
   S, n, pct, dmy, countAr, paginate, Ring, Donut, DonutLegend, Bars, Kpis, Highlights, Box, Signs, Page,
   Cover as KitCover,
@@ -52,7 +52,7 @@ function Cover({ theme, info, s }) {
       badge: { main: "البرنامج والرصد", sub: info.termLabel }, side: { main: info.hijri, sub: "تاريخ الإصدار" },
       rows: [["user", "منسق البرنامج", info.leader || "—"], ["users", "طلاب البرنامج", countAr(info.members, "student")],
              ["calendar", "تاريخ الإصدار", info.issued], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],
-      note: ["globe", `GLOBE: ${GLOBE_MEANING} — يوثّق برامج الخطة وجلسات الرصد في ميادين البحث الخمسة وما رُفع إلى منصة GLOBE.`],
+      note: ["lock", "يوثّق برامج الخطة وجلسات الرصد البيئي وما نُفّذ منها ورُفع إلى منصة GLOBE."],
       strip: [[s.programs, "برامج الخطة"], [s.sessions, "جلسات الرصد"], [s.uploaded, "رُفعت إلى GLOBE"],
               [`${s.commit ?? 0}%`, "الالتزام بالرصد"]],
       foot: "برنامج جلوب البيئي العالمي",
