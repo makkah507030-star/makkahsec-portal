@@ -1,32 +1,16 @@
 // src/pages/media/MediaViewer.jsx
 import { useEffect, useState } from "react";
-import { useSession } from "../../lib/session.jsx";
 import { signedUrls, VIDEO_TTL } from "../../lib/media.js";
 import { fmtDate } from "../../lib/dates";
 
 /* =====================================================================
    عارض المادة داخل البوابة: الصورة أو المقطع برابط موقّع قصير العمر يُطلب عند الفتح،
-   وفوقها علامة مائية باسم المشاهد وتاريخ اليوم، بلا تنزيل ولا قائمة الزر الأيمن ولا سحب.
+   بلا تنزيل ولا قائمة الزر الأيمن ولا سحب، وتحتها تحذير من النشر خارج البوابة.
    ===================================================================== */
 
 const block = (e) => e.preventDefault();
 
-export function Watermark({ name }) {
-  const t = `${name || "بوابة مكة الثانوية"} · ${fmtDate(new Date().toISOString())} · للعرض داخل البوابة فقط`;
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      <div className="absolute -inset-1/2 flex rotate-[-24deg] flex-col justify-center gap-16">
-        {Array.from({ length: 9 }, (_, i) => (
-          <p key={i} className="whitespace-nowrap text-center text-[13px] font-semibold tracking-wide text-white/25 [text-shadow:0_0_2px_rgba(0,0,0,.35)]"
-             style={{ marginInlineStart: i % 2 ? 120 : 0 }}>{`${t}      ${t}      ${t}`}</p>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function MediaViewer({ item, onClose, onPrev, onNext }) {
-  const { profile } = useSession();
   const [url, setUrl] = useState(null);
   useEffect(() => {
     let live = true;
@@ -60,12 +44,11 @@ export default function MediaViewer({ item, onClose, onPrev, onNext }) {
           <video src={url} controls autoPlay playsInline controlsList="nodownload noplaybackrate" disablePictureInPicture
                  onDragStart={block} className="max-h-full max-w-full" />
         )}
-        <Watermark name={profile?.full_name} />
         {onPrev && <button className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-white" onClick={onPrev} aria-label="السابق">›</button>}
         {onNext && <button className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 px-3 py-2 text-white" onClick={onNext} aria-label="التالي">‹</button>}
       </div>
       {item.body && <p className="mx-auto mt-2 w-full max-w-4xl text-sm leading-relaxed text-white/80" onClick={(e) => e.stopPropagation()}>{item.body}</p>}
-      <p className="mx-auto mt-2 text-[11px] text-white/45">للعرض داخل البوابة فقط · يُمنع تصوير الشاشة ونشر المادة في وسائل التواصل</p>
+      <p className="mx-auto mt-2 rounded-pill bg-late/20 px-3 py-1 text-center text-[12px] font-medium text-white/85">⚠ للعرض داخل البوابة فقط · يُمنع تصوير الشاشة ونشر المادة في وسائل التواصل، ويُحاسَب المخالف وفق لائحة السلوك</p>
     </div>
   );
 }
