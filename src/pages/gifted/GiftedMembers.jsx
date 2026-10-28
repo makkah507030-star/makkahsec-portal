@@ -1,13 +1,12 @@
 // src/pages/gifted/GiftedMembers.jsx
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
-import { useSession } from "../../lib/session.jsx";
+import { useSession, ROLE_PERSON_NAME } from "../../lib/session.jsx";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import { cleanMobile } from "../../lib/importer";
 import { byClassName } from "../../lib/sortAr.js";
 import { confirmDanger } from "../../lib/danger";
-import { printReport, escHtml as e } from "../../lib/exportUtils";
-import { PRINCIPAL_NAME, GIFTED_LEADER_NAME } from "../../lib/signers.js";
+import { printReport, escHtml as e, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { logos } from "../student-affairs/shared.jsx";
 import Loader from "../../components/Loader.jsx";
 import { GIFTED_DOMAINS, SOURCE, domainOf } from "../../lib/gifted.js";
@@ -94,7 +93,7 @@ export default function GiftedMembers() {
       <td>${e((m.domains ?? []).map((d) => domainOf(d).t).join("، ") || "—")}</td><td>${e(localMobile(m.student_mobile) || "—")}</td><td>${e(localMobile(m.guardian) || "—")}</td></tr>`).join("");
     printReport({ title: "كشف الطلاب الموهوبين", sections: [{ title: "كشف الطلاب الموهوبين", subtitle: `عدد الطلاب: ${rows.length}`,
       html: `<table><thead><tr><th>م</th><th>الطالب</th><th>الصف/الفصل</th><th>مصدر الاكتشاف</th><th>مجالات الموهبة</th><th>جوال الطالب</th><th>جوال ولي الأمر</th></tr></thead><tbody>${body}</tbody></table>` }],
-      ...logos(), signatures: [{ title: "مسؤول برنامج الموهوبين", name: GIFTED_LEADER_NAME }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }] });
+      ...logos(), signatures: [{ title: "مسؤول برنامج الموهوبين", name: (ROLE_PERSON_NAME.gifted_program ?? "").replace(/^الأستاذ:\s*/, "") }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }] });
   };
   const shown = rows.filter((m) => (dom === "all" || (m.domains ?? []).includes(dom)) && (!q.trim() || m.full_name.includes(q.trim())));
 

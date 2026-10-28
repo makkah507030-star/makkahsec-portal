@@ -13,7 +13,8 @@ import { printThen } from "../../lib/print.js";
 import moeLogo from "../../assets/moe-logo.png";
 import logoIcon from "../../assets/icon-mint.png";
 import { usePrincipalSignature } from "../../lib/principalSignature.js";
-import { PRINCIPAL_NAME, GLOBE_LEADER_NAME } from "../../lib/signers.js";
+import { PRINCIPAL_NAME } from "../../lib/signers.js";
+import { ROLE_PERSON_NAME } from "../../lib/session.jsx";
 import { cleanMobile } from "../../lib/importer";
 import GlobeMark from "../../components/GlobeMark.jsx";
 import GlobePlan from "../globe/GlobePlan.jsx";
@@ -82,7 +83,7 @@ export default function GlobeTeam() {
   const setTab = (t) => { if (t === "report") setPrevTab(tab); setTabRaw(t); };
   const [waText, setWaText] = useState("");     // نص جاهز يُفتح به الواتساب لكل طالب وولي أمر
   // توقيعا الكشف: منسق البرنامج ومدير المدرسة
-  const leaderName = GLOBE_LEADER_NAME;   // من «الإدارة ← أسماء الموقّعين»
+  const leaderName = (ROLE_PERSON_NAME.globe_program ?? "").replace(/^الأستاذ:\s*/, "");
   const principal = usePrincipalSignature();
 
   const load = async () => {

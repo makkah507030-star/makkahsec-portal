@@ -20,17 +20,11 @@ export let ACADEMIC_DEPUTY_NAME = "فهد بن سعود حضراوي";
 // مسؤول الدعم الفني للبوابة — يظهر في تقارير مركز الدعم والمساندة
 export let TECH_SUPPORT_NAME = "محمد بن حسن الحازمي";
 
-// مسؤولو البرامج — في كشوف برنامجي الموهوبين وجلوب وتقارير خططهما (وبحث توقيعهما بالاسم)
-export let GIFTED_LEADER_NAME = "فواز بن حامد الحارثي";
-export let GLOBE_LEADER_NAME = "عبدالله بن محمد بادابود";
-
 export const SIGNERS = [
   { key: "signer_principal",        label: "مدير المدرسة" },
   { key: "signer_student_deputy",   label: "وكيل شؤون الطلاب" },
   { key: "signer_academic_deputy",  label: "وكيل الشؤون التعليمية" },
   { key: "signer_tech_support",     label: "مسؤول الدعم الفني" },
-  { key: "signer_gifted",           label: "مسؤول برنامج الموهوبين" },
-  { key: "signer_globe",            label: "منسق برنامج جلوب" },
 ];
 
 /** الأسماء الحالية { signer_principal: "…", … } */
@@ -40,8 +34,6 @@ export function currentSigners() {
     signer_student_deputy: STUDENT_DEPUTY_NAME,
     signer_academic_deputy: ACADEMIC_DEPUTY_NAME,
     signer_tech_support: TECH_SUPPORT_NAME,
-    signer_gifted: GIFTED_LEADER_NAME,
-    signer_globe: GLOBE_LEADER_NAME,
   };
 }
 
@@ -52,8 +44,6 @@ export function applySigners(m) {
   if (v("signer_student_deputy"))  STUDENT_DEPUTY_NAME  = v("signer_student_deputy");
   if (v("signer_academic_deputy")) ACADEMIC_DEPUTY_NAME = v("signer_academic_deputy");
   if (v("signer_tech_support"))    TECH_SUPPORT_NAME    = v("signer_tech_support");
-  if (v("signer_gifted"))          GIFTED_LEADER_NAME   = v("signer_gifted");
-  if (v("signer_globe"))           GLOBE_LEADER_NAME    = v("signer_globe");
 }
 
 let loading = null;
