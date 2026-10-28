@@ -8,6 +8,7 @@ import { uploadMedia, MEDIA_BUCKET, MAX_VIDEO_MB } from "../../lib/media.js";
 import Loader from "../../components/Loader.jsx";
 import { useMedia, MediaGrid } from "./MediaGallery.jsx";
 import MediaViewer from "./MediaViewer.jsx";
+import NoPhotoList from "./NoPhotoList.jsx";
 
 /* =====================================================================
    استوديو الوسائط (صلاحية «استوديو الوسائط»، supabase/media_1.sql): رفع صور المدرسة
@@ -26,6 +27,7 @@ export default function MediaStudio() {
   const [busy, setBusy] = useState(null);         // نص التقدم
   const [msg, setMsg] = useState(null);
   const [open, setOpen] = useState(null);
+  const [tab, setTab] = useState("items");       // items: المواد، consent: موافقات التصوير
   const albums = useMemo(() => [...new Set((rows ?? []).map((r) => r.album).filter(Boolean))], [rows]);
   if (!rows) return <Loader />;
   const toggle = (k, v) => setF((x) => ({ ...x, [k]: x[k].includes(v) ? x[k].filter((y) => y !== v) : [...x[k], v] }));
@@ -63,6 +65,11 @@ export default function MediaStudio() {
         <h1 className="text-lg font-bold text-ink">استوديو الوسائط</h1>
         <p className="mt-1 text-sm text-muted">ارفع صور المدرسة ومقاطعها لتظهر في «معرض المدرسة» داخل الحسابات فقط. لا يصدر لأي ملف رابط عام، والرابط المنسوخ يتعطل بعد دقائق.</p>
       </div>
+      <div className="flex gap-1.5">
+        <button className={pill(tab === "items")} onClick={() => setTab("items")}>المواد</button>
+        <button className={pill(tab === "consent")} onClick={() => setTab("consent")}>موافقات التصوير و«لا يُصوَّر»</button>
+      </div>
+      {tab === "consent" ? <NoPhotoList /> : <>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 
       <section className="card space-y-3 p-4">
@@ -112,6 +119,7 @@ export default function MediaStudio() {
           )} />
         ) : <p className="card px-4 py-8 text-center text-sm text-muted">لا مواد بعد.</p>}
       </section>
+      </>}
       {open != null && rows[open] && <MediaViewer item={rows[open]} onClose={() => setOpen(null)}
         onPrev={open > 0 ? () => setOpen(open - 1) : null} onNext={open < rows.length - 1 ? () => setOpen(open + 1) : null} />}
     </div>
