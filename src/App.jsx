@@ -52,6 +52,7 @@ const ScoutsHub = lazy(() => import("./pages/scouts/ScoutsHub.jsx"));
 const ScoutReports = lazy(() => import("./pages/scouts/ScoutReports.jsx"));
 const MyScouts = lazy(() => import("./pages/scouts/MyScouts.jsx"));
 const GlobeTeam = lazy(() => import("./pages/admin/GlobeTeam.jsx"));
+const GiftedHub = lazy(() => import("./pages/gifted/GiftedHub.jsx"));
 const NotificationsAdmin = lazy(() => import("./pages/admin/NotificationsAdmin.jsx"));
 const Circulars = lazy(() => import("./pages/circulars/Circulars.jsx"));
 const CircularView = lazy(() => import("./pages/circulars/CircularView.jsx"));
@@ -388,6 +389,7 @@ export default function App() {
               {(can("scouts") || adminRoles.some(isScoutRole) || adminRoles.some((r) => ["deputy_students", "principal", "tech_support"].includes(r))) &&
                 <Route path="/scout-reports" element={<div className="space-y-4"><h1 className="text-lg font-bold text-ink">بلاغات الفريق الكشفي</h1><ScoutReports /></div>} />}
               {can("globe") && <Route path="/globe" element={<GlobeTeam />} />}
+              {can("gifted") && <Route path="/gifted" element={<GiftedHub />} />}
               {can("notifications") && <Route path="/notifications" element={<NotificationsAdmin />} />}
               {isTechSupport && <Route path="/notifications-review" element={<NotificationsReview />} />}
               {can("notifications") && <Route path="/announcements" element={<AnnouncementsAdmin />} />}

@@ -148,6 +148,7 @@ export const ADMIN_GROUPS = [
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
       { to: "/events-reports", label: "تقارير الأحداث",     icon: "pie" },
       { to: "/scouts",         label: "الفريق الكشفي", scoutGate: true, icon: "flag", kw: "كشافة اعضاء طلائع تحضير عريف" },
+      { to: "/gifted",         label: "برنامج الموهوبين", perm: "gifted", icon: "award", kw: "موهبة مقياس موهوب كشف" },
       { to: "/globe",          label: "طلاب برنامج جلوب", perm: "globe", icon: "globe", kw: "جلوب بيئي بيئة globe" },
       { to: "/studio",         label: "استوديو البوابة", icon: "palette", kw: "تصميم" },
     ],

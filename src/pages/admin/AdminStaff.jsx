@@ -540,7 +540,7 @@ const PERM_GROUPS = [
   { title: "المحتوى والتواصل",
     keys: ["circulars", "banners", "news", "guides", "notifications", "feedback"] },
   { title: "النشاط",
-    keys: ["scouts", "globe"] },
+    keys: ["scouts", "globe", "gifted"] },
   { title: "الحسابات والنظام",
     keys: ["accounts", "staff", "password_reset", "login_log"] },
 ];
