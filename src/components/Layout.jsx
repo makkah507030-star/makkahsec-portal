@@ -22,6 +22,7 @@ import { useAchMember, useAchOpen, ACH_GATE_ROLES } from "../lib/achievement";
 import { useBackSteps, goBack } from "../lib/backStep.js";
 import { savedTheme, saveTheme, applyTheme, savedStyle, saveStyle } from "../lib/theme.js";
 import { EvidenceDock } from "./EvidenceTags.jsx";
+import { isScoutRole } from "../lib/scoutLeader.js";
 
 /* =====================================================================
    القائمة الجانبية — مرتبة من العمل اليومي إلى الإعدادات، وفي أسفلها
@@ -68,6 +69,7 @@ export const ADMIN_GROUPS = [
       { to: "/referrals", label: "إحالة طالب", roles: COUNSEL, icon: "send", kw: "موجه" },
       { to: "/behavior", label: "نماذج السلوك والمواظبة", roles: COUNSEL, icon: "flag", kw: "مخالفات غياب" },
       { to: "/absence-excuses", label: "أعذار الغياب", roles: ["principal", "deputy_students", "clerk", "clerk_2", "tech_support"], icon: "idcard", kw: "عذر غياب طبي تقرير مرضي ولي أمر" },
+      { to: "/scout-reports", label: "بلاغات الفريق الكشفي", roles: ["principal", "deputy_students", "tech_support"], icon: "flag", kw: "كشافة بلاغ قائد ملاحظة تنظيم" },
       { to: "/student-requests", label: "طلبات التواصل مع الوكيل", roles: ["principal", "deputy_students", "tech_support"], icon: "send", kw: "مقابلة ولي أمر طالب سؤال استفسار وكيل" },
       { to: "/student-affairs", label: "تقارير شؤون الطلاب", perm: "reports", icon: "chart", kw: "غياب" },
     ],
@@ -145,7 +147,7 @@ export const ADMIN_GROUPS = [
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
       { to: "/events-reports", label: "تقارير الأحداث",     icon: "pie" },
-      { to: "/scouts",         label: "الفريق الكشفي", perm: "scouts", icon: "flag", kw: "كشافة اعضاء" },
+      { to: "/scouts",         label: "الفريق الكشفي", scoutGate: true, icon: "flag", kw: "كشافة اعضاء طلائع تحضير عريف" },
       { to: "/globe",          label: "طلاب برنامج جلوب", perm: "globe", icon: "globe", kw: "جلوب بيئي بيئة globe" },
       { to: "/studio",         label: "استوديو البوابة", icon: "palette", kw: "تصميم" },
     ],
@@ -297,6 +299,8 @@ const BASIC_GROUPS = [
       { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
+      // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
+      { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
     ],
   },
 ];
@@ -444,12 +448,19 @@ export default function Layout({ children }) {
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const achMember = useAchMember(session?.user?.id);
+  // عضوية الطالب في الفريق الكشفي: تظهر له «فريقي الكشفي»
+  const [scoutMember, setScoutMember] = useState(false);
+  useEffect(() => {
+    if (effectiveRole !== "student") { setScoutMember(false); return; }
+    supabase.rpc("scout_my").then(({ data, error }) => setScoutMember(!error && !!data));
+  }, [effectiveRole, session?.user?.id]);
   const [achOpen] = useAchOpen();
 
   // هل يظهر الرابط لهذا المستخدم؟
   const visible = (i) => {
     if (i.staffOnly && !isStaff) return false;
     if (i.studentOnly && effectiveRole !== "student") return false;
+    if (i.scoutMember && !scoutMember) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
     // مركز تحليل النتائج وما حوله: مخفيّ حتى يُفتح، إلا رابط المركز نفسه
     // يبقى لمن يملك فتحه (الوكيل/المدير/الدعم) ليدخل ويفتحه.
@@ -464,6 +475,7 @@ export default function Layout({ children }) {
       if (i.roles && !i.roles.some((r) => adminRoles.includes(r)) && !(i.orMember && achMember)) return false;
       if (i.manageForms) return adminRoles.includes("tech_support") || adminRoles.includes("principal");
       if (i.techOnly) return adminRoles.includes("tech_support");
+      if (i.scoutGate) return can("scouts") || adminRoles.some(isScoutRole);
       // anyPerm: يظهر العنصر لمن يملك أيًّا من الصلاحيات المذكورة
       return i.anyPerm ? i.anyPerm.some((p) => can(p)) : !i.perm || can(i.perm);
     }
@@ -476,7 +488,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
