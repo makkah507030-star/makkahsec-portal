@@ -9,7 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { todayISO, GRADE_NAMES } from "../../lib/schoolTime";
-import { fmtDate } from "../../lib/dates";
+import { fmtDate, fmtGreg, fmtHijri } from "../../lib/dates";
 import { printReport, escHtml } from "../../lib/exportUtils";
 import { fetchAllPaged } from "../../lib/attendanceHelpers";
 import { loadRangeStart, WARNING_STAGES } from "../../lib/officialAttendance";
@@ -21,7 +21,7 @@ import { FORM_KINDS } from "../../components/BehaviorSheet.jsx";
 import { STATUS as REF_STATUS } from "../../lib/referrals.js";
 import { levelLabel } from "../../lib/guidanceInquiry.js";
 import { NOTE_KINDS } from "../../lib/studentNotes.js";
-import { TONE, buildModel } from "./studentFileModel.js";
+import { TONE, buildModel, actionLabel } from "./studentFileModel.js";
 import PeriodNoticeCard from "../../components/PeriodNoticeCard.jsx";
 
 // من يعدّل حضور الحصص (supabase/class_attendance_staff_edit.sql)
@@ -416,7 +416,7 @@ function Attendance({ m, att, fp }) {
 function Conduct({ m }) {
   const items = [
     ...m.behavior.map((b) => ({ d: b.d, t: FORM_KINDS[b.kind]?.short ?? "نموذج سلوك", x: b.type || b.text, deg: b.degree, ack: b.ack, by: b.by, form: true })),
-    ...m.actions.map((a) => ({ d: a.d, t: a.category || "إجراء", x: a.action || a.detail, deg: a.degree, by: a.by })),
+    ...m.actions.map((a) => { const l = actionLabel(a); return { d: a.d, t: l.kind, x: l.text, deg: a.degree, by: a.by }; }),
   ].sort((a, b) => String(b.d).localeCompare(String(a.d)));
   const degs = [1, 2, 3, 4, 5].map((n) => [`الدرجة ${n}`, items.filter((i) => i.deg === n).length]).filter(([, c]) => c);
   return (
@@ -607,22 +607,66 @@ function Contact({ gd, st }) {
   );
 }
 
+const MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
 function Timeline({ items }) {
   const [all, setAll] = useState(false);
   const list = all ? items : items.slice(0, 15);
+  // صفوف الجدول مجمّعة بالشهر: صف عنوان لكل شهر ثم أحداثه
+  const groups = [];
+  list.forEach((e) => {
+    const k = e.d.slice(0, 7);
+    if (groups.at(-1)?.k !== k) groups.push({ k, rows: [] });
+    groups.at(-1).rows.push(e);
+  });
   return (
     <Section title="السجل الزمني الموحّد" icon="clock">
       {!items.length ? <Empty>لا أحداث في الفترة.</Empty> : (
-        <ol className="relative space-y-2 border-s-2 border-line ps-4">
-          {list.map((e, i) => (
-            <li key={i} className="relative text-sm">
-              <span className={`absolute -start-[21px] top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-white ${TONE[e.tone].bar}`} />
-              <span className="num text-xs text-muted">{weekdayOf(e.d)} {day(e.d)}</span>
-              <span className={`mx-1.5 rounded-pill px-1.5 text-[10px] font-semibold ${TONE[e.tone].soft} ${TONE[e.tone].text}`}>{e.kind}</span>
-              <span className="text-ink">{e.text}</span>
-            </li>
-          ))}
-        </ol>
+        <div className="overflow-x-auto rounded-card border border-line">
+          <table className="w-full min-w-[640px] border-collapse text-sm">
+            <thead>
+              <tr className="bg-mint-deep text-right text-xs text-white">
+                <th className="w-10 px-2 py-2.5 text-center font-semibold">م</th>
+                <th className="w-24 px-3 py-2.5 font-semibold">اليوم</th>
+                <th className="w-32 px-3 py-2.5 font-semibold">التاريخ</th>
+                <th className="w-24 px-3 py-2.5 font-semibold">النوع</th>
+                <th className="px-3 py-2.5 font-semibold">البيان</th>
+                <th className="w-44 px-3 py-2.5 font-semibold">المادة / الجهة</th>
+              </tr>
+            </thead>
+            {groups.map((g) => {
+              const [y, mo] = g.k.split("-");
+              return (
+                <tbody key={g.k}>
+                  <tr className="bg-mint-tint/70">
+                    <td colSpan={6} className="px-3 py-1.5 text-xs font-bold text-mint-deep" dir="rtl">
+                      {`${MONTHS[Number(mo) - 1]} ${y}`}
+                      <span className="ms-2 font-normal text-muted">{`· ${g.rows.length === 1 ? "حدث واحد" : g.rows.length === 2 ? "حدثان" : `${g.rows.length} ${g.rows.length > 10 ? "حدثًا" : "أحداث"}`}`}</span>
+                    </td>
+                  </tr>
+                  {g.rows.map((e, i) => {
+                    const n = list.indexOf(e) + 1;
+                    return (
+                      <tr key={i} className="border-t border-line/70 even:bg-canvas/60 hover:bg-mint-tint/30">
+                        <td className="relative px-2 py-2 text-center">
+                          <span className={`absolute inset-y-0 start-0 w-1 ${TONE[e.tone].bar}`} />
+                          <span className="num text-xs text-faint">{n}</span>
+                        </td>
+                        <td className="px-3 py-2 text-xs font-medium text-ink">{weekdayOf(e.d)}</td>
+                        <td className="px-3 py-2 leading-tight">
+                          <span className="num block text-[13px] font-semibold text-ink">{fmtGreg(e.d + "T12:00:00")}</span>
+                          <span className="num block text-[10.5px] text-muted">{fmtHijri(e.d + "T12:00:00")}</span>
+                        </td>
+                        <td className="px-3 py-2"><span className={`inline-block rounded-pill px-2 py-0.5 text-[11px] font-semibold ${TONE[e.tone].soft} ${TONE[e.tone].text}`}>{e.kind}</span></td>
+                        <td className="px-3 py-2 text-ink">{e.text}</td>
+                        <td className="px-3 py-2 text-xs text-muted">{e.extra || "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              );
+            })}
+          </table>
+        </div>
       )}
       {items.length > 15 && <button onClick={() => setAll(!all)} className="text-xs text-mint-deep underline">
         {all ? "عرض أحدث 15 فقط" : `عرض الكل (${items.length})`}</button>}
@@ -663,7 +707,7 @@ function printFile({ s, st, m, data, from, to, fp, kpis }) {
     ${block("الأعذار والاستئذان", [...(att.excused ?? []).map((e) => ["عذر", `${day(e.from)}${e.to !== e.from ? ` — ${day(e.to)}` : ""}`, e.excuse || e.reason || ""]),
       ...(att.permissions ?? []).map((p) => ["استئذان", day(p.d), p.note ?? ""])], ["النوع", "التاريخ", "التفاصيل"], "لا أعذار ولا استئذان.")}
     ${block("السلوك والانضباط", [...m.behavior.map((b) => [FORM_KINDS[b.kind]?.short ?? "نموذج", b.degree ?? "—", b.type || b.text || "", day(b.d), b.ack ? "اطّلع" : "لم يطّلع"]),
-      ...m.actions.map((a) => [a.category || "إجراء", a.degree ?? "—", a.action || a.detail || "", day(a.d), ""])], ["النوع", "الدرجة", "الوصف", "التاريخ", "ولي الأمر"], "لا مخالفات في الفترة.")}
+      ...m.actions.map((a) => { const l = actionLabel(a); return [l.kind, a.degree ?? "—", l.text, day(a.d), ""]; })], ["النوع", "الدرجة", "الوصف", "التاريخ", "ولي الأمر"], "لا مخالفات في الفترة.")}
     ${block("الإحالات", m.referrals.map((r) => [r.serial, r.reason ?? "", r.teacher ?? "", day(r.d), REF_STATUS[r.status]?.t ?? r.status]), ["الرقم", "السبب", "المعلم", "التاريخ", "الحالة"], "لا إحالات في الفترة.")}
     ${(con.cases ?? []).length ? block("حالات التوجيه", con.cases.map((c) => [c.title, day(c.opened), c.status === "open" ? "مفتوحة" : "مغلقة", c.sessions, c.last ?? ""]), ["الحالة", "فُتحت", "الوضع", "الجلسات", "آخر توصية"], "") : ""}
     ${block("الاختبارات", m.quizzes.map((q) => [q.title, q.subject ?? "", `${q.score} / ${q.total}`, `${q.pct}%`, q.avgPct != null ? `${q.avgPct}%` : "—"]), ["الاختبار", "المادة", "الدرجة", "النسبة", "متوسط الفصل"], "لا اختبارات مرصودة في الفترة.")}
