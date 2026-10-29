@@ -11,7 +11,7 @@ export const BANNER_KIND = {
   event:       { t: "مناسبة", c: "bg-[#3F6B99]" },
   general:     { t: "إعلان",  c: "bg-mint-deep" },
 };
-export const AUDIENCE = [["student", "الطلاب"], ["guardian", "أولياء الأمور"], ["staff", "المنسوبون"]];
+export const AUDIENCE = [["student", "الطلاب"], ["guardian", "أولياء الأمور"], ["staff", "المعلمون والإداريون"]];
 
 // صفحات البوابة الجاهزة للرابط (يظهر لكل مستفيد ما يخصه منها)
 export const LINK_PAGES = [
