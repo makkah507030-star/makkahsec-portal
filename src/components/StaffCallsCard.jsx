@@ -16,15 +16,19 @@ const STAGE = {
   withdrawn: { t: "انسحبت", c: "bg-canvas text-muted" },
 };
 
-export default function StaffCallsCard() {
+// page: صفحة «فرص المشاركة» للمعلم (يفتحها زر بطاقة الإعلان)، فتظهر حتى بلا فرص برسالة توضيحية
+export default function StaffCallsCard({ page = false }) {
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(null);        // الإعلان المفتوح نموذجه
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const load = () => supabase.rpc("nom_staff_calls").then(({ data }) => setRows(data ?? []));
+  const [ready, setReady] = useState(false);
+  const load = () => supabase.rpc("nom_staff_calls").then(({ data }) => { setRows(data ?? []); setReady(true); });
   useEffect(() => { load(); }, []);
-  if (!rows.length) return null;
+  if (!rows.length) return page && ready
+    ? <p className="card px-4 py-8 text-center text-sm text-muted">لا فرص قيادة مفتوحة الآن. تظهر هنا إعلانات الترشيحات التي تطلب معلمًا لقيادة فريق أو رئاسة مركز.</p>
+    : null;
 
   const send = async (c, text) => {
     setBusy(true); setErr("");
