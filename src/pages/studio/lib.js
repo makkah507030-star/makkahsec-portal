@@ -101,7 +101,7 @@ export const ROLE_DEPT = {
   globe_program:    ["برنامج جلوب البيئي", "GL"],
   makkah_sport:     ["مكة سبورت", "SP"],
   student_voice:    ["صوت الطالب", "SV"],
-  media_portal:     ["البوابة الإعلامية", "MD"],
+  media_portal:     ["المركز الإعلامي", "MD"],
   safety_security:  ["الأمن والسلامة", "SF"],
   science_labs:     ["مختبرات العلوم", "LB"],
   science_labs_2:   ["مختبرات العلوم", "LB"],

@@ -145,7 +145,7 @@ export const ADMIN_GROUPS = [
       { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
-      { to: "/my-media-team",  label: "فريقي الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية قائد الفريق" },
+      { to: "/my-media-team",  label: "المركز الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية مشرف الفريق عضوية" },
       { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
       { to: "/media",          label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
@@ -285,7 +285,7 @@ const TEACHER_GROUPS = [
       { to: "/events",     label: "الأحداث والمناسبات", icon: "sparkles" },
       { to: "/studio",     label: "استوديو البوابة",    icon: "palette", kw: "تصميم" },
       { to: "/media",      label: "معرض المدرسة",      icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
-      { to: "/my-media-team", label: "فريقي الإعلامي",  icon: "palette", mediaMember: true, kw: "بطاقة اعلامية قائد الفريق" },
+      { to: "/my-media-team", label: "المركز الإعلامي",  icon: "palette", mediaMember: true, kw: "بطاقة اعلامية مشرف الفريق عضوية" },
       { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
     ],
   },
@@ -311,8 +311,8 @@ const BASIC_GROUPS = [
       { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
       // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
       { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
-      // فريقي الإعلامي — لعضو الفريق وحده (supabase/media_3.sql)
-      { to: "/my-media-team", label: "فريقي الإعلامي", icon: "palette", studentOnly: true, mediaMember: true, kw: "تصوير اعلامي لا يصور بطاقة" },
+      // المركز الإعلامي — لعضوه وحده (supabase/media_3.sql)
+      { to: "/my-media-team", label: "المركز الإعلامي", icon: "palette", studentOnly: true, mediaMember: true, kw: "تصوير اعلامي لا يصور بطاقة" },
     ],
   },
 ];
@@ -466,7 +466,7 @@ export default function Layout({ children }) {
     if (effectiveRole !== "student") { setScoutMember(false); return; }
     supabase.rpc("scout_my").then(({ data, error }) => setScoutMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
-  // عضوية الفريق الإعلامي للطالب وقائده من المعلمين: تظهر «فريقي الإعلامي» (media_4.sql)
+  // عضوية المركز الإعلامي للطالب ومشرفه من المعلمين: تظهر «المركز الإعلامي» (media_4.sql)
   const [mediaMember, setMediaMember] = useState(false);
   useEffect(() => {
     if (effectiveRole === "guardian") { setMediaMember(false); return; }

@@ -31,10 +31,10 @@ const blank = () => ({
   home_banner: true, banner_image: null, staff_lead: null,
 });
 const addDays = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
-// قالب الفريق الإعلامي للبوابة: فروعه وشروطه وقيادته من المعلمين، ويعدّله صاحب الإعلان قبل النشر
+// قالب المركز الإعلامي: فروعه وشروطه وقيادته من المعلمين، ويعدّله صاحب الإعلان قبل النشر
 const mediaTeam = () => ({
-  ...blank(), title: "الانضمام للفريق الإعلامي للبوابة", unit: "الفريق الإعلامي", closes_on: addDays(14), guardian_ok: true,
-  body: "فريق من الطلاب يوثّق فعاليات المدرسة وبرامجها بالصور والمقاطع والأخبار، وتُنشر أعماله في «معرض المدرسة» داخل حسابات البوابة فقط، ومنها برنامج «وجوه من مكة الثانوية».",
+  ...blank(), title: "الانضمام إلى المركز الإعلامي", unit: "المركز الإعلامي", closes_on: addDays(14), guardian_ok: true,
+  body: "يضم المركز الإعلامي فريقًا من الطلاب يوثّق فعاليات المدرسة وبرامجها بالصور والمقاطع والأخبار، وتُنشر أعماله في «معرض المدرسة» داخل حسابات البوابة فقط، ومنها برنامج «وجوه من مكة الثانوية».",
   tasks: ["تصوير الفعاليات والبرامج بأجهزة المدرسة وبإذن مسبق", "كتابة الأخبار والتعليقات القصيرة على المواد", "إعداد المقاطع القصيرة ومونتاجها",
     "إعداد حلقات «وجوه من مكة الثانوية»", "الالتزام بقائمة «لا يُصوَّر» قبل كل تصوير"].join("\n"),
   terms: ["أصوّر بأجهزة المدرسة فقط، ولا أصوّر بجوالي الشخصي", "لا أنشر أي صورة أو مقطع خارج البوابة",
@@ -46,7 +46,7 @@ const mediaTeam = () => ({
     { id: uid(), q: "هل لديك أعمال سابقة تستطيع عرضها في المقابلة؟", kind: "choice", options: ["نعم", "لا"] }],
   criteria: [{ id: "c1", name: "المهارة الفنية", max: 10 }, { id: "c2", name: "الأمانة والانضباط", max: 10 },
     { id: "c3", name: "العمل الجماعي", max: 10 }, { id: "c4", name: "الإبداع", max: 10 }],
-  staff_lead: "قائد الفريق الإعلامي", link_media: true,
+  staff_lead: "مشرف المركز الإعلامي", link_media: true,
 });
 const uid = () => Math.random().toString(36).slice(2, 8);
 
@@ -82,7 +82,7 @@ function CallList() {
           <p className="text-sm text-muted">إعلانات التقديم للطلاب: الشروط والمقابلات والفرز وإعلان المقبولين.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="rounded-pill border border-line bg-white px-4 py-2 text-sm text-ink hover:bg-canvas" onClick={() => setEdit(mediaTeam())}>قالب: الفريق الإعلامي</button>
+          <button className="rounded-pill border border-line bg-white px-4 py-2 text-sm text-ink hover:bg-canvas" onClick={() => setEdit(mediaTeam())}>قالب: المركز الإعلامي</button>
           <button className="btn-primary" onClick={() => setEdit(blank())}>+ إعلان جديد</button>
         </div>
       </div>
@@ -289,7 +289,7 @@ function CallEditor({ init, onClose }) {
         <p className="text-[11px] text-faint">تُحسب من بيانات الفصل الدراسي الحالي، ولا يستطيع التقديم من لا تنطبق عليه.</p>
         <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.guardian_ok} onChange={(e) => set("guardian_ok", e.target.checked)} /> يشترط موافقة ولي الأمر من حسابه</label>
         <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.link_scouts} onChange={(e) => set("link_scouts", e.target.checked)} /> المقبولون يُضافون إلى الفريق الكشفي عند إعلان النتائج</label>
-        <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={!!f.link_media} onChange={(e) => set("link_media", e.target.checked)} /> المقبولون يُضافون إلى الفريق الإعلامي بفرعهم عند إعلان النتائج</label>
+        <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={!!f.link_media} onChange={(e) => set("link_media", e.target.checked)} /> المقبولون يُضافون إلى المركز الإعلامي بفرعهم عند إعلان النتائج</label>
       </section>
 
       <section className="card space-y-3 p-4">
@@ -314,7 +314,7 @@ function CallEditor({ init, onClose }) {
         </label>
         {f.staff_lead != null && (
           <div className="grid gap-2 sm:grid-cols-2">
-            <L t="اسم دور القيادة"><input className="field mt-1" value={f.staff_lead} maxLength={60} onChange={(e) => set("staff_lead", e.target.value)} placeholder="قائد الفريق الإعلامي" /></L>
+            <L t="اسم دور القيادة"><input className="field mt-1" value={f.staff_lead} maxLength={60} onChange={(e) => set("staff_lead", e.target.value)} placeholder="مشرف المركز الإعلامي" /></L>
             <p className="self-end text-xs leading-relaxed text-faint">يظهر الإعلان في رئيسية المعلمين والإداريين بزر «أترشّح»، ويكتب المترشّح نبذة عن خبرته، وتختار أنت من تبويب «ترشّح المعلمين».</p>
           </div>
         )}

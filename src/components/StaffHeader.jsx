@@ -22,7 +22,7 @@ export default function StaffHeader({ kicker = null }) {
   const [ready, setReady] = useState(false);   // العمود موجود (بعد تشغيل ملف SQL)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [media, setMedia] = useState(null);     // قائد الفريق الإعلامي (supabase/media_4.sql)
+  const [media, setMedia] = useState(null);     // مشرف المركز الإعلامي (supabase/media_4.sql)
 
   useEffect(() => {
     if (!uid) return;
@@ -54,7 +54,7 @@ export default function StaffHeader({ kicker = null }) {
   const chips = teacherView
     ? [{ t: "معلم", strong: true }, spec && { t: spec }].filter(Boolean)
     : adminRoles.map((r, i) => ({ t: ADMIN_ROLE_LABEL[r] ?? r, strong: i === 0 })).slice(0, 3);
-  if (media) chips.push({ badge: true, color: TONES.leader.base, title: "الفريق الإعلامي", t: <><span aria-hidden="true">◉</span> {media}</> });
+  if (media) chips.push({ badge: true, color: TONES.leader.base, title: "المركز الإعلامي", t: <><span aria-hidden="true">◉</span> {media}</> });
 
   return (
     <div className="space-y-1">

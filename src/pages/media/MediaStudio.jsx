@@ -70,7 +70,7 @@ export default function MediaStudio() {
       <div className="flex gap-1.5">
         <button className={pill(tab === "items")} onClick={() => setTab("items")}>المواد</button>
         <button className={pill(tab === "consent")} onClick={() => setTab("consent")}>موافقات التصوير و«لا يُصوَّر»</button>
-        <button className={pill(tab === "team")} onClick={() => setTab("team")}>الفريق الإعلامي</button>
+        <button className={pill(tab === "team")} onClick={() => setTab("team")}>أعضاء المركز</button>
         <Link to="/media-contact?center=1" className={pill(false)}>طلبات التواصل ←</Link>
       </div>
       {tab === "consent" ? <NoPhotoList /> : tab === "team" ? <MediaTeam /> : <>

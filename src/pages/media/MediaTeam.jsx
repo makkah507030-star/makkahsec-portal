@@ -6,7 +6,7 @@ import { confirmDanger } from "../../lib/danger";
 import Loader from "../../components/Loader.jsx";
 
 /* =====================================================================
-   الفريق الإعلامي في استوديو الوسائط (supabase/media_3.sql): الطلاب الأعضاء بفروعهم.
+   أعضاء المركز الإعلامي في استوديو الوسائط (supabase/media_3.sql): الطلاب الأعضاء بفروعهم.
    يُضافون تلقائيًا من إعلان الترشيح المربوط بالفريق عند إعلان نتائجه، ويُزالون من هنا.
    ===================================================================== */
 
@@ -20,7 +20,7 @@ export default function MediaTeam() {
   useEffect(() => { load(); }, []);
   if (!rows) return <Loader />;
   const remove = async (r) => {
-    if (!(await confirmDanger({ title: `إزالة ${r.full_name} من الفريق`, impact: ["لا يرى بعدها صفحة «فريقي الإعلامي» ولا قائمة «لا يُصوَّر»."], confirmLabel: "إزالة" }))) return;
+    if (!(await confirmDanger({ title: `إزالة ${r.full_name} من المركز الإعلامي`, impact: ["لا يرى بعدها صفحة «المركز الإعلامي» ولا قائمة «لا يُصوَّر»."], confirmLabel: "إزالة" }))) return;
     await supabase.from("media_team").delete().eq("student_id", r.student_id);
     load();
   };
@@ -29,7 +29,7 @@ export default function MediaTeam() {
   return (
     <div className="space-y-3">
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
-      <p className="text-sm text-muted">يُضاف الطلاب تلقائيًا من إعلان «الفريق الإعلامي» في الترشيحات عند إعلان نتائجه، ويرى كل عضو في حسابه «فريقي الإعلامي» وفيها قائمة «لا يُصوَّر».</p>
+      <p className="text-sm text-muted">يُضاف الطلاب تلقائيًا من إعلان «المركز الإعلامي» في الترشيحات عند إعلان نتائجه، ويرى كل عضو في حسابه «المركز الإعلامي» وفيها قائمة «لا يُصوَّر».</p>
       {rows.length ? branches.map((b) => {
         const list = rows.filter((r) => (r.branch ?? "بلا فرع") === b);
         return (
@@ -45,7 +45,7 @@ export default function MediaTeam() {
             ))}
           </section>
         );
-      }) : !err && <p className="card px-4 py-8 text-center text-sm text-muted">لا أعضاء بعد. أنشئ إعلانًا من «الترشيحات» بقالب «الفريق الإعلامي».</p>}
+      }) : !err && <p className="card px-4 py-8 text-center text-sm text-muted">لا أعضاء بعد. أنشئ إعلانًا من «الترشيحات» بقالب «المركز الإعلامي».</p>}
     </div>
   );
 }

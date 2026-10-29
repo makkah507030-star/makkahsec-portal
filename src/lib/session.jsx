@@ -253,7 +253,7 @@ export const ADMIN_ROLE_LABEL = {
   activity_leader: "رائد النشاط",
   tech_support:    "الدعم الفني",
   data_registrar:  "مسجّل المعلومات",
-  media_portal:    "البوابة الإعلامية",
+  media_portal:    "المركز الإعلامي",
   gifted_program:  "برنامج الموهوبين",
   globe_program:   "برنامج جلوب البيئي العالمي",
   student_voice:   "برنامج صوت الطالب",
