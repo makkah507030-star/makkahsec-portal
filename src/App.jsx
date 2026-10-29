@@ -561,6 +561,11 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/nominations" element={<Nominations />} />}
           {effectiveRole === "admin" && <Route path="/nominations/:id" element={<Nominations />} />}
           {(effectiveRole === "student" || effectiveRole === "guardian") && <Route path="/opportunities" element={<Opportunities />} />}
+          {/* للمعلم والإداري: فرص القيادة، فيعمل زر بطاقة الإعلان في رئيسيتهم (nominations_9.sql) */}
+          {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/opportunities" element={
+            <div className="space-y-4"><div><h1 className="text-lg font-bold text-ink">فرص المشاركة</h1>
+              <p className="mt-1 text-sm text-muted">فرص القيادة المفتوحة للمعلمين والإداريين في إعلانات الترشيحات.</p></div>
+              <StaffCallsCard page /></div>} />}
           {effectiveRole === "student" && <Route path="/my-scouts" element={<MyScouts />} />}
           {effectiveRole !== "guardian" && <Route path="/my-media-team" element={<MyMediaTeam />} />}
           <Route path="/media-contact" element={<MediaContact />} />
