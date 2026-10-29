@@ -71,6 +71,10 @@ export default function Feedback() {
     e.preventDefault();
     setError("");
 
+    // كلمة مرور الطالب تُعاد حضوريًا في المدرسة، فلا يُرسل طلبها من هنا
+    if (!session && category === "login" && guestRole === "طالب") {
+      setError("كلمة مرور الطالب تُعاد حضوريًا فقط: راجع الدعم الفني في المدرسة."); return;
+    }
     const phone = normMobile(mobile);
     if (!session) {
       if (name.trim().length < 3) { setError("اكتب اسمك الثلاثي."); return; }
