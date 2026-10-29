@@ -66,6 +66,9 @@ export default function Feedback() {
   };
 
   useEffect(() => { loadTickets(); }, [profile?.id]);
+  // طلب واحد في اليوم بتوقيت مكة (supabase/feedback_daily_limit.sql): طلب اليوم يُتابع من صفحته
+  const meccaDay = (v) => new Date(v).toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
+  const todayTicket = (tickets ?? []).find((t) => meccaDay(t.created_at) === meccaDay(Date.now()));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -247,6 +250,13 @@ export default function Feedback() {
               </div>
             )}
 
+            {todayTicket ? (
+              <div className="card mt-6 space-y-2 p-5 text-sm">
+                <p className="font-semibold text-ink">لك طلب دعم فني اليوم</p>
+                <p className="text-muted">يُقبل طلب واحد في اليوم. تابع طلبك أو أضف إليه ما يلزم من صفحته، ويمكنك إرسال طلب جديد غدًا.</p>
+                <Link to={`/ticket/${todayTicket.id}`} className="btn-primary inline-flex w-auto px-4 py-1.5 text-xs">فتح طلب اليوم</Link>
+              </div>
+            ) : (
             <form onSubmit={submit} className="card mt-6 space-y-5 p-5">
               {/* بيانات التواصل */}
               <div className="grid gap-3 sm:grid-cols-2">
@@ -344,6 +354,7 @@ export default function Feedback() {
                 {sending ? "جارٍ الإرسال…" : "إرسال الطلب"}
               </button>
             </form>
+            )}
           </>
         )}
       </main>
