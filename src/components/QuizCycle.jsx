@@ -427,6 +427,24 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange, vi
     onChange({ analyzed_at: at, analysis });
   };
 
+  // تحديث التحليل المعتمد حين تتغير الدرجات بعده (إعادة الاختبار أو تعديل الرصد): المتوسط ومن يحتاج
+  // دعمًا والمتفوقون، مع بقاء تاريخ الاعتماد الأول. الخطة العلاجية لا تتغير، ويُبيَّن من دخل الدعم ومن خرج منه
+  const ids = (l) => new Set((l ?? []).map((x) => x.id));
+  const sAt = ids(q.analysis?.support), sNow = ids(live.support), tAt = ids(q.analysis?.top), tNow = ids(live.top);
+  const drift = !!q.analyzed_at && !!q.analysis && (q.analysis.graded !== live.graded || q.analysis.avg !== live.avg
+    || sAt.size !== sNow.size || [...sNow].some((x) => !sAt.has(x)) || tAt.size !== tNow.size || [...tNow].some((x) => !tAt.has(x)));
+  const enteredSupport = live.support.filter((x) => !sAt.has(x.id));
+  const leftSupport = (q.analysis?.support ?? []).filter((x) => !sNow.has(x.id));
+  const refreshAnalysis = async () => {
+    setBusy(true);
+    const analysis = { graded: live.graded, avg: live.avg, support: live.support, top: live.top,
+      at: new Date().toISOString(), first_at: q.analysis?.first_at ?? q.analysis?.at ?? q.analyzed_at };
+    const { error } = await supabase.from("quizzes").update({ analysis }).eq("id", q.id);
+    setBusy(false);
+    if (error) { alert(error.message); return; }
+    onChange({ analysis });
+  };
+
   const honorOther = async () => {
     if (!window.confirm("تأكيد تكريم المتفوقين بطريقة أخرى غير شهادات البوابة؟")) return;
     const at = new Date().toISOString();
@@ -504,6 +522,26 @@ export default function QuizCycle({ q, questionsCount, teacherName, onChange, vi
           </div>
           <EvidenceTags items={["e10_01", "e10_02"]} />
         </div>
+      )}
+
+      {done.analysis && drift && !done.close && (
+        <div className="space-y-2 rounded-sm2 border border-late/40 bg-late/5 p-3 text-sm">
+          <p className="font-semibold text-ink">تغيّرت النتائج بعد اعتماد التحليل</p>
+          <p className="text-muted">
+            المتوسط من <span className="num">{q.analysis.avg ?? "—"}%</span> إلى <span className="num">{live.avg ?? "—"}%</span>
+            {" · "}يحتاج دعمًا من <span className="num">{q.analysis.support?.length ?? 0}</span> إلى <span className="num">{live.support.length}</span>
+            {" · "}المتفوقون من <span className="num">{q.analysis.top?.length ?? 0}</span> إلى <span className="num">{live.top.length}</span>
+            {q.analysis.graded !== live.graded && <>{" · "}المصحَّحون من <span className="num">{q.analysis.graded}</span> إلى <span className="num">{live.graded}</span></>}
+          </p>
+          {leftSupport.length > 0 && <p className="text-xs text-present">خرجوا من الدعم: {leftSupport.map((x) => x.name).join("، ")}</p>}
+          {enteredSupport.length > 0 && <p className="text-xs text-absent">دخلوا الدعم: {enteredSupport.map((x) => x.name).join("، ")}</p>}
+          {plan("remedial") && <p className="text-xs text-faint">الخطة العلاجية المُعدّة لا تتغير تلقائيًا؛ عدّل طلابها إن شئت بعد التحديث.</p>}
+          {!ro && <button className="btn-primary" onClick={refreshAnalysis} disabled={busy}>تحديث التحليل</button>}
+        </div>
+      )}
+      {done.analysis && q.analysis?.first_at && (
+        <p className="text-xs text-faint">اعتُمد التحليل <span className="num">{fmtDate(q.analysis.first_at)}</span>
+          {" "}وحُدِّث <span className="num">{fmtDate(q.analysis.at)}</span></p>
       )}
 
       {done.analysis && (
