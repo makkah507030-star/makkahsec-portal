@@ -4,17 +4,15 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDateTime } from "../../lib/dates";
 import { AUDIENCE } from "../../lib/banners.js";
-import { printReport } from "../../lib/exportUtils";
-import logoIcon from "../../assets/icon-mint.png";
-import moeLogo from "../../assets/moe-logo.png";
-import { POLL_KIND, POLL_RESULTS, pollState, setupMsg, pct } from "../../lib/polls.js";
+import { POLL_KIND, POLL_RESULTS, pollState, setupMsg } from "../../lib/polls.js";
 import Loader from "../../components/Loader.jsx";
 import PollResults, { usePollResults } from "./PollResults.jsx";
+import PollReport from "./PollReportDoc.jsx";
 
 /* =====================================================================
    التصويت والاستطلاعات — صفحة الإدارة (صلاحية «التصويت والاستطلاعات»، supabase/polls_1..2.sql):
    إنشاء استطلاع أو انتخاب بخياراته ولمن يظهر وموعده ومتى تظهر نتائجه، ونشره، ومتابعة المشاركة
-   والنتائج، والإغلاق المبكر والإلغاء، وطباعة محضر النتيجة. انتخابات الترشيحات تُدار من إعلانها.
+   والنتائج، والإغلاق المبكر والإلغاء، وتقرير كل تصويت بهوية التقارير الشهرية (PollReportDoc). انتخابات الترشيحات تُدار من إعلانها.
    ===================================================================== */
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -57,6 +55,7 @@ export default function PollsAdmin() {
 function Row({ p, open, onOpen, onEdit, onChange }) {
   const st = pollState(p);
   const [k, setK] = useState(0);
+  const [report, setReport] = useState(false);
   const { rows, err } = usePollResults(open ? p.id : null, k);
   const voted = rows?.[0]?.voters ?? 0;
   const act = async (patch, q) => { if (q && !window.confirm(q)) return; await supabase.from("polls").update(patch).eq("id", p.id); onChange(); setK((x) => x + 1); };
@@ -80,8 +79,9 @@ function Row({ p, open, onOpen, onEdit, onChange }) {
               onClick={() => act({ closes_at: new Date().toISOString() }, "إغلاق التصويت الآن؟")}>إغلاق الآن</button>}
             {!p.cancelled_at && <button className="rounded-pill border border-absent/40 px-3 py-1.5 text-absent"
               onClick={() => act({ cancelled_at: new Date().toISOString() }, "إلغاء التصويت؟ يختفي عن المصوّتين.")}>إلغاء</button>}
-            {rows?.length > 0 && <button className="rounded-pill border border-line px-3 py-1.5 text-muted hover:bg-canvas" onClick={() => printPoll(p, rows)}>طباعة المحضر</button>}
+            {rows?.length > 0 && <button className="btn-primary px-3 py-1.5 text-xs" onClick={() => setReport(!report)}>{report ? "إخفاء التقرير" : "التقرير"}</button>}
           </div>
+          {report && rows?.length > 0 && <PollReport p={p} rows={rows} />}
         </div>
       )}
     </div>
@@ -179,18 +179,4 @@ function Editor({ init, onClose }) {
       </div>
     </div>
   );
-}
-
-function printPoll(p, rows) {
-  const total = rows.reduce((a, r) => a + r.votes, 0);
-  const { voters, eligible } = rows[0];
-  printReport({
-    title: `محضر نتيجة ${POLL_KIND[p.kind]?.t}: ${p.title}`,
-    subtitle: `من ${fmtDateTime(p.opens_at)} إلى ${fmtDateTime(p.closes_at)} · صوّت ${voters}${eligible != null ? ` من ${eligible} يحق لهم (المشاركة ${pct(voters, eligible)}%)` : ""}`,
-    logoUrl: new URL(logoIcon, window.location.origin).href,
-    moeLogoUrl: new URL(moeLogo, window.location.origin).href,
-    headers: ["م", p.kind === "election" ? "المرشح" : "الخيار", "الأصوات", "النسبة"],
-    rows: [...rows].sort((a, b) => b.votes - a.votes)
-      .map((r, i) => [i + 1, r.note ? `${r.label} — ${r.note}` : r.label, r.votes, `${pct(r.votes, total)}%`]),
-  });
 }
