@@ -70,7 +70,7 @@ export default function MediaStudio() {
       <div className="flex gap-1.5">
         <button className={pill(tab === "items")} onClick={() => setTab("items")}>المواد</button>
         <button className={pill(tab === "consent")} onClick={() => setTab("consent")}>موافقات التصوير و«لا يُصوَّر»</button>
-        <button className={pill(tab === "team")} onClick={() => setTab("team")}>الفريق الإعلامي</button>
+        <button className={pill(tab === "team")} onClick={() => setTab("team")}>أعضاء المركز</button>
         <Link to="/media-contact?center=1" className={pill(false)}>طلبات التواصل ←</Link>
       </div>
       {tab === "consent" ? <NoPhotoList /> : tab === "team" ? <MediaTeam /> : <>
@@ -104,7 +104,7 @@ export default function MediaStudio() {
         </label>
         <label className="flex items-start gap-2 rounded-sm2 bg-late/10 px-3 py-2 text-sm text-ink">
           <input type="checkbox" className="mt-1" checked={f.consent} onChange={(e) => setF({ ...f, consent: e.target.checked })} />
-          <span>أقرّ بأن التصوير تمّ بإذن إدارة المدرسة وبأجهزتها، وأن لكل طالب يظهر في المواد موافقة ولي أمره على التصوير لهذا العام، ولكل منسوب يظهر فيها موافقته.</span>
+          <span>أقرّ بأن التصوير تمّ بإذن إدارة المدرسة وبأجهزتها، وأن لكل طالب يظهر في المواد موافقة ولي أمره على التصوير لهذا العام، ولكل معلم أو إداري يظهر فيها موافقته.</span>
         </label>
         {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.t}</p>}
         <button className="btn-primary" disabled={!ok || !!busy} onClick={upload}>{busy ?? "رفع إلى المعرض"}</button>

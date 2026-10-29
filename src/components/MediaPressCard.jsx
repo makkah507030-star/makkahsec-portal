@@ -3,9 +3,9 @@ import iconWhite from "../assets/icon-white.png";
 import { fmtDate } from "../lib/dates";
 
 /* =====================================================================
-   البطاقة الإعلامية لعضو الفريق الإعلامي وقائده (supabase/media_4.sql): بطاقة صحفية كلاسيكية
+   البطاقة الإعلامية لعضو المركز الإعلامي ورئيسه (supabase/media_4.sql): بطاقة صحفية كلاسيكية
    بألوان الهوية الرسمية (الأخضر والذهبي): ترويسة خضراء، وإطار ذهبي مزدوج، وحقول مسطّرة،
-   وختم «معتمد». ومعها لوحة «قوة الفريق الإعلامي»: أعضاؤه وقادته وأعماله وتوزيع فروعه ومؤشر قوته.
+   وختم «معتمد». ومعها لوحة «قوة المركز الإعلامي»: أعضاؤه ورئيسه وأعماله وتوزيع فروعه ومؤشر قوته.
    ===================================================================== */
 
 const G = { ink: "#1F3D2E", green: "#3E6350", gold: "#B8912F", goldL: "#D9B45A", paper: "#FBF8F0", line: "#E4DCC6", sub: "#6B6253" };
@@ -13,17 +13,17 @@ const TARGET = 12;
 
 // لون كل فئة: القائد بالأخضر الرسمي، ولكل فرع لونه (dark للترويسة، base للشارة والأشرطة)
 export const TONES = {
-  leader: { t: "القيادة",                 dark: "#1F3D2E", base: "#3E6350" },
+  leader: { t: "الرئاسة",                 dark: "#1F3D2E", base: "#3E6350" },
   photo:  { t: "التصوير الفوتوغرافي",      dark: "#1B3350", base: "#2F5D8A" },
   video:  { t: "التصوير المرئي والمونتاج", dark: "#4A1824", base: "#8A2E40" },
   write:  { t: "التحرير والكتابة",         dark: "#4A3216", base: "#8A6230" },
   design: { t: "التصميم",                 dark: "#33224D", base: "#64478F" },
   member: { t: "عضو",                     dark: "#1F3D2E", base: "#3E6350" },
 };
-/** فئة الفرع من اسمه (أسماء قالب الفريق الإعلامي أو ما يشبهها) */
+/** فئة الفرع من اسمه (أسماء قالب المركز الإعلامي أو ما يشبهها) */
 export const toneOf = (branch, staff = false) => TONES[staff ? "leader"
   : /مونتاج|مرئي|فيديو/.test(branch ?? "") ? "video" : /فوتوغراف|تصوير/.test(branch ?? "") ? "photo"
-  : /تحرير|كتابة|أخبار/.test(branch ?? "") ? "write" : /تصميم/.test(branch ?? "") ? "design" : "member"];   // مقاعد قالب الفريق الإعلامي
+  : /تحرير|كتابة|أخبار/.test(branch ?? "") ? "write" : /تصميم/.test(branch ?? "") ? "design" : "member"];   // مقاعد قالب المركز الإعلامي
 
 /** مؤشر القوة من 100: حجم الفريق إلى مقاعده (60) وأعماله المنشورة حتى 60 عملًا (40) */
 export const teamPower = (c) => Math.round(Math.min(1, (c.members ?? 0) / TARGET) * 60 + Math.min(1, (c.items ?? 0) / 60) * 40);
@@ -54,7 +54,7 @@ export default function MediaPressCard({ c, photo, year }) {
             <img src={iconWhite} alt="" className="h-6 w-6 object-contain" />
           </div>
           <p className="mt-2 text-[19px] font-bold tracking-[.12em]" style={{ color: G.goldL }}>بطاقة إعلامية</p>
-          <p className="text-[7.5px] font-semibold tracking-[.45em]" style={{ color: `${G.goldL}cc` }} dir="ltr">PRESS · MEDIA TEAM</p>
+          <p className="text-[7.5px] font-semibold tracking-[.45em]" style={{ color: `${G.goldL}cc` }} dir="ltr">PRESS · MEDIA CENTER</p>
         </div>
         <div className="h-[3px] shrink-0" style={{ background: `linear-gradient(90deg, ${G.gold}, ${G.goldL}, ${G.gold})` }} />
 
@@ -69,7 +69,7 @@ export default function MediaPressCard({ c, photo, year }) {
           </div>
           <p className="mt-3 max-w-full truncate text-center text-[15px] font-bold" style={{ color: G.ink }}>{c.name}</p>
           <span className="mt-1 rounded-full px-3 py-[2px] text-[10.5px] font-semibold text-white" style={{ background: T.base }}>
-            {staff ? c.role : "عضو الفريق الإعلامي"}</span>
+            {staff ? c.role : "عضو المركز الإعلامي"}</span>
           <div className="mt-3 w-full rounded-[6px] bg-white/80 px-2.5 py-0.5" style={{ border: `1px solid ${G.line}` }}>
             {!staff && <Row k="الفرع" v={c.role} />}
             {c.cls && <Row k="الفصل" v={c.cls} num />}
@@ -79,7 +79,7 @@ export default function MediaPressCard({ c, photo, year }) {
           {/* ختم «معتمد» */}
           <div className="pointer-events-none absolute left-3 top-[86px] grid h-[50px] w-[50px] -rotate-12 place-items-center rounded-full opacity-85"
                style={{ border: `1.5px solid ${G.gold}`, boxShadow: `inset 0 0 0 3px ${G.paper}, inset 0 0 0 4px ${G.gold}88`, background: `${G.paper}cc` }}>
-            <span className="text-center text-[8px] font-bold leading-tight" style={{ color: G.gold }}>معتمد<br /><span className="text-[6.5px] font-semibold">الفريق الإعلامي</span></span>
+            <span className="text-center text-[8px] font-bold leading-tight" style={{ color: G.gold }}>معتمد<br /><span className="text-[6.5px] font-semibold">المركز الإعلامي</span></span>
           </div>
         </div>
 
@@ -93,18 +93,18 @@ export default function MediaPressCard({ c, photo, year }) {
   );
 }
 
-/** لوحة قوة الفريق الإعلامي بالطراز نفسه */
+/** لوحة قوة المركز الإعلامي بالطراز نفسه */
 export function TeamStrength({ c }) {
   const p = teamPower(c);
   const lvl = LEVEL.find(([m]) => p >= m)[1];
   const max = Math.max(1, ...(c.branches ?? []).map((b) => b.n));
-  const stats = [[c.members, "عضوًا"], [c.leaders?.length ?? 0, "قائدًا"], [c.items, "عملًا منشورًا"], [c.videos, "مقطعًا"]];
+  const stats = [[c.members, "عضوًا"], [c.leaders?.length ?? 0, "رئيسًا"], [c.items, "عملًا منشورًا"], [c.videos, "مقطعًا"]];
   return (
     <section className="mx-auto w-full max-w-[420px] rounded-[10px] p-[5px]" style={{ background: G.paper, border: `1.5px solid ${G.green}` }}>
       <div className="rounded-[6px] px-4 py-3" style={{ border: `1px solid ${G.gold}` }}>
         <div className="flex items-center gap-2">
           <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, transparent, ${G.gold})` }} />
-          <p className="text-[13px] font-bold tracking-[.08em]" style={{ color: G.ink }}>قوة الفريق الإعلامي</p>
+          <p className="text-[13px] font-bold tracking-[.08em]" style={{ color: G.ink }}>قوة المركز الإعلامي</p>
           <span className="h-px flex-1" style={{ background: `linear-gradient(270deg, transparent, ${G.gold})` }} />
         </div>
 
@@ -151,7 +151,7 @@ export function TeamStrength({ c }) {
           </div>
         )}
         {c.leaders?.length > 0 && <p className="mt-3 border-t pt-2 text-center text-[11px]" style={{ borderColor: G.line, color: G.sub }}>
-          بقيادة <b style={{ color: G.ink }}>{c.leaders.join("، ")}</b></p>}
+          برئاسة <b style={{ color: G.ink }}>{c.leaders.join("، ")}</b></p>}
       </div>
     </section>
   );

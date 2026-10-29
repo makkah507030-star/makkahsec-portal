@@ -110,7 +110,7 @@ export default function StudentHeader({ name, grade, classNo, studentId = null, 
     if (!studentId) return;
     supabase.rpc("gifted_badge", { p_student: studentId }).then(({ data }) => setGifted(data ?? null), () => {});
   }, [studentId]);
-  // وسم الفريق الإعلامي (supabase/media_4.sql) بفرع العضو
+  // وسم المركز الإعلامي (supabase/media_4.sql) بفرع العضو
   const [media, setMedia] = useState(null);
   useEffect(() => {
     setMedia(null);
@@ -127,8 +127,8 @@ export default function StudentHeader({ name, grade, classNo, studentId = null, 
                                  t: <><span aria-hidden="true">⚜</span> {rank ? rank.t : "عضو الفريق الكشفي"}</> },
                       gifted && { badge: true, color: "#7A4FB5", title: gifted.source === "mawhiba" ? "اكتُشف في مقياس موهبة" : "برنامج الموهوبين",
                                   t: <><span aria-hidden="true">★</span> موهوب{gDomain ? ` · ${gDomain.t}` : ""}</> },
-                      media && { badge: true, color: toneOf(media).base, title: "الفريق الإعلامي",
-                                 t: <><span aria-hidden="true">◉</span> الفريق الإعلامي · {media}</> },
+                      media && { badge: true, color: toneOf(media).base, title: "المركز الإعلامي",
+                                 t: <><span aria-hidden="true">◉</span> المركز الإعلامي · {media}</> },
               ].filter(Boolean)} />
   );
 }

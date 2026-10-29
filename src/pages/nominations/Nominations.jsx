@@ -31,22 +31,27 @@ const blank = () => ({
   home_banner: true, banner_image: null, staff_lead: null,
 });
 const addDays = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
-// قالب الفريق الإعلامي للبوابة: فروعه وشروطه وقيادته من المعلمين، ويعدّله صاحب الإعلان قبل النشر
+// قالب المركز الإعلامي: فروعه وشروطه وقيادته من المعلمين، ويعدّله صاحب الإعلان قبل النشر
 const mediaTeam = () => ({
-  ...blank(), title: "الانضمام للفريق الإعلامي للبوابة", unit: "الفريق الإعلامي", closes_on: addDays(14), guardian_ok: true,
-  body: "فريق من الطلاب يوثّق فعاليات المدرسة وبرامجها بالصور والمقاطع والأخبار، وتُنشر أعماله في «معرض المدرسة» داخل حسابات البوابة فقط، ومنها برنامج «وجوه من مكة الثانوية».",
+  ...blank(), title: "الانضمام إلى المركز الإعلامي", unit: "المركز الإعلامي", closes_on: addDays(14), guardian_ok: true,
+  body: "يضم المركز الإعلامي فريقًا من الطلاب يوثّق فعاليات المدرسة وبرامجها بالصور والمقاطع والأخبار، وتُنشر أعماله في «معرض المدرسة» داخل حسابات البوابة فقط، ومنها برنامج «وجوه من مكة الثانوية».",
   tasks: ["تصوير الفعاليات والبرامج بأجهزة المدرسة وبإذن مسبق", "كتابة الأخبار والتعليقات القصيرة على المواد", "إعداد المقاطع القصيرة ومونتاجها",
     "إعداد حلقات «وجوه من مكة الثانوية»", "الالتزام بقائمة «لا يُصوَّر» قبل كل تصوير"].join("\n"),
   terms: ["أصوّر بأجهزة المدرسة فقط، ولا أصوّر بجوالي الشخصي", "لا أنشر أي صورة أو مقطع خارج البوابة",
     "لا أصوّر أحدًا في قائمة «لا يُصوَّر»", "أصوّر في الأماكن والأوقات المأذون بها فقط"],
-  branches: [["التصوير الفوتوغرافي", 4], ["التصوير المرئي والمونتاج", 3], ["التحرير والكتابة", 3], ["التصميم", 2]]
-    .map(([name, seats]) => ({ id: uid(), name, note: "", seats, reserve: 1 })),
+  branches: [
+    ["التصوير الفوتوغرافي", 4, "توثيق الفعاليات والبرامج بالصور الاحترافية بكاميرات المدرسة، واختيار أفضل اللقطات للمعرض."],
+    ["التصوير المرئي والمونتاج", 3, "تصوير المقاطع القصيرة ومونتاجها، وإعداد حلقات «وجوه من مكة الثانوية»."],
+    ["التحرير والكتابة", 3, "كتابة أخبار الفعاليات وتعليقات الصور، وإعداد الحوارات والقصص الملهمة."],
+    ["التصميم", 2, "تصميم بطاقات المناسبات والإعلانات وأغلفة الألبومات بهوية المدرسة."],
+  ].map(([name, seats, note]) => ({ id: uid(), name, note, seats, reserve: 1 })),
   rules: { min_attend: 90, max_degree: 2 },
   questions: [{ id: uid(), q: "ما خبرتك في التصوير أو الكتابة أو التصميم؟", kind: "text", options: [] },
     { id: uid(), q: "هل لديك أعمال سابقة تستطيع عرضها في المقابلة؟", kind: "choice", options: ["نعم", "لا"] }],
   criteria: [{ id: "c1", name: "المهارة الفنية", max: 10 }, { id: "c2", name: "الأمانة والانضباط", max: 10 },
     { id: "c3", name: "العمل الجماعي", max: 10 }, { id: "c4", name: "الإبداع", max: 10 }],
-  staff_lead: "قائد الفريق الإعلامي", link_media: true,
+  staff_lead: "رئيس المركز الإعلامي", link_media: true,
+  staff_body: "يشرف رئيس المركز على فريق من 12 طالبًا في أربعة فروع، ويعتمد المواد قبل نشرها في «معرض المدرسة»، ويستقبل طلبات التغطية والاقتراحات من «التواصل مع المركز الإعلامي».", banner_label: "انضم إلينا الآن",
 });
 const uid = () => Math.random().toString(36).slice(2, 8);
 
@@ -82,7 +87,7 @@ function CallList() {
           <p className="text-sm text-muted">إعلانات التقديم للطلاب: الشروط والمقابلات والفرز وإعلان المقبولين.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button className="rounded-pill border border-line bg-white px-4 py-2 text-sm text-ink hover:bg-canvas" onClick={() => setEdit(mediaTeam())}>قالب: الفريق الإعلامي</button>
+          <button className="rounded-pill border border-line bg-white px-4 py-2 text-sm text-ink hover:bg-canvas" onClick={() => setEdit(mediaTeam())}>قالب: المركز الإعلامي</button>
           <button className="btn-primary" onClick={() => setEdit(blank())}>+ إعلان جديد</button>
         </div>
       </div>
@@ -198,6 +203,8 @@ function CallEditor({ init, onClose }) {
       // قيادة المعلمين (nominations_7.sql): لا يُرسل الحقل إلا عند استعماله، فلا يتعطل الحفظ قبل تشغيل الملف
       ...(f.staff_lead?.trim() || init.staff_lead ? { staff_lead: f.staff_lead?.trim() || null } : {}),
       ...(f.link_media || init.link_media ? { link_media: !!f.link_media } : {}),      // media_3.sql
+      ...(f.staff_body?.trim() || init.staff_body ? { staff_body: f.staff_body?.trim() || null } : {}),   // nominations_8.sql
+      ...(f.banner_label?.trim() || init.banner_label ? { banner_label: f.banner_label?.trim() || null } : {}),   // nominations_8.sql
     };
     const q = f.id ? supabase.from("nom_calls").update(row).eq("id", f.id)
       : supabase.from("nom_calls").insert({ ...row, owner_name: profile?.full_name ?? "" });
@@ -289,7 +296,7 @@ function CallEditor({ init, onClose }) {
         <p className="text-[11px] text-faint">تُحسب من بيانات الفصل الدراسي الحالي، ولا يستطيع التقديم من لا تنطبق عليه.</p>
         <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.guardian_ok} onChange={(e) => set("guardian_ok", e.target.checked)} /> يشترط موافقة ولي الأمر من حسابه</label>
         <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.link_scouts} onChange={(e) => set("link_scouts", e.target.checked)} /> المقبولون يُضافون إلى الفريق الكشفي عند إعلان النتائج</label>
-        <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={!!f.link_media} onChange={(e) => set("link_media", e.target.checked)} /> المقبولون يُضافون إلى الفريق الإعلامي بفرعهم عند إعلان النتائج</label>
+        <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={!!f.link_media} onChange={(e) => set("link_media", e.target.checked)} /> المقبولون يُضافون إلى المركز الإعلامي بفرعهم عند إعلان النتائج</label>
       </section>
 
       <section className="card space-y-3 p-4">
@@ -314,8 +321,11 @@ function CallEditor({ init, onClose }) {
         </label>
         {f.staff_lead != null && (
           <div className="grid gap-2 sm:grid-cols-2">
-            <L t="اسم دور القيادة"><input className="field mt-1" value={f.staff_lead} maxLength={60} onChange={(e) => set("staff_lead", e.target.value)} placeholder="قائد الفريق الإعلامي" /></L>
+            <L t="اسم دور القيادة"><input className="field mt-1" value={f.staff_lead} maxLength={60} onChange={(e) => set("staff_lead", e.target.value)} placeholder="رئيس المركز الإعلامي" /></L>
             <p className="self-end text-xs leading-relaxed text-faint">يظهر الإعلان في رئيسية المعلمين والإداريين بزر «أترشّح»، ويكتب المترشّح نبذة عن خبرته، وتختار أنت من تبويب «ترشّح المعلمين».</p>
+            <div className="sm:col-span-2"><L t="وصف الدور للمعلمين" hint="يظهر في بطاقة «فرص القيادة» بدل وصف الطلاب؛ إن تُرك فارغًا ظهر وصف الطلاب.">
+              <textarea className="field mt-1 min-h-[60px]" value={f.staff_body ?? ""} maxLength={500} onChange={(e) => set("staff_body", e.target.value)}
+                        placeholder="مهام القيادة والمطلوب من المترشّح" /></L></div>
           </div>
         )}
       </section>
@@ -345,8 +355,15 @@ function CallEditor({ init, onClose }) {
         {f.home_banner && (
           <div className="grid gap-3 lg:grid-cols-2">
             <div className="space-y-2 text-xs text-muted">
-              <p className="leading-relaxed">تظهر البطاقة لصفوف الإعلان من بداية التقديم إلى آخر موعده، وزرها «قدّم الآن» يفتح «فرص المشاركة».
+              <p className="leading-relaxed">تظهر البطاقة لصفوف الإعلان من بداية التقديم إلى آخر موعده، وزرها يفتح «فرص المشاركة».
                 وعند إعلان النتائج تصير «أُعلنت نتائج …» خمسة أيام، بلا أسماء.</p>
+              <label className="block">نص الزر
+                <input className="field mt-1" value={f.banner_label ?? ""} maxLength={24} placeholder="قدّم الآن"
+                       onChange={(e) => set("banner_label", e.target.value)} />
+                <span className="mt-1 flex flex-wrap gap-1">{["قدّم الآن", "انضم إلينا الآن", "سجّل الآن", "شارك الآن"].map((t) => (
+                  <button key={t} type="button" className="rounded-pill border border-line px-2 py-0.5 text-[11px] hover:bg-canvas" onClick={() => set("banner_label", t)}>{t}</button>
+                ))}</span>
+              </label>
               <label className="block">صورة البطاقة (اختيارية)
                 <input type="file" accept="image/jpeg,image/png,image/webp" className="mt-1 block text-xs"
                        onChange={async (e) => {
@@ -365,7 +382,7 @@ function CallEditor({ init, onClose }) {
             <div>
               <p className="mb-1.5 text-xs text-muted">معاينة كما تظهر في الرئيسية</p>
               <Banner preview b={{ kind: "opportunity", title: f.title || "عنوان الإعلان", body: (f.body ?? "").slice(0, 160),
-                image_path: preview ? null : f.banner_image, image_url: preview ?? undefined, link: "/opportunities", link_label: "قدّم الآن" }} />
+                image_path: preview ? null : f.banner_image, image_url: preview ?? undefined, link: "/opportunities", link_label: f.banner_label?.trim() || "قدّم الآن" }} />
             </div>
           </div>
         )}

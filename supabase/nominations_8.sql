@@ -1,0 +1,69 @@
+-- =====================================================================
+-- الترشيحات (الجزء 8): نص زر بطاقة الإعلان في الرئيسية لكل إعلان.
+-- • nom_calls.banner_label: نص الزر (مثل «انضم إلينا الآن»)؛ إن تُرك فارغًا بقي «قدّم الآن».
+-- • تُعاد دالة المزامنة nom_banner_sync (من nominations_6.sql) لتأخذ النص منه.
+-- • إعلان المركز الإعلامي المنشور يأخذ «انضم إلينا الآن» فورًا، ودور قيادته «رئيس المركز الإعلامي».
+-- • nom_calls.staff_body: وصف الدور للمعلمين في «فرص القيادة» بدل وصف الطلاب (إن تُرك فارغًا ظهر وصف الطلاب).
+-- يُنفَّذ بعد nominations_6.sql وnominations_7.sql في Supabase ← SQL Editor، وتكرار التنفيذ آمن.
+-- =====================================================================
+alter table public.nom_calls add column if not exists banner_label text;
+alter table public.nom_calls add column if not exists staff_body text;
+
+create or replace function public.nom_staff_calls()
+returns table (id uuid, title text, unit text, body text, staff_lead text, closes_on date, owner_name text, stage text)
+language sql stable security definer set search_path = public as $$
+  select c.id, c.title, c.unit, coalesce(nullif(trim(c.staff_body), ''), c.body), c.staff_lead, c.closes_on, c.owner_name, a.stage
+    from nom_calls c
+    left join nom_staff_apps a on a.call_id = c.id and a.user_id = auth.uid()
+   where c.staff_lead is not null and c.published and c.cancelled_at is null
+     and exists (select 1 from users u where u.id = auth.uid() and u.role in ('teacher', 'admin') and u.is_active)
+     and (current_date between c.opens_on and c.closes_on or a.stage is not null)
+     and c.owner_id <> auth.uid()
+   order by c.closes_on;
+$$;
+
+
+create or replace function public.nom_banner_sync() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_res boolean := new.results_at is not null;
+        v_day date := (new.results_at at time zone 'Asia/Riyadh')::date;   -- يوم الإعلان بتوقيت مكة
+begin
+  if not (new.home_banner and new.published and new.cancelled_at is null) then
+    delete from home_banners where nom_call_id = new.id;
+    return new;
+  end if;
+  insert into home_banners (kind, title, body, image_path, link, link_label, audience, grades, starts_on, ends_on, nom_call_id)
+  values (case when v_res then 'general' else 'opportunity' end,
+          case when v_res then 'أُعلنت نتائج ' || new.title else new.title end,
+          case when v_res then 'اطّلع على نتيجتك في «فرص المشاركة».' else nullif(left(coalesce(new.body, ''), 160), '') end,
+          new.banner_image, '/opportunities', case when v_res then 'نتيجتي' else coalesce(nullif(trim(new.banner_label), ''), 'قدّم الآن') end,
+          '{student,guardian}', case when new.grades @> '{1,2,3}' then '{}' else new.grades end,
+          case when v_res then v_day else new.opens_on end,
+          case when v_res then v_day + 4 else new.closes_on end, new.id)
+  on conflict (nom_call_id) do update set kind = excluded.kind, title = excluded.title, body = excluded.body,
+    image_path = excluded.image_path, link_label = excluded.link_label, grades = excluded.grades,
+    starts_on = excluded.starts_on, ends_on = excluded.ends_on;
+  return new;
+end $$;
+drop trigger if exists nom_banner_sync on public.nom_calls;
+create trigger nom_banner_sync after insert or update of home_banner, banner_label, published, cancelled_at, results_at, title, body,
+  banner_image, grades, opens_on, closes_on on public.nom_calls
+  for each row execute function public.nom_banner_sync();
+revoke all on function public.nom_banner_sync() from public, anon;
+
+update public.nom_calls set banner_label = 'انضم إلينا الآن'
+ where coalesce(banner_label, '') = '' and (unit = 'المركز الإعلامي' or title like '%المركز الإعلامي%');
+
+update public.nom_calls set staff_lead = 'رئيس المركز الإعلامي'
+ where staff_lead in ('مشرف المركز الإعلامي', 'قائد الفريق الإعلامي');
+update public.media_team_staff set title = 'رئيس المركز الإعلامي'
+ where title in ('مشرف المركز الإعلامي', 'قائد الفريق الإعلامي');
+update public.nom_calls set staff_body = 'يشرف رئيس المركز على فريق من 12 طالبًا في أربعة فروع، ويعتمد المواد قبل نشرها في «معرض المدرسة»، ويستقبل طلبات التغطية والاقتراحات من «التواصل مع المركز الإعلامي».'
+ where coalesce(staff_body, '') = '' and staff_lead = 'رئيس المركز الإعلامي';
+alter table public.media_team_staff alter column title set default 'رئيس المركز الإعلامي';
+
+-- للتحقق
+select c.title as "الإعلان", b.link_label as "نص الزر", c.staff_lead as "دور القيادة"
+  from public.nom_calls c join public.home_banners b on b.nom_call_id = c.id
+ order by c.created_at desc limit 5;
+-- نهاية الجزء 8

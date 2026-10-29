@@ -9,15 +9,15 @@ import MediaPressCard, { TeamStrength } from "../../components/MediaPressCard.js
 import { useSession } from "../../lib/session.jsx";
 
 /* =====================================================================
-   فريقي الإعلامي للطالب العضو وقائد الفريق من المعلمين (supabase/media_3.sql وmedia_4.sql):
+   صفحة المركز الإعلامي لعضوه من الطلاب ورئيسه من المعلمين (supabase/media_3.sql وmedia_4.sql):
    البطاقة الإعلامية وقوة الفريق، وضوابط التصوير، وقائمة «لا يُصوَّر» يراجعها قبل كل تصوير.
    ===================================================================== */
 
 const RULES = [
   "أصوّر بأجهزة المدرسة فقط، ولا أصوّر بجوالي الشخصي.",
-  "أصوّر في الأماكن والأوقات المأذون بها، وبحضور المشرف أو بإذنه.",
+  "أصوّر في الأماكن والأوقات المأذون بها، وبحضور رئيس المركز أو بإذنه.",
   "أراجع قائمة «لا يُصوَّر» قبل كل تصوير، ولا يظهر أحد منها في أي صورة أو مقطع.",
-  "أسلّم المواد للمشرف ولا أحتفظ بنسخة، ولا أنشر شيئًا خارج البوابة.",
+  "أسلّم المواد لرئيس المركز ولا أحتفظ بنسخة، ولا أنشر شيئًا خارج البوابة.",
 ];
 
 export default function MyMediaTeam() {
@@ -37,12 +37,12 @@ export default function MyMediaTeam() {
     });
   }, [me?.kind, session?.user?.id]);
   if (me === undefined) return <Loader />;
-  if (!me) return <p className="card px-4 py-8 text-center text-sm text-muted">لست عضوًا في الفريق الإعلامي.</p>;
+  if (!me) return <p className="card px-4 py-8 text-center text-sm text-muted">لست عضوًا في المركز الإعلامي.</p>;
   const staff = me.kind === "staff";
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-ink">فريقي الإعلامي</h1>
+        <h1 className="text-lg font-bold text-ink">المركز الإعلامي</h1>
         <p className="mt-1 text-sm text-muted">{staff ? me.role : `فرع ${me.role}`} · منذ {fmtDate(me.joined_at)}
           {staff && <> · <Link to="/media-contact?center=1" className="font-semibold text-mint-deep underline">طلبات التواصل مع المركز</Link></>}</p>
       </div>
