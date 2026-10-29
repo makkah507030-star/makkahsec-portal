@@ -144,6 +144,10 @@ export const ADMIN_GROUPS = [
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
+      { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
+      { to: "/my-media-team",  label: "فريقي الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية قائد الفريق" },
+      { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
+      { to: "/media",          label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
       { to: "/events-reports", label: "تقارير الأحداث",     icon: "pie" },
@@ -280,6 +284,9 @@ const TEACHER_GROUPS = [
       { to: "/news-admin", label: "الأخبار والمقالات",  extraTabKey: "news", icon: "news" },
       { to: "/events",     label: "الأحداث والمناسبات", icon: "sparkles" },
       { to: "/studio",     label: "استوديو البوابة",    icon: "palette", kw: "تصميم" },
+      { to: "/media",      label: "معرض المدرسة",      icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
+      { to: "/my-media-team", label: "فريقي الإعلامي",  icon: "palette", mediaMember: true, kw: "بطاقة اعلامية قائد الفريق" },
+      { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
     ],
   },
 ];
@@ -300,8 +307,12 @@ const BASIC_GROUPS = [
       { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
+      { to: "/media", label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
+      { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
       // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
       { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
+      // فريقي الإعلامي — لعضو الفريق وحده (supabase/media_3.sql)
+      { to: "/my-media-team", label: "فريقي الإعلامي", icon: "palette", studentOnly: true, mediaMember: true, kw: "تصوير اعلامي لا يصور بطاقة" },
     ],
   },
 ];
@@ -455,6 +466,12 @@ export default function Layout({ children }) {
     if (effectiveRole !== "student") { setScoutMember(false); return; }
     supabase.rpc("scout_my").then(({ data, error }) => setScoutMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
+  // عضوية الفريق الإعلامي للطالب وقائده من المعلمين: تظهر «فريقي الإعلامي» (media_4.sql)
+  const [mediaMember, setMediaMember] = useState(false);
+  useEffect(() => {
+    if (effectiveRole === "guardian") { setMediaMember(false); return; }
+    supabase.rpc("media_card_me").then(({ data, error }) => setMediaMember(!error && !!data));
+  }, [effectiveRole, session?.user?.id]);
   const [achOpen] = useAchOpen();
 
   // هل يظهر الرابط لهذا المستخدم؟
@@ -462,6 +479,7 @@ export default function Layout({ children }) {
     if (i.staffOnly && !isStaff) return false;
     if (i.studentOnly && effectiveRole !== "student") return false;
     if (i.scoutMember && !scoutMember) return false;
+    if (i.mediaMember && !mediaMember) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
     // مركز تحليل النتائج وما حوله: مخفيّ حتى يُفتح، إلا رابط المركز نفسه
     // يبقى لمن يملك فتحه (الوكيل/المدير/الدعم) ليدخل ويفتحه.
@@ -489,7 +507,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)

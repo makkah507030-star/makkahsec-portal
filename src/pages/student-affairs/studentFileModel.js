@@ -5,7 +5,15 @@
    الحدود هنا وحدها، فيسهل ضبطها.
    ===================================================================== */
 import { WARNING_STAGES } from "../../lib/officialAttendance";
-import { STATUS as REF_STATUS, OPEN_STATUSES } from "../../lib/referrals.js";
+import { STATUS as REF_STATUS, OPEN_STATUSES, BEHAVIOR_STEPS, ACADEMIC_ITEMS } from "../../lib/referrals.js";
+import { countAr } from "../../lib/arabicCount.js";
+
+/** إجراء المعلم بالعربية: نوعه (سلوكي/دراسي…) ونص خطوته بدل مفاتيح القاعدة (behavior، verbal) */
+const ACTION_KIND = { behavior: "إجراء سلوكي", academic: "إجراء دراسي", performance: "إجراء أدائي" };
+export const actionLabel = (a) => ({
+  kind: ACTION_KIND[a.category] ?? (a.category && !/^[a-z_]+$/.test(a.category) ? a.category : "إجراء"),
+  text: a.detail || [...BEHAVIOR_STEPS, ...ACADEMIC_ITEMS].find((x) => x.key === a.action)?.t || (/^[a-z_]+$/.test(a.action ?? "") ? "" : a.action) || "",
+});
 
 export const TONE = {
   ok:   { t: "سليم",   long: "وضع سليم",       bar: "bg-present", text: "text-present", soft: "bg-present/10", ring: "#2E8B57" },
@@ -62,7 +70,7 @@ export function buildModel(att, con, aca, today) {
       sub: `بعذر ${excusedDays.length}${lastWarn ? ` · ${lastWarn.label}` : ""}`,
       tone: absent.length >= WARNING_STAGES[0].days || warnings.length ? "bad" : absent.length >= 3 ? "warn" : "ok" },
     { key: "late", label: "التأخر الصباحي", icon: "clock", value: late.length,
-      sub: late.length ? `مجموعه ${late.reduce((a, d) => a + d.late, 0)} دقيقة` : "لا تأخر",
+      sub: late.length ? `${countAr(late.length, "time")} · ${countAr(late.reduce((a, d) => a + d.late, 0), "minute")} إجمالًا` : "لا تأخر",
       tone: late.length > 5 ? "bad" : late.length > 2 ? "warn" : "ok" },
     { key: "periods", label: "غياب الحصص", icon: "grid", value: pAbsent.length,
       sub: bySubject[0] ? `أكثرها: ${bySubject[0][0]} (${bySubject[0][1]})` : `تأخر عن ${pLate.length} حصة`,
@@ -103,7 +111,7 @@ export function buildModel(att, con, aca, today) {
   const noAck = behavior.filter((b) => !b.ack && b.kind !== "incident" && b.kind !== "statement").length;
   if (noAck) add("warn", `${noAck} من نماذج السلوك لم يطّلع عليها ولي الأمر بعد`);
   quizzes.filter((q) => q.avgPct != null && q.avgPct - q.pct >= 20).slice(-2)
-    .forEach((q) => add("warn", `أقل من متوسط فصله بفارق كبير في «${q.title}» (${q.pct}% مقابل ${q.avgPct}%)`));
+    .forEach((q) => add("warn", `أقل من متوسط فصله بفارق كبير في ${q.subject ? `مادة ${q.subject}، ` : ""}«${q.title}»: ${q.pct}% ومتوسط الفصل ${q.avgPct}%`));
   if (quizAvg != null && quizAvg < 60) add("bad", `متوسط اختباراته ${quizAvg}% فقط`);
   if ((con?.notes ?? []).some((n) => n.kind === "health")) add("info", "له ملاحظة صحية مسجّلة");
   if (!att?.student?.guardian?.mobile) add("warn", "لا رقم جوال لولي أمره في البوابة");
@@ -111,17 +119,17 @@ export function buildModel(att, con, aca, today) {
 
   // السجل الزمني الموحّد: كل حدث بتاريخه ولونه
   const tl = [];
-  const push = (d, kind, text, tone) => d && tl.push({ d: String(d).slice(0, 10), kind, text, tone });
+  const push = (d, kind, text, tone, extra = "") => d && tl.push({ d: String(d).slice(0, 10), kind, text, tone, extra });
   absent.forEach((x) => push(x.d, "غياب", "غياب بلا عذر", "bad"));
   excusedDays.forEach((x) => push(x.d, "غياب", "غياب بعذر", "info"));
-  late.forEach((x) => push(x.d, "تأخر", `تأخر صباحي ${x.late} دقيقة`, "warn"));
+  late.forEach((x) => push(x.d, "تأخر", `تأخر صباحي ${countAr(x.late, "minute")}`, "warn"));
   warnings.forEach((w) => push(w.on, "إنذار", WARNING_STAGES.find((s) => s.key === w.stage)?.label ?? w.stage, "bad"));
   (att?.permissions ?? []).forEach((p) => push(p.d, "استئذان", p.note || "استئذان", "info"));
-  behavior.forEach((b) => push(b.d, "سلوك", `${b.type || "نموذج سلوك"}${b.degree ? ` · الدرجة ${b.degree}` : ""}`, (b.degree ?? 0) >= 3 ? "bad" : "warn"));
-  actions.forEach((a) => push(a.d, "إجراء", a.detail || "إجراء", "warn"));
-  referrals.forEach((r) => push(r.d, "إحالة", `${r.reason ?? "إحالة"}${r.teacher ? ` · ${r.teacher}` : ""}`, OPEN_STATUSES.includes(r.status) ? "bad" : "warn"));
+  behavior.forEach((b) => push(b.d, "سلوك", `${b.type || b.text || "نموذج سلوك"}${b.degree ? ` · الدرجة ${b.degree}` : ""}`, (b.degree ?? 0) >= 3 ? "bad" : "warn", b.by));
+  actions.forEach((a) => { const l = actionLabel(a); push(a.d, "إجراء", `${l.text || l.kind}${a.degree ? ` · الدرجة ${a.degree}` : ""}`, "warn", a.by); });
+  referrals.forEach((r) => push(r.d, "إحالة", r.reason ?? "إحالة", OPEN_STATUSES.includes(r.status) ? "bad" : "warn", [r.subject, r.teacher].filter(Boolean).join(" · ")));
   (con?.cases ?? []).forEach((c) => push(c.opened, "توجيه", c.title, "info"));
-  quizzes.forEach((q) => push(q.d, "اختبار", `${q.title}: ${q.pct}%`, q.pct >= 85 ? "ok" : q.pct >= 65 ? "warn" : "bad"));
+  quizzes.forEach((q) => push(q.d, "اختبار", `${q.title}: ${q.pct}%${q.avgPct != null ? ` (متوسط الفصل ${q.avgPct}%)` : ""}`, q.pct >= 85 ? "ok" : q.pct >= 65 ? "warn" : "bad", q.subject));
   docs.forEach((d) => push(d.d, d.category === "certificate" ? "شهادة" : "نموذج", d.title, d.category === "certificate" ? "ok" : "info"));
   attended.forEach((e) => push(e.d, "فعالية", e.title, "ok"));
   tl.sort((a, b) => b.d.localeCompare(a.d));

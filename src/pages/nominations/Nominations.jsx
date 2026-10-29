@@ -28,7 +28,25 @@ const blank = () => ({
   title: "", unit: "", body: "", tasks: "", special_terms: "", grades: [1, 2, 3], seats: 10, reserve: 3,
   opens_on: todayISO(), closes_on: "", rules: {}, questions: [], criteria: DEFAULT_CRITERIA,
   interview_place: "", slot_minutes: 10, guardian_ok: false, link_scouts: false, published: false, branches: [],
-  home_banner: true, banner_image: null,
+  home_banner: true, banner_image: null, staff_lead: null,
+});
+const addDays = (n) => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+// قالب الفريق الإعلامي للبوابة: فروعه وشروطه وقيادته من المعلمين، ويعدّله صاحب الإعلان قبل النشر
+const mediaTeam = () => ({
+  ...blank(), title: "الانضمام للفريق الإعلامي للبوابة", unit: "الفريق الإعلامي", closes_on: addDays(14), guardian_ok: true,
+  body: "فريق من الطلاب يوثّق فعاليات المدرسة وبرامجها بالصور والمقاطع والأخبار، وتُنشر أعماله في «معرض المدرسة» داخل حسابات البوابة فقط، ومنها برنامج «وجوه من مكة الثانوية».",
+  tasks: ["تصوير الفعاليات والبرامج بأجهزة المدرسة وبإذن مسبق", "كتابة الأخبار والتعليقات القصيرة على المواد", "إعداد المقاطع القصيرة ومونتاجها",
+    "إعداد حلقات «وجوه من مكة الثانوية»", "الالتزام بقائمة «لا يُصوَّر» قبل كل تصوير"].join("\n"),
+  terms: ["أصوّر بأجهزة المدرسة فقط، ولا أصوّر بجوالي الشخصي", "لا أنشر أي صورة أو مقطع خارج البوابة",
+    "لا أصوّر أحدًا في قائمة «لا يُصوَّر»", "أصوّر في الأماكن والأوقات المأذون بها فقط"],
+  branches: [["التصوير الفوتوغرافي", 4], ["التصوير المرئي والمونتاج", 3], ["التحرير والكتابة", 3], ["التصميم", 2]]
+    .map(([name, seats]) => ({ id: uid(), name, note: "", seats, reserve: 1 })),
+  rules: { min_attend: 90, max_degree: 2 },
+  questions: [{ id: uid(), q: "ما خبرتك في التصوير أو الكتابة أو التصميم؟", kind: "text", options: [] },
+    { id: uid(), q: "هل لديك أعمال سابقة تستطيع عرضها في المقابلة؟", kind: "choice", options: ["نعم", "لا"] }],
+  criteria: [{ id: "c1", name: "المهارة الفنية", max: 10 }, { id: "c2", name: "الأمانة والانضباط", max: 10 },
+    { id: "c3", name: "العمل الجماعي", max: 10 }, { id: "c4", name: "الإبداع", max: 10 }],
+  staff_lead: "قائد الفريق الإعلامي", link_media: true,
 });
 const uid = () => Math.random().toString(36).slice(2, 8);
 
@@ -63,7 +81,10 @@ function CallList() {
           <h1 className="text-lg font-bold text-ink">الترشيحات</h1>
           <p className="text-sm text-muted">إعلانات التقديم للطلاب: الشروط والمقابلات والفرز وإعلان المقبولين.</p>
         </div>
-        <button className="btn-primary" onClick={() => setEdit(blank())}>+ إعلان جديد</button>
+        <div className="flex flex-wrap gap-2">
+          <button className="rounded-pill border border-line bg-white px-4 py-2 text-sm text-ink hover:bg-canvas" onClick={() => setEdit(mediaTeam())}>قالب: الفريق الإعلامي</button>
+          <button className="btn-primary" onClick={() => setEdit(blank())}>+ إعلان جديد</button>
+        </div>
       </div>
       {err && <p className="rounded-card bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       {!calls ? <Loader /> : !calls.length ? (
@@ -130,7 +151,7 @@ const L = ({ t, children, hint }) => (
 function CallEditor({ init, onClose }) {
   const { profile } = useSession();
   // الشروط الخاصة: شرط في كل سطر يقرّ به الطالب؛ والفروع بمقاعدها (nominations_5.sql)
-  const [f, setF] = useState(() => ({ ...init, branches: branchesOf(init), terms: lines(init.special_terms).length ? lines(init.special_terms) : [] }));
+  const [f, setF] = useState(() => ({ ...init, branches: branchesOf(init), terms: init.terms ?? lines(init.special_terms) }));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [file, setFile] = useState(null);       // صورة بطاقة الرئيسية قبل رفعها
@@ -174,6 +195,9 @@ function CallEditor({ init, onClose }) {
       interview_place: f.interview_place || null, slot_minutes: Number(f.slot_minutes) || 10,
       guardian_ok: f.guardian_ok, link_scouts: f.link_scouts, published: publish ?? f.published,
       home_banner: !!f.home_banner, banner_image,
+      // قيادة المعلمين (nominations_7.sql): لا يُرسل الحقل إلا عند استعماله، فلا يتعطل الحفظ قبل تشغيل الملف
+      ...(f.staff_lead?.trim() || init.staff_lead ? { staff_lead: f.staff_lead?.trim() || null } : {}),
+      ...(f.link_media || init.link_media ? { link_media: !!f.link_media } : {}),      // media_3.sql
     };
     const q = f.id ? supabase.from("nom_calls").update(row).eq("id", f.id)
       : supabase.from("nom_calls").insert({ ...row, owner_name: profile?.full_name ?? "" });
@@ -265,6 +289,7 @@ function CallEditor({ init, onClose }) {
         <p className="text-[11px] text-faint">تُحسب من بيانات الفصل الدراسي الحالي، ولا يستطيع التقديم من لا تنطبق عليه.</p>
         <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.guardian_ok} onChange={(e) => set("guardian_ok", e.target.checked)} /> يشترط موافقة ولي الأمر من حسابه</label>
         <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={f.link_scouts} onChange={(e) => set("link_scouts", e.target.checked)} /> المقبولون يُضافون إلى الفريق الكشفي عند إعلان النتائج</label>
+        <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" checked={!!f.link_media} onChange={(e) => set("link_media", e.target.checked)} /> المقبولون يُضافون إلى الفريق الإعلامي بفرعهم عند إعلان النتائج</label>
       </section>
 
       <section className="card space-y-3 p-4">
@@ -280,6 +305,19 @@ function CallEditor({ init, onClose }) {
               onChange={(e) => setQ(i, "options", e.target.value.split(/[،,]/).map((s) => s.trim()))} />}
           </div>
         ))}
+      </section>
+
+      <section className="card space-y-3 p-4">
+        <label className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <input type="checkbox" checked={f.staff_lead != null} onChange={(e) => set("staff_lead", e.target.checked ? "قائد الفريق" : null)} />
+          ترشّح المعلمين لقيادة الفريق
+        </label>
+        {f.staff_lead != null && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <L t="اسم دور القيادة"><input className="field mt-1" value={f.staff_lead} maxLength={60} onChange={(e) => set("staff_lead", e.target.value)} placeholder="قائد الفريق الإعلامي" /></L>
+            <p className="self-end text-xs leading-relaxed text-faint">يظهر الإعلان في رئيسية المعلمين والإداريين بزر «أترشّح»، ويكتب المترشّح نبذة عن خبرته، وتختار أنت من تبويب «ترشّح المعلمين».</p>
+          </div>
+        )}
       </section>
 
       <section className="card space-y-3 p-4">

@@ -538,7 +538,7 @@ const PERM_GROUPS = [
   { title: "الشؤون التعليمية",
     keys: ["schedules", "import", "calendar"] },
   { title: "المحتوى والتواصل",
-    keys: ["circulars", "banners", "news", "guides", "notifications", "feedback"] },
+    keys: ["circulars", "banners", "news", "media", "guides", "notifications", "feedback"] },
   { title: "النشاط",
     keys: ["scouts", "globe", "gifted"] },
   { title: "الحسابات والنظام",
