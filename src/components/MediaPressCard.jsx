@@ -3,9 +3,9 @@ import iconWhite from "../assets/icon-white.png";
 import { fmtDate } from "../lib/dates";
 
 /* =====================================================================
-   البطاقة الإعلامية لعضو المركز الإعلامي ومشرفه (supabase/media_4.sql): بطاقة صحفية كلاسيكية
+   البطاقة الإعلامية لعضو المركز الإعلامي ورئيسه (supabase/media_4.sql): بطاقة صحفية كلاسيكية
    بألوان الهوية الرسمية (الأخضر والذهبي): ترويسة خضراء، وإطار ذهبي مزدوج، وحقول مسطّرة،
-   وختم «معتمد». ومعها لوحة «قوة المركز الإعلامي»: أعضاؤه ومشرفوه وأعماله وتوزيع فروعه ومؤشر قوته.
+   وختم «معتمد». ومعها لوحة «قوة المركز الإعلامي»: أعضاؤه ورئيسه وأعماله وتوزيع فروعه ومؤشر قوته.
    ===================================================================== */
 
 const G = { ink: "#1F3D2E", green: "#3E6350", gold: "#B8912F", goldL: "#D9B45A", paper: "#FBF8F0", line: "#E4DCC6", sub: "#6B6253" };
@@ -13,7 +13,7 @@ const TARGET = 12;
 
 // لون كل فئة: القائد بالأخضر الرسمي، ولكل فرع لونه (dark للترويسة، base للشارة والأشرطة)
 export const TONES = {
-  leader: { t: "الإشراف",                 dark: "#1F3D2E", base: "#3E6350" },
+  leader: { t: "الرئاسة",                 dark: "#1F3D2E", base: "#3E6350" },
   photo:  { t: "التصوير الفوتوغرافي",      dark: "#1B3350", base: "#2F5D8A" },
   video:  { t: "التصوير المرئي والمونتاج", dark: "#4A1824", base: "#8A2E40" },
   write:  { t: "التحرير والكتابة",         dark: "#4A3216", base: "#8A6230" },
@@ -98,7 +98,7 @@ export function TeamStrength({ c }) {
   const p = teamPower(c);
   const lvl = LEVEL.find(([m]) => p >= m)[1];
   const max = Math.max(1, ...(c.branches ?? []).map((b) => b.n));
-  const stats = [[c.members, "عضوًا"], [c.leaders?.length ?? 0, "مشرفًا"], [c.items, "عملًا منشورًا"], [c.videos, "مقطعًا"]];
+  const stats = [[c.members, "عضوًا"], [c.leaders?.length ?? 0, "رئيسًا"], [c.items, "عملًا منشورًا"], [c.videos, "مقطعًا"]];
   return (
     <section className="mx-auto w-full max-w-[420px] rounded-[10px] p-[5px]" style={{ background: G.paper, border: `1.5px solid ${G.green}` }}>
       <div className="rounded-[6px] px-4 py-3" style={{ border: `1px solid ${G.gold}` }}>
@@ -151,7 +151,7 @@ export function TeamStrength({ c }) {
           </div>
         )}
         {c.leaders?.length > 0 && <p className="mt-3 border-t pt-2 text-center text-[11px]" style={{ borderColor: G.line, color: G.sub }}>
-          بإشراف <b style={{ color: G.ink }}>{c.leaders.join("، ")}</b></p>}
+          برئاسة <b style={{ color: G.ink }}>{c.leaders.join("، ")}</b></p>}
       </div>
     </section>
   );

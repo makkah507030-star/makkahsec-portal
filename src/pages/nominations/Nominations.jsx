@@ -50,7 +50,7 @@ const mediaTeam = () => ({
     { id: uid(), q: "هل لديك أعمال سابقة تستطيع عرضها في المقابلة؟", kind: "choice", options: ["نعم", "لا"] }],
   criteria: [{ id: "c1", name: "المهارة الفنية", max: 10 }, { id: "c2", name: "الأمانة والانضباط", max: 10 },
     { id: "c3", name: "العمل الجماعي", max: 10 }, { id: "c4", name: "الإبداع", max: 10 }],
-  staff_lead: "مشرف المركز الإعلامي", link_media: true, banner_label: "انضم إلينا الآن",
+  staff_lead: "رئيس المركز الإعلامي", link_media: true, banner_label: "انضم إلينا الآن",
 });
 const uid = () => Math.random().toString(36).slice(2, 8);
 
@@ -319,7 +319,7 @@ function CallEditor({ init, onClose }) {
         </label>
         {f.staff_lead != null && (
           <div className="grid gap-2 sm:grid-cols-2">
-            <L t="اسم دور القيادة"><input className="field mt-1" value={f.staff_lead} maxLength={60} onChange={(e) => set("staff_lead", e.target.value)} placeholder="مشرف المركز الإعلامي" /></L>
+            <L t="اسم دور القيادة"><input className="field mt-1" value={f.staff_lead} maxLength={60} onChange={(e) => set("staff_lead", e.target.value)} placeholder="رئيس المركز الإعلامي" /></L>
             <p className="self-end text-xs leading-relaxed text-faint">يظهر الإعلان في رئيسية المعلمين والإداريين بزر «أترشّح»، ويكتب المترشّح نبذة عن خبرته، وتختار أنت من تبويب «ترشّح المعلمين».</p>
           </div>
         )}

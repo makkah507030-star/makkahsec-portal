@@ -2,7 +2,7 @@
 -- الترشيحات (الجزء 8): نص زر بطاقة الإعلان في الرئيسية لكل إعلان.
 -- • nom_calls.banner_label: نص الزر (مثل «انضم إلينا الآن»)؛ إن تُرك فارغًا بقي «قدّم الآن».
 -- • تُعاد دالة المزامنة nom_banner_sync (من nominations_6.sql) لتأخذ النص منه.
--- • إعلان المركز الإعلامي المنشور يأخذ «انضم إلينا الآن» فورًا.
+-- • إعلان المركز الإعلامي المنشور يأخذ «انضم إلينا الآن» فورًا، ودور قيادته «رئيس المركز الإعلامي».
 -- يُنفَّذ بعد nominations_6.sql في Supabase ← SQL Editor، وتكرار التنفيذ آمن.
 -- =====================================================================
 alter table public.nom_calls add column if not exists banner_label text;
@@ -38,8 +38,14 @@ revoke all on function public.nom_banner_sync() from public, anon;
 update public.nom_calls set banner_label = 'انضم إلينا الآن'
  where coalesce(banner_label, '') = '' and (unit = 'المركز الإعلامي' or title like '%المركز الإعلامي%');
 
+update public.nom_calls set staff_lead = 'رئيس المركز الإعلامي'
+ where staff_lead in ('مشرف المركز الإعلامي', 'قائد الفريق الإعلامي');
+update public.media_team_staff set title = 'رئيس المركز الإعلامي'
+ where title in ('مشرف المركز الإعلامي', 'قائد الفريق الإعلامي');
+alter table public.media_team_staff alter column title set default 'رئيس المركز الإعلامي';
+
 -- للتحقق
-select c.title as "الإعلان", b.link_label as "نص الزر"
+select c.title as "الإعلان", b.link_label as "نص الزر", c.staff_lead as "دور القيادة"
   from public.nom_calls c join public.home_banners b on b.nom_call_id = c.id
  order by c.created_at desc limit 5;
 -- نهاية الجزء 8

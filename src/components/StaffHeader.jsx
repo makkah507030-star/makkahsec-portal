@@ -22,7 +22,7 @@ export default function StaffHeader({ kicker = null }) {
   const [ready, setReady] = useState(false);   // العمود موجود (بعد تشغيل ملف SQL)
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [media, setMedia] = useState(null);     // مشرف المركز الإعلامي (supabase/media_4.sql)
+  const [media, setMedia] = useState(null);     // رئيس المركز الإعلامي (supabase/media_4.sql)
 
   useEffect(() => {
     if (!uid) return;
