@@ -167,11 +167,9 @@ export const LEVEL_T = { high: "مرتفع", mid: "متوسط", low: "منخفض
 export const PLAN_STATUS = { draft: { t: "مسودة", c: "bg-late/10 text-late" }, active: { t: "السارية", c: "bg-present/10 text-present" }, archived: { t: "مؤرشفة", c: "bg-canvas text-muted" } };
 export const fmtPct = (v) => (v == null ? "—" : `${Number(v)}%`);
 
-// ألوان المجالات في الملف الرقمي والتقارير (أسماء ألوان dfile.css)
-export const DOMAIN_TONE = { 1: "navy", 2: "math", 3: "science", 4: "social" };
 export const roleT = (m) => (m.role === "coordinator" ? "مشرف اللجنة" : m.domains?.length ? "مشرف مجال" : "عضو");
 
-/** بيانات القسم للتقارير والملفات: برامج الخطة السارية وكل الشواهد والمحاضر */
+/** بيانات القسم للتقارير: برامج الخطة السارية وكل الشواهد والمحاضر */
 export async function loadAccData(plans) {
   const plan = plans.find((p) => p.status === "active") ?? plans[0] ?? null;
   const [pg, ev, mt] = await Promise.all([

@@ -11,7 +11,6 @@ import AccEvaluation from "./AccEvaluation.jsx";
 import AccEvidence from "./AccEvidence.jsx";
 import AccTools from "./AccTools.jsx";
 import AccCommittee from "./AccCommittee.jsx";
-import AccMemberFile from "./AccMemberFile.jsx";
 import AccDomainReport from "./AccDomainDoc.jsx";
 
 /* =====================================================================
@@ -72,7 +71,7 @@ export default function Accreditation() {
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {TABS.map(([k, t]) => <button key={k} className={pill(tab === k)} onClick={() => go(k)}>{t}</button>)}
       </div>
-      {sp.get("file") || sp.get("report") ? <Views sp={sp} tab={tab} {...common} /> : <>
+      {sp.get("report") ? <Views sp={sp} tab={tab} {...common} /> : <>
       {tab === "dash" && <Dashboard {...common} />}
       {tab === "ind" && <AccEvidence {...common} />}
       {tab === "plan" && <AccPlan {...common} />}
@@ -85,20 +84,16 @@ export default function Accreditation() {
   );
 }
 
-/* الملف الرقمي لعضو (file=) وتقرير المجال (report=): يُحمَّلان ببيانات الخطة السارية والشواهد والمحاضر */
+/* تقرير المجال لمشرفه (report=1..4) والتقرير العام لمشرف اللجنة (report=all) */
 function Views({ sp, go, tab, me, members, reports, plans }) {
   const [data, setData] = useState(null);
   useEffect(() => { loadAccData(plans).then(setData); }, [plans]);
   if (!data) return <Loader />;
-  const fileId = sp.get("file");
-  const d = Number(sp.get("report"));
-  if (d && DOMAINS[d]) {
-    if (!me.coord && !me.domains.includes(d)) return <p className="card px-4 py-6 text-sm text-muted">تقرير هذا المجال لمشرفه ولمشرف اللجنة.</p>;
-    return <AccDomainReport d={d} data={data} reports={reports} members={members} onClose={() => go(tab, fileId ? { file: fileId } : {})} />;
-  }
-  const m = members.find((x) => x.user_id === fileId);
-  if (!m) return <p className="card px-4 py-6 text-sm text-muted">لم يُعثر على العضو في لجنة التميز.</p>;
-  return <AccMemberFile m={m} data={data} reports={reports} onBack={() => go("team")} onReport={(x) => go(tab, { file: fileId, report: String(x) })} />;
+  const r = sp.get("report");
+  const d = r === "all" ? 0 : Number(r);
+  if (!(d === 0 || DOMAINS[d]) || (d === 0 ? !me.coord : !me.coord && !me.domains.includes(d)))
+    return <p className="card px-4 py-6 text-sm text-muted">{d === 0 ? "التقرير العام لمشرف اللجنة والمدير." : "تقرير هذا المجال لمشرفه ولمشرف اللجنة."}</p>;
+  return <AccDomainReport d={d} data={data} reports={reports} members={members} onClose={() => go(tab)} />;
 }
 
 /* لوحة الأداء: نتيجة آخر تقرير، والخطة السارية وإنجازها، ومحطات المتابعة */
@@ -127,9 +122,9 @@ function Dashboard({ me, reports, plans, members, go }) {
 
   return (
     <div className="space-y-4">
-      {self && <div className="flex flex-wrap gap-2">
-        <button className="rounded-pill bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white" onClick={() => go("dash", { file: self.user_id })}>ملفي الرقمي</button>
-        {(self.role === "coordinator" ? [1, 2, 3, 4] : self.domains).map((d) => <button key={d} className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs text-mint-deep" onClick={() => go("dash", { report: String(d) })}>تقرير مجال {DOMAINS[d]}</button>)}
+      {(me.coord || self?.domains.length > 0) && <div className="flex flex-wrap gap-2">
+        {me.coord && <button className="rounded-pill bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white" onClick={() => go("dash", { report: "all" })}>التقرير العام للجنة</button>}
+        {(me.coord ? [1, 2, 3, 4] : self.domains).map((d) => <button key={d} className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs text-mint-deep" onClick={() => go("dash", { report: String(d) })}>تقرير مجال {DOMAINS[d]}</button>)}
       </div>}
       {!base && (
         <div className="card space-y-2 p-4 text-sm">

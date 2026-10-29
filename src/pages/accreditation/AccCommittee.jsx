@@ -34,12 +34,12 @@ export default function AccCommittee({ me, year, members, reload, go }) {
 
   return (
     <div className="space-y-4">
-      <Members me={me} members={members} reload={reload} setMsg={setMsg} by={profile?.full_name} go={go} />
+      <Members me={me} members={members} reload={reload} setMsg={setMsg} by={profile?.full_name} />
       <section className="card p-4">
         <p className="mb-2 text-sm font-semibold text-ink">تقارير المجالات</p>
-        <div className="flex flex-wrap gap-2">{Object.entries(DOMAINS).filter(([d]) => me.coord || me.domains.includes(+d)).map(([d, t]) => (
+        <div className="flex flex-wrap gap-2">{me.coord && <button onClick={() => go("team", { report: "all" })} className="rounded-pill bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white">التقرير العام للجنة</button>}{Object.entries(DOMAINS).filter(([d]) => me.coord || me.domains.includes(+d)).map(([d, t]) => (
           <button key={d} onClick={() => go("team", { report: d })} className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs text-mint-deep hover:border-mint-light">تقرير مجال {t}</button>))}</div>
-        <p className="mt-2 text-[11px] text-faint">لكل مجال تقرير بهوية التقارير الشهرية: المؤشرات، والبرامج وقياس نواتجها، والشواهد المرفوعة وغير المرفوعة، والاعتماد.</p>
+        <p className="mt-2 text-[11px] text-faint">لكل مجال تقرير بهوية التقارير الشهرية: المؤشرات، والبرامج وقياس نواتجها، والشواهد المرفوعة وغير المرفوعة، ومساهمة مشرف المجال، والاعتماد. والتقرير العام يجمع المجالات الأربعة ومساهمة كل مشرف.</p>
       </section>
       <section className="card overflow-hidden">
         <div className="flex items-center gap-2 border-b border-line px-4 py-3">
@@ -77,7 +77,7 @@ export default function AccCommittee({ me, year, members, reload, go }) {
   );
 }
 
-function Members({ me, members, reload, setMsg, by, go }) {
+function Members({ me, members, reload, setMsg, by }) {
   const [open, setOpen] = useState(false);
   const [staff, setStaff] = useState(null);
   const [q, setQ] = useState("");
@@ -125,7 +125,6 @@ function Members({ me, members, reload, setMsg, by, go }) {
             <div className="flex flex-wrap items-center gap-2">
               <span className={`chip text-[11px] ${m.role === "coordinator" ? "bg-mint-tint text-mint-deep" : "bg-canvas text-muted"}`}>{roleT(m)}</span>
               <span className="min-w-0 flex-1 text-sm font-medium text-ink">{m.full_name}{m.title && <span className="text-[12px] font-normal text-muted"> · {m.title}</span>}</span>
-              <button onClick={() => go("team", { file: m.user_id })} className="text-[11px] font-semibold text-mint-deep hover:underline">الملف الرقمي</button>
               {me.coord && <button onClick={() => setTitleOf(m)} className="text-[11px] text-muted hover:underline">الصفة</button>}
               {me.all && <button onClick={() => setRole(m, m.role === "coordinator" ? "member" : "coordinator")} className="text-[11px] text-mint-deep hover:underline">{m.role === "coordinator" ? "جعله عضوًا" : "جعله المشرف"}</button>}
               {me.coord && (m.role !== "coordinator" || me.all) && <button onClick={() => remove(m)} className="text-[11px] text-absent hover:underline">إزالة</button>}
