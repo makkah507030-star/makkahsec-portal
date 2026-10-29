@@ -17,6 +17,7 @@ import NomCall from "./NomCall.jsx";
 import { Banner } from "../../components/HomeBanners.jsx";
 import { normalizeImage } from "../../lib/imageResize";
 import { BANNER_BUCKET, BANNER_W, BANNER_H, checkBanner } from "../../lib/banners.js";
+import { VOTE_MODE } from "../../lib/polls.js";
 
 const day = (d) => (d ? fmtDate(d + "T12:00:00") : "—");
 const DEFAULT_CRITERIA = [
@@ -203,6 +204,7 @@ function CallEditor({ init, onClose }) {
       // قيادة المعلمين (nominations_7.sql): لا يُرسل الحقل إلا عند استعماله، فلا يتعطل الحفظ قبل تشغيل الملف
       ...(f.staff_lead?.trim() || init.staff_lead ? { staff_lead: f.staff_lead?.trim() || null } : {}),
       ...(f.link_media || init.link_media ? { link_media: !!f.link_media } : {}),      // media_3.sql
+      ...((f.vote_mode ?? "committee") !== "committee" || (init.vote_mode && init.vote_mode !== "committee") ? { vote_mode: f.vote_mode ?? "committee" } : {}),   // polls_2.sql
       ...(f.staff_body?.trim() || init.staff_body ? { staff_body: f.staff_body?.trim() || null } : {}),   // nominations_8.sql
       ...(f.banner_label?.trim() || init.banner_label ? { banner_label: f.banner_label?.trim() || null } : {}),   // nominations_8.sql
     };
@@ -328,6 +330,17 @@ function CallEditor({ init, onClose }) {
                         placeholder="مهام القيادة والمطلوب من المترشّح" /></L></div>
           </div>
         )}
+      </section>
+
+      <section className="card space-y-2 p-4">
+        <p className="text-sm font-semibold text-ink">طريقة الاختيار</p>
+        <div className="flex flex-wrap gap-1.5">
+          {Object.entries(VOTE_MODE).map(([k, v]) => (
+            <button key={k} type="button" onClick={() => set("vote_mode", k)}
+              className={`rounded-pill px-3 py-1 text-xs font-semibold ${(f.vote_mode ?? "committee") === k ? "bg-mint-deep text-white" : "border border-line text-muted"}`}>{v.t}</button>
+          ))}
+        </div>
+        <p className="text-xs leading-relaxed text-faint">{VOTE_MODE[f.vote_mode ?? "committee"].hint}</p>
       </section>
 
       <section className="card space-y-3 p-4">

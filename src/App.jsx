@@ -53,6 +53,9 @@ const ScoutReports = lazy(() => import("./pages/scouts/ScoutReports.jsx"));
 const MyScouts = lazy(() => import("./pages/scouts/MyScouts.jsx"));
 const MyMediaTeam = lazy(() => import("./pages/media/MyMediaTeam.jsx"));
 const MediaContact = lazy(() => import("./pages/media/MediaContact.jsx"));
+const Polls = lazy(() => import("./pages/polls/Polls.jsx"));
+const PollsAdmin = lazy(() => import("./pages/polls/PollsAdmin.jsx"));
+const PollsCard = lazy(() => import("./components/PollsCard.jsx"));
 const GlobeTeam = lazy(() => import("./pages/admin/GlobeTeam.jsx"));
 const GiftedHub = lazy(() => import("./pages/gifted/GiftedHub.jsx"));
 const MediaGallery = lazy(() => import("./pages/media/MediaGallery.jsx"));
@@ -330,6 +333,7 @@ export default function App() {
       <ExamDayCard />
       {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
       <TasksBox />
+      <PollsCard />
       <StaffCallsCard />
       <DutyCard personal />
     </div>
@@ -569,6 +573,9 @@ export default function App() {
           {effectiveRole === "student" && <Route path="/my-scouts" element={<MyScouts />} />}
           {effectiveRole !== "guardian" && <Route path="/my-media-team" element={<MyMediaTeam />} />}
           <Route path="/media-contact" element={<MediaContact />} />
+          {/* التصويت والاستطلاعات: للجميع بحسب فئته، وإدارتها لصاحب الصلاحية (supabase/polls_1..2.sql) */}
+          <Route path="/polls" element={<Polls />} />
+          {can("polls") && <Route path="/polls-admin" element={<PollsAdmin />} />}
           <Route path="/media" element={<MediaGallery />} />
           {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}

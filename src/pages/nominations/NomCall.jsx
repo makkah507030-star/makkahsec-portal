@@ -15,6 +15,7 @@ import { logos } from "../student-affairs/shared.jsx";
 import StudentFileLink from "../../components/StudentFileLink.jsx";
 import Loader from "../../components/Loader.jsx";
 import { notifyUsers } from "../../lib/referrals.js";
+import NomVote from "./NomVote.jsx";
 
 const day = (d) => (d ? fmtDate(String(d).slice(0, 10) + "T12:00:00") : "—");
 const when = (ts) => (ts ? new Date(ts).toLocaleString("ar-SA-u-nu-latn-ca-gregory",
@@ -68,7 +69,8 @@ export default function NomCall({ id }) {
       </div>
 
       <div className="flex flex-wrap gap-1.5">
-        {[...TABS, ...(call.staff_lead ? [["staff", "ترشّح المعلمين"]] : [])].map(([k, t]) => (
+        {[...TABS, ...(call.vote_mode && call.vote_mode !== "committee" ? [["vote", "التصويت"]] : []),
+          ...(call.staff_lead ? [["staff", "ترشّح المعلمين"]] : [])].map(([k, t]) => (
           <button key={k} onClick={() => { setTab(k); setMsg(null); }}
             className={`rounded-pill px-4 py-1.5 text-sm font-medium ${tab === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`}>{t}</button>
         ))}
@@ -79,6 +81,7 @@ export default function NomCall({ id }) {
       {tab === "interviews" && <Interviews call={call} apps={active.filter((a) => a.interview_at)} reload={load} say={say} />}
       {tab === "decision" && <Decision call={call} apps={active} reload={load} say={say} />}
       {tab === "staff" && <StaffLeads call={call} say={say} />}
+      {tab === "vote" && <NomVote call={call} apps={active} reload={load} say={say} />}
     </div>
   );
 }
