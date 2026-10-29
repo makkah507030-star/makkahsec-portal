@@ -982,7 +982,8 @@ function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
                     <ListeningSection audioPath={q.listening_audio} audioUrl={audioUrl} rows={listenQs}
                                       onUpload={uploadAudio} onRemoveAudio={removeAudio}
                                       onAdd={(kind) => addQuestion(kind, { listening: true })}
-                                      onPatch={patchQ} onRemove={removeQ} />
+                                      onPatch={patchQ} onRemove={removeQ}
+                                      others={mainQs} onMove={(row) => patchQ(row, { listening: true })} />
                   )}
                   {listening && mainQs.length > 0 && (
                     <p className="px-1 pt-1 text-xs font-bold text-mint-deep">بقية الأسئلة</p>
@@ -1772,7 +1773,7 @@ function PrintBtn({ title, sub, onClick, busy, tone }) {
 /** صورة السؤال: رفع، وعرضها في الورقة (٪ من عرض الصفحة)، وحذف */
 /* قسم الاستماع (الاختبار الإلكتروني بالإنجليزية): ملف صوتي واحد يرفعه المعلم،
    وعليه فقرات اختيار متعدد أو صح وخطأ تُصحَّح آليًا وتظهر للطالب أولًا مع المشغّل. */
-function ListeningSection({ audioPath, audioUrl, rows, onUpload, onRemoveAudio, onAdd, onPatch, onRemove }) {
+function ListeningSection({ audioPath, audioUrl, rows, onUpload, onRemoveAudio, onAdd, onPatch, onRemove, others = [], onMove }) {
   const [busy, setBusy] = useState(false);
   const pick = (e) => {
     const f = e.target.files?.[0];
@@ -1814,6 +1815,24 @@ function ListeningSection({ audioPath, audioUrl, rows, onUpload, onRemoveAudio, 
       {rows.map((row, i) => (
         <QuestionCard key={row.id} row={row} index={i + 1} lang="en" onPatch={onPatch} onRemove={onRemove} />
       ))}
+
+      {/* الصوت مرفوع ولا فقرة في قسمه: الأسئلة المضافة من «بقية الأسئلة» أو الاستيراد أو البنك لا تُعدّ استماعًا */}
+      {audioPath && rows.length === 0 && (
+        <div className="space-y-2 rounded-card border border-late/40 bg-late/10 p-3 text-xs leading-relaxed text-late">
+          <p>لا فقرات في قسم الاستماع بعد. الأسئلة المضافة في «بقية الأسئلة» أو من الاستيراد أو البنك لا تُعدّ أسئلة استماع،
+            فأضف فقرات الاستماع من هنا، أو انقل إلى هذا القسم الأسئلة التي تُجاب من المقطع:</p>
+          {others.some((x) => x.kind !== "match") && (
+            <div className="flex flex-wrap gap-1.5">
+              {others.map((x, i) => x.kind !== "match" && (
+                <button key={x.id} onClick={() => onMove(x)} title={x.text}
+                  className="rounded-pill border border-mint-light bg-white px-3 py-1 text-[11px] font-medium text-mint-deep hover:bg-mint-light">
+                  نقل السؤال <span className="num">{i + 1}</span> إلى الاستماع
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-xs text-muted">إضافة فقرة استماع:</span>
