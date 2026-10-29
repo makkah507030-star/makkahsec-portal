@@ -109,6 +109,13 @@ export const ADMIN_GROUPS = [
     ],
   },
   {
+    // قسم التقويم والاعتماد المدرسي: للمدير والوكيل والدعم الفني ولأعضاء لجنة التميز (supabase/acc_1.sql)
+    title: "التقويم والاعتماد المدرسي",
+    items: [
+      { to: "/accreditation", label: "التقويم والاعتماد المدرسي", accMember: true, icon: "award", kw: "لجنة التميز تقويم ذاتي خارجي خطة تحسين شواهد مؤشرات هيئة تقويم تميز اعتماد" },
+    ],
+  },
+  {
     // تظهر لمن يُسمح له بأحد معاملها فقط (المجموعة الفارغة تُخفى)
     title: "المعامل والمختبرات",
     items: [
@@ -199,6 +206,8 @@ const SECTIONS = [
     groups: ["الشؤون التعليمية", "المعامل والمختبرات"] },
   { key: "achievement", title: "التحصيل الدراسي", icon: "chart", hint: "تحليل النتائج والملاحظات والخطط العلاجية واختبارات قياس",
     groups: ["التحصيل الدراسي"] },
+  { key: "accreditation", title: "التقويم والاعتماد", icon: "award", hint: "لجنة التميز والتقويم الذاتي والخارجي وخطة التحسين وشواهد المؤشرات",
+    groups: ["التقويم والاعتماد المدرسي"] },
   { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والشهادات والأداء الوظيفي والتطوير المهني",
     groups: ["النماذج", "الأداء الوظيفي"] },
   { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأدلة والأحداث",
@@ -258,6 +267,12 @@ const TEACHER_GROUPS = [
       { to: "/ach-committee",  label: "لجنة التحصيل",       achMember: true, icon: "users", kw: "محاضر" },
       { to: "/qudrat",         label: "مركز التدريب",      icon: "target", exact: true, kw: "قياس قدرات تحصيلي تدريب اسئلة" },
       { to: "/qudrat/asks",    label: "أسئلة الطلاب (القدرات)", icon: "chat", kw: "قدرات استفسار طالب" },
+    ],
+  },
+  {
+    title: "التقويم والاعتماد المدرسي",
+    items: [
+      { to: "/accreditation", label: "التقويم والاعتماد المدرسي", accMember: true, icon: "award", kw: "لجنة التميز تقويم ذاتي خارجي خطة تحسين شواهد مؤشرات" },
     ],
   },
   {
@@ -477,6 +492,12 @@ export default function Layout({ children }) {
     supabase.rpc("media_card_me").then(({ data, error }) => setMediaMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
   const [achOpen] = useAchOpen();
+  // لجنة التميز: يظهر قسم التقويم والاعتماد لأعضائها وللمدير والوكيل والدعم الفني (acc_1.sql)
+  const [accMember, setAccMember] = useState(false);
+  useEffect(() => {
+    if (!isStaff) { setAccMember(false); return; }
+    supabase.rpc("acc_me").then(({ data, error }) => setAccMember(!error && !!data?.member));
+  }, [isStaff, session?.user?.id]);
 
   // هل يظهر الرابط لهذا المستخدم؟
   const visible = (i) => {
@@ -484,6 +505,7 @@ export default function Layout({ children }) {
     if (i.studentOnly && effectiveRole !== "student") return false;
     if (i.scoutMember && !scoutMember) return false;
     if (i.mediaMember && !mediaMember) return false;
+    if (i.accMember && !accMember) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
     // مركز تحليل النتائج وما حوله: مخفيّ حتى يُفتح، إلا رابط المركز نفسه
     // يبقى لمن يملك فتحه (الوكيل/المدير/الدعم) ليدخل ويفتحه.
@@ -511,7 +533,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember, accMember]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
