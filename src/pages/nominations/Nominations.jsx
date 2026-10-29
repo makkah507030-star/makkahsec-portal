@@ -50,7 +50,8 @@ const mediaTeam = () => ({
     { id: uid(), q: "هل لديك أعمال سابقة تستطيع عرضها في المقابلة؟", kind: "choice", options: ["نعم", "لا"] }],
   criteria: [{ id: "c1", name: "المهارة الفنية", max: 10 }, { id: "c2", name: "الأمانة والانضباط", max: 10 },
     { id: "c3", name: "العمل الجماعي", max: 10 }, { id: "c4", name: "الإبداع", max: 10 }],
-  staff_lead: "رئيس المركز الإعلامي", link_media: true, banner_label: "انضم إلينا الآن",
+  staff_lead: "رئيس المركز الإعلامي", link_media: true,
+  staff_body: "يشرف رئيس المركز على فريق من 12 طالبًا في أربعة فروع، ويعتمد المواد قبل نشرها في «معرض المدرسة»، ويستقبل طلبات التغطية والاقتراحات من «التواصل مع المركز الإعلامي».", banner_label: "انضم إلينا الآن",
 });
 const uid = () => Math.random().toString(36).slice(2, 8);
 
@@ -202,6 +203,7 @@ function CallEditor({ init, onClose }) {
       // قيادة المعلمين (nominations_7.sql): لا يُرسل الحقل إلا عند استعماله، فلا يتعطل الحفظ قبل تشغيل الملف
       ...(f.staff_lead?.trim() || init.staff_lead ? { staff_lead: f.staff_lead?.trim() || null } : {}),
       ...(f.link_media || init.link_media ? { link_media: !!f.link_media } : {}),      // media_3.sql
+      ...(f.staff_body?.trim() || init.staff_body ? { staff_body: f.staff_body?.trim() || null } : {}),   // nominations_8.sql
       ...(f.banner_label?.trim() || init.banner_label ? { banner_label: f.banner_label?.trim() || null } : {}),   // nominations_8.sql
     };
     const q = f.id ? supabase.from("nom_calls").update(row).eq("id", f.id)
@@ -321,6 +323,9 @@ function CallEditor({ init, onClose }) {
           <div className="grid gap-2 sm:grid-cols-2">
             <L t="اسم دور القيادة"><input className="field mt-1" value={f.staff_lead} maxLength={60} onChange={(e) => set("staff_lead", e.target.value)} placeholder="رئيس المركز الإعلامي" /></L>
             <p className="self-end text-xs leading-relaxed text-faint">يظهر الإعلان في رئيسية المعلمين والإداريين بزر «أترشّح»، ويكتب المترشّح نبذة عن خبرته، وتختار أنت من تبويب «ترشّح المعلمين».</p>
+            <div className="sm:col-span-2"><L t="وصف الدور للمعلمين" hint="يظهر في بطاقة «فرص القيادة» بدل وصف الطلاب؛ إن تُرك فارغًا ظهر وصف الطلاب.">
+              <textarea className="field mt-1 min-h-[60px]" value={f.staff_body ?? ""} maxLength={500} onChange={(e) => set("staff_body", e.target.value)}
+                        placeholder="مهام القيادة والمطلوب من المترشّح" /></L></div>
           </div>
         )}
       </section>

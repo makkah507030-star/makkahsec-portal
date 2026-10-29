@@ -3,9 +3,25 @@
 -- • nom_calls.banner_label: نص الزر (مثل «انضم إلينا الآن»)؛ إن تُرك فارغًا بقي «قدّم الآن».
 -- • تُعاد دالة المزامنة nom_banner_sync (من nominations_6.sql) لتأخذ النص منه.
 -- • إعلان المركز الإعلامي المنشور يأخذ «انضم إلينا الآن» فورًا، ودور قيادته «رئيس المركز الإعلامي».
--- يُنفَّذ بعد nominations_6.sql في Supabase ← SQL Editor، وتكرار التنفيذ آمن.
+-- • nom_calls.staff_body: وصف الدور للمعلمين في «فرص القيادة» بدل وصف الطلاب (إن تُرك فارغًا ظهر وصف الطلاب).
+-- يُنفَّذ بعد nominations_6.sql وnominations_7.sql في Supabase ← SQL Editor، وتكرار التنفيذ آمن.
 -- =====================================================================
 alter table public.nom_calls add column if not exists banner_label text;
+alter table public.nom_calls add column if not exists staff_body text;
+
+create or replace function public.nom_staff_calls()
+returns table (id uuid, title text, unit text, body text, staff_lead text, closes_on date, owner_name text, stage text)
+language sql stable security definer set search_path = public as $$
+  select c.id, c.title, c.unit, coalesce(nullif(trim(c.staff_body), ''), c.body), c.staff_lead, c.closes_on, c.owner_name, a.stage
+    from nom_calls c
+    left join nom_staff_apps a on a.call_id = c.id and a.user_id = auth.uid()
+   where c.staff_lead is not null and c.published and c.cancelled_at is null
+     and exists (select 1 from users u where u.id = auth.uid() and u.role in ('teacher', 'admin') and u.is_active)
+     and (current_date between c.opens_on and c.closes_on or a.stage is not null)
+     and c.owner_id <> auth.uid()
+   order by c.closes_on;
+$$;
+
 
 create or replace function public.nom_banner_sync() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -42,6 +58,8 @@ update public.nom_calls set staff_lead = 'رئيس المركز الإعلامي
  where staff_lead in ('مشرف المركز الإعلامي', 'قائد الفريق الإعلامي');
 update public.media_team_staff set title = 'رئيس المركز الإعلامي'
  where title in ('مشرف المركز الإعلامي', 'قائد الفريق الإعلامي');
+update public.nom_calls set staff_body = 'يشرف رئيس المركز على فريق من 12 طالبًا في أربعة فروع، ويعتمد المواد قبل نشرها في «معرض المدرسة»، ويستقبل طلبات التغطية والاقتراحات من «التواصل مع المركز الإعلامي».'
+ where coalesce(staff_body, '') = '' and staff_lead = 'رئيس المركز الإعلامي';
 alter table public.media_team_staff alter column title set default 'رئيس المركز الإعلامي';
 
 -- للتحقق
