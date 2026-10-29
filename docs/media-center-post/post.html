@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:Plex;font-weight:400;src:url(../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2)}
+@font-face{font-family:Plex;font-weight:400;src:url(../../public/fonts/ibm-plex-sans-arabic-400-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:Plex;font-weight:600;src:url(../../public/fonts/ibm-plex-sans-arabic-600-arabic.woff2)}
+@font-face{font-family:Plex;font-weight:600;src:url(../../public/fonts/ibm-plex-sans-arabic-600-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:Plex;font-weight:700;src:url(../../public/fonts/ibm-plex-sans-arabic-700-arabic.woff2)}
+@font-face{font-family:Plex;font-weight:700;src:url(../../public/fonts/ibm-plex-sans-arabic-700-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
+*{box-sizing:border-box;margin:0}
+html{background:#F2FAF5;overflow:hidden}
+/* الهوية الرسمية الفاتحة: خلفية الاستوديو الفاتحة بملمسها المائل، وترويسة الوزارة، والخط الذهبي */
+body{width:1080px;height:1350px;font-family:Plex;color:#1C3328;overflow:hidden;position:relative;
+ background:radial-gradient(ellipse 90% 55% at 95% 0%,#DDF3E6 0%,transparent 60%),linear-gradient(160deg,#F2FAF5 0%,#F8FBF9 45%,#EDF6F0 100%)}
+.tex{position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(62,99,80,.045) 0 1.5px,transparent 1.5px 22px)}
+.blob{position:absolute;width:520px;height:520px;border-radius:50%;background:rgba(137,215,173,.38);filter:blur(110px);left:0;top:520px}
+.frame{position:absolute;inset:26px;border:1.5px solid #3E6350;border-radius:10px}
+.frame::after{content:"";position:absolute;inset:7px;border:1px solid #B8912F;border-radius:6px;opacity:.75}
+.page{position:relative;height:100%;padding:58px 66px 54px;display:flex;flex-direction:column}
+.gov{display:flex;justify-content:space-between;align-items:center}
+.gov .lines{font-size:15px;line-height:1.6;color:#444}
+.gov .lines b{display:block;color:#3E6350;font-size:18px}
+.gov .logos{display:flex;gap:14px;align-items:center}
+.gov .logos img{height:58px}
+.rule{height:2px;margin:18px 0 0;background:linear-gradient(90deg,transparent,#B8912F,transparent)}
+.kick{margin-top:34px;display:flex;gap:10px;align-items:center}
+.pill{background:#89D7AD;color:#16301F;border-radius:99px;padding:8px 20px;font-weight:700;font-size:18px}
+.pill.o{background:transparent;color:#9A7B22;border:1.5px solid #B8912F88}
+h1{font-size:76px;font-weight:700;line-height:1.15;margin-top:18px;letter-spacing:-.5px}
+h1 em{font-style:normal;color:#3E6350}
+.sub{font-size:24px;color:#5E7268;margin-top:12px;line-height:1.55}
+.sub b{color:#3E6350}
+.mid{display:flex;gap:30px;margin-top:34px;align-items:stretch}
+.br{flex:1;display:flex;flex-direction:column;gap:14px}
+.b{background:#fff;border:1px solid #D5E7DC;border-radius:16px;padding:15px 18px;display:flex;gap:14px;align-items:center;box-shadow:0 6px 18px -14px rgba(28,51,40,.45);position:relative;overflow:hidden}
+.b::before{content:"";position:absolute;inset:0 0 0 auto;width:6px;background:var(--c)}
+.b i{flex:none;width:48px;height:48px;border-radius:12px;background:var(--c);display:grid;place-items:center}
+.b i svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.b div{flex:1;min-width:0}
+.b b{display:block;font-size:21px;color:var(--c)}
+.b p{font-size:15.5px;color:#5E7268;line-height:1.45;margin-top:2px}
+.b .s{flex:none;text-align:center;font-size:13px;color:#5E7268}
+.b .s strong{display:block;font-size:26px;color:#1C3328;line-height:1}
+.card{width:300px;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.card img{width:282px;filter:drop-shadow(0 16px 26px rgba(28,51,40,.22));transform:rotate(-3deg)}
+.card p{margin-top:12px;font-size:16px;font-weight:600;color:#3E6350;text-align:center;line-height:1.45}
+.gets{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}
+.g{background:#3E6350;color:#E3F6EA;border-radius:14px;padding:14px 16px;font-size:16px;line-height:1.45}
+.g b{display:block;color:#89D7AD;font-size:18px;margin-bottom:2px}
+.cond{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:17px}
+.cond span.h{font-weight:700;color:#3E6350;margin-left:4px}
+.cond span.c{background:#fff;border:1px solid #D5E7DC;border-radius:10px;padding:6px 14px}
+.foot{margin-top:auto;border:2px dashed #BFE3CC;border-radius:18px;padding:16px 22px;display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.55)}
+.path{display:flex;align-items:center;gap:10px;font-size:18px}
+.path .ch{background:#E3F6EA;border-radius:10px;padding:7px 14px;font-weight:700;color:#3E6350}
+.path .ch.go{background:#3E6350;color:#fff}
+.path .ar{color:#5E7268}
+.dl{text-align:left}
+.dl b{display:block;font-size:22px;color:#1C3328}
+.dl span{font-size:14px;color:#5E7268}
+.site{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);font-size:15px;font-weight:700;color:#3E8A62;direction:ltr}
+</style></head><body>
+<!-- منشور الانضمام إلى المركز الإعلامي (١٠٨٠ × ١٣٥٠) بالهوية الرسمية الفاتحة: الفروع الأربعة بألوانها ومقاعدها،
+     والبطاقة الإعلامية، والشروط، وطريق التقديم. تُلتقط الصورة بـ Playwright إلى media-center-post.png. -->
+<i class="tex"></i><i class="blob"></i><div class="frame"></div>
+<div class="page">
+ <div class="gov">
+  <div class="lines">المملكة العربية السعودية<br>وزارة التعليم<br>الإدارة العامة للتعليم بمنطقة مكة المكرمة<b>مدرسة مكة الثانوية</b></div>
+  <div class="logos"><img src="../../src/assets/moe-logo.png"><img src="../../src/assets/icon-mint.png"></div>
+ </div>
+ <div class="rule"></div>
+
+ <div class="kick"><span class="pill">فرصة انضمام للطلاب</span><span class="pill o">العام الدراسي 1448هـ</span></div>
+ <h1>انضم إلى <em>المركز الإعلامي</em></h1>
+ <p class="sub">وثّق فعاليات مدرستك بالصورة والمقطع والكلمة، وكن من صنّاع برنامج <b>«وجوه من مكة الثانوية»</b></p>
+
+ <div class="mid">
+  <div class="br">
+   <div class="b" style="--c:#2F5D8A"><i><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2.5"/><circle cx="12" cy="13.5" r="3.5"/><path d="M8.5 7l1.5-2.5h4L15.5 7"/></svg></i>
+    <div><b>التصوير الفوتوغرافي</b><p>توثيق الفعاليات بصور احترافية بكاميرات المدرسة</p></div><span class="s"><strong>4</strong>مقاعد</span></div>
+   <div class="b" style="--c:#8A2E40"><i><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="M15.5 10.5l6-3.5v10l-6-3.5"/></svg></i>
+    <div><b>التصوير المرئي والمونتاج</b><p>مقاطع قصيرة ومونتاجها، وحلقات «وجوه من مكة الثانوية»</p></div><span class="s"><strong>3</strong>مقاعد</span></div>
+   <div class="b" style="--c:#8A6230"><i><svg viewBox="0 0 24 24"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 6l3 3"/></svg></i>
+    <div><b>التحرير والكتابة</b><p>أخبار الفعاليات وتعليقات الصور والحوارات الملهمة</p></div><span class="s"><strong>3</strong>مقاعد</span></div>
+   <div class="b" style="--c:#64478F"><i><svg viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><path d="M12 22a10 10 0 1 1 10-10c0 2-2 3-4 3h-2a2 2 0 0 0-1 3.7c.6.6.4 2.3-3 3.3z"/></svg></i>
+    <div><b>التصميم</b><p>بطاقات المناسبات والإعلانات بهوية المدرسة</p></div><span class="s"><strong>2</strong>مقعدان</span></div>
+  </div>
+  <div class="card"><img src="shots/card.png"><p>بطاقتك الإعلامية في حسابك<br>بلون فرعك</p></div>
+ </div>
+
+ <div class="gets">
+  <div class="g"><b>بطاقة ووسم</b>البطاقة الإعلامية ووسم المركز في بطاقة اسمك</div>
+  <div class="g"><b>أجهزة المدرسة</b>تعمل بأجهزتها وتحت إشراف رئيس المركز</div>
+  <div class="g"><b>أعمالك تُعرض</b>في «معرض المدرسة» داخل البوابة فقط</div>
+ </div>
+
+ <div class="cond"><span class="h">الشروط:</span><span class="c">حضور 90% فأكثر</span><span class="c">لا مخالفة فوق الدرجة الثانية</span><span class="c">موافقة ولي الأمر من حسابه</span></div>
+
+ <div class="foot">
+  <div class="path"><span class="ar">قدّم من</span><span class="ch">البوابة</span><span class="ar">←</span><span class="ch">فرص المشاركة</span><span class="ar">←</span><span class="ch go">انضم إلينا الآن</span></div>
+  <div class="dl"><b>حتى 12 نوفمبر</b><span>آخر موعد للتقديم</span></div>
+ </div>
+</div>
+<div class="site">makkahsec.com</div>
+</body></html>
