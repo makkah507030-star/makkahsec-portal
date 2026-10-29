@@ -6,7 +6,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { fmtDate } from "../../lib/dates";
 import { cmpAr } from "../../lib/sortAr.js";
 import { confirmDanger } from "../../lib/danger";
-import { DOMAINS } from "../../lib/accreditation.js";
+import { DOMAINS, roleT } from "../../lib/accreditation.js";
 import Loader from "../../components/Loader.jsx";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import { printThen } from "../../lib/print.js";
@@ -14,14 +14,14 @@ import moeLogo from "../../assets/moe-logo.png";
 import logoIcon from "../../assets/icon-mint.png";
 
 /* =====================================================================
-   لجنة التميز (supabase/acc_1.sql، acc_3.sql): برئاسة مدير المدرسة، ومنسقها يوزّع العمل:
+   لجنة التميز (supabase/acc_1.sql، acc_3.sql): برئاسة مدير المدرسة، ومشرفها يوزّع العمل:
    يضيف الأعضاء ويسند لكل عضو مجالًا أو أكثر فيرى مؤشراته وبرامجه وشواهده وحدها.
-   تعيين المنسق للمدير ووكيل الشؤون التعليمية والدعم الفني. ومحاضر اجتماعات اللجنة بقراراتها.
+   تعيين المشرف للمدير ووكيل الشؤون التعليمية والدعم الفني. ومحاضر اجتماعات اللجنة بقراراتها.
    ===================================================================== */
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-export default function AccCommittee({ me, year, members, reload }) {
+export default function AccCommittee({ me, year, members, reload, go }) {
   const { profile } = useSession();
   const [, setMsg] = useNotice(null);
   const [meetings, setMeetings] = useState(null);
@@ -34,7 +34,13 @@ export default function AccCommittee({ me, year, members, reload }) {
 
   return (
     <div className="space-y-4">
-      <Members me={me} members={members} reload={reload} setMsg={setMsg} by={profile?.full_name} />
+      <Members me={me} members={members} reload={reload} setMsg={setMsg} by={profile?.full_name} go={go} />
+      <section className="card p-4">
+        <p className="mb-2 text-sm font-semibold text-ink">تقارير المجالات</p>
+        <div className="flex flex-wrap gap-2">{Object.entries(DOMAINS).filter(([d]) => me.coord || me.domains.includes(+d)).map(([d, t]) => (
+          <button key={d} onClick={() => go("team", { report: d })} className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs text-mint-deep hover:border-mint-light">تقرير مجال {t}</button>))}</div>
+        <p className="mt-2 text-[11px] text-faint">لكل مجال تقرير بهوية التقارير الشهرية: المؤشرات، والبرامج وقياس نواتجها، والشواهد المرفوعة وغير المرفوعة، والاعتماد.</p>
+      </section>
       <section className="card overflow-hidden">
         <div className="flex items-center gap-2 border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold text-ink">محاضر الاجتماعات <span className="num text-muted">({meetings.length})</span></h2>
@@ -60,7 +66,7 @@ export default function AccCommittee({ me, year, members, reload }) {
             <p className="num mt-1 text-center text-[11.5px] text-muted">{fmtDate(printing.held_on)}</p>
             <MeetingBody m={printing} members={members} print />
             <div className="mt-10 grid grid-cols-2 gap-10 text-center text-[12px]">
-              {[["منسق اللجنة", coord?.full_name], ["رئيس اللجنة · مدير المدرسة", null]].map(([r, n]) => (
+              {[["مشرف اللجنة", coord?.full_name], ["رئيس اللجنة · مدير المدرسة", null]].map(([r, n]) => (
                 <div key={r}><p className="font-bold text-mint-deep">{r}</p><p className="mt-1">{n || "...................."}</p><p className="mt-5 text-faint">التوقيع: ..............</p></div>
               ))}
             </div>
@@ -71,7 +77,7 @@ export default function AccCommittee({ me, year, members, reload }) {
   );
 }
 
-function Members({ me, members, reload, setMsg, by }) {
+function Members({ me, members, reload, setMsg, by, go }) {
   const [open, setOpen] = useState(false);
   const [staff, setStaff] = useState(null);
   const [q, setQ] = useState("");
@@ -117,10 +123,11 @@ function Members({ me, members, reload, setMsg, by }) {
         {members.map((m) => (
           <div key={m.user_id} className="space-y-1.5 px-4 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`chip text-[11px] ${m.role === "coordinator" ? "bg-mint-tint text-mint-deep" : "bg-canvas text-muted"}`}>{m.role === "coordinator" ? "منسق اللجنة" : "عضو"}</span>
+              <span className={`chip text-[11px] ${m.role === "coordinator" ? "bg-mint-tint text-mint-deep" : "bg-canvas text-muted"}`}>{roleT(m)}</span>
               <span className="min-w-0 flex-1 text-sm font-medium text-ink">{m.full_name}{m.title && <span className="text-[12px] font-normal text-muted"> · {m.title}</span>}</span>
+              <button onClick={() => go("team", { file: m.user_id })} className="text-[11px] font-semibold text-mint-deep hover:underline">الملف الرقمي</button>
               {me.coord && <button onClick={() => setTitleOf(m)} className="text-[11px] text-muted hover:underline">الصفة</button>}
-              {me.all && <button onClick={() => setRole(m, m.role === "coordinator" ? "member" : "coordinator")} className="text-[11px] text-mint-deep hover:underline">{m.role === "coordinator" ? "جعله عضوًا" : "جعله المنسق"}</button>}
+              {me.all && <button onClick={() => setRole(m, m.role === "coordinator" ? "member" : "coordinator")} className="text-[11px] text-mint-deep hover:underline">{m.role === "coordinator" ? "جعله عضوًا" : "جعله المشرف"}</button>}
               {me.coord && (m.role !== "coordinator" || me.all) && <button onClick={() => remove(m)} className="text-[11px] text-absent hover:underline">إزالة</button>}
             </div>
             {m.role === "coordinator" ? <p className="text-[11px] text-faint">يرى كل المجالات، ويوزّع العمل على الأعضاء.</p> : (
@@ -131,7 +138,7 @@ function Members({ me, members, reload, setMsg, by }) {
             )}
           </div>
         ))}
-        {members.length === 0 && <p className="px-4 py-4 text-sm text-muted">{me.all ? "أضف أعضاء اللجنة، ثم اجعل أحدهم منسقها ليوزّع المجالات." : "لا أعضاء بعد."}</p>}
+        {members.length === 0 && <p className="px-4 py-4 text-sm text-muted">{me.all ? "أضف أعضاء اللجنة، ثم اجعل أحدهم مشرفها ليوزّع المجالات." : "لا أعضاء بعد."}</p>}
       </div>
     </section>
   );

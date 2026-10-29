@@ -4,8 +4,9 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { fmtDate } from "../../lib/dates";
+import { confirmDanger } from "../../lib/danger";
 import {
-  DOMAINS, STANDARDS, INDICATORS, PLAN_BELOW, LEVEL_T, PLAN_STATUS, levelOf, stdOf, progOf, fmtPct, setupMsg,
+  CODES, DOMAINS, STANDARDS, INDICATORS, PLAN_BELOW, domainOf, LEVEL_T, PLAN_STATUS, levelOf, stdOf, progOf, fmtPct, setupMsg,
 } from "../../lib/accreditation.js";
 import { SELF_1448, PROGRAMS_1448, SUSTAIN_1448, MILESTONES_1448 } from "../../lib/accPlan1448.js";
 import Loader from "../../components/Loader.jsx";
@@ -31,12 +32,15 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
   const [open, setOpen] = useState(null);
   const [report, setReport] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [susEdit, setSusEdit] = useState(null);
   const loadProgs = () => plan
     ? supabase.from("acc_programs").select("*").eq("plan_id", plan.id).order("code").then(({ data, error }) => { if (error) setMsg({ ok: false, text: setupMsg(error) }); setProgs(data ?? []); })
     : setProgs([]);
   useEffect(() => { setProgs(null); loadProgs(); }, [plan?.id]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const doms = Object.keys(DOMAINS).map(Number).filter((d) => me.coord || me.domains.includes(d));
+  const editProps = { planId: plan?.id, doms, canDelete: me.coord && plan?.status !== "archived" };
   const canEditP = (p) => plan?.status !== "archived" && (me.coord || me.domains.includes(p.domain));
   const list = (progs ?? []).filter((p) => !dom || p.domain === dom);
   const inPlan = list.filter((p) => p.kind === "plan");
@@ -98,7 +102,7 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
       <p className="font-semibold text-ink">لا خطة تحسين بعد</p>
       <p className="text-muted">الخطة الحالية مبنية على تقرير التقويم الذاتي حتى يصدر تقرير التقويم الخارجي، ثم تُحدَّث بنسخة جديدة.</p>
       {me.coord ? <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={importPlan}>{busy ? "جارٍ الاستيراد…" : "استيراد خطة 1448هـ من ملف المدرسة"}</button>
-        : <p className="text-faint">يستوردها منسق اللجنة.</p>}
+        : <p className="text-faint">يستوردها مشرف اللجنة.</p>}
     </div>
   );
   if (!progs) return <Loader />;
@@ -140,10 +144,15 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
       )}
 
       <section className="space-y-2">
-        <p className="text-sm font-semibold text-ink">برامج الخطة <span className="num text-muted">({inPlan.length})</span></p>
+        <div className="flex items-center gap-2">
+          <p className="flex-1 text-sm font-semibold text-ink">برامج الخطة <span className="num text-muted">({inPlan.length})</span></p>
+          {me.coord && plan.status !== "archived" && !adding && <button className="rounded-pill bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white" onClick={() => setAdding(true)}>+ برنامج جديد</button>}
+        </div>
+        {adding && <div className="card overflow-hidden"><ProgramEdit p={{ kind: "plan", code: "", methods: [], team: [], evidence: [], follow: "فريق التقويم الذاتي" }} {...editProps}
+          by={profile?.full_name} setMsg={setMsg} onDone={(ok) => { setAdding(false); if (ok) loadProgs(); }} /></div>}
         {inPlan.length === 0 && <p className="card px-4 py-6 text-center text-sm text-muted">لا برامج في {dom ? DOMAINS[dom] : "مجالاتك"}.</p>}
         {inPlan.map((p) => <Program key={p.id} p={p} open={open === p.id} onToggle={() => setOpen(open === p.id ? null : p.id)}
-          canEdit={canEditP(p)} by={profile?.full_name} onSaved={loadProgs} setMsg={setMsg} />)}
+          canEdit={canEditP(p)} edit={editProps} by={profile?.full_name} onSaved={loadProgs} setMsg={setMsg} />)}
       </section>
 
       {sustain.length > 0 && (
@@ -151,14 +160,16 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
           <p className="border-b border-line px-4 py-3 text-sm font-semibold text-ink">جدول الاستدامة — مؤشرات في مستوى التقدم والتميز <span className="num text-muted">({sustain.length})</span></p>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[620px] text-sm">
-              <thead><tr className="bg-canvas text-right text-xs text-muted"><th className="p-2">الرمز</th><th className="p-2">الحالي</th><th className="p-2">المستهدف</th><th className="p-2">إجراء الاستدامة</th><th className="p-2">المسؤول</th></tr></thead>
+              <thead><tr className="bg-canvas text-right text-xs text-muted"><th className="p-2">الرمز</th><th className="p-2">الحالي</th><th className="p-2">المستهدف</th><th className="p-2">إجراء الاستدامة</th><th className="p-2">المسؤول</th><th className="p-2" /></tr></thead>
               <tbody className="divide-y divide-line/60">{sustain.map((p) => (
                 <tr key={p.id}><td className="num p-2 font-bold text-ink" title={INDICATORS[p.code]}>{p.code}</td>
                   <td className="num p-2" style={{ color: levelOf(p.current)?.c }}>{fmtPct(p.current)}</td><td className="num p-2 text-muted">{fmtPct(p.target)}</td>
-                  <td className="p-2 text-ink">{p.initiative}</td><td className="p-2 text-xs text-muted">{p.owner ?? "—"}</td></tr>
+                  <td className="p-2 text-ink">{p.initiative}</td><td className="p-2 text-xs text-muted">{p.owner ?? "—"}</td>
+                  <td className="p-2">{canEditP(p) && <button className="text-[11px] font-semibold text-mint-deep" onClick={() => setSusEdit(p)}>تعديل</button>}</td></tr>
               ))}</tbody>
             </table>
           </div>
+          {susEdit && <ProgramEdit key={susEdit.id} p={susEdit} {...editProps} by={profile?.full_name} setMsg={setMsg} onDone={(ok) => { setSusEdit(null); if (ok) loadProgs(); }} />}
         </section>
       )}
 
@@ -209,7 +220,7 @@ function Suggest({ plan, progs, ext, me, onChange, setMsg }) {
   );
 }
 
-function Program({ p, open, onToggle, canEdit, by, onSaved, setMsg }) {
+function Program({ p, open, onToggle, canEdit, edit, by, onSaved, setMsg }) {
   const lv = levelOf(p.current);
   const pr = progOf(p);
   const g = gap(p);
@@ -227,12 +238,12 @@ function Program({ p, open, onToggle, canEdit, by, onSaved, setMsg }) {
         </span>
       </button>
       <div className="h-1 bg-canvas"><div className="h-full bg-mint-deep" style={{ width: `${pr.done}%` }} /></div>
-      {open && <ProgramBody p={p} canEdit={canEdit} by={by} onSaved={onSaved} setMsg={setMsg} />}
+      {open && <ProgramBody p={p} canEdit={canEdit} edit={edit} by={by} onSaved={onSaved} setMsg={setMsg} />}
     </div>
   );
 }
 
-function ProgramBody({ p, canEdit, by, onSaved, setMsg }) {
+function ProgramBody({ p, canEdit, edit: editProps, by, onSaved, setMsg }) {
   const [edit, setEdit] = useState(false);
   const [m, setM] = useState(p.methods ?? []);
   useEffect(() => setM(p.methods ?? []), [p.methods]);
@@ -242,7 +253,7 @@ function ProgramBody({ p, canEdit, by, onSaved, setMsg }) {
     if (error) setMsg({ ok: false, text: error.message }); else onSaved();
   };
   const setOne = (i, k, v) => saveM(m.map((x, j) => (j === i ? { ...x, [k]: x[k] === v ? null : v } : x)));
-  if (edit) return <ProgramEdit p={p} by={by} onDone={(ok) => { setEdit(false); if (ok) onSaved(); }} setMsg={setMsg} />;
+  if (edit) return <ProgramEdit p={p} {...editProps} by={by} onDone={(ok) => { setEdit(false); if (ok) onSaved(); }} setMsg={setMsg} />;
   const row = (t, v) => (v ? <div key={t} className="grid gap-1 sm:grid-cols-[140px_1fr]"><span className="text-xs font-semibold text-mint-deep">{t}</span><span className="text-sm text-ink">{v}</span></div> : null);
   const opt = (on) => `rounded-pill border px-2 py-0.5 text-[11px] ${on ? "border-mint-deep bg-mint-tint text-mint-deep" : "border-line bg-white text-faint"}`;
 
@@ -274,55 +285,88 @@ function ProgramBody({ p, canEdit, by, onSaved, setMsg }) {
       </div>
       {p.rec && <div className="rounded-sm2 bg-mint-tint/60 px-3 py-2"><p className="text-xs font-semibold text-mint-deep">التوصيات والمقترحات العلاجية</p><p className="mt-1 text-sm leading-relaxed text-ink">{p.rec}</p></div>}
       <div className="flex items-center gap-3 text-xs">
-        {canEdit && <button className="font-semibold text-mint-deep" onClick={() => setEdit(true)}>تعديل البرنامج</button>}
+        {canEdit && <button className="font-semibold text-mint-deep" onClick={() => setEdit(true)}>تعديل البرنامج{editProps.canDelete ? " أو حذفه" : ""}</button>}
         {p.updated_by_name && <span className="text-faint">آخر تحديث: {p.updated_by_name} · {fmtDate(p.updated_at)}</span>}
       </div>
     </div>
   );
 }
 
-function ProgramEdit({ p, by, onDone, setMsg }) {
+/* تعديل البرنامج بكل ما يتعلق به، أو إدخال برنامج جديد، أو حذفه (الإضافة والحذف لمشرف اللجنة ومدير المدرسة) */
+function ProgramEdit({ p, planId, doms, canDelete, by, onDone, setMsg }) {
+  const isNew = !p.id;
   const [x, setX] = useState({ ...p, team: (p.team ?? []).join("\n"), evidence: (p.evidence ?? []).join("\n"), methodsT: (p.methods ?? []).map((m) => m.t).join("\n") });
   const set = (k) => (e) => setX((o) => ({ ...o, [k]: e.target.value }));
   const [busy, setBusy] = useState(false);
+  const num = (v) => (v === "" || v == null ? null : Number(v));
   const save = async () => {
+    if (!INDICATORS[x.code]) { setMsg({ ok: false, text: "اختر المؤشر." }); return; }
+    if (!x.initiative?.trim()) { setMsg({ ok: false, text: "اكتب اسم البرنامج أو إجراء الاستدامة." }); return; }
     const old = new Map((p.methods ?? []).map((m) => [m.t, m]));
-    setBusy(true);
-    const { error } = await supabase.from("acc_programs").update({
-      initiative: x.initiative?.trim() || null, semester: x.semester || null, team: lines(x.team), follow: x.follow || null,
-      period: x.period || null, measure: x.measure || null, needs: x.needs || null, rec: x.rec || null,
-      target: x.target === "" ? null : Number(x.target), evidence: lines(x.evidence),
+    const row = {
+      code: x.code, kind: x.kind, current: num(x.current), target: num(x.target), owner: x.owner?.trim() || null,
+      initiative: x.initiative.trim(), semester: x.semester || null, team: lines(x.team), follow: x.follow || null,
+      period: x.period || null, measure: x.measure || null, needs: x.needs || null, rec: x.rec || null, evidence: lines(x.evidence),
       methods: lines(x.methodsT).map((t) => old.get(t) ?? { t }), updated_by_name: by ?? null, updated_at: new Date().toISOString(),
-    }).eq("id", p.id);
+    };
+    setBusy(true);
+    const { error } = isNew ? await supabase.from("acc_programs").insert({ ...row, plan_id: planId, sort: 200 })
+      : await supabase.from("acc_programs").update(row).eq("id", p.id);
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
-    onDone(true);
+    if (error) { setMsg({ ok: false, text: /duplicate|unique/i.test(error.message) ? `للمؤشر ${x.code} برنامج في هذه النسخة؛ عدّله بدل إضافة غيره.` : error.message }); return; }
+    setMsg({ ok: true, text: isNew ? "أُضيف البرنامج." : "حُفظ البرنامج." }); onDone(true);
   };
-  const F = ({ t, k, area, num }) => (
+  const remove = async () => {
+    if (!(await confirmDanger({ title: `حذف برنامج المؤشر ${p.code}`, impact: [`«${p.initiative}» بأساليبه وقياس نواتجه من هذه النسخة.`, "تبقى شواهد المؤشر كما هي."], confirmLabel: "حذف" }))) return;
+    const { error } = await supabase.from("acc_programs").delete().eq("id", p.id);
+    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    setMsg({ ok: true, text: "حُذف البرنامج." }); onDone(true);
+  };
+  const F = ({ t, k, area, n }) => (
     <label className="block text-xs text-muted">{t}
       {area ? <textarea className="field mt-1 min-h-[72px]" value={x[k] ?? ""} onChange={set(k)} />
-        : <input className="field mt-1" type={num ? "number" : "text"} value={x[k] ?? ""} onChange={set(k)} />}
+        : <input className="field mt-1" type={n ? "number" : "text"} step={n ? "0.01" : undefined} value={x[k] ?? ""} onChange={set(k)} />}
     </label>
   );
+  const plan = x.kind === "plan";
   return (
     <div className="space-y-3 border-t border-line bg-canvas/40 p-4">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {F({ t: "المبادرة (اسم البرنامج)", k: "initiative" })}
-        {F({ t: "المستهدف %", k: "target", num: true })}
-        {F({ t: "الفصل الدراسي", k: "semester" })}
-        {F({ t: "الفترة الزمنية لقياس النواتج", k: "period" })}
-        {F({ t: "الفريق المكلف (سطر لكل جهة)", k: "team", area: true })}
-        {F({ t: "الفريق المكلف بالمتابعة", k: "follow" })}
+      {isNew && <p className="text-sm font-semibold text-ink">برنامج جديد</p>}
+      <div className="grid gap-3 sm:grid-cols-[1fr_170px]">
+        <label className="block text-xs text-muted">المؤشر
+          <select className="field mt-1" value={x.code ?? ""} onChange={set("code")}>
+            <option value="">— اختر —</option>
+            {CODES.filter((c) => doms.includes(domainOf(c))).map((c) => <option key={c} value={c}>{c} · {INDICATORS[c].slice(0, 70)}</option>)}
+          </select></label>
+        <label className="block text-xs text-muted">النوع
+          <select className="field mt-1" value={x.kind} onChange={set("kind")}>
+            <option value="plan">برنامج ضمن الخطة</option><option value="sustain">إجراء استدامة</option>
+          </select></label>
       </div>
-      {F({ t: "البرامج وأساليب التنفيذ (سطر لكل بند)", k: "methodsT", area: true })}
-      {F({ t: "الأدلة والشواهد (سطر لكل شاهد)", k: "evidence", area: true })}
-      {F({ t: "مؤشر القياس", k: "measure", area: true })}
-      {F({ t: "الاحتياجات", k: "needs" })}
-      {F({ t: "التوصيات والمقترحات العلاجية", k: "rec", area: true })}
-      <p className="text-[11px] text-faint">تعديل نص بند يعيد قياسه فارغًا، وتبقى قياسات البنود التي لم تتغير.</p>
-      <div className="flex gap-2">
-        <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={save}>{busy ? "…" : "حفظ"}</button>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {F({ t: plan ? "المبادرة (اسم البرنامج)" : "إجراء الاستدامة", k: "initiative" })}
+        {F({ t: "الحالي %", k: "current", n: true })}
+        {F({ t: "المستهدف %", k: "target", n: true })}
+      </div>
+      {!plan && F({ t: "المسؤول", k: "owner" })}
+      {plan && <>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {F({ t: "الفصل الدراسي", k: "semester" })}
+          {F({ t: "الفترة الزمنية لقياس النواتج", k: "period" })}
+          {F({ t: "الفريق المكلف (سطر لكل جهة)", k: "team", area: true })}
+          {F({ t: "الفريق المكلف بالمتابعة", k: "follow" })}
+        </div>
+        {F({ t: "البرامج وأساليب التنفيذ (سطر لكل بند)", k: "methodsT", area: true })}
+        {F({ t: "الأدلة والشواهد المطلوبة (سطر لكل شاهد)", k: "evidence", area: true })}
+        {F({ t: "مؤشر القياس", k: "measure", area: true })}
+        {F({ t: "الاحتياجات", k: "needs" })}
+        {F({ t: "التوصيات والمقترحات العلاجية", k: "rec", area: true })}
+        {!isNew && <p className="text-[11px] text-faint">تعديل نص بند يعيد قياسه فارغًا، وتبقى قياسات البنود التي لم تتغير.</p>}
+      </>}
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={save}>{busy ? "…" : isNew ? "إضافة البرنامج" : "حفظ"}</button>
         <button className="rounded-pill border border-line bg-white px-4 py-1.5 text-xs text-muted" onClick={() => onDone(false)}>إلغاء</button>
+        {!isNew && canDelete && <button className="ms-auto text-xs font-semibold text-absent" onClick={remove}>حذف البرنامج</button>}
       </div>
     </div>
   );

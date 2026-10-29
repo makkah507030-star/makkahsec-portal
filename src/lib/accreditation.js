@@ -2,7 +2,7 @@
 import { supabase } from "./supabase";
 
 /* =====================================================================
-   قسم التقويم والاعتماد المدرسي (supabase/acc_1..3.sql): لجنة التميز ومنسقها، والمؤشرات
+   قسم التقويم والاعتماد المدرسي (supabase/acc_1..3.sql): لجنة التميز ومشرفها، والمؤشرات
    الـ47 للمرحلة الثانوية الحكومية برموز تقرير الأداء المدرسي (الإصدار الثالث 1447هـ)، بلا
    مؤشرات نافس ولا المدارس الأهلية. الصياغة منقولة من تقرير المدرسة كما هي.
    ===================================================================== */
@@ -166,3 +166,47 @@ export function progOf(p) {
 export const LEVEL_T = { high: "مرتفع", mid: "متوسط", low: "منخفض" };
 export const PLAN_STATUS = { draft: { t: "مسودة", c: "bg-late/10 text-late" }, active: { t: "السارية", c: "bg-present/10 text-present" }, archived: { t: "مؤرشفة", c: "bg-canvas text-muted" } };
 export const fmtPct = (v) => (v == null ? "—" : `${Number(v)}%`);
+
+// ألوان المجالات في الملف الرقمي والتقارير (أسماء ألوان dfile.css)
+export const DOMAIN_TONE = { 1: "navy", 2: "math", 3: "science", 4: "social" };
+export const roleT = (m) => (m.role === "coordinator" ? "مشرف اللجنة" : m.domains?.length ? "مشرف مجال" : "عضو");
+
+/** بيانات القسم للتقارير والملفات: برامج الخطة السارية وكل الشواهد والمحاضر */
+export async function loadAccData(plans) {
+  const plan = plans.find((p) => p.status === "active") ?? plans[0] ?? null;
+  const [pg, ev, mt] = await Promise.all([
+    plan ? supabase.from("acc_programs").select("*").eq("plan_id", plan.id) : Promise.resolve({ data: [] }),
+    supabase.from("acc_evidence").select("*").order("created_at", { ascending: false }),
+    supabase.from("acc_meetings").select("*").order("held_on", { ascending: false }),
+  ]);
+  return { plan, progs: pg.data ?? [], ev: ev.data ?? [], meetings: mt.data ?? [] };
+}
+
+/** الشواهد المطلوبة في برامج الخطة وما رُفع منها: يُعدّ الشاهد مرفوعًا إن رُفع للمؤشر شاهد بعنوانه */
+export function evidenceGaps(codes, progs, ev) {
+  const up = {}; ev.forEach((e) => { (up[e.code] ??= []).push(e); });
+  const missing = [];
+  for (const c of codes) {
+    const p = progs.find((x) => x.code === c && x.kind === "plan");
+    const titles = new Set((up[c] ?? []).map((e) => e.title.trim()));
+    (p?.evidence ?? []).forEach((t) => { if (!titles.has(t.trim())) missing.push({ code: c, title: t }); });
+    if (!p?.evidence?.length && !(up[c]?.length)) missing.push({ code: c, title: null });
+  }
+  const required = codes.reduce((s, c) => s + (progs.find((x) => x.code === c && x.kind === "plan")?.evidence?.length ?? 0), 0);
+  return { up, missing, required, uploaded: codes.reduce((s, c) => s + (up[c]?.length ?? 0), 0) };
+}
+
+/** ملخص مجال أو مجموعة مجالات: المؤشرات ونسبها، والبرامج وإنجازها، والشواهد وفجواتها */
+export function domainSummary(domains, { progs, ev, scores = {} }) {
+  const codes = CODES.filter((c) => domains.includes(domainOf(c)));
+  const inPlan = progs.filter((p) => p.kind === "plan" && domains.includes(p.domain));
+  const sustain = progs.filter((p) => p.kind === "sustain" && domains.includes(p.domain));
+  const evs = ev.filter((e) => domains.includes(e.domain));
+  const gaps = evidenceGaps(codes, progs, evs);
+  const done = inPlan.length ? Math.round(inPlan.reduce((s, p) => s + progOf(p).done, 0) / inPlan.length) : 0;
+  const met = inPlan.length ? Math.round(inPlan.reduce((s, p) => s + progOf(p).met, 0) / inPlan.length) : 0;
+  const vals = codes.map((c) => scores[c]).filter((v) => v != null);
+  const perf = vals.length ? Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 100) / 100 : null;
+  const approved = evs.filter((e) => e.status === "approved").length;
+  return { codes, inPlan, sustain, evs, gaps, done, met, perf, approved };
+}

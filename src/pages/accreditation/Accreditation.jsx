@@ -2,25 +2,28 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { useSession } from "../../lib/session.jsx";
 import { cmpAr } from "../../lib/sortAr.js";
-import { DOMAINS, analyze, levelOf, fmtPct, progOf, setupMsg } from "../../lib/accreditation.js";
+import { DOMAINS, analyze, levelOf, fmtPct, progOf, setupMsg, loadAccData } from "../../lib/accreditation.js";
 import Loader from "../../components/Loader.jsx";
 import AccPlan from "./AccPlan.jsx";
 import AccEvaluation from "./AccEvaluation.jsx";
 import AccEvidence from "./AccEvidence.jsx";
 import AccTools from "./AccTools.jsx";
 import AccCommittee from "./AccCommittee.jsx";
+import AccMemberFile from "./AccMemberFile.jsx";
+import AccDomainReport from "./AccDomainDoc.jsx";
 
 /* =====================================================================
    قسم التقويم والاعتماد المدرسي (supabase/acc_1..3.sql، src/lib/accreditation.js) تديره لجنة التميز:
-   • المدير ووكيل الشؤون التعليمية والدعم الفني يرون الكل، ويعيّنون منسق اللجنة.
-   • المنسق يرى الكل، ويضيف الأعضاء ويسند لكل منهم مجالات، فيرى العضو مجالاته وحدها.
+   • المدير ووكيل الشؤون التعليمية والدعم الفني يرون الكل، ويعيّنون مشرف اللجنة.
+   • المشرف يرى الكل، ويضيف الأعضاء ويسند لكل منهم مجالات، فيرى العضو مجالاته وحدها.
    التبويبات: اللوحة، والمؤشرات والشواهد، والتقويم الذاتي، والتقويم الخارجي، وخطة التحسين
    (من تقرير التقويم الذاتي حتى يصدر الخارجي ثم تُحدَّث بنسخة جديدة)، وأدوات التقويم، واللجنة.
    ===================================================================== */
 
 const TABS = [
-  ["dash", "اللوحة"], ["ind", "المؤشرات والشواهد"], ["plan", "خطة التحسين"], ["self", "التقويم الذاتي"],
+  ["dash", "لوحة الأداء"], ["ind", "المؤشرات والشواهد"], ["plan", "خطة التحسين"], ["self", "التقويم الذاتي"],
   ["ext", "التقويم الخارجي"], ["tools", "أدوات التقويم"], ["team", "لجنة التميز"],
 ];
 const pill = (on) => `shrink-0 rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
@@ -69,6 +72,7 @@ export default function Accreditation() {
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {TABS.map(([k, t]) => <button key={k} className={pill(tab === k)} onClick={() => go(k)}>{t}</button>)}
       </div>
+      {sp.get("file") || sp.get("report") ? <Views sp={sp} tab={tab} {...common} /> : <>
       {tab === "dash" && <Dashboard {...common} />}
       {tab === "ind" && <AccEvidence {...common} />}
       {tab === "plan" && <AccPlan {...common} />}
@@ -76,15 +80,34 @@ export default function Accreditation() {
       {tab === "ext" && <AccEvaluation kind="external" {...common} />}
       {tab === "tools" && <AccTools {...common} />}
       {tab === "team" && <AccCommittee {...common} />}
+      </>}
     </div>
   );
 }
 
-/* اللوحة: نتيجة آخر تقرير، والخطة السارية وإنجازها، ومحطات المتابعة */
-function Dashboard({ me, reports, plans, go }) {
-  const self = reports.find((r) => r.kind === "self");
+/* الملف الرقمي لعضو (file=) وتقرير المجال (report=): يُحمَّلان ببيانات الخطة السارية والشواهد والمحاضر */
+function Views({ sp, go, tab, me, members, reports, plans }) {
+  const [data, setData] = useState(null);
+  useEffect(() => { loadAccData(plans).then(setData); }, [plans]);
+  if (!data) return <Loader />;
+  const fileId = sp.get("file");
+  const d = Number(sp.get("report"));
+  if (d && DOMAINS[d]) {
+    if (!me.coord && !me.domains.includes(d)) return <p className="card px-4 py-6 text-sm text-muted">تقرير هذا المجال لمشرفه ولمشرف اللجنة.</p>;
+    return <AccDomainReport d={d} data={data} reports={reports} members={members} onClose={() => go(tab, fileId ? { file: fileId } : {})} />;
+  }
+  const m = members.find((x) => x.user_id === fileId);
+  if (!m) return <p className="card px-4 py-6 text-sm text-muted">لم يُعثر على العضو في لجنة التميز.</p>;
+  return <AccMemberFile m={m} data={data} reports={reports} onBack={() => go("team")} onReport={(x) => go(tab, { file: fileId, report: String(x) })} />;
+}
+
+/* لوحة الأداء: نتيجة آخر تقرير، والخطة السارية وإنجازها، ومحطات المتابعة */
+function Dashboard({ me, reports, plans, members, go }) {
+  const { profile } = useSession();
+  const self = members.find((m) => m.user_id === profile?.id);
+  const selfRep = reports.find((r) => r.kind === "self");
   const ext = reports.find((r) => r.kind === "external");
-  const base = ext ?? self;
+  const base = ext ?? selfRep;
   const a = useMemo(() => analyze(base?.scores ?? {}), [base]);
   const plan = plans.find((p) => p.status === "active") ?? plans[0];
   const [progs, setProgs] = useState(null);
@@ -104,6 +127,10 @@ function Dashboard({ me, reports, plans, go }) {
 
   return (
     <div className="space-y-4">
+      {self && <div className="flex flex-wrap gap-2">
+        <button className="rounded-pill bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white" onClick={() => go("dash", { file: self.user_id })}>ملفي الرقمي</button>
+        {(self.role === "coordinator" ? [1, 2, 3, 4] : self.domains).map((d) => <button key={d} className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs text-mint-deep" onClick={() => go("dash", { report: String(d) })}>تقرير مجال {DOMAINS[d]}</button>)}
+      </div>}
       {!base && (
         <div className="card space-y-2 p-4 text-sm">
           <p className="font-semibold text-ink">ابدأ من تقرير التقويم الذاتي</p>

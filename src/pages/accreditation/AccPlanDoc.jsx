@@ -128,7 +128,7 @@ export function planPages({ plan, progs, rep, theme = "light", sigs = {} }) {
         <div className="mr-notes">تُراجع هذه الخطة دوريًا، وتُحدَّث المستهدفات والإجراءات بما يضمن تحقيق أهدافها، وتُحدَّث بعد صدور تقرير التقويم الخارجي، وتُعتمد نسختها من مدير المدرسة بعد إقرارها من لجنة التميز.</div>
       </Box>
       <Signs stamp={sigs.stamp} people={[
-        { title: "منسق لجنة التميز", name: sigs.coord },
+        { title: "مشرف لجنة التميز", name: sigs.coord },
         { title: "مدير المدرسة · رئيس اللجنة", name: sigs.principalName, sig: sigs.principal },
       ]} />
     </Page>,

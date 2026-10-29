@@ -1,7 +1,7 @@
 -- =====================================================================
 -- قسم التقويم والاعتماد المدرسي (1): لجنة التميز وصلاحياتها والتقارير المرفوعة.
--- • المدير ووكيل الشؤون التعليمية والدعم الفني: يرون كل القسم ويديرونه، ويعيّنون المنسق.
--- • منسق اللجنة: يرى كل القسم، ويضيف الأعضاء ويسند لكل عضو مجالات من المجالات الأربعة.
+-- • المدير ووكيل الشؤون التعليمية والدعم الفني: يرون كل القسم ويديرونه، ويعيّنون المشرف.
+-- • مشرف اللجنة: يرى كل القسم، ويضيف الأعضاء ويسند لكل عضو مجالات من المجالات الأربعة.
 -- • العضو: يرى مؤشرات مجالاته وبرامجها وشواهدها فقط، ويعمل عليها.
 -- تكرار التنفيذ آمن.
 -- =====================================================================
@@ -27,11 +27,11 @@ create or replace function public.acc_domain(p_domain int) returns boolean langu
   select public.acc_coord() or exists (select 1 from acc_members where user_id = auth.uid() and p_domain = any(domains));
 $$;
 
--- المنسق يدير الأعضاء، وتعيين المنسق أو عزله للمدير والوكيل والدعم الفني وحدهم
+-- المشرف يدير الأعضاء، وتعيين المشرف أو عزله للمدير والوكيل والدعم الفني وحدهم
 create or replace function public.acc_members_guard() returns trigger language plpgsql security definer set search_path = public as $$
 begin
   if not public.acc_all() and ((tg_op <> 'INSERT' and old.role = 'coordinator') or (tg_op <> 'DELETE' and new.role = 'coordinator')) then
-    raise exception 'تعيين منسق اللجنة للمدير ووكيل الشؤون التعليمية';
+    raise exception 'تعيين مشرف اللجنة للمدير ووكيل الشؤون التعليمية';
   end if;
   return coalesce(new, old);
 end $$;
@@ -65,7 +65,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 -- التقارير المرفوعة: التقويم الذاتي، والتقويم الخارجي بعد الزيارة، وخطة التحسين المرفوعة.
--- scores: نسب المؤشرات { "1-1-1-1": 75.25, … } يُدخلها المنسق من التقرير فيُحلَّل في البوابة.
+-- scores: نسب المؤشرات { "1-1-1-1": 75.25, … } يُدخلها المشرف من التقرير فيُحلَّل في البوابة.
 create table if not exists public.acc_reports (
   id uuid primary key default gen_random_uuid(),
   kind text not null check (kind in ('self', 'external', 'plan')),

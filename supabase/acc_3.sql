@@ -22,7 +22,7 @@ drop policy if exists acc_evidence_read on public.acc_evidence;
 create policy acc_evidence_read on public.acc_evidence for select to authenticated using (public.acc_domain(domain));
 drop policy if exists acc_evidence_add on public.acc_evidence;
 create policy acc_evidence_add on public.acc_evidence for insert to authenticated with check (public.acc_domain(domain));
--- التعديل والحذف لصاحب الشاهد في مجاله، والاعتماد للمنسق
+-- التعديل والحذف لصاحب الشاهد في مجاله، والاعتماد للمشرف
 drop policy if exists acc_evidence_edit on public.acc_evidence;
 create policy acc_evidence_edit on public.acc_evidence for update to authenticated
   using (public.acc_coord() or (created_by = auth.uid() and public.acc_domain(domain)))

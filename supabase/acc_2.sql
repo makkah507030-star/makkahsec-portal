@@ -42,7 +42,7 @@ drop policy if exists acc_plans_read on public.acc_plans;
 create policy acc_plans_read on public.acc_plans for select to authenticated using (public.acc_member());
 drop policy if exists acc_plans_write on public.acc_plans;
 create policy acc_plans_write on public.acc_plans for all to authenticated using (public.acc_coord()) with check (public.acc_coord());
--- العضو يرى برامج مجالاته ويعمل عليها ما لم تُؤرشف النسخة، والإضافة والحذف للمنسق
+-- العضو يرى برامج مجالاته ويعمل عليها ما لم تُؤرشف النسخة، والإضافة والحذف للمشرف
 drop policy if exists acc_programs_read on public.acc_programs;
 create policy acc_programs_read on public.acc_programs for select to authenticated using (public.acc_domain(domain));
 drop policy if exists acc_programs_add on public.acc_programs;
@@ -60,7 +60,7 @@ create or replace function public.acc_plan_copy(p_plan uuid, p_report uuid, p_ti
 returns uuid language plpgsql security definer set search_path = public as $$
 declare v_new uuid; v_sc jsonb := '{}'; v_src text := 'self';
 begin
-  if not public.acc_coord() then raise exception 'للمنسق ومدير المدرسة'; end if;
+  if not public.acc_coord() then raise exception 'لمشرف اللجنة ومدير المدرسة'; end if;
   if p_report is not null then
     select scores, case kind when 'external' then 'external' else 'self' end into v_sc, v_src from acc_reports where id = p_report;
   end if;
@@ -80,7 +80,7 @@ end $$;
 -- اعتماد نسخة: تصبح السارية وتُؤرشف غيرها من العام نفسه
 create or replace function public.acc_plan_activate(p_plan uuid) returns void language plpgsql security definer set search_path = public as $$
 begin
-  if not public.acc_coord() then raise exception 'للمنسق ومدير المدرسة'; end if;
+  if not public.acc_coord() then raise exception 'لمشرف اللجنة ومدير المدرسة'; end if;
   update acc_plans set status = 'archived' where academic_year = (select academic_year from acc_plans where id = p_plan)
     and id <> p_plan and status = 'active';
   update acc_plans set status = 'active', approved_at = now(), approved_by_name = (select full_name from users where id = auth.uid())
