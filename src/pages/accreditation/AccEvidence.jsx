@@ -139,7 +139,6 @@ function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
         <input className="field text-sm" dir="ltr" value={f.link} onChange={(e) => setF({ ...f, link: e.target.value })} placeholder="أو رابط https://" />
       </div>
       <input className="field text-sm" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="ملاحظة (اختياري)" />
-      <p className="text-[11px] text-faint">لا تُرفع بيانات شخصية للطلاب (هويات، جوالات، درجات بالأسماء) إلا ما يلزم الشاهد، والملفات خاصة بأعضاء اللجنة.</p>
       <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={add}>{busy ? "جارٍ الرفع…" : "إضافة الشاهد"}</button>
     </div>
   );
