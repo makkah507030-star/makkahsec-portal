@@ -33,6 +33,7 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
   const [report, setReport] = useState(false);
   const [busy, setBusy] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [importErr, setImportErr] = useState("");
   const [susEdit, setSusEdit] = useState(null);
   const loadProgs = () => plan
     ? supabase.from("acc_programs").select("*").eq("plan_id", plan.id).order("code").then(({ data, error }) => { if (error) setMsg({ ok: false, text: setupMsg(error) }); setProgs(data ?? []); })
@@ -47,34 +48,48 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
   const sustain = list.filter((p) => p.kind === "sustain");
 
   // استيراد خطة المدرسة 1448هـ: تقرير التقويم الذاتي بنسبه، والنسخة الأولى بكل برامجها
-  const importPlan = async () => {
-    if (!window.confirm("استيراد خطة 1448هـ من ملف المدرسة؟ يُنشأ تقرير التقويم الذاتي بنسبه، ونسخة أولى من الخطة فيها 23 برنامجًا و24 إجراء استدامة.")) return;
-    setBusy(true);
+  // استيراد خطة المدرسة 1448هـ: تقرير التقويم الذاتي بنسبه، والنسخة الأولى بكل برامجها.
+  // يُستكمل إن أُنشئت النسخة من قبل بلا برامج (into)، ولا يكرر ما أُدخل.
+  const importPlan = async (into = null) => {
+    if (!window.confirm(into ? "إكمال استيراد برامج خطة 1448هـ في هذه النسخة؟"
+      : "استيراد خطة 1448هـ من ملف المدرسة؟ يُنشأ تقرير التقويم الذاتي بنسبه، ونسخة أولى من الخطة فيها 23 برنامجًا و24 إجراء استدامة.")) return;
+    setBusy(true); setImportErr("");
+    const fail = (e, step) => { setBusy(false); const t = `${step}: ${setupMsg(e)}`; setImportErr(t); setMsg({ ok: false, text: t }); };
     const by = profile?.full_name ?? null;
-    // الأداء العام الرسمي في تقرير 1448هـ: 75% (التقدم)
-    const scores = { ...Object.fromEntries(Object.entries(SELF_1448).filter(([, [v]]) => v != null).map(([c, [v]]) => [c, v])), _overall: 75 };
-    let rep = reports.find((r) => r.kind === "self" && r.academic_year === year);
-    if (!rep) {
-      const { data, error } = await supabase.from("acc_reports").insert({ kind: "self", academic_year: year, title: `تقرير التقويم الذاتي ${year}هـ`, scores, created_by_name: by }).select().single();
-      if (error) { setBusy(false); setMsg({ ok: false, text: setupMsg(error) }); return; }
-      rep = data;
+    let pl = into;
+    if (!pl) {
+      // الأداء العام الرسمي في تقرير 1448هـ: 75% (التقدم)
+      const scores = { ...Object.fromEntries(Object.entries(SELF_1448).filter(([, [v]]) => v != null).map(([c, [v]]) => [c, v])), _overall: 75 };
+      let rep = reports.find((r) => r.kind === "self" && r.academic_year === year);
+      if (!rep) {
+        const { data, error } = await supabase.from("acc_reports").insert({ kind: "self", academic_year: year, title: `تقرير التقويم الذاتي ${year}هـ`, scores, created_by_name: by }).select().single();
+        if (error) return fail(error, "تقرير التقويم الذاتي");
+        rep = data;
+      }
+      const { data, error } = await supabase.from("acc_plans").insert({
+        academic_year: year, version: 1, title: `خطة التحسين والتطوير ${year}هـ`, source: "self", report_id: rep.id,
+        milestones: MILESTONES_1448, created_by_name: by }).select().single();
+      if (error) return fail(error, "إنشاء الخطة");
+      pl = data;
     }
-    const { data: pl, error: e1 } = await supabase.from("acc_plans").insert({
-      academic_year: year, version: 1, title: `خطة التحسين والتطوير ${year}هـ`, source: "self", report_id: rep.id,
-      milestones: MILESTONES_1448, created_by_name: by }).select().single();
-    if (e1) { setBusy(false); setMsg({ ok: false, text: setupMsg(e1) }); return; }
+    // كل صف بالحقول نفسها: الإدراج الجماعي يملأ الحقل الغائب بقيمة فارغة لا بالافتراضية، فيُرفض
+    const have = new Set((into ? progs ?? [] : []).map((p) => p.code));
+    const row = (o) => ({ plan_id: pl.id, semester: null, team: [], methods: [], evidence: [], follow: null, period: null, measure: null,
+      needs: null, rec: null, owner: null, ...o });
     const rows = [
-      ...PROGRAMS_1448.map((p, i) => ({ plan_id: pl.id, kind: "plan", code: p.code, current: SELF_1448[p.code][0], target: SELF_1448[p.code][1],
+      ...PROGRAMS_1448.map((p, i) => row({ kind: "plan", code: p.code, current: SELF_1448[p.code][0], target: SELF_1448[p.code][1],
         semester: p.semester, team: p.team, initiative: p.initiative, methods: p.methods.map((t) => ({ t })), evidence: p.evidence,
         follow: p.follow, period: p.period, measure: p.measure, needs: p.needs ?? null, rec: p.rec, sort: i })),
-      ...SUSTAIN_1448.map(([code, initiative, owner], i) => ({ plan_id: pl.id, kind: "sustain", code, current: SELF_1448[code][0],
+      ...SUSTAIN_1448.map(([code, initiative, owner], i) => row({ kind: "sustain", code, current: SELF_1448[code][0],
         target: SELF_1448[code][1], initiative, owner, sort: 100 + i })),
-    ];
-    const { error: e2 } = await supabase.from("acc_programs").insert(rows);
-    if (!e2) await supabase.rpc("acc_plan_activate", { p_plan: pl.id });
+    ].filter((r) => !have.has(r.code));
+    if (rows.length) {
+      const { error } = await supabase.from("acc_programs").insert(rows);
+      if (error) return fail(error, "إدخال البرامج");
+    }
+    if (pl.status !== "active") await supabase.rpc("acc_plan_activate", { p_plan: pl.id });
     setBusy(false);
-    if (e2) { setMsg({ ok: false, text: e2.message }); return; }
-    setMsg({ ok: true, text: "استُوردت خطة 1448هـ وأصبحت النسخة السارية." }); setPlanId(pl.id); reload();
+    setMsg({ ok: true, text: "استُوردت خطة 1448هـ وأصبحت النسخة السارية." }); setPlanId(pl.id); loadProgs(); reload();
   };
 
   const newVersion = async () => {
@@ -101,11 +116,22 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
     <div className="card space-y-2 p-4 text-sm">
       <p className="font-semibold text-ink">لا خطة تحسين بعد</p>
       <p className="text-muted">الخطة الحالية مبنية على تقرير التقويم الذاتي حتى يصدر تقرير التقويم الخارجي، ثم تُحدَّث بنسخة جديدة.</p>
-      {me.coord ? <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={importPlan}>{busy ? "جارٍ الاستيراد…" : "استيراد خطة 1448هـ من ملف المدرسة"}</button>
+      {me.coord ? <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={() => importPlan()}>{busy ? "جارٍ الاستيراد…" : "استيراد خطة 1448هـ من ملف المدرسة"}</button>
         : <p className="text-faint">يستوردها مشرف اللجنة.</p>}
+      {importErr && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-xs leading-relaxed text-absent">تعذّر الاستيراد — {importErr}</p>}
     </div>
   );
   if (!progs) return <Loader />;
+  // نسخة أُنشئت بلا برامج (تعثّر استيراد سابق): إكمال الاستيراد فيها
+  if (!progs.length && plan.status !== "archived") return (
+    <div className="card space-y-2 p-4 text-sm">
+      <p className="font-semibold text-ink">{plan.title} — بلا برامج بعد</p>
+      <p className="text-muted">أُنشئت هذه النسخة ولم تُدخل برامجها. أكمل الاستيراد لتُضاف البرامج الـ23 وإجراءات الاستدامة الـ24 وتصبح الخطة السارية.</p>
+      {me.coord ? <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={() => importPlan(plan)}>{busy ? "جارٍ الاستيراد…" : "إكمال استيراد خطة 1448هـ"}</button>
+        : <p className="text-faint">يكمله مشرف اللجنة.</p>}
+      {importErr && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-xs leading-relaxed text-absent">تعذّر الاستيراد — {importErr}</p>}
+    </div>
+  );
   if (report) return <AccPlanReport plan={plan} progs={progs} reports={reports} members={members} onClose={() => setReport(false)} />;
   const st = PLAN_STATUS[plan.status];
   const ext = reports.find((r) => r.id === plan.report_id && r.kind === "external");
