@@ -6,7 +6,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { fmtDate } from "../../lib/dates";
 import { confirmDanger } from "../../lib/danger";
 import {
-  CODES, DOMAINS, STANDARDS, INDICATORS, PLAN_BELOW, domainOf, LEVEL_T, PLAN_STATUS, levelOf, stdOf, progOf, fmtPct, setupMsg,
+  CODES, DOMAINS, DOMAIN_COLOR, STANDARDS, INDICATORS, PLAN_BELOW, domainOf, LEVEL_T, PLAN_STATUS, levelOf, stdOf, progOf, fmtPct, setupMsg,
 } from "../../lib/accreditation.js";
 import { SELF_1448, PROGRAMS_1448, SUSTAIN_1448, MILESTONES_1448 } from "../../lib/accPlan1448.js";
 import Loader from "../../components/Loader.jsx";
@@ -227,7 +227,7 @@ function Program({ p, open, onToggle, canEdit, edit, by, onSaved, setMsg }) {
   return (
     <div className="card overflow-hidden">
       <button onClick={onToggle} className="flex w-full flex-wrap items-center gap-3 p-3 text-start">
-        <span className="num rounded-sm2 bg-mint-deep px-2 py-1 text-xs font-bold text-white">{p.code}</span>
+        <span className="num rounded-sm2 px-2 py-1 text-xs font-bold text-white" style={{ background: DOMAIN_COLOR[p.domain] }}>{p.code}</span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-ink">{p.initiative || INDICATORS[p.code]}</span>
           <span className="block text-[11.5px] text-muted">{STANDARDS[stdOf(p.code)]} · {INDICATORS[p.code]}</span>

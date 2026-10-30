@@ -208,3 +208,8 @@ export function domainSummary(domains, { progs, ev, scores = {} }) {
   const approved = evs.filter((e) => e.status === "approved").length;
   return { codes, inPlan, sustain, evs, gaps, done, met, perf, approved };
 }
+
+// لون لكل مجال في الشواهد وعارضها وبطاقات المؤشرات
+export const DOMAIN_COLOR = { 1: "#2F5D8A", 2: "#2E7D6B", 3: "#9A6A1F", 4: "#7A4FB5" };
+// نوع ملف الشاهد من امتداده: pdf أو image أو other
+export const fileKind = (path) => (/\.pdf$/i.test(path ?? "") ? "pdf" : /\.(png|jpe?g|webp|gif|bmp)$/i.test(path ?? "") ? "image" : "other");
