@@ -155,7 +155,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
         {rows.length ? <table className="mr-table">
           <thead><tr><th style={{ width: 62 }}>الرمز</th><th>الشاهد</th><th style={{ width: 52 }}>الحالة</th><th style={{ width: 120 }}>رفعه</th></tr></thead>
           <tbody>{rows.map((e) => (
-            <tr key={e.id}><td className="c num"><b>{e.code}</b></td><td>{e.title}</td>
+            <tr key={e.id}><td className="c num"><b>{e.code}</b></td><td>{e.title}{e.link?.startsWith("portal:") && <span style={L}> · من أعمال البوابة</span>}</td>
               <td className="c">{EV_STATUS[e.status].t}</td><td style={{ fontSize: 10 }}>{e.created_by_name ?? "—"} · <span className="num">{fmtDate(e.created_at)}</span></td></tr>))}</tbody>
         </table> : <Box tint><div className="mr-notes">لم يُرفع شاهد بعد.</div></Box>}
       </Page>
