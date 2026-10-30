@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { fmtDate } from "../../lib/dates";
 import { usePrincipalSignature } from "../../lib/principalSignature.js";
 import {
-  DOMAINS, STANDARDS, INDICATORS, TOOLS, EV_STATUS, LEVEL_T, LEVELS, roleT, levelOf, stdOf, progOf, fmtPct, domainSummary,
+  DOMAINS, STANDARDS, INDICATORS, EV_STATUS, LEVEL_T, LEVELS, roleT, levelOf, stdOf, progOf, fmtPct, domainSummary,
 } from "../../lib/accreditation.js";
 import { S, Kpis, Box, Bars, Highlights, Signs, Page, Cover, paginate } from "../../components/report/ReportKit.jsx";
 import ReportViewer from "../../components/report/ReportViewer.jsx";
@@ -15,7 +15,6 @@ import ReportViewer from "../../components/report/ReportViewer.jsx";
    نواتجها ← الشواهد المرفوعة ← غير المرفوعة ← مساهمة المشرفين ← الاعتماد والتوقيع والختم.
    ===================================================================== */
 
-const toolT = Object.fromEntries(TOOLS.map((t) => [t.key, t.t]));
 const short = (t, n = 80) => (t && t.length > n ? `${t.slice(0, n)}…` : t);
 const L = { color: "var(--mr-ink2)" };
 
@@ -129,9 +128,9 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
     ...(evPages.length ? evPages : [[]]).map((rows, i) => (
       <Page key={`ev${i}`} {...common} page={pg++} sec={i ? null : { no: 4, title: "الشواهد المرفوعة", sub: `${sm.gaps.uploaded} شاهدًا · المعتمد ${sm.approved}` }}>
         {rows.length ? <table className="mr-table">
-          <thead><tr><th style={{ width: 62 }}>الرمز</th><th>الشاهد</th><th style={{ width: 110 }}>الأداة</th><th style={{ width: 52 }}>الحالة</th><th style={{ width: 120 }}>رفعه</th></tr></thead>
+          <thead><tr><th style={{ width: 62 }}>الرمز</th><th>الشاهد</th><th style={{ width: 52 }}>الحالة</th><th style={{ width: 120 }}>رفعه</th></tr></thead>
           <tbody>{rows.map((e) => (
-            <tr key={e.id}><td className="c num"><b>{e.code}</b></td><td>{e.title}</td><td style={{ fontSize: 10 }}>{toolT[e.tool] ?? "—"}</td>
+            <tr key={e.id}><td className="c num"><b>{e.code}</b></td><td>{e.title}</td>
               <td className="c">{EV_STATUS[e.status].t}</td><td style={{ fontSize: 10 }}>{e.created_by_name ?? "—"} · <span className="num">{fmtDate(e.created_at)}</span></td></tr>))}</tbody>
         </table> : <Box tint><div className="mr-notes">لم يُرفع شاهد بعد.</div></Box>}
       </Page>
