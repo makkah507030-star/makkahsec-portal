@@ -1,4 +1,5 @@
 // src/pages/accreditation/AccDashboard.jsx
+import { countAr } from "../../lib/arabicCount.js";
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate } from "../../lib/dates";
@@ -102,9 +103,9 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
               <span key={t} className="num absolute translate-x-1/2" style={{ right: `${t}%` }}>{t}</span>))}</div>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Stat v={`${a.measured}/47`} t="مؤشرًا مقاسًا" s={fresh.length ? `${fresh.length} مستحدث بلا قياس` : null} />
+            <Stat v={`${a.measured}/47`} t="المؤشرات المقاسة" s={fresh.length ? `مستحدثة بلا قياس: ${fresh.length}` : null} />
             <Stat v={low.length} t="دون مستوى التقدم" c="rgb(var(--c-absent))" s="مرشحة لخطة التحسين" />
-            <Stat v={`${tot.done}%`} t="إنجاز برامج الخطة" c={pctColor(tot.done)} s={`${tot.inPlan.length} برنامجًا · تحقق ${tot.met}%`} />
+            <Stat v={`${tot.done}%`} t="إنجاز برامج الخطة" c={pctColor(tot.done)} s={`${countAr(tot.inPlan.length, "program")} · تحقق ${tot.met}%`} />
             <Stat v={`${evPct}%`} t="الشواهد المطلوبة" c={pctColor(evPct)} s={`بقي ${tot.gaps.missing.filter((g) => g.title).length} من ${tot.gaps.required}`} />
           </div>
           {next && <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">المحطة القادمة في الخطة: <b>{next.title}</b> — {next.due} · {next.owner}</p>}
@@ -128,7 +129,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
               <div className="grid grid-cols-4 gap-1 text-center">
                 <Mini v={x.codes.length} t="مؤشرات" />
                 <Mini v={below} t="دون 75%" c={below ? "rgb(var(--c-absent))" : "rgb(var(--c-present))"} />
-                <Mini v={`${x.done}%`} t={`إنجاز ${x.inPlan.length} برامج`} c={pctColor(x.done)} />
+                <Mini v={`${x.done}%`} t={`إنجاز ${countAr(x.inPlan.length, "program", { acc: true })}`} c={pctColor(x.done)} />
                 <Mini v={x.gaps.required ? `${x.gaps.required - left}/${x.gaps.required}` : "—"} t={left ? `شواهد · بقي ${left}` : "شواهد"} c={x.gaps.required ? pctColor(((x.gaps.required - left) / x.gaps.required) * 100) : undefined} />
               </div>
             </button>
@@ -172,7 +173,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
       {/* جدول أولويات التحسين */}
       <section className="card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-          <h2 className="text-sm font-bold text-ink">أولويات التحسين <span className="num font-normal text-muted">— {low.length} مؤشرًا دون {PLAN_BELOW}%، من الأدنى</span></h2>
+          <h2 className="text-sm font-bold text-ink">أولويات التحسين <span className="num font-normal text-muted">— {countAr(low.length, "indicator")} دون {PLAN_BELOW}%، من الأدنى</span></h2>
           {low.length > 8 && <button className="text-xs font-semibold text-mint-deep" onClick={() => setAllLow(!allLow)}>{allLow ? "أهم 8 فقط" : `عرض الكل (${low.length})`}</button>}
         </div>
         {low.length === 0 ? <p className="px-4 py-6 text-center text-sm text-present">لا مؤشرات دون مستوى التقدم.</p> : (

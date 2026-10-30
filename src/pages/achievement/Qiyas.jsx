@@ -8,6 +8,7 @@
    • التحليل على المعتمد وحده: أعلى درجة لكل طالب، والمتوسط والتوزيع والفصول، ومن لم يُدخل بعد.
    • النتيجة الرسمية للمدرسة من بطاقة الهيئة (قسم التقويم والاعتماد، supabase/acc_5.sql) تُقارن بما سُجّل هنا.
    ===================================================================== */
+import { countAr } from "../../lib/arabicCount.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
@@ -96,7 +97,7 @@ export default function Qiyas() {
             <button key={t.k} onClick={() => setTest(t.k)}
                     className={`rounded-card border px-3 py-3 text-start transition ${on ? "border-mint-deep bg-mint-deep text-white shadow-card" : "border-line bg-white hover:border-mint-light"}`}>
               <span className={`block text-sm font-bold ${on ? "text-white" : "text-ink"}`}>{t.t}</span>
-              <span className={`mt-0.5 block text-[11px] ${on ? "text-white/80" : "text-faint"}`}>{n ? `${n} طالبًا` : "لا نتائج بعد"}{p ? ` · ${p} بانتظار التحقق` : ""}</span>
+              <span className={`mt-0.5 block text-[11px] ${on ? "text-white/80" : "text-faint"}`}>{n ? countAr(n, "student") : "لا نتائج بعد"}{p ? ` · ${p} بانتظار التحقق` : ""}</span>
             </button>
           );
         })}
@@ -194,7 +195,7 @@ function Official({ series, best }) {
         {r.district_avg != null && <>متوسط الإدارة <b className="num text-ink">{r.district_avg}</b> والمملكة <b className="num text-ink">{r.kingdom_avg ?? "—"}</b>. </>}
         {r.change_pct != null && <>التغير عن العام السابق <b className="num text-ink">{signed(r.change_pct)}%</b>. </>}
         {diff != null && s.n > 0 && <>متوسط المسجّلة {diff === 0 ? "يساوي" : diff > 0 ? "أعلى من" : "أدنى من"} الرسمي{diff ? <> بـ<b className="num text-ink">{Math.abs(diff)}</b></> : ""}
-          {r.takers && s.n < r.takers * 0.8 ? ` — سُجّل ${s.n} طالبًا من ${r.takers} مختبرًا، فقد لا تمثّل المسجّلة المدرسة كلها.` : "."}</>}
+          {r.takers && s.n < r.takers * 0.8 ? ` — سُجّلت نتائج ${countAr(s.n, "student", { acc: true })} من ${countAr(r.takers, "examinee", { acc: true })}، فقد لا تمثّل المسجّلة المدرسة كلها.` : "."}</>}
       </p>
     </section>
   );
@@ -206,7 +207,7 @@ function Analysis({ best, test, students }) {
   const byClass = useMemo(() => [...groupBy(best, (b) => `${b.grade}|${b.class_no}`)].map(([k, bs]) => {
     const [g, c] = k.split("|");
     const x = stats(bs.map((b) => ({ testPct: b.score })));
-    return { key: k, g: Number(g), c: Number(c), label: `${GRADE_NAMES[g]?.split(" ")[0] ?? ""} ${c}`, value: x.avg, tip: `${x.n} طالبًا` };
+    return { key: k, g: Number(g), c: Number(c), label: `${GRADE_NAMES[g]?.split(" ")[0] ?? ""} ${c}`, value: x.avg, tip: countAr(x.n, "student") };
   }).sort((a, b) => a.g - b.g || a.c - b.c), [best]);
   const third = students.filter((x) => x.grade === 3);
   const missing = test.k === "step" ? null : third.filter((x) => !best.some((b) => b.student_id === x.student_id)).length;
@@ -222,7 +223,7 @@ function Analysis({ best, test, students }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="متوسط الدرجات" value={s.avg ?? "—"} sub={`الوسيط ${s.median ?? "—"} · من 100`} />
         <Stat label="نتائج مسجّلة" value={s.n} sub={missing != null ? `${missing} من طلاب الثالث لم تُسجَّل لهم نتيجة بعد` : "أعلى درجة لكل طالب"} />
-        <Stat label="90 فأكثر" value={pctTxt(s.exPct)} sub={`${s.ex} طالبًا`} />
+        <Stat label="90 فأكثر" value={pctTxt(s.exPct)} sub={countAr(s.ex, "student")} />
         <Stat label="أعلى درجة" value={s.max ?? "—"} sub={`أدنى درجة ${s.min ?? "—"}`} />
       </div>
       <section className="card p-4">
@@ -312,7 +313,7 @@ function Upload({ test, year, students, me, onDone, setMsg }) {
       if (error) { setBusy(false); setMsg({ ok: false, text: /qiyas_results/.test(error.message) ? setupMsg : error.message }); return; }
     }
     setBusy(false);
-    onDone(`حُفظت نتائج ${test.t} لـ ${payload.length} طالبًا (${attempt}) معتمدة.`);
+    onDone(`حُفظت نتائج ${test.t} لـ ${countAr(payload.length, "student", { acc: true })} (${attempt}) معتمدة.`);
   };
 
   const saveOne = () => {
@@ -350,7 +351,7 @@ function Upload({ test, year, students, me, onDone, setMsg }) {
           <p className="text-[12.5px] text-ink">مطابق: <b className="num">{preview.ok.length}</b> · غير مطابق أو بلا درجة: <b className="num text-absent">{preview.bad.length}</b></p>
           {preview.bad.length > 0 && <p className="text-[11.5px] text-muted">أمثلة: {preview.bad.slice(0, 6).map((b) => `${b.nid} (${b.why})`).join("، ")}</p>}
           <button onClick={() => save(preview.ok, "official")} disabled={busy || !preview.ok.length}
-                  className="rounded-pill bg-mint-deep px-4 py-2 text-xs font-semibold text-white">{busy ? "…" : `حفظ ${preview.ok.length} نتيجة`}</button>
+                  className="rounded-pill bg-mint-deep px-4 py-2 text-xs font-semibold text-white">{busy ? "…" : `حفظ ${countAr(preview.ok.length, "result")}`}</button>
         </div>
       )}
       <div className="border-t border-line pt-3">

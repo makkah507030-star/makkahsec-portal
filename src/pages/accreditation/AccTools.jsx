@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useNotice } from "../../lib/useNotice.js";
+import { countAr } from "../../lib/arabicCount.js";
 import { TOOLS, sampleMin } from "../../lib/accreditation.js";
 import Loader from "../../components/Loader.jsx";
 
@@ -41,7 +42,7 @@ export default function AccTools({ me, year }) {
       <p className="rounded-sm2 bg-canvas px-3 py-2 text-sm text-muted">تُطبَّق الأدوات في منصة تميز؛ هنا توزيعها ومتابعتها. أُغلقت <span className="num font-bold text-ink">{closed}</span> من <span className="num">{TOOLS.length}</span> أدوات.</p>
       <section className="card p-4 text-sm">
         <p className="mb-1 font-semibold text-ink">الحد الأدنى لعينة الاستبانات</p>
-        {min ? <p className="text-muted">عدد الطلاب <span className="num font-bold text-ink">{students}</span>: الطلاب <span className="num font-bold text-ink">{min.q_students}%</span> (نحو <span className="num">{Math.ceil(students * min.q_students / 100)}</span> طالبًا)، والمعلمون <span className="num font-bold text-ink">{min.q_teachers}%</span>، والأسر <span className="num font-bold text-ink">{min.q_family}%</span>.</p>
+        {min ? <p className="text-muted">عدد الطلاب <span className="num font-bold text-ink">{students}</span>: الطلاب <span className="num font-bold text-ink">{min.q_students}%</span> (نحو {countAr(Math.ceil(students * min.q_students / 100), "student")})، والمعلمون <span className="num font-bold text-ink">{min.q_teachers}%</span>، والأسر <span className="num font-bold text-ink">{min.q_family}%</span>.</p>
           : <p className="text-muted">أقل من 100 طالب: 50% و70% و25% · من 100 إلى 300: 40% و60% و15% · أكثر من 300: 30% و50% و10% (الطلاب والمعلمون والأسر).</p>}
         <p className="mt-1 text-xs text-faint">الملاحظات الصفية: 15 على الأقل، موزعة على المواد والمعلمين.</p>
       </section>

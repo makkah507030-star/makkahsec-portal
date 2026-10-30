@@ -7,9 +7,9 @@ import { useNotice } from "../../lib/useNotice.js";
 import { fmtDate } from "../../lib/dates";
 import { confirmDanger } from "../../lib/danger";
 import {
-  CODES, DOMAINS, DOMAIN_COLOR, STANDARDS, INDICATORS, EV_STATUS, ACC_BUCKET, domainOf, stdOf, levelOf, fmtPct, fileKind, accUpload, setupMsg,
+  CODES, DOMAINS, DOMAIN_COLOR, STANDARDS, INDICATORS, EV_STATUS, ACC_BUCKET, bidi, domainOf, stdOf, levelOf, fmtPct, fileKind, accUpload, setupMsg,
 } from "../../lib/accreditation.js";
-import { PORTAL_BY, loadPortalCounts, portalKey, sourcesOf } from "../../lib/accPortal.js";
+import { PORTAL_BY, loadPortalCounts, portalCount, portalKey, portalNoun, sourcesOf } from "../../lib/accPortal.js";
 import AccViewer from "./AccViewer.jsx";
 import Loader from "../../components/Loader.jsx";
 
@@ -185,7 +185,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
               <div key={x.k} className={`flex items-center gap-2 rounded-sm2 border bg-white px-3 py-2 ${n ? "" : "opacity-60"}`} style={{ borderColor: n ? `${color}55` : undefined }}>
                 <span className="num grid h-9 min-w-9 shrink-0 place-items-center rounded-full px-1.5 text-xs font-bold" style={n ? { background: `${color}18`, color } : undefined}>{n}</span>
                 <span className="min-w-0 flex-1"><span className="block text-[12.5px] font-semibold leading-snug text-ink">{x.t}</span>
-                  <span className="block text-[10.5px] text-muted">{n ? `${n} ${x.u} هذا العام` : "لا عمل مسجّل هذا العام"}{linked && " · مربوط شاهدًا"}</span></span>
+                  <span className="block text-[10.5px] text-muted">{n ? portalCount(x, n) : x.ever ? "لا عمل مسجّل" : "لا عمل مسجّل هذا العام"}{linked && " · مربوط شاهدًا"}</span></span>
                 <span className="flex shrink-0 flex-col items-end gap-1">
                   <button className="text-[11px] font-semibold" style={{ color }} onClick={() => nav(x.to)}>فتح ←</button>
                   {n > 0 && !linked && <button className="text-[11px] font-semibold text-mint-deep" onClick={() => linkPortal(x.t, x)}>+ شاهدًا</button>}
@@ -198,7 +198,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
       {view && <AccViewer ev={view} color={color} onClose={() => setView(null)} />}
       {!more ? <button className="text-xs font-semibold" style={{ color }} onClick={() => setMore(true)}>+ شاهد إضافي بعنوان آخر</button> : (
         <div className="space-y-2 rounded-sm2 border border-dashed bg-white p-3" style={{ borderColor: `${color}66` }}>
-          <p className="text-xs font-bold" style={{ color }}>+ شاهد {slots.length ? "إضافي" : "جديد"} للمؤشر {code}</p>
+          <p className="text-xs font-bold" style={{ color }}>+ شاهد {slots.length ? "إضافي" : "جديد"} للمؤشر <span className="num">{code}</span></p>
           <input className="field text-sm" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="عنوان الشاهد" />
           <input type="file" accept="application/pdf,image/*" className="text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           <input className="field text-sm" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="ملاحظة (اختياري)" />
@@ -222,7 +222,7 @@ function Slot({ title, color, ready, counts, onUpload, onLink }) {
     <label className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 p-4 text-center ${busy ? "opacity-60" : "hover:bg-canvas"}`}>
       <input type="file" accept="application/pdf,image/*" className="hidden" disabled={busy} onChange={pick} />
       <span className="grid h-11 w-11 place-items-center rounded-full text-xl font-bold text-white" style={{ background: color }}>{busy ? "…" : "↑"}</span>
-      <p className="text-sm font-semibold leading-snug text-ink">{title}</p>
+      <p className="text-sm font-semibold leading-snug text-ink">{bidi(title)}</p>
       <span className="chip bg-late/10 text-late">لم يُرفع بعد</span>
       <span className="text-[11px] font-semibold" style={{ color }}>{busy ? "جارٍ الرفع…" : "اضغط لرفع الملف (PDF أو صورة)"}</span>
     </label>
@@ -286,7 +286,7 @@ function EvCard({ e, color, thumb, me, uid, counts, onView, onChange, setMsg }) 
         {kind === "image" && thumb ? <img src={thumb} alt="" className="h-full w-full object-cover" />
           : src && !e.file_path ? <span className="grid place-items-center gap-0.5 px-3 text-center" style={{ color }}>
               <b className="num text-3xl leading-none">{counts?.[src.k] ?? "—"}</b>
-              <span className="text-[11px] font-semibold">{src.u} هذا العام · من أعمال البوابة</span>
+              <span className="text-[11px] font-semibold">{portalNoun(src, counts?.[src.k] ?? 0)} · من أعمال البوابة</span>
             </span>
           : <span className="grid place-items-center gap-1" style={{ color }}>
               <svg viewBox="0 0 24 24" className="h-10 w-10" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
@@ -308,8 +308,8 @@ function EvCard({ e, color, thumb, me, uid, counts, onView, onChange, setMsg }) 
         </div>
       ) : (
         <div className="flex flex-1 flex-col gap-1 p-3">
-          <p className="text-sm font-semibold leading-snug text-ink">{e.title}</p>
-          {e.notes && <p className="text-xs text-muted">{e.notes}</p>}
+          <p className="text-sm font-semibold leading-snug text-ink">{bidi(e.title)}</p>
+          {e.notes && <p className="text-xs text-muted">{bidi(e.notes)}</p>}
           <p className="mt-auto text-[11px] text-faint">{[e.created_by_name, fmtDate(e.created_at)].filter(Boolean).join(" · ")}</p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <button className={act} style={{ borderColor: color, color }} onClick={viewIt}>عرض</button>
@@ -350,19 +350,19 @@ function EvStats({ all, doms, me, setMsg }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-ink">مساعد الشواهد</p>
-          <p className="text-xs leading-relaxed text-muted">رُفع <b className="num text-ink">{all.done}</b> من <b className="num text-ink">{all.req}</b> شاهدًا مطلوبًا في خطة التحسين، وبقي <b className="num text-late">{all.left}</b>.
+          <p className="text-xs leading-relaxed text-muted">الشواهد المطلوبة في خطة التحسين <b className="num text-ink">{all.req}</b>: رُفع منها <b className="num text-ink">{all.done}</b>، وبقي <b className="num text-late">{all.left}</b>.
             اضغط المؤشر لتظهر بطاقات شواهده، وارفع كل ملف في بطاقته أو اربطه بعمل مسجّل في البوابة.</p>
         </div>
         {me.coord && <button className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mint-deep" disabled={busy} onClick={remind}>{busy ? "…" : "تذكير مشرفي المجالات"}</button>}
       </div>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-7">
-        {tile(all.left, "متبقٍ", "rgb(var(--c-late))")}
-        {tile(all.files, "شاهدًا مسجّلًا")}
-        {tile(all.approved, "معتمد", "rgb(var(--c-present))")}
-        {tile(all.reviewed, "مراجَع", "rgb(var(--c-excused))")}
-        {tile(`${all.full}/${all.withReq}`, "مؤشرًا مكتملًا")}
-        {tile(all.portal, "مؤشرًا له عمل في البوابة", "rgb(var(--c-present))")}
-        {tile(all.empty, "مؤشرًا بلا شاهد", "rgb(var(--c-absent))")}
+        {tile(all.left, "المتبقي", "rgb(var(--c-late))")}
+        {tile(all.files, "الشواهد المسجّلة")}
+        {tile(all.approved, "المعتمد", "rgb(var(--c-present))")}
+        {tile(all.reviewed, "المراجَع", "rgb(var(--c-excused))")}
+        {tile(`${all.full}/${all.withReq}`, "المؤشرات المكتملة")}
+        {tile(all.portal, "مؤشرات لها عمل في البوابة", "rgb(var(--c-present))")}
+        {tile(all.empty, "مؤشرات بلا شاهد", "rgb(var(--c-absent))")}
       </div>
       {doms.length > 1 && <div className="space-y-1.5">{doms.map(([d, x]) => (
         <div key={d} className="flex items-center gap-2 text-xs">

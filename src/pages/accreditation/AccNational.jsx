@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
-import { ACC_BUCKET, DOMAIN_COLOR, INDICATORS, accUpload, levelOf, fmtPct } from "../../lib/accreditation.js";
+import { ACC_BUCKET, DOMAIN_COLOR, INDICATORS, accUpload, bidi, levelOf, fmtPct } from "../../lib/accreditation.js";
 import { NAT_TESTS, NAT_BANDS, NAT_PROPOSALS, loadNational, natSeries, signed } from "../../lib/accNational.js";
 import AccViewer from "./AccViewer.jsx";
 import Loader from "../../components/Loader.jsx";
@@ -137,7 +137,7 @@ export function NatCard({ test, series, me, onEdit, onView, compact }) {
           {r.file_path ? <button className="font-semibold text-mint-deep" onClick={() => onView({ file_path: r.file_path, code: T.level, title: `بطاقة ${T.t} ${r.academic_year}هـ` })}>عرض بطاقة الهيئة</button>
             : <span className="text-faint">لم يُرفق ملف الهيئة بعد</span>}
           {me.coord && <button className="font-semibold text-mint-deep" onClick={() => onEdit(r)}>تعديل{r.file_path ? "" : " وإرفاق الملف"}</button>}
-          {r.notes && <span className="basis-full text-faint">{r.notes}</span>}
+          {r.notes && <span className="basis-full text-faint">{bidi(r.notes)}</span>}
         </div>}
       </div>
     </section>
@@ -287,7 +287,7 @@ function Proposals({ me, plans, by, setMsg }) {
 
   const apply = async (code) => {
     const P = NAT_PROPOSALS[code], p = by_[code];
-    if (!(await confirmDanger({ title: `اعتماد المقترح لبرنامج ${code}`, impact: ["يُستبدل اسم البرنامج وفريقه وبنوده وشواهده المطلوبة ومؤشر قياسه وتوصياته بالمقترح.", "تبقى نسبته الحالية والمستهدفة، وإنجاز البنود المتطابقة نصًا."], confirmLabel: "اعتماد" }))) return;
+    if (!(await confirmDanger({ title: bidi(`اعتماد المقترح لبرنامج ${code}`), impact: ["يُستبدل اسم البرنامج وفريقه وبنوده وشواهده المطلوبة ومؤشر قياسه وتوصياته بالمقترح.", "تبقى نسبته الحالية والمستهدفة، وإنجاز البنود المتطابقة نصًا."], confirmLabel: "اعتماد" }))) return;
     setBusy(code);
     const old = new Map((p?.methods ?? []).map((m) => [m.t, m]));
     const body = { initiative: P.initiative, team: P.team, methods: P.methods.map((t) => old.get(t) ?? { t }), evidence: P.evidence,
@@ -296,14 +296,14 @@ function Proposals({ me, plans, by, setMsg }) {
       : await supabase.from("acc_programs").insert({ ...body, plan_id: plan.id, kind: "plan", code, target: 75, follow: "فريق التقويم الذاتي", sort: 10 + codes.indexOf(code) });
     setBusy(null);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
-    setMsg({ ok: true, text: `اعتُمد المقترح لبرنامج ${code}، ويُعدَّل متى شئتم من «خطة التحسين ← تعديل البرنامج».` });
+    setMsg({ ok: true, text: bidi(`اعتُمد المقترح لبرنامج ${code}، ويُعدَّل متى شئتم من «خطة التحسين ← تعديل البرنامج».`) });
     load();
   };
 
   return (
     <section className="card overflow-hidden">
       <div className="border-b border-line px-4 py-3">
-        <h2 className="text-sm font-bold text-ink">اقتراح تحديث برامج المؤشرات 3-1-1-1 إلى 3-1-1-4</h2>
+        <h2 className="text-sm font-bold text-ink">اقتراح تحديث برامج المؤشرات <span className="num">3-1-1-1</span> إلى <span className="num">3-1-1-4</span></h2>
         <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
           البرامج الحالية موجهة إلى القراءة والرياضيات العامة، والمؤشرات تقيس التحصيلي والقدرات. المقترح مبني على بطاقات 1447هـ:
           أضعف مجالات التحصيلي الرياضيات ثم الكيمياء والفيزياء، ونحو 64% في التحصيلي و61% في القدرات دون 65.
