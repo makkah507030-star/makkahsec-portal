@@ -4,6 +4,7 @@
 --   (كانت تعدّ كل الإقرارات بأي وثيقة ومن غير المعلمين).
 -- • الاختبارات: بلا المسودات، كالملف الرقمي. الإشعارات: المرسلة يدويًا بلا الآلية.
 -- • الترشيحات: المنشورة. المعرض: المنشور. الأخبار: المنشورة في العام.
+-- • حضور الحصص: عدد الحصص المرصودة (الحصة في يومها مرة واحدة) بدل سجلات الطلاب.
 -- يستبدل الدالة من acc_6.sql، ويُنفَّذ بعده. تكرار التنفيذ آمن.
 -- =====================================================================
 create or replace function public.acc_portal_counts()
@@ -42,7 +43,7 @@ begin
     ('acc_meetings', 'select count(*) from acc_meetings where academic_year = $1'),
     ('ach_meetings', 'select count(*) from ach_meetings where academic_year = $1'),
     ('attendance', 'select count(distinct attend_date) from daily_attendance where academic_year = $1'),
-    ('class_att', 'select count(*) from class_attendance where academic_year = $1'),
+    ('class_att', 'select count(*) from (select distinct schedule_id, attend_date from class_attendance where academic_year = $1) x'),
     ('warnings', 'select count(*) from absence_warnings where academic_year = $1'),
     ('excuses', 'select count(*) from excused_absences where academic_year = $1'),
     ('permissions', 'select count(*) from permission_requests where created_at >= $2'),

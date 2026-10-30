@@ -36,7 +36,7 @@ export const PORTAL_SOURCES = [
   { k: "acc_meetings", t: "محاضر لجنة التميز", u: "محضر", to: "/accreditation?tab=team", codes: ["1-4-1-3", "1-4-1-4", "1-1-1-2"] },
   { k: "ach_meetings", t: "محاضر لجنة التحصيل", u: "محضر", to: "/ach-committee", codes: ["2-2-1-3", "1-1-1-2"] },
   { k: "attendance", t: "أيام رصد الحضور الآلي", u: "يومًا", to: "/attendance-overview", codes: ["1-2-1-3", "3-2-1-5"] },
-  { k: "class_att", t: "رصد حضور الحصص", u: "سجل", to: "/period-attendance", codes: ["1-2-1-3", "2-1-1-2"] },
+  { k: "class_att", t: "الحصص المرصود حضورها", u: "حصة", to: "/period-attendance", codes: ["1-2-1-3", "2-1-1-2"] },
   { k: "warnings", t: "إنذارات الغياب", u: "إنذار", to: "/attendance-overview", codes: ["1-2-1-3"] },
   { k: "excuses", t: "أعذار الغياب الموثقة", u: "عذر", to: "/absence-excuses", codes: ["1-2-1-3", "1-3-1-2"] },
   { k: "permissions", t: "الاستئذان الموثق", u: "طلب", to: "/permissions", codes: ["1-2-1-3", "1-5-1-1"] },
