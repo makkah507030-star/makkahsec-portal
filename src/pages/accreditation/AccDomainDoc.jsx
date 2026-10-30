@@ -125,7 +125,8 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
             <Bars full max={100} items={NAT_BANDS.map((b) => ({ t: `${b.t} (${b.s})`, v: r[b.k] ?? 0, c: b.c, note: fmtPct(r[b.k]) }))} />
             {r.subs?.length > 0 && <Bars full max={100} items={[...r.subs].sort((a, b) => a.v - b.v).map((s2) => ({ t: s2.t, v: s2.v, c: S[2], note: `${r.subs_estimated ? "≈" : ""}${s2.v}` }))} />}
             <div className="mr-notes" style={{ fontSize: 10, ...L }}>
-              {T.growth}: {x.length === 1 ? `هذا العام خط الأساس (المتوسط ${r.avg}).` : `المتوسط ${signed(r.dBase)} عن خط الأساس ${x[0].academic_year}هـ (${x[0].avg}).`}
+              {T.growth}: {r.isBase ? `هذا العام خط الأساس (المتوسط ${r.avg}).` : `المتوسط ${signed(r.dBase)} عن خط الأساس ${x.find((y) => y.isBase).academic_year}هـ (${x.find((y) => y.isBase).avg}).`}
+              {x.length > 1 && ` المتوسط عبر الأعوام: ${x.map((y) => `${y.academic_year}هـ ${y.avg}`).join(" · ")}.`}
               {r.subs_estimated ? " المجالات الفرعية تقديرية من أطوال الأشرطة في البطاقة." : ""}
             </div>
           </Box>

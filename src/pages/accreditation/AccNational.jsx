@@ -12,7 +12,7 @@ import Loader from "../../components/Loader.jsx";
 /* =====================================================================
    الاختبارات الوطنية (supabase/acc_5.sql): بطاقة لكل اختبار بآخر عام: المتوسط والتغير، والتوزيع
    على المستويات، والمقارنة بالإدارة والمملكة، والترتيب، والمجالات الفرعية، وقياس التقدم عن خط
-   الأساس (أول عام) للمؤشرين المستحدثين. يُدخل مشرف اللجنة كل عام مرة ويرفق ملف الهيئة، فيُرفع
+   الأساس (العام المعلَّم، 1447هـ) للمؤشرين المستحدثين، والأعوام السابقة تاريخ. يُدخل مشرف اللجنة كل عام مرة ويرفق ملف الهيئة، فيُرفع
    الملف شاهدًا للمؤشرين. وتحتها اقتراح تحديث برامج 3-1-1-1 إلى 3-1-1-4 يعتمده المشرف.
    ===================================================================== */
 
@@ -37,7 +37,7 @@ export default function AccNational({ me, year, plans }) {
     <div className="space-y-4">
       <p className="text-sm leading-relaxed text-muted">
         بطاقات القدرات والتحصيلي من هيئة تقويم التعليم والتدريب: تُدخل أرقام كل عام مرة واحدة ويُرفق ملف الهيئة، فتظهر في لوحة الأداء
-        وتقرير مجال نواتج التعلم، ويُقاس بها تقدم المؤشرين المستحدثين <b className="num text-ink">3-1-1-3</b> و<b className="num text-ink">3-1-1-4</b> قياسًا على أول عام (خط الأساس).
+        وتقرير مجال نواتج التعلم، ويُقاس بها تقدم المؤشرين المستحدثين <b className="num text-ink">3-1-1-3</b> و<b className="num text-ink">3-1-1-4</b> قياسًا على عام خط الأساس (1447هـ ما لم يُغيَّر)، وتظهر الأعوام السابقة تاريخًا بفرق كل عام عن سابقه.
       </p>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.text}</p>}
@@ -65,7 +65,7 @@ export function NatCard({ test, series, me, onEdit, onView, compact }) {
   const cmp = [["المدرسة", r.school_avg ?? r.avg, C3], ["الإدارة", r.district_avg, "#7C8796"], ["المملكة", r.kingdom_avg, "#A9B1BC"]].filter((x) => x[1] != null);
   const lo = Math.floor(Math.min(...cmp.map((x) => x[1])) - 3), hi = Math.ceil(Math.max(...cmp.map((x) => x[1])) + 1);
   const w = (v) => `${Math.max(4, ((v - lo) / (hi - lo)) * 100)}%`;
-  const base = series[0];
+  const base = series.find((x) => x.isBase);
 
   return (
     <section className="card overflow-hidden" style={{ borderTop: `4px solid ${C3}` }}>
@@ -78,7 +78,8 @@ export function NatCard({ test, series, me, onEdit, onView, compact }) {
       <div className="space-y-4 p-4">
         <div className="grid grid-cols-3 gap-2 text-center">
           <Fig v={r.avg} t="متوسط الدرجات" c={C3} big />
-          <Fig v={r.change_pct == null ? "—" : `${signed(r.change_pct)}%`} t="التغير عن العام السابق" c={dColor(r.change_pct)} />
+          {r.change_pct != null || r.dPrev == null ? <Fig v={r.change_pct == null ? "—" : `${signed(r.change_pct)}%`} t="التغير عن العام السابق" c={dColor(r.change_pct)} />
+            : <Fig v={signed(r.dPrev)} t="عن العام السابق (نقطة)" c={dColor(r.dPrev)} />}
           <Fig v={r.takers ?? "—"} t="المختبرون" />
         </div>
 
@@ -117,15 +118,17 @@ export function NatCard({ test, series, me, onEdit, onView, compact }) {
 
         <div className="rounded-sm2 px-3 py-2 text-xs" style={{ background: `${C3}12`, color: C3 }}>
           <b className="num">{T.growth}</b> {INDICATORS[T.growth].replace("يحقق المتعلمون ", "")}{" "}
-          {r === base ? <>هذا العام <b>خط الأساس</b>: المتوسط <b className="num">{r.avg}</b>، والمرتفع <b className="num">{r.high_pct ?? "—"}%</b>، ودون 65 <b className="num">{r.low_pct ?? "—"}%</b>.</>
-            : <>المتوسط <b className="num" style={{ color: dColor(r.dBase) }}>{signed(r.dBase)}</b> عن خط الأساس ({base.academic_year}هـ: <span className="num">{base.avg}</span>)،
-              والمرتفع <b className="num" style={{ color: dColor(r.dHigh) }}>{signed(r.dHigh)}</b>، ودون 65 <b className="num" style={{ color: dColor(-r.dLow) }}>{signed(r.dLow)}</b> نقطة.</>}
+          {r.isBase ? <>هذا العام <b>خط الأساس</b>: المتوسط <b className="num">{r.avg}</b>{r.high_pct != null && <>، والمرتفع <b className="num">{r.high_pct}%</b>، ودون 65 <b className="num">{r.low_pct ?? "—"}%</b></>}{r.dPrev != null && <>، وعن العام السابق <b className="num" style={{ color: dColor(r.dPrev) }}>{signed(r.dPrev)}</b></>}.</>
+            : r.beforeBase ? <>عام سابق لخط الأساس ({base.academic_year}هـ){r.dPrev != null && <>، والمتوسط عن العام الذي قبله <b className="num" style={{ color: dColor(r.dPrev) }}>{signed(r.dPrev)}</b></>}.</>
+            : <>المتوسط <b className="num" style={{ color: dColor(r.dBase) }}>{signed(r.dBase)}</b> عن خط الأساس ({base.academic_year}هـ: <span className="num">{base.avg}</span>)، و<b className="num" style={{ color: dColor(r.dPrev) }}>{signed(r.dPrev)}</b> عن العام السابق
+              {r.dHigh != null && <>، والمرتفع <b className="num" style={{ color: dColor(r.dHigh) }}>{signed(r.dHigh)}</b>، ودون 65 <b className="num" style={{ color: dColor(r.dLow == null ? null : -r.dLow) }}>{signed(r.dLow)}</b> نقطة</>}.</>}
         </div>
 
+        {series.length > 1 && <Trend series={series} />}
         {!compact && series.length > 1 && <div className="overflow-x-auto"><table className="w-full min-w-[420px] text-xs">
           <thead className="bg-canvas text-muted"><tr>{["العام", "المتوسط", "عن السابق", "عن خط الأساس", "مرتفع", "دون 65"].map((h) => <th key={h} className="px-2 py-1.5 text-start font-medium">{h}</th>)}</tr></thead>
           <tbody className="divide-y divide-line">{series.map((x) => (
-            <tr key={x.id}><td className="num px-2 py-1.5">{x.academic_year}{x.isBase && <span className="text-faint"> (الأساس)</span>}</td><td className="num px-2 py-1.5 font-semibold">{x.avg}</td>
+            <tr key={x.id}><td className="px-2 py-1.5"><span className="num">{x.academic_year}</span>{x.isBase && <span className="text-faint"> (الأساس)</span>}</td><td className="num px-2 py-1.5 font-semibold">{x.avg}</td>
               <td className="num px-2 py-1.5" style={{ color: dColor(x.dPrev) }}>{signed(x.dPrev)}</td><td className="num px-2 py-1.5" style={{ color: dColor(x.dBase) }}>{signed(x.dBase)}</td>
               <td className="num px-2 py-1.5">{fmtPct(x.high_pct)}</td><td className="num px-2 py-1.5">{fmtPct(x.low_pct)}</td></tr>))}</tbody>
         </table></div>}
@@ -138,6 +141,24 @@ export function NatCard({ test, series, me, onEdit, onView, compact }) {
         </div>}
       </div>
     </section>
+  );
+}
+
+/* المتوسط عبر الأعوام: عمود لكل عام، وخط الأساس بإطار */
+function Trend({ series }) {
+  const v = series.map((x) => x.avg).filter((a) => a != null);
+  const lo = Math.floor(Math.min(...v) - 2), hi = Math.ceil(Math.max(...v) + 1);
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-semibold text-ink">المتوسط عبر الأعوام</p>
+      <div className="flex h-28 items-end gap-2">{series.map((x) => (
+        <div key={x.id} className="flex flex-1 flex-col items-center gap-1">
+          <span className="num text-[10.5px] font-bold text-ink">{x.avg ?? "—"}</span>
+          <span className="w-full max-w-12 rounded-t-sm2" style={{ height: `${x.avg == null ? 0 : Math.max(6, ((x.avg - lo) / (hi - lo)) * 72)}px`,
+            background: x.isBase ? C3 : x.beforeBase ? "#C9CED6" : `${C3}AA`, outline: x.isBase ? `2px solid ${C3}` : undefined, outlineOffset: 2 }} />
+          <span className="text-[10.5px] text-muted"><span className="num">{x.academic_year}</span>{x.isBase && " · الأساس"}</span>
+        </div>))}</div>
+    </div>
   );
 }
 
@@ -165,7 +186,7 @@ function NatForm({ row, year, by, setMsg, onDone }) {
   const T = NAT_TESTS[row.test];
   const isNew = !row.id;
   const [x, setX] = useState(() => ({ ...Object.fromEntries(NUMS.map(([k]) => [k, row[k] ?? ""])), academic_year: row.academic_year ?? year,
-    subs: (row.subs ?? []).map((s) => `${s.t}: ${s.v}`).join("\n"), subs_estimated: row.subs_estimated ?? false, notes: row.notes ?? "" }));
+    subs: (row.subs ?? []).map((s) => `${s.t}: ${s.v}`).join("\n"), subs_estimated: row.subs_estimated ?? false, notes: row.notes ?? "", baseline: row.baseline ?? false }));
   const [file, setFile] = useState(null);
   const [asEv, setAsEv] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -186,16 +207,19 @@ function NatForm({ row, year, by, setMsg, onDone }) {
       if (up.error) { setBusy(false); setMsg({ ok: false, text: up.error.message }); return; }
       file_path = up.path;
     }
-    const payload = { ...vals, test: row.test, academic_year: x.academic_year.trim(), subs, subs_estimated: x.subs_estimated,
+    const payload = { ...vals, test: row.test, academic_year: x.academic_year.trim(), subs, subs_estimated: x.subs_estimated, baseline: x.baseline,
       notes: x.notes.trim() || null, file_path, updated_at: new Date().toISOString(), ...(isNew ? { created_by_name: by ?? null } : {}) };
     const q = isNew ? supabase.from("acc_national").insert(payload) : supabase.from("acc_national").update(payload).eq("id", row.id);
     const { error } = await q;
+    // خط الأساس عام واحد لكل اختبار
+    if (!error && x.baseline) await supabase.from("acc_national").update({ baseline: false }).eq("test", row.test).neq("academic_year", payload.academic_year);
     if (error) { setBusy(false); setMsg({ ok: false, text: /duplicate|unique/.test(error.message) ? `بطاقة ${T.t} لعام ${payload.academic_year} مُدخلة من قبل؛ عدّلها بدل إضافتها.` : error.message }); return; }
     if (file && row.file_path) supabase.storage.from(ACC_BUCKET).remove([row.file_path]);
     // رفع البطاقة شاهدًا لمؤشري الاختبار بنسخة لكل مؤشر، فحذف أحد الشاهدين لا يحذف ملف البطاقة
     let added = 0;
     if (file && asEv) {
-      const { data: first } = await supabase.from("acc_national").select("academic_year").eq("test", row.test).order("academic_year").limit(1).maybeSingle();
+      const { data: all } = await supabase.from("acc_national").select("academic_year, baseline").eq("test", row.test).order("academic_year");
+      const first = (all ?? []).find((a) => a.baseline) ?? all?.[0];
       const { data: have } = await supabase.from("acc_evidence").select("code, title").in("code", [T.level, T.growth]);
       for (const [code, title] of evTitles(T, payload.academic_year, first?.academic_year === payload.academic_year)) {
         if ((have ?? []).some((e) => e.code === code && e.title.trim() === title)) continue;
@@ -231,6 +255,8 @@ function NatForm({ row, year, by, setMsg, onDone }) {
           <span className="mt-1 flex items-center gap-1.5"><input type="checkbox" checked={x.subs_estimated} onChange={(e) => setX({ ...x, subs_estimated: e.target.checked })} />القيم تقديرية من أطوال الأشرطة (البطاقة لا تكتب أرقامها)</span>
         </label>
         <div className="space-y-2">
+          <label className="flex items-center gap-1.5 text-[11.5px] text-ink"><input type="checkbox" checked={x.baseline} onChange={(e) => setX({ ...x, baseline: e.target.checked })} />
+            هذا العام خط الأساس للمؤشر <span className="num">{T.growth}</span> (يُقاس التقدم بعده عليه)</label>
           <label className="block text-[11.5px] text-muted">ملاحظات<textarea className="field mt-1 h-16 w-full text-sm" value={x.notes} onChange={set("notes")} /></label>
           <label className="block text-[11.5px] text-muted">ملف بطاقة الهيئة (PDF أو صورة){row.file_path && " — يستبدل الملف الحالي"}
             <input type="file" accept=".pdf,image/*" className="mt-1 block text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></label>

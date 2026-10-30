@@ -3,8 +3,8 @@ import { supabase } from "./supabase";
 
 /* =====================================================================
    نتائج الاختبارات الوطنية الرسمية (supabase/acc_5.sql): بطاقات القدرات والتحصيلي من هيئة تقويم
-   التعليم والتدريب لكل عام. أول عام مُدخل خط الأساس، ومقارنة كل عام به وبالعام السابق قياسٌ
-   للمؤشرين المستحدثين 3-1-1-3 و3-1-1-4.
+   التعليم والتدريب لكل عام. خط الأساس العام المعلَّم (baseline) وإلا فأول عام، ومقارنة ما بعده به
+   وبالعام السابق قياسٌ للمؤشرين المستحدثين 3-1-1-3 و3-1-1-4، وما قبله تاريخٌ بفرق كل عام عن سابقه.
    ===================================================================== */
 
 export const NAT_TESTS = {
@@ -24,22 +24,24 @@ export async function loadNational() {
 }
 
 const r2 = (v) => (v == null ? null : Math.round(v * 100) / 100);
-/** سلسلة اختبار واحد بالأعوام، وكل عام بفرقه عن السابق وعن خط الأساس (أول عام) */
+/** سلسلة اختبار واحد بالأعوام، وكل عام بفرقه عن السابق، وما بعد خط الأساس بفرقه عنه */
 export function natSeries(rows, test) {
   const list = rows.filter((r) => r.test === test).sort((a, b) => a.academic_year.localeCompare(b.academic_year));
-  const base = list[0] ?? null;
-  return list.map((r, i) => ({ ...r, isBase: i === 0,
-    dPrev: i && r.avg != null && list[i - 1].avg != null ? r2(r.avg - list[i - 1].avg) : null,
-    dBase: i && r.avg != null && base.avg != null ? r2(r.avg - base.avg) : null,
-    dHigh: i && r.high_pct != null && base.high_pct != null ? r2(r.high_pct - base.high_pct) : null,
-    dLow: i && r.low_pct != null && base.low_pct != null ? r2(r.low_pct - base.low_pct) : null }));
+  const bi = Math.max(0, list.findIndex((r) => r.baseline));
+  const base = list[bi] ?? null;
+  const d = (a, b) => (a != null && b != null ? r2(a - b) : null);
+  return list.map((r, i) => ({ ...r, isBase: i === bi, beforeBase: i < bi,
+    dPrev: i ? d(r.avg, list[i - 1].avg) : null,
+    dBase: i > bi ? d(r.avg, base.avg) : null,
+    dHigh: i > bi ? d(r.high_pct, base.high_pct) : null,
+    dLow: i > bi ? d(r.low_pct, base.low_pct) : null }));
 }
 /** قياس مؤشر التقدم: خط الأساس وآخر عام والفرق بينهما */
 export function natGrowth(rows, test) {
   const s = natSeries(rows, test);
   if (!s.length) return null;
-  const last = s[s.length - 1];
-  return { base: s[0], last, delta: last.dBase, only: s.length === 1 };
+  const base = s.find((x) => x.isBase), last = s[s.length - 1];
+  return { base, last, delta: last.dBase, only: last === base };
 }
 export const signed = (v) => (v == null ? "—" : `${v > 0 ? "+" : ""}${v}`);
 
