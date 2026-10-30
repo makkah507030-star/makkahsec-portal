@@ -15,6 +15,7 @@ import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
 import OfficialLinks from "../components/OfficialLinks.jsx";
 import TasksBox from "../components/TasksBox.jsx";
+import PollsCard from "../components/PollsCard.jsx";
 import PhotoConsentCard from "../components/PhotoConsentCard.jsx";
 import QuizResults from "../components/QuizResults.jsx";
 import { useSession } from "../lib/session.jsx";
@@ -160,6 +161,8 @@ export default function GuardianHome() {
 
       {/* الترتيب بالأولوية: ما ينتظر ولي الأمر، ثم حضور ابنه، ثم نتائجه، ثم يومه، ثم المرجع */}
       <TasksBox />
+
+      <PollsCard />
 
       <PhotoConsentCard key={`pc-${active?.id}`} studentId={active?.id} name={cleanName(active?.full_name)} />
 

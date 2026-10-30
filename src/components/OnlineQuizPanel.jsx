@@ -15,7 +15,8 @@ import { buildOfflinePackage } from "../lib/offlineQuizBuild.js";
    • «نشر وإرسال» يُسند الاختبار ويُرسل إشعار الجرس والجوال برابط الاختبار
      للطلاب المختارين فقط.
    • بعد النشر: متابعة حيّة لمن بدأ ومن سلّم ودرجته، مع التذكير والإغلاق والتعديل.
-   • بعد الإغلاق: «إعادة فتح لمن لم يختبر» تفتحه من الآن حتى موعد جديد وتُشعر من لم يبدأ فقط.
+   • بعد الإغلاق: «إعادة فتح الاختبار» تفتحه من الآن حتى موعد جديد للغائبين تلقائيًا، ولمن يختارهم
+     المعلم ممن سلّموا لإعادة الاختبار (supabase/quiz_retake_1.sql)، ويُشعَر هؤلاء وحدهم.
    • التسليم يُصحَّح آليًا ويظهر في «التصحيح والدرجات» وكشف الرصد كالورقي.
    • «دون إنترنت» (mode = offline): النشر نفسه، وموعد الفتح بداية التنزيل، والإغلاق آخر
      موعد للتنزيل والمسح. يؤدّيه الطالب في الحصة بلا اتصال (OfflineQuizTools).
@@ -40,6 +41,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   const [roster, setRoster] = useState({});          // class_id → [{id, full_name}]
   const [form, setForm] = useState(null);            // عند الإنشاء أو التعديل
   const [reopen, setReopen] = useState(null);        // موعد الإغلاق الجديد عند إعادة الفتح
+  const [retake, setRetake] = useState(new Set());   // من سلّموا ويعيدون الاختبار
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useNotice(null);
   const [tick, setTick] = useState(Date.now());
@@ -180,6 +182,16 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     if (closes <= new Date()) { setMsg({ ok: false, text: "موعد الإغلاق الجديد يجب أن يكون بعد الآن." }); return; }
     const opens = new Date(); opens.setSeconds(0, 0);
     setBusy(true); setMsg(null);
+    // من اختارهم المعلم ممن سلّموا: تُمسح محاولتهم أولًا فيدخلون من جديد (وتبقى درجتهم حتى يسلّموا)
+    if (retake.size) {
+      const { error: e0 } = await supabase.rpc("retake_online_quiz", { p_quiz: quiz.id, p_students: [...retake] });
+      if (e0) {
+        setBusy(false);
+        setMsg({ ok: false, text: /retake_online_quiz|schema cache|function/i.test(e0.message)
+          ? "إعادة الاختبار تحتاج تشغيل supabase/quiz_retake_1.sql مرة واحدة في Supabase ← SQL Editor." : e0.message });
+        return;
+      }
+    }
     const { data: n, error } = await supabase.rpc("publish_online_quiz", {
       p_quiz: quiz.id, p_students: assigns.map((a) => a.student_id),
       p_opens: opens.toISOString(), p_closes: closes.toISOString(),
@@ -187,7 +199,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     });
     setBusy(false);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
-    setReopen(null);
+    setReopen(null); setRetake(new Set());
     setTick(Date.now());
     setMsg({ ok: true, text: `أُعيد فتح الاختبار حتى ${fmtDateTime(closes)}` +
       (n ? `، وأُرسل الإشعار إلى ${n === 1 ? "طالب واحد" : n === 2 ? "طالبين" : `${n} ${n <= 10 ? "طلاب" : "طالبًا"}`}.` : ".") });
@@ -345,6 +357,9 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
   const done = assigns.filter((a) => a.submitted_at).length;
   const going = assigns.filter((a) => (offline ? a.offline_at : a.started_at) && !a.submitted_at).length;
   const missed = now >= closes ? assigns.filter((a) => !a.started_at) : [];
+  const finished = now >= closes && !offline ? assigns.filter((a) => a.submitted_at) : [];
+  const toggleRetake = (id) => setRetake((x) => { const y = new Set(x); y.has(id) ? y.delete(id) : y.add(id); return y; });
+  const reached = missed.length + retake.size;
 
   return (
     <section className="card space-y-4 p-4">
@@ -377,32 +392,53 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
 
       {reopen != null && (
         <div className="space-y-3 rounded-card border border-mint-light bg-mint-tint p-3">
-          <p className="text-sm font-semibold text-ink">إعادة فتح الاختبار لمن لم يختبر</p>
+          <p className="text-sm font-semibold text-ink">إعادة فتح الاختبار</p>
           <p className="text-xs leading-relaxed text-muted">
-            يُفتح الاختبار من الآن حتى الموعد الجديد، ويصل إشعار في الجرس وعلى الجوال إلى
-            {missed.length === 1 ? " طالب واحد" : missed.length === 2 ? " طالبين" : ` ${missed.length} ${missed.length <= 10 ? "طلاب" : "طالبًا"}`}:
-            <span className="text-ink"> {missed.map((a) => a.students?.full_name).join("، ")}</span>.
-            من سلّم لا يتأثر، ومن لا يختبر حتى الموعد الجديد يُسجَّل غائبًا.
+            يُفتح الاختبار من الآن حتى الموعد الجديد، ويصل إشعار في الجرس وعلى الجوال إلى الغائبين ومن تختارهم لإعادته وحدهم.
           </p>
+          <div className="rounded-sm2 bg-white/70 px-3 py-2 text-xs">
+            <p className="font-semibold text-ink">الغائبون <span className="num font-normal text-muted">({missed.length})</span> — يُضمَّنون تلقائيًا</p>
+            <p className="mt-0.5 text-muted">{missed.length ? missed.map((a) => a.students?.full_name).join("، ") : "لا غائبين."}</p>
+          </div>
+          {finished.length > 0 && (
+            <div className="rounded-sm2 bg-white/70 px-3 py-2 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-semibold text-ink">إعادة الاختبار لمن سلّم <span className="font-normal text-muted">(اختياري)</span></p>
+                <button type="button" className="text-mint-deep underline"
+                        onClick={() => setRetake(retake.size === finished.length ? new Set() : new Set(finished.map((a) => a.student_id)))}>
+                  {retake.size === finished.length ? "إلغاء الكل" : "تحديد الكل"}</button>
+              </div>
+              <div className="mt-1.5 grid gap-1 sm:grid-cols-2">
+                {finished.map((a) => (
+                  <label key={a.id} className="flex items-center gap-2 rounded-sm2 px-1.5 py-1 hover:bg-canvas">
+                    <input type="checkbox" checked={retake.has(a.student_id)} onChange={() => toggleRetake(a.student_id)} />
+                    <span className="min-w-0 flex-1 truncate text-ink">{a.students?.full_name}</span>
+                    {subs[a.student_id]?.score != null && <bdi className="num text-muted">{subs[a.student_id].score}</bdi>}
+                  </label>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] text-faint">تبقى درجته الحالية حتى يسلّم المحاولة الجديدة فتحل محلها، وإن لم يختبر حتى الموعد الجديد بقيت كما هي.</p>
+            </div>
+          )}
           <label className="block text-xs text-muted">يُغلق في
             <input type="datetime-local" className="field mt-1" value={reopen} onChange={(e) => setReopen(e.target.value)} />
           </label>
           <p className="text-[11px] text-faint">المدة كما هي: <bdi className="num">{online.duration_min}</bdi> دقيقة لكل طالب.</p>
           <div className="flex flex-wrap gap-2">
-            <button className="btn-primary flex-1" disabled={busy} onClick={doReopen}>
-              {busy ? "جارٍ الفتح…" : "إعادة الفتح وإرسال الإشعار"}
+            <button className="btn-primary flex-1" disabled={busy || !reached} onClick={doReopen}>
+              {busy ? "جارٍ الفتح…" : `إعادة الفتح وإرسال الإشعار (${reached})`}
             </button>
             <button className="rounded-pill border border-line px-4 py-2 text-sm text-muted"
-                    onClick={() => { setReopen(null); setMsg(null); }}>إلغاء</button>
+                    onClick={() => { setReopen(null); setRetake(new Set()); setMsg(null); }}>إلغاء</button>
           </div>
         </div>
       )}
 
       <div className="flex flex-wrap gap-2">
-        {missed.length > 0 && reopen == null && (
+        {(missed.length > 0 || finished.length > 0) && reopen == null && (
           <button className="rounded-pill border border-mint-light bg-mint-tint px-3 py-1.5 text-xs font-semibold text-mint-deep"
                   disabled={busy} onClick={() => { setMsg(null); setReopen(toLocal(new Date(nextFive().getTime() + 24 * 3600e3))); }}>
-            إعادة فتح لمن لم يختبر (<bdi className="num">{missed.length}</bdi>)
+            إعادة فتح الاختبار{missed.length > 0 && <> (<bdi className="num">{missed.length}</bdi> غائب)</>}
           </button>
         )}
         <button className="rounded-pill border border-line px-3 py-1.5 text-xs font-semibold text-muted hover:bg-canvas"

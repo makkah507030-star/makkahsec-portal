@@ -36,6 +36,7 @@ import HomeBanners from "../../components/HomeBanners.jsx";
 import StaffHeader from "../../components/StaffHeader.jsx";
 import TasksBox from "../../components/TasksBox.jsx";
 import StaffCallsCard from "../../components/StaffCallsCard.jsx";
+import PollsCard from "../../components/PollsCard.jsx";
 import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 
@@ -128,6 +129,7 @@ export default function Dashboard() {
         <HomeBanners />
         <TasksBox />
         <StaffCallsCard />
+        <PollsCard />
         <DutyCard />
         <section className="card px-6 py-12 text-center">
           <p className="text-lg font-bold text-ink">
@@ -163,6 +165,7 @@ export default function Dashboard() {
       <TasksBox />
 
       <StaffCallsCard />
+      <PollsCard />
 
       {/* حساب إداري محدود الصلاحيات: ترحيب وتوجيه للقائمة الجانبية */}
       {barren && (

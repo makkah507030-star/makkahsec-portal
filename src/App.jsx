@@ -53,6 +53,9 @@ const ScoutReports = lazy(() => import("./pages/scouts/ScoutReports.jsx"));
 const MyScouts = lazy(() => import("./pages/scouts/MyScouts.jsx"));
 const MyMediaTeam = lazy(() => import("./pages/media/MyMediaTeam.jsx"));
 const MediaContact = lazy(() => import("./pages/media/MediaContact.jsx"));
+const Polls = lazy(() => import("./pages/polls/Polls.jsx"));
+const PollsAdmin = lazy(() => import("./pages/polls/PollsAdmin.jsx"));
+const PollsCard = lazy(() => import("./components/PollsCard.jsx"));
 const GlobeTeam = lazy(() => import("./pages/admin/GlobeTeam.jsx"));
 const GiftedHub = lazy(() => import("./pages/gifted/GiftedHub.jsx"));
 const MediaGallery = lazy(() => import("./pages/media/MediaGallery.jsx"));
@@ -122,6 +125,8 @@ const AchForm = lazy(() => import("./pages/achievement/AchForm.jsx"));
 const Qiyas = lazy(() => import("./pages/achievement/Qiyas.jsx"));
 const MyQiyas = lazy(() => import("./pages/achievement/MyQiyas.jsx"));
 const AchCommittee = lazy(() => import("./pages/achievement/AchCommittee.jsx"));
+// قسم التقويم والاعتماد المدرسي — لجنة التميز (supabase/acc_1..3.sql)
+const Accreditation = lazy(() => import("./pages/accreditation/Accreditation.jsx"));
 const AchFormsList = lazy(() => import("./pages/achievement/AchForm.jsx").then((m) => ({ default: m.AchFormsList })));
 const Nominations = lazy(() => import("./pages/nominations/Nominations.jsx"));
 const Opportunities = lazy(() => import("./pages/nominations/Opportunities.jsx"));
@@ -330,6 +335,7 @@ export default function App() {
       <ExamDayCard />
       {!hiddenTabs.has("attendance") && <TeacherTodayCard />}
       <TasksBox />
+      <PollsCard />
       <StaffCallsCard />
       <DutyCard personal />
     </div>
@@ -550,6 +556,7 @@ export default function App() {
           <Route path="/qiyas" element={<Qiyas />} />
           <Route path="/my-qiyas" element={<MyQiyas />} />
           <Route path="/ach-committee" element={<AchCommittee />} />
+          <Route path="/accreditation" element={<Accreditation />} />
           {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
           <Route path="/ach-forms" element={<AchGate><AchFormsList /></AchGate>} />
           <Route path="/ach-forms/:id" element={<AchGate><AchForm /></AchGate>} />
@@ -569,6 +576,9 @@ export default function App() {
           {effectiveRole === "student" && <Route path="/my-scouts" element={<MyScouts />} />}
           {effectiveRole !== "guardian" && <Route path="/my-media-team" element={<MyMediaTeam />} />}
           <Route path="/media-contact" element={<MediaContact />} />
+          {/* التصويت والاستطلاعات: للجميع بحسب فئته، وإدارتها لصاحب الصلاحية (supabase/polls_1..2.sql) */}
+          <Route path="/polls" element={<Polls />} />
+          {can("polls") && <Route path="/polls-admin" element={<PollsAdmin />} />}
           <Route path="/media" element={<MediaGallery />} />
           {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}

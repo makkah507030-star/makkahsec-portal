@@ -109,6 +109,13 @@ export const ADMIN_GROUPS = [
     ],
   },
   {
+    // قسم التقويم والاعتماد المدرسي: للمدير والوكيل والدعم الفني ولأعضاء لجنة التميز (supabase/acc_1.sql)
+    title: "التقويم والاعتماد المدرسي",
+    items: [
+      { to: "/accreditation", label: "التقويم والاعتماد المدرسي", accMember: true, icon: "award", kw: "لجنة التميز تقويم ذاتي خارجي خطة تحسين شواهد مؤشرات هيئة تقويم تميز اعتماد" },
+    ],
+  },
+  {
     // تظهر لمن يُسمح له بأحد معاملها فقط (المجموعة الفارغة تُخفى)
     title: "المعامل والمختبرات",
     items: [
@@ -144,9 +151,11 @@ export const ADMIN_GROUPS = [
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
+      { to: "/polls-admin",    label: "إدارة التصويت والاستطلاعات", perm: "polls", icon: "check", kw: "تصويت استطلاع انتخاب رأي مجلس طلابي" },
       { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
       { to: "/my-media-team",  label: "المركز الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية رئيس المركز عضوية" },
       { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
+      { to: "/polls", label: "التصويت والاستطلاعات", icon: "check", kw: "تصويت استطلاع انتخاب رأي" },
       { to: "/media",          label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       { to: "/guides-admin",   label: "الأدلة",    perm: "guides",   icon: "book" },
       { to: "/events",         label: "الأحداث والمناسبات", icon: "sparkles" },
@@ -197,6 +206,8 @@ const SECTIONS = [
     groups: ["الشؤون التعليمية", "المعامل والمختبرات"] },
   { key: "achievement", title: "التحصيل الدراسي", icon: "chart", hint: "تحليل النتائج والملاحظات والخطط العلاجية واختبارات قياس",
     groups: ["التحصيل الدراسي"] },
+  { key: "accreditation", title: "التقويم والاعتماد", icon: "award", hint: "لجنة التميز والتقويم الذاتي والخارجي وخطة التحسين وشواهد المؤشرات",
+    groups: ["التقويم والاعتماد المدرسي"] },
   { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والشهادات والأداء الوظيفي والتطوير المهني",
     groups: ["النماذج", "الأداء الوظيفي"] },
   { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأدلة والأحداث",
@@ -259,6 +270,12 @@ const TEACHER_GROUPS = [
     ],
   },
   {
+    title: "التقويم والاعتماد المدرسي",
+    items: [
+      { to: "/accreditation", label: "التقويم والاعتماد المدرسي", accMember: true, icon: "award", kw: "لجنة التميز تقويم ذاتي خارجي خطة تحسين شواهد مؤشرات" },
+    ],
+  },
+  {
     title: "النماذج",
     items: [
       { to: "/forms",        label: "النماذج والشهادات",  icon: "certificate" },
@@ -287,6 +304,7 @@ const TEACHER_GROUPS = [
       { to: "/media",      label: "معرض المدرسة",      icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       { to: "/my-media-team", label: "المركز الإعلامي",  icon: "palette", mediaMember: true, kw: "بطاقة اعلامية رئيس المركز عضوية" },
       { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
+      { to: "/polls", label: "التصويت والاستطلاعات", icon: "check", kw: "تصويت استطلاع انتخاب رأي" },
     ],
   },
 ];
@@ -309,6 +327,7 @@ const BASIC_GROUPS = [
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
       { to: "/media", label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
       { to: "/media-contact", label: "تواصل مع المركز الإعلامي", icon: "megaphone", kw: "طلب تغطية تصوير اقتراح مشاركة اعلامي" },
+      { to: "/polls", label: "التصويت والاستطلاعات", icon: "check", kw: "تصويت استطلاع انتخاب رأي" },
       // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
       { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
       // المركز الإعلامي — لعضوه وحده (supabase/media_3.sql)
@@ -473,6 +492,12 @@ export default function Layout({ children }) {
     supabase.rpc("media_card_me").then(({ data, error }) => setMediaMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
   const [achOpen] = useAchOpen();
+  // لجنة التميز: يظهر قسم التقويم والاعتماد لأعضائها وللمدير والوكيل والدعم الفني (acc_1.sql)
+  const [accMember, setAccMember] = useState(false);
+  useEffect(() => {
+    if (!isStaff) { setAccMember(false); return; }
+    supabase.rpc("acc_me").then(({ data, error }) => setAccMember(!error && !!data?.member));
+  }, [isStaff, session?.user?.id]);
 
   // هل يظهر الرابط لهذا المستخدم؟
   const visible = (i) => {
@@ -480,6 +505,7 @@ export default function Layout({ children }) {
     if (i.studentOnly && effectiveRole !== "student") return false;
     if (i.scoutMember && !scoutMember) return false;
     if (i.mediaMember && !mediaMember) return false;
+    if (i.accMember && !accMember) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
     // مركز تحليل النتائج وما حوله: مخفيّ حتى يُفتح، إلا رابط المركز نفسه
     // يبقى لمن يملك فتحه (الوكيل/المدير/الدعم) ليدخل ويفتحه.
@@ -507,7 +533,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember, accMember]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)

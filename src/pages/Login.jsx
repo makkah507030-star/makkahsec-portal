@@ -225,12 +225,9 @@ export default function Login() {
               </p>
             </div>
 
-            {/* نموذج الدعم مفتوحًا على «مشكلة في الدخول»: يتواصل الدعم الفني ويعيد التعيين بكلمة مؤقتة */}
+            {/* إعادة تعيين كلمة المرور حضوريًا فقط: طلبها عن بعد صار ذريعة لتكرار تغييرها */}
             <p className="mt-3 text-center text-[11.5px] leading-relaxed text-muted">
-              <Link to="/contact?type=login" className="font-semibold text-mint-deep underline underline-offset-2">
-                نسيت كلمة المرور؟
-              </Link>{" "}
-              الطالب يراجع الدعم الفني في المدرسة حضوريًا، والمعلم وولي الأمر يرسلان طلبًا ويُتواصل معهما.
+              نسيت كلمة المرور؟ راجع الدعم الفني في المدرسة لإعادة تعيينها.
             </p>
           </form>
 

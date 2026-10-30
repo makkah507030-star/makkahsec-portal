@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import { useSession } from "../lib/session.jsx";
 import { BANNER_KIND, bannerImage, isExternal } from "../lib/banners.js";
 import { useStudioTheme, StudioDecor } from "../lib/studioTheme.jsx";
 
@@ -17,11 +18,17 @@ export default function HomeBanners() {
   const track = useRef(null);
   const auto = useRef(false);   // تمرير برمجي جارٍ: لا تتبعه النقاط حتى لا يتوقف في منتصفه
 
+  // صاحب صلاحية الإعلانات يقرأ كل البطاقات بسياسة الإدارة (للتعديل)، فتُصفّى هنا كما يصفّيها الخادم لغيره:
+  // المفعّل، في مدته بتوقيت مكة، ولفئة المستخدم. والصف يفرضه الخادم للطالب وولي الأمر.
+  const { effectiveRole } = useSession();
+  const who = effectiveRole === "student" ? "student" : effectiveRole === "guardian" ? "guardian" : "staff";
   useEffect(() => {
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Riyadh" });
     supabase.from("home_banners").select("id, kind, title, body, image_path, link, link_label")
+      .eq("is_active", true).lte("starts_on", today).or(`ends_on.is.null,ends_on.gte.${today}`).contains("audience", [who])
       .order("sort").order("created_at", { ascending: false }).limit(12)
       .then(({ data, error }) => setRows(error ? [] : data ?? []));   // قبل تشغيل ملف SQL لا يظهر شيء
-  }, []);
+  }, [who]);
 
   // التقليب التلقائي، ويتوقف عند لمس البطاقات أو الوقوف عليها
   useEffect(() => {

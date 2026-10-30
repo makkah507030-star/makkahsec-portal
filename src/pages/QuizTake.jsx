@@ -491,6 +491,18 @@ export default function QuizTake() {
         </section>
       )}
 
+      {/* ملف استماع بلا فقرات معلَّمة للاستماع: يظهر المقطع أعلى الأسئلة فلا يفوت الطالب */}
+      {listenGroups.length === 0 && audioPath && (
+        <section className="card space-y-2 p-4">
+          <p className="text-sm font-bold text-ink">{t.listen}</p>
+          <div className="sticky top-16 z-10 rounded-card border border-mint-light bg-mint-tint p-2">
+            {audioUrl ? <audio controls preload="auto" src={audioUrl} className="w-full" controlsList="nodownload" />
+              : audioUrl === null ? <p className="px-1 text-xs text-absent">{t.noAudio}</p>
+              : <Loader compact />}
+          </div>
+        </section>
+      )}
+
       {groups.map((g, gi) => (
         <section key={g.kind} className="card space-y-3 p-4">
           <p className="text-sm font-bold text-ink">

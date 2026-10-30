@@ -16,6 +16,7 @@ import AttendanceLog from "../components/AttendanceLog.jsx";
 import { GuidanceRequestCard } from "./GuidanceMore.jsx";
 import OfficialLinks from "../components/OfficialLinks.jsx";
 import TasksBox from "../components/TasksBox.jsx";
+import PollsCard from "../components/PollsCard.jsx";
 import MyQuizzesCard from "../components/MyQuizzesCard.jsx";
 import LabSeatCard from "../components/LabSeatCard.jsx";
 import LabRulesCard from "../components/LabRulesCard.jsx";
@@ -128,6 +129,8 @@ export default function StudentHome() {
 
       {/* الترتيب بالأولوية: ما ينتظر الطالب، ثم يومه، ثم حضوره، ثم نتائجه، ثم المرجع */}
       <TasksBox />
+
+      <PollsCard />
       <BehaviorAckCard />
       <LabRulesCard />
 
