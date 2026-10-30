@@ -44,7 +44,18 @@ export default function AccEvidence({ me, year, reports, plans }) {
   if (!ev) return <Loader />;
   const codes = CODES.filter((c) => doms.includes(domainOf(c)) && (!dom || domainOf(c) === dom)
     && (!q.trim() || c.includes(q.trim()) || INDICATORS[c].includes(q.trim())));
-  const covered = codes.filter((c) => byCode[c]?.length).length;
+  // الإنجاز: الشواهد المطلوبة في الخطة وما رُفع منها، لكل مؤشر وللمعروض كله
+  const reqOf = (c) => (pBy[c]?.kind === "plan" ? pBy[c].evidence ?? [] : []);
+  const doneOf = (c) => reqOf(c).filter((t) => (byCode[c] ?? []).some((e) => e.title.trim() === t.trim())).length;
+  const stat = (cs) => {
+    const req = cs.reduce((a, c) => a + reqOf(c).length, 0), done = cs.reduce((a, c) => a + doneOf(c), 0);
+    const files = cs.flatMap((c) => byCode[c] ?? []);
+    return { req, done, left: req - done, pct: req ? Math.round((done / req) * 100) : 0, files: files.length,
+      approved: files.filter((e) => e.status === "approved").length, reviewed: files.filter((e) => e.status === "reviewed").length,
+      full: cs.filter((c) => reqOf(c).length && doneOf(c) === reqOf(c).length).length, withReq: cs.filter((c) => reqOf(c).length).length,
+      empty: cs.filter((c) => !(byCode[c]?.length)).length };
+  };
+  const all = stat(codes);
 
   return (
     <div className="space-y-3">
@@ -53,7 +64,7 @@ export default function AccEvidence({ me, year, reports, plans }) {
           style={d ? (dom === d ? { background: DOMAIN_COLOR[d], borderColor: DOMAIN_COLOR[d] } : { color: DOMAIN_COLOR[d] }) : undefined}>{d ? DOMAINS[d] : "كل المجالات"}</button>)}
         <input className="field ms-auto w-56 text-sm" value={q} onChange={(e) => setQ(e.target.value)} placeholder="ابحث برمز أو نص" />
       </div>
-      <p className="num text-xs text-muted">{codes.length} مؤشرًا · لها شواهد {covered} · مجموع الشواهد {codes.reduce((s, c) => s + (byCode[c]?.length ?? 0), 0)}</p>
+      <EvStats all={all} doms={doms.filter((d) => !dom || d === dom).map((d) => [d, stat(codes.filter((c) => domainOf(c) === d))])} me={me} setMsg={setMsg} />
       {doms.filter((d) => !dom || d === dom).map((d) => {
         const list = codes.filter((c) => domainOf(c) === d);
         if (!list.length) return null;
@@ -69,7 +80,12 @@ export default function AccEvidence({ me, year, reports, plans }) {
                     <span className="min-w-0 flex-1"><span className="block text-sm text-ink">{INDICATORS[c]}</span>
                       <span className="block text-[11px] text-faint">{STANDARDS[stdOf(c)]}{p && ` · ${p.kind === "plan" ? "ضمن خطة التحسين" : "استدامة"}`}</span></span>
                     <span className="num shrink-0 text-xs font-bold" style={{ color: lv?.c }}>{fmtPct(v)}</span>
-                    <span className="chip shrink-0" style={n ? { background: `${DOMAIN_COLOR[d]}18`, color: DOMAIN_COLOR[d] } : undefined}>شواهد {n}</span>
+                    {reqOf(c).length ? (
+                      <span className="flex w-24 shrink-0 flex-col items-end gap-1">
+                        <span className="num text-[11px] font-bold" style={{ color: DOMAIN_COLOR[d] }}>{doneOf(c)} / {reqOf(c).length}</span>
+                        <span className="h-1.5 w-full overflow-hidden rounded-pill bg-canvas"><span className="block h-full rounded-pill" style={{ width: `${(doneOf(c) / reqOf(c).length) * 100}%`, background: DOMAIN_COLOR[d] }} /></span>
+                      </span>
+                    ) : <span className="chip shrink-0" style={n ? { background: `${DOMAIN_COLOR[d]}18`, color: DOMAIN_COLOR[d] } : undefined}>شواهد {n}</span>}
                   </button>
                   {open === c && <Indicator code={c} list={byCode[c] ?? []} hints={p?.evidence ?? []} me={me} year={year}
                     uid={profile?.id} by={profile?.full_name} onChange={load} setMsg={setMsg} />}
@@ -83,6 +99,8 @@ export default function AccEvidence({ me, year, reports, plans }) {
   );
 }
 
+/* شواهد المؤشر: بطاقات جاهزة للشواهد المطلوبة في خطة التحسين يُرفع ملف كل منها في مكانه،
+   ثم ما رُفع زيادة عليها، ثم نموذج شاهد إضافي بعنوان حر */
 function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
   const color = DOMAIN_COLOR[domainOf(code)];
   const [f, setF] = useState({ title: "", notes: "" });
@@ -90,6 +108,7 @@ function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState(null);
   const [thumbs, setThumbs] = useState({});
+  const [more, setMore] = useState(!hints.length);
   // مصغّرات الصور بروابط مؤقتة دفعة واحدة
   useEffect(() => {
     const paths = list.filter((e) => fileKind(e.file_path) === "image").map((e) => e.file_path);
@@ -97,38 +116,77 @@ function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
     supabase.storage.from(ACC_BUCKET).createSignedUrls(paths, 1800)
       .then(({ data }) => setThumbs(Object.fromEntries((data ?? []).filter((x) => x.signedUrl).map((x) => [x.path, x.signedUrl]))));
   }, [list]);
-  const add = async () => {
-    if (!f.title.trim()) { setMsg({ ok: false, text: "اكتب عنوان الشاهد." }); return; }
-    if (!file) { setMsg({ ok: false, text: "أرفق ملف الشاهد." }); return; }
-    setBusy(true);
-    const up = await accUpload(code, file);
-    if (up.error) { setBusy(false); setMsg({ ok: false, text: up.error.message }); return; }
-    const { error } = await supabase.from("acc_evidence").insert({ code, academic_year: year, title: f.title.trim(),
-      notes: f.notes.trim() || null, file_path: up.path, created_by_name: by ?? null });
-    setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
-    setF({ title: "", notes: "" }); setFile(null); setMsg({ ok: true, text: "أُضيف الشاهد." }); onChange();
+  const slots = hints.map((t) => ({ t, ev: list.filter((e) => e.title.trim() === t.trim()) }));
+  const extra = list.filter((e) => !hints.some((t) => t.trim() === e.title.trim()));
+  const filled = slots.filter((x) => x.ev.length).length;
+  const upload = async (title, fl, notes = "") => {
+    if (!title.trim()) { setMsg({ ok: false, text: "اكتب عنوان الشاهد." }); return false; }
+    if (!fl) { setMsg({ ok: false, text: "أرفق ملف الشاهد." }); return false; }
+    const up = await accUpload(code, fl);
+    if (up.error) { setMsg({ ok: false, text: up.error.message }); return false; }
+    const { error } = await supabase.from("acc_evidence").insert({ code, academic_year: year, title: title.trim(),
+      notes: notes.trim() || null, file_path: up.path, created_by_name: by ?? null });
+    if (error) { setMsg({ ok: false, text: error.message }); return false; }
+    setMsg({ ok: true, text: `رُفع «${title.trim()}».` }); onChange(); return true;
   };
+  const add = async () => {
+    setBusy(true);
+    if (await upload(f.title, file, f.notes)) { setF({ title: "", notes: "" }); setFile(null); }
+    setBusy(false);
+  };
+  const card = (e) => <EvCard key={e.id} e={e} color={color} thumb={thumbs[e.file_path]} me={me} uid={uid}
+    onView={() => setView(e)} onChange={onChange} setMsg={setMsg} />;
 
   return (
-    <div className="space-y-3 border-t border-line bg-canvas/30 px-4 py-3">
-      {list.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map((e) => <EvCard key={e.id} e={e} color={color} thumb={thumbs[e.file_path]} me={me} uid={uid}
-            onView={() => setView(e)} onChange={onChange} setMsg={setMsg} />)}
+    <div className="space-y-4 border-t border-line bg-canvas/30 px-4 py-3">
+      {slots.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs font-bold" style={{ color }}>الشواهد المطلوبة في خطة التحسين</p>
+            <span className="num text-xs text-muted">رُفع {filled} من {slots.length}</span>
+            <span className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-pill bg-white"><span className="block h-full rounded-pill" style={{ width: `${(filled / slots.length) * 100}%`, background: color }} /></span>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {slots.map((x) => (x.ev.length ? x.ev.map(card) : <Slot key={x.t} title={x.t} color={color} onUpload={(fl) => upload(x.t, fl)} />))}
+          </div>
+        </div>
+      )}
+      {extra.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-bold text-muted">{slots.length ? "شواهد إضافية" : "الشواهد"}</p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{extra.map(card)}</div>
         </div>
       )}
       {view && <AccViewer ev={view} color={color} onClose={() => setView(null)} />}
-      <div className="space-y-2 rounded-sm2 border border-dashed bg-white p-3" style={{ borderColor: `${color}66` }}>
-        <p className="text-xs font-bold" style={{ color }}>+ شاهد جديد للمؤشر {code}</p>
-        {hints.length > 0 && <div><p className="text-[11px] text-muted">الشواهد المطلوبة في خطة التحسين — اضغط لتعبئة العنوان:</p>
-          <div className="mt-1 flex flex-wrap gap-1.5">{hints.map((h) => <button key={h} onClick={() => setF({ ...f, title: h })} className="rounded-pill border border-line bg-white px-2.5 py-0.5 text-[11px] text-ink">{h}</button>)}</div></div>}
-        <input className="field text-sm" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="عنوان الشاهد" />
-        <input type="file" accept="application/pdf,image/*" className="text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        <input className="field text-sm" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="ملاحظة (اختياري)" />
-        <button className="rounded-pill px-4 py-1.5 text-xs font-semibold text-white" style={{ background: color }} disabled={busy} onClick={add}>{busy ? "جارٍ الرفع…" : "إضافة الشاهد"}</button>
-      </div>
+      {!more ? <button className="text-xs font-semibold" style={{ color }} onClick={() => setMore(true)}>+ شاهد إضافي بعنوان آخر</button> : (
+        <div className="space-y-2 rounded-sm2 border border-dashed bg-white p-3" style={{ borderColor: `${color}66` }}>
+          <p className="text-xs font-bold" style={{ color }}>+ شاهد {slots.length ? "إضافي" : "جديد"} للمؤشر {code}</p>
+          <input className="field text-sm" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="عنوان الشاهد" />
+          <input type="file" accept="application/pdf,image/*" className="text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          <input className="field text-sm" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="ملاحظة (اختياري)" />
+          <button className="rounded-pill px-4 py-1.5 text-xs font-semibold text-white" style={{ background: color }} disabled={busy} onClick={add}>{busy ? "جارٍ الرفع…" : "إضافة الشاهد"}</button>
+        </div>
+      )}
     </div>
+  );
+}
+
+/* بطاقة شاهد مطلوب لم يُرفع: الرفع من البطاقة نفسها بعنوانها */
+function Slot({ title, color, onUpload }) {
+  const [busy, setBusy] = useState(false);
+  const pick = async (e) => {
+    const fl = e.target.files?.[0]; e.target.value = "";
+    if (!fl) return;
+    setBusy(true); await onUpload(fl); setBusy(false);
+  };
+  return (
+    <label className={`flex min-h-[15rem] cursor-pointer flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed bg-white p-4 text-center ${busy ? "opacity-60" : "hover:bg-canvas"}`} style={{ borderColor: `${color}66` }}>
+      <input type="file" accept="application/pdf,image/*" className="hidden" disabled={busy} onChange={pick} />
+      <span className="grid h-11 w-11 place-items-center rounded-full text-xl font-bold text-white" style={{ background: color }}>{busy ? "…" : "↑"}</span>
+      <p className="text-sm font-semibold leading-snug text-ink">{title}</p>
+      <span className="chip bg-late/10 text-late">لم يُرفع بعد</span>
+      <span className="text-[11px] font-semibold" style={{ color }}>{busy ? "جارٍ الرفع…" : "اضغط لرفع الملف (PDF أو صورة)"}</span>
+    </label>
   );
 }
 
@@ -209,5 +267,54 @@ function EvCard({ e, color, thumb, me, uid, onView, onChange, setMsg }) {
         </div>
       )}
     </div>
+  );
+}
+
+/* مساعد الشواهد: نسبة الإنجاز والمتبقي وحالات الشواهد لمجالات المستخدم، ولكل مجال شريطه، وتذكير المشرفين */
+function EvStats({ all, doms, me, setMsg }) {
+  const [busy, setBusy] = useState(false);
+  const remind = async () => {
+    if (!window.confirm("إرسال تذكير لكل مشرف مجال بعدد الشواهد المطلوبة التي لم يرفعها بعد؟")) return;
+    setBusy(true);
+    const { data, error } = await supabase.rpc("acc_remind");
+    setBusy(false);
+    if (error) setMsg({ ok: false, text: /acc_remind/.test(error.message) ? "التذكير يحتاج تشغيل supabase/acc_4.sql." : error.message });
+    else setMsg({ ok: true, text: data ? `وصل التذكير ${data} من مشرفي المجالات.` : "لا شواهد متبقية عند أي مشرف." });
+  };
+  const tile = (v, t, c) => (
+    <div className="rounded-sm2 bg-white px-3 py-2 text-center shadow-card">
+      <p className="num text-xl font-bold" style={{ color: c ?? "rgb(var(--c-ink))" }}>{v}</p><p className="text-[11px] text-muted">{t}</p>
+    </div>
+  );
+  return (
+    <section className="card space-y-3 p-4" style={{ background: "linear-gradient(135deg, rgb(var(--c-paper)), rgba(137,215,173,.12))" }}>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative grid h-20 w-20 shrink-0 place-items-center">
+          <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90"><circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(0,0,0,.07)" strokeWidth="4" />
+            <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgb(var(--c-present))" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${all.pct * 0.974} 100`} /></svg>
+          <b className="num text-lg text-ink">{all.pct}%</b>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-ink">مساعد الشواهد</p>
+          <p className="text-xs leading-relaxed text-muted">رُفع <b className="num text-ink">{all.done}</b> من <b className="num text-ink">{all.req}</b> شاهدًا مطلوبًا في خطة التحسين، وبقي <b className="num text-late">{all.left}</b>.
+            اضغط المؤشر لتظهر بطاقات شواهده، وارفع كل ملف في بطاقته.</p>
+        </div>
+        {me.coord && <button className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mint-deep" disabled={busy} onClick={remind}>{busy ? "…" : "تذكير مشرفي المجالات"}</button>}
+      </div>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        {tile(all.left, "متبقٍ", "rgb(var(--c-late))")}
+        {tile(all.files, "ملفًا مرفوعًا")}
+        {tile(all.approved, "معتمد", "rgb(var(--c-present))")}
+        {tile(all.reviewed, "مراجَع", "rgb(var(--c-excused))")}
+        {tile(`${all.full}/${all.withReq}`, "مؤشرًا مكتملًا")}
+        {tile(all.empty, "مؤشرًا بلا شاهد", "rgb(var(--c-absent))")}
+      </div>
+      {doms.length > 1 && <div className="space-y-1.5">{doms.map(([d, x]) => (
+        <div key={d} className="flex items-center gap-2 text-xs">
+          <span className="w-28 shrink-0 font-semibold" style={{ color: DOMAIN_COLOR[d] }}>{DOMAINS[d]}</span>
+          <span className="h-2 flex-1 overflow-hidden rounded-pill bg-white"><span className="block h-full rounded-pill" style={{ width: `${x.pct}%`, background: DOMAIN_COLOR[d] }} /></span>
+          <span className="num w-28 shrink-0 text-end text-muted">{x.done}/{x.req} · بقي {x.left}</span>
+        </div>))}</div>}
+    </section>
   );
 }
