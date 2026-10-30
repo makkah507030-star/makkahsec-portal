@@ -13,7 +13,7 @@ import Loader from "../../components/Loader.jsx";
 
 /* =====================================================================
    المؤشرات والشواهد (supabase/acc_3.sql): المؤشرات الـ47 بمعاييرها ومجالاتها، ونسبة كل مؤشر
-   في آخر تقرير، وشواهده: ملف في المخزن الخاص أو رابط، بحالته
+   في آخر تقرير، وشواهده: ملف في المخزن الخاص بحالته
    (مجموع ← مراجَع ← معتمد يعتمده المشرف). العضو يرى مؤشرات مجالاته وحدها ويرفع شواهدها.
    ===================================================================== */
 
@@ -82,12 +82,12 @@ export default function AccEvidence({ me, year, reports, plans }) {
 }
 
 function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
-  const [f, setF] = useState({ title: "", link: "", notes: "" });
+  const [f, setF] = useState({ title: "", notes: "" });
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const add = async () => {
     if (!f.title.trim()) { setMsg({ ok: false, text: "اكتب عنوان الشاهد." }); return; }
-    if (!file && !f.link.trim()) { setMsg({ ok: false, text: "أرفق ملفًا أو رابطًا." }); return; }
+    if (!file) { setMsg({ ok: false, text: "أرفق ملف الشاهد." }); return; }
     setBusy(true);
     let file_path = null;
     if (file) {
@@ -95,11 +95,11 @@ function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
       if (up.error) { setBusy(false); setMsg({ ok: false, text: up.error.message }); return; }
       file_path = up.path;
     }
-    const { error } = await supabase.from("acc_evidence").insert({ code, academic_year: year, title: f.title.trim(), link: f.link.trim() || null,
+    const { error } = await supabase.from("acc_evidence").insert({ code, academic_year: year, title: f.title.trim(),
       notes: f.notes.trim() || null, file_path, created_by_name: by ?? null });
     setBusy(false);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
-    setF({ title: "", link: "", notes: "" }); setFile(null); setMsg({ ok: true, text: "أُضيف الشاهد." }); onChange();
+    setF({ title: "", notes: "" }); setFile(null); setMsg({ ok: true, text: "أُضيف الشاهد." }); onChange();
   };
   const setStatus = async (e, status) => {
     const { error } = await supabase.from("acc_evidence").update({ status }).eq("id", e.id);
@@ -134,10 +134,7 @@ function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
       {hints.length > 0 && <div><p className="text-[11px] text-muted">الشواهد المطلوبة في خطة التحسين — اضغط لتعبئة العنوان:</p>
         <div className="mt-1 flex flex-wrap gap-1.5">{hints.map((h) => <button key={h} onClick={() => setF({ ...f, title: h })} className="rounded-pill border border-line bg-white px-2.5 py-0.5 text-[11px] text-ink">{h}</button>)}</div></div>}
       <input className="field text-sm" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="عنوان الشاهد" />
-      <div className="grid gap-2 sm:grid-cols-2">
-        <input type="file" className="text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-        <input className="field text-sm" dir="ltr" value={f.link} onChange={(e) => setF({ ...f, link: e.target.value })} placeholder="أو رابط https://" />
-      </div>
+      <input type="file" className="text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       <input className="field text-sm" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="ملاحظة (اختياري)" />
       <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={add}>{busy ? "جارٍ الرفع…" : "إضافة الشاهد"}</button>
     </div>
