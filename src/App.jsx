@@ -546,8 +546,8 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/absence-excuses" element={<AbsenceExcuses />} />}
           {/* ملف الطالب الشامل — الصفحة تحصر الطلاب في صفوف المستخدم، والدوال تفرض الصلاحية */}
           {effectiveRole === "admin" && <Route path="/student-file" element={<StudentFile />} />}
-          {/* صفحات الأقسام العامة لقائمة الإدارة — تعرض ما تعرضه القائمة للمستخدم فقط */}
-          {effectiveRole === "admin" && <Route path="/s/:key" element={<SectionHub />} />}
+          {/* صفحات الأقسام العامة لقائمة الإدارة والمعلم — تعرض ما تعرضه القائمة للمستخدم فقط */}
+          {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/s/:key" element={<SectionHub />} />}
           {/* شاشة المتابعة اليومية — للمدير والوكيلين والدعم الفني (عنصر القائمة يحصرها، والقاعدة تفرض ما يُقرأ) */}
           {effectiveRole === "admin" && <Route path="/monitor" element={<MonitorScreen />} />}
           {/* مركز تحليل النتائج — الصفحة تتحقق من الدور (وكيل الشؤون التعليمية والموجهون…)

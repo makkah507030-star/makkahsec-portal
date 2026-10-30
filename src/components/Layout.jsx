@@ -210,10 +210,27 @@ const SECTIONS = [
     groups: ["التقويم والاعتماد المدرسي"] },
   { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والشهادات والأداء الوظيفي والتطوير المهني",
     groups: ["النماذج", "الأداء الوظيفي"] },
-  { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأدلة والأحداث",
+  { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأحداث والمركز الإعلامي والتصويت وبرامج الطلاب",
     groups: ["التواصل والمحتوى"] },
   { key: "settings", title: "الإعدادات والدعم الفني", icon: "sliders", hint: "الحسابات والصلاحيات والتقويم والاستيراد والدعم",
     groups: ["إعدادات المدرسة", "الدعم الفني"] },
+];
+
+/* أقسام قائمة المعلم بالطريقة نفسها: كل قسم يجمع مجموعات من TEACHER_GROUPS ويفتح صفحة بطاقاتها،
+   والقسم ذو الرابط الواحد يفتحه مباشرة. أي مجموعة جديدة في TEACHER_GROUPS يُضاف عنوانها هنا. */
+const TEACHER_SECTIONS = [
+  { key: "daily", title: "المهام اليومية", icon: "userCheck", hint: "التحضير وحصص الانتظار والجدول والأنشطة والاستئذان والمعمل",
+    groups: ["المهام اليومية", "المعامل والمختبرات"] },
+  { key: "students", title: "طلابي", icon: "users", hint: "السجلات والمتابعة والغياب والإحالات والتقارير",
+    groups: ["طلابي"] },
+  { key: "exams", title: "الاختبارات والتحصيل", icon: "quiz", hint: "اختباراتي والتصحيح والتحليل وبنك الأسئلة ومركز التدريب",
+    groups: ["الاختبارات"] },
+  { key: "accreditation", title: "التقويم والاعتماد", icon: "award", hint: "لجنة التميز وشواهد المؤشرات وخطة التحسين",
+    groups: ["التقويم والاعتماد المدرسي"] },
+  { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والتعاميم والتطوير المهني وشواهد الأداء والملف الرقمي",
+    groups: ["النماذج", "الأداء الوظيفي"] },
+  { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأحداث والمعرض والمركز الإعلامي والتصويت",
+    groups: ["التواصل والمحتوى"] },
 ];
 
 const TEACHER_GROUPS = [
@@ -536,12 +553,12 @@ export default function Layout({ children }) {
   }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember, accMember]);
   const footer = FOOTER.filter(visible);
 
-  // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
-  const sections = useMemo(() => (!isAdmin ? [] : SECTIONS
+  // الأقسام العامة للإدارة والمعلم بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
+  const sections = useMemo(() => (isAdmin ? SECTIONS : effectiveRole === "teacher" ? TEACHER_SECTIONS : [])
     .map((x) => ({ ...x, groups: groups.filter((g) => x.groups.includes(g.title)) }))
     .map((x) => ({ ...x, items: x.groups.flatMap((g) => g.items) }))
-    .filter((x) => x.items.length)), [isAdmin, groups]);
-  const topItems = isAdmin ? groups.find((g) => !g.title)?.items ?? [] : [];
+    .filter((x) => x.items.length), [isAdmin, effectiveRole, groups]);
+  const topItems = sections.length ? groups.find((g) => !g.title)?.items ?? [] : [];
 
   const isActive = (i) =>
     i.to === "/" || i.exact
@@ -911,7 +928,7 @@ export default function Layout({ children }) {
             ) : (
               <p className="px-3 py-6 text-center text-[13px] text-muted">لا توجد صفحة بهذا الاسم</p>
             )
-          ) : isAdmin ? (
+          ) : sections.length ? (
             <>
               <div className="space-y-0.5">{topItems.map((i) => navItem(i, { iconOnly }))}</div>
               <div className={iconOnly ? "mt-2 border-t border-line pt-2" : "mt-3"}>
@@ -1045,7 +1062,7 @@ export default function Layout({ children }) {
 
           {/* الزر العائم فوق الشريط السفلي: مسافة إضافية أسفل الصفحة كي لا يغطي آخر المحتوى */}
           <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-6 lg:pb-5 ${showBack ? "pb-36" : "pb-24"}`}>
-            <NavContext.Provider value={{ sections, badgeOf }}>
+            <NavContext.Provider value={{ sections, badgeOf, teacher: effectiveRole === "teacher" }}>
               <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
               {/* صندوق شواهد ملف الأداء: آخر كل صفحة فيها إجراء يُحتسب شاهدًا (EvidenceTags) */}
               <EvidenceDock />

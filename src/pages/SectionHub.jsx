@@ -1,6 +1,6 @@
 // src/pages/SectionHub.jsx
 /* =====================================================================
-   صفحة القسم العام (/s/:key) — بطاقات أقسامه الفرعية: أيقونة واسم وسطر يشرح
+   صفحة القسم العام (/s/:key) للإدارة والمعلم — بطاقات أقسامه الفرعية: أيقونة واسم وسطر يشرح
    عملها، وعلى البطاقة عدد ما ينتظر إجراءك. تعرض ما تعرضه القائمة للمستخدم
    بالضبط (lib/navContext.js)، فلا تُظهر صفحة لا يملك صلاحيتها.
    ===================================================================== */
@@ -14,6 +14,10 @@ const TONE = {
   forms:    "bg-late/10 text-late",
   comms:    "bg-present/10 text-present",
   settings: "bg-canvas text-muted",
+  achievement: "bg-excused/10 text-excused",
+  accreditation: "bg-late/10 text-late",
+  daily: "bg-mint-tint text-mint-deep",
+  exams: "bg-excused/10 text-excused",
 };
 
 // سطر يشرح عمل كل صفحة
@@ -92,6 +96,46 @@ const DESC = {
   "/quiz-marks": "الاطلاع على التصحيح والدرجات",
   "/quiz-analytics": "تحليل نتائج الاختبارات",
   "/maintenance": "إيقاف البوابة مؤقتًا للصيانة",
+  // أقسام أُدرجت حديثًا
+  "/scout-reports": "بلاغات الفريق الكشفي ومعالجتها",
+  "/accreditation": "لجنة التميز والتقويم الذاتي والخارجي وخطة التحسين وشواهد المؤشرات",
+  "/polls-admin": "إنشاء التصويت والاستطلاعات واعتماد نتائجها",
+  "/media-studio": "رفع صور المدرسة ومقاطعها ونشرها في المعرض",
+  "/my-media-team": "أعضاء المركز الإعلامي ومهامهم وبطاقاتهم",
+  "/media-contact": "طلب تغطية أو تصوير، واقتراح مشاركة إعلامية",
+  "/polls": "المشاركة في التصويت والاستطلاعات المفتوحة",
+  "/media": "صور المدرسة ومقاطعها في ألبومات",
+  "/gifted": "الطلاب الموهوبون وبرامجهم ومقياس موهبة",
+  "/globe": "طلاب برنامج جلوب البيئي وبرامجه",
+  // صفحات قائمة المعلم
+  "/attendance": "تحضير طلاب حصصك اليومية",
+  "/substitute": "حصص الانتظار المسندة إليك",
+  "/schedule": "جدول حصصك الأسبوعي",
+  "/records": "سجلات طلابك في موادك",
+  "/follow-up": "المهام الأدائية والمشاركة والواجبات",
+  "/my-absence": "غياب طلابك في حصص مادتك",
+  "/reports": "تقارير فصولك وطلابك",
+  "/exams": "جداول الاختبارات المعتمدة",
+  "/ach-forms": "ملاحظات التحصيل وخطط الطلاب المتعثرين",
+  "/qudrat": "تدريب الطلاب على القدرات واختباراتها المحاكية",
+  "/qudrat/asks": "أسئلة الطلاب عن حلول القدرات والرد عليها",
+  "/my-performance": "شواهدك في عناصر الأداء الوظيفي",
+  "/my-dfile": "ملفك الرقمي برمزه ورابطه للزوار",
+  "/ethics": "ميثاق أخلاقيات المهنة والإقرار به",
+  "/notify": "إشعارات لطلابك وأولياء أمورهم",
+};
+
+// ما يختلف معناه للمعلم عن الإدارة
+const DESC_TEACHER = {
+  "/quizzes": "اختباراتك الإلكترونية والورقية ومن خارج البوابة",
+  "/quiz-marks": "تصحيح اختباراتك ورصد درجاتها",
+  "/quiz-analytics": "تحليل نتائج اختباراتك",
+  "/referrals": "إحالة طالب إلى الوكيل والموجه ومتابعتها",
+  "/dropouts": "الإبلاغ عن طالب منقطع",
+  "/forms": "إصدار الشهادات والنماذج الرسمية",
+  "/plc": "مجتمعات التعلم المهني والزيارات التبادلية",
+  "/news-admin": "كتابة أخبار المدرسة ومقالاتها",
+  "/events": "الأحداث والمناسبات التي تنظمها أو تشارك فيها",
 };
 
 export default function SectionHub() {
@@ -101,6 +145,7 @@ export default function SectionHub() {
   const s = nav.sections.find((x) => x.key === key);
   if (!s) return <p className="card px-4 py-6 text-center text-sm text-muted">لا صفحات متاحة لك في هذا القسم.</p>;
   const tone = TONE[s.key] ?? TONE.settings;
+  const desc = (to) => (nav.teacher && DESC_TEACHER[to]) || DESC[to];
 
   return (
     <div className="space-y-5">
@@ -125,7 +170,7 @@ export default function SectionHub() {
                     {n > 0 && <span className="num rounded-pill bg-absent px-2 py-0.5 text-[11px] font-bold text-white">{n}</span>}
                   </div>
                   <p className="text-sm font-semibold leading-snug text-ink">{i.label}</p>
-                  {DESC[i.to] && <p className="text-[11.5px] leading-snug text-muted">{DESC[i.to]}</p>}
+                  {desc(i.to) && <p className="text-[11.5px] leading-snug text-muted">{desc(i.to)}</p>}
                   {n > 0 && <p className="mt-auto text-[11px] font-semibold text-absent">بانتظار إجرائك</p>}
                 </Link>
               );
