@@ -7,17 +7,16 @@ import { useNotice } from "../../lib/useNotice.js";
 import { fmtDate } from "../../lib/dates";
 import { confirmDanger } from "../../lib/danger";
 import {
-  CODES, DOMAINS, STANDARDS, INDICATORS, TOOLS, EV_STATUS, domainOf, stdOf, levelOf, fmtPct, accUpload, accOpen, setupMsg,
+  CODES, DOMAINS, STANDARDS, INDICATORS, EV_STATUS, domainOf, stdOf, levelOf, fmtPct, accUpload, accOpen, setupMsg,
 } from "../../lib/accreditation.js";
 import Loader from "../../components/Loader.jsx";
 
 /* =====================================================================
    المؤشرات والشواهد (supabase/acc_3.sql): المؤشرات الـ47 بمعاييرها ومجالاتها، ونسبة كل مؤشر
-   في آخر تقرير، وشواهده: ملف في المخزن الخاص أو رابط، بأداة التقويم التي يخدمها وحالته
+   في آخر تقرير، وشواهده: ملف في المخزن الخاص أو رابط، بحالته
    (مجموع ← مراجَع ← معتمد يعتمده المشرف). العضو يرى مؤشرات مجالاته وحدها ويرفع شواهدها.
    ===================================================================== */
 
-const toolT = Object.fromEntries(TOOLS.map((t) => [t.key, t.t]));
 
 export default function AccEvidence({ me, year, reports, plans }) {
   const { profile } = useSession();
@@ -83,7 +82,7 @@ export default function AccEvidence({ me, year, reports, plans }) {
 }
 
 function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
-  const [f, setF] = useState({ title: "", link: "", tool: "", notes: "" });
+  const [f, setF] = useState({ title: "", link: "", notes: "" });
   const [file, setFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const add = async () => {
@@ -97,10 +96,10 @@ function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
       file_path = up.path;
     }
     const { error } = await supabase.from("acc_evidence").insert({ code, academic_year: year, title: f.title.trim(), link: f.link.trim() || null,
-      tool: f.tool || null, notes: f.notes.trim() || null, file_path, created_by_name: by ?? null });
+      notes: f.notes.trim() || null, file_path, created_by_name: by ?? null });
     setBusy(false);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
-    setF({ title: "", link: "", tool: "", notes: "" }); setFile(null); setMsg({ ok: true, text: "أُضيف الشاهد." }); onChange();
+    setF({ title: "", link: "", notes: "" }); setFile(null); setMsg({ ok: true, text: "أُضيف الشاهد." }); onChange();
   };
   const setStatus = async (e, status) => {
     const { error } = await supabase.from("acc_evidence").update({ status }).eq("id", e.id);
@@ -123,7 +122,7 @@ function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
         <div key={e.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
           <button className="min-w-0 flex-1 text-start" onClick={() => openIt(e)}>
             <span className="block font-medium text-mint-deep underline-offset-2 hover:underline">{e.title}</span>
-            <span className="block text-[11px] text-faint">{[e.tool && toolT[e.tool], e.created_by_name, fmtDate(e.created_at)].filter(Boolean).join(" · ")}</span>
+            <span className="block text-[11px] text-faint">{[e.created_by_name, fmtDate(e.created_at)].filter(Boolean).join(" · ")}</span>
             {e.notes && <span className="block text-xs text-muted">{e.notes}</span>}
           </button>
           <span className={`chip ${EV_STATUS[e.status].c}`}>{EV_STATUS[e.status].t}</span>
@@ -134,11 +133,7 @@ function Indicator({ code, list, hints, me, year, uid, by, onChange, setMsg }) {
       ))}</div>}
       {hints.length > 0 && <div><p className="text-[11px] text-muted">الشواهد المطلوبة في خطة التحسين — اضغط لتعبئة العنوان:</p>
         <div className="mt-1 flex flex-wrap gap-1.5">{hints.map((h) => <button key={h} onClick={() => setF({ ...f, title: h })} className="rounded-pill border border-line bg-white px-2.5 py-0.5 text-[11px] text-ink">{h}</button>)}</div></div>}
-      <div className="grid gap-2 sm:grid-cols-[1fr_200px]">
-        <input className="field text-sm" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="عنوان الشاهد" />
-        <select className="field text-sm" value={f.tool} onChange={(e) => setF({ ...f, tool: e.target.value })}>
-          <option value="">أداة التقويم (اختياري)</option>{TOOLS.map((t) => <option key={t.key} value={t.key}>{t.t}</option>)}</select>
-      </div>
+      <input className="field text-sm" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="عنوان الشاهد" />
       <div className="grid gap-2 sm:grid-cols-2">
         <input type="file" className="text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         <input className="field text-sm" dir="ltr" value={f.link} onChange={(e) => setF({ ...f, link: e.target.value })} placeholder="أو رابط https://" />
