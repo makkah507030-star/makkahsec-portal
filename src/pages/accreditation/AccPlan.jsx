@@ -52,7 +52,7 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
   // يُستكمل إن أُنشئت النسخة من قبل بلا برامج (into)، ولا يكرر ما أُدخل.
   const importPlan = async (into = null) => {
     if (!window.confirm(into ? "إكمال استيراد برامج خطة 1448هـ في هذه النسخة؟"
-      : "استيراد خطة 1448هـ من ملف المدرسة؟ يُنشأ تقرير التقويم الذاتي بنسبه، ونسخة أولى من الخطة فيها 23 برنامجًا و24 إجراء استدامة.")) return;
+      : "استيراد خطة 1448هـ من ملف المدرسة؟ يُنشأ تقرير التقويم الذاتي بنسبه، ونسخة أولى من الخطة فيها 23 برنامجًا و24 إجراءً للاستدامة.")) return;
     setBusy(true); setImportErr("");
     const fail = (e, step) => { setBusy(false); const t = `${step}: ${setupMsg(e)}`; setImportErr(t); setMsg({ ok: false, text: t }); };
     const by = profile?.full_name ?? null;

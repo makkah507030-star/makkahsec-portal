@@ -1,4 +1,5 @@
 // src/pages/accreditation/AccDomainDoc.jsx
+import { countAr } from "../../lib/arabicCount.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { fmtDate } from "../../lib/dates";
@@ -71,16 +72,16 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
       rows: [["users", all ? "مشرفو المجالات" : "مشرف المجال", names], ["user", "مشرف اللجنة", coord ?? "—"],
              ["doc", "مصدر النتائج", rep ? rep.title : "—"], ["clock", "تاريخ التقرير", fmtDate(new Date())]],
       note: ["check", `يعرض مؤشرات ${W} وبرامجه وما رُفع من شواهده وما لم يُرفع، ومساهمة ${all ? "كل مشرف" : "مشرف المجال"}، كما سُجّلت في البوابة.`],
-      strip: [[sm.codes.length, "مؤشرًا"], [progs.length, "برنامجًا"], [sm.gaps.uploaded, "شاهدًا مرفوعًا"], [sm.gaps.missing.length, "غير مرفوع"]],
+      strip: [[sm.codes.length, "المؤشرات"], [progs.length, "البرامج"], [sm.gaps.uploaded, "الشواهد المرفوعة"], [sm.gaps.missing.length, "غير المرفوعة"]],
       foot: "التقويم والاعتماد المدرسي",
     }} />,
 
-    <Page key="sum" {...common} page={pg++} sec={{ no: 1, title: `ملخص ${W}`, sub: all ? `4 مجالات · ${stds.length} معيارًا` : `${DOMAINS[d]} · ${stds.length} معايير` }}>
+    <Page key="sum" {...common} page={pg++} sec={{ no: 1, title: `ملخص ${W}`, sub: all ? `4 مجالات · ${countAr(stds.length, "standard")}` : `${DOMAINS[d]} · ${countAr(stds.length, "standard")}` }}>
       <Kpis cols={4} items={[
         { ic: "chart", t: all ? "متوسط المؤشرات" : "أداء المجال", v: fmtPct(sm.perf), s: lv?.t, c: S[0] },
         { ic: "check", t: "إنجاز البرامج", v: `${sm.done}%`, s: `تحققت الأهداف ${sm.met}%`, c: S[1] },
         { ic: "folder", t: "الشواهد المرفوعة", v: sm.gaps.uploaded, s: `المعتمد ${sm.approved}`, c: S[2] },
-        { ic: "alert", t: "غير المرفوعة", v: sm.gaps.missing.length, s: `من ${sm.gaps.required} مطلوبًا في الخطة`, c: S[3] },
+        { ic: "alert", t: "غير المرفوعة", v: sm.gaps.missing.length, s: `المطلوب في الخطة: ${sm.gaps.required}`, c: S[3] },
       ]} />
       {all && <Box icon="chart" title="أداء المجالات الأربعة">
         <Bars full max={100} items={ds.map((x) => ({ t: DOMAINS[x], v: domAvg(x) ?? 0, c: levelOf(domAvg(x))?.c, note: fmtPct(domAvg(x)) }))} />
@@ -94,8 +95,8 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
       <Highlights items={[
         low && `أدنى مؤشرات ${W} \u2066${low}\u2069 «${short(INDICATORS[low], 60)}» بنسبة ${sc[low]}%.`,
         best && `أعلى البرامج إنجازًا «${best.initiative}» بنسبة ${progOf(best).done}%.`,
-        `${progs.length} برنامجًا ضمن الخطة و${sm.sustain.length} للاستدامة.`,
-        sm.gaps.missing.length ? `${sm.gaps.missing.length} شاهدًا مطلوبًا لم يُرفع بعد.` : "رُفعت كل الشواهد المطلوبة في الخطة.",
+        `${countAr(progs.length, "program")} ضمن الخطة، وللاستدامة ${countAr(sm.sustain.length, "program")}.`,
+        sm.gaps.missing.length ? `لم يُرفع بعد من الشواهد المطلوبة: ${sm.gaps.missing.length}.` : "رُفعت كل الشواهد المطلوبة في الخطة.",
       ].filter(Boolean)} />
     </Page>,
 
@@ -114,7 +115,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
     ...(nat.length ? [
       <Page key="nat" {...common} page={pg++} sec={{ no: no++, title: "الاختبارات الوطنية", sub: "بطاقات القدرات والتحصيلي من هيئة تقويم التعليم والتدريب" }}>
         {nat.map(([k, x]) => { const r = x[x.length - 1]; const T = NAT_TESTS[k]; return (
-          <Box key={k} icon="chart" title={`${T.full} · ${r.academic_year}هـ`} aside={`${r.takers ?? "—"} مختبرًا`}>
+          <Box key={k} icon="chart" title={`${T.full} · ${r.academic_year}هـ`} aside={r.takers ? countAr(r.takers, "examinee") : null}>
             <table className="mr-table">
               <thead><tr><th>المتوسط</th><th>عن السابق</th><th>المدرسة / الإدارة / المملكة</th><th>الترتيب في المملكة</th><th>الترتيب في الإدارة</th></tr></thead>
               <tbody><tr><td className="c num"><b>{r.avg}</b></td><td className="c num">{r.change_pct == null ? "—" : `${signed(r.change_pct)}%`}</td>
@@ -151,7 +152,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
     )),
 
     ...(evPages.length ? evPages : [[]]).map((rows, i) => (
-      <Page key={`ev${i}`} {...common} page={pg++} sec={i ? null : { no: no++, title: "الشواهد المرفوعة", sub: `${sm.gaps.uploaded} شاهدًا · المعتمد ${sm.approved}` }}>
+      <Page key={`ev${i}`} {...common} page={pg++} sec={i ? null : { no: no++, title: "الشواهد المرفوعة", sub: `${countAr(sm.gaps.uploaded, "evidence")} · المعتمد ${sm.approved}` }}>
         {rows.length ? <table className="mr-table">
           <thead><tr><th style={{ width: 62 }}>الرمز</th><th>الشاهد</th><th style={{ width: 52 }}>الحالة</th><th style={{ width: 120 }}>رفعه</th></tr></thead>
           <tbody>{rows.map((e) => (
