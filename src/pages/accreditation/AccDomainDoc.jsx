@@ -4,7 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { fmtDate } from "../../lib/dates";
 import { usePrincipalSignature } from "../../lib/principalSignature.js";
 import {
-  DOMAINS, STANDARDS, INDICATORS, EV_STATUS, LEVEL_T, LEVELS, roleT, levelOf, stdOf, progOf, fmtPct, domainSummary,
+  DOMAINS, STANDARDS, INDICATORS, EV_STATUS, LEVEL_T, LEVELS, roleT, levelOf, stdOf, progOf, fmtPct, domainSummary, bidi,
 } from "../../lib/accreditation.js";
 import { NAT_TESTS, NAT_BANDS, natSeries, signed } from "../../lib/accNational.js";
 import { S, Kpis, Box, Bars, Highlights, Signs, Page, Cover, paginate } from "../../components/report/ReportKit.jsx";
@@ -92,7 +92,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
         <Bars full items={LEVELS.map((l) => ({ t: l.t, v: sm.codes.filter((c) => levelOf(sc[c]) === l).length, c: l.c }))} />
       </Box>
       <Highlights items={[
-        low && `أدنى مؤشرات ${W} ${low} «${short(INDICATORS[low], 60)}» بنسبة ${sc[low]}%.`,
+        low && `أدنى مؤشرات ${W} \u2066${low}\u2069 «${short(INDICATORS[low], 60)}» بنسبة ${sc[low]}%.`,
         best && `أعلى البرامج إنجازًا «${best.initiative}» بنسبة ${progOf(best).done}%.`,
         `${progs.length} برنامجًا ضمن الخطة و${sm.sustain.length} للاستدامة.`,
         sm.gaps.missing.length ? `${sm.gaps.missing.length} شاهدًا مطلوبًا لم يُرفع بعد.` : "رُفعت كل الشواهد المطلوبة في الخطة.",
@@ -155,7 +155,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
         {rows.length ? <table className="mr-table">
           <thead><tr><th style={{ width: 62 }}>الرمز</th><th>الشاهد</th><th style={{ width: 52 }}>الحالة</th><th style={{ width: 120 }}>رفعه</th></tr></thead>
           <tbody>{rows.map((e) => (
-            <tr key={e.id}><td className="c num"><b>{e.code}</b></td><td>{e.title}{e.link?.startsWith("portal:") && <span style={L}> · من أعمال البوابة</span>}</td>
+            <tr key={e.id}><td className="c num"><b>{e.code}</b></td><td>{bidi(e.title)}{e.link?.startsWith("portal:") && <span style={L}> · من أعمال البوابة</span>}</td>
               <td className="c">{EV_STATUS[e.status].t}</td><td style={{ fontSize: 10 }}>{e.created_by_name ?? "—"} · <span className="num">{fmtDate(e.created_at)}</span></td></tr>))}</tbody>
         </table> : <Box tint><div className="mr-notes">لم يُرفع شاهد بعد.</div></Box>}
       </Page>
@@ -166,7 +166,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
         {rows.length ? <table className="mr-table">
           <thead><tr><th style={{ width: 62 }}>الرمز</th><th>الشاهد المطلوب</th><th style={{ width: 150 }}>البرنامج</th></tr></thead>
           <tbody>{rows.map((x, k) => (
-            <tr key={k}><td className="c num"><b>{x.code}</b></td><td>{x.title ?? <span style={L}>لا شاهد للمؤشر بعد</span>}</td>
+            <tr key={k}><td className="c num"><b>{x.code}</b></td><td>{bidi(x.title) ?? <span style={L}>لا شاهد للمؤشر بعد</span>}</td>
               <td style={{ fontSize: 10 }}>{data.progs.find((p) => p.code === x.code)?.initiative ?? "—"}</td></tr>))}</tbody>
         </table> : <Box tint><div className="mr-notes">رُفعت كل الشواهد المطلوبة في البرامج.</div></Box>}
       </Page>

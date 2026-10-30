@@ -339,11 +339,11 @@ function ProgramEdit({ p, planId, doms, canDelete, by, onDone, setMsg }) {
     const { error } = isNew ? await supabase.from("acc_programs").insert({ ...row, plan_id: planId, sort: 200 })
       : await supabase.from("acc_programs").update(row).eq("id", p.id);
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: /duplicate|unique/i.test(error.message) ? `للمؤشر ${x.code} برنامج في هذه النسخة؛ عدّله بدل إضافة غيره.` : error.message }); return; }
+    if (error) { setMsg({ ok: false, text: /duplicate|unique/i.test(error.message) ? `للمؤشر \u2066${x.code}\u2069 برنامج في هذه النسخة؛ عدّله بدل إضافة غيره.` : error.message }); return; }
     setMsg({ ok: true, text: isNew ? "أُضيف البرنامج." : "حُفظ البرنامج." }); onDone(true);
   };
   const remove = async () => {
-    if (!(await confirmDanger({ title: `حذف برنامج المؤشر ${p.code}`, impact: [`«${p.initiative}» بأساليبه وقياس نواتجه من هذه النسخة.`, "تبقى شواهد المؤشر كما هي."], confirmLabel: "حذف" }))) return;
+    if (!(await confirmDanger({ title: `حذف برنامج المؤشر \u2066${p.code}\u2069`, impact: [`«${p.initiative}» بأساليبه وقياس نواتجه من هذه النسخة.`, "تبقى شواهد المؤشر كما هي."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("acc_programs").delete().eq("id", p.id);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
     setMsg({ ok: true, text: "حُذف البرنامج." }); onDone(true);

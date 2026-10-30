@@ -7,7 +7,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { fmtDate } from "../../lib/dates";
 import { confirmDanger } from "../../lib/danger";
 import {
-  CODES, DOMAINS, DOMAIN_COLOR, STANDARDS, INDICATORS, EV_STATUS, ACC_BUCKET, domainOf, stdOf, levelOf, fmtPct, fileKind, accUpload, setupMsg,
+  CODES, DOMAINS, DOMAIN_COLOR, STANDARDS, INDICATORS, EV_STATUS, ACC_BUCKET, bidi, domainOf, stdOf, levelOf, fmtPct, fileKind, accUpload, setupMsg,
 } from "../../lib/accreditation.js";
 import { PORTAL_BY, loadPortalCounts, portalKey, sourcesOf } from "../../lib/accPortal.js";
 import AccViewer from "./AccViewer.jsx";
@@ -198,7 +198,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
       {view && <AccViewer ev={view} color={color} onClose={() => setView(null)} />}
       {!more ? <button className="text-xs font-semibold" style={{ color }} onClick={() => setMore(true)}>+ شاهد إضافي بعنوان آخر</button> : (
         <div className="space-y-2 rounded-sm2 border border-dashed bg-white p-3" style={{ borderColor: `${color}66` }}>
-          <p className="text-xs font-bold" style={{ color }}>+ شاهد {slots.length ? "إضافي" : "جديد"} للمؤشر {code}</p>
+          <p className="text-xs font-bold" style={{ color }}>+ شاهد {slots.length ? "إضافي" : "جديد"} للمؤشر <span className="num">{code}</span></p>
           <input className="field text-sm" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="عنوان الشاهد" />
           <input type="file" accept="application/pdf,image/*" className="text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           <input className="field text-sm" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} placeholder="ملاحظة (اختياري)" />
@@ -222,7 +222,7 @@ function Slot({ title, color, ready, counts, onUpload, onLink }) {
     <label className={`flex flex-1 cursor-pointer flex-col items-center justify-center gap-2 p-4 text-center ${busy ? "opacity-60" : "hover:bg-canvas"}`}>
       <input type="file" accept="application/pdf,image/*" className="hidden" disabled={busy} onChange={pick} />
       <span className="grid h-11 w-11 place-items-center rounded-full text-xl font-bold text-white" style={{ background: color }}>{busy ? "…" : "↑"}</span>
-      <p className="text-sm font-semibold leading-snug text-ink">{title}</p>
+      <p className="text-sm font-semibold leading-snug text-ink">{bidi(title)}</p>
       <span className="chip bg-late/10 text-late">لم يُرفع بعد</span>
       <span className="text-[11px] font-semibold" style={{ color }}>{busy ? "جارٍ الرفع…" : "اضغط لرفع الملف (PDF أو صورة)"}</span>
     </label>
@@ -308,8 +308,8 @@ function EvCard({ e, color, thumb, me, uid, counts, onView, onChange, setMsg }) 
         </div>
       ) : (
         <div className="flex flex-1 flex-col gap-1 p-3">
-          <p className="text-sm font-semibold leading-snug text-ink">{e.title}</p>
-          {e.notes && <p className="text-xs text-muted">{e.notes}</p>}
+          <p className="text-sm font-semibold leading-snug text-ink">{bidi(e.title)}</p>
+          {e.notes && <p className="text-xs text-muted">{bidi(e.notes)}</p>}
           <p className="mt-auto text-[11px] text-faint">{[e.created_by_name, fmtDate(e.created_at)].filter(Boolean).join(" · ")}</p>
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             <button className={act} style={{ borderColor: color, color }} onClick={viewIt}>عرض</button>

@@ -65,8 +65,8 @@ export function planPages({ plan, progs, rep, theme = "light", sigs = {} }) {
         <Bars full max={100} items={Object.keys(STANDARDS).map((s) => ({ t: STANDARDS[s], v: a.byStd[s] ?? 0, c: levelOf(a.byStd[s])?.c, note: fmtPct(a.byStd[s]) }))} />
       </Box>
       <Highlights items={[
-        a.low[0] && `أدنى مؤشر: ${a.low[0]} «${short(INDICATORS[a.low[0]], 60)}» بنسبة ${rep.scores[a.low[0]]}%.`,
-        a.high[0] && `أعلى مؤشر: ${a.high[0]} بنسبة ${rep.scores[a.high[0]]}%.`,
+        a.low[0] && `أدنى مؤشر: \u2066${a.low[0]}\u2069 «${short(INDICATORS[a.low[0]], 60)}» بنسبة ${rep.scores[a.low[0]]}%.`,
+        a.high[0] && `أعلى مؤشر: \u2066${a.high[0]}\u2069 بنسبة ${rep.scores[a.high[0]]}%.`,
         `${a.below.length} مؤشرًا دون مستوى التقدم (75%)، ومتوسط إنجاز برامج الخطة ${avgDone}%.`,
       ].filter(Boolean)} />
     </Page>,
