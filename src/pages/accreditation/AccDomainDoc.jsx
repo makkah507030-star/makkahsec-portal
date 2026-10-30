@@ -4,18 +4,18 @@ import { supabase } from "../../lib/supabase";
 import { fmtDate } from "../../lib/dates";
 import { usePrincipalSignature } from "../../lib/principalSignature.js";
 import {
-  DOMAINS, STANDARDS, INDICATORS, TOOLS, EV_STATUS, LEVEL_T, LEVELS, roleT, levelOf, stdOf, progOf, fmtPct, domainSummary,
+  DOMAINS, STANDARDS, INDICATORS, EV_STATUS, LEVEL_T, LEVELS, roleT, levelOf, stdOf, progOf, fmtPct, domainSummary,
 } from "../../lib/accreditation.js";
+import { NAT_TESTS, NAT_BANDS, natSeries, signed } from "../../lib/accNational.js";
 import { S, Kpis, Box, Bars, Highlights, Signs, Page, Cover, paginate } from "../../components/report/ReportKit.jsx";
 import ReportViewer from "../../components/report/ReportViewer.jsx";
 
 /* =====================================================================
    تقرير المجال لمشرفه، والتقرير العام لمشرف اللجنة بالمجالات الأربعة، بهوية التقارير الشهرية:
-   الغلاف ← الملخص (الأداء والإنجاز والشواهد والمعايير) ← المؤشرات ← برامج خطة التحسين بقياس
+   الغلاف ← الملخص (الأداء والإنجاز والشواهد والمعايير) ← المؤشرات ← الاختبارات الوطنية (لنواتج التعلم) ← برامج خطة التحسين بقياس
    نواتجها ← الشواهد المرفوعة ← غير المرفوعة ← مساهمة المشرفين ← الاعتماد والتوقيع والختم.
    ===================================================================== */
 
-const toolT = Object.fromEntries(TOOLS.map((t) => [t.key, t.t]));
 const short = (t, n = 80) => (t && t.length > n ? `${t.slice(0, n)}…` : t);
 const L = { color: "var(--mr-ink2)" };
 
@@ -56,10 +56,11 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
   const evPages = paginate(sm.evs, () => 40, 740, 820);
   const misPages = paginate(sm.gaps.missing, () => 44, 720, 800);
   const conPages = paginate(contrib, () => 40, 700, 820);
-  const total = 3 + Math.max(1, conPages.length) + indPages.length + prgPages.length + Math.max(1, evPages.length) + Math.max(1, misPages.length);
+  const nat = ds.includes(3) ? Object.keys(NAT_TESTS).map((k) => [k, natSeries(data.nat ?? [], k)]).filter(([, x]) => x.length) : [];
+  const total = 3 + (nat.length ? 1 : 0) + Math.max(1, conPages.length) + indPages.length + prgPages.length + Math.max(1, evPages.length) + Math.max(1, misPages.length);
   const doc = { title: all ? "التقرير العام للجنة التميز" : `تقرير مجال ${DOMAINS[d]}`, meta: ["لجنة التميز", rep ? `${rep.academic_year}هـ` : null], foot: "التقويم والاعتماد المدرسي" };
   const common = { theme, doc, total };
-  let pg = 2;
+  let pg = 2, no = 2;
   const names = supervisors.map((m) => m.full_name).join("، ") || "—";
 
   return [
@@ -99,7 +100,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
     </Page>,
 
     ...indPages.map((rows, i) => (
-      <Page key={`ind${i}`} {...common} page={pg++} sec={i ? null : { no: 2, title: `مؤشرات ${W}`, sub: "النسبة في آخر تقرير وحالة الشواهد" }}>
+      <Page key={`ind${i}`} {...common} page={pg++} sec={i ? null : { no: no++, title: `مؤشرات ${W}`, sub: "النسبة في آخر تقرير وحالة الشواهد" }}>
         <table className="mr-table">
           <thead><tr><th style={{ width: 62 }}>الرمز</th><th>المؤشر</th><th style={{ width: 54 }}>النسبة</th><th style={{ width: 58 }}>المستوى</th><th style={{ width: 62 }}>الخطة</th><th style={{ width: 46 }}>الشواهد</th></tr></thead>
           <tbody>{rows.map((c) => (
@@ -110,8 +111,31 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
       </Page>
     )),
 
+    ...(nat.length ? [
+      <Page key="nat" {...common} page={pg++} sec={{ no: no++, title: "الاختبارات الوطنية", sub: "بطاقات القدرات والتحصيلي من هيئة تقويم التعليم والتدريب" }}>
+        {nat.map(([k, x]) => { const r = x[x.length - 1]; const T = NAT_TESTS[k]; return (
+          <Box key={k} icon="chart" title={`${T.full} · ${r.academic_year}هـ`} aside={`${r.takers ?? "—"} مختبرًا`}>
+            <table className="mr-table">
+              <thead><tr><th>المتوسط</th><th>عن السابق</th><th>المدرسة / الإدارة / المملكة</th><th>الترتيب في المملكة</th><th>الترتيب في الإدارة</th></tr></thead>
+              <tbody><tr><td className="c num"><b>{r.avg}</b></td><td className="c num">{r.change_pct == null ? "—" : `${signed(r.change_pct)}%`}</td>
+                <td className="c num">{[r.school_avg, r.district_avg, r.kingdom_avg].map((v) => v ?? "—").join(" / ")}</td>
+                <td className="c num">{r.kingdom_above != null ? `أعلى من ${r.kingdom_above}%` : "—"}{r.kingdom_rank ? ` (${r.kingdom_rank} من ${r.kingdom_total})` : ""}</td>
+                <td className="c num">{r.district_above != null ? `أعلى من ${r.district_above}%` : "—"}{r.district_rank ? ` (${r.district_rank} من ${r.district_total})` : ""}</td></tr></tbody>
+            </table>
+            <Bars full max={100} items={NAT_BANDS.map((b) => ({ t: `${b.t} (${b.s})`, v: r[b.k] ?? 0, c: b.c, note: fmtPct(r[b.k]) }))} />
+            {r.subs?.length > 0 && <Bars full max={100} items={[...r.subs].sort((a, b) => a.v - b.v).map((s2) => ({ t: s2.t, v: s2.v, c: S[2], note: `${r.subs_estimated ? "≈" : ""}${s2.v}` }))} />}
+            <div className="mr-notes" style={{ fontSize: 10, ...L }}>
+              {T.growth}: {r.isBase ? `هذا العام خط الأساس (المتوسط ${r.avg}).` : `المتوسط ${signed(r.dBase)} عن خط الأساس ${x.find((y) => y.isBase).academic_year}هـ (${x.find((y) => y.isBase).avg}).`}
+              {x.length > 1 && ` المتوسط عبر الأعوام: ${x.map((y) => `${y.academic_year}هـ ${y.avg}`).join(" · ")}.`}
+              {r.subs_estimated ? " المجالات الفرعية تقديرية من أطوال الأشرطة في البطاقة." : ""}
+            </div>
+          </Box>
+        ); })}
+      </Page>,
+    ] : []),
+
     ...prgPages.map((rows, i) => (
-      <Page key={`prg${i}`} {...common} page={pg++} sec={i ? null : { no: 3, title: "برامج خطة التحسين", sub: "قياس نواتج المبادرات والبرامج" }}>
+      <Page key={`prg${i}`} {...common} page={pg++} sec={i ? null : { no: no++, title: "برامج خطة التحسين", sub: "قياس نواتج المبادرات والبرامج" }}>
         {rows.map((p) => { const pr = progOf(p); return (
           <Box key={p.id} title={`${p.code} · ${p.initiative}`} aside={`نُفّذ ${pr.done}% · تحققت ${pr.met}%`}>
             <div className="num" style={{ fontSize: 10.5, ...L, marginBottom: 4 }}>الحالي {p.current == null ? "مستحدث" : `${p.current}%`} · المستهدف {fmtPct(p.target)} · {p.team?.join("، ")}</div>
@@ -127,18 +151,18 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
     )),
 
     ...(evPages.length ? evPages : [[]]).map((rows, i) => (
-      <Page key={`ev${i}`} {...common} page={pg++} sec={i ? null : { no: 4, title: "الشواهد المرفوعة", sub: `${sm.gaps.uploaded} شاهدًا · المعتمد ${sm.approved}` }}>
+      <Page key={`ev${i}`} {...common} page={pg++} sec={i ? null : { no: no++, title: "الشواهد المرفوعة", sub: `${sm.gaps.uploaded} شاهدًا · المعتمد ${sm.approved}` }}>
         {rows.length ? <table className="mr-table">
-          <thead><tr><th style={{ width: 62 }}>الرمز</th><th>الشاهد</th><th style={{ width: 110 }}>الأداة</th><th style={{ width: 52 }}>الحالة</th><th style={{ width: 120 }}>رفعه</th></tr></thead>
+          <thead><tr><th style={{ width: 62 }}>الرمز</th><th>الشاهد</th><th style={{ width: 52 }}>الحالة</th><th style={{ width: 120 }}>رفعه</th></tr></thead>
           <tbody>{rows.map((e) => (
-            <tr key={e.id}><td className="c num"><b>{e.code}</b></td><td>{e.title}</td><td style={{ fontSize: 10 }}>{toolT[e.tool] ?? "—"}</td>
+            <tr key={e.id}><td className="c num"><b>{e.code}</b></td><td>{e.title}{e.link?.startsWith("portal:") && <span style={L}> · من أعمال البوابة</span>}</td>
               <td className="c">{EV_STATUS[e.status].t}</td><td style={{ fontSize: 10 }}>{e.created_by_name ?? "—"} · <span className="num">{fmtDate(e.created_at)}</span></td></tr>))}</tbody>
         </table> : <Box tint><div className="mr-notes">لم يُرفع شاهد بعد.</div></Box>}
       </Page>
     )),
 
     ...(misPages.length ? misPages : [[]]).map((rows, i) => (
-      <Page key={`mis${i}`} {...common} page={pg++} sec={i ? null : { no: 5, title: "الشواهد غير المرفوعة", sub: "المطلوبة في برامج الخطة، والمؤشرات التي لا شاهد لها" }}>
+      <Page key={`mis${i}`} {...common} page={pg++} sec={i ? null : { no: no++, title: "الشواهد غير المرفوعة", sub: "المطلوبة في برامج الخطة، والمؤشرات التي لا شاهد لها" }}>
         {rows.length ? <table className="mr-table">
           <thead><tr><th style={{ width: 62 }}>الرمز</th><th>الشاهد المطلوب</th><th style={{ width: 150 }}>البرنامج</th></tr></thead>
           <tbody>{rows.map((x, k) => (
@@ -149,7 +173,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
     )),
 
     ...(conPages.length ? conPages : [[]]).map((rows, i) => (
-      <Page key={`con${i}`} {...common} page={pg++} sec={i ? null : { no: 6, title: all ? "مساهمة مشرفي اللجنة" : "مساهمة مشرف المجال", sub: "الشواهد والاجتماعات والقرارات المسندة" }}>
+      <Page key={`con${i}`} {...common} page={pg++} sec={i ? null : { no: no++, title: all ? "مساهمة مشرفي اللجنة" : "مساهمة مشرف المجال", sub: "الشواهد والاجتماعات والقرارات المسندة" }}>
         {rows.length ? <>
           <table className="mr-table">
             <thead><tr><th>الاسم</th><th style={{ width: 120 }}>الصفة</th><th style={{ width: 52 }}>الشواهد</th><th style={{ width: 52 }}>المعتمد</th><th style={{ width: 62 }}>الاجتماعات</th><th style={{ width: 70 }}>القرارات</th></tr></thead>
@@ -164,7 +188,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
       </Page>
     )),
 
-    <Page key="end" {...common} page={pg++} sec={{ no: 7, title: "الاعتماد", sub: all ? "إقرار مشرف اللجنة ومدير المدرسة" : "إقرار مشرف المجال ومدير المدرسة" }}>
+    <Page key="end" {...common} page={pg++} sec={{ no: no++, title: "الاعتماد", sub: all ? "إقرار مشرف اللجنة ومدير المدرسة" : "إقرار مشرف المجال ومدير المدرسة" }}>
       <Box icon="check" title="إقرار" tint>
         <div className="mr-notes">بيانات هذا التقرير كما سجّلتها البوابة عند إعداده: نسب المؤشرات من {rep ? `«${rep.title}»` : "آخر تقرير"}، وقياس نواتج البرامج كما عبّأه الفريق المكلف، والشواهد كما رُفعت في القسم.</div>
       </Box>
