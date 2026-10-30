@@ -6,6 +6,7 @@
    • اختياريًا: يُدخل الطالب نتيجته من حسابه («نتائج قياس») فتُضاف مباشرة دون تحقق. وقسم «بانتظار
      التحقق» يظهر إن فُعّل التحقق لاحقًا (qiyas_submit بحالة pending).
    • التحليل على المعتمد وحده: أعلى درجة لكل طالب، والمتوسط والتوزيع والفصول، ومن لم يُدخل بعد.
+   • النتيجة الرسمية للمدرسة من بطاقة الهيئة (قسم التقويم والاعتماد، supabase/acc_5.sql) تُقارن بما سُجّل هنا.
    ===================================================================== */
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
@@ -16,6 +17,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { ACH_ALL, useAchMember, stats, groupBy } from "../../lib/achievement";
 import Loader from "../../components/Loader.jsx";
 import { DistStrip, HBars, Stat, pctTxt } from "./Charts.jsx";
+import { NAT_TESTS, NAT_BANDS, natSeries, signed } from "../../lib/accNational.js";
 
 const TESTS = [
   { k: "qudrat", t: "القدرات العامة", d: "اختبار القدرات العامة (اللفظي والكمي)" },
@@ -38,6 +40,7 @@ export default function Qiyas() {
   const [err, setErr] = useState("");
   const [msg, setMsg] = useNotice(null);
   const [upload, setUpload] = useState(false);
+  const [nat, setNat] = useState([]);
 
   const load = async () => {
     const { data: st } = await supabase.from("settings").select("value").eq("key", "active_year").maybeSingle();
@@ -47,6 +50,8 @@ export default function Qiyas() {
       supabase.from("qiyas_results").select("id, student_id, test, attempt, score, taken_on, status, source, proof_path, reject_reason, created_at").limit(20000),
       supabase.from("v_active_students").select("student_id, full_name, national_id, grade, class_no").eq("academic_year", y).eq("status", "active").limit(5000),
     ]);
+    // بطاقات الهيئة الرسمية: قبل acc_5.sql أو بلا صلاحية تُعدّ فارغة
+    supabase.from("acc_national").select("*").order("academic_year").then(({ data: n }) => setNat(n ?? []));
     if (error) { setErr(/qiyas_results/.test(error.message) ? setupMsg : error.message); setRows([]); return; }
     setRows(data ?? []); setStudents(vs ?? []);
   };
@@ -108,6 +113,8 @@ export default function Qiyas() {
       {!err && <Pending rows={(rows ?? []).filter((r) => r.test === test && r.status === "pending" && myGrades.includes(stu.get(r.student_id)?.grade))}
                         stu={stu} canWrite={canWrite} onChange={load} setMsg={setMsg} />}
 
+      {!err && NAT_TESTS[test] && <Official series={natSeries(nat, test)} best={best} />}
+
       {!err && <Analysis best={best} test={T} students={students.filter((s) => myGrades.includes(s.grade))} />}
     </div>
   );
@@ -154,6 +161,41 @@ function Pending({ rows, stu, canWrite, onChange, setMsg }) {
           );
         })}
       </div>
+    </section>
+  );
+}
+
+/* النتيجة الرسمية للمدرسة (آخر بطاقة من الهيئة) مقارنةً بما سُجّل للطلاب في هذه الصفحة */
+function Official({ series, best }) {
+  const r = series[series.length - 1];
+  if (!r) return null;
+  const s = stats(best.map((b) => ({ testPct: b.score })));
+  const band = (lo, hi) => (best.length ? Math.round((best.filter((b) => b.score >= lo && b.score < hi).length / best.length) * 1000) / 10 : null);
+  const mine = { high_pct: band(75, 101), mid_pct: band(65, 75), low_pct: band(0, 65) };
+  const diff = s.avg != null && r.avg != null ? Math.round((s.avg - r.avg) * 100) / 100 : null;
+  return (
+    <section className="card overflow-hidden">
+      <div className="border-b border-line px-4 py-2.5">
+        <h2 className="text-sm font-semibold text-ink">النتيجة الرسمية للمدرسة <span className="font-normal text-muted">— بطاقة الهيئة {r.academic_year}هـ</span></h2>
+        <p className="text-[11.5px] text-muted">من قسم التقويم والاعتماد. تُقارن بما سُجّل هنا لكل طالب، فيُعرف هل النتائج المسجّلة تمثّل المدرسة.</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px] text-[12.5px]">
+          <thead className="bg-canvas text-muted"><tr>{["", "المتوسط", "الطلاب", ...NAT_BANDS.map((b) => `${b.t} (${b.s})`)].map((h) => <th key={h} className="px-3 py-2 text-start font-medium">{h}</th>)}</tr></thead>
+          <tbody className="divide-y divide-line">
+            <tr><td className="px-3 py-2 font-semibold text-ink">الرسمية (الهيئة)</td><td className="num px-3 py-2 font-bold text-ink">{r.avg}</td><td className="num px-3 py-2">{r.takers ?? "—"}</td>
+              {NAT_BANDS.map((b) => <td key={b.k} className="num px-3 py-2">{r[b.k] == null ? "—" : `${r[b.k]}%`}</td>)}</tr>
+            <tr><td className="px-3 py-2 font-semibold text-ink">المسجّلة هنا</td><td className="num px-3 py-2 font-bold text-ink">{s.avg ?? "—"}</td><td className="num px-3 py-2">{s.n}</td>
+              {NAT_BANDS.map((b) => <td key={b.k} className="num px-3 py-2">{mine[b.k] == null ? "—" : `${mine[b.k]}%`}</td>)}</tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="px-4 py-2.5 text-[11.5px] text-muted">
+        {r.district_avg != null && <>متوسط الإدارة <b className="num text-ink">{r.district_avg}</b> والمملكة <b className="num text-ink">{r.kingdom_avg ?? "—"}</b>. </>}
+        {r.change_pct != null && <>التغير عن العام السابق <b className="num text-ink">{signed(r.change_pct)}%</b>. </>}
+        {diff != null && s.n > 0 && <>متوسط المسجّلة {diff === 0 ? "يساوي" : diff > 0 ? "أعلى من" : "أدنى من"} الرسمي{diff ? <> بـ<b className="num text-ink">{Math.abs(diff)}</b></> : ""}
+          {r.takers && s.n < r.takers * 0.8 ? ` — سُجّل ${s.n} طالبًا من ${r.takers} مختبرًا، فقد لا تمثّل المسجّلة المدرسة كلها.` : "."}</>}
+      </p>
     </section>
   );
 }

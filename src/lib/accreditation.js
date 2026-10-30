@@ -169,15 +169,16 @@ export const fmtPct = (v) => (v == null ? "—" : `${Number(v)}%`);
 
 export const roleT = (m) => (m.role === "coordinator" ? "مشرف اللجنة" : m.domains?.length ? "مشرف مجال" : "عضو");
 
-/** بيانات القسم للتقارير: برامج الخطة السارية وكل الشواهد والمحاضر */
+/** بيانات القسم للتقارير: برامج الخطة السارية وكل الشواهد والمحاضر ونتائج الاختبارات الوطنية */
 export async function loadAccData(plans) {
   const plan = plans.find((p) => p.status === "active") ?? plans[0] ?? null;
-  const [pg, ev, mt] = await Promise.all([
+  const [pg, ev, mt, nat] = await Promise.all([
     plan ? supabase.from("acc_programs").select("*").eq("plan_id", plan.id) : Promise.resolve({ data: [] }),
     supabase.from("acc_evidence").select("*").order("created_at", { ascending: false }),
     supabase.from("acc_meetings").select("*").order("held_on", { ascending: false }),
+    supabase.from("acc_national").select("*").order("academic_year"),   // قبل acc_5.sql يفشل فتُعدّ فارغة
   ]);
-  return { plan, progs: pg.data ?? [], ev: ev.data ?? [], meetings: mt.data ?? [] };
+  return { plan, progs: pg.data ?? [], ev: ev.data ?? [], meetings: mt.data ?? [], nat: nat.data ?? [] };
 }
 
 /** الشواهد المطلوبة في برامج الخطة وما رُفع منها: يُعدّ الشاهد مرفوعًا إن رُفع للمؤشر شاهد بعنوانه */

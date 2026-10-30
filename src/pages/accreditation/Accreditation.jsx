@@ -12,18 +12,19 @@ import AccTools from "./AccTools.jsx";
 import AccCommittee from "./AccCommittee.jsx";
 import AccDomainReport from "./AccDomainDoc.jsx";
 import AccDashboard from "./AccDashboard.jsx";
+import AccNational from "./AccNational.jsx";
 
 /* =====================================================================
-   قسم التقويم والاعتماد المدرسي (supabase/acc_1..3.sql، src/lib/accreditation.js) تديره لجنة التميز:
+   قسم التقويم والاعتماد المدرسي (supabase/acc_1..5.sql، src/lib/accreditation.js) تديره لجنة التميز:
    • المدير ووكيل الشؤون التعليمية والدعم الفني يرون الكل، ويعيّنون مشرف اللجنة.
    • المشرف يرى الكل، ويضيف الأعضاء ويسند لكل منهم مجالات، فيرى العضو مجالاته وحدها.
-   التبويبات: اللوحة، والمؤشرات والشواهد، والتقويم الذاتي، والتقويم الخارجي، وخطة التحسين
+   التبويبات: اللوحة، والمؤشرات والشواهد، والتقويم الذاتي، والتقويم الخارجي، والاختبارات الوطنية (القدرات والتحصيلي)، وخطة التحسين
    (من تقرير التقويم الذاتي حتى يصدر الخارجي ثم تُحدَّث بنسخة جديدة)، وأدوات التقويم، واللجنة.
    ===================================================================== */
 
 const TABS = [
   ["dash", "لوحة الأداء"], ["ind", "المؤشرات والشواهد"], ["plan", "خطة التحسين"], ["self", "التقويم الذاتي"],
-  ["ext", "التقويم الخارجي"], ["tools", "أدوات التقويم"], ["team", "لجنة التميز"],
+  ["ext", "التقويم الخارجي"], ["nat", "الاختبارات الوطنية"], ["tools", "أدوات التقويم"], ["team", "لجنة التميز"],
 ];
 const pill = (on) => `shrink-0 rounded-pill px-4 py-1.5 text-sm font-medium transition-colors ${
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
@@ -77,6 +78,7 @@ export default function Accreditation() {
       {tab === "plan" && <AccPlan {...common} />}
       {tab === "self" && <AccEvaluation kind="self" {...common} />}
       {tab === "ext" && <AccEvaluation kind="external" {...common} />}
+      {tab === "nat" && <AccNational {...common} />}
       {tab === "tools" && <AccTools {...common} />}
       {tab === "team" && <AccCommittee {...common} />}
       </>}

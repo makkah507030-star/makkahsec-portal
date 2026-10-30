@@ -5,6 +5,8 @@ import { fmtDate } from "../../lib/dates";
 import {
   CODES, DOMAINS, DOMAIN_COLOR, INDICATORS, LEVELS, PLAN_BELOW, analyze, domainOf, domainSummary, fmtPct, levelOf, loadAccData, progOf,
 } from "../../lib/accreditation.js";
+import { NAT_TESTS, natGrowth, natSeries, signed } from "../../lib/accNational.js";
+import { NatCard } from "./AccNational.jsx";
 import Loader from "../../components/Loader.jsx";
 
 /* =====================================================================
@@ -12,6 +14,7 @@ import Loader from "../../components/Loader.jsx";
    • الأداء العام على سلّم المستويات الأربعة، وأرقام الخطة والشواهد.
    • جدول المجالات: الأداء والمستوى، والمؤشرات ودون التقدم منها، وبرامج الخطة وإنجازها، والشواهد والمتبقي.
    • جدول أولويات التحسين: كل مؤشر دون التقدم بفجوته وبرنامجه وإنجازه وشواهده، مرتبًا من الأدنى.
+   • الاختبارات الوطنية (القدرات والتحصيلي) لمن يرى مجال نواتج التعلم، وقياس المستحدثين على خط أساسها.
    • جوانب القوة، والمحطة القادمة في الخطة.
    ===================================================================== */
 
@@ -220,6 +223,17 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
         )}
       </section>
 
+      {/* الاختبارات الوطنية */}
+      {doms.includes(3) && data.nat.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-ink">الاختبارات الوطنية <span className="font-normal text-muted">— بطاقات هيئة تقويم التعليم والتدريب</span></h2>
+            <button className="text-xs font-semibold text-mint-deep" onClick={() => go("nat")}>التفاصيل ←</button>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-2">{Object.keys(NAT_TESTS).map((k) => <NatCard key={k} test={k} series={natSeries(data.nat, k)} me={me} compact />)}</div>
+        </section>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         {/* جوانب القوة */}
         <section className="card overflow-hidden">
@@ -234,10 +248,13 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
         {/* المستحدثة بلا قياس */}
         <section className="card overflow-hidden">
           <h2 className="border-b border-line px-4 py-3 text-sm font-bold text-ink">مؤشرات مستحدثة بلا قياس سابق <span className="font-normal text-muted">— تحتاج خط أساس وشواهد</span></h2>
-          {fresh.length ? <div className="divide-y divide-line/70">{fresh.map((c) => { const [dn, rq] = reqDone(c); return (
+          {fresh.length ? <div className="divide-y divide-line/70">{fresh.map((c) => { const [dn, rq] = reqDone(c);
+            const tk = Object.keys(NAT_TESTS).find((k) => NAT_TESTS[k].growth === c); const g = tk && natGrowth(data.nat, tk); return (
             <div key={c} className="flex items-center gap-3 px-4 py-2.5">
               <span className="num rounded-sm2 px-1.5 py-0.5 text-[11px] font-bold text-white" style={{ background: DOMAIN_COLOR[domainOf(c)] }}>{c}</span>
-              <span className="min-w-0 flex-1 text-[13px] text-ink">{INDICATORS[c]}</span>
+              <span className="min-w-0 flex-1 text-[13px] text-ink">{INDICATORS[c]}
+                {g && <span className="block text-[11px] text-muted">{g.only ? <>خط الأساس {g.base.academic_year}هـ: المتوسط <b className="num text-ink">{g.base.avg}</b></>
+                  : <>المتوسط {g.last.academic_year}هـ <b className="num text-ink">{g.last.avg}</b> · عن خط الأساس <b className="num" style={{ color: g.delta > 0 ? "rgb(var(--c-present))" : "rgb(var(--c-absent))" }}>{signed(g.delta)}</b></>}</span>}</span>
               {rq > 0 && <b className="num text-xs" style={{ color: pctColor((dn / rq) * 100) }}>شواهد {dn}/{rq}</b>}
             </div>); })}</div> : <p className="px-4 py-6 text-center text-sm text-muted">لا مؤشرات مستحدثة في مجالاتك.</p>}
         </section>
