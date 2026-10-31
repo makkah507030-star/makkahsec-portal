@@ -66,9 +66,8 @@ export const INDICATORS = {
   "4-2-1-3": "تتابع المدرسة نظافة المبنى المدرسي وجميع مرافقه بشكل مستمر.",
 };
 export const CODES = Object.keys(INDICATORS);
-// رمز المؤشر داخل نص عربي تعكس المتصفحات أرقامه (1-2-1-2 تظهر 2-1-2-1) لأنها تُعامَل أرقامًا عربية بعد حرف عربي؛
-// فيُعزل كل رمز في النص اتجاهًا من اليسار (LRI … PDI). يُستعمل لكل نص فيه رمز: الرسائل والعناوين والملاحظات.
-export const bidi = (t) => (typeof t === "string" ? t.replace(/\d+(?:-\d+){3}/g, (m) => `\u2066${m}\u2069`) : t);
+// رمز المؤشر والنسبة داخل نص عربي ينعكسان (src/lib/bidi.js)؛ يُستعمل لكل نص فيه رمز أو نسبة
+export { bidi } from "./bidi.js";
 export const domainOf = (code) => Number(code[0]);
 export const stdOf = (code) => code.slice(0, 3);
 export const NEW_CODES = ["3-1-1-3", "3-1-1-4"];   // مستحدثان في الإصدار الثالث بلا قياس سابق

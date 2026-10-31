@@ -42,6 +42,8 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
   const W = all ? "المجالات" : "المجال";
   const sm = domainSummary(ds, { ...data, scores: rep?.scores ?? {} });
   const sc = rep?.scores ?? {};
+  // غير المرفوع من الشواهد المطلوبة في الخطة وحدها؛ والمؤشرات التي لا شاهد لها ولا مطلوب في الخطة في صفحة «غير المرفوعة»
+  const missReq = sm.gaps.missing.filter((g) => g.title).length;
   const lv = levelOf(all ? (rep?.scores?._overall ?? sm.perf) : sm.perf);
   const stds = Object.keys(STANDARDS).filter((s) => ds.includes(+s[0]));
   const domAvg = (x) => domainSummary([x], { ...data, scores: rep?.scores ?? {} }).perf;
@@ -72,7 +74,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
       rows: [["users", all ? "مشرفو المجالات" : "مشرف المجال", names], ["user", "مشرف اللجنة", coord ?? "—"],
              ["doc", "مصدر النتائج", rep ? rep.title : "—"], ["clock", "تاريخ التقرير", fmtDate(new Date())]],
       note: ["check", `يعرض مؤشرات ${W} وبرامجه وما رُفع من شواهده وما لم يُرفع، ومساهمة ${all ? "كل مشرف" : "مشرف المجال"}، كما سُجّلت في البوابة.`],
-      strip: [[sm.codes.length, "المؤشرات"], [progs.length, "البرامج"], [sm.gaps.uploaded, "الشواهد المرفوعة"], [sm.gaps.missing.length, "غير المرفوعة"]],
+      strip: [[sm.codes.length, "المؤشرات"], [progs.length, "البرامج"], [sm.gaps.uploaded, "الشواهد المرفوعة"], [missReq, "غير المرفوعة"]],
       foot: "التقويم والاعتماد المدرسي",
     }} />,
 
@@ -81,7 +83,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
         { ic: "chart", t: all ? "متوسط المؤشرات" : "أداء المجال", v: fmtPct(sm.perf), s: lv?.t, c: S[0] },
         { ic: "check", t: "إنجاز البرامج", v: `${sm.done}%`, s: `تحققت الأهداف ${sm.met}%`, c: S[1] },
         { ic: "folder", t: "الشواهد المرفوعة", v: sm.gaps.uploaded, s: `المعتمد ${sm.approved}`, c: S[2] },
-        { ic: "alert", t: "غير المرفوعة", v: sm.gaps.missing.length, s: `المطلوب في الخطة: ${sm.gaps.required}`, c: S[3] },
+        { ic: "alert", t: "غير المرفوعة", v: missReq, s: `من ${sm.gaps.required} مطلوبة في الخطة`, c: S[3] },
       ]} />
       {all && <Box icon="chart" title="أداء المجالات الأربعة">
         <Bars full max={100} items={ds.map((x) => ({ t: DOMAINS[x], v: domAvg(x) ?? 0, c: levelOf(domAvg(x))?.c, note: fmtPct(domAvg(x)) }))} />
@@ -93,10 +95,10 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
         <Bars full items={LEVELS.map((l) => ({ t: l.t, v: sm.codes.filter((c) => levelOf(sc[c]) === l).length, c: l.c }))} />
       </Box>
       <Highlights items={[
-        low && `أدنى مؤشرات ${W} \u2066${low}\u2069 «${short(INDICATORS[low], 60)}» بنسبة ${sc[low]}%.`,
+        low && `أدنى مؤشرات ${W} ${low} «${short(INDICATORS[low], 60)}» بنسبة ${sc[low]}%.`,
         best && `أعلى البرامج إنجازًا «${best.initiative}» بنسبة ${progOf(best).done}%.`,
-        `${countAr(progs.length, "program")} ضمن الخطة، وللاستدامة ${countAr(sm.sustain.length, "program")}.`,
-        sm.gaps.missing.length ? `لم يُرفع بعد من الشواهد المطلوبة: ${sm.gaps.missing.length}.` : "رُفعت كل الشواهد المطلوبة في الخطة.",
+        `${countAr(progs.length, "program")} ضمن الخطة${sm.sustain.length ? `، وللاستدامة ${countAr(sm.sustain.length, "program")}` : ""}.`,
+        missReq ? `لم يُرفع بعد من الشواهد المطلوبة في الخطة: ${missReq} من ${sm.gaps.required}.` : "رُفعت كل الشواهد المطلوبة في الخطة.",
       ].filter(Boolean)} />
     </Page>,
 

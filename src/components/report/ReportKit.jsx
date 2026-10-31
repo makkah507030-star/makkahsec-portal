@@ -6,6 +6,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import { Decor, ICONS } from "../../pages/studio/Sheets.jsx";
 import "../../pages/studio/studio.css";
 import "./report.css";
+import { bidi } from "../../lib/bidi.js";
 
 /* =====================================================================
    طقم التقارير المصمّمة بهوية استوديو البوابة — مكوّنات مشتركة لكل تقرير
@@ -305,9 +306,9 @@ export function Kpis({ items, cols = 4 }) {
       {items.map(({ ic, t, v, s, c }) => (
         <div key={t} className="mr-kpi" style={{ "--c": c ?? S[0] }}>
           <div className="ic">{IC[ic]}</div>
-          <div className="v num">{typeof v === "number" ? n(v) : v}</div>
-          <div className="k">{t}</div>
-          {s && <div className="s">{s}</div>}
+          <div className={`v num${String(typeof v === "number" ? n(v) : v ?? "").length > 5 ? " long" : ""}`}>{typeof v === "number" ? n(v) : v}</div>
+          <div className="k">{bidi(t)}</div>
+          {s && <div className="s">{bidi(s)}</div>}
         </div>
       ))}
     </div>
@@ -318,7 +319,7 @@ export function Highlights({ title = "أبرز ما في التقرير", items 
   return (
     <div className="mr-high">
       <h3>{IC.spark}{title}</h3>
-      <ul>{items.map((t) => <li key={t}>{t}</li>)}</ul>
+      <ul>{items.map((t) => <li key={t}>{bidi(t)}</li>)}</ul>
     </div>
   );
 }
@@ -326,7 +327,7 @@ export function Highlights({ title = "أبرز ما في التقرير", items 
 export function Box({ icon, title, aside, tint, style, children }) {
   return (
     <div className={`mr-box${tint ? " tint" : ""}`} style={style}>
-      {title && <h3>{icon && IC[icon]}{title}{aside != null && <span className="aside">{aside}</span>}</h3>}
+      {title && <h3>{icon && IC[icon]}{bidi(title)}{aside != null && <span className="aside">{bidi(aside)}</span>}</h3>}
       {children}
     </div>
   );
