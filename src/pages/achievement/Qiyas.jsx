@@ -59,10 +59,10 @@ export default function Qiyas() {
   useEffect(() => { load(); }, []);
 
   const stu = useMemo(() => new Map(students.map((s) => [s.student_id, s])), [students]);
-  // أعلى درجة لكل طالب في الاختبار المختار، لطلاب الصفوف المتاحة
-  const best = useMemo(() => {
+  // أعلى درجة لكل طالب في الاختبار المختار، لطلاب الصفوف المتاحة؛ official: من تقرير المركز وحده
+  const bestOf = (official) => {
     const m = new Map();
-    (rows ?? []).filter((r) => r.test === test && r.status === "verified").forEach((r) => {
+    (rows ?? []).filter((r) => r.test === test && r.status === "verified" && (!official || r.source === "official")).forEach((r) => {
       const s = stu.get(r.student_id);
       if (!s || !myGrades.includes(s.grade)) return;
       const x = m.get(r.student_id);
@@ -70,7 +70,9 @@ export default function Qiyas() {
       else x.attempts++;
     });
     return [...m.values()];
-  }, [rows, stu, test, myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
+  };
+  const best = useMemo(() => bestOf(false), [rows, stu, test, myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const bestOfficial = useMemo(() => bestOf(true), [rows, stu, test, myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!myGrades.length) return <p className="card px-4 py-6 text-sm text-muted">صفحة اختبارات قياس لوكيل الشؤون التعليمية ولجنة التحصيل والموجهين.</p>;
   if (!rows) return <Loader />;
@@ -114,7 +116,7 @@ export default function Qiyas() {
       {!err && <Pending rows={(rows ?? []).filter((r) => r.test === test && r.status === "pending" && myGrades.includes(stu.get(r.student_id)?.grade))}
                         stu={stu} canWrite={canWrite} onChange={load} setMsg={setMsg} />}
 
-      {!err && NAT_TESTS[test] && <Official series={natSeries(nat, test)} best={best} />}
+      {!err && NAT_TESTS[test] && <Official series={natSeries(nat, test)} best={bestOfficial} />}
 
       {!err && <Analysis best={best} test={T} students={students.filter((s) => myGrades.includes(s.grade))} />}
     </div>
@@ -166,7 +168,8 @@ function Pending({ rows, stu, canWrite, onChange, setMsg }) {
   );
 }
 
-/* النتيجة الرسمية للمدرسة (آخر بطاقة من الهيئة) مقارنةً بما سُجّل للطلاب في هذه الصفحة */
+/* النتيجة الرسمية للمدرسة (آخر بطاقة من الهيئة) مقارنةً بنتائج الطلاب من تقرير المركز وحده،
+   فما يُدخله الطلاب من حساباتهم لا يدخل المقارنة */
 function Official({ series, best }) {
   const r = series[series.length - 1];
   if (!r) return null;
@@ -178,7 +181,7 @@ function Official({ series, best }) {
     <section className="card overflow-hidden">
       <div className="border-b border-line px-4 py-2.5">
         <h2 className="text-sm font-semibold text-ink">النتيجة الرسمية للمدرسة <span className="font-normal text-muted">— بطاقة الهيئة {r.academic_year}هـ</span></h2>
-        <p className="text-[11.5px] text-muted">من قسم التقويم والاعتماد. تُقارن بما سُجّل هنا لكل طالب، فيُعرف هل النتائج المسجّلة تمثّل المدرسة.</p>
+        <p className="text-[11.5px] text-muted">من قسم التقويم والاعتماد. تُقارن بنتائج الطلاب من تقرير المركز المرفوع هنا وحده، دون ما أدخله الطلاب من حساباتهم.</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[520px] text-[12.5px]">
@@ -186,7 +189,7 @@ function Official({ series, best }) {
           <tbody className="divide-y divide-line [&_td.num]:text-center">
             <tr><td className="px-3 py-2 font-semibold text-ink">الرسمية (الهيئة)</td><td className="num px-3 py-2 font-bold text-ink">{r.avg}</td><td className="num px-3 py-2">{r.takers ?? "—"}</td>
               {NAT_BANDS.map((b) => <td key={b.k} className="num px-3 py-2">{r[b.k] == null ? "—" : `${r[b.k]}%`}</td>)}</tr>
-            <tr><td className="px-3 py-2 font-semibold text-ink">المسجّلة هنا</td><td className="num px-3 py-2 font-bold text-ink">{s.avg ?? "—"}</td><td className="num px-3 py-2">{s.n}</td>
+            <tr><td className="px-3 py-2 font-semibold text-ink">تقرير المركز المرفوع</td><td className="num px-3 py-2 font-bold text-ink">{s.avg ?? "—"}</td><td className="num px-3 py-2">{s.n}</td>
               {NAT_BANDS.map((b) => <td key={b.k} className="num px-3 py-2">{mine[b.k] == null ? "—" : `${mine[b.k]}%`}</td>)}</tr>
           </tbody>
         </table>
@@ -194,8 +197,9 @@ function Official({ series, best }) {
       <p className="px-4 py-2.5 text-[11.5px] text-muted">
         {r.district_avg != null && <>متوسط الإدارة <b className="num text-ink">{r.district_avg}</b> والمملكة <b className="num text-ink">{r.kingdom_avg ?? "—"}</b>. </>}
         {r.change_pct != null && <>التغير عن العام السابق <b className="num text-ink">{signed(r.change_pct)}%</b>. </>}
-        {diff != null && s.n > 0 && <>متوسط المسجّلة {diff === 0 ? "يساوي" : diff > 0 ? "أعلى من" : "أدنى من"} الرسمي{diff ? <> بـ<b className="num text-ink">{Math.abs(diff)}</b></> : ""}
-          {r.takers && s.n < r.takers * 0.8 ? ` — سُجّلت نتائج ${countAr(s.n, "student", { acc: true })} من ${countAr(r.takers, "examinee", { acc: true })}، فقد لا تمثّل المسجّلة المدرسة كلها.` : "."}</>}
+        {s.n === 0 ? <>لم يُرفع تقرير المركز لهذا الاختبار بعد، فلا مقارنة. ارفعه من «رفع تقرير … الرسمي».</>
+          : diff != null && <>متوسط تقرير المركز {diff === 0 ? "يساوي" : diff > 0 ? "أعلى من" : "أدنى من"} الرسمي{diff ? <> بـ<b className="num text-ink">{Math.abs(diff)}</b></> : ""}
+          {r.takers && s.n < r.takers * 0.8 ? ` — في التقرير المرفوع نتائج ${countAr(s.n, "student", { acc: true })} من ${countAr(r.takers, "examinee", { acc: true })}، فقد لا يمثّل المدرسة كلها.` : "."}</>}
       </p>
     </section>
   );
