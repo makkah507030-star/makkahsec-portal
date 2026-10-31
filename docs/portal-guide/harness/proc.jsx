@@ -9,12 +9,8 @@ const ICON = { "الدخول والحساب": "user", "المعلم": "book", "�
   "المحتوى والإشعارات": "megaphone", "استوديو البوابة": "spark", "الأحداث والمناسبات": "award", "معمل الحاسب الآلي": "grid",
   "الحسابات والصلاحيات": "lock", "الدعم الفني": "shield", "التقويم والاعتماد المدرسي": "award", "البرامج الطلابية": "globe" };
 
-/* بلا تفاصيل تقنية لا تهم المطلع: تُحذف الجمل التي تذكر ملفات قاعدة البيانات أو خدمات الاستضافة،
-   ويُستثنى إجراء نشر التحديث (للمطوّر وحده) */
-const TECH = /supabase|\.sql|\bSQL\b|Netlify|GitHub/i;
-const clean = (t) => (t ?? "").split(/(?<=[.؛])\s+/).filter((x) => !TECH.test(x)).join(" ").replace(/ولا تقبله قاعدة البيانات/g, "ولا تقبله البوابة").trim() || null;
-const GUIDE = PROCS.filter((p) => p.title !== "نشر تحديث على الموقع")
-  .map((p) => ({ ...p, steps: p.steps.filter((x) => !TECH.test(x)).map(clean), note: clean(p.note) }));
+// إجراءات «دليل الاستخدام» كما هي، بلغة المستخدم بلا تفاصيل تقنية
+const GUIDE = PROCS;
 export const cats = () => { const out = []; GUIDE.forEach((p) => { if (!out.includes(p.cat)) out.push(p.cat); }); return out; };
 export const GUIDE_COUNT = () => GUIDE.length;
 
