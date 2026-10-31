@@ -182,8 +182,8 @@ function Official({ series, best }) {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[520px] text-[12.5px]">
-          <thead className="bg-canvas text-muted"><tr>{["", "المتوسط", "الطلاب", ...NAT_BANDS.map((b) => `${b.t} (${b.s})`)].map((h) => <th key={h} className="px-3 py-2 text-start font-medium">{h}</th>)}</tr></thead>
-          <tbody className="divide-y divide-line">
+          <thead className="bg-canvas text-muted"><tr>{["", "المتوسط", "الطلاب", ...NAT_BANDS.map((b) => `${b.t} (${b.s})`)].map((h, i) => <th key={h} className={`px-3 py-2 font-medium ${i ? "text-center" : "text-start"}`}>{h}</th>)}</tr></thead>
+          <tbody className="divide-y divide-line [&_td.num]:text-center">
             <tr><td className="px-3 py-2 font-semibold text-ink">الرسمية (الهيئة)</td><td className="num px-3 py-2 font-bold text-ink">{r.avg}</td><td className="num px-3 py-2">{r.takers ?? "—"}</td>
               {NAT_BANDS.map((b) => <td key={b.k} className="num px-3 py-2">{r[b.k] == null ? "—" : `${r[b.k]}%`}</td>)}</tr>
             <tr><td className="px-3 py-2 font-semibold text-ink">المسجّلة هنا</td><td className="num px-3 py-2 font-bold text-ink">{s.avg ?? "—"}</td><td className="num px-3 py-2">{s.n}</td>
