@@ -21,7 +21,7 @@ const TONE = {
 };
 
 // سطر يشرح عمل كل صفحة
-const DESC = {
+export const DESC = {
   "/monitor": "الوضع اليومي في شاشة كاملة للعرض",
   "/school-report": "خلاصة شهرية لأداء المدرسة",
   "/students": "قوائم الطلاب بالصف والفصل وبياناتهم",
@@ -126,7 +126,7 @@ const DESC = {
 };
 
 // ما يختلف معناه للمعلم عن الإدارة
-const DESC_TEACHER = {
+export const DESC_TEACHER = {
   "/quizzes": "اختباراتك الإلكترونية والورقية ومن خارج البوابة",
   "/quiz-marks": "تصحيح اختباراتك ورصد درجاتها",
   "/quiz-analytics": "تحليل نتائج اختباراتك",

@@ -196,10 +196,11 @@ export const ADMIN_GROUPS = [
   },
 ];
 
-/* الأقسام العامة لقائمة الإدارة: كل قسم يجمع أقسامًا من ADMIN_GROUPS بعناوينها، ويفتح
+/* (تُصدَّر الأقسام والمجموعات لدليل البوابة التنظيمي في docs/portal-guide)
+   الأقسام العامة لقائمة الإدارة: كل قسم يجمع أقسامًا من ADMIN_GROUPS بعناوينها، ويفتح
    صفحة بطاقاتها (/s/:key، pages/SectionHub.jsx). القسم الذي يبقى فيه رابط واحد للمستخدم
    يفتح الرابط مباشرة. أي قسم جديد في ADMIN_GROUPS يُضاف عنوانه هنا. */
-const SECTIONS = [
+export const SECTIONS = [
   { key: "students", title: "الطلاب", icon: "users", hint: "شؤون الطلاب والسلوك والمواظبة والتوجيه",
     groups: ["شؤون الطلاب", "السلوك والمواظبة", "التوجيه الطلابي"] },
   { key: "academic", title: "الشؤون التعليمية", icon: "book", hint: "الجداول والرصد والاختبارات والأنشطة والمعامل",
@@ -218,7 +219,7 @@ const SECTIONS = [
 
 /* أقسام قائمة المعلم بالطريقة نفسها: كل قسم يجمع مجموعات من TEACHER_GROUPS ويفتح صفحة بطاقاتها،
    والقسم ذو الرابط الواحد يفتحه مباشرة. أي مجموعة جديدة في TEACHER_GROUPS يُضاف عنوانها هنا. */
-const TEACHER_SECTIONS = [
+export const TEACHER_SECTIONS = [
   { key: "daily", title: "المهام اليومية", icon: "userCheck", hint: "التحضير وحصص الانتظار والجدول والأنشطة والاستئذان والمعمل",
     groups: ["المهام اليومية", "المعامل والمختبرات"] },
   { key: "students", title: "طلابي", icon: "users", hint: "السجلات والمتابعة والغياب والإحالات والتقارير",
@@ -233,7 +234,7 @@ const TEACHER_SECTIONS = [
     groups: ["التواصل والمحتوى"] },
 ];
 
-const TEACHER_GROUPS = [
+export const TEACHER_GROUPS = [
   {
     title: null,
     items: [
@@ -326,7 +327,7 @@ const TEACHER_GROUPS = [
   },
 ];
 
-const BASIC_GROUPS = [
+export const BASIC_GROUPS = [
   {
     title: null,
     items: [
