@@ -2,8 +2,7 @@
 // مجموعة بفئاتها، لكل إجراء: المسؤول، والمسار في البوابة، والخطوات، والملاحظة. وملحق بما أُضيف بعد الإصدار الأول.
 import { PROCS } from "../../../src/pages/Help.jsx";
 import { Kpis } from "../../../src/components/report/ReportKit.jsx";
-import { bidi } from "../../../src/lib/bidi.js";
-import { P, OL, Card, Note, tableBlocks } from "./blocks.jsx";
+import { P, OL, Card, Note, tableBlocks, txt } from "./blocks.jsx";
 
 const ICON = { "الدخول والحساب": "user", "المعلم": "book", "الأنشطة والألعاب": "star", "الطالب وولي الأمر": "cap", "الاختبارات القصيرة": "doc",
   "شؤون الطلاب": "users", "التوجيه الطلابي": "chat", "الشؤون التعليمية": "calendar", "النتائج": "chart", "النماذج والشهادات": "pen",
@@ -13,11 +12,11 @@ const ICON = { "الدخول والحساب": "user", "المعلم": "book", "�
 export const cats = () => { const out = []; PROCS.forEach((p) => { if (!out.includes(p.cat)) out.push(p.cat); }); return out; };
 
 const Proc = ({ p, n }) => (
-  <Card icon={ICON[p.cat] ?? "list"} title={<>{bidi(`${n}. ${p.title}`)}{p.after && <span className="g-new">مضاف بعد الإصدار الأول</span>}</>}
+  <Card icon={ICON[p.cat] ?? "list"} title={<><span className="num">{n}.</span> {txt(p.title)}{p.after && <span className="g-new">مضاف بعد الإصدار الأول</span>}</>}
         aside={<span className="g-who">{p.who.map((w) => <span key={w}>{w}</span>)}</span>}>
-    <div className="g-path">المسار: <b>{bidi(p.path)}</b></div>
+    <div className="g-path">المسار: <b>{txt(p.path)}</b></div>
     <OL items={p.steps} />
-    {p.note && <Note>{bidi(p.note)}</Note>}
+    {p.note && <Note>{txt(p.note)}</Note>}
   </Card>
 );
 
@@ -37,7 +36,7 @@ export function procSections() {
     <Card icon="grid" title="فهرس الفئات">
       <div className="g-toc">{cs.map((c, i) => <div key={c}><b className="num">{i + 1}</b><span>{c}</span><span>{PROCS.filter((p) => p.cat === c).length} إجراء</span></div>)}</div>
     </Card>,
-    <Note>هذا الدليل مولَّد من «دليل الاستخدام» داخل البوابة (القائمة ← المساعدة)، وفيه البحث والتصفية بالدور. أي تعديل في إجراء يُحدَّث هناك ثم يُعاد توليد الدليل.</Note>,
+    <Note>{txt("هذا الدليل مولَّد من «دليل الاستخدام» داخل البوابة (القائمة ← المساعدة)، وفيه البحث والتصفية بالدور. أي تعديل في إجراء يُحدَّث هناك ثم يُعاد توليد الدليل.")}</Note>,
   ] };
   let n = 0;
   const body = cs.map((c) => ({ title: c, sub: `${PROCS.filter((p) => p.cat === c).length} إجراء`, blocks: PROCS.filter((p) => p.cat === c).map((p) => <Proc p={p} n={++n} />) }));

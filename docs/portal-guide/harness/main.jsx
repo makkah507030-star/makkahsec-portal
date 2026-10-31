@@ -39,7 +39,7 @@ const cover = (pg, total) => (
   }} />
 );
 const approve = (pg, total) => (
-  <Page theme={theme} doc={doc} page={pg} total={total} sec={{ no: "✓", title: "الاعتماد", sub: "إقرار الدليل والعمل به" }}>
+  <Page theme={theme} doc={doc} page={pg} total={total} sec={{ no: <svg className="g-sym" style={{ width: 20, height: 20 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 5 5 9-10" /></svg>, title: "الاعتماد", sub: "إقرار الدليل والعمل به" }}>
     <Card icon="check" title="إقرار" tint>
       <P>اعتُمد هذا {META.title} لبوابة مكة الثانوية الرقمية، ويُعمل به من تاريخ اعتماده، ويُحدَّث مع كل إصدار أو دفعة تعديلات تمس ما فيه.</P>
     </Card>

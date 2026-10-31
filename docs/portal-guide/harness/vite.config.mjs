@@ -8,6 +8,8 @@ const here = path.resolve(import.meta.dirname);
 const root = path.resolve(here, "../../..");
 export default defineConfig({
   root: here,
+  // خط البوابة المعتمد (IBM Plex Sans Arabic) في public/fonts بمسار /fonts؛ بدونه يُطبع بخط بديل
+  publicDir: path.join(root, "public"),
   plugins: [react(), {
     name: "stub-supabase", enforce: "pre",
     resolveId(src, imp) {

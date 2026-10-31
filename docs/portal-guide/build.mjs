@@ -30,6 +30,13 @@ try {
     await p.goto(`${base}/?doc=${doc}&theme=${theme}`);
     await p.waitForFunction(() => window.__ready, null, { timeout: 120000 });
     await p.evaluate(() => document.fonts.ready);
+    // الخط المعتمد شرط: إن لم يُحمَّل وزنا العادي والعريض يتوقف البناء بدل طباعة خط بديل
+    const fontOk = await p.evaluate(async () => {
+      const faces = [...document.fonts].filter((f) => f.family.replace(/["']/g, "") === "IBM Plex Sans Arabic");
+      await Promise.all(faces.map((f) => f.load().catch(() => null)));
+      return ["400", "700"].every((w) => faces.some((f) => f.weight === w && f.status === "loaded"));
+    });
+    if (!fontOk) throw new Error("لم يُحمَّل خط IBM Plex Sans Arabic؛ لا يُطبع الدليل بخط بديل.");
     await p.waitForTimeout(800);
     const over = await p.evaluate(() => [...document.querySelectorAll(".pg-sheets .mr-body")].filter((e) => e.scrollHeight - e.clientHeight > 2).length);
     if (over) console.warn(`تنبيه: ${over} صفحة فيها محتوى مقصوص في ${name}`);

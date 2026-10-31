@@ -34,3 +34,6 @@ html, body { margin: 0; background: #E9EFEB; }
 .mr .g-secw .mr-sec { margin-top: 4px; }
 .mr .mr-body > .g-secw:not(:first-child) { margin-top: 10px; }
 .mr [data-sec] .mr-sec { margin-top: 4px; }
+/* رمز مرسوم بلون النص بدل محرف ليس في خط البوابة */
+.mr .g-sym { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; margin: 0 1px; }
+.mr .g-sym[aria-label="←"] { transform: scaleX(1); }
