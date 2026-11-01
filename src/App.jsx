@@ -127,6 +127,7 @@ const MyQiyas = lazy(() => import("./pages/achievement/MyQiyas.jsx"));
 const AchCommittee = lazy(() => import("./pages/achievement/AchCommittee.jsx"));
 // قسم التقويم والاعتماد المدرسي — لجنة التميز (supabase/acc_1..3.sql)
 const Accreditation = lazy(() => import("./pages/accreditation/Accreditation.jsx"));
+const Culture = lazy(() => import("./pages/culture/Culture.jsx"));
 const AchFormsList = lazy(() => import("./pages/achievement/AchForm.jsx").then((m) => ({ default: m.AchFormsList })));
 const Nominations = lazy(() => import("./pages/nominations/Nominations.jsx"));
 const Opportunities = lazy(() => import("./pages/nominations/Opportunities.jsx"));
@@ -557,6 +558,8 @@ export default function App() {
           <Route path="/my-qiyas" element={<MyQiyas />} />
           <Route path="/ach-committee" element={<AchCommittee />} />
           <Route path="/accreditation" element={<Accreditation />} />
+          {/* الثقافة المؤسسية (سفير الثقافة): لكل المنسوبين، والصفحة تحدد ما يظهر لكل منهم (cult_1.sql) */}
+          {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/culture" element={<Culture />} />}
           {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
           <Route path="/ach-forms" element={<AchGate><AchFormsList /></AchGate>} />
           <Route path="/ach-forms/:id" element={<AchGate><AchForm /></AchGate>} />

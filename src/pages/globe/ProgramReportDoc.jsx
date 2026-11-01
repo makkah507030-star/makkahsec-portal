@@ -8,12 +8,16 @@ import {
 /* =====================================================================
    خطة برنامج وتقرير تنفيذها بطقم التقارير (عامّة، لبرامج بلا رصد كالموهوبين):
    الغلاف ← الملخص ← جدول برامج الخطة ← توثيق المنفّذ بصوره ← الاعتماد.
-   cfg: { title, unit, tag (أيقونة الغلاف), kinds, kindPlural, domainOf, signer, membersLabel }
+   cfg: { title, unit, tag (أيقونة الغلاف), kinds, kindPlural, domainOf, signer, membersLabel,
+          اختياريًا: colorOf (لون النوع)، membersNoun (معدود الأعضاء، الافتراضي طالب)، itemNoun (معدود البرامج) }
    programs: صفوف الخطة ومع كل منها photoUrls (روابط موقّتة)
    ===================================================================== */
 
 const COLORS = [S[1], S[0], S[2], S[3]];
-const kindColor = (cfg, k) => COLORS[Math.max(0, Object.keys(cfg.kinds).indexOf(k)) % COLORS.length];
+const kindColor = (cfg, k) => cfg.colorOf?.(k) ?? COLORS[Math.max(0, Object.keys(cfg.kinds).indexOf(k)) % COLORS.length];
+
+// ألفاظ المعدود في التقرير: البرامج افتراضيًا، أو الأنشطة (cfg.words)
+const W0 = { pl: "برامج", al: "البرامج", sg: "البرنامج", one: "برنامج", kind: "النوع", kindSg: "النوع", kindOf: "نوعها" };
 
 function stats(cfg, programs) {
   const done = programs.filter((p) => p.status === "done");
@@ -29,6 +33,7 @@ const docH = (p) => 96 + (p.photoUrls?.length ? 150 : 0) + Math.ceil((p.outcome 
 
 export function programPages({ cfg, programs, theme = "light", info, notes, sigs }) {
   const s = stats(cfg, programs);
+  const w = { ...W0, ...cfg.words };
   const doc = { title: `${cfg.title} وتقرير تنفيذها`, meta: [cfg.unit, info.year], foot: cfg.unit };
   const kinds = Object.keys(cfg.kinds);
   const tables = paginate(programs, (p) => 27 + (p.title.length > 34 ? 15 : 0), 790, 860);
@@ -36,10 +41,11 @@ export function programPages({ cfg, programs, theme = "light", info, notes, sigs
   const total = 3 + tables.length + docs.length;
   const next = programs.filter((p) => p.status !== "done").slice(0, 8);
   const hl = [
-    s.total && `تضم الخطة ${countAr(s.total, "program")}، نُفّذ منها ${n(s.done)} بنسبة ${pct(s.done, s.total) ?? 0}%.`,
-    s.beneficiaries && `استفاد من البرامج المنفّذة ${countAr(s.beneficiaries, "beneficiary")}.`,
-    info.members && `${cfg.membersLabel}: ${countAr(info.members, "student")}.`,
+    s.total && `تضم الخطة ${countAr(s.total, cfg.itemNoun ?? "program")}، نُفّذ منها ${n(s.done)} بنسبة ${pct(s.done, s.total) ?? 0}%.`,
+    s.beneficiaries && `استفاد من ${w.al} المنفّذة ${countAr(s.beneficiaries, "beneficiary")}.`,
+    info.members && `${cfg.membersLabel}: ${countAr(info.members, cfg.membersNoun ?? "student")}.`,
     s.photos && `وُثّق التنفيذ بـ${s.photos === 1 ? "صورة واحدة" : s.photos === 2 ? "صورتين" : ` ${n(s.photos)} صور`}.`,
+    ...(info.highlights ?? []),   // أبرز إضافية من القسم (كسجلات الثقافة المؤسسية)
   ].filter(Boolean);
   const parts = kinds.map((k) => ({ t: cfg.kinds[k], v: s.byKind[k].total, c: kindColor(cfg, k) }));
   const ben = s.doneList.filter((p) => p.beneficiaries).sort((a, b) => b.beneficiaries - a.beneficiaries).slice(0, 7);
@@ -51,39 +57,39 @@ export function programPages({ cfg, programs, theme = "light", info, notes, sigs
       // العنوان الطويل يصغر ليتسع سطرًا واحدًا (كخطة برنامج الموهوبين)
       titleSize: cfg.title.length > 15 ? Math.round((88 * 15) / cfg.title.length) : undefined,
       badge: { main: info.termLabel, sub: info.year }, side: { main: info.hijri, sub: "تاريخ الإصدار" },
-      rows: [["user", cfg.signer, info.leader || "—"], ["users", cfg.membersLabel, countAr(info.members ?? 0, "student")],
+      rows: [["user", cfg.signer, info.leader || "—"], ["users", cfg.membersLabel, countAr(info.members ?? 0, cfg.membersNoun ?? "student")],
              ["calendar", "تاريخ الإصدار", info.issued], ["building", "العام الدراسي", `${info.year} · ${info.termLabel}`]],
-      note: ["lock", "يوثّق برامج الخطة وما نُفّذ منها بمستفيديه وأثره وصوره."],
-      strip: [[s.total, "برامج الخطة"], [s.done, "البرامج المنفّذة"], [s.beneficiaries, "المستفيدون"], [`${pct(s.done, s.total) ?? 0}%`, "نسبة التنفيذ"]],
+      note: ["lock", `يوثّق ${w.pl} الخطة وما نُفّذ منها بمستفيديه وأثره وصوره.`],
+      strip: [[s.total, `${w.pl} الخطة`], [s.done, `${w.al} المنفّذة`], [s.beneficiaries, "المستفيدون"], [`${pct(s.done, s.total) ?? 0}%`, "نسبة التنفيذ"]],
       foot: cfg.unit,
     }} />,
-    <Page key="sum" theme={theme} doc={doc} page={pg++} total={total} sec={{ no: 1, title: "ملخص الخطة", sub: "مؤشرات تنفيذ الخطة وتوزيع برامجها" }}>
+    <Page key="sum" theme={theme} doc={doc} page={pg++} total={total} sec={{ no: 1, title: "ملخص الخطة", sub: `مؤشرات تنفيذ الخطة وتوزيع ${w.al}` }}>
       <Kpis items={[
-        { ic: "list", t: "برامج الخطة", v: s.total, s: `نُفّذ ${n(s.done)}`, c: S[0] },
+        { ic: "list", t: `${w.pl} الخطة`, v: s.total, s: `نُفّذ ${n(s.done)}`, c: S[0] },
         { ic: "check", t: "نسبة التنفيذ", v: `${pct(s.done, s.total) ?? 0}%`, s: `${n(s.total - s.done)} لم تُنفَّذ`, c: S[1] },
-        { ic: "users", t: "المستفيدون", v: s.beneficiaries, s: "من البرامج المنفّذة", c: S[2] },
+        { ic: "users", t: "المستفيدون", v: s.beneficiaries, s: `من ${w.al} المنفّذة`, c: S[2] },
         { ic: "award", t: cfg.membersLabel, v: info.members ?? 0, s: cfg.unit, c: S[3] },
       ]} />
       <div className="mr-row c2">
-        <Box icon="chart" title="البرامج بحسب النوع">
-          {s.total ? (<div style={{ display: "flex", alignItems: "center", gap: 14 }}><Donut parts={parts} total={s.total} label="برنامج" size={132} /><DonutLegend parts={parts} /></div>)
-                   : <div className="mr-empty">لا برامج في الخطة بعد.</div>}
+        <Box icon="chart" title={`${w.al} بحسب ${w.kind}`}>
+          {s.total ? (<div style={{ display: "flex", alignItems: "center", gap: 14 }}><Donut parts={parts} total={s.total} label={w.one} size={132} /><DonutLegend parts={parts} /></div>)
+                   : <div className="mr-empty">لا {w.pl} في الخطة بعد.</div>}
         </Box>
-        <Box icon="users" title="المستفيدون في البرامج المنفّذة" aside={n(s.beneficiaries)}>
+        <Box icon="users" title={`المستفيدون في ${w.al} المنفّذة`} aside={n(s.beneficiaries)}>
           {ben.length ? <Bars wide items={ben.map((p) => ({ t: p.title, v: Number(p.beneficiaries), c: kindColor(cfg, p.kind) }))} />
                       : <div className="mr-empty">لم يُسجَّل عدد المستفيدين بعد.</div>}
         </Box>
       </div>
-      <Box icon="list" title="التنفيذ بحسب النوع">
-        <div className="mr-list">{kinds.map((k) => <div key={k}><span>البرامج {cfg.kindPlural[k]}</span><span className="num">{n(s.byKind[k].done)} من {n(s.byKind[k].total)}</span></div>)}</div>
+      <Box icon="list" title={`التنفيذ بحسب ${w.kind}`}>
+        <div className="mr-list">{kinds.map((k) => <div key={k}><span>{w.al} {cfg.kindPlural[k]}</span><span><b className="num">{n(s.byKind[k].done)}</b> من <span className="num">{n(s.byKind[k].total)}</span></span></div>)}</div>
       </Box>
       {hl.length > 0 && <Highlights title="أبرز ما في الخطة" items={hl} />}
     </Page>,
     ...tables.map((chunk, i) => { const st = start; start += chunk.length; return (
-      <Page key={`t${i}`} theme={theme} doc={doc} page={pg++} total={total} sec={{ no: 2, title: i ? "برامج الخطة (تتمة)" : "برامج الخطة", sub: i ? null : "البرامج بنوعها ومجالها وموعدها وحالة تنفيذها" }}>
+      <Page key={`t${i}`} theme={theme} doc={doc} page={pg++} total={total} sec={{ no: 2, title: i ? `${w.pl} الخطة (تتمة)` : `${w.pl} الخطة`, sub: i ? null : `${w.al} ب${w.kindOf} ومجالها وموعدها وحالة تنفيذها` }}>
         {chunk.length ? (
           <table className="mr-table">
-            <thead><tr><th className="c" style={{ width: 24 }}>م</th><th>البرنامج</th><th className="c" style={{ width: 56 }}>النوع</th><th className="c" style={{ width: 84 }}>المجال</th>
+            <thead><tr><th className="c" style={{ width: 24 }}>م</th><th>{w.sg}</th><th className="c" style={{ width: 56 }}>{w.kindSg}</th><th className="c" style={{ width: 84 }}>المجال</th>
               <th className="c" style={{ width: 68 }}>الموعد</th><th className="c" style={{ width: 60 }}>الحالة</th><th className="c" style={{ width: 68 }}>التنفيذ</th><th className="c" style={{ width: 50 }}>المستفيدون</th></tr></thead>
             <tbody>{chunk.map((p, j) => (
               <tr key={p.id}><td className="c num">{st + j + 1}</td><td style={{ fontWeight: 600 }}>{p.title}</td>
@@ -93,11 +99,11 @@ export function programPages({ cfg, programs, theme = "light", info, notes, sigs
                 <td className="c num">{p.status === "done" && p.done_date ? dmy(p.done_date) : "—"}</td><td className="c num">{p.beneficiaries ?? "—"}</td></tr>
             ))}</tbody>
           </table>
-        ) : <div className="mr-empty">لا برامج في الخطة بعد.</div>}
+        ) : <div className="mr-empty">لا {w.pl} في الخطة بعد.</div>}
       </Page>
     ); }),
     ...docs.map((chunk, i) => (
-      <Page key={`d${i}`} theme={theme} doc={doc} page={pg++} total={total} sec={{ no: 3, title: i ? "توثيق التنفيذ (تتمة)" : "توثيق التنفيذ", sub: i ? null : "تاريخ كل برنامج ومستفيدوه وأثره وصور تنفيذه" }}>
+      <Page key={`d${i}`} theme={theme} doc={doc} page={pg++} total={total} sec={{ no: 3, title: i ? "توثيق التنفيذ (تتمة)" : "توثيق التنفيذ", sub: i ? null : `تاريخ كل ${w.one} ومستفيدوه وأثره وصور تنفيذه` }}>
         {chunk.length ? chunk.map((p) => (
           <div key={p.id} className="mr-box" style={{ borderRight: `4px solid ${kindColor(cfg, p.kind)}`, padding: "10px 14px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -120,10 +126,10 @@ export function programPages({ cfg, programs, theme = "light", info, notes, sigs
         )) : <div className="mr-empty">لم يُوثَّق تنفيذ بعد.</div>}
       </Page>
     )),
-    <Page key="ok" theme={theme} doc={doc} page={pg++} total={total} sec={{ no: 4, title: "الاعتماد", sub: "البرامج المتبقية، والملاحظات، والتوقيعات" }}>
-      <Box icon="calendar" title="البرامج المتبقية في الخطة" aside={n(s.total - s.done)}>
+    <Page key="ok" theme={theme} doc={doc} page={pg++} total={total} sec={{ no: 4, title: "الاعتماد", sub: `${w.al} المتبقية، والملاحظات، والتوقيعات` }}>
+      <Box icon="calendar" title={`${w.al} المتبقية في الخطة`} aside={n(s.total - s.done)}>
         {next.length ? <div className="mr-list">{next.map((p) => <div key={p.id}><span>{p.title}</span><span className="num">{p.planned_date ? dmy(p.planned_date) : "بلا موعد"}</span></div>)}</div>
-                     : <div className="mr-empty">نُفّذت برامج الخطة كلها.</div>}
+                     : <div className="mr-empty">نُفّذت {w.pl} الخطة كلها.</div>}
       </Box>
       <Box icon="pen" title={`ملاحظات ${cfg.signer} وتوصياته`} tint style={{ minHeight: 170 }}>
         {notes?.trim() ? <div className="mr-notes">{notes.trim()}</div> : <div className="mr-lines">{[0, 1, 2, 3, 4].map((i) => <i key={i} />)}</div>}
