@@ -71,14 +71,14 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
   const plan = data.plan;
   const progBy = Object.fromEntries(data.progs.map((p) => [p.code, p]));
   const evBy = {}; data.ev.forEach((e) => { (evBy[e.code] ??= []).push(e); });
-  const reqDone = (c) => { const p = progBy[c]; const req = ["plan", "sustain"].includes(p?.kind) ? p.evidence ?? [] : [];
+  const reqDone = (c) => { const p = progBy[c]; const req = p?.kind === "plan" ? p.evidence ?? [] : [];
     return [fillSlots(req, evBy[c] ?? []).slots.filter((x) => x.ev.length).length, req.length]; };
   const visible = CODES.filter((c) => doms.includes(domainOf(c)));
   const low = visible.filter((c) => sc[c] != null && sc[c] < PLAN_BELOW).sort((x, y) => sc[x] - sc[y]);
   const fresh = visible.filter((c) => sc[c] == null);
   const high = visible.filter((c) => sc[c] != null).sort((x, y) => sc[y] - sc[x]).slice(0, 4);
   const next = (plan?.milestones ?? []).find((m) => !m.done_at);
-  const evPct = tot.gaps.required ? Math.round(((tot.gaps.required - tot.gaps.missing.filter((g) => g.title).length) / tot.gaps.required) * 100) : 0;
+  const evPct = tot.gaps.required ? Math.round(((tot.gaps.required - tot.gaps.missing.length) / tot.gaps.required) * 100) : 0;
   const th = "px-3 py-2.5 text-start text-[11.5px] font-semibold text-muted";
 
   return (
@@ -107,7 +107,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
             <Stat v={`${a.measured}/47`} t="المؤشرات المقاسة" s={fresh.length ? `مستحدثة بلا قياس: ${fresh.length}` : null} />
             <Stat v={low.length} t="دون مستوى التقدم" c="rgb(var(--c-absent))" s="مرشحة لخطة التحسين" />
             <Stat v={`${tot.done}%`} t="إنجاز برامج الخطة" c={pctColor(tot.done)} s={`${countAr(tot.inPlan.length, "program")} · تحقق ${tot.met}%`} />
-            <Stat v={`${evPct}%`} t="الشواهد المطلوبة" c={pctColor(evPct)} s={`بقي ${tot.gaps.missing.filter((g) => g.title).length} من ${tot.gaps.required}`} />
+            <Stat v={`${evPct}%`} t="الشواهد المطلوبة" c={pctColor(evPct)} s={`بقي ${tot.gaps.missing.length} من ${tot.gaps.required}`} />
           </div>
           {next && <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">المحطة القادمة في الخطة: <b>{next.title}</b> — {next.due} · {next.owner}</p>}
         </div>
@@ -121,7 +121,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
         </div>
         <div className="divide-y divide-line/70 md:hidden">{rows.map(([d, x]) => {
           const below = x.codes.filter((c) => sc[c] != null && sc[c] < PLAN_BELOW).length;
-          const left = x.gaps.missing.filter((g) => g.title).length;
+          const left = x.gaps.missing.length;
           return (
             <button key={d} className="block w-full space-y-2 px-4 py-3 text-start" style={{ borderInlineStart: `5px solid ${DOMAIN_COLOR[d]}` }} onClick={() => go("dash", { report: String(d) })}>
               <div className="flex items-center gap-2"><b className="flex-1" style={{ color: DOMAIN_COLOR[d] }}>{DOMAINS[d]}</b>{lvChip(x.perf)}
@@ -146,7 +146,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
             </tr></thead>
             <tbody className="divide-y divide-line/70">{rows.map(([d, x]) => {
               const below = x.codes.filter((c) => sc[c] != null && sc[c] < PLAN_BELOW).length;
-              const left = x.gaps.missing.filter((g) => g.title).length;
+              const left = x.gaps.missing.length;
               const ep = x.gaps.required ? Math.round(((x.gaps.required - left) / x.gaps.required) * 100) : null;
               return (
                 <tr key={d} className="align-middle">

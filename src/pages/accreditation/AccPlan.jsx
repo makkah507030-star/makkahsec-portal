@@ -80,8 +80,8 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
       ...PROGRAMS_1448.map((p, i) => row({ kind: "plan", code: p.code, current: SELF_1448[p.code][0], target: SELF_1448[p.code][1],
         semester: p.semester, team: p.team, initiative: p.initiative, methods: p.methods.map((t) => ({ t })), evidence: p.evidence,
         follow: p.follow, period: p.period, measure: p.measure, needs: p.needs ?? null, rec: p.rec, sort: i })),
-      ...SUSTAIN_1448.map(([code, initiative, owner, evidence], i) => row({ kind: "sustain", code, current: SELF_1448[code][0],
-        target: SELF_1448[code][1], initiative, owner, evidence: evidence ?? [], sort: 100 + i })),
+      ...SUSTAIN_1448.map(([code, initiative, owner], i) => row({ kind: "sustain", code, current: SELF_1448[code][0],
+        target: SELF_1448[code][1], initiative, owner, sort: 100 + i })),
     ].filter((r) => !have.has(r.code));
     if (rows.length) {
       const { error } = await supabase.from("acc_programs").insert(rows);

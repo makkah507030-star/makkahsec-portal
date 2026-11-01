@@ -43,7 +43,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
   const sm = domainSummary(ds, { ...data, scores: rep?.scores ?? {} });
   const sc = rep?.scores ?? {};
   // غير المرفوع من الشواهد المطلوبة في الخطة وحدها؛ والمؤشرات التي لا شاهد لها ولا مطلوب في الخطة في صفحة «غير المرفوعة»
-  const missReq = sm.gaps.missing.filter((g) => g.title).length;
+  const missReq = sm.gaps.missing.length;
   const lv = levelOf(all ? (rep?.scores?._overall ?? sm.perf) : sm.perf);
   const stds = Object.keys(STANDARDS).filter((s) => ds.includes(+s[0]));
   const domAvg = (x) => domainSummary([x], { ...data, scores: rep?.scores ?? {} }).perf;
@@ -83,7 +83,7 @@ export function domainPages({ d, data, rep, members, theme = "light", sigs = {} 
         { ic: "chart", t: all ? "متوسط المؤشرات" : "أداء المجال", v: fmtPct(sm.perf), s: lv?.t, c: S[0] },
         { ic: "check", t: "إنجاز البرامج", v: `${sm.done}%`, s: `تحققت الأهداف ${sm.met}%`, c: S[1] },
         { ic: "folder", t: "الشواهد المرفوعة", v: sm.gaps.uploaded, s: `المعتمد ${sm.approved}`, c: S[2] },
-        { ic: "alert", t: "غير المرفوعة", v: missReq, s: `من ${sm.gaps.required} مطلوبة في الخطة`, c: S[3] },
+        { ic: "alert", t: "غير المرفوعة", v: missReq, s: `من ${sm.gaps.required} مطلوبة (الخطة ونقطة لكل مؤشر بلا شواهد فيها)`, c: S[3] },
       ]} />
       {all && <Box icon="chart" title="أداء المجالات الأربعة">
         <Bars full max={100} items={ds.map((x) => ({ t: DOMAINS[x], v: domAvg(x) ?? 0, c: levelOf(domAvg(x))?.c, note: fmtPct(domAvg(x)) }))} />

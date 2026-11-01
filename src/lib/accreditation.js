@@ -215,11 +215,12 @@ export function evidenceGaps(codes, progs, ev) {
   const up = {}; ev.forEach((e) => { (up[e.code] ??= []).push(e); });
   const missing = [];
   for (const c of codes) {
-    const p = progs.find((x) => x.code === c && (x.kind === "plan" || x.kind === "sustain"));
+    const p = progs.find((x) => x.code === c && x.kind === "plan");
     fillSlots(p?.evidence ?? [], up[c] ?? []).slots.forEach((x) => { if (!x.ev.length) missing.push({ code: c, title: x.t }); });
     if (!p?.evidence?.length && !(up[c]?.length)) missing.push({ code: c, title: null });
   }
-  const required = codes.reduce((s, c) => s + (progs.find((x) => x.code === c && (x.kind === "plan" || x.kind === "sustain"))?.evidence?.length ?? 0), 0);
+  // المؤشر بلا شواهد في الخطة: نقطة واحدة (يُعدّ ناقصًا ما لم يُرفع له شاهد، كما في missing)
+  const required = codes.reduce((s, c) => s + (progs.find((x) => x.code === c && x.kind === "plan")?.evidence?.length || 1), 0);
   return { up, missing, required, uploaded: codes.reduce((s, c) => s + (up[c]?.length ?? 0), 0) };
 }
 
