@@ -27,79 +27,71 @@ const ICONS = {
 };
 const hijri = () => { try { return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "long", year: "numeric" }).format(new Date()); } catch { return ""; } };
 
+/* ختم النجمة الثمانية: مربعان متعامدان ودائرة تحمل أيقونة نوع البطاقة */
+function Seal({ p, ic }) {
+  const r = 40, c = 60;
+  return (
+    <svg width="120" height="120" viewBox="0 0 120 120" style={{ position: "absolute", left: -6, top: "50%", transform: "translateY(-50%)" }} aria-hidden>
+      {[0, 45].map((a) => <rect key={a} x={c - r} y={c - r} width={r * 2} height={r * 2} rx="6" transform={`rotate(${a} ${c} ${c})`}
+        fill="#fff" fillOpacity=".8" stroke={p.accent} strokeOpacity=".35" strokeWidth="1.4" />)}
+      <circle cx={c} cy={c} r="30" fill="none" stroke={p.accent} strokeOpacity=".35" strokeWidth="1.2" strokeDasharray="2 5" strokeLinecap="round" />
+      <circle cx={c} cy={c} r="23" fill={p.soft} />
+      <g transform={`translate(${c - 14} ${c - 14}) scale(1.17)`} fill="none" stroke={p.accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <path d={ICONS[ic] ?? ICONS.star} />
+      </g>
+    </svg>
+  );
+}
+
 export const CultCard = forwardRef(function CultCard({ c }, ref) {
   const p = PALETTES[c.pal] ?? PALETTES.mint;
   const len = (c.body ?? "").length;
-  const fs = len > 300 ? 15.5 : len > 220 ? 17 : len > 140 ? 18 : 19.5;
-  const pid = `cc-${c.pal}`;
+  const fs = len > 300 ? 15.5 : len > 220 ? 17 : len > 140 ? 18.5 : 20;
   return (
-    <div ref={ref} dir="rtl" style={{ width: W, height: H, color: p.deep, position: "relative", overflow: "hidden",
-      background: `linear-gradient(165deg, ${p.bg} 0%, #FFFFFF 52%, ${p.bg} 100%)`,
-      fontFamily: '"IBM Plex Sans Arabic", Tahoma, sans-serif', display: "flex", flexDirection: "column", padding: "34px 40px 30px" }}>
-      {/* الزخرفة: نقش النجمة الثمانية خافتًا، ودوائر هادئة، وإطار داخلي رفيع */}
+    <div ref={ref} dir="rtl" style={{ width: W, height: H, background: p.bg, color: p.deep, position: "relative", overflow: "hidden",
+      fontFamily: '"IBM Plex Sans Arabic", Tahoma, sans-serif', display: "flex", flexDirection: "column", padding: "30px 36px 26px" }}>
+      {/* زخرفة: دوائر هادئة بلون البطاقة */}
       <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0 }} aria-hidden>
-        <defs>
-          <pattern id={pid} width="44" height="44" patternUnits="userSpaceOnUse">
-            <g fill="none" stroke={p.accent} strokeWidth="1">
-              <rect x="13" y="13" width="18" height="18" />
-              <rect x="13" y="13" width="18" height="18" transform="rotate(45 22 22)" />
-              <circle cx="22" cy="22" r="3" />
-            </g>
-          </pattern>
-          <radialGradient id={`${pid}-f`} cx="0" cy="0" r="1"><stop offset="0" stopColor="#fff" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></radialGradient>
-          <mask id={`${pid}-m`}><rect width={W} height={H} fill="black" /><circle cx="0" cy="0" r="260" fill={`url(#${pid}-f)`} /></mask>
-        </defs>
-        <rect width={W} height={H} fill={`url(#${pid})`} opacity=".16" mask={`url(#${pid}-m)`} />
-        <circle cx={W + 30} cy={H - 30} r={200} fill={p.soft} opacity=".75" />
-        <circle cx={W - 80} cy={H - 130} r={74} fill="none" stroke={p.accent} strokeOpacity=".22" strokeWidth="1.5" />
-        <circle cx={W - 80} cy={H - 130} r={92} fill="none" stroke={p.accent} strokeOpacity=".1" strokeWidth="1" strokeDasharray="2 6" />
-        <rect x="14" y="14" width={W - 28} height={H - 28} rx="22" fill="none" stroke={p.accent} strokeOpacity=".22" strokeWidth="1.2" />
+        <circle cx={W + 20} cy={H - 40} r={190} fill={p.soft} />
+        <circle cx={-40} cy={150} r={120} fill={p.soft} opacity=".7" />
+        <circle cx={60} cy={H - 70} r={14} fill={p.accent} opacity=".18" />
+        <circle cx={95} cy={H - 40} r={7} fill={p.accent} opacity=".3" />
+        {Array.from({ length: 4 }, (_, i) => <circle key={i} cx={W - 40} cy={40} r={30 + i * 22} fill="none" stroke={p.accent} strokeOpacity={0.14 - i * 0.025} strokeWidth="1.5" />)}
       </svg>
 
       <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 13, background: "#fff", display: "grid", placeItems: "center", boxShadow: "0 2px 10px rgba(0,0,0,.07)" }}>
-            <img src={iconMint} alt="" style={{ width: 28 }} />
+          <div style={{ width: 46, height: 46, borderRadius: 13, background: "#fff", display: "grid", placeItems: "center", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+            <img src={iconMint} alt="" style={{ width: 30 }} />
           </div>
           <div style={{ lineHeight: 1.35 }}>
-            <b style={{ display: "block", fontSize: 15.5, fontWeight: 700 }}>مدرسة مكة الثانوية</b>
-            <span style={{ fontSize: 11.5, opacity: 0.7 }}>الثقافة المؤسسية · سفير الثقافة</span>
+            <b style={{ display: "block", fontSize: 16, fontWeight: 700 }}>مدرسة مكة الثانوية</b>
+            <span style={{ fontSize: 12, opacity: 0.75 }}>الثقافة المؤسسية · سفير الثقافة</span>
           </div>
         </div>
-        <img src={moeLogo} alt="" style={{ height: 38, opacity: 0.9 }} />
+        <img src={moeLogo} alt="" style={{ height: 40, opacity: 0.9 }} />
       </div>
 
-      {/* المحتوى في الوسط بسطور متوازنة: العنوان والاسم والنص تتوسط البطاقة وتتقارب أطوال سطورها */}
-      <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center" }}>
-        <span style={{ width: 50, height: 50, borderRadius: "50%", background: "#fff", display: "grid", placeItems: "center",
-          boxShadow: `0 0 0 6px ${p.soft}, 0 8px 16px -10px ${p.accent}` }}>
-          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke={p.accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={ICONS[c.ic] ?? ICONS.star} /></svg>
+      {/* المحتوى محاذى من اليمين بسطور متوازنة الطول، وختم النجمة الثمانية يقابل العنوان من اليسار */}
+      <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingTop: 10 }}>
+        <div style={{ position: "relative" }}>
+        <Seal p={p} ic={c.ic} />
+        <span style={{ alignSelf: "flex-start", background: p.accent, color: "#fff", borderRadius: 99, padding: "5px 16px", fontSize: 14, fontWeight: 700 }}>{c.chip}</span>
+        {c.title && <h2 style={{ margin: "16px 0 0", maxWidth: 330, fontSize: c.title.length > 18 ? 34 : 44, fontWeight: 700, lineHeight: 1.25, color: p.deep }}>{c.title}</h2>}
+        {c.name && <p style={{ margin: "10px 0 0", fontSize: 21, fontWeight: 600, color: p.accent }}>الأستاذ / {c.name}</p>}
+        </div>
+        <span style={{ display: "block", width: 64, height: 5, borderRadius: 9, background: p.accent, margin: "18px 0 16px" }} />
+        {c.body && <p style={{ margin: 0, fontSize: fs, lineHeight: 1.9, whiteSpace: "pre-line", textAlign: "right", textWrap: "balance" }}>{c.body}</p>}
+      </div>
+
+      <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,.8)",
+        borderRadius: 16, padding: "9px 18px", fontSize: 14 }}>
+        <b style={{ fontWeight: 700 }}>أسرة مدرسة مكة الثانوية</b>
+        <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 12.5, opacity: 0.7 }}>{hijri()}</span>
+          <i style={{ width: 4, height: 4, borderRadius: 9, background: p.accent, opacity: 0.5 }} />
+          <span dir="ltr" style={{ fontWeight: 600, color: p.accent }}>makkahsec.com</span>
         </span>
-        <span style={{ marginTop: 14, color: p.accent, fontSize: 14.5, fontWeight: 700, letterSpacing: ".3px" }}>{c.chip}</span>
-        {c.title && <h2 style={{ margin: "8px 0 0", fontSize: c.title.length > 18 ? 35 : 46, fontWeight: 700, lineHeight: 1.22, color: p.deep, textWrap: "balance" }}>{c.title}</h2>}
-        {/* فاصل زخرفي متناظر: خطان ومعيّن */}
-        <svg width="132" height="14" viewBox="0 0 132 14" style={{ margin: "14px 0 14px" }} aria-hidden>
-          <line x1="4" y1="7" x2="22" y2="7" stroke={p.accent} strokeOpacity=".4" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="30" y1="7" x2="56" y2="7" stroke={p.accent} strokeWidth="2.5" strokeLinecap="round" />
-          <rect x="61" y="2" width="10" height="10" transform="rotate(45 66 7)" fill={p.accent} />
-          <line x1="76" y1="7" x2="102" y2="7" stroke={p.accent} strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="110" y1="7" x2="128" y2="7" stroke={p.accent} strokeOpacity=".4" strokeWidth="2.5" strokeLinecap="round" />
-        </svg>
-        {c.name && <p style={{ margin: "0 0 12px", lineHeight: 1.3 }}>
-          <span style={{ display: "block", fontSize: 13, color: p.deep, opacity: 0.6 }}>إلى الأستاذ</span>
-          <b style={{ display: "block", marginTop: 3, fontSize: 23, fontWeight: 700, color: p.accent }}>{c.name}</b></p>}
-        {c.body && <p style={{ margin: 0, maxWidth: 420, fontSize: fs, lineHeight: 1.95, whiteSpace: "pre-line", textWrap: "balance" }}>{c.body}</p>}
-      </div>
-
-      <div style={{ position: "relative", display: "flex", alignItems: "flex-end", justifyContent: "space-between", borderTop: `1px solid ${p.accent}33`, paddingTop: 12 }}>
-        <div style={{ lineHeight: 1.4 }}>
-          <b style={{ display: "block", fontSize: 14.5, fontWeight: 700 }}>أسرة مدرسة مكة الثانوية</b>
-          <span style={{ fontSize: 11.5, opacity: 0.65 }}>قيم نعيشها وتجسّد هويتنا المؤسسية</span>
-        </div>
-        <div style={{ textAlign: "left", lineHeight: 1.4 }}>
-          <span style={{ display: "block", fontSize: 11.5, opacity: 0.65 }}>{hijri()}</span>
-          <b dir="ltr" style={{ fontSize: 13.5, fontWeight: 700, color: p.accent }}>makkahsec.com</b>
-        </div>
       </div>
     </div>
   );
