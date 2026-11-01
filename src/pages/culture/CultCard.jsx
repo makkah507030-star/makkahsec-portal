@@ -18,20 +18,6 @@ const waNumber = (m) => {
 
 const hijri = () => { try { return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "long", year: "numeric" }).format(new Date()); } catch { return ""; } };
 
-/* ختم النجمة الثمانية: مربعان متعامدان ودائرتان متداخلتان (زخرفة بلا أيقونة) */
-function Seal({ p }) {
-  const r = 40, c = 60;
-  return (
-    <svg width="120" height="120" viewBox="0 0 120 120" style={{ position: "absolute", left: -6, top: "50%", transform: "translateY(-50%)" }} aria-hidden>
-      {[0, 45].map((a) => <rect key={a} x={c - r} y={c - r} width={r * 2} height={r * 2} rx="6" transform={`rotate(${a} ${c} ${c})`}
-        fill="#fff" fillOpacity=".8" stroke={p.accent} strokeOpacity=".35" strokeWidth="1.4" />)}
-      <circle cx={c} cy={c} r="30" fill="none" stroke={p.accent} strokeOpacity=".35" strokeWidth="1.2" strokeDasharray="2 5" strokeLinecap="round" />
-      <circle cx={c} cy={c} r="23" fill={p.soft} />
-      <circle cx={c} cy={c} r="6" fill={p.accent} fillOpacity=".55" />
-    </svg>
-  );
-}
-
 export const CultCard = forwardRef(function CultCard({ c }, ref) {
   const p = PALETTES[c.pal] ?? PALETTES.mint;
   const len = (c.body ?? "").length;
@@ -61,12 +47,11 @@ export const CultCard = forwardRef(function CultCard({ c }, ref) {
         <img src={moeLogo} alt="" style={{ height: 40, opacity: 0.9 }} />
       </div>
 
-      {/* المحتوى محاذى من اليمين بسطور متوازنة الطول، وختم النجمة الثمانية يقابل العنوان من اليسار */}
+      {/* المحتوى محاذى من اليمين بسطور متوازنة الطول */}
       <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingTop: 10 }}>
         <div style={{ position: "relative" }}>
-        <Seal p={p} />
         <span style={{ alignSelf: "flex-start", background: p.accent, color: "#fff", borderRadius: 99, padding: "5px 16px", fontSize: 14, fontWeight: 700 }}>{c.chip}</span>
-        {c.title && <h2 style={{ margin: "16px 0 0", maxWidth: 330, fontSize: c.title.length > 18 ? 34 : 44, fontWeight: 700, lineHeight: 1.25, color: p.deep }}>{c.title}</h2>}
+        {c.title && <h2 style={{ margin: "16px 0 0", fontSize: c.title.length > 18 ? 34 : 44, fontWeight: 700, lineHeight: 1.25, color: p.deep }}>{c.title}</h2>}
         {c.name && <p style={{ margin: "10px 0 0", fontSize: 21, fontWeight: 600, color: p.accent }}>الأستاذ / {c.name}</p>}
         </div>
         <span style={{ display: "block", width: 64, height: 5, borderRadius: 9, background: p.accent, margin: "18px 0 16px" }} />
