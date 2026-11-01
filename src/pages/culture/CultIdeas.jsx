@@ -8,6 +8,7 @@ import { confirmDanger } from "../../lib/danger";
 import { sendPush } from "../../lib/pushSend.js";
 import { IDEA_STATUS, PROGRAMS, setupMsg } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
+import { CardMaker } from "./CultCard.jsx";
 
 /* الأفكار والابتكار: يشارك كل موظف فكرته التطويرية ويرى ردّ الفريق عليها، والفريق يدرس الأفكار
    ويحدّث حالتها (قيد الدراسة، معتمدة، كُرّم صاحبها) ويرد، ويصل الرد صاحبها إشعارًا إن رد السفير. */
@@ -78,6 +79,7 @@ export default function CultIdeas({ me }) {
 }
 
 function Review({ r, me, setMsg, onChange, onRemove }) {
+  const [card, setCard] = useState(false);
   const [status, setStatus] = useState(r.status === "new" ? "review" : r.status);
   const [reply, setReply] = useState(r.reply ?? "");
   const [notify, setNotify] = useState(me.amb);
@@ -98,7 +100,10 @@ function Review({ r, me, setMsg, onChange, onRemove }) {
       <div className="flex flex-wrap gap-1.5">{Object.entries(IDEA_STATUS).filter(([k]) => k !== "new").map(([k, s]) => (
         <button key={k} onClick={() => setStatus(k)} className={`rounded-pill border px-3 py-1 text-xs ${status === k ? "border-mint-deep bg-mint-deep text-white" : "border-line bg-white text-muted"}`}>{s.t}</button>))}</div>
       <textarea className="field min-h-[60px] w-full text-sm" placeholder="رد الفريق على صاحب الفكرة" value={reply} onChange={(e) => setReply(e.target.value)} />
-      {status === "honored" && <p className="text-[11px] text-muted">لتكريم صاحب الفكرة بشهادة شكر استخدم «النماذج والشهادات».</p>}
+      {status === "honored" && <p className="flex flex-wrap items-center gap-2 text-[11px] text-muted">
+        <button className="rounded-pill bg-[#25D366] px-3 py-1 text-[11.5px] font-bold text-white" onClick={() => setCard(true)}>بطاقة شكر واتساب</button>
+        ولشهادة شكر رسمية استخدم «النماذج والشهادات».</p>}
+      {card && <CardMaker init={{ kind: "honor", name: r.author_name ?? "" }} onClose={() => setCard(false)} />}
       <div className="flex flex-wrap items-center gap-3">
         <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={save}>{busy ? "…" : "حفظ"}</button>
         {me.amb && <label className="flex items-center gap-1.5 text-[11.5px] text-muted"><input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />إشعار صاحب الفكرة بالرد</label>}

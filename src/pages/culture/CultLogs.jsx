@@ -9,6 +9,7 @@ import { confirmDanger } from "../../lib/danger";
 import { sendPush } from "../../lib/pushSend.js";
 import { MEETINGS, OCCASIONS, ONBOARD, PROGRAMS, setupMsg } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
+import { CardMaker } from "./CultCard.jsx";
 
 /* سجلات البرامج: «التواصل الملهم» (اللقاءات)، و«نهتم بك» (مناسبات الموظفين وبطاقاتها إشعارًا لصاحبها)،
    و«حيّاك» (تهيئة الموظف الجديد بمهامها على مراحلها). يوثّقها الفريق، ويرسل السفير البطاقات. */
@@ -94,6 +95,7 @@ export function CultCare({ me }) {
   const { rows, load, remove, setMsg } = useRows("cult_occasions", "held_on");
   const [x, setX] = useState({ user_id: "", kind: "achievement", held_on: todayISO(), message: "" });
   const [busy, setBusy] = useState(null);
+  const [card, setCard] = useState(null);
   if (!rows) return <Loader />;
   const person = staff.find((s) => s.id === x.user_id);
   const pick = (patch) => {
@@ -139,10 +141,11 @@ export function CultCare({ me }) {
         </div>
         <label className={`block ${lbl}`}>نص البطاقة (مقترح يُعدَّل)<textarea className="field mt-1 min-h-[70px] w-full text-sm" value={x.message} onChange={(e) => setX({ ...x, message: e.target.value })} /></label>
         <div className="flex flex-wrap gap-2">
-          {me.amb && <button className="btn-primary px-4 py-1.5 text-xs" disabled={!!busy} onClick={() => save(true)}>{busy === "new" ? "…" : "حفظ وإرسال البطاقة"}</button>}
+          {me.amb && <button className="btn-primary px-4 py-1.5 text-xs" disabled={!!busy} onClick={() => save(true)}>{busy === "new" ? "…" : "حفظ وإرسال إشعار"}</button>}
           <button className="btn-ghost px-4 py-1.5 text-xs" disabled={!!busy} onClick={() => save(false)}>حفظ دون إرسال</button>
+          <button className="rounded-pill bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white" onClick={() => person ? setCard({ kind: "occasion", sub: x.kind, name: person.full_name, mobile: person.mobile, body: x.message || undefined }) : setMsg({ ok: false, text: "اختر صاحب المناسبة." })}>بطاقة واتساب</button>
         </div>
-        <p className="text-[11px] text-faint">تصل البطاقة إشعارًا في جرس صاحبها وجواله. ولبطاقة مصممة بهوية المدرسة استخدم «استوديو البوابة».</p>
+        <p className="text-[11px] text-faint">الإشعار يصل جرس صاحب المناسبة وجواله في البوابة. و«بطاقة واتساب» صورة بهوية المدرسة تُرسل في قروب العمل أو على الخاص.</p>
       </section>
       <div className="card divide-y divide-line/70 overflow-hidden">
         {rows.length ? rows.map((r) => (
@@ -153,13 +156,15 @@ export function CultCare({ me }) {
               {r.message && <span className="mt-1 block text-[12px] leading-relaxed text-muted">{r.message}</span>}
             </span>
             <span className="flex shrink-0 flex-col items-end gap-1">
-              {r.sent_at ? <span className="chip bg-present/10 text-present">أُرسلت · <span className="num">{fmtDate(r.sent_at)}</span></span>
-                : me.amb ? <button className="text-[11.5px] font-semibold text-mint-deep" disabled={!!busy} onClick={() => resend(r)}>{busy === r.id ? "…" : "إرسال البطاقة"}</button>
+              {r.sent_at ? <span className="chip bg-present/10 text-present">أُرسل الإشعار · <span className="num">{fmtDate(r.sent_at)}</span></span>
+                : me.amb ? <button className="text-[11.5px] font-semibold text-mint-deep" disabled={!!busy} onClick={() => resend(r)}>{busy === r.id ? "…" : "إرسال إشعار"}</button>
                 : <span className="chip bg-canvas text-muted">لم تُرسل</span>}
+              <button className="text-[11.5px] font-semibold text-[#128C7E]" onClick={() => setCard({ kind: "occasion", sub: r.kind, name: r.person_name, mobile: staff.find((s) => s.id === r.user_id)?.mobile, body: r.message || undefined })}>بطاقة واتساب</button>
               <button className="text-[11px] text-absent" onClick={() => remove(r.id, `${r.person_name} · ${OCCASIONS[r.kind]?.t ?? ""}`)}>حذف</button>
             </span>
           </div>)) : <p className="px-4 py-6 text-center text-sm text-muted">لا مناسبات مسجلة بعد.</p>}
       </div>
+      {card && <CardMaker init={card} onClose={() => setCard(null)} />}
     </div>
   );
 }
@@ -205,7 +210,7 @@ export function CultOnboard() {
                 <span className="h-2 w-24 shrink-0 overflow-hidden rounded-pill bg-canvas"><span className="block h-full rounded-pill bg-mint-deep" style={{ width: `${(done / ONBOARD.length) * 100}%` }} /></span>
                 <span className="num w-12 shrink-0 text-end text-xs text-muted">{done}/{ONBOARD.length}</span>
               </button>
-              {open === r.id && <Onboard r={r} setMsg={setMsg} onChange={load} onRemove={() => remove(r.id, r.person_name)} />}
+              {open === r.id && <Onboard r={r} mobile={staff.find((s) => s.id === r.user_id)?.mobile} setMsg={setMsg} onChange={load} onRemove={() => remove(r.id, r.person_name)} />}
             </div>
           );
         }) : <p className="px-4 py-6 text-center text-sm text-muted">لا موظفين جدد في التهيئة.</p>}
@@ -214,7 +219,8 @@ export function CultOnboard() {
   );
 }
 
-function Onboard({ r, setMsg, onChange, onRemove }) {
+function Onboard({ r, mobile, setMsg, onChange, onRemove }) {
+  const [card, setCard] = useState(false);
   const [checks, setChecks] = useState(r.checks ?? {});
   const [notes, setNotes] = useState(r.notes ?? "");
   const persist = async (patch) => {
@@ -237,6 +243,8 @@ function Onboard({ r, setMsg, onChange, onRemove }) {
       <label className={`block ${lbl}`}>ملاحظات التهيئة<textarea className="field mt-1 min-h-[56px] w-full text-sm" value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
       <div className="flex items-center gap-2">
         <button className="btn-primary px-4 py-1.5 text-xs" onClick={() => persist({ notes: notes.trim() || null })}>حفظ الملاحظات</button>
+        <button className="rounded-pill bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white" onClick={() => setCard(true)}>بطاقة ترحيب واتساب</button>
+        {card && <CardMaker init={{ kind: "welcome", name: r.person_name, mobile }} onClose={() => setCard(false)} />}
         <button className="ms-auto text-xs text-absent" onClick={onRemove}>حذف</button>
       </div>
     </div>

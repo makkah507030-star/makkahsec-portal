@@ -4,6 +4,7 @@ import { supabase } from "../../lib/supabase";
 import { useNotice } from "../../lib/useNotice.js";
 import { sendPush } from "../../lib/pushSend.js";
 import { VALUES, AMB_ROLES, AMB_SKILLS, PROGRAMS } from "../../lib/culture.js";
+import { CardMaker } from "./CultCard.jsx";
 
 /* القيم والأدوار: قيم الوزارة الخمس بتعريفها ومؤشراتها وممارساتها، وأدوار سفير الثقافة ومهاراته.
    ويرسل السفير منها رسائل التوعية بالقيم وعروض «مزايا» إشعارًا لكل الموظفين. */
@@ -69,6 +70,8 @@ function Composer() {
   const [, setMsg] = useNotice(null);
   const [x, setX] = useState({ title: "", body: "" });
   const [busy, setBusy] = useState(false);
+  const [kind, setKind] = useState("");
+  const [card, setCard] = useState(null);
   const send = async () => {
     if (!x.title.trim() || !x.body.trim()) { setMsg({ ok: false, text: "اكتب العنوان والنص." }); return; }
     setBusy(true);
@@ -82,10 +85,18 @@ function Composer() {
       <h2 className="text-sm font-bold text-ink">رسالة لكل الموظفين</h2>
       <p className="text-[11.5px] text-muted">رسائل التوعية بالقيم، وعروض «مزايا»، ورسائل «رفاه»: تصل إشعارًا في الجرس والجوال لكل المعلمين والإداريين.</p>
       <div className="flex flex-wrap gap-1.5">{PRESETS.map((p) => (
-        <button key={p.k} className="rounded-pill border border-line bg-white px-3 py-1 text-xs text-muted hover:bg-canvas" onClick={() => setX({ title: p.title, body: p.body })}>{p.t}</button>))}</div>
+        <button key={p.k} className="rounded-pill border border-line bg-white px-3 py-1 text-xs text-muted hover:bg-canvas" onClick={() => { setX({ title: p.title, body: p.body }); setKind(p.k); }}>{p.t}</button>))}</div>
       <input className="field w-full text-sm" maxLength={120} placeholder="العنوان" value={x.title} onChange={(e) => setX({ ...x, title: e.target.value })} />
       <textarea className="field min-h-[90px] w-full text-sm" maxLength={1200} placeholder="النص" value={x.body} onChange={(e) => setX({ ...x, body: e.target.value })} />
-      <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={send}>{busy ? "…" : "إرسال لكل الموظفين"}</button>
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={send}>{busy ? "…" : "إشعار لكل الموظفين"}</button>
+        <button className="rounded-pill bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white" onClick={() => {
+          const v = VALUES.some((y) => y.k === kind);
+          setCard(v ? { kind: "value", sub: kind, body: x.body.trim() || undefined }
+            : { kind: ["mazaya", "rafah"].includes(kind) ? kind : "general", title: x.title.trim() || undefined, body: x.body.trim() || undefined });
+        }}>بطاقة لقروب العمل في واتساب</button>
+      </div>
+      {card && <CardMaker init={card} onClose={() => setCard(null)} />}
     </section>
   );
 }
