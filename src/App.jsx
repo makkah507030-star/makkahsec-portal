@@ -127,6 +127,7 @@ const MyQiyas = lazy(() => import("./pages/achievement/MyQiyas.jsx"));
 const AchCommittee = lazy(() => import("./pages/achievement/AchCommittee.jsx"));
 // قسم التقويم والاعتماد المدرسي — لجنة التميز (supabase/acc_1..3.sql)
 const Accreditation = lazy(() => import("./pages/accreditation/Accreditation.jsx"));
+const Culture = lazy(() => import("./pages/culture/Culture.jsx"));
 const AchFormsList = lazy(() => import("./pages/achievement/AchForm.jsx").then((m) => ({ default: m.AchFormsList })));
 const Nominations = lazy(() => import("./pages/nominations/Nominations.jsx"));
 const Opportunities = lazy(() => import("./pages/nominations/Opportunities.jsx"));
@@ -156,6 +157,7 @@ const BehaviorForms = lazy(() => import("./pages/BehaviorForms.jsx"));
 const StudentCertificate = lazy(() => import("./pages/StudentCertificate.jsx"));
 const BehaviorFormView = lazy(() => import("./pages/BehaviorFormView.jsx"));
 const MaintenanceAdmin = lazy(() => import("./pages/admin/MaintenanceAdmin.jsx"));
+const Repairs = lazy(() => import("./pages/Repairs.jsx"));
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
 import { useHolidays } from "./lib/useHolidays.js";
@@ -546,8 +548,8 @@ export default function App() {
           {effectiveRole === "admin" && <Route path="/absence-excuses" element={<AbsenceExcuses />} />}
           {/* ملف الطالب الشامل — الصفحة تحصر الطلاب في صفوف المستخدم، والدوال تفرض الصلاحية */}
           {effectiveRole === "admin" && <Route path="/student-file" element={<StudentFile />} />}
-          {/* صفحات الأقسام العامة لقائمة الإدارة — تعرض ما تعرضه القائمة للمستخدم فقط */}
-          {effectiveRole === "admin" && <Route path="/s/:key" element={<SectionHub />} />}
+          {/* صفحات الأقسام العامة لقائمة الإدارة والمعلم — تعرض ما تعرضه القائمة للمستخدم فقط */}
+          {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/s/:key" element={<SectionHub />} />}
           {/* شاشة المتابعة اليومية — للمدير والوكيلين والدعم الفني (عنصر القائمة يحصرها، والقاعدة تفرض ما يُقرأ) */}
           {effectiveRole === "admin" && <Route path="/monitor" element={<MonitorScreen />} />}
           {/* مركز تحليل النتائج — الصفحة تتحقق من الدور (وكيل الشؤون التعليمية والموجهون…)
@@ -557,6 +559,10 @@ export default function App() {
           <Route path="/my-qiyas" element={<MyQiyas />} />
           <Route path="/ach-committee" element={<AchCommittee />} />
           <Route path="/accreditation" element={<Accreditation />} />
+          {/* الثقافة المؤسسية (سفير الثقافة): لكل المنسوبين، والصفحة تحدد ما يظهر لكل منهم (cult_1.sql) */}
+          {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/culture" element={<Culture />} />}
+          {/* بلاغات الصيانة: يرفعها كل الموظفين، ويتابعها المساعد الإداري 3 (maint_1.sql) */}
+          {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/repairs" element={<Repairs />} />}
           {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
           <Route path="/ach-forms" element={<AchGate><AchFormsList /></AchGate>} />
           <Route path="/ach-forms/:id" element={<AchGate><AchForm /></AchGate>} />

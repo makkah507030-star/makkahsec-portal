@@ -264,7 +264,7 @@ const ALIASES = {
   "لغتي": "الكفايات اللغوية",
 };
 
-const resolveAlias = (name) => ALIASES[clean(name)] ?? name;
+export const resolveAlias = (name) => ALIASES[clean(name)] ?? name;
 
 /** يبحث عن مادة داخل مجموعة إعدادات معيّنة (تطابق تام ثم جزئي) */
 function lookup(subjectName, table) {

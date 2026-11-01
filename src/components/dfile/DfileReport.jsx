@@ -402,6 +402,12 @@ export default function DfileReport({ data: d, settings: s, code }) {
   const evTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + ev[k], 0);
   const autoTotal = ELEMENTS.slice(1).reduce((a, [k]) => a + Number(auto[k] ?? 0), 0);
   const evMax = Math.max(1, ...ELEMENTS.map(([k]) => Number(ev[k] ?? 0)));
+  // تغطية البنود (supabase/dfile_cover.sql): لكل عنصر بنود لها شاهد من بنوده كلها، بدل جمع الأعداد
+  // الذي يضخّم العنصر (العمل الواحد يشهد لأكثر من بند). قبل تشغيل الملف تبقى الأعداد كما كانت.
+  const cover = d.evidence_cover && Object.keys(d.evidence_cover).length ? d.evidence_cover : null;
+  const cv = (k) => cover?.[k] ?? { on: 0, of: 0 };
+  const coverOn = cover ? ELEMENTS.slice(1).reduce((a, [k]) => a + Number(cv(k).on), 0) : 0;
+  const coverOf = cover ? ELEMENTS.slice(1).reduce((a, [k]) => a + Number(cv(k).of), 0) : 0;
 
   // دروس الأسبوع الدراسي الحالي من توزيع المنهج، لكل مادة
   const lessons = d.week ? (s?.distribution?.items ?? [])
@@ -584,14 +590,15 @@ export default function DfileReport({ data: d, settings: s, code }) {
         {show("wins") && <Wins d={d} s={s} />}
         {show("elements") && (
           <Fold id="elements" title="عناصر الأداء الوظيفي" open={!!open.elements} onToggle={(v) => setOpen((o) => ({ ...o, elements: v }))}
-                line={`${evLabel(evTotal)} في ${ELEMENTS.length - 1} عناصر${autoTotal ? `، منها ${autoTotal} من عمله في البوابة` : ""}، والعنصر الأول يقدّره مدير المدرسة`}>
+                line={cover ? `بنود لها شواهد: ${coverOn} من ${countAr(coverOf, "clause", { acc: true })} في ${ELEMENTS.length - 1} عناصر، والعنصر الأول يقدّره مدير المدرسة`
+                  : `${evLabel(evTotal)} في ${ELEMENTS.length - 1} عناصر${autoTotal ? `، منها ${autoTotal} من عمله في البوابة` : ""}، والعنصر الأول يقدّره مدير المدرسة`}>
             <div className="df-els">
               {ELEMENTS.map(([k, t], i) => (
                 <div className="df-el" key={k}>
                   <span className="df-k" style={{ background: `var(--${k})` }}>{k.slice(1)}</span>
                   <div className="df-t"><p>{t}</p><div className="df-track" style={{ marginTop: 4 }}>
-                    <div className="df-fill" style={{ width: `${(100 * Number(ev[k] ?? 0)) / evMax}%`, background: `var(--${k})` }} /></div></div>
-                  <span className="df-n df-num">{i === 0 ? "يقدّره المدير" : evLabel(Number(ev[k] ?? 0))}</span>
+                    <div className="df-fill" style={{ width: `${cover ? (cv(k).of ? (100 * cv(k).on) / cv(k).of : 0) : (100 * Number(ev[k] ?? 0)) / evMax}%`, background: `var(--${k})` }} /></div></div>
+                  <span className="df-n df-num">{i === 0 ? "يقدّره المدير" : cover ? `${cv(k).on} من ${countAr(cv(k).of, "clause", { acc: true })}` : evLabel(Number(ev[k] ?? 0))}</span>
                 </div>
               ))}
             </div>

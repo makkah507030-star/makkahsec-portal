@@ -50,6 +50,10 @@ export const PORTAL_SOURCES = [
   { k: "qudrat", t: "طلاب تدربوا في مركز التدريب (القدرات)", u: "student", to: "/qudrat/report", codes: ["3-1-1-2", "3-1-1-4", "2-1-1-6", "3-2-1-6"] },
   { k: "qudrat_mocks", t: "الاختبارات المحاكية للقدرات", u: "quiz", to: "/qudrat/report", codes: ["3-1-1-2", "3-1-1-4"] },
   { k: "qiyas", t: "نتائج الطلاب في اختبارات قياس", u: "result", ever: true, to: "/qiyas", codes: ["3-1-1-1", "3-1-1-2"] },
+  // الثقافة المؤسسية (cult_4.sql): أنشطة خطة سفير الثقافة المنفذة، ولقاءات التواصل الملهم، وبطاقات «نهتم بك»
+  { k: "culture", t: "أنشطة الثقافة المؤسسية المنفذة", u: "activity", to: "/culture?tab=plan", codes: ["1-3-1-1", "1-2-1-2"] },
+  { k: "culture_meet", t: "لقاءات التواصل الملهم مع الموظفين", u: "meeting", to: "/culture?tab=comm", codes: ["1-5-1-2", "1-1-1-2"] },
+  { k: "culture_care", t: "بطاقات «نهتم بك» لمناسبات الموظفين", u: "card", to: "/culture?tab=care", codes: ["1-2-1-2"] },
   { k: "national", t: "بطاقات الاختبارات الوطنية من الهيئة", u: "card", ever: true, to: "/accreditation?tab=nat", codes: ["3-1-1-1", "3-1-1-2", "3-1-1-3", "3-1-1-4"] },
 ];
 export const PORTAL_BY = Object.fromEntries(PORTAL_SOURCES.map((s) => [s.k, s]));

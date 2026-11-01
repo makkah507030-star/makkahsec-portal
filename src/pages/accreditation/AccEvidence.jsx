@@ -8,6 +8,7 @@ import { fmtDate } from "../../lib/dates";
 import { confirmDanger } from "../../lib/danger";
 import {
   CODES, DOMAINS, DOMAIN_COLOR, STANDARDS, INDICATORS, EV_STATUS, ACC_BUCKET, bidi, domainOf, stdOf, levelOf, fmtPct, fileKind, accUpload, setupMsg,
+  fillSlots,
 } from "../../lib/accreditation.js";
 import { PORTAL_BY, loadPortalCounts, portalCount, portalKey, portalNoun, sourcesOf } from "../../lib/accPortal.js";
 import AccViewer from "./AccViewer.jsx";
@@ -52,13 +53,16 @@ export default function AccEvidence({ me, year, reports, plans }) {
     && (!q.trim() || c.includes(q.trim()) || INDICATORS[c].includes(q.trim())));
   // الإنجاز: الشواهد المطلوبة في الخطة وما رُفع منها، لكل مؤشر وللمعروض كله
   const reqOf = (c) => (pBy[c]?.kind === "plan" ? pBy[c].evidence ?? [] : []);
-  const doneOf = (c) => reqOf(c).filter((t) => (byCode[c] ?? []).some((e) => e.title.trim() === t.trim())).length;
+  const doneOf = (c) => fillSlots(reqOf(c), byCode[c] ?? []).slots.filter((x) => x.ev.length).length;
+  // المؤشر الذي ليس له شواهد في الخطة يُحتسب بنقطة واحدة تكتمل بأول شاهد يُرفع له
+  const needOf = (c) => reqOf(c).length || 1;
+  const gotOf = (c) => (reqOf(c).length ? doneOf(c) : (byCode[c]?.length ? 1 : 0));
   const stat = (cs) => {
-    const req = cs.reduce((a, c) => a + reqOf(c).length, 0), done = cs.reduce((a, c) => a + doneOf(c), 0);
+    const req = cs.reduce((a, c) => a + needOf(c), 0), done = cs.reduce((a, c) => a + gotOf(c), 0);
     const files = cs.flatMap((c) => byCode[c] ?? []);
     return { req, done, left: req - done, pct: req ? Math.round((done / req) * 100) : 0, files: files.length,
       approved: files.filter((e) => e.status === "approved").length, reviewed: files.filter((e) => e.status === "reviewed").length,
-      full: cs.filter((c) => reqOf(c).length && doneOf(c) === reqOf(c).length).length, withReq: cs.filter((c) => reqOf(c).length).length,
+      full: cs.filter((c) => gotOf(c) === needOf(c)).length, withReq: cs.length,
       portal: cs.filter((c) => sourcesOf(c, counts).some((x) => counts[x.k] > 0)).length,
       empty: cs.filter((c) => !(byCode[c]?.length) && !sourcesOf(c, counts).some((x) => counts[x.k] > 0)).length };
   };
@@ -134,8 +138,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
     supabase.storage.from(ACC_BUCKET).createSignedUrls(paths, 1800)
       .then(({ data }) => setThumbs(Object.fromEntries((data ?? []).filter((x) => x.signedUrl).map((x) => [x.path, x.signedUrl]))));
   }, [list]);
-  const slots = hints.map((t) => ({ t, ev: list.filter((e) => e.title.trim() === t.trim()) }));
-  const extra = list.filter((e) => !hints.some((t) => t.trim() === e.title.trim()));
+  const { slots, extra } = fillSlots(hints, list);
   const filled = slots.filter((x) => x.ev.length).length;
   const upload = async (title, fl, notes = "") => {
     if (!title.trim()) { setMsg({ ok: false, text: "اكتب عنوان الشاهد." }); return false; }
@@ -152,11 +155,18 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
     if (await upload(f.title, file, f.notes)) { setF({ title: "", notes: "" }); setFile(null); }
     setBusy(false);
   };
-  const card = (e) => <EvCard key={e.id} e={e} color={color} thumb={thumbs[e.file_path]} me={me} uid={uid}
+  const free = slots.filter((x) => !x.ev.length).map((x) => x.t);
+  const card = (e, i, arr, open = []) => <EvCard key={e.id} e={e} color={color} thumb={thumbs[e.file_path]} me={me} uid={uid} free={open}
     counts={counts} onView={() => setView(e)} onChange={onChange} setMsg={setMsg} />;
 
   return (
     <div className="space-y-4 border-t border-line bg-canvas/30 px-4 py-3">
+      {!slots.length && (
+        <p className="rounded-sm2 border border-dashed bg-white px-3 py-2 text-[12px] leading-relaxed text-muted" style={{ borderColor: `${color}55` }}>
+          <b style={{ color }}>المؤشر ليس له برنامج في خطة التحسين</b> (مؤشر استدامة)، فلا شواهد محددة له. يُحتسب في «مساعد الشواهد» بنقطة تكتمل بأول شاهد،
+          وبإمكانك رفع أكثر من شاهد بحسب ما تراه اللجنة، أو ربطه بأعمال البوابة أدناه.
+        </p>
+      )}
       {slots.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -165,7 +175,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
             <span className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-pill bg-white"><span className="block h-full rounded-pill" style={{ width: `${(filled / slots.length) * 100}%`, background: color }} /></span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {slots.map((x) => (x.ev.length ? x.ev.map(card) : <Slot key={x.t} title={x.t} color={color} ready={ready} counts={counts}
+            {slots.map((x) => (x.ev.length ? x.ev.map((e) => card(e)) : <Slot key={x.t} title={x.t} color={color} ready={ready} counts={counts}
               onUpload={(fl) => upload(x.t, fl)} onLink={(src) => linkPortal(x.t, src)} />))}
           </div>
         </div>
@@ -173,7 +183,8 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
       {extra.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-bold text-muted">{slots.length ? "شواهد إضافية" : "الشواهد"}</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{extra.map(card)}</div>
+          {free.length > 0 && <p className="text-[11px] text-muted">إن كان أحد هذه الشواهد يقابل شاهدًا مطلوبًا في الخطة فاختره من «يُحتسب للمطلوب» تحت بطاقته.</p>}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{extra.map((e) => card(e, 0, extra, free))}</div>
         </div>
       )}
       {srcs.length > 0 && (
@@ -188,7 +199,15 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
                   <span className="block text-[10.5px] text-muted">{n ? portalCount(x, n) : x.ever ? "لا عمل مسجّل" : "لا عمل مسجّل هذا العام"}{linked && " · مربوط شاهدًا"}</span></span>
                 <span className="flex shrink-0 flex-col items-end gap-1">
                   <button className="text-[11px] font-semibold" style={{ color }} onClick={() => nav(x.to)}>فتح ←</button>
-                  {n > 0 && !linked && <button className="text-[11px] font-semibold text-mint-deep" onClick={() => linkPortal(x.t, x)}>+ شاهدًا</button>}
+                  {n > 0 && !linked && (free.length
+                    // في مؤشر له شواهد مطلوبة: يُختار المطلوب الذي يشهد له هذا العمل فيُحتسب في الإنجاز
+                    ? <select className="max-w-[9.5rem] rounded-pill border border-mint-deep/40 bg-white px-2 py-0.5 text-[11px] font-semibold text-mint-deep" value=""
+                        onChange={(v) => v.target.value && linkPortal(v.target.value === "__extra" ? x.t : v.target.value, x)} aria-label="ربطه شاهدًا">
+                        <option value="">+ شاهدًا لـ…</option>
+                        {free.map((t) => <option key={t} value={t}>{t}</option>)}
+                        <option value="__extra">شاهد إضافي (لا يُحتسب في المطلوب)</option>
+                      </select>
+                    : <button className="text-[11px] font-semibold text-mint-deep" onClick={() => linkPortal(x.t, x)}>+ شاهدًا</button>)}
                 </span>
               </div>
             );
@@ -238,7 +257,7 @@ function Slot({ title, color, ready, counts, onUpload, onLink }) {
 }
 
 /* بطاقة الشاهد: معاينة (صورة مصغّرة أو أيقونة PDF)، والعنوان والملاحظة والحالة، وأزرار العرض والتعديل والحذف */
-function EvCard({ e, color, thumb, me, uid, counts, onView, onChange, setMsg }) {
+function EvCard({ e, color, thumb, me, uid, free = [], counts, onView, onChange, setMsg }) {
   const kind = fileKind(e.file_path);
   const nav = useNavigate();
   const src = PORTAL_BY[portalKey(e.link)];
@@ -268,6 +287,13 @@ function EvCard({ e, color, thumb, me, uid, counts, onView, onChange, setMsg }) 
     if (e.file_path) await supabase.storage.from(ACC_BUCKET).remove([e.file_path]);
     const { error } = await supabase.from("acc_evidence").delete().eq("id", e.id);
     if (error) setMsg({ ok: false, text: error.message }); else onChange();
+  };
+  // احتساب شاهد إضافي لشاهد مطلوب: يأخذ عنوان المطلوب، ويبقى عنوانه الأصلي في الملاحظة
+  const assign = async (t) => {
+    if (!t) return;
+    const notes = [e.notes, e.title.trim() !== t.trim() ? `العنوان السابق: ${e.title}` : ""].filter(Boolean).join(" · ") || null;
+    const { error } = await supabase.from("acc_evidence").update({ title: t, notes }).eq("id", e.id);
+    if (error) setMsg({ ok: false, text: error.message }); else { setMsg({ ok: true, text: "احتُسب الشاهد للمطلوب في الخطة." }); onChange(); }
   };
   const setStatus = async (status) => {
     const { error } = await supabase.from("acc_evidence").update({ status }).eq("id", e.id);
@@ -318,6 +344,11 @@ function EvCard({ e, color, thumb, me, uid, counts, onView, onChange, setMsg }) 
             {me.coord && <select className="field ms-auto w-auto py-1 text-[11px]" value={e.status} onChange={(v) => setStatus(v.target.value)} aria-label="حالة الشاهد">
               {Object.entries(EV_STATUS).map(([k, st]) => <option key={k} value={k}>{st.t}</option>)}</select>}
           </div>
+          {canEdit && free.length > 0 && (
+            <select className="field mt-1 w-full py-1 text-[11px]" value="" onChange={(v) => assign(v.target.value)} aria-label="احتسابه لشاهد مطلوب">
+              <option value="">يُحتسب للمطلوب في الخطة…</option>
+              {free.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>)}
         </div>
       )}
     </div>
@@ -350,7 +381,7 @@ function EvStats({ all, doms, me, setMsg }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-ink">مساعد الشواهد</p>
-          <p className="text-xs leading-relaxed text-muted">الشواهد المطلوبة في خطة التحسين <b className="num text-ink">{all.req}</b>: رُفع منها <b className="num text-ink">{all.done}</b>، وبقي <b className="num text-late">{all.left}</b>.
+          <p className="text-xs leading-relaxed text-muted">المطلوب <b className="num text-ink">{all.req}</b>: شواهد خطة التحسين، ونقطة لكل مؤشر ليس له شواهد في الخطة تكتمل بأول شاهد يُرفع له. أُنجز <b className="num text-ink">{all.done}</b>، وبقي <b className="num text-late">{all.left}</b>.
             اضغط المؤشر لتظهر بطاقات شواهده، وارفع كل ملف في بطاقته أو اربطه بعمل مسجّل في البوابة.</p>
         </div>
         {me.coord && <button className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mint-deep" disabled={busy} onClick={remind}>{busy ? "…" : "تذكير مشرفي المجالات"}</button>}
