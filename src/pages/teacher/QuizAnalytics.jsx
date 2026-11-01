@@ -1,4 +1,5 @@
 // src/pages/teacher/QuizAnalytics.jsx
+import { clean, correctness } from "../../lib/quizItems.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { cmpAr } from "../../lib/sortAr";
@@ -44,7 +45,6 @@ const BANDS = [
 const pct = (score, total) => (Number(total) > 0 ? (Number(score) / Number(total)) * 100 : 0);
 const r1 = (n) => Math.round(n * 10) / 10;
 const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
-const clean = (v) => (typeof v === "string" ? v.replace(/^"|"$/g, "") : v);
 const classLabel = (c) => (c ? `${GRADE_NAMES[c.grade] ?? ""} — ${c.class_no}` : "—");
 
 /** هل أجاب الطالب الفقرة صحيحًا؟ (للمصحَّح آليًا) — المزاوجة بنسبة أزواجها الصحيحة */
@@ -78,18 +78,6 @@ function suspectKey(q, answers, en) {
   return null;
 }
 
-function correctness(q, a) {
-  if (a == null) return 0;
-  const key = clean(q.answer);
-  if (q.kind === "mcq" || q.kind === "truefalse") return String(clean(a)) === String(key) ? 1 : 0;
-  if (q.kind === "match") {
-    const k = key && typeof key === "object" ? key : {};
-    const pairs = Object.keys(k);
-    if (!pairs.length || typeof a !== "object") return 0;
-    return pairs.filter((p) => String(a[p]) === String(k[p])).length / pairs.length;
-  }
-  return null;   // الأنماط المكتوبة لا تُحلَّل آليًا
-}
 
 export default function QuizAnalytics() {
   // الدعم الفني يختار المعلم ويطّلع دون إعادة تصحيح (QuizTeacherPicker.jsx)

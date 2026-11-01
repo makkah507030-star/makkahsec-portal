@@ -1,10 +1,14 @@
 // src/pages/accreditation/AccDashboard.jsx
+import { countAr } from "../../lib/arabicCount.js";
 import { useEffect, useMemo, useState } from "react";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate } from "../../lib/dates";
 import {
   CODES, DOMAINS, DOMAIN_COLOR, INDICATORS, LEVELS, PLAN_BELOW, analyze, domainOf, domainSummary, fmtPct, levelOf, loadAccData, progOf,
+  fillSlots,
 } from "../../lib/accreditation.js";
+import { NAT_TESTS, natGrowth, natSeries, signed } from "../../lib/accNational.js";
+import { NatCard } from "./AccNational.jsx";
 import Loader from "../../components/Loader.jsx";
 
 /* =====================================================================
@@ -12,6 +16,7 @@ import Loader from "../../components/Loader.jsx";
    • الأداء العام على سلّم المستويات الأربعة، وأرقام الخطة والشواهد.
    • جدول المجالات: الأداء والمستوى، والمؤشرات ودون التقدم منها، وبرامج الخطة وإنجازها، والشواهد والمتبقي.
    • جدول أولويات التحسين: كل مؤشر دون التقدم بفجوته وبرنامجه وإنجازه وشواهده، مرتبًا من الأدنى.
+   • الاختبارات الوطنية (القدرات والتحصيلي) لمن يرى مجال نواتج التعلم، وقياس المستحدثين على خط أساسها.
    • جوانب القوة، والمحطة القادمة في الخطة.
    ===================================================================== */
 
@@ -67,13 +72,13 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
   const progBy = Object.fromEntries(data.progs.map((p) => [p.code, p]));
   const evBy = {}; data.ev.forEach((e) => { (evBy[e.code] ??= []).push(e); });
   const reqDone = (c) => { const p = progBy[c]; const req = p?.kind === "plan" ? p.evidence ?? [] : [];
-    return [req.filter((t) => (evBy[c] ?? []).some((e) => e.title.trim() === t.trim())).length, req.length]; };
+    return [fillSlots(req, evBy[c] ?? []).slots.filter((x) => x.ev.length).length, req.length]; };
   const visible = CODES.filter((c) => doms.includes(domainOf(c)));
   const low = visible.filter((c) => sc[c] != null && sc[c] < PLAN_BELOW).sort((x, y) => sc[x] - sc[y]);
   const fresh = visible.filter((c) => sc[c] == null);
   const high = visible.filter((c) => sc[c] != null).sort((x, y) => sc[y] - sc[x]).slice(0, 4);
   const next = (plan?.milestones ?? []).find((m) => !m.done_at);
-  const evPct = tot.gaps.required ? Math.round(((tot.gaps.required - tot.gaps.missing.filter((g) => g.title).length) / tot.gaps.required) * 100) : 0;
+  const evPct = tot.gaps.required ? Math.round(((tot.gaps.required - tot.gaps.missing.length) / tot.gaps.required) * 100) : 0;
   const th = "px-3 py-2.5 text-start text-[11.5px] font-semibold text-muted";
 
   return (
@@ -99,10 +104,10 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
               <span key={t} className="num absolute translate-x-1/2" style={{ right: `${t}%` }}>{t}</span>))}</div>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Stat v={`${a.measured}/47`} t="مؤشرًا مقاسًا" s={fresh.length ? `${fresh.length} مستحدث بلا قياس` : null} />
+            <Stat v={`${a.measured}/47`} t="المؤشرات المقاسة" s={fresh.length ? `مستحدثة بلا قياس: ${fresh.length}` : null} />
             <Stat v={low.length} t="دون مستوى التقدم" c="rgb(var(--c-absent))" s="مرشحة لخطة التحسين" />
-            <Stat v={`${tot.done}%`} t="إنجاز برامج الخطة" c={pctColor(tot.done)} s={`${tot.inPlan.length} برنامجًا · تحقق ${tot.met}%`} />
-            <Stat v={`${evPct}%`} t="الشواهد المطلوبة" c={pctColor(evPct)} s={`بقي ${tot.gaps.missing.filter((g) => g.title).length} من ${tot.gaps.required}`} />
+            <Stat v={`${tot.done}%`} t="إنجاز برامج الخطة" c={pctColor(tot.done)} s={`${countAr(tot.inPlan.length, "program")} · تحقق ${tot.met}%`} />
+            <Stat v={`${evPct}%`} t="الشواهد المطلوبة" c={pctColor(evPct)} s={`بقي ${tot.gaps.missing.length} من ${tot.gaps.required}`} />
           </div>
           {next && <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-xs text-mint-deep">المحطة القادمة في الخطة: <b>{next.title}</b> — {next.due} · {next.owner}</p>}
         </div>
@@ -116,7 +121,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
         </div>
         <div className="divide-y divide-line/70 md:hidden">{rows.map(([d, x]) => {
           const below = x.codes.filter((c) => sc[c] != null && sc[c] < PLAN_BELOW).length;
-          const left = x.gaps.missing.filter((g) => g.title).length;
+          const left = x.gaps.missing.length;
           return (
             <button key={d} className="block w-full space-y-2 px-4 py-3 text-start" style={{ borderInlineStart: `5px solid ${DOMAIN_COLOR[d]}` }} onClick={() => go("dash", { report: String(d) })}>
               <div className="flex items-center gap-2"><b className="flex-1" style={{ color: DOMAIN_COLOR[d] }}>{DOMAINS[d]}</b>{lvChip(x.perf)}
@@ -125,7 +130,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
               <div className="grid grid-cols-4 gap-1 text-center">
                 <Mini v={x.codes.length} t="مؤشرات" />
                 <Mini v={below} t="دون 75%" c={below ? "rgb(var(--c-absent))" : "rgb(var(--c-present))"} />
-                <Mini v={`${x.done}%`} t={`إنجاز ${x.inPlan.length} برامج`} c={pctColor(x.done)} />
+                <Mini v={`${x.done}%`} t={`إنجاز ${countAr(x.inPlan.length, "program", { acc: true })}`} c={pctColor(x.done)} />
                 <Mini v={x.gaps.required ? `${x.gaps.required - left}/${x.gaps.required}` : "—"} t={left ? `شواهد · بقي ${left}` : "شواهد"} c={x.gaps.required ? pctColor(((x.gaps.required - left) / x.gaps.required) * 100) : undefined} />
               </div>
             </button>
@@ -141,7 +146,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
             </tr></thead>
             <tbody className="divide-y divide-line/70">{rows.map(([d, x]) => {
               const below = x.codes.filter((c) => sc[c] != null && sc[c] < PLAN_BELOW).length;
-              const left = x.gaps.missing.filter((g) => g.title).length;
+              const left = x.gaps.missing.length;
               const ep = x.gaps.required ? Math.round(((x.gaps.required - left) / x.gaps.required) * 100) : null;
               return (
                 <tr key={d} className="align-middle">
@@ -169,7 +174,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
       {/* جدول أولويات التحسين */}
       <section className="card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
-          <h2 className="text-sm font-bold text-ink">أولويات التحسين <span className="num font-normal text-muted">— {low.length} مؤشرًا دون {PLAN_BELOW}%، من الأدنى</span></h2>
+          <h2 className="text-sm font-bold text-ink">أولويات التحسين <span className="num font-normal text-muted">— {countAr(low.length, "indicator")} دون {PLAN_BELOW}%، من الأدنى</span></h2>
           {low.length > 8 && <button className="text-xs font-semibold text-mint-deep" onClick={() => setAllLow(!allLow)}>{allLow ? "أهم 8 فقط" : `عرض الكل (${low.length})`}</button>}
         </div>
         {low.length === 0 ? <p className="px-4 py-6 text-center text-sm text-present">لا مؤشرات دون مستوى التقدم.</p> : (
@@ -220,6 +225,17 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
         )}
       </section>
 
+      {/* الاختبارات الوطنية */}
+      {doms.includes(3) && data.nat.length > 0 && (
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-ink">الاختبارات الوطنية <span className="font-normal text-muted">— بطاقات هيئة تقويم التعليم والتدريب</span></h2>
+            <button className="text-xs font-semibold text-mint-deep" onClick={() => go("nat")}>التفاصيل ←</button>
+          </div>
+          <div className="grid gap-4 xl:grid-cols-2">{Object.keys(NAT_TESTS).map((k) => <NatCard key={k} test={k} series={natSeries(data.nat, k)} me={me} compact />)}</div>
+        </section>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         {/* جوانب القوة */}
         <section className="card overflow-hidden">
@@ -234,10 +250,13 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
         {/* المستحدثة بلا قياس */}
         <section className="card overflow-hidden">
           <h2 className="border-b border-line px-4 py-3 text-sm font-bold text-ink">مؤشرات مستحدثة بلا قياس سابق <span className="font-normal text-muted">— تحتاج خط أساس وشواهد</span></h2>
-          {fresh.length ? <div className="divide-y divide-line/70">{fresh.map((c) => { const [dn, rq] = reqDone(c); return (
+          {fresh.length ? <div className="divide-y divide-line/70">{fresh.map((c) => { const [dn, rq] = reqDone(c);
+            const tk = Object.keys(NAT_TESTS).find((k) => NAT_TESTS[k].growth === c); const g = tk && natGrowth(data.nat, tk); return (
             <div key={c} className="flex items-center gap-3 px-4 py-2.5">
               <span className="num rounded-sm2 px-1.5 py-0.5 text-[11px] font-bold text-white" style={{ background: DOMAIN_COLOR[domainOf(c)] }}>{c}</span>
-              <span className="min-w-0 flex-1 text-[13px] text-ink">{INDICATORS[c]}</span>
+              <span className="min-w-0 flex-1 text-[13px] text-ink">{INDICATORS[c]}
+                {g && <span className="block text-[11px] text-muted">{g.only ? <>خط الأساس {g.base.academic_year}هـ: المتوسط <b className="num text-ink">{g.base.avg}</b></>
+                  : <>المتوسط {g.last.academic_year}هـ <b className="num text-ink">{g.last.avg}</b> · عن خط الأساس <b className="num" style={{ color: g.delta > 0 ? "rgb(var(--c-present))" : "rgb(var(--c-absent))" }}>{signed(g.delta)}</b></>}</span>}</span>
               {rq > 0 && <b className="num text-xs" style={{ color: pctColor((dn / rq) * 100) }}>شواهد {dn}/{rq}</b>}
             </div>); })}</div> : <p className="px-4 py-6 text-center text-sm text-muted">لا مؤشرات مستحدثة في مجالاتك.</p>}
         </section>

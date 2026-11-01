@@ -116,6 +116,13 @@ export const ADMIN_GROUPS = [
     ],
   },
   {
+    // الثقافة المؤسسية — سفير الثقافة (pages/culture، supabase/cult_1.sql): لكل الموظفين
+    title: "الثقافة المؤسسية",
+    items: [
+      { to: "/culture", label: "الثقافة المؤسسية", icon: "heart", kw: "سفير الثقافة قيم رفاه حياك نهتم بك مزايا تواصل ملهم ابتكار فكرة جلسة فنجان" },
+    ],
+  },
+  {
     // تظهر لمن يُسمح له بأحد معاملها فقط (المجموعة الفارغة تُخفى)
     title: "المعامل والمختبرات",
     items: [
@@ -167,6 +174,13 @@ export const ADMIN_GROUPS = [
     ],
   },
   {
+    // بلاغات الصيانة (pages/Repairs.jsx، supabase/maint_1.sql): لكل الموظفين، ويتابعها المساعد الإداري 3
+    title: "الصيانة",
+    items: [
+      { to: "/repairs", label: "بلاغات الصيانة", icon: "wrench", kw: "عطل اعطال صيانة تكييف كهرباء سباكة اصلاح بلاغ" },
+    ],
+  },
+  {
     title: "إعدادات المدرسة",
     items: [
       { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
@@ -196,10 +210,11 @@ export const ADMIN_GROUPS = [
   },
 ];
 
-/* الأقسام العامة لقائمة الإدارة: كل قسم يجمع أقسامًا من ADMIN_GROUPS بعناوينها، ويفتح
+/* (تُصدَّر الأقسام والمجموعات لدليل البوابة التنظيمي في docs/portal-guide)
+   الأقسام العامة لقائمة الإدارة: كل قسم يجمع أقسامًا من ADMIN_GROUPS بعناوينها، ويفتح
    صفحة بطاقاتها (/s/:key، pages/SectionHub.jsx). القسم الذي يبقى فيه رابط واحد للمستخدم
    يفتح الرابط مباشرة. أي قسم جديد في ADMIN_GROUPS يُضاف عنوانه هنا. */
-const SECTIONS = [
+export const SECTIONS = [
   { key: "students", title: "الطلاب", icon: "users", hint: "شؤون الطلاب والسلوك والمواظبة والتوجيه",
     groups: ["شؤون الطلاب", "السلوك والمواظبة", "التوجيه الطلابي"] },
   { key: "academic", title: "الشؤون التعليمية", icon: "book", hint: "الجداول والرصد والاختبارات والأنشطة والمعامل",
@@ -208,15 +223,36 @@ const SECTIONS = [
     groups: ["التحصيل الدراسي"] },
   { key: "accreditation", title: "التقويم والاعتماد", icon: "award", hint: "لجنة التميز والتقويم الذاتي والخارجي وخطة التحسين وشواهد المؤشرات",
     groups: ["التقويم والاعتماد المدرسي"] },
+  { key: "culture", title: "الثقافة المؤسسية", icon: "heart", hint: "سفير الثقافة وبرامج الثقافة المؤسسية وقيمنا ومشاركة الأفكار",
+    groups: ["الثقافة المؤسسية"] },
   { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والشهادات والأداء الوظيفي والتطوير المهني",
     groups: ["النماذج", "الأداء الوظيفي"] },
-  { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأدلة والأحداث",
+  { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأحداث والمركز الإعلامي والتصويت وبرامج الطلاب",
     groups: ["التواصل والمحتوى"] },
-  { key: "settings", title: "الإعدادات والدعم الفني", icon: "sliders", hint: "الحسابات والصلاحيات والتقويم والاستيراد والدعم",
-    groups: ["إعدادات المدرسة", "الدعم الفني"] },
+  { key: "settings", title: "الإعدادات والدعم الفني", icon: "sliders", hint: "بلاغات الصيانة والحسابات والصلاحيات والتقويم والاستيراد والدعم",
+    groups: ["الصيانة", "إعدادات المدرسة", "الدعم الفني"] },
 ];
 
-const TEACHER_GROUPS = [
+/* أقسام قائمة المعلم بالطريقة نفسها: كل قسم يجمع مجموعات من TEACHER_GROUPS ويفتح صفحة بطاقاتها،
+   والقسم ذو الرابط الواحد يفتحه مباشرة. أي مجموعة جديدة في TEACHER_GROUPS يُضاف عنوانها هنا. */
+export const TEACHER_SECTIONS = [
+  { key: "daily", title: "المهام اليومية", icon: "userCheck", hint: "التحضير وحصص الانتظار والجدول والأنشطة والاستئذان والمعمل وبلاغات الصيانة",
+    groups: ["المهام اليومية", "المعامل والمختبرات"] },
+  { key: "students", title: "طلابي", icon: "users", hint: "السجلات والمتابعة والغياب والإحالات والتقارير",
+    groups: ["طلابي"] },
+  { key: "exams", title: "الاختبارات والتحصيل", icon: "quiz", hint: "اختباراتي والتصحيح والتحليل وبنك الأسئلة ومركز التدريب",
+    groups: ["الاختبارات"] },
+  { key: "accreditation", title: "التقويم والاعتماد", icon: "award", hint: "لجنة التميز وشواهد المؤشرات وخطة التحسين",
+    groups: ["التقويم والاعتماد المدرسي"] },
+  { key: "culture", title: "الثقافة المؤسسية", icon: "heart", hint: "سفير الثقافة وبرامج الثقافة المؤسسية وقيمنا ومشاركة الأفكار",
+    groups: ["الثقافة المؤسسية"] },
+  { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والتعاميم والتطوير المهني وشواهد الأداء والملف الرقمي",
+    groups: ["النماذج", "الأداء الوظيفي"] },
+  { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأحداث والمعرض والمركز الإعلامي والتصويت",
+    groups: ["التواصل والمحتوى"] },
+];
+
+export const TEACHER_GROUPS = [
   {
     title: null,
     items: [
@@ -231,6 +267,7 @@ const TEACHER_GROUPS = [
       { to: "/activities",  label: "الأنشطة والألعاب",       icon: "sparkles", kw: "حقيبة الانتظار الأنشطة الصفية دوري المادة كأس حروف مسابقة مؤقت" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
+      { to: "/repairs",     label: "بلاغات الصيانة",        icon: "wrench", kw: "عطل اعطال صيانة تكييف كهرباء سباكة اصلاح بلاغ" },
     ],
   },
   {
@@ -276,6 +313,13 @@ const TEACHER_GROUPS = [
     ],
   },
   {
+    // الثقافة المؤسسية — سفير الثقافة (pages/culture، supabase/cult_1.sql): لكل الموظفين
+    title: "الثقافة المؤسسية",
+    items: [
+      { to: "/culture", label: "الثقافة المؤسسية", icon: "heart", kw: "سفير الثقافة قيم رفاه حياك نهتم بك مزايا تواصل ملهم ابتكار فكرة جلسة فنجان" },
+    ],
+  },
+  {
     title: "النماذج",
     items: [
       { to: "/forms",        label: "النماذج والشهادات",  icon: "certificate" },
@@ -309,7 +353,7 @@ const TEACHER_GROUPS = [
   },
 ];
 
-const BASIC_GROUPS = [
+export const BASIC_GROUPS = [
   {
     title: null,
     items: [
@@ -536,12 +580,12 @@ export default function Layout({ children }) {
   }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember, accMember]);
   const footer = FOOTER.filter(visible);
 
-  // الأقسام العامة للإدارة بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
-  const sections = useMemo(() => (!isAdmin ? [] : SECTIONS
+  // الأقسام العامة للإدارة والمعلم بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
+  const sections = useMemo(() => (isAdmin ? SECTIONS : effectiveRole === "teacher" ? TEACHER_SECTIONS : [])
     .map((x) => ({ ...x, groups: groups.filter((g) => x.groups.includes(g.title)) }))
     .map((x) => ({ ...x, items: x.groups.flatMap((g) => g.items) }))
-    .filter((x) => x.items.length)), [isAdmin, groups]);
-  const topItems = isAdmin ? groups.find((g) => !g.title)?.items ?? [] : [];
+    .filter((x) => x.items.length), [isAdmin, effectiveRole, groups]);
+  const topItems = sections.length ? groups.find((g) => !g.title)?.items ?? [] : [];
 
   const isActive = (i) =>
     i.to === "/" || i.exact
@@ -911,7 +955,7 @@ export default function Layout({ children }) {
             ) : (
               <p className="px-3 py-6 text-center text-[13px] text-muted">لا توجد صفحة بهذا الاسم</p>
             )
-          ) : isAdmin ? (
+          ) : sections.length ? (
             <>
               <div className="space-y-0.5">{topItems.map((i) => navItem(i, { iconOnly }))}</div>
               <div className={iconOnly ? "mt-2 border-t border-line pt-2" : "mt-3"}>
@@ -1045,7 +1089,7 @@ export default function Layout({ children }) {
 
           {/* الزر العائم فوق الشريط السفلي: مسافة إضافية أسفل الصفحة كي لا يغطي آخر المحتوى */}
           <main className={`min-w-0 flex-1 px-4 pt-5 sm:px-6 lg:pb-5 ${showBack ? "pb-36" : "pb-24"}`}>
-            <NavContext.Provider value={{ sections, badgeOf }}>
+            <NavContext.Provider value={{ sections, badgeOf, teacher: effectiveRole === "teacher" }}>
               <div key={pageKey} className="mx-auto max-w-5xl">{children}</div>
               {/* صندوق شواهد ملف الأداء: آخر كل صفحة فيها إجراء يُحتسب شاهدًا (EvidenceTags) */}
               <EvidenceDock />

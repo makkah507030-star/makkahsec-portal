@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { fmtDate } from "../../lib/dates.js";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
@@ -276,6 +277,13 @@ export default function MyDfile() {
         {!(d?.quizzes?.length) && (
           <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
             نتائج طلابك لا تظهر لأنه لا اختبارات لك هذا العام. أضف اختبارك من «اختباراتي» ← «اختبار من خارج البوابة» وارصد درجات طلابك لتظهر.
+          </p>
+        )}
+        {d && !(d.docs?.length) && !hidden.has("docs") && (
+          // القسم يختفي عن الزائر ما دام فارغًا، فيُنبَّه المعلم وحده إلى سبب غيابه وطريقة رفعها
+          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
+            «الشواهد من خارج البوابة» لا تظهر في ملفك لأنك لم ترفع شاهدًا بملف هذا العام. ارفعها من{" "}
+            <Link to="/my-performance" className="font-semibold underline">ملف الأداء</Link> ← العنصر ← «رفع شاهد» (PDF أو صورة) لتظهر للزائر.
           </p>
         )}
       </Block>

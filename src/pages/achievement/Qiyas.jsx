@@ -6,7 +6,9 @@
    • اختياريًا: يُدخل الطالب نتيجته من حسابه («نتائج قياس») فتُضاف مباشرة دون تحقق. وقسم «بانتظار
      التحقق» يظهر إن فُعّل التحقق لاحقًا (qiyas_submit بحالة pending).
    • التحليل على المعتمد وحده: أعلى درجة لكل طالب، والمتوسط والتوزيع والفصول، ومن لم يُدخل بعد.
+   • النتيجة الرسمية للمدرسة من بطاقة الهيئة (قسم التقويم والاعتماد، supabase/acc_5.sql) تُقارن بما سُجّل هنا.
    ===================================================================== */
+import { countAr } from "../../lib/arabicCount.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
@@ -16,6 +18,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { ACH_ALL, useAchMember, stats, groupBy } from "../../lib/achievement";
 import Loader from "../../components/Loader.jsx";
 import { DistStrip, HBars, Stat, pctTxt } from "./Charts.jsx";
+import { NAT_TESTS, NAT_BANDS, natSeries, signed } from "../../lib/accNational.js";
 
 const TESTS = [
   { k: "qudrat", t: "القدرات العامة", d: "اختبار القدرات العامة (اللفظي والكمي)" },
@@ -38,6 +41,7 @@ export default function Qiyas() {
   const [err, setErr] = useState("");
   const [msg, setMsg] = useNotice(null);
   const [upload, setUpload] = useState(false);
+  const [nat, setNat] = useState([]);
 
   const load = async () => {
     const { data: st } = await supabase.from("settings").select("value").eq("key", "active_year").maybeSingle();
@@ -47,16 +51,18 @@ export default function Qiyas() {
       supabase.from("qiyas_results").select("id, student_id, test, attempt, score, taken_on, status, source, proof_path, reject_reason, created_at").limit(20000),
       supabase.from("v_active_students").select("student_id, full_name, national_id, grade, class_no").eq("academic_year", y).eq("status", "active").limit(5000),
     ]);
+    // بطاقات الهيئة الرسمية: قبل acc_5.sql أو بلا صلاحية تُعدّ فارغة
+    supabase.from("acc_national").select("*").order("academic_year").then(({ data: n }) => setNat(n ?? []));
     if (error) { setErr(/qiyas_results/.test(error.message) ? setupMsg : error.message); setRows([]); return; }
     setRows(data ?? []); setStudents(vs ?? []);
   };
   useEffect(() => { load(); }, []);
 
   const stu = useMemo(() => new Map(students.map((s) => [s.student_id, s])), [students]);
-  // أعلى درجة لكل طالب في الاختبار المختار، لطلاب الصفوف المتاحة
-  const best = useMemo(() => {
+  // أعلى درجة لكل طالب في الاختبار المختار، لطلاب الصفوف المتاحة؛ official: من تقرير المركز وحده
+  const bestOf = (official) => {
     const m = new Map();
-    (rows ?? []).filter((r) => r.test === test && r.status === "verified").forEach((r) => {
+    (rows ?? []).filter((r) => r.test === test && r.status === "verified" && (!official || r.source === "official")).forEach((r) => {
       const s = stu.get(r.student_id);
       if (!s || !myGrades.includes(s.grade)) return;
       const x = m.get(r.student_id);
@@ -64,7 +70,9 @@ export default function Qiyas() {
       else x.attempts++;
     });
     return [...m.values()];
-  }, [rows, stu, test, myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
+  };
+  const best = useMemo(() => bestOf(false), [rows, stu, test, myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
+  const bestOfficial = useMemo(() => bestOf(true), [rows, stu, test, myGrades.join()]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!myGrades.length) return <p className="card px-4 py-6 text-sm text-muted">صفحة اختبارات قياس لوكيل الشؤون التعليمية ولجنة التحصيل والموجهين.</p>;
   if (!rows) return <Loader />;
@@ -91,7 +99,7 @@ export default function Qiyas() {
             <button key={t.k} onClick={() => setTest(t.k)}
                     className={`rounded-card border px-3 py-3 text-start transition ${on ? "border-mint-deep bg-mint-deep text-white shadow-card" : "border-line bg-white hover:border-mint-light"}`}>
               <span className={`block text-sm font-bold ${on ? "text-white" : "text-ink"}`}>{t.t}</span>
-              <span className={`mt-0.5 block text-[11px] ${on ? "text-white/80" : "text-faint"}`}>{n ? `${n} طالبًا` : "لا نتائج بعد"}{p ? ` · ${p} بانتظار التحقق` : ""}</span>
+              <span className={`mt-0.5 block text-[11px] ${on ? "text-white/80" : "text-faint"}`}>{n ? countAr(n, "student") : "لا نتائج بعد"}{p ? ` · ${p} بانتظار التحقق` : ""}</span>
             </button>
           );
         })}
@@ -107,6 +115,8 @@ export default function Qiyas() {
 
       {!err && <Pending rows={(rows ?? []).filter((r) => r.test === test && r.status === "pending" && myGrades.includes(stu.get(r.student_id)?.grade))}
                         stu={stu} canWrite={canWrite} onChange={load} setMsg={setMsg} />}
+
+      {!err && NAT_TESTS[test] && <Official series={natSeries(nat, test)} best={bestOfficial} />}
 
       {!err && <Analysis best={best} test={T} students={students.filter((s) => myGrades.includes(s.grade))} />}
     </div>
@@ -158,13 +168,50 @@ function Pending({ rows, stu, canWrite, onChange, setMsg }) {
   );
 }
 
+/* النتيجة الرسمية للمدرسة (آخر بطاقة من الهيئة) مقارنةً بنتائج الطلاب من تقرير المركز وحده،
+   فما يُدخله الطلاب من حساباتهم لا يدخل المقارنة */
+function Official({ series, best }) {
+  const r = series[series.length - 1];
+  if (!r) return null;
+  const s = stats(best.map((b) => ({ testPct: b.score })));
+  const band = (lo, hi) => (best.length ? Math.round((best.filter((b) => b.score >= lo && b.score < hi).length / best.length) * 1000) / 10 : null);
+  const mine = { high_pct: band(75, 101), mid_pct: band(65, 75), low_pct: band(0, 65) };
+  const diff = s.avg != null && r.avg != null ? Math.round((s.avg - r.avg) * 100) / 100 : null;
+  return (
+    <section className="card overflow-hidden">
+      <div className="border-b border-line px-4 py-2.5">
+        <h2 className="text-sm font-semibold text-ink">النتيجة الرسمية للمدرسة <span className="font-normal text-muted">— بطاقة الهيئة {r.academic_year}هـ</span></h2>
+        <p className="text-[11.5px] text-muted">من قسم التقويم والاعتماد. تُقارن بنتائج الطلاب من تقرير المركز المرفوع هنا وحده، دون ما أدخله الطلاب من حساباتهم.</p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px] text-[12.5px]">
+          <thead className="bg-canvas text-muted"><tr>{["", "المتوسط", "الطلاب", ...NAT_BANDS.map((b) => `${b.t} (${b.s})`)].map((h, i) => <th key={h} className={`px-3 py-2 font-medium ${i ? "text-center" : "text-start"}`}>{h}</th>)}</tr></thead>
+          <tbody className="divide-y divide-line [&_td.num]:text-center">
+            <tr><td className="px-3 py-2 font-semibold text-ink">الرسمية (الهيئة)</td><td className="num px-3 py-2 font-bold text-ink">{r.avg}</td><td className="num px-3 py-2">{r.takers ?? "—"}</td>
+              {NAT_BANDS.map((b) => <td key={b.k} className="num px-3 py-2">{r[b.k] == null ? "—" : `${r[b.k]}%`}</td>)}</tr>
+            <tr><td className="px-3 py-2 font-semibold text-ink">تقرير المركز المرفوع</td><td className="num px-3 py-2 font-bold text-ink">{s.avg ?? "—"}</td><td className="num px-3 py-2">{s.n}</td>
+              {NAT_BANDS.map((b) => <td key={b.k} className="num px-3 py-2">{mine[b.k] == null ? "—" : `${mine[b.k]}%`}</td>)}</tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="px-4 py-2.5 text-[11.5px] text-muted">
+        {r.district_avg != null && <>متوسط الإدارة <b className="num text-ink">{r.district_avg}</b> والمملكة <b className="num text-ink">{r.kingdom_avg ?? "—"}</b>. </>}
+        {r.change_pct != null && <>التغير عن العام السابق <b className="num text-ink">{signed(r.change_pct)}%</b>. </>}
+        {s.n === 0 ? <>لم يُرفع تقرير المركز لهذا الاختبار بعد، فلا مقارنة. ارفعه من «رفع تقرير … الرسمي».</>
+          : diff != null && <>متوسط تقرير المركز {diff === 0 ? "يساوي" : diff > 0 ? "أعلى من" : "أدنى من"} الرسمي{diff ? <> بـ<b className="num text-ink">{Math.abs(diff)}</b></> : ""}
+          {r.takers && s.n < r.takers * 0.8 ? ` — في التقرير المرفوع نتائج ${countAr(s.n, "student", { acc: true })} من ${countAr(r.takers, "examinee", { acc: true })}، فقد لا يمثّل المدرسة كلها.` : "."}</>}
+      </p>
+    </section>
+  );
+}
+
 function Analysis({ best, test, students }) {
   const [q, setQ] = useState("");
   const s = useMemo(() => stats(best.map((b) => ({ testPct: b.score }))), [best]);
   const byClass = useMemo(() => [...groupBy(best, (b) => `${b.grade}|${b.class_no}`)].map(([k, bs]) => {
     const [g, c] = k.split("|");
     const x = stats(bs.map((b) => ({ testPct: b.score })));
-    return { key: k, g: Number(g), c: Number(c), label: `${GRADE_NAMES[g]?.split(" ")[0] ?? ""} ${c}`, value: x.avg, tip: `${x.n} طالبًا` };
+    return { key: k, g: Number(g), c: Number(c), label: `${GRADE_NAMES[g]?.split(" ")[0] ?? ""} ${c}`, value: x.avg, tip: countAr(x.n, "student") };
   }).sort((a, b) => a.g - b.g || a.c - b.c), [best]);
   const third = students.filter((x) => x.grade === 3);
   const missing = test.k === "step" ? null : third.filter((x) => !best.some((b) => b.student_id === x.student_id)).length;
@@ -180,7 +227,7 @@ function Analysis({ best, test, students }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="متوسط الدرجات" value={s.avg ?? "—"} sub={`الوسيط ${s.median ?? "—"} · من 100`} />
         <Stat label="نتائج مسجّلة" value={s.n} sub={missing != null ? `${missing} من طلاب الثالث لم تُسجَّل لهم نتيجة بعد` : "أعلى درجة لكل طالب"} />
-        <Stat label="90 فأكثر" value={pctTxt(s.exPct)} sub={`${s.ex} طالبًا`} />
+        <Stat label="90 فأكثر" value={pctTxt(s.exPct)} sub={countAr(s.ex, "student")} />
         <Stat label="أعلى درجة" value={s.max ?? "—"} sub={`أدنى درجة ${s.min ?? "—"}`} />
       </div>
       <section className="card p-4">
@@ -270,7 +317,7 @@ function Upload({ test, year, students, me, onDone, setMsg }) {
       if (error) { setBusy(false); setMsg({ ok: false, text: /qiyas_results/.test(error.message) ? setupMsg : error.message }); return; }
     }
     setBusy(false);
-    onDone(`حُفظت نتائج ${test.t} لـ ${payload.length} طالبًا (${attempt}) معتمدة.`);
+    onDone(`حُفظت نتائج ${test.t} لـ ${countAr(payload.length, "student", { acc: true })} (${attempt}) معتمدة.`);
   };
 
   const saveOne = () => {
@@ -308,7 +355,7 @@ function Upload({ test, year, students, me, onDone, setMsg }) {
           <p className="text-[12.5px] text-ink">مطابق: <b className="num">{preview.ok.length}</b> · غير مطابق أو بلا درجة: <b className="num text-absent">{preview.bad.length}</b></p>
           {preview.bad.length > 0 && <p className="text-[11.5px] text-muted">أمثلة: {preview.bad.slice(0, 6).map((b) => `${b.nid} (${b.why})`).join("، ")}</p>}
           <button onClick={() => save(preview.ok, "official")} disabled={busy || !preview.ok.length}
-                  className="rounded-pill bg-mint-deep px-4 py-2 text-xs font-semibold text-white">{busy ? "…" : `حفظ ${preview.ok.length} نتيجة`}</button>
+                  className="rounded-pill bg-mint-deep px-4 py-2 text-xs font-semibold text-white">{busy ? "…" : `حفظ ${countAr(preview.ok.length, "result")}`}</button>
         </div>
       )}
       <div className="border-t border-line pt-3">

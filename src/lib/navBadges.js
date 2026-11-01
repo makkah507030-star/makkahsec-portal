@@ -256,6 +256,10 @@ async function load() {
     && !qOpen.some((y) => y.quiz_id === x.quiz_id && y.kind === "remedial" && y.round === 2));
   const goalDueRows = goals.filter((g) => goalDue(g) && (g.owner_user_id === uid || (g.teacher_user_id === uid && !g.progress_at)));
 
+  // بلاغات الصيانة الجديدة للمساعد الإداري 3 (supabase/maint_1.sql)
+  const maint = has("clerk_3") ? await rowsOf(supabase.from("maint_tickets").select("id, category, place_kind, place, urgent")
+    .eq("status", "new").order("created_at").limit(100)) : [];
+
   const tasks = [
     // العاجل أولًا: الإقرار بميثاق أخلاقيات المهنة
     { key: "ethics", n: ethicsDue, to: "/ethics", label: "ميثاق أخلاقيات المهنة ينتظر اطّلاعك وإقرارك", tone: "absent", icon: "shield",
@@ -316,6 +320,9 @@ async function load() {
     { key: "perfAck", n: perfAck, to: "/my-performance", label: "تقييم أداء ينتظر اطلاعك", tone: "warning", icon: "award" },
     { key: "referrals", n: refDeputy.length + refCounselor.length, to: "/referrals", label: "إحالات تنتظر إجراءك", tone: "warning", icon: "send",
       items: [...refDeputy, ...refCounselor].map((r) => ({ id: r.id, to: `/referrals?tab=inbox&open=${r.id}`, title: r.student_name ?? "", flag: r.flag ?? null })) },
+    { key: "maint", n: maint.length, to: "/repairs?tab=all", label: "بلاغات صيانة جديدة تنتظر متابعتك",
+      tone: maint.some((r) => r.urgent) ? "absent" : "warning", icon: "wrench",
+      items: maint.map((r) => ({ id: r.id, to: `/repairs?tab=all&open=${r.id}`, title: `${r.urgent ? "عاجل: " : ""}${r.category} · ${r.place || r.place_kind}` })) },
     { key: "dropouts", n: dropouts.length, to: "/dropouts?tab=new", label: "بلاغات طلاب منقطعين تنتظر إجراءك",
       tone: "warning", icon: "userX",
       items: dropouts.map((r) => ({ id: r.id, to: `/dropouts?tab=new&open=${r.id}`, title: r.student_name ?? "" })) },
@@ -391,6 +398,7 @@ async function load() {
     "/improve": goalPlan.length + goalReview.length + goalDueRows.length,
     "/quizzes": qEnded.length + qVerify.length + qRound2.length,
     "/dropouts": dropouts.length,
+    "/repairs": maint.length,
     "/ethics": ethicsDue,
     "/notebook": myNotes.length,
     "/my-circulars": circPending.length,

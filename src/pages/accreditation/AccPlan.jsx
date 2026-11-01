@@ -52,7 +52,7 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
   // يُستكمل إن أُنشئت النسخة من قبل بلا برامج (into)، ولا يكرر ما أُدخل.
   const importPlan = async (into = null) => {
     if (!window.confirm(into ? "إكمال استيراد برامج خطة 1448هـ في هذه النسخة؟"
-      : "استيراد خطة 1448هـ من ملف المدرسة؟ يُنشأ تقرير التقويم الذاتي بنسبه، ونسخة أولى من الخطة فيها 23 برنامجًا و24 إجراء استدامة.")) return;
+      : "استيراد خطة 1448هـ من ملف المدرسة؟ يُنشأ تقرير التقويم الذاتي بنسبه، ونسخة أولى من الخطة فيها 23 برنامجًا و24 إجراءً للاستدامة.")) return;
     setBusy(true); setImportErr("");
     const fail = (e, step) => { setBusy(false); const t = `${step}: ${setupMsg(e)}`; setImportErr(t); setMsg({ ok: false, text: t }); };
     const by = profile?.full_name ?? null;
@@ -280,34 +280,77 @@ function ProgramBody({ p, canEdit, edit: editProps, by, onSaved, setMsg }) {
   };
   const setOne = (i, k, v) => saveM(m.map((x, j) => (j === i ? { ...x, [k]: x[k] === v ? null : v } : x)));
   if (edit) return <ProgramEdit p={p} {...editProps} by={by} onDone={(ok) => { setEdit(false); if (ok) onSaved(); }} setMsg={setMsg} />;
-  const row = (t, v) => (v ? <div key={t} className="grid gap-1 sm:grid-cols-[140px_1fr]"><span className="text-xs font-semibold text-mint-deep">{t}</span><span className="text-sm text-ink">{v}</span></div> : null);
-  const opt = (on) => `rounded-pill border px-2 py-0.5 text-[11px] ${on ? "border-mint-deep bg-mint-tint text-mint-deep" : "border-line bg-white text-faint"}`;
+  const color = DOMAIN_COLOR[p.domain] ?? "rgb(var(--c-mint-deep))";
+  const pr = progOf(p);
+  // بطاقات المعلومات: الفترة تُدمج بالفصل حين تتطابقان
+  const samePeriod = p.period && p.period === p.semester;
+  const facts = [
+    ["الفصل الدراسي", p.semester, samePeriod ? "وفترة القياس" : null],
+    ["الفترة الزمنية للقياس", samePeriod ? null : p.period],
+    ["الفريق المكلف", p.team?.join("، ")],
+    ["المتابعة", p.follow],
+    ["الاحتياجات", p.needs],
+  ].filter(([, v]) => v);
+  // مجموعة أزرار متصلة: لكل خيار لونه حين يُختار
+  const seg = (i, k, opts) => (
+    <span className="inline-flex overflow-hidden rounded-pill border border-line bg-white">
+      {opts.map(([v, t, c], n) => {
+        const on = m[i]?.[k] === v;
+        return <button key={t} disabled={!canEdit} onClick={() => setOne(i, k, v)}
+          className={`px-3 py-1 text-[11.5px] transition-colors ${n ? "border-s border-line" : ""} ${on ? "font-bold text-white" : "text-muted hover:bg-canvas"}`}
+          style={on ? { background: c } : undefined}>{t}</button>;
+      })}
+    </span>
+  );
+  const GREEN = "rgb(var(--c-present))", RED = "rgb(var(--c-absent))", AMBER = "rgb(var(--c-late))";
 
   return (
     <div className="space-y-4 border-t border-line p-4">
-      <div className="space-y-2">
-        {row("الفصل الدراسي", p.semester)}
-        {row("الفريق المكلف", p.team?.join("، "))}
-        {row("الفريق المكلف بالمتابعة", p.follow)}
-        {row("الفترة الزمنية للقياس", p.period)}
-        {row("مؤشر القياس", p.measure)}
-        {row("الاحتياجات", p.needs)}
-      </div>
-      {p.evidence?.length > 0 && <div><p className="mb-1 text-xs font-semibold text-mint-deep">الأدلة والشواهد</p>
-        <ul className="list-disc space-y-0.5 ps-5 text-sm text-ink">{p.evidence.map((e) => <li key={e}>{e}</li>)}</ul></div>}
-      <div>
-        <p className="mb-1 text-xs font-semibold text-mint-deep">قياس نواتج المبادرات والبرامج</p>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-sm">
-            <thead><tr className="bg-canvas text-right text-xs text-muted"><th className="p-2">البرامج وأساليب التنفيذ</th><th className="p-2">التنفيذ</th><th className="p-2">درجة الإنجاز</th><th className="p-2">تحقق الأهداف</th></tr></thead>
-            <tbody className="divide-y divide-line/60">{m.map((x, i) => (
-              <tr key={i}><td className="p-2 text-ink">{x.t}</td>
-                <td className="p-2"><span className="flex gap-1">{[[true, "نعم"], [false, "لا"]].map(([v, t]) => <button key={t} disabled={!canEdit} className={opt(x.done === v)} onClick={() => setOne(i, "done", v)}>{t}</button>)}</span></td>
-                <td className="p-2"><span className="flex gap-1">{Object.entries(LEVEL_T).map(([v, t]) => <button key={v} disabled={!canEdit} className={opt(x.level === v)} onClick={() => setOne(i, "level", v)}>{t}</button>)}</span></td>
-                <td className="p-2"><span className="flex gap-1">{[[true, "متحققة"], [false, "غير متحققة"]].map(([v, t]) => <button key={t} disabled={!canEdit} className={opt(x.met === v)} onClick={() => setOne(i, "met", v)}>{t}</button>)}</span></td></tr>
-            ))}</tbody>
-          </table>
+      {facts.length > 0 && (
+        <div className={`grid gap-2 sm:grid-cols-2 ${["", "lg:grid-cols-1", "lg:grid-cols-2", "lg:grid-cols-3", "lg:grid-cols-4", "lg:grid-cols-5"][facts.length]}`}>{facts.map(([t, v, sub]) => (
+          <div key={t} className="rounded-sm2 border border-line bg-white px-3 py-2">
+            <p className="text-[11px] font-semibold" style={{ color }}>{t}{sub && <span className="font-normal text-faint"> {sub}</span>}</p>
+            <p className="mt-0.5 text-[13px] leading-snug text-ink">{v}</p>
+          </div>))}</div>
+      )}
+      {p.measure && (
+        <div className="flex items-start gap-3 rounded-sm2 px-3 py-2.5" style={{ background: `${color}10`, borderInlineStart: `4px solid ${color}` }}>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-semibold" style={{ color }}>مؤشر القياس</p>
+            <p className="mt-0.5 text-[13.5px] font-semibold leading-snug text-ink">{p.measure}</p>
+          </div>
+          <span className="shrink-0 text-center text-[11px] text-muted">المستهدف<b className="num block text-lg leading-tight" style={{ color }}>{fmtPct(p.target)}</b></span>
         </div>
+      )}
+      {p.evidence?.length > 0 && (
+        <div>
+          <p className="mb-1.5 text-xs font-bold text-ink">الأدلة والشواهد المطلوبة <span className="num font-normal text-muted">({p.evidence.length})</span></p>
+          <div className="grid gap-2 sm:grid-cols-3">{p.evidence.map((e, n) => (
+            <div key={e} className="flex items-start gap-2 rounded-sm2 border border-dashed bg-white px-3 py-2" style={{ borderColor: `${color}66` }}>
+              <span className="num grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10.5px] font-bold text-white" style={{ background: color }}>{n + 1}</span>
+              <span className="text-[12.5px] leading-snug text-ink">{e}</span>
+            </div>))}</div>
+          <p className="mt-1 text-[11px] text-faint">تُرفع ملفاتها من «المؤشرات والشواهد» في بطاقة كل شاهد.</p>
+        </div>
+      )}
+      <div>
+        <div className="mb-1.5 flex flex-wrap items-center gap-2">
+          <p className="text-xs font-bold text-ink">قياس نواتج المبادرات والبرامج</p>
+          <span className="text-[11px] text-muted">نُفّذ <b className="num text-ink">{pr.done}%</b> · تحققت أهدافه <b className="num text-ink">{pr.met}%</b></span>
+        </div>
+        <div className="space-y-2">{m.map((x, i) => (
+          <div key={i} className="rounded-sm2 border border-line bg-white p-3">
+            <div className="flex items-start gap-2">
+              <span className="num grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold" style={{ background: `${color}18`, color }}>{i + 1}</span>
+              <p className="min-w-0 flex-1 text-[13.5px] font-semibold leading-snug text-ink">{x.t}</p>
+              {x.done === true && x.met === true && <span className="chip shrink-0 bg-present/10 text-present">مكتمل</span>}
+            </div>
+            <div className="mt-2 grid gap-2 ps-8 sm:grid-cols-3">
+              <span className="space-y-1"><span className="block text-[10.5px] text-faint">التنفيذ</span>{seg(i, "done", [[true, "نعم", GREEN], [false, "لا", RED]])}</span>
+              <span className="space-y-1"><span className="block text-[10.5px] text-faint">درجة الإنجاز</span>{seg(i, "level", [["high", LEVEL_T.high, GREEN], ["mid", LEVEL_T.mid, AMBER], ["low", LEVEL_T.low, RED]])}</span>
+              <span className="space-y-1"><span className="block text-[10.5px] text-faint">تحقق الأهداف</span>{seg(i, "met", [[true, "متحققة", GREEN], [false, "غير متحققة", RED]])}</span>
+            </div>
+          </div>))}</div>
       </div>
       {p.rec && <div className="rounded-sm2 bg-mint-tint/60 px-3 py-2"><p className="text-xs font-semibold text-mint-deep">التوصيات والمقترحات العلاجية</p><p className="mt-1 text-sm leading-relaxed text-ink">{p.rec}</p></div>}
       <div className="flex items-center gap-3 text-xs">
@@ -339,11 +382,11 @@ function ProgramEdit({ p, planId, doms, canDelete, by, onDone, setMsg }) {
     const { error } = isNew ? await supabase.from("acc_programs").insert({ ...row, plan_id: planId, sort: 200 })
       : await supabase.from("acc_programs").update(row).eq("id", p.id);
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: /duplicate|unique/i.test(error.message) ? `للمؤشر ${x.code} برنامج في هذه النسخة؛ عدّله بدل إضافة غيره.` : error.message }); return; }
+    if (error) { setMsg({ ok: false, text: /duplicate|unique/i.test(error.message) ? `للمؤشر \u2066${x.code}\u2069 برنامج في هذه النسخة؛ عدّله بدل إضافة غيره.` : error.message }); return; }
     setMsg({ ok: true, text: isNew ? "أُضيف البرنامج." : "حُفظ البرنامج." }); onDone(true);
   };
   const remove = async () => {
-    if (!(await confirmDanger({ title: `حذف برنامج المؤشر ${p.code}`, impact: [`«${p.initiative}» بأساليبه وقياس نواتجه من هذه النسخة.`, "تبقى شواهد المؤشر كما هي."], confirmLabel: "حذف" }))) return;
+    if (!(await confirmDanger({ title: `حذف برنامج المؤشر \u2066${p.code}\u2069`, impact: [`«${p.initiative}» بأساليبه وقياس نواتجه من هذه النسخة.`, "تبقى شواهد المؤشر كما هي."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("acc_programs").delete().eq("id", p.id);
     if (error) { setMsg({ ok: false, text: error.message }); return; }
     setMsg({ ok: true, text: "حُذف البرنامج." }); onDone(true);

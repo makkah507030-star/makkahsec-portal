@@ -83,6 +83,9 @@
     direction: ltr;
     unicode-bidi: embed;
   }
+  /* خلية جدول برقم: اتجاهها من اليسار فكانت تنحاز يسارًا تحت عنوان عمودها المنحاز يمينًا، فيبدو الرقم
+     في العمود المجاور. تنحاز يمينًا كعنوانها ما لم تُعطَ محاذاة صريحة (text-center وغيرها تغلبها) */
+  td.num, th.num { text-align: right; }
   :focus-visible { outline: 2px solid rgb(var(--c-mint-deep)); outline-offset: 2px; }
 }
 

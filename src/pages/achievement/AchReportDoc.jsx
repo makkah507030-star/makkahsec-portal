@@ -263,7 +263,7 @@ export function achReportPages({ recs, checks, forms, keyName, scope, year, term
           <tbody>{list.map((c) => (
             <tr key={c.id}>
               <td className="c"><Chip c={SEV[c.sev].c} bg={SEV[c.sev].bg}>{SEV[c.sev].t}</Chip></td>
-              <td className="num">{gShort(c.grade)} · {c.class_no ?? "الصف"}</td>
+              <td>{gShort(c.grade)} · {c.class_no ?? "الصف"}</td>
               <td>{c.subject ?? "عدة مواد"}</td>
               <td><b style={{ fontWeight: 600 }}>{c.title}</b><div style={{ fontSize: 10.5, color: "var(--mr-ink2)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 420 }}>{c.detail}</div></td>
             </tr>
@@ -300,7 +300,7 @@ export function achReportPages({ recs, checks, forms, keyName, scope, year, term
               <tr key={f.id}>
                 <td style={{ fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 170 }}>{f.teacher_name}</td>
                 <td style={{ whiteSpace: "nowrap" }}>{f.subject}</td>
-                <td className="num" style={{ whiteSpace: "nowrap" }}>{gShort(f.grade)} · {f.classes.map((c) => c.class_no).join("، ")}</td>
+                <td style={{ whiteSpace: "nowrap" }}>{gShort(f.grade)} · {f.classes.map((c) => c.class_no).join("، ")}</td>
                 <td className="c num">{n(f.classes.reduce((a, c) => a + c.students.length, 0))}</td>
                 <td className="c"><Chip c={late ? "#A23B3B" : s.c} bg={late ? "#FBEBEB" : s.bg}>{s.t}{late ? " · متأخر" : ""}</Chip></td>
                 <td className="c num">{["sent", "returned"].includes(f.status) ? dmy(f.due_on) : "—"}</td>

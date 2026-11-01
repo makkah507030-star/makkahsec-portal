@@ -1,4 +1,5 @@
 // src/pages/accreditation/AccCommittee.jsx
+import { countAr } from "../../lib/arabicCount.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
@@ -178,7 +179,7 @@ function Meeting({ m, members, canEdit, onEdit, onPrint, onChange, setMsg }) {
     <div className="px-4 py-3">
       <button onClick={() => setOpen(!open)} className="flex w-full flex-wrap items-center gap-2 text-start">
         <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-ink">{m.title}</span>
-          <span className="num block text-[11.5px] text-muted">{fmtDate(m.held_on)} · {m.decisions.length} قرارًا · نُفّذ {done}</span></span>
+          <span className="num block text-[11.5px] text-muted">{fmtDate(m.held_on)} · {countAr(m.decisions.length, "decision")} · نُفّذ {done}</span></span>
         <span className="text-xs text-faint">{open ? "▲" : "▼"}</span>
       </button>
       {open && (

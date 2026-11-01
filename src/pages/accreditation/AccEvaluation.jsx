@@ -1,4 +1,5 @@
 // src/pages/accreditation/AccEvaluation.jsx
+import { countAr } from "../../lib/arabicCount.js";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
@@ -137,7 +138,7 @@ function ReportEdit({ x, by, setMsg, onDone }) {
         <p className="text-xs text-muted">لصق سريع: انسخ جدول المؤشرات من التقرير والصقه، فتُلتقط الرموز ونسبها</p>
         <div className="mt-1 flex gap-2">
           <textarea className="field min-h-[56px] flex-1 text-xs" value={paste} onChange={(e) => setPaste(e.target.value)} placeholder="1-1-1-1  75.25%  …" />
-          <button className="rounded-pill border border-line bg-white px-3 text-xs text-mint-deep" onClick={() => { const s = parsePaste(paste); setF((o) => ({ ...o, scores: { ...o.scores, ...s } })); setMsg({ ok: true, text: `التُقطت ${Object.keys(s).length} نسبة.` }); setPaste(""); }}>التقاط</button>
+          <button className="rounded-pill border border-line bg-white px-3 text-xs text-mint-deep" onClick={() => { const s = parsePaste(paste); setF((o) => ({ ...o, scores: { ...o.scores, ...s } })); setMsg({ ok: true, text: `التُقطت ${countAr(Object.keys(s).length, "ratio")}.` }); setPaste(""); }}>التقاط</button>
         </div>
       </div>
       <label className="block text-xs text-muted">الأداء العام الرسمي كما في التقرير % (يُقدَّم على المحسوب من النسب)
@@ -185,7 +186,7 @@ function Analysis({ r, cmp, me }) {
           <p className="text-sm font-semibold" style={{ color: lv?.c }}>{lv?.t}</p>
           {a.official && a.calc != null && a.calc !== a.overall && <p className="mt-1 text-[11px] text-faint">الرسمي في التقرير؛ المحسوب من النسب <span className="num">{a.calc}%</span></p>}
           {c && <p className="mt-1 text-xs text-muted">الذاتي <span className="num">{fmtPct(c.overall)}</span></p>}
-          <p className="num mt-1 text-[11px] text-faint">{a.measured} مؤشرًا مقاسًا</p>
+          <p className="num mt-1 text-[11px] text-faint">{countAr(a.measured, "indicator")} مقاسة</p>
         </div>
         <div className="space-y-3">
           <div>

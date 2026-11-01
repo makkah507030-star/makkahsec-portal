@@ -8,6 +8,7 @@ import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import EvidenceTags from "./EvidenceTags.jsx";
+import { itemRates } from "../lib/quizItems.js";
 
 /* =====================================================================
    دورة الاختبار المتتابعة (التشخيصي واختبارا الفترتين) — مثل مراحل الأحداث:
@@ -44,7 +45,36 @@ const r1 = (x) => Math.round(x * 10) / 10;
 // اطلاع الدعم الفني: تظهر المراحل والخطط والنتائج، وتختفي أزرار الاعتماد والتعديل والإنشاء
 const ReadOnlyCtx = createContext(false);
 
-function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, parentId = null }) {
+/* مقترحات الخطة الجديدة من تحليل الفقرات (نسبة الصواب لكل فقرة بين طلاب الخطة): المهارات المستهدفة
+   أضعف الفقرات بأرقامها ونصوصها ونسبها، والإجراءات عليها، والتنفيذ من اليوم أسبوعين. يعدّلها المعلم كما يرى */
+const short = (t, n = 70) => (t.length > n ? `${t.slice(0, n)}…` : t);
+function suggest(kind, round, rates) {
+  const weak = kind === "remedial"
+    ? (() => { const w = rates.filter((x) => x.pct < SUPPORT_PCT).sort((a, b) => a.pct - b.pct); return (w.length ? w : [...rates].sort((a, b) => a.pct - b.pct).slice(0, 3)).slice(0, 6); })()
+    : [...rates].sort((a, b) => a.pct - b.pct).slice(0, 4);
+  const list = [...weak].sort((a, b) => a.n - b.n);
+  const refs = list.map((x) => `ف${x.n}`).join("، ");
+  const skills = list.map((x) => `ف${x.n}: ${short(x.text)} (الإجابات الصحيحة ${x.pct}%)`).join("\n");
+  const procedures = kind === "enrichment" ? [
+    `• مسائل وأنشطة عليا في مهارات الفقرات (${refs}) تتجاوز مستوى الاختبار.`,
+    "• مشروع أو بحث قصير يعرضه الطالب على زملائه.",
+    "• تكليف المتفوقين بدور المساند لزملائهم في الخطة العلاجية.",
+  ] : round > 1 ? [
+    `• إعادة تعليم مهارات الفقرات (${refs}) في مجموعة صغيرة جدًا وبزمن أطول، بأمثلة محسوسة.`,
+    "• تعلّم بالأقران: متفوق مساند لكل طالب.",
+    "• أوراق عمل متدرجة لكل مهارة، ومتابعة يومية قصيرة.",
+    "• التواصل مع ولي الأمر بخطة المتابعة في المنزل.",
+  ] : [
+    `• إعادة شرح مهارات الفقرات (${refs}) في مجموعة صغيرة بأمثلة جديدة.`,
+    "• أوراق عمل متدرجة لكل مهارة من السهل إلى الصعب.",
+    "• تعلّم بالأقران مع المتفوقين في الصف.",
+    "• تقويم قصير بعد كل مهارة، ثم اختبار التحقق بعد نهاية الخطة.",
+  ];
+  return { skills: list.length ? skills : "", procedures: procedures.join("\n") };
+}
+const plusDays = (iso, d) => { const t = new Date(`${iso}T12:00:00`); t.setDate(t.getDate() + d); return t.toISOString().slice(0, 10); };
+
+export function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, parentId = null }) {
   const [picked, setPicked] = useState(() => new Set((plan?.students ?? suggested).map((s) => s.id)));
   const [skills, setSkills] = useState(plan?.skills ?? "");
   const [procedures, setProcedures] = useState(plan?.procedures ?? "");
@@ -56,6 +86,29 @@ function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, pare
     const m = new Map([...(plan?.students ?? []), ...suggested].map((s) => [s.id, s]));
     return [...m.values()];
   }, [plan, suggested]);
+  // الخطة الجديدة تُعبّأ بمقترحات من تحليل الفقرات (الحقول الفارغة وحدها)
+  const [filled, setFilled] = useState(null);   // "items" مع المهارات، "basic" بلا تحليل فقرات
+  useEffect(() => {
+    if (plan) return;
+    let off = false;
+    (async () => {
+      const [{ data: qs }, { data: subs }] = await Promise.all([
+        supabase.from("quiz_questions").select("id, sort_order, kind, text, answer").eq("quiz_id", q.id),
+        supabase.from("quiz_submissions").select("student_id, answers, absent").eq("quiz_id", q.id),
+      ]);
+      if (off) return;
+      const ids = new Set(suggested.map((x) => x.id));
+      const sheets = (subs ?? []).filter((x) => !x.absent && x.answers && Object.keys(x.answers).length && (kind === "enrichment" || ids.has(x.student_id)));
+      const rates = sheets.length ? itemRates(qs ?? [], sheets) : [];
+      const sg = suggest(kind, round, rates);
+      setSkills((v) => v || sg.skills);
+      setProcedures((v) => v || sg.procedures);
+      setStart((v) => v || todayISO());
+      setEnd((v) => v || plusDays(todayISO(), 14));
+      setFilled(sg.skills ? "items" : "basic");
+    })();
+    return () => { off = true; };
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = async () => {
     setErr("");
@@ -101,14 +154,21 @@ function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, pare
           </div>
         )}
       </div>
+      {filled && (
+        <p className="rounded-sm2 bg-paper px-3 py-2 text-xs leading-relaxed text-muted">
+          {filled === "items"
+            ? "تم بناء الخطة بمقترحات من تحليل الفقرات: أضعف الفقرات عند طلاب الخطة بنسب الإجابات الصحيحة، وإجراءات عليها، والتنفيذ من اليوم أسبوعين. عدّلها كما تراه."
+            : "الاختبار لا تُحلَّل فقراته آليًا (يُرصد بمجموعه)، فاكتب المهارات المستهدفة. وتم بناء الإجراءات والتواريخ مقترحةً، فعدّلها كما تراه."}
+        </p>
+      )}
       <div>
         <label className="label">المهارات المستهدفة</label>
-        <textarea className="field min-h-[70px]" value={skills} onChange={(e) => setSkills(e.target.value)}
+        <textarea className="field min-h-[120px]" value={skills} onChange={(e) => setSkills(e.target.value)}
                   placeholder={kind === "remedial" ? "المهارات المفقودة كما ظهرت في تحليل الفقرات…" : "المهارات التي يُثرى فيها المتفوقون…"} />
       </div>
       <div>
         <label className="label">الإجراءات والاستراتيجيات</label>
-        <textarea className="field min-h-[70px]" value={procedures} onChange={(e) => setProcedures(e.target.value)}
+        <textarea className="field min-h-[120px]" value={procedures} onChange={(e) => setProcedures(e.target.value)}
                   placeholder="مثل: تعلّم بالأقران، أوراق عمل متدرجة، إعادة شرح في حصة النشاط…" />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

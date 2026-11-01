@@ -66,6 +66,8 @@ export const INDICATORS = {
   "4-2-1-3": "تتابع المدرسة نظافة المبنى المدرسي وجميع مرافقه بشكل مستمر.",
 };
 export const CODES = Object.keys(INDICATORS);
+// رمز المؤشر والنسبة داخل نص عربي ينعكسان (src/lib/bidi.js)؛ يُستعمل لكل نص فيه رمز أو نسبة
+export { bidi } from "./bidi.js";
 export const domainOf = (code) => Number(code[0]);
 export const stdOf = (code) => code.slice(0, 3);
 export const NEW_CODES = ["3-1-1-3", "3-1-1-4"];   // مستحدثان في الإصدار الثالث بلا قياس سابق
@@ -169,28 +171,56 @@ export const fmtPct = (v) => (v == null ? "—" : `${Number(v)}%`);
 
 export const roleT = (m) => (m.role === "coordinator" ? "مشرف اللجنة" : m.domains?.length ? "مشرف مجال" : "عضو");
 
-/** بيانات القسم للتقارير: برامج الخطة السارية وكل الشواهد والمحاضر */
+/** بيانات القسم للتقارير: برامج الخطة السارية وكل الشواهد والمحاضر ونتائج الاختبارات الوطنية */
 export async function loadAccData(plans) {
   const plan = plans.find((p) => p.status === "active") ?? plans[0] ?? null;
-  const [pg, ev, mt] = await Promise.all([
+  const [pg, ev, mt, nat] = await Promise.all([
     plan ? supabase.from("acc_programs").select("*").eq("plan_id", plan.id) : Promise.resolve({ data: [] }),
     supabase.from("acc_evidence").select("*").order("created_at", { ascending: false }),
     supabase.from("acc_meetings").select("*").order("held_on", { ascending: false }),
+    supabase.from("acc_national").select("*").order("academic_year"),   // قبل acc_5.sql يفشل فتُعدّ فارغة
   ]);
-  return { plan, progs: pg.data ?? [], ev: ev.data ?? [], meetings: mt.data ?? [] };
+  return { plan, progs: pg.data ?? [], ev: ev.data ?? [], meetings: mt.data ?? [], nat: nat.data ?? [] };
 }
 
-/** الشواهد المطلوبة في برامج الخطة وما رُفع منها: يُعدّ الشاهد مرفوعًا إن رُفع للمؤشر شاهد بعنوانه */
+/* مطابقة الشاهد المرفوع بالشاهد المطلوب: لا يُشترط تطابق العنوان حرفًا بحرف، فيُطبَّع النص
+   (التشكيل والهمزات والتاء المربوطة وعلامات الترقيم)، ويكفي أن يحتوي أحدهما الآخر، أو أن تشترك
+   كلماتهما الأساسية في معظمها. وكل شاهد مرفوع يُحتسب لشاهد مطلوب واحد فقط. */
+const evNorm = (s) => String(s ?? "").replace(/[\u064B-\u0652\u0640]/g, "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي")
+  .replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim();
+const evWords = (s) => evNorm(s).split(" ").map((w) => w.replace(/^(وال|بال|لل|ال|و)(?=\S{3,})/, "").replace(/(?<=\S{3,})ه$/, "")).filter((w) => w.length >= 3);
+export function evMatches(title, req) {
+  const a = evNorm(title), b = evNorm(req);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (Math.min(a.length, b.length) >= 8 && (a.includes(b) || b.includes(a))) return true;
+  const wa = new Set(evWords(title)), wb = evWords(req);
+  const hit = wb.filter((w) => wa.has(w)).length;
+  return hit >= 2 && hit / wb.length >= 0.6;
+}
+/** توزيع شواهد المؤشر على شواهده المطلوبة: المطابق تمامًا أولًا ثم المقارب. يعيد { slots: [{ t, ev }], extra } */
+export function fillSlots(reqs, list) {
+  const used = new Set();
+  const slots = (reqs ?? []).map((t) => ({ t, ev: [] }));
+  const pass = (fn) => slots.forEach((x) => list.forEach((e) => {
+    if (!used.has(e.id) && fn(e.title, x.t)) { x.ev.push(e); used.add(e.id); }
+  }));
+  pass((a, b) => evNorm(a) === evNorm(b));
+  pass((a, b) => evMatches(a, b));
+  return { slots, extra: list.filter((e) => !used.has(e.id)) };
+}
+
+/** الشواهد المطلوبة في برامج الخطة وما رُفع منها: يُعدّ الشاهد مرفوعًا إن رُفع للمؤشر شاهد بعنوانه أو بعنوان مقارب له */
 export function evidenceGaps(codes, progs, ev) {
   const up = {}; ev.forEach((e) => { (up[e.code] ??= []).push(e); });
   const missing = [];
   for (const c of codes) {
     const p = progs.find((x) => x.code === c && x.kind === "plan");
-    const titles = new Set((up[c] ?? []).map((e) => e.title.trim()));
-    (p?.evidence ?? []).forEach((t) => { if (!titles.has(t.trim())) missing.push({ code: c, title: t }); });
+    fillSlots(p?.evidence ?? [], up[c] ?? []).slots.forEach((x) => { if (!x.ev.length) missing.push({ code: c, title: x.t }); });
     if (!p?.evidence?.length && !(up[c]?.length)) missing.push({ code: c, title: null });
   }
-  const required = codes.reduce((s, c) => s + (progs.find((x) => x.code === c && x.kind === "plan")?.evidence?.length ?? 0), 0);
+  // المؤشر بلا شواهد في الخطة: نقطة واحدة (يُعدّ ناقصًا ما لم يُرفع له شاهد، كما في missing)
+  const required = codes.reduce((s, c) => s + (progs.find((x) => x.code === c && x.kind === "plan")?.evidence?.length || 1), 0);
   return { up, missing, required, uploaded: codes.reduce((s, c) => s + (up[c]?.length ?? 0), 0) };
 }
 
