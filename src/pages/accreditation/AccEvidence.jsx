@@ -8,6 +8,7 @@ import { fmtDate } from "../../lib/dates";
 import { confirmDanger } from "../../lib/danger";
 import {
   CODES, DOMAINS, DOMAIN_COLOR, STANDARDS, INDICATORS, EV_STATUS, ACC_BUCKET, bidi, domainOf, stdOf, levelOf, fmtPct, fileKind, accUpload, setupMsg,
+  fillSlots,
 } from "../../lib/accreditation.js";
 import { PORTAL_BY, loadPortalCounts, portalCount, portalKey, portalNoun, sourcesOf } from "../../lib/accPortal.js";
 import AccViewer from "./AccViewer.jsx";
@@ -52,7 +53,7 @@ export default function AccEvidence({ me, year, reports, plans }) {
     && (!q.trim() || c.includes(q.trim()) || INDICATORS[c].includes(q.trim())));
   // الإنجاز: الشواهد المطلوبة في الخطة وما رُفع منها، لكل مؤشر وللمعروض كله
   const reqOf = (c) => (pBy[c]?.kind === "plan" ? pBy[c].evidence ?? [] : []);
-  const doneOf = (c) => reqOf(c).filter((t) => (byCode[c] ?? []).some((e) => e.title.trim() === t.trim())).length;
+  const doneOf = (c) => fillSlots(reqOf(c), byCode[c] ?? []).slots.filter((x) => x.ev.length).length;
   const stat = (cs) => {
     const req = cs.reduce((a, c) => a + reqOf(c).length, 0), done = cs.reduce((a, c) => a + doneOf(c), 0);
     const files = cs.flatMap((c) => byCode[c] ?? []);
@@ -134,8 +135,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
     supabase.storage.from(ACC_BUCKET).createSignedUrls(paths, 1800)
       .then(({ data }) => setThumbs(Object.fromEntries((data ?? []).filter((x) => x.signedUrl).map((x) => [x.path, x.signedUrl]))));
   }, [list]);
-  const slots = hints.map((t) => ({ t, ev: list.filter((e) => e.title.trim() === t.trim()) }));
-  const extra = list.filter((e) => !hints.some((t) => t.trim() === e.title.trim()));
+  const { slots, extra } = fillSlots(hints, list);
   const filled = slots.filter((x) => x.ev.length).length;
   const upload = async (title, fl, notes = "") => {
     if (!title.trim()) { setMsg({ ok: false, text: "اكتب عنوان الشاهد." }); return false; }
@@ -152,7 +152,8 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
     if (await upload(f.title, file, f.notes)) { setF({ title: "", notes: "" }); setFile(null); }
     setBusy(false);
   };
-  const card = (e) => <EvCard key={e.id} e={e} color={color} thumb={thumbs[e.file_path]} me={me} uid={uid}
+  const free = slots.filter((x) => !x.ev.length).map((x) => x.t);
+  const card = (e, i, arr, open = []) => <EvCard key={e.id} e={e} color={color} thumb={thumbs[e.file_path]} me={me} uid={uid} free={open}
     counts={counts} onView={() => setView(e)} onChange={onChange} setMsg={setMsg} />;
 
   return (
@@ -165,7 +166,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
             <span className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-pill bg-white"><span className="block h-full rounded-pill" style={{ width: `${(filled / slots.length) * 100}%`, background: color }} /></span>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {slots.map((x) => (x.ev.length ? x.ev.map(card) : <Slot key={x.t} title={x.t} color={color} ready={ready} counts={counts}
+            {slots.map((x) => (x.ev.length ? x.ev.map((e) => card(e)) : <Slot key={x.t} title={x.t} color={color} ready={ready} counts={counts}
               onUpload={(fl) => upload(x.t, fl)} onLink={(src) => linkPortal(x.t, src)} />))}
           </div>
         </div>
@@ -173,7 +174,8 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
       {extra.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-bold text-muted">{slots.length ? "شواهد إضافية" : "الشواهد"}</p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{extra.map(card)}</div>
+          {free.length > 0 && <p className="text-[11px] text-muted">إن كان أحد هذه الشواهد يقابل شاهدًا مطلوبًا في الخطة فاختره من «يُحتسب للمطلوب» تحت بطاقته.</p>}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{extra.map((e) => card(e, 0, extra, free))}</div>
         </div>
       )}
       {srcs.length > 0 && (
@@ -238,7 +240,7 @@ function Slot({ title, color, ready, counts, onUpload, onLink }) {
 }
 
 /* بطاقة الشاهد: معاينة (صورة مصغّرة أو أيقونة PDF)، والعنوان والملاحظة والحالة، وأزرار العرض والتعديل والحذف */
-function EvCard({ e, color, thumb, me, uid, counts, onView, onChange, setMsg }) {
+function EvCard({ e, color, thumb, me, uid, free = [], counts, onView, onChange, setMsg }) {
   const kind = fileKind(e.file_path);
   const nav = useNavigate();
   const src = PORTAL_BY[portalKey(e.link)];
@@ -268,6 +270,13 @@ function EvCard({ e, color, thumb, me, uid, counts, onView, onChange, setMsg }) 
     if (e.file_path) await supabase.storage.from(ACC_BUCKET).remove([e.file_path]);
     const { error } = await supabase.from("acc_evidence").delete().eq("id", e.id);
     if (error) setMsg({ ok: false, text: error.message }); else onChange();
+  };
+  // احتساب شاهد إضافي لشاهد مطلوب: يأخذ عنوان المطلوب، ويبقى عنوانه الأصلي في الملاحظة
+  const assign = async (t) => {
+    if (!t) return;
+    const notes = [e.notes, e.title.trim() !== t.trim() ? `العنوان السابق: ${e.title}` : ""].filter(Boolean).join(" · ") || null;
+    const { error } = await supabase.from("acc_evidence").update({ title: t, notes }).eq("id", e.id);
+    if (error) setMsg({ ok: false, text: error.message }); else { setMsg({ ok: true, text: "احتُسب الشاهد للمطلوب في الخطة." }); onChange(); }
   };
   const setStatus = async (status) => {
     const { error } = await supabase.from("acc_evidence").update({ status }).eq("id", e.id);
@@ -318,6 +327,11 @@ function EvCard({ e, color, thumb, me, uid, counts, onView, onChange, setMsg }) 
             {me.coord && <select className="field ms-auto w-auto py-1 text-[11px]" value={e.status} onChange={(v) => setStatus(v.target.value)} aria-label="حالة الشاهد">
               {Object.entries(EV_STATUS).map(([k, st]) => <option key={k} value={k}>{st.t}</option>)}</select>}
           </div>
+          {canEdit && free.length > 0 && (
+            <select className="field mt-1 w-full py-1 text-[11px]" value="" onChange={(v) => assign(v.target.value)} aria-label="احتسابه لشاهد مطلوب">
+              <option value="">يُحتسب للمطلوب في الخطة…</option>
+              {free.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>)}
         </div>
       )}
     </div>

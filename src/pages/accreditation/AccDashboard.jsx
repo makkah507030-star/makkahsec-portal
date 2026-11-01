@@ -5,6 +5,7 @@ import { useSession } from "../../lib/session.jsx";
 import { fmtDate } from "../../lib/dates";
 import {
   CODES, DOMAINS, DOMAIN_COLOR, INDICATORS, LEVELS, PLAN_BELOW, analyze, domainOf, domainSummary, fmtPct, levelOf, loadAccData, progOf,
+  fillSlots,
 } from "../../lib/accreditation.js";
 import { NAT_TESTS, natGrowth, natSeries, signed } from "../../lib/accNational.js";
 import { NatCard } from "./AccNational.jsx";
@@ -71,7 +72,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
   const progBy = Object.fromEntries(data.progs.map((p) => [p.code, p]));
   const evBy = {}; data.ev.forEach((e) => { (evBy[e.code] ??= []).push(e); });
   const reqDone = (c) => { const p = progBy[c]; const req = p?.kind === "plan" ? p.evidence ?? [] : [];
-    return [req.filter((t) => (evBy[c] ?? []).some((e) => e.title.trim() === t.trim())).length, req.length]; };
+    return [fillSlots(req, evBy[c] ?? []).slots.filter((x) => x.ev.length).length, req.length]; };
   const visible = CODES.filter((c) => doms.includes(domainOf(c)));
   const low = visible.filter((c) => sc[c] != null && sc[c] < PLAN_BELOW).sort((x, y) => sc[x] - sc[y]);
   const fresh = visible.filter((c) => sc[c] == null);
