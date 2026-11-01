@@ -116,7 +116,7 @@ function Activity({ a, me, by, events, urls, setMsg, onChange }) {
 }
 
 function NewActivity({ by, setMsg, onDone }) {
-  const [x, setX] = useState({ program: "values", title: "", due_date: "", due_label: "", target: "منسوبو المدرسة", mechanism: "" });
+  const [x, setX] = useState({ program: "values", title: "", due_date: "", due_label: "", target: "موظفو المدرسة", mechanism: "" });
   const set = (k) => (e) => setX({ ...x, [k]: e.target.value });
   const save = async () => {
     if (!x.title.trim()) { setMsg({ ok: false, text: "اكتب النشاط." }); return; }

@@ -10,7 +10,7 @@ import { sendPush } from "../../lib/pushSend.js";
 import { MEETINGS, OCCASIONS, ONBOARD, PROGRAMS, setupMsg } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
 
-/* سجلات البرامج: «التواصل الملهم» (اللقاءات)، و«نهتم بك» (مناسبات المنسوبين وبطاقاتها إشعارًا لصاحبها)،
+/* سجلات البرامج: «التواصل الملهم» (اللقاءات)، و«نهتم بك» (مناسبات الموظفين وبطاقاتها إشعارًا لصاحبها)،
    و«حيّاك» (تهيئة الموظف الجديد بمهامها على مراحلها). يوثّقها الفريق، ويرسل السفير البطاقات. */
 
 const lbl = "text-[11.5px] text-muted";
@@ -132,7 +132,7 @@ export function CultCare({ me }) {
       <section className="card space-y-2 p-4">
         <div className="grid gap-2 sm:grid-cols-[1fr_150px_150px]">
           <label className={lbl}>صاحب المناسبة<select className="field mt-1 w-full text-sm" value={x.user_id} onChange={(e) => pick({ user_id: e.target.value })}>
-            <option value="">— اختر من المنسوبين —</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></label>
+            <option value="">— اختر من الموظفين —</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}</select></label>
           <label className={lbl}>المناسبة<select className="field mt-1 w-full text-sm" value={x.kind} onChange={(e) => pick({ kind: e.target.value })}>
             {["سعيدة", "إنسانية"].map((g) => <optgroup key={g} label={`مناسبات ${g}`}>{Object.entries(OCCASIONS).filter(([, o]) => o.g === g).map(([k, o]) => <option key={k} value={k}>{o.t}</option>)}</optgroup>)}</select></label>
           <label className={lbl}>التاريخ<input type="date" className="field num mt-1 w-full text-sm" value={x.held_on} onChange={(e) => setX({ ...x, held_on: e.target.value })} /></label>

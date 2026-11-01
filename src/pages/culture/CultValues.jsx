@@ -6,7 +6,7 @@ import { sendPush } from "../../lib/pushSend.js";
 import { VALUES, AMB_ROLES, AMB_SKILLS, PROGRAMS } from "../../lib/culture.js";
 
 /* القيم والأدوار: قيم الوزارة الخمس بتعريفها ومؤشراتها وممارساتها، وأدوار سفير الثقافة ومهاراته.
-   ويرسل السفير منها رسائل التوعية بالقيم وعروض «مزايا» إشعارًا لكل المنسوبين. */
+   ويرسل السفير منها رسائل التوعية بالقيم وعروض «مزايا» إشعارًا لكل الموظفين. */
 
 const PRESETS = [
   ...VALUES.map((v) => ({ k: v.k, t: `قيمة ${v.t}`, title: `قيمنا المؤسسية · ${v.t}`, body: `${v.t}: ${v.d}\nمن ممارساتها: ${v.pr.join(" ")}` })),
@@ -74,18 +74,18 @@ function Composer() {
     setBusy(true);
     const { data: nid, error } = await supabase.rpc("cult_notify", { p_title: x.title.trim(), p_body: x.body.trim(), p_user_ids: null });
     if (error) setMsg({ ok: false, text: error.message });
-    else { sendPush(nid); setX({ title: "", body: "" }); setMsg({ ok: true, text: "أُرسلت الرسالة لكل المنسوبين." }); }
+    else { sendPush(nid); setX({ title: "", body: "" }); setMsg({ ok: true, text: "أُرسلت الرسالة لكل الموظفين." }); }
     setBusy(false);
   };
   return (
     <section className="card space-y-2 p-4">
-      <h2 className="text-sm font-bold text-ink">رسالة لكل المنسوبين</h2>
+      <h2 className="text-sm font-bold text-ink">رسالة لكل الموظفين</h2>
       <p className="text-[11.5px] text-muted">رسائل التوعية بالقيم، وعروض «مزايا»، ورسائل «رفاه»: تصل إشعارًا في الجرس والجوال لكل المعلمين والإداريين.</p>
       <div className="flex flex-wrap gap-1.5">{PRESETS.map((p) => (
         <button key={p.k} className="rounded-pill border border-line bg-white px-3 py-1 text-xs text-muted hover:bg-canvas" onClick={() => setX({ title: p.title, body: p.body })}>{p.t}</button>))}</div>
       <input className="field w-full text-sm" maxLength={120} placeholder="العنوان" value={x.title} onChange={(e) => setX({ ...x, title: e.target.value })} />
       <textarea className="field min-h-[90px] w-full text-sm" maxLength={1200} placeholder="النص" value={x.body} onChange={(e) => setX({ ...x, body: e.target.value })} />
-      <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={send}>{busy ? "…" : "إرسال لكل المنسوبين"}</button>
+      <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={send}>{busy ? "…" : "إرسال لكل الموظفين"}</button>
     </section>
   );
 }

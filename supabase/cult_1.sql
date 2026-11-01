@@ -2,7 +2,7 @@
 -- الثقافة المؤسسية — سفير الثقافة (1): الفريق والصلاحيات.
 -- • سفير الثقافة: يدير القسم كله (الخطة والتنفيذ والتواصل والمناسبات والتهيئة والأفكار).
 -- • المدير والوكلاء والدعم الفني: يرون القسم كله ويديرونه، ويعيّنون السفير.
--- • عضو الفريق: يرى القسم ويوثّق التنفيذ. • كل المنسوبين: القيم ومشاركة الأفكار.
+-- • عضو الفريق: يرى القسم ويوثّق التنفيذ. • كل الموظفين: القيم ومشاركة الأفكار.
 -- يُسند السفير هنا إلى الأستاذ زياد الحربي. تكرار التنفيذ آمن.
 -- =====================================================================
 
@@ -21,7 +21,7 @@ $$;
 create or replace function public.cult_member() returns boolean language sql stable security definer set search_path = public as $$
   select public.cult_amb() or exists (select 1 from cult_team where user_id = auth.uid());
 $$;
--- المنسوب: معلم أو إداري نشط
+-- الموظف: معلم أو إداري نشط
 create or replace function public.cult_staff_user() returns boolean language sql stable security definer set search_path = public as $$
   select exists (select 1 from users where id = auth.uid() and is_active and role::text in ('teacher', 'admin'));
 $$;
@@ -49,7 +49,7 @@ grant select, insert, update, delete on public.cult_team to authenticated;
 create or replace function public.cult_me() returns jsonb language sql stable security definer set search_path = public as $$
   select jsonb_build_object('all', public.cult_all(), 'amb', public.cult_amb(), 'member', public.cult_member(), 'staff', public.cult_staff_user());
 $$;
--- الفريق بأسمائه، والمنسوبون (للمناسبات والتهيئة واختيار الأعضاء)
+-- الفريق بأسمائه، والموظفون (للمناسبات والتهيئة واختيار الأعضاء)
 create or replace function public.cult_team_list() returns table (user_id uuid, full_name text, role text)
 language sql stable security definer set search_path = public as $$
   select t.user_id, u.full_name, t.role from cult_team t join users u on u.id = t.user_id where public.cult_member();

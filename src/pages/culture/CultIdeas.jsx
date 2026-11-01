@@ -9,7 +9,7 @@ import { sendPush } from "../../lib/pushSend.js";
 import { IDEA_STATUS, PROGRAMS, setupMsg } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
 
-/* الأفكار والابتكار: يشارك كل منسوب فكرته التطويرية ويرى ردّ الفريق عليها، والفريق يدرس الأفكار
+/* الأفكار والابتكار: يشارك كل موظف فكرته التطويرية ويرى ردّ الفريق عليها، والفريق يدرس الأفكار
    ويحدّث حالتها (قيد الدراسة، معتمدة، كُرّم صاحبها) ويرد، ويصل الرد صاحبها إشعارًا إن رد السفير. */
 
 export default function CultIdeas({ me }) {
@@ -71,7 +71,7 @@ export default function CultIdeas({ me }) {
                   {r.reply ? <p className="rounded-sm2 bg-white px-3 py-2 text-ink"><b className="text-mint-deep">رد الفريق: </b>{r.reply}</p> : <p className="text-faint">لم يرد الفريق بعد.</p>}
                   {r.status === "new" && <button className="text-xs text-absent" onClick={() => remove(r)}>حذف الفكرة</button>}
                 </div>)}
-          </div>)) : <p className="px-4 py-6 text-center text-sm text-muted">{me.member ? "لم يشارك المنسوبون أفكارًا بعد." : "لم تشارك فكرة بعد."}</p>}
+          </div>)) : <p className="px-4 py-6 text-center text-sm text-muted">{me.member ? "لم يشارك الموظفون أفكارًا بعد." : "لم تشارك فكرة بعد."}</p>}
       </div>
     </div>
   );

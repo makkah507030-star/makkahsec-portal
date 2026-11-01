@@ -60,9 +60,9 @@ export default function CultReport({ go }) {
       hijri: new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${today}T12:00:00`)),
       highlights: [
         data.meet && `عُقد في «التواصل الملهم» ${few(data.meet, "لقاء واحد", "لقاءان", "لقاءات", "لقاءً")}.`,
-        data.care && `أُرسل في «نهتم بك» ${few(data.care, "بطاقة واحدة", "بطاقتان", "بطاقات", "بطاقة")} لمناسبات المنسوبين.`,
+        data.care && `أُرسل في «نهتم بك» ${few(data.care, "بطاقة واحدة", "بطاقتان", "بطاقات", "بطاقة")} لمناسبات الموظفين.`,
         data.onb && `هُيّئ في «حيّاك» ${few(data.onb, "موظف جديد واحد", "موظفان جديدان", "موظفين جدد", "موظفًا جديدًا")}.`,
-        data.ideas.length && `شارك المنسوبون ${few(data.ideas.length, "فكرة واحدة", "فكرتين", "أفكار", "فكرة")}${adopted ? `، اعتُمد منها ${adopted}` : ""}.`,
+        data.ideas.length && `شارك الموظفون ${few(data.ideas.length, "فكرة واحدة", "فكرتين", "أفكار", "فكرة")}${adopted ? `، اعتُمد منها ${adopted}` : ""}.`,
       ].filter(Boolean),
     };
   }, [data]);

@@ -56,7 +56,7 @@ export default function CultTeam({ me, reload }) {
         <section className="card flex flex-wrap items-end gap-2 p-4">
           <label className="min-w-0 flex-1 text-[11.5px] text-muted">إضافة عضو إلى الفريق
             <select className="field mt-1 w-full text-sm" value={pick} onChange={(e) => setPick(e.target.value)}>
-              <option value="">— اختر من المنسوبين —</option>
+              <option value="">— اختر من الموظفين —</option>
               {staff.filter((s) => !ids.has(s.id)).map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
             </select></label>
           <button className="btn-primary px-4 py-1.5 text-xs" disabled={!pick} onClick={add}>إضافة</button>

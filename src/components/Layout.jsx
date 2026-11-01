@@ -116,7 +116,7 @@ export const ADMIN_GROUPS = [
     ],
   },
   {
-    // الثقافة المؤسسية — سفير الثقافة (pages/culture، supabase/cult_1.sql): لكل المنسوبين
+    // الثقافة المؤسسية — سفير الثقافة (pages/culture، supabase/cult_1.sql): لكل الموظفين
     title: "الثقافة المؤسسية",
     items: [
       { to: "/culture", label: "الثقافة المؤسسية", icon: "heart", kw: "سفير الثقافة قيم رفاه حياك نهتم بك مزايا تواصل ملهم ابتكار فكرة جلسة فنجان" },
@@ -305,7 +305,7 @@ export const TEACHER_GROUPS = [
     ],
   },
   {
-    // الثقافة المؤسسية — سفير الثقافة (pages/culture، supabase/cult_1.sql): لكل المنسوبين
+    // الثقافة المؤسسية — سفير الثقافة (pages/culture، supabase/cult_1.sql): لكل الموظفين
     title: "الثقافة المؤسسية",
     items: [
       { to: "/culture", label: "الثقافة المؤسسية", icon: "heart", kw: "سفير الثقافة قيم رفاه حياك نهتم بك مزايا تواصل ملهم ابتكار فكرة جلسة فنجان" },

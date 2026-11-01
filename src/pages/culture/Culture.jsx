@@ -15,7 +15,7 @@ import CultReport from "./CultReport.jsx";
 /* =====================================================================
    الثقافة المؤسسية — سفير الثقافة (supabase/cult_1..4.sql، src/lib/culture.js):
    • السفير (الأستاذ زياد الحربي) والمدير والوكلاء والدعم الفني: القسم كله.
-   • عضو الفريق: يرى القسم ويوثّق التنفيذ. • كل المنسوبين: القيم والأدوار، ومشاركة أفكارهم.
+   • عضو الفريق: يرى القسم ويوثّق التنفيذ. • كل الموظفين: القيم والأدوار، ومشاركة أفكارهم.
    مرتبط بالبوابة: الأحداث (ربط النشاط بحدث)، والإشعارات (رسائل التوعية ومزايا وبطاقات المناسبات)،
    والاستوديو والشهادات والاستطلاعات، وشواهد «التقويم والاعتماد» (cult_4.sql).
    ===================================================================== */
@@ -41,7 +41,7 @@ export default function Culture() {
 
   if (me === null) return <Loader />;
   if (err) return <p className="card px-4 py-6 text-sm text-absent">{err}</p>;
-  if (!me.member && !me.staff) return <p className="card px-4 py-6 text-sm text-muted">قسم الثقافة المؤسسية لمنسوبي المدرسة.</p>;
+  if (!me.member && !me.staff) return <p className="card px-4 py-6 text-sm text-muted">قسم الثقافة المؤسسية لموظفي المدرسة.</p>;
   const tabs = me.member ? TEAM_TABS : STAFF_TABS;
   const tab = tabs.some(([k]) => k === sp.get("tab")) ? sp.get("tab") : tabs[0][0];
   const go = (k) => setSp({ tab: k }, { replace: true });

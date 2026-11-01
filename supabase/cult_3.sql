@@ -1,8 +1,8 @@
 -- =====================================================================
--- الثقافة المؤسسية (3): سجلات البرامج وإشعار المنسوبين.
+-- الثقافة المؤسسية (3): سجلات البرامج وإشعار الموظفين.
 -- • التواصل الملهم: اللقاءات (رسمي، القائد الموجه، جلسة فنجان، غير رسمي، الموظف الضيف).
--- • نهتم بك: مناسبات المنسوبين (تهنئة، تعزية…) وإرسال بطاقتها إشعارًا لصاحبها.
--- • حيّاك: تهيئة الموظف الجديد بقائمة مهامها. • الابتكار: أفكار المنسوبين ومتابعتها وتكريمها.
+-- • نهتم بك: مناسبات الموظفين (تهنئة، تعزية…) وإرسال بطاقتها إشعارًا لصاحبها.
+-- • حيّاك: تهيئة الموظف الجديد بقائمة مهامها. • الابتكار: أفكار الموظفين ومتابعتها وتكريمها.
 -- يُنفَّذ بعد cult_2.sql، وتكرار التنفيذ آمن.
 -- =====================================================================
 create table if not exists public.cult_meetings (
@@ -41,7 +41,7 @@ drop policy if exists cult_occ_all on public.cult_occasions;
 create policy cult_occ_all on public.cult_occasions for all to authenticated using (public.cult_member()) with check (public.cult_member());
 drop policy if exists cult_onb_all on public.cult_onboard;
 create policy cult_onb_all on public.cult_onboard for all to authenticated using (public.cult_member()) with check (public.cult_member());
--- الأفكار: يكتبها كل منسوب ويرى أفكاره، والفريق يرى الكل ويرد
+-- الأفكار: يكتبها كل موظف ويرى أفكاره، والفريق يرى الكل ويرد
 drop policy if exists cult_ideas_read on public.cult_ideas;
 create policy cult_ideas_read on public.cult_ideas for select to authenticated using (author_id = auth.uid() or public.cult_member());
 drop policy if exists cult_ideas_add on public.cult_ideas;
@@ -52,12 +52,12 @@ drop policy if exists cult_ideas_del on public.cult_ideas;
 create policy cult_ideas_del on public.cult_ideas for delete to authenticated using (public.cult_amb() or (author_id = auth.uid() and status = 'new'));
 grant select, insert, update, delete on public.cult_meetings, public.cult_occasions, public.cult_onboard, public.cult_ideas to authenticated;
 
--- إشعار المنسوبين من سفير الثقافة: لأشخاص بأعيانهم، أو لكل المنسوبين إن لم يُحدَّدوا (رسائل التوعية ومزايا)
+-- إشعار الموظفين من سفير الثقافة: لأشخاص بأعيانهم، أو لكل الموظفين إن لم يُحدَّدوا (رسائل التوعية ومزايا)
 create or replace function public.cult_notify(p_title text, p_body text, p_user_ids uuid[] default null)
 returns uuid language plpgsql security definer set search_path = public as $$
 declare ids uuid[];
 begin
-  if not public.cult_amb() then raise exception 'إشعار المنسوبين لسفير الثقافة'; end if;
+  if not public.cult_amb() then raise exception 'إشعار الموظفين لسفير الثقافة'; end if;
   if coalesce(trim(p_title), '') = '' then raise exception 'اكتب عنوان الإشعار'; end if;
   ids := coalesce(p_user_ids, (select array_agg(id) from users where is_active and role::text in ('teacher', 'admin')));
   return public.send_notification(trim(p_title), nullif(trim(coalesce(p_body, '')), ''), 'general', null, null, ids, null, null, true);
