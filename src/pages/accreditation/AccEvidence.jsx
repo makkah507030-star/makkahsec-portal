@@ -52,7 +52,8 @@ export default function AccEvidence({ me, year, reports, plans }) {
   const codes = CODES.filter((c) => doms.includes(domainOf(c)) && (!dom || domainOf(c) === dom)
     && (!q.trim() || c.includes(q.trim()) || INDICATORS[c].includes(q.trim())));
   // الإنجاز: الشواهد المطلوبة في الخطة وما رُفع منها، لكل مؤشر وللمعروض كله
-  const reqOf = (c) => (pBy[c]?.kind === "plan" ? pBy[c].evidence ?? [] : []);
+  // المطلوب: شواهد برنامج الخطة، أو شواهد الاستدامة لمؤشرات التقدم والتميز (acc_8.sql)
+  const reqOf = (c) => (["plan", "sustain"].includes(pBy[c]?.kind) ? pBy[c].evidence ?? [] : []);
   const doneOf = (c) => fillSlots(reqOf(c), byCode[c] ?? []).slots.filter((x) => x.ev.length).length;
   const stat = (cs) => {
     const req = cs.reduce((a, c) => a + reqOf(c).length, 0), done = cs.reduce((a, c) => a + doneOf(c), 0);
@@ -161,7 +162,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
       {slots.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-bold" style={{ color }}>الشواهد المطلوبة في خطة التحسين</p>
+            <p className="text-xs font-bold" style={{ color }}>الشواهد المطلوبة في الخطة (برنامج أو استدامة)</p>
             <span className="num text-xs text-muted">رُفع {filled} من {slots.length}</span>
             <span className="h-1.5 min-w-24 flex-1 overflow-hidden rounded-pill bg-white"><span className="block h-full rounded-pill" style={{ width: `${(filled / slots.length) * 100}%`, background: color }} /></span>
           </div>
@@ -372,7 +373,7 @@ function EvStats({ all, doms, me, setMsg }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-ink">مساعد الشواهد</p>
-          <p className="text-xs leading-relaxed text-muted">الشواهد المطلوبة في خطة التحسين <b className="num text-ink">{all.req}</b>: رُفع منها <b className="num text-ink">{all.done}</b>، وبقي <b className="num text-late">{all.left}</b>.
+          <p className="text-xs leading-relaxed text-muted">الشواهد المطلوبة في الخطة (برامجها والاستدامة) <b className="num text-ink">{all.req}</b>: رُفع منها <b className="num text-ink">{all.done}</b>، وبقي <b className="num text-late">{all.left}</b>.
             اضغط المؤشر لتظهر بطاقات شواهده، وارفع كل ملف في بطاقته أو اربطه بعمل مسجّل في البوابة.</p>
         </div>
         {me.coord && <button className="rounded-pill border border-line bg-white px-3 py-1.5 text-xs font-semibold text-mint-deep" disabled={busy} onClick={remind}>{busy ? "…" : "تذكير مشرفي المجالات"}</button>}

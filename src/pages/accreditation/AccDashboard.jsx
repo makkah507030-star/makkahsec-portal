@@ -71,7 +71,7 @@ export default function AccDashboard({ me, reports, plans, members, go }) {
   const plan = data.plan;
   const progBy = Object.fromEntries(data.progs.map((p) => [p.code, p]));
   const evBy = {}; data.ev.forEach((e) => { (evBy[e.code] ??= []).push(e); });
-  const reqDone = (c) => { const p = progBy[c]; const req = p?.kind === "plan" ? p.evidence ?? [] : [];
+  const reqDone = (c) => { const p = progBy[c]; const req = ["plan", "sustain"].includes(p?.kind) ? p.evidence ?? [] : [];
     return [fillSlots(req, evBy[c] ?? []).slots.filter((x) => x.ev.length).length, req.length]; };
   const visible = CODES.filter((c) => doms.includes(domainOf(c)));
   const low = visible.filter((c) => sc[c] != null && sc[c] < PLAN_BELOW).sort((x, y) => sc[x] - sc[y]);
