@@ -16,19 +16,10 @@ const waNumber = (m) => {
   return d.startsWith("05") ? `966${d.slice(1)}` : d.startsWith("5") ? `966${d}` : d;
 };
 
-// أيقونات البطاقة بخط رفيع
-const ICONS = {
-  heart: "M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10Z",
-  leaf: "M5 19c0-8 6-14 15-14 0 9-6 15-14 15M5 19l7-7",
-  star: "M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z",
-  home: "M3.5 11 12 4l8.5 7M5.5 9.5V20h4.5v-5.5h4V20h4.5V9.5",
-  bulb: "M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z",
-  gift: "M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7c-2-3-6-3-6 0M12 7c2-3 6-3 6 0",
-};
 const hijri = () => { try { return new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "long", year: "numeric" }).format(new Date()); } catch { return ""; } };
 
-/* ختم النجمة الثمانية: مربعان متعامدان ودائرة تحمل أيقونة نوع البطاقة */
-function Seal({ p, ic }) {
+/* ختم النجمة الثمانية: مربعان متعامدان ودائرتان متداخلتان (زخرفة بلا أيقونة) */
+function Seal({ p }) {
   const r = 40, c = 60;
   return (
     <svg width="120" height="120" viewBox="0 0 120 120" style={{ position: "absolute", left: -6, top: "50%", transform: "translateY(-50%)" }} aria-hidden>
@@ -36,9 +27,7 @@ function Seal({ p, ic }) {
         fill="#fff" fillOpacity=".8" stroke={p.accent} strokeOpacity=".35" strokeWidth="1.4" />)}
       <circle cx={c} cy={c} r="30" fill="none" stroke={p.accent} strokeOpacity=".35" strokeWidth="1.2" strokeDasharray="2 5" strokeLinecap="round" />
       <circle cx={c} cy={c} r="23" fill={p.soft} />
-      <g transform={`translate(${c - 14} ${c - 14}) scale(1.17)`} fill="none" stroke={p.accent} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-        <path d={ICONS[ic] ?? ICONS.star} />
-      </g>
+      <circle cx={c} cy={c} r="6" fill={p.accent} fillOpacity=".55" />
     </svg>
   );
 }
@@ -75,7 +64,7 @@ export const CultCard = forwardRef(function CultCard({ c }, ref) {
       {/* المحتوى محاذى من اليمين بسطور متوازنة الطول، وختم النجمة الثمانية يقابل العنوان من اليسار */}
       <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", paddingTop: 10 }}>
         <div style={{ position: "relative" }}>
-        <Seal p={p} ic={c.ic} />
+        <Seal p={p} />
         <span style={{ alignSelf: "flex-start", background: p.accent, color: "#fff", borderRadius: 99, padding: "5px 16px", fontSize: 14, fontWeight: 700 }}>{c.chip}</span>
         {c.title && <h2 style={{ margin: "16px 0 0", maxWidth: 330, fontSize: c.title.length > 18 ? 34 : 44, fontWeight: 700, lineHeight: 1.25, color: p.deep }}>{c.title}</h2>}
         {c.name && <p style={{ margin: "10px 0 0", fontSize: 21, fontWeight: 600, color: p.accent }}>الأستاذ / {c.name}</p>}

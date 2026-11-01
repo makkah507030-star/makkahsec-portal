@@ -141,14 +141,14 @@ const VALUE_PAL = { commit: "coral", quality: "sky", creative: "lilac", team: "t
 export function cardInit(kind, sub, name = "") {
   // الاسم بمسافات غير فاصلة فلا ينقسم بين سطرين في نص البطاقة
   const n = name ? name.split(" ").slice(0, 2).join("\u00A0") : "";
-  if (kind === "occasion") { const o = OCCASIONS[sub] ?? OCCASIONS.achievement; return { chip: "نهتم بك", ic: o.g === "سعيدة" ? "heart" : "leaf", title: o.h, body: o.msg(n || "…"), pal: o.pal }; }
+  if (kind === "occasion") { const o = OCCASIONS[sub] ?? OCCASIONS.achievement; return { chip: "نهتم بك", title: o.h, body: o.msg(n || "…"), pal: o.pal }; }
   if (kind === "value") { const v = VALUES.find((x) => x.k === sub) ?? VALUES[0];
-    return { chip: "قيمنا المؤسسية", ic: "star", title: v.t, body: `${v.d}\n${v.pr.join(" ")}`, pal: VALUE_PAL[v.k] }; }
-  if (kind === "welcome") return { chip: "حيّاك", ic: "home", title: "حيّاك في أسرتنا", pal: "teal",
+    return { chip: "قيمنا المؤسسية", title: v.t, body: `${v.d}\n${v.pr.join(" ")}`, pal: VALUE_PAL[v.k] }; }
+  if (kind === "welcome") return { chip: "حيّاك", title: "حيّاك في أسرتنا", pal: "teal",
     body: `تسعد أسرة مدرسة مكة الثانوية بانضمام الأستاذ\u00A0${n || "…"} إليها، مرحّبين به زميلًا وشريكًا في رسالتها، ومتمنين له التوفيق والعطاء.` };
-  if (kind === "honor") return { chip: "الابتكار", ic: "bulb", title: "شكرًا لمبادرتك", pal: "sand",
+  if (kind === "honor") return { chip: "الابتكار", title: "شكرًا لمبادرتك", pal: "sand",
     body: `تشكر أسرة مدرسة مكة الثانوية الأستاذ\u00A0${n || "…"} على فكرته التطويرية، فمبادرته تجسيد لقيمة الإبداع، وعطاؤه محل فخرنا.` };
-  if (kind === "mazaya") return { chip: "مزايا", ic: "gift", title: "عرض لمنسوبي التعليم", pal: "sand", body: "" };
-  if (kind === "rafah") return { chip: "رفاه", ic: "leaf", title: "لصحتك وجودة حياتك", pal: "mint", body: "" };
-  return { chip: "الثقافة المؤسسية", ic: "star", title: "", body: "", pal: "mint" };
+  if (kind === "mazaya") return { chip: "مزايا", title: "عرض لمنسوبي التعليم", pal: "sand", body: "" };
+  if (kind === "rafah") return { chip: "رفاه", title: "لصحتك وجودة حياتك", pal: "mint", body: "" };
+  return { chip: "الثقافة المؤسسية", title: "", body: "", pal: "mint" };
 }
