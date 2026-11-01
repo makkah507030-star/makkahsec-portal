@@ -127,13 +127,13 @@ export function overdue(a, today = new Date()) {
    بطاقات بهوية البوابة تُرسل صورةً في واتساب (قروب العمل أو على الخاص) دون الاستوديو.
    لكل نوع شارته ولونه الافتراضي، ويختار السفير من ألوان هادئة للتمييز والتغيير. */
 export const PALETTES = {
-  mint: { t: "نعناعي", bg: "#F1FAF5", soft: "#D9F1E3", accent: "#3E8E66", deep: "#22473A" },
-  teal: { t: "فيروزي", bg: "#EFF9F8", soft: "#D1EEEB", accent: "#11847F", deep: "#0D4643" },
-  sky: { t: "سماوي", bg: "#F0F7FB", soft: "#D6EAF5", accent: "#2F7FA8", deep: "#1D4560" },
+  mint: { t: "أخضر", bg: "#F1FAF5", soft: "#D9F1E3", accent: "#3E8E66", deep: "#22473A" },
+  teal: { t: "تركوازي", bg: "#EFF9F8", soft: "#D1EEEB", accent: "#11847F", deep: "#0D4643" },
+  sky: { t: "أزرق", bg: "#F0F7FB", soft: "#D6EAF5", accent: "#2F7FA8", deep: "#1D4560" },
   lilac: { t: "بنفسجي", bg: "#F6F3FB", soft: "#E4DBF3", accent: "#7258A4", deep: "#3D2D5E" },
-  sand: { t: "ذهبي", bg: "#FBF7EE", soft: "#F1E4C4", accent: "#A97C28", deep: "#57411A" },
-  coral: { t: "مرجاني", bg: "#FCF4F1", soft: "#F5DACF", accent: "#C2603F", deep: "#5E2C20" },
-  slate: { t: "رمادي وقور", bg: "#F4F5F6", soft: "#E0E4E8", accent: "#5B6773", deep: "#2C343C" },
+  sand: { t: "أصفر", bg: "#FBF7EE", soft: "#F1E4C4", accent: "#A97C28", deep: "#57411A" },
+  coral: { t: "برتقالي", bg: "#FCF4F1", soft: "#F5DACF", accent: "#C2603F", deep: "#5E2C20" },
+  slate: { t: "رمادي", bg: "#F4F5F6", soft: "#E0E4E8", accent: "#5B6773", deep: "#2C343C" },
 };
 const VALUE_PAL = { commit: "coral", quality: "sky", creative: "lilac", team: "teal", learn: "mint" };
 
