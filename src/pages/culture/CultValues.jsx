@@ -3,8 +3,8 @@ import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useNotice } from "../../lib/useNotice.js";
 import { sendPush } from "../../lib/pushSend.js";
-import { VALUES, AMB_ROLES, AMB_SKILLS, PROGRAMS } from "../../lib/culture.js";
-import { CardMaker } from "./CultCard.jsx";
+import { VALUES, AMB_ROLES, AMB_SKILLS, PROGRAMS, cardInit } from "../../lib/culture.js";
+import { CardMaker, SendPreview } from "./CultCard.jsx";
 
 /* القيم والأدوار: قيم الوزارة الخمس بتعريفها ومؤشراتها وممارساتها، وأدوار سفير الثقافة ومهاراته.
    ويرسل السفير منها رسائل التوعية بالقيم وعروض «مزايا» إشعارًا لكل الموظفين. */
@@ -72,13 +72,23 @@ function Composer() {
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState("");
   const [card, setCard] = useState(null);
+  const [preview, setPreview] = useState(false);
+  const cardOf = () => {
+    const v = VALUES.some((y) => y.k === kind);
+    return v ? { kind: "value", sub: kind, body: x.body.trim() || undefined }
+      : { kind: ["mazaya", "rafah"].includes(kind) ? kind : "general", title: x.title.trim() || undefined, body: x.body.trim() || undefined };
+  };
+  const ask = () => {
+    if (!x.title.trim() || !x.body.trim()) { setMsg({ ok: false, text: "اكتب العنوان والنص." }); return; }
+    setPreview(true);
+  };
   const send = async () => {
     if (!x.title.trim() || !x.body.trim()) { setMsg({ ok: false, text: "اكتب العنوان والنص." }); return; }
     setBusy(true);
     const { data: nid, error } = await supabase.rpc("cult_notify", { p_title: x.title.trim(), p_body: x.body.trim(), p_user_ids: null });
     if (error) setMsg({ ok: false, text: error.message });
     else { sendPush(nid); setX({ title: "", body: "" }); setMsg({ ok: true, text: "أُرسلت الرسالة لكل الموظفين." }); }
-    setBusy(false);
+    setBusy(false); setPreview(false);
   };
   return (
     <section className="card space-y-2 p-4">
@@ -89,14 +99,13 @@ function Composer() {
       <input className="field w-full text-sm" maxLength={120} placeholder="العنوان" value={x.title} onChange={(e) => setX({ ...x, title: e.target.value })} />
       <textarea className="field min-h-[90px] w-full text-sm" maxLength={1200} placeholder="النص" value={x.body} onChange={(e) => setX({ ...x, body: e.target.value })} />
       <div className="flex flex-wrap gap-2">
-        <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={send}>{busy ? "…" : "إشعار لكل الموظفين"}</button>
-        <button className="rounded-pill bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white" onClick={() => {
-          const v = VALUES.some((y) => y.k === kind);
-          setCard(v ? { kind: "value", sub: kind, body: x.body.trim() || undefined }
-            : { kind: ["mazaya", "rafah"].includes(kind) ? kind : "general", title: x.title.trim() || undefined, body: x.body.trim() || undefined });
-        }}>بطاقة لقروب العمل في واتساب</button>
+        <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={ask}>{busy ? "…" : "معاينة وإشعار لكل الموظفين"}</button>
+        <button className="rounded-pill bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white" onClick={() => setCard(cardOf())}>بطاقة لقروب العمل في واتساب</button>
       </div>
       {card && <CardMaker init={card} onClose={() => setCard(null)} />}
+      {preview && (() => { const c = cardOf(); const base = cardInit(c.kind, c.sub);
+        return <SendPreview card={{ ...base, title: c.title ?? base.title, body: c.body ?? base.body }} notif={{ title: x.title.trim(), body: x.body.trim() }}
+          to="كل المعلمين والإداريين — في جرس البوابة وعلى جوالاتهم" busy={busy} onConfirm={send} onClose={() => setPreview(false)} />; })()}
     </section>
   );
 }
