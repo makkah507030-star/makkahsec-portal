@@ -161,6 +161,12 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
 
   return (
     <div className="space-y-4 border-t border-line bg-canvas/30 px-4 py-3">
+      {!slots.length && (
+        <p className="rounded-sm2 border border-dashed bg-white px-3 py-2 text-[12px] leading-relaxed text-muted" style={{ borderColor: `${color}55` }}>
+          <b style={{ color }}>المؤشر ليس له برنامج في خطة التحسين</b> (مؤشر استدامة)، فلا شواهد محددة له. يُحتسب في «مساعد الشواهد» بنقطة تكتمل بأول شاهد،
+          وبإمكانك رفع أكثر من شاهد بحسب ما تراه اللجنة، أو ربطه بأعمال البوابة أدناه.
+        </p>
+      )}
       {slots.length > 0 && (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
