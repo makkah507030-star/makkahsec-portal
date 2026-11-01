@@ -100,7 +100,7 @@ export function CultCare({ me }) {
   const person = staff.find((s) => s.id === x.user_id);
   const pick = (patch) => {
     const y = { ...x, ...patch }; const p = staff.find((s) => s.id === y.user_id);
-    setX({ ...y, message: p ? OCCASIONS[y.kind].msg(p.full_name.split(" ").slice(0, 2).join(" ")) : y.message });
+    setX({ ...y, message: p ? OCCASIONS[y.kind].msg(p.full_name.split(" ").slice(0, 2).join("\u00A0")) : y.message });
   };
   // البطاقة إشعار لصاحب المناسبة في الجرس وجواله، ولا يرسلها إلا السفير
   const send = async (r) => {
