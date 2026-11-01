@@ -174,6 +174,13 @@ export const ADMIN_GROUPS = [
     ],
   },
   {
+    // بلاغات الصيانة (pages/Repairs.jsx، supabase/maint_1.sql): لكل الموظفين، ويتابعها المساعد الإداري 3
+    title: "الصيانة",
+    items: [
+      { to: "/repairs", label: "بلاغات الصيانة", icon: "wrench", kw: "عطل اعطال صيانة تكييف كهرباء سباكة اصلاح بلاغ" },
+    ],
+  },
+  {
     title: "إعدادات المدرسة",
     items: [
       { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
@@ -222,14 +229,14 @@ export const SECTIONS = [
     groups: ["النماذج", "الأداء الوظيفي"] },
   { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأحداث والمركز الإعلامي والتصويت وبرامج الطلاب",
     groups: ["التواصل والمحتوى"] },
-  { key: "settings", title: "الإعدادات والدعم الفني", icon: "sliders", hint: "الحسابات والصلاحيات والتقويم والاستيراد والدعم",
-    groups: ["إعدادات المدرسة", "الدعم الفني"] },
+  { key: "settings", title: "الإعدادات والدعم الفني", icon: "sliders", hint: "بلاغات الصيانة والحسابات والصلاحيات والتقويم والاستيراد والدعم",
+    groups: ["الصيانة", "إعدادات المدرسة", "الدعم الفني"] },
 ];
 
 /* أقسام قائمة المعلم بالطريقة نفسها: كل قسم يجمع مجموعات من TEACHER_GROUPS ويفتح صفحة بطاقاتها،
    والقسم ذو الرابط الواحد يفتحه مباشرة. أي مجموعة جديدة في TEACHER_GROUPS يُضاف عنوانها هنا. */
 export const TEACHER_SECTIONS = [
-  { key: "daily", title: "المهام اليومية", icon: "userCheck", hint: "التحضير وحصص الانتظار والجدول والأنشطة والاستئذان والمعمل",
+  { key: "daily", title: "المهام اليومية", icon: "userCheck", hint: "التحضير وحصص الانتظار والجدول والأنشطة والاستئذان والمعمل وبلاغات الصيانة",
     groups: ["المهام اليومية", "المعامل والمختبرات"] },
   { key: "students", title: "طلابي", icon: "users", hint: "السجلات والمتابعة والغياب والإحالات والتقارير",
     groups: ["طلابي"] },
@@ -260,6 +267,7 @@ export const TEACHER_GROUPS = [
       { to: "/activities",  label: "الأنشطة والألعاب",       icon: "sparkles", kw: "حقيبة الانتظار الأنشطة الصفية دوري المادة كأس حروف مسابقة مؤقت" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
+      { to: "/repairs",     label: "بلاغات الصيانة",        icon: "wrench", kw: "عطل اعطال صيانة تكييف كهرباء سباكة اصلاح بلاغ" },
     ],
   },
   {

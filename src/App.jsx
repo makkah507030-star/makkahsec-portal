@@ -157,6 +157,7 @@ const BehaviorForms = lazy(() => import("./pages/BehaviorForms.jsx"));
 const StudentCertificate = lazy(() => import("./pages/StudentCertificate.jsx"));
 const BehaviorFormView = lazy(() => import("./pages/BehaviorFormView.jsx"));
 const MaintenanceAdmin = lazy(() => import("./pages/admin/MaintenanceAdmin.jsx"));
+const Repairs = lazy(() => import("./pages/Repairs.jsx"));
 import MaintenanceScreen from "./components/MaintenanceScreen.jsx";
 import { useMaintenance } from "./lib/useMaintenance.js";
 import { useHolidays } from "./lib/useHolidays.js";
@@ -560,6 +561,8 @@ export default function App() {
           <Route path="/accreditation" element={<Accreditation />} />
           {/* الثقافة المؤسسية (سفير الثقافة): لكل المنسوبين، والصفحة تحدد ما يظهر لكل منهم (cult_1.sql) */}
           {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/culture" element={<Culture />} />}
+          {/* بلاغات الصيانة: يرفعها كل الموظفين، ويتابعها المساعد الإداري 3 (maint_1.sql) */}
+          {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/repairs" element={<Repairs />} />}
           {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
           <Route path="/ach-forms" element={<AchGate><AchFormsList /></AchGate>} />
           <Route path="/ach-forms/:id" element={<AchGate><AchForm /></AchGate>} />
