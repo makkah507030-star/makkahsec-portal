@@ -190,7 +190,15 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
                   <span className="block text-[10.5px] text-muted">{n ? portalCount(x, n) : x.ever ? "لا عمل مسجّل" : "لا عمل مسجّل هذا العام"}{linked && " · مربوط شاهدًا"}</span></span>
                 <span className="flex shrink-0 flex-col items-end gap-1">
                   <button className="text-[11px] font-semibold" style={{ color }} onClick={() => nav(x.to)}>فتح ←</button>
-                  {n > 0 && !linked && <button className="text-[11px] font-semibold text-mint-deep" onClick={() => linkPortal(x.t, x)}>+ شاهدًا</button>}
+                  {n > 0 && !linked && (free.length
+                    // في مؤشر له شواهد مطلوبة: يُختار المطلوب الذي يشهد له هذا العمل فيُحتسب في الإنجاز
+                    ? <select className="max-w-[9.5rem] rounded-pill border border-mint-deep/40 bg-white px-2 py-0.5 text-[11px] font-semibold text-mint-deep" value=""
+                        onChange={(v) => v.target.value && linkPortal(v.target.value === "__extra" ? x.t : v.target.value, x)} aria-label="ربطه شاهدًا">
+                        <option value="">+ شاهدًا لـ…</option>
+                        {free.map((t) => <option key={t} value={t}>{t}</option>)}
+                        <option value="__extra">شاهد إضافي (لا يُحتسب في المطلوب)</option>
+                      </select>
+                    : <button className="text-[11px] font-semibold text-mint-deep" onClick={() => linkPortal(x.t, x)}>+ شاهدًا</button>)}
                 </span>
               </div>
             );
