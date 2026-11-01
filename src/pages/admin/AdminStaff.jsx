@@ -573,6 +573,14 @@ const HIDE = "hide:";
 const isHide = (k) => k.startsWith(HIDE);
 const NAV_SECTIONS = ADMIN_GROUPS.map((g) => ({ title: g.title ?? "عام", items: g.items.filter((i) => i.to !== "/") }))
   .filter((g) => g.items.length);
+/* صفحات تظهر بالعضوية لا بالدور: «تظهر» هنا تعني أنها متاحة لأعضائها من حَمَلة الدور، لا لكل من يحمله */
+function navMembers(i) {
+  if (i.mediaMember) return "تظهر لأعضاء المركز الإعلامي ورئيسه فقط";
+  if (i.accMember) return "تظهر لأعضاء لجنة التميز ومن له الدور فقط";
+  if (i.scoutGate) return "تظهر لمن له صلاحية الكشافة أو دور في الفريق الكشفي";
+  if (i.achGate) return "تظهر بعد فتح مركز تحليل النتائج";
+  return null;
+}
 function navReason(i, role, sel) {
   if (i.techOnly) return "للدعم الفني فقط";
   if (i.manageForms) return "للمدير والدعم الفني";
@@ -838,7 +846,8 @@ function RolePermissions() {
                                 why ? "cursor-not-allowed border-line bg-canvas opacity-60" : on ? "cursor-pointer border-mint-light bg-mint-tint/40" : "cursor-pointer border-line"}`}>
                                 <span className="min-w-0">
                                   <span className="block truncate text-[13px] text-ink">{i.label}</span>
-                                  {why && <span className="block text-[10.5px] leading-tight text-faint">{why}</span>}
+                                  {why ? <span className="block text-[10.5px] leading-tight text-faint">{why}</span>
+                                    : navMembers(i) && <span className="block text-[10.5px] leading-tight text-late">{navMembers(i)}</span>}
                                 </span>
                                 <span className="flex shrink-0 items-center gap-1.5">
                                   <span className={`text-[11px] ${on ? "text-mint-deep" : "text-faint"}`}>{why ? "غير متاحة" : on ? "تظهر" : "مخفية"}</span>
@@ -853,6 +862,7 @@ function RolePermissions() {
                   })}
                   <p className="text-[11px] leading-relaxed text-faint">
                     الإخفاء يخص القائمة وبطاقات الأقسام. ومن يجمع أكثر من دور تظهر له الصفحة إن ظهرت لأحد أدواره.
+                    والصفحة المكتوب تحتها «تظهر لأعضاء…» لا يراها إلا أعضاؤها ولو كانت «تظهر» للدور، وإخفاؤها هنا يخفيها عن أعضائها من حملة الدور أيضًا.
                   </p>
                 </div>
               </details>
