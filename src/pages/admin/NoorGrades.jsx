@@ -273,9 +273,16 @@ export default function NoorGrades() {
   const stamp = `${weekday(today)} ${fmtHijri(today)} الساعة ${new Intl.DateTimeFormat("ar-SA", { hour: "numeric", minute: "2-digit", numberingSystem: "latn" }).format(now)}`;
 
   // كشوف الرصد من نور (Excel): كل ورقة فصل، تُطابق بالصف ورمز الفصل واسم المادة
+  // والاسم يختلف بين نور والجدول في «ال» و«و» والضمير: «القرآن الكريم والتفسير» = «القرآن الكريم وتفسيره»،
+  // فتُقارن كلمات الاسمين بعد تجريدها منها، ويكفي أن تحتوي إحداهما الأخرى
+  const words = (n) => normAr(baseSubject(n)).split(" ").map((w) => w.replace(/^و(?=ال)/, "").replace(/^ال/, "")
+    .replace(/^و(?=\S{3,})/, "").replace(/(?<=\S{3,})ه$/, "")).filter(Boolean);
   const sameSubject = (a, b) => {
     const x = normAr(baseSubject(a)), y = normAr(baseSubject(b));
-    return x === y || x.includes(y) || y.includes(x);
+    if (x === y || x.includes(y) || y.includes(x)) return true;
+    const wx = new Set(words(a)), wy = new Set(words(b));
+    const sub = (p, q) => p.size > 0 && [...p].every((w) => q.has(w));
+    return sub(wx, wy) || sub(wy, wx);
   };
   const onReports = async (files) => {
     if (!files.length || !term) return;
