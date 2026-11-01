@@ -507,9 +507,17 @@ function CustomRoles({ onOpenMembers }) {
               </div>
               {r.note && <p className="mt-1 text-xs text-muted">{r.note}</p>}
               <div className="mt-1.5 flex flex-wrap gap-1">
-                {[...r.perms].map((k) => <span key={k} className="chip bg-mint-light text-mint-deep">{permByKey[k]?.label ?? k}</span>)}
-                {r.perms.size === 0 && <span className="text-[11.5px] text-faint">بلا صلاحيات إضافية</span>}
+                {[...r.perms].filter((k) => !k.startsWith("hide:")).map((k) => <span key={k} className="chip bg-mint-light text-mint-deep">{permByKey[k]?.label ?? k}</span>)}
+                {![...r.perms].some((k) => !k.startsWith("hide:")) && <span className="text-[11.5px] text-faint">بلا صلاحيات إضافية</span>}
               </div>
+              {/* الصفحات المخفية عن الدور (hide:/مسار) بأسمائها في القائمة */}
+              {[...r.perms].some((k) => k.startsWith("hide:")) && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                  <span className="text-[11px] text-faint">صفحات مخفية:</span>
+                  {[...r.perms].filter((k) => k.startsWith("hide:")).map((k) => (
+                    <span key={k} className="chip border border-line bg-canvas text-muted line-through decoration-faint/60">{NAV_LABEL[k.slice(5)] ?? k.slice(5)}</span>))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -560,6 +568,8 @@ const PRESETS = [
 ];
 
 const permByKey = Object.fromEntries(PERMISSIONS.map((p) => [p.key, p]));
+// اسم الصفحة في القائمة من مسارها (لعرض الصفحات المخفية عن الدور)
+const NAV_LABEL = Object.fromEntries(ADMIN_GROUPS.flatMap((g) => g.items.map((i) => [i.to, i.label])));
 // كل صلاحية تظهر في لوحتها: ما لم يُذكر في الأقسام أعلاه يُجمع في «أخرى»
 const PERM_SECTIONS = (() => {
   const listed = new Set(PERM_GROUPS.flatMap((g) => g.keys));
