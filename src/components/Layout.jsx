@@ -505,7 +505,7 @@ function useCultAmbassador() {
 }
 
 export default function Layout({ children }) {
-  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav } = useSession();
+  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav, focusRoles, roleFocus, switchFocus } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
@@ -754,6 +754,21 @@ export default function Layout({ children }) {
     );
   };
 
+  // التبديل بين دورين إداريين في الحساب نفسه (الدعم الفني ومحضر معمل الحاسب الآلي)
+  const FocusSwitch = () => {
+    if (!focusRoles || effectiveRole !== "admin") return null;
+    const other = focusRoles.find((r) => r !== roleFocus);
+    const short = { tech_support: "الدعم الفني", computer_lab: "محضر المعمل" };
+    return (
+      <button onClick={() => { switchFocus(other); navigate(other === "computer_lab" ? "/lab" : "/"); }}
+              title={`التبديل إلى حساب ${ADMIN_ROLE_LABEL[other] ?? other}`}
+              className="flex shrink-0 items-center gap-1.5 rounded-pill border border-[#7258A4] bg-[#F1ECF8] px-3 py-1.5 text-xs font-semibold text-[#5B4387] transition-colors hover:bg-[#E5DCF2] sm:px-3.5">
+        <Icon name="swap" className="h-4 w-4" />
+        <span>{short[other] ?? ADMIN_ROLE_LABEL[other]}</span>
+      </button>
+    );
+  };
+
   const Brand = ({ compact, iconOnly }) => (
     <NavLink to="/" end className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80">
       <img src={logoIcon} alt="" className="h-9 w-9 shrink-0 object-contain" />
@@ -771,6 +786,7 @@ export default function Layout({ children }) {
   const Actions = () => (
     <div className="flex shrink-0 items-center gap-2">
       <ViewSwitch />
+      <FocusSwitch />
       {isStudentView && <ThemeToggle />}
       <Refresh />
       <PreviewSite />

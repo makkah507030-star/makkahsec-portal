@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { traced, bootSummary } from "./bootTrace.js";
 import { supabase, isConfigured } from "./supabase";
 import { setHolidayRanges, todayISO } from "./schoolTime";
@@ -32,14 +32,17 @@ async function loadHolidays() {
   }
 }
 
+// أدوار إدارية تُعرض كل منها وحدها حين تجتمع في حساب واحد، بالتبديل من الشريط العلوي
+const FOCUS_PAIRS = [["tech_support", "computer_lab"]];
+
 export function SessionProvider({ children }) {
   const [session, setSession] = useState(null);
   const sessionRef = useRef(null);
   const [profile, setProfile] = useState(null);
-  const [adminRoles, setAdminRoles] = useState([]);
+  const [rawAdminRoles, setAdminRoles] = useState([]);
   // صفحات القائمة المخفية: ما أخفته كل أدوار المستخدم («hide:/مسار» في role_permissions)
-  const [hiddenNav, setHiddenNav] = useState(() => new Set());
-  const [permissions, setPermissions] = useState([]);
+  const [rawHiddenNav, setHiddenNav] = useState(() => new Set());
+  const [rawPermissions, setPermissions] = useState([]);
   const [loading, setLoading] = useState(true);
   // دعم الدور المزدوج (معلم + إداري): هل للمستخدم سجل معلّم أيضًا؟ وأي واجهة نشطة الآن؟
   const [isTeacher, setIsTeacher] = useState(false);
@@ -195,6 +198,41 @@ export function SessionProvider({ children }) {
     try { localStorage.setItem("mk_view_" + (session?.user?.id ?? ""), v); } catch { /* تجاهل */ }
   };
 
+  // التبديل بين دورين إداريين في حساب واحد (الدعم الفني ومحضر المعمل): كل دور بقائمته وصفحاته.
+  // تبديل للعرض فقط؛ الصلاحيات في الخادم تبقى لكل أدوار الحساب.
+  const focusRoles = FOCUS_PAIRS.find((pair) => pair.every((r) => rawAdminRoles.includes(r))) ?? null;
+  let savedFocus = null;
+  try { savedFocus = localStorage.getItem("mk_focus_" + (session?.user?.id ?? "")); } catch { /* تجاهل */ }
+  const [focusState, setFocus] = useState(null);
+  const roleFocus = focusRoles ? (focusRoles.includes(focusState ?? savedFocus) ? (focusState ?? savedFocus) : focusRoles[0]) : null;
+  const adminRoles = useMemo(() => (roleFocus ? rawAdminRoles.filter((r) => r === roleFocus || !focusRoles.includes(r)) : rawAdminRoles),
+    [rawAdminRoles, roleFocus, focusRoles]);
+  // صلاحيات الدور المختار وحده وصفحاته المخفية، حين لا يكون من أدوار الصلاحية الكاملة
+  const focusKey = roleFocus && !SUPER_ROLES.includes(roleFocus) ? adminRoles.join(",") : "";
+  const [focusPerms, setFocusPerms] = useState(null);   // { key, perms, hidden }
+  useEffect(() => {
+    if (!focusKey) return;
+    let alive = true;
+    const list = focusKey.split(",");
+    supabase.from("role_permissions").select("role_type, permission").in("role_type", list).then(({ data }) => {
+      if (!alive) return;
+      const rows = data ?? [];
+      const hid = list.map((r) => new Set(rows.filter((p) => p.role_type === r && p.permission.startsWith("hide:")).map((p) => p.permission.slice(5))));
+      setFocusPerms({ key: focusKey, perms: [...new Set(rows.filter((p) => !p.permission.startsWith("hide:")).map((p) => p.permission))],
+        hidden: new Set([...hid[0]].filter((x) => hid.every((h) => h.has(x)))) });
+    });
+    return () => { alive = false; };
+  }, [focusKey]);
+  const focused = focusKey && focusPerms?.key === focusKey ? focusPerms : null;
+  const permissions = focused ? focused.perms : rawPermissions;
+  const hiddenNav = focused ? focused.hidden : rawHiddenNav;
+
+  const switchFocus = (r) => {
+    if (!focusRoles?.includes(r)) return;
+    setFocus(r);
+    try { localStorage.setItem("mk_focus_" + (session?.user?.id ?? ""), r); } catch { /* تجاهل */ }
+  };
+
   const hasAdminRole = (...roles) => roles.some((r) => adminRoles.includes(r));
 
   // هل يملك المستخدم هذه الصلاحية؟
@@ -209,6 +247,7 @@ export function SessionProvider({ children }) {
         session, profile, adminRoles, permissions, loading, hiddenNav,
         signOut, hasAdminRole, can, isSuper,
         isTeacher, dualRole, hasChildren, views, effectiveRole, view, switchView,
+        focusRoles, roleFocus, switchFocus,
         reload: () => loadProfile(session?.user?.id),
       }}
     >
