@@ -15,6 +15,7 @@ import LabRules from "./LabRules.jsx";
 import LabUsage from "./LabUsage.jsx";
 import LabLessons from "./LabLessons.jsx";
 import LabRecord from "./LabRecord.jsx";
+import LabPerf from "./LabPerf.jsx";
 
 const TABS = [
   { key: "lessons", label: "الدروس" },
@@ -25,6 +26,7 @@ const TABS = [
   { key: "tickets", label: "البلاغات" },
   { key: "rules", label: "قواعد السلامة" },
   { key: "usage", label: "سجل الاستخدام" },
+  { key: "perf", label: "شواهد الأداء", manager: true },   // لمحضر المعمل ومن يطّلع على أدائه
 ];
 
 export default function Lab() {
@@ -34,10 +36,10 @@ export default function Lab() {
   const [params, setParams] = useSearchParams();
   // ?report=0 من لوحة البلاغ العامة: يُختار الجهاز من رسم المعمل
   const reportSeat = /^\d+$/.test(params.get("report") ?? "") ? Number(params.get("report")) : null;
-  const [tab, setTab] = useState(() =>
-    reportSeat != null ? "tickets" : TABS.some((t) => t.key === params.get("tab")) ? params.get("tab") : "booking");
-
   const isManager = effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r));
+  const tabs = TABS.filter((t) => !t.manager || isManager);
+  const [tab, setTab] = useState(() =>
+    reportSeat != null ? "tickets" : tabs.some((t) => t.key === params.get("tab")) ? params.get("tab") : "booking");
   const canBook = effectiveRole === "teacher" && granted.has("computer_lab");
 
   return (
@@ -51,7 +53,7 @@ export default function Lab() {
 
       {/* ست تبويبات: سطر واحد يُمرَّر أفقيًا على الجوال بدل التفافها */}
       <div className="flex max-w-full overflow-x-auto rounded-card border border-line bg-paper p-1 sm:inline-flex print:hidden">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button key={t.key} type="button" onClick={() => setTab(t.key)}
                   className={`shrink-0 whitespace-nowrap rounded-pill px-4 py-1.5 text-[13px] transition-colors ${
                     tab === t.key ? "bg-mint-deep font-semibold text-white" : "font-medium text-muted hover:text-ink"}`}>
@@ -60,6 +62,7 @@ export default function Lab() {
         ))}
       </div>
 
+      {tab === "perf" && isManager && <LabPerf onGo={(k) => { setTab(k); window.scrollTo({ top: 0 }); }} />}
       {tab === "lessons" && <LabLessons lab={DEFAULT_LAB} canCreate={canBook || isManager} />}
       {tab === "record" && <LabRecord lab={DEFAULT_LAB} canEdit={canBook} />}
       {tab === "booking" && <LabBooking lab={DEFAULT_LAB} canBook={canBook} isManager={isManager} />}
