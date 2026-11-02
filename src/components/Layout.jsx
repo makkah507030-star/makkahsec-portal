@@ -490,6 +490,20 @@ const Badge = ({ n, dot, at = "-top-0.5 -left-1" }) => (n > 0
     : <span className="num ms-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{n}</span>
   : null);
 
+/* هل المستخدم سفير الثقافة المؤسسية — يُجلب مرة في الجلسة */
+let ambCache = null;   // { uid, v }
+function useCultAmbassador() {
+  const { session } = useSession();
+  const uid = session?.user?.id;
+  const [v, setV] = useState(ambCache?.uid === uid ? ambCache.v : false);
+  useEffect(() => {
+    if (!uid || ambCache?.uid === uid) return;
+    supabase.from("cult_team").select("role").eq("user_id", uid).eq("role", "ambassador").maybeSingle()
+      .then(({ data, error }) => { const x = !error && !!data; ambCache = { uid, v: x }; setV(x); });
+  }, [uid]);
+  return v;
+}
+
 export default function Layout({ children }) {
   const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav } = useSession();
   const navigate = useNavigate();
@@ -703,6 +717,8 @@ export default function Layout({ children }) {
 
   // وسم «رئيس قسم …» بجانب الاسم (supabase/plc_1_departments.sql)
   const dept = useMyDepartment();
+  // ووسم «سفير الثقافة المؤسسية» لمن عُيّن سفيرًا (supabase/cult_1.sql ← cult_team)
+  const amb = useCultAmbassador();
 
   const subtitle =
     isAdmin && adminRoles.length
@@ -832,9 +848,10 @@ export default function Layout({ children }) {
           {profile?.full_name ?? profile?.username ?? "—"}
         </p>
         <p className="truncate text-[11px] leading-tight text-muted">{subtitle}</p>
-        {dept?.is_head && (
-          <span className="mt-0.5 inline-block rounded-pill bg-mint-light px-2 py-px text-[10.5px] font-semibold text-mint-deep">
-            {headLabel(dept)}
+        {(dept?.is_head || amb) && (
+          <span className="mt-0.5 flex flex-wrap gap-1">
+            {dept?.is_head && <span className="rounded-pill bg-mint-light px-2 py-px text-[10.5px] font-semibold text-mint-deep">{headLabel(dept)}</span>}
+            {amb && <span className="rounded-pill px-2 py-px text-[10.5px] font-semibold text-white" style={{ background: "#7258A4" }}>✦ سفير الثقافة المؤسسية</span>}
           </span>
         )}
       </div>
