@@ -528,7 +528,7 @@ function useCultAmbassador() {
 }
 
 export default function Layout({ children }) {
-  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav, focusRoles, roleFocus, switchFocus } = useSession();
+  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav, focusRoles, roleFocus, switchFocus, focusLimited } = useSession();
   const navigate = useNavigate();
   const outreachInbox = useOutreachInbox();
   const location = useLocation();
@@ -578,8 +578,16 @@ export default function Layout({ children }) {
   const [accMember, setAccMember] = useState(false);
   useEffect(() => {
     if (!isStaff) { setAccMember(false); return; }
-    supabase.rpc("acc_me").then(({ data, error }) => setAccMember(!error && !!data?.member));
-  }, [isStaff, session?.user?.id]);
+    supabase.rpc("acc_me").then(async ({ data, error }) => {
+      if (error || !data?.member) { setAccMember(false); return; }
+      // في حساب محضر المعمل: بالعضوية الفعلية في اللجنة لا بصلاحية الدعم الفني
+      if (focusLimited && data.all) {
+        const { data: m } = await supabase.from("acc_members").select("user_id").eq("user_id", session?.user?.id).maybeSingle();
+        setAccMember(!!m); return;
+      }
+      setAccMember(true);
+    });
+  }, [isStaff, session?.user?.id, focusLimited]);
 
   // هل يظهر الرابط لهذا المستخدم؟
   const visible = (i) => {

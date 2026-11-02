@@ -240,6 +240,9 @@ export function SessionProvider({ children }) {
     permissions.includes("*") || permissions.includes(perm);
 
   const isSuper = adminRoles.some((r) => SUPER_ROLES.includes(r));
+  // الحساب في دور غير كامل الصلاحية (محضر المعمل مثلًا) وأدواره الأخرى أوسع: الأقسام التي تمنح
+  // صلاحيتها بالدور في الخادم (الثقافة المؤسسية، والتقويم والاعتماد) تُعرض بعضويته الفعلية وحدها
+  const focusLimited = !!roleFocus && !SUPER_ROLES.includes(roleFocus);
 
   return (
     <SessionContext.Provider
@@ -247,7 +250,7 @@ export function SessionProvider({ children }) {
         session, profile, adminRoles, permissions, loading, hiddenNav,
         signOut, hasAdminRole, can, isSuper,
         isTeacher, dualRole, hasChildren, views, effectiveRole, view, switchView,
-        focusRoles, roleFocus, switchFocus,
+        focusRoles, roleFocus, switchFocus, focusLimited,
         reload: () => loadProfile(session?.user?.id),
       }}
     >
