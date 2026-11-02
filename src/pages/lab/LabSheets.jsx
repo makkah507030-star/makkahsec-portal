@@ -154,3 +154,88 @@ export function WallpaperSheet({ theme = "dark", w, h, device, labName, note, qr
     </div>
   );
 }
+
+/* ----------------------------- لوحة إرشادية عامة (استوديو المعمل) ----------------------------- */
+// عنوان ووصف وبنود: «بطاقات» في عمودين، أو «خطوات» في عمود واحد. الأيقونة من أيقونات الاستوديو.
+export function BoardSheet({ theme = "light", labName, title, sub, items, icon = "monitor", layout = "cards", note }) {
+  const list = items.filter((t) => t.trim());
+  const n = list.length;
+  const one = layout === "steps" || n <= 5;
+  const size = one ? (n <= 5 ? 24 : n <= 7 ? 21 : n <= 9 ? 18.5 : 16) : (n <= 8 ? 21 : n <= 10 ? 19 : n <= 14 ? 16.5 : 14.5);
+  const t = fitTitle(title || " ", { max: 62, min: 34, width: 690, weight: 700 });
+  return (
+    <div className={`stu stu-${theme} stu-portrait lab-rules sheet`}>
+      <Decor />
+      <div className="stu-page">
+        <Head theme={theme} year={academicYearLabel()} />
+        <div className="lab-hero">
+          <span className="stu-tag">{ICONS[icon] ?? ICONS.monitor}{labName}</span>
+          <div className="stu-h1" style={{ fontSize: t.size }}>{title}</div>
+          {sub?.trim() && <span className="stu-sub" style={{ fontSize: 22 }}>{sub}</span>}
+          <div className="stu-grule" />
+        </div>
+        <ol className={`lab-rules-list${one ? " one" : ""}`}>
+          {list.map((x, i) => (
+            <li key={i}>
+              <span className="stu-ic num">{i + 1}</span>
+              <p style={{ fontSize: size }}>{x}</p>
+            </li>
+          ))}
+        </ol>
+        {note?.trim() && <p className="lab-note">{note}</p>}
+        <Foot />
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------- بطاقات الأجهزة الكبيرة (4 في ورقة A4) ----------------------------- */
+// بطاقة توضع بجانب الجهاز أو عليه: الرقم والرمز ورمز QR للبلاغ، ومواصفاته وسطر تعليمات اختياريان
+export function DeviceCardsSheet({ theme = "light", lab, devices, labName, codes, note, specs }) {
+  const cells = Array.from({ length: 4 }, (_, i) => devices[i] ?? null);
+  return (
+    <div className={`stu stu-${theme} stu-portrait lab-dcards sheet`}>
+      <div className="grid">
+        {cells.map((d, i) => (
+          <div key={i} className={`lab-dcard${d ? "" : " empty"}`}>
+            {d && (
+              <div className="in">
+                <div className="br"><img src={theme === "dark" ? iconWhite : iconMint} alt="" /><span>بوابة مكة الثانوية الرقمية</span></div>
+                <span className="stu-tag">{ICONS.monitor}{labName}</span>
+                <div className="row">
+                  <div className="nm"><span>رقم الجهاز</span><b className="num">{d.seat_no}</b><small className="num">{d.code}</small></div>
+                  <div className="qr">{codes[reportUrl(d.seat_no, lab)] && <img src={codes[reportUrl(d.seat_no, lab)]} alt="" />}<i>بلاغ عطل</i></div>
+                </div>
+                {specs && [d.cpu, d.ram, d.storage, d.os].some(Boolean) && (
+                  <p className="sp" dir="ltr">{[d.cpu, d.ram, d.storage, d.os].filter(Boolean).join(" · ")}</p>)}
+                {note?.trim() && <p className="nt">{note}</p>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <p className="note">بطاقات A6 · أربع في الورقة · قصّ على الخط المتقطع</p>
+    </div>
+  );
+}
+
+/* ----------------------------- خلفية التعليمات (بجانب لوحة رقم الجهاز) ----------------------------- */
+export function TipsWallSheet({ tips, title, ...p }) {
+  const { w, h } = p;
+  const k = Math.min(w / 1920, h / 1080);
+  const px = (n) => Math.round(n * k);
+  const list = (tips ?? []).filter((t) => t.trim()).slice(0, 6);
+  return (
+    <div style={{ position: "relative", width: w, height: h }} className="lab-wall-wrap">
+      <WallpaperSheet {...p} note="" />
+      {list.length > 0 && (
+        <div className={`stu stu-${p.theme} lab-tips`} style={{ position: "absolute", top: "50%", transform: "translateY(-50%)",
+          right: px(56) + px(440) + px(56), width: px(600), padding: px(30), borderRadius: px(26), background: "transparent" }}>
+          <b style={{ fontSize: px(30) }}>{title}</b>
+          <ol style={{ marginTop: px(16) }}>{list.map((t, i) => (
+            <li key={i} style={{ fontSize: px(22), gap: px(12), padding: `${px(10)}px 0` }}><span className="num" style={{ width: px(36), height: px(36), fontSize: px(17) }}>{i + 1}</span><span>{t}</span></li>))}</ol>
+        </div>
+      )}
+    </div>
+  );
+}

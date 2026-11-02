@@ -16,6 +16,7 @@ import LabRules from "./LabRules.jsx";
 import LabUsage from "./LabUsage.jsx";
 import LabLessons from "./LabLessons.jsx";
 import LabRecord from "./LabRecord.jsx";
+import LabStudio from "./LabStudio.jsx";
 
 const TABS = [
   { key: "lessons", label: "الدروس" },
@@ -26,6 +27,8 @@ const TABS = [
   { key: "tickets", label: "البلاغات" },
   { key: "rules", label: "قواعد السلامة" },
   { key: "usage", label: "سجل الاستخدام" },
+  // استوديو المعمل: اللوحات الإرشادية وبطاقات الأجهزة وخلفيات سطح المكتب — لمن يدير المعمل أو يحجزه
+  { key: "studio", label: "استوديو المعمل", studio: true },
 ];
 
 export default function Lab() {
@@ -36,10 +39,10 @@ export default function Lab() {
   // ?report=0 من لوحة البلاغ العامة: يُختار الجهاز من رسم المعمل
   const reportSeat = /^\d+$/.test(params.get("report") ?? "") ? Number(params.get("report")) : null;
   const isManager = effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r));
-  const tabs = TABS.filter((t) => !t.manager || isManager);
+  const canBook = effectiveRole === "teacher" && granted.has("computer_lab");
+  const tabs = TABS.filter((t) => (!t.manager || isManager) && (!t.studio || isManager || canBook));
   const [tab, setTab] = useState(() =>
     reportSeat != null ? "tickets" : tabs.some((t) => t.key === params.get("tab")) ? params.get("tab") : "booking");
-  const canBook = effectiveRole === "teacher" && granted.has("computer_lab");
 
   // المعامل المفعّلة: يظهر المبدّل حين يكون أكثر من معمل، والاختيار يُحفظ للزيارة القادمة،
   // و?lab= من رمز QR على جهاز المعمل الثاني يفتحه مباشرة
@@ -100,6 +103,7 @@ export default function Lab() {
       {tab === "devices" && <LabDevices key={lab} lab={lab} isManager={isManager} canEdit={canBook || isManager} />}
       {tab === "rules" && <LabRules key={lab} lab={lab} isManager={isManager} />}
       {tab === "usage" && <LabUsage key={lab} lab={lab} canBook={canBook} isManager={isManager} />}
+      {tab === "studio" && <LabStudio key={lab} lab={lab} />}
       {tab === "tickets" && (
         <LabTickets key={lab} lab={lab} canReport={canBook || isManager} isManager={isManager}
                     reportSeat={reportSeat} onReportDone={() => reportSeat != null && setParams({}, { replace: true })} />
