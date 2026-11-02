@@ -108,7 +108,7 @@ export function PracticeStation({ st, onDone, result, onNext }) {
         <span className="num shrink-0 rounded-pill bg-canvas px-2.5 py-0.5 text-xs text-muted">{k + 1} / {st.tasks.length}</span>
       </div>
       <W.Input task={task} value={value} setValue={setValue} disabled={!!state} />
-      {wrong > 0 && !state && <p className="text-sm text-absent">ليست صحيحة — حاول مرة أخرى{wrong >= 2 ? "، أو اطلب التلميح" : ""}.</p>}
+      {wrong > 0 && !state && <p className="text-sm text-absent">ليست صحيحة{W.missing?.(task, value) ? `: ${W.missing(task, value)}` : ""} — حاول مرة أخرى{wrong >= 2 ? "، أو اطلب التلميح" : ""}.</p>}
       {(hint || state === "solved") && (
         <div className="rounded-card bg-warning-light/70 px-3 py-2 text-sm text-ink">
           {W.hint(task).map((h, i) => <p key={i} className="leading-relaxed">{h}</p>)}

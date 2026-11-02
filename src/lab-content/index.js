@@ -10,7 +10,7 @@
 //   objectives: ["…"],
 //   stations: [                        // المحطات بالترتيب، ولكل محطة نسبة إتقان
 //     { id, type: "concept", title, slides: [{ title, text, figure? }], check? },
-//     { id, type: "practice", widget: "bits" | "convert" | "ascii" | "rgb" | "truth" | "sequence" | "classify",
+//     { id, type: "practice", widget: "bits" | "convert" | "ascii" | "rgb" | "truth" | "sequence" | "classify" | "html",
 //       title, intro, tasks: [...] },      // صيغة مهام كل أداة في lessons/widgets.jsx
 //     { id, type: "steps", title, intro, mock: "calculator" | "firewall", start: {...}, steps: [{ say, target, set? }] },
 //     { id, type: "quiz", title, pass: 70, questions: [...] },
@@ -38,9 +38,14 @@ import monitoringControl from "./g10/u3-l1-monitoring-control.js";
 import artificialIntelligence from "./g10/u3-l2-artificial-intelligence.js";
 import emergingTechnologies from "./g10/u3-l3-emerging-technologies.js";
 import healthEnvironment from "./g10/u3-l4-health-environment.js";
+// الوحدة الرابعة: البرمجة باستخدام لغة ترميز النص التشعبي
+import htmlWebsite from "./g10/u4-l1-html-website.js";
+import contentStructure from "./g10/u4-l2-content-structure.js";
+import htmlForm from "./g10/u4-l3-html-form.js";
 
 export const LESSONS = [dataRepresentation, computerStructure, operatingSystems, networks, ictSociety,
   onlineDocuments, onlineMeetings, broadcastPresentation, oneNote, mindMaps,
-  monitoringControl, artificialIntelligence, emergingTechnologies, healthEnvironment];
+  monitoringControl, artificialIntelligence, emergingTechnologies, healthEnvironment,
+  htmlWebsite, contentStructure, htmlForm];
 
 export const lessonById = (id) => LESSONS.find((l) => l.id === id) ?? null;
