@@ -43,9 +43,15 @@ import htmlWebsite from "./g10/u4-l1-html-website.js";
 import contentStructure from "./g10/u4-l2-content-structure.js";
 import htmlForm from "./g10/u4-l3-html-form.js";
 
+// الثالث الثانوي — التقنية الرقمية (3)، الوحدة الأولى: تخطيط المشروعات
+import projectPlanning from "./g12/u1-l1-project-planning.js";
+import ganttProject from "./g12/u1-l2-gantt-project.js";
+import taskManagement from "./g12/u1-l3-task-management.js";
+
 export const LESSONS = [dataRepresentation, computerStructure, operatingSystems, networks, ictSociety,
   onlineDocuments, onlineMeetings, broadcastPresentation, oneNote, mindMaps,
   monitoringControl, artificialIntelligence, emergingTechnologies, healthEnvironment,
-  htmlWebsite, contentStructure, htmlForm];
+  htmlWebsite, contentStructure, htmlForm,
+  projectPlanning, ganttProject, taskManagement];
 
 export const lessonById = (id) => LESSONS.find((l) => l.id === id) ?? null;
