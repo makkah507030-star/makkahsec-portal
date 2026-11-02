@@ -33,8 +33,14 @@ import onlineMeetings from "./g10/u2-l2-online-meetings.js";
 import broadcastPresentation from "./g10/u2-l3-broadcast-presentation.js";
 import oneNote from "./g10/u2-l4-onenote.js";
 import mindMaps from "./g10/u2-l5-mind-maps.js";
+// الوحدة الثالثة: التقنية والحياة
+import monitoringControl from "./g10/u3-l1-monitoring-control.js";
+import artificialIntelligence from "./g10/u3-l2-artificial-intelligence.js";
+import emergingTechnologies from "./g10/u3-l3-emerging-technologies.js";
+import healthEnvironment from "./g10/u3-l4-health-environment.js";
 
 export const LESSONS = [dataRepresentation, computerStructure, operatingSystems, networks, ictSociety,
-  onlineDocuments, onlineMeetings, broadcastPresentation, oneNote, mindMaps];
+  onlineDocuments, onlineMeetings, broadcastPresentation, oneNote, mindMaps,
+  monitoringControl, artificialIntelligence, emergingTechnologies, healthEnvironment];
 
 export const lessonById = (id) => LESSONS.find((l) => l.id === id) ?? null;
