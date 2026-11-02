@@ -2,7 +2,7 @@
 // «النشرات والاستبانات» للمرسل (الموجهون الطلابيون ومن له الصلاحية): القائمة بحالة كل نشرة ونسب
 // الاستجابة، والقوالب الجاهزة، وصفحة كل نشرة بتبويباتها: المحتوى، والإرسال والمشاركة، والمتابعة، والنتائج.
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate } from "../../lib/dates";
@@ -20,7 +20,7 @@ const Icon = ({ d, className = "h-5 w-5" }) => (
 );
 
 export default function OutreachAdmin() {
-  const { session, hasAdminRole } = useSession();
+  const { session, hasAdminRole, can } = useSession();
   const uid = session.user.id;
   const [sp, setSp] = useSearchParams();
   const [items, setItems] = useState(null);
@@ -77,6 +77,11 @@ export default function OutreachAdmin() {
               <span className="text-[12.5px] text-muted">{k === "post" ? "نص وصور ومقاطع وروابط، مع «تم الاطلاع» للتعليمات المهمة" : "اختيار، ومقياس، ونعم ولا، وإجابات نصية؛ باسم أو دون اسم"}</span></span>
           </button>))}
       </div>
+      {/* التمييز عن «التصويت والاستطلاعات»: سؤال واحد بنتيجة معلنة مكانه هناك */}
+      <p className="-mt-2 text-[12px] leading-relaxed text-muted">
+        لسؤال واحد يُصوَّت عليه وتُعلن نتيجته للجميع، أو لانتخاب، استخدم{" "}
+        {can("polls") ? <Link to="/polls-admin" className="font-semibold text-mint-deep hover:underline">التصويت والاستطلاعات</Link> : <b className="text-ink">التصويت والاستطلاعات</b>}.
+      </p>
 
       <section className="space-y-2">
         <h2 className="text-sm font-bold text-ink">ابدأ من قالب جاهز</h2>

@@ -1,6 +1,7 @@
 // src/pages/polls/PollsAdmin.jsx
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
+import { Link } from "react-router-dom";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDateTime } from "../../lib/dates";
 import { AUDIENCE } from "../../lib/banners.js";
@@ -22,6 +23,7 @@ const blank = () => ({ kind: "poll", title: "", body: "", options: ["", ""], max
 const pill = (on) => `rounded-pill px-3 py-1 text-xs font-medium ${on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`;
 
 export default function PollsAdmin() {
+  const { can } = useSession();
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [edit, setEdit] = useState(null);
@@ -40,6 +42,9 @@ export default function PollsAdmin() {
         <div>
           <h1 className="text-lg font-bold text-ink">التصويت والاستطلاعات</h1>
           <p className="text-sm text-muted">استطلاعات الرأي والانتخابات للطلاب وأولياء الأمور والمعلمين والإداريين. انتخابات الترشيحات تُدار من إعلانها.</p>
+          {/* التمييز عن «النشرات والاستبانات»: الاستبانة متعددة الأسئلة أو دون اسم مكانها هناك */}
+          <p className="mt-1 text-[12px] text-muted">لاستبانة بعدة أسئلة، أو دون اسم، أو بتحليل وتصدير إلى Excel، استخدم{" "}
+            {can("outreach") ? <Link to="/outreach" className="font-semibold text-mint-deep hover:underline">النشرات والاستبانات</Link> : <b className="text-ink">النشرات والاستبانات</b>}.</p>
         </div>
         <button className="btn-primary" onClick={() => setEdit(blank())}>+ تصويت جديد</button>
       </div>

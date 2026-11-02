@@ -25,13 +25,13 @@ export const QTYPES = {
   long: { t: "إجابة مطوّلة" },
 };
 
-export const TOPICS = ["توعية", "تعليمات", "الصحة النفسية", "السلوك والانضباط", "التوجيه المهني", "الصحة", "السلامة", "الأمن الرقمي", "التحصيل الدراسي", "استطلاع رأي"];
+export const TOPICS = ["توعية", "تعليمات", "الصحة النفسية", "السلوك والانضباط", "التوجيه المهني", "الصحة", "السلامة", "الأمن الرقمي", "التحصيل الدراسي", "رأي وتقييم"];
 
 const q = (type, text, options, required = true) => ({ id: Math.random().toString(36).slice(2, 8), type, q: text, options: options ?? [], required });
 
 /* قوالب جاهزة تبدأ منها، وتُعدَّل بالكامل */
 export const TEMPLATES = [
-  { kind: "survey", topic: "استطلاع رأي", title: "الرضا عن خدمات التوجيه الطلابي", anonymous: true,
+  { kind: "survey", topic: "رأي وتقييم", title: "الرضا عن خدمات التوجيه الطلابي", anonymous: true,
     body: "رأيك يساعدنا على تحسين خدمات التوجيه في المدرسة. الإجابة دون اسم.",
     questions: () => [q("scale", "أعرف من هو الموجه الطلابي لصفي وكيف أصل إليه"), q("scale", "أجد المساعدة حين أحتاجها"),
       q("scale", "أشعر بالارتياح عند الحديث مع الموجه الطلابي"), q("multi", "ما البرامج التي تفيدك أكثر؟", ["مهارات المذاكرة", "إدارة الوقت", "التعامل مع القلق", "اختيار التخصص والمسار", "العلاقات مع الزملاء"]),
@@ -58,7 +58,7 @@ export const TEMPLATES = [
   { kind: "post", topic: "تعليمات", title: "تعليمات مهمة للطلاب", body: "" },
 ];
 
-export const blankItem = (kind) => ({ kind, title: "", body: "", topic: kind === "survey" ? "استطلاع رأي" : "توعية", media: [], links: [],
+export const blankItem = (kind) => ({ kind, title: "", body: "", topic: kind === "survey" ? "رأي وتقييم" : "توعية", media: [], links: [],
   questions: kind === "survey" ? [q("single", "", ["", ""])] : [], needs_ack: false, anonymous: kind === "survey", closes_at: null });
 export const fromTemplate = (t) => ({ ...blankItem(t.kind), title: t.title, body: t.body, topic: t.topic, anonymous: !!t.anonymous,
   questions: t.questions ? t.questions() : [] });
