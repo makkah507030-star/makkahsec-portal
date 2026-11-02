@@ -1,6 +1,6 @@
 // src/pages/Legal.jsx
 import { Link } from "react-router-dom";
-import { OWNER_NAME, PORTAL_NAME, RIGHTS_LINE } from "../lib/legal";
+import { OWNER_NAME, PORTAL_NAME, REG_NO, REG_TEXT, RIGHTS_LINE } from "../lib/legal";
 import logoIcon from "../assets/icon-mint.png";
 
 /* =====================================================================
@@ -71,7 +71,7 @@ export default function Legal({ kind = "terms" }) {
         </section>
       ))}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-        <span>{RIGHTS_LINE}</span>
+        <span>{RIGHTS_LINE}<span className="block">{REG_TEXT} <bdi dir="ltr" className="num">{REG_NO}</bdi></span></span>
         <span className="flex gap-3">
           <Link to={isTerms ? "/privacy" : "/terms"} className="font-semibold text-mint-deep">{isTerms ? "سياسة الخصوصية" : "شروط الاستخدام"}</Link>
           <Link to="/" className="font-semibold text-mint-deep">الرئيسية</Link>
