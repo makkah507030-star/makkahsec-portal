@@ -62,6 +62,18 @@ export const blankItem = (kind) => ({ kind, title: "", body: "", topic: kind ===
   questions: kind === "survey" ? [q("single", "", ["", ""])] : [], needs_ack: false, anonymous: kind === "survey", closes_at: null });
 export const fromTemplate = (t) => ({ ...blankItem(t.kind), title: t.title, body: t.body, topic: t.topic, anonymous: !!t.anonymous,
   questions: t.questions ? t.questions() : [] });
+/** نسخة جديدة من نشرة أو استبانة سابقة: محتواها وأسئلتها، ووسائطها منسوخة إلى مجلد المرسل
+    (فلا يمسّها حذف الأصل)، بلا إرسال ولا موعد إغلاق */
+export async function copyItem(uid, i) {
+  const media = [];
+  for (const m of i.media ?? []) {
+    const to = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${m.path.split(".").pop()}`;
+    const { error } = await supabase.storage.from(BUCKET).copy(m.path, to);
+    if (!error) media.push({ ...m, path: to });
+  }
+  return { ...blankItem(i.kind), title: i.title, body: i.body ?? "", topic: i.topic ?? "", media, links: [...(i.links ?? [])],
+    questions: (i.questions ?? []).map((q) => ({ ...q, options: [...(q.options ?? [])] })), needs_ack: !!i.needs_ack, anonymous: !!i.anonymous };
+}
 export const newQuestion = (type = "single") => q(type, "", QTYPES[type].opts ? ["", ""] : []);
 
 /** رابط النشرة الثابت: يُفتح بعد الدخول (من واتساب أو رمز QR أو الإشعار) */
