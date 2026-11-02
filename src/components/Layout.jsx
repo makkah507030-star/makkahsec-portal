@@ -161,7 +161,7 @@ export const ADMIN_GROUPS = [
       { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/outreach",       label: "النشرات والاستبانات", perm: "outreach", icon: "megaphone", kw: "استبانة استبيان نشرة توعية توعوية تعليمات موجه طلابي واتساب" },
-      { to: "/my-outreach",    label: "ما وصلني من نشرات واستبانات", icon: "inbox", kw: "استبانة نشرة توعية" },
+      { to: "/my-outreach",    label: "ما وصلني من نشرات واستبانات", inbox: true, icon: "inbox", kw: "استبانة نشرة توعية" },
       { to: "/polls-admin",    label: "إدارة التصويت والاستطلاعات", perm: "polls", icon: "check", kw: "تصويت استطلاع انتخاب رأي مجلس طلابي" },
       { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
       { to: "/my-media-team",  label: "المركز الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية رئيس المركز عضوية" },
@@ -330,7 +330,7 @@ export const TEACHER_GROUPS = [
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
       { to: "/my-circulars", label: "تعاميمي",            icon: "circular", kw: "تعميم اطلاع" },
-      { to: "/my-outreach",  label: "النشرات والاستبانات", icon: "inbox", kw: "استبانة نشرة توعية" },
+      { to: "/my-outreach",  label: "ما وصلني من نشرات واستبانات", inbox: true, icon: "inbox", kw: "استبانة نشرة توعية" },
       { to: "/plc",          label: "التطوير المهني",     icon: "users", kw: "مجتمع التعلم المهني" },
     ],
   },
@@ -373,7 +373,7 @@ export const BASIC_GROUPS = [
       // التعاميم تصل أولياء الأمور لا الطلاب
       { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
       // النشرات التوعوية والاستبانات من الموجه الطلابي والإدارة (supabase/outreach_1..2.sql)
-      { to: "/my-outreach", label: "النشرات والاستبانات", icon: "inbox", kw: "استبانة استبيان نشرة توعية تعليمات" },
+      { to: "/my-outreach", label: "النشرات والاستبانات", inbox: true, icon: "inbox", kw: "استبانة استبيان نشرة توعية تعليمات" },
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
       { to: "/media", label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
@@ -497,6 +497,20 @@ const Badge = ({ n, dot, at = "-top-0.5 -left-1" }) => (n > 0
     : <span className="num ms-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{n}</span>
   : null);
 
+/* هل وصل المستخدمَ شيء من النشرات والاستبانات — يُجلب مرة في الجلسة، فلا يظهر الرابط لمن لم يصله شيء */
+let inboxCache = null;   // { uid, v }
+function useOutreachInbox() {
+  const { session } = useSession();
+  const uid = session?.user?.id;
+  const [v, setV] = useState(inboxCache?.uid === uid ? inboxCache.v : false);
+  useEffect(() => {
+    if (!uid || inboxCache?.uid === uid) return;
+    supabase.from("outreach_recipients").select("item_id", { count: "exact", head: true }).eq("user_id", uid)
+      .then(({ count, error }) => { const x = !error && (count ?? 0) > 0; inboxCache = { uid, v: x }; setV(x); });
+  }, [uid]);
+  return v;
+}
+
 /* هل المستخدم سفير الثقافة المؤسسية — يُجلب مرة في الجلسة */
 let ambCache = null;   // { uid, v }
 function useCultAmbassador() {
@@ -514,6 +528,7 @@ function useCultAmbassador() {
 export default function Layout({ children }) {
   const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav, focusRoles, roleFocus, switchFocus } = useSession();
   const navigate = useNavigate();
+  const outreachInbox = useOutreachInbox();
   const location = useLocation();
   const path = location.pathname;
   const [open, setOpen] = useState(false);
@@ -571,6 +586,8 @@ export default function Layout({ children }) {
     if (i.scoutMember && !scoutMember) return false;
     if (i.mediaMember && !mediaMember) return false;
     if (i.accMember && !accMember) return false;
+    // ما وصلني من نشرات واستبانات: لمن وصله شيء منها فقط
+    if (i.inbox && !outreachInbox) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
     // مركز تحليل النتائج وما حوله: مخفيّ حتى يُفتح، إلا رابط المركز نفسه
     // يبقى لمن يملك فتحه (الوكيل/المدير/الدعم) ليدخل ويفتحه.
@@ -598,7 +615,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember, accMember]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember, accMember, outreachInbox]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة والمعلم بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)

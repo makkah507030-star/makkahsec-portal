@@ -585,6 +585,7 @@ const NAV_SECTIONS = ADMIN_GROUPS.map((g) => ({ title: g.title ?? "عام", item
   .filter((g) => g.items.length);
 /* صفحات تظهر بالعضوية لا بالدور: «تظهر» هنا تعني أنها متاحة لأعضائها من حَمَلة الدور، لا لكل من يحمله */
 function navMembers(i) {
+  if (i.inbox) return "تظهر لمن وصلته نشرة أو استبانة فقط";
   if (i.mediaMember) return "تظهر لأعضاء المركز الإعلامي ورئيسه فقط";
   if (i.accMember) return "تظهر لأعضاء لجنة التميز ومن له الدور فقط";
   if (i.scoutGate) return "تظهر لمن له صلاحية الكشافة أو دور في الفريق الكشفي";
