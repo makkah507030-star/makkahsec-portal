@@ -1169,11 +1169,12 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
             {r.period_no ? <> · الحصة <span className="num">{r.period_no}</span></> : ""}
             {r.kind === "behavior" && ` · مخالفة سلوكية — الدرجة ${degreeName(r.violation_degree)}`}
             {r.kind === "missing" && " · طالب مفقود"}
+            {r.kind === "absence" && " · غياب بدون عذر"}
           </p>
           {/* صاحب الإحالة: المعلم في إحالة الحصة، ومن أنشأها في المخالفة والمفقود */}
           {r.teacher_name && (
             <p className="mt-0.5 text-xs text-muted">
-              {r.kind === "behavior" || r.kind === "missing" ? "أنشأها" : "المعلم"}: <span className="font-semibold text-ink">{r.teacher_name}</span>
+              {r.kind === "behavior" || r.kind === "missing" || r.kind === "absence" ? "أنشأها" : "المعلم"}: <span className="font-semibold text-ink">{r.teacher_name}</span>
             </p>
           )}
         </div>

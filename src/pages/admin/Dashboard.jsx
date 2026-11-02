@@ -30,7 +30,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import { fmtDate, noEra } from "../../lib/dates";
 import { loadPeriodTimes, currentPeriodNo } from "../../lib/periodTimes";
 import { markedScheduleIds } from "../../lib/attendanceHelpers";
-import { notifyUsers } from "../../lib/referrals";
+import { referMissing } from "../../lib/deputyReferral.js";
 import DutyCard from "../../components/DutyCard.jsx";
 import HomeBanners from "../../components/HomeBanners.jsx";
 import StaffHeader from "../../components/StaffHeader.jsx";
@@ -440,43 +440,12 @@ function MissingStudentsBox({ date }) {
 
   // التحويل للموجه الطلابي: إحالة (kind = missing) لموجه صف الطالب، تسير في مسار الإحالة المعتاد
   const referToCounselor = async (r) => {
-    const { data: cs } = await supabase.from("admin_roles")
-      .select("user_id, role_type, users(full_name)").eq("role_type", `counselor_${r.grade}`).limit(1);
-    const c = cs?.[0];
-    if (!c) return `لا يوجد موجه طلابي مسند للصف ${GRADE_NAMES[r.grade] ?? ""} — أسنده من «الإدارة» أولًا.`;
-    const { data: serial } = await supabase.rpc("next_referral_serial");
-    const { data: sig } = await supabase.from("user_signatures").select("path").eq("user_id", profile.id).maybeSingle();
-    const classLabel = `${GRADE_NAMES[r.grade] ?? ""} — فصل ${r.class_no ?? ""}`.trim();
     // مسار الطالب اليوم كما رُصد حتى لحظة التحويل — يُحفظ في الإحالة، وورقة الإحالة تكمله حيًّا لآخر حصة
     const { data: tl } = await supabase.rpc("student_day_timeline", { p_date: date, p_student_id: r.student_id });
-    const dayTimeline = {
-      punch_time: tl?.[0]?.punch_time ?? null,
-      missing_period: r.missing_period ?? null,
-      periods: (tl ?? [])
-        .filter((x) => x.period_no != null)
-        .map((x) => ({ period_no: x.period_no, subject: x.subject, teacher: x.teacher, status: x.status })),
-    };
-    const { error } = await supabase.from("student_referrals").insert({
-      day_timeline: dayTimeline,
-      serial, kind: "missing",
-      student_id: r.student_id, student_name: r.full_name, class_label: classLabel, grade: r.grade ?? null,
-      referral_date: date, subject: r.subject ?? null, period_no: r.missing_period ?? null,
-      reason: `فُقد الطالب من الحصة ${r.missing_period ?? "—"}${r.subject ? ` (${r.subject})` : ""} بعد حضوره الحصة ${r.last_seen_period ?? "—"}.`,
-      teacher_at: null,
-      deputy_id: profile.id, deputy_name: profile.full_name ?? "", deputy_sig: sig?.path ?? null,
-      deputy_at: new Date().toISOString(),
-      counselor_id: c.user_id, counselor_name: c.users?.full_name ?? "",
-      status: "with_counselor",
-    });
-    if (error) {
-      return /kind|check|policy|row-level|day_timeline/i.test(error.message)
-        ? "نفّذ ملف supabase/missing_to_counselor.sql أولًا من Supabase ← SQL Editor."
-        : error.message;
-    }
-    await notifyUsers([c.user_id], "إحالة طالب مفقود",
-      `أحال إليك وكيل شؤون الطلاب الطالب ${r.full_name} (${classLabel}) لفقدانه من الحصة ${r.missing_period ?? ""} (${serial}).`,
-      "/referrals");
-    return null;
+    try {
+      await referMissing({ profile, row: r, date, timeline: tl });
+      return null;
+    } catch (e) { return e.message; }
   };
 
   const recordAction = async (studentId, action, row) => {
@@ -484,8 +453,12 @@ function MissingStudentsBox({ date }) {
     setBusyId(studentId);
 
     if (action === "to_counselor") {
+      // referMissing يسجّل الإجراء نفسه في admin_missing_notes
       const err = await referToCounselor(row);
-      if (err) { setBusyId(null); alert(err); return; }
+      setBusyId(null);
+      if (err) { alert(err); return; }
+      setDone((m) => ({ ...m, [studentId]: action }));
+      return;
     }
 
     // سجل الإجراء دائمًا (للأرشيف والعرض عند المعلم)

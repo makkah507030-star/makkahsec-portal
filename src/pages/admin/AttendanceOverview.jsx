@@ -11,6 +11,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { byClassName } from "../../lib/sortAr.js";
+import { referMissing } from "../../lib/deputyReferral.js";
 
 const TABS = [
   { key: "official", label: "الحضور والغياب الرسمي" },
@@ -222,15 +223,38 @@ export function MissingTab() {
   const [rows, setRows] = useState(null);
   const [openId, setOpenId] = useState(null);
   const [timeline, setTimeline] = useState(null);
+  const { profile } = useSession();
+  const [referred, setReferred] = useState({});   // student_id -> true (حُوِّل للموجه في اليوم)
+  const [busy, setBusy] = useState(null);
+  const [actMsg, setActMsg] = useState(null);
 
   useEffect(() => {
     (async () => {
-      setRows(null);
+      setRows(null); setReferred({}); setActMsg(null);
       const { data, error } = await supabase.rpc("missing_students", { p_date: date });
       if (error) { console.error(error); setRows([]); return; }
       setRows((data ?? []).sort(byClassName()));
+      const ids = (data ?? []).map((r) => r.student_id);
+      if (ids.length) {
+        const { data: notes } = await supabase.from("admin_missing_notes").select("student_id")
+          .eq("note_date", date).eq("action", "to_counselor").in("student_id", ids);
+        setReferred(Object.fromEntries((notes ?? []).map((n) => [n.student_id, true])));
+      }
     })();
   }, [date]);
+
+  // التحويل للموجه الطلابي الخاص بصف الطالب (الإجراء نفسه في صندوق المفقودين بلوحة التحكم)
+  const toCounselor = async (r) => {
+    if (!profile?.id) return;
+    setBusy(r.student_id); setActMsg(null);
+    try {
+      const { data: tl } = await supabase.rpc("student_day_timeline", { p_date: date, p_student_id: r.student_id });
+      const { serial, counselor } = await referMissing({ profile, row: r, date, timeline: tl });
+      setReferred((m) => ({ ...m, [r.student_id]: true }));
+      setActMsg({ ok: true, text: `حُوِّل ${r.full_name} إلى ${counselor.name || "الموجه الطلابي"} (${serial}).` });
+    } catch (e) { setActMsg({ ok: false, text: e.message }); }
+    setBusy(null);
+  };
 
   const toggle = async (studentId) => {
     if (openId === studentId) { setOpenId(null); return; }
@@ -296,6 +320,7 @@ export function MissingTab() {
         </button>
       </div>
 
+      {actMsg && <p className={`text-sm ${actMsg.ok ? "text-present" : "text-absent"}`}>{actMsg.text}</p>}
       {!rows && <Loader compact />}
       {rows && rows.length === 0 && (
         <p className="rounded-card bg-present/10 px-4 py-6 text-center text-sm text-present">
@@ -317,6 +342,7 @@ export function MissingTab() {
                       فصل <span className="num">{r.class_no}</span> · آخر حضور الحصة{" "}
                       <span className="num">{r.last_seen_period}</span> · فُقد في الحصة{" "}
                       <span className="num font-semibold text-absent">{r.missing_period}</span>
+                      {referred[r.student_id] && <span className="text-mint-deep"> · ✓ حُوِّل للموجه</span>}
                     </p>
                   </div>
                   <svg viewBox="0 0 24 24" fill="none"
@@ -351,6 +377,17 @@ export function MissingTab() {
                         })}
                       </div>
                     )}
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+                      {referred[r.student_id] ? (
+                        <span className="chip bg-mint-tint text-mint-deep">✓ حُوِّل للموجه الطلابي</span>
+                      ) : (
+                        <button onClick={() => toCounselor(r)} disabled={busy === r.student_id}
+                          className="rounded-sm2 bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50">
+                          {busy === r.student_id ? "جارٍ التحويل…" : "التحويل للموجه الطلابي"}
+                        </button>
+                      )}
+                      <span className="text-[11px] text-muted">إحالة لموجه صف الطالب، يتابعها من «الإحالات».</span>
+                    </div>
                   </div>
                 )}
               </div>

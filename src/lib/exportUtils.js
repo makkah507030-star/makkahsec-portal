@@ -310,31 +310,36 @@ export async function printReport(opts) {
       ];
 
   // توقيع المدير المعتمد (من «إدارة النماذج») يظهر آليًا في خانة «مدير المدرسة»
+  // ولكل قسم توقيعاته إن مُرِّرت (sections[i].signatures)، مثل محاضر عدة طلاب في طباعة واحدة
   const isPrincipal = (sg) => String(sg.title ?? "").includes("مدير المدرسة");
-  const principalSig = !hideSignatures && signList.some(isPrincipal)
+  const allLists = [signList, ...(sections ?? []).map((sec) => sec.signatures).filter((l) => l?.length)];
+  const principalSig = !hideSignatures && allLists.some((l) => l.some(isPrincipal))
     ? await loadPrincipalSignature()
     : null;
   // بقية الموقّعين (الموجه، الوكيل، رئيس القسم…): توقيع صاحب الاسم من «توقيعي» إن أمكن
-  const otherSigs = hideSignatures ? [] : await Promise.all(signList.map((sg) =>
-    sg.url ? sg.url : isPrincipal(sg) ? null : signatureByName(sg.name).catch(() => null)));
+  const byName = new Map();
+  if (!hideSignatures) {
+    const names = [...new Set(allLists.flat().filter((sg) => !sg.url && !isPrincipal(sg)).map((sg) => sg.name))];
+    await Promise.all(names.map(async (n) => byName.set(n, await signatureByName(n).catch(() => null))));
+  }
 
-  const signBlock = hideSignatures ? "" : `
-  <div class="sign ${signList.length === 1 ? "one" : signList.length >= 3 ? "three" : ""}">
-    ${signList
-      .map(
-        (sg, i) => `
+  const signBlockOf = (sl) => hideSignatures ? "" : `
+  <div class="sign ${sl.length === 1 ? "one" : sl.length >= 3 ? "three" : ""}">
+    ${sl
+      .map((sg) => {
+        const img = isPrincipal(sg) ? principalSig?.url : sg.url ?? byName.get(sg.name);
+        return `
     <div class="sign-box">
       <p class="sign-title">${escHtml(sg.title)}</p>
       <p class="sign-name">${escHtml(sg.name)}</p>
-      ${isPrincipal(sg) && principalSig?.url
-        ? `<img class="sign-img" src="${principalSig.url}" alt="" />`
-        : otherSigs[i]
-        ? `<img class="sign-img" src="${otherSigs[i]}" alt="" />`
+      ${img
+        ? `<img class="sign-img" src="${img}" alt="" />`
         : hideSignatureLine ? "" : `<p class="sign-line">التوقيع: ..........................</p>`}
-    </div>`
-      )
+    </div>`;
+      })
       .join("")}
   </div>`;
+  const signBlock = signBlockOf(signList);
 
   /* ---------- الترويسة الرسمية ---------- */
   const headBlock = `
@@ -465,7 +470,7 @@ export async function printReport(opts) {
     }
 
     ${sec.note ?? note ? `<p class="note">${sec.note ?? note}</p>` : ""}
-    ${!signOnLastPageOnly || i === list.length - 1 ? signBlock : ""}
+    ${!signOnLastPageOnly || i === list.length - 1 ? (sec.signatures?.length ? signBlockOf(sec.signatures) : signBlock) : ""}
   </section>`
     )
     .join("");

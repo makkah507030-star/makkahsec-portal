@@ -92,6 +92,7 @@ export const closedByCounselor = (r) =>
 /** سبب تجاوز الحلقتين الأولى والثانية أو الأولى وحدها، وإلا null */
 function skipReason(r) {
   if (r.kind === "missing") return "طالب مفقود رصده الوكيل";
+  if (r.kind === "absence") return "غياب بدون عذر أحاله الوكيل";
   if (r.kind === "behavior") return "مخالفة رصدها الوكيل";
   if (r.ref_type && r.ref_type !== "behavior") return null;
   if (r.docs?.direct) return "مخالفة من الدرجة الثالثة فما فوق";
@@ -102,7 +103,7 @@ function skipReason(r) {
 
 /** حلقات السلسلة لإحالة محفوظة: state = done | now | todo | skip | back */
 export function chainOf(r) {
-  const fromDeputy = r.kind === "missing" || r.kind === "behavior";
+  const fromDeputy = r.kind === "missing" || r.kind === "behavior" || r.kind === "absence";
   const skip = skipReason(r);
   const stepsN = r.docs?.steps?.length ?? 0;
   const closed = ["guardian_replied", "archived", "closed"].includes(r.status);
@@ -172,7 +173,8 @@ export const isDirectToGuardian = (r) =>
 export function timelineOf(r) {
   // إحالة المخالفة السلوكية يصدرها الوكيل مباشرة (بلا مرحلة المعلم)
   // إحالة الطالب المفقود يصدرها الوكيل من صندوق المفقودين في لوحة التحكم
-  if (r.kind === "missing") return [
+  // إحالة الغياب يصدرها الوكيل من صفحة الإنذارات لدراسة الحالة
+  if (r.kind === "missing" || r.kind === "absence") return [
     { t: "رصدها الوكيل وأحالها", who: r.deputy_name,    at: r.deputy_at },
     { t: "إجراء الموجه",        who: r.counselor_name, at: r.counselor_at },
     { t: "أُقفلت وأُشعر ولي الأمر", who: "",           at: r.closed_at },
