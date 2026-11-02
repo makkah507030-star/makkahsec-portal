@@ -29,6 +29,7 @@ export const PARTS = [
   { key: "quote", t: "رأي الإدارة" },
   { key: "teach", t: "التخطيط والتدريس" },
   { key: "records", t: "السجلات والنماذج" },
+  { key: "lab", t: "المعمل الرقمي" },
   { key: "results", t: "النتائج" },
   { key: "assess", t: "التقويم" },
   { key: "growth", t: "التطوير المهني" },
@@ -137,6 +138,13 @@ export async function loadDfile(uid) {
   const { data, error } = await supabase.from("teacher_dfiles").select("*").eq("teacher_user_id", uid).maybeSingle();
   if (error) throw error;
   return data;
+}
+
+/** قسم المعمل الرقمي ومعمل الحاسب (supabase/dfile_lab.sql) بكود الملف؛ null قبل تشغيل الملف أو بلا عمل في المعمل */
+export async function loadDfileLab(code) {
+  if (!code) return null;
+  const { data, error } = await supabase.rpc("dfile_lab", { p_code: code });
+  return error ? null : data;
 }
 
 export async function loadDfileData(uid) {
