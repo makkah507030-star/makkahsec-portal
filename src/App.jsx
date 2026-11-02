@@ -632,6 +632,8 @@ export default function App() {
           <Route path="/xvisits/:id" element={<ExchangeVisits />} />
           {/* خطط التطوير (حلقة التحسين) — للمعلم خططه، وللزائر ما يتابعه، وللمدير اللوحة؛ القاعدة تفرض الصلاحية */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/improve" element={<Improve />} />}
+          {/* برنامج الموهوبين لمشرفه في واجهة المعلم أيضًا (من يجمع الإشراف والتدريس) */}
+          {effectiveRole === "teacher" && can("gifted") && <Route path="/gifted" element={<GiftedHub />} />}
           <Route path="/pd" element={<PdReports />} />
           <Route path="/pd/:id" element={<PdReports />} />
           {/* اختباراتي — للمعلم */}

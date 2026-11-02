@@ -289,6 +289,8 @@ export const TEACHER_GROUPS = [
       { to: "/referrals",  label: "إحالة طالب",             icon: "send", kw: "موجه" },
       { to: "/dropouts",   label: "الإبلاغ عن طالب منقطع",  icon: "userX", kw: "انقطاع سفر غياب" },
       { to: "/reports",    label: "التقارير",               tabKey: "reports", icon: "chart" },
+      // برنامج الموهوبين لمشرفه حين يكون في واجهة المعلم (صلاحية gifted من دوره الإداري)
+      { to: "/gifted",     label: "برنامج الموهوبين",       viewPerm: "gifted", icon: "award", kw: "موهبة مقياس موهوب كشف" },
     ],
   },
   {
@@ -607,6 +609,8 @@ export default function Layout({ children }) {
       return i.anyPerm ? i.anyPerm.some((p) => can(p)) : !i.perm || can(i.perm);
     }
     if (i.achMember) return achMember;
+    // عنصر في واجهة المعلم يتبع صلاحية من الدور الإداري للحساب نفسه
+    if (i.viewPerm) return can(i.viewPerm);
     if (i.extraTabKey) return grantedTabs.has(i.extraTabKey);
     return !i.tabKey || !hiddenTabs.has(i.tabKey);
   };
