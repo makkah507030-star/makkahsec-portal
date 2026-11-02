@@ -1,6 +1,6 @@
 // src/pages/outreach/OutreachSend.jsx
 // الإرسال والمشاركة: اختيار المستفيدين (الطلاب بصفوفهم وفصولهم أو بأسمائهم، وأولياء أمورهم،
-// والمنسوبون)، ثم الإرسال بإشعار في الجرس والجوال؛ والمشاركة عبر واتساب برابط يُفتح بعد الدخول،
+// والموظفون)، ثم الإرسال بإشعار في الجرس والجوال؛ والمشاركة عبر واتساب برابط يُفتح بعد الدخول،
 // ورمز QR يُعرض في الفصل أو يُطبع. الإرسال مرة أخرى يضيف الجدد فقط.
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
@@ -45,7 +45,7 @@ export default function OutreachSend({ item, onSent }) {
     if (error) { notify({ ok: false, text: error.message }); return; }
     const audience = { students: st === "all" ? "كل الطلاب" : st === "grades" ? grades.map((g) => GRADE_NAMES[g]).join(" و") + (classes.length ? ` (فصول ${classes.join("، ")})` : "") : null,
       picked: picked.length || null, guardians: gd === "none" ? null : gd === "all" ? "كل أولياء الأمور" : "أولياء أمور الصفوف المختارة",
-      staff: { none: null, all: "كل المنسوبين", teachers: "المعلمون", admins: "الإداريون" }[staff] };
+      staff: { none: null, all: "كل الموظفين", teachers: "المعلمون", admins: "الإداريون" }[staff] };
     await supabase.from("outreach_items").update({ audience }).eq("id", item.id);
     notify({ ok: true, text: data ? `أُرسلت، ووصل الإشعار إلى ${countAr(data, "beneficiary", { acc: true })}.` : "لا مستفيدين جدد: كلهم وصلتهم من قبل." });
     onSent();
@@ -72,7 +72,7 @@ export default function OutreachSend({ item, onSent }) {
         </div>
         <div className="space-y-2"><p className="text-[12.5px] font-semibold text-ink">أولياء الأمور</p>
           <Seg value={gd} onChange={setGd} opts={[["none", "لا أحد"], ["all", "كل أولياء الأمور"], ["grades", "أولياء أمور الصفوف المختارة"]]} /></div>
-        <div className="space-y-2"><p className="text-[12.5px] font-semibold text-ink">المنسوبون</p>
+        <div className="space-y-2"><p className="text-[12.5px] font-semibold text-ink">الموظفون</p>
           <Seg value={staff} onChange={setStaff} opts={[["none", "لا أحد"], ["all", "الكل"], ["teachers", "المعلمون"], ["admins", "الإداريون"]]} /></div>
         <button className="btn-primary px-6" disabled={busy} onClick={send}>{busy ? "جارٍ الإرسال…" : item.sent_at ? "إرسال للإضافات" : `إرسال ${KIND[item.kind].t}`}</button>
       </section>

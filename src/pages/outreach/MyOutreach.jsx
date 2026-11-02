@@ -1,5 +1,5 @@
 // src/pages/outreach/MyOutreach.jsx
-// «النشرات والاستبانات» للمستلم (طالب أو ولي أمر أو منسوب): ما وصله، وما ينتظره أولًا.
+// «النشرات والاستبانات» للمستلم (طالب أو ولي أمر أو موظف): ما وصله، وما ينتظره أولًا.
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";

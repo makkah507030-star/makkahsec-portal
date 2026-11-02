@@ -10,7 +10,7 @@ import { exportToExcel } from "../../lib/exportUtils.js";
 import Loader from "../../components/Loader.jsx";
 import { QTYPES } from "../../lib/outreach.js";
 
-const KIND_T = { student: "الطلاب", guardian: "أولياء الأمور", staff: "المنسوبون" };
+const KIND_T = { student: "الطلاب", guardian: "أولياء الأمور", staff: "الموظفون" };
 const pc = (a, b) => (b ? Math.round((100 * a) / b) : 0);
 const Bar = ({ p, c = "#3E6350" }) => <div className="h-2 overflow-hidden rounded-pill bg-line/50"><div className="h-full rounded-pill" style={{ width: `${p}%`, background: c }} /></div>;
 
