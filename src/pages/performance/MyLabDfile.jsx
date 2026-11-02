@@ -21,7 +21,7 @@ const Block = ({ title, sub, children }) => (
 );
 
 export default function MyLabDfile() {
-  const { session } = useSession();
+  const { session, profile } = useSession();
   const uid = session.user.id;
   const [s, setS] = useState(undefined);       // undefined: يُحمَّل، null: لم يُفعَّل
   const [pub, setPub] = useState(null);        // بيانات الملف كما يراها الزائر
@@ -177,7 +177,8 @@ export default function MyLabDfile() {
       </Block>
 
       <Block title="رابط ملفك" sub="رابط ثابت طوال العام، وبطاقته بهوية البوابة لتعرضها أو تطبعها.">
-        <DfileShare uid={uid} s={s} d={pub?.data} onSave={save} kind="lab" />
+        {/* الاسم من الملف العام، وإلا من الحساب (حين يكون الملف مخفيًا عن الزوار أو لم يُحمَّل بعد) */}
+        <DfileShare uid={uid} s={s} d={{ ...(pub?.data ?? {}), name: pub?.data?.name || profile?.full_name || "" }} onSave={save} kind="lab" />
       </Block>
     </div>
   );
