@@ -1,7 +1,6 @@
 -- النشرات والاستبانات (1 من 2): الجداول والصلاحيات والمخزن.
--- نشرة توعوية (نص وصور ومقاطع وروابط) أو استبانة (أسئلة متنوعة، باسم أو دون اسم) يرسلها الموجهون
--- الطلابيون ومن له صلاحية «النشرات والاستبانات» (outreach) إلى الطلاب أو أولياء الأمور أو المنسوبين.
--- المستلمون يُحدَّدون عند الإرسال، ويُتابع اطلاع كل منهم وإجابته. تكرار التنفيذ آمن.
+-- نشرة توعوية أو استبانة يرسلها صاحب صلاحية outreach للطلاب أو أولياء الأمور أو المنسوبين، ويتابع اطلاعهم
+-- وإجاباتهم. تكرار التنفيذ آمن.
 
 create table if not exists public.outreach_items (
   id uuid primary key default gen_random_uuid(),
@@ -55,8 +54,7 @@ language sql stable security definer set search_path = public as $$
   select exists (select 1 from outreach_recipients r where r.item_id = p_id and r.user_id = auth.uid());
 $$;
 
-alter table public.outreach_items enable row level security;
-alter table public.outreach_recipients enable row level security;
+alter table public.outreach_items enable row level security; alter table public.outreach_recipients enable row level security;
 alter table public.outreach_answers enable row level security;
 drop policy if exists outreach_items_read on public.outreach_items;
 create policy outreach_items_read on public.outreach_items for select to authenticated
@@ -77,8 +75,7 @@ create policy outreach_rec_read on public.outreach_recipients for select to auth
 drop policy if exists outreach_ans_read on public.outreach_answers;
 create policy outreach_ans_read on public.outreach_answers for select to authenticated
   using (public.outreach_owner(item_id) or user_id = auth.uid());
-grant select, insert, update, delete on public.outreach_items to authenticated;
-grant select on public.outreach_recipients, public.outreach_answers to authenticated;
+grant select, insert, update, delete on public.outreach_items to authenticated; grant select on public.outreach_recipients, public.outreach_answers to authenticated;
 
 -- الصلاحية للموجهين الطلابيين والصحي والوكلاء ورائد النشاط (والمدير والدعم الفني دائمًا)
 insert into public.role_permissions (role_type, permission)
@@ -97,7 +94,5 @@ create policy "outreach read" on storage.objects for select to authenticated usi
 drop policy if exists "outreach write" on storage.objects;
 create policy "outreach write" on storage.objects for insert to authenticated
   with check (bucket_id = 'outreach' and (storage.foldername(name))[1] = auth.uid()::text and public.has_permission('outreach'));
-drop policy if exists "outreach delete" on storage.objects;
-create policy "outreach delete" on storage.objects for delete to authenticated
-  using (bucket_id = 'outreach' and (storage.foldername(name))[1] = auth.uid()::text);
+drop policy if exists "outreach delete" on storage.objects; create policy "outreach delete" on storage.objects for delete to authenticated using (bucket_id = 'outreach' and (storage.foldername(name))[1] = auth.uid()::text);
 -- نهاية الجزء 1
