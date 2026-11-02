@@ -383,6 +383,8 @@ export const BASIC_GROUPS = [
       { to: "/polls", label: "التصويت والاستطلاعات", icon: "check", kw: "تصويت استطلاع انتخاب رأي" },
       // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
       { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
+      // برنامج جلوب — للطالب العضو حين يسند له المشرف الدخول (supabase/globe_4.sql)
+      { to: "/my-globe", label: "برنامج جلوب", icon: "globe", studentOnly: true, globeMember: true, kw: "جلوب رصد بيئي globe" },
       // المركز الإعلامي — لعضوه وحده (supabase/media_3.sql)
       { to: "/my-media-team", label: "المركز الإعلامي", icon: "palette", studentOnly: true, mediaMember: true, kw: "تصوير اعلامي لا يصور بطاقة" },
     ],
@@ -567,6 +569,12 @@ export default function Layout({ children }) {
     if (effectiveRole !== "student") { setScoutMember(false); return; }
     supabase.rpc("scout_my").then(({ data, error }) => setScoutMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
+  // دخول الطالب إلى برنامج جلوب بإسناد المشرف (globe_4.sql): تظهر له «برنامج جلوب»
+  const [globeMember, setGlobeMember] = useState(false);
+  useEffect(() => {
+    if (effectiveRole !== "student") { setGlobeMember(false); return; }
+    supabase.rpc("globe_my").then(({ data, error }) => setGlobeMember(!error && !!data));
+  }, [effectiveRole, session?.user?.id]);
   // عضوية المركز الإعلامي للطالب ورئيسه من المعلمين: تظهر «المركز الإعلامي» (media_4.sql)
   const [mediaMember, setMediaMember] = useState(false);
   useEffect(() => {
@@ -594,6 +602,7 @@ export default function Layout({ children }) {
     if (i.staffOnly && !isStaff) return false;
     if (i.studentOnly && effectiveRole !== "student") return false;
     if (i.scoutMember && !scoutMember) return false;
+    if (i.globeMember && !globeMember) return false;
     if (i.mediaMember && !mediaMember) return false;
     if (i.accMember && !accMember) return false;
     // ما وصلني من نشرات واستبانات: لمن وصله شيء منها فقط
@@ -627,7 +636,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember, accMember, outreachInbox]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة والمعلم بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)

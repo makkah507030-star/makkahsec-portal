@@ -279,6 +279,9 @@ export default function GlobeMonitor({ me, members, onReport }) {
                       <span className="font-semibold text-mint-deep">القراءات والملاحظات: </span>{o.readings}
                     </p>
                   )}
+                  {o.status === "done" && o.documented_by_name && (
+                    <p className="mt-1 text-[11px] text-muted">وثّقها الطالب: {o.documented_by_name}</p>
+                  )}
                   {o.status === "done" && <Thumbs paths={o.photos} urls={urls} />}
                 </div>
 

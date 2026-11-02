@@ -24,7 +24,7 @@ import GlobeLibrary from "../globe/GlobeLibrary.jsx";
 import GlobeBadges from "../globe/GlobeBadges.jsx";
 import GlobeSupervisor from "../globe/GlobeSupervisor.jsx";
 import GlobeChart from "../globe/GlobeChart.jsx";
-import { GLOBE_MEMBER_ROLES, memberRole } from "../../lib/globe.js";
+import { GLOBE_MEMBER_ROLES, memberRole, ALL_PROTOCOLS } from "../../lib/globe.js";
 import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
 
 /* =====================================================================
@@ -103,6 +103,7 @@ export default function GlobeTeam() {
       return { id: r.student_id, full_name: r.students?.full_name ?? "—", national_id: r.students?.national_id,
                grade: en?.classes?.grade, class_no: en?.classes?.class_no, added_at: r.added_at, added_by_name: r.added_by_name,
                role: r.role ?? "member",                       // globe_3.sql؛ قبله «عضو»
+               portal: !!r.portal, tasks: r.tasks ?? [],          // دخول الطالب ومهامه (globe_4.sql)
                student_mobile: r.student_mobile ?? null };
     }).sort(byClassName()));
   };
@@ -179,6 +180,19 @@ export default function GlobeTeam() {
     }
     setMembers((list) => list.map((x) => (x.id === m.id ? { ...x, role } : x)));
   };
+
+  // دخول الطالب إلى «برنامج جلوب» في حسابه، والبروتوكولات المكلّف بها (globe_4.sql)
+  const saveAccess = async (m, patch) => {
+    setBusy(m.id);
+    const { error } = await supabase.from("globe_members").update(patch).eq("student_id", m.id);
+    setBusy(null);
+    if (error) {
+      setMsg({ ok: false, text: /portal|tasks/i.test(error.message) ? "يلزم تشغيل ملف supabase/globe_4.sql أولًا." : error.message });
+      return;
+    }
+    setMembers((list) => list.map((x) => (x.id === m.id ? { ...x, ...patch } : x)));
+  };
+  const toggleTask = (m, t) => saveAccess(m, { tasks: m.tasks.includes(t) ? m.tasks.filter((x) => x !== t) : [...m.tasks, t] });
 
   const shown = useMemo(() => {
     const t = q.trim();
@@ -325,6 +339,25 @@ export default function GlobeTeam() {
                         </span>
                       )}
                     </Cell>
+                  </div>
+                  <div className="mt-2 rounded-sm2 border border-line px-3 py-2">
+                    <label className="flex items-center gap-2 text-[12.5px] font-semibold text-ink">
+                      <input type="checkbox" className="accent-mint-deep" checked={m.portal} disabled={busy === m.id}
+                             onChange={(e) => saveAccess(m, { portal: e.target.checked })} />
+                      دخول الطالب إلى «برنامج جلوب» في حسابه
+                      {m.portal && <span className="text-[11px] font-normal text-muted">· يرى جلسات الرصد المكلّف بها ويوثّقها</span>}
+                    </label>
+                    {m.portal && (
+                      <div className="mt-2">
+                        <p className="mb-1 text-[11px] text-muted">البروتوكولات المكلّف بها (يرى كل جلساتها، إضافة إلى الجلسات المسجّل فيها باسمه)</p>
+                        <div className="flex flex-wrap gap-1">
+                          {ALL_PROTOCOLS.map((t) => (
+                            <button key={t} type="button" disabled={busy === m.id} onClick={() => toggleTask(m, t)}
+                                    className={`rounded-pill px-2.5 py-0.5 text-[11.5px] font-medium ${m.tasks.includes(t) ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>{t}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

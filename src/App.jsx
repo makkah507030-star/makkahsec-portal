@@ -51,6 +51,7 @@ const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
 const ScoutsHub = lazy(() => import("./pages/scouts/ScoutsHub.jsx"));
 const ScoutReports = lazy(() => import("./pages/scouts/ScoutReports.jsx"));
 const MyScouts = lazy(() => import("./pages/scouts/MyScouts.jsx"));
+const MyGlobe = lazy(() => import("./pages/globe/MyGlobe.jsx"));
 const MyMediaTeam = lazy(() => import("./pages/media/MyMediaTeam.jsx"));
 const MediaContact = lazy(() => import("./pages/media/MediaContact.jsx"));
 const Polls = lazy(() => import("./pages/polls/Polls.jsx"));
@@ -595,6 +596,7 @@ export default function App() {
               <p className="mt-1 text-sm text-muted">فرص القيادة المفتوحة للمعلمين والإداريين في إعلانات الترشيحات.</p></div>
               <StaffCallsCard page /></div>} />}
           {effectiveRole === "student" && <Route path="/my-scouts" element={<MyScouts />} />}
+          {effectiveRole === "student" && <Route path="/my-globe" element={<MyGlobe />} />}
           {effectiveRole !== "guardian" && <Route path="/my-media-team" element={<MyMediaTeam />} />}
           <Route path="/media-contact" element={<MediaContact />} />
           {/* التصويت والاستطلاعات: للجميع بحسب فئته، وإدارتها لصاحب الصلاحية (supabase/polls_1..2.sql) */}
