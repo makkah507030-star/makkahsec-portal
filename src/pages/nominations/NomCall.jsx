@@ -14,6 +14,7 @@ import { STAGE, RULES, ruleList, callStatus, totalScore, maxScore, notifyIntervi
 import { logos } from "../student-affairs/shared.jsx";
 import StudentFileLink from "../../components/StudentFileLink.jsx";
 import Loader from "../../components/Loader.jsx";
+import { useSession } from "../../lib/session.jsx";
 import { notifyUsers } from "../../lib/referrals.js";
 import NomVote from "./NomVote.jsx";
 
@@ -25,6 +26,8 @@ const TABS = [["apps", "المتقدمون"], ["interviews", "المقابلات
 
 export default function NomCall({ id }) {
   const [call, setCall] = useState(null);
+  // في حساب محضر المعمل: إعلاناته وحدها، لا كل الإعلانات بصلاحية الدعم الفني
+  const { session, focusLimited } = useSession();
   const [apps, setApps] = useState(null);
   const [tab, setTab] = useState("apps");
   const [msg, setMsg] = useState(null);
@@ -33,7 +36,7 @@ export default function NomCall({ id }) {
       supabase.from("nom_calls").select("*").eq("id", id).maybeSingle(),
       supabase.rpc("nom_applicants", { p_call: id }),
     ]);
-    setCall(c.data ?? false);
+    setCall(c.data && (!focusLimited || c.data.owner_id === session?.user?.id) ? c.data : false);
     setApps(a.data ?? []);
     if (a.error) setMsg({ ok: false, t: a.error.message });
   };
