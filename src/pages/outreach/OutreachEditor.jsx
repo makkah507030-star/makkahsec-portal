@@ -70,7 +70,7 @@ export default function OutreachEditor({ item, onSaved, onCancel }) {
         <span className="text-sm text-muted">هكذا يراها المستلم</span></div>
       <ItemBody item={{ ...x, created_by_name: profile?.full_name }} urls={preview}>
         {x.kind === "survey" && <SurveyForm questions={x.questions} value={{}} onChange={() => {}} />}
-        {x.kind === "post" && x.needs_ack && <button className="btn-primary w-full" disabled>اطّلعت</button>}
+        {x.kind === "post" && x.needs_ack && <button className="btn-primary w-full" disabled>تم الاطلاع</button>}
       </ItemBody>
     </div>
   );
@@ -114,7 +114,7 @@ export default function OutreachEditor({ item, onSaved, onCancel }) {
           {x.kind === "post" && (
             <label className="flex cursor-pointer items-start gap-2 rounded-sm2 border border-line px-3 py-2 text-sm">
               <input type="checkbox" className="mt-1 accent-mint-deep" checked={!!x.needs_ack} onChange={(e) => set("needs_ack", e.target.checked)} />
-              <span>يتطلب «اطّلعت»<span className="block text-[11.5px] text-muted">للتعليمات المهمة: تتابع من أقرّ بالاطلاع، وتذكّر البقية.</span></span></label>)}
+              <span>يتطلب «تم الاطلاع»<span className="block text-[11.5px] text-muted">للتعليمات المهمة: تتابع من أقرّ بالاطلاع، وتذكّر البقية.</span></span></label>)}
           {x.kind === "survey" && (
             <label className="flex cursor-pointer items-start gap-2 rounded-sm2 border border-line px-3 py-2 text-sm">
               <input type="checkbox" className="mt-1 accent-mint-deep" checked={!!x.anonymous} onChange={(e) => set("anonymous", e.target.checked)} />

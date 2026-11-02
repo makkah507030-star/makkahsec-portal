@@ -1,5 +1,5 @@
 // src/pages/outreach/OutreachView.jsx
-// النشرة أو الاستبانة كما يراها المستلم (/o/:id): المحتوى بصوره ومقاطعه وروابطه، و«اطلعت»،
+// النشرة أو الاستبانة كما يراها المستلم (/o/:id): المحتوى بصوره ومقاطعه وروابطه، و«تم الاطلاع»،
 // ونموذج الإجابة. يُسجَّل الفتح تلقائيًا. ويراها المرسل معاينةً بلا إجابة.
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -140,8 +140,8 @@ export default function OutreachView() {
       <Link to="/my-outreach" className="text-sm text-mint-deep">→ النشرات والاستبانات</Link>
       <ItemBody item={item} urls={urls}>
         {item.kind === "post" && me && item.needs_ack && (
-          me.ack_at ? <p className="rounded-sm2 bg-present/10 px-3 py-2 text-sm text-present">✓ اطّلعت في {fmtDateTime(me.ack_at)}</p>
-            : <button className="btn-primary w-full" disabled={busy} onClick={ack}>اطّلعت</button>
+          me.ack_at ? <p className="rounded-sm2 bg-present/10 px-3 py-2 text-sm text-present">✓ تم الاطلاع في {fmtDateTime(me.ack_at)}</p>
+            : <button className="btn-primary w-full" disabled={busy} onClick={ack}>تم الاطلاع</button>
         )}
         {item.kind === "survey" && me && (me.answered_at
           ? <div className="rounded-sm2 bg-present/10 px-4 py-5 text-center"><p className="text-lg font-bold text-present">شكرًا لك</p>

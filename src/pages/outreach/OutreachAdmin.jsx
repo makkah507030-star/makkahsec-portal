@@ -73,7 +73,7 @@ export default function OutreachAdmin() {
                   style={{ background: `linear-gradient(135deg, ${KIND[k].c}12, #fff 60%)`, borderTop: `4px solid ${KIND[k].c}` }}>
             <span className="grid h-11 w-11 place-items-center rounded-sm2 text-white" style={{ background: KIND[k].c }}><Icon d={KIND[k].icon} /></span>
             <span><b className="block text-ink">+ {KIND[k].t} جديدة</b>
-              <span className="text-[12.5px] text-muted">{k === "post" ? "نص وصور ومقاطع وروابط، مع «اطّلعت» للتعليمات المهمة" : "اختيار، ومقياس، ونعم ولا، وإجابات نصية؛ باسم أو دون اسم"}</span></span>
+              <span className="text-[12.5px] text-muted">{k === "post" ? "نص وصور ومقاطع وروابط، مع «تم الاطلاع» للتعليمات المهمة" : "اختيار، ومقياس، ونعم ولا، وإجابات نصية؛ باسم أو دون اسم"}</span></span>
           </button>))}
       </div>
 
