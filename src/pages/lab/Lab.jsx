@@ -17,6 +17,7 @@ import LabUsage from "./LabUsage.jsx";
 import LabLessons from "./LabLessons.jsx";
 import LabRecord from "./LabRecord.jsx";
 import LabStudio from "./LabStudio.jsx";
+import LabExams from "./exams/LabExams.jsx";
 
 const TABS = [
   { key: "lessons", label: "الدروس" },
@@ -29,6 +30,8 @@ const TABS = [
   { key: "usage", label: "سجل الاستخدام" },
   // استوديو المعمل: اللوحات الإرشادية وبطاقات الأجهزة وخلفيات سطح المكتب — لمن يدير المعمل أو يحجزه
   { key: "studio", label: "استوديو المعمل", studio: true },
+  // مركز اختبارات التقنية الرقمية: النهائي النظري والعملي وبنك الأسئلة (exams/LabExams.jsx)
+  { key: "exams", label: "مركز الاختبارات", studio: true },
 ];
 
 export default function Lab() {
@@ -104,6 +107,7 @@ export default function Lab() {
       {tab === "rules" && <LabRules key={lab} lab={lab} isManager={isManager} />}
       {tab === "usage" && <LabUsage key={lab} lab={lab} canBook={canBook} isManager={isManager} />}
       {tab === "studio" && <LabStudio key={lab} lab={lab} />}
+      {tab === "exams" && <LabExams key={lab} lab={lab} canCreate={canBook} />}
       {tab === "tickets" && (
         <LabTickets key={lab} lab={lab} canReport={canBook || isManager} isManager={isManager}
                     reportSeat={reportSeat} onReportDone={() => reportSeat != null && setParams({}, { replace: true })} />

@@ -22,7 +22,8 @@ const STATUS = {
   blank: { t: "لم يُظلَّل", c: "bg-canvas text-muted" },
 };
 
-export default function QuizScan({ quiz, questions, students, subs, startId, onSave, onAbsent, onClose }) {
+// saveCard: حفظ نسخة البطاقة المصحّحة (الافتراضي مخزن اختبارات البوابة؛ ومركز اختبارات المعمل يمرّر بديله)
+export default function QuizScan({ quiz, questions, students, subs, startId, onSave, onAbsent, onClose, saveCard = saveQuizCard }) {
   const ltr = quiz?.lang === "en";
   const shapes = useMemo(() => cardLayouts(questions, ltr), [questions, ltr]);
   const current = shapes.current;
@@ -77,7 +78,7 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
     setBusy(true);
     const answers = rowsToAnswers(layout.rows, picks);
     const fresh = await onSave(student, answers);
-    const cardErr = await saveQuizCard(quiz.id, fresh, result?.preview);
+    const cardErr = await saveCard(quiz.id, fresh, result?.preview);
     setBusy(false);
     setSaved((fresh?.score != null
       ? `حُفظ ${student.full_name}: ${fresh.score} / ${quiz?.total_marks}`

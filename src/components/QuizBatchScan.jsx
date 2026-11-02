@@ -18,7 +18,7 @@ import { useBackStep } from "../lib/backStep.js";
 
 let seq = 0;
 
-export default function QuizBatchScan({ quiz, questions, students, subs, onSave, onAbsent, onClose }) {
+export default function QuizBatchScan({ quiz, questions, students, subs, onSave, onAbsent, onClose, saveCard = saveQuizCard }) {
   const ltr = quiz?.lang === "en";
   const shapes = useMemo(() => cardLayouts(questions, ltr), [questions, ltr]);
   const byHash = useMemo(() => hashIndex(students), [students]);
@@ -82,7 +82,7 @@ export default function QuizBatchScan({ quiz, questions, students, subs, onSave,
       return;
     }
     const fresh = await onSave(owner, rowsToAnswers(layout.rows, result.picks));
-    await saveQuizCard(quiz.id, fresh, result.preview);
+    await saveCard(quiz.id, fresh, result.preview);
     update(it.id, { state: "saved", student: owner, score: fresh?.score ?? null, result: null, file: null,
                     blanks: result.rows.filter((x) => x.status === "blank").length });
   };
@@ -92,7 +92,7 @@ export default function QuizBatchScan({ quiz, questions, students, subs, onSave,
     if (!it.student) return;
     setBusy(true);
     const fresh = await onSave(it.student, rowsToAnswers(it.layout.rows, it.picks));
-    await saveQuizCard(quiz.id, fresh, it.result?.preview);
+    await saveCard(quiz.id, fresh, it.result?.preview);
     setBusy(false);
     update(it.id, { state: "saved", score: fresh?.score ?? null, result: null, reason: null });
     setOpen(null);
