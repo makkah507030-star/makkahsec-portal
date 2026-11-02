@@ -4,11 +4,11 @@ import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { GRADE_NAMES, todayISO } from "../lib/schoolTime";
 import { countAr } from "../lib/arabicCount";
-import { printReport, PRINCIPAL_NAME } from "../lib/exportUtils";
+import { printReport, PRINCIPAL_NAME, rawHtml, escHtml } from "../lib/exportUtils";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import EvidenceTags from "./EvidenceTags.jsx";
-import { itemRates } from "../lib/quizItems.js";
+import { itemRates, correctness } from "../lib/quizItems.js";
 
 /* =====================================================================
    دورة الاختبار المتتابعة (التشخيصي واختبارا الفترتين) — مثل مراحل الأحداث:
@@ -72,6 +72,14 @@ function suggest(kind, round, rates) {
   ];
   return { skills: list.length ? skills : "", procedures: procedures.join("\n") };
 }
+/* الفقرات التي أخفق فيها كل طالب (إجابة خاطئة، أو أقل من نصف أزواج المزاوجة): { معرف الطالب: [{ n, t }] } */
+function missOf(questions, sheets) {
+  const qs = [...questions].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+  return Object.fromEntries(sheets.map((s) => [s.student_id, qs.map((q, i) => {
+    const v = correctness(q, s.answers?.[q.id]);
+    return v != null && v < 0.5 ? { n: i + 1, t: short(String(q.text ?? "").trim(), 60) } : null;
+  }).filter(Boolean)]));
+}
 const plusDays = (iso, d) => { const t = new Date(`${iso}T12:00:00`); t.setDate(t.getDate() + d); return t.toISOString().slice(0, 10); };
 
 export function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 1, parentId = null }) {
@@ -88,6 +96,8 @@ export function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 
   }, [plan, suggested]);
   // الخطة الجديدة تُعبّأ بمقترحات من تحليل الفقرات (الحقول الفارغة وحدها)
   const [filled, setFilled] = useState(null);   // "items" مع المهارات، "basic" بلا تحليل فقرات
+  // مهارات كل طالب: الفقرات التي أخفق فيها هو من إجاباته [{ n, t }]، تُحفظ مع الطالب في الخطة
+  const [miss, setMiss] = useState(() => Object.fromEntries((plan?.students ?? []).filter((s) => s.miss).map((s) => [s.id, s.miss])));
   useEffect(() => {
     if (plan) return;
     let off = false;
@@ -101,6 +111,7 @@ export function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 
       const sheets = (subs ?? []).filter((x) => !x.absent && x.answers && Object.keys(x.answers).length && (kind === "enrichment" || ids.has(x.student_id)));
       const rates = sheets.length ? itemRates(qs ?? [], sheets) : [];
       const sg = suggest(kind, round, rates);
+      if (kind === "remedial") setMiss(missOf(qs ?? [], sheets));
       setSkills((v) => v || sg.skills);
       setProcedures((v) => v || sg.procedures);
       setStart((v) => v || todayISO());
@@ -117,7 +128,7 @@ export function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 
     if (!procedures.trim()) { setErr("اكتب الإجراءات والاستراتيجيات."); return; }
     setBusy(true);
     const row = {
-      quiz_id: q.id, kind, students: pool.filter((s) => picked.has(s.id)),
+      quiz_id: q.id, kind, students: pool.filter((s) => picked.has(s.id)).map((s) => (miss[s.id] ? { ...s, miss: miss[s.id] } : s)),
       skills: skills.trim(), procedures: procedures.trim(),
       start_date: start || null, end_date: end || null, updated_at: new Date().toISOString(),
       ...(!plan && round > 1 ? { round, parent_id: parentId } : {}),
@@ -147,7 +158,9 @@ export function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 
               <label key={s.id} className="flex items-center gap-2 rounded-sm2 bg-paper px-2.5 py-1.5 text-sm">
                 <input type="checkbox" checked={picked.has(s.id)}
                        onChange={() => setPicked((p) => { const n = new Set(p); if (n.has(s.id)) n.delete(s.id); else n.add(s.id); return n; })} />
-                <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                <span className="min-w-0 flex-1"><span className="block truncate">{s.name}</span>
+                  {miss[s.id]?.length > 0 && <span className="block truncate text-[10.5px] text-absent" title={miss[s.id].map((x) => `ف${x.n}: ${x.t}`).join("\n")}>
+                    أخفق في: {miss[s.id].map((x) => `ف${x.n}`).join("، ")}</span>}</span>
                 <span className="num text-xs text-muted">{s.avg}%</span>
               </label>
             ))}
@@ -157,7 +170,7 @@ export function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 
       {filled && (
         <p className="rounded-sm2 bg-paper px-3 py-2 text-xs leading-relaxed text-muted">
           {filled === "items"
-            ? "تم بناء الخطة بمقترحات من تحليل الفقرات: أضعف الفقرات عند طلاب الخطة بنسب الإجابات الصحيحة، وإجراءات عليها، والتنفيذ من اليوم أسبوعين. عدّلها كما تراه."
+            ? `تم بناء الخطة بمقترحات من تحليل الفقرات: أضعف الفقرات عند طلاب الخطة بنسب الإجابات الصحيحة، وإجراءات عليها، والتنفيذ من اليوم أسبوعين. عدّلها كما تراه.${kind === "remedial" ? " وتحت اسم كل طالب الفقرات التي أخفق فيها هو، فتُعالج مع كل طالب مهاراته، وتظهر في الخطة المطبوعة." : ""}`
             : "الاختبار لا تُحلَّل فقراته آليًا (يُرصد بمجموعه)، فاكتب المهارات المستهدفة. وتم بناء الإجراءات والتواريخ مقترحةً، فعدّلها كما تراه."}
         </p>
       )}
@@ -199,6 +212,8 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
     setAsking(false); onChanged();
   };
 
+  const hasMiss = (plan.students ?? []).some((s) => s.miss?.length);
+  const [showMiss, setShowMiss] = useState(false);
   const print = () => printReport({
     title: KIND_LABEL[plan.kind],
     subtitle: `${q.title} · ${q.subject_name ?? ""}`,
@@ -212,6 +227,8 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
       ] },
       { title: "الطلاب المستهدفون", headers: ["م", "الطالب", "الفصل", "النسبة"],
         rows: (plan.students ?? []).map((s, i) => [i + 1, s.name, s.cls ?? "", `${s.avg}٪`]) },
+      ...(hasMiss ? [{ title: "مهارات كل طالب (الفقرات التي أخفق فيها)", headers: ["م", "الطالب", "الفقرات"],
+        rows: (plan.students ?? []).map((s, i) => [i + 1, s.name, rawHtml((s.miss ?? []).map((x) => escHtml(`ف${x.n}: ${x.t}`)).join("<br>") || "—")]) }] : []),
     ],
     logoUrl: new URL(logoIcon, window.location.origin).href,
     moeLogoUrl: new URL(moeLogo, window.location.origin).href,
@@ -232,6 +249,19 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
         {countAr(plan.students?.length ?? 0, "student")} · {plan.skills}
       </p>
       {plan.procedures && <p className="mt-1 text-sm text-muted">الإجراءات: {plan.procedures}</p>}
+      {hasMiss && (
+        <div className="mt-2">
+          <button className="text-sm font-semibold text-mint-deep" onClick={() => setShowMiss(!showMiss)}>{showMiss ? "إخفاء" : "عرض"} مهارات كل طالب</button>
+          {showMiss && (
+            <div className="mt-1.5 divide-y divide-line/60 rounded-sm2 border border-line/60">{(plan.students ?? []).map((s) => (
+              <div key={s.id} className="px-3 py-2 text-sm">
+                <p className="font-semibold text-ink">{s.name} <span className="num text-xs font-normal text-muted">{s.avg}%</span></p>
+                {s.miss?.length ? <ul className="mt-0.5 space-y-0.5 text-xs text-muted">{s.miss.map((x) => <li key={x.n}><b className="num text-absent">ف{x.n}</b>: {x.t}</li>)}</ul>
+                  : <p className="text-xs text-faint">لا فقرات مسجلة له.</p>}
+              </div>))}</div>
+          )}
+        </div>
+      )}
       {done && plan.done_note && <p className="mt-1 text-sm text-muted">ملاحظة التنفيذ: {plan.done_note}</p>}
       <div className="mt-2 flex flex-wrap gap-3 text-sm">
         <button className="text-mint-deep underline" onClick={print}>طباعة الخطة</button>

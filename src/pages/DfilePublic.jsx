@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import DfileReport from "../components/dfile/DfileReport.jsx";
+import DfileReport, { LabDfileReport } from "../components/dfile/DfileReport.jsx";
 import { experience, loadPublic, visitNote, visitPing, visitStart } from "../lib/dfile.js";
 import logoWhite from "../assets/icon-white.png";
 
@@ -60,19 +60,20 @@ export default function DfilePublic() {
   if (welcome) {
     const d = res.data ?? {};
     const exp = experience(res.settings, d.year);
+    const lab = res.kind === "lab";   // ملف محضر المعمل (رمز ML-)
     return (
       <div className="dfile df-gate" dir="rtl" data-subject={res.settings?.color || "science"}>
         <div className="df-gate-in">
           <img src={logoWhite} alt="" className="df-gate-logo" />
-          <p className="df-gate-eye">مدرسة مكة الثانوية، ملف المعلم الرقمي{d.year ? `، ${d.year}هـ` : ""}</p>
+          <p className="df-gate-eye">مدرسة مكة الثانوية، {lab ? "ملف محضر المعمل الرقمي" : "ملف المعلم الرقمي"}{d.year ? `، ${d.year}هـ` : ""}</p>
           {d.name && <h1 className="df-gate-name">أ. {d.name}</h1>}
           <p className="df-gate-role">
-            {[d.spec && `معلم ${d.spec}`, exp != null && `${exp} سنة خبرة`].filter(Boolean).join("، ")}
+            {[lab ? "محضر معمل الحاسب الآلي" : d.spec && `معلم ${d.spec}`, exp != null && `${exp} سنة خبرة`].filter(Boolean).join("، ")}
           </p>
 
           <form className="df-gate-card" onSubmit={(e) => { e.preventDefault(); enter(name, org); }}>
-            <h2>مرحبًا بك في ملف المعلم</h2>
-            <p>اكتب اسمك وجهتك ليعرف المعلم من اطّلع على ملفه، وتستطيع كتابة ملاحظتك له من الزر أسفل الصفحة. هذا اختياري.</p>
+            <h2>مرحبًا بك في ملف {lab ? "المحضر" : "المعلم"}</h2>
+            <p>اكتب اسمك وجهتك ليعرف {lab ? "المحضر" : "المعلم"} من اطّلع على ملفه، وتستطيع كتابة ملاحظتك له من الزر أسفل الصفحة. هذا اختياري.</p>
             <div className="df-gate-grid">
               <input placeholder="الاسم" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} aria-label="الاسم" />
               <input placeholder="الجهة، مثل مدير المدرسة" value={org} onChange={(e) => setOrg(e.target.value)} maxLength={80} aria-label="الجهة" />
@@ -89,8 +90,10 @@ export default function DfilePublic() {
 
   return (
     <div style={{ background: "var(--df-bg, #F3F6F4)" }}>
-      <DfileReport data={res.data} settings={res.settings} code={res.settings.code} />
-      <VisitorNote save={async (text) => {
+      {res.kind === "lab"
+        ? <LabDfileReport data={res.data} settings={res.settings} code={res.settings.code} />
+        : <DfileReport data={res.data} settings={res.settings} code={res.settings.code} />}
+      <VisitorNote who={res.kind === "lab" ? "المحضر" : "المعلم"} save={async (text) => {
         const id = await start(name, org);
         if (!id) throw new Error("تعذّر حفظ الملاحظة. أعد تحميل الصفحة ثم حاول مرة أخرى.");
         return visitNote(id, text);
@@ -100,7 +103,7 @@ export default function DfilePublic() {
 }
 
 /* «اكتب ملاحظتك للمعلم»: زر ثابت أسفل الصفحة يفتح نافذة الملاحظة، وتُحفظ في سجل الزوار */
-function VisitorNote({ save }) {
+function VisitorNote({ save, who = "المعلم" }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [state, setState] = useState("");   // "" | busy | saved | رسالة خطأ
@@ -114,14 +117,14 @@ function VisitorNote({ save }) {
     <>
       <button type="button" onClick={() => { setOpen(true); if (state !== "busy") setState(""); }}
               className="fixed bottom-4 left-4 z-40 rounded-pill bg-mint-deep px-4 py-2.5 text-sm font-bold text-white shadow-card">
-        {state === "saved" ? "✓ ملاحظتك وصلت" : "اكتب ملاحظتك للمعلم"}
+        {state === "saved" ? "✓ ملاحظتك وصلت" : `اكتب ملاحظتك ${who === "المعلم" ? "للمعلم" : "للمحضر"}`}
       </button>
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-3 sm:items-center" dir="rtl" onClick={() => setOpen(false)}>
           <form className="card w-full max-w-md space-y-3 p-4" onSubmit={send} onClick={(e) => e.stopPropagation()}>
             <div>
               <p className="text-base font-bold text-ink">ملاحظتك في سجل الزوار</p>
-              <p className="mt-0.5 text-sm text-muted">يراها المعلم وحده، ويسعده توجيهك وملاحظاتك.</p>
+              <p className="mt-0.5 text-sm text-muted">يراها {who} وحده، ويسعده توجيهك وملاحظاتك.</p>
             </div>
             <textarea className="field min-h-32" value={text} onChange={(e) => { setText(e.target.value); setState(""); }}
                       maxLength={1000} placeholder="اكتب ملاحظتك هنا" aria-label="الملاحظة" autoFocus />

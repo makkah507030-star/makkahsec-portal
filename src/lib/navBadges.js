@@ -1,5 +1,6 @@
 // src/lib/navBadges.js
 import { useEffect, useState } from "react";
+import { pendingFor } from "./outreach.js";
 import { supabase } from "./supabase";
 import { stageOf, isLate, STAGE_COLS, autoCloseReferrals } from "./referrals.js";
 import { fmtHijri, fmtDateTime } from "./dates.js";
@@ -108,7 +109,7 @@ async function load() {
     plcBack, pdBack, xvBack, perfAck, guidance, deputyReq, excuses,
     behaviorGuardian, refGuardian, pledges, refAway, noorDue,
     giTeacher, giDeputy, giCounselor, giGuardian, dropouts, ethicsAck, onlineQuizzes, myNotes,
-    goals, goalsLate, qPlans, qPlansLate, circs,
+    goals, goalsLate, qPlans, qPlansLate, circs, accSign, outreach,
   ] = await Promise.all([
     staff ? count(fd().eq("created_by", uid).eq("status", "rejected")) : none,
     has("principal") ? rowsFlag((f) => supabase.from("form_documents").select(`id, title, recipient${f}`)
@@ -206,12 +207,20 @@ async function load() {
     staff || isGuardian ? rowsOf(supabase.from("circular_recipients")
       .select("circular_id, read_at, ack_at, circulars!inner(subject, needs_ack, priority, closed_at)")
       .eq("user_id", uid).is("circulars.closed_at", null).is("ack_at", null).limit(100)) : noRows,
+    // محاضر لجنة التميز المرسلة لتوقيع الحاضرين (supabase/acc_8.sql)
+    staff ? rowsOf(supabase.from("acc_meetings").select("id, title, number, acc_meeting_signs(user_id)")
+      .eq("status", "signing").contains("attendees", [uid]).limit(50)) : noRows,
+    // النشرات والاستبانات: ما ينتظر المستفيد (supabase/outreach_1..2.sql)
+    rowsOf(supabase.from("outreach_recipients").select("read_at, ack_at, answered_at, outreach_items(id, kind, title, needs_ack, closes_at, closed_at)")
+      .eq("user_id", uid).limit(200)),
   ]);
   const circPending = circs.filter((r) => (r.circulars?.needs_ack ? !r.ack_at : !r.read_at));
 
   const unsigned = (rows, sigKey) => rows.filter((r) => !(r[sigKey] ?? []).some((g) => g.user_id === uid));
   const plcToSign = unsigned(plcSign, "plc_signatures");
   const pdToSign = unsigned(pdSign, "pd_signatures");
+  const accToSign = unsigned(accSign, "acc_meeting_signs");
+  const outreachDue = outreach.filter((r) => pendingFor(r, r.outreach_items));
   const awayC = refAway.filter((r) => stageOf(r).group === "counselor").length;
   const awayG = refAway.filter((r) => stageOf(r).group === "guardian").length;
   const awayLate = refAway.filter(isLate).length;
@@ -293,6 +302,12 @@ async function load() {
     { key: "toReply", n: toReply.length, to: "/my-documents",
       items: toReply.map((d) => ({ id: d.id, to: `/doc/${d.id}`, title: `${d.title} · ${d.serial}`, flag: d.flag ?? null })),
       label: staff ? "نماذج وصلتك تنتظر إفادتك" : "نماذج وصلتك تنتظر ردك", tone: "warning", icon: "folder" },
+    { key: "outreach", n: outreachDue.length, to: "/my-outreach",
+      items: outreachDue.map((r) => ({ id: r.outreach_items.id, to: `/o/${r.outreach_items.id}`, title: r.outreach_items.title, flag: null })),
+      label: "نشرات واستبانات تنتظرك", tone: "warning", icon: "inbox" },
+    { key: "accSign", n: accToSign.length, to: "/accreditation?tab=team",
+      items: accToSign.map((r) => ({ id: r.id, to: "/accreditation?tab=team", title: `محضر ${r.number ? `رقم ${r.number} · ` : ""}${r.title}`, flag: null })),
+      label: "محاضر لجنة التميز تنتظر توقيعك", tone: "warning", icon: "signature" },
     { key: "plcSign", n: plcToSign.length, to: "/plc?tab=sign",
       items: items(plcToSign, "/plc", (r) => `جلسة ${r.head_name ?? ""}`),
       label: "جلسات تعلم مهني تنتظر توقيعك", tone: "warning", icon: "signature" },
@@ -395,6 +410,8 @@ async function load() {
       + pdToSign.length + pdPending.length + pdBack.length
       + xvHost.length + xvPending.length + xvBack.length,
     "/my-performance": perfAck,
+    "/accreditation": accToSign.length,
+    "/my-outreach": outreachDue.length,
     "/improve": goalPlan.length + goalReview.length + goalDueRows.length,
     "/quizzes": qEnded.length + qVerify.length + qRound2.length,
     "/dropouts": dropouts.length,

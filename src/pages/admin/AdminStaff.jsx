@@ -422,7 +422,7 @@ function CustomRoles({ onOpenMembers }) {
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-semibold text-ink">الأدوار المخصّصة</h2>
             <p className="mt-0.5 text-xs leading-relaxed text-muted">
-              أدوار خارج القائمة الثابتة، لمنسوب في المدرسة أو لشخص من خارجها مثل القائد الكشفي.
+              أدوار خارج القائمة الثابتة، لموظف في المدرسة أو لشخص من خارجها مثل القائد الكشفي.
               أضف الدور وصلاحياته هنا، ثم أسنده لصاحبه وفعّل حسابه من تبويب «الأعضاء».
             </p>
           </div>
@@ -507,9 +507,17 @@ function CustomRoles({ onOpenMembers }) {
               </div>
               {r.note && <p className="mt-1 text-xs text-muted">{r.note}</p>}
               <div className="mt-1.5 flex flex-wrap gap-1">
-                {[...r.perms].map((k) => <span key={k} className="chip bg-mint-light text-mint-deep">{permByKey[k]?.label ?? k}</span>)}
-                {r.perms.size === 0 && <span className="text-[11.5px] text-faint">بلا صلاحيات إضافية</span>}
+                {[...r.perms].filter((k) => !k.startsWith("hide:")).map((k) => <span key={k} className="chip bg-mint-light text-mint-deep">{permByKey[k]?.label ?? k}</span>)}
+                {![...r.perms].some((k) => !k.startsWith("hide:")) && <span className="text-[11.5px] text-faint">بلا صلاحيات إضافية</span>}
               </div>
+              {/* الصفحات المخفية عن الدور (hide:/مسار) بأسمائها في القائمة */}
+              {[...r.perms].some((k) => k.startsWith("hide:")) && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1">
+                  <span className="text-[11px] text-faint">صفحات مخفية:</span>
+                  {[...r.perms].filter((k) => k.startsWith("hide:")).map((k) => (
+                    <span key={k} className="chip border border-line bg-canvas text-muted line-through decoration-faint/60">{NAV_LABEL[k.slice(5)] ?? k.slice(5)}</span>))}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -560,6 +568,8 @@ const PRESETS = [
 ];
 
 const permByKey = Object.fromEntries(PERMISSIONS.map((p) => [p.key, p]));
+// اسم الصفحة في القائمة من مسارها (لعرض الصفحات المخفية عن الدور)
+const NAV_LABEL = Object.fromEntries(ADMIN_GROUPS.flatMap((g) => g.items.map((i) => [i.to, i.label])));
 // كل صلاحية تظهر في لوحتها: ما لم يُذكر في الأقسام أعلاه يُجمع في «أخرى»
 const PERM_SECTIONS = (() => {
   const listed = new Set(PERM_GROUPS.flatMap((g) => g.keys));
@@ -573,6 +583,14 @@ const HIDE = "hide:";
 const isHide = (k) => k.startsWith(HIDE);
 const NAV_SECTIONS = ADMIN_GROUPS.map((g) => ({ title: g.title ?? "عام", items: g.items.filter((i) => i.to !== "/") }))
   .filter((g) => g.items.length);
+/* صفحات تظهر بالعضوية لا بالدور: «تظهر» هنا تعني أنها متاحة لأعضائها من حَمَلة الدور، لا لكل من يحمله */
+function navMembers(i) {
+  if (i.mediaMember) return "تظهر لأعضاء المركز الإعلامي ورئيسه فقط";
+  if (i.accMember) return "تظهر لأعضاء لجنة التميز ومن له الدور فقط";
+  if (i.scoutGate) return "تظهر لمن له صلاحية الكشافة أو دور في الفريق الكشفي";
+  if (i.achGate) return "تظهر بعد فتح مركز تحليل النتائج";
+  return null;
+}
 function navReason(i, role, sel) {
   if (i.techOnly) return "للدعم الفني فقط";
   if (i.manageForms) return "للمدير والدعم الفني";
@@ -838,7 +856,8 @@ function RolePermissions() {
                                 why ? "cursor-not-allowed border-line bg-canvas opacity-60" : on ? "cursor-pointer border-mint-light bg-mint-tint/40" : "cursor-pointer border-line"}`}>
                                 <span className="min-w-0">
                                   <span className="block truncate text-[13px] text-ink">{i.label}</span>
-                                  {why && <span className="block text-[10.5px] leading-tight text-faint">{why}</span>}
+                                  {why ? <span className="block text-[10.5px] leading-tight text-faint">{why}</span>
+                                    : navMembers(i) && <span className="block text-[10.5px] leading-tight text-late">{navMembers(i)}</span>}
                                 </span>
                                 <span className="flex shrink-0 items-center gap-1.5">
                                   <span className={`text-[11px] ${on ? "text-mint-deep" : "text-faint"}`}>{why ? "غير متاحة" : on ? "تظهر" : "مخفية"}</span>
@@ -853,6 +872,7 @@ function RolePermissions() {
                   })}
                   <p className="text-[11px] leading-relaxed text-faint">
                     الإخفاء يخص القائمة وبطاقات الأقسام. ومن يجمع أكثر من دور تظهر له الصفحة إن ظهرت لأحد أدواره.
+                    والصفحة المكتوب تحتها «تظهر لأعضاء…» لا يراها إلا أعضاؤها ولو كانت «تظهر» للدور، وإخفاؤها هنا يخفيها عن أعضائها من حملة الدور أيضًا.
                   </p>
                 </div>
               </details>

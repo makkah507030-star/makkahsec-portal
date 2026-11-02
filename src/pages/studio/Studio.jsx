@@ -260,7 +260,7 @@ function Editor({ init, ctx: baseCtx, uid, onBack }) {
   const [data, setData] = useState(init.data);
   const [id, setId] = useState(init.id);
   const [busy, setBusy] = useState(false);
-  // بيانات إضافية يحتاجها القالب (جدول الحصص، الطلاب، المنسوبون) تُحمَّل عند فتحه
+  // بيانات إضافية يحتاجها القالب (جدول الحصص، الطلاب، الموظفون) تُحمَّل عند فتحه
   const [extra, setExtra] = useState(tpl.load ? null : {});
   useEffect(() => {
     if (!tpl.load) return;

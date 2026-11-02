@@ -29,6 +29,7 @@ export const PARTS = [
   { key: "quote", t: "رأي الإدارة" },
   { key: "teach", t: "التخطيط والتدريس" },
   { key: "records", t: "السجلات والنماذج" },
+  { key: "lab", t: "المعمل الرقمي" },
   { key: "results", t: "النتائج" },
   { key: "assess", t: "التقويم" },
   { key: "growth", t: "التطوير المهني" },
@@ -37,6 +38,26 @@ export const PARTS = [
   { key: "elements", t: "عناصر الأداء" },
   { key: "docs", t: "الشواهد" },
 ];
+
+/* ملف محضر المعمل الرقمي (supabase/lab_dfile_*.sql): أقسامه التي يختار إظهارها، وعناصر نموذج «محضر المختبر» */
+export const LAB_PARTS = [
+  { key: "run", t: "تشغيل المعمل" },
+  { key: "devices", t: "الأجهزة والصيانة" },
+  { key: "safety", t: "السلامة" },
+  { key: "digital", t: "المعمل الرقمي" },
+  { key: "wins", t: "الإنجازات" },
+  { key: "elements", t: "عناصر الأداء" },
+  { key: "docs", t: "الشواهد" },
+];
+export const LAB_ELEMENTS = [
+  ["l01", "أداء الواجبات الوظيفية"], ["l02", "التفاعل مع المجتمع المهني"], ["l03", "التفاعل مع أولياء الأمور"],
+  ["l04", "التنويع في استراتيجيات التدريس"], ["l05", "تحسين نتائج المتعلمين"], ["l06", "خطة يومية لأنشطة المختبر"],
+  ["l07", "المعرفة بالأسس والمفاهيم الفنية"], ["l08", "توفير المستلزمات اللازمة"], ["l09", "سياسات وإجراءات السلامة المهنية"],
+  ["l10", "تحضير المختبر وتجهيزه"], ["l11", "تهيئة الأجهزة وتسليمها وتخزينها"], ["l12", "تقرير أنشطة المختبر الأسبوعية"],
+  ["l13", "تقارير دورية عن حالة الأجهزة"],
+];
+// لون عنصر المحضر: بألوان عناصر المعلم بالترتيب، والأخيران إضافيان
+export const labElColor = (k) => ({ l12: "#7a6a3a", l13: "#4f6f8f" }[k] ?? `var(--${k.replace(/^l/, "e")})`);
 
 export const ELEMENTS = [
   ["e01", "أداء الواجبات الوظيفية"], ["e02", "التفاعل مع المجتمع المهني"], ["e03", "التفاعل مع أولياء الأمور"],
@@ -139,6 +160,13 @@ export async function loadDfile(uid) {
   return data;
 }
 
+/** قسم المعمل الرقمي ومعمل الحاسب (supabase/dfile_lab.sql) بكود الملف؛ null قبل تشغيل الملف أو بلا عمل في المعمل */
+export async function loadDfileLab(code) {
+  if (!code) return null;
+  const { data, error } = await supabase.rpc("dfile_lab", { p_code: code });
+  return error ? null : data;
+}
+
 export async function loadDfileData(uid) {
   const { data, error } = await supabase.rpc("dfile_data", { p_uid: uid });
   if (error) throw error;
@@ -170,13 +198,16 @@ export const SHARE_MSG = "السلام عليكم ورحمة الله وبركا
   + "وأتشرف بملاحظاتكم وتوجيهاتكم في سجل الزوار داخل الملف، فهي محل تقديري واهتمامي.";
 
 export async function loadPublic(code) {
-  const { data, error } = await supabase.rpc("dfile_public", { p_code: code });
+  const { data, error } = await supabase.rpc(isLabCode(code) ? "lab_dfile_public" : "dfile_public", { p_code: code });
   if (error) throw error;
   return data;
 }
 
+/* ملف محضر المعمل: رمزه يبدأ بـ ML- (supabase/lab_dfile_*.sql) */
+export const isLabCode = (code) => /^ML-/i.test(String(code ?? "").trim());
+
 export async function visitStart(code, name, org, via) {
-  const { data } = await supabase.rpc("dfile_visit_start", { p_code: code, p_name: name ?? "", p_org: org ?? "", p_via: via });
+  const { data } = await supabase.rpc(isLabCode(code) ? "lab_dfile_visit_start" : "dfile_visit_start", { p_code: code, p_name: name ?? "", p_org: org ?? "", p_via: via });
   return data ?? null;
 }
 
@@ -192,10 +223,11 @@ export function visitPing(id, seconds) {
   supabase.rpc("dfile_visit_ping", { p_id: id, p_seconds: Math.round(seconds) }).then(() => {}, () => {});
 }
 
-export async function loadVisits(uid) {
+/** زوار الملف. kind: «teacher» لملف المعلم، و«lab» لملف محضر المعمل (supabase/lab_dfile_1.sql) */
+export async function loadVisits(uid, kind = "teacher") {
   const { data } = await supabase.from("dfile_visits").select("*")
-    .eq("teacher_user_id", uid).order("started_at", { ascending: false }).limit(50);
-  return data ?? [];
+    .eq("teacher_user_id", uid).order("started_at", { ascending: false }).limit(100);
+  return (data ?? []).filter((v) => (v.kind ?? "teacher") === kind).slice(0, 50);
 }
 
 export const STOP_REASONS = ["نقل من المدرسة", "تقاعد", "تحويل إلى عمل إداري"];

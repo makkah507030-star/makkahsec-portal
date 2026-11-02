@@ -5,7 +5,8 @@ import { fmtDate, fmtHijri } from "../../lib/dates.js";
 import { countAr } from "../../lib/arabicCount.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
-  DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord,
+  DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord, loadDfileLab,
+  LAB_PARTS, LAB_ELEMENTS, labElColor,
 } from "../../lib/dfile.js";
 
 /* =====================================================================
@@ -23,6 +24,7 @@ const ICON = {
   file: "M14 3H6v18h12V7ZM14 3v4h4M9 13h6M9 17h4",
   image: "M4 5h16v14H4ZM4 15l4-4 4 4 3-3 5 5M15 9.5h.01",
   book: "M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2ZM5 18a2 2 0 0 1 2-2h11M9 8h5",
+  monitor: "M3 4h18v12H3ZM8 20h8M12 16v4",
 };
 const ELEMENT_NAME = Object.fromEntries(ELEMENTS);
 const Svg = ({ d, ...p }) => (
@@ -56,6 +58,80 @@ function CardH({ title, sub, src, srcKind }) {
       <div><h3>{title}</h3>{sub && <p className="df-sub">{sub}</p>}</div>
       {src && <Src k={srcKind}>{src}</Src>}
     </div>
+  );
+}
+
+/* المعمل الرقمي ومعمل الحاسب: مكتبة الدروس التفاعلية (لمن أعدّها)، والتدريس في المعمل
+   ونتائجه، وعمل محضر المعمل — أرقام بلا أسماء طلاب (supabase/dfile_lab.sql) */
+const LAB_FEATURES = ["مفهوم ثم تدريب عملي ثم اختبار", "تصحيح فوري لكل تدريب", "يعمل على أجهزة المعمل دون إنترنت",
+  "عرض الدرس على السبورة", "رصد إتقان كل طالب برمز QR", "ملف دائم مثبّت على أجهزة المعمل", "نقل الدرجات إلى سجل التطبيقات"];
+const LabBig = ({ v, t }) => <span><b className="df-num">{v}</b>{t}</span>;
+function LabPart({ x, L }) {
+  const used = new Map((x.by_lesson ?? []).map((r) => [r.id, r]));
+  const shown = x.author ? L.list : L.list.filter((l) => used.has(l.id));
+  const lab = x.lab;
+  return (
+    <Section id="lab" title="المعمل الرقمي ومعمل الحاسب" sub={x.author ? "دروس تفاعلية أعدّها، والتدريس بها، وتشغيل المعمل" : "التدريس في معمل الحاسب ونتائجه"}>
+      {x.author && L.lessons > 0 && (
+        <div className="df-card df-lab">
+          <div className="df-lab-hero df-cols">
+            <div><p className="df-lab-k">مكتبة المعمل الرقمي</p>
+              <h3>{L.lessons} دروس تفاعلية مطابقة لكتاب «التقنية الرقمية» · {L.list[0]?.grade} (طبعة 1448)</h3>
+              <p className="df-lab-s">أعدّها في البوابة درسًا درسًا من صفحات الكتاب، ويعمل بها معلمو الحاسب في المعمل.</p></div>
+            <div className="df-lab-big">
+              <LabBig v={L.stations} t="محطة تعلم" /><LabBig v={L.tasks} t="تدريبًا عمليًا" /><LabBig v={L.questions} t="سؤالًا وتحققًا" />
+              <LabBig v={L.slides} t="شريحة شرح" /><LabBig v={L.objectives} t="هدفًا تعليميًا" /><LabBig v={L.widgets} t="أداة تفاعلية" />
+            </div>
+          </div>
+          <div className="df-tags">{LAB_FEATURES.map((t) => <span key={t} className="df-tag"><Svg d={ICON.ok} strokeWidth="2.4" />{t}</span>)}</div>
+        </div>
+      )}
+      {shown.length > 0 && (
+        <div className="df-card">
+          <CardH title={x.author ? "الدروس" : "الدروس التي درّسها في المعمل"} sub={`${[...new Set(shown.map((l) => l.unit.title))].join("، ")} · ${shown.length} ${shown.length <= 10 ? "دروس" : "درسًا"}`} src="من البوابة" srcKind="mix" />
+          <div className="df-lcards df-lab-ls">{shown.map((l) => {
+            const u = used.get(l.id);
+            const k = l.stations.reduce((a, s) => ({ ...a, [s.type]: (a[s.type] ?? 0) + 1 }), {});
+            return (
+              <div className="df-lcard" key={l.id}>
+                <span className="df-sb">الدرس {l.lesson.no} · ص <span dir="ltr" style={{ unicodeBidi: "isolate" }}>{l.pages}</span></span>
+                <b className="df-lab-t">{l.lesson.title}</b>
+                <small className="df-num">{l.stations.length} محطات: {k.concept ?? 0} مفهوم، {(k.practice ?? 0) + (k.steps ?? 0)} تدريب، {k.quiz ?? 0} اختبار</small>
+                {u && <small className="df-lab-u df-num">نُفّذ في {u.n} {u.n === 1 ? "حصة" : u.n === 2 ? "حصتين" : u.n <= 10 ? "حصص" : "حصة"}{u.st ? ` · ${u.st} نتيجة طالب` : ""}{u.m != null ? ` · إتقان ${pc(u.m)}` : ""}</small>}
+              </div>);
+          })}</div>
+        </div>
+      )}
+      {(x.periods > 0 || x.sessions > 0) && (
+        <div className="df-card">
+          <CardH title="التدريس في المعمل" sub="هذا العام" src="تلقائي" />
+          <div className="df-tiles">
+            <span><b className="df-num">{x.periods}</b>حصة في المعمل</span>
+            <span><b className="df-num">{x.classes}</b>فصلًا</span>
+            <span><b className="df-num">{x.sessions}</b>حصة درس رقمي</span>
+            <span><b className="df-num">{x.results}</b>نتيجة طالب رُصدت</span>
+            <span><b className="df-num">{x.mastery != null ? pc(x.mastery) : "—"}</b>متوسط الإتقان</span>
+            <span><b className="df-num">{x.works}</b>عملًا في السجل</span>
+          </div>
+        </div>
+      )}
+      {lab && (
+        <div className="df-card">
+          <CardH title="محضر معمل الحاسب الآلي" sub="تشغيل المعمل وأجهزته وسلامته" src="تلقائي" />
+          <div className="df-tiles">
+            <span><b className="df-num">{lab.ok}<small> من {lab.devices}</small></b>جهاز جاهز</span>
+            <span><b className="df-num">{lab.resolved}<small> من {lab.tickets}</small></b>عطل حُلّ</span>
+            <span><b className="df-num">{lab.hours != null ? lab.hours : "—"}</b>ساعة متوسط الحل</span>
+            <span><b className="df-num">{lab.bookings}</b>حصة خدمها المعمل</span>
+            <span><b className="df-num">{lab.teachers}</b>معلمًا استفاد</span>
+            <span><b className="df-num">{lab.weeks}</b>أسبوعًا موثّقًا</span>
+            <span><b className="df-num">{lab.rules}</b>قاعدة سلامة</span>
+            <span><b className="df-num">{lab.acks}</b>طالبًا أقرّ بها</span>
+            <span><b className="df-num">{lab.seats}</b>خريطة جلوس</span>
+          </div>
+        </div>
+      )}
+    </Section>
   );
 }
 
@@ -389,6 +465,34 @@ function Wins({ d, s }) {
   );
 }
 
+// حركة الرسوم مرة واحدة حين يظهر الرسم على الشاشة (ولا حركة لمن فعّل «تقليل الحركة»)
+function useDfMotion(root, deps) {
+  useEffect(() => {
+    const els = [...(root.current?.querySelectorAll(".df-track, .df-dist, .df-g-bar, .df-cols, .df-ring") ?? [])];
+    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (still || !("IntersectionObserver" in window)) { els.forEach((el) => el.classList.add("df-in")); return undefined; }
+    const counts = els.flatMap((el) => [...el.querySelectorAll("[data-count]")]);
+    counts.forEach((b) => { b.textContent = (0).toFixed((b.dataset.count.split(".")[1] ?? "").length); });
+    const count = (b) => {
+      const to = Number(b.dataset.count), dec = (b.dataset.count.split(".")[1] ?? "").length, t0 = performance.now();
+      const step = (t) => {
+        const k = Math.min(1, (t - t0) / 1100);
+        b.textContent = (to * (1 - (1 - k) ** 3)).toFixed(dec);
+        if (k < 1) requestAnimationFrame(step); else b.textContent = b.dataset.count;
+      };
+      requestAnimationFrame(step);
+    };
+    const io = new IntersectionObserver((es) => es.forEach((e) => {
+      if (!e.isIntersecting) return;
+      e.target.classList.add("df-in");
+      e.target.querySelectorAll("[data-count]").forEach(count);
+      io.unobserve(e.target);
+    }), { rootMargin: "0px 0px -12% 0px" });
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, deps);   // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 export default function DfileReport({ data: d, settings: s, code }) {
   const hidden = new Set(s?.hidden ?? []);
   const show = (k) => !hidden.has(k);
@@ -414,6 +518,17 @@ export default function DfileReport({ data: d, settings: s, code }) {
     .map((it) => { const w = (it.weeks ?? []).find((x) => x.n === d.week.n); return { s: it.subject, c: it.classes ?? [], t: w?.t, days: w?.days }; })
     .filter((x) => x.t) : [];
   const opinions = d.opinions ?? [];
+  // قسم المعمل: يُجلب بكود الملف (للمعلم وللزائر)، ولا يظهر إلا لمن له عمل في المعمل
+  const [lab, setLab] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    loadDfileLab(code).then(async (x) => {
+      // مكتبة الدروس تُحمَّل حين يكون للمعلم عمل في المعمل فقط
+      if (x && (x.author || x.by_lesson?.length)) x = { ...x, L: (await import("../../lib/labPerf.js")).lessonStats() };
+      if (alive) setLab(x);
+    });
+    return () => { alive = false; };
+  }, [code]);
   // الشاهد يُعرض داخل الصفحة (DfileDocViewer)، فيراه الزائر في كل جهاز
   const [doc, setDoc] = useState(null);
   const closeDoc = useCallback(() => setDoc(null), [setDoc]);
@@ -430,6 +545,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
   const has = {
     teach: d.lessons > 0 || d.subs > 0 || madOn || actOn || lessons.length > 0,
     records: recAuto.length + recForms.length + recOwn.length > 0,
+    lab: !!lab && (lab.author || lab.periods > 0 || lab.sessions > 0 || !!lab.lab),
     results: (d.grades?.n ?? 0) > 0,
     assess: (d.quizzes?.length ?? 0) > 0,
     growth: true,
@@ -449,31 +565,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
     return () => io.disconnect();
   }, [d, s]);
 
-  // حركة الرسوم مرة واحدة حين يظهر الرسم على الشاشة (ولا حركة لمن فعّل «تقليل الحركة»)
-  useEffect(() => {
-    const els = [...(root.current?.querySelectorAll(".df-track, .df-dist, .df-g-bar, .df-cols, .df-ring") ?? [])];
-    const still = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if (still || !("IntersectionObserver" in window)) { els.forEach((el) => el.classList.add("df-in")); return undefined; }
-    const counts = els.flatMap((el) => [...el.querySelectorAll("[data-count]")]);
-    counts.forEach((b) => { b.textContent = (0).toFixed((b.dataset.count.split(".")[1] ?? "").length); });
-    const count = (b) => {
-      const to = Number(b.dataset.count), dec = (b.dataset.count.split(".")[1] ?? "").length, t0 = performance.now();
-      const step = (t) => {
-        const k = Math.min(1, (t - t0) / 1100);
-        b.textContent = (to * (1 - (1 - k) ** 3)).toFixed(dec);
-        if (k < 1) requestAnimationFrame(step); else b.textContent = b.dataset.count;
-      };
-      requestAnimationFrame(step);
-    };
-    const io = new IntersectionObserver((es) => es.forEach((e) => {
-      if (!e.isIntersecting) return;
-      e.target.classList.add("df-in");
-      e.target.querySelectorAll("[data-count]").forEach(count);
-      io.unobserve(e.target);
-    }), { rootMargin: "0px 0px -12% 0px" });
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, [d, s]);
+  useDfMotion(root, [d, s]);
 
   const go = (k) => {
     if (k === "elements" || k === "docs") setOpen((o) => ({ ...o, [k]: true }));
@@ -583,6 +675,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
             </div>
           </Section>
         )}
+        {show("lab") && has.lab && <LabPart x={lab} L={lab.L ?? { list: [] }} />}
         {show("results") && has.results && <Results g={d.grades} />}
         {show("assess") && has.assess && <Assess d={d} />}
         {show("growth") && <Growth d={d} />}
@@ -621,6 +714,235 @@ export default function DfileReport({ data: d, settings: s, code }) {
         {doc && <DfileDocViewer code={code} doc={doc} onClose={closeDoc} />}
         <footer className="df-foot">
           <span>صادر من بوابة مكة الثانوية الرقمية، يتحدّث تلقائيًا مع كل عمل جديد للمعلم</span>
+          <span>لا يعرض أسماء الطلاب ولا بياناتهم الشخصية</span>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+   ملف محضر المعمل الرقمي — بتصميم ملف المعلم وأجزائه نفسها (supabase/lab_dfile_2.sql):
+   تشغيل المعمل، والأجهزة والصيانة، والسلامة، والمعمل الرقمي، والإنجازات، وعناصر الأداء، والشواهد.
+   ===================================================================== */
+const LAB_EL_NAME = Object.fromEntries(LAB_ELEMENTS);
+const DEV_PARTS = [["ok", "يعمل", "#4E7D66"], ["maint", "في الصيانة", "#9A7B22"], ["broken", "معطّل", "#B4661E"]];
+
+export function LabDfileReport({ data: d, settings: s, code }) {
+  const hidden = new Set(s?.hidden ?? []);
+  const show = (k) => !hidden.has(k);
+  const [open, setOpen] = useState({});
+  const [cur, setCur] = useState(null);
+  const [doc, setDoc] = useState(null);
+  const closeDoc = useCallback(() => setDoc(null), [setDoc]);
+  const [L, setL] = useState(null);
+  const root = useRef(null);
+  const dv = d.devices ?? {}, tk = d.tickets ?? {}, use = d.use ?? {}, seats = d.seats ?? {}, dig = d.digital ?? {};
+  const weeks = d.weeks ?? [];
+  const wMax = Math.max(1, ...weeks.map((w) => w.n));
+  const cover = d.cover ?? {};
+  const cv = (k) => cover[k] ?? { on: 0, of: 0 };
+  const coverOn = LAB_ELEMENTS.slice(1).reduce((a, [k]) => a + Number(cv(k).on), 0);
+  const coverOf = LAB_ELEMENTS.slice(1).reduce((a, [k]) => a + Number(cv(k).of), 0);
+  const exp = experience(s, d.year);
+  const rate = s?.perf_rating ? Number(s.perf_rating) : null;
+  useEffect(() => {
+    if (dig.author || dig.by_lesson?.length) import("../../lib/labPerf.js").then((m) => setL(m.lessonStats()));
+  }, [dig.author, dig.by_lesson?.length]);
+  useDfMotion(root, [d, s, L]);
+
+  const has = {
+    run: Number(use.done) > 0, devices: Number(dv.n) > 0 || Number(tk.n) > 0, safety: (d.rules?.length ?? 0) > 0 || d.acks > 0,
+    digital: !!(dig.author || dig.sessions > 0), wins: (s?.other_wins?.length ?? 0) > 0, elements: true, docs: (d.docs?.length ?? 0) > 0,
+  };
+  const tabs = LAB_PARTS.filter((p) => show(p.key) && has[p.key]);
+  useEffect(() => {
+    if (!("IntersectionObserver" in window)) return undefined;
+    const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && setCur(e.target.id.slice(3))),
+      { rootMargin: "-30% 0px -60% 0px" });
+    root.current?.querySelectorAll(".df-sec[id]").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [d, s, L]);
+  const go = (k) => {
+    if (k === "elements" || k === "docs") setOpen((o) => ({ ...o, [k]: true }));
+    root.current?.querySelector(`#df-${k}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  return (
+    <div className="dfile" dir="rtl" data-subject={s?.color || "science"} ref={root}>
+      <div className="df-wrap">
+        <header className="df-hero">
+          <div className="df-hero-top">
+            <div>
+              <p className="df-eyebrow">مدرسة مكة الثانوية، ملف محضر المعمل الرقمي، {d.year}هـ</p>
+              <h1>أ. {d.name}</h1>
+              <p className="df-role">{["محضر معمل الحاسب الآلي", exp != null && `${exp} سنة خبرة`].filter(Boolean).join("، ")}</p>
+              <div className="df-chips">
+                {dv.n > 0 && <span className="df-hchip df-num">{countAr(dv.n, "device")} في المعمل</span>}
+                {use.teachers > 0 && <span className="df-hchip df-num">يخدم {countAr(use.teachers, "teacher", { acc: true })}</span>}
+                {use.classes > 0 && <span className="df-hchip df-num">{countAr(use.classes, "cls")}</span>}
+              </div>
+            </div>
+            {rate && (
+              <div className="df-ring-wrap">
+                <div className="df-ring" aria-label={`تقييم الأداء للعام السابق ${rate} من 5`}>
+                  <svg viewBox="0 0 100 100" aria-hidden="true">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.16)" strokeWidth="9" />
+                    <circle className="df-arc" cx="50" cy="50" r="42" fill="none" stroke="var(--mint)" strokeWidth="9" strokeLinecap="round"
+                            strokeDasharray="263.9" strokeDashoffset={263.9 * (1 - rate / 5)} style={{ "--off": 263.9 * (1 - rate / 5) }} />
+                  </svg>
+                  <div className="df-lbl"><b className="df-num" data-count={rate.toFixed(2)}>{rate.toFixed(2)}</b><span>من 5</span></div>
+                </div>
+                <span className="df-ring-cap">{RATING_LABEL[Math.min(5, Math.max(1, Math.floor(rate)))]}</span>
+                {s.perf_year && <span className="df-sub" style={{ color: "var(--hero-soft)", fontSize: 10.5 }}>تقييم أداء {s.perf_year}هـ</span>}
+              </div>
+            )}
+          </div>
+          <div className="df-hero-foot"><span>يُبنى مباشرة من البوابة</span>{code && <span>رمز التحقق <span className="df-code">{code}</span></span>}</div>
+        </header>
+
+        <div className="df-kpis df-kpis-lab">
+          <div className="df-kpi"><span className="df-v df-num">{use.done ?? 0}</span><span className="df-l">حصة خدمها المعمل</span>
+            {use.days > 0 && <span className="df-d">في {countAr(use.days, "day", { acc: true })}</span>}</div>
+          <div className="df-kpi"><span className="df-v df-num">{tk.resolved ?? 0}</span><span className="df-l">عطلًا حلّه</span>
+            {tk.hours != null && tk.resolved > 0 && <span className="df-d">متوسط الحل {tk.hours} ساعة</span>}</div>
+          <div className="df-kpi"><span className="df-v df-num">{dv.ok ?? 0}</span><span className="df-l">جهازًا جاهزًا للعمل</span>
+            {dv.n > 0 && <span className="df-d">من {countAr(dv.n, "device", { acc: true })}</span>}</div>
+          <div className="df-kpi"><span className="df-v df-num">{d.acks ?? 0}</span><span className="df-l">طالبًا أقرّ بقواعد السلامة</span>
+            {d.rules?.length > 0 && <span className="df-d">قواعد معتمدة: {d.rules.length}</span>}</div>
+          <div className="df-kpi"><span className="df-v df-num">{weeks.length}</span><span className="df-l">أسبوعًا موثّقًا</span>
+            <span className="df-d">في سجل الاستخدام</span></div>
+          {dig.author && L && <div className="df-kpi"><span className="df-v df-num">{L.lessons}</span><span className="df-l">{L.lessons >= 3 && L.lessons <= 10 ? "دروس رقمية أعدّها" : "درسًا رقميًا أعدّها"}</span>
+            <span className="df-d">{L.stations} محطة تعلم</span></div>}
+        </div>
+
+        {tabs.length > 0 && (
+          <nav className="df-tabs" aria-label="أقسام الملف">
+            {tabs.map((t) => <button key={t.key} type="button" className="df-tab" aria-current={cur === t.key} onClick={() => go(t.key)}>{t.t}</button>)}
+          </nav>
+        )}
+
+        {show("run") && has.run && (
+          <Section id="run" title="تشغيل المعمل" sub="الحجوزات وسجل الاستخدام">
+            <div className="df-grid2">
+              <div className="df-card df-top">
+                <CardH title="الحصص في المعمل" sub="هذا العام" src="تلقائي" />
+                <div className="df-tiles">
+                  <span><b className="df-num">{use.done}</b>حصة نُفّذت</span>
+                  <span><b className="df-num">{use.walk_in ?? 0}</b>بلا حجز سابق</span>
+                  <span><b className="df-num">{use.unused ?? 0}</b>لم تُستخدم</span>
+                  <span><b className="df-num">{use.teachers ?? 0}</b>معلمًا</span>
+                  <span><b className="df-num">{use.classes ?? 0}</b>فصلًا</span>
+                  <span><b className="df-num">{use.days ?? 0}</b>يوم عمل</span>
+                </div>
+              </div>
+              {weeks.length > 0 && (
+                <div className="df-card">
+                  <CardH title="الاستخدام الأسبوعي" sub="الحصص المنفّذة في آخر الأسابيع" src="تلقائي" />
+                  {weeks.slice(-8).map((w) => (
+                    <div className="df-bar" key={w.w}>
+                      <div className="df-row"><span>الأسبوع من {fmtDate(w.w)}</span><span className="df-num">{countAr(w.n, "period")}</span></div>
+                      <div className="df-track"><div className="df-fill" style={{ width: `${pct(w.n, wMax)}%` }} /></div>
+                    </div>))}
+                </div>
+              )}
+            </div>
+          </Section>
+        )}
+
+        {show("devices") && has.devices && (
+          <Section id="devices" title="الأجهزة والصيانة" sub="سجل الأجهزة وبلاغات الأعطال">
+            <div className="df-grid2">
+              {dv.n > 0 && (
+                <div className="df-card df-top">
+                  <CardH title="حالة الأجهزة" sub={`${countAr(dv.n, "device")}، الموثّق منها مواصفاته ${dv.specs}`} src="تلقائي" />
+                  <Dist parts={DEV_PARTS.map(([k, , c]) => ({ k, n: dv[k] ?? 0, c, label: String(dv[k] ?? 0) }))} />
+                  <div className="df-keys">{DEV_PARTS.filter(([k]) => dv[k] > 0).map(([k, t, c]) => <span key={k}><i style={{ background: c }} />{t}</span>)}</div>
+                </div>
+              )}
+              {tk.n > 0 && (
+                <div className="df-card">
+                  <CardH title="بلاغات الأعطال" sub="من رمز البلاغ على خلفية كل جهاز" src="تلقائي" />
+                  <div className="df-tiles">
+                    <span><b className="df-num">{tk.n}</b>بلاغًا</span>
+                    <span><b className="df-num">{tk.resolved}</b>حُلّ</span>
+                    <span><b className="df-num">{tk.external}</b>للصيانة الخارجية</span>
+                  </div>
+                  {tk.resolved > 0 && <Bar label="نسبة الحل" v={tk.resolved} of={tk.n} />}
+                  {d.cats?.length > 0 && <div className="df-tags">{d.cats.map((c) => <span key={c.t} className="df-tag df-num">{c.t}، {c.n}</span>)}</div>}
+                </div>
+              )}
+            </div>
+          </Section>
+        )}
+
+        {show("safety") && has.safety && (
+          <Section id="safety" title="السلامة في المعمل" sub="القواعد وإقرار الطلاب وتنظيم الجلوس">
+            <div className="df-grid2">
+              {d.rules?.length > 0 && (
+                <div className="df-card">
+                  <CardH title="قواعد السلامة" sub="معلّقة في المعمل، ويقرّ بها كل طالب كل فصل" src="تلقائي" />
+                  <ul className="df-qlist">{d.rules.map((r, i) => <li key={i}><b>{r}</b></li>)}</ul>
+                </div>
+              )}
+              <div className="df-card df-top">
+                <CardH title="الطلاب والجلوس" sub="بلا أسماء طلاب" src="تلقائي" />
+                <div className="df-tiles">
+                  <span><b className="df-num">{d.acks ?? 0}</b>طالبًا أقرّ</span>
+                  <span><b className="df-num">{seats.classes ?? 0}</b>خريطة جلوس</span>
+                  <span><b className="df-num">{seats.students ?? 0}</b>طالبًا في الخرائط</span>
+                </div>
+              </div>
+            </div>
+          </Section>
+        )}
+
+        {show("digital") && has.digital && (
+          <LabPart L={L ?? { list: [] }} x={{ author: dig.author, periods: use.done, classes: use.classes, sessions: dig.sessions,
+            results: dig.results, mastery: dig.mastery, works: dig.works, by_lesson: dig.by_lesson, lab: null }} />
+        )}
+
+        {show("wins") && has.wins && (
+          <Section id="wins" title="المبادرات والإنجازات" sub="ما صنعه خارج العمل اليومي">
+            <div className="df-card">
+              <CardH title="إنجازات" sub="يكتبها المحضر بنفسه" src="يكتبه المحضر" srcKind="up" />
+              <ul className="df-qlist">{s.other_wins.map((w, i) => <li key={i}><b>{w.t}</b>{w.d && <span>{w.d}</span>}</li>)}</ul>
+            </div>
+          </Section>
+        )}
+
+        {show("elements") && (
+          <Fold id="elements" title="عناصر الأداء الوظيفي" open={!!open.elements} onToggle={(v) => setOpen((o) => ({ ...o, elements: v }))}
+                line={`بنود لها شواهد: ${coverOn} من ${countAr(coverOf, "clause", { acc: true })} في ${LAB_ELEMENTS.length - 1} عنصرًا، والعنصر الأول يقدّره مدير المدرسة`}>
+            <div className="df-els">
+              {LAB_ELEMENTS.map(([k, t], i) => (
+                <div className="df-el" key={k}>
+                  <span className="df-k" style={{ background: labElColor(k) }}>{Number(k.slice(1))}</span>
+                  <div className="df-t"><p>{t}</p><div className="df-track" style={{ marginTop: 4 }}>
+                    <div className="df-fill" style={{ width: `${cv(k).of ? (100 * cv(k).on) / cv(k).of : 0}%`, background: labElColor(k) }} /></div></div>
+                  <span className="df-n df-num">{i === 0 ? "يقدّره المدير" : `${cv(k).on} من ${countAr(cv(k).of, "clause", { acc: true })}`}</span>
+                </div>
+              ))}
+            </div>
+          </Fold>
+        )}
+
+        {show("docs") && has.docs && (
+          <Fold id="docs" title="الشواهد من خارج البوابة" line={`${d.docs.length} ملفات رفعها المحضر`}
+                open={!!open.docs} onToggle={(v) => setOpen((o) => ({ ...o, docs: v }))}>
+            <div className="df-docs">
+              {d.docs.map((f) => (
+                <button type="button" className="df-doc" key={f.id} onClick={() => setDoc(f)}>
+                  <span className="df-ic"><Svg d={f.kind === "image" ? ICON.image : ICON.file} /></span><b>{f.title}</b>
+                  {LAB_EL_NAME[f.el] && <span className="df-doc-el" style={{ color: labElColor(f.el) }}>{LAB_EL_NAME[f.el]}</span>}
+                  <span className="df-num">{[f.kind === "image" ? "صورة" : "PDF", f.date && fmtHijri(f.date)].filter(Boolean).join("، ")}</span></button>
+              ))}
+            </div>
+          </Fold>
+        )}
+        {doc && <DfileDocViewer code={code} doc={doc} onClose={closeDoc} />}
+        <footer className="df-foot">
+          <span>صادر من بوابة مكة الثانوية الرقمية، يتحدّث تلقائيًا مع كل عمل جديد في المعمل</span>
           <span>لا يعرض أسماء الطلاب ولا بياناتهم الشخصية</span>
         </footer>
       </div>

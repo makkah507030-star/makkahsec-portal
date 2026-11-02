@@ -7,9 +7,9 @@ import { fmtDate } from "../../lib/dates";
 import { todayISO } from "../../lib/schoolTime";
 import { confirmDanger } from "../../lib/danger";
 import { sendPush } from "../../lib/pushSend.js";
-import { MEETINGS, OCCASIONS, ONBOARD, PROGRAMS, setupMsg } from "../../lib/culture.js";
+import { MEETINGS, OCCASIONS, ONBOARD, PROGRAMS, setupMsg, cardInit } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
-import { CardMaker } from "./CultCard.jsx";
+import { CardMaker, SendPreview } from "./CultCard.jsx";
 
 /* سجلات البرامج: «التواصل الملهم» (اللقاءات)، و«نهتم بك» (مناسبات الموظفين وبطاقاتها إشعارًا لصاحبها)،
    و«حيّاك» (تهيئة الموظف الجديد بمهامها على مراحلها). يوثّقها الفريق، ويرسل السفير البطاقات. */
@@ -96,8 +96,20 @@ export function CultCare({ me }) {
   const [x, setX] = useState({ user_id: "", kind: "achievement", held_on: todayISO(), message: "" });
   const [busy, setBusy] = useState(null);
   const [card, setCard] = useState(null);
+  const [preview, setPreview] = useState(null);   // { row } لمناسبة محفوظة، أو { fresh: true } لمناسبة جديدة
   if (!rows) return <Loader />;
   const person = staff.find((s) => s.id === x.user_id);
+  // ما يُعرض في المعاينة: البطاقة بنصها، والإشعار بعنوانه، والمستلم
+  const previewOf = (kind, name, message) => ({
+    card: { ...cardInit("occasion", kind, name), name, body: message },
+    notif: { title: `نهتم بك · ${OCCASIONS[kind]?.t ?? "مناسبة"}`, body: message },
+    to: `${name} — في جرس البوابة وعلى جواله`,
+  });
+  const ask = () => {
+    if (!person) { setMsg({ ok: false, text: "اختر صاحب المناسبة." }); return; }
+    if (!x.message.trim()) { setMsg({ ok: false, text: "اكتب نص البطاقة." }); return; }
+    setPreview({ fresh: true, ...previewOf(x.kind, person.full_name, x.message.trim()) });
+  };
   const pick = (patch) => {
     const y = { ...x, ...patch }; const p = staff.find((s) => s.id === y.user_id);
     setX({ ...y, message: p ? OCCASIONS[y.kind].msg(p.full_name.split(" ").slice(0, 2).join("\u00A0")) : y.message });
@@ -127,6 +139,10 @@ export function CultCare({ me }) {
     setBusy(null);
   };
   const resend = async (r) => { setBusy(r.id); if (await send(r)) { setMsg({ ok: true, text: `أُرسلت البطاقة إلى ${r.person_name}.` }); load(); } setBusy(null); };
+  const confirm = async () => {
+    if (preview.fresh) await save(true); else await resend(preview.row);
+    setPreview(null);
+  };
 
   return (
     <div className="space-y-3">
@@ -141,7 +157,7 @@ export function CultCare({ me }) {
         </div>
         <label className={`block ${lbl}`}>نص البطاقة (مقترح يُعدَّل)<textarea className="field mt-1 min-h-[70px] w-full text-sm" value={x.message} onChange={(e) => setX({ ...x, message: e.target.value })} /></label>
         <div className="flex flex-wrap gap-2">
-          {me.amb && <button className="btn-primary px-4 py-1.5 text-xs" disabled={!!busy} onClick={() => save(true)}>{busy === "new" ? "…" : "حفظ وإرسال إشعار"}</button>}
+          {me.amb && <button className="btn-primary px-4 py-1.5 text-xs" disabled={!!busy} onClick={ask}>{busy === "new" ? "…" : "معاينة وإرسال إشعار"}</button>}
           <button className="btn-ghost px-4 py-1.5 text-xs" disabled={!!busy} onClick={() => save(false)}>حفظ دون إرسال</button>
           <button className="rounded-pill bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white" onClick={() => person ? setCard({ kind: "occasion", sub: x.kind, name: person.full_name, mobile: person.mobile, body: x.message || undefined }) : setMsg({ ok: false, text: "اختر صاحب المناسبة." })}>بطاقة واتساب</button>
         </div>
@@ -157,7 +173,7 @@ export function CultCare({ me }) {
             </span>
             <span className="flex shrink-0 flex-col items-end gap-1">
               {r.sent_at ? <span className="chip bg-present/10 text-present">أُرسل الإشعار · <span className="num">{fmtDate(r.sent_at)}</span></span>
-                : me.amb ? <button className="text-[11.5px] font-semibold text-mint-deep" disabled={!!busy} onClick={() => resend(r)}>{busy === r.id ? "…" : "إرسال إشعار"}</button>
+                : me.amb ? <button className="text-[11.5px] font-semibold text-mint-deep" disabled={!!busy} onClick={() => setPreview({ row: r, ...previewOf(r.kind, r.person_name, r.message ?? "") })}>{busy === r.id ? "…" : "إرسال إشعار"}</button>
                 : <span className="chip bg-canvas text-muted">لم تُرسل</span>}
               <button className="text-[11.5px] font-semibold text-[#128C7E]" onClick={() => setCard({ kind: "occasion", sub: r.kind, name: r.person_name, mobile: staff.find((s) => s.id === r.user_id)?.mobile, body: r.message || undefined })}>بطاقة واتساب</button>
               <button className="text-[11px] text-absent" onClick={() => remove(r.id, `${r.person_name} · ${OCCASIONS[r.kind]?.t ?? ""}`)}>حذف</button>
@@ -165,6 +181,7 @@ export function CultCare({ me }) {
           </div>)) : <p className="px-4 py-6 text-center text-sm text-muted">لا مناسبات مسجلة بعد.</p>}
       </div>
       {card && <CardMaker init={card} onClose={() => setCard(null)} />}
+      {preview && <SendPreview card={preview.card} notif={preview.notif} to={preview.to} busy={!!busy} onConfirm={confirm} onClose={() => setPreview(null)} />}
     </div>
   );
 }

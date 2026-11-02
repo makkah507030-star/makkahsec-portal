@@ -1,7 +1,7 @@
 // الفئات المستهدفة للأدلة — مصدر موحّد للواجهة والإدارة
 export const AUDIENCES = [
   { key: "general",  label: "عام",              desc: "يخصّ الجميع" },
-  { key: "admin",    label: "الإدارة المدرسية", desc: "منسوبو الإدارة" },
+  { key: "admin",    label: "الإدارة المدرسية", desc: "موظفو الإدارة" },
   { key: "teacher",  label: "المعلمون",         desc: "الكادر التعليمي" },
   { key: "student",  label: "الطلاب",           desc: "طلاب المدرسة" },
   { key: "guardian", label: "أولياء الأمور",    desc: "أولياء أمور الطلاب" },

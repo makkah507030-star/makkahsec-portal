@@ -168,3 +168,53 @@ export function CardMaker({ init, onClose }) {
     </div>
   );
 }
+
+/** معاينة قبل الإرسال: البطاقة كما تبدو، ونص الإشعار كما يصل الجرس والجوال، ومن يستلمه، ثم التأكيد.
+ *  card = قالب CultCard، notif = { title, body }، to = نص المستلمين */
+export function SendPreview({ card, notif, to, busy, onConfirm, onClose }) {
+  const box = useRef(null);
+  const [scale, setScale] = useState(0.5);
+  useEffect(() => {
+    const fit = () => setScale(Math.min(0.62, (box.current?.offsetWidth ?? 300) / W));
+    fit(); window.addEventListener("resize", fit); return () => window.removeEventListener("resize", fit);
+  }, []);
+  useEffect(() => { const esc = (e) => e.key === "Escape" && !busy && onClose(); window.addEventListener("keydown", esc); return () => window.removeEventListener("keydown", esc); }, [busy, onClose]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 p-3 sm:items-center" onClick={() => !busy && onClose()}>
+      <div className="w-full max-w-3xl rounded-card bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-ink">معاينة قبل الإرسال</h2>
+          <button className="text-xs text-muted" disabled={busy} onClick={onClose}>إغلاق</button>
+        </div>
+        <div className="grid gap-4 md:grid-cols-[1fr_300px]">
+          <div className="space-y-3">
+            <div>
+              <p className="mb-1 text-[11.5px] font-semibold text-muted">المستلم</p>
+              <p className="rounded-sm2 bg-canvas px-3 py-2 text-sm font-semibold text-ink">{to}</p>
+            </div>
+            <div>
+              <p className="mb-1 text-[11.5px] font-semibold text-muted">الإشعار كما يصل الجرس والجوال</p>
+              <div className="flex gap-3 rounded-card border border-line bg-white p-3 shadow-card">
+                <img src={iconMint} alt="" className="h-9 w-9 shrink-0 rounded-sm2 bg-mint-tint p-1.5" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold text-ink">{notif.title}</p>
+                  <p className="mt-0.5 whitespace-pre-line text-[12.5px] leading-relaxed text-muted">{notif.body}</p>
+                </div>
+              </div>
+            </div>
+            <p className="text-[11px] leading-relaxed text-faint">راجع الاسم والنص جيدًا: الإشعار يصل فور التأكيد ولا يُسترجع. والبطاقة المجاورة هي صورته لواتساب إن أردت إرسالها أيضًا.</p>
+            <div className="flex flex-wrap gap-2">
+              <button className="btn-primary px-5 py-2 text-xs" disabled={busy} onClick={onConfirm}>{busy ? "جارٍ الإرسال…" : "تأكيد الإرسال"}</button>
+              <button className="btn-ghost px-4 py-2 text-xs" disabled={busy} onClick={onClose}>رجوع للتعديل</button>
+            </div>
+          </div>
+          <div ref={box} className="mx-auto w-full max-w-[300px]">
+            <div style={{ width: W * scale, height: H * scale, overflow: "hidden", borderRadius: 14, boxShadow: "0 8px 24px rgba(0,0,0,.12)" }}>
+              <div style={{ transform: `scale(${scale})`, transformOrigin: "top right" }}><CultCard c={card} /></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

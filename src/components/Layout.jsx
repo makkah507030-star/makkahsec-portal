@@ -127,6 +127,8 @@ export const ADMIN_GROUPS = [
     title: "المعامل والمختبرات",
     items: [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
+      { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab", "principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
+      { to: "/my-lab-dfile", label: "ملف المحضر الرقمي", roles: ["computer_lab"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف محضر" },
     ],
   },
   {
@@ -158,6 +160,8 @@ export const ADMIN_GROUPS = [
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
+      { to: "/outreach",       label: "النشرات والاستبانات", perm: "outreach", icon: "megaphone", kw: "استبانة استبيان نشرة توعية توعوية تعليمات موجه طلابي واتساب" },
+      { to: "/my-outreach",    label: "ما وصلني من نشرات واستبانات", icon: "inbox", kw: "استبانة نشرة توعية" },
       { to: "/polls-admin",    label: "إدارة التصويت والاستطلاعات", perm: "polls", icon: "check", kw: "تصويت استطلاع انتخاب رأي مجلس طلابي" },
       { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
       { to: "/my-media-team",  label: "المركز الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية رئيس المركز عضوية" },
@@ -184,7 +188,7 @@ export const ADMIN_GROUPS = [
     title: "إعدادات المدرسة",
     items: [
       { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
-      { to: "/staff",          label: "الإدارة",             perm: "staff",          icon: "briefcase", kw: "منسوبين" },
+      { to: "/staff",          label: "الإدارة",             perm: "staff",          icon: "briefcase", kw: "موظفين منسوبين" },
       { to: "/teacher-permissions", label: "صلاحيات المعلمين", perm: "staff",       icon: "shield" },
       { to: "/calendar-admin", label: "التقويم والإجازات",   perm: "calendar",       icon: "calendar" },
       { to: "/season",         label: "التوقيت الزمني",       perm: "import",         icon: "clock", kw: "حصص" },
@@ -326,6 +330,7 @@ export const TEACHER_GROUPS = [
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
       { to: "/my-circulars", label: "تعاميمي",            icon: "circular", kw: "تعميم اطلاع" },
+      { to: "/my-outreach",  label: "النشرات والاستبانات", icon: "inbox", kw: "استبانة نشرة توعية" },
       { to: "/plc",          label: "التطوير المهني",     icon: "users", kw: "مجتمع التعلم المهني" },
     ],
   },
@@ -367,6 +372,8 @@ export const BASIC_GROUPS = [
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
       // التعاميم تصل أولياء الأمور لا الطلاب
       { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
+      // النشرات التوعوية والاستبانات من الموجه الطلابي والإدارة (supabase/outreach_1..2.sql)
+      { to: "/my-outreach", label: "النشرات والاستبانات", icon: "inbox", kw: "استبانة استبيان نشرة توعية تعليمات" },
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
       { to: "/media", label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
@@ -490,8 +497,22 @@ const Badge = ({ n, dot, at = "-top-0.5 -left-1" }) => (n > 0
     : <span className="num ms-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{n}</span>
   : null);
 
+/* هل المستخدم سفير الثقافة المؤسسية — يُجلب مرة في الجلسة */
+let ambCache = null;   // { uid, v }
+function useCultAmbassador() {
+  const { session } = useSession();
+  const uid = session?.user?.id;
+  const [v, setV] = useState(ambCache?.uid === uid ? ambCache.v : false);
+  useEffect(() => {
+    if (!uid || ambCache?.uid === uid) return;
+    supabase.from("cult_team").select("role").eq("user_id", uid).eq("role", "ambassador").maybeSingle()
+      .then(({ data, error }) => { const x = !error && !!data; ambCache = { uid, v: x }; setV(x); });
+  }, [uid]);
+  return v;
+}
+
 export default function Layout({ children }) {
-  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav } = useSession();
+  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav, focusRoles, roleFocus, switchFocus } = useSession();
   const navigate = useNavigate();
   const location = useLocation();
   const path = location.pathname;
@@ -703,6 +724,8 @@ export default function Layout({ children }) {
 
   // وسم «رئيس قسم …» بجانب الاسم (supabase/plc_1_departments.sql)
   const dept = useMyDepartment();
+  // ووسم «سفير الثقافة المؤسسية» لمن عُيّن سفيرًا (supabase/cult_1.sql ← cult_team)
+  const amb = useCultAmbassador();
 
   const subtitle =
     isAdmin && adminRoles.length
@@ -738,6 +761,21 @@ export default function Layout({ children }) {
     );
   };
 
+  // التبديل بين دورين إداريين في الحساب نفسه (الدعم الفني ومحضر معمل الحاسب الآلي)
+  const FocusSwitch = () => {
+    if (!focusRoles || effectiveRole !== "admin") return null;
+    const other = focusRoles.find((r) => r !== roleFocus);
+    const short = { tech_support: "الدعم الفني", computer_lab: "محضر المعمل" };
+    return (
+      <button onClick={() => { switchFocus(other); navigate(other === "computer_lab" ? "/lab" : "/"); }}
+              title={`التبديل إلى حساب ${ADMIN_ROLE_LABEL[other] ?? other}`}
+              className="flex shrink-0 items-center gap-1.5 rounded-pill border border-[#7258A4] bg-[#F1ECF8] px-3 py-1.5 text-xs font-semibold text-[#5B4387] transition-colors hover:bg-[#E5DCF2] sm:px-3.5">
+        <Icon name="swap" className="h-4 w-4" />
+        <span>{short[other] ?? ADMIN_ROLE_LABEL[other]}</span>
+      </button>
+    );
+  };
+
   const Brand = ({ compact, iconOnly }) => (
     <NavLink to="/" end className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80">
       <img src={logoIcon} alt="" className="h-9 w-9 shrink-0 object-contain" />
@@ -755,6 +793,7 @@ export default function Layout({ children }) {
   const Actions = () => (
     <div className="flex shrink-0 items-center gap-2">
       <ViewSwitch />
+      <FocusSwitch />
       {isStudentView && <ThemeToggle />}
       <Refresh />
       <PreviewSite />
@@ -832,9 +871,10 @@ export default function Layout({ children }) {
           {profile?.full_name ?? profile?.username ?? "—"}
         </p>
         <p className="truncate text-[11px] leading-tight text-muted">{subtitle}</p>
-        {dept?.is_head && (
-          <span className="mt-0.5 inline-block rounded-pill bg-mint-light px-2 py-px text-[10.5px] font-semibold text-mint-deep">
-            {headLabel(dept)}
+        {(dept?.is_head || amb) && (
+          <span className="mt-0.5 flex flex-wrap gap-1">
+            {dept?.is_head && <span className="rounded-pill bg-mint-light px-2 py-px text-[10.5px] font-semibold text-mint-deep">{headLabel(dept)}</span>}
+            {amb && <span className="rounded-pill px-2 py-px text-[10.5px] font-semibold text-white" style={{ background: "#7258A4" }}>✦ سفير الثقافة المؤسسية</span>}
           </span>
         )}
       </div>

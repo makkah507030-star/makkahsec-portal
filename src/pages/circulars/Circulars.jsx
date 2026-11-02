@@ -2,7 +2,7 @@
 /* =====================================================================
    التعاميم (/circulars) — لمن له صلاحية «التعاميم» مع المدير والدعم الفني (supabase/circulars_*.sql):
    • تعميم جديد: وارد (من الإدارة العامة للتعليم أو الوزارة) أو داخلي، برقمه وتاريخه وجهته وموضوعه
-     وتصنيفه وأهميته والمطلوب وآخر موعد وملفه، ثم المستفيدون: المنسوبون (الكل أو فئة أو أدوار أو
+     وتصنيفه وأهميته والمطلوب وآخر موعد وملفه، ثم المستفيدون: الموظفون (الكل أو فئة أو أدوار أو
      أشخاص) وأولياء الأمور (الكل أو صفوف أو فصول). يصل كلَّ مستفيد إشعار برابط التعميم.
    • الأرشيف: كل التعاميم برقم قيدها في السنة، بحث وتصفية، ونسبة الاطلاع لكلٍّ منها.
    • التقرير: ملخص الفترة، والتصنيفات، والتزام كل مستفيد بالاطلاع؛ طباعة بهوية البوابة وExcel.
@@ -44,7 +44,7 @@ export default function Circulars() {
       <div>
         <h1 className="text-lg font-bold text-ink">التعاميم</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          التعاميم الواردة من الإدارة العامة للتعليم والوزارة، والتعاميم الداخلية للمدرسة: تُرسل للمنسوبين وأولياء
+          التعاميم الواردة من الإدارة العامة للتعليم والوزارة، والتعاميم الداخلية للمدرسة: تُرسل للموظفين وأولياء
           الأمور، ويُتابع اطلاع كل مستفيد وإقراره، ويُذكَّر من تأخر، وتُحفظ في الأرشيف برقم قيدها.
         </p>
       </div>
@@ -85,7 +85,7 @@ export function Audience({ value, onChange }) {
   return (
     <div className="space-y-3">
       <div>
-        <p className="mb-1.5 text-xs font-semibold text-ink">المنسوبون</p>
+        <p className="mb-1.5 text-xs font-semibold text-ink">الموظفون</p>
         <div className="flex flex-wrap gap-1.5">
           {STAFF_SCOPES.map(([k, t]) => <button key={k} type="button" className={chip(v.staff === k)} onClick={() => set({ staff: k })}>{t}</button>)}
         </div>
@@ -406,7 +406,7 @@ function Report({ year }) {
       { title: "الملخص", headerRows: [kpis.map((k) => k[0])], rows: [kpis.map((k) => k[1])] },
       { title: "التعاميم", headerRows: [["رقم القيد", "النوع", "الموضوع", "الجهة", "التاريخ", "الاطلاع"]],
         rows: list.map((c) => { const s = circStats(c.recs, c.needs_ack); return [circNo(c), DIRECTION[c.direction]?.t, c.subject, c.source ?? "", fmtDate(c.sent_at), `${s.done}/${s.total} (${s.pct}%)`]; }) },
-      { title: kind === "staff" ? "التزام المنسوبين بالاطلاع" : "اطلاع أولياء الأمور", headerRows: [HEAD], rows: people.map(line) },
+      { title: kind === "staff" ? "التزام الموظفين بالاطلاع" : "اطلاع أولياء الأمور", headerRows: [HEAD], rows: people.map(line) },
     ],
     signatures: [{ title: "مدير المدرسة", name: PRINCIPAL_NAME }], signOnLastPageOnly: true,
   });
@@ -419,7 +419,7 @@ function Report({ year }) {
         <label className="text-xs text-muted">من<input type="date" className="field mt-1" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
         <label className="text-xs text-muted">إلى<input type="date" className="field mt-1" value={to} onChange={(e) => setTo(e.target.value)} /></label>
         <div className="flex gap-1.5">
-          <button className={chip(kind === "staff")} onClick={() => setKind("staff")}>المنسوبون</button>
+          <button className={chip(kind === "staff")} onClick={() => setKind("staff")}>الموظفون</button>
           <button className={chip(kind === "guardian")} onClick={() => setKind("guardian")}>أولياء الأمور</button>
         </div>
         <button className="btn-primary mr-auto" disabled={!list.length} onClick={print}>طباعة التقرير</button>
@@ -440,7 +440,7 @@ function Report({ year }) {
       )}
       <section className="card overflow-hidden">
         <p className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">
-          {kind === "staff" ? "التزام المنسوبين بالاطلاع" : "اطلاع أولياء الأمور"} <span className="text-[11px] font-normal text-muted">الأقل اطلاعًا أولًا</span></p>
+          {kind === "staff" ? "التزام الموظفين بالاطلاع" : "اطلاع أولياء الأمور"} <span className="text-[11px] font-normal text-muted">الأقل اطلاعًا أولًا</span></p>
         {people.length === 0 ? <p className="px-4 py-5 text-sm text-muted">لا بيانات في هذه الفترة.</p> : (
           <div className="max-h-[32rem] overflow-auto">
             <table className="w-full text-sm">

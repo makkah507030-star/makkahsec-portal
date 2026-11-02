@@ -274,6 +274,13 @@ export default function MyDfile() {
             </label>
           ))}
         </div>
+        {"lab_author" in s && (
+          <label className="flex cursor-pointer items-start gap-2 rounded-sm2 border border-line bg-white px-3 py-2 text-sm text-ink">
+            <input type="checkbox" className="mt-1 accent-mint-deep" checked={!!s.lab_author} onChange={(e) => save({ lab_author: e.target.checked })} />
+            <span>أنا من أعدّ دروس المعمل الرقمي في البوابة
+              <span className="block text-[11.5px] text-muted">يعرض قسم «المعمل الرقمي» مكتبة الدروس التفاعلية بمحطاتها وتدريباتها باسمك، مع حصصك ونتائجها في المعمل.</span></span>
+          </label>
+        )}
         {!(d?.quizzes?.length) && (
           <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
             نتائج طلابك لا تظهر لأنه لا اختبارات لك هذا العام. أضف اختبارك من «اختباراتي» ← «اختبار من خارج البوابة» وارصد درجات طلابك لتظهر.

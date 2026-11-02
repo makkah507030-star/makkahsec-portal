@@ -18,7 +18,7 @@ const TABS = [
   { key: "students", label: "الطلاب" },
   { key: "teachers", label: "المعلمون" },
   { key: "guardians", label: "أولياء الأمور" },
-  { key: "staffKids", label: "أبناء المنسوبين" },
+  { key: "staffKids", label: "أبناء الموظفين" },
   { key: "admins", label: "حسابات الإدارة" },
 ];
 

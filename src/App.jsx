@@ -97,6 +97,11 @@ const DocumentView = lazy(() => import("./pages/DocumentView.jsx"));
 const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
 const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx"));
 const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
+const LabPerformance = lazy(() => import("./pages/performance/LabPerformance.jsx"));
+const MyLabDfile = lazy(() => import("./pages/performance/MyLabDfile.jsx"));
+const OutreachAdmin = lazy(() => import("./pages/outreach/OutreachAdmin.jsx"));
+const OutreachView = lazy(() => import("./pages/outreach/OutreachView.jsx"));
+const MyOutreach = lazy(() => import("./pages/outreach/MyOutreach.jsx"));
 const DfilePublic = lazy(() => import("./pages/DfilePublic.jsx"));
 const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
 const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
@@ -247,6 +252,8 @@ export default function App() {
           <Route path="/notifications-me" element={<Navigate to="/login" replace />} />
           {/* رمز QR على خلفية جهاز المعمل: يُحفظ البلاغ المطلوب ويُفتح بعد الدخول */}
           <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
+          {/* رابط النشرة أو الاستبانة من واتساب أو رمز QR: يُفتح بعد الدخول */}
+          <Route path="/o/:id" element={<AfterLogin />} />
           {/* رمز درجة من ملف المعمل: يُرصد بعد الدخول */}
           <Route path="/lab/g/:code" element={<LabGradeLink />} />
           {/* رمز تسليم الاختبار دون إنترنت: يُرصد بعد الدخول */}
@@ -523,6 +530,14 @@ export default function App() {
            (effectiveRole === "teacher" && grantedTabs.has("computer_lab")) ? (
             <Route path="/lab" element={<Lab />} />
           ) : null}
+          {/* شواهد أداء محضر المعمل: له، وللمدير والدعم الفني اطلاعًا (supabase/lab_perf_*.sql) */}
+          {effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r)) && (
+            <Route path="/lab-performance" element={<LabPerformance />} />
+          )}
+          {/* ملف محضر المعمل الرقمي: للمحضر وحده (supabase/lab_dfile_*.sql) */}
+          {effectiveRole === "admin" && adminRoles.includes("computer_lab") && (
+            <Route path="/my-lab-dfile" element={<MyLabDfile />} />
+          )}
           {/* الأنشطة: حقيبة الانتظار والأنشطة الصفية وأدوات الصف — للمعلمين، ويديرها وكيل الشؤون التعليمية */}
           {effectiveRole === "teacher" ||
            (effectiveRole === "admin" && ["deputy_academic", "principal", "tech_support"].some((r) => adminRoles.includes(r))) ? (
@@ -559,14 +574,14 @@ export default function App() {
           <Route path="/my-qiyas" element={<MyQiyas />} />
           <Route path="/ach-committee" element={<AchCommittee />} />
           <Route path="/accreditation" element={<Accreditation />} />
-          {/* الثقافة المؤسسية (سفير الثقافة): لكل المنسوبين، والصفحة تحدد ما يظهر لكل منهم (cult_1.sql) */}
+          {/* الثقافة المؤسسية (سفير الثقافة): لكل الموظفين، والصفحة تحدد ما يظهر لكل منهم (cult_1.sql) */}
           {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/culture" element={<Culture />} />}
           {/* بلاغات الصيانة: يرفعها كل الموظفين، ويتابعها المساعد الإداري 3 (maint_1.sql) */}
           {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/repairs" element={<Repairs />} />}
           {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
           <Route path="/ach-forms" element={<AchGate><AchFormsList /></AchGate>} />
           <Route path="/ach-forms/:id" element={<AchGate><AchForm /></AchGate>} />
-          {/* التعاميم: الإدارة لصاحب الصلاحية، وصفحة التعميم وتعاميمي للمنسوبين وأولياء الأمور */}
+          {/* التعاميم: الإدارة لصاحب الصلاحية، وصفحة التعميم وتعاميمي للموظفين وأولياء الأمور */}
           {effectiveRole === "admin" && can("circulars") && <Route path="/circulars" element={<Circulars />} />}
           {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/circulars/:id" element={<CircularView />} />}
           {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/my-circulars" element={<MyCirculars />} />}
@@ -585,6 +600,10 @@ export default function App() {
           {/* التصويت والاستطلاعات: للجميع بحسب فئته، وإدارتها لصاحب الصلاحية (supabase/polls_1..2.sql) */}
           <Route path="/polls" element={<Polls />} />
           {can("polls") && <Route path="/polls-admin" element={<PollsAdmin />} />}
+          {/* النشرات والاستبانات: للمستفيد ما وصله، وإنشاؤها لصاحب الصلاحية (supabase/outreach_1..2.sql) */}
+          <Route path="/my-outreach" element={<MyOutreach />} />
+          <Route path="/o/:id" element={<OutreachView />} />
+          {effectiveRole === "admin" && can("outreach") && <Route path="/outreach" element={<OutreachAdmin />} />}
           <Route path="/media" element={<MediaGallery />} />
           {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}
@@ -646,6 +665,13 @@ export default function App() {
       </Suspense>
     </Layout>
   );
+}
+
+// رابط يُفتح بعد الدخول (النشرات والاستبانات /o/:id): يُحفظ في الجلسة ثم صفحة الدخول
+function AfterLogin() {
+  const loc = useLocation();
+  try { sessionStorage.setItem("mk_after_login", loc.pathname + loc.search); } catch { /* تجاهل */ }
+  return <Navigate to="/login" replace />;
 }
 
 // رابط رمز QR على خلفية جهاز المعمل أو ملصقه (/lab/r/5) ← صفحة البلاغ والجهاز محدد.

@@ -21,7 +21,7 @@ export const CATEGORIES = ["الشؤون التعليمية", "شؤون الطل
 export const SOURCES = ["الإدارة العامة للتعليم بمنطقة مكة المكرمة", "وزارة التعليم", "إدارة المدرسة"];
 
 export const STAFF_SCOPES = [
-  ["none", "لا يُرسل لهم"], ["all", "كل المنسوبين"], ["teachers", "المعلمون"], ["admins", "الإداريون"],
+  ["none", "لا يُرسل لهم"], ["all", "كل الموظفين"], ["teachers", "المعلمون"], ["admins", "الإداريون"],
 ];
 export const GUARDIAN_SCOPES = [["none", "لا يُرسل لهم"], ["all", "كل أولياء الأمور"], ["grades", "صفوف أو فصول"]];
 

@@ -23,7 +23,14 @@ async function photoData(path) {
 const VIA = { qr: "مسح الرمز", wa: "واتساب", link: "الرابط" };
 const dur = (s) => (s >= 60 ? `${Math.round(s / 60)} دقيقة` : s > 0 ? `${s} ثانية` : "أقل من دقيقة");
 
-export default function DfileShare({ uid, s, d, onSave }) {
+/* kind = "lab": ملف محضر معمل الحاسب الآلي (supabase/lab_dfile_*.sql) */
+const KIND = {
+  teacher: { title: "ملف المعلم الرقمي", owner: "المعلم" },
+  lab: { title: "ملف محضر المعمل الرقمي", owner: "المحضر", spec: "محضر معمل الحاسب الآلي" },
+};
+
+export default function DfileShare({ uid, s, d, onSave, kind = "teacher" }) {
+  const K = KIND[kind];
   const card = useRef(null);
   const [photo, setPhoto] = useState(null);
   const [busy, setBusy] = useState("");
@@ -32,7 +39,7 @@ export default function DfileShare({ uid, s, d, onSave }) {
   const link = dfileLink(s.code);
 
   useEffect(() => { photoData(s.photo_path).then(setPhoto); }, [s.photo_path]);
-  useEffect(() => { loadVisits(uid).then(setVisits); }, [uid]);
+  useEffect(() => { loadVisits(uid, kind).then(setVisits); }, [uid, kind]);
 
   const upload = async (file) => {
     if (!file) return;
@@ -68,7 +75,7 @@ export default function DfileShare({ uid, s, d, onSave }) {
     try { await navigator.clipboard.writeText(link); setMsg("نُسخ الرابط."); } catch { setMsg(link); }
   };
   const share = () => {
-    if (navigator.share) navigator.share({ title: `ملف المعلم الرقمي: ${d?.name ?? ""}`, url: link }).catch(() => {});
+    if (navigator.share) navigator.share({ title: `${K.title}: ${d?.name ?? ""}`, url: link }).catch(() => {});
     else copy();
   };
 
@@ -105,7 +112,7 @@ export default function DfileShare({ uid, s, d, onSave }) {
 
   return (
     <div className="space-y-4">
-      <DfileCard ref={card} name={d?.name} rank={s.rank} spec={d?.spec} code={s.code} color={s.color} photo={photo} />
+      <DfileCard ref={card} name={d?.name} rank={s.rank} spec={K.spec ?? d?.spec} code={s.code} color={s.color} photo={photo} title={K.title} owner={K.owner} />
 
       <div className="flex flex-wrap items-center justify-center gap-2">
         <label className="btn-ghost cursor-pointer">

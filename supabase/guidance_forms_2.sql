@@ -24,7 +24,7 @@ insert into public.form_templates (key, title, category, department, orientation
 values ('guidance_pledge', 'تعهد طالب', 'administrative', 'guidance', 'portrait', '[{"name": "recipient", "type": "student", "label": "الطالب", "required": true},
   {"name": "cls", "type": "text", "label": "الصف والفصل", "required": false},
   {"name": "pledge_date", "type": "date", "label": "التاريخ", "required": true},
-  {"name": "pledge", "type": "textarea", "label": "نص التعهد", "required": true, "presets": ["أتعهد بالالتزام بالحضور وعدم الغياب بدون عذر مقبول.", "أتعهد بالحضور المبكر إلى المدرسة وحضور الاصطفاف الصباحي.", "أتعهد بالالتزام بأنظمة المدرسة وتعليماتها.", "أتعهد باحترام زملائي ومعلمي ومنسوبي المدرسة.", "أتعهد بالمحافظة على ممتلكات المدرسة.", "وفي حال تكرار ذلك يحق للمدرسة اتخاذ الإجراءات النظامية وفق دليل السلوك والمواظبة."], "presets_append": true},
+  {"name": "pledge", "type": "textarea", "label": "نص التعهد", "required": true, "presets": ["أتعهد بالالتزام بالحضور وعدم الغياب بدون عذر مقبول.", "أتعهد بالحضور المبكر إلى المدرسة وحضور الاصطفاف الصباحي.", "أتعهد بالالتزام بأنظمة المدرسة وتعليماتها.", "أتعهد باحترام زملائي ومعلمي وموظفي المدرسة.", "أتعهد بالمحافظة على ممتلكات المدرسة.", "وفي حال تكرار ذلك يحق للمدرسة اتخاذ الإجراءات النظامية وفق دليل السلوك والمواظبة."], "presets_append": true},
   {"name": "signs", "type": "sign_lines", "label": "التوقيعات", "required": false, "labels": ["الطالب", "ولي الأمر"]}]'::jsonb,
   array['deputy_students', 'counselor_1', 'counselor_2', 'counselor_3'], false, 'issuer', false, true, 15)
 on conflict (key) do update set title = excluded.title, fields = excluded.fields,

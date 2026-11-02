@@ -1,10 +1,10 @@
 // src/pages/circulars/CircularView.jsx
 /* =====================================================================
    صفحة التعميم (/circulars/:id) — يصلها المستفيد من الإشعار، ومدير التعاميم من الأرشيف.
-   • المستفيد (منسوب أو ولي أمر): التعميم بملفه والمطلوب وموعده، ويُسجَّل فتحه تلقائيًا، وزر
+   • المستفيد (موظف أو ولي أمر): التعميم بملفه والمطلوب وموعده، ويُسجَّل فتحه تلقائيًا، وزر
      «اطّلعت على التعميم» إن تطلّب الإقرار.
    • مدير التعاميم: نسب الاطلاع، والمستفيدون بحالاتهم، وتذكير من لم يطّلع، وإضافة مستفيدين،
-     وكشف الاطلاع المطبوع بتوقيع كل منسوب أقرّ (من «توقيعي»، supabase/circulars_3.sql) وExcel،
+     وكشف الاطلاع المطبوع بتوقيع كل موظف أقرّ (من «توقيعي»، supabase/circulars_3.sql) وExcel،
      وإغلاق المتابعة، والحذف.
    ===================================================================== */
 import { useEffect, useState } from "react";
@@ -51,21 +51,21 @@ export default function CircularView() {
       refreshNavBadges(true);
     }
     setMine(me ?? null);
-    // توقيعي: للمنسوب المستفيد، ليُنبَّه إن لم يرفع توقيعه قبل الإقرار
+    // توقيعي: للموظف المستفيد، ليُنبَّه إن لم يرفع توقيعه قبل الإقرار
     if (me?.kind === "staff") {
       const { data: sig } = await supabase.from("user_signatures").select("path").eq("user_id", uid).maybeSingle();
       setHasSig(!!sig?.path);
     }
     if (manager) {
       const { data: all } = await supabase.from("circular_recipients").select("*").eq("circular_id", id);
-      // صور توقيعات من أقرّ من المنسوبين (supabase/circulars_3.sql)
+      // صور توقيعات من أقرّ من الموظفين (supabase/circulars_3.sql)
       const paths = [...new Set((all ?? []).map((r) => r.ack_sig).filter(Boolean))];
       const urls = new Map();
       if (paths.length) {
         const { data: links } = await supabase.storage.from("form-assets").createSignedUrls(paths, 3600);
         (links ?? []).forEach((l, i) => { if (l?.signedUrl) urls.set(paths[i], l.signedUrl); });
       }
-      // صفة المنسوب في الكشف: معلم أو إداري بحسب حسابه
+      // صفة الموظف في الكشف: معلم أو إداري بحسب حسابه
       const staffIds = (all ?? []).filter((r) => r.kind === "staff").map((r) => r.user_id);
       const roleBy = new Map();
       for (let i = 0; i < staffIds.length; i += 150) {
@@ -193,7 +193,7 @@ function Tracking({ c, recs, onChange, setMsg }) {
 
   const HEAD = ["م", "الاسم", "الصفة", "فتحه", c.needs_ack ? "أقرّ بالاطلاع" : "الحالة", "التوقيع"];
   const kindT = (r) => r.roleT ?? (r.kind === "guardian" ? "ولي أمر" : "معلم");
-  // خانة التوقيع: صورة توقيع المنسوب الذي أقرّ، أو «أقرّ إلكترونيًا»، وإلا فارغة للتوقيع باليد
+  // خانة التوقيع: صورة توقيع الموظف الذي أقرّ، أو «أقرّ إلكترونيًا»، وإلا فارغة للتوقيع باليد
   const sigCell = (r) => (r.sigUrl ? rawHtml(`<img src="${escHtml(r.sigUrl)}" alt="" style="height:30px;max-width:110px;object-fit:contain" />`)
     : r.ack_at ? "✓ أقرّ إلكترونيًا" : "");
   const line = (r, i) => [i + 1, r.name ?? "—", kindT(r), r.read_at ? fmtDateTime(r.read_at) : "—",
@@ -246,7 +246,7 @@ function Tracking({ c, recs, onChange, setMsg }) {
           ))}
           {hasGuardians && <>
             <span className="mx-1 h-4 w-px bg-line" />
-            {[["", "الجميع"], ["staff", "المنسوبون"], ["guardian", "أولياء الأمور"]].map(([k, t]) => (
+            {[["", "الجميع"], ["staff", "الموظفون"], ["guardian", "أولياء الأمور"]].map(([k, t]) => (
               <button key={k} className={chip(kind === k)} onClick={() => setKind(k)}>{t}</button>
             ))}
           </>}
