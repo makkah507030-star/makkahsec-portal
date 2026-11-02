@@ -154,8 +154,15 @@ function Row({ m, open, onToggle, members, coord, uid, me, isPrincipal, ready, s
       notify(coord ? [coord.user_id] : [], "اعتُمد محضر لجنة التميز", `اعتمد مدير المدرسة محضر «${m.title}» رقم ${m.number ?? ""}.`);
   };
   const remove = async () => {
-    if (!(await confirmDanger({ title: `حذف محضر «${m.title}»`, impact: ["يُحذف المحضر وتوقيعاته وقراراته نهائيًا."], confirmLabel: "حذف" }))) return;
-    run(() => supabase.from("acc_meetings").delete().eq("id", m.id), "حُذف المحضر.");
+    const impact = ["يُحذف المحضر وقراراته ومتابعة تنفيذها نهائيًا، ولا يُسترجع."];
+    if (signs.length) impact.push(`وتُحذف توقيعات الحاضرين عليه (${signs.length}).`);
+    if (status === "approved") impact.push("المحضر معتمد من مدير المدرسة.");
+    if (!(await confirmDanger({ title: `حذف محضر «${m.title}»${m.number ? ` رقم ${m.number}` : ""}`, impact, confirmLabel: "حذف المحضر" }))) return;
+    // المحذوف يُتحقق منه: الحذف المرفوض بالصلاحيات لا يعيد خطأ بل صفر صفوف
+    run(async () => {
+      const r = await supabase.from("acc_meetings").delete().eq("id", m.id).select("id");
+      return r.error || r.data?.length ? r : { error: { message: "تعذّر الحذف: حذف المحاضر لمشرف اللجنة." } };
+    }, "حُذف المحضر.");
   };
   const toggle = (i) => run(() => upd({ decisions: m.decisions.map((d, k) => (k === i ? { ...d, done: !d.done } : d)) }));
 
@@ -184,13 +191,13 @@ function Row({ m, open, onToggle, members, coord, uid, me, isPrincipal, ready, s
             <button onClick={onPrint} className="rounded-pill border border-line bg-white px-4 py-1.5 text-xs font-semibold text-mint-deep">طباعة المحضر</button>
             {me.coord && status === "draft" && <>
               <button onClick={onEdit} className="rounded-pill border border-line bg-white px-4 py-1.5 text-xs font-semibold text-ink">تعديل</button>
-              {ready && <button onClick={send} disabled={busy} className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white">إرسال للتوقيع</button>}
-              <button onClick={remove} className="px-2 text-xs text-absent">حذف</button></>}
+              {ready && <button onClick={send} disabled={busy} className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white">إرسال للتوقيع</button>}</>}
             {me.coord && status === "signing" && <>
               {!allSigned && <button onClick={remind} className="rounded-pill border border-line bg-white px-4 py-1.5 text-xs font-semibold text-mint-deep">تذكير من لم يوقّع</button>}
               <button onClick={back} disabled={busy} className="rounded-pill border border-line bg-white px-4 py-1.5 text-xs text-muted">إعادة للتعديل</button></>}
             {isPrincipal && status === "signing" && <button onClick={approve} disabled={busy} className="rounded-pill bg-mint-deep px-4 py-1.5 text-xs font-semibold text-white">اعتماد المحضر</button>}
             {me.all && status === "approved" && <button onClick={back} disabled={busy} className="rounded-pill border border-line bg-white px-4 py-1.5 text-xs text-muted">إلغاء الاعتماد وإعادة للتعديل</button>}
+            {me.coord && <button onClick={remove} disabled={busy} className="ms-auto rounded-pill border border-absent/30 bg-white px-4 py-1.5 text-xs font-semibold text-absent hover:bg-absent/5">حذف المحضر</button>}
           </div>
         </div>
       )}
