@@ -42,7 +42,7 @@ insert into public.evidence_links (template_key, category, element, level, note,
   ('teacher_support_visit', 'all',        'التفاعل مع المجتمع المهني',                         'support', 'استمارات الدعم الموقعة', 10),
   ('teacher_support_visit', 'teacher',    'التنويع في استراتيجيات التدريس',                    'support', 'استمارات زيارات الدعم', 20),
   ('teacher_support_visit', 'leadership', 'يقدم التغذية الراجعة ويتابع مؤشرات تحقق الأداء الوظيفي', 'direct', 'الاستمارات الموقعة بأرقامها التسلسلية', 20),
-  ('teacher_support_visit', 'leadership', 'يقيّم أداء منسوبي المدرسة',                        'direct',  'استمارة التقييم المطبوعة', 30),
+  ('teacher_support_visit', 'leadership', 'يقيّم أداء موظفي المدرسة',                        'direct',  'استمارة التقييم المطبوعة', 30),
   ('teacher_support_visit', 'leadership', 'يدعم تنفيذ برامج التطوير المهني',                  'support', 'استمارات الدعم وسجل الإشعارات', 40),
   ('teacher_support_visit', 'leadership', 'يعد أو يشارك في إعداد خطة للتطوير المهني',         'support', 'تقرير نموذج لزيارات الدعم', 50)
 on conflict do nothing;

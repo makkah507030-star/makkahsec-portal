@@ -422,7 +422,7 @@ function CustomRoles({ onOpenMembers }) {
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-semibold text-ink">الأدوار المخصّصة</h2>
             <p className="mt-0.5 text-xs leading-relaxed text-muted">
-              أدوار خارج القائمة الثابتة، لمنسوب في المدرسة أو لشخص من خارجها مثل القائد الكشفي.
+              أدوار خارج القائمة الثابتة، لموظف في المدرسة أو لشخص من خارجها مثل القائد الكشفي.
               أضف الدور وصلاحياته هنا، ثم أسنده لصاحبه وفعّل حسابه من تبويب «الأعضاء».
             </p>
           </div>

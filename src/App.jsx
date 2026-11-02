@@ -574,14 +574,14 @@ export default function App() {
           <Route path="/my-qiyas" element={<MyQiyas />} />
           <Route path="/ach-committee" element={<AchCommittee />} />
           <Route path="/accreditation" element={<Accreditation />} />
-          {/* الثقافة المؤسسية (سفير الثقافة): لكل المنسوبين، والصفحة تحدد ما يظهر لكل منهم (cult_1.sql) */}
+          {/* الثقافة المؤسسية (سفير الثقافة): لكل الموظفين، والصفحة تحدد ما يظهر لكل منهم (cult_1.sql) */}
           {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/culture" element={<Culture />} />}
           {/* بلاغات الصيانة: يرفعها كل الموظفين، ويتابعها المساعد الإداري 3 (maint_1.sql) */}
           {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/repairs" element={<Repairs />} />}
           {/* نموذج ملاحظة التحصيل — للمعلم نماذجه وللموجه والوكيل؛ القاعدة تفرض الصلاحية */}
           <Route path="/ach-forms" element={<AchGate><AchFormsList /></AchGate>} />
           <Route path="/ach-forms/:id" element={<AchGate><AchForm /></AchGate>} />
-          {/* التعاميم: الإدارة لصاحب الصلاحية، وصفحة التعميم وتعاميمي للمنسوبين وأولياء الأمور */}
+          {/* التعاميم: الإدارة لصاحب الصلاحية، وصفحة التعميم وتعاميمي للموظفين وأولياء الأمور */}
           {effectiveRole === "admin" && can("circulars") && <Route path="/circulars" element={<Circulars />} />}
           {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/circulars/:id" element={<CircularView />} />}
           {["admin", "teacher", "guardian"].includes(effectiveRole) && <Route path="/my-circulars" element={<MyCirculars />} />}

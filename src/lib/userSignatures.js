@@ -7,7 +7,7 @@ import { supabase } from "./supabase";
    (الموجه الطلابي، الوكيل، رئيس القسم…) لا حسابه.
    يُطابَق الاسم مع حسابات المعلمين والإداريين، ثم يُجلب توقيعه المرفوع من
    «توقيعي» (user_signatures). توقيعات أصحاب الأدوار الإدارية متاحة لكل
-   منسوبي المدرسة، وتوقيع المعلم لصاحبه ولمديري النماذج؛ وما لا يُسمح
+   موظفي المدرسة، وتوقيع المعلم لصاحبه ولمديري النماذج؛ وما لا يُسمح
    بقراءته يبقى خانة توقيع يدوي.
    ===================================================================== */
 
@@ -26,7 +26,7 @@ async function loadAll() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Map();
   // توقيعات يحق لي قراءتها: توقيعي (والجميع لمدير النماذج)، وتوقيعات أصحاب
-  // الأدوار الإدارية لكل منسوبي المدرسة (supabase/staff_signatures_read.sql)
+  // الأدوار الإدارية لكل موظفي المدرسة (supabase/staff_signatures_read.sql)
   const [{ data: own }, { data: staff }] = await Promise.all([
     supabase.from("user_signatures").select("user_id, path"),
     supabase.rpc("staff_signatures"),

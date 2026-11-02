@@ -7,15 +7,15 @@
 -- ١) شهادة حضور الورشة التدريبية ← العنصر ٢
 insert into public.evidence_links (template_key, category, element, level, note, sort_order)
 values ('training_attendance', 'all', 'التفاعل مع المجتمع المهني', 'direct',
-        'شهادة حضور الورشة التدريبية باسم المنسوب', 15)
+        'شهادة حضور الورشة التدريبية باسم الموظف', 15)
 on conflict do nothing;
 
 -- ٢) شهادة شكر وتقدير — معلم أو إداري ← العنصرين ٢ و١ معًا
 insert into public.evidence_links (template_key, category, element, level, note, sort_order)
 values ('cert_teacher_thanks', 'all', 'التفاعل مع المجتمع المهني', 'direct',
-        'شهادة الشكر والتقدير باسم المنسوب', 15),
+        'شهادة الشكر والتقدير باسم الموظف', 15),
        ('cert_teacher_thanks', 'all', 'أداء الواجبات الوظيفية', 'direct',
-        'شهادة الشكر والتقدير باسم المنسوب', 16)
+        'شهادة الشكر والتقدير باسم الموظف', 16)
 on conflict do nothing;
 
 -- تأكيد: الربط بعد التنفيذ

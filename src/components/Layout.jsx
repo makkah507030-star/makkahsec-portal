@@ -188,7 +188,7 @@ export const ADMIN_GROUPS = [
     title: "إعدادات المدرسة",
     items: [
       { to: "/accounts",       label: "الحسابات",            perm: "accounts",       icon: "key" },
-      { to: "/staff",          label: "الإدارة",             perm: "staff",          icon: "briefcase", kw: "منسوبين" },
+      { to: "/staff",          label: "الإدارة",             perm: "staff",          icon: "briefcase", kw: "موظفين منسوبين" },
       { to: "/teacher-permissions", label: "صلاحيات المعلمين", perm: "staff",       icon: "shield" },
       { to: "/calendar-admin", label: "التقويم والإجازات",   perm: "calendar",       icon: "calendar" },
       { to: "/season",         label: "التوقيت الزمني",       perm: "import",         icon: "clock", kw: "حصص" },
