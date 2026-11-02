@@ -360,3 +360,6 @@
 @media (max-width: 640px) { .dfile .df-lab-hero { grid-template-columns: 1fr; } }
 .dfile .df-lab .df-tag { display: inline-flex; align-items: center; gap: 4px; }
 .dfile .df-lab .df-tag svg { width: 13px; height: 13px; flex: none; }
+/* ملف محضر المعمل: ستة مؤشرات بعرض واحد (ثلاثة في الصف على الشاشة الواسعة) */
+.dfile .df-kpis.df-kpis-lab .df-kpi:nth-child(5) { grid-column: auto; }
+.dfile .df-card.df-top { align-content: start; }

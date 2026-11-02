@@ -2,13 +2,13 @@
 -- بصيغة perf_auto_counts نفسها (المستخدم، البند، العدد، آخرها) في العام الدراسي.
 -- لمحضر المعمل نفسه، ولمدير المدرسة والدعم الفني. يُنفَّذ بعد الجزء 1 وcomputer_lab_*.sql. تكرار التنفيذ آمن.
 
-create or replace function public.lab_perf_auto(p_uid uuid, p_year text)
+-- النواة بلا تحقق من المستدعي: لا تُمنح لأحد، ويستدعيها lab_perf_auto وملف المحضر الرقمي (lab_dfile_2.sql)
+create or replace function public.lab_perf_auto_core(p_uid uuid, p_year text)
 returns table (teacher_user_id uuid, item_key text, cnt bigint, last_at timestamptz)
 language plpgsql stable security definer set search_path = public as $$
 declare y0 date;
 begin
-  if not exists (select 1 from admin_roles r where r.user_id = p_uid and r.role_type::text = 'computer_lab')
-     or not (p_uid = auth.uid() or public.has_admin_role(array['principal', 'tech_support'])) then return; end if;
+  if not exists (select 1 from admin_roles r where r.user_id = p_uid and r.role_type::text = 'computer_lab') then return; end if;
   select coalesce(min(start_date), current_date - 365) into y0 from academic_calendar where academic_year = p_year;
   return query
   select p_uid, x.k, x.n, x.l from (
@@ -34,6 +34,14 @@ begin
     union all select 'l13_03', count(*), max(t.updated_at) from lab_tickets t where t.status = 'external' and t.created_at >= y0
   ) x where x.n > 0;
 end; $$;
+revoke execute on function public.lab_perf_auto_core(uuid, text) from public, anon, authenticated;
+
+create or replace function public.lab_perf_auto(p_uid uuid, p_year text)
+returns table (teacher_user_id uuid, item_key text, cnt bigint, last_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select * from public.lab_perf_auto_core(p_uid, p_year)
+   where p_uid = auth.uid() or public.has_admin_role(array['principal', 'tech_support']);
+$$;
 revoke execute on function public.lab_perf_auto(uuid, text) from public, anon;
 grant execute on function public.lab_perf_auto(uuid, text) to authenticated;
 -- نهاية الجزء 2

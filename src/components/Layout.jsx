@@ -128,6 +128,7 @@ export const ADMIN_GROUPS = [
     items: [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
       { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab", "principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
+      { to: "/my-lab-dfile", label: "ملف المحضر الرقمي", roles: ["computer_lab"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف محضر" },
     ],
   },
   {

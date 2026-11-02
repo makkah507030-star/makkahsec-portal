@@ -98,6 +98,7 @@ const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
 const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx"));
 const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
 const LabPerformance = lazy(() => import("./pages/performance/LabPerformance.jsx"));
+const MyLabDfile = lazy(() => import("./pages/performance/MyLabDfile.jsx"));
 const DfilePublic = lazy(() => import("./pages/DfilePublic.jsx"));
 const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
 const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
@@ -527,6 +528,10 @@ export default function App() {
           {/* شواهد أداء محضر المعمل: له، وللمدير والدعم الفني اطلاعًا (supabase/lab_perf_*.sql) */}
           {effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r)) && (
             <Route path="/lab-performance" element={<LabPerformance />} />
+          )}
+          {/* ملف محضر المعمل الرقمي: للمحضر وحده (supabase/lab_dfile_*.sql) */}
+          {effectiveRole === "admin" && adminRoles.includes("computer_lab") && (
+            <Route path="/my-lab-dfile" element={<MyLabDfile />} />
           )}
           {/* الأنشطة: حقيبة الانتظار والأنشطة الصفية وأدوات الصف — للمعلمين، ويديرها وكيل الشؤون التعليمية */}
           {effectiveRole === "teacher" ||

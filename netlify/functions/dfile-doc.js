@@ -31,15 +31,20 @@ export const handler = async (event) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const { data: f } = await admin.from("teacher_dfiles")
-      .select("teacher_user_id, hidden, disabled_at")
-      .eq("code", String(code).trim().toUpperCase()).maybeSingle();
+    // ملف محضر المعمل برمز ML- (supabase/lab_dfile_1.sql)، وغيره ملف معلم
+    const c = String(code).trim().toUpperCase();
+    const lab = c.startsWith("ML-");
+    const { data: f } = lab
+      ? await admin.from("lab_dfiles").select("teacher_user_id:user_id, hidden, disabled_at").eq("code", c).maybeSingle()
+      : await admin.from("teacher_dfiles").select("teacher_user_id, hidden, disabled_at").eq("code", c).maybeSingle();
     if (!f || f.disabled_at || (f.hidden ?? []).includes("docs")) return json({ error: "الملف غير متاح" }, 404);
 
     const { data: ev } = await admin.from("perf_evidence")
-      .select("file_path, source, teacher_user_id")
+      .select("file_path, source, teacher_user_id, item_key")
       .eq("id", id).maybeSingle();
-    if (!ev || ev.teacher_user_id !== f.teacher_user_id || ev.source !== "upload" || !ev.file_path) {
+    // ملف المحضر يعرض شواهد بنوده (l..) وحدها، وملف المعلم شواهد بنود المعلم
+    if (!ev || ev.teacher_user_id !== f.teacher_user_id || ev.source !== "upload" || !ev.file_path
+        || /^l\d/.test(ev.item_key ?? "") !== lab) {
       return json({ error: "الشاهد غير موجود" }, 404);
     }
 
