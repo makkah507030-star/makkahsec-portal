@@ -9,7 +9,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import { classText } from "../../lib/lab.js";
 import { pinHash } from "../../lib/labSign.js";
-import { LESSONS, lessonById } from "../../lab-content/index.js";
+import { LESSONS, lessonById, LESSON_GROUPS } from "../../lab-content/index.js";
 import LessonPresenter from "./lessons/LessonPresenter.jsx";
 import { buildLabFile, downloadText } from "./labFile.js";
 
@@ -117,7 +117,7 @@ export function RoomOpen({ lab, onClose }) {
             <div>
               <label className="label" htmlFor="room-lesson">الدرس</label>
               <select id="room-lesson" className="field" value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
-                {LESSONS.map((l) => <option key={l.id} value={l.id}>{l.grade} · الدرس {l.lesson.no}: {l.lesson.title}</option>)}
+                {LESSON_GROUPS.map((g) => <optgroup key={g.label} label={g.label}>{g.lessons.map((l) => <option key={l.id} value={l.id}>الدرس {l.lesson.no}: {l.lesson.title}{l.draft ? " (مسودة)" : ""}</option>)}</optgroup>)}
               </select>
             </div>
             <div>

@@ -51,12 +51,26 @@ import taskManagement from "./g12/u1-l3-task-management.js";
 import systemLifeCycle from "./g12/u2-l1-system-life-cycle.js";
 import diagrams from "./g12/u2-l2-diagrams.js";
 import cybersecurity from "./g12/u2-l3-cybersecurity.js";
+// الوحدة الثالثة: تطبيقات الهواتف الذكية
+import smartphoneApps from "./g12/u3-l1-smartphone-apps.js";
+import buildingApps from "./g12/u3-l2-building-apps.js";
+import programmingApp from "./g12/u3-l3-programming-app.js";
 
 export const LESSONS = [dataRepresentation, computerStructure, operatingSystems, networks, ictSociety,
   onlineDocuments, onlineMeetings, broadcastPresentation, oneNote, mindMaps,
   monitoringControl, artificialIntelligence, emergingTechnologies, healthEnvironment,
   htmlWebsite, contentStructure, htmlForm,
   projectPlanning, ganttProject, taskManagement,
-  systemLifeCycle, diagrams, cybersecurity];
+  systemLifeCycle, diagrams, cybersecurity,
+  smartphoneApps, buildingApps, programmingApp];
 
 export const lessonById = (id) => LESSONS.find((l) => l.id === id) ?? null;
+
+/** الدروس مجمّعة بالصف والوحدة لقوائم الاختيار: [{ label: "الأول الثانوي · الوحدة 2: …", lessons }] */
+export const LESSON_GROUPS = LESSONS.reduce((groups, l) => {
+  const label = `${l.grade} · الوحدة ${l.unit.no}: ${l.unit.title}`;
+  let g = groups.find((x) => x.label === label);
+  if (!g) groups.push(g = { label, lessons: [] });
+  g.lessons.push(l);
+  return groups;
+}, []);
