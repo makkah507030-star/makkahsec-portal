@@ -99,6 +99,9 @@ const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx")
 const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
 const LabPerformance = lazy(() => import("./pages/performance/LabPerformance.jsx"));
 const MyLabDfile = lazy(() => import("./pages/performance/MyLabDfile.jsx"));
+const OutreachAdmin = lazy(() => import("./pages/outreach/OutreachAdmin.jsx"));
+const OutreachView = lazy(() => import("./pages/outreach/OutreachView.jsx"));
+const MyOutreach = lazy(() => import("./pages/outreach/MyOutreach.jsx"));
 const DfilePublic = lazy(() => import("./pages/DfilePublic.jsx"));
 const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
 const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
@@ -249,6 +252,8 @@ export default function App() {
           <Route path="/notifications-me" element={<Navigate to="/login" replace />} />
           {/* رمز QR على خلفية جهاز المعمل: يُحفظ البلاغ المطلوب ويُفتح بعد الدخول */}
           <Route path="/lab/r/:seat" element={<LabReportRedirect />} />
+          {/* رابط النشرة أو الاستبانة من واتساب أو رمز QR: يُفتح بعد الدخول */}
+          <Route path="/o/:id" element={<AfterLogin />} />
           {/* رمز درجة من ملف المعمل: يُرصد بعد الدخول */}
           <Route path="/lab/g/:code" element={<LabGradeLink />} />
           {/* رمز تسليم الاختبار دون إنترنت: يُرصد بعد الدخول */}
@@ -595,6 +600,10 @@ export default function App() {
           {/* التصويت والاستطلاعات: للجميع بحسب فئته، وإدارتها لصاحب الصلاحية (supabase/polls_1..2.sql) */}
           <Route path="/polls" element={<Polls />} />
           {can("polls") && <Route path="/polls-admin" element={<PollsAdmin />} />}
+          {/* النشرات والاستبانات: للمستفيد ما وصله، وإنشاؤها لصاحب الصلاحية (supabase/outreach_1..2.sql) */}
+          <Route path="/my-outreach" element={<MyOutreach />} />
+          <Route path="/o/:id" element={<OutreachView />} />
+          {effectiveRole === "admin" && can("outreach") && <Route path="/outreach" element={<OutreachAdmin />} />}
           <Route path="/media" element={<MediaGallery />} />
           {/* بنك الأسئلة — للمعلمين والإدارة؛ القاعدة تُظهر للمعلم أسئلته والمشارك من غيره */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qbank" element={<QuestionBank />} />}
@@ -656,6 +665,13 @@ export default function App() {
       </Suspense>
     </Layout>
   );
+}
+
+// رابط يُفتح بعد الدخول (النشرات والاستبانات /o/:id): يُحفظ في الجلسة ثم صفحة الدخول
+function AfterLogin() {
+  const loc = useLocation();
+  try { sessionStorage.setItem("mk_after_login", loc.pathname + loc.search); } catch { /* تجاهل */ }
+  return <Navigate to="/login" replace />;
 }
 
 // رابط رمز QR على خلفية جهاز المعمل أو ملصقه (/lab/r/5) ← صفحة البلاغ والجهاز محدد.

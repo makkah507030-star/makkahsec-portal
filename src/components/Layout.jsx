@@ -160,6 +160,8 @@ export const ADMIN_GROUPS = [
       { to: "/announcements",  label: "رسالة الدخول", perm: "notifications", icon: "megaphone" },
       { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
+      { to: "/outreach",       label: "النشرات والاستبانات", perm: "outreach", icon: "megaphone", kw: "استبانة استبيان نشرة توعية توعوية تعليمات موجه طلابي واتساب" },
+      { to: "/my-outreach",    label: "ما وصلني من نشرات واستبانات", icon: "inbox", kw: "استبانة نشرة توعية" },
       { to: "/polls-admin",    label: "إدارة التصويت والاستطلاعات", perm: "polls", icon: "check", kw: "تصويت استطلاع انتخاب رأي مجلس طلابي" },
       { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
       { to: "/my-media-team",  label: "المركز الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية رئيس المركز عضوية" },
@@ -328,6 +330,7 @@ export const TEACHER_GROUPS = [
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
       { to: "/my-circulars", label: "تعاميمي",            icon: "circular", kw: "تعميم اطلاع" },
+      { to: "/my-outreach",  label: "النشرات والاستبانات", icon: "inbox", kw: "استبانة نشرة توعية" },
       { to: "/plc",          label: "التطوير المهني",     icon: "users", kw: "مجتمع التعلم المهني" },
     ],
   },
@@ -369,6 +372,8 @@ export const BASIC_GROUPS = [
       { to: "/my-documents", label: "نماذجي", icon: "folder" },
       // التعاميم تصل أولياء الأمور لا الطلاب
       { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
+      // النشرات التوعوية والاستبانات من الموجه الطلابي والإدارة (supabase/outreach_1..2.sql)
+      { to: "/my-outreach", label: "النشرات والاستبانات", icon: "inbox", kw: "استبانة استبيان نشرة توعية تعليمات" },
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
       { to: "/media", label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
