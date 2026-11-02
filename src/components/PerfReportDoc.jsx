@@ -17,16 +17,18 @@ const CAP = 800;   // ارتفاع محتوى الصفحة الداخلية تق
 const NOTE = "تخضع الشواهد لتقييم مدير المدرسة وتدقيقه، واكتمالها لا يعني الحصول على الدرجة الكاملة، وإنما هو خطوة متقدمة نحو تقدير عالٍ. وللمقيِّم أن يطلب مشاهدة أكثر من الشاهد المرفوع.";
 
 // مصادر الشواهد في أربع فئات ثابتة الألوان
-const SRC = [
-  { k: "upload", t: "مرفوع من المعلم", c: S[0], of: ["upload"] },
+// who: صاحب الملف — «المعلم»، أو «المحضر» في ملف محضر معمل الحاسب الآلي
+const srcOf = (who = "المعلم") => [
+  { k: "upload", t: `مرفوع من ${who}`, c: S[0], of: ["upload"] },
   { k: "forms", t: "من نماذج البوابة", c: S[1], of: ["form", "pd"] },
   { k: "visits", t: "زيارات ومجتمعات تعلم", c: S[2], of: ["visit", "plc", "xvisit"] },
   { k: "auto", t: "يصل تلقائيًا من البوابة", c: S[3] },
 ];
+const SRC = srcOf();
 
-const evText = (r) => {
+const evText = (r, who = "المعلم") => {
   if (!r.st.ok) return "—";
-  if (!r.st.list.length) return "شاهد آلي من عمل المعلم في البوابة";
+  if (!r.st.list.length) return `شاهد آلي من عمل ${who} في البوابة`;
   if (r.it.is_record) return r.st.list.map((e) => e.title).slice(0, 2).join("، ") + (r.st.list.length > 2 ? ` و${r.st.list.length - 2} أخرى` : "");
   return r.st.list[0].title;
 };
@@ -50,21 +52,23 @@ export function perfModel(elements, evidence, auto) {
   };
 }
 
-function highlights(m, visits) {
+function highlights(m, visits, who = "المعلم") {
   const out = [];
   const sorted = [...m.els].sort((a, b) => b.p - a.p);
   out.push(`نسبة الإنجاز الكلية ${m.p}%: المتوفر ${m.ok} من ${countAr(m.total, "item", "g")}.`);
   if (sorted[0]) out.push(`أعلى العناصر اكتمالًا: «${sorted[0].el.title}» بنسبة ${sorted[0].p}%.`);
   const low = sorted.filter((e) => e.p < 100).slice(-1)[0];
   if (low) out.push(`أكثرها حاجة للاستكمال: «${low.el.title}» (${low.ok} من ${low.total}).`);
-  if (m.src.auto) out.push(`بنود تصل شواهدها تلقائيًا من عمل المعلم في البوابة: ${n(m.src.auto)}.`);
+  if (m.src.auto) out.push(`بنود تصل شواهدها تلقائيًا من عمل ${who} في البوابة: ${n(m.src.auto)}.`);
   if (m.hours) out.push(`ساعات حضور التطوير المهني: ${countAr(m.hours, "hour")}.`);
   if (visits.length) out.push(`زيارات الدعم الواردة من الإدارة: ${n(visits.length)}.`);
   return out.slice(0, 6);
 }
 
 /** أوراق التقرير بالترتيب — كل ورقة عنصر مستقل */
-export function perfReportPages({ elements, evidence, auto, visits = [], info, name, year, theme = "light", sigs = {} }) {
+/* role (اختياري) لغير المعلم: { who, tag, rows, note } — ملف محضر معمل الحاسب الآلي */
+export function perfReportPages({ elements, evidence, auto, visits = [], info, name, year, theme = "light", sigs = {}, role = null }) {
+  const who = role?.who ?? "المعلم";
   const m = perfModel(elements, evidence, auto);
   const teacher = info?.full_name ?? name ?? "";
   const doc = { title: "شواهد الأداء الوظيفي", meta: [teacher, `${year}هـ`], foot: "الأداء الوظيفي" };
@@ -89,13 +93,14 @@ export function perfReportPages({ elements, evidence, auto, visits = [], info, n
 
   return [
     <Cover key="cover" theme={theme} c={{
-      year: `${year}هـ`, tag: ["award", "ملف الأداء الوظيفي للمعلم"], title: "شواهد الأداء الوظيفي", sub: teacher,
+      year: `${year}هـ`, tag: ["award", role?.tag ?? "ملف الأداء الوظيفي للمعلم"], title: "شواهد الأداء الوظيفي", sub: teacher,
       titleSize: 72, subSize: teacher.length > 28 ? 30 : 36,
       badge: { main: `${m.p}%`, sub: "نسبة الإنجاز" }, side: { main: `${m.ok} من ${countAr(m.total, "item", "g")}`, sub: "بنود شواهدها متوفرة" },
-      rows: [["user", "المعلم", teacher || "—"], ["book", "المادة", subjects],
+      rows: role?.rows ? [["user", who, teacher || "—"], ...role.rows, ["calendar", "العام الدراسي", `${year}هـ`]]
+        : [["user", "المعلم", teacher || "—"], ["book", "المادة", subjects],
              ["cap", "الصفوف والفصول", `${grades || "—"}${info?.classes?.length ? ` · ${countAr(info.classes.length, "cls")}` : ""}`],
              ["calendar", "العام الدراسي", `${year}هـ`]],
-      note: ["check", "الشواهد كما في ملف المعلم بالبوابة: المرفوعة، والواردة من النماذج والزيارات، والآلية من عمله."],
+      note: ["check", role?.note ?? "الشواهد كما في ملف المعلم بالبوابة: المرفوعة، والواردة من النماذج والزيارات، والآلية من عمله."],
       strip: [[m.ok, "البنود المتوفرة"], [m.missing, "البنود غير المتوفرة"], [evidence.length, "الشواهد في الملف"], [m.src.auto, "بنود تصل تلقائيًا"]],
       foot: "الأداء الوظيفي",
     }} />,
@@ -123,11 +128,11 @@ export function perfReportPages({ elements, evidence, auto, visits = [], info, n
       </Box>
       <Box icon="folder" title="مصادر الشواهد">
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <Donut parts={SRC.map((s) => ({ t: s.t, v: m.src[s.k], c: s.c }))} label="شاهد وبند" size={130} />
-          <DonutLegend parts={SRC.map((s) => ({ t: s.t, v: m.src[s.k], c: s.c }))} />
+          <Donut parts={srcOf(who).map((s) => ({ t: s.t, v: m.src[s.k], c: s.c }))} label="شاهد وبند" size={130} />
+          <DonutLegend parts={srcOf(who).map((s) => ({ t: s.t, v: m.src[s.k], c: s.c }))} />
         </div>
       </Box>
-      <Highlights title="خلاصة الملف" items={highlights(m, visits)} />
+      <Highlights title="خلاصة الملف" items={highlights(m, visits, who)} />
     </Page>,
 
     ...detailPages.map((list, i) => {
@@ -151,7 +156,7 @@ export function perfReportPages({ elements, evidence, auto, visits = [], info, n
                   <tbody>{b.rows.map((r) => (
                     <tr key={r.it.key}>
                       <td className="c num">{r.it.sort_order}</td><td>{r.it.title}</td>
-                      <td style={{ color: "var(--mr-ink2)", fontSize: 10.5 }}>{evText(r)}{countText(r) && <span className="num" style={{ display: "block", color: "var(--mr-ink)", fontWeight: 600 }}>{countText(r)}</span>}</td>
+                      <td style={{ color: "var(--mr-ink2)", fontSize: 10.5 }}>{evText(r, who)}{countText(r) && <span className="num" style={{ display: "block", color: "var(--mr-ink)", fontWeight: 600 }}>{countText(r)}</span>}</td>
                       <td className="c"><span className={`mr-chip ${r.st.ok ? (r.st.list.length ? "ok" : "auto") : "no"}`}>{r.st.ok ? (r.st.list.length ? "متوفر" : "آلي") : "غير متوفر"}</span></td>
                     </tr>
                   ))}</tbody>
@@ -187,7 +192,7 @@ export function perfReportPages({ elements, evidence, auto, visits = [], info, n
           {last && (
             <>
               <Box icon="alert" title="تنبيه" tint style={{ marginTop: 4 }}><p className="mr-note" style={{ fontSize: 12 }}>{NOTE}</p></Box>
-              <Signs showStamp={false} people={[{ title: "المعلم", name: teacher, sig: sigs.teacher }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
+              <Signs showStamp={false} people={[{ title: role?.signTitle ?? "المعلم", name: teacher, sig: sigs.teacher }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
             </>
           )}
         </Page>

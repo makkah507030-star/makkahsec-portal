@@ -127,6 +127,7 @@ export const ADMIN_GROUPS = [
     title: "المعامل والمختبرات",
     items: [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
+      { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab", "principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
     ],
   },
   {

@@ -97,6 +97,7 @@ const DocumentView = lazy(() => import("./pages/DocumentView.jsx"));
 const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
 const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx"));
 const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
+const LabPerformance = lazy(() => import("./pages/performance/LabPerformance.jsx"));
 const DfilePublic = lazy(() => import("./pages/DfilePublic.jsx"));
 const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
 const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
@@ -523,6 +524,10 @@ export default function App() {
            (effectiveRole === "teacher" && grantedTabs.has("computer_lab")) ? (
             <Route path="/lab" element={<Lab />} />
           ) : null}
+          {/* شواهد أداء محضر المعمل: له، وللمدير والدعم الفني اطلاعًا (supabase/lab_perf_*.sql) */}
+          {effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r)) && (
+            <Route path="/lab-performance" element={<LabPerformance />} />
+          )}
           {/* الأنشطة: حقيبة الانتظار والأنشطة الصفية وأدوات الصف — للمعلمين، ويديرها وكيل الشؤون التعليمية */}
           {effectiveRole === "teacher" ||
            (effectiveRole === "admin" && ["deputy_academic", "principal", "tech_support"].some((r) => adminRoles.includes(r))) ? (

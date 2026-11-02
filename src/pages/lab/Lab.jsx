@@ -15,7 +15,6 @@ import LabRules from "./LabRules.jsx";
 import LabUsage from "./LabUsage.jsx";
 import LabLessons from "./LabLessons.jsx";
 import LabRecord from "./LabRecord.jsx";
-import LabPerf from "./LabPerf.jsx";
 
 const TABS = [
   { key: "lessons", label: "الدروس" },
@@ -26,7 +25,6 @@ const TABS = [
   { key: "tickets", label: "البلاغات" },
   { key: "rules", label: "قواعد السلامة" },
   { key: "usage", label: "سجل الاستخدام" },
-  { key: "perf", label: "شواهد الأداء", manager: true },   // لمحضر المعمل ومن يطّلع على أدائه
 ];
 
 export default function Lab() {
@@ -62,7 +60,6 @@ export default function Lab() {
         ))}
       </div>
 
-      {tab === "perf" && isManager && <LabPerf onGo={(k) => { setTab(k); window.scrollTo({ top: 0 }); }} />}
       {tab === "lessons" && <LabLessons lab={DEFAULT_LAB} canCreate={canBook || isManager} />}
       {tab === "record" && <LabRecord lab={DEFAULT_LAB} canEdit={canBook} />}
       {tab === "booking" && <LabBooking lab={DEFAULT_LAB} canBook={canBook} isManager={isManager} />}

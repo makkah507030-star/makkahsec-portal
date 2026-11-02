@@ -1,70 +1,73 @@
--- =====================================================================
--- شواهد الأداء الوظيفي لمحضر معمل الحاسب الآلي (نموذج «محضر المختبر» في الدليل الإرشادي
--- لإدارة الأداء الوظيفي، الإصدار الثاني). الشواهد الآلية تُحسب من جداول المعمل بالدالة
--- lab_perf_stats، والشواهد اليدوية في lab_perf_evidence ومرفقاتها في مخزن perf-evidence.
--- يُنفَّذ بعد computer_lab_1..12.sql وteacher_performance.sql. تكرار التنفيذ آمن.
--- =====================================================================
+-- شواهد الأداء الوظيفي لمحضر معمل الحاسب الآلي (1 من 3): العناصر والبنود بنظام ملف أداء المعلم نفسه.
+-- نموذج «محضر المختبر» (5) في الدليل الإرشادي لإدارة الأداء الوظيفي، الإصدار الثاني: 13 عنصرًا بأوزانها،
+-- وبنود كل عنصر من تفسيره في الدليل مطبّقًا على معمل الحاسب. track = 'lab' يفصلها عن عناصر المعلم.
+-- الشواهد في perf_evidence نفسه ومخزن perf-evidence. يُنفَّذ بعد teacher_performance*.sql. تكرار التنفيذ آمن.
 
-create table if not exists public.lab_perf_evidence (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null default auth.uid(),
-  academic_year text not null,
-  element_key text not null,                 -- lp01..lp13 (src/lib/labPerf.js)
-  title text not null,
-  note text, event_date date,
-  file_path text, file_name text,
-  created_at timestamptz not null default now()
-);
-create index if not exists lab_perf_evidence_user_idx on public.lab_perf_evidence (user_id, academic_year);
-alter table public.lab_perf_evidence enable row level security;
+alter table public.perf_elements add column if not exists track text not null default 'teacher';
 
-drop policy if exists lab_perf_read on public.lab_perf_evidence;
-create policy lab_perf_read on public.lab_perf_evidence for select to authenticated
-  using (user_id = auth.uid() or public.has_admin_role(array['principal', 'tech_support']));
-drop policy if exists lab_perf_write on public.lab_perf_evidence;
-create policy lab_perf_write on public.lab_perf_evidence for all to authenticated
-  using (user_id = auth.uid() and public.lab_is_manager())
-  with check (user_id = auth.uid() and public.lab_is_manager());
-grant select, insert, update, delete on public.lab_perf_evidence to authenticated;
+insert into public.perf_elements (key, title, weight, sort_order, evaluator_only, track) values
+  ('l01', 'أداء الواجبات الوظيفية', 10, 1, true, 'lab'),
+  ('l02', 'التفاعل مع المجتمع المهني', 10, 2, false, 'lab'),
+  ('l03', 'التفاعل مع أولياء الأمور', 10, 3, false, 'lab'),
+  ('l04', 'التنويع في استراتيجيات التدريس', 10, 4, false, 'lab'),
+  ('l05', 'تحسين نتائج المتعلمين', 10, 5, false, 'lab'),
+  ('l06', 'يُعد خطة يومية لأنشطة المختبر', 5, 6, false, 'lab'),
+  ('l07', 'المعرفة بالأسس والمفاهيم الفنية', 5, 7, false, 'lab'),
+  ('l08', 'يُوفر المستلزمات اللازمة لأداء التجارب العلمية', 5, 8, false, 'lab'),
+  ('l09', 'يلتزم بسياسات وإجراءات السلامة المهنية', 5, 9, false, 'lab'),
+  ('l10', 'يُحضر ويُجهز المختبر', 5, 10, false, 'lab'),
+  ('l11', 'تهيئة وتسليم الأجهزة المطلوبة للمعلمين وتخزينها بطريقة سليمة', 5, 11, false, 'lab'),
+  ('l12', 'يُعد تقرير أنشطة ومهام المختبر الأسبوعية', 10, 12, false, 'lab'),
+  ('l13', 'يُعد تقارير دورية عن حالة الأجهزة والمعدات', 10, 13, false, 'lab')
+on conflict (key) do update set title = excluded.title, weight = excluded.weight, sort_order = excluded.sort_order,
+  evaluator_only = excluded.evaluator_only, track = excluded.track;
 
--- أرقام المعمل للشواهد الآلية ولملف المعلم الرقمي: لمسؤولي المعمل ومعلمي الحاسب المخوّلين
-create or replace function public.lab_perf_stats()
-returns jsonb language sql stable security definer set search_path = public as $$
-  select case when not public.lab_can_view() then null else jsonb_build_object(
-    'devices',          (select count(*) from lab_devices),
-    'devices_ok',       (select count(*) from lab_devices where status = 'ok'),
-    'devices_specs',    (select count(*) from lab_devices where coalesce(cpu, os, ram) is not null),
-    'tickets',          (select count(*) from lab_tickets),
-    'tickets_resolved', (select count(*) from lab_tickets where status = 'resolved'),
-    'tickets_external', (select count(*) from lab_tickets where status = 'external'),
-    'tickets_hours',    (select round(avg(extract(epoch from updated_at - created_at) / 3600)::numeric, 1)
-                           from lab_tickets where status = 'resolved'),
-    'bookings',         (select count(*) from lab_bookings),
-    'bookings_done',    (select count(*) from lab_bookings where booking_date <= current_date and coalesce(used, true)),
-    'walk_in',          (select count(*) from lab_bookings where walk_in),
-    'booking_teachers', (select count(distinct teacher_id) from lab_bookings),
-    'booking_classes',  (select count(distinct class_id) from lab_bookings),
-    'booking_days',     (select count(distinct booking_date) from lab_bookings where booking_date <= current_date),
-    'booking_weeks',    (select count(distinct date_trunc('week', booking_date + 1)) from lab_bookings where booking_date <= current_date),
-    'weeks',            (select coalesce(jsonb_agg(jsonb_build_object('w', w, 'n', n) order by w), '[]') from (
-                           select (date_trunc('week', booking_date + 1) - interval '1 day')::date w, count(*) n
-                             from lab_bookings where booking_date <= current_date and coalesce(used, true)
-                            group by 1 order by 1 desc limit 16) x),
-    'rules_items',      (select coalesce(jsonb_array_length(items), 0) from lab_rules where id = 1),
-    'rules_version',    (select version from lab_rules where id = 1),
-    'acks',             (select count(distinct student_id) from lab_rule_acks),
-    'seat_classes',     (select count(distinct class_id) from lab_seats),
-    'seat_students',    (select count(distinct student_id) from lab_seats),
-    'sessions',         (select count(*) from lab_sessions),
-    'session_classes',  (select count(distinct class_id) from lab_sessions),
-    'results',          (select count(*) from lab_results),
-    'avg_mastery',      (select round(avg(mastery)) from lab_results where mastery is not null),
-    'avg_quiz',         (select round(avg(quiz)) from lab_results where quiz is not null),
-    'works',            (select count(*) from lab_works),
-    'work_marks',       (select count(*) from lab_work_marks),
-    'installs',         (select count(*) from lab_installs)
-  ) end;
-$$;
-revoke execute on function public.lab_perf_stats() from public, anon;
-grant execute on function public.lab_perf_stats() to authenticated;
+insert into public.perf_items (key, element_key, sort_order, title, source, is_record, portal) values
+  ('l01_01', 'l01', 1, 'الحفاظ على الدوام والالتزام بالمواعيد', 'school', false, 'judge'),
+  ('l01_02', 'l01', 2, 'فتح المعمل وتجهيزه في مواعيد الحصص', 'school', false, 'judge'),
+  ('l01_03', 'l01', 3, 'متابعة بلاغات الأعطال حتى تُحل', 'school', false, 'judge'),
+  ('l01_04', 'l01', 4, 'المشاركة في اللجان والمناسبات المدرسية', 'school', false, 'judge'),
+  ('l02_01', 'l02', 1, 'حضور برامج تدريبية وورش في التقنية وتشغيل المعامل', 'guide', true, 'record'),
+  ('l02_02', 'l02', 2, 'تقديم ورشة أو لقاء لمعلمي الحاسب على أدوات المعمل', 'school', false, 'manual'),
+  ('l02_03', 'l02', 3, 'إعداد أدلة استخدام المعمل للمعلم والطالب والدعم الفني', 'school', false, 'manual'),
+  ('l02_04', 'l02', 4, 'المشاركة في مجتمعات التعلم المهني بالمدرسة', 'guide', false, 'manual'),
+  ('l02_05', 'l02', 5, 'خدمة معلمي الحاسب في المعمل وتبادل الخبرة معهم', 'school', false, 'auto'),
+  ('l03_01', 'l03', 1, 'توعية أولياء الأمور بقواعد السلامة والاستخدام الآمن للأجهزة', 'school', false, 'manual'),
+  ('l03_02', 'l03', 2, 'مشاركة إنجازات الطلاب في المعمل مع أسرهم', 'school', false, 'manual'),
+  ('l03_03', 'l03', 3, 'التواصل مع ولي الأمر عند الحاجة بشأن استخدام الطالب للأجهزة', 'guide', false, 'manual'),
+  ('l04_01', 'l04', 1, 'حصص بدروس المعمل الرقمي التفاعلية', 'school', false, 'auto'),
+  ('l04_02', 'l04', 2, 'التعلم بالمحطات: مفهوم ثم تدريب عملي بتصحيح فوري ثم اختبار', 'school', false, 'partial'),
+  ('l04_03', 'l04', 3, 'عرض الدرس على السبورة لجهاز المعلم', 'school', false, 'manual'),
+  ('l04_04', 'l04', 4, 'التعلم دون إنترنت على أجهزة المعمل', 'school', false, 'partial'),
+  ('l05_01', 'l05', 1, 'رصد إتقان كل طالب في دروس المعمل برمز QR', 'school', false, 'auto'),
+  ('l05_02', 'l05', 2, 'نقل الدرجات إلى سجل التطبيقات العملية', 'school', false, 'auto'),
+  ('l05_03', 'l05', 3, 'دعم الطلاب المتعثرين في المهارات العملية', 'guide', false, 'manual'),
+  ('l06_01', 'l06', 1, 'جدول حجوزات المعمل اليومي لمعلمي الحاسب', 'school', false, 'auto'),
+  ('l06_02', 'l06', 2, 'خطة يومية معتمدة لأنشطة المعمل بالتعاون مع المعلم المختص', 'guide', false, 'manual'),
+  ('l06_03', 'l06', 3, 'مواءمة الخطة مع جدول المعلمين والإجازات الرسمية', 'guide', false, 'partial'),
+  ('l07_01', 'l07', 1, 'حل أعطال الأجهزة ومساعدة المعلمين والطلاب في تشغيلها', 'guide', false, 'auto'),
+  ('l07_02', 'l07', 2, 'توثيق مواصفات أجهزة المعمل وبرامجها', 'school', false, 'auto'),
+  ('l07_03', 'l07', 3, 'تثبيت ملف المعمل الدائم على الأجهزة', 'school', false, 'auto'),
+  ('l07_04', 'l07', 4, 'دورة أو شهادة في الأسس والمفاهيم الفنية', 'guide', false, 'manual'),
+  ('l08_01', 'l08', 1, 'جاهزية أجهزة المعمل للعمل', 'guide', false, 'auto'),
+  ('l08_02', 'l08', 2, 'حصر الاحتياج من الأجهزة والملحقات والبرامج', 'guide', false, 'manual'),
+  ('l08_03', 'l08', 3, 'طلب توفير المستلزمات ومتابعته (خطاب أو محضر استلام)', 'guide', false, 'manual'),
+  ('l09_01', 'l09', 1, 'قواعد السلامة المعتمدة ولوحتها معلّقة في المعمل', 'guide', false, 'auto'),
+  ('l09_02', 'l09', 2, 'إقرار الطلاب بقواعد السلامة كل فصل دراسي', 'school', false, 'auto'),
+  ('l09_03', 'l09', 3, 'مراجعة دورية للأجهزة والتوصيلات الكهربائية والمخزون', 'guide', false, 'manual'),
+  ('l10_01', 'l10', 1, 'خرائط جلوس الطلاب لكل فصل', 'school', false, 'auto'),
+  ('l10_02', 'l10', 2, 'ملصقات الأجهزة وخلفياتها برمز البلاغ', 'school', false, 'manual'),
+  ('l10_03', 'l10', 3, 'متابعة نظافة المعمل وترتيبه قبل الاستخدام وبعده', 'guide', false, 'manual'),
+  ('l11_01', 'l11', 1, 'تهيئة المعمل لكل حصة محجوزة وتأكيد استخدامها', 'guide', false, 'auto'),
+  ('l11_02', 'l11', 2, 'تسجيل الاستخدام بلا حجز سابق', 'school', false, 'auto'),
+  ('l11_03', 'l11', 3, 'استلام الأجهزة بعد الحصة وتخزين الملحقات بطريقة سليمة', 'guide', false, 'manual'),
+  ('l12_01', 'l12', 1, 'سجل الاستخدام الأسبوعي للمعمل', 'school', false, 'auto'),
+  ('l12_02', 'l12', 2, 'تقرير أسبوعي بالأنشطة والمهام والتحديات', 'guide', false, 'manual'),
+  ('l12_03', 'l12', 3, 'تنظيم سجلات المعمل وتحديث بيانات موجوداته', 'guide', false, 'partial'),
+  ('l13_01', 'l13', 1, 'سجل الأجهزة بحالة كل جهاز', 'school', false, 'auto'),
+  ('l13_02', 'l13', 2, 'بلاغات الأعطال ومتابعتها حتى الحل', 'guide', false, 'auto'),
+  ('l13_03', 'l13', 3, 'رفع الحاجة للصيانة للمختصين ومتابعتها', 'guide', false, 'auto'),
+  ('l13_04', 'l13', 4, 'تقرير دوري معتمد عن حالة الأجهزة والمعدات', 'guide', false, 'manual')
+on conflict (key) do update set element_key = excluded.element_key, sort_order = excluded.sort_order, title = excluded.title,
+  source = excluded.source, is_record = excluded.is_record, portal = excluded.portal, is_active = true;
 -- نهاية الجزء 1

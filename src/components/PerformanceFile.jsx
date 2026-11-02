@@ -90,7 +90,7 @@ function OverallProgress({ elements, evidence, auto }) {
   );
 }
 
-function InfoBox({ info, name }) {
+function InfoBox({ info, name, role }) {
   return (
     <section className="card flex items-center gap-4 p-4">
       <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-mint-light text-lg font-bold text-mint-deep">
@@ -99,12 +99,12 @@ function InfoBox({ info, name }) {
       <div className="min-w-0">
         <p className="font-bold text-ink">{info?.full_name ?? name ?? "—"}</p>
         <p className="mt-0.5 text-sm leading-relaxed text-muted">
-          {[
+          {role ? role.desc : <>{[
             info?.specialization,
             info?.subjects?.length ? info.subjects.join("، ") : null,
             info?.classes?.length ? `${info.classes.length} فصول` : null,
           ].filter(Boolean).join(" · ") || "لا بيانات تدريس في العام النشط"}
-          {info?.periods ? <> · النصاب <span className="num">{info.periods}</span> حصة</> : null}
+          {info?.periods ? <> · النصاب <span className="num">{info.periods}</span> حصة</> : null}</>}
         </p>
       </div>
     </section>
@@ -220,7 +220,7 @@ function EvidenceRow({ ev, item, readOnly, onEdit, onDelete }) {
             ev.hours ? `${ev.hours} ساعة` : null].filter(Boolean).join(" · ")}
           {!item.is_record && (
             <>العداد <span className="num font-semibold text-ink">{ev.use_count}</span>
-              {ev.source === "upload" ? " · مُدخل من المعلم" : ` · آخرها ${fmtDate(ev.last_used_at)}`}</>
+              {ev.source === "upload" ? " · مُدخل يدويًا" : ` · آخرها ${fmtDate(ev.last_used_at)}`}</>
           )}
         </p>
       </div>
@@ -277,7 +277,7 @@ function DutyIndicators({ uid, year }) {
    تُجمع حسب نوعها (العنوان) مع عدد مراته وآخرها، وتُفتح المجموعة لرؤية تفاصيلها. */
 const ACT_ITEMS = ["e04_02", "e08_04", "e09_05"];
 
-function AutoDetails({ uid, year, itemKey }) {
+function AutoDetails({ uid, year, itemKey, track }) {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [openG, setOpenG] = useState(null);   // المجموعة المفتوحة تفاصيلها
@@ -285,7 +285,7 @@ function AutoDetails({ uid, year, itemKey }) {
     (async () => {
       // بنود الأنشطة لها دالتها (supabase/activities_4.sql)
       // وبند الإنتاج المعرفي من بنك الأسئلة (supabase/qbank_3.sql)
-      const fn = ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
+      const fn = track === "lab" ? "lab_perf_details" : ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
       const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year, p_item: itemKey });
       if (error) setErr(error.message?.includes(fn) ? "عرض التفاصيل غير مفعّل بعد في قاعدة البيانات." : "تعذّر تحميل التفاصيل.");
       setRows(data ?? []);
@@ -337,7 +337,7 @@ function AutoDetails({ uid, year, itemKey }) {
   );
 }
 
-function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChanged }) {
+function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChanged, track, role }) {
   const [open, setOpen] = useState(null);   // { key, mode: "add" | "edit", ev }
   const sum = elementSummary(el, evidence, auto);
   const [shown, setShown] = useState(null);   // البند الآلي المفتوحة تفاصيله
@@ -367,10 +367,10 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
         </div>
         {el.evaluator_only && (
           <p className="mt-3 rounded-sm2 bg-canvas px-3 py-2 text-sm text-muted">
-            هذا العنصر يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد في ملف المعلم.
+            هذا العنصر يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد في ملف {role?.who ?? "المعلم"}.
           </p>
         )}
-        {el.evaluator_only && readOnly && <DutyIndicators uid={uid} year={year} />}
+        {el.evaluator_only && readOnly && !role && <DutyIndicators uid={uid} year={year} />}
       </section>
 
       <div className="space-y-3">
@@ -421,7 +421,7 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                       )}
                     </div>
                   )}
-                  {st.auto && shown === it.key && <AutoDetails uid={uid} year={year} itemKey={it.key} />}
+                  {st.auto && shown === it.key && <AutoDetails uid={uid} year={year} itemKey={it.key} track={track} />}
                   {st.list.map((ev) => (
                     <EvidenceRow key={ev.id} ev={ev} item={it} readOnly={readOnly}
                                  onEdit={() => setOpen({ key: it.key, mode: "edit", ev })}
@@ -548,7 +548,7 @@ function TrackView({ elements, evidence, auto, readOnly, onReport }) {
 }
 
 /* التقرير النهائي بهوية استوديو البوابة (PerfReportDoc.jsx): غلاف وملخص وتفاصيل ونواقص وتوقيعات */
-function PerfReport({ elements, evidence, auto, visits, info, name, year }) {
+function PerfReport({ elements, evidence, auto, visits, info, name, year, role }) {
   const [theme, setTheme] = useState("light");
   const [sigs, setSigs] = useState({});
   const teacher = info?.full_name ?? name ?? "";
@@ -558,12 +558,21 @@ function PerfReport({ elements, evidence, auto, visits, info, name, year }) {
       .then(([t, p]) => { if (live) setSigs({ teacher: t, principal: p?.url ?? null }); });
     return () => { live = false; };
   }, [teacher]);
-  const pages = useMemo(() => perfReportPages({ elements, evidence, auto, visits, info, name, year, theme, sigs }),
-    [elements, evidence, auto, visits, info, name, year, theme, sigs]);
+  const pages = useMemo(() => perfReportPages({ elements, evidence, auto, visits, info, name, year, theme, sigs, role: role?.report }),
+    [elements, evidence, auto, visits, info, name, year, theme, sigs, role]);
   return <ReportViewer id="perf-report" pages={pages} theme={theme} setTheme={setTheme} fileTitle={`شواهد الأداء الوظيفي - ${teacher}`} />;
 }
 
-export default function PerformanceFile({ uid, name, readOnly = false }) {
+/* track = "lab": ملف محضر معمل الحاسب الآلي بالنظام نفسه (supabase/lab_perf_*.sql)، وrole نصوصه */
+const LAB_ROLE = {
+  who: "المحضر", desc: "محضر معمل الحاسب الآلي · نموذج «محضر المختبر» في دليل الأداء الوظيفي",
+  report: { who: "المحضر", signTitle: "محضر معمل الحاسب الآلي", tag: "ملف الأداء الوظيفي لمحضر معمل الحاسب الآلي",
+    rows: [["book", "الوظيفة", "محضر معمل الحاسب الآلي"], ["cap", "النموذج", "محضر المختبر (5) · الإصدار الثاني"]],
+    note: "الشواهد كما في ملف المحضر بالبوابة: المرفوعة، والآلية من عمل المعمل (الحجوزات والاستخدام والأجهزة والبلاغات والسلامة والدروس)." },
+};
+
+export default function PerformanceFile({ uid, name, readOnly = false, track = "teacher" }) {
+  const role = track === "lab" ? LAB_ROLE : null;
   const [elements, setElements] = useState(null);
   const [evidence, setEvidence] = useState([]);
   const [auto, setAuto] = useState({});      // الشواهد الآلية: { [بند]: { cnt, last } }
@@ -577,15 +586,18 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
   const reload = useCallback(async () => {
     try {
       const y = await activeYear();
+      const lab = track === "lab";
       const [els, ev, vs, inf, au] = await Promise.all([
-        loadPerfReference(), loadEvidence(uid, y), loadSupportVisits(uid), loadTeacherInfo(uid), loadAutoCounts(uid, y),
+        loadPerfReference(track), loadEvidence(uid, y), lab ? [] : loadSupportVisits(uid), lab ? null : loadTeacherInfo(uid), loadAutoCounts(uid, y, track),
       ]);
-      setYear(y); setElements(els); setEvidence(ev); setVisits(vs); setInfo(inf); setAuto(au[uid] ?? {});
+      // شواهد هذا الملف وحده: من يجمع ملف المعلم وملف المحضر لا تختلط شواهدهما
+      const keys = new Set(els.flatMap((e) => e.items.map((i) => i.key)));
+      setYear(y); setElements(els); setEvidence(ev.filter((e) => keys.has(e.item_key))); setVisits(vs); setInfo(inf); setAuto(au[uid] ?? {});
     } catch (e) {
       setErr(e.message?.includes("perf_") ? "ملف الأداء غير مفعّل بعد في قاعدة البيانات." : (e.message ?? "تعذّر التحميل."));
       setElements([]);
     }
-  }, [uid]);
+  }, [uid, track]);
 
   useEffect(() => { setElements(null); setView("cards"); setCurrent(null); reload(); }, [reload]);
 
@@ -598,13 +610,13 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
     const el = elements.find((e) => e.key === current);
     return (
       <ElementView el={el} evidence={evidence} auto={auto} uid={uid} year={year} readOnly={readOnly}
-                   onBack={() => setCurrent(null)} onChanged={reload} />
+                   onBack={() => setCurrent(null)} onChanged={reload} track={track} role={role} />
     );
   }
 
   return (
     <div className="space-y-4">
-      <InfoBox info={info} name={name} />
+      <InfoBox info={info} name={name} role={role} />
 
       <div className="flex gap-2">
         {[["cards", "بطاقات العناصر"], ["track", "متابعة الشواهد"], ["report", "التقرير النهائي"]].map(([k, l]) => (
@@ -616,7 +628,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
       </div>
 
       {view === "report" ? (
-        <PerfReport elements={elements} evidence={evidence} auto={auto} visits={visits} info={info} name={name} year={year} />
+        <PerfReport elements={elements} evidence={evidence} auto={auto} visits={visits} info={info} name={name} year={year} role={role} />
       ) : view === "track" ? (
         <TrackView elements={elements} evidence={evidence} auto={auto} readOnly={readOnly} onReport={() => setView("report")} />
       ) : (
@@ -646,7 +658,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
             ))}
           </div>
 
-          <section className="card p-4">
+          {!role && <section className="card p-4">
             <h2 className="font-bold text-ink">زيارات الدعم</h2>
             <p className="mt-0.5 text-sm text-muted">تصل تلقائيًا من الوكلاء ومدير المدرسة.</p>
             {visits.length === 0 ? (
@@ -661,7 +673,7 @@ export default function PerformanceFile({ uid, name, readOnly = false }) {
                 ))}
               </div>
             )}
-          </section>
+          </section>}
         </>
       )}
     </div>
