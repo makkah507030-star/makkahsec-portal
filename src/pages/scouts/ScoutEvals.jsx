@@ -78,9 +78,9 @@ export default function ScoutEvals() {
     <div className="space-y-4">
       {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.t}</p>}
       <section className="card flex flex-wrap items-center gap-2 p-3">
-        <button className="btn-ghost px-3 py-1 text-xs" onClick={() => setWeek(addDays(week, -7))}>→ الأسبوع السابق</button>
+        <button data-ro-ok className="btn-ghost px-3 py-1 text-xs" onClick={() => setWeek(addDays(week, -7))}>→ الأسبوع السابق</button>
         <p className="flex-1 text-center text-sm font-semibold text-ink">أسبوع <span className="num">{fmtDate(week + "T12:00:00")}</span> – <span className="num">{fmtDate(addDays(week, 4) + "T12:00:00")}</span></p>
-        <button className="btn-ghost px-3 py-1 text-xs" disabled={week >= weekStart(todayISO())} onClick={() => setWeek(addDays(week, 7))}>الأسبوع التالي ←</button>
+        <button data-ro-ok className="btn-ghost px-3 py-1 text-xs" disabled={week >= weekStart(todayISO())} onClick={() => setWeek(addDays(week, 7))}>الأسبوع التالي ←</button>
       </section>
 
       <section className="card overflow-hidden">

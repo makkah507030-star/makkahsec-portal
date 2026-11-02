@@ -25,6 +25,7 @@ import GlobeBadges from "../globe/GlobeBadges.jsx";
 import GlobeSupervisor from "../globe/GlobeSupervisor.jsx";
 import GlobeChart from "../globe/GlobeChart.jsx";
 import { GLOBE_MEMBER_ROLES, memberRole } from "../../lib/globe.js";
+import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
 
 /* =====================================================================
    طلاب برنامج جلوب البيئي العالمي (supabase/globe_1.sql و globe_3.sql):
@@ -91,6 +92,7 @@ export default function GlobeTeam() {
   // توقيعا الكشف: منسق البرنامج ومدير المدرسة
   const leaderName = (ROLE_PERSON_NAME.globe_program ?? "").replace(/^الأستاذ:\s*/, "");
   const principal = usePrincipalSignature();
+  const ro = useSupportReadOnly("globe_program");   // الدعم الفني: عرض فقط
 
   const load = async () => {
     const { data, error } = await supabase.from("globe_members")
@@ -213,12 +215,13 @@ export default function GlobeTeam() {
       <div className="flex gap-1 overflow-x-auto rounded-pill border border-line bg-paper p-1">
         {[["students", `الطلاب (${members.length})`], ["plan", "خطة البرنامج"], ["monitor", "خطة الرصد"],
           ["library", "المكتبة"], ["badges", "الإنجازات والأوسمة"], ["supervisor", "مشرف البرنامج"]].map(([k, t]) => (
-          <button key={k} onClick={() => setTab(k)}
+          <button key={k} data-ro-ok onClick={() => setTab(k)}
                   className={`flex-1 whitespace-nowrap rounded-pill px-3 py-1.5 text-[13px] font-semibold transition-colors ${
                     tab === k ? "bg-mint-deep text-white" : "text-muted hover:bg-canvas"}`}>{t}</button>
         ))}
       </div>
 
+      <ReadOnlyZone on={ro}>
       {tab === "plan" && <GlobePlan me={profile?.full_name} onReport={() => setTab("report")} />}
       {tab === "monitor" && <GlobeMonitor me={profile?.full_name} members={members} onReport={() => setTab("report")} />}
       {tab === "library" && <GlobeLibrary me={profile?.full_name} />}
@@ -266,8 +269,8 @@ export default function GlobeTeam() {
               </h2>
               {members.length > 0 && (
                 <span className="ms-auto flex gap-3">
-                  <button onClick={() => setTab("chart")} className="text-xs font-semibold text-mint-deep">هيكل الفريق</button>
-                  <button onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
+                  <button data-ro-ok onClick={() => setTab("chart")} className="text-xs font-semibold text-mint-deep">هيكل الفريق</button>
+                  <button data-ro-ok onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
                           className="text-xs font-semibold text-mint-deep">طباعة الكشف</button>
                 </span>
               )}
@@ -275,14 +278,14 @@ export default function GlobeTeam() {
             {members.length > 0 && (
               <div className="border-b border-line bg-[#25D366]/5 p-3">
                 <label className="text-[11px] font-semibold text-[#128C7E]">رسالة واتساب جاهزة (اختياري)</label>
-                <textarea className="field mt-1 min-h-[3.5rem] w-full text-sm" value={waText} onChange={(e) => setWaText(e.target.value)}
+                <textarea data-ro-ok className="field mt-1 min-h-[3.5rem] w-full text-sm" value={waText} onChange={(e) => setWaText(e.target.value)}
                           placeholder="مثال: نذكّركم بموعد الرصد البيئي غدًا بعد الحصة السادسة في ساحة المدرسة." />
                 <p className="mt-1 text-[11px] text-muted">يُفتح بها زر «واتساب» عند كل طالب، ويبقى الإرسال بيدك.</p>
               </div>
             )}
             {members.length > 5 && (
               <div className="border-b border-line p-3">
-                <input className="field" value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالاسم أو رقم الهوية" />
+                <input data-ro-ok className="field" value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالاسم أو رقم الهوية" />
               </div>
             )}
             {members.length === 0 && <p className="px-4 py-6 text-sm text-muted">لا طلاب بعد. اختر فصلًا وأضف الطلاب.</p>}
@@ -329,6 +332,7 @@ export default function GlobeTeam() {
           </section>
         </>
       ))}
+      </ReadOnlyZone>
 
       {/* تحميل توقيع المدير مسبقًا فيظهر في الطباعة فورًا */}
       <div className="hidden">

@@ -6,6 +6,8 @@ import ScoutAttendance from "./ScoutAttendance.jsx";
 import ScoutEvals from "./ScoutEvals.jsx";
 import ScoutStats from "./ScoutStats.jsx";
 import ScoutReports from "./ScoutReports.jsx";
+import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
+import { isScoutRole } from "../../lib/scoutLeader.js";
 
 /* =====================================================================
    الفريق الكشفي — صفحة القائد ونائبه: الأعضاء، والهيكل والطلائع، والتحضير،
@@ -19,6 +21,7 @@ const TABS = [
 
 export default function ScoutsHub() {
   const [tab, setTab] = useState(() => new URLSearchParams(window.location.search).get("t") ?? "members");
+  const ro = useSupportReadOnly(isScoutRole);   // الدعم الفني: عرض فقط
   return (
     <div className="space-y-4">
       <div>
@@ -27,16 +30,18 @@ export default function ScoutsHub() {
       </div>
       <div className="flex gap-1 overflow-x-auto rounded-pill border border-line bg-paper p-1">
         {TABS.map(([k, t]) => (
-          <button key={k} onClick={() => setTab(k)}
+          <button key={k} data-ro-ok onClick={() => setTab(k)}
                   className={`flex-1 whitespace-nowrap rounded-pill px-3 py-1.5 text-[13px] font-semibold transition-colors ${tab === k ? "bg-mint-deep text-white" : "text-muted hover:bg-canvas"}`}>{t}</button>
         ))}
       </div>
-      {tab === "members" && <ScoutTeam embedded />}
-      {tab === "structure" && <ScoutStructure />}
-      {tab === "attendance" && <ScoutAttendance />}
-      {tab === "evals" && <ScoutEvals />}
-      {tab === "stats" && <ScoutStats />}
-      {tab === "reports" && <ScoutReports />}
+      <ReadOnlyZone on={ro}>
+        {tab === "members" && <ScoutTeam embedded />}
+        {tab === "structure" && <ScoutStructure />}
+        {tab === "attendance" && <ScoutAttendance />}
+        {tab === "evals" && <ScoutEvals />}
+        {tab === "stats" && <ScoutStats />}
+        {tab === "reports" && <ScoutReports />}
+      </ReadOnlyZone>
     </div>
   );
 }

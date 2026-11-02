@@ -72,8 +72,8 @@ export default function GlobeLibrary({ me }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-1.5">
-        <button className={pill(kind === "video")} onClick={() => { setKind("video"); setForm(null); }}>المرئيات</button>
-        <button className={pill(kind === "doc")} onClick={() => { setKind("doc"); setForm(null); }}>التقارير والمنشورات</button>
+        <button data-ro-ok className={pill(kind === "video")} onClick={() => { setKind("video"); setForm(null); }}>المرئيات</button>
+        <button data-ro-ok className={pill(kind === "doc")} onClick={() => { setKind("doc"); setForm(null); }}>التقارير والمنشورات</button>
         {!form && <button className="btn-primary ms-auto px-4 py-1.5 text-sm" onClick={() => setForm(BLANK)}>
           {kind === "video" ? "+ إضافة مقطع" : "+ رفع تقرير أو منشور"}</button>}
       </div>
@@ -146,7 +146,7 @@ export default function GlobeLibrary({ me }) {
                 {r.mime === "application/pdf" ? "PDF" : "صورة"}
               </span>
               <div className="min-w-0 flex-1"><Info r={r} bare /></div>
-              <button className="text-xs font-semibold text-mint-deep" onClick={() => open(r)}>عرض</button>
+              <button data-ro-ok className="text-xs font-semibold text-mint-deep" onClick={() => open(r)}>عرض</button>
               <button className="text-xs text-absent" onClick={() => remove(r)}>حذف</button>
             </div>
           ))}

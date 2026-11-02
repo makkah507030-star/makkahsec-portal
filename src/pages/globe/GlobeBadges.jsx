@@ -88,7 +88,7 @@ export default function GlobeBadges({ leader }) {
 
       <div className="flex flex-wrap items-center gap-1.5">
         {allYears.map((y) => (
-          <button key={y} className={pill(y === year)} onClick={() => { setYear(y); setEdit(null); }}>
+          <button key={y} data-ro-ok className={pill(y === year)} onClick={() => { setYear(y); setEdit(null); }}>
             <span className="num">{y}</span> <span className="num opacity-75">({yearTotal(y)})</span>
           </button>
         ))}
@@ -104,7 +104,7 @@ export default function GlobeBadges({ leader }) {
             <button className="text-xs text-muted" onClick={() => setNewYear(null)}>إلغاء</button>
           </span>
         )}
-        <button className="btn-primary ms-auto px-4 py-1.5 text-sm" disabled={!total} onClick={() => setReport(true)}>تقرير الإنجازات PDF</button>
+        <button data-ro-ok className="btn-primary ms-auto px-4 py-1.5 text-sm" disabled={!total} onClick={() => setReport(true)}>تقرير الإنجازات PDF</button>
       </div>
       {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.text}</p>}
 

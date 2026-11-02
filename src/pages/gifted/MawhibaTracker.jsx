@@ -166,17 +166,17 @@ export default function MawhibaTracker() {
       {/* التصفية والتحديث الجماعي */}
       <section className="card space-y-2 p-3">
         <div className="flex flex-wrap gap-2">
-          <select className="field w-auto" value={cls} onChange={(x) => setCls(x.target.value)}>
+          <select data-ro-ok className="field w-auto" value={cls} onChange={(x) => setCls(x.target.value)}>
             <option value="all">كل الفصول</option>{classes.map((c) => <option key={c} value={c}>الأول / {c}</option>)}
           </select>
-          <input className="field min-w-0 flex-1" value={q} onChange={(x) => setQ(x.target.value)} placeholder="بحث بالاسم أو الهوية" />
-          <button className="btn-ghost px-4 text-xs" onClick={print}>طباعة الكشف</button>
+          <input data-ro-ok className="field min-w-0 flex-1" value={q} onChange={(x) => setQ(x.target.value)} placeholder="بحث بالاسم أو الهوية" />
+          <button data-ro-ok className="btn-ghost px-4 text-xs" onClick={print}>طباعة الكشف</button>
         </div>
         <div className="flex flex-wrap gap-1.5">
           {["all", ...FLOW].map((k) => {
             const n = k === "all" ? rows.length : rows.filter((r) => r.status === k).length;
             return (k === "all" || n > 0) && (
-              <button key={k} onClick={() => setSt(k)} className={`rounded-pill px-3 py-1 text-xs font-medium ${st === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>
+              <button key={k} data-ro-ok onClick={() => setSt(k)} className={`rounded-pill px-3 py-1 text-xs font-medium ${st === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>
                 {k === "all" ? "الكل" : STATUS[k].t} <span className="num">({n})</span></button>
             );
           })}
@@ -213,7 +213,7 @@ export default function MawhibaTracker() {
               </div>
               <Wa mobile={r.student_mobile} text={waText(r, false)} label="الطالب" />
               <Wa mobile={r.guardian} text={waText(r, true)} label="ولي الأمر" />
-              <button className="text-xs font-semibold text-mint-deep underline" onClick={() => setOpen(open === r.id ? null : r.id)}>{open === r.id ? "إغلاق" : "تحديث"}</button>
+              <button className="text-xs font-semibold text-mint-deep underline" data-ro-ok onClick={() => setOpen(open === r.id ? null : r.id)}>{open === r.id ? "إغلاق" : "تحديث"}</button>
             </div>
             {open === r.id && <Editor r={r} busy={busy} onSave={async (patch) => { if (await save([r.id], patch)) setOpen(null); }} />}
           </div>

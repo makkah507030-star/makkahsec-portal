@@ -65,7 +65,7 @@ export default function ScoutReports() {
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       <div className="flex flex-wrap items-center gap-2">
         {[["open", "مفتوحة"], ["closed", "مغلقة"]].map(([k, t]) => (
-          <button key={k} onClick={() => setTab(k)} className={`rounded-pill px-4 py-1.5 text-sm font-semibold ${tab === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>
+          <button key={k} data-ro-ok onClick={() => setTab(k)} className={`rounded-pill px-4 py-1.5 text-sm font-semibold ${tab === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>
             {t} <span className="num">({rows.filter((r) => r.status === k).length})</span></button>
         ))}
         {!fromDeputy && !nf && <button className="btn-primary ms-auto px-4 py-1.5 text-xs" onClick={() => setNf(BLANK)}>+ بلاغ لوكيل شؤون الطلاب</button>}
@@ -110,7 +110,7 @@ export default function ScoutReports() {
       ) : (
         <div className="space-y-2">
           {shown.map((r) => (
-            <button key={r.id} onClick={() => setOpen(r.id)} className="card flex w-full items-start gap-3 p-4 text-right hover:bg-canvas/50">
+            <button key={r.id} data-ro-ok onClick={() => setOpen(r.id)} className="card flex w-full items-start gap-3 p-4 text-right hover:bg-canvas/50">
               <span className={`chip shrink-0 ${r.kind === "students" ? "bg-late/10 text-late" : "bg-excused/10 text-excused"}`}>{KIND[r.kind]}</span>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-ink">{r.title}</p>
@@ -157,7 +157,7 @@ function Thread({ r, nameOf, fromDeputy, me, onBack }) {
 
   return (
     <div className="space-y-3">
-      <button className="text-xs text-muted underline" onClick={onBack}>← البلاغات</button>
+      <button data-ro-ok className="text-xs text-muted underline" onClick={onBack}>← البلاغات</button>
       <section className="card space-y-2 p-4">
         <div className="flex flex-wrap items-start gap-2">
           <div className="min-w-0 flex-1">

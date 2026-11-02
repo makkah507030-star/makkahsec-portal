@@ -71,10 +71,10 @@ export default function ScoutAttendance() {
       <section className="card space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
           {Object.entries(ATT_KIND).map(([k, t]) => (
-            <button key={k} onClick={() => setKind(k)}
+            <button key={k} data-ro-ok onClick={() => setKind(k)}
                     className={`rounded-pill px-4 py-1.5 text-sm font-semibold ${kind === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>{t}</button>
           ))}
-          <input type="date" className="field num ms-auto w-auto" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value || todayISO())} />
+          <input data-ro-ok type="date" className="field num ms-auto w-auto" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value || todayISO())} />
         </div>
         <div className="grid grid-cols-4 gap-2 text-center">
           {Object.entries(ATT_STATUS).map(([k, s]) => (

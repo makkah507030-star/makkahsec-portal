@@ -82,7 +82,7 @@ export default function GlobeSupervisor({ leader }) {
       <section className="card space-y-3 p-4">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-ink">السيرة الذاتية لمشرف البرنامج</h2>
-          <button className="btn-ghost ms-auto px-3 py-1.5 text-xs" onClick={() => setPrint(true)}>طباعة السيرة الذاتية</button>
+          <button data-ro-ok className="btn-ghost ms-auto px-3 py-1.5 text-xs" onClick={() => setPrint(true)}>طباعة السيرة الذاتية</button>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
           {CV_FIELDS.map((f) => (
@@ -107,7 +107,7 @@ export default function GlobeSupervisor({ leader }) {
         {row.cert_path && (
           <div className="flex items-center gap-3 rounded-sm2 border border-line bg-canvas px-3 py-2">
             <span className="text-sm text-ink">{row.cert_mime === "application/pdf" ? "ملف PDF مرفوع" : "صورة مرفوعة"}</span>
-            <button className="text-xs font-semibold text-mint-deep" onClick={openCert}>عرض</button>
+            <button data-ro-ok className="text-xs font-semibold text-mint-deep" onClick={openCert}>عرض</button>
           </div>
         )}
         <input type="file" accept="image/*,application/pdf" className="field w-full" disabled={busy}

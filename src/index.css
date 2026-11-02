@@ -147,3 +147,7 @@
 @keyframes nt-ring { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: none; } }
 .nt-veil { animation: nt-veil .25s ease-out both; }
 .nt-ring { animation: nt-ring .45s cubic-bezier(.2,.9,.3,1.2) both; }
+
+/* وضع «عرض فقط» (components/ReadOnlyZone.jsx): أدوات التعديل باهتة ومعطّلة، والتنقل والعرض كما هما */
+.ro-zone :is(button, select, input, textarea):not([data-ro-ok]) { opacity: .45; cursor: not-allowed; }
+.ro-zone [data-ro-ok] :is(button, select, input, textarea) { opacity: 1; cursor: auto; }

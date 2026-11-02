@@ -88,9 +88,9 @@ export default function ScoutStats() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-1.5">
         {PERIODS.map(([k, t]) => (
-          <button key={k} onClick={() => setPeriod(k)} className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold ${period === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>{t}</button>
+          <button key={k} data-ro-ok onClick={() => setPeriod(k)} className={`rounded-pill px-3.5 py-1.5 text-xs font-semibold ${period === k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>{t}</button>
         ))}
-        <button className="btn-ghost ms-auto px-4 py-1.5 text-xs" onClick={print}>طباعة التقرير</button>
+        <button data-ro-ok className="btn-ghost ms-auto px-4 py-1.5 text-xs" onClick={print}>طباعة التقرير</button>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Card p={rep.best} label="🏆 أفضل طليعة" c="text-present" />

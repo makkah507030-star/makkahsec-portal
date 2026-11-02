@@ -144,14 +144,14 @@ export default function GlobeMonitor({ me, members, onReport }) {
             <p className="text-xs text-muted">جلسات الرصد بمواعيدها وطلابها، والتذكير بالواتساب، وتوثيق القراءات ورفعها إلى منصة GLOBE.</p>
           </div>
           <button className="btn-primary px-4 py-1.5 text-xs" onClick={() => setNf({ ...BLANK, obs_date: today })}>+ جلسة رصد</button>
-          {rows.length > 0 && <button className="btn-ghost px-4 py-1.5 text-xs" onClick={onReport}>تقرير الخطة وطباعتها</button>}
+          {rows.length > 0 && <button data-ro-ok className="btn-ghost px-4 py-1.5 text-xs" onClick={onReport}>تقرير الخطة وطباعتها</button>}
         </div>
         <Stats ratio={ratio} label="الالتزام بالرصد (المنفّذ من الجلسات التي حل موعدها)" items={[
           ["جلسات الرصد", live.length, "text-ink"], ["نُفّذت", doneN, "text-present"],
           ["رُفعت إلى GLOBE", upN, "text-excused"], ["القادمة", live.filter((o) => o.status === "planned" && o.obs_date >= today).length, "text-late"]]} />
         <div className="flex flex-wrap gap-1.5 px-4 py-3">
           {[["upcoming", "المجدولة"], ["done", "المنفّذة"], ["all", "الكل"]].map(([k, t]) => (
-            <button key={k} className={pill(tab === k)} onClick={() => setTab(k)}>{t}</button>
+            <button key={k} data-ro-ok className={pill(tab === k)} onClick={() => setTab(k)}>{t}</button>
           ))}
         </div>
       </section>
@@ -285,7 +285,7 @@ export default function GlobeMonitor({ me, members, onReport }) {
                 <div className="flex flex-wrap items-center gap-2 border-t border-line bg-canvas/50 px-4 py-2">
                   {o.status === "planned" && kids.length > 0 && (
                     <button className="inline-flex items-center gap-1 rounded-pill bg-[#25D366]/15 px-3 py-1 text-xs font-semibold text-[#128C7E]"
-                            onClick={() => setRemindFor(remindFor === o.id ? null : o.id)}>{WA_ICON}تذكير الطلاب</button>
+                            data-ro-ok onClick={() => setRemindFor(remindFor === o.id ? null : o.id)}>{WA_ICON}تذكير الطلاب</button>
                   )}
                   {o.status !== "cancelled" && (
                     <button className="rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white"
