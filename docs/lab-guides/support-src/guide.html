@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<!-- مصدر «دليل الدعم الفني» لمعمل الحاسب الآلي (A4). يُبنى إلى ../lab-guide-support.pdf بـ build.cjs -->
+<style>
+@font-face{font-family:Plex;font-weight:400;src:url(../../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2)}
+@font-face{font-family:Plex;font-weight:400;src:url(../../../public/fonts/ibm-plex-sans-arabic-400-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:Plex;font-weight:600;src:url(../../../public/fonts/ibm-plex-sans-arabic-600-arabic.woff2)}
+@font-face{font-family:Plex;font-weight:600;src:url(../../../public/fonts/ibm-plex-sans-arabic-600-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:Plex;font-weight:700;src:url(../../../public/fonts/ibm-plex-sans-arabic-700-arabic.woff2)}
+@font-face{font-family:Plex;font-weight:700;src:url(../../../public/fonts/ibm-plex-sans-arabic-700-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
+@page{size:A4;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Plex;color:#1C3328;font-size:10.8pt;line-height:1.75}
+.pg{width:210mm;height:297mm;padding:16mm 15mm 18mm;position:relative;page-break-after:always;overflow:hidden}
+.pg:last-child{page-break-after:auto}
+.ft{position:absolute;bottom:8mm;left:0;right:0;text-align:center;font-size:8pt;color:#5E7268}
+.cover{padding:14mm 13mm 18mm}
+.cv{height:100%;border-radius:7mm;background:linear-gradient(160deg,#3F6652,#2F5442);color:#fff;padding:20mm 15mm 18mm;display:flex;flex-direction:column}
+.cv .lg{align-self:flex-start;margin-inline-start:auto;background:#fff;border-radius:4mm;width:38mm;height:26mm;display:grid;place-items:center}
+.cv .lg img{width:30mm}
+.cv .pill{align-self:flex-start;background:#89D7AD;color:#1C3328;font-weight:700;border-radius:99px;padding:2mm 6mm;margin-top:auto;font-size:11.5pt}
+.cv h1{font-size:30pt;line-height:1.35;margin-top:6mm}
+.cv p{font-size:11.5pt;margin-top:5mm;color:#E9F4EE}
+.cv ul{margin:5mm 5mm 0;font-size:11pt}
+.cv .cf{margin-top:auto;border-top:1px solid rgba(255,255,255,.25);padding-top:5mm;font-size:9.5pt;color:#D7E9DF}
+h2{font-size:15pt;color:#3E6350;border-bottom:2.5px solid #89D7AD;padding-bottom:2mm;margin-bottom:5mm}
+.st{display:flex;align-items:center;gap:3mm;font-size:13pt;font-weight:700;margin:5mm 0 2mm}
+.st i{font-style:normal;width:9mm;height:9mm;border-radius:50%;background:#3E6350;color:#fff;display:grid;place-items:center;font-size:11pt;flex:none}
+ul.b{margin-inline-start:6mm;margin-inline-end:10mm}
+ul.b li{margin:.6mm 0}
+.k{display:inline-block;background:#E3F6EA;border:1px solid #89D7AD;border-radius:2mm;padding:0 2mm;font-weight:600;color:#2F5442;line-height:1.5}
+code{direction:ltr;unicode-bidi:embed;font-family:Consolas,"DejaVu Sans Mono",monospace;font-size:9pt;background:#F1F5F2;border:1px solid #DDE7E0;border-radius:1.5mm;padding:0 1.5mm}
+.shot{display:block;margin:3mm auto 1mm 0;max-width:100%;border:1px solid #D5E7DC;border-radius:3mm;box-shadow:0 2mm 5mm -3mm rgba(28,51,40,.35)}
+.box{background:#EEF8F2;border:1px solid #BFE3CC;border-radius:4mm;padding:4mm 5mm;margin-bottom:3mm}
+.box b.t{display:block;font-size:12pt;margin-bottom:1mm}
+.box.warn{background:#FBF5E9;border-color:#E6D2A6}
+.box.warn b.t{color:#7A5A1F}
+.two{display:flex;gap:4mm;align-items:flex-start}
+.two img{flex:1;min-width:0}
+b.en{white-space:nowrap;unicode-bidi:isolate}
+.cap{text-align:center;font-size:8.5pt;color:#5E7268}
+table.t{width:100%;border-collapse:collapse;margin-top:2mm;font-size:10pt}
+table.t td,table.t th{border:1px solid #D5E7DC;padding:1.5mm 2.5mm;text-align:right}
+table.t th{background:#E3F6EA}
+</style></head><body>
+
+<section class="pg cover"><div class="cv">
+ <div class="lg"><img src="img/logo.png"></div>
+ <span class="pill">الدعم الفني ومحضر المعمل</span>
+ <h1>دليل تشغيل معمل الحاسب الآلي الرقمي</h1>
+ <p>خطوات تجهيز المعملين مرة واحدة في بداية العام، ثم متابعتهما يوميًا. كل الشاشات من البوابة: القائمة «المعامل والمختبرات» ← «معمل الحاسب الآلي»، واختر المعمل 1 أو المعمل 2 من أعلى الصفحة.</p>
+ <ul>
+  <li>تجهيز سجل الأجهزة، ومطبوعات «استوديو المعمل» وخلفياته، وقواعد السلامة.</li>
+  <li>إصدار <b>ملف المعمل الدائم</b> وتثبيته على أجهزة الطلاب بوضع القفل (Kiosk).</li>
+  <li>حساب <b>«تطبيق عملي»</b> للبرامج والاختبارات العملية والإلكترونية.</li>
+  <li>متابعة بلاغات الأعطال وسجل استخدام المعمل.</li>
+ </ul>
+ <div class="cf">بوابة مدرسة مكة الثانوية · معمل الحاسب الآلي الرقمي · نوفمبر 2026</div>
+</div><div class="ft">دليل الدعم الفني — 1 / 9</div></section>
+
+<section class="pg">
+ <h2>أولًا: التجهيز في بداية العام</h2>
+ <div class="box"><b class="t">معملان في البوابة</b>
+  <ul class="b"><li><b>المعمل 1:</b> 24 جهازًا، رموزها PC-01 إلى PC-24.</li>
+  <li><b>المعمل 2:</b> 21 جهازًا، رموزها PC2-01 إلى PC2-21.</li>
+  <li>اختر المعمل من المبدّل أعلى الصفحة قبل كل خطوة؛ فلكل معمل أجهزته ومطبوعاته وملفه الدائم.</li></ul></div>
+ <div class="st"><i>1</i>سجل الأجهزة</div>
+ <ul class="b">
+  <li>افتح تبويب <span class="k">سجل الأجهزة</span>. يظهر المعمل كما هو: السبورة في الأعلى والأجهزة حولها بأرقامها.</li>
+  <li>اضغط على أي جهاز لعرض مواصفاته وتعديل حالته: <b>يعمل</b> أو <b>معطّل</b> أو <b>في الصيانة</b>.</li>
+  <li>سجّل مواصفات جهاز واحد ثم <span class="k">نسخ المواصفات لكل الأجهزة</span> لتوفير الوقت، و<span class="k">طباعة السجل</span> للملف الورقي.</li>
+ </ul>
+ <img class="shot" src="img/devices.png" style="width:100%">
+ <div class="ft">دليل الدعم الفني — 2 / 9</div>
+</section>
+
+<section class="pg">
+ <div class="st" style="margin-top:0"><i>2</i>استوديو المعمل: المطبوعات والخلفيات</div>
+ <ul class="b">
+  <li>تبويب <span class="k">استوديو المعمل</span>، وفيه ثلاثة أقسام: <span class="k">اللوحات الإرشادية</span> و<span class="k">بطاقات الأجهزة</span> و<span class="k">خلفيات سطح المكتب</span>.</li>
+  <li><b>بطاقات الأجهزة</b> (4 في الورقة) والملصقات الصغيرة برقم الجهاز ورمز <b class="en">QR</b> يفتح بلاغ العطل عنه؛ تُلصق على الأجهزة، وتفيد حين لا يعمل الجهاز أصلًا.</li>
+  <li><b>خلفيات سطح المكتب:</b> اختر دقة شاشة الأجهزة ثم <span class="k">تنزيل خلفيات كل الأجهزة</span>. نزّل نسختين:
+   عادية لحساب الدروس، وأخرى بتفعيل <span class="k">منطقة اختصارات البرامج</span> لحساب «تطبيق عملي» (الخطوة 9).</li>
+  <li><b>رقم الجهاز على الخلفية هو نفسه رقمه في ملف المعمل</b> (الخطوة 5).</li>
+ </ul>
+ <div class="two"><div style="flex:1.45"><img class="shot" src="img/wallpaper-apps.png" style="width:100%"><p class="cap">خلفية بمنطقة اختصارات البرامج (يسار)</p></div>
+  <div style="flex:1"><img class="shot" src="img/device-cards.png" style="width:100%"><p class="cap">بطاقات الأجهزة</p></div></div>
+ <div class="st"><i>3</i>قواعد السلامة</div>
+ <ul class="b">
+  <li>تبويب <span class="k">قواعد السلامة</span> ← <span class="k">تعديل القواعد</span> ثم <span class="k">حفظ القواعد</span>.</li>
+  <li>تُطبع لوحتها من «اللوحات الإرشادية» في الاستوديو بمقاس A3 أو A4، ومعها لوحات التشغيل والإخلاء والأمن الرقمي.</li>
+  <li>أسفل القواعد كشف <span class="k">إقرار الطلاب بالقواعد</span> لكل فصل.</li>
+ </ul>
+ <img class="shot" src="img/rules.png" style="width:82%">
+ <div class="ft">دليل الدعم الفني — 3 / 9</div>
+</section>
+
+<section class="pg">
+ <h2>ثانيًا: ملف المعمل الدائم على أجهزة الطلاب</h2>
+ <div class="box"><b class="t">لماذا ملف دائم؟</b>
+  <ul class="b"><li>أجهزة الطلاب <b>غير متصلة بالإنترنت</b>؛ لذلك يُنسخ ملف واحد <code>lab.html</code> على كل جهاز مرة واحدة، فيه كل الدروس وأسماء الطلاب.</li>
+  <li>في كل حصة يفتح الطالب الدرس <b>برمز من 5 أرقام</b> يكتبه المعلم على السبورة، ولا يُنسخ أي ملف جديد.</li></ul></div>
+ <div class="st"><i>4</i>إصدار الملف وتنزيله (لكل معمل)</div>
+ <ul class="b">
+  <li>تبويب <span class="k">الدروس</span> ← <span class="k">الملف الدائم لأجهزة المعمل</span> ← <span class="k">إصدار الملف</span>.</li>
+  <li>اكتب <b>رمز المعلم</b> (4 إلى 8 أرقام) ثم أكّده، واضغط <span class="k">إصدار وتنزيل</span>؛ يُنزَّل ملف <code>lab.html</code>.</li>
+  <li><b>أصدره مرتين:</b> مرة والمعمل 1 مختار، ومرة والمعمل 2 مختار. لكل معمل ملفه، فلا يُخلطان عند النسخ.</li>
+  <li>احتفظ برمز المعلم وأبلغ به معلمي الحاسب؛ يُطلب على الأجهزة عند <span class="k">تبديل الطالب</span> و<span class="k">إعدادات المعلم</span>.</li>
+ </ul>
+ <img class="shot" src="img/install.png" style="width:88%">
+ <div class="st"><i>5</i>نسخ الملف إلى كل جهاز</div>
+ <ul class="b">
+  <li>أنشئ المجلد <code>C:\MakkahLab</code> وانسخ إليه <code>lab.html</code> الخاص بمعمله بالاسم نفسه.</li>
+  <li>رابط التشغيل يحمل رقم الجهاز في آخره، مثال للجهاز 5: <code>file:///C:/MakkahLab/lab.html#seat=5</code></li>
+  <li>غيّر الرقم بعد <code>seat=</code> حسب الرقم على خلفية الجهاز: <b>المعمل 1 من 1 إلى 24</b>، و<b>المعمل 2 من 1 إلى 21</b>.</li>
+ </ul>
+ <div class="ft">دليل الدعم الفني — 4 / 9</div>
+</section>
+
+<section class="pg">
+ <div class="st" style="margin-top:0"><i>6</i>قفل الجهاز على ملف المعمل (Kiosk)</div>
+ <ul class="b">
+  <li>يتطلب Windows 10 أو 11 بإصدار Pro أو Education أو Enterprise.</li>
+  <li>بحساب المسؤول: Settings ← Accounts ← Other users ← قسم <b class="en">Kiosk</b> ← <b class="en">Get started</b>.</li>
+  <li>اختر حساب الطالب المحدود، ثم التطبيق <b class="en">Microsoft Edge</b> ← <b class="en">As a digital sign or interactive display</b>.</li>
+  <li>في العنوان (URL) اكتب رابط الجهاز من الخطوة السابقة، وفي مدة الخمول (Idle time) اختر أطول مدة أو Never.</li>
+  <li>أعد التشغيل وادخل بحساب الطالب: يجب أن يظهر ملف المعمل بملء الشاشة دون شريط مهام.</li>
+  <li>الخروج: <b class="en">Ctrl+Alt+Del</b> ← Sign out، ثم الدخول بحساب المعلم أو المسؤول.</li>
+ </ul>
+ <div class="box warn" style="margin-top:6mm"><b class="t">تنبيهات مهمة</b>
+  <ul class="b">
+   <li>جرّب على جهاز واحد أولًا ثم عمّم.</li>
+   <li>تاريخ الجهاز وساعته يجب أن يكونا صحيحين؛ فرمز الحصة يعمل في يومه فقط.</li>
+   <li>عند إصدار جديد (طلاب جدد أو دروس جديدة) انسخ <code>lab.html</code> الجديد فوق القديم في كل أجهزة معمله؛ الرموز بعده لا تعمل على الملف القديم.</li>
+   <li>إن لم يقبل Edge الرابط المحلي فالطريقة البديلة مشروحة في دليل القفل التفصيلي (<code>docs/lab-kiosk-setup.md</code>).</li>
+  </ul></div>
+ <div class="ft">دليل الدعم الفني — 5 / 9</div>
+</section>
+
+<section class="pg">
+ <h2>ثالثًا: حساب «تطبيق عملي» للبرامج والاختبارات</h2>
+ <div class="box"><b class="t">لماذا حساب ثانٍ؟</b>
+  <ul class="b"><li>حساب الطالب في وضع Kiosk مقفل على ملف المعمل، فلا يفتح فيه البرامج.</li>
+  <li>التطبيقات العملية والاختبار العملي تحتاج برامج حقيقية؛ فيُضاف حساب يرى فيه الطالب سطح مكتب عليه <b>اختصارات البرامج فقط</b>، ويدخله دون كلمة مرور.</li></ul>
+  <table class="t"><tr><th>الحساب</th><th>ماذا يرى الطالب</th><th>متى</th></tr>
+   <tr><td><b>حساب الدروس</b> (Kiosk)</td><td>ملف المعمل وحده بملء الشاشة</td><td>حصص الدروس التفاعلية</td></tr>
+   <tr><td><b>تطبيق عملي</b></td><td>سطح مكتب بأيقونات البرامج وملف المعمل</td><td>التطبيق على البرامج، والاختبار العملي والإلكتروني</td></tr></table></div>
+ <div class="st"><i>7</i>إنشاء الحساب</div>
+ <ul class="b">
+  <li>بحساب المسؤول: Settings ← Accounts ← Other users ← <b class="en">Add account</b>.</li>
+  <li>حساب محلي باسم <span class="k">تطبيق عملي</span> من نوع <b class="en">Standard user</b> (ليس مسؤولًا).</li>
+ </ul>
+ <div class="st"><i>8</i>البرامج واختصاراتها</div>
+ <ul class="b">
+  <li>ثبّت البرامج لكل المستخدمين:
+   <table class="t"><tr><th>الأول الثانوي</th><td>حاسبة ويندوز، OneNote، Freeplane، Visual Studio Code ومتصفح</td></tr>
+   <tr><th>الثالث الثانوي</th><td>GanttProject، draw.io (نسخة سطح المكتب)</td></tr></table></li>
+  <li>ضع اختصار كل برنامج في <code>C:\Users\Public\Desktop</code>، ومعها اختصار ملف المعمل <code>C:\MakkahLab\lab.html</code>؛ فتظهر لكل الحسابات العادية.</li>
+  <li>بطاقتا «ون درايف» و«MIT App Inventor» في الاختبار العملي تحتاجان إنترنت؛ إن لم يتوفر فلا يخترهما المعلم.</li>
+ </ul>
+ <div class="ft">دليل الدعم الفني — 6 / 9</div>
+</section>
+
+<section class="pg">
+ <div class="st" style="margin-top:0"><i>9</i>الخلفية وترتيب الأيقونات</div>
+ <ul class="b">
+  <li>ضع لهذا الحساب خلفية الجهاز من النسخة <b>بمنطقة اختصارات البرامج</b> (الخطوة 2).</li>
+  <li>بحساب «تطبيق عملي»: زر الفأرة الأيمن على سطح المكتب ← View ← فعّل <b class="en">Auto arrange icons</b> و<b class="en">Align icons to grid</b>؛ فتصطف الأيقونات في الجهة اليسرى داخل إطار «برامج المعمل».</li>
+ </ul>
+ <div class="st"><i>10</i>القيود والدخول دون كلمة مرور</div>
+ <ul class="b">
+  <li>طبّق على الحساب قيود السياسات (<code>gpedit.msc</code>): منع إدارة المهام، وموجّه الأوامر، وقائمة Run، و<b class="en">Prohibit access to Control Panel and PC settings</b>.</li>
+  <li>اترك «إعدادات ويندوز» متاحة إن كان في الاختبار العملي بطاقة جدار الحماية أو أذونات المجلد.</li>
+  <li>للدخول التلقائي استخدم أداة <b class="en">Autologon</b> من Microsoft (Sysinternals): اسم الحساب وكلمة مروره ← Enable. أو اجعل كلمة مروره فارغة فيدخله الطالب بالضغط على اسمه.</li>
+  <li><b>التبديل بين الحسابين:</b> Ctrl+Alt+Del ← <b class="en">Switch user</b>، ثم اختيار الحساب.</li>
+ </ul>
+ <div class="box" style="margin-top:6mm"><b class="t">يوم الاختبار الإلكتروني</b>
+  <ul class="b">
+   <li>ينزّل المعلم «ملف الاختبار» من مركز الاختبارات ← الاختبار ← <span class="k">الأجهزة</span>.</li>
+   <li>انسخه إلى <code>C:\Users\Public\Desktop</code> في كل جهاز، فيظهر أيقونة في حساب «تطبيق عملي».</li>
+   <li>يفتحه الطلاب من سطح المكتب بـ Edge، ويكتبون مفتاح الفتح الذي يعلنه المعلم وقت البدء.</li>
+   <li>بعد الاختبار ومسح رموز الطلاب احذف ملف الاختبار من الأجهزة. <b>لا يُمس ملف المعمل الدائم.</b></li>
+  </ul></div>
+ <div class="ft">دليل الدعم الفني — 7 / 9</div>
+</section>
+
+<section class="pg">
+ <h2>رابعًا: المتابعة اليومية</h2>
+ <div class="st"><i>11</i>بلاغات الأعطال</div>
+ <ul class="b">
+  <li>تبويب <span class="k">البلاغات</span>: تصل بلاغات المعلمين، وبلاغات رمز QR على بطاقات الأجهزة وخلفياتها.</li>
+  <li>التصفية: <span class="k">المفتوحة</span> أو <span class="k">المحلولة</span> أو <span class="k">الكل</span>.</li>
+ </ul>
+ <img class="shot" src="img/tickets.png" style="width:100%">
+ <div class="st"><i>12</i>متابعة البلاغ</div>
+ <ul class="b">
+  <li>اضغط <span class="k">متابعة</span> على البلاغ، واختر الحالة: <b>قيد المعالجة</b> أو <b>صيانة خارجية</b> (يصير الجهاز في الصيانة) أو <b>تم الحل</b>.</li>
+  <li>اكتب الإجراء المتخذ ثم <span class="k">حفظ</span>. عند الحل يعود الجهاز <b>يعمل</b> ويُشعَر المعلم.</li>
+ </ul>
+ <img class="shot" src="img/ticket-follow.png" style="width:100%">
+ <div class="ft">دليل الدعم الفني — 8 / 9</div>
+</section>
+
+<section class="pg">
+ <div class="st" style="margin-top:0"><i>13</i>سجل الاستخدام</div>
+ <ul class="b">
+  <li>تبويب <span class="k">سجل الاستخدام</span>: ملخص الحصص المحجوزة والمنفذة ونسبة الاستخدام والبلاغات.</li>
+  <li>الاستخدام حسب المعلم والفصل، و<b>سجل الحصص</b> بحالتها (تمت / لم تُستخدم / بانتظار التأكيد)، مع الطباعة.</li>
+ </ul>
+ <img class="shot" src="img/usage.png" style="width:100%">
+ <div class="ft">دليل الدعم الفني — 9 / 9</div>
+</section>
+</body></html>
