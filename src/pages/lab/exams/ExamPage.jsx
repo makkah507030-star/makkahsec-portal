@@ -182,7 +182,7 @@ function DeviceTab({ exam, classes, onExam }) {
     <div className="space-y-3">
       <section className="card space-y-2 p-4">
         <h3 className="font-bold text-ink">١. ملف الاختبار لأجهزة المعمل</h3>
-        <p className="text-sm leading-relaxed text-muted">ملف واحد يعمل دون إنترنت، يُنسخ إلى كل جهاز (أو مجلد مشترك) قبل الاختبار. الأسئلة فيه مشفّرة لا تُقرأ قبل إدخال مفتاح الفتح، والإجابات الصحيحة ليست فيه.</p>
+        <p className="text-sm leading-relaxed text-muted">ملف واحد يعمل دون إنترنت، يُنسخ قبل الاختبار إلى سطح المكتب العام في كل جهاز (<bdi dir="ltr">C:\Users\Public\Desktop</bdi>)، فيفتحه الطلاب من حساب «تطبيق عملي». الأسئلة فيه مشفّرة لا تُقرأ قبل إدخال مفتاح الفتح، والإجابات الصحيحة ليست فيه.</p>
         <button type="button" className="btn-primary" disabled={busy || !classes.length} onClick={download}>{busy ? "جارٍ التجهيز…" : "تنزيل ملف الاختبار"}</button>
         <p className="text-[11.5px] text-faint">أعد التنزيل إن تغيّرت قوائم الفصول، فالطالب يُعرف برقمه في قائمة فصله.</p>
       </section>

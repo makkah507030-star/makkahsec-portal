@@ -220,7 +220,7 @@ export function DeviceCardsSheet({ theme = "light", lab, devices, labName, codes
 }
 
 /* ----------------------------- خلفية التعليمات (بجانب لوحة رقم الجهاز) ----------------------------- */
-export function TipsWallSheet({ tips, title, ...p }) {
+export function TipsWallSheet({ tips, title, apps, ...p }) {
   const { w, h } = p;
   const k = Math.min(w / 1920, h / 1080);
   const px = (n) => Math.round(n * k);
@@ -234,6 +234,17 @@ export function TipsWallSheet({ tips, title, ...p }) {
           <b style={{ fontSize: px(30) }}>{title}</b>
           <ol style={{ marginTop: px(16) }}>{list.map((t, i) => (
             <li key={i} style={{ fontSize: px(22), gap: px(12), padding: `${px(10)}px 0` }}><span className="num" style={{ width: px(36), height: px(36), fontSize: px(17) }}>{i + 1}</span><span>{t}</span></li>))}</ol>
+        </div>
+      )}
+      {apps && (
+        // منطقة اختصارات البرامج (لحساب التطبيق العملي): إطار في الجهة اليسرى حيث يرتّب ويندوز أيقونات
+        // سطح المكتب من الأعلى، وعنوانه في أسفله فلا تغطيه الأيقونات
+        <div style={{ position: "absolute", left: px(14), top: px(14), bottom: px(40), width: px(270), borderRadius: px(22),
+          border: `${Math.max(1, px(2))}px dashed ${p.theme === "dark" ? "rgba(255,255,255,.28)" : "rgba(46,94,99,.35)"}`,
+          background: p.theme === "dark" ? "rgba(255,255,255,.05)" : "rgba(46,94,99,.05)",
+          display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", padding: px(18), direction: "rtl" }}>
+          <b style={{ fontSize: px(24), color: p.theme === "dark" ? "#E3F6EA" : "#2E5E63" }}>{apps}</b>
+          <span style={{ fontSize: px(15), marginTop: px(4), color: p.theme === "dark" ? "rgba(227,246,234,.75)" : "#5E7268" }}>افتح البرنامج بنقرتين</span>
         </div>
       )}
     </div>

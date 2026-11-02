@@ -178,13 +178,15 @@ function Walls({ lab, labName, devices }) {
   const [withTips, setWithTips] = useState(() => store("mk_labwall_tips_on") ?? true);
   const [tipsTitle, setTipsTitle] = useState(() => store("mk_labwall_title") ?? "تعليمات المعمل");
   const [tips, setTips] = useState(() => store("mk_labwall_tips") ?? DEFAULT_TIPS);
+  const [withApps, setWithApps] = useState(() => store("mk_labwall_apps_on") ?? false);
+  const [appsTitle, setAppsTitle] = useState(() => store("mk_labwall_apps") ?? "برامج المعمل");
   const [exporting, setExporting] = useState(null);
   const offRef = useRef(null);
   const [, setMsg] = useNotice(null);
   const codes = useQrCodes(devices.map((d) => reportUrl(d.seat_no, lab)), 520);
   const { w, h } = WALLPAPER_SIZES[size];
   const device = devices.find((d) => d.seat_no === Number(seat)) ?? devices[0];
-  const props = (d) => ({ theme, w, h, device: d, labName, qr: codes[reportUrl(d.seat_no, lab)], tips: withTips ? tips : [], title: tipsTitle });
+  const props = (d) => ({ theme, w, h, device: d, labName, qr: codes[reportUrl(d.seat_no, lab)], tips: withTips ? tips : [], title: tipsTitle, apps: withApps ? appsTitle : null });
   const upd = (k, set, v) => { set(v); store(k, v); };
 
   useEffect(() => {
@@ -229,6 +231,8 @@ function Walls({ lab, labName, devices }) {
                 <button type="button" className="text-xs text-danger" onClick={() => upd("mk_labwall_tips", setTips, tips.filter((_, j) => j !== i))}>✕</button></div>))}
             {tips.length < 6 && <button type="button" className="text-xs font-semibold text-mint-deep" onClick={() => upd("mk_labwall_tips", setTips, [...tips, ""])}>+ بند</button>}
           </div>)}
+        <label className="flex items-center gap-2 text-sm text-ink"><input type="checkbox" className="accent-mint-deep" checked={withApps} onChange={(e) => upd("mk_labwall_apps_on", setWithApps, e.target.checked)} />منطقة اختصارات البرامج (لحساب التطبيق العملي)</label>
+        {withApps && <input className="field py-1.5 text-sm" value={appsTitle} maxLength={30} onChange={(e) => upd("mk_labwall_apps", setAppsTitle, e.target.value)} />}
         <button type="button" className="btn-ghost w-full" disabled={!!exporting} onClick={() => setExporting([device])}>{exporting?.length === 1 ? "جارٍ التجهيز…" : `تنزيل خلفية ${device.code}`}</button>
         <button type="button" className="btn-primary w-full" disabled={!!exporting} onClick={() => setExporting(devices)}>{exporting?.length > 1 ? "جارٍ التنزيل…" : `تنزيل خلفيات كل الأجهزة (${devices.length})`}</button>
       </div>
