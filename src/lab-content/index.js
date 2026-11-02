@@ -47,11 +47,16 @@ import htmlForm from "./g10/u4-l3-html-form.js";
 import projectPlanning from "./g12/u1-l1-project-planning.js";
 import ganttProject from "./g12/u1-l2-gantt-project.js";
 import taskManagement from "./g12/u1-l3-task-management.js";
+// الوحدة الثانية: دورة حياة النظام
+import systemLifeCycle from "./g12/u2-l1-system-life-cycle.js";
+import diagrams from "./g12/u2-l2-diagrams.js";
+import cybersecurity from "./g12/u2-l3-cybersecurity.js";
 
 export const LESSONS = [dataRepresentation, computerStructure, operatingSystems, networks, ictSociety,
   onlineDocuments, onlineMeetings, broadcastPresentation, oneNote, mindMaps,
   monitoringControl, artificialIntelligence, emergingTechnologies, healthEnvironment,
   htmlWebsite, contentStructure, htmlForm,
-  projectPlanning, ganttProject, taskManagement];
+  projectPlanning, ganttProject, taskManagement,
+  systemLifeCycle, diagrams, cybersecurity];
 
 export const lessonById = (id) => LESSONS.find((l) => l.id === id) ?? null;
