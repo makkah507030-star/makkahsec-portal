@@ -681,8 +681,9 @@ function AfterLogin() {
 function LabReportRedirect() {
   const { seat } = useParams();
   const { session } = useSession();
-  // 0 = لوحة البلاغ العامة في المعمل: يُختار الجهاز من الرسم
-  const target = `/lab?report=${Number(seat) || 0}`;
+  // 0 = لوحة البلاغ العامة في المعمل: يُختار الجهاز من الرسم. و«2-5» = الجهاز 5 في المعمل الثاني
+  const m = String(seat).match(/^(?:(\d+)-)?(\d+)$/);
+  const target = `/lab?${m?.[1] ? `lab=${m[1]}&` : ""}report=${Number(m?.[2]) || 0}`;
   if (!session) {
     try { sessionStorage.setItem("mk_after_login", target); } catch { /* تجاهل */ }
     return <Navigate to="/login" replace />;

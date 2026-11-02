@@ -31,7 +31,7 @@ export default function LabWallpapers({ lab, devices }) {
     supabase.from("labs").select("name").eq("id", lab).maybeSingle().then(({ data }) => data?.name && setLabName(data.name));
   }, [lab]);
 
-  const urls = [...devices.map((d) => reportUrl(d.seat_no)), reportUrl(0)];
+  const urls = [...devices.map((d) => reportUrl(d.seat_no, lab)), reportUrl(0, lab)];
   const codes = useQrCodes(open ? urls : [], 520);
   const { w, h } = WALLPAPER_SIZES[size];
   const device = devices.find((d) => d.seat_no === Number(seat)) ?? devices[0];
@@ -57,7 +57,7 @@ export default function LabWallpapers({ lab, devices }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exporting]);
 
-  const wallProps = (d) => ({ theme, w, h, device: d, labName, note, qr: codes[reportUrl(d.seat_no)] });
+  const wallProps = (d) => ({ theme, w, h, device: d, labName, note, qr: codes[reportUrl(d.seat_no, lab)] });
 
   return (
     <div className="card overflow-hidden print:hidden">
@@ -138,11 +138,11 @@ export default function LabWallpapers({ lab, devices }) {
 
       {dialog === "stickers" && (
         <LabPrintDialog title="ملصقات أجهزة المعمل" fileName={`ملصقات-${labName}`} onClose={() => setDialog(null)}
-                        render={(th) => <StickersSheet theme={th} devices={devices} labName={labName} codes={codes} />} />
+                        render={(th) => <StickersSheet theme={th} lab={lab} devices={devices} labName={labName} codes={codes} />} />
       )}
       {dialog === "poster" && (
         <LabPrintDialog title="لوحة البلاغ العامة" fileName={`لوحة-البلاغ-${labName}`} onClose={() => setDialog(null)}
-                        render={(th) => <PosterSheet theme={th} labName={labName} qr={codes[reportUrl(0)]} />} />
+                        render={(th) => <PosterSheet theme={th} labName={labName} qr={codes[reportUrl(0, lab)]} />} />
       )}
     </div>
   );

@@ -90,7 +90,7 @@ export function PosterSheet({ theme = "light", labName, qr }) {
 }
 
 /* ----------------------------- ورقة ملصقات الأجهزة ----------------------------- */
-export function StickersSheet({ theme = "light", devices, labName, codes }) {
+export function StickersSheet({ theme = "light", lab, devices, labName, codes }) {
   const cells = Array.from({ length: 24 }, (_, i) => devices[i] ?? null);
   return (
     <div className={`stu stu-${theme} stu-portrait lab-stickers sheet`}>
@@ -99,7 +99,7 @@ export function StickersSheet({ theme = "light", devices, labName, codes }) {
           <div key={i} className={`lab-sticker${d ? "" : " empty"}`}>
             {d && (
               <div className="in">
-                <div className="qr">{codes[reportUrl(d.seat_no)] && <img src={codes[reportUrl(d.seat_no)]} alt="" />}</div>
+                <div className="qr">{codes[reportUrl(d.seat_no, lab)] && <img src={codes[reportUrl(d.seat_no, lab)]} alt="" />}</div>
                 <div className="tx">
                   <div className="br"><img src={theme === "dark" ? iconWhite : iconMint} alt="" /><span>{labName}</span></div>
                   <b className="num">{d.seat_no}</b>
