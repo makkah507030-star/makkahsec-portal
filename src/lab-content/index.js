@@ -27,7 +27,14 @@ import computerStructure from "./g10/u1-l2-computer-structure.js";
 import operatingSystems from "./g10/u1-l3-operating-systems.js";
 import networks from "./g10/u1-l4-networks.js";
 import ictSociety from "./g10/u1-l5-ict-society.js";
+// الوحدة الثانية: العمل عبر الإنترنت
+import onlineDocuments from "./g10/u2-l1-online-documents.js";
+import onlineMeetings from "./g10/u2-l2-online-meetings.js";
+import broadcastPresentation from "./g10/u2-l3-broadcast-presentation.js";
+import oneNote from "./g10/u2-l4-onenote.js";
+import mindMaps from "./g10/u2-l5-mind-maps.js";
 
-export const LESSONS = [dataRepresentation, computerStructure, operatingSystems, networks, ictSociety];
+export const LESSONS = [dataRepresentation, computerStructure, operatingSystems, networks, ictSociety,
+  onlineDocuments, onlineMeetings, broadcastPresentation, oneNote, mindMaps];
 
 export const lessonById = (id) => LESSONS.find((l) => l.id === id) ?? null;
