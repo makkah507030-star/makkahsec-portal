@@ -17,23 +17,22 @@ export const GLOBE_SPHERES = [
 export const sphereOf = (k) => GLOBE_SPHERES.find((s) => s.k === k) ?? GLOBE_SPHERES[0];
 
 // صفات الطالب في فريق البرنامج (globe_members.role، supabase/globe_3.sql) يختارها المشرف،
-// وهي نفسها في بطاقته بالاستوديو؛ بترتيب الهيكل من الأعلى
+// وهي نفسها في بطاقته بالاستوديو؛ بترتيب الهيكل من الأعلى. والمشرف العام هو مشرف البرنامج (المعلم)
 export const GLOBE_MEMBER_ROLES = [
-  { k: "lead", t: "مشرف عام" },
   { k: "deputy", t: "نائب المشرف العام" },
   { k: "monitor", t: "مشرف رصد" },
   { k: "member", t: "عضو" },
 ];
-export const memberRole = (k) => GLOBE_MEMBER_ROLES.find((r) => r.k === k) ?? GLOBE_MEMBER_ROLES[3];
+export const memberRole = (k) => GLOBE_MEMBER_ROLES.find((r) => r.k === k) ?? GLOBE_MEMBER_ROLES[GLOBE_MEMBER_ROLES.length - 1];
 export const GLOBE_ROLES = GLOBE_MEMBER_ROLES.map((r) => r.t);
 
 // بروتوكولات الرصد العشرة المعتمدة في البرنامج، موزعة على مجالاتها
 export const GLOBE_PROTOCOLS = {
-  atmo: ["الغيوم", "التحضير", "الغلاف الجوي اليومي", "الغلاف الجوي الأسبوعي"],
+  atmo: ["الغيوم", "الغلاف الجوي اليومي", "الغلاف الجوي الأسبوعي"],
   hydro: ["الماء"],
   pedo: ["تسلل التربة", "درجة حرارة التربة", "رطوبة التربة ووزنها"],
   bio: ["الغطاء الأرضي", "الحدائق"],
-  pheno: [],
+  pheno: ["التخضير"],
 };
 export const ALL_PROTOCOLS = Object.values(GLOBE_PROTOCOLS).flat();
 

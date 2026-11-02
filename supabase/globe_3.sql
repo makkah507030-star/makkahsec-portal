@@ -1,6 +1,7 @@
 -- =====================================================================
 -- برنامج جلوب (الجزء 3) — بعد الجزأين 1 و2:
--- • globe_members.role: صفة الطالب في الفريق (مشرف عام، نائب المشرف العام، مشرف رصد، عضو).
+-- • globe_members.role: صفة الطالب في الفريق (نائب المشرف العام، مشرف رصد، عضو)؛
+--   والمشرف العام هو مشرف البرنامج (المعلم) فلا يُسند لطالب.
 -- • globe_library: المكتبة: المرئيات (رابط يوتيوب من قناة البرنامج) والتقارير والمنشورات (صورة أو PDF).
 -- • globe_badges: أوسمة البرنامج بالعام والربع، بعددها ومجالاتها (لوحة شرف GLOBE).
 -- • globe_supervisor: السيرة الذاتية لمشرف البرنامج وشهادة اعتماد تدريبه (صف واحد).
@@ -11,7 +12,7 @@
 alter table public.globe_members add column if not exists role text not null default 'member';
 alter table public.globe_members drop constraint if exists globe_members_role_check;
 alter table public.globe_members add constraint globe_members_role_check
-  check (role in ('lead', 'deputy', 'monitor', 'member'));
+  check (role in ('deputy', 'monitor', 'member'));
 
 create table if not exists public.globe_library (
   id uuid primary key default gen_random_uuid(),

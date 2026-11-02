@@ -6,7 +6,7 @@ import { n, Box, Signs, Page } from "../../components/report/ReportKit.jsx";
 
 /* =====================================================================
    مستندات برنامج جلوب بطقم التقارير (هوية البوابة):
-   • chartPages: هيكل فريق البرنامج: المشرف ← المشرف العام ← نائبه ← مشرفو الرصد ← الأعضاء.
+   • chartPages: هيكل فريق البرنامج: المشرف العام (مشرف البرنامج) ← نائبه ← مشرفو الرصد ← الأعضاء.
    • cvPages: السيرة الذاتية لمشرف البرنامج وشهادة اعتماد تدريبه.
    ===================================================================== */
 
@@ -18,8 +18,7 @@ const cls = (m) => (m.grade ? `${GRADE_NAMES[m.grade] ?? ""} · ${m.class_no}` :
 /* ---------------------------- هيكل الفريق ---------------------------- */
 
 const LEVEL = {
-  lead:    { bg: "linear-gradient(150deg,#C9A443,#A9822A)", fg: "#fff", sub: "#FFF4D6", w: 230 },
-  deputy:  { bg: "linear-gradient(150deg,#3E6350,#2F5442)", fg: "#fff", sub: "#CFE9DA", w: 210 },
+  deputy:  { bg: "linear-gradient(150deg,#C9A443,#A9822A)", fg: "#fff", sub: "#FFF4D6", w: 220 },
   monitor: { bg: "#EAF6EF", fg: DEEP, sub: "#5E7268", w: 170, border: "1.5px solid #9CC9B0" },
 };
 
@@ -75,10 +74,10 @@ function Members({ list, start }) {
 
 export function chartPages({ members, leader, theme = "light", sigs, year }) {
   const by = (k) => members.filter((m) => (m.role ?? "member") === k);
-  const lead = by("lead"), deputy = by("deputy"), monitor = by("monitor"), rest = by("member");
+  const deputy = by("deputy"), monitor = by("monitor"), rest = by("member");
   const doc = { title: "هيكل فريق برنامج جلوب", meta: ["برنامج جلوب البيئي", year], foot: "برنامج جلوب البيئي العالمي" };
   // الأعضاء: بقية الصفحة الأولى بحسب ما فوقهم، ثم 56 في كل صفحة
-  const topRows = [lead, deputy, monitor].filter((x) => x.length).length;
+  const topRows = [deputy, monitor].filter((x) => x.length).length;
   const firstCap = Math.max(8, 36 - topRows * 4 - Math.ceil(monitor.length / 4) * 4);
   const chunks = [rest.slice(0, firstCap)];
   for (let i = firstCap; i < rest.length; i += 56) chunks.push(rest.slice(i, i + 56));
@@ -93,11 +92,10 @@ export function chartPages({ members, leader, theme = "light", sigs, year }) {
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ display: "flex", justifyContent: "center" }}>
             <div style={{ borderRadius: 16, padding: "11px 22px", textAlign: "center", background: "linear-gradient(150deg,#264536,#1C3328)", color: "#fff", minWidth: 250 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: "#89D7AD" }}>مشرف البرنامج</div>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: "#89D7AD" }}>المشرف العام · مشرف البرنامج</div>
               <div style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{leader || "…………………"}</div>
             </div>
           </div>
-          <Row list={lead} role="المشرف العام" kind="lead" />
           <Row list={deputy} role="نائب المشرف العام" kind="deputy" />
           {monitor.length > 0 && (
             monitor.length <= 4 ? <Row list={monitor} role="مشرف رصد" kind="monitor" /> : (
@@ -118,7 +116,7 @@ export function chartPages({ members, leader, theme = "light", sigs, year }) {
         </Box>
       )}
       {p === total - 1 && (
-        <Signs stamp={sigs.stamp} people={[{ title: "مشرف برنامج جلوب", name: leader, sig: sigs.leader },
+        <Signs stamp={sigs.stamp} people={[{ title: "المشرف العام لبرنامج جلوب", name: leader, sig: sigs.leader },
                                            { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
       )}
     </Page>
@@ -154,7 +152,7 @@ export function cvPages({ d, theme = "light", cert, sig, principal, stamp, hasPd
         </div>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.35 }}>{d.name || "…………………"}</div>
-          <div style={{ fontSize: 13, color: "#CFE9DA", marginTop: 2 }}>{d.title || "مشرف برنامج جلوب البيئي العالمي"} · مدرسة مكة الثانوية</div>
+          <div style={{ fontSize: 13, color: "#CFE9DA", marginTop: 2 }}>{d.title || "المشرف العام لبرنامج جلوب البيئي العالمي"} · مدرسة مكة الثانوية</div>
         </div>
       </div>
       {facts.length > 0 && (

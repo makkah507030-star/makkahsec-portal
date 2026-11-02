@@ -17,7 +17,7 @@ import { cvPages } from "./GlobeCharts.jsx";
 
 export const CV_FIELDS = [
   { k: "name", t: "الاسم" },
-  { k: "title", t: "الصفة", ph: "مشرف برنامج جلوب البيئي العالمي" },
+  { k: "title", t: "الصفة", ph: "المشرف العام لبرنامج جلوب البيئي العالمي" },
   { k: "degree", t: "المؤهل العلمي", ph: "بكالوريوس علوم — تخصص …" },
   { k: "job", t: "العمل الحالي", ph: "معلم … بمدرسة مكة الثانوية" },
   { k: "years", t: "سنوات الخبرة في التعليم" },
@@ -43,7 +43,7 @@ export default function GlobeSupervisor({ leader }) {
   const load = () => supabase.from("globe_supervisor").select("*").eq("id", 1).maybeSingle().then(({ data, error }) => {
     if (error) setMsg({ ok: false, text: setup(error) });
     setRow(data ?? { id: 1, data: {} });
-    setD({ name: leader ?? "", title: "مشرف برنامج جلوب البيئي العالمي", ...(data?.data ?? {}) });
+    setD({ name: leader ?? "", title: "المشرف العام لبرنامج جلوب البيئي العالمي", ...(data?.data ?? {}) });
   });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, []);
