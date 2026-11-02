@@ -20,13 +20,19 @@ import GlobeMark from "../../components/GlobeMark.jsx";
 import GlobePlan from "../globe/GlobePlan.jsx";
 import GlobeMonitor from "../globe/GlobeMonitor.jsx";
 import GlobeReport from "../globe/GlobeReport.jsx";
+import GlobeLibrary from "../globe/GlobeLibrary.jsx";
+import GlobeBadges from "../globe/GlobeBadges.jsx";
+import GlobeSupervisor from "../globe/GlobeSupervisor.jsx";
+import GlobeChart from "../globe/GlobeChart.jsx";
+import { GLOBE_MEMBER_ROLES, memberRole } from "../../lib/globe.js";
 
 /* =====================================================================
-   طلاب برنامج جلوب البيئي العالمي (supabase/globe_1.sql):
+   طلاب برنامج جلوب البيئي العالمي (supabase/globe_1.sql و globe_3.sql):
    من له صلاحية «برنامج جلوب» (حساب البرنامج، والمدير والدعم الفني) يضيف
-   طلاب البرنامج من أي فصل ويحذفهم، ويتواصل معهم ومع أولياء أمورهم بالواتساب،
-   ويطبع كشفهم. وبطاقاتهم في الاستوديو (قالب «بطاقة جلوب»).
-   وتبويبا «خطة البرنامج» و«خطة الرصد» وتقريرهما في pages/globe.
+   طلاب البرنامج من أي فصل ويحذفهم، ويحدد صفة كل طالب في الفريق، ويتواصل
+   معهم بالواتساب (لا تواصل مع أولياء الأمور)، ويطبع كشفهم وهيكل الفريق.
+   وبطاقاتهم في الاستوديو (قالب «بطاقة جلوب»).
+   وتبويبات الخطة والرصد والمكتبة والأوسمة والمشرف في pages/globe.
    ===================================================================== */
 
 const classLabel = (c) => (c ? `${GRADE_NAMES[c.grade] ?? ""} · فصل ${c.class_no}` : "—");
@@ -78,10 +84,10 @@ export default function GlobeTeam() {
   const [msg, setMsg] = useNotice(null);
   const [printing, setPrinting] = useState(false);
   const [mobEdit, setMobEdit] = useState(null); // { id, v } جوال الطالب قيد التعديل
-  const [tab, setTabRaw] = useState("students"); // students | plan | monitor | report
+  const [tab, setTabRaw] = useState("students"); // students | plan | monitor | library | badges | supervisor | report | chart
   const [prevTab, setPrevTab] = useState("plan");
-  const setTab = (t) => { if (t === "report") setPrevTab(tab); setTabRaw(t); };
-  const [waText, setWaText] = useState("");     // نص جاهز يُفتح به الواتساب لكل طالب وولي أمر
+  const setTab = (t) => { if (t === "report" || t === "chart") setPrevTab(tab); setTabRaw(t); };
+  const [waText, setWaText] = useState("");     // نص جاهز يُفتح به الواتساب لكل طالب
   // توقيعا الكشف: منسق البرنامج ومدير المدرسة
   const leaderName = (ROLE_PERSON_NAME.globe_program ?? "").replace(/^الأستاذ:\s*/, "");
   const principal = usePrincipalSignature();
@@ -90,15 +96,11 @@ export default function GlobeTeam() {
     const { data, error } = await supabase.from("globe_members")
       .select("*, students(full_name, national_id, student_enrollment(status, classes(grade, class_no)))");
     if (error) { setMissing(true); setMembers([]); return; }
-    // جوال ولي الأمر للتواصل
-    const { data: mob, error: mobErr } = await supabase.rpc("globe_roster");
-    if (mobErr) setMsg({ ok: false, text: `تعذّر جلب جوالات أولياء الأمور: ${mobErr.message}` });
-    const mobileOf = Object.fromEntries((mob ?? []).map((x) => [x.student_id, x.mobile]));
     setMembers((data ?? []).map((r) => {
       const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
       return { id: r.student_id, full_name: r.students?.full_name ?? "—", national_id: r.students?.national_id,
                grade: en?.classes?.grade, class_no: en?.classes?.class_no, added_at: r.added_at, added_by_name: r.added_by_name,
-               mobile: mobileOf[r.student_id] ?? null,
+               role: r.role ?? "member",                       // globe_3.sql؛ قبله «عضو»
                student_mobile: r.student_mobile ?? null };
     }).sort(byClassName()));
   };
@@ -164,6 +166,18 @@ export default function GlobeTeam() {
     load();
   };
 
+  // صفة الطالب في الفريق (globe_3.sql)
+  const saveRole = async (m, role) => {
+    setBusy(m.id);
+    const { error } = await supabase.from("globe_members").update({ role }).eq("student_id", m.id);
+    setBusy(null);
+    if (error) {
+      setMsg({ ok: false, text: /role/i.test(error.message) ? "يلزم تشغيل ملف supabase/globe_3.sql أولًا." : error.message });
+      return;
+    }
+    setMembers((list) => list.map((x) => (x.id === m.id ? { ...x, role } : x)));
+  };
+
   const shown = useMemo(() => {
     const t = q.trim();
     return t ? (members ?? []).filter((m) => m.full_name.includes(t) || (m.national_id ?? "").includes(t)) : members ?? [];
@@ -171,6 +185,7 @@ export default function GlobeTeam() {
 
   if (!members) return <Loader />;
   if (tab === "report") return <GlobeReport leader={leaderName} members={members} onBack={() => setTab(prevTab)} />;
+  if (tab === "chart") return <GlobeChart leader={leaderName} members={members} onBack={() => setTab(prevTab)} />;
 
   return (
     <div className="space-y-5">
@@ -179,8 +194,8 @@ export default function GlobeTeam() {
         <div>
           <h1 className="text-lg font-bold text-ink">طلاب برنامج جلوب</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            طلاب برنامج جلوب البيئي العالمي من كل الفصول: أضف الطالب من فصله، واحفظ جواله، وتواصل معه
-            ومع ولي أمره بالواتساب. وبطاقاتهم الطولية في «استوديو البوابة» ← بطاقة طالب جلوب.
+            طلاب برنامج جلوب البيئي العالمي من كل الفصول: أضف الطالب من فصله، وحدد صفته في الفريق،
+            واحفظ جواله وتواصل معه بالواتساب. وبطاقاتهم الطولية في «استوديو البوابة» ← بطاقة طالب جلوب.
           </p>
         </div>
       </div>
@@ -196,7 +211,8 @@ export default function GlobeTeam() {
       </a>
 
       <div className="flex gap-1 overflow-x-auto rounded-pill border border-line bg-paper p-1">
-        {[["students", `الطلاب (${members.length})`], ["plan", "خطة البرنامج"], ["monitor", "خطة الرصد"]].map(([k, t]) => (
+        {[["students", `الطلاب (${members.length})`], ["plan", "خطة البرنامج"], ["monitor", "خطة الرصد"],
+          ["library", "المكتبة"], ["badges", "الإنجازات والأوسمة"], ["supervisor", "مشرف البرنامج"]].map(([k, t]) => (
           <button key={k} onClick={() => setTab(k)}
                   className={`flex-1 whitespace-nowrap rounded-pill px-3 py-1.5 text-[13px] font-semibold transition-colors ${
                     tab === k ? "bg-mint-deep text-white" : "text-muted hover:bg-canvas"}`}>{t}</button>
@@ -205,6 +221,9 @@ export default function GlobeTeam() {
 
       {tab === "plan" && <GlobePlan me={profile?.full_name} onReport={() => setTab("report")} />}
       {tab === "monitor" && <GlobeMonitor me={profile?.full_name} members={members} onReport={() => setTab("report")} />}
+      {tab === "library" && <GlobeLibrary me={profile?.full_name} />}
+      {tab === "badges" && <GlobeBadges leader={leaderName} />}
+      {tab === "supervisor" && <GlobeSupervisor leader={leaderName} />}
       {tab === "students" && (missing ? (
         <div className="card px-6 py-10 text-center text-sm text-muted">
           الصفحة تحتاج تنفيذ ملف supabase/globe_1.sql في قاعدة البيانات مرة واحدة.
@@ -246,8 +265,11 @@ export default function GlobeTeam() {
                 طلاب البرنامج <span className="num text-muted">({members.length})</span>
               </h2>
               {members.length > 0 && (
-                <button onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
-                        className="ms-auto text-xs font-semibold text-mint-deep">طباعة الكشف</button>
+                <span className="ms-auto flex gap-3">
+                  <button onClick={() => setTab("chart")} className="text-xs font-semibold text-mint-deep">هيكل الفريق</button>
+                  <button onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
+                          className="text-xs font-semibold text-mint-deep">طباعة الكشف</button>
+                </span>
               )}
             </div>
             {members.length > 0 && (
@@ -255,7 +277,7 @@ export default function GlobeTeam() {
                 <label className="text-[11px] font-semibold text-[#128C7E]">رسالة واتساب جاهزة (اختياري)</label>
                 <textarea className="field mt-1 min-h-[3.5rem] w-full text-sm" value={waText} onChange={(e) => setWaText(e.target.value)}
                           placeholder="مثال: نذكّركم بموعد الرصد البيئي غدًا بعد الحصة السادسة في ساحة المدرسة." />
-                <p className="mt-1 text-[11px] text-muted">يُفتح بها زر «واتساب» عند كل طالب وولي أمر، ويبقى الإرسال بيدك.</p>
+                <p className="mt-1 text-[11px] text-muted">يُفتح بها زر «واتساب» عند كل طالب، ويبقى الإرسال بيدك.</p>
               </div>
             )}
             {members.length > 5 && (
@@ -269,10 +291,14 @@ export default function GlobeTeam() {
                 <div key={m.id} className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{m.full_name}</p>
+                    <select className="field !h-7 w-auto !py-0 text-xs" value={m.role} disabled={busy === m.id}
+                            aria-label={`صفة ${m.full_name}`} onChange={(e) => saveRole(m, e.target.value)}>
+                      {GLOBE_MEMBER_ROLES.map((r) => <option key={r.k} value={r.k}>{r.t}</option>)}
+                    </select>
                     <button onClick={() => remove(m)} disabled={busy === m.id}
                             className="shrink-0 text-xs font-medium text-absent hover:underline">حذف</button>
                   </div>
-                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-sm2 border border-line bg-canvas px-3 py-2.5 sm:grid-cols-4">
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2.5 rounded-sm2 border border-line bg-canvas px-3 py-2.5 sm:grid-cols-3">
                     <Cell label="الصف والفصل">{m.grade ? classLabel(m) : <span className="text-faint">غير مسجّل في فصل</span>}</Cell>
                     <Cell label="رقم الهوية"><span className="num" dir="ltr">{m.national_id ?? "—"}</span></Cell>
                     <Cell label="جوال الطالب">
@@ -296,7 +322,6 @@ export default function GlobeTeam() {
                         </span>
                       )}
                     </Cell>
-                    <Cell label="جوال ولي الأمر"><Phone mobile={m.mobile} text={waText} /></Cell>
                   </div>
                 </div>
               ))}
@@ -328,7 +353,7 @@ export default function GlobeTeam() {
             <table style={{ width: "100%", borderCollapse: "collapse", marginTop: 12 }}>
               <thead>
                 <tr>
-                  {["م", "اسم الطالب", "رقم الهوية", "الصف والفصل", "جوال الطالب", "جوال ولي الأمر"].map((h) => (
+                  {["م", "اسم الطالب", "الصفة", "رقم الهوية", "الصف والفصل", "جوال الطالب"].map((h) => (
                     <th key={h} style={{ border: "1px solid #d8e4dc", padding: "6px 8px", background: "#EEF6F1",
                       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{h}</th>
                   ))}
@@ -339,10 +364,10 @@ export default function GlobeTeam() {
                   <tr key={m.id}>
                     <td className="num" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{i + 1}</td>
                     <td style={{ border: "1px solid #d8e4dc", padding: "5px 8px" }}>{m.full_name}</td>
+                    <td style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{memberRole(m.role).t}</td>
                     <td className="num" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{m.national_id}</td>
                     <td style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{m.grade ? classLabel(m) : "—"}</td>
                     <td className="num" dir="ltr" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{localMobile(m.student_mobile) || "—"}</td>
-                    <td className="num" dir="ltr" style={{ border: "1px solid #d8e4dc", padding: "5px 8px", textAlign: "center" }}>{localMobile(m.mobile) || "—"}</td>
                   </tr>
                 ))}
               </tbody>

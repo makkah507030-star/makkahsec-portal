@@ -11,13 +11,14 @@ import { MAX_PHOTOS, pill, setupErr, activeTerm, uploadPhotos, useSignedPhotos, 
 /* =====================================================================
    خطة الرصد البيئي (supabase/globe_2.sql): جلسات الرصد بالبروتوكول والموعد
    والمكان والطلاب المكلّفين، وتكرارها أسبوعيًا. لكل جلسة تذكير واتساب
-   جاهز للطلاب وأولياء أمورهم، وتوثيقها بالقراءات ورفعها إلى منصة GLOBE.
-   members: طلاب البرنامج من GlobeTeam (id, full_name, student_mobile, mobile)
+   جاهز للطلاب، وتوثيقها بالقراءات ورفعها إلى منصة GLOBE.
+   members: طلاب البرنامج من GlobeTeam (id, full_name, student_mobile)
    ===================================================================== */
 
 const PLACES = ["ساحة المدرسة", "حديقة المدرسة", "مختبر العلوم", "محطة الرصد"];
 const MAX_REPEAT = 30;
-const SPHERES = GLOBE_SPHERES.filter((s) => s.k !== "all");
+// المجالات التي فيها بروتوكولات معتمدة فقط (البروتوكولات العشرة في lib/globe.js)
+const SPHERES = GLOBE_SPHERES.filter((s) => s.k !== "all" && GLOBE_PROTOCOLS[s.k]?.length);
 
 export const weekday = (iso) => new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { weekday: "long" }).format(new Date(`${iso}T12:00:00`));
 export const time12 = (t) => {
@@ -44,9 +45,10 @@ function Wa({ mobile, text, label }) {
   );
 }
 
-const reminder = (o, name, guardian) => [
-  `${guardian ? "ولي أمر الطالب" : "الطالب"} ${name}، السلام عليكم ورحمة الله.`,
-  `تذكير من برنامج جلوب البيئي بمدرسة مكة الثانوية: ${guardian ? "ابنكم مكلّف بجلسة" : "أنت مكلّف بجلسة"} رصد «${o.protocol}»`,
+// تذكير للطالب وحده (أُلغي التواصل مع أولياء الأمور من البرنامج)
+const reminder = (o, name) => [
+  `الطالب ${name}، السلام عليكم ورحمة الله.`,
+  `تذكير من برنامج جلوب البيئي بمدرسة مكة الثانوية: أنت مكلّف بجلسة رصد «${o.protocol}»`,
   `يوم ${weekday(o.obs_date)} ${fmtDate(o.obs_date + "T00:00:00")}${o.obs_time ? ` الساعة ${time12(o.obs_time)}` : ""}${o.place ? ` في ${o.place}` : ""}.`,
 ].join("\n");
 
@@ -301,8 +303,7 @@ export default function GlobeMonitor({ me, members, onReport }) {
                     {kids.map((k) => (
                       <div key={k.id} className="flex flex-wrap items-center gap-2 px-4 py-2">
                         <span className="min-w-0 flex-1 truncate text-sm text-ink">{k.full_name}</span>
-                        <Wa mobile={k.student_mobile} text={reminder(o, k.full_name, false)} label="الطالب" />
-                        <Wa mobile={k.mobile} text={reminder(o, k.full_name, true)} label="ولي الأمر" />
+                        <Wa mobile={k.student_mobile} text={reminder(o, k.full_name)} label="الطالب" />
                       </div>
                     ))}
                   </div>

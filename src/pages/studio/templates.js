@@ -413,7 +413,7 @@ export const TEMPLATES = [
       { name: "scope", label: "الطباعة", type: "opts",
         options: (d, c) => [["one", "بطاقة واحدة"], ["page", "ورقة كاملة (9 نسخ)"], ["all", `كل طلاب البرنامج (${c.globe?.length ?? 0})`]] },
     ],
-    defaults: (c) => ({ name: "", role: GLOBE_ROLES[0], sphere: GLOBE_SPHERES[0].t, cls: "", photo: "", logo: "", scope: "one", year: c.year }),
+    defaults: (c) => ({ name: "", role: GLOBE_ROLES[GLOBE_ROLES.length - 1], sphere: GLOBE_SPHERES[0].t, cls: "", photo: "", logo: "", scope: "one", year: c.year }),
     sample: () => ({ name: "اسم الطالب", cls: "الثاني الثانوي · 3" }),
     view: (d) => ({ ...d, cards: globeCards(d, {})[0] }),
     pages: (d, c) => globeCards(d, c).map((cards) => ({ ...d, cards })),
@@ -657,7 +657,7 @@ function globeCards(d, c) {
   const me = { name: d.name, role: d.role, sphere: d.sphere, cls: d.cls, photo: d.photo, no: 1 };
   if (d.scope === "page") return [Array.from({ length: 9 }, () => me)];
   if (d.scope === "all" && c.globe?.length) {
-    const all = c.globe.map((x, i) => ({ name: x.full_name, role: d.role, sphere: d.sphere, cls: x.cls, no: i + 1 }));
+    const all = c.globe.map((x, i) => ({ name: x.full_name, role: x.role ?? d.role, sphere: d.sphere, cls: x.cls, no: i + 1 }));
     const out = [];
     for (let i = 0; i < all.length; i += 9) out.push(all.slice(i, i + 9));
     return out;

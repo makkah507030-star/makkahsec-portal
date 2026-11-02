@@ -1,5 +1,6 @@
 // src/pages/studio/data.js
 import { supabase } from "../../lib/supabase";
+import { memberRole } from "../../lib/globe.js";
 import { loadPeriodTimes } from "../../lib/periodTimes";
 import { byClassName, byName } from "../../lib/sortAr.js";
 
@@ -101,6 +102,7 @@ export async function loadGlobe() {
     const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
     return { full_name: r.students?.full_name ?? "",
              grade: en?.classes?.grade, class_no: en?.classes?.class_no,
+             role: r.role ? memberRole(r.role).t : null,                    // صفته في الفريق (globe_3.sql)
              cls: en ? `${G[en.classes?.grade] ?? ""} · ${en.classes?.class_no ?? ""}` : "" };
   }).filter((x) => x.full_name).sort(byClassName());
   return { globe };
