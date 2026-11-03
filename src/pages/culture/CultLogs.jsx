@@ -7,7 +7,7 @@ import { fmtDate } from "../../lib/dates";
 import { todayISO } from "../../lib/schoolTime";
 import { confirmDanger } from "../../lib/danger";
 import { sendPush } from "../../lib/pushSend.js";
-import { MEETINGS, OCCASIONS, ONBOARD, PROGRAMS, setupMsg, cardInit } from "../../lib/culture.js";
+import { MEETINGS, OCCASIONS, ONBOARD, PROGRAMS, setupMsg, cardInit, staffTitle, shortName } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
 import { CardMaker, SendPreview } from "./CultCard.jsx";
 
@@ -101,7 +101,7 @@ export function CultCare({ me }) {
   const person = staff.find((s) => s.id === x.user_id);
   // ما يُعرض في المعاينة: البطاقة بنصها، والإشعار بعنوانه، والمستلم
   const previewOf = (kind, name, message) => ({
-    card: { ...cardInit("occasion", kind, name), name, body: message },
+    card: { ...cardInit("occasion", kind, name), name, role: staffTitle(staff.find((s) => s.full_name === name)), body: message },
     notif: { title: `نهتم بك · ${OCCASIONS[kind]?.t ?? "مناسبة"}`, body: message },
     to: `${name} — في جرس البوابة وعلى جواله`,
   });
@@ -112,7 +112,7 @@ export function CultCare({ me }) {
   };
   const pick = (patch) => {
     const y = { ...x, ...patch }; const p = staff.find((s) => s.id === y.user_id);
-    setX({ ...y, message: p ? OCCASIONS[y.kind].msg(p.full_name.split(" ").slice(0, 2).join("\u00A0")) : y.message });
+    setX({ ...y, message: p ? OCCASIONS[y.kind].msg(shortName(p.full_name)) : y.message });
   };
   // البطاقة إشعار لصاحب المناسبة في الجرس وجواله، ولا يرسلها إلا السفير
   const send = async (r) => {

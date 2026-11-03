@@ -12,6 +12,8 @@ import CultIdeas from "./CultIdeas.jsx";
 import CultValues from "./CultValues.jsx";
 import CultTeam from "./CultTeam.jsx";
 import CultReport from "./CultReport.jsx";
+import CultSend from "./CultSend.jsx";
+import { useCultMode } from "../../lib/cultMode.js";
 
 /* =====================================================================
    الثقافة المؤسسية — سفير الثقافة (supabase/cult_1..4.sql، src/lib/culture.js):
@@ -22,7 +24,7 @@ import CultReport from "./CultReport.jsx";
    ===================================================================== */
 
 const TEAM_TABS = [
-  ["dash", "لوحة التنفيذ"], ["plan", "الخطة التنفيذية"], ["comm", "التواصل الملهم"], ["care", "نهتم بك"],
+  ["dash", "لوحة التنفيذ"], ["send", "الإجراءات والرسائل"], ["plan", "الخطة التنفيذية"], ["comm", "التواصل الملهم"], ["care", "نهتم بك"],
   ["hayyak", "حيّاك"], ["ideas", "الأفكار والابتكار"], ["values", "القيم والأدوار"], ["report", "التقرير"], ["team", "الفريق"],
 ];
 const STAFF_TABS = [["values", "القيم والأدوار"], ["ideas", "شارك فكرة"]];
@@ -35,6 +37,8 @@ export default function Culture() {
   const [err, setErr] = useState("");
   const { session, focusLimited } = useSession();
   const uid = session?.user?.id;
+  // في مساحة سفير الثقافة: التبويبات في القائمة الجانبية بدل الأزرار
+  const cultMode = useCultMode(uid);
   const load = useCallback(async () => {
     const { data, error } = await supabase.rpc("cult_me");
     if (error) { setErr(setupMsg(error)); setMe(false); return; }
@@ -66,10 +70,11 @@ export default function Culture() {
           وقيم الوزارة الخمس (الالتزام، الجودة، الإبداع، روح الفريق، التعلم المستمر).
         </p>
       </div>
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      <div className={`-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 ${cultMode && me.member ? "lg:hidden" : ""}`}>
         {tabs.map(([k, t]) => <button key={k} className={pill(tab === k)} onClick={() => go(k)}>{t}</button>)}
       </div>
       {tab === "dash" && <CultDash {...common} />}
+      {tab === "send" && <CultSend {...common} />}
       {tab === "plan" && <CultPlan {...common} />}
       {tab === "comm" && <CultMeetings {...common} />}
       {tab === "care" && <CultCare {...common} />}

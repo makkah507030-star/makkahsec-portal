@@ -63,10 +63,13 @@ export const PORTAL_TAG = {
   judge:   { t: "يقدّره المقيِّم بالملاحظة، ويمكنك رفع شاهد", c: "bg-canvas text-muted" },
 };
 
-/** أدوار صاحب الملف الإدارية: بنود الوكيل تختلف بمجال عمله (perf_items.roles في supabase/staff_perf_2.sql) */
+/** علامات صاحب الملف: أدواره الإدارية، وcult_team إن كان في فريق الثقافة المؤسسية (supabase/cult_7.sql).
+    بنود الوكيل تختلف بمجال عمله، وبند أعمال فريق الثقافة لأعضائه (perf_items.roles) */
 export async function loadOwnerRoles(uid) {
-  const { data } = await supabase.from("admin_roles").select("role_type").eq("user_id", uid);
-  return (data ?? []).map((r) => r.role_type);
+  const { data, error } = await supabase.rpc("perf_owner_tags", { p_uid: uid });
+  if (!error) return data ?? [];
+  const { data: r } = await supabase.from("admin_roles").select("role_type").eq("user_id", uid);
+  return (r ?? []).map((x) => x.role_type);
 }
 /** بنود العناصر التي تخص أدوار صاحب الملف: البند بلا roles للجميع، وإلا لمن يحمل أحدها */
 export const itemsForRoles = (els, roles) => els.map((e) => ({
@@ -76,14 +79,16 @@ export const itemsForRoles = (els, roles) => els.map((e) => ({
 let refCache = null;
 /** العناصر وبنودها مرتبة، مع بنود كل عنصر في elements[i].items.
     track: «teacher» لنموذج المعلم، و«lab» لنموذج محضر معمل الحاسب (supabase/lab_perf_1.sql) */
-export function loadPerfReference(track = "teacher") {
+export function loadPerfReference(track = "teacher", tags = []) {
   return loadAllPerfReference().then((els) => {
-    if (track !== "activity") return els.filter((e) => (e.track ?? "teacher") === track);
+    // البنود الخاصة بأدوار (roles) لا تظهر إلا لمن يحمل أحدها في علاماته (tags)
+    const pick = (list) => itemsForRoles(list, tags);
+    if (track !== "activity") return pick(els.filter((e) => (e.track ?? "teacher") === track));
     // رائد النشاط: عناصر المعلم بأوزان نموذجه، ثم العناصر الخاصة بالنشاط
-    return [
+    return pick([
       ...els.filter((e) => (e.track ?? "teacher") === "teacher").map((e) => ({ ...e, weight: ACTIVITY_WEIGHTS[e.key] ?? e.weight })),
       ...els.filter((e) => e.track === "activity"),
-    ];
+    ]);
   });
 }
 function loadAllPerfReference() {
@@ -223,6 +228,8 @@ export const AUTO_SOURCE = {
   d12_04: { label: "اجتماعات لجنة التحصيل", to: "/ach-committee" },
   d13_03: { label: "لقاءات الثقافة المدرسية", to: "/culture" },
   d15_03: { label: "نماذج رسمية أصدرها", to: "/my-documents" },
+  // أعضاء فريق الثقافة المؤسسية (supabase/cult_7.sql)
+  e02_12: { label: "أعمال في فريق الثقافة المؤسسية", to: "/culture" },
   // محضر مختبر العلوم من عمل مختبره (supabase/sci_lab_6.sql)
   s04_01: { label: "تجارب نُفّذت في المختبر", to: "/science-labs?tab=runs" },
   s10_01: { label: "حصص جهّزها للتجارب", to: "/science-labs?tab=booking" },
@@ -264,8 +271,9 @@ export const AUTO_SOURCE = {
 export async function loadAutoCounts(uid, year, track = "teacher") {
   // المعلم ورائد النشاط من عمل المعلم، ومحضر المعمل من عمل المعمل، والموجه والوكيل ورائد النشاط
   // من عملهم في البوابة (supabase/staff_perf_4.sql)؛ ومحضر مختبر العلوم بلا شواهد آلية بعد
-  const fns = track === "lab" ? ["lab_perf_auto"] : track === "teacher" ? ["perf_auto_counts"]
-    : track === "activity" ? ["perf_auto_counts", "staff_perf_auto"] : ["staff_perf_auto"];
+  // وأعمال فريق الثقافة المؤسسية لأعضائه من المعلمين (supabase/cult_7.sql)
+  const fns = track === "lab" ? ["lab_perf_auto"] : track === "teacher" ? ["perf_auto_counts", "cult_perf_auto"]
+    : track === "activity" ? ["perf_auto_counts", "staff_perf_auto", "cult_perf_auto"] : ["staff_perf_auto"];
   const m = {};
   for (const fn of fns) {
     const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year });

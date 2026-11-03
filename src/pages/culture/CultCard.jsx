@@ -1,6 +1,6 @@
 // src/pages/culture/CultCard.jsx
 import { forwardRef, useEffect, useRef, useState } from "react";
-import { PALETTES, cardInit } from "../../lib/culture.js";
+import { PALETTES, cardInit, loadCultStaff, staffByName, staffTitle } from "../../lib/culture.js";
 import iconMint from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -53,6 +53,7 @@ export const CultCard = forwardRef(function CultCard({ c }, ref) {
         <span style={{ alignSelf: "flex-start", background: p.accent, color: "#fff", borderRadius: 99, padding: "5px 16px", fontSize: 14, fontWeight: 700 }}>{c.chip}</span>
         {c.title && <h2 style={{ margin: "16px 0 0", fontSize: c.title.length > 18 ? 34 : 44, fontWeight: 700, lineHeight: 1.25, color: p.deep }}>{c.title}</h2>}
         {c.name && <p style={{ margin: "10px 0 0", fontSize: 21, fontWeight: 600, color: p.accent }}>الأستاذ / {c.name}</p>}
+        {c.name && c.role && <p style={{ margin: "2px 0 0", fontSize: 15, fontWeight: 500, color: p.deep, opacity: 0.8 }}>{c.role}</p>}
         </div>
         <span style={{ display: "block", width: 64, height: 5, borderRadius: 9, background: p.accent, margin: "18px 0 16px" }} />
         {c.body && <p style={{ margin: 0, fontSize: fs, lineHeight: 1.9, whiteSpace: "pre-line", textAlign: "right", textWrap: "balance" }}>{c.body}</p>}
@@ -74,7 +75,12 @@ export const CultCard = forwardRef(function CultCard({ c }, ref) {
 /** نافذة البطاقة: init = { kind, sub, name, mobile, title?, body? } */
 export function CardMaker({ init, onClose }) {
   const base = cardInit(init.kind, init.sub, init.name);
-  const [c, setC] = useState({ ...base, name: init.name ?? "", title: init.title ?? base.title, body: init.body ?? base.body });
+  const [c, setC] = useState({ ...base, name: init.name ?? "", role: init.role ?? "", title: init.title ?? base.title, body: init.body ?? base.body });
+  // صفة الزميل تحت اسمه (معلم المادة، أو مسمّى دوره) من سجل الموظفين، وتُعدَّل
+  useEffect(() => {
+    if (!init.name || init.role) return;
+    loadCultStaff().then((list) => { const r = staffTitle(staffByName(list, init.name)); if (r) setC((o) => (o.role ? o : { ...o, role: r })); });
+  }, [init.name, init.role]);
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
   const card = useRef(null);
@@ -85,7 +91,7 @@ export function CardMaker({ init, onClose }) {
     fit(); window.addEventListener("resize", fit); return () => window.removeEventListener("resize", fit);
   }, []);
   const set = (k) => (e) => setC({ ...c, [k]: e.target.value });
-  const caption = [c.title, c.name ? `الأستاذ / ${c.name}` : "", "سفير الثقافة المؤسسية · مدرسة مكة الثانوية"].filter(Boolean).join("\n");
+  const caption = [c.title, c.name ? `الأستاذ / ${c.name}${c.role ? ` — ${c.role}` : ""}` : "", "سفير الثقافة المؤسسية · مدرسة مكة الثانوية"].filter(Boolean).join("\n");
   const fileName = `makkahsec-culture-${Date.now()}.png`;
 
   const blob = async () => {
@@ -139,7 +145,10 @@ export function CardMaker({ init, onClose }) {
         <div className="grid gap-4 md:grid-cols-[1fr_340px]">
           <div className="space-y-2">
             <label className="block text-[11.5px] text-muted">العنوان<input className="field mt-1 w-full text-sm" maxLength={40} value={c.title} onChange={set("title")} /></label>
-            <label className="block text-[11.5px] text-muted">اسم الزميل (اختياري)<input className="field mt-1 w-full text-sm" maxLength={40} value={c.name} onChange={set("name")} /></label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="block text-[11.5px] text-muted">اسم الزميل (اختياري)<input className="field mt-1 w-full text-sm" maxLength={40} value={c.name} onChange={set("name")} /></label>
+              <label className="block text-[11.5px] text-muted">صفته (تظهر تحت اسمه)<input className="field mt-1 w-full text-sm" maxLength={40} placeholder="معلم الرياضيات" value={c.role} onChange={set("role")} /></label>
+            </div>
             <label className="block text-[11.5px] text-muted">النص<textarea className="field mt-1 min-h-[120px] w-full text-sm" maxLength={380} value={c.body} onChange={set("body")} /></label>
             <div>
               <p className="mb-1 text-[11.5px] text-muted">لون البطاقة</p>

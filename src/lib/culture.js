@@ -1,5 +1,6 @@
 // src/lib/culture.js
 import { supabase } from "./supabase";
+import { ADMIN_ROLE_LABEL } from "./session.jsx";
 
 /* =====================================================================
    الثقافة المؤسسية — سفير الثقافة (supabase/cult_1..4.sql): ما يخص المدرسة من دليل «الثقافة المؤسسية:
@@ -137,10 +138,16 @@ export const PALETTES = {
 };
 const VALUE_PAL = { commit: "coral", quality: "sky", creative: "lilac", team: "teal", learn: "mint" };
 
+/** الاسم في نص البطاقة: الاسم الأول واسم العائلة («خالد الغامدي» لا «خالد بن») بمسافة غير فاصلة فلا ينقسم */
+export function shortName(name) {
+  const w = String(name ?? "").trim().split(/\s+/).filter((x) => x && !["بن", "ابن", "بنت"].includes(x));
+  return (w.length > 1 ? [w[0], w[w.length - 1]] : w).join("\u00A0");
+}
+
 /** قالب البطاقة الابتدائي بحسب نوعها: { chip, title, body, pal } */
 export function cardInit(kind, sub, name = "") {
   // الاسم بمسافات غير فاصلة فلا ينقسم بين سطرين في نص البطاقة
-  const n = name ? name.split(" ").slice(0, 2).join("\u00A0") : "";
+  const n = shortName(name);
   if (kind === "occasion") { const o = OCCASIONS[sub] ?? OCCASIONS.achievement; return { chip: "نهتم بك", title: o.h, body: o.msg(n || "…"), pal: o.pal }; }
   if (kind === "value") { const v = VALUES.find((x) => x.k === sub) ?? VALUES[0];
     return { chip: "قيمنا المؤسسية", title: v.t, body: `${v.d}\n${v.pr.join(" ")}`, pal: VALUE_PAL[v.k] }; }
@@ -152,3 +159,53 @@ export function cardInit(kind, sub, name = "") {
   if (kind === "rafah") return { chip: "رفاه", title: "لصحتك وجودة حياتك", pal: "mint", body: "" };
   return { chip: "الثقافة المؤسسية", title: "", body: "", pal: "mint" };
 }
+
+/* ============================ صفة الموظف (supabase/cult_6.sql) ============================
+   تظهر تحت اسمه في البطاقات: «معلم الرياضيات» من تخصصه، وإلا مسمّى دوره الإداري */
+const ROLE_ORDER = ["principal", "deputy_academic", "deputy_school", "deputy_students", "counselor_1", "counselor_2", "counselor_3",
+  "activity_leader", "health_counselor", "tech_support", "computer_lab", "science_labs", "science_labs_2", "science_labs_3"];
+export function staffTitle(s) {
+  if (!s) return "";
+  const r = ROLE_ORDER.find((k) => s.roles?.includes(k));
+  if (r && !/^(computer_lab|science_labs|tech_support)/.test(r)) return (ADMIN_ROLE_LABEL[r] ?? "").replace(/\s+\d+$/, "");
+  if (s.spec) return /^معلم/.test(s.spec) ? s.spec : `معلم ${s.spec}`;
+  return r ? (ADMIN_ROLE_LABEL[r] ?? "").replace(/\s+\d+$/, "") : "";
+}
+let staffCache = null;
+/** الموظفون بجوالاتهم وصفاتهم، مرة واحدة في الجلسة */
+export function loadCultStaff() {
+  if (!staffCache) staffCache = supabase.rpc("cult_staff").then(({ data, error }) => { if (error) staffCache = null; return data ?? []; });
+  return staffCache;
+}
+const norm = (t) => String(t ?? "").replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").replace(/ى/g, "ي").replace(/\s+/g, " ").trim();
+/** الموظف باسمه (كاملًا أو بأوله) */
+export const staffByName = (list, name) => {
+  const n = norm(name);
+  return n ? list.find((s) => norm(s.full_name) === n) ?? list.find((s) => norm(s.full_name).startsWith(n)) : null;
+};
+
+/* ============================ الإجراءات والرسائل (supabase/cult_6.sql ← cult_send) ============================
+   كل ما يرسله الفريق لكل الموظفين ببرنامجه: يُسجَّل في سجل البرنامج، ويُحسب في لوحة التنفيذ والتقرير وشواهد مرسله.
+   to: تبويب الإجراء حين يكون لشخص بعينه (نهتم بك، حيّاك، الأفكار) */
+export const ACTIONS = [
+  ...VALUES.map((v) => ({ k: `value_${v.k}`, program: "values", t: `قيمة ${v.t}`, title: `قيمنا المؤسسية · ${v.t}`,
+    body: `${v.t}: ${v.d}\nمن ممارساتها: ${v.pr.join(" ")}`, card: { kind: "value", sub: v.k } })),
+  { k: "mazaya", program: "mazaya", t: "عرض «مزايا» الشهري", title: "مزايا · عرض لمنسوبي التعليم", body: "يسرّنا إطلاعكم على عرض جديد ضمن برنامج «مزايا» لمنسوبي التعليم: ", card: { kind: "mazaya" } },
+  { k: "rafah", program: "rafah", t: "رسالة «رفاه» أو يوم عالمي", title: "رفاه · لصحتك وجودة حياتك", body: "", card: { kind: "rafah" } },
+  { k: "takafu", program: "takafu", t: "رسالة «تكافؤ»", title: "تكافؤ · بيئة عمل للجميع", body: "" },
+  { k: "ohi", program: "ohi", t: "رسالة الصحة التنظيمية", title: "الصحة التنظيمية · ممارسة إدارية إيجابية", body: "" },
+  { k: "comm", program: "comm", t: "دعوة لقاء أو رسالة من القيادة", title: "التواصل الملهم · ", body: "" },
+  { k: "innov", program: "innov", t: "دعوة لمشاركة الأفكار", title: "الابتكار · شاركنا فكرتك",
+    body: "فكرتك تطوّر مدرستنا: شارك فكرة أو مبادرة تحسّن إجراءات العمل أو بيئته من «الثقافة المؤسسية ← شارك فكرة» في البوابة." },
+  { k: "general", program: "values", t: "رسالة عامة", title: "الثقافة المؤسسية · ", body: "" },
+];
+export const PERSON_ACTIONS = [
+  { tab: "care", program: "care", t: "تهنئة أو تعزية لموظف", d: "بطاقة «نهتم بك» لصاحب المناسبة" },
+  { tab: "hayyak", program: "hayyak", t: "ترحيب بموظف جديد", d: "تهيئته في «حيّاك» وبطاقة ترحيب" },
+  { tab: "ideas", program: "innov", t: "رد على فكرة أو شكر صاحبها", d: "يصل صاحب الفكرة إشعارًا، وبطاقة شكر" },
+  { tab: "comm", program: "comm", t: "توثيق لقاء", d: "اجتماع أو جلسة فنجان أو القائد الموجه" },
+];
+export const WORK_KINDS = {
+  act: { t: "أنشطة مكتملة", c: "#2E8B57" }, meet: { t: "لقاءات", c: "#218CAA" }, care: { t: "بطاقات نهتم بك", c: "#C0392B" },
+  onboard: { t: "تهيئة موظفين", c: "#0DA9A6" }, idea: { t: "ردود على أفكار", c: "#E08A3C" }, msg: { t: "رسائل للموظفين", c: "#7258A4" },
+};

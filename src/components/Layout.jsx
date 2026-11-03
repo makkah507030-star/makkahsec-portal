@@ -23,6 +23,7 @@ import { useBackSteps, goBack } from "../lib/backStep.js";
 import { savedTheme, saveTheme, applyTheme, savedStyle, saveStyle } from "../lib/theme.js";
 import { EvidenceDock } from "./EvidenceTags.jsx";
 import { isScoutRole } from "../lib/scoutLeader.js";
+import { useCultMode, setCultMode } from "../lib/cultMode.js";
 
 /* =====================================================================
    القائمة الجانبية — مرتبة من العمل اليومي إلى الإعدادات، وفي أسفلها
@@ -258,6 +259,12 @@ export const TEACHER_SECTIONS = [
   { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأحداث والمعرض والمركز الإعلامي والتصويت",
     groups: ["التواصل والمحتوى"] },
 ];
+
+/* مساحة «سفير الثقافة» (lib/cultMode.js): أعمال الثقافة المؤسسية وحدها، كل تبويب رابط في القائمة */
+const CULT_TABS = [["dash", "لوحة التنفيذ", "home"], ["send", "الإجراءات والرسائل", "megaphone"], ["plan", "الخطة التنفيذية", "list"],
+  ["comm", "التواصل الملهم", "users"], ["care", "نهتم بك", "heart"], ["hayyak", "حيّاك", "userCheck"], ["ideas", "الأفكار والابتكار", "sparkles"],
+  ["values", "القيم والأدوار", "award"], ["report", "التقرير", "trend"], ["team", "الفريق", "users"]];
+const CULT_GROUPS = [{ title: null, items: CULT_TABS.map(([k, label, icon]) => ({ to: `/culture?tab=${k}`, label, icon, cultTab: k })) }];
 
 export const TEACHER_GROUPS = [
   {
@@ -592,6 +599,17 @@ export default function Layout({ children }) {
     if (effectiveRole !== "teacher") { setSciTeacher(false); return; }
     supabase.rpc("sci_teacher_labs").then(({ data, error }) => setSciTeacher(!error && (data ?? []).length > 0));
   }, [effectiveRole, session?.user?.id]);
+  // سفير الثقافة بالتعيين في حسابه معلمًا: زر التبديل إلى مساحة السفير (cult_6.sql ← cult_me.ambassador)
+  const [cultAmb, setCultAmb] = useState(false);
+  useEffect(() => {
+    if (effectiveRole !== "teacher") { setCultAmb(false); return; }
+    supabase.rpc("cult_me").then(({ data, error }) => setCultAmb(!error && !!data?.ambassador));
+  }, [effectiveRole, session?.user?.id]);
+  const cultModeOn = useCultMode(session?.user?.id);
+  const cultMode = cultAmb && cultModeOn;
+  useEffect(() => {
+    if (cultMode && path === "/") navigate("/culture?tab=dash", { replace: true });
+  }, [cultMode, path]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [achOpen] = useAchOpen();
   // لجنة التميز: يظهر قسم التقويم والاعتماد لأعضائها وللمدير والوكيل والدعم الفني (acc_1.sql)
   const [accMember, setAccMember] = useState(false);
@@ -645,21 +663,24 @@ export default function Layout({ children }) {
   };
 
   const groups = useMemo(() => {
+    if (cultMode) return CULT_GROUPS;
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox, sciTeacher]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox, sciTeacher, cultMode]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة والمعلم بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
-  const sections = useMemo(() => (isAdmin ? SECTIONS : effectiveRole === "teacher" ? TEACHER_SECTIONS : [])
+  const sections = useMemo(() => (cultMode ? [] : isAdmin ? SECTIONS : effectiveRole === "teacher" ? TEACHER_SECTIONS : [])
     .map((x) => ({ ...x, groups: groups.filter((g) => x.groups.includes(g.title)) }))
     .map((x) => ({ ...x, items: x.groups.flatMap((g) => g.items) }))
-    .filter((x) => x.items.length), [isAdmin, effectiveRole, groups]);
+    .filter((x) => x.items.length), [isAdmin, effectiveRole, groups, cultMode]);
   const topItems = sections.length ? groups.find((g) => !g.title)?.items ?? [] : [];
 
+  const cultTabNow = path === "/culture" ? new URLSearchParams(location.search).get("tab") || "dash" : null;
   const isActive = (i) =>
-    i.to === "/" || i.exact
+    i.cultTab ? cultTabNow === i.cultTab
+    : i.to === "/" || i.exact
       ? path === i.to
       : [i.to, ...(i.also ?? [])].some((t) => path === t || path.startsWith(t + "/"));
 
@@ -826,6 +847,19 @@ export default function Layout({ children }) {
     );
   };
 
+  // التبديل بين حساب المعلم ومساحة سفير الثقافة المؤسسية
+  const CultSwitch = () => {
+    if (!cultAmb) return null;
+    const go = () => { setCultMode(session?.user?.id, !cultMode); navigate(cultMode ? "/" : "/culture?tab=dash"); };
+    return (
+      <button onClick={go} title={cultMode ? "العودة إلى حساب المعلم" : "مساحة سفير الثقافة المؤسسية"}
+              className="flex shrink-0 items-center gap-1.5 rounded-pill border border-[#C0392B]/60 bg-[#FCEFEC] px-3 py-1.5 text-xs font-semibold text-[#A3352A] transition-colors hover:bg-[#F8E0DA] sm:px-3.5">
+        <Icon name={cultMode ? "swap" : "heart"} className="h-4 w-4" />
+        <span>{cultMode ? "المعلم" : "سفير الثقافة"}</span>
+      </button>
+    );
+  };
+
   const Brand = ({ compact, iconOnly }) => (
     <NavLink to="/" end className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80">
       <img src={logoIcon} alt="" className="h-9 w-9 shrink-0 object-contain" />
@@ -844,6 +878,7 @@ export default function Layout({ children }) {
     <div className="flex shrink-0 items-center gap-2">
       <ViewSwitch />
       <FocusSwitch />
+      <CultSwitch />
       {isStudentView && <ThemeToggle />}
       <Refresh />
       <PreviewSite />

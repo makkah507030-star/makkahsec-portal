@@ -1,21 +1,11 @@
 // src/pages/culture/CultValues.jsx
 import { useState } from "react";
-import { supabase } from "../../lib/supabase";
-import { useNotice } from "../../lib/useNotice.js";
-import { sendPush } from "../../lib/pushSend.js";
-import { VALUES, AMB_ROLES, AMB_SKILLS, PROGRAMS, cardInit } from "../../lib/culture.js";
-import { CardMaker, SendPreview } from "./CultCard.jsx";
+import { VALUES, AMB_ROLES, AMB_SKILLS, PROGRAMS } from "../../lib/culture.js";
 
 /* القيم والأدوار: قيم الوزارة الخمس بتعريفها ومؤشراتها وممارساتها، وأدوار سفير الثقافة ومهاراته.
-   ويرسل السفير منها رسائل التوعية بالقيم وعروض «مزايا» إشعارًا لكل الموظفين. */
+   ورسائل التوعية بالقيم و«مزايا» لكل الموظفين في «الإجراءات والرسائل» (CultSend.jsx). */
 
-const PRESETS = [
-  ...VALUES.map((v) => ({ k: v.k, t: `قيمة ${v.t}`, title: `قيمنا المؤسسية · ${v.t}`, body: `${v.t}: ${v.d}\nمن ممارساتها: ${v.pr.join(" ")}` })),
-  { k: "mazaya", t: "عرض من «مزايا»", title: "مزايا · عرض لمنسوبي التعليم", body: "يسرّنا إطلاعكم على عرض جديد ضمن برنامج «مزايا» لمنسوبي التعليم: " },
-  { k: "rafah", t: "رسالة «رفاه»", title: "رفاه · لصحتك وجودة حياتك", body: "" },
-];
-
-export default function CultValues({ me }) {
+export default function CultValues({ me, go }) {
   const [open, setOpen] = useState(VALUES[0].k);
   const v = VALUES.find((x) => x.k === open);
   return (
@@ -38,7 +28,14 @@ export default function CultValues({ me }) {
         </div>
       </section>
 
-      {me.amb && <Composer />}
+      {me.member && (
+        <button onClick={() => go("send")} className="card flex w-full items-center gap-3 px-4 py-3 text-start hover:bg-canvas">
+          <span className="min-w-0 flex-1">
+            <b className="block text-sm text-ink">رسائل التوعية بالقيم و«مزايا» و«رفاه» ←</b>
+            <span className="text-[12px] text-muted">انتقلت إلى «الإجراءات والرسائل»: تُرسل من هناك وتُسجَّل في برنامجها وتظهر في لوحة التنفيذ والتقرير والشواهد.</span>
+          </span>
+        </button>
+      )}
 
       <section className="card space-y-3 p-4">
         <h2 className="text-sm font-bold text-ink">أدوار سفير الثقافة المؤسسية</h2>
@@ -63,49 +60,5 @@ export default function CultValues({ me }) {
           </div>))}</div>
       </section>
     </div>
-  );
-}
-
-function Composer() {
-  const [, setMsg] = useNotice(null);
-  const [x, setX] = useState({ title: "", body: "" });
-  const [busy, setBusy] = useState(false);
-  const [kind, setKind] = useState("");
-  const [card, setCard] = useState(null);
-  const [preview, setPreview] = useState(false);
-  const cardOf = () => {
-    const v = VALUES.some((y) => y.k === kind);
-    return v ? { kind: "value", sub: kind, body: x.body.trim() || undefined }
-      : { kind: ["mazaya", "rafah"].includes(kind) ? kind : "general", title: x.title.trim() || undefined, body: x.body.trim() || undefined };
-  };
-  const ask = () => {
-    if (!x.title.trim() || !x.body.trim()) { setMsg({ ok: false, text: "اكتب العنوان والنص." }); return; }
-    setPreview(true);
-  };
-  const send = async () => {
-    if (!x.title.trim() || !x.body.trim()) { setMsg({ ok: false, text: "اكتب العنوان والنص." }); return; }
-    setBusy(true);
-    const { data: nid, error } = await supabase.rpc("cult_notify", { p_title: x.title.trim(), p_body: x.body.trim(), p_user_ids: null });
-    if (error) setMsg({ ok: false, text: error.message });
-    else { sendPush(nid); setX({ title: "", body: "" }); setMsg({ ok: true, text: "أُرسلت الرسالة لكل الموظفين." }); }
-    setBusy(false); setPreview(false);
-  };
-  return (
-    <section className="card space-y-2 p-4">
-      <h2 className="text-sm font-bold text-ink">رسالة لكل الموظفين</h2>
-      <p className="text-[11.5px] text-muted">رسائل التوعية بالقيم، وعروض «مزايا»، ورسائل «رفاه»: تصل إشعارًا في الجرس والجوال لكل المعلمين والإداريين.</p>
-      <div className="flex flex-wrap gap-1.5">{PRESETS.map((p) => (
-        <button key={p.k} className="rounded-pill border border-line bg-white px-3 py-1 text-xs text-muted hover:bg-canvas" onClick={() => { setX({ title: p.title, body: p.body }); setKind(p.k); }}>{p.t}</button>))}</div>
-      <input className="field w-full text-sm" maxLength={120} placeholder="العنوان" value={x.title} onChange={(e) => setX({ ...x, title: e.target.value })} />
-      <textarea className="field min-h-[90px] w-full text-sm" maxLength={1200} placeholder="النص" value={x.body} onChange={(e) => setX({ ...x, body: e.target.value })} />
-      <div className="flex flex-wrap gap-2">
-        <button className="btn-primary px-4 py-1.5 text-xs" disabled={busy} onClick={ask}>{busy ? "…" : "معاينة وإشعار لكل الموظفين"}</button>
-        <button className="rounded-pill bg-[#25D366] px-4 py-1.5 text-xs font-bold text-white" onClick={() => setCard(cardOf())}>بطاقة لقروب العمل في واتساب</button>
-      </div>
-      {card && <CardMaker init={card} onClose={() => setCard(null)} />}
-      {preview && (() => { const c = cardOf(); const base = cardInit(c.kind, c.sub);
-        return <SendPreview card={{ ...base, title: c.title ?? base.title, body: c.body ?? base.body }} notif={{ title: x.title.trim(), body: x.body.trim() }}
-          to="كل المعلمين والإداريين — في جرس البوابة وعلى جوالاتهم" busy={busy} onConfirm={send} onClose={() => setPreview(false)} />; })()}
-    </section>
   );
 }

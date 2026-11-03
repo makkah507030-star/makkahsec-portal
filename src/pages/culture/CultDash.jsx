@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { countAr } from "../../lib/arabicCount.js";
-import { PROGRAMS, STATUS, dueOf, overdue, setupMsg } from "../../lib/culture.js";
+import { PROGRAMS, STATUS, WORK_KINDS, dueOf, overdue, setupMsg } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
 
 /* لوحة التنفيذ: مؤشرات الخطة (الإجمالي والمكتمل وقيد التنفيذ ونسبة الإنجاز)، وتوزيع الحالات، وكل برنامج
@@ -27,9 +27,11 @@ export default function CultDash({ go }) {
       supabase.from("cult_occasions").select("sent_at"),
       supabase.from("cult_onboard").select("checks"),
       supabase.from("cult_ideas").select("status"),
-    ]).then(([a, m, o, b, i]) => {
+      supabase.from("cult_messages").select("program"),
+      supabase.rpc("cult_team_works"),
+    ]).then(([a, m, o, b, i, g, w]) => {
       if (a.error) { setErr(setupMsg(a.error)); setD({}); return; }
-      setD({ acts: a.data ?? [], meet: m.data ?? [], occ: o.data ?? [], onb: b.data ?? [], ideas: i.data ?? [] });
+      setD({ acts: a.data ?? [], meet: m.data ?? [], occ: o.data ?? [], onb: b.data ?? [], ideas: i.data ?? [], msgs: g.data ?? [], works: w.data ?? [] });
     });
   }, []);
   if (!d) return <Loader />;
@@ -90,12 +92,15 @@ export default function CultDash({ go }) {
         })}</div>
       </section>
 
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {tile(d.msgs.length, "رسائل للموظفين", "#7258A4")}
         {tile(d.meet.length, "لقاءات التواصل الملهم")}
         {tile(d.occ.filter((x) => x.sent_at).length, "بطاقات «نهتم بك» المرسلة")}
         {tile(d.onb.length, "موظفون جدد في «حيّاك»")}
         {tile(d.ideas.length, "أفكار الموظفين")}
       </section>
+
+      <Team works={d.works} />
 
       <section className="card space-y-2 p-4">
         <h2 className="text-sm font-bold text-ink">أدوات البوابة للمشروع</h2>
@@ -105,5 +110,37 @@ export default function CultDash({ go }) {
           </Link>))}</div>
       </section>
     </div>
+  );
+}
+
+/* إسهام أعضاء الفريق (cult_7.sql ← cult_team_works): أعمال كل عضو بأنواعها في شريط ملوّن، وهي نفسها شواهده */
+function Team({ works }) {
+  const people = [...new Map(works.map((w) => [w.user_id, { id: w.user_id, name: w.full_name, role: w.role, by: {} }])).values()];
+  works.forEach((w) => { people.find((p) => p.id === w.user_id).by[w.kind] = Number(w.n); });
+  people.forEach((p) => { p.total = Object.values(p.by).reduce((a, v) => a + v, 0); });
+  people.sort((a, b) => b.total - a.total);
+  const max = Math.max(1, ...people.map((p) => p.total));
+  return (
+    <section className="card space-y-3 p-4">
+      <div>
+        <h2 className="text-sm font-bold text-ink">إسهام أعضاء الفريق</h2>
+        <p className="text-[11.5px] text-muted">أعمال كل عضو هذا العام، وتصل شواهدَ في ملف أدائه الوظيفي («أعمال فريق الثقافة المؤسسية»).</p>
+      </div>
+      {people.length === 0 ? <p className="text-sm text-muted">لم يُسجَّل عمل باسم أحد الأعضاء بعد.</p> : (
+        <div className="space-y-2">{people.map((p) => (
+          <div key={p.id} className="flex items-center gap-3">
+            <span className="w-32 shrink-0 truncate text-[12.5px] text-ink" title={p.name}>{p.name}{p.role === "ambassador" && <span className="text-[10.5px] text-muted"> · السفير</span>}</span>
+            <span className="flex h-3 flex-1 overflow-hidden rounded-pill bg-canvas">
+              <span className="flex h-full" style={{ width: `${(p.total / max) * 100}%` }}>
+                {Object.entries(WORK_KINDS).map(([k, w]) => p.by[k] ? <span key={k} title={`${w.t}: ${p.by[k]}`} style={{ flex: p.by[k], background: w.c }} /> : null)}
+              </span>
+            </span>
+            <span className="num w-8 shrink-0 text-end text-xs font-bold text-ink">{p.total}</span>
+          </div>))}</div>
+      )}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted">
+        {Object.values(WORK_KINDS).map((w) => <span key={w.t}><i className="me-1 inline-block h-2 w-2 rounded-full align-middle" style={{ background: w.c }} />{w.t}</span>)}
+      </div>
+    </section>
   );
 }
