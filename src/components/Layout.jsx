@@ -145,8 +145,7 @@ export const ADMIN_GROUPS = [
   {
     title: "الأداء الوظيفي",
     items: [
-      { to: "/performance",  label: "تقييم الأداء الوظيفي", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء" },
-      { to: "/staff-performance", label: "شواهد أداء الموظفين", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد أداء وكيل موجه محضر رائد نشاط" },
+      { to: "/staff-performance", label: "شواهد أداء الموظفين", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء معلم وكيل موجه محضر رائد نشاط" },
       { to: "/my-staff-performance", label: "شواهد أدائي الوظيفي", roles: ["deputy_academic", "deputy_school", "deputy_students", "counselor_1", "counselor_2", "counselor_3", "science_labs", "science_labs_2", "science_labs_3", "activity_leader"], icon: "award", kw: "شواهد تقييم أداء وكيل موجه محضر رائد" },
       { to: "/improve",      label: "خطط التطوير", icon: "target", kw: "حلقة التحسين توصيات متابعة أثر زيارة دعم" },
       { to: "/dfiles-admin", label: "ملفات المعلمين الرقمية", roles: ["tech_support", "principal", "deputy_academic", "deputy_students"], icon: "idcard", kw: "ملف رقمي إيقاف نقل تقاعد رمز" },

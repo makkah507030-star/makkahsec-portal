@@ -5,13 +5,15 @@ import { PERF_TRACKS, perfTrackOf } from "../../lib/performance";
 import PerformanceFile from "../../components/PerformanceFile.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useBackStep } from "../../lib/backStep.js";
+import PerformanceAdmin from "./PerformanceAdmin.jsx";
 
 /* =====================================================================
    شواهد الأداء الوظيفي للموظفين من غير المعلمين، بنظام ملف أداء المعلم نفسه وتصميمه
    (supabase/lab_perf_*.sql و staff_perf_*.sql): الوكلاء، والموجهون الطلابيون، ومحضرو مختبرات
    العلوم ومعمل الحاسب، ورائد النشاط — كلٌّ بنموذج وظيفته في الدليل الإرشادي لإدارة الأداء الوظيفي.
    • mine: صاحب الوظيفة يتابع شواهده ويرفعها (/my-staff-performance).
-   • وإلا: مدير المدرسة والدعم الفني يطّلعون على ملف كل موظف (/staff-performance).
+   • وإلا: مدير المدرسة والدعم الفني يتابعون من صفحة واحدة (/staff-performance): المعلمين بشواهدهم
+     وتقييمهم (PerformanceAdmin)، ثم ملف كل موظف بوظيفته.
    ===================================================================== */
 
 const WARN = (
@@ -24,6 +26,8 @@ const WARN = (
   </div>
 );
 const ORDER = ["deputy", "counselor", "activity", "science", "lab"];
+const TEACHER = { label: "المعلمون", form: "المعلم (1)" };
+const labelOf = (k) => (k === "teacher" ? TEACHER : PERF_TRACKS[k]);
 
 export default function StaffPerformance({ mine = false }) {
   const { session, profile, adminRoles } = useSession();
@@ -48,11 +52,13 @@ export default function StaffPerformance({ mine = false }) {
   return <StaffList />;
 }
 
-/* قائمة الموظفين بوظائفهم لمدير المدرسة والدعم الفني */
+/* قائمة المعلمين والموظفين بوظائفهم لمدير المدرسة والدعم الفني */
 function StaffList() {
   const [rows, setRows] = useState(null);
-  const [track, setTrack] = useState("deputy");
+  const [track, setTrack] = useState(() => { try { return sessionStorage.getItem("staffPerfTrack") || "teacher"; } catch { return "teacher"; } });
   const [picked, setPicked] = useState(null);
+  const [teacherOpen, setTeacherOpen] = useState(false);   // ملف معلم مفتوح داخل تبويب المعلمين
+  const pick = (k) => { setTrack(k); try { sessionStorage.setItem("staffPerfTrack", k); } catch { /* تجاهل */ } };
   useBackStep(!!picked, () => setPicked(null), "قائمة الموظفين");
 
   useEffect(() => {
@@ -63,6 +69,7 @@ function StaffList() {
 
   const list = useMemo(() => {
     const seen = new Set();
+    if (track === "teacher") return [];
     return (rows ?? []).filter((r) => PERF_TRACKS[track].roles.includes(r.role_type))
       .filter((r) => !seen.has(r.user_id) && seen.add(r.user_id))
       .sort((a, b) => PERF_TRACKS[track].roles.indexOf(a.role_type) - PERF_TRACKS[track].roles.indexOf(b.role_type));
@@ -79,23 +86,27 @@ function StaffList() {
   }
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-bold text-ink">شواهد أداء الموظفين</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
-          ملفات شواهد الوكلاء والموجهين الطلابيين ورائد النشاط ومحضري المختبرات، كلٌّ بنموذج وظيفته في الدليل الإرشادي
-          لإدارة الأداء الوظيفي. والمعلمون في «تقييم الأداء الوظيفي».
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {ORDER.map((k) => (
-          <button key={k} onClick={() => setTrack(k)}
-                  className={`rounded-pill px-3.5 py-1.5 text-[13px] font-semibold ${track === k ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`}>
-            {PERF_TRACKS[k].label}
-          </button>
-        ))}
-      </div>
-      <p className="text-xs text-muted">النموذج: {PERF_TRACKS[track].form} · الإصدار الثاني</p>
-      {rows === null ? <Loader /> : list.length === 0 ? (
+      {!teacherOpen && (
+        <>
+          <div>
+            <h1 className="text-lg font-bold text-ink">شواهد أداء الموظفين</h1>
+            <p className="mt-1 text-sm leading-relaxed text-muted">
+              متابعة الأداء الوظيفي من صفحة واحدة: المعلمون بشواهدهم وتقييمهم، والوكلاء والموجهون الطلابيون ورائد النشاط
+              ومحضرو المختبرات، كلٌّ بنموذج وظيفته في الدليل الإرشادي لإدارة الأداء الوظيفي.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {["teacher", ...ORDER].map((k) => (
+              <button key={k} onClick={() => pick(k)}
+                      className={`rounded-pill px-3.5 py-1.5 text-[13px] font-semibold ${track === k ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`}>
+                {labelOf(k).label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted">النموذج: {labelOf(track).form} · الإصدار الثاني</p>
+        </>
+      )}
+      {track === "teacher" ? <PerformanceAdmin embedded onOpen={setTeacherOpen} /> : rows === null ? <Loader /> : list.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-muted">لم تُسند هذه الوظيفة لأحد بعد.</p>
       ) : (
         <div className="card divide-y divide-line overflow-hidden">

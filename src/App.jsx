@@ -107,7 +107,6 @@ const MyOutreach = lazy(() => import("./pages/outreach/MyOutreach.jsx"));
 const DfilePublic = lazy(() => import("./pages/DfilePublic.jsx"));
 const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
 const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
-const PerformanceAdmin = lazy(() => import("./pages/performance/PerformanceAdmin.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
 const Legal = lazy(() => import("./pages/Legal.jsx"));
 const Qudrat = lazy(() => import("./pages/qudrat/Qudrat.jsx"));
@@ -438,7 +437,7 @@ export default function App() {
                 <Route path="/forms-admin" element={<FormsAdmin />} />
               )}
               {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة، وللدعم الفني للمتابعة الفنية */}
-              {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<PerformanceAdmin />} />}
+              {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<Navigate to="/staff-performance" replace />} />}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/staff-performance" element={<StaffPerformance />} />}
               {perfTrackOf(adminRoles) && <Route path="/my-staff-performance" element={<StaffPerformance mine />} />}
               {/* ملفات المعلمين الرقمية: إدارتها للدعم الفني، والاطلاع للمدير والوكيلين (teacher_dfile_9.sql) */}
