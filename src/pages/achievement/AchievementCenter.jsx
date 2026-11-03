@@ -21,6 +21,7 @@ import { buildFormRows, syncForms, setupMsg as formsSetup, isSetupErr } from "..
 import { FormsTab, DeputyReport } from "./FormsTab.jsx";
 import { AchGateSwitch } from "./AchGate.jsx";
 import { DistStrip, HBars, Histogram, Heat, Stat, pctTxt, useTip as useTipLocal } from "./Charts.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 
 const TABS = [
@@ -59,13 +60,13 @@ export default function AchievementCenter() {
 
   useEffect(() => {
     loadNoticeKeys().then(({ year: y, keys: k }) => { setYear(y); setKeys(k); setKey(k[0]?.key ?? ""); })
-      .catch((e) => { setErr(e.message); setKeys([]); });
+      .catch((e) => { setErr(friendlyError(e.message)); setKeys([]); });
   }, []);
   useEffect(() => {
     if (!key) return;
     setData(null);
     const load = (k) => cache.current.get(k) ?? cache.current.set(k, loadAchievement(year, k)).get(k);
-    load(key).then(setData).catch((e) => setErr(e.message));
+    load(key).then(setData).catch((e) => setErr(friendlyError(e.message)));
   }, [key, year]);
 
   // الفصل الدراسي، وأقسامه الرئيسية: الفترة الأولى والثانية والاختبار النهائي

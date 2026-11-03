@@ -15,6 +15,7 @@ import PrintPortal from "../../components/PrintPortal.jsx";
 import { printThen } from "../../lib/print.js";
 import moeLogo from "../../assets/moe-logo.png";
 import logoIcon from "../../assets/icon-mint.png";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    محاضر لجنة التميز (supabase/acc_3.sql، acc_8.sql) بصيغة «محضر اجتماع» الرسمية في البوابة:
@@ -127,7 +128,7 @@ function Row({ m, open, onToggle, members, coord, uid, me, isPrincipal, ready, s
     setBusy(true);
     const { error } = await fn();
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return false; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return false; }
     if (ok) setMsg({ ok: true, text: ok });
     reload(); return true;
   };
@@ -144,7 +145,7 @@ function Row({ m, open, onToggle, members, coord, uid, me, isPrincipal, ready, s
   };
   const back = async () => {
     if (signs.length && !(await confirmDanger({ title: "إعادة المحضر للتعديل", impact: [`تُمسح التوقيعات (${signs.length}) ويُعاد إرساله بعد التعديل.`], confirmLabel: "إعادة للتعديل" }))) return;
-    if (signs.length) { const { error } = await supabase.from("acc_meeting_signs").delete().eq("meeting_id", m.id); if (error) { setMsg({ ok: false, text: error.message }); return; } }
+    if (signs.length) { const { error } = await supabase.from("acc_meeting_signs").delete().eq("meeting_id", m.id); if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; } }
     run(() => upd({ status: "draft", sent_at: null, approved_at: null, approved_name: null }), "أُعيد المحضر مسودة.");
   };
   const sign = () => run(() => supabase.from("acc_meeting_signs").insert({ meeting_id: m.id, user_id: uid, name: members.find((x) => x.user_id === uid)?.full_name ?? null }), "وقّعت على المحضر.");
@@ -340,7 +341,7 @@ function Editor({ m, members, year, by, onDone, setMsg }) {
     const { error } = x.id ? await supabase.from("acc_meetings").update(row).eq("id", x.id)
       : await supabase.from("acc_meetings").insert({ ...row, academic_year: year, created_by_name: by ?? null });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     onDone(true);
   };
   return (

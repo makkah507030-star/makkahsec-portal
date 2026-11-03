@@ -17,6 +17,7 @@ import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
 import { signatureByName, useSignatureByName } from "../lib/userSignatures.js";
 import { STUDENT_DEPUTY_NAME } from "../lib/signers.js";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    الطلاب المنقطعون (supabase/student_dropouts_1.sql و _2.sql):
@@ -169,7 +170,7 @@ function ReportForm({ isManager, onDone }) {
   const pickClass = async (c) => {
     setCls(c); setStudent(null); setStudents(null);
     const { data, error } = await supabase.rpc("dropout_class_students", { p_class: c.class_id });
-    if (error) { setMsg({ ok: false, text: error.message }); setStudents([]); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); setStudents([]); return; }
     // الأطول غيابًا أولًا، ثم أبجديًا
     setStudents((data ?? []).sort((a, b) => (b.absent_days ?? 0) - (a.absent_days ?? 0) || byName()(a, b)));
   };
@@ -182,7 +183,7 @@ function ReportForm({ isManager, onDone }) {
     setBusy(true);
     const { error } = await supabase.rpc("dropout_report", { p_student: student.student_id, p_reason: reason, p_note: note });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `أُرسل البلاغ عن ${student.full_name} لوكيل شؤون الطلاب.` });
     setStudent(null); setReason(""); setNote("");
     onDone?.();
@@ -341,7 +342,7 @@ function Card({ r, manage, onChange, onPrint }) {
       ? await supabase.rpc("dropout_return", { p_id: r.id, p_note: note })
       : await supabase.rpc("dropout_decide", { p_id: r.id, p_action: act, p_note: note });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: act === "withdraw" ? "طُوي قيد الطالب وأُلغي تفعيله." : act === "return" ? "أُعيد الطالب للدراسة وعاد لكشف فصله." : "رُدّ البلاغ." });
     setAct(null); setNote("");
     onChange?.();

@@ -19,6 +19,7 @@ import { ACH_ALL, useAchMember, stats, groupBy } from "../../lib/achievement";
 import Loader from "../../components/Loader.jsx";
 import { DistStrip, HBars, Stat, pctTxt } from "./Charts.jsx";
 import { NAT_TESTS, NAT_BANDS, natSeries, signed } from "../../lib/accNational.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const TESTS = [
   { k: "qudrat", t: "القدرات العامة", d: "اختبار القدرات العامة (اللفظي والكمي)" },
@@ -136,7 +137,7 @@ function Pending({ rows, stu, canWrite, onChange, setMsg }) {
     setBusy(r.id);
     const { error } = await supabase.rpc("qiyas_verify", { p_id: r.id, p_ok: ok, p_reason: reason[r.id] ?? "" });
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     onChange();
   };
   return (

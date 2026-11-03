@@ -10,6 +10,7 @@ import { LEVELS, STATUS, isSetupErr, setupMsg } from "../lib/guidanceInquiry";
 import Sticker from "../components/Sticker.jsx";
 import InquirySheet, { InquiryPrintArea } from "../components/InquirySheet.jsx";
 import Loader from "../components/Loader.jsx";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    استمارة توضيح مستوى الطالب — صفحة واحدة لكل أطرافها بحسب دوره:
@@ -78,7 +79,7 @@ export default function GuidanceInquiry() {
     setBusy(true); setMsg(null);
     const { error } = await fn();
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: ok });
     refreshNavBadges(true);
     load();
@@ -112,7 +113,7 @@ export default function GuidanceInquiry() {
   const remove = async () => {
     if (!(await confirmDanger({ title: "إلغاء الاستمارة وحذفها؟", impact: ["تُحذف معها تعبئة المعلمين."], level: "high", confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("guidance_inquiries").delete().eq("id", id);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     refreshNavBadges(true);
     navigate("/guidance?tab=inquiry");
   };

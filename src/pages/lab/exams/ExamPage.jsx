@@ -16,6 +16,7 @@ import { buildLabFile, downloadText } from "../labFile.js";
 import { ExamQuestion } from "./ExamBank.jsx";
 import ExamRecord from "./ExamRecord.jsx";
 import { TaskCardsPrint } from "./ExamPrint.jsx";
+import { friendlyError } from "../../../lib/friendlyError.js";
 
 // صور الأسئلة: لا صور في بنك المعمل، وكائن ثابت لأن الورقة تعيد القياس كلما تغيّر
 const NO_IMAGES = {};
@@ -33,7 +34,7 @@ export default function ExamPage({ exam: initial, onBack, onDeleted }) {
   const remove = async () => {
     if (!(await confirmDanger({ title: `حذف «${exam.title}»`, impact: ["تُحذف نتائج الطلاب في هذا الاختبار. الدرجات المنقولة إلى سجل التطبيقات تبقى فيه، وتُحذف من هناك إن أردت."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("lab_exams").delete().eq("id", exam.id);
-    if (error) notify({ ok: false, text: error.message }); else onDeleted();
+    if (error) notify({ ok: false, text: friendlyError(error.message) }); else onDeleted();
   };
 
   return (

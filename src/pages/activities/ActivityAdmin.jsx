@@ -10,6 +10,7 @@ import Loader from "../../components/Loader.jsx";
 import { activeYear } from "../../lib/performance.js";
 import { Cover, CardView } from "./ActivityBank.jsx";
 import ActivityReport from "./ActivityReport.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const EMPTY = { kind: "waiting", section: "games", title: "", summary: "", duration_min: 45, goals: "", materials: "",
   steps: [{ min: 5, text: "" }], grades: [], subject: "", video_url: "", cover_path: null, images: [], game: "", game_data: null, published: true, emoji: "" };
@@ -299,7 +300,7 @@ function Editor({ init, onClose }) {
     setBusy(true); setErr("");
     const { error } = f.id ? await supabase.from("activity_cards").update(row).eq("id", f.id) : await supabase.from("activity_cards").insert(row);
     setBusy(false);
-    if (error) setErr(error.message); else onClose(true);
+    if (error) setErr(friendlyError(error.message)); else onClose(true);
   };
 
   return (

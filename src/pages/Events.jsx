@@ -26,6 +26,7 @@ import { AUDIENCE, GRADES, audienceOf, audienceLabel, audienceTitle, scopeOf, sc
 import { useScoutLeader, issuesAsScout } from "../lib/scoutLeader.js";
 
 import { useCultMode } from "../lib/cultMode.js";
+import { friendlyError } from "../lib/friendlyError.js";
 const CULT_AMB_ROLE = "سفير الثقافة المؤسسية";
 
 /* صفة المعلم أو الإداري في كشف الحضور وشهادته: «معلم الرياضيات» بتخصصه، والإداري بمسمّى دوره */
@@ -296,7 +297,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
     }).select("id").single();
 
     setBusy(false);
-    if (error) { onDone(null, { ok: false, text: error.message }); return; }
+    if (error) { onDone(null, { ok: false, text: friendlyError(error.message) }); return; }
     onDone(data.id, { ok: true, text: f.audience.length
       ? `أُنشئ الحدث ${serial} ${f.audience.some((k) => k === "students" || k === "guardians") ? `حدثًا عامًا ${scopePlace(f.scope)}` : "حدثًا عامًا"}. أضف المكرَّمين بالاسم إن وُجدوا، ثم تابع.`
       : `أُنشئ الحدث ${serial}. انتقل لاختيار الطلاب.` });
@@ -453,7 +454,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
 
   const patch = async (fields, okText) => {
     const { error } = await supabase.from("school_events").update(fields).eq("id", e.id);
-    if (error) { onMsg({ ok: false, text: error.message }); return false; }
+    if (error) { onMsg({ ok: false, text: friendlyError(error.message) }); return false; }
     setE((x) => ({ ...x, ...fields }));
     if (okText) onMsg({ ok: true, text: okText });
     return true;
@@ -1331,7 +1332,7 @@ function StagePermission({ e, parts, uid, reload, onNext }) {
       created_by: uid,
     }).select("id").single();
 
-    if (error) { setDoneMsg({ ok: false, text: error.message }); setBusy(false); return; }
+    if (error) { setDoneMsg({ ok: false, text: friendlyError(error.message) }); setBusy(false); return; }
 
     const rows = approved.map((p) => ({ request_id: newReq.id, student_id: p.student_id }));
     const { error: e2 } = await supabase.from("permission_request_students").insert(rows);
@@ -1606,7 +1607,7 @@ function StaffAttendance({ e, patch }) {
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.rpc("ev_audience_members", { p_event: e.id, p_kinds: kinds });
-      if (error) { setErr(error.message); setMembers([]); return; }
+      if (error) { setErr(friendlyError(error.message)); setMembers([]); return; }
       setMembers((data ?? []).map((m) => ({
         key: m.key, name: m.full_name, kind: m.kind,
         role: staffRoleOf(m),

@@ -27,6 +27,7 @@ import GlobeChart from "../globe/GlobeChart.jsx";
 import ProgramCards from "../studio/ProgramCards.jsx";
 import { GLOBE_MEMBER_ROLES, memberRole, ALL_PROTOCOLS } from "../../lib/globe.js";
 import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    طلاب برنامج جلوب البيئي العالمي (supabase/globe_1.sql و globe_3.sql):
@@ -137,7 +138,7 @@ export default function GlobeTeam() {
     const { error } = await supabase.from("globe_members")
       .insert({ student_id: s.id, added_by_name: profile?.full_name ?? null });
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `أُضيف ${s.full_name} إلى البرنامج.` });
     load();
   };
@@ -151,7 +152,7 @@ export default function GlobeTeam() {
     setBusy(m.id);
     const { error } = await supabase.from("globe_members").delete().eq("student_id", m.id);
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `حُذف ${m.full_name} من البرنامج.` });
     load();
   };
@@ -164,7 +165,7 @@ export default function GlobeTeam() {
     setBusy(m.id);
     const { error } = await supabase.from("globe_members").update({ student_mobile: mobile }).eq("student_id", m.id);
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMobEdit(null);
     setMsg({ ok: true, text: mobile ? `حُفظ جوال ${m.full_name}.` : `حُذف جوال ${m.full_name}.` });
     load();

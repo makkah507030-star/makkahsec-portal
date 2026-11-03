@@ -10,6 +10,7 @@ import { printReport, escHtml as e, PRINCIPAL_NAME } from "../../lib/exportUtils
 import { logos } from "../student-affairs/shared.jsx";
 import Loader from "../../components/Loader.jsx";
 import { MAWHIBA, STATUS, FLOW, PAY, reached, waText, span } from "../../lib/gifted.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    متابعة مقياس موهبة لطلاب الأول الثانوي (supabase/gifted_1.sql): حالة كل طالب من
@@ -93,7 +94,7 @@ export default function MawhibaTracker() {
                ...patch, updated_by_name: profile?.full_name ?? null, updated_at: new Date().toISOString() };
     }), { onConflict: "student_id,academic_year" });
     setBusy(false);
-    if (error) { setErr(error.message); return false; }
+    if (error) { setErr(friendlyError(error.message)); return false; }
     await load(); return true;
   };
 

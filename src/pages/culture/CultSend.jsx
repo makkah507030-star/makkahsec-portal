@@ -12,6 +12,7 @@ import { fmtDate } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import { ACTIONS, PERSON_ACTIONS, PROGRAMS, cardInit, setupMsg } from "../../lib/culture.js";
 import { CardMaker, SendPreview } from "./CultCard.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 export default function CultSend({ me, go }) {
   const [log, setLog] = useState(null);
@@ -54,7 +55,7 @@ export default function CultSend({ me, go }) {
   const remove = async (r) => {
     if (!(await confirmDanger({ title: `حذف «${r.title}» من السجل`, impact: ["يُحذف من سجل البرنامج والتقرير والشواهد، ولا يُسترجع الإشعار المرسل."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("cult_messages").delete().eq("id", r.id);
-    if (error) setMsg({ ok: false, text: error.message }); else load();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else load();
   };
 
   const list = useMemo(() => (log ?? []).filter((r) => prog === "all" || r.program === prog), [log, prog]);

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   pushSupported, pushState, enablePush, disablePush, isIosNeedsInstall,
 } from "../lib/push";
+import { friendlyError } from "../lib/friendlyError.js";
 
 // بطاقة تفعيل إشعارات الجوال — يضعها التخطيط في حساب المستخدم.
 // تظهر فقط عند دعم المتصفّح، وترشد مستخدم الآيفون لتثبيت البوابة أولًا.
@@ -19,7 +20,7 @@ export default function EnableNotifications() {
   const on = async () => {
     setErr(""); setBusy(true);
     try { await enablePush(); await refresh(); }
-    catch (e) { setErr(e.message || "تعذّر تفعيل الإشعارات."); }
+    catch (e) { setErr(friendlyError(e.message) || "تعذّر تفعيل الإشعارات."); }
     finally { setBusy(false); }
   };
   const off = async () => {

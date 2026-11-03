@@ -6,6 +6,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const SEASONS = [
   { key: "summer", label: "التوقيت الصيفي" },
@@ -97,7 +98,7 @@ function TimesEditor({ season, label, rows, isActive, otherSeasons, onDone, onCa
         : await supabase.from("period_times").insert(payload(r)));
     }
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     clearPeriodTimesCache();
     setMsg({ ok: true, text: `حُفظ جدول «${label}».` });
     onDone();
@@ -229,7 +230,7 @@ export default function SeasonSwitch() {
     if (!ok) return;
     const { error } = await supabase
       .from("settings").upsert({ key: "active_season", value: s }, { onConflict: "key" });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     clearPeriodTimesCache();
     setSeason(s);
     setMsg({ ok: true, text: "حُدِّث التوقيت الفعّال." });
@@ -245,7 +246,7 @@ export default function SeasonSwitch() {
     if (!ok) return;
     const { error } = await supabase
       .from("settings").upsert({ key: "late_grace_minutes", value: v }, { onConflict: "key" });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setGrace(v);
     setMsg({ ok: true, text: "حُفظت مهلة السماح." });
   };

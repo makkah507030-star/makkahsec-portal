@@ -19,6 +19,7 @@ import {
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import { referToGradeCounselor, classLabelOf } from "../../lib/deputyReferral.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const STAGE = Object.fromEntries(WARNING_STAGES.map((s) => [s.key, s]));
 const WATCH_AT = 5;
@@ -130,7 +131,7 @@ export default function Warnings() {
       await record(s, stage);
       await printMinutes(s, stage, { from, to, done: s.done, issuedOn: todayISO() });
       setTick((t) => t + 1);
-    } catch (e) { setMsg(e.message ?? String(e)); }
+    } catch (e) { setMsg(friendlyError(e)); }
   };
 
   // التحويل للموجه الطلابي لدراسة الحالة: إحالة لموجه صف الطالب، ومحضر الوكيل يُطبع فورًا
@@ -153,7 +154,7 @@ export default function Warnings() {
       });
       await printMinutesMany([{ s, stage: "counselor", from, to, done: s.done, issuedOn: todayISO(), counselor: counselor.name }]);
       setTick((t) => t + 1);
-    } catch (e) { setMsg(e.message ?? String(e)); }
+    } catch (e) { setMsg(friendlyError(e)); }
   };
 
   /* ---------- الطباعة الجماعية للطلاب المحددين ---------- */
@@ -307,7 +308,7 @@ export default function Warnings() {
                   onPaper={async (stage, date, note) => {
                     setMsg(null);
                     try { await record(s, stage, { source: "paper", issuedOn: date, note }); setTick((t) => t + 1); }
-                    catch (e) { setMsg(e.message ?? String(e)); }
+                    catch (e) { setMsg(friendlyError(e)); }
                   }}
                   onReprint={(w) => printMinutes(s, w.stage, { from, to, done: s.done, issuedOn: w.issued_on })}
                   referral={refs[s.student_id]}

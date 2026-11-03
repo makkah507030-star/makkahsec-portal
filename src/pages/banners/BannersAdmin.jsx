@@ -7,6 +7,7 @@ import { fmtGreg } from "../../lib/dates";
 import { BANNER_BUCKET, BANNER_KIND, AUDIENCE, LINK_PAGES, BANNER_W, BANNER_H, checkBanner, isExternal, bannersSetupMsg } from "../../lib/banners.js";
 import { Banner } from "../../components/HomeBanners.jsx";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    إعلانات الرئيسية — إدارة البطاقات المصوّرة أعلى رئيسية الطالب وولي الأمر (والموظفين):
@@ -90,7 +91,7 @@ export default function BannersAdmin() {
       ? await supabase.from("home_banners").update(row).eq("id", edit.id)
       : await supabase.from("home_banners").insert(row);
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     if (file && edit.image_path && edit.image_path !== image_path) supabase.storage.from(BANNER_BUCKET).remove([edit.image_path]);
     setEdit(null); setMsg({ ok: true, text: "حُفظ الإعلان." }); load();
   };

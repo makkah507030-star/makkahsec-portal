@@ -13,6 +13,7 @@ import PrintPortal from "../components/PrintPortal.jsx";
 import { printThen } from "../lib/print.js";
 import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    ملاحظات الطلاب — يكتب كل أنواعها الموجه الصحي والموجهون الطلابيون،
@@ -70,7 +71,7 @@ export default function StudentNotes() {
           .insert({ ...row, student_id: form.student.student_id, created_by: session?.user?.id, created_by_name: myName,
                     updated_by_name: myName });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: editing ? "حُدّثت الملاحظة." : "أُضيفت الملاحظة، وتظهر لمعلمي الطالب في كشف التحضير." });
     reset();
     load();
@@ -89,13 +90,13 @@ export default function StudentNotes() {
   const toggle = async (n) => {
     const { error } = await supabase.from("student_notes")
       .update({ is_active: !n.is_active, updated_by_name: myName, updated_at: new Date().toISOString() }).eq("id", n.id);
-    if (error) setMsg({ ok: false, text: error.message }); else load();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else load();
   };
 
   const remove = async (n) => {
     if (!window.confirm(`حذف ملاحظة ${n.students?.full_name ?? "الطالب"} نهائيًا؟ يمكنك إيقافها بدل حذفها.`)) return;
     const { error } = await supabase.from("student_notes").delete().eq("id", n.id);
-    if (error) setMsg({ ok: false, text: error.message }); else load();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else load();
   };
 
   if (!kinds.length) {

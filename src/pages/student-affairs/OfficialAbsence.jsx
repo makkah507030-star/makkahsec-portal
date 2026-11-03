@@ -16,6 +16,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { countAr } from "../../lib/arabicCount.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const TONE = {
   present: "bg-present/10 text-present",
@@ -118,7 +119,7 @@ export default function OfficialAbsence({ initialDate }) {
   const run = async (fn, okText) => {
     setBusy(true); setMsg(null);
     try { await fn(); setMsg({ ok: true, text: okText }); reload(); }
-    catch (e) { setMsg({ ok: false, text: e.message ?? String(e) }); }
+    catch (e) { setMsg({ ok: false, text: friendlyError(e) }); }
     finally { setBusy(false); }
   };
 

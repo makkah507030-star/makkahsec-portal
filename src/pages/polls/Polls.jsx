@@ -6,6 +6,7 @@ import { loadMyPolls, isOpen, pollState, POLL_KIND } from "../../lib/polls.js";
 import Loader from "../../components/Loader.jsx";
 import { useSession } from "../../lib/session.jsx";
 import PollResults, { usePollResults } from "./PollResults.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    التصويت والاستطلاعات لكل الفئات (supabase/polls_1..2.sql): ما فُتح لفئة المستخدم وصفّه،
@@ -63,7 +64,7 @@ function PollCard({ p, onVoted }) {
     setBusy(true); setMsg("");
     const { error } = await supabase.rpc("poll_vote", { p_poll: p.id, p_options: sel });
     setBusy(false);
-    if (error) { setMsg(error.message); return; }
+    if (error) { setMsg(friendlyError(error.message)); return; }
     onVoted?.();
   };
 

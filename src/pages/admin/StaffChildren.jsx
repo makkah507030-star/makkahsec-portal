@@ -7,6 +7,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 export default function StaffChildren() {
   const [list, setList] = useState(null);
@@ -65,7 +66,7 @@ export default function StaffChildren() {
     setBusy(true); setMsg(""); setErr("");
     const { data, error } = await supabase.rpc("staff_link_children", { p_guardian: guardian.id, p_staff: member.id });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setMsg(`رُبط الأبناء بحساب ${member.full_name} (عددهم: ${data?.children ?? "—"}). تظهر له «أبنائي» عند دخوله التالي.`);
     reset(); load();
   };
@@ -73,7 +74,7 @@ export default function StaffChildren() {
   const unlink = async (r) => {
     if (!window.confirm(`فك ربط أبناء «${r.staff_name}»؟ تختفي واجهة «أبنائي» من حسابه، ويعود سجل ولي الأمر بلا حساب.`)) return;
     const { error } = await supabase.rpc("staff_unlink_children", { p_guardian: r.guardian_id });
-    if (error) setErr(error.message); else { setMsg("فُك الربط."); load(); }
+    if (error) setErr(friendlyError(error.message)); else { setMsg("فُك الربط."); load(); }
   };
 
   const Pick = ({ items, label, onPick }) => items.length > 0 && (

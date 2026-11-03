@@ -10,6 +10,7 @@ import SignatureCleaner from "../../components/SignatureCleaner.jsx";
 import {
   ALWAYS_ROLES, GENERAL_ROLES, specificRoles, roleLabel, suggestRoles,
 } from "../../lib/formRoles";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    إدارة النماذج — للدعم الفني ومدير المدرسة:
@@ -227,7 +228,7 @@ export default function FormsAdmin() {
     setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, ...changes } : r)));
     const { error } = await supabase.from("form_templates")
       .update({ ...changes, updated_at: new Date().toISOString() }).eq("id", row.id);
-    if (error) { setMsg({ ok: false, text: error.message }); load(); }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); load(); }
     else setMsg({ ok: true, text: "حُفظ التعديل." });
   };
 
@@ -245,7 +246,7 @@ export default function FormsAdmin() {
     const { error } = await supabase.from("school_assets")
       .update({ label: principalName, updated_at: new Date().toISOString() })
       .eq("key", "principal_signature");
-    setMsg(error ? { ok: false, text: error.message } : { ok: true, text: "حُفظ اسم المدير." });
+    setMsg(error ? { ok: false, text: friendlyError(error.message) } : { ok: true, text: "حُفظ اسم المدير." });
   };
 
   const savePresets = async (row, text) => {
@@ -288,7 +289,7 @@ export default function FormsAdmin() {
       is_active: true,
       sort_order: 100,
     });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setAdding(false); setNf(null);
     setMsg({ ok: true, text: "أُضيف النموذج." });
     load();
@@ -314,7 +315,7 @@ export default function FormsAdmin() {
     const { error } = await supabase.from("school_assets")
       .upsert({ key, path, updated_at: new Date().toISOString(), updated_by: session.user.id },
               { onConflict: "key" });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     // ملف قديم بصيغة أخرى لم يعد مستخدمًا
     if (assets[key] && assets[key] !== path) await supabase.storage.from("form-assets").remove([assets[key]]);
     setMsg({ ok: true, text: "حُفظ الملف." });

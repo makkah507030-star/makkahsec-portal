@@ -5,6 +5,7 @@ import { fmtDateTime } from "../lib/dates";
 import { GRADE_NAMES } from "../lib/schoolTime";
 import Loader from "../components/Loader.jsx";
 import { EXCUSE_KIND, EXCUSE_STATUS, EXCUSE_BUCKET, dayLabel, deciderText, openExcuseFile, caseOf, REPLY_CARDS, fillReply, ExcuseGuide, CasePicker } from "../components/AbsenceExcuse.jsx";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    أعذار الغياب — لوكيل شؤون الطلاب والمساعدَين الإداريَّين 1 و2 (ومعهم المدير والدعم الفني):
@@ -79,7 +80,7 @@ function ManualExcuse({ onDone }) {
       p_file_path: path, p_file_name: file?.name ?? null,
     });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     onDone(`سُجّل عذر ${st.full_name} يدويًا${data ? `، وصار غياب ${data === 1 ? "يوم" : `${data} أيام`} معتمد «غائب بعذر»` : ""}.`);
   };
 
@@ -165,7 +166,7 @@ export default function AbsenceExcuses() {
     setBusy(r.id); setMsg(null);
     const { data, error } = await supabase.rpc("absence_excuse_decide", { p_id: r.id, p_accept: accept, p_note: n || null });
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: accept
       ? `قُبل عذر ${r.students?.full_name ?? ""}${data ? `، وصار غياب ${data === 1 ? "يوم" : `${data} أيام`} معتمد «غائب بعذر»` : ""}.`
       : `لم يُقبل عذر ${r.students?.full_name ?? ""}، ووصل السبب إلى المستفيد.` });
@@ -211,7 +212,7 @@ export default function AbsenceExcuses() {
                 {caseOf(r.case_key)?.proof && <p className="text-xs text-muted">الإثبات المطلوب: <b className="text-ink">{caseOf(r.case_key).proof}</b>{caseOf(r.case_key).note && ` · ${caseOf(r.case_key).note}`}</p>}
                 {r.file_path && (
                   <button className="text-xs font-semibold text-mint-deep underline"
-                          onClick={() => openExcuseFile(r.file_path).catch((e) => setMsg({ ok: false, text: e.message }))}>
+                          onClick={() => openExcuseFile(r.file_path).catch((e) => setMsg({ ok: false, text: friendlyError(e.message) }))}>
                     فتح المرفق{r.file_name ? ` (${r.file_name})` : ""} ↗
                   </button>
                 )}

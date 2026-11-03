@@ -10,6 +10,7 @@ import { printReport, escHtml as e, PRINCIPAL_NAME } from "../../lib/exportUtils
 import { logos } from "../student-affairs/shared.jsx";
 import Loader from "../../components/Loader.jsx";
 import { GIFTED_DOMAINS, SOURCE, domainOf } from "../../lib/gifted.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    الطلاب الموهوبون (supabase/gifted_2.sql) من كل الصفوف: من اكتُشف في مقياس موهبة
@@ -73,7 +74,7 @@ export default function GiftedMembers() {
     setBusy(s.id);
     const { error } = await supabase.from("gifted_members").insert({ student_id: s.id, source: "school", added_by_name: profile?.full_name ?? null });
     setBusy(null);
-    if (error) setErr(error.message); else load();
+    if (error) setErr(friendlyError(error.message)); else load();
   };
   const remove = async (m) => {
     if (!(await confirmDanger({ title: `حذف ${m.full_name} من الطلاب الموهوبين`, impact: ["يُحذف من الكشف ويزول وسم «موهوب» من بطاقته.", "لا تتأثر متابعة مقياس موهبة."], confirmLabel: "حذف" }))) return;
@@ -85,7 +86,7 @@ export default function GiftedMembers() {
     setBusy(edit.id);
     const { error } = await supabase.from("gifted_members").update({ domains: edit.domains, student_mobile: mobile, note: edit.note.trim() || null }).eq("student_id", edit.id);
     setBusy(null);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setEdit(null); setErr(""); load();
   };
   const print = () => {

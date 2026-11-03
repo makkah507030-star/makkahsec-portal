@@ -17,6 +17,7 @@ import { usePrincipalSignature } from "../../lib/principalSignature.js";
 import { PRINCIPAL_NAME } from "../../lib/signers.js";
 import { cleanMobile } from "../../lib/importer";
 import Fleur from "../../components/Fleur.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    الفريق الكشفي (supabase/scouts_1.sql):
@@ -122,7 +123,7 @@ export default function ScoutTeam({ embedded = false }) {
     const { error } = await supabase.from("scout_members")
       .insert({ student_id: s.id, added_by_name: profile?.full_name ?? null });
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `أُضيف ${s.full_name} إلى الفريق.` });
     load();
   };
@@ -136,7 +137,7 @@ export default function ScoutTeam({ embedded = false }) {
     setBusy(m.id);
     const { error } = await supabase.from("scout_members").delete().eq("student_id", m.id);
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `حُذف ${m.full_name} من الفريق.` });
     load();
   };

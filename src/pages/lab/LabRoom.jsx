@@ -12,6 +12,7 @@ import { pinHash } from "../../lib/labSign.js";
 import { LESSONS, lessonById, LESSON_GROUPS } from "../../lab-content/index.js";
 import LessonPresenter from "./lessons/LessonPresenter.jsx";
 import { buildLabFile, downloadText } from "./labFile.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const dateText = (ts) => new Date(ts).toLocaleDateString("ar-SA-u-ca-gregory-nu-latn", { day: "numeric", month: "long", year: "numeric" });
 
@@ -97,7 +98,7 @@ export function RoomOpen({ lab, onClose }) {
     setBusy(true); setErr("");
     const { data, error } = await supabase.rpc("lab_room_open", { p_lab: lab, p_class: classId, p_lesson: lessonId, p_title: lesson.lesson.title });
     setBusy(false);
-    if (error) setErr(error.message); else setRoom(data);
+    if (error) setErr(friendlyError(error.message)); else setRoom(data);
   };
 
   const badge = room && (

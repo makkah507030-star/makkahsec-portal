@@ -7,6 +7,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import QuizCardsCleanup from "../../components/QuizCardsCleanup.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 export default function MaintenanceAdmin() {
   const { profile, adminRoles } = useSession();
@@ -64,7 +65,7 @@ export default function MaintenanceAdmin() {
       })
       .eq("id", 1);
     setSaving(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: next ? "تم تفعيل وضع الصيانة — البوابة محجوبة الآن عن جميع المستخدمين ما عداك." : "تم إلغاء وضع الصيانة — البوابة متاحة الآن للجميع." });
     await load();
   };
@@ -81,7 +82,7 @@ export default function MaintenanceAdmin() {
       })
       .eq("id", 1);
     setSaving(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: "تم تحديث نص الرسالة." });
     await load();
   };

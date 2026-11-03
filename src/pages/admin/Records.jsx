@@ -10,6 +10,7 @@ import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
 import { byName } from "../../lib/sortAr.js";
 import StaffChildren from "./StaffChildren.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const TRACK_LABEL = { common_year: "السنة المشتركة", general_track: "المسار العام" };
 const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
@@ -294,7 +295,7 @@ function StudentsTab({ year, yearLabel }) {
       setEditingId(null);
       await load();
     } catch (e) {
-      setErr(e.message ?? String(e));
+      setErr(friendlyError(e));
     } finally {
       setBusy(false);
     }
@@ -693,7 +694,7 @@ function TeachersTab() {
       setEditingId(null);
       await load();
     } catch (e) {
-      setErr(e.message ?? String(e));
+      setErr(friendlyError(e));
     } finally {
       setBusy(false);
     }
@@ -897,7 +898,7 @@ function GuardiansTab() {
       setEditingId(null);
       await load();
     } catch (e) {
-      setErr(e.message ?? String(e));
+      setErr(friendlyError(e));
     } finally {
       setBusy(false);
     }

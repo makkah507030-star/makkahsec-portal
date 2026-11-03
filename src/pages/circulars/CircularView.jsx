@@ -23,6 +23,7 @@ import { Audience, emptyAudience, audienceEmpty, audienceText, sendAudience } fr
 import {
   CIRC_BUCKET, DIRECTION, PRIORITY, recStatus, circStats, circNo, openCircularFile, setupMsg, isSetupErr,
 } from "../../lib/circulars.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const chip = (on) => `rounded-pill border px-3 py-1 text-xs transition-colors ${
   on ? "border-mint-deep bg-mint-tint text-mint-deep" : "border-line bg-white text-muted hover:bg-canvas"}`;
@@ -89,7 +90,7 @@ export default function CircularView() {
 
   const ack = async () => {
     const { error } = await supabase.rpc("circular_mark", { p_id: id, p_ack: true });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMine((m) => ({ ...m, ack_at: new Date().toISOString() }));
     refreshNavBadges(true);
   };
@@ -124,7 +125,7 @@ export default function CircularView() {
           </div>
         )}
         {c.file_path && (
-          <button className="btn-ghost" onClick={() => openCircularFile(c.file_path).catch((e) => setMsg({ ok: false, text: e.message }))}>
+          <button className="btn-ghost" onClick={() => openCircularFile(c.file_path).catch((e) => setMsg({ ok: false, text: friendlyError(e.message) }))}>
             فتح ملف التعميم {c.file_name ? <span className="text-[11px] text-muted">({c.file_name})</span> : null}
           </button>
         )}
@@ -165,7 +166,7 @@ function Tracking({ c, recs, onChange, setMsg }) {
     setBusy(true);
     const { data, error } = await supabase.rpc("circular_remind", { p_id: c.id });
     setBusy(false);
-    setMsg(error ? { ok: false, text: error.message } : { ok: true, text: `أُرسل التذكير إلى ${countAr(data, "person", { acc: true })}.` });
+    setMsg(error ? { ok: false, text: friendlyError(error.message) } : { ok: true, text: `أُرسل التذكير إلى ${countAr(data, "person", { acc: true })}.` });
     onChange();
   };
   const add = async () => {
@@ -173,7 +174,7 @@ function Tracking({ c, recs, onChange, setMsg }) {
     setBusy(true);
     const { data, error } = await sendAudience(c.id, aud);
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: data ? `أُضيف ${countAr(data, "person")} ووصلهم الإشعار.` : "لا جديد: كلهم مستفيدون من قبل." });
     if (data) await supabase.from("circulars").update({ audience: { text: [c.audience?.text, audienceText(aud)].filter(Boolean).join(" + ") } }).eq("id", c.id);
     setAdding(false); setAud(emptyAudience()); onChange();
@@ -187,7 +188,7 @@ function Tracking({ c, recs, onChange, setMsg }) {
       impact: ["يُحذف التعميم وملفه وسجل الاطلاع عليه نهائيًا، ويختفي عند كل المستفيدين."], confirmLabel: "حذف" }))) return;
     if (c.file_path) await supabase.storage.from(CIRC_BUCKET).remove([c.file_path]);
     const { error } = await supabase.from("circulars").delete().eq("id", c.id);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     navigate("/circulars");
   };
 

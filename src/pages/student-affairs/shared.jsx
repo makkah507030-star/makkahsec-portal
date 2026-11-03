@@ -5,6 +5,7 @@ import { loadDay, loadApproval, loadFingerprintEnabled } from "../../lib/officia
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 // getter: الاسم يُقرأ وقت الطباعة، بعد جلب الأسماء من الإعدادات
 export const SIGNS = [
@@ -120,7 +121,7 @@ export function useDay(date) {
     setLive(null); setApproval(null); setError(null);
     Promise.all([loadDay(date), loadApproval(date)])
       .then(([d, a]) => { if (alive) { setLive(d); setApproval(a); } })
-      .catch((e) => { console.error("useDay:", e); if (alive) setError(e.message ?? String(e)); });
+      .catch((e) => { console.error("useDay:", e); if (alive) setError(friendlyError(e)); });
     return () => { alive = false; };
   }, [date, tick]);
 

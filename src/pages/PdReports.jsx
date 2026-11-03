@@ -17,6 +17,7 @@ import { PD_KINDS, PD_KIND_KEYS, PD_STATUS, PD_BUCKET, PD_MAX_FILES, pdStages, p
 import { HeadTag, useRoles, Chips, StageBar, C } from "./Plc.jsx";
 import { byName } from "../lib/sortAr.js";
 import NiepdLink from "../components/NiepdLink.jsx";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    التطوير المهني ← نماذج سجل التطوير المهني (src/lib/pd.js).
@@ -85,7 +86,7 @@ function ReportList() {
       kind, owner_user_id: uid, owner_name: profile?.full_name ?? "", academic_year: year,
       department_id: dept?.department_id ?? null, data: kind === "training" ? { provider: "مدرسة مكة الثانوية" } : {},
     }).select("id").single();
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     navigate(`/pd/${data.id}`);
   };
 

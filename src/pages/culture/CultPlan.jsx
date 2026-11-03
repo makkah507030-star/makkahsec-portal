@@ -10,6 +10,7 @@ import { confirmDanger } from "../../lib/danger";
 import { PROGRAMS, STATUS, CULT_BUCKET, dueOf, overdue, setupMsg } from "../../lib/culture.js";
 import { MAX_PHOTOS, uploadPhotos, useSignedPhotos, Thumbs } from "../globe/shared.jsx";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* الخطة التنفيذية لسفير الثقافة: أنشطة كل برنامج بموعدها وفئتها وآلية تنفيذها، وحالة كل نشاط،
    وتوثيقه (المستفيدون والأثر وحتى 3 صور)، وربطه بحدث في «الأحداث والمناسبات». والسفير يضيف نشاطًا أو يحذفه. */
@@ -77,14 +78,14 @@ function Activity({ a, me, by, events, urls, setMsg, onChange }) {
       }).eq("id", a.id);
       if (error) throw error;
       setFiles([]); setMsg({ ok: true, text: "حُفظ النشاط." }); onChange();
-    } catch (e) { setMsg({ ok: false, text: e.message }); }
+    } catch (e) { setMsg({ ok: false, text: friendlyError(e.message) }); }
     setBusy(false);
   };
   const remove = async () => {
     if (!(await confirmDanger({ title: `حذف النشاط «${a.title}»`, impact: ["يُحذف من الخطة بتوثيقه وصوره."], confirmLabel: "حذف" }))) return;
     if (a.photos?.length) await supabase.storage.from(CULT_BUCKET).remove(a.photos);
     const { error } = await supabase.from("cult_activities").delete().eq("id", a.id);
-    if (error) setMsg({ ok: false, text: error.message }); else onChange();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onChange();
   };
   const ev = events.find((e) => e.id === x.event_id);
   return (
@@ -122,7 +123,7 @@ function NewActivity({ by, setMsg, onDone }) {
     if (!x.title.trim()) { setMsg({ ok: false, text: "اكتب النشاط." }); return; }
     const { error } = await supabase.from("cult_activities").insert({ ...x, title: x.title.trim(), due_date: x.due_date || null,
       due_label: x.due_label.trim() || null, mechanism: x.mechanism.trim() || null, sort: 100, updated_by_name: by });
-    if (error) setMsg({ ok: false, text: error.message }); else onDone();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onDone();
   };
   return (
     <section className="card grid gap-2 p-4 sm:grid-cols-2">

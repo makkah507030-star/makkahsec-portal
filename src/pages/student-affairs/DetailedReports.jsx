@@ -12,6 +12,7 @@ import {
 } from "./shared.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 import { byName } from "../../lib/sortAr.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const VIEWS = [
   { key: "class", label: "بالفصل" },
@@ -379,7 +380,7 @@ function ByStudent() {
       .eq("student_id", student.student_id).gte("attend_date", from).lte("attend_date", to)
       .order("id", { ascending: true }))
       .then((d) => { if (alive) setRecs(d); })
-      .catch((e) => { if (alive) setError(e.message ?? String(e)); });
+      .catch((e) => { if (alive) setError(friendlyError(e)); });
     return () => { alive = false; };
   }, [student, from, to]);
 

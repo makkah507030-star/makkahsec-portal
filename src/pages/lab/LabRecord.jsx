@@ -11,6 +11,7 @@ import { classText, isoOf, shortDate } from "../../lib/lab.js";
 import Loader from "../../components/Loader.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const num = (v) => Number(v).toLocaleString("en", { maximumFractionDigits: 1 });
 const dateOf = (d) => shortDate(String(d).slice(0, 10));
@@ -47,7 +48,7 @@ export default function LabRecord({ lab, canEdit }) {
     setBusy(true);
     const { error } = await supabase.rpc(fn, args);
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return false; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return false; }
     if (ok) setMsg({ ok: true, text: ok });
     setForm(null); load();
     return true;

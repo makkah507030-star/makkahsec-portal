@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    فرص القيادة في رئيسية المعلم والإداري (supabase/nominations_7.sql): إعلانات الترشيحات التي
@@ -34,7 +35,7 @@ export default function StaffCallsCard({ page = false }) {
     setBusy(true); setErr("");
     const { error } = await supabase.rpc("nom_staff_apply", { p_call: c.id, p_note: text });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setOpen(null); setNote(""); load();
   };
 

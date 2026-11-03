@@ -13,6 +13,7 @@ import LabScanner from "../LabScanner.jsx";
 import { paperQuiz, readResultCode, scoreTheory, unpackAnswers } from "../../../lib/labExam.js";
 import { cardFor } from "../../../lib/labPractical.js";
 import { classStudents, loadSubs, saveSub } from "../../../lib/labExamData.js";
+import { friendlyError } from "../../../lib/friendlyError.js";
 
 const noCard = async () => null;
 const SRC = { device: "الجهاز", paper: "الورقة", manual: "يدوي", rubric: "سلّم التقدير" };
@@ -36,7 +37,7 @@ export default function ExamRecord({ exam, classes }) {
       const row = await saveSub(exam, classId, sid, sub);
       setSubs((m) => ({ ...m, [sid]: row }));
       return row;
-    } catch (e) { notify({ ok: false, text: e.message }); return null; }
+    } catch (e) { notify({ ok: false, text: friendlyError(e.message) }); return null; }
   };
   // العملي: الجزآن يُجمعان، وكل جزء يُحفظ بمصدره
   const storePractical = (classId, sid, part) => {

@@ -16,6 +16,7 @@ import MonthlyReport from "./guidance/MonthlyReport.jsx";
 import { WATCH_AT, LATE_AT, reasonsOf, SOURCE, KIND, OUTCOME } from "../lib/guidanceWarning";
 import GuidanceInquiries from "../components/GuidanceInquiries.jsx";
 import { useBackStep } from "../lib/backStep.js";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    التوجيه الطلابي (supabase/guidance_1.sql و guidance_2.sql).
@@ -290,7 +291,7 @@ function CaseView({ id, me, onBack }) {
       supabase.from("guidance_cases").select("*, students(full_name)").eq("id", id).maybeSingle(),
       supabase.from("guidance_sessions").select("*").eq("case_id", id).order("session_date").order("created_at"),
     ]);
-    if (error) setErr(error.message);
+    if (error) setErr(friendlyError(error.message));
     setC(data); setSessions(s ?? []);
   };
   useEffect(() => { load(); }, [id]);   // eslint-disable-line react-hooks/exhaustive-deps
@@ -303,7 +304,7 @@ function CaseView({ id, me, onBack }) {
       recommendation: f.recommendation.trim() || null, created_by_name: me ?? null,
     });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setF({ session_date: todayISO(), kind: "individual", summary: "", recommendation: "" });
     load();
   };
@@ -312,7 +313,7 @@ function CaseView({ id, me, onBack }) {
     setBusy(true);
     const { error } = await supabase.from("guidance_cases").update(patch).eq("id", id);
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setClosing(null); load();
   };
 

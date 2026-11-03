@@ -8,6 +8,7 @@ import Loader from "../components/Loader.jsx";
 import { useSession } from "../lib/session.jsx";
 import { shuffled } from "../lib/offlineQuiz.js";
 import OfflineQuizDownload from "../components/OfflineQuizDownload.jsx";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    الاختبار الإلكتروني — صفحة الطالب (/quiz/:id).
@@ -92,7 +93,7 @@ export default function QuizTake() {
 
   const load = useCallback(async () => {
     const { data: d, error } = await supabase.rpc("get_online_quiz", { p_quiz: id });
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     apply(d);
   }, [id, apply]);
 
@@ -203,7 +204,7 @@ export default function QuizTake() {
     setBusy(true); setErr(null);
     const { data: d, error } = await supabase.rpc("start_online_quiz", { p_quiz: id });
     setBusy(false);
-    if (error) { setErr(error.message); load(); return; }
+    if (error) { setErr(friendlyError(error.message)); load(); return; }
     apply(d);
   };
 

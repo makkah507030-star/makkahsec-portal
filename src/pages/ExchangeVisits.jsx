@@ -16,6 +16,7 @@ import {
   useMyDepartment, loadDeptTeachers, plcNotify,
 } from "../lib/plc";
 import { HeadTag, useRoles, Chips, StageBar, C } from "./Plc.jsx";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    التطوير المهني ← استمارة تبادل الزيارات بين معلمي القسم.
@@ -82,7 +83,7 @@ function VisitList() {
       department_id: dept.department_id, visitor_user_id: uid, visitor_name: profile?.full_name ?? "",
       host_user_id: mates[0].user_id, host_name: mates[0].name, academic_year: year, data: { host_pending: true },
     }).select("id").single();
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     navigate(`/xvisits/${data.id}`);
   };
 

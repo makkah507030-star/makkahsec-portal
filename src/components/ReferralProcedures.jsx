@@ -8,6 +8,7 @@ import { degreeName } from "../lib/behavior";
 import {
   ACADEMIC_ITEMS, BEHAVIOR_STEPS, DIRECT_DEGREE, academicItemDone,
 } from "../lib/referrals";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    إجراءات المعلم قبل الإحالة — مكوّنات صفحة الإحالة:
@@ -299,7 +300,7 @@ export function AcademicDocs({ uid, student, docs, onChange }) {
       const d = await portalData(uid, student.id);
       setData(d);
       add("guidance", `إشعار لولي الأمر عبر البوابة (${fmtDate(todayISO())})`);
-    } catch (e) { setErr(e.message); }
+    } catch (e) { setErr(friendlyError(e.message)); }
     setBusy("");
   };
 

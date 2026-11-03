@@ -8,6 +8,7 @@ import { ACC_BUCKET, DOMAIN_COLOR, INDICATORS, accUpload, bidi, levelOf, fmtPct 
 import { NAT_TESTS, NAT_BANDS, NAT_PROPOSALS, loadNational, natSeries, signed } from "../../lib/accNational.js";
 import AccViewer from "./AccViewer.jsx";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    الاختبارات الوطنية (supabase/acc_5.sql): بطاقة لكل اختبار بآخر عام: المتوسط والتغير، والتوزيع
@@ -237,7 +238,7 @@ function NatForm({ row, year, by, setMsg, onDone }) {
     if (!(await confirmDanger({ title: `حذف بطاقة ${T.t} ${row.academic_year}هـ`, impact: ["تُحذف أرقامها وملفها من القسم، وتبقى الشواهد المرفوعة منها."], confirmLabel: "حذف" }))) return;
     if (row.file_path) await supabase.storage.from(ACC_BUCKET).remove([row.file_path]);
     const { error } = await supabase.from("acc_national").delete().eq("id", row.id);
-    if (error) setMsg({ ok: false, text: error.message }); else onDone(true);
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onDone(true);
   };
 
   return (
@@ -295,7 +296,7 @@ function Proposals({ me, plans, by, setMsg }) {
     const { error } = p ? await supabase.from("acc_programs").update(body).eq("id", p.id)
       : await supabase.from("acc_programs").insert({ ...body, plan_id: plan.id, kind: "plan", code, target: 75, follow: "فريق التقويم الذاتي", sort: 10 + codes.indexOf(code) });
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: bidi(`اعتُمد المقترح لبرنامج ${code}، ويُعدَّل متى شئتم من «خطة التحسين ← تعديل البرنامج».`) });
     load();
   };

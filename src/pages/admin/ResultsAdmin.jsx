@@ -10,6 +10,7 @@ import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import PeriodNoticesAdmin from "./PeriodNoticesAdmin.jsx";
 import TopStudents from "./TopStudents.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const REPORT_TYPES = ["period1", "period2", "final"];
 
@@ -260,7 +261,7 @@ export default function ResultsAdmin() {
       setMsg(`تم احتساب الترتيب لـ ${rankMap.size} نتيجة.`);
       await loadExisting();
     } catch (e) {
-      setErr(e.message);
+      setErr(friendlyError(e.message));
     }
     setBusy(false);
   };

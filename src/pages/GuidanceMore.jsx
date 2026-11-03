@@ -10,6 +10,7 @@ import GuidanceThread, { GUIDANCE_VOICE } from "../components/GuidanceThread.jsx
 import { VoiceRecorder, uploadVoice } from "../components/Voice.jsx";
 import PlanReport from "./guidance/PlanReport.jsx";
 import { eventReach } from "../lib/eventAudience.js";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    التوجيه الطلابي — بقية الصفحة (supabase/guidance_3.sql و guidance_4.sql):
@@ -127,7 +128,7 @@ export function Programs({ grade, me }) {
       organizer_role: adminRoles.some((r) => r.startsWith("counselor")) ? "الموجه الطلابي" : "",
       cert_template: "classic", stage: "participants",
     }).select("id").single();
-    if (error) { setBusy(false); setErr(error.message); return; }
+    if (error) { setBusy(false); setErr(friendlyError(error.message)); return; }
     const { error: e2 } = await supabase.from("guidance_programs").update({ event_id: ev.id }).eq("id", p.id);
     setBusy(false);
     if (e2) { setErr(setupErr(e2, "guidance_5.sql")); return; }
@@ -430,7 +431,7 @@ export function Requests({ grade, target = "counselor" }) {
     if (status === "scheduled") patch.appointment_at = new Date(edit.at).toISOString();
     const { error } = await supabase.from("guidance_requests").update(patch).eq("id", r.id);
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setEdit(null); load();
   };
 
@@ -528,7 +529,7 @@ export function GuidanceRequestCard({ studentId, requester = "student", target =
       } catch (e) { setMsg(`أُرسل الطلب، وتعذّر رفع الرسالة الصوتية: ${e.message}`); }
     }
     setBusy(false);
-    if (error) { setMsg(error.message); return; }
+    if (error) { setMsg(friendlyError(error.message)); return; }
     setOpen(false); setReason(""); setPreferred(""); setRec(null);
     setMsg(mode === "remote" ? `أُرسل سؤالك إلى ${who}، وسيصلك إشعار برده.` : `أُرسل طلبك إلى ${who}، وسيصلك إشعار بالموعد.`);
     load();

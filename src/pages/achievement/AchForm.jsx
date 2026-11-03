@@ -19,6 +19,7 @@ import PrintPortal from "../../components/PrintPortal.jsx";
 import { printThen } from "../../lib/print.js";
 import moeLogo from "../../assets/moe-logo.png";
 import logoIcon from "../../assets/icon-mint.png";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 export function StatusChip({ f }) {
   const s = FORM_STATUS[f.status];
@@ -66,7 +67,7 @@ export default function AchForm() {
     setBusy(true); setMsg(null);
     const { error } = await supabase.rpc(fn, { p_id: f.id, ...args });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: ok }); setNote(""); load();
   };
 

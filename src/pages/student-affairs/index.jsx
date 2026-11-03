@@ -7,6 +7,7 @@ import { Loading } from "./shared.jsx";
 import { loadFingerprintEnabled, setFingerprintEnabled } from "../../lib/officialAttendance";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const TodayBoard = lazy(() => import("./TodayBoard.jsx"));
 const MorningLate = lazy(() => import("./MorningLate.jsx"));
@@ -144,7 +145,7 @@ function FingerprintSwitch({ enabled, onChange, canToggle }) {
     if (!ok) return;
     setBusy(true); setErr(null);
     try { await setFingerprintEnabled(next); onChange(next); }
-    catch (e) { setErr(e.message ?? String(e)); }
+    catch (e) { setErr(friendlyError(e)); }
     finally { setBusy(false); }
   };
   if (!canToggle) {

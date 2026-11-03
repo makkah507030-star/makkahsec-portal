@@ -11,6 +11,7 @@ import { fmtDate } from "../../lib/dates";
 import { STAGE, RULES, ruleList, callStatus, seatsText, branchesOf, branchName, lines } from "../../lib/nominations.js";
 import Loader from "../../components/Loader.jsx";
 import { Icon } from "../../components/Layout.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const day = (d) => (d ? fmtDate(String(d).slice(0, 10) + "T12:00:00") : "—");
 const when = (ts) => new Date(ts).toLocaleString("ar-SA-u-nu-latn-ca-gregory",
@@ -35,7 +36,7 @@ function StudentView() {
   const [rows, setRows] = useState(null);
   const [err, setErr] = useState("");
   const [open, setOpen] = useState(null);
-  const load = () => supabase.rpc("nom_student_calls").then(({ data, error }) => { if (error) setErr(error.message); setRows(data ?? []); });
+  const load = () => supabase.rpc("nom_student_calls").then(({ data, error }) => { if (error) setErr(friendlyError(error.message)); setRows(data ?? []); });
   useEffect(() => { load(); }, []);
   if (!rows) return <Loader />;
   if (err) return <p className="card px-4 py-6 text-center text-sm text-muted">لا فرص متاحة الآن.</p>;
@@ -96,7 +97,7 @@ function CallCard({ r, open, onOpen, reload }) {
     setBusy(true); setErr("");
     const { error } = await supabase.rpc("nom_apply", { p_call: c.id, p_answers: ans, ...(branches.length ? { p_branch: branch } : {}) });
     setBusy(false);
-    if (error) setErr(error.message); else reload();
+    if (error) setErr(friendlyError(error.message)); else reload();
   };
   return (
     <div className="card p-4">

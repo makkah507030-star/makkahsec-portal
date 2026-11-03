@@ -5,6 +5,7 @@ import { shrinkImage } from "../../lib/imageResize.js";
 import { fmtDateTime } from "../../lib/dates.js";
 import DfileCard from "./DfileCard.jsx";
 import { DFILE_PHOTOS, SHARE_MSG, dfileLink, loadVisits } from "../../lib/dfile.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    «رابط ملفك» في لوحة المعلم: بطاقة الرمز، وصورة المعلم الاختيارية، وتنزيل
@@ -49,7 +50,7 @@ export default function DfileShare({ uid, s, d, onSave, kind = "teacher", spec }
     const img = await shrinkImage(file, 600, 0.86, { jpeg: true });
     const path = `${uid}/photo-${Date.now()}.jpg`;
     const { error } = await supabase.storage.from(DFILE_PHOTOS).upload(path, img, { contentType: "image/jpeg" });
-    if (error) { setMsg(error.message); setBusy(""); return; }
+    if (error) { setMsg(friendlyError(error.message)); setBusy(""); return; }
     if (s.photo_path) supabase.storage.from(DFILE_PHOTOS).remove([s.photo_path]);
     await onSave({ photo_path: path });
     setBusy("");

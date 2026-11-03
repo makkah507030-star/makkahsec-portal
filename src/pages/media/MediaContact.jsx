@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    التواصل مع المركز الإعلامي (supabase/media_5.sql): لكل الفئات طلب تغطية أو اقتراح أو مشاركة،
@@ -60,7 +61,7 @@ export default function MediaContact() {
       event_at, place: f.kind === "coverage" ? f.place.trim() || null : null,
       created_by_name: profile?.full_name ?? null, created_by_role: ROLE[effectiveRole] ?? null });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setF(BLANK); setBox("mine"); setReload((x) => x + 1);
   };
 

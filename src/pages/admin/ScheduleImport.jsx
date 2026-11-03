@@ -7,6 +7,7 @@ import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const BATCH = 400;
 
@@ -61,7 +62,7 @@ export default function ScheduleImport() {
       });
       setStage("preview");
     } catch (e) {
-      setError(e.message ?? String(e));
+      setError(friendlyError(e));
     }
   };
 

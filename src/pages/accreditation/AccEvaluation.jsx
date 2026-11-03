@@ -8,6 +8,7 @@ import { fmtDate } from "../../lib/dates";
 import {
   CODES, DOMAINS, STANDARDS, INDICATORS, NEW_CODES, PHASES, PLAN_BELOW, REPORT_KIND, analyze, domainOf, levelOf, fmtPct, accUpload, accOpen,
 } from "../../lib/accreditation.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    التقويم الذاتي والتقويم الخارجي: لكل منهما خطواته (PHASES) يتابعها المشرف، وتقريره يُرفع
@@ -47,7 +48,7 @@ export default function AccEvaluation({ kind, me, year, reports, reload }) {
         {!edit && r && (
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
             <span>{r.report_date ? `تاريخه ${fmtDate(r.report_date)}` : `أُضيف ${fmtDate(r.created_at)}`}{r.created_by_name && ` · ${r.created_by_name}`}</span>
-            {r.file_path && <button className="font-semibold text-mint-deep" onClick={async () => { const e = await accOpen(r.file_path); if (e) setMsg({ ok: false, text: e.message }); }}>فتح ملف التقرير</button>}
+            {r.file_path && <button className="font-semibold text-mint-deep" onClick={async () => { const e = await accOpen(r.file_path); if (e) setMsg({ ok: false, text: friendlyError(e.message) }); }}>فتح ملف التقرير</button>}
             {me.coord && <button className="font-semibold text-muted" onClick={() => setEdit(r)}>تعديل النسب</button>}
           </div>
         )}
@@ -68,7 +69,7 @@ function Steps({ kind, me, year, by, setMsg }) {
     if (!me.coord) return;
     const on = !rows[step]?.done_at;
     const { error } = await supabase.from("acc_steps").upsert({ academic_year: year, kind, step, done_at: on ? new Date().toISOString() : null, done_by_name: on ? by ?? null : null });
-    if (error) setMsg({ ok: false, text: error.message }); else load();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else load();
   };
   return (
     <section className="card p-4">
@@ -123,7 +124,7 @@ function ReportEdit({ x, by, setMsg, onDone }) {
     const { data, error } = f.id ? await supabase.from("acc_reports").update(row).eq("id", f.id).select("id").single()
       : await supabase.from("acc_reports").insert({ ...row, kind: f.kind, academic_year: f.academic_year, created_by_name: by ?? null }).select("id").single();
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: "حُفظ التقرير وحُلّلت نسبه." }); onDone(data.id);
   };
   return (

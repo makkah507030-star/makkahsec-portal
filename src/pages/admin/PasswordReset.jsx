@@ -10,6 +10,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { byName } from "../../lib/sortAr.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const ROLES = ["admin", "teacher", "student", "guardian"];
 
@@ -41,7 +42,7 @@ export default function PasswordReset() {
 
     setSearching(false);
     if (error) {
-      setMsg({ ok: false, text: error.message });
+      setMsg({ ok: false, text: friendlyError(error.message) });
       return;
     }
     setResults((data ?? []).sort(byName((u) => u.full_name ?? u.username)));
@@ -65,7 +66,7 @@ export default function PasswordReset() {
       setConfirming(null);
       await search();
     } catch (e) {
-      setMsg({ ok: false, text: e.message ?? String(e) });
+      setMsg({ ok: false, text: friendlyError(e) });
     } finally {
       setBusy(false);
     }

@@ -9,6 +9,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import { exportToExcel } from "../../lib/exportUtils.js";
 import Loader from "../../components/Loader.jsx";
 import { QTYPES } from "../../lib/outreach.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const KIND_T = { student: "الطلاب", guardian: "أولياء الأمور", staff: "الموظفون" };
 const pc = (a, b) => (b ? Math.round((100 * a) / b) : 0);
@@ -42,7 +43,7 @@ export function Follow({ item }) {
     setBusy(true);
     const { data, error } = await supabase.rpc("outreach_remind", { p_id: item.id });
     setBusy(false);
-    if (error) notify({ ok: false, text: error.message }); else { notify({ ok: true, text: `وصل التذكير إلى ${countAr(data, "beneficiary", { acc: true })}.` }); reload(); }
+    if (error) notify({ ok: false, text: friendlyError(error.message) }); else { notify({ ok: true, text: `وصل التذكير إلى ${countAr(data, "beneficiary", { acc: true })}.` }); reload(); }
   };
   return (
     <div className="space-y-4">

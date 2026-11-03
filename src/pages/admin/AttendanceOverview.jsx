@@ -12,6 +12,7 @@ import Loader from "../../components/Loader.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { byClassName } from "../../lib/sortAr.js";
 import { referMissing } from "../../lib/deputyReferral.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const TABS = [
   { key: "official", label: "الحضور والغياب الرسمي" },
@@ -252,7 +253,7 @@ export function MissingTab() {
       const { serial, counselor } = await referMissing({ profile, row: r, date, timeline: tl });
       setReferred((m) => ({ ...m, [r.student_id]: true }));
       setActMsg({ ok: true, text: `حُوِّل ${r.full_name} إلى ${counselor.name || "الموجه الطلابي"} (${serial}).` });
-    } catch (e) { setActMsg({ ok: false, text: e.message }); }
+    } catch (e) { setActMsg({ ok: false, text: friendlyError(e.message) }); }
     setBusy(null);
   };
 
@@ -596,7 +597,7 @@ export function DevicesTab() {
         ]);
         setData({ today, devices: dv.data ?? [], punches, enr, unmatched: un.data ?? [], unErr: un.error });
       } catch (e) {
-        setErr(e.message ?? String(e));
+        setErr(friendlyError(e));
       }
     })();
   }, []);

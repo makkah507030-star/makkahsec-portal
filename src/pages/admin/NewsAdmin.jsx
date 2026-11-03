@@ -6,6 +6,7 @@ import NewsCoverCard from "../../components/NewsCoverCard.jsx";
 import { normalizeImage } from "../../lib/imageResize.js";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const empty = {
   id: null,
@@ -228,7 +229,7 @@ export default function NewsAdmin() {
 
     setSaving(false);
     if (error) {
-      setMsg({ ok: false, text: error.message });
+      setMsg({ ok: false, text: friendlyError(error.message) });
       return;
     }
     setMsg({

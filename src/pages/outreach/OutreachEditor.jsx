@@ -7,6 +7,7 @@ import { useSession, ADMIN_ROLE_LABEL } from "../../lib/session.jsx";
 import { notify } from "../../lib/notice";
 import { KIND, QTYPES, TOPICS, mediaUrls, newQuestion, uploadMedia, youtubeId } from "../../lib/outreach.js";
 import { ItemBody, SurveyForm } from "./OutreachView.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const L = ({ children, hint }) => <p className="mb-1 text-[12px] font-semibold text-muted">{children}{hint && <span className="font-normal text-faint"> · {hint}</span>}</p>;
 
@@ -30,7 +31,7 @@ export default function OutreachEditor({ item, onSaved, onCancel }) {
       const added = [];
       for (const f of files) added.push(await uploadMedia(uid, f));
       set("media", [...x.media, ...added]);
-    } catch (e) { notify({ ok: false, text: e.message }); }
+    } catch (e) { notify({ ok: false, text: friendlyError(e.message) }); }
     setBusy("");
   };
   const removeMedia = async (m) => {
@@ -61,7 +62,7 @@ export default function OutreachEditor({ item, onSaved, onCancel }) {
       ? await supabase.from("outreach_items").update(row).eq("id", x.id).select().single()
       : await supabase.from("outreach_items").insert({ ...row, created_by_name: profile?.full_name ?? null, created_by_role: roleT }).select().single();
     setBusy("");
-    if (error) { notify({ ok: false, text: error.message }); return null; }
+    if (error) { notify({ ok: false, text: friendlyError(error.message) }); return null; }
     onSaved(data);
     return data;
   };

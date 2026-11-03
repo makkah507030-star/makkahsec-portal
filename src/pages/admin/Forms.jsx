@@ -28,6 +28,7 @@ import { flagRank, urgentPrefix } from "../../lib/flags.js";
 import { useBackStep } from "../../lib/backStep.js";
 import ImprovePicker from "../../components/ImprovePicker.jsx";
 import { confirmedCount, visitScores } from "../../lib/improve.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    النماذج والشهادات — الإصدار والأرشيف والاعتماد.
@@ -1173,7 +1174,7 @@ export default function Forms({ view = "issue", openKey = null }) {
         : { status: "awaiting_reply", decision_note: note };
     const { data: saved, error } = await supabase.from("form_documents")
       .update(patch).eq("id", d.id).select("id");
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     // RLS تُسقط التعديل غير المسموح بصمت (بلا خطأ) — نتحقق أن الصف تغيّر فعلًا
     if (!saved?.length) {
       setMsg({ ok: false, text: "لم يُحفظ القرار: حسابك لا يملك صلاحية تعديل هذا المستند. "
@@ -1201,7 +1202,7 @@ export default function Forms({ view = "issue", openKey = null }) {
         approved_at: new Date().toISOString(),
       })
       .eq("id", doc.id).select("id");
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     if (!data?.length) {
       setMsg({ ok: false, text: "لم يُحفظ القرار: حسابك لا يملك صلاحية اعتماد هذا المستند." });
       loadDocs();
@@ -1321,7 +1322,7 @@ export default function Forms({ view = "issue", openKey = null }) {
     if (rTo)   q = q.lte("created_at", `${rTo}T23:59:59`);
 
     const { data, error } = await q;
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     if (!data?.length) { setMsg({ ok: false, text: "لا مستندات في هذا النطاق." }); return; }
 
     const ids = [...new Set(data.map((d) => d.created_by).filter(Boolean))];

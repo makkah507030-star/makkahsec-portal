@@ -10,6 +10,7 @@ import { sendPush } from "../../lib/pushSend.js";
 import { MEETINGS, OCCASIONS, ONBOARD, PROGRAMS, setupMsg, cardInit, staffTitle, shortName } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
 import { CardMaker, SendPreview } from "./CultCard.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* سجلات البرامج: «التواصل الملهم» (اللقاءات)، و«نهتم بك» (مناسبات الموظفين وبطاقاتها إشعارًا لصاحبها)،
    و«حيّاك» (تهيئة الموظف الجديد بمهامها على مراحلها). يوثّقها الفريق، ويرسل السفير البطاقات. */
@@ -31,7 +32,7 @@ function useRows(table, order) {
   const remove = async (id, title) => {
     if (!(await confirmDanger({ title: `حذف «${title}»`, impact: ["يُحذف من السجل نهائيًا."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from(table).delete().eq("id", id);
-    if (error) setMsg({ ok: false, text: error.message }); else load();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else load();
   };
   return { rows, load, remove, setMsg };
 }
@@ -54,7 +55,7 @@ export function CultMeetings() {
       kind: x.kind, held_on: x.held_on, title: x.title.trim() || MEETINGS[x.kind].t,
       attendees: x.attendees === "" ? null : Number(x.attendees), notes: x.notes.trim() || null, created_by_name: profile?.full_name ?? null,
     });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setX({ ...x, title: "", attendees: "", notes: "" }); setMsg({ ok: true, text: "سُجّل اللقاء." }); load();
   };
   const count = (k) => rows.filter((r) => r.kind === k).length;
@@ -118,7 +119,7 @@ export function CultCare({ me }) {
   const send = async (r) => {
     if (!r.user_id) { setMsg({ ok: false, text: "صاحب المناسبة ليس من حسابات البوابة؛ أرسل البطاقة من الاستوديو." }); return false; }
     const { data: nid, error } = await supabase.rpc("cult_notify", { p_title: `نهتم بك · ${OCCASIONS[r.kind]?.t ?? "مناسبة"}`, p_body: r.message, p_user_ids: [r.user_id] });
-    if (error) { setMsg({ ok: false, text: error.message }); return false; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return false; }
     sendPush(nid);
     await supabase.from("cult_occasions").update({ sent_at: new Date().toISOString() }).eq("id", r.id);
     return true;
@@ -130,7 +131,7 @@ export function CultCare({ me }) {
     const { data, error } = await supabase.from("cult_occasions").insert({
       user_id: person.id, person_name: person.full_name, kind: x.kind, held_on: x.held_on, message: x.message.trim(), created_by_name: profile?.full_name ?? null,
     }).select().single();
-    if (error) setMsg({ ok: false, text: error.message });
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) });
     else {
       const ok = andSend ? await send(data) : true;
       if (ok) setMsg({ ok: true, text: andSend ? `أُرسلت البطاقة إلى ${person.full_name}.` : "سُجّلت المناسبة." });
@@ -202,7 +203,7 @@ export function CultOnboard() {
     const { data, error } = await supabase.from("cult_onboard").insert({
       user_id: p.id, person_name: p.full_name, joined_on: x.joined_on, mentor_name: x.mentor_name || null, created_by_name: profile?.full_name ?? null,
     }).select("id").single();
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setX({ ...x, user_id: "", mentor_name: "" }); setOpen(data.id); load();
   };
   return (
@@ -242,7 +243,7 @@ function Onboard({ r, mobile, setMsg, onChange, onRemove }) {
   const [notes, setNotes] = useState(r.notes ?? "");
   const persist = async (patch) => {
     const { error } = await supabase.from("cult_onboard").update(patch).eq("id", r.id);
-    if (error) setMsg({ ok: false, text: error.message }); else onChange();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onChange();
   };
   const toggle = (k) => { const c = { ...checks }; if (c[k]) delete c[k]; else c[k] = todayISO(); setChecks(c); persist({ checks: c }); };
   return (

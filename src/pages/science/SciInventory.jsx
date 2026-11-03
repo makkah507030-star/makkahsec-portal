@@ -11,6 +11,7 @@ import { todayISO } from "../../lib/schoolTime";
 import Loader from "../../components/Loader.jsx";
 import { INV_KIND, INV_STATUS, setupMsg, labOf } from "../../lib/sciLab.js";
 import { cleanText, toLatinDigits } from "../../lib/importer";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const pill = (on) => `rounded-pill px-3 py-1.5 text-[12.5px] font-semibold ${on ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`;
 const BLANK = { name: "", kind: "tool", qty: "1", unit: "", status: "ok", expiry: "", location: "", note: "" };
@@ -51,7 +52,7 @@ export default function SciInventory({ lab, isManager, onPrint }) {
   const remove = async (x) => {
     if (!(await confirmDanger({ title: `حذف «${x.name}» من العهدة`, impact: ["يُحذف الصنف من كشف العهدة."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("sci_inventory").delete().eq("id", x.id);
-    if (error) setMsg({ ok: false, text: error.message }); else load();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else load();
   };
 
   const template = () => {

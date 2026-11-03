@@ -18,6 +18,7 @@ import PrintPortal from "../../components/PrintPortal.jsx";
 import { printThen } from "../../lib/print.js";
 import moeLogo from "../../assets/moe-logo.png";
 import logoIcon from "../../assets/icon-mint.png";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const ROLE_T = { secretary: "مقرر اللجنة", member: "عضو" };
 const setupMsg = "لجنة التحصيل تحتاج تشغيل supabase/ach_committee.sql في Supabase ← SQL Editor.";
@@ -130,18 +131,18 @@ function Members({ members, canManage, onChange, setMsg, me }) {
 
   const add = async (u) => {
     const { error } = await supabase.from("ach_committee").insert({ user_id: u.id, role, title: title.trim() || null, added_by_name: me ?? null });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `أُضيف ${u.full_name} إلى اللجنة.` }); setTitle(""); onChange();
   };
   const remove = async (m) => {
     if (!(await confirmDanger({ title: `إزالة ${m.full_name} من اللجنة`, impact: ["لا يرى المركز ولا المحاضر بعدها، وتبقى المحاضر السابقة كما هي."], confirmLabel: "إزالة" }))) return;
     const { error } = await supabase.from("ach_committee").delete().eq("user_id", m.user_id);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     onChange();
   };
   const setR = async (m, r) => {
     const { error } = await supabase.from("ach_committee").update({ role: r }).eq("user_id", m.user_id);
-    if (error) setMsg({ ok: false, text: error.message }); else onChange();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onChange();
   };
 
   return (
@@ -227,7 +228,7 @@ function Meeting({ m, members, canMinute, onEdit, onPrint, onChange, setMsg }) {
   const toggle = async (i) => {
     const decisions = m.decisions.map((d, k) => (k === i ? { ...d, done: !d.done } : d));
     const { error } = await supabase.from("ach_meetings").update({ decisions, updated_at: new Date().toISOString() }).eq("id", m.id);
-    if (error) setMsg({ ok: false, text: error.message }); else onChange();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onChange();
   };
   return (
     <div className="px-4 py-3">

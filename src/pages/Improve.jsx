@@ -14,6 +14,7 @@ import {
 import Loader from "../components/Loader.jsx";
 import { supabase } from "../lib/supabase";
 import { excelBoard, printBoard, printGoal, printRecord } from "../lib/improvePrint.js";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    خطط التطوير — حلقة التحسين (src/lib/improve.js):
@@ -63,7 +64,7 @@ function Goal({ g, uid, boss, onDone, focus }) {
     if (confirmText && !window.confirm(confirmText)) return;
     setBusy(true); setErr("");
     try { await act(g, action, opts); setOpen(null); onDone(); refreshNavBadges(true); }
-    catch (e) { setErr(e.message ?? "تعذّر الحفظ."); }
+    catch (e) { setErr(friendlyError(e.message) ?? "تعذّر الحفظ."); }
     setBusy(false);
   };
 

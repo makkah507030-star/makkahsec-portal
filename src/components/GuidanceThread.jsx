@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
 import { VoiceRecorder, VoicePlayer, uploadVoice } from "./Voice.jsx";
+import { friendlyError } from "../lib/friendlyError.js";
 
 export const GUIDANCE_VOICE = "guidance-voice";
 
@@ -36,7 +37,7 @@ export default function GuidanceThread({ requestId, side, voice, closed, onSent,
       if (error) throw error;
       setText(""); setRec(null); setRecKey((k) => k + 1);
       await load(); onSent?.();
-    } catch (e) { setErr(e.message ?? String(e)); }
+    } catch (e) { setErr(friendlyError(e)); }
     setBusy(false);
   };
 

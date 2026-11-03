@@ -11,6 +11,7 @@ import {
 import { SELF_1448, PROGRAMS_1448, SUSTAIN_1448, MILESTONES_1448 } from "../../lib/accPlan1448.js";
 import Loader from "../../components/Loader.jsx";
 import AccPlanReport from "./AccPlanDoc.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    خطة التحسين المبنية على مؤشرات الدليل (supabase/acc_2.sql): لكل مؤشر دون المستهدف برنامج
@@ -98,18 +99,18 @@ export default function AccPlan({ me, year, plans, reports, members, reload }) {
       ext ? `خطة التحسين بعد التقويم الخارجي ${plan.academic_year}هـ` : `${plan.title} — تحديث`);
     if (!t) return;
     const { data, error } = await supabase.rpc("acc_plan_copy", { p_plan: plan.id, p_report: ext?.id ?? null, p_title: t });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: "أُنشئت نسخة جديدة مسودة: عدّلها ثم اعتمدها لتصبح السارية." }); setPlanId(data); reload();
   };
   const activate = async () => {
     if (!window.confirm("اعتماد هذه النسخة؟ تصبح الخطة السارية وتُؤرشف النسخة السابقة للاطلاع.")) return;
     const { error } = await supabase.rpc("acc_plan_activate", { p_plan: plan.id });
-    if (error) setMsg({ ok: false, text: error.message }); else { setMsg({ ok: true, text: "اعتُمدت النسخة." }); reload(); }
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else { setMsg({ ok: true, text: "اعتُمدت النسخة." }); reload(); }
   };
   const toggleMile = async (i) => {
     const milestones = plan.milestones.map((m, k) => (k === i ? { ...m, done_at: m.done_at ? null : new Date().toISOString() } : m));
     const { error } = await supabase.from("acc_plans").update({ milestones }).eq("id", plan.id);
-    if (error) setMsg({ ok: false, text: error.message }); else reload();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else reload();
   };
 
   if (!plan) return (
@@ -227,11 +228,11 @@ function Suggest({ plan, progs, ext, me, onChange, setMsg }) {
     const row = { kind: "plan", current: ext.scores[c], target: Math.max(PLAN_BELOW, Math.ceil(ext.scores[c] + 5)), follow: "فريق التقويم الذاتي" };
     const { error } = p ? await supabase.from("acc_programs").update(row).eq("id", p.id)
       : await supabase.from("acc_programs").insert({ ...row, plan_id: plan.id, code: c, sort: 50 });
-    if (error) setMsg({ ok: false, text: error.message }); else onChange();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onChange();
   };
   const toSustain = async (p) => {
     const { error } = await supabase.from("acc_programs").update({ kind: "sustain", owner: p.team?.[0] ?? null }).eq("id", p.id);
-    if (error) setMsg({ ok: false, text: error.message }); else onChange();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onChange();
   };
   return (
     <section className="card space-y-2 border-late/40 p-4 text-sm">
@@ -276,7 +277,7 @@ function ProgramBody({ p, canEdit, edit: editProps, by, onSaved, setMsg }) {
   const saveM = async (next) => {
     setM(next);
     const { error } = await supabase.from("acc_programs").update({ methods: next, updated_by_name: by ?? null, updated_at: new Date().toISOString() }).eq("id", p.id);
-    if (error) setMsg({ ok: false, text: error.message }); else onSaved();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onSaved();
   };
   const setOne = (i, k, v) => saveM(m.map((x, j) => (j === i ? { ...x, [k]: x[k] === v ? null : v } : x)));
   if (edit) return <ProgramEdit p={p} {...editProps} by={by} onDone={(ok) => { setEdit(false); if (ok) onSaved(); }} setMsg={setMsg} />;
@@ -388,7 +389,7 @@ function ProgramEdit({ p, planId, doms, canDelete, by, onDone, setMsg }) {
   const remove = async () => {
     if (!(await confirmDanger({ title: `حذف برنامج المؤشر \u2066${p.code}\u2069`, impact: [`«${p.initiative}» بأساليبه وقياس نواتجه من هذه النسخة.`, "تبقى شواهد المؤشر كما هي."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("acc_programs").delete().eq("id", p.id);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: "حُذف البرنامج." }); onDone(true);
   };
   const F = ({ t, k, area, n }) => (

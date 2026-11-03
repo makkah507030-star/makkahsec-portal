@@ -9,6 +9,8 @@
 //    (حفظ/حذف بعد ضغطة)، لا الكتابات الخلفية كتعليم الإشعار مقروءًا.
 // =====================================================================
 
+import { friendlyError } from "./friendlyError.js";
+
 const listeners = new Set();
 let toasts = [];
 let active = { writes: 0, reads: 0, loaders: 0 };
@@ -38,6 +40,8 @@ export function notify(input, type) {
   }
   text = String(text).trim();
   if (!text) return;
+  // الخطأ بلغة يفهمها المستخدم (lib/friendlyError.js)
+  if (kind === "error") text = friendlyError(text);
   // لا تكرار للرسالة نفسها في اللحظة نفسها (نقرتان سريعتان، أو StrictMode)
   const now = Date.now();
   if (toasts.some((t) => t.text === text && t.kind === kind && now - t.at < 1200)) return;

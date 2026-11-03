@@ -10,6 +10,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import { byName } from "../../lib/sortAr.js";
 import { normName } from "../../lib/userSignatures.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* ربط اسم مكتوب نصًّا (من الجدول المستورد) بحساب موظف: تطابق تام بعد توحيد الكتابة
    («بن» والهمزات)، وإلا أن تأتي كلمات الاسم كلها بترتيبها في اسم موظف واحد فقط
@@ -243,7 +244,7 @@ function DutyTab({ staff }) {
 
   const patch = async (row, fields) => {
     const { error } = await supabase.from("duty_roster").update(fields).eq("id", row.id);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setRows((rs) => rs.map((r) => (r.id === row.id ? { ...r, ...fields } : r)));
     setMsg({ ok: true, text: `حُفظ ${fmtG(row.duty_date)}` });
   };
@@ -267,7 +268,7 @@ function DutyTab({ staff }) {
     };
     const { error } = await supabase.from("duty_roster")
       .upsert(payload, { onConflict: "duty_date" });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `أُضيف ${fmtG(nf.date)}` });
     setNf({ date: "", a: null, b: null, note: "", week: "" });
     setAdding(false);
@@ -469,7 +470,7 @@ function SupTab({ staff }) {
       kind: add.kind,
       user_id: add.user,
     });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: "أُضيف." });
     setAdd((a) => ({ ...a, user: null }));
     load();

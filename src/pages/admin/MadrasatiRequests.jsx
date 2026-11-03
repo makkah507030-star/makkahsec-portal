@@ -10,6 +10,7 @@ import { sendPush } from "../../lib/pushSend.js";
 import Loader from "../../components/Loader.jsx";
 import MadrasatiReport from "./MadrasatiReport.jsx";
 import { MR_KINDS, MR_STATUS, kindOf } from "../../components/MadrasatiSupport.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const tail = (m) => String(m ?? "").slice(-3);
 // الردود الجاهزة: لا تحمل كلمة مرور أبدًا
@@ -63,7 +64,7 @@ export default function MadrasatiRequests() {
     const patch = { status, reply: reply?.trim() || null, handled_by: profile?.id ?? null, handled_by_name: profile?.full_name ?? null,
                     handled_at: status === "in_progress" ? null : new Date().toISOString() };
     const { error } = await supabase.from("madrasati_requests").update(patch).eq("id", r.id);
-    if (error) { setBusy(false); setErr(error.message); return; }
+    if (error) { setBusy(false); setErr(friendlyError(error.message)); return; }
     if (status !== "in_progress") {
       const { data: nid } = await supabase.rpc("send_notification", {
         p_title: status === "done" ? "تم طلبك لمنصة مدرستي" : "طلبك لمنصة مدرستي",

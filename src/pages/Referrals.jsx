@@ -30,6 +30,7 @@ import PresetChips from "../components/PresetChips.jsx";
 import Sticker, { FlagPicker } from "../components/Sticker.jsx";
 import { urgentPrefix } from "../lib/flags.js";
 import { loadTermStart } from "../lib/officialAttendance";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    إحالة الطالب — شاشة واحدة تخدم المسار كاملًا بحسب دور المستخدم:
@@ -980,7 +981,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
     if (!error && after) await after();
     setBusy(false);
     setOpen(false);
-    onChange(error ? { ok: false, text: error.message } : { ok: true, text: okText });
+    onChange(error ? { ok: false, text: friendlyError(error.message) } : { ok: true, text: okText });
   };
 
   // ② الوكيل يحوّلها للموجه
@@ -1054,7 +1055,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
   const sendToGuardian = async (patch, okText) => {
     setBusy(true);
     const { error } = await supabase.from("student_referrals").update(patch).eq("id", r.id);
-    if (error) { setBusy(false); onChange({ ok: false, text: error.message }); return; }
+    if (error) { setBusy(false); onChange({ ok: false, text: friendlyError(error.message) }); return; }
 
     // إشعار الطالب وولي أمره
     const ids = new Set();

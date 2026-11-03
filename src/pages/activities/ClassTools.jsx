@@ -15,6 +15,7 @@ import Loader from "../../components/Loader.jsx";
 import { fullscreen } from "./games/GameHost.jsx";
 import ChampionCertificate from "./ChampionCertificate.jsx";
 import { FloatPortal, canPin, useFloatWindow } from "./FloatWindow.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const TOOLS = [
   { key: "pick", label: "🎲 اختيار طالب" },
@@ -48,13 +49,13 @@ export default function ClassTools({ teacher = true, viewer = false }) {
   const load = useCallback(() => {
     if (!cid) return;
     supabase.rpc("act_league_board", { p_class: cid, p_subject: sid })
-      .then(({ data, error }) => { if (error) setErr(error.message); else { setErr(""); setBoard(data); } });
+      .then(({ data, error }) => { if (error) setErr(friendlyError(error.message)); else { setErr(""); setBoard(data); } });
   }, [cid, sid]);
   useEffect(() => { setBoard(null); load(); }, [load]);
 
   const addPoints = async (row, points, reason) => {
     const { error } = await supabase.from("subject_league_points").insert({ class_id: cid, subject_id: sid, points, reason: reason || null, ...row });
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     load();
   };
 
@@ -312,7 +313,7 @@ function LeagueOverview() {
     if (!cur) return;
     setBoard(null); setLog([]);
     const a = { p_class: cur.class_id, p_subject: cur.subject_id };
-    supabase.rpc("act_league_board", a).then(({ data, error }) => (error ? setErr(error.message) : setBoard(data)));
+    supabase.rpc("act_league_board", a).then(({ data, error }) => (error ? setErr(friendlyError(error.message)) : setBoard(data)));
     supabase.rpc("act_league_log", a).then(({ data }) => setLog(data ?? []));
   }, [cur]);
   const list = useMemo(() => (rows ?? []).filter((r) => !q.trim() || `${r.class_no} ${r.subject ?? ""} ${r.teachers ?? ""}`.includes(q.trim())), [rows, q]);

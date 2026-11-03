@@ -5,6 +5,7 @@ import { useSession } from "../../lib/session.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* فريق الثقافة المؤسسية: السفير وأعضاء الفريق الذين يوثّقون التنفيذ معه.
    يضيف السفير الأعضاء ويزيلهم، ويعيّن المدير والوكلاء والدعم الفني السفير. */
@@ -17,14 +18,14 @@ export default function CultTeam({ me, reload }) {
   const [pick, setPick] = useState("");
   const [ambPick, setAmbPick] = useState("");
   const load = () => supabase.rpc("cult_team_list").then(({ data, error }) => {
-    if (error) setMsg({ ok: false, text: error.message }); setTeam(data ?? []);
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); setTeam(data ?? []);
   });
   useEffect(() => { load(); supabase.rpc("cult_staff").then(({ data }) => setStaff(data ?? [])); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   if (!team) return <Loader />;
   const ids = new Set(team.map((t) => t.user_id));
   const run = async (q, ok) => {
     const { error } = await q;
-    if (error) setMsg({ ok: false, text: error.message }); else { setMsg({ ok: true, text: ok }); load(); reload(); }
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else { setMsg({ ok: true, text: ok }); load(); reload(); }
   };
   const add = () => {
     if (!pick) return;
@@ -45,7 +46,7 @@ export default function CultTeam({ me, reload }) {
       impact: [cur.length ? `يعود ${cur.map((t) => t.full_name).join("، ")} عضوًا في الفريق.` : "يدير القسم كله بعد التعيين."], confirmLabel: "تعيين" }))) return;
     if (cur.length) {
       const { error } = await supabase.from("cult_team").update({ role: "member" }).in("user_id", cur.map((t) => t.user_id));
-      if (error) { setMsg({ ok: false, text: error.message }); return; }
+      if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     }
     await run(supabase.from("cult_team").upsert({ user_id: p.id, role: "ambassador", added_by_name: profile?.full_name ?? null }, { onConflict: "user_id" }),
       `عُيّن ${p.full_name} سفيرًا للثقافة المؤسسية.`);
