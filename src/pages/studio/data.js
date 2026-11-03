@@ -86,7 +86,7 @@ export async function loadGifted() {
   const G = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
   const gifted = (data ?? []).map((r) => {
     const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
-    return { full_name: r.students?.full_name ?? "", domains: r.domains ?? [],
+    return { id: r.student_id, full_name: r.students?.full_name ?? "", domains: r.domains ?? [],
              grade: en?.classes?.grade, class_no: en?.classes?.class_no,
              cls: en ? `${G[en.classes?.grade] ?? ""} · ${en.classes?.class_no ?? ""}` : "" };
   }).filter((x) => x.full_name).sort(byClassName());
@@ -101,7 +101,7 @@ export async function loadGlobe() {
   const G = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
   const globe = (data ?? []).map((r) => {
     const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
-    return { full_name: r.students?.full_name ?? "",
+    return { id: r.student_id, full_name: r.students?.full_name ?? "",
              grade: en?.classes?.grade, class_no: en?.classes?.class_no,
              role: r.role ? memberRole(r.role).t : null,                    // صفته في الفريق (globe_3.sql)
              cls: en ? `${G[en.classes?.grade] ?? ""} · ${en.classes?.class_no ?? ""}` : "" };
@@ -118,7 +118,7 @@ export async function loadScouts() {
   const G = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
   const scouts = (data ?? []).map((r) => {
     const en = (r.students?.student_enrollment ?? []).find((e) => e.status === "active");
-    return { full_name: r.students?.full_name ?? "", rank: r.rank ?? null,
+    return { id: r.student_id, full_name: r.students?.full_name ?? "", rank: r.rank ?? null,
              grade: en?.classes?.grade, class_no: en?.classes?.class_no,
              cls: en ? `${G[en.classes?.grade] ?? ""} · ${en.classes?.class_no ?? ""}` : "" };
   }).filter((x) => x.full_name).sort(byClassName());

@@ -642,7 +642,7 @@ function scoutCards(d, c) {
   if (d.scope === "all" && c.scouts?.length) {
     const all = c.scouts.map((x, i) => {
       const r = rankOf(x.rank);
-      return { name: x.full_name, rank: r?.t ?? "عضو الفريق الكشفي", color: r?.color ?? "#3E8A62", cls: x.cls, no: i + 1 };
+      return { sid: x.id, name: x.full_name, rank: r?.t ?? "عضو الفريق الكشفي", color: r?.color ?? "#3E8A62", cls: x.cls, no: i + 1 };
     });
     const out = [];
     for (let i = 0; i < all.length; i += 10) out.push(all.slice(i, i + 10));
@@ -656,7 +656,7 @@ function globeCards(d, c) {
   const me = { name: d.name, role: d.role, cls: d.cls, photo: d.photo, no: 1 };
   if (d.scope === "page") return [Array.from({ length: 9 }, () => me)];
   if (d.scope === "all" && c.globe?.length) {
-    const all = c.globe.map((x, i) => ({ name: x.full_name, role: x.role ?? d.role, cls: x.cls, no: i + 1 }));
+    const all = c.globe.map((x, i) => ({ sid: x.id, name: x.full_name, role: x.role ?? d.role, cls: x.cls, no: i + 1 }));
     const out = [];
     for (let i = 0; i < all.length; i += 9) out.push(all.slice(i, i + 9));
     return out;
@@ -669,7 +669,7 @@ function giftedCards(d, c) {
   const me = { name: d.name, role: d.role, domains: d.domain ? [d.domain] : [], cls: d.cls, photo: d.photo, no: 1 };
   if (d.scope === "page") return [Array.from({ length: 9 }, () => me)];
   if (d.scope === "all" && c.gifted?.length) {
-    const all = c.gifted.map((x, i) => ({ name: x.full_name, role: d.role, domains: x.domains.map((k) => domainOf(k).t), cls: x.cls, no: i + 1 }));
+    const all = c.gifted.map((x, i) => ({ sid: x.id, name: x.full_name, role: d.role, domains: x.domains.map((k) => domainOf(k).t), cls: x.cls, no: i + 1 }));
     const out = [];
     for (let i = 0; i < all.length; i += 9) out.push(all.slice(i, i + 9));
     return out;

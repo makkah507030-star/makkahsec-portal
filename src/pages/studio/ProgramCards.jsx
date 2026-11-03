@@ -6,6 +6,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import PrintPortal from "../../components/PrintPortal.jsx";
 import Loader from "../../components/Loader.jsx";
 import { printThen } from "../../lib/print.js";
+import { supabase } from "../../lib/supabase";
 import { loadSchoolStamp } from "../../lib/principalSignature";
 import { templateOf } from "./templates";
 import { THEMES, academicYearLabel, useFontsReady } from "./lib";
@@ -15,10 +16,11 @@ import { GlobeCards, GiftedCards, ScoutCards } from "./Sheets.jsx";
 const SHEETS = { globecard: [GlobeCards, 9], giftedcard: [GiftedCards, 9], scoutcard: [ScoutCards, 10] };
 const SHEET_W = 794;   // عرض ورقة A4 في الاستوديو بالبكسل
 
-/* صور الطلاب اختيارية: تُصغَّر إلى 360 بكسل مربعًا كما في الاستوديو، وتُحفظ في هذا الجهاز وحده
-   (localStorage) لا في خادم، فتبقى لطباعة لاحقة منه. وما لا صورة له يظهر برمز البرنامج. */
-const photoKey = (k) => `program-card-photos:${k}`;
-const readPhotos = (k) => { try { return JSON.parse(localStorage.getItem(photoKey(k)) ?? "{}"); } catch { return {}; } };
+/* صور الطلاب اختيارية: تُصغَّر إلى 360 بكسل مربعًا كما في الاستوديو، وتُحفظ في مخزن البرنامج في البوابة
+   (cards/رقم الطالب.jpg) فتظهر من أي جهاز. المخازن وصلاحياتها قائمة: globe_2.sql وgifted_3.sql وscouts_7.sql.
+   وما لا صورة له يظهر برمز البرنامج. */
+const BUCKETS = { "globe-card": "globe-files", "gifted-card": "gifted-files", "scout-card": "scout-files" };
+const asDataUrl = (blob) => new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ok(null); r.readAsDataURL(blob); });
 function squarePhoto(file, done) {
   const img = new Image();
   img.onload = () => {
@@ -28,7 +30,7 @@ function squarePhoto(file, done) {
     const g = cv.getContext("2d");
     g.fillStyle = "#fff"; g.fillRect(0, 0, n, n);
     g.drawImage(img, (img.width - k) / 2, (img.height - k) / 2, k, k, 0, 0, n, n);
-    done(cv.toDataURL("image/jpeg", 0.85));
+    cv.toBlob((b) => done(b, cv.toDataURL("image/jpeg", 0.85)), "image/jpeg", 0.85);
     URL.revokeObjectURL(img.src);
   };
   img.src = URL.createObjectURL(file);
@@ -64,15 +66,44 @@ export default function ProgramCards({ tplKey, onBack, backLabel = "رجوع" })
   const [theme, setTheme] = useState(tpl.defaultTheme ?? "light");
   const [who, setWho] = useState("all");          // all أو رقم البطاقة لبطاقة واحدة
   const [printing, setPrinting] = useState(false);
-  const [photos, setPhotos] = useState(() => readPhotos(tplKey));
+  const [photos, setPhotos] = useState({});       // رقم الطالب ← الصورة (data URL، فتظهر في الطباعة فورًا)
+  const [busyPhoto, setBusyPhoto] = useState(null);
   const [photoMsg, setPhotoMsg] = useState("");
+  const bucket = BUCKETS[tplKey];
   useFontsReady();
-  const setPhoto = (name, url) => {
-    const next = { ...photos };
-    if (url) next[name] = url; else delete next[name];
-    setPhotos(next);
-    try { localStorage.setItem(photoKey(tplKey), JSON.stringify(next)); setPhotoMsg(""); }
-    catch { setPhotoMsg("أُضيفت الصورة لهذه الطباعة، ولم تُحفظ في الجهاز لامتلاء مساحته."); }
+
+  // الصور المحفوظة في المخزن
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const { data, error } = await supabase.storage.from(bucket).list("cards", { limit: 1000 });
+      if (error || !live) return;
+      const got = await Promise.all((data ?? []).filter((f) => f.name.endsWith(".jpg")).map(async (f) => {
+        const { data: b } = await supabase.storage.from(bucket).download(`cards/${f.name}`);
+        return [f.name.replace(/\.jpg$/, ""), b ? await asDataUrl(b) : null];
+      }));
+      if (live) setPhotos(Object.fromEntries(got.filter(([, u]) => u)));
+    })();
+    return () => { live = false; };
+  }, [bucket]);
+
+  const setPhoto = async (sid, file) => {
+    if (!sid) return;
+    setBusyPhoto(sid); setPhotoMsg("");
+    if (!file) {
+      const { error } = await supabase.storage.from(bucket).remove([`cards/${sid}.jpg`]);
+      if (error) setPhotoMsg(`تعذّر حذف الصورة: ${error.message}`);
+      else setPhotos((x) => { const n = { ...x }; delete n[sid]; return n; });
+      setBusyPhoto(null);
+      return;
+    }
+    squarePhoto(file, async (blob, url) => {
+      const { error } = await supabase.storage.from(bucket)
+        .upload(`cards/${sid}.jpg`, blob, { upsert: true, contentType: "image/jpeg" });
+      if (error) setPhotoMsg(`تعذّر حفظ الصورة: ${error.message}`);
+      else setPhotos((x) => ({ ...x, [sid]: url }));
+      setBusyPhoto(null);
+    });
   };
 
   useEffect(() => {
@@ -84,8 +115,8 @@ export default function ProgramCards({ tplKey, onBack, backLabel = "رجوع" })
   const base = useMemo(() => (ctx ? { ...tpl.defaults(ctx), scope: "all" } : null), [ctx, tpl]);
   const cards = useMemo(() => (base ? tpl.pages(base, ctx).flatMap((p) => p.cards ?? []).filter((c) => c?.name) : []), [base, ctx, tpl]);
   const chosen = who === "all" ? cards : cards.filter((c) => String(c.no) === who);
-  const list = chosen.map((c) => (photos[c.name] ? { ...c, photo: photos[c.name] } : c));
-  const withPhoto = cards.filter((c) => photos[c.name]).length;
+  const list = chosen.map((c) => (photos[c.sid] ? { ...c, photo: photos[c.sid] } : c));
+  const withPhoto = cards.filter((c) => photos[c.sid]).length;
   const pages = [];
   for (let i = 0; i < list.length; i += per) pages.push({ ...base, cards: list.slice(i, i + per) });
 
@@ -123,22 +154,26 @@ export default function ProgramCards({ tplKey, onBack, backLabel = "رجوع" })
               صور الطلاب (اختيارية) <span className="num text-xs font-normal text-muted">— أُضيفت {withPhoto} من {cards.length}</span>
             </summary>
             <p className="px-4 pb-2 text-[11.5px] leading-relaxed text-muted">
-              لمن يرغب: صورة مربعة لكل طالب تظهر في بطاقته، وتُحفظ في هذا الجهاز وحده ولا تُرفع للبوابة. ومن لا صورة له يظهر برمز البرنامج.
+              لمن يرغب: صورة لكل طالب تظهر في بطاقته، تُقص مربعة وتُحفظ في البوابة فتظهر من أي جهاز. ومن لا صورة له يظهر برمز البرنامج.
             </p>
             {photoMsg && <p className="mx-4 mb-2 rounded-sm2 bg-warning-light px-3 py-2 text-[11.5px] text-warning">{photoMsg}</p>}
             <div className="grid gap-px border-t border-line bg-line sm:grid-cols-2">
               {chosen.map((c) => (
                 <div key={c.no} className="flex items-center gap-2 bg-white px-4 py-2">
-                  {photos[c.name]
-                    ? <img src={photos[c.name]} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-line" />
+                  {photos[c.sid]
+                    ? <img src={photos[c.sid]} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-line" />
                     : <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-canvas text-[10px] text-faint">صورة</span>}
                   <span className="min-w-0 flex-1 truncate text-[13px] text-ink">{c.name}</span>
-                  <label className="shrink-0 cursor-pointer rounded-pill border border-line px-3 py-1 text-[11.5px] text-muted hover:bg-canvas">
-                    {photos[c.name] ? "تغيير" : "إضافة"}
-                    <input type="file" accept="image/*" className="hidden"
-                           onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) squarePhoto(f, (u) => setPhoto(c.name, u)); }} />
-                  </label>
-                  {photos[c.name] && <button className="shrink-0 text-[11.5px] text-absent" onClick={() => setPhoto(c.name, "")}>إزالة</button>}
+                  {busyPhoto === c.sid ? <span className="shrink-0 text-[11.5px] text-muted">جارٍ الحفظ…</span> : (
+                    <>
+                      <label className="shrink-0 cursor-pointer rounded-pill border border-line px-3 py-1 text-[11.5px] text-muted hover:bg-canvas">
+                        {photos[c.sid] ? "تغيير" : "إضافة"}
+                        <input type="file" accept="image/*" className="hidden"
+                               onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setPhoto(c.sid, f); }} />
+                      </label>
+                      {photos[c.sid] && <button className="shrink-0 text-[11.5px] text-absent" onClick={() => setPhoto(c.sid, null)}>إزالة</button>}
+                    </>
+                  )}
                 </div>
               ))}
             </div>
