@@ -6,6 +6,7 @@ import ScoutAttendance from "./ScoutAttendance.jsx";
 import ScoutEvals from "./ScoutEvals.jsx";
 import ScoutStats from "./ScoutStats.jsx";
 import ScoutReports from "./ScoutReports.jsx";
+import ProgramCards from "../studio/ProgramCards.jsx";
 import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
 import { isScoutRole } from "../../lib/scoutLeader.js";
 
@@ -16,7 +17,7 @@ import { isScoutRole } from "../../lib/scoutLeader.js";
 
 const TABS = [
   ["members", "الأعضاء"], ["structure", "الهيكل والطلائع"], ["attendance", "التحضير"],
-  ["evals", "التقييم"], ["stats", "التقرير"], ["reports", "بلاغات الوكيل"],
+  ["evals", "التقييم"], ["stats", "التقرير"], ["reports", "بلاغات الوكيل"], ["cards", "البطاقات"],
 ];
 
 export default function ScoutsHub() {
@@ -42,6 +43,8 @@ export default function ScoutsHub() {
         {tab === "stats" && <ScoutStats />}
         {tab === "reports" && <ScoutReports />}
       </ReadOnlyZone>
+      {/* بطاقات العضوية داخل القسم (studio/ProgramCards.jsx)، والطباعة متاحة للدعم الفني أيضًا */}
+      {tab === "cards" && <ProgramCards tplKey="scout-card" />}
     </div>
   );
 }

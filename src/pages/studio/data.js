@@ -1,6 +1,6 @@
 // src/pages/studio/data.js
 import { supabase } from "../../lib/supabase";
-import { memberRole } from "../../lib/globe.js";
+import { memberRole, GLOBE_MEMBER_ROLES } from "../../lib/globe.js";
 import { loadPeriodTimes } from "../../lib/periodTimes";
 import { byClassName, byName } from "../../lib/sortAr.js";
 
@@ -95,6 +95,7 @@ export async function loadGifted() {
 
 /* طلاب برنامج جلوب بفصولهم — لبطاقة طالب جلوب (globe_1.sql) */
 export async function loadGlobe() {
+  const rk = (t) => Math.max(0, GLOBE_MEMBER_ROLES.findIndex((r) => r.t === (t ?? "عضو")));
   const { data } = await supabase.from("globe_members")
     .select("*, students(full_name, student_enrollment(status, classes(grade, class_no)))");
   const G = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
@@ -104,7 +105,9 @@ export async function loadGlobe() {
              grade: en?.classes?.grade, class_no: en?.classes?.class_no,
              role: r.role ? memberRole(r.role).t : null,                    // صفته في الفريق (globe_3.sql)
              cls: en ? `${G[en.classes?.grade] ?? ""} · ${en.classes?.class_no ?? ""}` : "" };
-  }).filter((x) => x.full_name).sort(byClassName());
+  }).filter((x) => x.full_name).sort(byClassName())
+    // نائب المشرف العام ثم مشرفو الرصد ثم الأعضاء، وكلٌّ بترتيب فصله
+    .sort((a, b) => rk(a.role) - rk(b.role));
   return { globe };
 }
 

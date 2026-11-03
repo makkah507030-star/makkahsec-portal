@@ -4,7 +4,6 @@ import iconWhite from "../../assets/icon-white.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fitSize, fitTitle, bodySize, classCode, classShort, GRADE_OPTIONS } from "./lib";
 import { ROLLUP_SIZES } from "./templates";
-import { GLOBE_ROLES } from "../../lib/globe.js";
 import { useStudioAssets } from "./assets";
 import "./studio.css";
 import Fleur from "../../components/Fleur.jsx";
@@ -613,9 +612,6 @@ const CONTOURS = (
   </svg>
 );
 
-// صفات فريق جلوب في سطر البطاقة بألوانها (lib/globe.js)
-const GLOBE_CARD_ROLES = GLOBE_ROLES.map((t, i) => ({ t, color: ["#D9B45A", "#5BB8E8", "#4CAF6A"][i] ?? "#4CAF6A" }));
-
 export function GlobeCards({ theme = "light", d }) {
   const cards = Array.from({ length: 9 }, (_, i) => (d.cards ?? [d])[i] ?? null);
   return (
@@ -652,14 +648,6 @@ export function GlobeCards({ theme = "light", d }) {
                   })()}
                   {c.role && <span className="rl">{c.role}</span>}
                   {c.cls && <div className="cl">{c.cls}</div>}
-                  {/* صفات الفريق، وتُضاء صفة الطالب (بروتوكولات الرصد صارت عشرة فلا تتسع لها البطاقة) */}
-                  <div className="sp">
-                    {GLOBE_CARD_ROLES.map((r) => (
-                      <span key={r.t} className={r.t === c.role ? "on" : ""} style={{ "--sp": r.color }}>
-                        <i />{r.t}
-                      </span>
-                    ))}
-                  </div>
                   <div className="ft">
                     <span className="num">GL-{String(c.no ?? 1).padStart(3, "0")}</span>
                     <span className="num geo">21.42°N · 39.83°E</span>

@@ -24,7 +24,7 @@ import GlobeLibrary from "../globe/GlobeLibrary.jsx";
 import GlobeBadges from "../globe/GlobeBadges.jsx";
 import GlobeSupervisor from "../globe/GlobeSupervisor.jsx";
 import GlobeChart from "../globe/GlobeChart.jsx";
-import GlobeCardsView from "../globe/GlobeCardsView.jsx";
+import ProgramCards from "../studio/ProgramCards.jsx";
 import { GLOBE_MEMBER_ROLES, memberRole, ALL_PROTOCOLS } from "../../lib/globe.js";
 import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
 
@@ -203,7 +203,7 @@ export default function GlobeTeam() {
   if (!members) return <Loader />;
   if (tab === "report") return <GlobeReport leader={leaderName} members={members} onBack={() => setTab(prevTab)} />;
   if (tab === "chart") return <GlobeChart leader={leaderName} members={members} onBack={() => setTab(prevTab)} />;
-  if (tab === "cards") return <GlobeCardsView members={members} onBack={() => setTab("students")} />;
+  if (tab === "cards") return <ProgramCards tplKey="globe-card" onBack={() => setTab("students")} backLabel="رجوع للطلاب" />;
 
   return (
     <div className="space-y-5">
