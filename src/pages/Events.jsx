@@ -576,6 +576,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
       {!cancelled && step === 4 && <StageAttendance e={e} parts={parts} reload={loadParts} skip={skip} patch={patch}
                                       onNext={() => advance("certificates", "انتقلنا للشهادات.")} />}
       {!cancelled && step === 5 && <StageCertificates e={e} parts={parts} patch={patch} reload={loadParts} isSupport={isSupport}
+                                        merge={(f) => setE((x) => ({ ...x, ...f }))}
                                         onNext={() => advance("report", "انتقلنا للتقرير.")} />}
       {!cancelled && step === 6 && <StageReport e={e} parts={parts} patch={patch} onMsg={onMsg}
                                                 onSubmitted={() => setStep(7)} />}
@@ -1725,7 +1726,7 @@ function usePrintWhenReady(id, trigger, onDone) {
 }
 
 /* ⑥ الشهادات */
-function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
+function StageCertificates({ e, parts, patch, reload, isSupport, onNext, merge }) {
   const [f, setF] = useState({
     cert_title: e.cert_title ?? "",
     cert_template: e.cert_template ?? (isNationalDay(e) ? "national" : "classic"),
@@ -1752,7 +1753,7 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [e.id, (e.audience_attended ?? []).length]);
   const staff = useMemo(() => (e.audience_attended ?? []).map((x) => (
-    { id: `s-${x.key}`, key: x.key, student_name: x.name, class_label: titles[x.key] || x.role, staff: true, cert_issued_at: x.cert_at })),
+    { id: `s-${x.key}`, key: x.key, student_name: x.name, class_label: titles[x.key] || x.role, staff: true, cert_issued_at: x.cert_at, doc_id: x.doc_id })),
   [e.audience_attended, titles]);
   const serialOf = (p) => (p.staff
     ? `${e.serial}-M${String(staff.indexOf(p) + 1).padStart(3, "0")}`
@@ -1772,6 +1773,31 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
     await save();
     setPrinting(list);
     await markIssued(list);
+  };
+
+  // إصدار الشهادات إلى حسابات أصحابها (events_certs_deliver.sql): مستند في «نماذجي» للطالب وولي أمره،
+  // وللمعلم والإداري، بالقالب والنص والتوقيع نفسها، مع إشعار. ما صدر لا يُعاد إصداره.
+  const [dlv, setDlv] = useState({ busy: false, msg: null });
+  const undelivered = [...attended.filter((p) => !p.cert_doc_id), ...staff.filter((p) => !p.doc_id)];
+  const deliver = async () => {
+    if (!undelivered.length) return;
+    if (!window.confirm(`إصدار ${undelivered.length} شهادة إلى حسابات أصحابها؟\nتظهر في «نماذجي» للطالب وولي أمره وللمعلم، ويصلهم إشعار. ` +
+                        "تصدر بنص الشهادة الحالي، ولا تتغير بعد إصدارها.")) return;
+    if (!(await save())) return;
+    setDlv({ busy: true, msg: null });
+    const items = undelivered.map((p) => (p.staff ? { key: p.key, serial: serialOf(p), title: p.class_label }
+                                                  : { pid: p.id, serial: serialOf(p) }));
+    const { data, error } = await supabase.rpc("ev_issue_certs", { p_event: e.id, p_items: items, p_year: hijriYear() });
+    if (error) {
+      setDlv({ busy: false, msg: { ok: false, text: /ev_issue_certs|schema cache/.test(error.message)
+        ? "الإصدار إلى الحسابات يحتاج تنفيذ supabase/events_certs_deliver.sql في قاعدة البيانات مرة واحدة." : error.message } });
+      return;
+    }
+    if (data?.notification) { try { await sendPush(data.notification); } catch { /* الإشعار في البوابة وصل */ } }
+    await reload();
+    const { data: ev } = await supabase.from("school_events").select("audience_attended").eq("id", e.id).single();
+    if (ev) merge(ev);
+    setDlv({ busy: false, msg: { ok: true, text: `صدرت ${data?.issued ?? 0} شهادة إلى حسابات أصحابها، ووصلهم إشعار.` } });
   };
 
   // عدّاد الشهادات: تُسجَّل الطباعة الأولى لكل اسم، وإعادة الطباعة لا تغيّرها
@@ -1894,6 +1920,24 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
         </CertPreview>
       </section>
 
+      {/* الإصدار إلى الحسابات */}
+      {(attended.length + staff.length) > 0 && (
+        <section className="card space-y-2 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ink">إصدار الشهادات إلى الحسابات</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                تصل شهادة كل حاضر إلى «نماذجي» في حسابه، وللطالب في حساب ولي أمره أيضًا، مع إشعار. الطباعة باقية كما هي.
+              </p>
+            </div>
+            <button className="btn-primary shrink-0" disabled={dlv.busy || !undelivered.length} onClick={deliver}>
+              {dlv.busy ? "جارٍ الإصدار…" : undelivered.length ? `إصدار إلى الحسابات (${undelivered.length})` : "صدرت كلها ✓"}
+            </button>
+          </div>
+          {dlv.msg && <p className={`rounded-sm2 px-3 py-2 text-xs ${dlv.msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{dlv.msg.text}</p>}
+        </section>
+      )}
+
       {/* الطلاب */}
       <section className="card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
@@ -1911,7 +1955,8 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
                 <p className="truncate text-sm font-medium text-ink">{p.student_name}</p>
                 <p className="num truncate text-xs text-faint">{p.class_label} · {serialOf(p)}</p>
               </div>
-              {p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
+              {p.cert_doc_id ? <span className="mr-auto shrink-0 text-xs text-present">في حسابه ✓</span>
+                : p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
               <button onClick={() => printList([p])}
                       className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
                 طباعة
@@ -1944,7 +1989,8 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
                   <p className="truncate text-sm font-medium text-ink">{p.student_name}</p>
                   <p className="num truncate text-xs text-faint">{p.class_label} · {serialOf(p)}</p>
                 </div>
-                {p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
+                {p.doc_id ? <span className="mr-auto shrink-0 text-xs text-present">في حسابه ✓</span>
+                  : p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
                 <button onClick={() => printList([p])}
                         className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
                   طباعة

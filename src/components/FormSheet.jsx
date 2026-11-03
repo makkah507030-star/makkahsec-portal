@@ -7,6 +7,7 @@ import PrintPortal from "./PrintPortal.jsx";
 import { OFFICIAL_LEVELS, RATING_LEVELS, gradeTone, itemPoints, officialLabel, overallLabel, ratingLabel, rubricScore, weightedRating } from "../lib/rubric.js";
 import { PRINCIPAL_NAME } from "../lib/signers.js";
 import { GuestCertificateBody } from "./GuestCertificate.jsx";
+import EventCertificate from "./EventCertificate.jsx";
 import { EVIDENCE_LEAD, EVIDENCE_NOTE, LEVEL_LABEL } from "../lib/evidence.js";
 import { levelBand } from "../lib/gradeBands.js";
 import { useSignatureByName } from "../lib/userSignatures.js";
@@ -1759,6 +1760,14 @@ export default function FormSheet({
   replySigUrl, replySigName, scale = 1, evidence,
 }) {
   if (!template) return null;
+  // شهادة حدث صدرت إلى حساب المشارك (events_certs_deliver.sql): قالب الشهادة نفسه في صفحة الأحداث
+  if (template.key === "event_certificate") {
+    const cert = (
+      <EventCertificate event={values?.event} participant={values?.participant} serial={values?.serial ?? doc?.serial}
+                        sigUrl={sigUrl} stampUrl={stampUrl} principalUrl={principalSigUrl} principalName={principalName} />
+    );
+    return scale !== 1 ? <div style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>{cert}</div> : cert;
+  }
   const landscape = sheetLandscape(template);
   // المستندات المحفوظة قبل توحيد التاريخ: «03/03/1448هـ (14/09/2026م)» تُعرض «03/03/1448 - 14/09/2026»
   const v = Object.fromEntries(Object.entries(values ?? {}).map(([k, x]) => [k,
