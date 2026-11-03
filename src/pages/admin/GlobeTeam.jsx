@@ -24,6 +24,7 @@ import GlobeLibrary from "../globe/GlobeLibrary.jsx";
 import GlobeBadges from "../globe/GlobeBadges.jsx";
 import GlobeSupervisor from "../globe/GlobeSupervisor.jsx";
 import GlobeChart from "../globe/GlobeChart.jsx";
+import GlobeCardsView from "../globe/GlobeCardsView.jsx";
 import { GLOBE_MEMBER_ROLES, memberRole, ALL_PROTOCOLS } from "../../lib/globe.js";
 import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
 
@@ -85,7 +86,7 @@ export default function GlobeTeam() {
   const [msg, setMsg] = useNotice(null);
   const [printing, setPrinting] = useState(false);
   const [mobEdit, setMobEdit] = useState(null); // { id, v } جوال الطالب قيد التعديل
-  const [tab, setTabRaw] = useState("students"); // students | plan | monitor | library | badges | supervisor | report | chart
+  const [tab, setTabRaw] = useState("students"); // students | plan | monitor | library | badges | supervisor | report | chart | cards
   const [prevTab, setPrevTab] = useState("plan");
   const setTab = (t) => { if (t === "report" || t === "chart") setPrevTab(tab); setTabRaw(t); };
   const [waText, setWaText] = useState("");     // نص جاهز يُفتح به الواتساب لكل طالب
@@ -202,6 +203,7 @@ export default function GlobeTeam() {
   if (!members) return <Loader />;
   if (tab === "report") return <GlobeReport leader={leaderName} members={members} onBack={() => setTab(prevTab)} />;
   if (tab === "chart") return <GlobeChart leader={leaderName} members={members} onBack={() => setTab(prevTab)} />;
+  if (tab === "cards") return <GlobeCardsView members={members} onBack={() => setTab("students")} />;
 
   return (
     <div className="space-y-5">
@@ -211,7 +213,7 @@ export default function GlobeTeam() {
           <h1 className="text-lg font-bold text-ink">طلاب برنامج جلوب</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted">
             طلاب برنامج جلوب البيئي العالمي من كل الفصول: أضف الطالب من فصله، وحدد صفته في الفريق،
-            واحفظ جواله وتواصل معه بالواتساب. وبطاقاتهم الطولية في «استوديو البوابة» ← بطاقة طالب جلوب.
+            واحفظ جواله وتواصل معه بالواتساب، واطبع بطاقاتهم الطولية من «بطاقات الطلاب».
           </p>
         </div>
       </div>
@@ -284,6 +286,7 @@ export default function GlobeTeam() {
               {members.length > 0 && (
                 <span className="ms-auto flex gap-3">
                   <button data-ro-ok onClick={() => setTab("chart")} className="text-xs font-semibold text-mint-deep">هيكل الفريق</button>
+                  <button data-ro-ok onClick={() => setTab("cards")} className="text-xs font-semibold text-mint-deep">بطاقات الطلاب</button>
                   <button data-ro-ok onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
                           className="text-xs font-semibold text-mint-deep">طباعة الكشف</button>
                 </span>
