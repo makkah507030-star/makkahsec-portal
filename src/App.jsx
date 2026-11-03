@@ -51,6 +51,7 @@ const NewsAdmin = lazy(() => import("./pages/admin/NewsAdmin.jsx"));
 const ScoutsHub = lazy(() => import("./pages/scouts/ScoutsHub.jsx"));
 const ScoutReports = lazy(() => import("./pages/scouts/ScoutReports.jsx"));
 const MyScouts = lazy(() => import("./pages/scouts/MyScouts.jsx"));
+const MyGlobe = lazy(() => import("./pages/globe/MyGlobe.jsx"));
 const MyMediaTeam = lazy(() => import("./pages/media/MyMediaTeam.jsx"));
 const MediaContact = lazy(() => import("./pages/media/MediaContact.jsx"));
 const Polls = lazy(() => import("./pages/polls/Polls.jsx"));
@@ -595,6 +596,7 @@ export default function App() {
               <p className="mt-1 text-sm text-muted">فرص القيادة المفتوحة للمعلمين والإداريين في إعلانات الترشيحات.</p></div>
               <StaffCallsCard page /></div>} />}
           {effectiveRole === "student" && <Route path="/my-scouts" element={<MyScouts />} />}
+          {effectiveRole === "student" && <Route path="/my-globe" element={<MyGlobe />} />}
           {effectiveRole !== "guardian" && <Route path="/my-media-team" element={<MyMediaTeam />} />}
           <Route path="/media-contact" element={<MediaContact />} />
           {/* التصويت والاستطلاعات: للجميع بحسب فئته، وإدارتها لصاحب الصلاحية (supabase/polls_1..2.sql) */}
@@ -632,6 +634,8 @@ export default function App() {
           <Route path="/xvisits/:id" element={<ExchangeVisits />} />
           {/* خطط التطوير (حلقة التحسين) — للمعلم خططه، وللزائر ما يتابعه، وللمدير اللوحة؛ القاعدة تفرض الصلاحية */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/improve" element={<Improve />} />}
+          {/* برنامج الموهوبين لمشرفه في واجهة المعلم أيضًا (من يجمع الإشراف والتدريس) */}
+          {effectiveRole === "teacher" && can("gifted") && <Route path="/gifted" element={<GiftedHub />} />}
           <Route path="/pd" element={<PdReports />} />
           <Route path="/pd/:id" element={<PdReports />} />
           {/* اختباراتي — للمعلم */}
@@ -679,8 +683,9 @@ function AfterLogin() {
 function LabReportRedirect() {
   const { seat } = useParams();
   const { session } = useSession();
-  // 0 = لوحة البلاغ العامة في المعمل: يُختار الجهاز من الرسم
-  const target = `/lab?report=${Number(seat) || 0}`;
+  // 0 = لوحة البلاغ العامة في المعمل: يُختار الجهاز من الرسم. و«2-5» = الجهاز 5 في المعمل الثاني
+  const m = String(seat).match(/^(?:(\d+)-)?(\d+)$/);
+  const target = `/lab?${m?.[1] ? `lab=${m[1]}&` : ""}report=${Number(m?.[2]) || 0}`;
   if (!session) {
     try { sessionStorage.setItem("mk_after_login", target); } catch { /* تجاهل */ }
     return <Navigate to="/login" replace />;

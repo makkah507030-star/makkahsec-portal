@@ -163,7 +163,8 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
   const r = useReferralSigs(raw);
   if (!r) return null;
   if (r.kind === "behavior") return <BehaviorSheets r={r} stampUrl={stampUrl} guardianView={guardianView} />;
-  const missing = r.kind === "missing";
+  const missing = r.kind === "missing" || r.kind === "absence";
+  const absence = r.kind === "absence";
   const direct = isDirectToGuardian(r);
   const byCounselor = closedByCounselor(r);
 
@@ -205,11 +206,12 @@ export default function ReferralSheet({ r: raw, stampUrl, guardianView = false }
 
       {missing ? (
         /* ① إحالة الطالب المفقود: يرصدها الوكيل ويحيلها مباشرة (بلا مرحلة المعلم) */
-        <Stage n="١" title="رصد وكيل شؤون الطلاب — طالب مفقود" who={r.deputy_name} at={r.deputy_at} sig={r.deputy_sig}>
+        <Stage n="١" title={absence ? "تحويل وكيل شؤون الطلاب — غياب بدون عذر" : "رصد وكيل شؤون الطلاب — طالب مفقود"} who={r.deputy_name} at={r.deputy_at} sig={r.deputy_sig}>
+          {!absence && (
           <div className="grid grid-cols-2 gap-x-4">
             <Field label="مادة حصة الفقدان" value={r.subject} />
             <Field label="حصة الفقدان" value={r.period_no ? `الحصة ${r.period_no}` : ""} />
-          </div>
+          </div>)}
           <Field label="سبب التحويل" value={r.reason} />
           {r.day_timeline && <DayTimeline t={r.day_timeline} studentId={r.student_id} date={r.referral_date} />}
           <Field label="ما تم عمله والملاحظات" value={r.deputy_note} />

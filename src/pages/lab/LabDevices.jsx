@@ -10,7 +10,6 @@ import Loader from "../../components/Loader.jsx";
 import { fmtDateTime } from "../../lib/dates";
 import { printReport, PRINCIPAL_NAME } from "../../lib/exportUtils";
 import { DEVICE_STATUS, SPEC_FIELDS, uLayout } from "../../lib/lab.js";
-import LabWallpapers from "./LabWallpapers.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
 
@@ -98,7 +97,10 @@ export default function LabDevices({ lab, isManager, canEdit }) {
         </div>
       </div>
 
-      {canEdit && <LabWallpapers lab={lab} devices={devices} />}
+      {canEdit && (
+        <p className="card px-4 py-3 text-sm text-muted print:hidden">
+          خلفيات سطح المكتب وبطاقات الأجهزة وملصقاتها ولوحة البلاغ صارت في تبويب <b className="text-ink">«استوديو المعمل»</b>.
+        </p>)}
 
       {open && (
         <DeviceSheet device={open} lab={lab} isManager={isManager} onClose={() => setOpen(null)}

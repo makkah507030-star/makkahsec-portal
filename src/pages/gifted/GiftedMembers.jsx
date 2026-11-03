@@ -123,18 +123,18 @@ export default function GiftedMembers() {
       <section className="card overflow-hidden">
         <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold text-ink">الطلاب الموهوبون <span className="num text-muted">({rows.length})</span></h2>
-          {rows.length > 0 && <button className="ms-auto text-xs font-semibold text-mint-deep" onClick={print}>طباعة الكشف</button>}
+          {rows.length > 0 && <button data-ro-ok className="ms-auto text-xs font-semibold text-mint-deep" onClick={print}>طباعة الكشف</button>}
         </div>
         {rows.length > 0 && (
           <div className="space-y-2 border-b border-line p-3">
             <div className="flex flex-wrap gap-1.5">
               {GIFTED_DOMAINS.map((d) => {
                 const n = d.k === "all" ? rows.length : rows.filter((m) => (m.domains ?? []).includes(d.k)).length;
-                return (d.k === "all" || n > 0) && <button key={d.k} onClick={() => setDom(d.k)} className={`rounded-pill px-3 py-1 text-xs font-medium ${dom === d.k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>{d.t} <span className="num">({n})</span></button>;
+                return (d.k === "all" || n > 0) && <button key={d.k} data-ro-ok onClick={() => setDom(d.k)} className={`rounded-pill px-3 py-1 text-xs font-medium ${dom === d.k ? "bg-mint-deep text-white" : "border border-line bg-white text-muted"}`}>{d.t} <span className="num">({n})</span></button>;
               })}
             </div>
-            {rows.length > 5 && <input className="field w-full" value={q} onChange={(x) => setQ(x.target.value)} placeholder="بحث بالاسم" />}
-            <textarea className="field min-h-[3rem] w-full text-sm" value={waText} onChange={(x) => setWaText(x.target.value)} placeholder="رسالة واتساب جاهزة (اختياري): يُفتح بها زر «واتساب» عند كل طالب وولي أمر" />
+            {rows.length > 5 && <input data-ro-ok className="field w-full" value={q} onChange={(x) => setQ(x.target.value)} placeholder="بحث بالاسم" />}
+            <textarea data-ro-ok className="field min-h-[3rem] w-full text-sm" value={waText} onChange={(x) => setWaText(x.target.value)} placeholder="رسالة واتساب جاهزة (اختياري): يُفتح بها زر «واتساب» عند كل طالب وولي أمر" />
           </div>
         )}
         {!rows.length && <p className="px-4 py-6 text-sm text-muted">لا طلاب بعد. أضفهم من فصولهم، ومن تصير حالته «موهوب» في متابعة المقياس يُضاف تلقائيًا.</p>}

@@ -19,6 +19,8 @@ export default function OutreachEditor({ item, onSaved, onCancel }) {
   const [link, setLink] = useState({ t: "", url: "" });
   const set = (k, v) => setX((o) => ({ ...o, [k]: v }));
   const setQ = (i, patch) => set("questions", x.questions.map((q, j) => (j === i ? { ...q, ...patch } : q)));
+  // تكرار السؤال تحته بنصه وخياراته، لتعديل ما يلزم (مثل سؤال المقياس لعدة عبارات)
+  const dupQ = (i) => { const a = [...x.questions]; a.splice(i + 1, 0, { ...a[i], id: Math.random().toString(36).slice(2, 8), options: [...a[i].options] }); set("questions", a); };
   const moveQ = (i, d) => { const a = [...x.questions]; const [q] = a.splice(i, 1); a.splice(i + d, 0, q); set("questions", a); };
   const k = KIND[x.kind];
 
@@ -138,6 +140,7 @@ export default function OutreachEditor({ item, onSaved, onCancel }) {
                 <span className="flex-1" />
                 <button className="text-xs text-muted disabled:opacity-30" disabled={i === 0} onClick={() => moveQ(i, -1)}>▲</button>
                 <button className="text-xs text-muted disabled:opacity-30" disabled={i === x.questions.length - 1} onClick={() => moveQ(i, 1)}>▼</button>
+                <button className="text-xs font-semibold text-mint-deep" onClick={() => dupQ(i)}>تكرار</button>
                 <button className="text-xs text-danger" onClick={() => set("questions", x.questions.filter((_, j) => j !== i))}>حذف</button>
               </div>
               <input className="field text-sm" maxLength={300} value={q.q} onChange={(e) => setQ(i, { q: e.target.value })} placeholder="نص السؤال" />

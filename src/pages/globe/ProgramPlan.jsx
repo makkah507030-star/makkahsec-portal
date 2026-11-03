@@ -97,20 +97,20 @@ export default function ProgramPlan({ cfg, me, onReport }) {
             <p className="text-xs text-muted">{cfg.sub}</p>
           </div>
           <button className="btn-primary px-4 py-1.5 text-xs" onClick={() => setNf(BLANK)}>+ برنامج</button>
-          {list.length > 0 && <button className="btn-ghost px-4 py-1.5 text-xs" onClick={onReport}>تقرير الخطة وطباعتها</button>}
+          {list.length > 0 && <button data-ro-ok className="btn-ghost px-4 py-1.5 text-xs" onClick={onReport}>تقرير الخطة وطباعتها</button>}
         </div>
         <Stats ratio={ratio} label="نسبة تنفيذ الخطة" items={[
           ["برامج الخطة", list.length, "text-ink"], ["نُفّذ", doneN, "text-present"],
           ["لم يُنفَّذ", list.length - doneN, "text-late"], ["المستفيدون", benN, "text-excused"]]} />
         <div className="flex flex-wrap gap-1.5 px-4 py-3">
-          <button className={pill(kindF === "all")} onClick={() => setKindF("all")}>كل الأنواع</button>
+          <button data-ro-ok className={pill(kindF === "all")} onClick={() => setKindF("all")}>كل الأنواع</button>
           {Object.entries(cfg.kinds).map(([k, t]) => {
             const c = list.filter((p) => p.kind === k).length;
-            return c ? <button key={k} className={pill(kindF === k)} onClick={() => setKindF(k)}>{t} <span className="num">({c})</span></button> : null;
+            return c ? <button key={k} data-ro-ok className={pill(kindF === k)} onClick={() => setKindF(k)}>{t} <span className="num">({c})</span></button> : null;
           })}
           <span className="mx-1 w-px self-stretch bg-line" />
           {[["all", "الكل"], ["done", "المنفّذة"], ["pending", "غير المنفّذة"]].map(([k, t]) => (
-            <button key={k} className={pill(statusF === k)} onClick={() => setStatusF(k)}>{t}</button>
+            <button key={k} data-ro-ok className={pill(statusF === k)} onClick={() => setStatusF(k)}>{t}</button>
           ))}
         </div>
       </section>

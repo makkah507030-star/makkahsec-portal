@@ -5,6 +5,7 @@ import MawhibaTracker from "./MawhibaTracker.jsx";
 import GiftedMembers from "./GiftedMembers.jsx";
 import GiftedReport from "./GiftedReport.jsx";
 import ProgramPlan from "../globe/ProgramPlan.jsx";
+import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
 import { GIFTED_KIND, GIFTED_PRESETS, GIFTED_DOMAINS, GIFTED_BUCKET, domainOf } from "../../lib/gifted.js";
 
 /* =====================================================================
@@ -24,6 +25,7 @@ const TABS = [["mawhiba", "مقياس موهبة"], ["members", "الطلاب ا
 export default function GiftedHub() {
   const { profile } = useSession();
   const [tab, setTab] = useState("mawhiba");
+  const ro = useSupportReadOnly("gifted_program");   // الدعم الفني: عرض فقط
   if (tab === "report") return <GiftedReport onBack={() => setTab("plan")} />;
   return (
     <div className="space-y-4">
@@ -33,12 +35,14 @@ export default function GiftedHub() {
       </div>
       <div className="flex gap-1 overflow-x-auto rounded-pill border border-line bg-paper p-1">
         {TABS.map(([k, t]) => (
-          <button key={k} onClick={() => setTab(k)} className={`flex-1 whitespace-nowrap rounded-pill px-3 py-1.5 text-[13px] font-semibold transition-colors ${tab === k ? "bg-mint-deep text-white" : "text-muted hover:bg-canvas"}`}>{t}</button>
+          <button key={k} data-ro-ok onClick={() => setTab(k)} className={`flex-1 whitespace-nowrap rounded-pill px-3 py-1.5 text-[13px] font-semibold transition-colors ${tab === k ? "bg-mint-deep text-white" : "text-muted hover:bg-canvas"}`}>{t}</button>
         ))}
       </div>
-      {tab === "mawhiba" && <MawhibaTracker />}
-      {tab === "members" && <GiftedMembers />}
-      {tab === "plan" && <ProgramPlan cfg={GIFTED_PLAN} me={profile?.full_name} onReport={() => setTab("report")} />}
+      <ReadOnlyZone on={ro}>
+        {tab === "mawhiba" && <MawhibaTracker />}
+        {tab === "members" && <GiftedMembers />}
+        {tab === "plan" && <ProgramPlan cfg={GIFTED_PLAN} me={profile?.full_name} onReport={() => setTab("report")} />}
+      </ReadOnlyZone>
     </div>
   );
 }

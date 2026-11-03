@@ -242,13 +242,13 @@ export default function ScoutTeam({ embedded = false }) {
                 أعضاء الفريق <span className="num text-muted">({members.length})</span>
               </h2>
               {members.length > 0 && (
-                <button onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
+                <button data-ro-ok onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
                         className="ms-auto text-xs font-semibold text-mint-deep">طباعة الكشف</button>
               )}
             </div>
             {members.length > 5 && (
               <div className="border-b border-line p-3">
-                <input className="field" value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالاسم أو رقم الهوية" />
+                <input data-ro-ok className="field" value={q} onChange={(e) => setQ(e.target.value)} placeholder="بحث بالاسم أو رقم الهوية" />
               </div>
             )}
             {members.length === 0 && <p className="px-4 py-6 text-sm text-muted">لا أعضاء بعد. اختر فصلًا وأضف الطلاب.</p>}

@@ -1,7 +1,7 @@
 // src/pages/lab/lessons/widgets.jsx
 // أدوات التدريب العملي. كل أداة تصف: نص المهمة، ومكان الإجابة، والتحقق، والتلميح،
 // والحل — ويتولى PracticeStation العدّ والتصحيح الفوري ونسبة الإتقان.
-// الأدوات: التحويل، والبتات، وASCII، والألوان، وجدول الحقيقة، والترتيب، والتصنيف.
+// الأدوات: التحويل، والبتات، وASCII، والألوان، وجدول الحقيقة، والترتيب، والتصنيف، ومحرر HTML.
 import { normalize, shuffled } from "./parts.jsx";
 
 const BASE_NAME = { 2: "الثنائي", 10: "العشري", 16: "الستة عشري" };
@@ -239,5 +239,29 @@ Object.assign(WIDGETS, {
     check: (t, v) => t.items.every((item, i) => okCats(item).includes(v[i])),
     hint: (t) => t.hint ?? [],
     solve: (t) => Object.fromEntries(t.items.map((item, i) => [i, okCats(item)[0]])),
+  },
+
+  /* محرر HTML: { prompt, start, checks: [[نمط تعبير منتظم, رسالة]], solution, hint?: [] }
+     يكتب الطالب الكود ويرى النتيجة في إطار معزول (لا تُشغَّل فيه البرامج)، ويُصحَّح بأنماط الوسوم المطلوبة */
+  html: {
+    prompt: (t) => t.prompt,
+    initial: (t) => t.start ?? "",
+    Input: ({ value, setValue, disabled }) => (
+      <div className="grid gap-2 lg:grid-cols-2">
+        <textarea dir="ltr" spellCheck={false} disabled={disabled} value={value} onChange={(e) => setValue(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Tab") { e.preventDefault(); const el = e.target, a = el.selectionStart;
+                    setValue(value.slice(0, a) + "  " + value.slice(el.selectionEnd)); requestAnimationFrame(() => { el.selectionStart = el.selectionEnd = a + 2; }); } }}
+                  className="field min-h-[16rem] font-mono text-[12.5px] leading-relaxed" />
+        <div className="overflow-hidden rounded-card border border-line bg-white">
+          <p className="border-b border-line bg-canvas px-3 py-1 text-[11px] text-muted">النتيجة في المتصفح</p>
+          <iframe title="معاينة الصفحة" sandbox="" srcDoc={value} className="h-[15rem] w-full bg-white" />
+        </div>
+      </div>
+    ),
+    check: (t, v) => (t.checks ?? []).every(([re]) => new RegExp(re, "is").test(v)),
+    hint: (t) => t.hint ?? [],
+    // رسالة أول شرط لم يتحقق، تظهر للطالب مع التلميح
+    missing: (t, v) => (t.checks ?? []).find(([re]) => !new RegExp(re, "is").test(v))?.[1] ?? null,
+    solve: (t) => t.solution ?? t.start ?? "",
   },
 });

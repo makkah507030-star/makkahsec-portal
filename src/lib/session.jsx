@@ -240,6 +240,9 @@ export function SessionProvider({ children }) {
     permissions.includes("*") || permissions.includes(perm);
 
   const isSuper = adminRoles.some((r) => SUPER_ROLES.includes(r));
+  // الحساب في دور غير كامل الصلاحية (محضر المعمل مثلًا) وأدواره الأخرى أوسع: الأقسام التي تمنح
+  // صلاحيتها بالدور في الخادم (الثقافة المؤسسية، والتقويم والاعتماد) تُعرض بعضويته الفعلية وحدها
+  const focusLimited = !!roleFocus && !SUPER_ROLES.includes(roleFocus);
 
   return (
     <SessionContext.Provider
@@ -247,7 +250,7 @@ export function SessionProvider({ children }) {
         session, profile, adminRoles, permissions, loading, hiddenNav,
         signOut, hasAdminRole, can, isSuper,
         isTeacher, dualRole, hasChildren, views, effectiveRole, view, switchView,
-        focusRoles, roleFocus, switchFocus,
+        focusRoles, roleFocus, switchFocus, focusLimited,
         reload: () => loadProfile(session?.user?.id),
       }}
     >
@@ -433,6 +436,7 @@ export const PERMISSIONS = [
   { key: "password_reset", label: "استعادة كلمة المرور", desc: "إعادة تعيين لأي مستخدم" },
   { key: "login_log",      label: "سجل الدخول والخروج",  desc: "متابعة عمليات تسجيل الدخول والخروج بالوقت والحالة" },
   { key: "scouts",         label: "الفريق الكشفي",      desc: "إضافة أعضاء الفريق الكشفي من كل الفصول وحذفهم" },
+  { key: "outreach",       label: "النشرات والاستبانات", desc: "إرسال النشرات التوعوية والاستبانات للطلاب وأولياء الأمور والموظفين، ومشاركتها عبر واتساب، ومتابعة الاطلاع والإجابات وتحليل النتائج" },
   { key: "polls",          label: "التصويت والاستطلاعات", desc: "إنشاء استطلاعات الرأي والانتخابات للطلاب وأولياء الأمور والمعلمين والإداريين، ومتابعة المشاركة والنتائج وطباعة محضرها" },
   { key: "media",          label: "استوديو الوسائط",     desc: "رفع صور المدرسة ومقاطعها إلى «معرض المدرسة» داخل الحسابات فقط، وإخفاؤها وحذفها" },
   { key: "gifted",         label: "برنامج الموهوبين",   desc: "متابعة طلاب الأول الثانوي في مقياس موهبة من التسجيل إلى النتيجة، وتذكيرهم وأولياء أمورهم بالواتساب" },

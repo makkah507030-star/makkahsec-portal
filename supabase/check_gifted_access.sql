@@ -6,7 +6,8 @@
 select 'صاحب الدور' as "البند",
        coalesce(nullif(trim(t.full_name), ''), u.full_name) || ' · ' || u.username
          || case when u.is_active then ' · نشط' else ' · موقوف' end
-         || ' · معلم: ' || case when t.user_id is not null then 'نعم' else 'لا' end as "النتيجة"
+         || ' · معلم: ' || case when t.user_id is not null then 'نعم' else 'لا' end
+         || ' · نوع الحساب: ' || u.role::text as "النتيجة"
   from public.admin_roles ar join public.users u on u.id = ar.user_id
   left join public.teachers t on t.user_id = u.id
  where ar.role_type = 'gifted_program'

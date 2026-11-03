@@ -5,6 +5,7 @@
 // • الملف الدائم (mode: "install"): يُثبَّت على الأجهزة ويفتح الحصة برمز (InstallPlayer).
 // • نسخة العرض (mode: "present"): الدرس على السبورة لجهاز المعلم.
 // • الاختبار دون إنترنت (mode: "oq"): صفحة تُحفظ على جوال الطالب (OfflineQuiz).
+// • اختبار المعمل النهائي (mode: "exam"): النظري أو العملي الآلي على أجهزة المعمل (ExamPlayer).
 // التقدم محفوظ على الجهاز (localStorage) لكل حصة وجهاز وطلاب، فلا يضيع بإعادة الفتح.
 import { useState } from "react";
 import { lessonById } from "../lab-content/index.js";
@@ -12,11 +13,14 @@ import LessonPresenter from "../pages/lab/lessons/LessonPresenter.jsx";
 import { resultCode } from "../lib/labSign.js";
 import InstallPlayer from "./InstallPlayer.jsx";
 import OfflineQuiz from "./OfflineQuiz.jsx";
+import ExamPlayer from "./ExamPlayer.jsx";
 import { store, Header, DeviceGrid, NamePicker, LessonRun } from "./shared.jsx";
 
 export default function Player({ data }) {
   if (data.mode === "install") return <InstallPlayer data={data} />;
   if (data.mode === "oq") return <OfflineQuiz data={data} />;
+  // ملف اختبار مركز اختبارات التقنية الرقمية (src/pages/lab/exams)
+  if (data.mode === "exam") return <ExamPlayer data={data} />;
   const lesson = lessonById(data.lesson);
   if (data.mode === "present" && lesson) return <LessonPresenter lesson={lesson} />;
   return <SessionPlayer data={data} lesson={lesson} />;

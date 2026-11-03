@@ -8,7 +8,7 @@ import { confirmDanger } from "../../lib/danger";
 import { printReport } from "../../lib/exportUtils";
 import { byName } from "../../lib/sortAr.js";
 import { classText, isoOf, shortDate } from "../../lib/lab.js";
-import { LESSONS, lessonById } from "../../lab-content/index.js";
+import { LESSONS, lessonById, LESSON_GROUPS } from "../../lab-content/index.js";
 import { buildLabFile, downloadText } from "./labFile.js";
 import LabScanner from "./LabScanner.jsx";
 import { InstallPanel, RoomOpen } from "./LabRoom.jsx";
@@ -125,7 +125,7 @@ function NewSession({ lab, onCancel, onCreated }) {
         <div>
           <label className="label" htmlFor="ses-lesson">الدرس</label>
           <select id="ses-lesson" className="field" value={lessonId} onChange={(e) => setLessonId(e.target.value)}>
-            {LESSONS.map((l) => <option key={l.id} value={l.id}>{l.grade} · الدرس {l.lesson.no}: {l.lesson.title}{l.draft ? " (مسودة)" : ""}</option>)}
+            {LESSON_GROUPS.map((g) => <optgroup key={g.label} label={g.label}>{g.lessons.map((l) => <option key={l.id} value={l.id}>الدرس {l.lesson.no}: {l.lesson.title}{l.draft ? " (مسودة)" : ""}</option>)}</optgroup>)}
           </select>
         </div>
         <div>

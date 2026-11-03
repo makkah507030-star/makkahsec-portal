@@ -25,13 +25,13 @@ export const QTYPES = {
   long: { t: "إجابة مطوّلة" },
 };
 
-export const TOPICS = ["توعية", "تعليمات", "الصحة النفسية", "السلوك والانضباط", "التوجيه المهني", "الصحة", "السلامة", "الأمن الرقمي", "التحصيل الدراسي", "استطلاع رأي"];
+export const TOPICS = ["توعية", "تعليمات", "الصحة النفسية", "السلوك والانضباط", "التوجيه المهني", "الصحة", "السلامة", "الأمن الرقمي", "التحصيل الدراسي", "رأي وتقييم"];
 
 const q = (type, text, options, required = true) => ({ id: Math.random().toString(36).slice(2, 8), type, q: text, options: options ?? [], required });
 
 /* قوالب جاهزة تبدأ منها، وتُعدَّل بالكامل */
 export const TEMPLATES = [
-  { kind: "survey", topic: "استطلاع رأي", title: "الرضا عن خدمات التوجيه الطلابي", anonymous: true,
+  { kind: "survey", topic: "رأي وتقييم", title: "الرضا عن خدمات التوجيه الطلابي", anonymous: true,
     body: "رأيك يساعدنا على تحسين خدمات التوجيه في المدرسة. الإجابة دون اسم.",
     questions: () => [q("scale", "أعرف من هو الموجه الطلابي لصفي وكيف أصل إليه"), q("scale", "أجد المساعدة حين أحتاجها"),
       q("scale", "أشعر بالارتياح عند الحديث مع الموجه الطلابي"), q("multi", "ما البرامج التي تفيدك أكثر؟", ["مهارات المذاكرة", "إدارة الوقت", "التعامل مع القلق", "اختيار التخصص والمسار", "العلاقات مع الزملاء"]),
@@ -58,10 +58,22 @@ export const TEMPLATES = [
   { kind: "post", topic: "تعليمات", title: "تعليمات مهمة للطلاب", body: "" },
 ];
 
-export const blankItem = (kind) => ({ kind, title: "", body: "", topic: kind === "survey" ? "استطلاع رأي" : "توعية", media: [], links: [],
+export const blankItem = (kind) => ({ kind, title: "", body: "", topic: kind === "survey" ? "رأي وتقييم" : "توعية", media: [], links: [],
   questions: kind === "survey" ? [q("single", "", ["", ""])] : [], needs_ack: false, anonymous: kind === "survey", closes_at: null });
 export const fromTemplate = (t) => ({ ...blankItem(t.kind), title: t.title, body: t.body, topic: t.topic, anonymous: !!t.anonymous,
   questions: t.questions ? t.questions() : [] });
+/** نسخة جديدة من نشرة أو استبانة سابقة: محتواها وأسئلتها، ووسائطها منسوخة إلى مجلد المرسل
+    (فلا يمسّها حذف الأصل)، بلا إرسال ولا موعد إغلاق */
+export async function copyItem(uid, i) {
+  const media = [];
+  for (const m of i.media ?? []) {
+    const to = `${uid}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${m.path.split(".").pop()}`;
+    const { error } = await supabase.storage.from(BUCKET).copy(m.path, to);
+    if (!error) media.push({ ...m, path: to });
+  }
+  return { ...blankItem(i.kind), title: i.title, body: i.body ?? "", topic: i.topic ?? "", media, links: [...(i.links ?? [])],
+    questions: (i.questions ?? []).map((q) => ({ ...q, options: [...(q.options ?? [])] })), needs_ack: !!i.needs_ack, anonymous: !!i.anonymous };
+}
 export const newQuestion = (type = "single") => q(type, "", QTYPES[type].opts ? ["", ""] : []);
 
 /** رابط النشرة الثابت: يُفتح بعد الدخول (من واتساب أو رمز QR أو الإشعار) */

@@ -2,14 +2,14 @@
 // «النشرات والاستبانات» للمرسل (الموجهون الطلابيون ومن له الصلاحية): القائمة بحالة كل نشرة ونسب
 // الاستجابة، والقوالب الجاهزة، وصفحة كل نشرة بتبويباتها: المحتوى، والإرسال والمشاركة، والمتابعة، والنتائج.
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate } from "../../lib/dates";
 import { notify } from "../../lib/notice";
 import { confirmDanger } from "../../lib/danger";
 import Loader from "../../components/Loader.jsx";
-import { KIND, TEMPLATES, blankItem, fromTemplate, mediaUrls, setupMsg, statusOf } from "../../lib/outreach.js";
+import { KIND, TEMPLATES, blankItem, copyItem, fromTemplate, mediaUrls, setupMsg, statusOf } from "../../lib/outreach.js";
 import OutreachEditor from "./OutreachEditor.jsx";
 import OutreachSend from "./OutreachSend.jsx";
 import { Follow, Results } from "./OutreachResults.jsx";
@@ -20,7 +20,7 @@ const Icon = ({ d, className = "h-5 w-5" }) => (
 );
 
 export default function OutreachAdmin() {
-  const { session, hasAdminRole } = useSession();
+  const { session, hasAdminRole, can } = useSession();
   const uid = session.user.id;
   const [sp, setSp] = useSearchParams();
   const [items, setItems] = useState(null);
@@ -52,7 +52,8 @@ export default function OutreachAdmin() {
   if (draft) return <OutreachEditor item={draft} onCancel={() => setDraft(null)}
     onSaved={(row) => { setDraft(null); load(); go(row.id, "send"); notify({ ok: true, text: "حُفظت. اختر المستفيدين ثم أرسل." }); }} />;
   const cur = openId && items.find((i) => i.id === openId);
-  if (openId && cur) return <ItemPage item={cur} tab={sp.get("tab")} setTab={(t) => go(cur.id, t)} onBack={() => go(null)} reload={load} />;
+  if (openId && cur) return <ItemPage item={cur} tab={sp.get("tab")} setTab={(t) => go(cur.id, t)} onBack={() => go(null)} reload={load}
+    onCopy={async () => { const d = await copyItem(uid, cur); go(null); setDraft(d); notify({ ok: true, text: "نسخة جديدة: عدّل ما يلزم ثم احفظ وأرسل." }); }} />;
 
   const surveys = items.filter((i) => i.kind === "survey" && i.sent_at).length;
   const posts = items.filter((i) => i.kind === "post" && i.sent_at).length;
@@ -76,6 +77,11 @@ export default function OutreachAdmin() {
               <span className="text-[12.5px] text-muted">{k === "post" ? "نص وصور ومقاطع وروابط، مع «تم الاطلاع» للتعليمات المهمة" : "اختيار، ومقياس، ونعم ولا، وإجابات نصية؛ باسم أو دون اسم"}</span></span>
           </button>))}
       </div>
+      {/* التمييز عن «التصويت والاستطلاعات»: سؤال واحد بنتيجة معلنة مكانه هناك */}
+      <p className="-mt-2 text-[12px] leading-relaxed text-muted">
+        لسؤال واحد يُصوَّت عليه وتُعلن نتيجته للجميع، أو لانتخاب، استخدم{" "}
+        {can("polls") ? <Link to="/polls-admin" className="font-semibold text-mint-deep hover:underline">التصويت والاستطلاعات</Link> : <b className="text-ink">التصويت والاستطلاعات</b>}.
+      </p>
 
       <section className="space-y-2">
         <h2 className="text-sm font-bold text-ink">ابدأ من قالب جاهز</h2>
@@ -119,7 +125,7 @@ export default function OutreachAdmin() {
   );
 }
 
-function ItemPage({ item, tab, setTab, onBack, reload }) {
+function ItemPage({ item, tab, setTab, onBack, reload, onCopy }) {
   const { session } = useSession();
   const own = item.created_by === session.user.id;
   const [editing, setEditing] = useState(false);
@@ -151,6 +157,7 @@ function ItemPage({ item, tab, setTab, onBack, reload }) {
         <span className="flex-1" />
         {own && !item.sent_at && <button className="btn-ghost" onClick={() => setEditing(true)}>تعديل</button>}
         {own && item.sent_at && survey && <button className="btn-ghost" onClick={close}>{item.closed_at ? "إعادة فتح الاستبانة" : "إغلاق الاستبانة"}</button>}
+        <button className="btn-ghost" onClick={onCopy}>نسخة جديدة</button>
         {own && <button className="text-sm text-danger" onClick={remove}>حذف</button>}
       </div>
       <h1 className="text-lg font-bold text-ink">{item.title}</h1>

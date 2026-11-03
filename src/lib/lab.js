@@ -4,7 +4,7 @@
 // أدوار الإدارة التي تدير المعمل (تطابق lab_is_manager في قاعدة البيانات)
 export const LAB_MANAGER_ROLES = ["computer_lab", "principal", "tech_support"];
 
-// المعمل المفعّل حاليًا — المعمل الثاني يُفعَّل لاحقًا من جدول labs
+// المعمل الافتراضي، والمعامل المفعّلة تُقرأ من جدول labs (المعمل الثاني: computer_lab_13.sql)
 export const DEFAULT_LAB = 1;
 
 export const DEVICE_STATUS = {
@@ -77,7 +77,9 @@ export const TICKET_STATUS = {
 export const OPEN_TICKET = ["new", "in_progress", "external"];
 
 /** رابط البلاغ المطبوع في رمز QR على خلفية الجهاز */
-export const reportUrl = (seat, origin = window.location.origin) => `${origin}/lab/r/${seat}`;
+// رابط رمز QR للجهاز: /lab/r/5 للمعمل الأول، و/lab/r/2-5 لجهاز 5 في المعمل الثاني
+export const reportUrl = (seat, lab = DEFAULT_LAB, origin = window.location.origin) =>
+  `${origin}/lab/r/${lab > DEFAULT_LAB ? `${lab}-${seat}` : seat}`;
 
 // دقات شاشات أجهزة المعمل لخلفية سطح المكتب
 export const WALLPAPER_SIZES = [

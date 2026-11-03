@@ -69,3 +69,38 @@
 .lab-wall .cap { text-align: center; font-weight: 700; color: var(--stu-text); line-height: 1.5; }
 .lab-wall .cap small { display: block; font-weight: 500; color: var(--stu-text2); font-size: .82em; }
 .lab-wall .foot-note { position: absolute; left: 6%; text-align: right; color: var(--stu-text2); font-weight: 500; }
+
+/* بطاقات الأجهزة الكبيرة: 2 × 2 في ورقة A4 */
+.lab-dcards { background: #fff; }
+.lab-dcards .grid { position: absolute; inset: 30px 28px 50px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.lab-dcard { border: 1px dashed #BDBDBD; padding: 8px; min-height: 0; }
+.lab-dcard.empty { border-color: transparent; }
+.lab-dcard .in { position: relative; height: 100%; border-radius: 16px; overflow: hidden; background: var(--stu-bg); color: var(--stu-text);
+                 display: flex; flex-direction: column; gap: 12px; padding: 20px 20px 16px; }
+.stu-official .lab-dcard .in { background: #fff; border: 1.5px solid #3E6350; border-radius: 8px; }
+.lab-dcard .in::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, var(--stu-lines) 0 1.5px, transparent 1.5px 22px); }
+.lab-dcard .in > * { position: relative; }
+.lab-dcard .br { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: var(--stu-text2); }
+.lab-dcard .br img { width: 22px; height: 22px; }
+.lab-dcard .stu-tag { align-self: flex-start; font-size: 13px; }
+.lab-dcard .stu-tag svg { width: 1.1em; height: 1.1em; }
+.lab-dcard .row { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 0; }
+.lab-dcard .nm { display: flex; flex-direction: column; }
+.lab-dcard .nm span { font-size: 14px; color: var(--stu-text2); font-weight: 600; }
+.lab-dcard .nm b { font-size: 92px; line-height: .95; font-weight: 700; color: var(--stu-accent); }
+.stu-dark .lab-dcard .nm b { color: #89D7AD; }
+.lab-dcard .nm small { font-size: 17px; font-weight: 700; direction: ltr; text-align: right; }
+.lab-dcard .qr { background: #fff; border-radius: 12px; padding: 8px; line-height: 0; text-align: center; }
+.lab-dcard .qr img { width: 130px; height: 130px; }
+.lab-dcard .qr i { display: block; font-style: normal; font-size: 11px; line-height: 1.6; font-weight: 700; color: #1C3328; margin-top: 4px; }
+.lab-dcard .sp { font-size: 11.5px; color: var(--stu-text2); font-weight: 600; text-align: center; }
+.lab-dcard .nt { font-size: 13px; font-weight: 700; color: var(--stu-gold); text-align: center; line-height: 1.5; }
+.lab-dcards .note { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; font-size: 11px; color: #8A8A8A; }
+
+/* خلفية التعليمات: بنود في وسط الشاشة بين الأيقونات ولوحة الجهاز */
+.lab-tips { color: var(--stu-text); border: 1.5px solid var(--stu-cardB); background: var(--stu-card) !important; }
+.lab-tips b { font-weight: 700; display: block; }
+.lab-tips ol { list-style: none; padding: 0; }
+.lab-tips li { display: flex; align-items: center; font-weight: 600; line-height: 1.5; border-top: 1px solid var(--stu-cardB); }
+.lab-tips li:first-child { border-top: 0; }
+.lab-tips li .num { flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--stu-accent); color: #fff; font-weight: 700; }

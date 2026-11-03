@@ -67,16 +67,19 @@ function CallList() {
   const [counts, setCounts] = useState({});
   const [err, setErr] = useState("");
   const [edit, setEdit] = useState(null);
+  // في حساب محضر المعمل (بالتبديل من الدعم الفني): إعلاناته وحدها، لا كل الإعلانات بصلاحية الدعم الفني
+  const { session, focusLimited } = useSession();
+  const me = session?.user?.id;
   const load = async () => {
     const [c, n] = await Promise.all([
       supabase.from("nom_calls").select("*").order("created_at", { ascending: false }),
       supabase.rpc("nom_counts"),
     ]);
     if (c.error) setErr(/nom_calls/.test(c.error.message) ? "الصفحة تحتاج تشغيل supabase/nominations_1.sql إلى 4." : c.error.message);
-    setCalls(c.data ?? []);
+    setCalls((c.data ?? []).filter((x) => !focusLimited || x.owner_id === me));
     setCounts(Object.fromEntries((n.data ?? []).map((r) => [r.call_id, r])));
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [focusLimited]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   if (edit) return <CallEditor init={edit} onClose={(saved) => { setEdit(null); if (saved) load(); }} />;
 

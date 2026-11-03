@@ -88,9 +88,12 @@ function DateFields({ f, setF }) {
 }
 
 export default function Events() {
-  const { session, profile, adminRoles } = useSession();
+  const { session, profile, adminRoles, focusLimited } = useSession();
   const uid = session?.user?.id;
   const roles = adminRoles ?? [];
+  // في حساب محضر المعمل (بالتبديل من الدعم الفني): أحداثه وحدها، لا كل الأحداث بصلاحية الدعم الفني،
+  // إلا إن كان لدوره المختار الاطلاع على الكل (events_rls_fix.sql)
+  const ownOnly = focusLimited && !roles.some((r) => ["principal", "tech_support", "deputy_students", "deputy_academic", "activity_leader"].includes(r));
   const isSupport = roles.includes("tech_support") || roles.includes("principal");
 
   const [list, setList] = useState(null);
@@ -106,10 +109,10 @@ export default function Events() {
   const load = async () => {
     const { data } = await supabase.from("school_events")
       .select("*").order("event_date", { ascending: false }).limit(100);
-    setList(data ?? []);
+    setList((data ?? []).filter((e) => !ownOnly || e.organizer_id === uid));
   };
 
-  useEffect(() => { load(); }, [uid]);
+  useEffect(() => { load(); }, [uid, ownOnly]);
 
   const open = (list ?? []).find((e) => e.id === openId);
   const closeOpen = () => { setOpenId(null); setOpenStep(null); load(); };

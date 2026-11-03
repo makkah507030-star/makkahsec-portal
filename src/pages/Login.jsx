@@ -1,4 +1,5 @@
 // src/pages/Login.jsx
+import { REG_NO, REG_TEXT } from "../lib/legal";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase, idToEmail, isConfigured, normalizeLogin } from "../lib/supabase";
@@ -250,6 +251,7 @@ export default function Login() {
           <p className="mt-5 text-center text-[11px] text-faint" dir="ltr">
             makkahsec.com
           </p>
+          <p className="mt-1 text-center text-[10.5px] text-faint">{REG_TEXT} <bdi dir="ltr" className="num">{REG_NO}</bdi></p>
         </div>
       </div>
     </div>

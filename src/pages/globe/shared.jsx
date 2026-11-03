@@ -86,3 +86,24 @@ export function Stats({ items, ratio, label }) {
     </>
   );
 }
+
+/* ملف صورة أو PDF (المكتبة وشهادة المشرف، supabase/globe_3.sql): الصورة تُصغَّر، والـPDF كما هو حتى 15 م.ب */
+export const MAX_DOC_MB = 15;
+export async function uploadDoc(folder, file, bucket = GLOBE_BUCKET) {
+  const pdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+  if (!pdf && !file.type.startsWith("image/")) throw new Error("الملف يجب أن يكون صورة أو PDF.");
+  if (pdf && file.size > MAX_DOC_MB * 1024 * 1024) throw new Error(`حجم ملف PDF أكبر من ${MAX_DOC_MB} م.ب.`);
+  const body = pdf ? file : await shrinkImage(file, 2000, 0.85, { jpeg: true });
+  const mime = pdf ? "application/pdf" : "image/jpeg";
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 6)}.${pdf ? "pdf" : "jpg"}`;
+  const { error } = await supabase.storage.from(bucket).upload(path, body, { contentType: mime });
+  if (error) throw error;
+  return { path, mime };
+}
+
+/** رابط موقّت لملف واحد */
+export async function signedUrl(path, bucket = GLOBE_BUCKET) {
+  if (!path) return null;
+  const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}

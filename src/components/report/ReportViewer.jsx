@@ -102,7 +102,7 @@ export default function ReportViewer({ id, pages, theme, setTheme, fileTitle, co
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-ro-ok>
       <div className="card space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
           {controls}

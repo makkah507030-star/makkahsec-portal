@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { setupMsg } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
+import { useSession } from "../../lib/session.jsx";
 import CultDash from "./CultDash.jsx";
 import CultPlan from "./CultPlan.jsx";
 import { CultMeetings, CultCare, CultOnboard } from "./CultLogs.jsx";
@@ -32,11 +33,20 @@ export default function Culture() {
   const [sp, setSp] = useSearchParams();
   const [me, setMe] = useState(null);
   const [err, setErr] = useState("");
+  const { session, focusLimited } = useSession();
+  const uid = session?.user?.id;
   const load = useCallback(async () => {
     const { data, error } = await supabase.rpc("cult_me");
     if (error) { setErr(setupMsg(error)); setMe(false); return; }
-    setErr(""); setMe(data);
-  }, []);
+    setErr("");
+    // في حساب محضر المعمل (بالتبديل من الدعم الفني): بعضويته في فريق الثقافة وحدها، لا بصلاحية الدعم الفني
+    if (focusLimited && data?.all) {
+      const { data: t } = await supabase.from("cult_team").select("role").eq("user_id", uid).maybeSingle();
+      setMe({ ...data, all: false, amb: t?.role === "ambassador", member: !!t });
+      return;
+    }
+    setMe(data);
+  }, [focusLimited, uid]);
   useEffect(() => { load(); }, [load]);
 
   if (me === null) return <Loader />;

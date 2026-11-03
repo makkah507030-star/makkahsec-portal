@@ -1,6 +1,6 @@
 // src/components/Layout.jsx
 import { useState, useEffect, useMemo, useRef } from "react";
-import { RIGHTS_LINE, PORTAL_VERSION } from "../lib/legal";
+import { RIGHTS_LINE, PORTAL_VERSION, REG_NO, REG_TEXT } from "../lib/legal";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession, ROLE_LABEL, ADMIN_ROLE_LABEL } from "../lib/session.jsx";
@@ -161,7 +161,7 @@ export const ADMIN_GROUPS = [
       { to: "/banners-admin",  label: "إعلانات الرئيسية", perm: "banners", icon: "megaphone", kw: "بنر فرصة مناسبة اعلان صورة" },
       { to: "/news-admin",     label: "الأخبار والمقالات",   perm: "news",     icon: "news" },
       { to: "/outreach",       label: "النشرات والاستبانات", perm: "outreach", icon: "megaphone", kw: "استبانة استبيان نشرة توعية توعوية تعليمات موجه طلابي واتساب" },
-      { to: "/my-outreach",    label: "ما وصلني من نشرات واستبانات", icon: "inbox", kw: "استبانة نشرة توعية" },
+      { to: "/my-outreach",    label: "ما وصلني من نشرات واستبانات", inbox: true, icon: "inbox", kw: "استبانة نشرة توعية" },
       { to: "/polls-admin",    label: "إدارة التصويت والاستطلاعات", perm: "polls", icon: "check", kw: "تصويت استطلاع انتخاب رأي مجلس طلابي" },
       { to: "/media-studio",   label: "استوديو الوسائط", perm: "media", icon: "palette", kw: "صور فيديو مقاطع رفع اعلامي" },
       { to: "/my-media-team",  label: "المركز الإعلامي", icon: "palette", mediaMember: true, kw: "بطاقة اعلامية رئيس المركز عضوية" },
@@ -289,6 +289,8 @@ export const TEACHER_GROUPS = [
       { to: "/referrals",  label: "إحالة طالب",             icon: "send", kw: "موجه" },
       { to: "/dropouts",   label: "الإبلاغ عن طالب منقطع",  icon: "userX", kw: "انقطاع سفر غياب" },
       { to: "/reports",    label: "التقارير",               tabKey: "reports", icon: "chart" },
+      // برنامج الموهوبين لمشرفه حين يكون في واجهة المعلم (صلاحية gifted من دوره الإداري)
+      { to: "/gifted",     label: "برنامج الموهوبين",       viewPerm: "gifted", icon: "award", kw: "موهبة مقياس موهوب كشف" },
     ],
   },
   {
@@ -330,7 +332,7 @@ export const TEACHER_GROUPS = [
       { to: "/forms-review", label: "الاعتماد والمتابعة", icon: "inbox" },
       { to: "/my-documents", label: "نماذجي",             icon: "folder" },
       { to: "/my-circulars", label: "تعاميمي",            icon: "circular", kw: "تعميم اطلاع" },
-      { to: "/my-outreach",  label: "النشرات والاستبانات", icon: "inbox", kw: "استبانة نشرة توعية" },
+      { to: "/my-outreach",  label: "ما وصلني من نشرات واستبانات", inbox: true, icon: "inbox", kw: "استبانة نشرة توعية" },
       { to: "/plc",          label: "التطوير المهني",     icon: "users", kw: "مجتمع التعلم المهني" },
     ],
   },
@@ -373,7 +375,7 @@ export const BASIC_GROUPS = [
       // التعاميم تصل أولياء الأمور لا الطلاب
       { to: "/my-circulars", label: "التعاميم", icon: "circular", guardianOnly: true, kw: "تعميم اطلاع" },
       // النشرات التوعوية والاستبانات من الموجه الطلابي والإدارة (supabase/outreach_1..2.sql)
-      { to: "/my-outreach", label: "النشرات والاستبانات", icon: "inbox", kw: "استبانة استبيان نشرة توعية تعليمات" },
+      { to: "/my-outreach", label: "النشرات والاستبانات", inbox: true, icon: "inbox", kw: "استبانة استبيان نشرة توعية تعليمات" },
       // فرص المشاركة — للطالب التقديم على لجان المدرسة وفرقها، ولولي الأمر متابعة طلبات أبنائه
       { to: "/opportunities", label: "فرص المشاركة", icon: "megaphone", kw: "ترشيح تقديم لجنة كشافة انضمام" },
       { to: "/media", label: "معرض المدرسة", icon: "sparkles", kw: "صور فيديو مقاطع البوم" },
@@ -381,6 +383,8 @@ export const BASIC_GROUPS = [
       { to: "/polls", label: "التصويت والاستطلاعات", icon: "check", kw: "تصويت استطلاع انتخاب رأي" },
       // فريقي الكشفي — لعضو الفريق وحده (supabase/scouts_6.sql)
       { to: "/my-scouts", label: "فريقي الكشفي", icon: "flag", studentOnly: true, scoutMember: true, kw: "كشافة طليعة عريف تحضير" },
+      // برنامج جلوب — للطالب العضو حين يسند له المشرف الدخول (supabase/globe_4.sql)
+      { to: "/my-globe", label: "برنامج جلوب", icon: "globe", studentOnly: true, globeMember: true, kw: "جلوب رصد بيئي globe" },
       // المركز الإعلامي — لعضوه وحده (supabase/media_3.sql)
       { to: "/my-media-team", label: "المركز الإعلامي", icon: "palette", studentOnly: true, mediaMember: true, kw: "تصوير اعلامي لا يصور بطاقة" },
     ],
@@ -497,6 +501,20 @@ const Badge = ({ n, dot, at = "-top-0.5 -left-1" }) => (n > 0
     : <span className="num ms-auto shrink-0 rounded-full bg-absent px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{n}</span>
   : null);
 
+/* هل وصل المستخدمَ شيء من النشرات والاستبانات — يُجلب مرة في الجلسة، فلا يظهر الرابط لمن لم يصله شيء */
+let inboxCache = null;   // { uid, v }
+function useOutreachInbox() {
+  const { session } = useSession();
+  const uid = session?.user?.id;
+  const [v, setV] = useState(inboxCache?.uid === uid ? inboxCache.v : false);
+  useEffect(() => {
+    if (!uid || inboxCache?.uid === uid) return;
+    supabase.from("outreach_recipients").select("item_id", { count: "exact", head: true }).eq("user_id", uid)
+      .then(({ count, error }) => { const x = !error && (count ?? 0) > 0; inboxCache = { uid, v: x }; setV(x); });
+  }, [uid]);
+  return v;
+}
+
 /* هل المستخدم سفير الثقافة المؤسسية — يُجلب مرة في الجلسة */
 let ambCache = null;   // { uid, v }
 function useCultAmbassador() {
@@ -512,8 +530,9 @@ function useCultAmbassador() {
 }
 
 export default function Layout({ children }) {
-  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav, focusRoles, roleFocus, switchFocus } = useSession();
+  const { session, profile, adminRoles, signOut, can, effectiveRole, views, switchView, hiddenNav, focusRoles, roleFocus, switchFocus, focusLimited } = useSession();
   const navigate = useNavigate();
+  const outreachInbox = useOutreachInbox();
   const location = useLocation();
   const path = location.pathname;
   const [open, setOpen] = useState(false);
@@ -550,6 +569,12 @@ export default function Layout({ children }) {
     if (effectiveRole !== "student") { setScoutMember(false); return; }
     supabase.rpc("scout_my").then(({ data, error }) => setScoutMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
+  // دخول الطالب إلى برنامج جلوب بإسناد المشرف (globe_4.sql): تظهر له «برنامج جلوب»
+  const [globeMember, setGlobeMember] = useState(false);
+  useEffect(() => {
+    if (effectiveRole !== "student") { setGlobeMember(false); return; }
+    supabase.rpc("globe_my").then(({ data, error }) => setGlobeMember(!error && !!data));
+  }, [effectiveRole, session?.user?.id]);
   // عضوية المركز الإعلامي للطالب ورئيسه من المعلمين: تظهر «المركز الإعلامي» (media_4.sql)
   const [mediaMember, setMediaMember] = useState(false);
   useEffect(() => {
@@ -561,16 +586,27 @@ export default function Layout({ children }) {
   const [accMember, setAccMember] = useState(false);
   useEffect(() => {
     if (!isStaff) { setAccMember(false); return; }
-    supabase.rpc("acc_me").then(({ data, error }) => setAccMember(!error && !!data?.member));
-  }, [isStaff, session?.user?.id]);
+    supabase.rpc("acc_me").then(async ({ data, error }) => {
+      if (error || !data?.member) { setAccMember(false); return; }
+      // في حساب محضر المعمل: بالعضوية الفعلية في اللجنة لا بصلاحية الدعم الفني
+      if (focusLimited && data.all) {
+        const { data: m } = await supabase.from("acc_members").select("user_id").eq("user_id", session?.user?.id).maybeSingle();
+        setAccMember(!!m); return;
+      }
+      setAccMember(true);
+    });
+  }, [isStaff, session?.user?.id, focusLimited]);
 
   // هل يظهر الرابط لهذا المستخدم؟
   const visible = (i) => {
     if (i.staffOnly && !isStaff) return false;
     if (i.studentOnly && effectiveRole !== "student") return false;
     if (i.scoutMember && !scoutMember) return false;
+    if (i.globeMember && !globeMember) return false;
     if (i.mediaMember && !mediaMember) return false;
     if (i.accMember && !accMember) return false;
+    // ما وصلني من نشرات واستبانات: لمن وصله شيء منها فقط
+    if (i.inbox && !outreachInbox) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
     // مركز تحليل النتائج وما حوله: مخفيّ حتى يُفتح، إلا رابط المركز نفسه
     // يبقى لمن يملك فتحه (الوكيل/المدير/الدعم) ليدخل ويفتحه.
@@ -590,6 +626,8 @@ export default function Layout({ children }) {
       return i.anyPerm ? i.anyPerm.some((p) => can(p)) : !i.perm || can(i.perm);
     }
     if (i.achMember) return achMember;
+    // عنصر في واجهة المعلم يتبع صلاحية من الدور الإداري للحساب نفسه
+    if (i.viewPerm) return can(i.viewPerm);
     if (i.extraTabKey) return grantedTabs.has(i.extraTabKey);
     return !i.tabKey || !hiddenTabs.has(i.tabKey);
   };
@@ -598,7 +636,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, mediaMember, accMember]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة والمعلم بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
@@ -1138,6 +1176,7 @@ export default function Layout({ children }) {
             <footer className="mx-auto mt-10 max-w-5xl border-t border-line pt-3 text-center text-[11px] leading-relaxed text-faint print:hidden">
               {RIGHTS_LINE} · <Link to="/terms" className="hover:text-mint-deep">الشروط</Link> · <Link to="/privacy" className="hover:text-mint-deep">الخصوصية</Link>
               <span className="mt-0.5 block text-[10.5px]">بوابة مكة الثانوية الرقمية · {PORTAL_VERSION}</span>
+              <span className="mt-0.5 block text-[10.5px]">{REG_TEXT} <bdi dir="ltr" className="num">{REG_NO}</bdi></span>
             </footer>
           </main>
           {isStaff && <QuickNote />}

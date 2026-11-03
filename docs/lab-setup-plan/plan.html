@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<!-- خطة تجهيز معملَي الحاسب الآلي وقائمة تحقق للطباعة (A4)، تُبنى إلى PDF بـ Playwright -->
+<style>
+@font-face{font-family:Plex;font-weight:400;src:url(../../public/fonts/ibm-plex-sans-arabic-400-arabic.woff2)}
+@font-face{font-family:Plex;font-weight:400;src:url(../../public/fonts/ibm-plex-sans-arabic-400-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:Plex;font-weight:600;src:url(../../public/fonts/ibm-plex-sans-arabic-600-arabic.woff2)}
+@font-face{font-family:Plex;font-weight:600;src:url(../../public/fonts/ibm-plex-sans-arabic-600-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
+@font-face{font-family:Plex;font-weight:700;src:url(../../public/fonts/ibm-plex-sans-arabic-700-arabic.woff2)}
+@font-face{font-family:Plex;font-weight:700;src:url(../../public/fonts/ibm-plex-sans-arabic-700-latin.woff2);unicode-range:U+0000-00FF,U+2000-206F}
+@page{size:A4;margin:14mm 14mm 16mm}
+*{box-sizing:border-box;margin:0}
+body{font-family:Plex;color:#1C3328;font-size:11.5pt;line-height:1.65}
+.hd{display:flex;align-items:center;gap:12px;border-bottom:3px solid #3E6350;padding-bottom:10px}
+.hd img{width:40px}
+.hd small{display:block;font-size:9.5pt;color:#5E7268}
+.hd b{font-size:12pt}
+h1{font-size:21pt;margin-top:14px;color:#1C3328}
+h1 em{font-style:normal;color:#3E6350}
+.lead{color:#5E7268;margin-top:2px}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 4px}
+.sum div{background:#E3F6EA;border-radius:10px;padding:8px 12px}
+.sum b{display:block;color:#3E6350;font-size:12pt}
+.sum span{font-size:9.5pt;color:#5E7268}
+.ph{margin-top:16px;break-inside:avoid-page}
+.ph h2{display:flex;align-items:center;gap:10px;font-size:13.5pt;background:#3E6350;color:#fff;border-radius:10px;padding:6px 12px}
+.ph h2 i{font-style:normal;background:#89D7AD;color:#1C3328;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-size:11pt}
+.ph h2 small{margin-inline-start:auto;font-size:9.5pt;font-weight:400;color:#E3F6EA}
+table{width:100%;border-collapse:collapse;margin-top:6px}
+td,th{border-bottom:1px solid #D5E7DC;padding:5px 6px;vertical-align:top;text-align:right}
+th{font-size:9.5pt;color:#5E7268;font-weight:600;background:#F6F9F7}
+td.ck{width:22px}td.ck span{display:inline-block;width:14px;height:14px;border:1.6px solid #3E6350;border-radius:3px;margin-top:4px}
+td.who{width:92px;font-size:9.5pt;color:#3E6350;font-weight:600}
+td small{display:block;color:#5E7268;font-size:9.5pt}
+code{direction:ltr;unicode-bidi:embed;font-family:Consolas,monospace;font-size:9.5pt;background:#F1F5F2;border-radius:4px;padding:0 4px}
+.note{margin-top:8px;border-inline-start:4px solid #A8823C;background:#FBF5E9;border-radius:6px;padding:7px 12px;font-size:10.5pt}
+.note b{color:#7A5A1F}
+.sig{display:flex;justify-content:space-between;margin-top:22px;font-size:10.5pt;color:#5E7268}
+</style></head><body>
+<div class="hd"><img src="../../src/assets/icon-mint.png"><div><b>بوابة مكة الثانوية الرقمية</b><small>مدرسة مكة الثانوية · معمل الحاسب الآلي</small></div></div>
+<h1>خطة تجهيز <em>معملَي الحاسب الآلي</em></h1>
+<p class="lead">الدروس التفاعلية، وسجل التطبيقات، والاستوديو، ومركز اختبارات التقنية الرقمية، على أجهزة المعملين دون إنترنت. علّم كل بند عند تنفيذه.</p>
+<div class="sum">
+ <div><b>المعمل 1</b><span>24 جهازًا · PC-01 إلى PC-24</span></div>
+ <div><b>المعمل 2</b><span>21 جهازًا · PC2-01 إلى PC2-21</span></div>
+ <div><b>الاختبارات النهائية</b><span>الأسبوعان 18 و19 · من 3 يناير 2027</span></div>
+</div>
+
+<div class="ph"><h2><i>1</i>تفعيل المعمل 2 ومركز الاختبارات<small>بعد دمج التحديث · 10 دقائق</small></h2>
+<table><tr><th></th><th>البند</th><th>المسؤول</th></tr>
+<tr><td class="ck"><span></span></td><td>تشغيل <code>computer_lab_13.sql</code> في Supabase ← SQL Editor<small>يضيف المعمل 2 بأجهزته الـ21</small></td><td class="who">مدير البوابة</td></tr>
+<tr><td class="ck"><span></span></td><td>تشغيل <code>lab_exam_1.sql</code> بعده<small>جداول مركز الاختبارات وبنك الأسئلة</small></td><td class="who">مدير البوابة</td></tr>
+<tr><td class="ck"><span></span></td><td>التحقق في «معمل الحاسب الآلي»: مبدّل المعمل 1 / المعمل 2، وسجل الأجهزة 24 و21، وتبويبا «استوديو المعمل» و«مركز الاختبارات»</td><td class="who">مدير البوابة</td></tr>
+<tr><td class="ck"><span></span></td><td>صلاحية «معمل الحاسب الآلي» لكل معلمي التقنية الرقمية ومحضر المعمل</td><td class="who">مدير البوابة</td></tr>
+</table></div>
+
+<div class="ph"><h2><i>2</i>الطباعة والتعليق من «استوديو المعمل»<small>يوم واحد · لكل معمل على حدة</small></h2>
+<table><tr><th></th><th>البند</th><th>المسؤول</th></tr>
+<tr><td class="ck"><span></span></td><td>بطاقات الأجهزة (4 في الورقة) برقم الجهاز ورمز QR للبلاغ<small>توضع على كل جهاز · المعمل 1 والمعمل 2</small></td><td class="who">محضر المعمل</td></tr>
+<tr><td class="ck"><span></span></td><td>الملصقات الصغيرة على الشاشات أو الصناديق</td><td class="who">محضر المعمل</td></tr>
+<tr><td class="ck"><span></span></td><td>ملصق البلاغات (QR) عند باب كل معمل</td><td class="who">محضر المعمل</td></tr>
+<tr><td class="ck"><span></span></td><td>اللوحات الإرشادية (قواعد السلامة والتعليمات) على الجدران</td><td class="who">محضر المعمل</td></tr>
+<tr><td class="ck"><span></span></td><td>تصدير خلفيات سطح المكتب (خلفية لكل جهاز برقمه) وتسليمها للدعم الفني<small>نسخة عادية لحساب الدروس، ونسخة بتفعيل «منطقة اختصارات البرامج» لحساب «تطبيق عملي»</small></td><td class="who">محضر المعمل</td></tr>
+</table></div>
+
+<div class="ph"><h2><i>3</i>تجهيز الأجهزة الـ45<small>بحسب دليل الدعم الفني · جرّب جهازًا واحدًا أولًا</small></h2>
+<table><tr><th></th><th>البند</th><th>المسؤول</th></tr>
+<tr><td class="ck"><span></span></td><td>إصدار الملف الدائم لكل معمل: الدروس ← حصص الطلاب ← «إصدار الملف» برمز معلم<small>مرة والمعمل 1 مختار، ومرة والمعمل 2 مختار. لكل معمل ملفه، فلا يُخلطان</small></td><td class="who">محضر المعمل</td></tr>
+<tr><td class="ck"><span></span></td><td>نسخ الملف إلى <code>C:\MakkahLab\lab.html</code> في كل جهاز</td><td class="who">الدعم الفني</td></tr>
+<tr><td class="ck"><span></span></td><td>رابط التشغيل برقم الجهاز: <code>file:///C:/MakkahLab/lab.html#seat=N</code><small>المعمل 1: N من 1 إلى 24 · المعمل 2: N من 1 إلى 21</small></td><td class="who">الدعم الفني</td></tr>
+<tr><td class="ck"><span></span></td><td>قفل حساب الطالب بوضع Kiosk على Edge (أو الطريقة البديلة في الدليل)</td><td class="who">الدعم الفني</td></tr>
+<tr><td class="ck"><span></span></td><td>خلفية كل جهاز برقمه</td><td class="who">الدعم الفني</td></tr>
+<tr><td class="ck"><span></span></td><td>ضبط التاريخ والساعة في كل جهاز<small>رمز الحصة يعمل في يومه فقط</small></td><td class="who">الدعم الفني</td></tr>
+<tr><td class="ck"><span></span></td><td>حساب ثانٍ «تطبيق عملي» (مستخدم عادي) يدخله الطالب دون كلمة مرور<small>للبرامج والاختبار العملي والإلكتروني · القسم ٧ في دليل الدعم الفني</small></td><td class="who">الدعم الفني</td></tr>
+<tr><td class="ck"><span></span></td><td>تثبيت البرامج واختصاراتها في <code>C:\Users\Public\Desktop</code><small>الأول الثانوي: حاسبة ويندوز، OneNote، Freeplane، VS Code ومتصفح · الثالث الثانوي: GanttProject، draw.io (سطح المكتب)</small></td><td class="who">الدعم الفني</td></tr>
+<tr><td class="ck"><span></span></td><td>خلفية «تطبيق عملي» بمنطقة اختصارات البرامج (من الاستوديو)، وترتيب الأيقونات تلقائيًا على الشبكة</td><td class="who">الدعم الفني</td></tr>
+</table>
+<p class="note"><b>تنبيه:</b> بطاقتا «ون درايف» و«MIT App Inventor» في الاختبار العملي تحتاجان إنترنت؛ إن لم يتوفر في المعمل وقت الاختبار فلا يخترهما المعلم.</p></div>
+
+<div class="ph"><h2><i>4</i>تجربة حصة كاملة<small>معلم و2–3 طلاب · في كل معمل</small></h2>
+<table><tr><th></th><th>البند</th><th>المسؤول</th></tr>
+<tr><td class="ck"><span></span></td><td>«فتح حصة برمز»: اختيار الفصل والدرس، وعرض الدرس على السبورة</td><td class="who">معلم التقنية</td></tr>
+<tr><td class="ck"><span></span></td><td>الطلاب يكتبون الرمز ويختارون أسماءهم ويؤدّون الدرس</td><td class="who">معلم التقنية</td></tr>
+<tr><td class="ck"><span></span></td><td>مسح رمز درجة كل طالب، وظهور الدرجة في «سجل التطبيقات»</td><td class="who">معلم التقنية</td></tr>
+<tr><td class="ck"><span></span></td><td>التبديل إلى حساب «تطبيق عملي» (Ctrl+Alt+Del ← Switch user)، وفتح كل برنامج من أيقونته</td><td class="who">معلم التقنية</td></tr>
+<tr><td class="ck"><span></span></td><td>بلاغ تجريبي بمسح رمز QR على جهاز، ووصوله إلى «البلاغات»</td><td class="who">محضر المعمل</td></tr>
+</table></div>
+
+<div class="ph"><h2><i>5</i>التدريب ونشر المنشور<small>بعد نجاح التجربة</small></h2>
+<table><tr><th></th><th>البند</th><th>المسؤول</th></tr>
+<tr><td class="ck"><span></span></td><td>نشر منشور «المعمل ومركز الاختبارات» لمعلمي التقنية الرقمية</td><td class="who">مدير البوابة</td></tr>
+<tr><td class="ck"><span></span></td><td>إرسال الأدلة: دليل المعلم للمعلمين، ودليل الطالب للطلاب، ودليل الدعم الفني للدعم</td><td class="who">مدير البوابة</td></tr>
+<tr><td class="ck"><span></span></td><td>لقاء 20 دقيقة: العرض على السبورة، وإنشاء حصة، والرصد، وإنشاء اختبار تجريبي</td><td class="who">مدير البوابة</td></tr>
+</table></div>
+
+<div class="ph"><h2><i>6</i>الاستعداد للاختبارات النهائية<small>قبل 3 يناير 2027</small></h2>
+<table><tr><th></th><th>البند</th><th>المسؤول</th></tr>
+<tr><td class="ck"><span></span></td><td>قبل الاختبار بأسبوع: إنشاء الاختبار النظري (15) والعملي (25) ومراجعة الأسئلة واستبدال ما يلزم</td><td class="who">معلم التقنية</td></tr>
+<tr><td class="ck"><span></span></td><td>الورقي: طباعة الأوراق وبطاقات الإجابة من «الطباعة»، وتجربة قراءة بطاقة بكاميرا الجوال</td><td class="who">معلم التقنية</td></tr>
+<tr><td class="ck"><span></span></td><td>الإلكتروني: تنزيل «ملف الاختبار» من «الأجهزة» يوم الاختبار بعد اعتماد قوائم الفصول</td><td class="who">معلم التقنية</td></tr>
+<tr><td class="ck"><span></span></td><td>يوم الاختبار: نسخ ملف الاختبار إلى <code>C:\Users\Public\Desktop</code>، فيفتحه الطلاب من حساب «تطبيق عملي»، وحذفه بعد الرصد<small>لا يُمس ملف المعمل الدائم</small></td><td class="who">الدعم الفني</td></tr>
+<tr><td class="ck"><span></span></td><td>إعلان مفتاح الفتح وقت البدء فقط، ومسح رموز QR من «الرصد» في الختام</td><td class="who">معلم التقنية</td></tr>
+<tr><td class="ck"><span></span></td><td>العملي بسلّم التقدير: طباعة بطاقات المهام باسم كل طالب، والتقدير من الجوال</td><td class="who">معلم التقنية</td></tr>
+</table></div>
+
+<div class="sig"><span>محضر المعمل: ____________________</span><span>الدعم الفني: ____________________</span><span>مدير المدرسة: ____________________</span></div>
+</body></html>

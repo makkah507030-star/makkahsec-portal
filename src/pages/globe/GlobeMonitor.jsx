@@ -11,13 +11,14 @@ import { MAX_PHOTOS, pill, setupErr, activeTerm, uploadPhotos, useSignedPhotos, 
 /* =====================================================================
    خطة الرصد البيئي (supabase/globe_2.sql): جلسات الرصد بالبروتوكول والموعد
    والمكان والطلاب المكلّفين، وتكرارها أسبوعيًا. لكل جلسة تذكير واتساب
-   جاهز للطلاب وأولياء أمورهم، وتوثيقها بالقراءات ورفعها إلى منصة GLOBE.
-   members: طلاب البرنامج من GlobeTeam (id, full_name, student_mobile, mobile)
+   جاهز للطلاب، وتوثيقها بالقراءات ورفعها إلى منصة GLOBE.
+   members: طلاب البرنامج من GlobeTeam (id, full_name, student_mobile)
    ===================================================================== */
 
 const PLACES = ["ساحة المدرسة", "حديقة المدرسة", "مختبر العلوم", "محطة الرصد"];
 const MAX_REPEAT = 30;
-const SPHERES = GLOBE_SPHERES.filter((s) => s.k !== "all");
+// المجالات التي فيها بروتوكولات معتمدة فقط (البروتوكولات العشرة في lib/globe.js)
+const SPHERES = GLOBE_SPHERES.filter((s) => s.k !== "all" && GLOBE_PROTOCOLS[s.k]?.length);
 
 export const weekday = (iso) => new Intl.DateTimeFormat("ar-SA-u-ca-gregory", { weekday: "long" }).format(new Date(`${iso}T12:00:00`));
 export const time12 = (t) => {
@@ -44,9 +45,10 @@ function Wa({ mobile, text, label }) {
   );
 }
 
-const reminder = (o, name, guardian) => [
-  `${guardian ? "ولي أمر الطالب" : "الطالب"} ${name}، السلام عليكم ورحمة الله.`,
-  `تذكير من برنامج جلوب البيئي بمدرسة مكة الثانوية: ${guardian ? "ابنكم مكلّف بجلسة" : "أنت مكلّف بجلسة"} رصد «${o.protocol}»`,
+// تذكير للطالب وحده (أُلغي التواصل مع أولياء الأمور من البرنامج)
+const reminder = (o, name) => [
+  `الطالب ${name}، السلام عليكم ورحمة الله.`,
+  `تذكير من برنامج جلوب البيئي بمدرسة مكة الثانوية: أنت مكلّف بجلسة رصد «${o.protocol}»`,
   `يوم ${weekday(o.obs_date)} ${fmtDate(o.obs_date + "T00:00:00")}${o.obs_time ? ` الساعة ${time12(o.obs_time)}` : ""}${o.place ? ` في ${o.place}` : ""}.`,
 ].join("\n");
 
@@ -142,14 +144,14 @@ export default function GlobeMonitor({ me, members, onReport }) {
             <p className="text-xs text-muted">جلسات الرصد بمواعيدها وطلابها، والتذكير بالواتساب، وتوثيق القراءات ورفعها إلى منصة GLOBE.</p>
           </div>
           <button className="btn-primary px-4 py-1.5 text-xs" onClick={() => setNf({ ...BLANK, obs_date: today })}>+ جلسة رصد</button>
-          {rows.length > 0 && <button className="btn-ghost px-4 py-1.5 text-xs" onClick={onReport}>تقرير الخطة وطباعتها</button>}
+          {rows.length > 0 && <button data-ro-ok className="btn-ghost px-4 py-1.5 text-xs" onClick={onReport}>تقرير الخطة وطباعتها</button>}
         </div>
         <Stats ratio={ratio} label="الالتزام بالرصد (المنفّذ من الجلسات التي حل موعدها)" items={[
           ["جلسات الرصد", live.length, "text-ink"], ["نُفّذت", doneN, "text-present"],
           ["رُفعت إلى GLOBE", upN, "text-excused"], ["القادمة", live.filter((o) => o.status === "planned" && o.obs_date >= today).length, "text-late"]]} />
         <div className="flex flex-wrap gap-1.5 px-4 py-3">
           {[["upcoming", "المجدولة"], ["done", "المنفّذة"], ["all", "الكل"]].map(([k, t]) => (
-            <button key={k} className={pill(tab === k)} onClick={() => setTab(k)}>{t}</button>
+            <button key={k} data-ro-ok className={pill(tab === k)} onClick={() => setTab(k)}>{t}</button>
           ))}
         </div>
       </section>
@@ -277,13 +279,16 @@ export default function GlobeMonitor({ me, members, onReport }) {
                       <span className="font-semibold text-mint-deep">القراءات والملاحظات: </span>{o.readings}
                     </p>
                   )}
+                  {o.status === "done" && o.documented_by_name && (
+                    <p className="mt-1 text-[11px] text-muted">وثّقها الطالب: {o.documented_by_name}</p>
+                  )}
                   {o.status === "done" && <Thumbs paths={o.photos} urls={urls} />}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 border-t border-line bg-canvas/50 px-4 py-2">
                   {o.status === "planned" && kids.length > 0 && (
                     <button className="inline-flex items-center gap-1 rounded-pill bg-[#25D366]/15 px-3 py-1 text-xs font-semibold text-[#128C7E]"
-                            onClick={() => setRemindFor(remindFor === o.id ? null : o.id)}>{WA_ICON}تذكير الطلاب</button>
+                            data-ro-ok onClick={() => setRemindFor(remindFor === o.id ? null : o.id)}>{WA_ICON}تذكير الطلاب</button>
                   )}
                   {o.status !== "cancelled" && (
                     <button className="rounded-pill bg-mint-deep px-3 py-1 text-xs font-semibold text-white"
@@ -301,8 +306,7 @@ export default function GlobeMonitor({ me, members, onReport }) {
                     {kids.map((k) => (
                       <div key={k.id} className="flex flex-wrap items-center gap-2 px-4 py-2">
                         <span className="min-w-0 flex-1 truncate text-sm text-ink">{k.full_name}</span>
-                        <Wa mobile={k.student_mobile} text={reminder(o, k.full_name, false)} label="الطالب" />
-                        <Wa mobile={k.mobile} text={reminder(o, k.full_name, true)} label="ولي الأمر" />
+                        <Wa mobile={k.student_mobile} text={reminder(o, k.full_name)} label="الطالب" />
                       </div>
                     ))}
                   </div>

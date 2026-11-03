@@ -1,6 +1,7 @@
 // src/pages/accreditation/Accreditation.jsx
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useSession } from "../../lib/session.jsx";
 import { supabase } from "../../lib/supabase";
 import { cmpAr } from "../../lib/sortAr.js";
 import { DOMAINS, setupMsg, loadAccData } from "../../lib/accreditation.js";
@@ -35,6 +36,8 @@ export default function Accreditation() {
   const go = (k, extra = {}) => setSp({ tab: k, ...extra }, { replace: true });
   const [ctx, setCtx] = useState(null);
   const [err, setErr] = useState("");
+  const { session, focusLimited } = useSession();
+  const uid = session?.user?.id;
 
   const load = useCallback(async () => {
     const [me, st, ms, rp, pl] = await Promise.all([
@@ -47,12 +50,17 @@ export default function Accreditation() {
     const e = me.error || ms.error || rp.error || pl.error;
     if (e) { setErr(setupMsg(e)); setCtx(false); return; }
     setErr("");
+    // في حساب محضر المعمل (بالتبديل من الدعم الفني): بعضويته في اللجنة وحدها، لا بصلاحية الدعم الفني
+    const row = (ms.data ?? []).find((m) => m.user_id === uid);
+    const meData = focusLimited && me.data?.all
+      ? { ...me.data, all: false, coord: row?.role === "coordinator", member: !!row, domains: row?.domains ?? [] }
+      : me.data;
     setCtx({
-      me: me.data, year: st.data?.value || "1448",
+      me: meData, year: st.data?.value || "1448",
       members: (ms.data ?? []).sort((a, b) => (a.role === "coordinator" ? -1 : 0) - (b.role === "coordinator" ? -1 : 0) || cmpAr(a.full_name, b.full_name)),
       reports: rp.data ?? [], plans: pl.data ?? [],
     });
-  }, []);
+  }, [focusLimited, uid]);
   useEffect(() => { load(); }, [load]);
 
   if (ctx === null) return <Loader />;

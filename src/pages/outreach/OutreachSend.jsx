@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { notify } from "../../lib/notice";
+import { confirmDanger } from "../../lib/danger";
 import { GRADE_NAMES } from "../../lib/schoolTime";
 import StudentPicker from "../../components/StudentPicker.jsx";
 import { countAr } from "../../lib/arabicCount.js";
@@ -27,17 +28,40 @@ export default function OutreachSend({ item, onSent }) {
   const [gd, setGd] = useState("none");
   const [staff, setStaff] = useState("none");
   const [allClasses, setAllClasses] = useState([]);
+  const [stRows, setStRows] = useState([]);   // الطلاب النشطون بصفوفهم وفصولهم، لعدّ المستفيدين قبل الإرسال
   const [busy, setBusy] = useState(false);
   useEffect(() => {
-    supabase.from("v_active_students").select("grade, class_no").then(({ data }) =>
-      setAllClasses([...new Set((data ?? []).map((r) => `${r.grade}-${r.class_no}`))].map((k) => k.split("-").map(Number)).sort((a, b) => a[0] - b[0] || a[1] - b[1])));
+    supabase.from("v_active_students").select("grade, class_no").then(({ data }) => {
+      setStRows(data ?? []);
+      setAllClasses([...new Set((data ?? []).map((r) => `${r.grade}-${r.class_no}`))].map((k) => k.split("-").map(Number)).sort((a, b) => a[0] - b[0] || a[1] - b[1]));
+    });
   }, []);
+  // عدد الطلاب في الصفوف والفصول المختارة
+  const inGrades = stRows.filter((r) => grades.includes(r.grade) && (!classes.length || classes.includes(r.class_no))).length;
   const classNos = [...new Set(allClasses.filter(([g]) => grades.includes(g)).map(([, c]) => c))].sort((a, b) => a - b);
   const toggle = (arr, v, setter) => setter(arr.includes(v) ? arr.filter((y) => y !== v) : [...arr, v].sort());
 
   const send = async () => {
     const students = st;
     if (students === "none" && !picked.length && gd === "none" && staff === "none") { notify({ ok: false, text: "اختر المستفيدين." }); return; }
+    // تأكيد بعدد المستفيدين قبل الإرسال، فلا تصل إلى كل الطلاب بضغطة خاطئة
+    setBusy(true);
+    let staffN = null;
+    if (staff !== "none") {
+      let q = supabase.from("users").select("id", { count: "exact", head: true }).eq("is_active", true);
+      q = staff === "all" ? q.in("role", ["teacher", "admin"]) : q.eq("role", staff === "teachers" ? "teacher" : "admin");
+      const { count } = await q;
+      staffN = count ?? null;
+    }
+    setBusy(false);
+    const stN = st === "all" ? stRows.length : st === "grades" ? inGrades : 0;
+    const lines = [
+      stN && `الطلاب: ${countAr(stN, "student")}${st === "grades" ? ` (${grades.map((g) => GRADE_NAMES[g]).join(" و")}${classes.length ? `، فصول ${classes.join("، ")}` : ""})` : " (كل المدرسة)"}`,
+      picked.length && `طلاب بأسمائهم: ${picked.length}`,
+      gd !== "none" && `أولياء أمور ${countAr(gd === "all" ? stRows.length : inGrades, "student", { acc: true })}`,
+      staff !== "none" && `${{ all: "الموظفون", teachers: "المعلمون", admins: "الإداريون" }[staff]}${staffN != null ? `: ${staffN}` : ""}`,
+    ].filter(Boolean);
+    if (!(await confirmDanger({ title: `إرسال «${item.title}»`, impact: [...lines, "يصلهم إشعار في الجرس والجوال فورًا، ولا يُسحب الإشعار بعد وصوله."], confirmLabel: "إرسال" }))) return;
     setBusy(true);
     const { data, error } = await supabase.rpc("outreach_send", { p_id: item.id, p_students: students, p_grades: grades, p_classes: classes,
       p_student_ids: picked.map((s) => s.student_id), p_guardians: gd, p_staff: staff, p_roles: [] });
@@ -76,7 +100,12 @@ export default function OutreachSend({ item, onSent }) {
           <Seg value={staff} onChange={setStaff} opts={[["none", "لا أحد"], ["all", "الكل"], ["teachers", "المعلمون"], ["admins", "الإداريون"]]} /></div>
         <button className="btn-primary px-6" disabled={busy} onClick={send}>{busy ? "جارٍ الإرسال…" : item.sent_at ? "إرسال للإضافات" : `إرسال ${KIND[item.kind].t}`}</button>
       </section>
-      {item.sent_at && <Share item={item} />}
+      {item.sent_at ? <Share item={item} /> : (
+        <section className="card flex items-start gap-3 p-4 text-sm text-muted">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-white" style={{ background: "#1FA855" }}>✆</span>
+          <p><b className="block text-ink">المشاركة عبر واتساب ورمز QR</b>
+            تظهر هنا بعد الإرسال. الرابط يُفتح داخل البوابة لمن أُرسلت إليهم فقط، فاختر الفئة نفسها التي ستشاركها في مجموعة واتساب ثم أرسل.</p>
+        </section>)}
     </div>
   );
 }
