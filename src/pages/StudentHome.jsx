@@ -186,7 +186,7 @@ export default function StudentHome() {
 
       <GuidanceRequestCard studentId={me.id} requester="student" />
       <GuidanceRequestCard studentId={me.id} requester="student" target="deputy" />
-      <OfficialLinks />
+      <OfficialLinks student />
     </div>
   );
 }

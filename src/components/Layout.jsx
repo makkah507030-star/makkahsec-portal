@@ -206,6 +206,7 @@ export const ADMIN_GROUPS = [
     items: [
       { to: "/feedback-admin", label: "مركز الدعم والمساندة", perm: "feedback", icon: "chat" },
       { to: "/support-report", label: "تقرير ومتابعة الدعم", perm: "feedback", icon: "chart" },
+      { to: "/madrasati-requests", label: "طلبات منصة مدرستي", techOnly: true, icon: "chat", kw: "مدرستي كلمة مرور جوال فصل" },
       { to: "/login-log", label: "سجل الدخول والخروج", perm: "login_log", icon: "door" },
       { to: "/site-metrics", label: "مؤشرات الموقع", techOnly: true, icon: "eye" },
       { to: "/usage-report", label: "إحصائية الاستخدام", techOnly: true, icon: "trend" },

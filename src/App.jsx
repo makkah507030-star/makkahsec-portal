@@ -83,6 +83,7 @@ const Reports = lazy(() => import("./pages/Reports.jsx"));
 const Feedback = lazy(() => import("./pages/Feedback.jsx"));
 const TicketDetail = lazy(() => import("./pages/TicketDetail.jsx"));
 const FeedbackAdmin = lazy(() => import("./pages/admin/FeedbackAdmin.jsx"));
+const MadrasatiRequests = lazy(() => import("./pages/admin/MadrasatiRequests.jsx"));
 const SupportReport = lazy(() => import("./pages/admin/SupportReport.jsx"));
 const LoginLogAdmin = lazy(() => import("./pages/admin/LoginLogAdmin.jsx"));
 const AnnouncementsAdmin = lazy(() => import("./pages/admin/AnnouncementsAdmin.jsx"));
@@ -420,6 +421,8 @@ export default function App() {
               {can("banners") && <Route path="/banners-admin" element={<BannersAdmin />} />}
               {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
               {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
+              {/* طلبات منصة مدرستي من الطلاب (madrasati_requests.sql) — الدعم الفني */}
+              {isTechSupport && <Route path="/madrasati-requests" element={<MadrasatiRequests />} />}
               {isTechSupport && <Route path="/usage-report" element={<UsageReport />} />}
               {isTechSupport && <Route path="/audit-log" element={<AuditLog />} />}
               {/* النماذج والشهادات — ما يظهر لكل مستخدم تحدّده سياسات قاعدة البيانات */}
