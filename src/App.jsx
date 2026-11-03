@@ -99,6 +99,7 @@ const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
 const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx"));
 const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
 const LabPerformance = lazy(() => import("./pages/performance/LabPerformance.jsx"));
+const StaffPerformance = lazy(() => import("./pages/performance/StaffPerformance.jsx"));
 const MyLabDfile = lazy(() => import("./pages/performance/MyLabDfile.jsx"));
 const OutreachAdmin = lazy(() => import("./pages/outreach/OutreachAdmin.jsx"));
 const OutreachView = lazy(() => import("./pages/outreach/OutreachView.jsx"));
@@ -177,6 +178,7 @@ import StaffHeader from "./components/StaffHeader.jsx";
 import TeacherDayCard from "./components/TeacherDayCard.jsx";
 import Loader from "./components/Loader.jsx";
 import { isScoutRole } from "./lib/scoutLeader.js";
+import { perfTrackOf } from "./lib/performance";
 
 // الصفحات تُحمَّل عند فتحها فقط (lazy) لتخفيف التحميل الأول، وهذا ما يظهر لحظة جلبها
 const pageFallback = (
@@ -437,6 +439,8 @@ export default function App() {
               )}
               {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة، وللدعم الفني للمتابعة الفنية */}
               {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<PerformanceAdmin />} />}
+              {(isTechSupport || adminRoles.includes("principal")) && <Route path="/staff-performance" element={<StaffPerformance />} />}
+              {perfTrackOf(adminRoles) && <Route path="/my-staff-performance" element={<StaffPerformance mine />} />}
               {/* ملفات المعلمين الرقمية: إدارتها للدعم الفني، والاطلاع للمدير والوكيلين (teacher_dfile_9.sql) */}
               {(isTechSupport || adminRoles.some((r) => ["principal", "deputy_academic", "deputy_students"].includes(r))) &&
                 <Route path="/dfiles-admin" element={<DfilesAdmin manage={isTechSupport} />} />}

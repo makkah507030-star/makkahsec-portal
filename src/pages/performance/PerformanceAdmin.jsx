@@ -25,8 +25,11 @@ export default function PerformanceAdmin() {
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState(null);
   const [err, setErr] = useState("");
+  const [leaders, setLeaders] = useState(() => new Set());   // رواد النشاط: ملفهم بنموذج «معلم مسند له نشاط طالبي»
 
   useEffect(() => {
+    supabase.from("admin_roles").select("user_id").eq("role_type", "activity_leader")
+      .then(({ data }) => setLeaders(new Set((data ?? []).map((r) => r.user_id))));
     (async () => {
       try {
         const [year, els, { data: ts }] = await Promise.all([
@@ -74,7 +77,8 @@ export default function PerformanceAdmin() {
         )}
         {principal && fileTab === "review"
           ? <ReviewEditor teacher={picked} />
-          : <PerformanceFile uid={picked.user_id} name={picked.full_name} readOnly />}
+          : <PerformanceFile uid={picked.user_id} name={picked.full_name} readOnly
+                             track={leaders.has(picked.user_id) ? "activity" : "teacher"} />}
       </div>
     );
   }

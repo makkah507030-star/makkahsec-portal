@@ -8,7 +8,7 @@ import SadeedLink from "./SadeedLink";
 import ReportViewer from "./report/ReportViewer.jsx";
 import { perfReportPages } from "./PerfReportDoc.jsx";
 import {
-  ACCEPT, AUTO_SOURCE, ITEM_HINT, PORTAL_TAG, SOURCE_LABEL, activeYear, loadAutoCounts, elementColor, elementSummary, itemStatus, loadEvidence,
+  ACCEPT, AUTO_SOURCE, ITEM_HINT, PORTAL_TAG, SOURCE_LABEL, PERF_TRACKS, activeYear, loadAutoCounts, elementColor, elementSummary, itemStatus, loadEvidence,
   loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile,
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
@@ -99,7 +99,7 @@ function InfoBox({ info, name, role }) {
       <div className="min-w-0">
         <p className="font-bold text-ink">{info?.full_name ?? name ?? "—"}</p>
         <p className="mt-0.5 text-sm leading-relaxed text-muted">
-          {role ? role.desc : <>{[
+          {role && !role.teacher ? role.desc : <>{[
             info?.specialization,
             info?.subjects?.length ? info.subjects.join("، ") : null,
             info?.classes?.length ? `${info.classes.length} فصول` : null,
@@ -285,7 +285,8 @@ function AutoDetails({ uid, year, itemKey, track }) {
     (async () => {
       // بنود الأنشطة لها دالتها (supabase/activities_4.sql)
       // وبند الإنتاج المعرفي من بنك الأسئلة (supabase/qbank_3.sql)
-      const fn = track === "lab" ? "lab_perf_details" : ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
+      // بنود الموجه والوكيل ورائد النشاط (supabase/staff_perf_5.sql)
+      const fn = track === "lab" ? "lab_perf_details" : /^(g|d|a1)\d+_/.test(itemKey) ? "staff_perf_details" : ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
       const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year, p_item: itemKey });
       if (error) setErr(error.message?.includes(fn) ? "عرض التفاصيل غير مفعّل بعد في قاعدة البيانات." : "تعذّر تحميل التفاصيل.");
       setRows(data ?? []);
@@ -571,8 +572,21 @@ const LAB_ROLE = {
     note: "الشواهد كما في ملف المحضر بالبوابة: المرفوعة، والآلية من عمل المعمل (الحجوزات والاستخدام والأجهزة والبلاغات والسلامة والدروس)." },
 };
 
+/* نصوص ملفات الموظفين الآخرين من نموذج وظيفتهم في الدليل (PERF_TRACKS في lib/performance.js) */
+function roleOf(track) {
+  if (track === "lab") return LAB_ROLE;
+  const t = PERF_TRACKS[track];
+  if (!t) return null;
+  return {
+    who: t.who, teacher: !!t.teacher, desc: `${t.label} · نموذج «${t.form.replace(/ \(\d+\)$/, "")}» في دليل الأداء الوظيفي`,
+    report: { who: t.who, signTitle: t.label, tag: `ملف الأداء الوظيفي ل${t.label}`,
+      rows: [["book", "الوظيفة", t.label], ["cap", "النموذج", `${t.form} · الإصدار الثاني`]],
+      note: `الشواهد كما في ملف ${t.who} بالبوابة: المرفوعة، والآلية من عمله في البوابة.` },
+  };
+}
+
 export default function PerformanceFile({ uid, name, readOnly = false, track = "teacher" }) {
-  const role = track === "lab" ? LAB_ROLE : null;
+  const role = roleOf(track);
   const [elements, setElements] = useState(null);
   const [evidence, setEvidence] = useState([]);
   const [auto, setAuto] = useState({});      // الشواهد الآلية: { [بند]: { cnt, last } }
@@ -586,7 +600,8 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
   const reload = useCallback(async () => {
     try {
       const y = await activeYear();
-      const lab = track === "lab";
+      // المعلم ورائد النشاط (معلم) بزيارات الدعم وبيانات التدريس، وبقية الموظفين دونها
+      const lab = !!role && !role.teacher;
       const [els, ev, vs, inf, au] = await Promise.all([
         loadPerfReference(track), loadEvidence(uid, y), lab ? [] : loadSupportVisits(uid), lab ? null : loadTeacherInfo(uid), loadAutoCounts(uid, y, track),
       ]);
@@ -597,7 +612,7 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
       setErr(e.message?.includes("perf_") ? "ملف الأداء غير مفعّل بعد في قاعدة البيانات." : (e.message ?? "تعذّر التحميل."));
       setElements([]);
     }
-  }, [uid, track]);
+  }, [uid, track]);   // eslint-disable-line react-hooks/exhaustive-deps -- role مشتق من track
 
   useEffect(() => { setElements(null); setView("cards"); setCurrent(null); reload(); }, [reload]);
 
@@ -658,7 +673,7 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
             ))}
           </div>
 
-          {!role && <section className="card p-4">
+          {(!role || role.teacher) && <section className="card p-4">
             <h2 className="font-bold text-ink">زيارات الدعم</h2>
             <p className="mt-0.5 text-sm text-muted">تصل تلقائيًا من الوكلاء ومدير المدرسة.</p>
             {visits.length === 0 ? (
