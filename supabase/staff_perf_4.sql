@@ -1,18 +1,18 @@
--- شواهد الأداء الوظيفي للموظفين (4 من 5): العدّادات الآلية من عمل الموظف في البوابة في العام الدراسي،
--- بصيغة perf_auto_counts نفسها (المستخدم، البند، العدد، آخرها) للموجه والوكيل ورائد النشاط.
--- لصاحب الملف نفسه، ولمدير المدرسة والدعم الفني. يُنفَّذ بعد الأجزاء 1–3. تكرار التنفيذ آمن.
-create or replace function public.staff_perf_auto(p_uid uuid, p_year text)
-returns table (teacher_user_id uuid, item_key text, cnt bigint, last_at timestamptz)
+-- شواهد الأداء الوظيفي للموظفين (4 من 7): العدّادات الآلية من عمل الموظف في البوابة في العام الدراسي،
+-- (البند، العدد، آخرها) للموجه والوكيل ورائد النشاط. دالة داخلية بلا تحقق من المستدعي: تستدعيها
+-- staff_perf_auto (الجزء 6) لصاحب الملف والمدير والدعم الفني، وملف الموظف الرقمي. يُنفَّذ بعد 1–3. تكرار التنفيذ آمن.
+drop function if exists public.staff_perf_auto(uuid, text);
+create or replace function public.staff_perf_auto_core(p_uid uuid, p_year text)
+returns table (item_key text, cnt bigint, last_at timestamptz)
 language plpgsql stable security definer set search_path = public as $$
 declare y0 date; v_grades int[];
 begin
-  if not (p_uid = auth.uid() or public.has_admin_role(array['principal', 'tech_support'])) then return; end if;
   select coalesce(min(start_date), current_date - 365) into y0 from academic_calendar where academic_year = p_year;
   -- صفوف الموجه الطلابي من أدواره (counselor_1..3)
   select array_agg(substring(r.role_type::text from 'counselor_(\d)')::int) into v_grades
     from admin_roles r where r.user_id = p_uid and r.role_type::text ~ '^counselor_\d$';
   return query
-  select p_uid, x.k, x.n, x.l from (
+  select x.k, x.n, x.l from (
     -- الموجه الطلابي
     select 'g03_01' k, count(*) n, max(s.created_at) l from guidance_sessions s where s.created_by = p_uid and s.kind = 'guardian' and s.session_date >= y0
     union all select 'g03_02', count(*), max(q.updated_at) from guidance_requests q
@@ -54,8 +54,7 @@ begin
        where e.organizer_id = p_uid and ep.cert_issued_at is not null and e.event_date >= y0
   ) x where x.n > 0;
 end; $$;
-revoke execute on function public.staff_perf_auto(uuid, text) from public, anon;
-grant execute on function public.staff_perf_auto(uuid, text) to authenticated;
+revoke execute on function public.staff_perf_auto_core(uuid, text) from public, anon, authenticated;
 
 -- للتحقق: عناصر كل نموذج وبنوده
 select e.track as "النموذج", count(distinct e.key) as "العناصر", count(i.key) as "البنود"

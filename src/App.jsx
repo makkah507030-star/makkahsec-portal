@@ -542,6 +542,10 @@ export default function App() {
           {effectiveRole === "admin" && adminRoles.includes("computer_lab") && (
             <Route path="/my-lab-dfile" element={<MyLabDfile />} />
           )}
+          {/* الملف الرقمي للوكيل والموجه الطلابي ومحضر مختبر العلوم (supabase/staff_dfile_*.sql) */}
+          {effectiveRole === "admin" && adminRoles.some((r) => /^(deputy_|counselor_\d|science_labs)/.test(r)) && (
+            <Route path="/my-staff-dfile" element={<MyLabDfile kind="staff" />} />
+          )}
           {/* الأنشطة: حقيبة الانتظار والأنشطة الصفية وأدوات الصف — للمعلمين، ويديرها وكيل الشؤون التعليمية */}
           {effectiveRole === "teacher" ||
            (effectiveRole === "admin" && ["deputy_academic", "principal", "tech_support"].some((r) => adminRoles.includes(r))) ? (

@@ -9,7 +9,7 @@ import ReportViewer from "./report/ReportViewer.jsx";
 import { perfReportPages } from "./PerfReportDoc.jsx";
 import {
   ACCEPT, AUTO_SOURCE, ITEM_HINT, PORTAL_TAG, SOURCE_LABEL, PERF_TRACKS, activeYear, loadAutoCounts, elementColor, elementSummary, itemStatus, loadEvidence,
-  loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile,
+  loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile, loadOwnerRoles, itemsForRoles,
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
 import Loader from "./Loader.jsx";
@@ -25,6 +25,7 @@ const PD_ITEM_SRC = {
   e02_06: { to: "/plc", what: "شارك في جلسات مجتمع التعلم في قسمك ووقّع على محاضرها" },
 };
 import { useBackStep } from "../lib/backStep.js";
+import { ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 
 /* =====================================================================
    ملف الأداء الوظيفي للمعلم — يفتحه المعلم لملفه، ومدير المدرسة لملف أي
@@ -573,10 +574,12 @@ const LAB_ROLE = {
 };
 
 /* نصوص ملفات الموظفين الآخرين من نموذج وظيفتهم في الدليل (PERF_TRACKS في lib/performance.js) */
-function roleOf(track) {
+function roleOf(track, job) {
   if (track === "lab") return LAB_ROLE;
-  const t = PERF_TRACKS[track];
-  if (!t) return null;
+  const base = PERF_TRACKS[track];
+  if (!base) return null;
+  // الوكيل باسم مجاله (وكيل الشؤون التعليمية مثلًا)، والنموذج واحد للوكلاء الثلاثة
+  const t = job ? { ...base, label: job } : base;
   return {
     who: t.who, teacher: !!t.teacher, desc: `${t.label} · نموذج «${t.form.replace(/ \(\d+\)$/, "")}» في دليل الأداء الوظيفي`,
     report: { who: t.who, signTitle: t.label, tag: `ملف الأداء الوظيفي ل${t.label}`,
@@ -586,7 +589,8 @@ function roleOf(track) {
 }
 
 export default function PerformanceFile({ uid, name, readOnly = false, track = "teacher" }) {
-  const role = roleOf(track);
+  const [job, setJob] = useState(null);       // مجال الوكيل من أدواره
+  const role = useMemo(() => roleOf(track, job), [track, job]);
   const [elements, setElements] = useState(null);
   const [evidence, setEvidence] = useState([]);
   const [auto, setAuto] = useState({});      // الشواهد الآلية: { [بند]: { cnt, last } }
@@ -602,9 +606,13 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
       const y = await activeYear();
       // المعلم ورائد النشاط (معلم) بزيارات الدعم وبيانات التدريس، وبقية الموظفين دونها
       const lab = !!role && !role.teacher;
-      const [els, ev, vs, inf, au] = await Promise.all([
+      const [all, ev, vs, inf, au, roles] = await Promise.all([
         loadPerfReference(track), loadEvidence(uid, y), lab ? [] : loadSupportVisits(uid), lab ? null : loadTeacherInfo(uid), loadAutoCounts(uid, y, track),
+        track === "deputy" ? loadOwnerRoles(uid) : [],
       ]);
+      // الوكيل: البنود الآلية من عمل مجاله وحده (شؤون الطلاب، أو الشؤون التعليمية، أو المدرسية)
+      const els = track === "deputy" ? itemsForRoles(all, roles) : all;
+      if (track === "deputy") setJob(roles.map((r) => ADMIN_ROLE_LABEL[r]).find((l) => l?.startsWith("وكيل")) ?? null);
       // شواهد هذا الملف وحده: من يجمع ملف المعلم وملف المحضر لا تختلط شواهدهما
       const keys = new Set(els.flatMap((e) => e.items.map((i) => i.key)));
       setYear(y); setElements(els); setEvidence(ev.filter((e) => keys.has(e.item_key))); setVisits(vs); setInfo(inf); setAuto(au[uid] ?? {});

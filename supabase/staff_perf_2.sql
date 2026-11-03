@@ -1,5 +1,7 @@
--- شواهد الأداء الوظيفي للموظفين (2 من 5): وكيل المدرسة (وكيل الشؤون التعليمية والمدرسية وشؤون الطلاب).
+-- شواهد الأداء الوظيفي للموظفين (2 من 7): وكيل المدرسة (وكيل الشؤون التعليمية والمدرسية وشؤون الطلاب).
 -- نموذج «وكيل المدرسة» (7) في الدليل: 19 عنصرًا بأوزانها، وبنودها من تفسير العناصر. track = 'deputy'. تكرار التنفيذ آمن.
+-- النموذج واحد للوكلاء الثلاثة، وبعض البنود الآلية من عمل وكيل بعينه: roles تحدد من تظهر له (فارغ = للجميع).
+alter table public.perf_items add column if not exists roles text[];
 insert into public.perf_elements (key, title, weight, sort_order, evaluator_only, track) values
   ('d01', 'أداء الواجبات الوظيفية', 5, 1, true, 'deputy'),
   ('d02', 'التفاعل مع المجتمع المهني', 5, 2, false, 'deputy'),
@@ -37,24 +39,36 @@ insert into public.perf_items (key, element_key, sort_order, title, source, is_r
   ('d06_01', 'd06', 1, 'الإحالات المتخذ فيها قرار', 'school', false, 'auto'),
   ('d06_02', 'd06', 2, 'إنذارات الغياب ومحاضرها', 'school', false, 'auto'),
   ('d06_03', 'd06', 3, 'نماذج المخالفات السلوكية وإجراءاتها', 'school', false, 'auto'),
+  ('d06_04', 'd06', 4, 'قرارات أعذار الغياب', 'school', false, 'auto'),
+  ('d06_05', 'd06', 5, 'بلاغات الطلاب المنقطعين المبتّ فيها', 'school', false, 'auto'),
+  ('d06_06', 'd06', 6, 'إجراءات الانضباط في مجال العمل (الحضور والانصراف والإشراف)', 'guide', false, 'manual'),
   ('d07_01', 'd07', 1, 'حصر الموارد البشرية والمادية وتوزيعها', 'guide', false, 'manual'),
   ('d07_02', 'd07', 2, 'شراكات أو موارد إضافية لدعم المدرسة', 'guide', false, 'manual'),
+  ('d07_03', 'd07', 3, 'بلاغات الصيانة المعالجة', 'school', false, 'auto'),
   ('d08_01', 'd08', 1, 'تحديد الاحتياج التدريبي لمنسوبي المدرسة', 'guide', false, 'manual'),
   ('d08_02', 'd08', 2, 'المشاركة في خطة التطوير المهني المدرسية', 'guide', false, 'manual'),
   ('d09_01', 'd09', 1, 'زيارات الدعم للمعلمين بالتغذية الراجعة', 'school', false, 'auto'),
   ('d09_02', 'd09', 2, 'مناقشة تحقق المستهدفات مع المعلمين ومتابعتها', 'guide', false, 'manual'),
+  ('d09_03', 'd09', 3, 'متابعة خطط تحسين أداء المعلمين', 'school', false, 'auto'),
   ('d10_01', 'd10', 1, 'تنفيذ برامج تطوير مهني أو متابعتها', 'guide', false, 'manual'),
   ('d10_02', 'd10', 2, 'ترشيح المعلمين للبرامج التدريبية ومتابعة أثرها', 'guide', false, 'manual'),
+  ('d10_03', 'd10', 3, 'اعتماد لقاءات مجتمعات التعلم وتقارير التطوير المهني', 'school', false, 'auto'),
   ('d11_01', 'd11', 1, 'ملاحظة أداء المعلمين بأدوات التقويم المعتمدة', 'guide', false, 'manual'),
   ('d11_02', 'd11', 2, 'تشجيع المرؤوسين على التقويم الذاتي', 'guide', false, 'manual'),
+  ('d11_03', 'd11', 3, 'الرأي في ملفات المعلمين الرقمية', 'school', false, 'auto'),
+  ('d11_04', 'd11', 4, 'اعتماد الزيارات التبادلية بين المعلمين', 'school', false, 'auto'),
   ('d12_01', 'd12', 1, 'تحليل نتائج المتعلمين وتصنيف مستوياتهم', 'guide', false, 'partial'),
   ('d12_02', 'd12', 2, 'متابعة الخطط العلاجية والإثرائية', 'guide', false, 'partial'),
+  ('d12_03', 'd12', 3, 'متابعة رصد الدرجات في نور', 'school', false, 'auto'),
+  ('d12_04', 'd12', 4, 'اجتماعات لجنة التحصيل', 'school', false, 'auto'),
   ('d13_01', 'd13', 1, 'مؤشرات تحسن أداء المدرسة في مجال العمل', 'guide', false, 'manual'),
   ('d13_02', 'd13', 2, 'المشاركة في لجنة التميز والتقويم الذاتي للمدرسة', 'school', false, 'manual'),
+  ('d13_03', 'd13', 3, 'لقاءات الثقافة المدرسية وبرامجها', 'school', false, 'auto'),
   ('d14_01', 'd14', 1, 'المشاركة في إعداد الخطة التشغيلية والخطط المدرسية', 'guide', false, 'manual'),
   ('d14_02', 'd14', 2, 'خطة مجال العمل (التعليمية أو المدرسية أو شؤون الطلاب)', 'guide', false, 'manual'),
   ('d15_01', 'd15', 1, 'تقارير متابعة تنفيذ الخطط', 'guide', false, 'manual'),
   ('d15_02', 'd15', 2, 'معالجة المعوقات وتعديل الخطط بناءً على المتابعة', 'guide', false, 'manual'),
+  ('d15_03', 'd15', 3, 'نماذج رسمية أصدرها عبر البوابة', 'school', false, 'auto'),
   ('d16_01', 'd16', 1, 'اعتماد الأحداث والمناسبات المدرسية', 'school', false, 'auto'),
   ('d16_02', 'd16', 2, 'تهيئة الإمكانات للأنشطة الصفية وغير الصفية', 'guide', false, 'manual'),
   ('d17_01', 'd17', 1, 'النشرات والاستبانات عبر البوابة', 'school', false, 'auto'),
@@ -62,8 +76,17 @@ insert into public.perf_items (key, element_key, sort_order, title, source, is_r
   ('d17_03', 'd17', 3, 'توظيف المنصات المعتمدة (مدرستي، نور) ومتابعة استخدامها', 'guide', false, 'manual'),
   ('d18_01', 'd18', 1, 'برامج تعزيز السلوك الإيجابي وتكريم المتميزين', 'guide', false, 'manual'),
   ('d18_02', 'd18', 2, 'متابعة مؤشرات السلوك ومعالجتها مع الموجه الطلابي', 'guide', false, 'partial'),
+  ('d18_03', 'd18', 3, 'بلاغات الفريق الكشفي المعالجة', 'school', false, 'auto'),
   ('d19_01', 'd19', 1, 'متابعة عناصر الأمن والسلامة في المدرسة', 'guide', false, 'manual'),
   ('d19_02', 'd19', 2, 'بيئة محفزة على التعلم (تهيئة المرافق والفصول)', 'guide', false, 'manual')
 on conflict (key) do update set element_key = excluded.element_key, sort_order = excluded.sort_order, title = excluded.title,
   source = excluded.source, is_record = excluded.is_record, portal = excluded.portal, is_active = true;
+-- لمن يظهر كل بند: شؤون الطلاب، والشؤون التعليمية، والشؤون المدرسية
+update public.perf_items set roles = case
+  when key in ('d03_01', 'd06_01', 'd06_02', 'd06_03', 'd06_04', 'd06_05', 'd18_03') then array['deputy_students']
+  when key in ('d09_03', 'd10_03', 'd11_03', 'd11_04', 'd12_03') then array['deputy_academic']
+  when key = 'd12_04' then array['deputy_academic', 'deputy_students']
+  when key = 'd06_06' then array['deputy_academic', 'deputy_school']
+  when key = 'd07_03' then array['deputy_school'] end
+ where key like 'd%' and element_key like 'd%';
 -- نهاية الجزء 2

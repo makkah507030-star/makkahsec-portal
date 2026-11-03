@@ -62,6 +62,16 @@ export const PORTAL_TAG = {
   judge:   { t: "يقدّره المقيِّم بالملاحظة، ويمكنك رفع شاهد", c: "bg-canvas text-muted" },
 };
 
+/** أدوار صاحب الملف الإدارية: بنود الوكيل تختلف بمجال عمله (perf_items.roles في supabase/staff_perf_2.sql) */
+export async function loadOwnerRoles(uid) {
+  const { data } = await supabase.from("admin_roles").select("role_type").eq("user_id", uid);
+  return (data ?? []).map((r) => r.role_type);
+}
+/** بنود العناصر التي تخص أدوار صاحب الملف: البند بلا roles للجميع، وإلا لمن يحمل أحدها */
+export const itemsForRoles = (els, roles) => els.map((e) => ({
+  ...e, items: e.items.filter((i) => !i.roles?.length || i.roles.some((r) => roles.includes(r))),
+}));
+
 let refCache = null;
 /** العناصر وبنودها مرتبة، مع بنود كل عنصر في elements[i].items.
     track: «teacher» لنموذج المعلم، و«lab» لنموذج محضر معمل الحاسب (supabase/lab_perf_1.sql) */
@@ -199,6 +209,19 @@ export const AUTO_SOURCE = {
   d16_01: { label: "أحداث ومناسبات اعتمدتها", to: "/events" },
   d17_01: { label: "نشرات واستبانات أُرسلت", to: "/outreach" },
   d17_02: { label: "تصويت واستطلاعات", to: "/polls-admin" },
+  // بنود خاصة بمجال كل وكيل (supabase/staff_perf_6.sql)
+  d06_04: { label: "أعذار غياب بتّ فيها", to: "/absence-excuses" },
+  d06_05: { label: "بلاغات انقطاع بتّ فيها", to: "/dropouts" },
+  d18_03: { label: "بلاغات الفريق الكشفي أُغلقت", to: "/scout-reports" },
+  d07_03: { label: "بلاغات صيانة عالجها", to: "/repairs" },
+  d09_03: { label: "خطط تحسين يتابعها", to: "/improve" },
+  d10_03: { label: "لقاءات وتقارير تطوير مهني اعتمدها", to: "/plc" },
+  d11_03: { label: "آراء في ملفات المعلمين الرقمية", to: "/dfile-opinions" },
+  d11_04: { label: "زيارات تبادلية اعتمدها", to: "/plc" },
+  d12_03: { label: "متابعات رصد الدرجات", to: "/noor-grades" },
+  d12_04: { label: "اجتماعات لجنة التحصيل", to: "/ach-committee" },
+  d13_03: { label: "لقاءات الثقافة المدرسية", to: "/culture" },
+  d15_03: { label: "نماذج رسمية أصدرها", to: "/my-documents" },
   a12_02: { label: "أحداث ومناسبات معتمدة", to: "/events" },
   a13_01: { label: "تقارير تنفيذ الأحداث", to: "/events" },
   a14_01: { label: "إعلانات ترشيح منشورة", to: "/nominations" },

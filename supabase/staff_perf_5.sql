@@ -1,5 +1,5 @@
--- شواهد الأداء الوظيفي للموظفين (5 من 5): تفاصيل كل بند آلي («عرض الشواهد») للموجه والوكيل ورائد النشاط،
--- بصيغة perf_auto_details نفسها (العنوان، التفصيل، التاريخ). يُنفَّذ بعد الجزء 4. تكرار التنفيذ آمن.
+-- شواهد الأداء الوظيفي للموظفين (5 من 7): تفاصيل كل بند آلي («عرض الشواهد») للموجه والوكيل ورائد النشاط،
+-- بصيغة perf_auto_details نفسها (العنوان، التفصيل، التاريخ). يُنفَّذ بعد الجزء 4، ويكمّله الجزء 6. تكرار التنفيذ آمن.
 create or replace function public.staff_perf_details(p_uid uuid, p_year text, p_item text)
 returns table (r_title text, r_detail text, r_at timestamptz)
 language plpgsql stable security definer set search_path = public as $$
@@ -74,6 +74,8 @@ begin
      where e.organizer_id = p_uid and e.cancelled_at is null and e.event_date >= y0
        and (p_item = 'a15_01' and coalesce(ep.attended, true) or p_item = 'a15_02' and ep.cert_issued_at is not null)
      group by e.id, e.title, e.event_date order by 3 desc;
+  else   -- بنود الوكلاء الخاصة بكل وكيل (الجزء 6)
+    return query select * from public.deputy_perf_details(p_uid, y0, p_item);
   end if;
 end; $$;
 revoke execute on function public.staff_perf_details(uuid, text, text) from public, anon;

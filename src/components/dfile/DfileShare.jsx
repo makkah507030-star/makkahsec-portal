@@ -27,10 +27,12 @@ const dur = (s) => (s >= 60 ? `${Math.round(s / 60)} دقيقة` : s > 0 ? `${s}
 const KIND = {
   teacher: { title: "ملف المعلم الرقمي", owner: "المعلم" },
   lab: { title: "ملف محضر المعمل الرقمي", owner: "المحضر", spec: "محضر معمل الحاسب الآلي" },
+  staff: { title: "الملف الرقمي", owner: "الموظف" },   // الوكيل والموجه ومحضر العلوم (supabase/staff_dfile_*.sql)، والوظيفة في spec
 };
 
-export default function DfileShare({ uid, s, d, onSave, kind = "teacher" }) {
-  const K = KIND[kind];
+export default function DfileShare({ uid, s, d, onSave, kind = "teacher", spec }) {
+  const owner = kind === "staff" ? { deputy: "الوكيل", counselor: "الموجه", science: "المحضر" }[d?.track] : null;
+  const K = { ...KIND[kind], ...(spec ? { spec } : {}), ...(owner ? { owner } : {}) };
   const card = useRef(null);
   const [photo, setPhoto] = useState(null);
   const [busy, setBusy] = useState("");
