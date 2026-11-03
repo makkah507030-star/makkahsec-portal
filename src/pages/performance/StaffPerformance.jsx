@@ -16,16 +16,16 @@ import PerformanceAdmin from "./PerformanceAdmin.jsx";
      وتقييمهم (PerformanceAdmin)، ثم ملف كل موظف بوظيفته.
    ===================================================================== */
 
-const WARN = (
+const WARN = (by = "مدير المدرسة") => (
   <div role="note" className="flex gap-3 rounded-card border-2 border-danger/50 bg-danger-light px-4 py-3">
     <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-danger text-sm font-bold text-white">!</span>
     <p className="text-sm leading-relaxed text-danger">
-      <b>تنبيه مهم:</b> تخضع الشواهد لتقييم مدير المدرسة وتدقيقه. واكتمالها لا يعني الحصول على
+      <b>تنبيه مهم:</b> تخضع الشواهد لتقييم {by} وتدقيقه. واكتمالها لا يعني الحصول على
       الدرجة الكاملة في التقييم، وإنما هو خطوة متقدمة نحو تقدير عالٍ.
     </p>
   </div>
 );
-const ORDER = ["deputy", "counselor", "activity", "science", "lab"];
+const ORDER = ["deputy", "counselor", "activity", "science", "lab", "principal"];
 const TEACHER = { label: "المعلمون", form: "المعلم (1)" };
 const labelOf = (k) => (k === "teacher" ? TEACHER : PERF_TRACKS[k]);
 
@@ -41,10 +41,11 @@ export default function StaffPerformance({ mine = false }) {
           <h1 className="text-lg font-bold text-ink">شواهد الأداء الوظيفي · {t.label}</h1>
           <p className="mt-1 text-sm leading-relaxed text-muted">
             شواهدك لعناصر نموذج «{t.form.replace(/ \(\d+\)$/, "")}» في الدليل الإرشادي لإدارة الأداء الوظيفي. بعضها يصل
-            تلقائيًا من عملك في البوابة، والباقي يُرفع. لا يرى الملف غيرك إلا مدير المدرسة، والدعم الفني لمعالجة الأعطال.
+            تلقائيًا من عملك في البوابة، والباقي يُرفع. {own === "principal" ? "لا يرى الملف غيرك إلا الدعم الفني لمعالجة الأعطال."
+              : "لا يرى الملف غيرك إلا مدير المدرسة، والدعم الفني لمعالجة الأعطال."}
           </p>
         </div>
-        {WARN}
+        {WARN(own === "principal" ? "الرئيس المباشر" : undefined)}
         <PerformanceFile uid={session.user.id} name={profile?.full_name} track={own} />
       </div>
     );

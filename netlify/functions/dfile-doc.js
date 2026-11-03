@@ -43,8 +43,8 @@ export const handler = async (event) => {
     const { data: ev } = await admin.from("perf_evidence")
       .select("file_path, source, teacher_user_id, item_key")
       .eq("id", id).maybeSingle();
-    // كل ملف يعرض شواهد بنود نموذجه وحده: المحضر (l..)، والموجه والوكيل ومحضر العلوم (g.. d.. s..)، والمعلم (e.. a..)
-    const of = (k) => (/^l\d/.test(k) ? "lab" : /^[gds]\d/.test(k) ? "staff" : "teacher");
+    // كل ملف يعرض شواهد بنود نموذجه وحده: المحضر (l..)، والمدير والموجه والوكيل ومحضر العلوم (m.. g.. d.. s..)، والمعلم (e.. a..)
+    const of = (k) => (/^l\d/.test(k) ? "lab" : /^[mgds]\d/.test(k) ? "staff" : "teacher");
     if (!ev || ev.teacher_user_id !== f.teacher_user_id || ev.source !== "upload" || !ev.file_path
         || of(ev.item_key ?? "") !== kind) {
       return json({ error: "الشاهد غير موجود" }, 404);

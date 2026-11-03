@@ -955,7 +955,7 @@ export function LabDfileReport({ data: d, settings: s, code }) {
    الملف الرقمي للموظف (الوكيل والموجه الطلابي ومحضر مختبر العلوم — supabase/staff_dfile_*.sql)
    بتصميم ملف محضر المعمل نفسه: عمله الآلي في البوابة ببنود نموذجه، والإنجازات، وعناصر الأداء، والشواهد.
    ===================================================================== */
-const STAFF_WHO = { deputy: "الوكيل", counselor: "الموجه", science: "المحضر" };
+const STAFF_WHO = { principal: "المدير", deputy: "الوكيل", counselor: "الموجه", science: "المحضر" };
 
 export function StaffDfileReport({ data: d, settings: s, code }) {
   const hidden = new Set(s?.hidden ?? []);
@@ -1047,7 +1047,7 @@ export function StaffDfileReport({ data: d, settings: s, code }) {
               {work.map((e) => (
                 <div className="df-card" key={e.k}>
                   <CardH title={e.t} sub={`وزنه ${e.w}%`} src="تلقائي" />
-                  <div className="df-tiles">
+                  <div className="df-tiles df-twrap">
                     {e.auto.map((i) => <span key={i.k}><b className="df-num">{auto[i.k].n}</b>{AUTO_SOURCE[i.k]?.label ?? i.t}</span>)}
                   </div>
                 </div>
@@ -1067,7 +1067,7 @@ export function StaffDfileReport({ data: d, settings: s, code }) {
 
         {show("elements") && (
           <Fold id="elements" title="عناصر الأداء الوظيفي" open={!!open.elements} onToggle={(v) => setOpen((o) => ({ ...o, elements: v }))}
-                line={`بنود لها شواهد: ${coverOn} من ${countAr(coverOf, "clause", { acc: true })} في ${counted.length} عنصرًا، والعنصر الأول يقدّره مدير المدرسة`}>
+                line={`بنود لها شواهد: ${coverOn} من ${countAr(coverOf, "clause", { acc: true })} في ${counted.length} عنصرًا، والعنصر الأول يقدّره ${d.track === "principal" ? "الرئيس المباشر" : "مدير المدرسة"}`}>
             <div className="df-els">
               {els.map((e, i) => {
                 const on = e.items.filter((x) => x.on).length;
@@ -1076,7 +1076,7 @@ export function StaffDfileReport({ data: d, settings: s, code }) {
                     <span className="df-k" style={{ background: elementColor(e.k) }}>{i + 1}</span>
                     <div className="df-t"><p>{e.t}</p><div className="df-track" style={{ marginTop: 4 }}>
                       <div className="df-fill" style={{ width: `${e.items.length ? (100 * on) / e.items.length : 0}%`, background: elementColor(e.k) }} /></div></div>
-                    <span className="df-n df-num">{e.eo ? "يقدّره المدير" : `${on} من ${countAr(e.items.length, "clause", { acc: true })}`}</span>
+                    <span className="df-n df-num">{e.eo ? (d.track === "principal" ? "يقدّره الرئيس المباشر" : "يقدّره المدير") : `${on} من ${countAr(e.items.length, "clause", { acc: true })}`}</span>
                   </div>
                 );
               })}

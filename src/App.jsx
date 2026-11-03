@@ -543,7 +543,7 @@ export default function App() {
             <Route path="/my-lab-dfile" element={<MyLabDfile />} />
           )}
           {/* الملف الرقمي للوكيل والموجه الطلابي ومحضر مختبر العلوم (supabase/staff_dfile_*.sql) */}
-          {effectiveRole === "admin" && adminRoles.some((r) => /^(deputy_|counselor_\d|science_labs)/.test(r)) && (
+          {effectiveRole === "admin" && adminRoles.some((r) => /^(principal$|deputy_|counselor_\d|science_labs)/.test(r)) && (
             <Route path="/my-staff-dfile" element={<MyLabDfile kind="staff" />} />
           )}
           {/* الأنشطة: حقيبة الانتظار والأنشطة الصفية وأدوات الصف — للمعلمين، ويديرها وكيل الشؤون التعليمية */}

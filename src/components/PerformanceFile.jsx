@@ -287,7 +287,7 @@ function AutoDetails({ uid, year, itemKey, track }) {
       // بنود الأنشطة لها دالتها (supabase/activities_4.sql)
       // وبند الإنتاج المعرفي من بنك الأسئلة (supabase/qbank_3.sql)
       // بنود الموجه والوكيل ورائد النشاط (supabase/staff_perf_5.sql)
-      const fn = track === "lab" ? "lab_perf_details" : /^(g|d|a1)\d+_/.test(itemKey) ? "staff_perf_details" : ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
+      const fn = track === "lab" ? "lab_perf_details" : /^m\d+_/.test(itemKey) ? "principal_perf_details" : /^(g|d|a1)\d+_/.test(itemKey) ? "staff_perf_details" : ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
       const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year, p_item: itemKey });
       if (error) setErr(error.message?.includes(fn) ? "عرض التفاصيل غير مفعّل بعد في قاعدة البيانات." : "تعذّر تحميل التفاصيل.");
       setRows(data ?? []);
@@ -369,7 +369,7 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
         </div>
         {el.evaluator_only && (
           <p className="mt-3 rounded-sm2 bg-canvas px-3 py-2 text-sm text-muted">
-            هذا العنصر يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد في ملف {role?.who ?? "المعلم"}.
+            هذا العنصر يقيّمه {role?.evaluator ?? "مدير المدرسة"} مباشرة، ولا يحتاج شواهد في ملف {role?.who ?? "المعلم"}.
           </p>
         )}
         {el.evaluator_only && readOnly && !role && <DutyIndicators uid={uid} year={year} />}
@@ -581,8 +581,10 @@ function roleOf(track, job) {
   // الوكيل باسم مجاله (وكيل الشؤون التعليمية مثلًا)، والنموذج واحد للوكلاء الثلاثة
   const t = job ? { ...base, label: job } : base;
   return {
+    // مدير المدرسة يقيّم عنصره الأول رئيسه المباشر، وبقية الموظفين مدير المدرسة
+    evaluator: track === "principal" ? "الرئيس المباشر" : "مدير المدرسة",
     who: t.who, teacher: !!t.teacher, desc: `${t.label} · نموذج «${t.form.replace(/ \(\d+\)$/, "")}» في دليل الأداء الوظيفي`,
-    report: { who: t.who, signTitle: t.label, tag: `ملف الأداء الوظيفي ل${t.label}`,
+    report: { who: t.who, signTitle: t.label, solo: track === "principal", tag: `ملف الأداء الوظيفي ل${t.label}`,
       rows: [["book", "الوظيفة", t.label], ["cap", "النموذج", `${t.form} · الإصدار الثاني`]],
       note: `الشواهد كما في ملف ${t.who} بالبوابة: المرفوعة، والآلية من عمله في البوابة.` },
   };
@@ -673,7 +675,7 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
                         style={{ background: elementColor(el.key) }}>{el.weight}%</span>
                 </div>
                 {el.evaluator_only ? (
-                  <p className="text-sm leading-relaxed text-muted">يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد.</p>
+                  <p className="text-sm leading-relaxed text-muted">يقيّمه {role?.evaluator ?? "مدير المدرسة"} مباشرة، ولا يحتاج شواهد.</p>
                 ) : (
                   <CountBoxes {...elementSummary(el, evidence, auto)} color={elementColor(el.key)} />
                 )}

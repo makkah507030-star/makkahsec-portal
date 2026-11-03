@@ -31,7 +31,7 @@ const KIND = {
 };
 
 export default function DfileShare({ uid, s, d, onSave, kind = "teacher", spec }) {
-  const owner = kind === "staff" ? { deputy: "الوكيل", counselor: "الموجه", science: "المحضر" }[d?.track] : null;
+  const owner = kind === "staff" ? { principal: "المدير", deputy: "الوكيل", counselor: "الموجه", science: "المحضر" }[d?.track] : null;
   const K = { ...KIND[kind], ...(spec ? { spec } : {}), ...(owner ? { owner } : {}) };
   const card = useRef(null);
   const [photo, setPhoto] = useState(null);

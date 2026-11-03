@@ -41,6 +41,7 @@ export const elementColor = (key) => {
    activity: رائد النشاط معلم، فعناصر المعلم نفسها بشواهدها وبأوزان نموذج «معلم مسند له نشاط طالبي»،
    ومعها العناصر الأربعة الخاصة بالنشاط. */
 export const PERF_TRACKS = {
+  principal: { roles: ["principal"], label: "مدير المدرسة", who: "المدير", form: "مدير المدرسة (8)" },
   lab:       { roles: ["computer_lab"], label: "محضر معمل الحاسب الآلي", who: "المحضر", form: "محضر المختبر (5)" },
   science:   { roles: ["science_labs", "science_labs_2", "science_labs_3"], label: "محضر مختبر العلوم", who: "المحضر", form: "محضر المختبر (5)" },
   counselor: { roles: ["counselor_1", "counselor_2", "counselor_3"], label: "الموجه الطلابي", who: "الموجه", form: "الموجه الطلابي (6)" },
@@ -222,6 +223,25 @@ export const AUTO_SOURCE = {
   d12_04: { label: "اجتماعات لجنة التحصيل", to: "/ach-committee" },
   d13_03: { label: "لقاءات الثقافة المدرسية", to: "/culture" },
   d15_03: { label: "نماذج رسمية أصدرها", to: "/my-documents" },
+  // مدير المدرسة (supabase/principal_perf_2.sql)
+  m03_01: { label: "إشعارات ورسائل أرسلها", to: "/notifications" },
+  m07_02: { label: "بلاغات صيانة عالجها", to: "/repairs" },
+  m09_01: { label: "زيارات دعم للمعلمين", to: "/forms" },
+  m09_02: { label: "خطط تحسين يتابعها", to: "/improve" },
+  m10_01: { label: "لقاءات وتقارير وزيارات اعتمدها", to: "/plc" },
+  m11_01: { label: "تقييمات أداء أرسلها للمعلمين", to: "/staff-performance" },
+  m11_02: { label: "آراء في ملفات المعلمين الرقمية", to: "/dfile-opinions" },
+  m12_02: { label: "اجتماعات لجنة التحصيل", to: "/ach-committee" },
+  m13_01: { label: "تقارير التقويم الذاتي", to: "/accreditation" },
+  m13_02: { label: "اجتماعات فريق التميز", to: "/accreditation" },
+  m14_02: { label: "خطط تحسين اعتمدها", to: "/accreditation" },
+  m15_01: { label: "تعاميم أرسلها", to: "/circulars" },
+  m15_02: { label: "نماذج رسمية اعتمدها", to: "/forms-review" },
+  m16_01: { label: "أحداث ومناسبات اعتمدها", to: "/events" },
+  m17_01: { label: "نشرات واستبانات أُرسلت", to: "/outreach" },
+  m17_02: { label: "تصويت واستطلاعات", to: "/polls-admin" },
+  m17_03: { label: "أخبار نُشرت", to: "/news-admin" },
+  m18_02: { label: "لقاءات الثقافة المدرسية", to: "/culture" },
   a12_02: { label: "أحداث ومناسبات معتمدة", to: "/events" },
   a13_01: { label: "تقارير تنفيذ الأحداث", to: "/events" },
   a14_01: { label: "إعلانات ترشيح منشورة", to: "/nominations" },
