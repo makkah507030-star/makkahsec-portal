@@ -13,6 +13,7 @@ import { useSession } from "../../lib/session.jsx";
 import { byClassName } from "../../lib/sortAr.js";
 import { referMissing } from "../../lib/deputyReferral.js";
 import { friendlyError } from "../../lib/friendlyError.js";
+import MobileCards from "../../components/MobileCards.jsx";
 
 const TABS = [
   { key: "official", label: "الحضور والغياب الرسمي" },
@@ -711,7 +712,7 @@ export function DevicesTab() {
           <p className="px-4 py-4 text-sm text-muted">لم تصل بصمة لأي فصل خلال المدة.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <MobileCards><table className="w-full text-sm">
               <thead className="bg-canvas text-xs text-muted">
                 <tr>
                   <th className="px-4 py-2 text-right font-medium">الفصل</th>
@@ -739,7 +740,7 @@ export function DevicesTab() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></MobileCards>
           </div>
         )}
       </section>

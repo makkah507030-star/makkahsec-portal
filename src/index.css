@@ -152,3 +152,20 @@
 /* وضع «عرض فقط» (components/ReadOnlyZone.jsx): أدوات التعديل باهتة ومعطّلة، والتنقل والعرض كما هما */
 .ro-zone :is(button, select, input, textarea):not([data-ro-ok]) { opacity: .45; cursor: not-allowed; }
 .ro-zone [data-ro-ok] :is(button, select, input, textarea) { opacity: 1; cursor: auto; }
+
+/* ——— الجدول بطاقات على الجوال (components/MobileCards.jsx) ——— */
+@media screen and (max-width: 639px) {
+  .m-cards table, .m-cards tbody, .m-cards tr, .m-cards td { display: block; width: 100%; }
+  .m-cards table { border: 0 !important; min-width: 0 !important; }
+  .m-cards thead { display: none; }
+  .m-cards tbody tr { margin-bottom: 8px; padding: 8px 12px; border: 1px solid rgb(var(--c-line)); border-radius: 12px;
+                      background: rgb(var(--c-paper)) !important; }
+  .m-cards tbody td { display: flex; align-items: baseline; gap: 10px; padding: 3px 0 !important; border: 0 !important;
+                      text-align: start !important; white-space: normal !important; background: transparent !important;
+                      direction: rtl; unicode-bidi: normal; }
+  .m-cards tbody td[data-l]::before { content: attr(data-l); flex: none; width: 7.5rem; font-size: 11.5px; font-weight: 400;
+                                      color: rgb(var(--c-muted)); }
+  .m-cards tbody td[data-t] { padding-bottom: 6px !important; font-size: 14.5px; font-weight: 700; color: rgb(var(--c-ink)); }
+  .m-cards tbody td[data-seq], .m-cards tbody td:empty { display: none; }
+  .m-cards tbody td[colspan] { justify-content: center; }
+}

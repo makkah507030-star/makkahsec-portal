@@ -23,6 +23,7 @@ import { levelLabel } from "../../lib/guidanceInquiry.js";
 import { NOTE_KINDS } from "../../lib/studentNotes.js";
 import { TONE, buildModel, actionLabel } from "./studentFileModel.js";
 import PeriodNoticeCard from "../../components/PeriodNoticeCard.jsx";
+import MobileCards from "../../components/MobileCards.jsx";
 
 // من يعدّل حضور الحصص (supabase/class_attendance_staff_edit.sql)
 const EDIT_ROLES = ["principal", "tech_support", "deputy_students"];
@@ -622,7 +623,7 @@ function Timeline({ items }) {
     <Section title="السجل الزمني الموحّد" icon="clock">
       {!items.length ? <Empty>لا أحداث في الفترة.</Empty> : (
         <div className="overflow-x-auto rounded-card border border-line">
-          <table className="w-full min-w-[640px] border-collapse text-sm">
+          <MobileCards><table className="w-full min-w-[640px] border-collapse text-sm">
             <thead>
               <tr className="bg-mint-deep text-right text-xs text-white">
                 <th className="w-10 px-2 py-2.5 text-center font-semibold">م</th>
@@ -665,7 +666,7 @@ function Timeline({ items }) {
                 </tbody>
               );
             })}
-          </table>
+          </table></MobileCards>
         </div>
       )}
       {items.length > 15 && <button onClick={() => setAll(!all)} className="text-xs text-mint-deep underline">

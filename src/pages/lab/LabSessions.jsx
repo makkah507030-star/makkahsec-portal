@@ -14,6 +14,7 @@ import LabScanner from "./LabScanner.jsx";
 import { InstallPanel, RoomOpen } from "./LabRoom.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import MobileCards from "../../components/MobileCards.jsx";
 
 const pc = (n) => (n == null ? "—" : `PC-${String(n).padStart(2, "0")}`);
 const dateOf = (ts) => shortDate(isoOf(new Date(ts)));
@@ -247,7 +248,7 @@ function Results({ session, onClose }) {
       {msg && !msg.ok && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-absent">{msg.text}</p>}
       {rows === null ? <p className="text-sm text-muted">جارٍ التحميل…</p> : (
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-xs sm:text-sm [&_td:not(:first-child)]:whitespace-nowrap">
+          <MobileCards><table className="w-full border-collapse text-xs sm:text-sm [&_td:not(:first-child)]:whitespace-nowrap">
             <thead>
               <tr className="bg-mint-tint text-xs text-mint-deep">
                 {["الطالب", "الجهاز", "الاختبار", "الإتقان", "المحطات", ""].map((h, i) => <th key={i} className={`border border-line px-2 py-1.5 text-start font-bold ${i === 4 ? "hidden sm:table-cell" : ""}`}>{h}</th>)}
@@ -272,7 +273,7 @@ function Results({ session, onClose }) {
                 );
               })}
             </tbody>
-          </table>
+          </table></MobileCards>
         </div>
       )}
     </div>

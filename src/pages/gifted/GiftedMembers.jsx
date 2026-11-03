@@ -11,6 +11,7 @@ import { logos } from "../student-affairs/shared.jsx";
 import Loader from "../../components/Loader.jsx";
 import { GIFTED_DOMAINS, SOURCE, domainOf } from "../../lib/gifted.js";
 import { friendlyError } from "../../lib/friendlyError.js";
+import MobileCards from "../../components/MobileCards.jsx";
 
 /* =====================================================================
    الطلاب الموهوبون (supabase/gifted_2.sql) من كل الصفوف: من اكتُشف في مقياس موهبة
@@ -93,7 +94,7 @@ export default function GiftedMembers() {
     const body = rows.map((m, i) => `<tr><td>${i + 1}</td><td>${e(m.full_name)}</td><td>${e(cls(m))}</td><td>${e(SOURCE[m.source])}</td>
       <td>${e((m.domains ?? []).map((d) => domainOf(d).t).join("، ") || "—")}</td><td>${e(localMobile(m.student_mobile) || "—")}</td><td>${e(localMobile(m.guardian) || "—")}</td></tr>`).join("");
     printReport({ title: "كشف الطلاب الموهوبين", sections: [{ title: "كشف الطلاب الموهوبين", subtitle: `عدد الطلاب: ${rows.length}`,
-      html: `<table><thead><tr><th>م</th><th>الطالب</th><th>الصف/الفصل</th><th>مصدر الاكتشاف</th><th>مجالات الموهبة</th><th>جوال الطالب</th><th>جوال ولي الأمر</th></tr></thead><tbody>${body}</tbody></table>` }],
+      html: `<MobileCards><table><thead><tr><th>م</th><th>الطالب</th><th>الصف/الفصل</th><th>مصدر الاكتشاف</th><th>مجالات الموهبة</th><th>جوال الطالب</th><th>جوال ولي الأمر</th></tr></thead><tbody>${body}</tbody></table></MobileCards>` }],
       ...logos(), signatures: [{ title: "مسؤول برنامج الموهوبين", name: (ROLE_PERSON_NAME.gifted_program ?? "").replace(/^الأستاذ:\s*/, "") }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }] });
   };
   const shown = rows.filter((m) => (dom === "all" || (m.domains ?? []).includes(dom)) && (!q.trim() || m.full_name.includes(q.trim())));

@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import Loader from "../../components/Loader.jsx";
 import { friendlyError } from "../../lib/friendlyError.js";
+import MobileCards from "../../components/MobileCards.jsx";
 
 export default function StaffChildren() {
   const [list, setList] = useState(null);
@@ -138,7 +139,7 @@ export default function StaffChildren() {
       <div className="card overflow-x-auto">
         <p className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">الموظفون المربوط بهم أبناؤهم</p>
         {!list ? <Loader compact /> : !list.length ? <p className="p-6 text-center text-sm text-muted">لا روابط بعد.</p> : (
-          <table className="w-full text-sm">
+          <MobileCards><table className="w-full text-sm">
             <thead><tr className="bg-canvas text-right text-xs text-muted"><th className="p-2">الموظف</th><th className="p-2">الأبناء</th><th className="p-2">جوال سجل ولي الأمر</th><th className="p-2" /></tr></thead>
             <tbody className="divide-y divide-line/50">
               {list.map((r) => (
@@ -150,7 +151,7 @@ export default function StaffChildren() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></MobileCards>
         )}
       </div>
     </div>

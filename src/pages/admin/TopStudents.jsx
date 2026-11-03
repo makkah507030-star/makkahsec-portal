@@ -15,6 +15,7 @@ import { countAr } from "../../lib/arabicCount.js";
 import Loader from "../../components/Loader.jsx";
 import logoIcon from "../../assets/icon-mint.png";
 import moeLogo from "../../assets/moe-logo.png";
+import MobileCards from "../../components/MobileCards.jsx";
 
 const pill = (on) => `rounded-pill px-3 py-1 text-xs font-medium transition-colors ${
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
@@ -201,7 +202,7 @@ export default function TopStudents({ year }) {
             <p className="text-[11px] text-muted">{countAr(g.rows.length, "student")} من <span className="num">{g.total}</span></p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <MobileCards><table className="w-full text-sm">
               <thead className="text-[11px] text-muted">
                 <tr className="border-b border-line">
                   <th className="px-3 py-2 text-center font-medium">الترتيب</th><th className="px-3 py-2 text-right font-medium">الطالب</th>
@@ -225,7 +226,7 @@ export default function TopStudents({ year }) {
                   );
                 })}
               </tbody>
-            </table>
+            </table></MobileCards>
           </div>
         </section>
       ))}

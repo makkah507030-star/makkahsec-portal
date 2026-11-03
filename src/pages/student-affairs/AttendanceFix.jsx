@@ -19,6 +19,7 @@ import {
   isMissingTable, OFFICIAL_LABEL,
 } from "../../lib/officialAttendance";
 import { DateInput, Note, Loading, Empty, weekdayOf } from "./shared.jsx";
+import MobileCards from "../../components/MobileCards.jsx";
 
 const P_STATUS = {
   present: { t: "حاضر", c: "text-present" },
@@ -270,7 +271,7 @@ export default function AttendanceFix() {
             <p className="font-semibold text-ink">سجل تعديلات الطالب</p>
             {d.log.length === 0 ? <p className="text-sm text-faint">لا تعديلات.</p> : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[36rem] text-sm">
+                <MobileCards><table className="w-full min-w-[36rem] text-sm">
                   <thead><tr className="text-right text-xs text-faint">
                     <th className="py-1">اليوم</th><th>البند</th><th>من</th><th>إلى</th><th>السبب</th><th>بواسطة</th>
                   </tr></thead>
@@ -286,7 +287,7 @@ export default function AttendanceFix() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></MobileCards>
               </div>
             )}
           </section>
