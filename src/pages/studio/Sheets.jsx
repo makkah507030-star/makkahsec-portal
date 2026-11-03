@@ -4,7 +4,7 @@ import iconWhite from "../../assets/icon-white.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fitSize, fitTitle, bodySize, classCode, classShort, GRADE_OPTIONS } from "./lib";
 import { ROLLUP_SIZES } from "./templates";
-import { GLOBE_SPHERES } from "../../lib/globe.js";
+import { GLOBE_ROLES } from "../../lib/globe.js";
 import { useStudioAssets } from "./assets";
 import "./studio.css";
 import Fleur from "../../components/Fleur.jsx";
@@ -613,14 +613,15 @@ const CONTOURS = (
   </svg>
 );
 
+// صفات فريق جلوب في سطر البطاقة بألوانها (lib/globe.js)
+const GLOBE_CARD_ROLES = GLOBE_ROLES.map((t, i) => ({ t, color: ["#D9B45A", "#5BB8E8", "#4CAF6A"][i] ?? "#4CAF6A" }));
+
 export function GlobeCards({ theme = "light", d }) {
   const cards = Array.from({ length: 9 }, (_, i) => (d.cards ?? [d])[i] ?? null);
-  const spheres = GLOBE_SPHERES.filter((s) => s.k !== "all");
   return (
     <div className={`stu stu-globes stu-${theme} stu-portrait sheet`}>
       <div className="grid">
         {cards.map((c, i) => {
-          const all = !c?.sphere || c.sphere === GLOBE_SPHERES[0].t;
           return (
             <div key={i} className={`stu-globe${c ? "" : " empty"}`}>
               {c && (
@@ -651,10 +652,11 @@ export function GlobeCards({ theme = "light", d }) {
                   })()}
                   {c.role && <span className="rl">{c.role}</span>}
                   {c.cls && <div className="cl">{c.cls}</div>}
+                  {/* صفات الفريق، وتُضاء صفة الطالب (بروتوكولات الرصد صارت عشرة فلا تتسع لها البطاقة) */}
                   <div className="sp">
-                    {spheres.map((s) => (
-                      <span key={s.k} className={all || s.t === c.sphere ? "on" : ""} style={{ "--sp": s.color }}>
-                        <i />{s.short}
+                    {GLOBE_CARD_ROLES.map((r) => (
+                      <span key={r.t} className={r.t === c.role ? "on" : ""} style={{ "--sp": r.color }}>
+                        <i />{r.t}
                       </span>
                     ))}
                   </div>
