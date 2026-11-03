@@ -25,6 +25,10 @@ import { useBackStep } from "../lib/backStep.js";
 import { AUDIENCE, GRADES, audienceOf, audienceLabel, audienceTitle, scopeOf, scopePlace, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
 import { useScoutLeader, issuesAsScout } from "../lib/scoutLeader.js";
 
+/* صفة المعلم أو الإداري في كشف الحضور وشهادته: «معلم الرياضيات» بتخصصه، والإداري بمسمّى دوره */
+const staffRoleOf = (m) => (m.kind === "admin" ? (ADMIN_ROLE_LABEL[m.roles?.[0]] ?? "الإدارة").replace(/\s+\d+$/, "")
+  : m.spec ? (/^معلم/.test(m.spec) ? m.spec : `معلم ${m.spec}`) : "معلم");
+
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
    ① بيانات الحدث ② الطلاب المشاركون ③ موافقة ولي الأمر
@@ -1583,7 +1587,7 @@ function StaffAttendance({ e, patch }) {
       if (error) { setErr(error.message); setMembers([]); return; }
       setMembers((data ?? []).map((m) => ({
         key: m.key, name: m.full_name, kind: m.kind,
-        role: m.kind === "admin" ? (ADMIN_ROLE_LABEL[m.roles?.[0]] ?? "الإدارة") : "معلم",
+        role: staffRoleOf(m),
       })).sort((a, b) => cmpAr(a.name, b.name)));
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1717,9 +1721,18 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
 
   const attended = useMemo(() => (parts ?? []).filter((p) => p.attended === true), [parts]);
   // المعلمون والإدارة الحاضرون في حدث للمدرسة كلها، بصيغة المشارك نفسها
+  // صفة كل حاضر محدَّثة من سجله (تخصص المعلم أو دور الإداري) لا كما حُفظت يوم الحضور (events_staff_title.sql)
+  const [titles, setTitles] = useState({});
+  useEffect(() => {
+    const kinds = staffKinds(e);
+    if (!kinds.length || !(e.audience_attended ?? []).length) return;
+    supabase.rpc("ev_audience_members", { p_event: e.id, p_kinds: kinds }).then(({ data }) =>
+      setTitles(Object.fromEntries((data ?? []).map((m) => [m.key, staffRoleOf(m)]))));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [e.id, (e.audience_attended ?? []).length]);
   const staff = useMemo(() => (e.audience_attended ?? []).map((x) => (
-    { id: `s-${x.key}`, key: x.key, student_name: x.name, class_label: x.role, staff: true, cert_issued_at: x.cert_at })),
-  [e.audience_attended]);
+    { id: `s-${x.key}`, key: x.key, student_name: x.name, class_label: titles[x.key] || x.role, staff: true, cert_issued_at: x.cert_at })),
+  [e.audience_attended, titles]);
   const serialOf = (p) => (p.staff
     ? `${e.serial}-M${String(staff.indexOf(p) + 1).padStart(3, "0")}`
     : `${e.serial}-${String(attended.indexOf(p) + 1).padStart(3, "0")}`);

@@ -256,6 +256,14 @@ function hoursText(h) {
   return `، والتي عُقدت لمدة ${w}`;
 }
 
+/* صفة صاحب الشهادة تحت اسمه: الفصل للطالب، والمعلم بتخصصه («معلم الرياضيات»)، والإداري بمسمّاه */
+function certTitle(v) {
+  if (v.class_label) return v.class_label;
+  const spec = (v.specialization || v.draft_target?.specialization || "").trim();
+  if (v.job === "معلم" && spec) return /^معلم/.test(spec) ? spec : `معلم ${spec}`;
+  return v.job || "";
+}
+
 function Certificate(p) {
   const { v, doc, template } = p;
   const att = isAttendanceCert(template);
@@ -292,6 +300,7 @@ function Certificate(p) {
           {att ? (<>
             <p className="mt-7 text-[15px] text-muted">تشهد مدرسة مكة الثانوية بأن الأستاذ/</p>
             <p className="mt-2 text-[32px] font-bold leading-tight text-ink">{v.recipient || "…"}</p>
+            {certTitle(v) && <p className="mt-1 text-[14px] text-mint-hover">{certTitle(v)}</p>}
             {v.national_id && <p className="mt-1 text-[14px] text-mint-hover">هوية وطنية: <span className="num">{v.national_id}</span></p>}
             <p className="mx-auto mt-4 max-w-[64ch] text-[15.5px] leading-[2.1] text-ink">
               قد حضر ورشة تدريبية بعنوان: <b className="text-mint-deep">«{v.workshop || "…"}»</b>
@@ -303,8 +312,8 @@ function Certificate(p) {
           </>) : (<>
             <p className="mt-7 text-[15px] text-muted">تتقدّم مدرسة مكة الثانوية بالشكر والتقدير إلى</p>
             <p className="mt-2 text-[32px] font-bold leading-tight text-ink">{v.recipient || "…"}</p>
-            {(v.class_label || v.job) && (
-              <p className="mt-1 text-[14px] text-mint-hover">{v.class_label || v.job}</p>
+            {certTitle(v) && (
+              <p className="mt-1 text-[14px] text-mint-hover">{certTitle(v)}</p>
             )}
 
             <p className="mx-auto mt-4 max-w-[58ch] text-[15.5px] leading-[2.1] text-ink">
