@@ -3,11 +3,12 @@
 @tailwind utilities;
 
 /* ——— الألوان: قنوات RGB تقرؤها tailwind.config.js ———
+   النص الخافت (faint) بتباين 4.5:1 على الأقل مع البطاقة البيضاء (معيار WCAG AA)، في الفاتح والرسمي والداكن.
    الفاتح هو الأصل. الداكن (html.dark، للطلاب حاليًا، src/lib/theme.js) على الشاشة وحدها،
    فالطباعة تبقى فاتحة كما هي: الشهادات والتقارير والنماذج.
    والورقة المعروضة على الشاشة (.sheet: النماذج والشهادات والتقارير) تبقى فاتحة في الداكن أيضًا. */
 :root, .dark .sheet {
-  --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 169 169 169;
+  --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 116 116 116;
   --c-line: 195 195 195;    --c-canvas: 244 244 244;  --c-paper: 255 255 255;
   --c-mint: 137 215 173;    --c-mint-hover: 106 167 134; --c-mint-deep: 62 99 80;
   --c-mint-light: 204 242 219; --c-mint-tint: 237 250 242;
@@ -22,11 +23,11 @@
    ألوانها الأصلية، والداكن بعده فيغلبه. */
 @media screen {
   html:not(.classic) {
-    --c-ink: 28 51 40;        --c-muted: 94 114 104;    --c-faint: 150 172 160;
+    --c-ink: 28 51 40;        --c-muted: 94 114 104;    --c-faint: 103 123 113;
     --c-line: 213 231 220;    --c-canvas: 242 250 245;  --c-mint-tint: 232 247 238;
   }
   html:not(.classic) .sheet {
-    --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 169 169 169;
+    --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 116 116 116;
     --c-line: 195 195 195;    --c-canvas: 244 244 244;  --c-mint-tint: 237 250 242;
   }
   html:not(.classic):not(.dark) .brand-rule { border-bottom: 2px solid #B8912F; }
@@ -35,7 +36,7 @@
 @media screen {
   html.dark {
     color-scheme: dark;
-    --c-ink: 233 238 235;     --c-muted: 163 173 167;   --c-faint: 115 126 120;
+    --c-ink: 233 238 235;     --c-muted: 163 173 167;   --c-faint: 138 149 143;
     --c-line: 58 67 62;       --c-canvas: 17 21 19;     --c-paper: 27 32 29;
     --c-mint-deep: 74 131 102; --c-mint-light: 44 74 58; --c-mint-tint: 29 45 37;
     --c-danger-light: 58 32 32; --c-warning-light: 56 48 28;
