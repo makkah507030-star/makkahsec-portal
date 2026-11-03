@@ -8,6 +8,7 @@ import { useSession } from "../../lib/session.jsx";
 import { fmtDateTime } from "../../lib/dates";
 import { sendPush } from "../../lib/pushSend.js";
 import Loader from "../../components/Loader.jsx";
+import MadrasatiReport from "./MadrasatiReport.jsx";
 import { MR_KINDS, MR_STATUS, kindOf } from "../../components/MadrasatiSupport.jsx";
 
 const tail = (m) => String(m ?? "").slice(-3);
@@ -38,6 +39,7 @@ export default function MadrasatiRequests() {
   const [kind, setKind] = useState("all");
   const [act, setAct] = useState(null);           // { id, status, reply }
   const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState(false);
 
   const load = useCallback(() => {
     supabase.from("madrasati_requests").select("*").order("created_at", { ascending: false }).limit(500)
@@ -72,14 +74,18 @@ export default function MadrasatiRequests() {
   };
 
   if (!rows) return <Loader />;
+  if (report) return <MadrasatiReport rows={rows} onBack={() => setReport(false)} />;
   return (
     <div className="space-y-4">
-      <div>
+      <div className="flex flex-wrap items-start gap-3">
+        <div className="min-w-0 flex-1">
         <h1 className="text-lg font-bold text-ink">طلبات منصة مدرستي</h1>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           طلبات الطلاب من «مركز الدعم والمساندة». نفّذ الطلب في لوحة منصة مدرستي، ثم أرسل الرد فيصل الطالب إشعارًا.
           كلمة المرور لا تُكتب في الرد: حدّث الجوال في المنصة وأرسلها منها على الجوال.
         </p>
+        </div>
+        <button className="btn-primary shrink-0 px-4 py-1.5 text-xs" disabled={!rows.length} onClick={() => setReport(true)}>تقرير دعم المنصة</button>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">
         {/does not exist|schema cache/.test(err) ? "نفّذ supabase/madrasati_requests.sql في قاعدة البيانات أولًا." : err}</p>}

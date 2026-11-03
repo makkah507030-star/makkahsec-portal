@@ -33,7 +33,7 @@ const okMobile = (v) => /^05\d{8}$/.test(v);
 
 export default function MadrasatiSupport() {
   const [kind, setKind] = useState(null);
-  const [f, setF] = useState({ mobile: "", mobile2: "", target: "", details: "" });
+  const [f, setF] = useState({ mobile: "", target: "", details: "" });
   const [classes, setClasses] = useState([]);
   const [mine, setMine] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -52,8 +52,8 @@ export default function MadrasatiSupport() {
 
   const open = (mine ?? []).filter((r) => r.status === "new" || r.status === "in_progress");
   const hasOpen = (k) => open.some((r) => r.kind === k);
-  const m1 = normMobile(f.mobile), m2 = normMobile(f.mobile2);
-  const valid = kind === "password" ? okMobile(m1) && m1 === m2
+  const m1 = normMobile(f.mobile);
+  const valid = kind === "password" ? okMobile(m1)
     : kind === "class" ? !!f.target : kind === "other" ? f.details.trim().length >= 5 : false;
 
   const send = async () => {
@@ -68,7 +68,7 @@ export default function MadrasatiSupport() {
       return;
     }
     setMsg({ ok: true, text: "وصل طلبك إلى الدعم الفني، ويصلك إشعار عند معالجته." });
-    setKind(null); setF({ mobile: "", mobile2: "", target: "", details: "" }); load();
+    setKind(null); setF({ mobile: "", target: "", details: "" }); load();
   };
   const cancel = async (r) => {
     if (!window.confirm("إلغاء هذا الطلب؟")) return;
@@ -128,14 +128,9 @@ export default function MadrasatiSupport() {
                 <p className="text-[12px] leading-relaxed text-muted">
                   اكتب رقم الجوال الذي تريد أن تصلك عليه كلمة المرور. يُسجَّل في المنصة ثم تُرسل عليه برسالة نصية، ولا تظهر كلمة المرور لأحد في المدرسة.
                 </p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <input className="field num" inputMode="tel" dir="ltr" maxLength={14} placeholder="05XXXXXXXX"
-                         value={f.mobile} onChange={(e) => setF({ ...f, mobile: e.target.value })} />
-                  <input className="field num" inputMode="tel" dir="ltr" maxLength={14} placeholder="أعد كتابة الرقم"
-                         value={f.mobile2} onChange={(e) => setF({ ...f, mobile2: e.target.value })} />
-                </div>
+                <input className="field num w-full sm:max-w-xs" inputMode="tel" dir="ltr" maxLength={14} placeholder="05XXXXXXXX"
+                       value={f.mobile} onChange={(e) => setF({ ...f, mobile: e.target.value })} />
                 {f.mobile && !okMobile(m1) && <p className="text-[11.5px] text-absent">الرقم يبدأ بـ 05 ومن 10 أرقام.</p>}
-                {okMobile(m1) && f.mobile2 && m1 !== m2 && <p className="text-[11.5px] text-absent">الرقمان غير متطابقين.</p>}
               </>
             )}
             {kind === "class" && (
