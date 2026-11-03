@@ -18,6 +18,7 @@ import SciRuns from "./SciRuns.jsx";
 import SciInventory from "./SciInventory.jsx";
 import SciReports from "./SciReports.jsx";
 import { planPages, logPages, inventoryPages } from "./SciDocs.jsx";
+import VirtualLabsGuide from "./VirtualLabsGuide.jsx";
 
 const TABS = [
   { key: "booking", label: "حجز المختبر" },
@@ -85,6 +86,7 @@ export default function ScienceLabs() {
           {isManager ? "حجوزات المختبر وتجهيزها، والخطة الفصلية للتجارب وسجل تنفيذها، والعهدة والتقارير." : "احجز حصتك في المختبر لتجربة من الخطة، وسجّل تنفيذها بعد الحصة."}
         </p>
       </div>
+      <VirtualLabsGuide />
       {labs.length > 1 && (
         <div className="flex flex-wrap gap-1.5">
           {labs.map((l) => <button key={l.key} className={pill(l.key === lab)} onClick={() => setLab(l.key)}>{l.name}</button>)}
