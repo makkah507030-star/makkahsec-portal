@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import MadrasatiAlert from "../components/MadrasatiAlert.jsx";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
@@ -172,6 +173,8 @@ export default function Feedback() {
           تواصل مع الدعم الفني للبوابة لأي مشكلة تقنية أو استفسار أو اقتراح،
           وسيصلك الرد داخل الموقع عبر الإشعارات.
         </p>
+
+        <MadrasatiAlert className="mt-6" />
 
         {/* بطاقة رابط دعم منصة مدرستي — موقع مستقل منفصل عن بوابة مكة */}
         <a

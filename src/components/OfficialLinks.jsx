@@ -6,6 +6,7 @@
    اسم النظام بلونه بدلًا منه.
    ===================================================================== */
 import { useState } from "react";
+import MadrasatiAlert from "./MadrasatiAlert.jsx";
 
 const SYSTEMS = [
   { key: "madrasati", name: "منصة مدرستي", desc: "الدروس والواجبات والاختبارات والفصول الافتراضية",
@@ -36,6 +37,7 @@ export default function OfficialLinks() {
     <section className="card p-4">
       <p className="text-sm font-bold text-ink">المنصات والدعم</p>
       <p className="text-xs text-muted">مدرستي ونور تسجّل الدخول فيهما بحسابك الرسمي (النفاذ الوطني)، ودعم مدرستي بوابة تديرها المدرسة لمساعدتك.</p>
+      <MadrasatiAlert className="mt-3" />
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {SYSTEMS.map((s) => (
           <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer"
