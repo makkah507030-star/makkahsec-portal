@@ -11,6 +11,7 @@ import { useMedia, MediaGrid } from "./MediaGallery.jsx";
 import MediaViewer from "./MediaViewer.jsx";
 import NoPhotoList from "./NoPhotoList.jsx";
 import MediaTeam from "./MediaTeam.jsx";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    استوديو الوسائط (صلاحية «استوديو الوسائط»، supabase/media_1.sql): رفع صور المدرسة
@@ -65,7 +66,7 @@ export default function MediaStudio() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">استوديو الوسائط</h1>
-        <p className="mt-1 text-sm text-muted">ارفع صور المدرسة ومقاطعها لتظهر في «معرض المدرسة» داخل الحسابات فقط. لا يصدر لأي ملف رابط عام، والرابط المنسوخ يتعطل بعد دقائق.</p>
+        <PageIntro className="mt-1 text-sm text-muted">ارفع صور المدرسة ومقاطعها لتظهر في «معرض المدرسة» داخل الحسابات فقط. لا يصدر لأي ملف رابط عام، والرابط المنسوخ يتعطل بعد دقائق.</PageIntro>
       </div>
       <div className="flex gap-1.5">
         <button className={pill(tab === "items")} onClick={() => setTab("items")}>المواد</button>

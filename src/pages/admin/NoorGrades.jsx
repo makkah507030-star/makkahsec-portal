@@ -11,6 +11,7 @@ import PresetChips from "../../components/PresetChips.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 import { readMarksReport, marksStatus, normAr } from "../../lib/noorMarksReport.js";
 import { resolveAlias } from "../../lib/gradeSheets.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    متابعة رصد درجات الفترات في نظام نور — لوكيل الشؤون التعليمية والدعم الفني
@@ -522,9 +523,9 @@ export default function NoorGrades() {
       )}
       <div>
         <h1 className="text-lg font-bold text-ink">متابعة رصد الدرجات في نظام نور</h1>
-        <p className="mt-0.5 text-sm text-muted">
+        <PageIntro className="mt-0.5 text-sm text-muted">
           اختر الصف ثم المادة كما في كشف متابعة نور، وسجّل حالة كل فصل في صفوفها. للإدخال السريع اختر الحالة ثم اضغط الخانات، أو طبّقها على الصف كله.
-        </p>
+        </PageIntro>
       </div>
 
       {!terms.length ? (

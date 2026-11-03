@@ -8,6 +8,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    سجل المتابعة الإلكتروني 2 — بفكرة السجل الأول نفسها، مع فرق واحد:
@@ -424,11 +425,11 @@ export default function FollowUpLog2() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">سجل المتابعة الإلكتروني 2</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           وزّع درجات المهام الأدائية والمشاركة والتفاعل على بنودها، فتظهر أمام كل طالب خانات بعدد درجات البند:
           ضغطة واحدة <b className="text-mint-deep">✓</b> تُحتسب درجة، وضغطتان <b className="text-danger">✗</b>، والثالثة تمسح الخانة.
           يُحفظ كل شيء تلقائيًا، وهو مستقل عن السجل الأول.
-        </p>
+        </PageIntro>
         <EvidenceTags className="mt-2" items={["e03_06", "e11_02", "e11_03"]} />
       </div>
 

@@ -10,6 +10,7 @@ import DfileDistribution from "../../components/dfile/DfileDistribution.jsx";
 import {
   ACTIVITY_LABEL, ACTIVITY_PRESETS, COLORS, RECORD_AUTO, RECORD_PRESETS, MADRASATI, PARTS, RANKS, OPINION_ROLE, actTotal, decideOpinion, dfileError, loadDfile, loadDfileData, loadMyOpinions, sentences,
 } from "../../lib/dfile.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    لوحة ملف المعلم الرقمي — صفحة مستقلة يراها المعلم وحده.
@@ -79,10 +80,10 @@ export default function MyDfile() {
   const head = (
     <div>
       <h1 className="text-lg font-bold text-ink">ملف المعلم الرقمي</h1>
-      <p className="mt-1 text-sm leading-relaxed text-muted">
+      <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
         تقرير تفاعلي عن أعمالك يُبنى لحظة فتحه من بيانات البوابة، تعرضه برمز على مشرف أو لجنة.
         لا يعرض أسماء الطلاب ولا يقارنك بأي زميل. هذه الصفحة تراها أنت وحدك.
-      </p>
+      </PageIntro>
     </div>
   );
 

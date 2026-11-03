@@ -11,6 +11,7 @@ import Loader from "../../components/Loader.jsx";
 import MadrasatiReport from "./MadrasatiReport.jsx";
 import { MR_KINDS, MR_STATUS, kindOf } from "../../components/MadrasatiSupport.jsx";
 import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const tail = (m) => String(m ?? "").slice(-3);
 // الردود الجاهزة: لا تحمل كلمة مرور أبدًا
@@ -83,10 +84,10 @@ export default function MadrasatiRequests() {
       <div className="flex flex-wrap items-start gap-3">
         <div className="min-w-0 flex-1">
         <h1 className="text-lg font-bold text-ink">طلبات منصة مدرستي</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           طلبات الطلاب من «مركز الدعم والمساندة». نفّذ الطلب في لوحة منصة مدرستي، ثم أرسل الرد فيصل الطالب إشعارًا.
           كلمة المرور لا تُكتب في الرد: حدّث الجوال في المنصة وأرسلها منها على الجوال.
-        </p>
+        </PageIntro>
         </div>
         <button className="btn-primary shrink-0 px-4 py-1.5 text-xs" disabled={!rows.length} onClick={() => setReport(true)}>تقرير دعم المنصة</button>
       </div>

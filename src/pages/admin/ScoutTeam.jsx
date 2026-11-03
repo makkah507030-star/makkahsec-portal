@@ -18,6 +18,7 @@ import { PRINCIPAL_NAME } from "../../lib/signers.js";
 import { cleanMobile } from "../../lib/importer";
 import Fleur from "../../components/Fleur.jsx";
 import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    الفريق الكشفي (supabase/scouts_1.sql):
@@ -186,10 +187,10 @@ export default function ScoutTeam({ embedded = false }) {
     <div className="space-y-5">
       {!embedded && <div>
         <h1 className="text-lg font-bold text-ink">الفريق الكشفي</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           أعضاء الفريق الكشفي بالمدرسة من كل الفصول: أضف الطالب من فصله، وأسند له رتبته الكشفية لمرحلة
           الكشاف المتقدم (المرحلة الثانوية)، فتظهر شارتها في بطاقته بحسابه.
-        </p>
+        </PageIntro>
       </div>}
 
       <a href={SCOUTS_URL} target="_blank" rel="noopener noreferrer"

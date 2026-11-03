@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { fmtDate } from "../../lib/dates.js";
 import { dfileError } from "../../lib/dfile.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    رأي الإدارة في ملف المعلم الرقمي — لمدير المدرسة ووكيل الشؤون التعليمية.
@@ -34,10 +35,10 @@ export default function DfileOpinions() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">رأي الإدارة في ملفات المعلمين</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           اكتب رأيك اختياريًا في ملف المعلم الرقمي، ويظهر للزائر باسمك وتاريخه ووسم «موقّع إلكترونيًا» بعد أن يختار
           المعلم إظهاره. لا يعدّل المعلم نصك، وإذا عدّلته عاد إليه ليختار من جديد. تظهر هنا ملفات المعلمين المفعّلة فقط.
-        </p>
+        </PageIntro>
       </div>
       {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}
       {rows === null ? <p className="text-sm text-muted">جارٍ التحميل…</p> : rows.length === 0 ? <p className="text-sm text-muted">لا ملفات مفعّلة بعد.</p> : (

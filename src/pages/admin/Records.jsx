@@ -11,6 +11,7 @@ import { countAr } from "../../lib/arabicCount.js";
 import { byName } from "../../lib/sortAr.js";
 import StaffChildren from "./StaffChildren.jsx";
 import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const TRACK_LABEL = { common_year: "السنة المشتركة", general_track: "المسار العام" };
 const trackName = (t) => TRACK_LABEL[t] ?? t ?? "";
@@ -44,10 +45,10 @@ export default function Records() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold">إدارة السجلات</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           إضافة وتعديل بيانات الطلاب والمعلمين وأولياء الأمور يدويًا دون الرجوع لملفات
           الاستيراد. أي تعديل هنا ينعكس فورًا في كل شاشات البوابة المرتبطة.
-        </p>
+        </PageIntro>
       </div>
 
       <div className="flex flex-wrap gap-1.5">

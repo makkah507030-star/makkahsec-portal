@@ -28,6 +28,7 @@ import ProgramCards from "../studio/ProgramCards.jsx";
 import { GLOBE_MEMBER_ROLES, memberRole, ALL_PROTOCOLS } from "../../lib/globe.js";
 import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
 import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    طلاب برنامج جلوب البيئي العالمي (supabase/globe_1.sql و globe_3.sql):
@@ -212,10 +213,10 @@ export default function GlobeTeam() {
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#0B5394]/10 text-[#0B5394]"><GlobeMark className="h-7 w-7" /></span>
         <div>
           <h1 className="text-lg font-bold text-ink">طلاب برنامج جلوب</h1>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
+          <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
             طلاب برنامج جلوب البيئي العالمي من كل الفصول: أضف الطالب من فصله، وحدد صفته في الفريق،
             واحفظ جواله وتواصل معه بالواتساب، واطبع بطاقاتهم الطولية من «بطاقات الطلاب».
-          </p>
+          </PageIntro>
         </div>
       </div>
 

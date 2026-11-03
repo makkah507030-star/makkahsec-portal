@@ -11,6 +11,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { byName } from "../../lib/sortAr.js";
 import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const ROLES = ["admin", "teacher", "student", "guardian"];
 
@@ -76,11 +77,11 @@ export default function PasswordReset() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">استعادة كلمة المرور</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           تُعاد كلمة المرور إلى <b className="text-ink">كلمة مؤقتة عشوائية</b> تظهر هنا مرة واحدة لتسلّمها لصاحبها،
           ويُطلب منه تغييرها بكلمة من اختياره عند أول دخول. <b className="text-ink">الطالب تُسلَّم له حضوريًا فقط</b>،
           والمعلم وولي الأمر بعد التحقق من هويتهما بالتواصل معهما.
-        </p>
+        </PageIntro>
       </div>
 
       <UnactivatedBoxes />

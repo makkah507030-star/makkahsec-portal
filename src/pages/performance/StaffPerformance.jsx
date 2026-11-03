@@ -6,6 +6,7 @@ import PerformanceFile from "../../components/PerformanceFile.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useBackStep } from "../../lib/backStep.js";
 import PerformanceAdmin from "./PerformanceAdmin.jsx";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    شواهد الأداء الوظيفي للموظفين من غير المعلمين، بنظام ملف أداء المعلم نفسه وتصميمه
@@ -91,10 +92,10 @@ function StaffList() {
         <>
           <div>
             <h1 className="text-lg font-bold text-ink">شواهد أداء الموظفين</h1>
-            <p className="mt-1 text-sm leading-relaxed text-muted">
+            <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
               متابعة الأداء الوظيفي من صفحة واحدة: المعلمون بشواهدهم وتقييمهم، والوكلاء والموجهون الطلابيون ورائد النشاط
               ومحضرو المختبرات، كلٌّ بنموذج وظيفته في الدليل الإرشادي لإدارة الأداء الوظيفي.
-            </p>
+            </PageIntro>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {["teacher", ...ORDER].map((k) => (

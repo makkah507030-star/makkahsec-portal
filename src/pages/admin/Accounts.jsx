@@ -5,6 +5,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import PageIntro from "../../components/PageIntro.jsx";
 
 
 const TARGETS = [
@@ -67,10 +68,10 @@ export default function Accounts() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold">الحسابات</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           كلمة المرور الأولية هي اسم المستخدم نفسه، والرقم الأقصر من 6 خانات (طالب برقم مؤقت)
           يُكمَّل بأصفار من اليسار حتى 10 خانات (15660 ← 0000015660). ويُطلب تغييرها عند أول دخول.
-        </p>
+        </PageIntro>
       </div>
 
       {TARGETS.map((t) => {

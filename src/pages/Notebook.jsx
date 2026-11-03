@@ -8,6 +8,7 @@ import { NOTE_COLS, colorOf, dueState, noteTitle } from "../lib/notes.js";
 import { refreshNavBadges } from "../lib/navBadges.js";
 import NoteEditor from "../components/NoteEditor.jsx";
 import Loader from "../components/Loader.jsx";
+import PageIntro from "../components/PageIntro.jsx";
 
 /* =====================================================================
    مفكرتي — ملاحظات ومهام شخصية للمعلمين والإداريين (supabase/staff_notes.sql).
@@ -89,10 +90,10 @@ export default function Notebook() {
       </div>
       <div>
         <h1 className="text-lg font-bold text-ink">مفكرتي</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           ملاحظاتك ومهامك الخاصة، لا يراها غيرك. ما حلّ موعده يظهر في «بانتظار إجرائك» في الرئيسية.
           وتضيف ملاحظة من أي صفحة بزر <b className="text-ink">✎</b> أسفل الشاشة، فتُربط بتلك الصفحة.
-        </p>
+        </PageIntro>
       </div>
 
       <section className="card p-4">

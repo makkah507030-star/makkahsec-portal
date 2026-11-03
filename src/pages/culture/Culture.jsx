@@ -14,6 +14,7 @@ import CultTeam from "./CultTeam.jsx";
 import CultReport from "./CultReport.jsx";
 import CultSend from "./CultSend.jsx";
 import { useCultMode } from "../../lib/cultMode.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    الثقافة المؤسسية — سفير الثقافة (supabase/cult_1..4.sql، src/lib/culture.js):
@@ -65,10 +66,10 @@ export default function Culture() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">الثقافة المؤسسية</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           قيم نعيشها وتجسّد هويتنا المؤسسية: برامج الثقافة المؤسسية في المدرسة بخطة سفير الثقافة التنفيذية لعام 2026م،
           وقيم الوزارة الخمس (الالتزام، الجودة، الإبداع، روح الفريق، التعلم المستمر).
-        </p>
+        </PageIntro>
       </div>
       <div className={`-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 ${cultMode && me.member ? "lg:hidden" : ""}`}>
         {tabs.map(([k, t]) => <button key={k} className={pill(tab === k)} onClick={() => go(k)}>{t}</button>)}

@@ -19,6 +19,7 @@ import { printThen } from "../../lib/print.js";
 import moeLogo from "../../assets/moe-logo.png";
 import logoIcon from "../../assets/icon-mint.png";
 import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const ROLE_T = { secretary: "مقرر اللجنة", member: "عضو" };
 const setupMsg = "لجنة التحصيل تحتاج تشغيل supabase/ach_committee.sql في Supabase ← SQL Editor.";
@@ -60,10 +61,10 @@ export default function AchCommittee() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">لجنة التحصيل الدراسي</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           برئاسة وكيل الشؤون التعليمية: تدرس نتائج مركز تحليل النتائج وملاحظاته، وتتابع الخطط العلاجية ونتائج اختبارات قياس،
           وتوثّق اجتماعاتها وقراراتها هنا. يرى أعضاؤها المركز وتقاريره للاطلاع.
-        </p>
+        </PageIntro>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.text}</p>}

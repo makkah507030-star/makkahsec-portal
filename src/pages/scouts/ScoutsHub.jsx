@@ -9,6 +9,7 @@ import ScoutReports from "./ScoutReports.jsx";
 import ProgramCards from "../studio/ProgramCards.jsx";
 import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
 import { isScoutRole } from "../../lib/scoutLeader.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    الفريق الكشفي — صفحة القائد ونائبه: الأعضاء، والهيكل والطلائع، والتحضير،
@@ -27,7 +28,7 @@ export default function ScoutsHub() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">الفريق الكشفي</h1>
-        <p className="mt-1 text-sm text-muted">الأعضاء ورتبهم، والطلائع بعرفائها ومهامها، وتحضير الاصطفاف والفسحة، والتقييم الأسبوعي وتقريره، والتواصل مع وكيل شؤون الطلاب.</p>
+        <PageIntro className="mt-1 text-sm text-muted">الأعضاء ورتبهم، والطلائع بعرفائها ومهامها، وتحضير الاصطفاف والفسحة، والتقييم الأسبوعي وتقريره، والتواصل مع وكيل شؤون الطلاب.</PageIntro>
       </div>
       <div className="flex gap-1 overflow-x-auto rounded-pill border border-line bg-paper p-1">
         {TABS.map(([k, t]) => (

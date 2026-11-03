@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import PerformanceFile from "../../components/PerformanceFile.jsx";
 import Loader from "../../components/Loader.jsx";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* شواهد الأداء الوظيفي لمحضر معمل الحاسب الآلي — بنظام ملف أداء المعلم نفسه (supabase/lab_perf_*.sql):
    المحضر يتابع شواهده ويرفعها، ومدير المدرسة والدعم الفني يطّلعون على ملفه. */
@@ -20,10 +21,10 @@ export default function LabPerformance() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">شواهد الأداء الوظيفي · محضر معمل الحاسب الآلي</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           شواهدك لعناصر نموذج تقييم أداء محضر المختبر في دليل الأداء الوظيفي، مطبّقة على معمل الحاسب. كثير منها يصل
           تلقائيًا من عملك في المعمل، والباقي يُرفع. لا يرى الملف غيرك إلا مدير المدرسة، والدعم الفني لمعالجة الأعطال.
-        </p>
+        </PageIntro>
       </div>
       <div role="note" className="flex gap-3 rounded-card border-2 border-danger/50 bg-danger-light px-4 py-3">
         <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-danger text-sm font-bold text-white">!</span>

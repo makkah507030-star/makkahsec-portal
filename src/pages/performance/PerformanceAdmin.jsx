@@ -7,6 +7,7 @@ import { ReviewEditor } from "../../components/PerformanceReview.jsx";
 import Loader from "../../components/Loader.jsx";
 import { byName } from "../../lib/sortAr.js";
 import { useBackStep } from "../../lib/backStep.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    تقييم الأداء الوظيفي — لمدير المدرسة، وللدعم الفني للمتابعة الفنية:
@@ -90,9 +91,9 @@ export default function PerformanceAdmin({ embedded = false, onOpen }) {
       {!embedded && (
         <div>
           <h1 className="text-lg font-bold text-ink">تقييم الأداء الوظيفي</h1>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
+          <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
             شواهد كل معلم لعناصر التقييم وتقييمه بمرحلتيه. الملف للاطلاع، والتقييم لمدير المدرسة وحده. لا يرى الملف إلا المعلم صاحبه ومدير المدرسة والدعم الفني.
-          </p>
+          </PageIntro>
         </div>
       )}
       {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}

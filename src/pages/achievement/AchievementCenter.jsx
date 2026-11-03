@@ -22,6 +22,7 @@ import { FormsTab, DeputyReport } from "./FormsTab.jsx";
 import { AchGateSwitch } from "./AchGate.jsx";
 import { DistStrip, HBars, Histogram, Heat, Stat, pctTxt, useTip as useTipLocal } from "./Charts.jsx";
 import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 
 const TABS = [
@@ -125,11 +126,11 @@ export default function AchievementCenter() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-bold text-ink">مركز تحليل النتائج</h1>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
+          <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
             تحليل نتائج الطلاب من «إشعار الفترة» المنشور في «نتائج الطلاب»، على <b className="text-ink">درجات الاختبارات وحدها</b> دون
             المهام الأدائية والمشاركة، مع فحوصات جماعية آلية ترصد مواضع الخلل.
             {!seesAll && <> يظهر لك {myGrades.map((g) => GRADE_NAMES[g]).join(" و")}.</>}
-          </p>
+          </PageIntro>
         </div>
         <AchGateSwitch />
       </div>

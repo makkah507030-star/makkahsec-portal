@@ -9,6 +9,7 @@ import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
 import { logColumns, itemsFor, validDist, mergeDist, defaultItems, newItemId, TEMPLATES, ITEM_PREFIX, DIST_TABLE } from "../../lib/followUp3.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    سجل المتابعة الإلكتروني 3 (تجريبي في الفصل الدراسي الأول، ثم يُستغنى عن أحد السجلات) —
@@ -427,11 +428,11 @@ export default function FollowUpLog3() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">سجل المتابعة الإلكتروني 3 <span className="chip mr-1 bg-warning-light align-middle text-warning">تجريبي</span></h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           وزّع درجات الفترة على بنود تسمّيها كما تشاء تحت كل عمود من أعمدة نور: اختبار لكل وحدة، أو تلاوة وحفظ، أو واجبات ومشاركة.
           بند «الخانات» تؤشّر عليه: ضغطة <b className="text-mint-deep">✓</b> تُحتسب درجة، وضغطتان <b className="text-danger">✗</b>، والثالثة تمسح.
           وبند «الدرجة» تكتب رقمه. يُحفظ كل شيء تلقائيًا، ويملأ كشف رصد الدرجات.
-        </p>
+        </PageIntro>
         <EvidenceTags className="mt-2" items={["e03_06", "e11_02", "e11_03"]} />
       </div>
 

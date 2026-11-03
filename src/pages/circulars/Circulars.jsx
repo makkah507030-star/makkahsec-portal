@@ -25,6 +25,7 @@ import {
   CIRC_BUCKET, DIRECTION, PRIORITY, CATEGORIES, SOURCES, STAFF_SCOPES, GUARDIAN_SCOPES,
   circStats, circNo, setupMsg, isSetupErr,
 } from "../../lib/circulars.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const pill = (on) => `rounded-pill px-3.5 py-1.5 text-[12.5px] font-medium transition-colors ${
   on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
@@ -43,10 +44,10 @@ export default function Circulars() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">التعاميم</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           التعاميم الواردة من الإدارة العامة للتعليم والوزارة، والتعاميم الداخلية للمدرسة: تُرسل للموظفين وأولياء
           الأمور، ويُتابع اطلاع كل مستفيد وإقراره، ويُذكَّر من تأخر، وتُحفظ في الأرشيف برقم قيدها.
-        </p>
+        </PageIntro>
       </div>
       <div className="flex flex-wrap gap-1.5">
         <button className={pill(tab === "new")} onClick={() => setParams({ tab: "new" })}>+ تعميم جديد</button>

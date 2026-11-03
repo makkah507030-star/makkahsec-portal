@@ -10,6 +10,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { isMissingTable } from "../../lib/officialAttendance.js";
 import { useBackStep } from "../../lib/backStep.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const TEACHER_ORDER = ["present", "absent", "late"];
 const SOLID = {
@@ -350,10 +351,10 @@ export default function SubstitutePeriod() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold">حصص الانتظار</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           إذا كنت تغطّي فصلًا غاب عنه معلمه في الحصة الجارية، اخترْه من القائمة وسجّل
           التحضير. ويمكنك إعادة تحضيره وتعديله حتى قبل نهاية الحصة بخمس دقائق.
-        </p>
+        </PageIntro>
       </div>
 
       <p className="text-xs font-medium text-mint-hover">
