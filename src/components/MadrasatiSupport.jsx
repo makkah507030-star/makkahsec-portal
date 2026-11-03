@@ -9,9 +9,11 @@ import { GRADE_NAMES } from "../lib/schoolTime";
 import MadrasatiAlert from "./MadrasatiAlert.jsx";
 
 export const MADRASATI_SUPPORT_URL = "https://schools.madrasati.sa/contact-us?Language=1";
+export const MADRASATI_CHANGE_PW_URL = "https://schools.madrasati.sa/ChangePassword?Language=1";
+export const MADRASATI_PW_VIDEO = "https://www.youtube.com/watch?v=dXqtJlga0Zs";
 
 export const MR_KINDS = [
-  { k: "password", t: "كلمة مرور جديدة", icon: "🔑", d: "تصلك برسالة على الجوال الذي تكتبه" },
+  { k: "password", t: "كلمة مرور جديدة", icon: "🔑", d: "تصلك برسالة على الجوال المسجّل أو رقم جديد" },
   { k: "class", t: "تغيير الفصل في المنصة", icon: "🏫", d: "فصلك في المنصة غير فصلك الصحيح" },
   { k: "other", t: "مشكلة أخرى", icon: "❓", d: "اكتب مشكلتك باختصار" },
 ];
@@ -33,7 +35,8 @@ const okMobile = (v) => /^05\d{8}$/.test(v);
 
 export default function MadrasatiSupport() {
   const [kind, setKind] = useState(null);
-  const [f, setF] = useState({ mobile: "", target: "", details: "" });
+  const [f, setF] = useState({ mobile: "", target: "", details: "", same: true });
+  const [regMobile, setRegMobile] = useState(undefined);   // جوال ولي الأمر في البوابة (نور) = المسجّل في المنصة
   const [classes, setClasses] = useState([]);
   const [mine, setMine] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -46,6 +49,7 @@ export default function MadrasatiSupport() {
   useEffect(() => {
     load();
     supabase.rpc("madrasati_classes").then(({ data }) => setClasses(data ?? []));
+    supabase.rpc("madrasati_my_mobile").then(({ data }) => setRegMobile(data ?? null));
     // الوصول من رابط «دعم منصة مدرستي» في الرئيسية
     if (window.location.hash === "#madrasati") setTimeout(() => document.getElementById("madrasati")?.scrollIntoView({ behavior: "smooth" }), 300);
   }, [load]);
@@ -53,12 +57,13 @@ export default function MadrasatiSupport() {
   const open = (mine ?? []).filter((r) => r.status === "new" || r.status === "in_progress");
   const hasOpen = (k) => open.some((r) => r.kind === k);
   const m1 = normMobile(f.mobile);
-  const valid = kind === "password" ? okMobile(m1)
+  const useReg = !!regMobile && f.same;
+  const valid = kind === "password" ? (useReg || okMobile(m1))
     : kind === "class" ? !!f.target : kind === "other" ? f.details.trim().length >= 5 : false;
 
   const send = async () => {
     setBusy(true); setMsg(null);
-    const row = { kind, mobile: kind === "password" ? m1 : null, target_class: kind === "class" ? f.target : null,
+    const row = { kind, mobile: kind === "password" && !useReg ? m1 : null, target_class: kind === "class" ? f.target : null,
                   details: f.details.trim() || null };
     const { error } = await supabase.from("madrasati_requests").insert(row);
     setBusy(false);
@@ -68,7 +73,7 @@ export default function MadrasatiSupport() {
       return;
     }
     setMsg({ ok: true, text: "وصل طلبك إلى الدعم الفني، ويصلك إشعار عند معالجته." });
-    setKind(null); setF({ mobile: "", target: "", details: "" }); load();
+    setKind(null); setF({ mobile: "", target: "", details: "", same: true }); load();
   };
   const cancel = async (r) => {
     if (!window.confirm("إلغاء هذا الطلب؟")) return;
@@ -101,8 +106,15 @@ export default function MadrasatiSupport() {
           <div className="rounded-sm2 border border-line bg-canvas/60 p-3">
             <b className="block text-[13px] text-ink">نسيت كلمة المرور؟</b>
             <span className="block text-[11.5px] leading-relaxed text-muted">
-              تصلك كلمة المرور برسالة على الجوال المسجّل لك في المنصة. إن لم تصلك أو تغيّر رقمك فاطلب «كلمة مرور جديدة» أدناه.
+              استعدها بنفسك من صفحة تحديث كلمة المرور في المنصة، فتصلك برسالة على الجوال المسجّل
+              {regMobile ? <> (<span className="num" dir="ltr">{regMobile}</span>)</> : null}.
             </span>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <a href={MADRASATI_CHANGE_PW_URL} target="_blank" rel="noopener noreferrer"
+                 className="rounded-pill bg-[#1B8354] px-3 py-1 text-[11.5px] font-semibold text-white">تحديث كلمة المرور ↗</a>
+              <a href={MADRASATI_PW_VIDEO} target="_blank" rel="noopener noreferrer"
+                 className="rounded-pill border border-line bg-white px-3 py-1 text-[11.5px] font-semibold text-ink hover:bg-canvas">▶ فيديو: طريقة الاستعادة</a>
+            </div>
           </div>
         </div>
 
@@ -125,12 +137,35 @@ export default function MadrasatiSupport() {
           <div className="space-y-3 rounded-sm2 border border-line bg-canvas/50 p-3">
             {kind === "password" && (
               <>
-                <p className="text-[12px] leading-relaxed text-muted">
-                  اكتب رقم الجوال الذي تريد أن تصلك عليه كلمة المرور. يُسجَّل في المنصة ثم تُرسل عليه برسالة نصية، ولا تظهر كلمة المرور لأحد في المدرسة.
+                {regMobile ? (
+                  <>
+                    <p className="text-[12px] leading-relaxed text-muted">
+                      الرقم المسجّل لك في منصة مدرستي (جوال ولي أمرك من نور):{" "}
+                      <b className="num text-[14px] text-ink" dir="ltr">{regMobile}</b>
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {[[true, "الرقم يعمل", "أرسلوا كلمة المرور الجديدة عليه"], [false, "الرقم لا يعمل أو أريد تغييره", "اكتب رقمًا جديدًا"]].map(([v, t, d]) => (
+                        <button key={t} type="button" onClick={() => setF({ ...f, same: v })}
+                                className={`rounded-sm2 border p-2.5 text-start ${f.same === v ? "border-mint-deep bg-mint-tint" : "border-line bg-white"}`}>
+                          <b className="block text-[12.5px] text-ink">{t}</b><span className="text-[11px] text-muted">{d}</span>
+                        </button>))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[12px] leading-relaxed text-muted">لا يوجد رقم مسجّل لك في البوابة. اكتب الرقم الذي تريد أن تصلك عليه كلمة المرور.</p>
+                )}
+                {!useReg && (
+                  <>
+                    <input className="field num w-full sm:max-w-xs" inputMode="tel" dir="ltr" maxLength={14} placeholder="الرقم الجديد 05XXXXXXXX"
+                           value={f.mobile} onChange={(e) => setF({ ...f, mobile: e.target.value })} />
+                    {f.mobile && !okMobile(m1) && <p className="text-[11.5px] text-absent">الرقم يبدأ بـ 05 ومن 10 أرقام.</p>}
+                  </>
+                )}
+                <p className="text-[11.5px] leading-relaxed text-faint">
+                  {useReg ? "تُرسل كلمة المرور الجديدة على هذا الرقم برسالة نصية."
+                    : "يُسجَّل الرقم الجديد في منصة مدرستي وحدها ثم تُرسل عليه كلمة المرور، ويبقى جوال ولي أمرك في البوابة كما هو."}
+                  {" "}ولا تظهر كلمة المرور لأحد في المدرسة.
                 </p>
-                <input className="field num w-full sm:max-w-xs" inputMode="tel" dir="ltr" maxLength={14} placeholder="05XXXXXXXX"
-                       value={f.mobile} onChange={(e) => setF({ ...f, mobile: e.target.value })} />
-                {f.mobile && !okMobile(m1) && <p className="text-[11.5px] text-absent">الرقم يبدأ بـ 05 ومن 10 أرقام.</p>}
               </>
             )}
             {kind === "class" && (

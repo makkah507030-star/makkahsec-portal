@@ -20,7 +20,7 @@ const clsS = (l) => (l ?? "").split(" · ")[1] ?? l ?? "";
 const day = (s) => new Date(s).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit" });
 const gradeOf = (l) => (l ?? "").split(" · ")[0] || "غير محدد";
 const weekKey = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - x.getDay()); return x.toISOString().slice(0, 10); };
-const what = (r) => (r.kind === "password" ? `جوال …${String(r.mobile ?? "").slice(-3)}`
+const what = (r) => (r.kind === "password" ? (r.mobile ? `رقم جديد …${String(r.mobile).slice(-3)}` : `المسجّل …${String(r.current_mobile ?? "").slice(-3)}`)
   : r.kind === "class" ? `إلى فصل ${clsS(r.target_class)}` : (r.details ?? "").slice(0, 60));
 
 function pages({ rows, theme, sigs, range }) {
@@ -49,7 +49,7 @@ function pages({ rows, theme, sigs, range }) {
 
   const high = [
     `${n(total)} طلبًا في الفترة، تمّ منها ${n(solved.length)} (${pct(solved.length, total) ?? 0}%) و${n(open)} مفتوحة.`,
-    kd.password ? `طلبات كلمة المرور ${n(kd.password)} (${pct(kd.password, total)}%) وهي الأكثر ارتباطًا بتغيّر جوالات الطلاب.` : null,
+    kd.password ? `طلبات كلمة المرور ${n(kd.password)} (${pct(kd.password, total)}%)، منها ${n(rows.filter((r) => r.kind === "password" && r.mobile).length)} برقم جديد لأن المسجّل في المنصة لا يعمل أو تغيّر.` : null,
     avg != null ? `متوسط زمن الحل ${dur(avg)}، وحُلّ ${pct(in24, hs.length)}% من الطلبات خلال 24 ساعة.` : null,
     grades[0] ? `أكثر الصفوف طلبًا: ${grades[0][0]} (${n(grades[0][1])}).` : null,
     repeat ? `${n(repeat)} طالبًا أرسلوا أكثر من طلب في الفترة.` : null,

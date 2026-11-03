@@ -1,6 +1,7 @@
 -- =====================================================================
 -- دعم منصة مدرستي داخل البوابة (بدل الموقع الملحق): طلبات الطالب البسيطة من «مركز الدعم والمساندة»:
--- كلمة مرور جديدة (على جوال يكتبه الطالب، فالمنصة ترسلها عليه)، وتغيير الفصل في المنصة، ومشكلة أخرى.
+-- كلمة مرور جديدة (المنصة ترسلها على الجوال المسجّل فيها، وهو جوال ولي الأمر من نور كما في البوابة؛
+-- يُعرض للطالب، فإن لم يعمل كتب رقمًا جديدًا يُسجَّل في المنصة وحدها)، وتغيير الفصل، ومشكلة أخرى.
 -- يعالجها الدعم الفني (ويطّلع المدير)، ويصل الطالب إشعار بالرد. يُنفَّذ مرة، وتكرار تنفيذه آمن.
 -- =====================================================================
 create table if not exists public.madrasati_requests (
@@ -10,11 +11,13 @@ create table if not exists public.madrasati_requests (
   student_name text, national_id text, class_label text,
   kind text not null check (kind in ('password', 'class', 'other')),
   mobile text check (mobile is null or mobile ~ '^05[0-9]{8}$'),
+  current_mobile text,   -- جوال ولي الأمر في البوابة (نور) يوم الطلب، ولا يتغير في البوابة
   target_class text, details text,
   status text not null default 'new' check (status in ('new', 'in_progress', 'done', 'rejected')),
   reply text, handled_by uuid, handled_by_name text, handled_at timestamptz,
   created_at timestamptz not null default now()
 );
+alter table public.madrasati_requests add column if not exists current_mobile text;
 -- طلب مفتوح واحد من كل نوع للطالب
 create unique index if not exists madrasati_requests_open on public.madrasati_requests (user_id, kind)
   where status in ('new', 'in_progress');
@@ -23,6 +26,17 @@ create or replace function public.madrasati_staff() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (select 1 from public.admin_roles where user_id = auth.uid() and role_type in ('tech_support', 'principal'));
 $$;
+
+-- جوال ولي الأمر الأساسي للطالب الحالي: هو المسجّل في المنصة من نور
+create or replace function public.madrasati_my_mobile() returns text
+language sql stable security definer set search_path = public as $$
+  select g.mobile from public.students s
+    join public.guardian_student gs on gs.student_id = s.id join public.guardians g on g.id = gs.guardian_id
+   where s.user_id = auth.uid() and coalesce(g.mobile, '') <> ''
+   order by gs.is_primary desc, g.is_active desc limit 1;
+$$;
+revoke execute on function public.madrasati_my_mobile() from public, anon;
+grant execute on function public.madrasati_my_mobile() to authenticated;
 
 -- بيانات الطالب من سجله في الخادم لا مما يرسله، ثم إشعار الدعم الفني
 create or replace function public.madrasati_request_fill() returns trigger
@@ -36,10 +50,11 @@ begin
     from public.students s left join public.v_active_students a on a.student_id = s.id
    where s.user_id = auth.uid() limit 1;
   new.user_id := auth.uid(); new.student_id := v.id; new.student_name := v.full_name;
-  new.national_id := v.national_id; new.status := 'new'; new.reply := null; new.handled_by := null;
+  new.national_id := v.national_id; new.current_mobile := public.madrasati_my_mobile(); new.status := 'new'; new.reply := null; new.handled_by := null;
   new.class_label := case v.grade when 1 then 'الأول الثانوي' when 2 then 'الثاني الثانوي' when 3 then 'الثالث الثانوي' end
                      || coalesce(' · ' || v.class_no, '');
-  if new.kind = 'password' and new.mobile is null then raise exception 'اكتب رقم الجوال لاستلام كلمة المرور'; end if;
+  -- كلمة المرور على الرقم الجديد إن كُتب، وإلا فعلى المسجّل
+  if new.kind = 'password' and coalesce(new.mobile, new.current_mobile) is null then raise exception 'اكتب رقم الجوال لاستلام كلمة المرور'; end if;
   if new.kind = 'class' and coalesce(trim(new.target_class), '') = '' then raise exception 'اختر الفصل الصحيح'; end if;
   if new.kind = 'other' and coalesce(trim(new.details), '') = '' then raise exception 'اكتب وصف المشكلة'; end if;
   ids := array(select user_id from public.admin_roles where role_type = 'tech_support');

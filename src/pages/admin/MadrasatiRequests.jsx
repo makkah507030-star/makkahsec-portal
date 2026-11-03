@@ -14,7 +14,9 @@ import { MR_KINDS, MR_STATUS, kindOf } from "../../components/MadrasatiSupport.j
 const tail = (m) => String(m ?? "").slice(-3);
 // الردود الجاهزة: لا تحمل كلمة مرور أبدًا
 const READY = {
-  password: (r) => `حُدّث جوالك في منصة مدرستي، وأُرسلت كلمة المرور الجديدة برسالة نصية إلى الرقم المنتهي بـ ${tail(r.mobile)}. ادخل بها ثم غيّرها من إعدادات حسابك.`,
+  password: (r) => (r.mobile
+    ? `حُدّث جوالك في منصة مدرستي، وأُرسلت كلمة المرور الجديدة برسالة نصية إلى الرقم المنتهي بـ ${tail(r.mobile)}. ادخل بها ثم غيّرها من إعدادات حسابك.`
+    : `أُرسلت كلمة المرور الجديدة برسالة نصية إلى الجوال المسجّل في المنصة المنتهي بـ ${tail(r.current_mobile)}. ادخل بها ثم غيّرها من إعدادات حسابك.`),
   class: (r) => `نُقلت في منصة مدرستي إلى فصل ${r.target_class}. قد يتأخر ظهور التغيير قليلًا، فأعد الدخول للمنصة.`,
   other: () => "عولجت مشكلتك. إن استمرت فأرسل طلبًا جديدًا مع وصف ما يظهر لك.",
 };
@@ -124,7 +126,9 @@ export default function MadrasatiRequests() {
                 <b className="text-ink">{r.student_name}</b>
                 <span>الهوية <Copy v={r.national_id} /></span>
                 {r.class_label && <span>فصله: {r.class_label}</span>}
-                {r.kind === "password" && <span>الجوال المطلوب <Copy v={r.mobile} /></span>}
+                {r.kind === "password" && (r.mobile
+                  ? <span>رقم جديد يُسجَّل في المنصة <Copy v={r.mobile} />{r.current_mobile && <> بدل <span className="num" dir="ltr">{r.current_mobile}</span></>}</span>
+                  : <span>على الرقم المسجّل <Copy v={r.current_mobile} /></span>)}
                 {r.kind === "class" && <span>الفصل الصحيح: <b className="text-ink">{r.target_class}</b></span>}
               </div>
               {r.details && <p className="rounded-sm2 bg-canvas px-3 py-2 text-[12.5px] leading-relaxed text-ink">{r.details}</p>}
