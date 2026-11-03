@@ -25,6 +25,9 @@ import { useBackStep } from "../lib/backStep.js";
 import { AUDIENCE, GRADES, audienceOf, audienceLabel, audienceTitle, scopeOf, scopePlace, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
 import { useScoutLeader, issuesAsScout } from "../lib/scoutLeader.js";
 
+import { useCultMode } from "../lib/cultMode.js";
+const CULT_AMB_ROLE = "سفير الثقافة المؤسسية";
+
 /* صفة المعلم أو الإداري في كشف الحضور وشهادته: «معلم الرياضيات» بتخصصه، والإداري بمسمّى دوره */
 const staffRoleOf = (m) => (m.kind === "admin" ? (ADMIN_ROLE_LABEL[m.roles?.[0]] ?? "الإدارة").replace(/\s+\d+$/, "")
   : m.spec ? (/^معلم/.test(m.spec) ? m.spec : `معلم ${m.spec}`) : "معلم");
@@ -239,6 +242,11 @@ export function CategoryPicker({ cats, value, onChange }) {
 function NewEvent({ uid, profile, roles, onDone }) {
   const { effectiveRole } = useSession();
   const scoutLeader = useScoutLeader(issuesAsScout(roles));
+  // سفير الثقافة المؤسسية: يختار صفته في الحدث، وفي مساحة السفير تكون «سفير الثقافة المؤسسية» ابتداءً (cult_6.sql)
+  const cultMode = useCultMode(uid);
+  const [cultAmb, setCultAmb] = useState(false);
+  const [asAmb, setAsAmb] = useState(cultMode);
+  useEffect(() => { supabase.rpc("cult_me").then(({ data }) => setCultAmb(!!data?.ambassador)); }, []);
   const [cats, setCats] = useState([]);
   const [f, setF] = useState({
     title: "", category: "", event_date: todayISO(), end_date: "",
@@ -262,6 +270,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
     // وأدوار الكشافة كلها (كنائب القائد) تُنظّم باسم القائد الكشفي وصفته (lib/scoutLeader.js)
     const asScout = effectiveRole !== "teacher" && issuesAsScout(roles) && !!scoutLeader;
     const roleLabel = asScout ? scoutLeader.label
+      : cultAmb && asAmb ? CULT_AMB_ROLE
       : roles.length && effectiveRole !== "teacher" ? (ADMIN_ROLE_LABEL[roles[0]] ?? "") : "معلم";
 
     const { data, error } = await supabase.from("school_events").insert({
@@ -303,6 +312,18 @@ function NewEvent({ uid, profile, roles, onDone }) {
                placeholder="مثال: الاحتفاء باليوم الوطني ٩٦"
                onChange={(e) => setF((x) => ({ ...x, title: e.target.value }))} />
       </div>
+
+      {cultAmb && (
+        <div>
+          <label className="text-xs text-muted">صفتك في الحدث (تظهر تحت توقيعك في الشهادات والتقرير)</label>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {[[true, CULT_AMB_ROLE], [false, roles.length && effectiveRole !== "teacher" ? (ADMIN_ROLE_LABEL[roles[0]] ?? "معلم") : "معلم"]].map(([v, t]) => (
+              <button key={t} type="button" onClick={() => setAsAmb(v)}
+                      className={`rounded-pill px-3.5 py-1.5 text-[13px] font-semibold ${asAmb === v ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`}>{t}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <CategoryPicker cats={cats} value={f.category} onChange={(c) => setF((x) => ({ ...x, category: c }))} />
 
