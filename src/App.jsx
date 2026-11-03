@@ -99,6 +99,7 @@ const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
 const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx"));
 const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
 const LabPerformance = lazy(() => import("./pages/performance/LabPerformance.jsx"));
+const ScienceLabs = lazy(() => import("./pages/science/ScienceLabs.jsx"));
 const StaffPerformance = lazy(() => import("./pages/performance/StaffPerformance.jsx"));
 const MyLabDfile = lazy(() => import("./pages/performance/MyLabDfile.jsx"));
 const OutreachAdmin = lazy(() => import("./pages/outreach/OutreachAdmin.jsx"));
@@ -542,6 +543,8 @@ export default function App() {
           {effectiveRole === "admin" && adminRoles.includes("computer_lab") && (
             <Route path="/my-lab-dfile" element={<MyLabDfile />} />
           )}
+          {/* مختبرات العلوم: لمحضريها والإدارة ولمعلمي المادة، والصفحة تتحقق من المختبرات (supabase/sci_lab_*.sql) */}
+          {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/science-labs" element={<ScienceLabs />} />}
           {/* الملف الرقمي للوكيل والموجه الطلابي ومحضر مختبر العلوم (supabase/staff_dfile_*.sql) */}
           {effectiveRole === "admin" && adminRoles.some((r) => /^(principal$|deputy_|counselor_\d|science_labs)/.test(r)) && (
             <Route path="/my-staff-dfile" element={<MyLabDfile kind="staff" />} />

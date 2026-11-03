@@ -223,6 +223,14 @@ export const AUTO_SOURCE = {
   d12_04: { label: "اجتماعات لجنة التحصيل", to: "/ach-committee" },
   d13_03: { label: "لقاءات الثقافة المدرسية", to: "/culture" },
   d15_03: { label: "نماذج رسمية أصدرها", to: "/my-documents" },
+  // محضر مختبر العلوم من عمل مختبره (supabase/sci_lab_6.sql)
+  s04_01: { label: "تجارب نُفّذت في المختبر", to: "/science-labs?tab=runs" },
+  s10_01: { label: "حصص جهّزها للتجارب", to: "/science-labs?tab=booking" },
+  s12_01: { label: "تجارب اعتمد تنفيذها", to: "/science-labs?tab=runs" },
+  s12_02: { label: "أصناف في سجل العهدة", to: "/science-labs?tab=inventory" },
+  s09_02: { label: "مواد كيميائية موثّقة الصلاحية", to: "/science-labs?tab=inventory" },
+  s13_01: { label: "أجهزة في سجل العهدة", to: "/science-labs?tab=inventory" },
+  s13_02: { label: "أصناف تالفة أو ناقصة رُصدت", to: "/science-labs?tab=inventory" },
   // مدير المدرسة (supabase/principal_perf_2.sql)
   m03_01: { label: "إشعارات ورسائل أرسلها", to: "/notifications" },
   m07_02: { label: "بلاغات صيانة عالجها", to: "/repairs" },
@@ -257,7 +265,7 @@ export async function loadAutoCounts(uid, year, track = "teacher") {
   // المعلم ورائد النشاط من عمل المعلم، ومحضر المعمل من عمل المعمل، والموجه والوكيل ورائد النشاط
   // من عملهم في البوابة (supabase/staff_perf_4.sql)؛ ومحضر مختبر العلوم بلا شواهد آلية بعد
   const fns = track === "lab" ? ["lab_perf_auto"] : track === "teacher" ? ["perf_auto_counts"]
-    : track === "activity" ? ["perf_auto_counts", "staff_perf_auto"] : track === "science" ? [] : ["staff_perf_auto"];
+    : track === "activity" ? ["perf_auto_counts", "staff_perf_auto"] : ["staff_perf_auto"];
   const m = {};
   for (const fn of fns) {
     const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year });

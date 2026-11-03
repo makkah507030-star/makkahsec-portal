@@ -287,7 +287,7 @@ function AutoDetails({ uid, year, itemKey, track }) {
       // بنود الأنشطة لها دالتها (supabase/activities_4.sql)
       // وبند الإنتاج المعرفي من بنك الأسئلة (supabase/qbank_3.sql)
       // بنود الموجه والوكيل ورائد النشاط (supabase/staff_perf_5.sql)
-      const fn = track === "lab" ? "lab_perf_details" : /^m\d+_/.test(itemKey) ? "principal_perf_details" : /^(g|d|a1)\d+_/.test(itemKey) ? "staff_perf_details" : ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
+      const fn = track === "lab" ? "lab_perf_details" : /^m\d+_/.test(itemKey) ? "principal_perf_details" : /^s\d+_/.test(itemKey) ? "sci_perf_details" : /^(g|d|a1)\d+_/.test(itemKey) ? "staff_perf_details" : ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
       const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year, p_item: itemKey });
       if (error) setErr(error.message?.includes(fn) ? "عرض التفاصيل غير مفعّل بعد في قاعدة البيانات." : "تعذّر تحميل التفاصيل.");
       setRows(data ?? []);

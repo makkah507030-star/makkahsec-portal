@@ -129,6 +129,7 @@ export const ADMIN_GROUPS = [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
       { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab", "principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
       { to: "/my-lab-dfile", label: "ملف المحضر الرقمي", roles: ["computer_lab"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف محضر" },
+      { to: "/science-labs", label: "مختبرات العلوم", roles: ["science_labs", "science_labs_2", "science_labs_3", "principal", "tech_support", "deputy_school"], icon: "flask", kw: "مختبر احياء كيمياء فيزياء تجارب عهدة حجز" },
     ],
   },
   {
@@ -280,6 +281,7 @@ export const TEACHER_GROUPS = [
     title: "المعامل والمختبرات",
     items: [
       { to: "/lab",         label: "معمل الحاسب الآلي",     extraTabKey: "computer_lab", icon: "monitor", kw: "حجز اجهزة تقنية رقمية" },
+      { to: "/science-labs", label: "مختبرات العلوم",        sciTeacher: true, icon: "flask", kw: "مختبر احياء كيمياء فيزياء تجارب حجز" },
     ],
   },
   {
@@ -443,6 +445,7 @@ export function Icon({ name, className = "h-[18px] w-[18px]" }) {
     upload: "M12 16V4m-5 5 5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
     palette: "M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-.9-.6-1.4-.6-2.2 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4c0-4.7-4-8.6-9-8.6ZM7.5 11.5h.01M10 7.5h.01M15 7.5h.01",
     monitor: "M3 4h18v12H3zM8 21h8M12 16v5",
+    flask:  "M9 3h6M10 3v6L4.5 18.5A1.6 1.6 0 0 0 5.9 21h12.2a1.6 1.6 0 0 0 1.4-2.5L14 9V3M7 15h10",
     grid:   "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
     table:  "M3 4h18v16H3zM3 9h18M3 14.5h18M9 4v16",
     chalk:  "M4 19v-3l11-11 3 3-11 11H4ZM14 6l3 3",
@@ -583,6 +586,12 @@ export default function Layout({ children }) {
     if (effectiveRole === "guardian") { setMediaMember(false); return; }
     supabase.rpc("media_card_me").then(({ data, error }) => setMediaMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
+  // معلم الأحياء أو الكيمياء أو الفيزياء بتخصصه أو جدوله: تظهر «مختبرات العلوم» (sci_lab_1.sql)
+  const [sciTeacher, setSciTeacher] = useState(false);
+  useEffect(() => {
+    if (effectiveRole !== "teacher") { setSciTeacher(false); return; }
+    supabase.rpc("sci_teacher_labs").then(({ data, error }) => setSciTeacher(!error && (data ?? []).length > 0));
+  }, [effectiveRole, session?.user?.id]);
   const [achOpen] = useAchOpen();
   // لجنة التميز: يظهر قسم التقويم والاعتماد لأعضائها وللمدير والوكيل والدعم الفني (acc_1.sql)
   const [accMember, setAccMember] = useState(false);
@@ -607,6 +616,7 @@ export default function Layout({ children }) {
     if (i.globeMember && !globeMember) return false;
     if (i.mediaMember && !mediaMember) return false;
     if (i.accMember && !accMember) return false;
+    if (i.sciTeacher && !sciTeacher) return false;
     // ما وصلني من نشرات واستبانات: لمن وصله شيء منها فقط
     if (i.inbox && !outreachInbox) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
@@ -638,7 +648,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox, sciTeacher]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة والمعلم بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
