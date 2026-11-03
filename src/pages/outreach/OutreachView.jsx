@@ -8,6 +8,7 @@ import { useSession } from "../../lib/session.jsx";
 import { fmtDate, fmtDateTime } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import { KIND, QTYPES, mediaUrls, setupMsg, youtubeId } from "../../lib/outreach.js";
+import { Icon } from "../../components/Layout.jsx";
 
 /* المحتوى نفسه: للمستلم، ولمعاينة المرسل قبل الإرسال */
 export function ItemBody({ item, urls = {}, children }) {
@@ -50,7 +51,7 @@ export function ItemBody({ item, urls = {}, children }) {
                 <span className="grid h-8 w-8 place-items-center rounded-sm2 bg-white text-[10px] font-bold text-danger">PDF</span><span className="min-w-0 flex-1 truncate">{m.name}</span></a>))}
             {yt.filter((l) => !l.yt).map((l) => (
               <a key={l.url} href={l.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-sm2 border border-line bg-canvas px-3 py-2.5 text-sm text-mint-deep hover:border-mint-light">
-                <span className="grid h-8 w-8 place-items-center rounded-sm2 bg-white">🔗</span><span className="min-w-0 flex-1 truncate">{l.t || l.url}</span></a>))}
+                <span className="grid h-8 w-8 place-items-center rounded-sm2 bg-white text-mint-deep"><Icon name="link" className="h-4 w-4" /></span><span className="min-w-0 flex-1 truncate">{l.t || l.url}</span></a>))}
           </div>
         )}
         {children}

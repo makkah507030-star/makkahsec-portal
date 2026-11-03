@@ -20,6 +20,7 @@ const MODE_NAME = { online: "إلكتروني", offline: "دون إنترنت", 
 import { PRINCIPAL_NAME } from "../../lib/exportUtils.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
 import QuizTeacherPicker, { useQuizTeacher } from "../../components/QuizTeacherPicker.jsx";
+import { Icon } from "../../components/Layout.jsx";
 
 /* =====================================================================
    التصحيح والدرجات.
@@ -225,7 +226,7 @@ export default function QuizMarks() {
             <option value="">اختر الاختبار…</option>
             {(quizzes ?? []).map((q) => (
               <option key={q.id} value={q.id}>
-                {q.mode === "paper" ? "📝 " : q.mode === "online" || q.mode === "offline" ? "📱 " : q.mode === "external" ? "⇪ " : ""}{q.title} — {q.subject_name ?? ""}
+                {q.title} — {q.subject_name ?? ""}
                 {" · "}{MODE_NAME[q.mode] ?? "تصحيح آلي"} · {fmtDate(q.created_at)} · {sheets[q.id] ? `${sheets[q.id]} ورقة` : "بلا أوراق"}
               </option>
             ))}
@@ -323,7 +324,7 @@ export default function QuizMarks() {
                     {!isOnline && !viewOnly && (
                       <button onClick={() => setScanFrom(s.id)} title="تصحيح بالكاميرا"
                               className="shrink-0 rounded-pill border border-mint-deep px-2.5 py-1 text-xs font-semibold text-mint-deep">
-                        📷
+                        <Icon name="camera" className="h-4 w-4" />
                       </button>
                     )}
                     {(!viewOnly || (sub && !sub.absent && !isPaper)) && (
@@ -353,13 +354,13 @@ export default function QuizMarks() {
                 {!isOnline && (
                   <button className="btn-primary flex-1"
                           onClick={() => setScanFrom((students.find((x) => !subs[x.id]) ?? students[0]).id)}>
-                    📷 التصحيح بالكاميرا
+                    <span className="inline-flex items-center gap-1.5"><Icon name="camera" className="h-4 w-4" />التصحيح بالكاميرا</span>
                   </button>
                 )}
                 {!isOnline && (
                   <button className="btn-primary flex-1" onClick={() => setBatch(true)}
                           title="صور بطاقات الفصل كلها دفعة واحدة: تُعرف كل بطاقة من رمز الطالب المطبوع فيها">
-                    🗂️ التصحيح الجماعي
+                    <span className="inline-flex items-center gap-1.5"><Icon name="layers" className="h-4 w-4" />التصحيح الجماعي</span>
                   </button>
                 )}
                 <button className="flex-1 rounded-pill border border-mint-deep py-2 text-sm font-semibold text-mint-deep"

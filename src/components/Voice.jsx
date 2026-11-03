@@ -1,6 +1,7 @@
 // src/components/Voice.jsx
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { Icon } from "./Layout.jsx";
 
 /* =====================================================================
    التسجيل الصوتي من المتصفح (الحاسب أو الجوال)، يُسمع قبل الإرسال ويُرفع إلى مخزن خاص.
@@ -105,7 +106,7 @@ export function VoicePlayer({ path, secs, bucket = VOICE_BUCKET, label = "رد �
   }, [path, bucket]);
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-semibold text-mint-deep">🎙️ {label}{secs ? <> · <span className="num">{mmss(secs)}</span></> : null}</span>
+      <span className="inline-flex items-center gap-1 text-xs font-semibold text-mint-deep"><Icon name="mic" className="h-3.5 w-3.5" />{label}{secs ? <> · <span className="num">{mmss(secs)}</span></> : null}</span>
       {url ? <audio src={url} controls preload="metadata" className="h-10 max-w-full flex-1" />
         : <span className="text-xs text-muted">{err ? "تعذّر تحميل التسجيل." : "جارٍ التحميل…"}</span>}
     </div>

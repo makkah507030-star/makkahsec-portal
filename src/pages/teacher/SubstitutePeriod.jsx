@@ -11,6 +11,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { isMissingTable } from "../../lib/officialAttendance.js";
 import { useBackStep } from "../../lib/backStep.js";
 import PageIntro from "../../components/PageIntro.jsx";
+import { Icon } from "../../components/Layout.jsx";
 
 const TEACHER_ORDER = ["present", "absent", "late"];
 const SOLID = {
@@ -372,7 +373,7 @@ export default function SubstitutePeriod() {
       {/* حقيبة حصص الانتظار (src/pages/activities): نشاط ترفيهي جاهز لحصة الانتظار */}
       <Link to="/activities?tab=waiting"
             className="flex items-center gap-3 rounded-card border border-mint-light bg-paper px-4 py-3 transition-colors hover:bg-mint-tint">
-        <span className="text-2xl">🎮</span>
+        <span className="text-mint-deep"><Icon name="sparkles" className="h-7 w-7" /></span>
         <span className="flex-1 text-sm"><b className="text-ink">حقيبة حصص الانتظار</b>
           <span className="block text-xs text-muted">ألعاب على السبورة، ورياضة وحركة، وتقنية — جاهزة لحصتك</span></span>
         <span className="text-mint-deep">←</span>

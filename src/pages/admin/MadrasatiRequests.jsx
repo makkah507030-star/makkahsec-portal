@@ -10,6 +10,7 @@ import { sendPush } from "../../lib/pushSend.js";
 import Loader from "../../components/Loader.jsx";
 import MadrasatiReport from "./MadrasatiReport.jsx";
 import { MR_KINDS, MR_STATUS, kindOf } from "../../components/MadrasatiSupport.jsx";
+import { Icon } from "../../components/Layout.jsx";
 import { friendlyError } from "../../lib/friendlyError.js";
 import PageIntro from "../../components/PageIntro.jsx";
 
@@ -120,7 +121,7 @@ export default function MadrasatiRequests() {
           {list.map((r) => (
             <div key={r.id} className="card space-y-2 p-4">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-bold text-ink">{kindOf(r.kind).icon} {kindOf(r.kind).t}</span>
+                <span className="flex items-center gap-1.5 text-sm font-bold text-ink"><Icon name={kindOf(r.kind).icon} className="h-4 w-4 text-mint-deep" />{kindOf(r.kind).t}</span>
                 <span className={`rounded-pill px-2 py-0.5 text-[11px] font-semibold ${MR_STATUS[r.status]?.c}`}>{MR_STATUS[r.status]?.t}</span>
                 <span className="num ms-auto text-[11px] text-faint">{fmtDateTime(r.created_at)}</span>
               </div>

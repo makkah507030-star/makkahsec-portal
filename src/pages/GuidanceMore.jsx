@@ -11,6 +11,7 @@ import { VoiceRecorder, uploadVoice } from "../components/Voice.jsx";
 import PlanReport from "./guidance/PlanReport.jsx";
 import { eventReach } from "../lib/eventAudience.js";
 import { friendlyError } from "../lib/friendlyError.js";
+import { Icon } from "../components/Layout.jsx";
 
 /* =====================================================================
    التوجيه الطلابي — بقية الصفحة (supabase/guidance_3.sql و guidance_4.sql):
@@ -277,7 +278,7 @@ export function Programs({ grade, me }) {
 
       {list.length === 0 && !nf ? (
         <div className="card px-6 py-10 text-center">
-          <p className="text-3xl">🗂️</p>
+          <p className="flex justify-center text-faint"><Icon name="folder" className="h-9 w-9" /></p>
           <p className="mt-2 text-sm font-semibold text-ink">لا برامج في خطة الصف بعد</p>
           <p className="mt-1 text-xs text-muted">أضف برامج الخطة من «+ برنامج»، ومنها برامج جاهزة بضغطة.</p>
         </div>

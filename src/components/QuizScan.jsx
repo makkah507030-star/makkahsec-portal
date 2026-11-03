@@ -4,6 +4,7 @@ import { rowsToAnswers } from "../lib/omrLayout.js";
 import { cardLayouts, readCardFile } from "../lib/omrScan.js";
 import { hashIndex } from "../lib/omrCode.js";
 import { saveQuizCard } from "../lib/quizCards.js";
+import { Icon } from "./Layout.jsx";
 
 /* =====================================================================
    التصحيح بكاميرا الجوال.
@@ -141,7 +142,7 @@ export default function QuizScan({ quiz, questions, students, subs, startId, onS
 
             <button className="btn-primary w-full py-3 text-base" disabled={stage === "reading"}
                     onClick={() => camRef.current?.click()}>
-              {stage === "reading" ? "جارٍ قراءة البطاقة…" : "📷 تصوير البطاقة"}
+              {stage === "reading" ? "جارٍ قراءة البطاقة…" : <span className="inline-flex items-center gap-1.5"><Icon name="camera" className="h-4 w-4" />تصوير البطاقة</span>}
             </button>
             <div className="flex gap-2">
               <button className="flex-1 rounded-pill border border-line py-2 text-sm text-muted"

@@ -5,6 +5,7 @@ import { fmtDate } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
 import Fleur from "../../components/Fleur.jsx";
 import { POSTS, ATT_KIND, ATT_STATUS } from "../../lib/scouts.js";
+import { Icon } from "../../components/Layout.jsx";
 
 /* =====================================================================
    «فريقي الكشفي» لعضو الفريق (supabase/scouts_6.sql: scout_my و scout_attend):
@@ -112,7 +113,7 @@ export default function MyScouts() {
               <div key={r.id} className="flex flex-wrap items-center gap-2 px-4 py-2">
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm text-ink">{r.name}{["chief", "chief_deputy"].includes(me.post) && r.patrol && <span className="text-[11px] text-muted"> · {r.patrol}</span>}</p>
-                  {locked(r) && <p className="text-[10.5px] font-semibold text-mint-deep">🔒 اعتمده القائد</p>}
+                  {locked(r) && <p className="text-[10.5px] font-semibold text-mint-deep"><span className="inline-flex items-center gap-1"><Icon name="lock" className="h-3 w-3" />اعتمده القائد</span></p>}
                 </div>
                 <div className="flex gap-1">
                   {Object.entries(ATT_STATUS).map(([k, s]) => (

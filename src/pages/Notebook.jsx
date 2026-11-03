@@ -9,6 +9,7 @@ import { refreshNavBadges } from "../lib/navBadges.js";
 import NoteEditor from "../components/NoteEditor.jsx";
 import Loader from "../components/Loader.jsx";
 import PageIntro from "../components/PageIntro.jsx";
+import { Icon } from "../components/Layout.jsx";
 
 /* =====================================================================
    مفكرتي — ملاحظات ومهام شخصية للمعلمين والإداريين (supabase/staff_notes.sql).
@@ -161,7 +162,7 @@ function NoteCard({ n, focus, editing, onEdit, onCancel, onSaved, onPatch, onRem
                     n.done_at ? "border-mint-deep bg-mint-deep text-white" : "border-line text-transparent hover:border-mint-deep"}`}>✓</button>
           <div className="min-w-0 flex-1">
             <p className={`text-sm font-semibold text-ink ${n.done_at ? "line-through" : ""}`}>
-              {n.pinned && <span title="مثبتة">📌 </span>}{noteTitle(n)}
+              {n.pinned && <span title="مثبتة" className="me-1 inline-block align-[-2px] text-mint-deep"><Icon name="pin" className="h-3.5 w-3.5" /></span>}{noteTitle(n)}
             </p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px]">
               {c && <span className="rounded-pill px-2 py-0.5 font-semibold" style={{ background: c.bg, color: c.c }}>{c.t}</span>}

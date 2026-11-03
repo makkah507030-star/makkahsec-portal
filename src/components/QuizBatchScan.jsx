@@ -6,6 +6,7 @@ import { hashIndex } from "../lib/omrCode.js";
 import { saveQuizCard } from "../lib/quizCards.js";
 import { CardRows } from "./QuizScan.jsx";
 import { useBackStep } from "../lib/backStep.js";
+import { Icon } from "./Layout.jsx";
 
 /* =====================================================================
    التصحيح الجماعي لبطاقات الإجابة.
@@ -141,10 +142,10 @@ export default function QuizBatchScan({ quiz, questions, students, subs, onSave,
               <input ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
                      onChange={(e) => { add(e.target.files); e.target.value = ""; }} />
               <button className="btn-primary w-full py-3 text-base" onClick={() => galRef.current?.click()}>
-                🖼️ اختيار صور البطاقات
+                <span className="inline-flex items-center gap-1.5"><Icon name="image" className="h-4 w-4" />اختيار صور البطاقات</span>
               </button>
               <button className="w-full rounded-pill border border-line py-2 text-sm text-muted" onClick={() => camRef.current?.click()}>
-                📷 تصوير بطاقة وإضافتها
+                <span className="inline-flex items-center gap-1.5"><Icon name="camera" className="h-4 w-4" />تصوير بطاقة وإضافتها</span>
               </button>
               <p className="text-[11px] text-faint">تُقرأ الصور داخل جهازك، وتُحفظ في البوابة نسخة مصغّرة من كل بطاقة مصحّحة، وتُحذف بنهاية الفصل.</p>
             </section>

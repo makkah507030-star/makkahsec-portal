@@ -8,6 +8,7 @@ import { notify } from "../../lib/notice";
 import { KIND, QTYPES, TOPICS, mediaUrls, newQuestion, uploadMedia, youtubeId } from "../../lib/outreach.js";
 import { ItemBody, SurveyForm } from "./OutreachView.jsx";
 import { friendlyError } from "../../lib/friendlyError.js";
+import { Icon } from "../../components/Layout.jsx";
 
 const L = ({ children, hint }) => <p className="mb-1 text-[12px] font-semibold text-muted">{children}{hint && <span className="font-normal text-faint"> · {hint}</span>}</p>;
 
@@ -104,7 +105,7 @@ export default function OutreachEditor({ item, onSaved, onCancel }) {
           <L hint="روابط يوتيوب تُعرض داخل الصفحة">الروابط</L>
           {x.links.length > 0 && <ul className="mb-2 space-y-1">{x.links.map((l, i) => (
             <li key={l.url + i} className="flex items-center gap-2 rounded-sm2 bg-canvas px-3 py-1.5 text-sm">
-              <span className="text-mint-deep">{youtubeId(l.url) ? "▶" : "🔗"}</span><span className="min-w-0 flex-1 truncate">{l.t || l.url}</span>
+              <span className="text-mint-deep">{youtubeId(l.url) ? "▶" : <Icon name="link" className="h-3.5 w-3.5" />}</span><span className="min-w-0 flex-1 truncate">{l.t || l.url}</span>
               <button className="text-xs text-danger" onClick={() => set("links", x.links.filter((_, j) => j !== i))}>حذف</button></li>))}</ul>}
           <div className="grid gap-2 sm:grid-cols-[180px_1fr_auto]">
             <input className="field text-sm" value={link.t} onChange={(e) => setLink({ ...link, t: e.target.value })} placeholder="عنوان الرابط (اختياري)" />

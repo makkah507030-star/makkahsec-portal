@@ -205,10 +205,10 @@ export default function PasswordReset() {
 /* ==================== الحسابات غير المفعَّلة ==================== */
 
 const ROLE_META = {
-  admin:    { label: "الإدارة",        icon: "🛡" },
-  teacher:  { label: "المعلمون",       icon: "📘" },
-  student:  { label: "الطلاب",         icon: "🎓" },
-  guardian: { label: "أولياء الأمور",  icon: "👪" },
+  admin:    { label: "الإدارة",        icon: "shield" },
+  teacher:  { label: "المعلمون",       icon: "book" },
+  student:  { label: "الطلاب",         icon: "idcard" },
+  guardian: { label: "أولياء الأمور",  icon: "users" },
 };
 
 function UnactivatedBoxes() {

@@ -7,15 +7,16 @@ import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
 import { GRADE_NAMES } from "../lib/schoolTime";
 import MadrasatiAlert from "./MadrasatiAlert.jsx";
+import { Icon } from "./Layout.jsx";
 
 export const MADRASATI_SUPPORT_URL = "https://schools.madrasati.sa/contact-us?Language=1";
 export const MADRASATI_CHANGE_PW_URL = "https://schools.madrasati.sa/ChangePassword?Language=1";
 export const MADRASATI_PW_VIDEO = "https://www.youtube.com/watch?v=dXqtJlga0Zs";
 
 export const MR_KINDS = [
-  { k: "password", t: "كلمة مرور جديدة", icon: "🔑", d: "تصلك برسالة على الجوال المسجّل أو رقم جديد" },
-  { k: "class", t: "تغيير الفصل في المنصة", icon: "🏫", d: "فصلك في المنصة غير فصلك الصحيح" },
-  { k: "other", t: "مشكلة أخرى", icon: "❓", d: "اكتب مشكلتك باختصار" },
+  { k: "password", t: "كلمة مرور جديدة", icon: "key", d: "تصلك برسالة على الجوال المسجّل أو رقم جديد" },
+  { k: "class", t: "تغيير الفصل في المنصة", icon: "users", d: "فصلك في المنصة غير فصلك الصحيح" },
+  { k: "other", t: "مشكلة أخرى", icon: "help", d: "اكتب مشكلتك باختصار" },
 ];
 export const MR_STATUS = {
   new: { t: "جديد", c: "bg-warning-light text-warning" },
@@ -96,7 +97,7 @@ export default function MadrasatiSupport() {
         <div className="grid gap-2 sm:grid-cols-2">
           <a href={MADRASATI_SUPPORT_URL} target="_blank" rel="noopener noreferrer"
              className="flex items-center gap-3 rounded-sm2 border border-line bg-white p-3 hover:border-mint-light hover:bg-mint-tint/40">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#1B8354]/10 text-[#1B8354]">☎</span>
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#1B8354]/10 text-[#1B8354]"><Icon name="chat" /></span>
             <span className="min-w-0 flex-1">
               <b className="block text-[13px] text-ink">الدعم الفني الرسمي للمنصة</b>
               <span className="block text-[11.5px] text-muted">صفحة «تواصل معنا» في منصة مدرستي</span>
@@ -125,7 +126,7 @@ export default function MadrasatiSupport() {
               <button key={x.k} type="button" disabled={hasOpen(x.k)} onClick={() => { setKind(x.k); setMsg(null); }}
                 className={`rounded-sm2 border p-3 text-start transition-colors disabled:opacity-60 ${
                   kind === x.k ? "border-mint-deep bg-mint-tint" : "border-line bg-white hover:bg-canvas"}`}>
-                <span className="text-lg">{x.icon}</span>
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-mint-tint text-mint-deep"><Icon name={x.icon} /></span>
                 <b className="mt-1 block text-[13px] text-ink">{x.t}</b>
                 <span className="block text-[11px] text-muted">{hasOpen(x.k) ? "لديك طلب مفتوح منه" : x.d}</span>
               </button>
@@ -198,7 +199,7 @@ export default function MadrasatiSupport() {
             {mine.map((r) => (
               <div key={r.id} className="space-y-1 px-4 py-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-[13px] font-semibold text-ink">{kindOf(r.kind).icon} {kindOf(r.kind).t}</span>
+                  <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink"><Icon name={kindOf(r.kind).icon} className="h-4 w-4 text-mint-deep" />{kindOf(r.kind).t}</span>
                   <span className={`rounded-pill px-2 py-0.5 text-[11px] font-semibold ${MR_STATUS[r.status]?.c}`}>{MR_STATUS[r.status]?.t}</span>
                   <span className="num ms-auto text-[11px] text-faint">{fmtDateTime(r.created_at)}</span>
                 </div>

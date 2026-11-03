@@ -93,7 +93,7 @@ export default function ScoutStats() {
         <button data-ro-ok className="btn-ghost ms-auto px-4 py-1.5 text-xs" onClick={print}>طباعة التقرير</button>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Card p={rep.best} label="🏆 أفضل طليعة" c="text-present" />
+        <Card p={rep.best} label="أفضل طليعة" c="text-present" />
         <Card p={rep.worst} label="الأقل في التقييم" c="text-absent" />
         <div className="card flex-1 p-4"><p className="text-xs font-semibold text-muted">حضور الفريق</p>
           <p className={`num mt-1 text-2xl font-bold ${tone(rep.teamAtt)}`}>{pctText(rep.teamAtt)}</p>

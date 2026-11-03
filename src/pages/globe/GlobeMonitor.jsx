@@ -7,6 +7,7 @@ import { confirmDanger } from "../../lib/danger";
 import Loader from "../../components/Loader.jsx";
 import { GLOBE_SPHERES, GLOBE_PROTOCOLS, GLOBE_BUCKET, sphereOf } from "../../lib/globe.js";
 import { MAX_PHOTOS, pill, setupErr, activeTerm, uploadPhotos, useSignedPhotos, Thumbs, Stats } from "./shared.jsx";
+import { Icon } from "../../components/Layout.jsx";
 
 /* =====================================================================
    خطة الرصد البيئي (supabase/globe_2.sql): جلسات الرصد بالبروتوكول والموعد
@@ -234,7 +235,7 @@ export default function GlobeMonitor({ me, members, onReport }) {
       {shown.length === 0 ? (
         !nf && (
           <div className="card px-6 py-10 text-center">
-            <p className="text-3xl">🔭</p>
+            <p className="flex justify-center text-faint"><Icon name="globe" className="h-9 w-9" /></p>
             <p className="mt-2 text-sm font-semibold text-ink">{rows.length ? "لا جلسات هنا" : "لا جلسات رصد بعد"}</p>
             {!rows.length && <p className="mt-1 text-xs text-muted">أضف جلسة من «+ جلسة رصد»، وكرّرها أسبوعيًا للرصد المنتظم.</p>}
           </div>

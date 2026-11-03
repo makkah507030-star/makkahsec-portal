@@ -169,7 +169,7 @@ export default function Feedback() {
       )}
 
       <main className={standalone ? "mx-auto max-w-2xl px-5 py-10" : "max-w-2xl"}>
-        <h1 className="text-2xl font-bold text-ink">مركز الدعم والمساندة</h1>
+        <h1 className={`${standalone ? "text-2xl" : "text-lg"} font-bold text-ink`}>مركز الدعم والمساندة</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           تواصل مع الدعم الفني للبوابة لأي مشكلة تقنية أو استفسار أو اقتراح،
           وسيصلك الرد داخل الموقع عبر الإشعارات.
