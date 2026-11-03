@@ -83,7 +83,7 @@ export default function Notebook() {
   const done = shown.filter((n) => n.done_at);
   return (
     <div className="space-y-5">
-      <div className="rounded-card border border-mint-light bg-gradient-to-l from-mint-tint to-[#F7FCF9] px-5 py-4 text-center">
+      <div className="rounded-card border border-mint-light bg-gradient-to-l from-mint-tint to-[#F7FCF9] dark:to-paper px-5 py-4 text-center">
         <p className="text-lg font-semibold leading-loose text-mint-deep">
           ﴿ وَاذْكُر رَّبَّكَ إِذَا نَسِيتَ وَقُلْ عَسَىٰ أَن يَهْدِيَنِ رَبِّي لِأَقْرَبَ مِنْ هَٰذَا رَشَدًا ﴾
         </p>

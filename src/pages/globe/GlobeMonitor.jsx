@@ -139,7 +139,7 @@ export default function GlobeMonitor({ me, members, onReport }) {
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 
       <section className="card overflow-hidden">
-        <div className="flex flex-wrap items-center gap-3 bg-gradient-to-l from-[#E3F1F7] to-paper px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3 bg-gradient-to-l from-[#E3F1F7] to-paper dark:from-[#16303B] px-4 py-3">
           <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
             <p className="text-base font-bold text-ink">خطة الرصد البيئي</p>
             <p className="text-xs text-muted">جلسات الرصد بمواعيدها وطلابها، والتذكير بالواتساب، وتوثيق القراءات ورفعها إلى منصة GLOBE.</p>
