@@ -57,7 +57,7 @@ returns table (teacher_user_id uuid, item_key text, cnt bigint, last_at timestam
 language plpgsql stable security definer set search_path = public as $$
 declare y0 date;
 begin
-  if not (p_uid = auth.uid() or public.has_admin_role(array['principal', 'tech_support'])) then return; end if;
+  if p_uid is distinct from auth.uid() and not public.has_admin_role(array['principal', 'tech_support']) then return; end if;
   select coalesce(min(start_date), current_date - 365) into y0 from academic_calendar where academic_year = p_year;
   return query select t.user_id, 'e02_12'::text, count(*), max(w.at)
     from cult_team t cross join lateral public.cult_works_of(t.user_id, y0) w
@@ -68,7 +68,7 @@ returns table (r_title text, r_detail text, r_at timestamptz)
 language plpgsql stable security definer set search_path = public as $$
 declare y0 date; lbl jsonb := '{"act":"نشاط من الخطة اكتمل","meet":"لقاء في التواصل الملهم","care":"بطاقة «نهتم بك»","onboard":"تهيئة موظف جديد في «حيّاك»","idea":"رد على فكرة موظف","msg":"رسالة للموظفين"}';
 begin
-  if not (p_uid = auth.uid() or public.has_admin_role(array['principal', 'tech_support'])) then return; end if;
+  if p_uid is distinct from auth.uid() and not public.has_admin_role(array['principal', 'tech_support']) then return; end if;
   select coalesce(min(start_date), current_date - 365) into y0 from academic_calendar where academic_year = p_year;
   return query select w.title, lbl ->> w.kind, w.at from public.cult_works_of(p_uid, y0) w order by 3 desc nulls last;
 end $$;
