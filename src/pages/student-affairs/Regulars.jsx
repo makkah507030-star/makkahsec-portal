@@ -19,6 +19,8 @@ import { Fit } from "../studio/ProgramCards.jsx";
 
 const GRADE = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
 const PER = 20;   // طالب في الورقة: عمودان في عشرة صفوف
+// الشرطة المنفردة في أسماء نور مكان جزء ناقص من الاسم، فلا تظهر في لوحة التكريم
+const cleanName = (n) => String(n ?? "").replace(/(^|\s)-(?=\s|$)/g, "").replace(/\s+/g, " ").trim();
 const dmy = (s) => (s ? s.split("-").reverse().join("/") : "");
 
 const pctOf = (n, d) => (d ? Math.round((n * 1000) / d) / 10 : 0);
@@ -219,7 +221,7 @@ function HonorReport({ data, grades, onBack }) {
 
   const pages = useMemo(() => grades.filter((g) => !grade || g === grade).flatMap((g) => {
     const list = data.rows.filter((r) => r.grade === g && r.late === 0)
-      .map((r, i) => ({ no: i + 1, name: r.full_name, cls: r.class_no }));
+      .map((r, i) => ({ no: i + 1, name: cleanName(r.full_name), cls: r.class_no }));
     if (!list.length) return [];
     const n = Math.ceil(list.length / PER);
     return Array.from({ length: n }, (_, p) => ({
