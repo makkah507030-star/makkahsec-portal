@@ -21,7 +21,7 @@ const STATUS = {
   present: { t: "حاضر", c: "bg-present text-white", r: "#4E7D66" },
   late: { t: "متأخر", c: "bg-late text-white", r: "#C08A1E" },
   absent: { t: "غائب", c: "bg-absent text-white", r: "#A23B3B" },
-  excused: { t: "بعذر", c: "bg-excused text-white", r: "#3F6B99" },
+  excused: { t: "مستأذن", c: "bg-excused text-white", r: "#3F6B99" },
 };
 const dowOf = (d) => { const n = new Date(`${d}T12:00:00`).getDay() + 1; return n >= 1 && n <= 5 ? n : 0; };
 const waNumber = (m) => { const d = String(m ?? "").replace(/\D/g, ""); return d.startsWith("05") ? `966${d.slice(1)}` : d.startsWith("5") ? `966${d}` : d; };
@@ -81,7 +81,7 @@ export default function SupervisionLog() {
   const save = async (status) => {
     if (status === "approved") {
       const ok = await confirmDanger({ title: `اعتماد سجل إشراف ${DAY_NAMES[dow]} ${dmy(date)}`, confirmLabel: "اعتماد",
-        impact: [`حاضر ${count(members, "present")} · متأخر ${count(members, "late")} · غائب ${count(members, "absent")} · بعذر ${count(members, "excused")}`,
+        impact: [`حاضر ${count(members, "present")} · متأخر ${count(members, "late")} · غائب ${count(members, "absent")} · مستأذن ${count(members, "excused")}`,
                  "بعد الاعتماد يُقفل السجل ويصير تقرير اليوم، ولا يعدّله إلا المدير والدعم الفني."] });
       if (!ok) return;
     }
@@ -209,7 +209,7 @@ function SupReport({ log, onBack }) {
         { ic: "users", t: "المعلمون المشرفون", v: ms.length },
         { ic: "check", t: "حاضر", v: count(ms, "present"), c: STATUS.present.r },
         { ic: "alert", t: "متأخر", v: count(ms, "late"), c: STATUS.late.r },
-        { ic: "alert", t: "غائب", v: count(ms, "absent"), s: count(ms, "excused") ? `بعذر ${count(ms, "excused")}` : null, c: STATUS.absent.r },
+        { ic: "alert", t: "غائب", v: count(ms, "absent"), s: count(ms, "excused") ? `مستأذن ${count(ms, "excused")}` : null, c: STATUS.absent.r },
       ]} />
       <table className="mr-table" style={{ fontSize: 11.5 }}>
         <thead><tr><th className="c">#</th><th>المعلم</th><th className="c">الحالة</th><th>الملاحظة</th></tr></thead>
