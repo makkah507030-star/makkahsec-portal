@@ -36,7 +36,8 @@ export default function SupervisionLog() {
   const [duty, setDuty] = useState(null);        // جدول الإشراف كله
   const [log, setLog] = useState(undefined);     // سجل اليوم المختار (null إن لم يُسجَّل)
   const [members, setMembers] = useState([]);
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState("");           // ملاحظات مشتركة (السجلات قبل الملاحظات الشخصية)
+  const [pnotes, setPnotes] = useState({});        // ملاحظات كل مشرف متابع باسمه (supervision_log_2.sql)
   const [mobiles, setMobiles] = useState({});
   const [list, setList] = useState([]);          // آخر السجلات (للإدارة)
   const [busy, setBusy] = useState(false);
@@ -50,10 +51,11 @@ export default function SupervisionLog() {
   const myDays = useMemo(() => [...new Set((duty ?? []).filter((r) => r.kind === "supervisor" && r.user_id === uid).map((r) => r.day_of_week))].sort(), [duty, uid]);
   const follower = myDays.includes(dow);
   const dayTeachers = useMemo(() => (duty ?? []).filter((r) => r.day_of_week === dow && r.kind === "teacher"), [duty, dow]);
-  const dayFollowers = (duty ?? []).filter((r) => r.day_of_week === dow && r.kind === "supervisor").map((r) => r.person_name);
+  const followerRows = (duty ?? []).filter((r) => r.day_of_week === dow && r.kind === "supervisor");
+  const dayFollowers = followerRows.map((r) => r.person_name);
 
   // الإدارة: كل الأيام؛ والمشرف المتابع: سجلات أيامه (سياسة القراءة تقصره عليها)
-  const loadList = () => (manager || myDays.length) && supabase.from("supervision_log").select("id, log_date, day_of_week, members, status, supervisor_name")
+  const loadList = () => (manager || myDays.length) && supabase.from("supervision_log").select("id, log_date, day_of_week, members, status, supervisor_name, followers")
     .order("log_date", { ascending: false }).limit(60).then(({ data }) => setList(data ?? []));
   useEffect(() => { loadList(); }, [manager, myDays.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -67,8 +69,8 @@ export default function SupervisionLog() {
         const saved = data.members ?? [];
         // من أُضيف لجدول الإشراف بعد الحفظ يظهر في المسودة حاضرًا
         const extra = data.status === "draft" ? base.filter((b) => !saved.some((s) => (s.user_id ?? s.name) === (b.user_id ?? b.name))) : [];
-        setMembers([...saved, ...extra]); setNote(data.note ?? "");
-      } else { setMembers(base); setNote(""); }
+        setMembers([...saved, ...extra]); setNote(data.note ?? ""); setPnotes(data.person_notes ?? {});
+      } else { setMembers(base); setNote(""); setPnotes({}); }
       setLog(data ?? null);
     });
     if (myDays.includes(dow)) supabase.rpc("supervision_mobiles", { p_dow: dow })
@@ -77,7 +79,7 @@ export default function SupervisionLog() {
 
   const approved = log?.status === "approved";
   const canEdit = dow > 0 && date <= todayISO() && ((follower && !approved) || editor);
-  const setM = (i, patch) => setMembers((ms) => ms.map((m, j) => (j === i ? { ...m, ...patch } : m)));
+  const setM = (i, patch) => setMembers((ms) => ms.map((m, j) => (j === i ? { ...m, ...patch, by: profile?.full_name ?? "" } : m)));
 
   const save = async (status) => {
     if (status === "approved") {
@@ -87,11 +89,22 @@ export default function SupervisionLog() {
       if (!ok) return;
     }
     setBusy(true);
-    const { data, error } = await supabase.from("supervision_log")
-      .upsert({ log_date: date, day_of_week: dow, members, note: note.trim() || null, status }, { onConflict: "log_date" }).select().single();
+    const row = { log_date: date, day_of_week: dow, members, note: note.trim() || null, person_notes: pnotes, status };
+    // يُرسل ما تغيّر وحده، فلا يمحو ما حفظه المشرف الآخر في الأثناء (والخادم يأخذ من كلٍّ ملاحظاته)
+    const patchOf = (base) => Object.fromEntries(Object.entries(row).filter(([k, v]) => k !== "log_date" && JSON.stringify(v ?? null) !== JSON.stringify(base?.[k] ?? null)));
+    let res;
+    if (log) res = await supabase.from("supervision_log").update(patchOf(log)).eq("id", log.id).select().single();
+    else {
+      res = await supabase.from("supervision_log").insert(row).select().single();
+      if (res.error && /duplicate|23505/.test(res.error.message)) {   // أنشأه المشرف الآخر للتو
+        const { data: cur } = await supabase.from("supervision_log").select("*").eq("log_date", date).maybeSingle();
+        if (cur) res = await supabase.from("supervision_log").update(patchOf({ ...cur, note: null, person_notes: {} })).eq("id", cur.id).select().single();
+      }
+    }
     setBusy(false);
+    const { data, error } = res;
     if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
-    setLog(data); loadList();
+    setLog(data); setMembers(data.members ?? members); setNote(data.note ?? ""); setPnotes(data.person_notes ?? {}); loadList();
     setMsg({ ok: true, text: status === "approved" ? "اعتُمد سجل الإشراف، وصار تقرير اليوم جاهزًا." : status === "draft" && approved ? "أُعيد السجل مسودة." : "حُفظ السجل." });
   };
 
@@ -121,7 +134,7 @@ export default function SupervisionLog() {
         <label className="flex items-center gap-2 text-sm text-muted">التاريخ
           <input type="date" className="field py-1 text-sm" value={date} max={todayISO()} onChange={(e) => e.target.value && setDate(e.target.value)} /></label>
         <span className="text-sm font-semibold text-ink">{DAY_NAMES[dow] ?? "لا دوام"}</span>
-        {dayFollowers.length > 0 && <span className="text-[12px] text-muted">المشرف المتابع: {dayFollowers.join(" و")}</span>}
+        {dayFollowers.length > 0 && <span className="text-[12px] text-muted">{dayFollowers.length > 1 ? "المشرفون المتابعون" : "المشرف المتابع"}: {dayFollowers.join(" و")}</span>}
         <span className={`chip ms-auto ${approved ? "bg-present/10 text-present" : log ? "bg-warning-light text-warning" : "bg-canvas text-muted"}`}>
           {approved ? `معتمد${log.approved_by_name ? ` · ${log.approved_by_name}` : ""}` : log ? "مسودة" : "لم يُسجَّل"}</span>
       </div>
@@ -141,7 +154,8 @@ export default function SupervisionLog() {
               return (
                 <div key={m.user_id ?? m.name} className="space-y-2 px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-0 flex-1 text-sm font-semibold text-ink">{m.name}</span>
+                    <span className="min-w-0 flex-1 text-sm font-semibold text-ink">{m.name}
+                      {followerRows.length > 1 && m.by && <span className="mr-2 text-[11px] font-normal text-faint">سجّله: {m.by.split(" ").filter((w) => w !== "بن").filter((w, k, arr) => k === 0 || k === arr.length - 1).join(" ")}</span>}</span>
                     {wa && <a href={wa} target="_blank" rel="noopener noreferrer" className="rounded-pill border border-line px-2.5 py-0.5 text-[11.5px] text-present hover:bg-present/10">تذكير واتساب</a>}
                     <div className="flex gap-1">
                       {Object.entries(STATUS).map(([k, s]) => (
@@ -156,11 +170,21 @@ export default function SupervisionLog() {
               );
             })}
           </div>
-          <div className="card space-y-2 p-4">
-            <p className="text-sm font-semibold text-ink">ملاحظات المشرف المتابع</p>
-            {canEdit ? <textarea className="field min-h-[80px] w-full text-sm" maxLength={1500} value={note} onChange={(e) => setNote(e.target.value)}
-                                 placeholder="ما لاحظته في الفسحة وبداية اليوم، والمواقع، وما يحتاج متابعة" />
-              : <p className="text-sm leading-relaxed text-muted">{note || "لا ملاحظات."}</p>}
+          <div className="card space-y-3 p-4">
+            <p className="text-sm font-semibold text-ink">ملاحظات {followerRows.length > 1 ? "المشرفين المتابعين" : "المشرف المتابع"}
+              {followerRows.length > 1 && <span className="text-[11.5px] font-normal text-muted"> · كلٌّ يكتب ملاحظاته ويرى ملاحظات زميله</span>}</p>
+            {(followerRows.length ? followerRows : [{ user_id: uid, person_name: profile?.full_name }]).map((r) => {
+              const mine = r.user_id === uid, val = pnotes[r.user_id] ?? "";
+              return (
+                <div key={r.user_id ?? r.person_name}>
+                  {followerRows.length > 1 && <p className="mb-1 text-[12px] font-semibold text-muted">{r.person_name}{mine ? " (أنت)" : ""}</p>}
+                  {canEdit && (mine || editor) ? <textarea className="field min-h-[70px] w-full text-sm" maxLength={1500} value={val}
+                      onChange={(e) => setPnotes((x) => ({ ...x, [r.user_id]: e.target.value }))} placeholder="ما لاحظته في الفسحة وبداية اليوم، والمواقع، وما يحتاج متابعة" />
+                    : <p className="rounded-sm2 bg-canvas px-3 py-2 text-sm leading-relaxed text-muted">{val || "لا ملاحظات."}</p>}
+                </div>
+              );
+            })}
+            {note && <p className="text-[12px] text-muted">ملاحظات سابقة: {note}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
             {canEdit && !approved && <button className="btn-ghost px-4 py-1.5 text-sm" disabled={busy} onClick={() => save("draft")}>حفظ</button>}
@@ -181,7 +205,7 @@ export default function SupervisionLog() {
             <tbody className="divide-y divide-line">{list.map((r) => (
               <tr key={r.id} className="cursor-pointer hover:bg-canvas" onClick={() => { setDate(r.log_date); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 <td className="num px-3 py-2">{dmy(r.log_date)}</td><td className="px-3 py-2">{DAY_NAMES[r.day_of_week]}</td>
-                <td className="px-3 py-2 text-muted">{r.supervisor_name}</td>
+                <td className="px-3 py-2 text-muted">{(r.followers ?? []).length ? r.followers.map((x) => x.name).join(" و") : r.supervisor_name}</td>
                 <td className="num px-3 py-2 text-present">{count(r.members ?? [], "present")}</td>
                 <td className="num px-3 py-2 text-absent">{count(r.members ?? [], "absent")}</td>
                 <td className="px-3 py-2"><span className={`chip ${r.status === "approved" ? "bg-present/10 text-present" : "bg-warning-light text-warning"}`}>{r.status === "approved" ? "معتمد" : "مسودة"}</span></td>
@@ -197,15 +221,18 @@ export default function SupervisionLog() {
 function SupReport({ log, onBack }) {
   const [theme, setTheme] = useState("light");
   const [sigs, setSigs] = useState({ sup: null, principal: null, stamp: null });
+  // المشرفون المتابعون: المحفوظون عند الاعتماد، وإلا من أنشأ السجل (السجلات القديمة)
+  const fol = (log.followers ?? []).length ? log.followers : [{ user_id: log.supervisor_id, name: log.supervisor_name }];
+  const folNames = fol.map((x) => x.name).filter(Boolean).join(" و");
   useEffect(() => {
-    Promise.all([log.supervisor_name ? signatureByName(log.supervisor_name) : null, loadPrincipalSignature(), loadSchoolStamp()])
+    Promise.all([fol.length === 1 && fol[0].name ? signatureByName(fol[0].name) : null, loadPrincipalSignature(), loadSchoolStamp()])
       .then(([s, p, st]) => setSigs({ sup: s, principal: p?.url ?? null, stamp: st }));
-  }, [log]);
+  }, [log]); // eslint-disable-line react-hooks/exhaustive-deps
   const ms = log.members ?? [];
   const doc = { title: "تقرير الإشراف اليومي", meta: [DAY_NAMES[log.day_of_week], dmy(log.log_date)], foot: "الإشراف اليومي" };
   const pages = [
     <Page key="p" theme={theme} doc={doc} page={1} total={1}
-          sec={{ no: 1, title: `الإشراف اليومي — ${DAY_NAMES[log.day_of_week]}`, sub: `${dmy(log.log_date)} · المشرف المتابع: ${log.supervisor_name ?? "—"}` }}>
+          sec={{ no: 1, title: `الإشراف اليومي — ${DAY_NAMES[log.day_of_week]}`, sub: `${dmy(log.log_date)} · ${fol.length > 1 ? "المشرفون المتابعون" : "المشرف المتابع"}: ${folNames || "—"}${log.approved_by_name ? ` · اعتمده ${log.approved_by_name}` : ""}` }}>
       <Kpis items={[
         { ic: "users", t: "المعلمون المشرفون", v: ms.length },
         { ic: "check", t: "حاضر", v: count(ms, "present"), c: STATUS.present.r },
@@ -218,8 +245,13 @@ function SupReport({ log, onBack }) {
           <tr key={m.user_id ?? m.name}><td className="c num">{i + 1}</td><td>{m.name}</td>
             <td className="c" style={{ color: STATUS[m.status]?.r, fontWeight: 700 }}>{STATUS[m.status]?.t}</td><td>{m.note || "—"}</td></tr>))}</tbody>
       </table>
-      <Box icon="list" title="ملاحظات المشرف المتابع"><p style={{ fontSize: 12.5, lineHeight: 1.9, whiteSpace: "pre-wrap" }}>{log.note || "لا ملاحظات."}</p></Box>
-      <Signs stamp={sigs.stamp} people={[{ title: "المشرف المتابع", name: log.supervisor_name, sig: sigs.sup }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
+      <Box icon="list" title={fol.length > 1 ? "ملاحظات المشرفين المتابعين" : "ملاحظات المشرف المتابع"}>
+        {fol.map((x) => { const t = log.person_notes?.[x.user_id]; return t ? (
+          <p key={x.user_id ?? x.name} style={{ fontSize: 12.5, lineHeight: 1.9, whiteSpace: "pre-wrap", marginBottom: 4 }}>{fol.length > 1 && <b>{x.name}: </b>}{t}</p>) : null; })}
+        {log.note && <p style={{ fontSize: 12.5, lineHeight: 1.9, whiteSpace: "pre-wrap" }}>{log.note}</p>}
+        {!log.note && !fol.some((x) => log.person_notes?.[x.user_id]) && <p style={{ fontSize: 12.5 }}>لا ملاحظات.</p>}
+      </Box>
+      <Signs stamp={sigs.stamp} people={[{ title: fol.length > 1 ? "المشرفون المتابعون" : "المشرف المتابع", name: folNames, sig: sigs.sup }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
     </Page>,
   ];
   return (

@@ -126,6 +126,8 @@ const DutyLog = lazy(() => import("./pages/DutyLog.jsx"));
 const StudentRequests = lazy(() => import("./pages/StudentRequests.jsx"));
 const MyWeek = lazy(() => import("./pages/MyWeek.jsx"));
 const AbsenceExcuses = lazy(() => import("./pages/AbsenceExcuses.jsx"));
+const AbsenceWhatsApp = lazy(() => import("./pages/AbsenceWhatsApp.jsx"));
+const GuardianMobiles = lazy(() => import("./pages/GuardianMobiles.jsx"));
 const BannersAdmin = lazy(() => import("./pages/banners/BannersAdmin.jsx"));
 const StudentFile = lazy(() => import("./pages/student-affairs/StudentFile.jsx"));
 const SectionHub = lazy(() => import("./pages/SectionHub.jsx"));
@@ -581,6 +583,9 @@ export default function App() {
           <Route path="/duty-log" element={<DutyLog />} />
           {effectiveRole === "admin" && <Route path="/student-requests" element={<StudentRequests />} />}
           {effectiveRole === "admin" && <Route path="/absence-excuses" element={<AbsenceExcuses />} />}
+          {/* رسائل الغياب بواتساب — الخادم يحصرها في شؤون الطلاب والكتّاب، وفي صف الموجه الطلابي */}
+          {effectiveRole === "admin" && <Route path="/absence-whatsapp" element={<AbsenceWhatsApp />} />}
+          {effectiveRole === "admin" && <Route path="/guardian-mobiles" element={<GuardianMobiles />} />}
           {/* ملف الطالب الشامل — الصفحة تحصر الطلاب في صفوف المستخدم، والدوال تفرض الصلاحية */}
           {effectiveRole === "admin" && <Route path="/student-file" element={<StudentFile />} />}
           {/* صفحات الأقسام العامة لقائمة الإدارة والمعلم — تعرض ما تعرضه القائمة للمستخدم فقط */}

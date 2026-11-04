@@ -26,7 +26,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 create or replace function public.duty_approver() returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.has_admin_role(array['principal', 'tech_support', 'deputy_school', 'deputy_students']);
+  select public.has_admin_role(array['principal', 'tech_support', 'deputy_academic', 'deputy_school', 'deputy_students']);
 $$;
 create or replace function public.duty_reader() returns boolean
 language sql stable security definer set search_path = public as $$

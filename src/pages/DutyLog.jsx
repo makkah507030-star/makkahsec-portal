@@ -2,7 +2,7 @@
 // سجل المناوبة اليومية (supabase/duty_log_1..2.sql): المناوبون يسجلون بداية اليوم ونهايته، والطلاب المتأخرين
 // وسببه، والمواقف على الطلاب، وملاحظاتهم، ثم يرفعونه للوكيل. والوكيل يسجل حضورهم (الأصل حاضر) وملاحظة لكل
 // منهم وملاحظاته ويذكّرهم عبر واتساب، ثم يعتمد: يُقفل ويصير تقرير اليوم، ويصل أولياء أمور المتأخرين تنبيه.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { todayISO, DAY_NAMES } from "../lib/schoolTime";
@@ -32,25 +32,41 @@ const byAt = (a) => [...(a ?? [])].sort((x, y) => (x.at ?? 0) - (y.at ?? 0));
 const norm = (l) => ({ ...l, person_notes: l.person_notes ?? {}, lates: byAt(l.lates), incidents: byAt(l.incidents) });
 // الاسم الأول والعائلة («بندر بن معيض الحارثي» ← «بندر الحارثي»)
 const short = (n) => { const w = String(n ?? "").split(" ").filter((x) => x && x !== "بن"); return w.length > 1 ? `${w[0]} ${w[w.length - 1]}` : w[0] ?? ""; };
+// الوقت من منتقي الوقت (13:50) بصيغة واحدة للعرض والتنبيه (1:50 م)
+const t12 = (v) => { if (!/^\d{1,2}:\d{2}/.test(v ?? "")) return ""; const [h, m] = v.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "ص" : "م"}`; };
 const L = ({ children }) => <p className="mb-1.5 text-sm font-semibold text-ink">{children}</p>;
 
-/* بحث عن طالب بالاسم من الطلاب النشطين */
+/* بحث عن طالب بالاسم من الطلاب النشطين. القائمة تُغلق بالاختيار، أو بالضغط خارجها، أو بـEsc، أو بمسح البحث */
 function StudentPick({ onPick }) {
-  const [q, setQ] = useState(""); const [res, setRes] = useState([]);
+  const [q, setQ] = useState(""); const [res, setRes] = useState([]); const [open, setOpen] = useState(false);
+  const box = useRef(null);
   useEffect(() => {
     const t = q.trim(); if (t.length < 3) { setRes([]); return undefined; }
     const h = setTimeout(() => supabase.from("v_active_students").select("student_id, full_name, class_no").ilike("full_name", `%${t}%`).limit(8)
-      .then(({ data }) => setRes(data ?? [])), 300);
+      .then(({ data }) => { setRes(data ?? []); setOpen(true); }), 300);
     return () => clearTimeout(h);
   }, [q]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const out = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", out); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", out); document.removeEventListener("keydown", esc); };
+  }, [open]);
+  const shown = open && q.trim().length >= 3;
   return (
-    <div className="relative">
-      <input className="field w-full py-1.5 text-sm" placeholder="ابحث باسم الطالب (3 أحرف فأكثر)" value={q} onChange={(e) => setQ(e.target.value)} />
-      {res.length > 0 && (
+    <div ref={box} className="relative">
+      <input className="field w-full py-1.5 text-sm" placeholder="ابحث باسم الطالب (3 أحرف فأكثر)" value={q}
+             onChange={(e) => setQ(e.target.value)} onFocus={() => res.length && setOpen(true)} onClick={() => res.length && setOpen(true)} />
+      {shown && (
         <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-sm2 border border-line bg-white shadow-card">
+          <div className="flex items-center justify-between border-b border-line bg-canvas px-3 py-1.5 text-[11.5px] text-muted">
+            <span>{res.length ? `${res.length === 8 ? "أول 8 نتائج، اكتب أكثر للتدقيق" : `${res.length} نتائج`}` : "لا طالب بهذا الاسم"}</span>
+            <button type="button" className="font-semibold text-ink hover:underline" onClick={() => setOpen(false)}>إغلاق ✕</button>
+          </div>
           {res.map((s) => (
             <button key={s.student_id} type="button" className="flex w-full items-center justify-between px-3 py-2 text-start text-sm hover:bg-canvas"
-                    onClick={() => { onPick({ student_id: s.student_id, name: s.full_name, class_no: s.class_no }); setQ(""); setRes([]); }}>
+                    onClick={() => { onPick({ student_id: s.student_id, name: s.full_name, class_no: s.class_no }); setQ(""); setRes([]); setOpen(false); }}>
               <span>{s.full_name}</span><span className="num text-[11.5px] text-muted">{s.class_no}</span></button>))}
         </div>
       )}
@@ -61,7 +77,7 @@ function StudentPick({ onPick }) {
 export default function DutyLog() {
   const { session, profile, hasAdminRole } = useSession();
   const uid = session?.user?.id;
-  const approver = hasAdminRole("principal", "tech_support", "deputy_school", "deputy_students");
+  const approver = hasAdminRole("principal", "tech_support", "deputy_academic", "deputy_school", "deputy_students");
   const reader = approver || hasAdminRole("deputy_academic");
   const editor = hasAdminRole("principal", "tech_support");
   const [date, setDate] = useState(todayISO());
@@ -207,16 +223,17 @@ export default function DutyLog() {
             {f.lates.map((x, i) => (
               <div key={i} className="flex flex-wrap items-center gap-2 rounded-sm2 bg-canvas px-3 py-2 text-[13px]">
                 <b className="text-ink">{x.name}</b><span className="num text-muted">{x.class_no}</span>
-                {x.time && <span className="num chip bg-late/10 text-late">{x.time}</span>}
+                {x.time && <span dir="rtl" className="chip whitespace-nowrap bg-late/10 text-late">{x.time}</span>}
                 <span className="min-w-0 flex-1 text-muted">{x.reason || "—"}</span>
                 {x.added_by_name && <span className="text-[11px] text-faint">أضافه: {short(x.added_by_name)}</span>}
                 {mineItem(x) && <button className="text-[12px] text-absent" onClick={() => set("lates", f.lates.filter((_, j) => j !== i))}>حذف</button>}
               </div>))}
             {canAny && (
-              <div className="grid gap-2 sm:grid-cols-[1fr_110px]">
-                <StudentPick onPick={(s) => { set("lates", [...f.lates, { ...s, ...late, ...by() }]); setLate({ kind: "pickup", time: "", reason: "" }); }} />
-                <input className="field py-1.5 text-sm" placeholder="وقت المغادرة" maxLength={10} value={late.time} onChange={(e) => setLate({ ...late, time: e.target.value })} />
-                <input className="field py-1.5 text-sm sm:col-span-2" placeholder="سبب التأخر (يُكتب قبل اختيار الطالب)" maxLength={160} value={late.reason} onChange={(e) => setLate({ ...late, reason: e.target.value })} />
+              <div className="grid gap-2 sm:grid-cols-[1fr_190px]">
+                <StudentPick onPick={(s) => { set("lates", [...f.lates, { ...s, kind: "pickup", time: t12(late.time), reason: late.reason, ...by() }]); setLate({ kind: "pickup", time: late.time, reason: "" }); }} />
+                <label className="flex items-center gap-1.5 text-[12px] text-muted"><span className="shrink-0">وقت المغادرة</span>
+                  <input type="time" className="field w-full py-1.5 text-sm" step={60} value={late.time} onChange={(e) => setLate({ ...late, time: e.target.value })} /></label>
+                <input className="field py-1.5 text-sm sm:col-span-2" placeholder="سبب التأخر (يُكتب مع الوقت قبل اختيار الطالب)" maxLength={160} value={late.reason} onChange={(e) => setLate({ ...late, reason: e.target.value })} />
               </div>)}
           </div>
 
@@ -254,6 +271,29 @@ export default function DutyLog() {
             <div className="card p-4"><L>ملاحظات الوكيل</L>
               {canDeputy ? <textarea className="field min-h-[70px] w-full text-sm" maxLength={1500} value={f.deputy_note ?? ""} onChange={(e) => set("deputy_note", e.target.value)} />
                 : <p className="text-sm text-muted">{f.deputy_note || "—"}</p>}</div>
+          </div>
+
+          {/* من يحفظ ومن يرفع ومن يعتمد: الخطوة الحالية بارزة، ومن قام بها ومتى */}
+          <div className="card p-4">
+            <p className="mb-2 text-sm font-semibold text-ink">خطوات السجل</p>
+            <ol className="grid gap-2 sm:grid-cols-3">
+              {[
+                ["1", "يحفظ المناوبون", "أيٌّ من المناوبين يسجل ويحفظ ما شاء قبل الرفع، وكلٌّ يرى ما كتبه زميله.",
+                  log?.created_by_name ? `بدأه ${short(log.created_by_name)}` : "لم يُحفظ بعد", st === "draft"],
+                ["2", "يرفع المناوبون للوكيل", "بعد الرفع لا يعدّله المناوبون، ويصل للوكيل ليراجعه.",
+                  log?.submitted_at ? `رُفع ${new Date(log.submitted_at).toLocaleTimeString("ar-SA-u-nu-latn", { hour: "numeric", minute: "2-digit" })}` : "لم يُرفع بعد", st === "submitted"],
+                ["3", "يعتمد الوكيل", "يسجل حضور المناوبين وملاحظاته ويعتمد: يُقفل، ويصير تقرير اليوم، ويصل أولياء أمور المتأخرين التنبيه.",
+                  log?.approved_by_name ? `اعتمده ${short(log.approved_by_name)}` : "لم يُعتمد بعد", st === "approved"],
+              ].map(([n, t, d, who, cur]) => (
+                <li key={n} className={`rounded-sm2 border px-3 py-2.5 ${cur ? "border-mint-deep bg-mint-tint" : "border-line bg-white"}`}>
+                  <p className="flex items-center gap-2 text-[13px] font-bold text-ink">
+                    <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] text-white ${cur ? "bg-mint-deep" : "bg-faint"}`}>{n}</span>{t}</p>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-muted">{d}</p>
+                  <p className={`mt-1.5 text-[11.5px] font-semibold ${cur ? "text-mint-deep" : "text-faint"}`}>{who}</p>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-2 text-[11.5px] text-faint">يعتمد: وكيل الشؤون التعليمية، ووكيل الشؤون المدرسية، ووكيل شؤون الطلاب، والمدير، والدعم الفني.</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -312,7 +352,7 @@ function DutyReport({ log, onBack }) {
       </div>
       <T head={["المناوب", "الحالة", "ملاحظة الوكيل"]} rows={ms.map((m) => <tr key={m.name}><td>{m.name}</td><td style={{ color: STATUS[m.status]?.r, fontWeight: 700 }}>{STATUS[m.status]?.t}</td><td>{m.note || "—"}</td></tr>)} />
       {lates.length > 0 && <T head={["المتأخر في الانصراف", "الفصل", "وقت المغادرة", "السبب"]}
-        rows={lates.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td className="num">{x.time || "—"}</td><td>{x.reason || "—"}</td></tr>)} />}
+        rows={lates.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td dir="rtl" style={{ whiteSpace: "nowrap" }}>{x.time || "—"}</td><td>{x.reason || "—"}</td></tr>)} />}
       {inc.length > 0 && <T head={["الطالب", "الفصل", "الموقف أو الملاحظة"]}
         rows={inc.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td>{x.text}</td></tr>)} />}
       <div className="mr-row c2">

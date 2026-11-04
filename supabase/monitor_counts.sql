@@ -25,6 +25,9 @@ begin
     'notes', (select count(*) from notifications where created_at >= t0),
     'toGuardians', (select count(*) from notification_recipients r join notifications n on n.id = r.notification_id
                     join users u on u.id = r.user_id where n.created_at >= t0 and u.role::text = 'guardian'),
+    -- عدد أولياء الأمور المختلفين الذين وصلهم إشعار واحد على الأقل اليوم
+    'guardiansReached', (select count(distinct r.user_id) from notification_recipients r join notifications n on n.id = r.notification_id
+                    join users u on u.id = r.user_id where n.created_at >= t0 and u.role::text = 'guardian'),
     'absenceNotes', (select count(*) from official_absence_notified where attend_date = p_date),
     'guardianForms', (select count(*) from form_documents d join form_templates t on t.id = d.template_id
                       where t.key in ('guidance_guardian_call', 'guidance_guardian_meeting') and d.created_at >= t0),
