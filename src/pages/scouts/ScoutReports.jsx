@@ -7,6 +7,7 @@ import { shrinkImage } from "../../lib/imageResize.js";
 import { isScoutRole } from "../../lib/scoutLeader.js";
 import Loader from "../../components/Loader.jsx";
 import { loadTeam, isSetupErr, SETUP_MSG } from "./data.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    بلاغات الفريق الكشفي (supabase/scouts_7.sql): يرفع القائد أو نائبه بلاغًا (تنظيم أو
@@ -145,14 +146,14 @@ function Thread({ r, nameOf, fromDeputy, me, onBack }) {
     const { data: u } = await supabase.auth.getUser();
     const { error } = await supabase.from("scout_report_msgs").insert({ report_id: r.id, body: text.trim(), by_user: u?.user?.id, by_name: me ?? null, from_deputy: fromDeputy });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setText(""); load();
   };
   const flip = async () => {
     const next = status === "open" ? "closed" : "open";
     const { error } = await supabase.from("scout_reports").update(next === "closed"
       ? { status: next, closed_at: new Date().toISOString(), closed_by_name: me ?? null } : { status: next, closed_at: null, closed_by_name: null }).eq("id", r.id);
-    if (error) setErr(error.message); else setStatus(next);
+    if (error) setErr(friendlyError(error.message)); else setStatus(next);
   };
 
   return (

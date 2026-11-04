@@ -8,6 +8,7 @@ import { confirmDanger } from "../../lib/danger";
 import { DOMAINS, roleT } from "../../lib/accreditation.js";
 import Loader from "../../components/Loader.jsx";
 import AccMinutes from "./AccMinutes.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    لجنة التميز (supabase/acc_1.sql، acc_3.sql): برئاسة مدير المدرسة، ومشرفها يوزّع العمل:
@@ -44,7 +45,7 @@ function Members({ me, members, reload, setMsg, by }) {
   }, [open, staff]);
   const inSet = useMemo(() => new Set(members.map((m) => m.user_id)), [members]);
   const found = (staff ?? []).filter((u) => !inSet.has(u.id) && (!q.trim() || u.full_name.includes(q.trim()))).slice(0, 12);
-  const run = async (p, ok) => { const { error } = await p; if (error) setMsg({ ok: false, text: error.message }); else { if (ok) setMsg({ ok: true, text: ok }); reload(); } };
+  const run = async (p, ok) => { const { error } = await p; if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else { if (ok) setMsg({ ok: true, text: ok }); reload(); } };
   const add = (u) => run(supabase.from("acc_members").insert({ user_id: u.id, title: title.trim() || null, added_by_name: by ?? null }), `أُضيف ${u.full_name} إلى اللجنة. أسند له مجالاته.`);
   const toggleD = (m, d) => run(supabase.from("acc_members").update({ domains: m.domains.includes(d) ? m.domains.filter((x) => x !== d) : [...m.domains, d].sort() }).eq("user_id", m.user_id));
   const setRole = (m, role) => run(supabase.from("acc_members").update({ role }).eq("user_id", m.user_id));

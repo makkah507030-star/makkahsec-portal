@@ -12,6 +12,7 @@ import { sendPush } from "../../lib/pushSend.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { byName } from "../../lib/sortAr.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const ROLES = [
   { key: "teacher",  label: "المعلمون" },
@@ -196,7 +197,7 @@ function SendForm() {
     // ============ مسار الإرسال المباشر (الدعم الفني فقط) ============
     if (isTechSupport) {
       const { data, error } = await supabase.rpc("send_notification", args);
-      if (error) { setSending(false); setMsg({ ok: false, text: error.message }); return; }
+      if (error) { setSending(false); setMsg({ ok: false, text: friendlyError(error.message) }); return; }
       if (!data)  { setSending(false); setMsg({ ok: false, text: "لا يوجد مستلمون مطابقون." }); return; }
 
       // حفظ المُرسِل/الصورة/المرفق/يوتيوب — نفحص الخطأ ونُظهره بدل ابتلاعه

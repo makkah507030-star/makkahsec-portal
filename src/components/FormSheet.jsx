@@ -7,6 +7,7 @@ import PrintPortal from "./PrintPortal.jsx";
 import { OFFICIAL_LEVELS, RATING_LEVELS, gradeTone, itemPoints, officialLabel, overallLabel, ratingLabel, rubricScore, weightedRating } from "../lib/rubric.js";
 import { PRINCIPAL_NAME } from "../lib/signers.js";
 import { GuestCertificateBody } from "./GuestCertificate.jsx";
+import EventCertificate from "./EventCertificate.jsx";
 import { EVIDENCE_LEAD, EVIDENCE_NOTE, LEVEL_LABEL } from "../lib/evidence.js";
 import { levelBand } from "../lib/gradeBands.js";
 import { useSignatureByName } from "../lib/userSignatures.js";
@@ -256,6 +257,14 @@ function hoursText(h) {
   return `، والتي عُقدت لمدة ${w}`;
 }
 
+/* صفة صاحب الشهادة تحت اسمه: الفصل للطالب، والمعلم بتخصصه («معلم الرياضيات»)، والإداري بمسمّاه */
+function certTitle(v) {
+  if (v.class_label) return v.class_label;
+  const spec = (v.specialization || v.draft_target?.specialization || "").trim();
+  if (v.job === "معلم" && spec) return /^معلم/.test(spec) ? spec : `معلم ${spec}`;
+  return v.job || "";
+}
+
 function Certificate(p) {
   const { v, doc, template } = p;
   const att = isAttendanceCert(template);
@@ -292,6 +301,7 @@ function Certificate(p) {
           {att ? (<>
             <p className="mt-7 text-[15px] text-muted">تشهد مدرسة مكة الثانوية بأن الأستاذ/</p>
             <p className="mt-2 text-[32px] font-bold leading-tight text-ink">{v.recipient || "…"}</p>
+            {certTitle(v) && <p className="mt-1 text-[14px] text-mint-hover">{certTitle(v)}</p>}
             {v.national_id && <p className="mt-1 text-[14px] text-mint-hover">هوية وطنية: <span className="num">{v.national_id}</span></p>}
             <p className="mx-auto mt-4 max-w-[64ch] text-[15.5px] leading-[2.1] text-ink">
               قد حضر ورشة تدريبية بعنوان: <b className="text-mint-deep">«{v.workshop || "…"}»</b>
@@ -303,8 +313,8 @@ function Certificate(p) {
           </>) : (<>
             <p className="mt-7 text-[15px] text-muted">تتقدّم مدرسة مكة الثانوية بالشكر والتقدير إلى</p>
             <p className="mt-2 text-[32px] font-bold leading-tight text-ink">{v.recipient || "…"}</p>
-            {(v.class_label || v.job) && (
-              <p className="mt-1 text-[14px] text-mint-hover">{v.class_label || v.job}</p>
+            {certTitle(v) && (
+              <p className="mt-1 text-[14px] text-mint-hover">{certTitle(v)}</p>
             )}
 
             <p className="mx-auto mt-4 max-w-[58ch] text-[15.5px] leading-[2.1] text-ink">
@@ -1750,6 +1760,14 @@ export default function FormSheet({
   replySigUrl, replySigName, scale = 1, evidence,
 }) {
   if (!template) return null;
+  // شهادة حدث صدرت إلى حساب المشارك (events_certs_deliver.sql): قالب الشهادة نفسه في صفحة الأحداث
+  if (template.key === "event_certificate") {
+    const cert = (
+      <EventCertificate event={values?.event} participant={values?.participant} serial={values?.serial ?? doc?.serial}
+                        sigUrl={sigUrl} stampUrl={stampUrl} principalUrl={principalSigUrl} principalName={principalName} />
+    );
+    return scale !== 1 ? <div style={{ transform: `scale(${scale})`, transformOrigin: "top center" }}>{cert}</div> : cert;
+  }
   const landscape = sheetLandscape(template);
   // المستندات المحفوظة قبل توحيد التاريخ: «03/03/1448هـ (14/09/2026م)» تُعرض «03/03/1448 - 14/09/2026»
   const v = Object.fromEntries(Object.entries(values ?? {}).map(([k, x]) => [k,

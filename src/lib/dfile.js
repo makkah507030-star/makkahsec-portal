@@ -49,6 +49,13 @@ export const LAB_PARTS = [
   { key: "elements", t: "عناصر الأداء" },
   { key: "docs", t: "الشواهد" },
 ];
+/* الملف الرقمي للموظف (supabase/staff_dfile_*.sql): الوكيل والموجه الطلابي ومحضر مختبر العلوم */
+export const STAFF_PARTS = [
+  { key: "work", t: "العمل في البوابة" },
+  { key: "wins", t: "الإنجازات" },
+  { key: "elements", t: "عناصر الأداء" },
+  { key: "docs", t: "الشواهد" },
+];
 export const LAB_ELEMENTS = [
   ["l01", "أداء الواجبات الوظيفية"], ["l02", "التفاعل مع المجتمع المهني"], ["l03", "التفاعل مع أولياء الأمور"],
   ["l04", "التنويع في استراتيجيات التدريس"], ["l05", "تحسين نتائج المتعلمين"], ["l06", "خطة يومية لأنشطة المختبر"],
@@ -197,17 +204,21 @@ export const SHARE_MSG = "السلام عليكم ورحمة الله وبركا
   + "يسعدني اطلاعكم على ملفي الرقمي في بوابة مكة الثانوية الرقمية، "
   + "وأتشرف بملاحظاتكم وتوجيهاتكم في سجل الزوار داخل الملف، فهي محل تقديري واهتمامي.";
 
+const publicFn = (code) => (isLabCode(code) ? "lab_dfile_public" : isStaffCode(code) ? "staff_dfile_public" : "dfile_public");
 export async function loadPublic(code) {
-  const { data, error } = await supabase.rpc(isLabCode(code) ? "lab_dfile_public" : "dfile_public", { p_code: code });
+  const { data, error } = await supabase.rpc(publicFn(code), { p_code: code });
   if (error) throw error;
   return data;
 }
 
 /* ملف محضر المعمل: رمزه يبدأ بـ ML- (supabase/lab_dfile_*.sql) */
 export const isLabCode = (code) => /^ML-/i.test(String(code ?? "").trim());
+/* ملف الموظف (الوكيل والموجه ومحضر العلوم): رمزه يبدأ بـ MW- (supabase/staff_dfile_*.sql) */
+export const isStaffCode = (code) => /^MW-/i.test(String(code ?? "").trim());
 
 export async function visitStart(code, name, org, via) {
-  const { data } = await supabase.rpc(isLabCode(code) ? "lab_dfile_visit_start" : "dfile_visit_start", { p_code: code, p_name: name ?? "", p_org: org ?? "", p_via: via });
+  const fn = isLabCode(code) ? "lab_dfile_visit_start" : isStaffCode(code) ? "staff_dfile_visit_start" : "dfile_visit_start";
+  const { data } = await supabase.rpc(fn, { p_code: code, p_name: name ?? "", p_org: org ?? "", p_via: via });
   return data ?? null;
 }
 
@@ -223,7 +234,7 @@ export function visitPing(id, seconds) {
   supabase.rpc("dfile_visit_ping", { p_id: id, p_seconds: Math.round(seconds) }).then(() => {}, () => {});
 }
 
-/** زوار الملف. kind: «teacher» لملف المعلم، و«lab» لملف محضر المعمل (supabase/lab_dfile_1.sql) */
+/** زوار الملف. kind: «teacher» لملف المعلم، و«lab» لملف محضر المعمل (supabase/lab_dfile_1.sql)، و«staff» لملف الموظف */
 export async function loadVisits(uid, kind = "teacher") {
   const { data } = await supabase.from("dfile_visits").select("*")
     .eq("teacher_user_id", uid).order("started_at", { ascending: false }).limit(100);

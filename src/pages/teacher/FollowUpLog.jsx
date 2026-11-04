@@ -8,6 +8,7 @@ import moeLogo from "../../assets/moe-logo.png";
 import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const TERM_LABEL = { 1: "الأول", 2: "الثاني" };
 const PERIODS = ["الفترة الأولى", "الفترة الثانية"];
@@ -470,10 +471,10 @@ export default function FollowUpLog() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">سجل المتابعة الإلكتروني</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           حدّد البند الذي تعمل عليه الآن فقط — مثل المشاركة أثناء الحصة —
           بتأشير الطلاب من القائمة، وارجع لبقية البنود لاحقًا. يُحفظ كل شيء تلقائيًا.
-        </p>
+        </PageIntro>
         <EvidenceTags className="mt-2" items={["e03_06", "e11_02", "e11_03"]} />
       </div>
 

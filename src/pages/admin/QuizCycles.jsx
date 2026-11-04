@@ -7,6 +7,7 @@ import { activeYear } from "../../lib/performance";
 import { fmtDate } from "../../lib/dates";
 import { byName } from "../../lib/sortAr.js";
 import Loader from "../../components/Loader.jsx";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    متابعة دورات الاختبار (الشؤون التعليمية) — للمدير ووكيل الشؤون التعليمية
@@ -107,10 +108,10 @@ export default function QuizCycles() {
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">متابعة دورات الاختبار</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           اختبارات الفترات والتشخيصي ومراحل دورتها: البناء، فالرصد، فالتحليل، فالخطة العلاجية وتنفيذها
           والتحقق من أثرها، ثم التكريم والإغلاق. ولكل اختبار خططه وحالة تنفيذها وأثرها.
-        </p>
+        </PageIntro>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 

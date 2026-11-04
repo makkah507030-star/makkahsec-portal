@@ -12,6 +12,7 @@ import { printReport, rawHtml, escHtml, exportStyledExcel, ACADEMIC_DEPUTY_NAME,
 import Loader from "../components/Loader.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    ميثاق أخلاقيات المهنة (supabase/ethics_code.sql):
@@ -45,7 +46,7 @@ export default function EthicsCode() {
     setBusy(true);
     const { data, error } = await supabase.from("doc_acks").insert({ doc_key: ETHICS_KEY }).select("acked_at").single();
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setAck(data);
     setMsg({ ok: true, text: "سُجّل إقرارك بالاطّلاع. شكرًا لك." });
     refreshNavBadges(true);

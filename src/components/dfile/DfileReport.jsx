@@ -6,8 +6,9 @@ import { countAr } from "../../lib/arabicCount.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
   DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord, loadDfileLab,
-  LAB_PARTS, LAB_ELEMENTS, labElColor,
+  LAB_PARTS, LAB_ELEMENTS, labElColor, STAFF_PARTS,
 } from "../../lib/dfile.js";
+import { AUTO_SOURCE, elementColor } from "../../lib/performance.js";
 
 /* =====================================================================
    تقرير ملف المعلم الرقمي — بتصميم العيّنة docs/teacher-digital-file/prototype.html.
@@ -943,6 +944,162 @@ export function LabDfileReport({ data: d, settings: s, code }) {
         {doc && <DfileDocViewer code={code} doc={doc} onClose={closeDoc} />}
         <footer className="df-foot">
           <span>صادر من بوابة مكة الثانوية الرقمية، يتحدّث تلقائيًا مع كل عمل جديد في المعمل</span>
+          <span>لا يعرض أسماء الطلاب ولا بياناتهم الشخصية</span>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================================
+   الملف الرقمي للموظف (الوكيل والموجه الطلابي ومحضر مختبر العلوم — supabase/staff_dfile_*.sql)
+   بتصميم ملف محضر المعمل نفسه: عمله الآلي في البوابة ببنود نموذجه، والإنجازات، وعناصر الأداء، والشواهد.
+   ===================================================================== */
+const STAFF_WHO = { principal: "المدير", deputy: "الوكيل", counselor: "الموجه", science: "المحضر" };
+
+export function StaffDfileReport({ data: d, settings: s, code }) {
+  const hidden = new Set(s?.hidden ?? []);
+  const show = (k) => !hidden.has(k);
+  const [open, setOpen] = useState({});
+  const [cur, setCur] = useState(null);
+  const [doc, setDoc] = useState(null);
+  const closeDoc = useCallback(() => setDoc(null), [setDoc]);
+  const root = useRef(null);
+  const auto = d.auto ?? {};
+  const els = d.elements ?? [];
+  const elName = Object.fromEntries(els.map((e) => [e.k, e.t]));
+  const counted = els.filter((e) => !e.eo);
+  const coverOn = counted.reduce((a, e) => a + e.items.filter((i) => i.on).length, 0);
+  const coverOf = counted.reduce((a, e) => a + e.items.length, 0);
+  // البنود الآلية التي لها عمل، مرتبة بعناصرها
+  const work = els.map((e) => ({ ...e, auto: e.items.filter((i) => auto[i.k]?.n > 0) })).filter((e) => e.auto.length);
+  const top = work.flatMap((e) => e.auto.map((i) => ({ ...i, n: auto[i.k].n, label: AUTO_SOURCE[i.k]?.label ?? i.t })))
+    .sort((a, b) => b.n - a.n).slice(0, 6);
+  const exp = experience(s, d.year);
+  const rate = s?.perf_rating ? Number(s.perf_rating) : null;
+  const who = STAFF_WHO[d.track] ?? "الموظف";
+  useDfMotion(root, [d, s]);
+
+  const has = { work: work.length > 0, wins: (s?.other_wins?.length ?? 0) > 0, elements: true, docs: (d.docs?.length ?? 0) > 0 };
+  const tabs = STAFF_PARTS.filter((p) => show(p.key) && has[p.key]);
+  useEffect(() => {
+    if (!("IntersectionObserver" in window)) return undefined;
+    const io = new IntersectionObserver((es) => es.forEach((e) => e.isIntersecting && setCur(e.target.id.slice(3))),
+      { rootMargin: "-30% 0px -60% 0px" });
+    root.current?.querySelectorAll(".df-sec[id]").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [d, s]);
+  const go = (k) => {
+    if (k === "elements" || k === "docs") setOpen((o) => ({ ...o, [k]: true }));
+    root.current?.querySelector(`#df-${k}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  return (
+    <div className="dfile" dir="rtl" data-subject={s?.color || "science"} ref={root}>
+      <div className="df-wrap">
+        <header className="df-hero">
+          <div className="df-hero-top">
+            <div>
+              <p className="df-eyebrow">مدرسة مكة الثانوية، الملف الرقمي، {d.year}هـ</p>
+              <h1>أ. {d.name}</h1>
+              <p className="df-role">{[d.job, exp != null && `${exp} سنة خبرة`].filter(Boolean).join("، ")}</p>
+              <div className="df-chips">
+                {coverOf > 0 && <span className="df-hchip df-num">بنود لها شواهد: {coverOn} من {coverOf}</span>}
+                {work.length > 0 && <span className="df-hchip df-num">عمل موثّق في {work.length} {work.length >= 3 && work.length <= 10 ? "عناصر" : "عنصرًا"}</span>}
+              </div>
+            </div>
+            {rate && (
+              <div className="df-ring-wrap">
+                <div className="df-ring" aria-label={`تقييم الأداء للعام السابق ${rate} من 5`}>
+                  <svg viewBox="0 0 100 100" aria-hidden="true">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.16)" strokeWidth="9" />
+                    <circle className="df-arc" cx="50" cy="50" r="42" fill="none" stroke="var(--mint)" strokeWidth="9" strokeLinecap="round"
+                            strokeDasharray="263.9" strokeDashoffset={263.9 * (1 - rate / 5)} style={{ "--off": 263.9 * (1 - rate / 5) }} />
+                  </svg>
+                  <div className="df-lbl"><b className="df-num" data-count={rate.toFixed(2)}>{rate.toFixed(2)}</b><span>من 5</span></div>
+                </div>
+                <span className="df-ring-cap">{RATING_LABEL[Math.min(5, Math.max(1, Math.floor(rate)))]}</span>
+                {s.perf_year && <span className="df-sub" style={{ color: "var(--hero-soft)", fontSize: 10.5 }}>تقييم أداء {s.perf_year}هـ</span>}
+              </div>
+            )}
+          </div>
+          <div className="df-hero-foot"><span>يُبنى مباشرة من البوابة</span>{code && <span>رمز التحقق <span className="df-code">{code}</span></span>}</div>
+        </header>
+
+        {top.length > 0 && (
+          <div className="df-kpis df-kpis-lab">
+            {top.map((t) => (
+              <div className="df-kpi" key={t.k}><span className="df-v df-num">{t.n}</span><span className="df-l">{t.label}</span>
+                <span className="df-d">{elName[t.k.slice(0, 3)]}</span></div>
+            ))}
+          </div>
+        )}
+
+        {tabs.length > 0 && (
+          <nav className="df-tabs" aria-label="أقسام الملف">
+            {tabs.map((t) => <button key={t.key} type="button" className="df-tab" aria-current={cur === t.key} onClick={() => go(t.key)}>{t.t}</button>)}
+          </nav>
+        )}
+
+        {show("work") && has.work && (
+          <Section id="work" title="العمل في البوابة" sub={`ما وثّقه ${who} هذا العام، يتحدّث تلقائيًا`}>
+            <div className="df-grid2">
+              {work.map((e) => (
+                <div className="df-card" key={e.k}>
+                  <CardH title={e.t} sub={`وزنه ${e.w}%`} src="تلقائي" />
+                  <div className="df-tiles df-twrap">
+                    {e.auto.map((i) => <span key={i.k}><b className="df-num">{auto[i.k].n}</b>{AUTO_SOURCE[i.k]?.label ?? i.t}</span>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {show("wins") && has.wins && (
+          <Section id="wins" title="المبادرات والإنجازات" sub="ما صنعه خارج العمل اليومي">
+            <div className="df-card">
+              <CardH title="إنجازات" sub={`يكتبها ${who} بنفسه`} src={`يكتبه ${who}`} srcKind="up" />
+              <ul className="df-qlist">{s.other_wins.map((w, i) => <li key={i}><b>{w.t}</b>{w.d && <span>{w.d}</span>}</li>)}</ul>
+            </div>
+          </Section>
+        )}
+
+        {show("elements") && (
+          <Fold id="elements" title="عناصر الأداء الوظيفي" open={!!open.elements} onToggle={(v) => setOpen((o) => ({ ...o, elements: v }))}
+                line={`بنود لها شواهد: ${coverOn} من ${countAr(coverOf, "clause", { acc: true })} في ${counted.length} عنصرًا، والعنصر الأول يقدّره ${d.track === "principal" ? "الرئيس المباشر" : "مدير المدرسة"}`}>
+            <div className="df-els">
+              {els.map((e, i) => {
+                const on = e.items.filter((x) => x.on).length;
+                return (
+                  <div className="df-el" key={e.k}>
+                    <span className="df-k" style={{ background: elementColor(e.k) }}>{i + 1}</span>
+                    <div className="df-t"><p>{e.t}</p><div className="df-track" style={{ marginTop: 4 }}>
+                      <div className="df-fill" style={{ width: `${e.items.length ? (100 * on) / e.items.length : 0}%`, background: elementColor(e.k) }} /></div></div>
+                    <span className="df-n df-num">{e.eo ? (d.track === "principal" ? "يقدّره الرئيس المباشر" : "يقدّره المدير") : `${on} من ${countAr(e.items.length, "clause", { acc: true })}`}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </Fold>
+        )}
+
+        {show("docs") && has.docs && (
+          <Fold id="docs" title="الشواهد من خارج البوابة" line={`${d.docs.length} ملفات رفعها ${who}`}
+                open={!!open.docs} onToggle={(v) => setOpen((o) => ({ ...o, docs: v }))}>
+            <div className="df-docs">
+              {d.docs.map((f) => (
+                <button type="button" className="df-doc" key={f.id} onClick={() => setDoc(f)}>
+                  <span className="df-ic"><Svg d={f.kind === "image" ? ICON.image : ICON.file} /></span><b>{f.title}</b>
+                  {elName[f.el] && <span className="df-doc-el" style={{ color: elementColor(f.el) }}>{elName[f.el]}</span>}
+                  <span className="df-num">{[f.kind === "image" ? "صورة" : "PDF", f.date && fmtHijri(f.date)].filter(Boolean).join("، ")}</span></button>
+              ))}
+            </div>
+          </Fold>
+        )}
+        {doc && <DfileDocViewer code={code} doc={doc} onClose={closeDoc} />}
+        <footer className="df-foot">
+          <span>صادر من بوابة مكة الثانوية الرقمية، يتحدّث تلقائيًا مع كل عمل جديد في البوابة</span>
           <span>لا يعرض أسماء الطلاب ولا بياناتهم الشخصية</span>
         </footer>
       </div>

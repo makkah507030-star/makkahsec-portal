@@ -12,6 +12,7 @@ import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { SIGNERS, loadSigners } from "../../lib/signers.js";
 import { byName } from "../../lib/sortAr.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 
 export default function AdminStaff() {
@@ -400,7 +401,7 @@ function CustomRoles({ onOpenMembers }) {
     }))) return;
     await supabase.from("role_permissions").delete().eq("role_type", r.role_type);
     const { error } = await supabase.from("custom_roles").delete().eq("role_type", r.role_type);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     await loadCustomRoles();
     load();
   };
@@ -666,12 +667,12 @@ function RolePermissions() {
     if (del.length) {
       const { error } = await supabase.from("role_permissions").delete()
         .eq("role_type", role).in("permission", del);
-      if (error) { setMsg({ ok: false, text: error.message }); setSaving(false); return; }
+      if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); setSaving(false); return; }
     }
     if (add.length) {
       const { error } = await supabase.from("role_permissions")
         .insert(add.map((permission) => ({ role_type: role, permission })));
-      if (error) { setMsg({ ok: false, text: error.message }); setSaving(false); return; }
+      if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); setSaving(false); return; }
     }
 
     setMap((prev) => ({ ...prev, [role]: new Set(sel) }));
@@ -936,7 +937,7 @@ function Signers() {
     }));
     const { error } = await supabase.from("settings").upsert(rows, { onConflict: "key" });
     setSaving(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     const m = await loadSigners(true);
     setNames(m); setSaved(m);
     setMsg({ ok: true, text: "حُفظت الأسماء، وتظهر في التقارير المطبوعة من الآن." });

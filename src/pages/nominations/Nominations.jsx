@@ -18,6 +18,7 @@ import { Banner } from "../../components/HomeBanners.jsx";
 import { normalizeImage } from "../../lib/imageResize";
 import { BANNER_BUCKET, BANNER_W, BANNER_H, checkBanner } from "../../lib/banners.js";
 import { VOTE_MODE } from "../../lib/polls.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const day = (d) => (d ? fmtDate(d + "T12:00:00") : "—");
 const DEFAULT_CRITERIA = [
@@ -215,7 +216,7 @@ function CallEditor({ init, onClose }) {
       : supabase.from("nom_calls").insert({ ...row, owner_name: profile?.full_name ?? "" });
     const { error } = await q;
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     // الصورة القديمة تُحذف إن استُبدلت أو أُزيلت (init: ما كان محفوظًا)
     if (init.banner_image && init.banner_image !== banner_image && f.id) supabase.storage.from(BANNER_BUCKET).remove([init.banner_image]);
     onClose(true);

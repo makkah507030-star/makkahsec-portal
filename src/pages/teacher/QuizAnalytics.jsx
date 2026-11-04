@@ -11,6 +11,7 @@ import { academicYearLabel, TERM_LABEL } from "../studio/lib";
 import { quizReportPages } from "./QuizReportDoc.jsx";
 import { fmtDate } from "../../lib/dates";
 import QuizTeacherPicker, { useQuizTeacher } from "../../components/QuizTeacherPicker.jsx";
+import { Icon } from "../../components/Layout.jsx";
 
 /* =====================================================================
    تحليل النتائج — للمعلم وحده، لاختباراته المنفّذة عبر البوابة فقط
@@ -290,7 +291,7 @@ export default function QuizAnalytics() {
 
       {nothing ? (
         <div className="card px-6 py-12 text-center">
-          <p className="text-3xl">📊</p>
+          <p className="flex justify-center text-faint"><Icon name="chart" className="h-9 w-9" /></p>
           <p className="mt-3 text-sm font-semibold text-ink">{tq.viewOnly && !uid ? "اختر المعلم لعرض نتائج اختباراته" : "لا نتائج لتحليلها بعد"}</p>
           <p className="mt-1 text-xs leading-relaxed text-muted">
             يظهر التحليل حين تبدأ رصد درجات أحد اختباراتك في «التصحيح والدرجات»،
@@ -427,7 +428,7 @@ export function Report({ print = false, kpi, perQuiz, dist, perClass, items, one
         <StudentList list={top} classes={classes} tone="good" empty="—" />
       </Panel>
       <Panel title="يحتاجون دعمًا" sub={`متوسط أقل من ${SUPPORT_PCT}٪ — الأدنى أولًا`}>
-        <StudentList list={support} classes={classes} tone="low" empty={`لا طلاب دون ${SUPPORT_PCT}٪ — أحسنت 👏`} />
+        <StudentList list={support} classes={classes} tone="low" empty={`لا طلاب دون ${SUPPORT_PCT}٪ — أحسنت`} />
       </Panel>
     </div>
   );

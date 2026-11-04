@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtHijri, fmtGreg, fmtDateTime } from "../lib/dates";
 import { ADMIN_ROLE_LABEL } from "../lib/session.jsx";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    أعذار الغياب (supabase/absence_excuses_1..2.sql): يرفعها الطالب أو ولي أمره من
@@ -122,7 +123,7 @@ export function ExcuseForm({ studentId, days, initial, onDone, onCancel }) {
     // قبل تشغيل absence_excuses_3.sql: بلا عمود الحالة (والحالة في نص السبب)
     if (error && /case_key/.test(error.message)) ({ error } = await supabase.from("absence_excuses").insert({ ...row, case_key: undefined }));
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     onDone();
   };
 

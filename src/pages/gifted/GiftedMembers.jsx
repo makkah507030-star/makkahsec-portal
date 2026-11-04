@@ -10,6 +10,8 @@ import { printReport, escHtml as e, PRINCIPAL_NAME } from "../../lib/exportUtils
 import { logos } from "../student-affairs/shared.jsx";
 import Loader from "../../components/Loader.jsx";
 import { GIFTED_DOMAINS, SOURCE, domainOf } from "../../lib/gifted.js";
+import { friendlyError } from "../../lib/friendlyError.js";
+import MobileCards from "../../components/MobileCards.jsx";
 
 /* =====================================================================
    الطلاب الموهوبون (supabase/gifted_2.sql) من كل الصفوف: من اكتُشف في مقياس موهبة
@@ -73,7 +75,7 @@ export default function GiftedMembers() {
     setBusy(s.id);
     const { error } = await supabase.from("gifted_members").insert({ student_id: s.id, source: "school", added_by_name: profile?.full_name ?? null });
     setBusy(null);
-    if (error) setErr(error.message); else load();
+    if (error) setErr(friendlyError(error.message)); else load();
   };
   const remove = async (m) => {
     if (!(await confirmDanger({ title: `حذف ${m.full_name} من الطلاب الموهوبين`, impact: ["يُحذف من الكشف ويزول وسم «موهوب» من بطاقته.", "لا تتأثر متابعة مقياس موهبة."], confirmLabel: "حذف" }))) return;
@@ -85,14 +87,14 @@ export default function GiftedMembers() {
     setBusy(edit.id);
     const { error } = await supabase.from("gifted_members").update({ domains: edit.domains, student_mobile: mobile, note: edit.note.trim() || null }).eq("student_id", edit.id);
     setBusy(null);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setEdit(null); setErr(""); load();
   };
   const print = () => {
     const body = rows.map((m, i) => `<tr><td>${i + 1}</td><td>${e(m.full_name)}</td><td>${e(cls(m))}</td><td>${e(SOURCE[m.source])}</td>
       <td>${e((m.domains ?? []).map((d) => domainOf(d).t).join("، ") || "—")}</td><td>${e(localMobile(m.student_mobile) || "—")}</td><td>${e(localMobile(m.guardian) || "—")}</td></tr>`).join("");
     printReport({ title: "كشف الطلاب الموهوبين", sections: [{ title: "كشف الطلاب الموهوبين", subtitle: `عدد الطلاب: ${rows.length}`,
-      html: `<table><thead><tr><th>م</th><th>الطالب</th><th>الصف/الفصل</th><th>مصدر الاكتشاف</th><th>مجالات الموهبة</th><th>جوال الطالب</th><th>جوال ولي الأمر</th></tr></thead><tbody>${body}</tbody></table>` }],
+      html: `<MobileCards><table><thead><tr><th>م</th><th>الطالب</th><th>الصف/الفصل</th><th>مصدر الاكتشاف</th><th>مجالات الموهبة</th><th>جوال الطالب</th><th>جوال ولي الأمر</th></tr></thead><tbody>${body}</tbody></table></MobileCards>` }],
       ...logos(), signatures: [{ title: "مسؤول برنامج الموهوبين", name: (ROLE_PERSON_NAME.gifted_program ?? "").replace(/^الأستاذ:\s*/, "") }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }] });
   };
   const shown = rows.filter((m) => (dom === "all" || (m.domains ?? []).includes(dom)) && (!q.trim() || m.full_name.includes(q.trim())));

@@ -7,6 +7,7 @@ import { ReviewEditor } from "../../components/PerformanceReview.jsx";
 import Loader from "../../components/Loader.jsx";
 import { byName } from "../../lib/sortAr.js";
 import { useBackStep } from "../../lib/backStep.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    تقييم الأداء الوظيفي — لمدير المدرسة، وللدعم الفني للمتابعة الفنية:
@@ -15,7 +16,8 @@ import { useBackStep } from "../../lib/backStep.js";
    (دورات الاختبار غير المكتملة انتقلت إلى «متابعة دورات الاختبار»: admin/QuizCycles.jsx)
    ===================================================================== */
 
-export default function PerformanceAdmin() {
+/* embedded: داخل «شواهد أداء الموظفين» (StaffPerformance) تبويبًا للمعلمين؛ onOpen يُبلغها بفتح ملف معلم لتُخفي رأسها */
+export default function PerformanceAdmin({ embedded = false, onOpen }) {
   const { adminRoles } = useSession();
   const principal = adminRoles.includes("principal");
   const [fileTab, setFileTab] = useState("file");
@@ -25,8 +27,11 @@ export default function PerformanceAdmin() {
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState(null);
   const [err, setErr] = useState("");
+  const [leaders, setLeaders] = useState(() => new Set());   // رواد النشاط: ملفهم بنموذج «معلم مسند له نشاط طالبي»
 
   useEffect(() => {
+    supabase.from("admin_roles").select("user_id").eq("role_type", "activity_leader")
+      .then(({ data }) => setLeaders(new Set((data ?? []).map((r) => r.user_id))));
     (async () => {
       try {
         const [year, els, { data: ts }] = await Promise.all([
@@ -57,6 +62,7 @@ export default function PerformanceAdmin() {
   const shown = useMemo(() => (teachers ?? []).filter((t) => !q.trim() || t.full_name.includes(q.trim())), [teachers, q]);
 
   useBackStep(!!picked, () => { setPicked(null); setFileTab("file"); }, "قائمة المعلمين");
+  useEffect(() => { onOpen?.(!!picked); }, [picked, onOpen]);
 
   if (teachers === null) return <Loader />;
 
@@ -74,19 +80,22 @@ export default function PerformanceAdmin() {
         )}
         {principal && fileTab === "review"
           ? <ReviewEditor teacher={picked} />
-          : <PerformanceFile uid={picked.user_id} name={picked.full_name} readOnly />}
+          : <PerformanceFile uid={picked.user_id} name={picked.full_name} readOnly
+                             track={leaders.has(picked.user_id) ? "activity" : "teacher"} />}
       </div>
     );
   }
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-lg font-bold text-ink">تقييم الأداء الوظيفي</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
-          شواهد كل معلم لعناصر التقييم وتقييمه بمرحلتيه. الملف للاطلاع، والتقييم لمدير المدرسة وحده. لا يرى الملف إلا المعلم صاحبه ومدير المدرسة والدعم الفني.
-        </p>
-      </div>
+      {!embedded && (
+        <div>
+          <h1 className="text-lg font-bold text-ink">تقييم الأداء الوظيفي</h1>
+          <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
+            شواهد كل معلم لعناصر التقييم وتقييمه بمرحلتيه. الملف للاطلاع، والتقييم لمدير المدرسة وحده. لا يرى الملف إلا المعلم صاحبه ومدير المدرسة والدعم الفني.
+          </PageIntro>
+        </div>
+      )}
       {err && <p className="rounded-sm2 bg-danger-light px-3 py-2 text-sm text-danger">{err}</p>}
       <input className="field max-w-sm" placeholder="ابحث باسم المعلم…" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="card divide-y divide-line/60">

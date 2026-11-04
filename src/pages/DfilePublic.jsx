@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import DfileReport, { LabDfileReport } from "../components/dfile/DfileReport.jsx";
+import DfileReport, { LabDfileReport, StaffDfileReport } from "../components/dfile/DfileReport.jsx";
 import { experience, loadPublic, visitNote, visitPing, visitStart } from "../lib/dfile.js";
 import logoWhite from "../assets/icon-white.png";
 
@@ -11,6 +11,7 @@ import logoWhite from "../assets/icon-white.png";
    الزيارة ومدتها للمعلم، ويكتب ملاحظته للمعلم في سجل الزوار.
    ===================================================================== */
 
+const STAFF_WHO = { principal: "المدير", deputy: "الوكيل", counselor: "الموجه", science: "المحضر" };   // ملف الموظف (رمز MW-)
 const AUTO_START = 15;   // ثانية: تُسجَّل الزيارة دون اسم إن لم يكتب الزائر ولم يتخطَّ
 const PING = 20;         // ثانية بين كل تحديث لمدة الزيارة
 
@@ -61,19 +62,21 @@ export default function DfilePublic() {
     const d = res.data ?? {};
     const exp = experience(res.settings, d.year);
     const lab = res.kind === "lab";   // ملف محضر المعمل (رمز ML-)
+    const staff = res.kind === "staff";   // ملف الوكيل والموجه ومحضر العلوم (رمز MW-)
+    const who = lab ? "المحضر" : staff ? STAFF_WHO[d.track] ?? "الموظف" : "المعلم";
     return (
       <div className="dfile df-gate" dir="rtl" data-subject={res.settings?.color || "science"}>
         <div className="df-gate-in">
           <img src={logoWhite} alt="" className="df-gate-logo" />
-          <p className="df-gate-eye">مدرسة مكة الثانوية، {lab ? "ملف محضر المعمل الرقمي" : "ملف المعلم الرقمي"}{d.year ? `، ${d.year}هـ` : ""}</p>
+          <p className="df-gate-eye">مدرسة مكة الثانوية، {lab ? "ملف محضر المعمل الرقمي" : staff ? "الملف الرقمي" : "ملف المعلم الرقمي"}{d.year ? `، ${d.year}هـ` : ""}</p>
           {d.name && <h1 className="df-gate-name">أ. {d.name}</h1>}
           <p className="df-gate-role">
-            {[lab ? "محضر معمل الحاسب الآلي" : d.spec && `معلم ${d.spec}`, exp != null && `${exp} سنة خبرة`].filter(Boolean).join("، ")}
+            {[lab ? "محضر معمل الحاسب الآلي" : staff ? d.job : d.spec && `معلم ${d.spec}`, exp != null && `${exp} سنة خبرة`].filter(Boolean).join("، ")}
           </p>
 
           <form className="df-gate-card" onSubmit={(e) => { e.preventDefault(); enter(name, org); }}>
-            <h2>مرحبًا بك في ملف {lab ? "المحضر" : "المعلم"}</h2>
-            <p>اكتب اسمك وجهتك ليعرف {lab ? "المحضر" : "المعلم"} من اطّلع على ملفه، وتستطيع كتابة ملاحظتك له من الزر أسفل الصفحة. هذا اختياري.</p>
+            <h2>مرحبًا بك في ملف {who}</h2>
+            <p>اكتب اسمك وجهتك ليعرف {who} من اطّلع على ملفه، وتستطيع كتابة ملاحظتك له من الزر أسفل الصفحة. هذا اختياري.</p>
             <div className="df-gate-grid">
               <input placeholder="الاسم" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} aria-label="الاسم" />
               <input placeholder="الجهة، مثل مدير المدرسة" value={org} onChange={(e) => setOrg(e.target.value)} maxLength={80} aria-label="الجهة" />
@@ -92,8 +95,9 @@ export default function DfilePublic() {
     <div style={{ background: "var(--df-bg, #F3F6F4)" }}>
       {res.kind === "lab"
         ? <LabDfileReport data={res.data} settings={res.settings} code={res.settings.code} />
+        : res.kind === "staff" ? <StaffDfileReport data={res.data} settings={res.settings} code={res.settings.code} />
         : <DfileReport data={res.data} settings={res.settings} code={res.settings.code} />}
-      <VisitorNote who={res.kind === "lab" ? "المحضر" : "المعلم"} save={async (text) => {
+      <VisitorNote who={res.kind === "lab" ? "المحضر" : res.kind === "staff" ? STAFF_WHO[res.data?.track] ?? "الموظف" : "المعلم"} save={async (text) => {
         const id = await start(name, org);
         if (!id) throw new Error("تعذّر حفظ الملاحظة. أعد تحميل الصفحة ثم حاول مرة أخرى.");
         return visitNote(id, text);

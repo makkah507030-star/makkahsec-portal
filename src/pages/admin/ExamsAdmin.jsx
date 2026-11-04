@@ -7,6 +7,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    جداول الاختبارات.
@@ -109,7 +110,7 @@ export default function ExamsAdmin() {
   const saveTerm = async (fields) => {
     if (!term) return;
     const { error } = await supabase.from("exam_terms").update(fields).eq("id", term.id);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
 
     // تغيّر بداية الفترة: تواريخ الاختبارات المختارة تُحسب عند اختيار الخانة،
     // فتُعاد حسابها هنا من البداية الجديدة (يوم الأسبوع ورقم الأسبوع ثابتان)
@@ -143,7 +144,7 @@ export default function ExamsAdmin() {
     q = kind === "final" ? q.is("class_id", null) : q.not("class_id", "is", null);
     const { data, error } = await q.order("exam_date").order("period_no");
     setPrintingAll(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
 
     const rows = data ?? [];
     const sheets = kind === "final"

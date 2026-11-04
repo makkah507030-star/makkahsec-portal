@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useAchOpen, setAchOpen, ACH_GATE_ROLES } from "../../lib/achievement";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* زرّ الفتح/الإغلاق — لمن يملكه فقط، في أعلى صفحات المركز حين يكون مفتوحًا */
 export function AchGateSwitch() {
@@ -21,7 +22,7 @@ export function AchGateSwitch() {
   const flip = async () => {
     setBusy(true); setErr("");
     try { await setAchOpen(!open); setOpen(!open); }
-    catch (e) { setErr(e.message ?? String(e)); }
+    catch (e) { setErr(friendlyError(e)); }
     finally { setBusy(false); }
   };
   return (
@@ -50,7 +51,7 @@ export default function AchGate({ children }) {
   const openNow = async () => {
     setBusy(true); setErr("");
     try { await setAchOpen(true); setOpen(true); }
-    catch (e) { setErr(e.message ?? String(e)); }
+    catch (e) { setErr(friendlyError(e)); }
     finally { setBusy(false); }
   };
 

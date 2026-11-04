@@ -7,6 +7,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
+import MobileCards from "../../components/MobileCards.jsx";
 
 export default function StaffChildren() {
   const [list, setList] = useState(null);
@@ -65,7 +67,7 @@ export default function StaffChildren() {
     setBusy(true); setMsg(""); setErr("");
     const { data, error } = await supabase.rpc("staff_link_children", { p_guardian: guardian.id, p_staff: member.id });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setMsg(`رُبط الأبناء بحساب ${member.full_name} (عددهم: ${data?.children ?? "—"}). تظهر له «أبنائي» عند دخوله التالي.`);
     reset(); load();
   };
@@ -73,7 +75,7 @@ export default function StaffChildren() {
   const unlink = async (r) => {
     if (!window.confirm(`فك ربط أبناء «${r.staff_name}»؟ تختفي واجهة «أبنائي» من حسابه، ويعود سجل ولي الأمر بلا حساب.`)) return;
     const { error } = await supabase.rpc("staff_unlink_children", { p_guardian: r.guardian_id });
-    if (error) setErr(error.message); else { setMsg("فُك الربط."); load(); }
+    if (error) setErr(friendlyError(error.message)); else { setMsg("فُك الربط."); load(); }
   };
 
   const Pick = ({ items, label, onPick }) => items.length > 0 && (
@@ -137,7 +139,7 @@ export default function StaffChildren() {
       <div className="card overflow-x-auto">
         <p className="border-b border-line px-4 py-2.5 text-sm font-semibold text-ink">الموظفون المربوط بهم أبناؤهم</p>
         {!list ? <Loader compact /> : !list.length ? <p className="p-6 text-center text-sm text-muted">لا روابط بعد.</p> : (
-          <table className="w-full text-sm">
+          <MobileCards><table className="w-full text-sm">
             <thead><tr className="bg-canvas text-right text-xs text-muted"><th className="p-2">الموظف</th><th className="p-2">الأبناء</th><th className="p-2">جوال سجل ولي الأمر</th><th className="p-2" /></tr></thead>
             <tbody className="divide-y divide-line/50">
               {list.map((r) => (
@@ -149,7 +151,7 @@ export default function StaffChildren() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></MobileCards>
         )}
       </div>
     </div>

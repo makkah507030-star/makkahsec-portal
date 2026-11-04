@@ -9,6 +9,7 @@ import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import EvidenceTags from "./EvidenceTags.jsx";
 import { itemRates, correctness } from "../lib/quizItems.js";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    دورة الاختبار المتتابعة (التشخيصي واختبارا الفترتين) — مثل مراحل الأحداث:
@@ -137,7 +138,7 @@ export function PlanForm({ q, kind, plan, suggested, onSaved, onCancel, round = 
       ? await supabase.from("quiz_plans").update(row).eq("id", plan.id)
       : await supabase.from("quiz_plans").insert(row);
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     onSaved();
   };
 
@@ -310,7 +311,7 @@ function VerifyBox({ q, p, subs, vq, last, onPlan2, onChanged }) {
     setBusy(true); setErr("");
     const { error } = await supabase.rpc("quiz_plan_measure", { p_plan: p.id, p_skip: skip });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     onChanged();
   }, [p.id, onChanged]);
 

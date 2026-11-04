@@ -7,6 +7,8 @@ import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import QuizCardsCleanup from "../../components/QuizCardsCleanup.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 export default function MaintenanceAdmin() {
   const { profile, adminRoles } = useSession();
@@ -64,7 +66,7 @@ export default function MaintenanceAdmin() {
       })
       .eq("id", 1);
     setSaving(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: next ? "تم تفعيل وضع الصيانة — البوابة محجوبة الآن عن جميع المستخدمين ما عداك." : "تم إلغاء وضع الصيانة — البوابة متاحة الآن للجميع." });
     await load();
   };
@@ -81,7 +83,7 @@ export default function MaintenanceAdmin() {
       })
       .eq("id", 1);
     setSaving(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: "تم تحديث نص الرسالة." });
     await load();
   };
@@ -92,10 +94,10 @@ export default function MaintenanceAdmin() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">وضع الصيانة</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           عند التفعيل تُحجب البوابة عن جميع المستخدمين (بمن فيهم الإدارة) ويظهر لهم شاشة رسالة فقط،
           باستثناء حسابات الدعم الفني التي تبقى قادرة على الدخول لإلغاء الحجب.
-        </p>
+        </PageIntro>
       </div>
 
       <section className={`card p-5 ${row.is_enabled ? "border-absent/40 bg-absent/5" : ""}`}>

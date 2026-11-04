@@ -24,8 +24,11 @@ import GlobeLibrary from "../globe/GlobeLibrary.jsx";
 import GlobeBadges from "../globe/GlobeBadges.jsx";
 import GlobeSupervisor from "../globe/GlobeSupervisor.jsx";
 import GlobeChart from "../globe/GlobeChart.jsx";
+import ProgramCards from "../studio/ProgramCards.jsx";
 import { GLOBE_MEMBER_ROLES, memberRole, ALL_PROTOCOLS } from "../../lib/globe.js";
 import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    طلاب برنامج جلوب البيئي العالمي (supabase/globe_1.sql و globe_3.sql):
@@ -85,7 +88,7 @@ export default function GlobeTeam() {
   const [msg, setMsg] = useNotice(null);
   const [printing, setPrinting] = useState(false);
   const [mobEdit, setMobEdit] = useState(null); // { id, v } جوال الطالب قيد التعديل
-  const [tab, setTabRaw] = useState("students"); // students | plan | monitor | library | badges | supervisor | report | chart
+  const [tab, setTabRaw] = useState("students"); // students | plan | monitor | library | badges | supervisor | report | chart | cards
   const [prevTab, setPrevTab] = useState("plan");
   const setTab = (t) => { if (t === "report" || t === "chart") setPrevTab(tab); setTabRaw(t); };
   const [waText, setWaText] = useState("");     // نص جاهز يُفتح به الواتساب لكل طالب
@@ -136,7 +139,7 @@ export default function GlobeTeam() {
     const { error } = await supabase.from("globe_members")
       .insert({ student_id: s.id, added_by_name: profile?.full_name ?? null });
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `أُضيف ${s.full_name} إلى البرنامج.` });
     load();
   };
@@ -150,7 +153,7 @@ export default function GlobeTeam() {
     setBusy(m.id);
     const { error } = await supabase.from("globe_members").delete().eq("student_id", m.id);
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `حُذف ${m.full_name} من البرنامج.` });
     load();
   };
@@ -163,7 +166,7 @@ export default function GlobeTeam() {
     setBusy(m.id);
     const { error } = await supabase.from("globe_members").update({ student_mobile: mobile }).eq("student_id", m.id);
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMobEdit(null);
     setMsg({ ok: true, text: mobile ? `حُفظ جوال ${m.full_name}.` : `حُذف جوال ${m.full_name}.` });
     load();
@@ -202,6 +205,7 @@ export default function GlobeTeam() {
   if (!members) return <Loader />;
   if (tab === "report") return <GlobeReport leader={leaderName} members={members} onBack={() => setTab(prevTab)} />;
   if (tab === "chart") return <GlobeChart leader={leaderName} members={members} onBack={() => setTab(prevTab)} />;
+  if (tab === "cards") return <ProgramCards tplKey="globe-card" onBack={() => setTab("students")} backLabel="رجوع للطلاب" />;
 
   return (
     <div className="space-y-5">
@@ -209,10 +213,10 @@ export default function GlobeTeam() {
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#0B5394]/10 text-[#0B5394]"><GlobeMark className="h-7 w-7" /></span>
         <div>
           <h1 className="text-lg font-bold text-ink">طلاب برنامج جلوب</h1>
-          <p className="mt-1 text-sm leading-relaxed text-muted">
+          <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
             طلاب برنامج جلوب البيئي العالمي من كل الفصول: أضف الطالب من فصله، وحدد صفته في الفريق،
-            واحفظ جواله وتواصل معه بالواتساب. وبطاقاتهم الطولية في «استوديو البوابة» ← بطاقة طالب جلوب.
-          </p>
+            واحفظ جواله وتواصل معه بالواتساب، واطبع بطاقاتهم الطولية من «بطاقات الطلاب».
+          </PageIntro>
         </div>
       </div>
 
@@ -284,6 +288,7 @@ export default function GlobeTeam() {
               {members.length > 0 && (
                 <span className="ms-auto flex gap-3">
                   <button data-ro-ok onClick={() => setTab("chart")} className="text-xs font-semibold text-mint-deep">هيكل الفريق</button>
+                  <button data-ro-ok onClick={() => setTab("cards")} className="text-xs font-semibold text-mint-deep">بطاقات الطلاب</button>
                   <button data-ro-ok onClick={() => { setPrinting(true); setTimeout(() => printThen(() => setPrinting(false)), 150); }}
                           className="text-xs font-semibold text-mint-deep">طباعة الكشف</button>
                 </span>

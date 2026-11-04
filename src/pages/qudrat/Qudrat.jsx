@@ -15,6 +15,7 @@ import QudratMock from "./QudratMock.jsx";
 import QudratResults from "./QudratResults.jsx";
 import { AskButton, MyAsks } from "./AskTeacher.jsx";
 import SadeedGuide from "./SadeedGuide.jsx";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    مركز التدريب — القدرات العامة (الدفعة الأولى): التدريب الحر بالمهارة.
@@ -116,10 +117,10 @@ export default function Qudrat() {
         <div className="bg-gradient-to-l from-mint-tint to-paper px-5 py-5">
           <p className="text-xs font-semibold text-mint-deep">مركز التدريب</p>
           <h1 className="mt-1 text-xl font-bold text-ink">اختبار القدرات العامة</h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
+          <PageIntro className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
             تدرّب على كل مهارة بأسئلة من الاختبارات التجريبية الرسمية: تلميح واستراتيجية قبل الحل، وطريقة الحل بعده،
             ويُحفظ مستواك في كل مهارة لتعرف أين تركّز.
-          </p>
+          </PageIntro>
           <p className="mt-2 text-[11px] text-faint">{SOURCE}</p>
         </div>
         <div className="grid grid-cols-3 divide-x divide-x-reverse divide-line/60 border-t border-line/60 text-center">

@@ -9,6 +9,7 @@ import Loader from "./Loader.jsx";
 import ImprovePicker from "./ImprovePicker.jsx";
 import { confirmedCount } from "../lib/improve.js";
 import { Link } from "react-router-dom";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    تقييم الأداء الوظيفي بمرحلتيه (supabase/performance_review.sql):
@@ -145,7 +146,7 @@ export function ReviewEditor({ teacher }) {
       } catch { /* الإشعار تكميلي */ }
     }
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: send ? "أُرسل التقييم للمعلم." : "حُفظ التقييم مسودةً، ولا يراه المعلم قبل الإرسال." });
     load();
   };

@@ -24,6 +24,7 @@ import Scaled from "./Scaled.jsx";
 import { StudioAssets } from "./assets";
 import { loadSchoolStamp } from "./data";
 import { useBackStep } from "../../lib/backStep.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 /* =====================================================================
    استوديو البوابة — قوالب بهوية المدرسة يملؤها المستخدم ويطبعها أو يصدّرها.
@@ -174,10 +175,10 @@ export default function Studio() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">استوديو البوابة</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           قوالب بهوية المدرسة: اختر القالب، واملأ بياناته، واطبعه أو صدّره. التصميم ثابت،
           فيخرج كل ما يصدر من المدرسة بمظهر واحد — من غلاف السجل إلى التعميم ومنشور التواصل.
-        </p>
+        </PageIntro>
       </div>
 
       <div className="flex flex-wrap gap-1.5">

@@ -14,6 +14,8 @@ import {
 import Loader from "../components/Loader.jsx";
 import { supabase } from "../lib/supabase";
 import { excelBoard, printBoard, printGoal, printRecord } from "../lib/improvePrint.js";
+import { friendlyError } from "../lib/friendlyError.js";
+import PageIntro from "../components/PageIntro.jsx";
 
 /* =====================================================================
    خطط التطوير — حلقة التحسين (src/lib/improve.js):
@@ -63,7 +65,7 @@ function Goal({ g, uid, boss, onDone, focus }) {
     if (confirmText && !window.confirm(confirmText)) return;
     setBusy(true); setErr("");
     try { await act(g, action, opts); setOpen(null); onDone(); refreshNavBadges(true); }
-    catch (e) { setErr(e.message ?? "تعذّر الحفظ."); }
+    catch (e) { setErr(friendlyError(e.message) ?? "تعذّر الحفظ."); }
     setBusy(false);
   };
 
@@ -387,10 +389,10 @@ export default function Improve() {
       <div>
         <Link to={boss ? "/performance" : "/my-performance"} className="text-xs text-muted hover:underline">الأداء الوظيفي ← خطط التطوير</Link>
         <h1 className="mt-0.5 text-lg font-bold text-ink">خطط التطوير</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           توصية من زيارة الدعم أو تقييم الأداء ← خطة يكتبها المعلم ويعتمدها الزائر ← متابعة في موعدها ← أثر يُقاس آليًا
           من درجة البند نفسه في الزيارة التالية. وما لم يتحسّن تُفتح له دورة ثانية بدعم أعلى.
-        </p>
+        </PageIntro>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 

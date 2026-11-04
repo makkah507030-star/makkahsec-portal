@@ -19,6 +19,8 @@ import { ACH_ALL, useAchMember, stats, groupBy } from "../../lib/achievement";
 import Loader from "../../components/Loader.jsx";
 import { DistStrip, HBars, Stat, pctTxt } from "./Charts.jsx";
 import { NAT_TESTS, NAT_BANDS, natSeries, signed } from "../../lib/accNational.js";
+import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const TESTS = [
   { k: "qudrat", t: "القدرات العامة", d: "اختبار القدرات العامة (اللفظي والكمي)" },
@@ -82,10 +84,10 @@ export default function Qiyas() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">اختبارات قياس: القدرات والتحصيلي واختبار STEP</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           ترفع اللجنة تقرير المركز الرسمي متى وصل المدرسة، وللطالب اختياريًا إدخال نتيجته من حسابه («نتائج قياس») فتُضاف
           مباشرة. والتحليل بأعلى درجة لكل طالب، ومتوسط الفصول، ومن لم تُسجَّل نتيجته بعد.
-        </p>
+        </PageIntro>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
       {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.text}</p>}
@@ -136,7 +138,7 @@ function Pending({ rows, stu, canWrite, onChange, setMsg }) {
     setBusy(r.id);
     const { error } = await supabase.rpc("qiyas_verify", { p_id: r.id, p_ok: ok, p_reason: reason[r.id] ?? "" });
     setBusy(null);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     onChange();
   };
   return (

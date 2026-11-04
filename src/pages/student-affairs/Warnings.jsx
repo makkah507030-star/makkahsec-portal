@@ -19,6 +19,8 @@ import {
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import { referToGradeCounselor, classLabelOf } from "../../lib/deputyReferral.js";
+import { friendlyError } from "../../lib/friendlyError.js";
+import NameSearch, { matchQ } from "../../components/NameSearch.jsx";
 
 const STAGE = Object.fromEntries(WARNING_STAGES.map((s) => [s.key, s]));
 const WATCH_AT = 5;
@@ -33,6 +35,7 @@ export default function Warnings() {
   const [missing, setMissing] = useState(false);
   const [grade, setGrade] = useState(0);
   const [view, setView] = useState("due");
+  const [q, setQ] = useState("");                 // البحث بالاسم أو الفصل
   const [open, setOpen] = useState(null);
   const [msg, setMsg] = useNotice(null, "error");
   const [tick, setTick] = useState(0);
@@ -99,12 +102,13 @@ export default function Warnings() {
     }).sort((a, b) => b.days - a.days || a.full_name.localeCompare(b.full_name, "ar"));
   }, [marks, issued]);
 
-  const list = useMemo(() => students
+  const listAll = useMemo(() => students
     .filter((s) => !grade || s.grade === grade)
     .filter((s) => view === "due" ? s.due.length > 0
       : view === "issued" ? Object.keys(s.done).length > 0
       : s.days >= WATCH_AT),
   [students, grade, view]);
+  const list = useMemo(() => listAll.filter((s) => matchQ(q, s.full_name, s.class_no)), [listAll, q]);
 
   const counts = useMemo(() => ({
     due: students.filter((s) => s.due.length).length,
@@ -130,7 +134,7 @@ export default function Warnings() {
       await record(s, stage);
       await printMinutes(s, stage, { from, to, done: s.done, issuedOn: todayISO() });
       setTick((t) => t + 1);
-    } catch (e) { setMsg(e.message ?? String(e)); }
+    } catch (e) { setMsg(friendlyError(e)); }
   };
 
   // التحويل للموجه الطلابي لدراسة الحالة: إحالة لموجه صف الطالب، ومحضر الوكيل يُطبع فورًا
@@ -153,7 +157,7 @@ export default function Warnings() {
       });
       await printMinutesMany([{ s, stage: "counselor", from, to, done: s.done, issuedOn: todayISO(), counselor: counselor.name }]);
       setTick((t) => t + 1);
-    } catch (e) { setMsg(e.message ?? String(e)); }
+    } catch (e) { setMsg(friendlyError(e)); }
   };
 
   /* ---------- الطباعة الجماعية للطلاب المحددين ---------- */
@@ -243,6 +247,8 @@ export default function Warnings() {
         <Pill on={view === "watch"} onClick={() => setView("watch")}>كل من غاب {WATCH_AT} أيام فأكثر</Pill>
         <Pill on={view === "issued"} onClick={() => setView("issued")}>الصادرة</Pill>
       </div>
+      <NameSearch value={q} onChange={setQ} placeholder="ابحث باسم الطالب أو رقم الفصل…" count={list.length}
+                  total={listAll.length} />
 
       <ExportBar disabled={!list.length}
         onPrint={() => printReport({ title: "كشف إنذارات الغياب", subtitle: range(), headers, rows: table(), ...logos(), signatures: SIGNS, landscape: true })}
@@ -307,7 +313,7 @@ export default function Warnings() {
                   onPaper={async (stage, date, note) => {
                     setMsg(null);
                     try { await record(s, stage, { source: "paper", issuedOn: date, note }); setTick((t) => t + 1); }
-                    catch (e) { setMsg(e.message ?? String(e)); }
+                    catch (e) { setMsg(friendlyError(e)); }
                   }}
                   onReprint={(w) => printMinutes(s, w.stage, { from, to, done: s.done, issuedOn: w.issued_on })}
                   referral={refs[s.student_id]}

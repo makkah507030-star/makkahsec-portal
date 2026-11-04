@@ -9,6 +9,7 @@ import { sendPush } from "../../lib/pushSend.js";
 import { IDEA_STATUS, PROGRAMS, setupMsg } from "../../lib/culture.js";
 import Loader from "../../components/Loader.jsx";
 import { CardMaker } from "./CultCard.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* الأفكار والابتكار: يشارك كل موظف فكرته التطويرية ويرى ردّ الفريق عليها، والفريق يدرس الأفكار
    ويحدّث حالتها (قيد الدراسة، معتمدة، كُرّم صاحبها) ويرد، ويصل الرد صاحبها إشعارًا إن رد السفير. */
@@ -28,13 +29,13 @@ export default function CultIdeas({ me }) {
   const add = async () => {
     if (!x.title.trim()) { setMsg({ ok: false, text: "اكتب عنوان الفكرة." }); return; }
     const { error } = await supabase.from("cult_ideas").insert({ title: x.title.trim(), body: x.body.trim() || null, author_name: profile?.full_name ?? null });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setX({ title: "", body: "" }); setMsg({ ok: true, text: "وصلت فكرتك إلى فريق الثقافة المؤسسية، شكرًا لمبادرتك." }); load();
   };
   const remove = async (r) => {
     if (!(await confirmDanger({ title: `حذف الفكرة «${r.title}»`, impact: ["تُحذف الفكرة وردّ الفريق عليها."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("cult_ideas").delete().eq("id", r.id);
-    if (error) setMsg({ ok: false, text: error.message }); else load();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else load();
   };
   const list = me.member ? rows : rows.filter(mine);
 
@@ -87,7 +88,7 @@ function Review({ r, me, setMsg, onChange, onRemove }) {
   const save = async () => {
     setBusy(true);
     const { error } = await supabase.from("cult_ideas").update({ status, reply: reply.trim() || null, updated_at: new Date().toISOString() }).eq("id", r.id);
-    if (error) { setMsg({ ok: false, text: error.message }); setBusy(false); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); setBusy(false); return; }
     if (notify && me.amb && reply.trim()) {
       const { data: nid, error: e2 } = await supabase.rpc("cult_notify", { p_title: `فكرتك «${r.title}» · ${IDEA_STATUS[status].t}`, p_body: reply.trim(), p_user_ids: [r.author_id] });
       if (e2) setMsg({ ok: false, text: e2.message }); else sendPush(nid);

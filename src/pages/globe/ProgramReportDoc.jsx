@@ -29,7 +29,7 @@ function stats(cfg, programs) {
   };
 }
 
-const docH = (p) => 96 + (p.photoUrls?.length ? 150 : 0) + Math.ceil((p.outcome ?? "").length / 92) * 19;
+const docH = (p) => 96 + (p.photoUrls?.length ? 158 * Math.ceil(p.photoUrls.length / 5) : 0) + Math.ceil((p.outcome ?? "").length / 92) * 19;
 
 export function programPages({ cfg, programs, theme = "light", info, notes, sigs }) {
   const s = stats(cfg, programs);
@@ -116,7 +116,15 @@ export function programPages({ cfg, programs, theme = "light", info, notes, sigs
               ))}
             </div>
             {p.outcome && <p style={{ marginTop: 8, fontSize: 12, lineHeight: 1.75 }}><b style={{ color: "var(--mr-deep)" }}>الأثر والملاحظات: </b>{p.outcome}</p>}
-            {p.photoUrls?.length > 0 && (
+            {p.photoUrls?.length > 0 && cfg.photoAspect && (
+              /* صور بشكل البطاقة نفسها (cfg.photoAspect، 4:5 في الثقافة المؤسسية): مصغّرة كاملة دون قص */
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 9 }}>
+                {p.photoUrls.map((u) => <div key={u} style={{ height: 150, width: Math.round(150 * cfg.photoAspect), borderRadius: 8, overflow: "hidden",
+                  background: "#F4F7F5", border: "1px solid #DCE8E1", boxShadow: "0 3px 8px -6px rgba(0,0,0,.35)" }}>
+                  <img src={u} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} /></div>)}
+              </div>
+            )}
+            {p.photoUrls?.length > 0 && !cfg.photoAspect && (
               <div style={{ display: "grid", gridTemplateColumns: `repeat(${p.photoUrls.length}, 1fr)`, gap: 8, marginTop: 9 }}>
                 {p.photoUrls.map((u) => <div key={u} style={{ height: 140, borderRadius: 10, overflow: "hidden", background: "#EEF4F0" }}>
                   <img src={u} alt="" crossOrigin="anonymous" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} /></div>)}

@@ -83,6 +83,7 @@ const Reports = lazy(() => import("./pages/Reports.jsx"));
 const Feedback = lazy(() => import("./pages/Feedback.jsx"));
 const TicketDetail = lazy(() => import("./pages/TicketDetail.jsx"));
 const FeedbackAdmin = lazy(() => import("./pages/admin/FeedbackAdmin.jsx"));
+const MadrasatiRequests = lazy(() => import("./pages/admin/MadrasatiRequests.jsx"));
 const SupportReport = lazy(() => import("./pages/admin/SupportReport.jsx"));
 const LoginLogAdmin = lazy(() => import("./pages/admin/LoginLogAdmin.jsx"));
 const AnnouncementsAdmin = lazy(() => import("./pages/admin/AnnouncementsAdmin.jsx"));
@@ -99,6 +100,8 @@ const MyDocuments = lazy(() => import("./pages/MyDocuments.jsx"));
 const MyPerformance = lazy(() => import("./pages/performance/MyPerformance.jsx"));
 const MyDfile = lazy(() => import("./pages/performance/MyDfile.jsx"));
 const LabPerformance = lazy(() => import("./pages/performance/LabPerformance.jsx"));
+const ScienceLabs = lazy(() => import("./pages/science/ScienceLabs.jsx"));
+const StaffPerformance = lazy(() => import("./pages/performance/StaffPerformance.jsx"));
 const MyLabDfile = lazy(() => import("./pages/performance/MyLabDfile.jsx"));
 const OutreachAdmin = lazy(() => import("./pages/outreach/OutreachAdmin.jsx"));
 const OutreachView = lazy(() => import("./pages/outreach/OutreachView.jsx"));
@@ -106,7 +109,6 @@ const MyOutreach = lazy(() => import("./pages/outreach/MyOutreach.jsx"));
 const DfilePublic = lazy(() => import("./pages/DfilePublic.jsx"));
 const DfilesAdmin = lazy(() => import("./pages/admin/DfilesAdmin.jsx"));
 const DfileOpinions = lazy(() => import("./pages/admin/DfileOpinions.jsx"));
-const PerformanceAdmin = lazy(() => import("./pages/performance/PerformanceAdmin.jsx"));
 const Help = lazy(() => import("./pages/Help.jsx"));
 const Legal = lazy(() => import("./pages/Legal.jsx"));
 const Qudrat = lazy(() => import("./pages/qudrat/Qudrat.jsx"));
@@ -177,6 +179,7 @@ import StaffHeader from "./components/StaffHeader.jsx";
 import TeacherDayCard from "./components/TeacherDayCard.jsx";
 import Loader from "./components/Loader.jsx";
 import { isScoutRole } from "./lib/scoutLeader.js";
+import { perfTrackOf } from "./lib/performance";
 
 // الصفحات تُحمَّل عند فتحها فقط (lazy) لتخفيف التحميل الأول، وهذا ما يظهر لحظة جلبها
 const pageFallback = (
@@ -418,6 +421,8 @@ export default function App() {
               {can("banners") && <Route path="/banners-admin" element={<BannersAdmin />} />}
               {isTechSupport && <Route path="/maintenance" element={<MaintenanceAdmin />} />}
               {isTechSupport && <Route path="/site-metrics" element={<SiteMetrics />} />}
+              {/* طلبات منصة مدرستي من الطلاب (madrasati_requests.sql) — الدعم الفني */}
+              {isTechSupport && <Route path="/madrasati-requests" element={<MadrasatiRequests />} />}
               {isTechSupport && <Route path="/usage-report" element={<UsageReport />} />}
               {isTechSupport && <Route path="/audit-log" element={<AuditLog />} />}
               {/* النماذج والشهادات — ما يظهر لكل مستخدم تحدّده سياسات قاعدة البيانات */}
@@ -436,7 +441,9 @@ export default function App() {
                 <Route path="/forms-admin" element={<FormsAdmin />} />
               )}
               {/* ملفات الأداء الوظيفي للمعلمين — لمدير المدرسة، وللدعم الفني للمتابعة الفنية */}
-              {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<PerformanceAdmin />} />}
+              {(isTechSupport || adminRoles.includes("principal")) && <Route path="/performance" element={<Navigate to="/staff-performance" replace />} />}
+              {(isTechSupport || adminRoles.includes("principal")) && <Route path="/staff-performance" element={<StaffPerformance />} />}
+              {perfTrackOf(adminRoles) && <Route path="/my-staff-performance" element={<StaffPerformance mine />} />}
               {/* ملفات المعلمين الرقمية: إدارتها للدعم الفني، والاطلاع للمدير والوكيلين (teacher_dfile_9.sql) */}
               {(isTechSupport || adminRoles.some((r) => ["principal", "deputy_academic", "deputy_students"].includes(r))) &&
                 <Route path="/dfiles-admin" element={<DfilesAdmin manage={isTechSupport} />} />}
@@ -538,6 +545,12 @@ export default function App() {
           {/* ملف محضر المعمل الرقمي: للمحضر وحده (supabase/lab_dfile_*.sql) */}
           {effectiveRole === "admin" && adminRoles.includes("computer_lab") && (
             <Route path="/my-lab-dfile" element={<MyLabDfile />} />
+          )}
+          {/* مختبرات العلوم: لمحضريها والإدارة ولمعلمي المادة، والصفحة تتحقق من المختبرات (supabase/sci_lab_*.sql) */}
+          {(effectiveRole === "admin" || effectiveRole === "teacher") && <Route path="/science-labs" element={<ScienceLabs />} />}
+          {/* الملف الرقمي للوكيل والموجه الطلابي ومحضر مختبر العلوم (supabase/staff_dfile_*.sql) */}
+          {effectiveRole === "admin" && adminRoles.some((r) => /^(principal$|deputy_|counselor_\d|science_labs)/.test(r)) && (
+            <Route path="/my-staff-dfile" element={<MyLabDfile kind="staff" />} />
           )}
           {/* الأنشطة: حقيبة الانتظار والأنشطة الصفية وأدوات الصف — للمعلمين، ويديرها وكيل الشؤون التعليمية */}
           {effectiveRole === "teacher" ||

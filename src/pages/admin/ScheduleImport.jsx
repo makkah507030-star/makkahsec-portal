@@ -7,6 +7,8 @@ import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { noEra } from "../../lib/dates";
 import { countAr } from "../../lib/arabicCount.js";
+import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const BATCH = 400;
 
@@ -61,7 +63,7 @@ export default function ScheduleImport() {
       });
       setStage("preview");
     } catch (e) {
-      setError(e.message ?? String(e));
+      setError(friendlyError(e));
     }
   };
 
@@ -141,11 +143,11 @@ export default function ScheduleImport() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">استيراد الجدول الذكي</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           الملف يُقرأ داخل متصفحك ولا يُرفع لأي خادم. تُرسل السجلات النظيفة فقط بعد مراجعتك.
           يتحدَّث الجدول تلقائيًا في كل مواقعه (جداول المعلمين والطلاب والجدول المدرسي والعام)
           فور تنفيذ الاستيراد.
-        </p>
+        </PageIntro>
         <p className="mt-2 text-sm">
           السنة الدراسية:{" "}
           <span className="num font-semibold text-mint-deep">{yearLabel ?? "…"}</span>

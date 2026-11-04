@@ -7,6 +7,7 @@ import Loader from "./Loader.jsx";
 import { useNotice } from "../lib/useNotice.js";
 import OfflineQuizTools, { OfflineQuizIntro } from "./OfflineQuizTools.jsx";
 import { buildOfflinePackage } from "../lib/offlineQuizBuild.js";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    تبويب «اختبار إلكتروني» في محرّر الاختبار (للمعلم).
@@ -149,7 +150,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
       p_duration: Number(f.duration) || 20, p_show_result: !!f.show, p_renotify: renotify,
     });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     if (quiz.status === "draft") onStatus?.("ready", true);
     // دون إنترنت: أول نشر يجهّز الحزمة المشفّرة مباشرة
     if (offline && !online) {
@@ -198,7 +199,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
       p_duration: online.duration_min, p_show_result: online.show_result, p_renotify: true,
     });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setReopen(null); setRetake(new Set());
     setTick(Date.now());
     setMsg({ ok: true, text: `أُعيد فتح الاختبار حتى ${fmtDateTime(closes)}` +
@@ -211,7 +212,7 @@ export default function OnlineQuizPanel({ quiz, linked, questionsCount, marksOk,
     setBusy(true);
     const { error } = await supabase.rpc("close_online_quiz", { p_quiz: quiz.id });
     setBusy(false);
-    setMsg(error ? { ok: false, text: error.message } : { ok: true, text: "أُغلق الاختبار." });
+    setMsg(error ? { ok: false, text: friendlyError(error.message) } : { ok: true, text: "أُغلق الاختبار." });
     load();
   };
 

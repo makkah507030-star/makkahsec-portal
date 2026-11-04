@@ -14,6 +14,7 @@ import { parseNoticeFile, noticeKey, noticeRow, noticeChanged } from "../../lib/
 import { confirmDanger } from "../../lib/danger";
 import { countAr } from "../../lib/arabicCount.js";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const STATUS = {
   new: { t: "جديد", c: "bg-mint-tint text-mint-deep" },
@@ -89,7 +90,7 @@ export default function PeriodNoticesAdmin({ year, students }) {
       setPreview(out);
       setFilter("todo");
       if (skipped) setMsg({ ok: false, text: `تُركت ${countAr(skipped, "sheet")} ليست إشعار فترة.` });
-    } catch (e) { setMsg({ ok: false, text: e.message ?? String(e) }); }
+    } catch (e) { setMsg({ ok: false, text: friendlyError(e) }); }
     setParsing(false);
   };
 

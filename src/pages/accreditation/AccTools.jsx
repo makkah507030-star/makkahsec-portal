@@ -5,6 +5,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { countAr } from "../../lib/arabicCount.js";
 import { TOOLS, sampleMin } from "../../lib/accreditation.js";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    أدوات التقويم (supabase/acc_3.sql): الأدوات نفسها تُطبَّق في منصة تميز، وهنا تنظيمها فقط:
@@ -33,7 +34,7 @@ export default function AccTools({ me, year }) {
     setRows((r) => ({ ...r, [tool]: next }));
     const { error } = await supabase.from("acc_tools").upsert({ academic_year: year, tool, owner_name: next.owner_name ?? null, due: next.due || null,
       status: next.status, target: next.target === "" || next.target == null ? null : Number(next.target), done: next.done === "" || next.done == null ? null : Number(next.done), notes: next.notes ?? null });
-    if (error) { setMsg({ ok: false, text: error.message }); load(); }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); load(); }
   };
   const closed = TOOLS.filter((t) => rows[t.key]?.status === "done").length;
 

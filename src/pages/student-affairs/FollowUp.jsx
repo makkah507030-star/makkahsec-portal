@@ -8,6 +8,7 @@ import {
   SIGNS, logos, Pill, DateInput, ExportBar, GradePills, Note, Loading, Empty, useDay,
   useFingerprint, FingerprintLockedNote,
 } from "./shared.jsx";
+import NameSearch, { matchQ } from "../../components/NameSearch.jsx";
 
 export default function FollowUp() {
   const [mode, setMode] = useState("conflict");
@@ -53,6 +54,7 @@ function DayList({ mode }) {
   const cfg = MODES[mode];
   const [date, setDate] = useState(todayISO());
   const [grade, setGrade] = useState(0);
+  const [q, setQ] = useState("");
   const { live, error } = useDay(date);
 
   const list = useMemo(() => (live?.rows ?? [])
@@ -61,6 +63,7 @@ function DayList({ mode }) {
     .sort((a, b) => a.grade - b.grade || a.class_no - b.class_no || a.full_name.localeCompare(b.full_name, "ar")),
   [live, grade, cfg]);
 
+  const shown = list.filter((r) => matchQ(q, r.full_name, r.class_no));
   const headers = mode === "conflict"
     ? ["م", "اسم الطالب", "الصف", "الفصل", "وقت البصمة"]
     : ["م", "اسم الطالب", "الصف", "الفصل"];
@@ -77,11 +80,12 @@ function DayList({ mode }) {
         onPrint={() => printReport({ title: cfg.title, subtitle: fmtDate(date), headers, rows: table(), ...logos(), signatures: SIGNS })}
         onExcel={() => exportStyledExcel({ title: cfg.title, subtitle: fmtDate(date), headers, rows: table(), fileName: `${cfg.file}-${date}`, sheetName: "المتابعة", signatures: SIGNS })} />
       {error && <Empty>تعذّر التحميل: {error}</Empty>}
-      {!live && !error ? <Loading /> : live && list.length === 0 ? (
+      <NameSearch value={q} onChange={setQ} placeholder="ابحث باسم الطالب أو رقم الفصل…" count={shown.length} total={list.length} />
+      {!live && !error ? <Loading /> : live && shown.length === 0 ? (
         <Empty tone="good">{cfg.empty}</Empty>
       ) : live && (
         <div className="card divide-y divide-line overflow-hidden">
-          {list.map((r) => (
+          {shown.map((r) => (
             <div key={r.student_id} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-ink">{r.full_name}</p>

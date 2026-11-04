@@ -3,11 +3,12 @@
 @tailwind utilities;
 
 /* ——— الألوان: قنوات RGB تقرؤها tailwind.config.js ———
+   النص الخافت (faint) بتباين 4.5:1 على الأقل مع البطاقة البيضاء (معيار WCAG AA)، في الفاتح والرسمي والداكن.
    الفاتح هو الأصل. الداكن (html.dark، للطلاب حاليًا، src/lib/theme.js) على الشاشة وحدها،
    فالطباعة تبقى فاتحة كما هي: الشهادات والتقارير والنماذج.
    والورقة المعروضة على الشاشة (.sheet: النماذج والشهادات والتقارير) تبقى فاتحة في الداكن أيضًا. */
 :root, .dark .sheet {
-  --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 169 169 169;
+  --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 116 116 116;
   --c-line: 195 195 195;    --c-canvas: 244 244 244;  --c-paper: 255 255 255;
   --c-mint: 137 215 173;    --c-mint-hover: 106 167 134; --c-mint-deep: 62 99 80;
   --c-mint-light: 204 242 219; --c-mint-tint: 237 250 242;
@@ -22,11 +23,11 @@
    ألوانها الأصلية، والداكن بعده فيغلبه. */
 @media screen {
   html:not(.classic) {
-    --c-ink: 28 51 40;        --c-muted: 94 114 104;    --c-faint: 150 172 160;
+    --c-ink: 28 51 40;        --c-muted: 94 114 104;    --c-faint: 103 123 113;
     --c-line: 213 231 220;    --c-canvas: 242 250 245;  --c-mint-tint: 232 247 238;
   }
   html:not(.classic) .sheet {
-    --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 169 169 169;
+    --c-ink: 16 16 16;        --c-muted: 107 107 107;   --c-faint: 116 116 116;
     --c-line: 195 195 195;    --c-canvas: 244 244 244;  --c-mint-tint: 237 250 242;
   }
   html:not(.classic):not(.dark) .brand-rule { border-bottom: 2px solid #B8912F; }
@@ -35,7 +36,7 @@
 @media screen {
   html.dark {
     color-scheme: dark;
-    --c-ink: 233 238 235;     --c-muted: 163 173 167;   --c-faint: 115 126 120;
+    --c-ink: 233 238 235;     --c-muted: 163 173 167;   --c-faint: 138 149 143;
     --c-line: 58 67 62;       --c-canvas: 17 21 19;     --c-paper: 27 32 29;
     --c-mint-deep: 74 131 102; --c-mint-light: 44 74 58; --c-mint-tint: 29 45 37;
     --c-danger-light: 58 32 32; --c-warning-light: 56 48 28;
@@ -151,3 +152,20 @@
 /* وضع «عرض فقط» (components/ReadOnlyZone.jsx): أدوات التعديل باهتة ومعطّلة، والتنقل والعرض كما هما */
 .ro-zone :is(button, select, input, textarea):not([data-ro-ok]) { opacity: .45; cursor: not-allowed; }
 .ro-zone [data-ro-ok] :is(button, select, input, textarea) { opacity: 1; cursor: auto; }
+
+/* ——— الجدول بطاقات على الجوال (components/MobileCards.jsx) ——— */
+@media screen and (max-width: 639px) {
+  .m-cards table, .m-cards tbody, .m-cards tr, .m-cards td { display: block; width: 100%; }
+  .m-cards table { border: 0 !important; min-width: 0 !important; }
+  .m-cards thead { display: none; }
+  .m-cards tbody tr { margin-bottom: 8px; padding: 8px 12px; border: 1px solid rgb(var(--c-line)); border-radius: 12px;
+                      background: rgb(var(--c-paper)) !important; }
+  .m-cards tbody td { display: flex; align-items: baseline; gap: 10px; padding: 3px 0 !important; border: 0 !important;
+                      text-align: start !important; white-space: normal !important; background: transparent !important;
+                      direction: rtl; unicode-bidi: normal; }
+  .m-cards tbody td[data-l]::before { content: attr(data-l); flex: none; width: 7.5rem; font-size: 11.5px; font-weight: 400;
+                                      color: rgb(var(--c-muted)); }
+  .m-cards tbody td[data-t] { padding-bottom: 6px !important; font-size: 14.5px; font-weight: 700; color: rgb(var(--c-ink)); }
+  .m-cards tbody td[data-seq], .m-cards tbody td:empty { display: none; }
+  .m-cards tbody td[colspan] { justify-content: center; }
+}

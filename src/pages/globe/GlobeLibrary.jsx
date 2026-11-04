@@ -7,6 +7,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import Loader from "../../components/Loader.jsx";
 import { GLOBE_BUCKET, YT_ID } from "../../lib/globe.js";
 import { pill, uploadDoc, signedUrl, MAX_DOC_MB } from "./shared.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    مكتبة برنامج جلوب (supabase/globe_3.sql ← globe_library) بقسمين:
@@ -56,7 +57,7 @@ export default function GlobeLibrary({ me }) {
   const remove = async (r) => {
     if (!(await confirmDanger({ title: `حذف «${r.title}» من المكتبة`, impact: [r.kind === "doc" ? "يُحذف الملف المرفوع نهائيًا." : "يُحذف الرابط من المكتبة فقط، ويبقى المقطع في يوتيوب."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("globe_library").delete().eq("id", r.id);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     if (r.path) await supabase.storage.from(GLOBE_BUCKET).remove([r.path]);
     load();
   };

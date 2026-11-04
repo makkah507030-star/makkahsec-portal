@@ -7,6 +7,7 @@ import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { noEra, fmtDateTime } from "../../lib/dates";
 import { GRADE_NAMES } from "../../lib/schoolTime";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const BATCH = 400;
 const STATUS_AR = { transferred: "منقول", withdrawn: "منقطع" };
@@ -71,7 +72,7 @@ export default function Import() {
       });
       setStage("preview");
     } catch (e) {
-      setError(e.message ?? String(e));
+      setError(friendlyError(e));
     }
   };
 

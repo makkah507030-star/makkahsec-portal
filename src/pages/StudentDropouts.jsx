@@ -17,6 +17,8 @@ import moeLogo from "../assets/moe-logo.png";
 import logoIcon from "../assets/icon-mint.png";
 import { signatureByName, useSignatureByName } from "../lib/userSignatures.js";
 import { STUDENT_DEPUTY_NAME } from "../lib/signers.js";
+import { friendlyError } from "../lib/friendlyError.js";
+import { Icon } from "../components/Layout.jsx";
 
 /* =====================================================================
    الطلاب المنقطعون (supabase/student_dropouts_1.sql و _2.sql):
@@ -30,13 +32,13 @@ const MANAGERS = ["principal", "deputy_students", "tech_support"];
 
 // البطاقات الجاهزة: تختار السبب وتملأ الملاحظة بصيغة قابلة للتعديل
 const REASONS = {
-  absent5: { label: "منقطع أكثر من 5 أيام متصلة", icon: "⏳",
+  absent5: { label: "منقطع أكثر من 5 أيام متصلة", icon: "hourglass",
     text: "انقطع الطالب عن الدراسة أكثر من خمسة أيام متصلة دون عذر، ويُحال لوكيل شؤون الطلاب لاستكمال الإجراء." },
-  travel: { label: "سافر للخارج", icon: "✈️",
+  travel: { label: "سافر للخارج", icon: "plane",
     text: "سافر الطالب خارج المملكة وانقطع عن الدراسة، ويُحال لوكيل شؤون الطلاب لطي قيده وإلغاء تفعيله من السجلات." },
-  transfer: { label: "انتقل لمدرسة أخرى", icon: "🏫",
+  transfer: { label: "انتقل لمدرسة أخرى", icon: "home",
     text: "أفاد الطالب أو ولي أمره بانتقاله لمدرسة أخرى ولم يعد يحضر، ويُحال لوكيل شؤون الطلاب لاستكمال الإجراء." },
-  other: { label: "سبب آخر", icon: "📝", text: "" },
+  other: { label: "سبب آخر", icon: "edit", text: "" },
 };
 
 // عبارة رد البلاغ الموحّدة: بطاقة جاهزة للوكيل حين يرد البلاغ لتوحيد الإجراء
@@ -169,7 +171,7 @@ function ReportForm({ isManager, onDone }) {
   const pickClass = async (c) => {
     setCls(c); setStudent(null); setStudents(null);
     const { data, error } = await supabase.rpc("dropout_class_students", { p_class: c.class_id });
-    if (error) { setMsg({ ok: false, text: error.message }); setStudents([]); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); setStudents([]); return; }
     // الأطول غيابًا أولًا، ثم أبجديًا
     setStudents((data ?? []).sort((a, b) => (b.absent_days ?? 0) - (a.absent_days ?? 0) || byName()(a, b)));
   };
@@ -182,7 +184,7 @@ function ReportForm({ isManager, onDone }) {
     setBusy(true);
     const { error } = await supabase.rpc("dropout_report", { p_student: student.student_id, p_reason: reason, p_note: note });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `أُرسل البلاغ عن ${student.full_name} لوكيل شؤون الطلاب.` });
     setStudent(null); setReason(""); setNote("");
     onDone?.();
@@ -251,7 +253,7 @@ function ReportForm({ isManager, onDone }) {
                   className={`rounded-card border p-3 text-right transition-colors ${
                     reason === k ? "border-mint-deep bg-mint-tint" : "border-line bg-paper hover:bg-canvas"}`}>
                   <p className={`text-sm font-bold ${reason === k ? "text-mint-deep" : "text-ink"}`}>
-                    <span className="ml-1.5">{r.icon}</span>{r.label}
+                    <span className="inline-flex items-center gap-1.5"><Icon name={r.icon} className="h-4 w-4" />{r.label}</span>
                   </p>
                   {r.text && <p className="mt-1 text-[11.5px] leading-relaxed text-muted">{r.text}</p>}
                 </button>
@@ -341,7 +343,7 @@ function Card({ r, manage, onChange, onPrint }) {
       ? await supabase.rpc("dropout_return", { p_id: r.id, p_note: note })
       : await supabase.rpc("dropout_decide", { p_id: r.id, p_action: act, p_note: note });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: act === "withdraw" ? "طُوي قيد الطالب وأُلغي تفعيله." : act === "return" ? "أُعيد الطالب للدراسة وعاد لكشف فصله." : "رُدّ البلاغ." });
     setAct(null); setNote("");
     onChange?.();
@@ -364,7 +366,7 @@ function Card({ r, manage, onChange, onPrint }) {
         <button onClick={onPrint} className="ms-auto text-xs font-semibold text-mint-deep">طباعة البطاقة</button>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="chip bg-mint-tint text-mint-deep">{reason.icon} {reason.label}</span>
+        <span className="chip gap-1 bg-mint-tint text-mint-deep"><Icon name={reason.icon} className="h-3.5 w-3.5" />{reason.label}</span>
         {r.absent_days > 0 && <span className="chip bg-absent/10 text-absent">غياب متصل عند البلاغ {countAr(r.absent_days, "day")}</span>}
       </div>
       {r.note && <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink">{r.note}</p>}

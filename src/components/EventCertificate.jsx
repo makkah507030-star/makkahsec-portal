@@ -202,6 +202,10 @@ export default function EventCertificate({ event, participant, sigUrl, stampUrl,
           <p style={{ marginTop: "3mm", fontSize: "26pt", fontWeight: 700, lineHeight: 1.3 }}>
             {participant?.student_name ?? ""}
           </p>
+          {/* صفة المعلم أو الإداري تحت اسمه */}
+          {participant?.staff && participant?.class_label && (
+            <p style={{ marginTop: "1mm", fontSize: "13pt", fontWeight: 500, color: th.accent }}>{participant.class_label}</p>
+          )}
           {body && (
             <p style={{ marginTop: "4mm", fontSize: "13pt", lineHeight: 1.95, maxWidth: "205mm", whiteSpace: "pre-line" }}>
               {withDates(body)}

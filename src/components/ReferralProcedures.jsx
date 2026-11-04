@@ -8,6 +8,8 @@ import { degreeName } from "../lib/behavior";
 import {
   ACADEMIC_ITEMS, BEHAVIOR_STEPS, DIRECT_DEGREE, academicItemDone,
 } from "../lib/referrals";
+import { friendlyError } from "../lib/friendlyError.js";
+import { Icon } from "./Layout.jsx";
 
 /* =====================================================================
    إجراءات المعلم قبل الإحالة — مكوّنات صفحة الإحالة:
@@ -299,7 +301,7 @@ export function AcademicDocs({ uid, student, docs, onChange }) {
       const d = await portalData(uid, student.id);
       setData(d);
       add("guidance", `إشعار لولي الأمر عبر البوابة (${fmtDate(todayISO())})`);
-    } catch (e) { setErr(e.message); }
+    } catch (e) { setErr(friendlyError(e.message)); }
     setBusy("");
   };
 
@@ -361,7 +363,7 @@ export function AcademicDocs({ uid, student, docs, onChange }) {
                 <ul className="mt-1 space-y-0.5 text-[11.5px] text-muted">
                   {files.map((f) => (
                     <li key={f.path} className="flex items-center gap-2">
-                      <span className="truncate">📎 {f.name}</span>
+                      <span className="flex min-w-0 items-center gap-1"><Icon name="clip" className="h-3.5 w-3.5" /><span className="truncate">{f.name}</span></span>
                       <button type="button" className="text-absent underline"
                               onClick={() => onChange({ ...docs, files: files.filter((x) => x.path !== f.path) })}>
                         إزالة
@@ -411,7 +413,7 @@ export function DocsView({ r }) {
             <li className="flex flex-wrap gap-2">
               {d.files.map((f) => (
                 <button key={f.path} type="button" onClick={() => open(f.path)} className="text-mint-deep underline">
-                  📎 {f.name}
+                  <span className="inline-flex items-center gap-1"><Icon name="clip" className="h-3.5 w-3.5" />{f.name}</span>
                 </button>
               ))}
             </li>

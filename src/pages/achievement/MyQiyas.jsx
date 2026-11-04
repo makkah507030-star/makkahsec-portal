@@ -10,6 +10,7 @@ import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { fmtDate } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const TESTS = [
   { k: "qudrat", t: "القدرات العامة" },
@@ -54,7 +55,7 @@ export default function MyQiyas() {
     const { error } = await supabase.rpc("qiyas_submit", { p_test: form.test, p_attempt: form.attempt, p_score: score,
       p_taken_on: form.taken_on || null, p_proof: path });
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setForm(null); setMsg({ ok: true, text: "أُضيفت نتيجتك." }); load();
   };
 

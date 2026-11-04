@@ -7,6 +7,7 @@ import Loader from "../../components/Loader.jsx";
 import { CMP, SECS, SKILLS, loadBank } from "../../qudrat-content/index.js";
 import { LETTERS, Stem } from "./shared.jsx";
 import { VoicePlayer, VoiceRecorder, uploadVoice } from "../../components/Voice.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    أسئلة الطلاب في مركز التدريب (القدرات): يرى المعلم ما وصله من طلاب فصوله
@@ -84,7 +85,7 @@ function AskCard({ r, st, teacher, q, onReplied }) {
       const { error } = await supabase.rpc("qudrat_reply", { p_id: r.id, p_reply: text, p_audio: audio, p_secs: voice?.secs ?? null });
       if (error) throw new Error(/qudrat_reply/.test(error.message) && voice ? "الرد الصوتي غير مفعّل بعد: يلزم تشغيل ملف supabase/qudrat_5.sql." : error.message);
       onReplied({ reply: text.trim(), reply_audio: audio, reply_secs: voice?.secs ?? null });
-    } catch (e) { setErr(e.message); }
+    } catch (e) { setErr(friendlyError(e.message)); }
     setBusy(false);
   };
   const opts = q ? (q.cmp ? CMP : q.o) : null;

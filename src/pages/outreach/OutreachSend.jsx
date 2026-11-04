@@ -12,6 +12,7 @@ import { GRADE_NAMES } from "../../lib/schoolTime";
 import StudentPicker from "../../components/StudentPicker.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 import { KIND, itemLink } from "../../lib/outreach.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const Seg = ({ value, onChange, opts }) => (
   <div className="flex flex-wrap gap-1.5">{opts.map(([k, t]) => (
@@ -66,7 +67,7 @@ export default function OutreachSend({ item, onSent }) {
     const { data, error } = await supabase.rpc("outreach_send", { p_id: item.id, p_students: students, p_grades: grades, p_classes: classes,
       p_student_ids: picked.map((s) => s.student_id), p_guardians: gd, p_staff: staff, p_roles: [] });
     setBusy(false);
-    if (error) { notify({ ok: false, text: error.message }); return; }
+    if (error) { notify({ ok: false, text: friendlyError(error.message) }); return; }
     const audience = { students: st === "all" ? "كل الطلاب" : st === "grades" ? grades.map((g) => GRADE_NAMES[g]).join(" و") + (classes.length ? ` (فصول ${classes.join("، ")})` : "") : null,
       picked: picked.length || null, guardians: gd === "none" ? null : gd === "all" ? "كل أولياء الأمور" : "أولياء أمور الصفوف المختارة",
       staff: { none: null, all: "كل الموظفين", teachers: "المعلمون", admins: "الإداريون" }[staff] };

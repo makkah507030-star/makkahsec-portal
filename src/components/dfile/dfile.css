@@ -118,6 +118,8 @@
 .dfile .df-tiles.df-t2 b { font-size: 24px; }
 .dfile .df-tiles b small { font-size: 12px; font-weight: 600; }
 .dfile .df-tiles b { font-size: 18px; color: var(--deep); line-height: 1.2; }
+.dfile .df-tiles.df-twrap { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dfile .df-tiles.df-twrap span { white-space: normal; text-align: center; line-height: 1.5; padding: 8px 6px; }
 .dfile .df-grp { font-size: 12.5px; font-weight: 700; color: var(--deep); margin-top: 2px; }
 .dfile .df-keys { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); }
 .dfile .df-keys span { display: inline-flex; align-items: center; gap: 5px; }

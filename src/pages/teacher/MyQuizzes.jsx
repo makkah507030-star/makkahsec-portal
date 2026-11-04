@@ -23,6 +23,7 @@ import { symbolLibraryFor } from "../../lib/symbolLibraries.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
 import { useBackStep } from "../../lib/backStep.js";
 import QuizTeacherPicker, { useQuizTeacher } from "../../components/QuizTeacherPicker.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    اختباراتي — اختبارات المعلم.
@@ -744,7 +745,7 @@ function QuizEditor({ quiz, uid, onBack, viewOnly = false, teacherName }) {
       `حذف «${q.title}» نهائيًا؟\n\nسيُحذف معه ${questions?.length ?? 0} سؤالًا وكل درجات الطلاب.`)) return;
     await removeQuizCards(q.id);
     const { error } = await supabase.from("quizzes").delete().eq("id", q.id);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     if (q.listening_audio) supabase.storage.from("quiz-audio").remove([q.listening_audio]);
     onBack();
   };
@@ -1209,7 +1210,7 @@ function QuizDetails({ q, onSaved }) {
     setBusy(true);
     const { error } = await supabase.from("quizzes").update(fields).eq("id", q.id);
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setEditing(false);
     onSaved(fields);
   };

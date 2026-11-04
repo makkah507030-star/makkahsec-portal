@@ -5,6 +5,7 @@ import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { byName } from "../../lib/sortAr.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const CORE_TABS = [
   { key: "attendance", label: "الحضور والغياب اليومي" },
@@ -104,10 +105,10 @@ export default function TeacherPermissions() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">صلاحيات المعلمين</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           تحكّم فردي بما يظهر لكل معلم من تبويبات شريطه. افتراضيًا كل التبويبات
           ظاهرة للجميع — إلغِ التحديد لإخفاء تبويب عن معلم بعينه.
-        </p>
+        </PageIntro>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr] lg:items-start">

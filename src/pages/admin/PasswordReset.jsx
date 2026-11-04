@@ -10,6 +10,8 @@ import moeLogo from "../../assets/moe-logo.png";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { byName } from "../../lib/sortAr.js";
+import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const ROLES = ["admin", "teacher", "student", "guardian"];
 
@@ -41,7 +43,7 @@ export default function PasswordReset() {
 
     setSearching(false);
     if (error) {
-      setMsg({ ok: false, text: error.message });
+      setMsg({ ok: false, text: friendlyError(error.message) });
       return;
     }
     setResults((data ?? []).sort(byName((u) => u.full_name ?? u.username)));
@@ -65,7 +67,7 @@ export default function PasswordReset() {
       setConfirming(null);
       await search();
     } catch (e) {
-      setMsg({ ok: false, text: e.message ?? String(e) });
+      setMsg({ ok: false, text: friendlyError(e) });
     } finally {
       setBusy(false);
     }
@@ -75,11 +77,11 @@ export default function PasswordReset() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">استعادة كلمة المرور</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           تُعاد كلمة المرور إلى <b className="text-ink">كلمة مؤقتة عشوائية</b> تظهر هنا مرة واحدة لتسلّمها لصاحبها،
           ويُطلب منه تغييرها بكلمة من اختياره عند أول دخول. <b className="text-ink">الطالب تُسلَّم له حضوريًا فقط</b>،
           والمعلم وولي الأمر بعد التحقق من هويتهما بالتواصل معهما.
-        </p>
+        </PageIntro>
       </div>
 
       <UnactivatedBoxes />
@@ -203,10 +205,10 @@ export default function PasswordReset() {
 /* ==================== الحسابات غير المفعَّلة ==================== */
 
 const ROLE_META = {
-  admin:    { label: "الإدارة",        icon: "🛡" },
-  teacher:  { label: "المعلمون",       icon: "📘" },
-  student:  { label: "الطلاب",         icon: "🎓" },
-  guardian: { label: "أولياء الأمور",  icon: "👪" },
+  admin:    { label: "الإدارة",        icon: "shield" },
+  teacher:  { label: "المعلمون",       icon: "book" },
+  student:  { label: "الطلاب",         icon: "idcard" },
+  guardian: { label: "أولياء الأمور",  icon: "users" },
 };
 
 function UnactivatedBoxes() {

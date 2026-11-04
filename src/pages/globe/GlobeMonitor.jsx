@@ -7,6 +7,7 @@ import { confirmDanger } from "../../lib/danger";
 import Loader from "../../components/Loader.jsx";
 import { GLOBE_SPHERES, GLOBE_PROTOCOLS, GLOBE_BUCKET, sphereOf } from "../../lib/globe.js";
 import { MAX_PHOTOS, pill, setupErr, activeTerm, uploadPhotos, useSignedPhotos, Thumbs, Stats } from "./shared.jsx";
+import { Icon } from "../../components/Layout.jsx";
 
 /* =====================================================================
    خطة الرصد البيئي (supabase/globe_2.sql): جلسات الرصد بالبروتوكول والموعد
@@ -138,7 +139,7 @@ export default function GlobeMonitor({ me, members, onReport }) {
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 
       <section className="card overflow-hidden">
-        <div className="flex flex-wrap items-center gap-3 bg-gradient-to-l from-[#E3F1F7] to-paper px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3 bg-gradient-to-l from-[#E3F1F7] to-paper dark:from-[#16303B] px-4 py-3">
           <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
             <p className="text-base font-bold text-ink">خطة الرصد البيئي</p>
             <p className="text-xs text-muted">جلسات الرصد بمواعيدها وطلابها، والتذكير بالواتساب، وتوثيق القراءات ورفعها إلى منصة GLOBE.</p>
@@ -234,7 +235,7 @@ export default function GlobeMonitor({ me, members, onReport }) {
       {shown.length === 0 ? (
         !nf && (
           <div className="card px-6 py-10 text-center">
-            <p className="text-3xl">🔭</p>
+            <p className="flex justify-center text-faint"><Icon name="globe" className="h-9 w-9" /></p>
             <p className="mt-2 text-sm font-semibold text-ink">{rows.length ? "لا جلسات هنا" : "لا جلسات رصد بعد"}</p>
             {!rows.length && <p className="mt-1 text-xs text-muted">أضف جلسة من «+ جلسة رصد»، وكرّرها أسبوعيًا للرصد المنتظم.</p>}
           </div>

@@ -22,10 +22,10 @@ const LEVEL = {
   monitor: { bg: "#EAF6EF", fg: DEEP, sub: "#5E7268", w: 170, border: "1.5px solid #9CC9B0" },
 };
 
-function Card({ m, role, kind }) {
+function Card({ m, role, kind, full }) {
   const L = LEVEL[kind];
   return (
-    <div style={{ position: "relative", width: L.w, maxWidth: "100%", borderRadius: 14, padding: "9px 12px", textAlign: "center",
+    <div style={{ position: "relative", width: full ? "100%" : L.w, maxWidth: "100%", boxSizing: "border-box", borderRadius: 14, padding: "9px 12px", textAlign: "center",
                   background: L.bg, color: L.fg, border: L.border ?? "none", boxShadow: "0 6px 14px -10px rgba(28,51,40,.6)" }}>
       <div style={{ fontSize: 10.5, fontWeight: 700, color: L.sub, letterSpacing: ".2px" }}>{role}</div>
       <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.45, marginTop: 2 }}>{m.full_name}</div>
@@ -78,7 +78,9 @@ export function chartPages({ members, leader, theme = "light", sigs, year }) {
   const doc = { title: "هيكل فريق برنامج جلوب", meta: ["برنامج جلوب البيئي", year], foot: "برنامج جلوب البيئي العالمي" };
   // الأعضاء: بقية الصفحة الأولى بحسب ما فوقهم، ثم 56 في كل صفحة
   const topRows = [deputy, monitor].filter((x) => x.length).length;
-  const firstCap = Math.max(8, 36 - topRows * 4 - Math.ceil(monitor.length / 4) * 4);
+  // صف مشرفي الرصد المتفرّع يأخذ مكان صف أعضاء، ومجموعتهم (أكثر من أربعة) مكان صف لكل ثلاثة وعنوانها
+  const monRows = monitor.length > 4 ? Math.ceil(monitor.length / 3) + 1 : monitor.length ? 1 : 0;
+  const firstCap = Math.max(8, 4 * Math.floor((36 - topRows * 4 - monRows * 4) / 4));
   const chunks = [rest.slice(0, firstCap)];
   for (let i = firstCap; i < rest.length; i += 56) chunks.push(rest.slice(i, i + 56));
   const total = chunks.length;
@@ -99,15 +101,20 @@ export function chartPages({ members, leader, theme = "light", sigs, year }) {
           <Row list={deputy} role="نائب المشرف العام" kind="deputy" />
           {monitor.length > 0 && (
             monitor.length <= 4 ? <Row list={monitor} role="مشرف رصد" kind="monitor" /> : (
+              /* أكثر من أربعة: مجموعة واحدة متصلة بالفرع، ثلاث بطاقات في الصف بعرض متساوٍ لا يتجاوز الصفحة */
               <div>
                 <VLine />
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, justifyItems: "center" }}>
-                  {monitor.map((m) => <Card key={m.id} m={m} role="مشرف رصد" kind="monitor" />)}
+                <div style={{ border: `1.5px dashed ${LINE}`, borderRadius: 16, padding: "8px 10px 10px", background: "#F7FBF8" }}>
+                  <div style={{ textAlign: "center", fontSize: 10.5, fontWeight: 700, color: "#5E7268", marginBottom: 7 }}>
+                    مشرفو الرصد <span className="num">({n(monitor.length)})</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+                    {monitor.map((m) => <Card key={m.id} m={m} role="مشرف رصد" kind="monitor" full />)}
+                  </div>
                 </div>
               </div>
             )
           )}
-          {rest.length > 0 && <VLine />}
         </div>
       )}
       {chunk.length > 0 && (

@@ -22,6 +22,7 @@ import {
 } from "../lib/plc";
 import { byName } from "../lib/sortAr.js";
 import NiepdLink from "../components/NiepdLink.jsx";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    التطوير المهني ← تقرير جلسة مجتمع التعلم المهني (src/lib/plc.js).
@@ -96,7 +97,7 @@ function SessionList() {
       department_id: dept.department_id, head_user_id: uid, head_name: profile?.full_name ?? "",
       academic_year: year, data: { target: `معلمو قسم ${dept.department_name}` },
     }).select("id").single();
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     navigate(`/plc/${data.id}`);
   };
 
@@ -692,7 +693,7 @@ export function PlcDepartments() {
   };
   useEffect(() => { load(); }, []);
 
-  const act = async (q) => { const { error } = await q; if (error) setErr(error.message); else { setErr(""); load(); } };
+  const act = async (q) => { const { error } = await q; if (error) setErr(friendlyError(error.message)); else { setErr(""); load(); } };
   const assign = (deptId, teacherId) => act(supabase.from("department_members")
     .upsert({ department_id: deptId, teacher_id: teacherId, is_head: false }, { onConflict: "teacher_id" }));
   const removeM = (m) => act(supabase.from("department_members").delete().eq("teacher_id", m.teacher_id));

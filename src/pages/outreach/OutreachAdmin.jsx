@@ -14,6 +14,8 @@ import OutreachEditor from "./OutreachEditor.jsx";
 import OutreachSend from "./OutreachSend.jsx";
 import { Follow, Results } from "./OutreachResults.jsx";
 import { ItemBody, SurveyForm } from "./OutreachView.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 const Icon = ({ d, className = "h-5 w-5" }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
@@ -61,10 +63,10 @@ export default function OutreachAdmin() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">النشرات والاستبانات</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           نشرات توعوية وتعليمات بالصور والمقاطع والروابط، واستبانات بأسئلة متنوعة، للطلاب وأولياء الأمور والموظفين.
           تصل إشعارًا في الجرس والجوال، وتُشارك عبر واتساب أو برمز QR، وتتابع من اطّلع وأجاب، وتحلّل النتائج.
-        </p>
+        </PageIntro>
       </div>
       {err && <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm text-warning">{err}</p>}
 
@@ -138,12 +140,12 @@ function ItemPage({ item, tab, setTab, onBack, reload, onCopy }) {
 
   const close = async () => {
     const { error } = await supabase.from("outreach_items").update({ closed_at: item.closed_at ? null : new Date().toISOString() }).eq("id", item.id);
-    if (error) notify({ ok: false, text: error.message }); else reload();
+    if (error) notify({ ok: false, text: friendlyError(error.message) }); else reload();
   };
   const remove = async () => {
     if (!(await confirmDanger({ title: `حذف «${item.title}»`, impact: ["تُحذف النشرة ووسائطها ومتابعتها وكل إجاباتها نهائيًا، وتختفي عند المستفيدين."], confirmLabel: "حذف" }))) return;
     const { error } = await supabase.from("outreach_items").delete().eq("id", item.id);
-    if (error) { notify({ ok: false, text: error.message }); return; }
+    if (error) { notify({ ok: false, text: friendlyError(error.message) }); return; }
     if (item.media.length) supabase.storage.from("outreach").remove(item.media.map((m) => m.path));
     onBack(); reload();
   };

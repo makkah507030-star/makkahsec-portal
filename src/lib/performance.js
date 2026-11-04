@@ -15,7 +15,8 @@ export const PERF_BUCKET = "perf-evidence";
 
 /* ساعات التطوير في التقارير: ساعات الحضور وحدها — حضور البرامج التدريبية (2-2) وحضور
    المؤتمرات (2-5) — دون ساعات تنفيذ المعلم برنامجًا لزملائه (2-1) */
-export const ATTEND_HOUR_ITEMS = ["e02_02", "e02_05", "l02_01"];   // l02_01: برامج محضر المعمل التدريبية
+// وللموظفين غير المعلمين بند البرامج التدريبية الذي يرفعونه بأنفسهم: محضر المعمل والموجه والوكيل والمدير ومحضر العلوم
+export const ATTEND_HOUR_ITEMS = ["e02_02", "e02_05", "l02_01", "g02_01", "d02_01", "m02_01", "s02_01"];
 export const attendHours = (rows) => (rows ?? [])
   .filter((r) => ATTEND_HOUR_ITEMS.includes(r.item_key)).reduce((a, r) => a + (Number(r.hours) || 0), 0);
 export const MAX_BYTES = 5 * 1024 * 1024;
@@ -28,9 +29,31 @@ export const ELEMENT_COLOR = {
   e01: "#6b6b6b", e02: "#3e6350", e03: "#2f7f7a", e04: "#3f6b99", e05: "#5a5f9e", e06: "#7a5c99",
   e07: "#9a4f6e", e08: "#a5523f", e09: "#b07a2a", e10: "#7d7f2a", e11: "#5f8a3a",
 };
-// عناصر محضر المعمل (l01..l13) بألوان عناصر المعلم نفسها بالترتيب، والعنصران الأخيران بلونين إضافيين
-const LAB_EXTRA = { l12: "#7a6a3a", l13: "#4f6f8f" };
-export const elementColor = (key) => ELEMENT_COLOR[key] ?? LAB_EXTRA[key] ?? ELEMENT_COLOR[String(key).replace(/^l/, "e")] ?? "#3e6350";
+// عناصر الموظفين الآخرين (l, s, g, d, a + رقم) بألوان عناصر المعلم نفسها بالترتيب، وما بعد الحادي عشر بألوان إضافية
+const EXTRA = ["#7a6a3a", "#4f6f8f", "#6f5a8a", "#3f7f5f", "#8a5a4a", "#4a6f7f", "#7f6f3f", "#5a7a4a"];
+export const elementColor = (key) => {
+  if (ELEMENT_COLOR[key]) return ELEMENT_COLOR[key];
+  const n = Number(String(key).slice(1));
+  if (!n) return "#3e6350";
+  return n <= 11 ? ELEMENT_COLOR[`e${String(n).padStart(2, "0")}`] : EXTRA[(n - 12) % EXTRA.length];
+};
+
+/* ملفات الأداء غير المعلم (supabase/lab_perf_*.sql و staff_perf_*.sql): نموذج كل وظيفة في الدليل وأدوارها.
+   activity: رائد النشاط متفرغ للنشاط ويعامل معاملة الإداريين: الجزء العام من نموذجه (عناصر المعلم الأحد عشر، 70%)
+   بطاقة واحدة يقدّرها مدير المدرسة دون شواهد، والعناصر الأربعة الخاصة بالنشاط (30%) بشواهدها. */
+export const PERF_TRACKS = {
+  principal: { roles: ["principal"], label: "مدير المدرسة", who: "المدير", form: "مدير المدرسة (8)" },
+  lab:       { roles: ["computer_lab"], label: "محضر معمل الحاسب الآلي", who: "المحضر", form: "محضر المختبر (5)" },
+  science:   { roles: ["science_labs", "science_labs_2", "science_labs_3"], label: "محضر مختبر العلوم", who: "المحضر", form: "محضر المختبر (5)" },
+  counselor: { roles: ["counselor_1", "counselor_2", "counselor_3"], label: "الموجه الطلابي", who: "الموجه", form: "الموجه الطلابي (6)" },
+  deputy:    { roles: ["deputy_academic", "deputy_school", "deputy_students"], label: "وكيل المدرسة", who: "الوكيل", form: "وكيل المدرسة (7)" },
+  activity:  { roles: ["activity_leader"], label: "رائد النشاط", who: "رائد النشاط", form: "معلم مسند له نشاط طالبي (2)" },
+};
+// أوزان عناصر المعلم في نموذج رائد النشاط (2)
+const ACTIVITY_WEIGHTS = { e01: 10, e02: 10, e03: 10, e04: 5, e05: 5, e06: 5, e07: 5, e08: 5, e09: 5, e10: 5, e11: 5 };
+/** مسار ملف الأداء لأدوار المستخدم (أول وظيفة يحملها من غير المعلم)، أو null */
+export const perfTrackOf = (adminRoles = []) =>
+  Object.entries(PERF_TRACKS).find(([, t]) => t.roles.some((r) => adminRoles.includes(r)))?.[0] ?? null;
 
 /* حالة البند في البوابة (perf_items.portal — supabase/teacher_performance_portal.sql) */
 export const PORTAL_TAG = {
@@ -38,14 +61,42 @@ export const PORTAL_TAG = {
   partial: { t: "متوفر جزئيًا في البوابة · أكمله برفع شاهد", c: "bg-canvas text-muted" },
   manual:  { t: "يُرفع يدويًا الآن · سيكون متاحًا في البوابة قريبًا", c: "bg-warning-light text-warning" },
   record:  { t: "سجل التطوير المهني: كل مشاركة بشاهدها", c: "bg-mint-tint text-mint-deep" },
+  // غير المعلمين (المحضرون والموجه والوكيل والمدير) بلا وحدة «التطوير المهني»: يرفعون مشاركاتهم بأنفسهم
+  recordManual: { t: "يُرفع يدويًا: كل برنامج أو مشاركة بشهادتها وساعاتها", c: "bg-mint-tint text-mint-deep" },
   judge:   { t: "يقدّره المقيِّم بالملاحظة، ويمكنك رفع شاهد", c: "bg-canvas text-muted" },
 };
+
+/** علامات صاحب الملف: أدواره الإدارية، وcult_team إن كان في فريق الثقافة المؤسسية (supabase/cult_7.sql).
+    بنود الوكيل تختلف بمجال عمله، وبند أعمال فريق الثقافة لأعضائه (perf_items.roles) */
+export async function loadOwnerRoles(uid) {
+  const { data, error } = await supabase.rpc("perf_owner_tags", { p_uid: uid });
+  if (!error) return data ?? [];
+  const { data: r } = await supabase.from("admin_roles").select("role_type").eq("user_id", uid);
+  return (r ?? []).map((x) => x.role_type);
+}
+/** بنود العناصر التي تخص أدوار صاحب الملف: البند بلا roles للجميع، وإلا لمن يحمل أحدها */
+export const itemsForRoles = (els, roles) => els.map((e) => ({
+  ...e, items: e.items.filter((i) => !i.roles?.length || i.roles.some((r) => roles.includes(r))),
+}));
 
 let refCache = null;
 /** العناصر وبنودها مرتبة، مع بنود كل عنصر في elements[i].items.
     track: «teacher» لنموذج المعلم، و«lab» لنموذج محضر معمل الحاسب (supabase/lab_perf_1.sql) */
-export function loadPerfReference(track = "teacher") {
-  return loadAllPerfReference().then((els) => els.filter((e) => (e.track ?? "teacher") === track));
+export function loadPerfReference(track = "teacher", tags = []) {
+  return loadAllPerfReference().then((els) => {
+    // البنود الخاصة بأدوار (roles) لا تظهر إلا لمن يحمل أحدها في علاماته (tags)
+    const pick = (list) => itemsForRoles(list, tags);
+    if (track !== "activity") return pick(els.filter((e) => (e.track ?? "teacher") === track));
+    // رائد النشاط: الجزء العام بطاقة واحدة للمقيِّم (بنودها عناصر المعلم بأوزانها للاطلاع)، ثم عناصر النشاط بشواهدها
+    const general = els.filter((e) => (e.track ?? "teacher") === "teacher");
+    return pick([
+      { key: "a00", title: "عناصر الأداء العامة", weight: general.reduce((a, e) => a + (ACTIVITY_WEIGHTS[e.key] ?? 0), 0),
+        sort_order: 0, evaluator_only: true, track: "activity",
+        items: general.map((e, i) => ({ key: `a00_${String(i + 1).padStart(2, "0")}`, element_key: "a00", sort_order: i + 1,
+          title: `${e.title} (${ACTIVITY_WEIGHTS[e.key] ?? e.weight}%)`, source: "school", is_record: false, portal: "judge" })) },
+      ...els.filter((e) => e.track === "activity"),
+    ]);
+  });
 }
 function loadAllPerfReference() {
   if (!refCache) {
@@ -148,16 +199,94 @@ export const AUTO_SOURCE = {
   l12_01: { label: "أسابيع موثّقة في سجل الاستخدام", to: "/lab?tab=usage" },
   l13_01: { label: "أجهزة في سجل الأجهزة", to: "/lab?tab=devices" },
   l13_02: { label: "بلاغات أعطال مسجّلة", to: "/lab?tab=tickets" },
+  // الموجه الطلابي والوكيل ورائد النشاط (supabase/staff_perf_4.sql)
+  g03_01: { label: "جلسات مع أولياء الأمور", to: "/guidance" },
+  g03_02: { label: "طلبات تواصل رُدّ عليها", to: "/guidance" },
+  g04_01: { label: "إحالات اتُّخذ فيها إجراء", to: "/referrals" },
+  g04_02: { label: "إحالات الغياب والطلاب المفقودين", to: "/referrals" },
+  g05_01: { label: "برامج نمائية", to: "/guidance" },
+  g06_01: { label: "برامج في خطة التوجيه", to: "/guidance" },
+  g06_03: { label: "برامج نُفّذت", to: "/guidance" },
+  g07_01: { label: "حالات فُتحت", to: "/guidance" },
+  g07_04: { label: "حالات أُغلقت", to: "/guidance" },
+  g08_01: { label: "برامج توعوية ووقائية", to: "/guidance" },
+  g08_02: { label: "نشرات واستبانات أُرسلت", to: "/outreach" },
+  g09_01: { label: "جلسات فردية", to: "/guidance" },
+  g09_02: { label: "جلسات جمعية", to: "/guidance" },
+  g12_01: { label: "برامج علاجية", to: "/guidance" },
+  d03_01: { label: "إحالات أُشعر بها ولي الأمر", to: "/referrals" },
+  d06_01: { label: "إحالات اتُّخذ فيها قرار", to: "/referrals" },
+  d06_02: { label: "إنذارات غياب", to: "/student-affairs" },
+  d06_03: { label: "نماذج سلوكية", to: "/behavior" },
+  d09_01: { label: "زيارات دعم للمعلمين", to: "/forms" },
+  d16_01: { label: "أحداث ومناسبات اعتمدتها", to: "/events" },
+  d17_01: { label: "نشرات واستبانات أُرسلت", to: "/outreach" },
+  d17_02: { label: "تصويت واستطلاعات", to: "/polls-admin" },
+  // بنود خاصة بمجال كل وكيل (supabase/staff_perf_6.sql)
+  d06_04: { label: "أعذار غياب بتّ فيها", to: "/absence-excuses" },
+  d06_05: { label: "بلاغات انقطاع بتّ فيها", to: "/dropouts" },
+  d18_03: { label: "بلاغات الفريق الكشفي أُغلقت", to: "/scout-reports" },
+  d07_03: { label: "بلاغات صيانة عالجها", to: "/repairs" },
+  d09_03: { label: "خطط تحسين يتابعها", to: "/improve" },
+  d10_03: { label: "لقاءات وتقارير تطوير مهني اعتمدها", to: "/plc" },
+  d11_03: { label: "آراء في ملفات المعلمين الرقمية", to: "/dfile-opinions" },
+  d11_04: { label: "زيارات تبادلية اعتمدها", to: "/plc" },
+  d12_03: { label: "متابعات رصد الدرجات", to: "/noor-grades" },
+  d12_04: { label: "اجتماعات لجنة التحصيل", to: "/ach-committee" },
+  d13_03: { label: "لقاءات الثقافة المدرسية", to: "/culture" },
+  d15_03: { label: "نماذج رسمية أصدرها", to: "/my-documents" },
+  // أعضاء فريق الثقافة المؤسسية (supabase/cult_7.sql)
+  e02_12: { label: "أعمال في فريق الثقافة المؤسسية", to: "/culture" },
+  // محضر مختبر العلوم من عمل مختبره (supabase/sci_lab_6.sql)
+  s04_01: { label: "تجارب نُفّذت في المختبر", to: "/science-labs?tab=runs" },
+  s10_01: { label: "حصص جهّزها للتجارب", to: "/science-labs?tab=booking" },
+  s12_01: { label: "تجارب اعتمد تنفيذها", to: "/science-labs?tab=runs" },
+  s12_02: { label: "أصناف في سجل العهدة", to: "/science-labs?tab=inventory" },
+  s09_02: { label: "مواد كيميائية موثّقة الصلاحية", to: "/science-labs?tab=inventory" },
+  s13_01: { label: "أجهزة في سجل العهدة", to: "/science-labs?tab=inventory" },
+  s13_02: { label: "أصناف تالفة أو ناقصة رُصدت", to: "/science-labs?tab=inventory" },
+  // مدير المدرسة (supabase/principal_perf_2.sql)
+  m03_01: { label: "إشعارات ورسائل أرسلها", to: "/notifications" },
+  m07_02: { label: "بلاغات صيانة عالجها", to: "/repairs" },
+  m09_01: { label: "زيارات دعم للمعلمين", to: "/forms" },
+  m09_02: { label: "خطط تحسين يتابعها", to: "/improve" },
+  m10_01: { label: "لقاءات وتقارير وزيارات اعتمدها", to: "/plc" },
+  m11_01: { label: "تقييمات أداء أرسلها للمعلمين", to: "/staff-performance" },
+  m11_02: { label: "آراء في ملفات المعلمين الرقمية", to: "/dfile-opinions" },
+  m12_02: { label: "اجتماعات لجنة التحصيل", to: "/ach-committee" },
+  m13_01: { label: "تقارير التقويم الذاتي", to: "/accreditation" },
+  m13_02: { label: "اجتماعات فريق التميز", to: "/accreditation" },
+  m14_02: { label: "خطط تحسين اعتمدها", to: "/accreditation" },
+  m15_01: { label: "تعاميم أرسلها", to: "/circulars" },
+  m15_02: { label: "نماذج رسمية اعتمدها", to: "/forms-review" },
+  m16_01: { label: "أحداث ومناسبات اعتمدها", to: "/events" },
+  m17_01: { label: "نشرات واستبانات أُرسلت", to: "/outreach" },
+  m17_02: { label: "تصويت واستطلاعات", to: "/polls-admin" },
+  m17_03: { label: "أخبار نُشرت", to: "/news-admin" },
+  m18_02: { label: "لقاءات الثقافة المدرسية", to: "/culture" },
+  a12_02: { label: "أحداث ومناسبات معتمدة", to: "/events" },
+  a13_01: { label: "تقارير تنفيذ الأحداث", to: "/events" },
+  a14_01: { label: "إعلانات ترشيح منشورة", to: "/nominations" },
+  a14_02: { label: "تصويت واستطلاعات", to: "/polls-admin" },
+  a15_01: { label: "مشاركات طلاب في الأحداث", to: "/events" },
+  a15_02: { label: "شهادات مشاركة صدرت", to: "/events" },
   l13_03: { label: "بلاغات رُفعت للصيانة الخارجية", to: "/lab?tab=tickets" },
 };
 
 /** الشواهد الآلية للمعلم (uid) أو لكل المعلمين (null): { [uid]: { [item]: { cnt, last } } }.
     ولمحضر المعمل (track = "lab") من عمل المعمل (supabase/lab_perf_2.sql) */
 export async function loadAutoCounts(uid, year, track = "teacher") {
-  const { data, error } = await supabase.rpc(track === "lab" ? "lab_perf_auto" : "perf_auto_counts", { p_uid: uid, p_year: year });
-  if (error) return {};   // قبل تشغيل ملف المرحلة الثانية: لا شواهد آلية
+  // المعلم ورائد النشاط من عمل المعلم، ومحضر المعمل من عمل المعمل، والموجه والوكيل ورائد النشاط
+  // من عملهم في البوابة (supabase/staff_perf_4.sql)؛ ومحضر مختبر العلوم بلا شواهد آلية بعد
+  // وأعمال فريق الثقافة المؤسسية لأعضائه من المعلمين (supabase/cult_7.sql)
+  const fns = track === "lab" ? ["lab_perf_auto"] : track === "teacher" ? ["perf_auto_counts", "cult_perf_auto"]
+    : ["staff_perf_auto"];   // رائد النشاط والموظفون: من عملهم في البوابة وحده (لا تدريس ولا تطوير مهني)
   const m = {};
-  for (const r of data ?? []) (m[r.teacher_user_id] ??= {})[r.item_key] = { cnt: Number(r.cnt), last: r.last_at };
+  for (const fn of fns) {
+    const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year });
+    if (error) continue;   // قبل تشغيل ملف SQL: لا شواهد آلية منه
+    for (const r of data ?? []) (m[r.teacher_user_id] ??= {})[r.item_key] = { cnt: Number(r.cnt), last: r.last_at };
+  }
   return m;
 }
 
@@ -296,6 +425,16 @@ export const ITEM_HINT = {
   e11_07: "تلقائي: كل اختبار تبنيه وتطبّقه من «اختباراتي».",
   // محضر معمل الحاسب الآلي — نموذج «محضر المختبر»
   l02_01: "أضف كل برنامج أو ورشة حضرتها بشهادتها، وتُجمع المشاركات وساعاتها.",
+  // التفاعل مع المجتمع المهني لغير المعلمين: ليس لهم «التطوير المهني» في البوابة، فكل الشواهد ترفع هنا يدويًا
+  g02_01: "«إضافة مشاركة»: كل برنامج تدريبي حضرته في التوجيه والإرشاد بشهادته وجهته وساعاته، وتُجمع المشاركات وساعاتها.",
+  g02_02: `${UP} لإعلان اللقاء أو الورشة التي قدّمتها للمعلمين، أو صور منها، أو كشف حضورهم.`,
+  g02_03: `${UP} لمحضر لقاء مع موجهين أو زملاء، أو مشاركة في مجتمع تعلم مهني.`,
+  d02_01: "«إضافة مشاركة»: كل برنامج تدريبي حضرته في القيادة المدرسية بشهادته وجهته وساعاته، وتُجمع المشاركات وساعاتها.",
+  d02_02: `${UP} لمحضر لقاء تبادل خبرات مع وكلاء أو قادة مدارس، أو مشاركة في مجتمع تعلم مهني.`,
+  m02_01: "«إضافة مشاركة»: كل برنامج تدريبي حضرته في القيادة المدرسية بشهادته وجهته وساعاته، وتُجمع المشاركات وساعاتها.",
+  m02_02: `${UP} لمحضر لقاء تبادل خبرات مع قادة المدارس، أو مشاركة في مجتمع تعلم مهني.`,
+  s02_01: "«إضافة مشاركة»: كل برنامج تدريبي حضرته في المختبرات أو السلامة بشهادته وجهته وساعاته، وتُجمع المشاركات وساعاتها.",
+  s02_02: `${UP} لمحضر لقاء مع معلمي العلوم أو محضرين آخرين، أو مشاركة في مجتمع تعلم مهني.`,
   l02_02: `${UP} لإعلان الورشة أو صور منها أو كشف حضور المعلمين.`,
   l02_03: `${UP} لدليل استخدام المعمل الذي أعددته (للمعلم أو الطالب أو الدعم الفني).`,
   l02_04: `${UP} لمحضر جلسة مجتمع تعلم حضرتها.`,

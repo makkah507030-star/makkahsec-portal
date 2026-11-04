@@ -23,6 +23,7 @@ import { useBackSteps, goBack } from "../lib/backStep.js";
 import { savedTheme, saveTheme, applyTheme, savedStyle, saveStyle } from "../lib/theme.js";
 import { EvidenceDock } from "./EvidenceTags.jsx";
 import { isScoutRole } from "../lib/scoutLeader.js";
+import { useCultMode, setCultMode } from "../lib/cultMode.js";
 
 /* =====================================================================
    القائمة الجانبية — مرتبة من العمل اليومي إلى الإعدادات، وفي أسفلها
@@ -129,6 +130,7 @@ export const ADMIN_GROUPS = [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
       { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab", "principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
       { to: "/my-lab-dfile", label: "ملف المحضر الرقمي", roles: ["computer_lab"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف محضر" },
+      { to: "/science-labs", label: "مختبرات العلوم", roles: ["science_labs", "science_labs_2", "science_labs_3", "principal", "tech_support", "deputy_school"], icon: "flask", kw: "مختبر احياء كيمياء فيزياء تجارب عهدة حجز" },
     ],
   },
   {
@@ -145,7 +147,9 @@ export const ADMIN_GROUPS = [
   {
     title: "الأداء الوظيفي",
     items: [
-      { to: "/performance",  label: "تقييم الأداء الوظيفي", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء" },
+      { to: "/staff-performance", label: "شواهد أداء الموظفين", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء معلم وكيل موجه محضر رائد نشاط" },
+      { to: "/my-staff-performance", label: "شواهد أدائي الوظيفي", roles: ["principal", "deputy_academic", "deputy_school", "deputy_students", "counselor_1", "counselor_2", "counselor_3", "science_labs", "science_labs_2", "science_labs_3", "activity_leader"], icon: "award", kw: "شواهد تقييم أداء وكيل موجه محضر رائد" },
+      { to: "/my-staff-dfile", label: "ملفي الرقمي", roles: ["principal", "deputy_academic", "deputy_school", "deputy_students", "counselor_1", "counselor_2", "counselor_3", "science_labs", "science_labs_2", "science_labs_3"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف وكيل موجه محضر" },
       { to: "/improve",      label: "خطط التطوير", icon: "target", kw: "حلقة التحسين توصيات متابعة أثر زيارة دعم" },
       { to: "/dfiles-admin", label: "ملفات المعلمين الرقمية", roles: ["tech_support", "principal", "deputy_academic", "deputy_students"], icon: "idcard", kw: "ملف رقمي إيقاف نقل تقاعد رمز" },
       { to: "/dfile-opinions", label: "رأي الإدارة في ملفات المعلمين", roles: ["principal", "deputy_academic"], icon: "edit", kw: "ملف رقمي رأي توصية المعلم" },
@@ -202,6 +206,7 @@ export const ADMIN_GROUPS = [
     items: [
       { to: "/feedback-admin", label: "مركز الدعم والمساندة", perm: "feedback", icon: "chat" },
       { to: "/support-report", label: "تقرير ومتابعة الدعم", perm: "feedback", icon: "chart" },
+      { to: "/madrasati-requests", label: "طلبات منصة مدرستي", techOnly: true, icon: "chat", kw: "مدرستي كلمة مرور جوال فصل" },
       { to: "/login-log", label: "سجل الدخول والخروج", perm: "login_log", icon: "door" },
       { to: "/site-metrics", label: "مؤشرات الموقع", techOnly: true, icon: "eye" },
       { to: "/usage-report", label: "إحصائية الاستخدام", techOnly: true, icon: "trend" },
@@ -256,6 +261,12 @@ export const TEACHER_SECTIONS = [
     groups: ["التواصل والمحتوى"] },
 ];
 
+/* مساحة «سفير الثقافة» (lib/cultMode.js): أعمال الثقافة المؤسسية وحدها، كل تبويب رابط في القائمة */
+const CULT_TABS = [["dash", "لوحة التنفيذ", "home"], ["send", "الإجراءات والرسائل", "megaphone"], ["plan", "الخطة التنفيذية", "list"],
+  ["comm", "التواصل الملهم", "users"], ["care", "نهتم بك", "heart"], ["hayyak", "حيّاك", "userCheck"], ["ideas", "الأفكار والابتكار", "sparkles"],
+  ["values", "القيم والأدوار", "award"], ["report", "التقرير", "trend"], ["team", "الفريق", "users"]];
+const CULT_GROUPS = [{ title: null, items: CULT_TABS.map(([k, label, icon]) => ({ to: `/culture?tab=${k}`, label, icon, cultTab: k })) }];
+
 export const TEACHER_GROUPS = [
   {
     title: null,
@@ -278,6 +289,7 @@ export const TEACHER_GROUPS = [
     title: "المعامل والمختبرات",
     items: [
       { to: "/lab",         label: "معمل الحاسب الآلي",     extraTabKey: "computer_lab", icon: "monitor", kw: "حجز اجهزة تقنية رقمية" },
+      { to: "/science-labs", label: "مختبرات العلوم",        sciTeacher: true, icon: "flask", kw: "مختبر احياء كيمياء فيزياء تجارب حجز" },
     ],
   },
   {
@@ -441,6 +453,7 @@ export function Icon({ name, className = "h-[18px] w-[18px]" }) {
     upload: "M12 16V4m-5 5 5-5 5 5M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
     palette: "M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-.9-.6-1.4-.6-2.2 0-.9.7-1.6 1.6-1.6H17a4 4 0 0 0 4-4c0-4.7-4-8.6-9-8.6ZM7.5 11.5h.01M10 7.5h.01M15 7.5h.01",
     monitor: "M3 4h18v12H3zM8 21h8M12 16v5",
+    flask:  "M9 3h6M10 3v6L4.5 18.5A1.6 1.6 0 0 0 5.9 21h12.2a1.6 1.6 0 0 0 1.4-2.5L14 9V3M7 15h10",
     grid:   "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
     table:  "M3 4h18v16H3zM3 9h18M3 14.5h18M9 4v16",
     chalk:  "M4 19v-3l11-11 3 3-11 11H4ZM14 6l3 3",
@@ -485,6 +498,14 @@ export function Icon({ name, className = "h-[18px] w-[18px]" }) {
     more:   "M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z",
     panel:  "M3 4h18v16H3zM15 4v16M10 9l-3 3 3 3",
     panelOpen: "M3 4h18v16H3zM15 4v16M7 9l3 3-3 3",
+    camera: "M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7",
+    image:  "M4 5h16v14H4zM4 16l5-5 4 4 2-2 5 5M15.5 9.5h.01",
+    clip:   "M20 11.5 12.2 19.3a5 5 0 0 1-7.1-7.1l7.8-7.8a3.3 3.3 0 0 1 4.7 4.7l-7.8 7.8a1.7 1.7 0 0 1-2.4-2.4l7.1-7.1",
+    mic:    "M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM5 11a7 7 0 0 0 14 0M12 18v3",
+    link:   "M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1 1M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1-1",
+    pin:    "M9 3h6l-1 6 4 4H6l4-4-1-6ZM12 13v8",
+    hourglass: "M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9s5 4 5 9",
+    plane:  "M21 15.5 13 11V5a1.5 1.5 0 0 0-3 0v6l-8 4.5V17l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-4.5l8 2.5Z",
   }[name];
 
   return (
@@ -581,6 +602,23 @@ export default function Layout({ children }) {
     if (effectiveRole === "guardian") { setMediaMember(false); return; }
     supabase.rpc("media_card_me").then(({ data, error }) => setMediaMember(!error && !!data));
   }, [effectiveRole, session?.user?.id]);
+  // معلم الأحياء أو الكيمياء أو الفيزياء بتخصصه أو جدوله: تظهر «مختبرات العلوم» (sci_lab_1.sql)
+  const [sciTeacher, setSciTeacher] = useState(false);
+  useEffect(() => {
+    if (effectiveRole !== "teacher") { setSciTeacher(false); return; }
+    supabase.rpc("sci_teacher_labs").then(({ data, error }) => setSciTeacher(!error && (data ?? []).length > 0));
+  }, [effectiveRole, session?.user?.id]);
+  // سفير الثقافة بالتعيين في حسابه معلمًا: زر التبديل إلى مساحة السفير (cult_6.sql ← cult_me.ambassador)
+  const [cultAmb, setCultAmb] = useState(false);
+  useEffect(() => {
+    if (effectiveRole !== "teacher") { setCultAmb(false); return; }
+    supabase.rpc("cult_me").then(({ data, error }) => setCultAmb(!error && !!data?.ambassador));
+  }, [effectiveRole, session?.user?.id]);
+  const cultModeOn = useCultMode(session?.user?.id);
+  const cultMode = cultAmb && cultModeOn;
+  useEffect(() => {
+    if (cultMode && path === "/") navigate("/culture?tab=dash", { replace: true });
+  }, [cultMode, path]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [achOpen] = useAchOpen();
   // لجنة التميز: يظهر قسم التقويم والاعتماد لأعضائها وللمدير والوكيل والدعم الفني (acc_1.sql)
   const [accMember, setAccMember] = useState(false);
@@ -605,6 +643,7 @@ export default function Layout({ children }) {
     if (i.globeMember && !globeMember) return false;
     if (i.mediaMember && !mediaMember) return false;
     if (i.accMember && !accMember) return false;
+    if (i.sciTeacher && !sciTeacher) return false;
     // ما وصلني من نشرات واستبانات: لمن وصله شيء منها فقط
     if (i.inbox && !outreachInbox) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
@@ -633,21 +672,24 @@ export default function Layout({ children }) {
   };
 
   const groups = useMemo(() => {
+    if (cultMode) return CULT_GROUPS;
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox, sciTeacher, cultMode]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة والمعلم بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)
-  const sections = useMemo(() => (isAdmin ? SECTIONS : effectiveRole === "teacher" ? TEACHER_SECTIONS : [])
+  const sections = useMemo(() => (cultMode ? [] : isAdmin ? SECTIONS : effectiveRole === "teacher" ? TEACHER_SECTIONS : [])
     .map((x) => ({ ...x, groups: groups.filter((g) => x.groups.includes(g.title)) }))
     .map((x) => ({ ...x, items: x.groups.flatMap((g) => g.items) }))
-    .filter((x) => x.items.length), [isAdmin, effectiveRole, groups]);
+    .filter((x) => x.items.length), [isAdmin, effectiveRole, groups, cultMode]);
   const topItems = sections.length ? groups.find((g) => !g.title)?.items ?? [] : [];
 
+  const cultTabNow = path === "/culture" ? new URLSearchParams(location.search).get("tab") || "dash" : null;
   const isActive = (i) =>
-    i.to === "/" || i.exact
+    i.cultTab ? cultTabNow === i.cultTab
+    : i.to === "/" || i.exact
       ? path === i.to
       : [i.to, ...(i.also ?? [])].some((t) => path === t || path.startsWith(t + "/"));
 
@@ -814,6 +856,19 @@ export default function Layout({ children }) {
     );
   };
 
+  // التبديل بين حساب المعلم ومساحة سفير الثقافة المؤسسية
+  const CultSwitch = () => {
+    if (!cultAmb) return null;
+    const go = () => { setCultMode(session?.user?.id, !cultMode); navigate(cultMode ? "/" : "/culture?tab=dash"); };
+    return (
+      <button onClick={go} title={cultMode ? "العودة إلى حساب المعلم" : "مساحة سفير الثقافة المؤسسية"}
+              className="flex shrink-0 items-center gap-1.5 rounded-pill border border-[#C0392B]/60 bg-[#FCEFEC] px-3 py-1.5 text-xs font-semibold text-[#A3352A] transition-colors hover:bg-[#F8E0DA] sm:px-3.5">
+        <Icon name={cultMode ? "swap" : "heart"} className="h-4 w-4" />
+        <span>{cultMode ? "المعلم" : "سفير الثقافة"}</span>
+      </button>
+    );
+  };
+
   const Brand = ({ compact, iconOnly }) => (
     <NavLink to="/" end className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80">
       <img src={logoIcon} alt="" className="h-9 w-9 shrink-0 object-contain" />
@@ -832,6 +887,7 @@ export default function Layout({ children }) {
     <div className="flex shrink-0 items-center gap-2">
       <ViewSwitch />
       <FocusSwitch />
+      <CultSwitch />
       {isStudentView && <ThemeToggle />}
       <Refresh />
       <PreviewSite />

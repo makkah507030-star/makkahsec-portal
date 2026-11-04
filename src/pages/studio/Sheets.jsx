@@ -4,7 +4,6 @@ import iconWhite from "../../assets/icon-white.png";
 import moeLogo from "../../assets/moe-logo.png";
 import { fitSize, fitTitle, bodySize, classCode, classShort, GRADE_OPTIONS } from "./lib";
 import { ROLLUP_SIZES } from "./templates";
-import { GLOBE_SPHERES } from "../../lib/globe.js";
 import { useStudioAssets } from "./assets";
 import "./studio.css";
 import Fleur from "../../components/Fleur.jsx";
@@ -615,12 +614,10 @@ const CONTOURS = (
 
 export function GlobeCards({ theme = "light", d }) {
   const cards = Array.from({ length: 9 }, (_, i) => (d.cards ?? [d])[i] ?? null);
-  const spheres = GLOBE_SPHERES.filter((s) => s.k !== "all");
   return (
     <div className={`stu stu-globes stu-${theme} stu-portrait sheet`}>
       <div className="grid">
         {cards.map((c, i) => {
-          const all = !c?.sphere || c.sphere === GLOBE_SPHERES[0].t;
           return (
             <div key={i} className={`stu-globe${c ? "" : " empty"}`}>
               {c && (
@@ -651,13 +648,6 @@ export function GlobeCards({ theme = "light", d }) {
                   })()}
                   {c.role && <span className="rl">{c.role}</span>}
                   {c.cls && <div className="cl">{c.cls}</div>}
-                  <div className="sp">
-                    {spheres.map((s) => (
-                      <span key={s.k} className={all || s.t === c.sphere ? "on" : ""} style={{ "--sp": s.color }}>
-                        <i />{s.short}
-                      </span>
-                    ))}
-                  </div>
                   <div className="ft">
                     <span className="num">GL-{String(c.no ?? 1).padStart(3, "0")}</span>
                     <span className="num geo">21.42°N · 39.83°E</span>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    موافقة التصوير السنوية في حساب ولي الأمر (supabase/media_2.sql): يسأل مرة في العام
@@ -34,7 +35,7 @@ export default function PhotoConsentCard({ studentId, name }) {
     setBusy(true); setErr("");
     const { error } = await supabase.rpc("media_consent_set", { p_student: studentId, p_allowed: allowed });
     setBusy(false);
-    if (error) { setErr(error.message); return; }
+    if (error) { setErr(friendlyError(error.message)); return; }
     setSt({ allowed, updated_at: new Date().toISOString() }); setEdit(false);
   };
   const first = (name ?? "").split(" ")[0] || "ابنك";

@@ -7,6 +7,7 @@ import { KIND_META } from "../../lib/useNotifications";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import EvidenceTags from "../../components/EvidenceTags.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 export default function TeacherNotify() {
   const { session } = useSession();
@@ -96,7 +97,7 @@ export default function TeacherNotify() {
 
     setSending(false);
 
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     if (!data) { setMsg({ ok: false, text: "لا يوجد مستلمون لهذا الاختيار." }); return; }
 
     setMsg({ ok: true, text: "أُرسل الإشعار." });

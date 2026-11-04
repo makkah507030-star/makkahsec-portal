@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import MadrasatiAlert from "../components/MadrasatiAlert.jsx";
+import MadrasatiSupport from "../components/MadrasatiSupport.jsx";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
@@ -167,36 +169,14 @@ export default function Feedback() {
       )}
 
       <main className={standalone ? "mx-auto max-w-2xl px-5 py-10" : "max-w-2xl"}>
-        <h1 className="text-2xl font-bold text-ink">مركز الدعم والمساندة</h1>
+        <h1 className={`${standalone ? "text-2xl" : "text-lg"} font-bold text-ink`}>مركز الدعم والمساندة</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           تواصل مع الدعم الفني للبوابة لأي مشكلة تقنية أو استفسار أو اقتراح،
           وسيصلك الرد داخل الموقع عبر الإشعارات.
         </p>
 
-        {/* بطاقة رابط دعم منصة مدرستي — موقع مستقل منفصل عن بوابة مكة */}
-        <a
-          href="https://makkah507030.netlify.app/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 flex items-center gap-4 rounded-card border border-line bg-white p-5 transition-colors hover:border-mint-light hover:bg-mint-tint/40"
-        >
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-mint-tint text-mint-deep">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none"
-                 stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22c5.5 0 10-4.5 10-10S17.5 2 12 2 2 6.5 2 12s4.5 10 10 10ZM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z" />
-            </svg>
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-ink">الدعم الفني لمنصة مدرستي</p>
-            <p className="mt-0.5 text-xs leading-relaxed text-muted">
-              بوابة دعم مستقلة خاصة بمشكلات منصة مدرستي — تذاكر دعم، متابعة الحالة، ومكتبة مصادر.
-            </p>
-          </div>
-          <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-faint" fill="none"
-               stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 17 17 7M9 7h8v8" />
-          </svg>
-        </a>
+        {/* دعم منصة مدرستي: للطالب قسمه الكامل بطلباته، ولغيره التنبيه وحده (components/MadrasatiSupport.jsx) */}
+        {profile?.role === "student" ? <div id="madrasati"><MadrasatiSupport /></div> : <MadrasatiAlert className="mt-6" />}
 
         {done ? (
           <div className="card mt-6 px-6 py-14 text-center">

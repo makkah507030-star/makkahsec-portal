@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { traced, bootSummary } from "./bootTrace.js";
 import { supabase, isConfigured } from "./supabase";
+import { setTechnicalAudience } from "./friendlyError.js";
 import { setHolidayRanges, todayISO } from "./schoolTime";
 
 const SessionContext = createContext(null);
@@ -200,6 +201,8 @@ export function SessionProvider({ children }) {
 
   // التبديل بين دورين إداريين في حساب واحد (الدعم الفني ومحضر المعمل): كل دور بقائمته وصفحاته.
   // تبديل للعرض فقط؛ الصلاحيات في الخادم تبقى لكل أدوار الحساب.
+  // تفاصيل الأخطاء التقنية للدعم الفني ومدير المدرسة وحدهما (lib/friendlyError.js)
+  setTechnicalAudience(rawAdminRoles.includes("tech_support") || rawAdminRoles.includes("principal"));
   const focusRoles = FOCUS_PAIRS.find((pair) => pair.every((r) => rawAdminRoles.includes(r))) ?? null;
   let savedFocus = null;
   try { savedFocus = localStorage.getItem("mk_focus_" + (session?.user?.id ?? "")); } catch { /* تجاهل */ }

@@ -5,6 +5,8 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
+import PageIntro from "../../components/PageIntro.jsx";
 
 // أنواع محطات التقويم — «إجازة» فقط هي التي تُعطّل الدراسة في البوابة،
 // والبقية للعرض في شريط «التقويم الدراسي» العام.
@@ -110,7 +112,7 @@ export default function CalendarAdmin() {
       : supabase.from("academic_calendar").insert(payload);
     const { error } = await q;
     setSaving(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: editing ? "تم حفظ التعديل." : "تمت الإضافة." });
     reset();
     load();
@@ -154,11 +156,11 @@ export default function CalendarAdmin() {
     <div className="space-y-5">
       <div>
         <h1 className="text-lg font-bold text-ink">التقويم والإجازات</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           أضف إجازات المدرسة ومحطات التقويم. أي <b>إجازة</b> مفعّلة تُعامَل تلقائيًا
           كيوم عطلة كامل في كل البوابة خلال مدّتها (تختفي الجداول والتحضير وإحصائيات
           اليوم)، ويظهر اسمها وشعارها في الصفحة الرئيسية.
-        </p>
+        </PageIntro>
       </div>
 
       {/* نموذج الإضافة/التعديل */}

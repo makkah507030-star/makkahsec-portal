@@ -192,7 +192,9 @@ export function perfReportPages({ elements, evidence, auto, visits = [], info, n
           {last && (
             <>
               <Box icon="alert" title="تنبيه" tint style={{ marginTop: 4 }}><p className="mr-note" style={{ fontSize: 12 }}>{NOTE}</p></Box>
-              <Signs showStamp={false} people={[{ title: role?.signTitle ?? "المعلم", name: teacher, sig: sigs.teacher }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
+              <Signs showStamp={false} people={role?.solo   // ملف مدير المدرسة: توقيعه وحده
+                ? [{ title: role.signTitle, name: teacher, sig: sigs.teacher }]
+                : [{ title: role?.signTitle ?? "المعلم", name: teacher, sig: sigs.teacher }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
             </>
           )}
         </Page>

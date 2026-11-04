@@ -12,6 +12,8 @@ import Loader from "../../components/Loader.jsx";
 import { useSession } from "../../lib/session.jsx";
 import { byClassName } from "../../lib/sortAr.js";
 import { referMissing } from "../../lib/deputyReferral.js";
+import { friendlyError } from "../../lib/friendlyError.js";
+import MobileCards from "../../components/MobileCards.jsx";
 
 const TABS = [
   { key: "official", label: "الحضور والغياب الرسمي" },
@@ -252,7 +254,7 @@ export function MissingTab() {
       const { serial, counselor } = await referMissing({ profile, row: r, date, timeline: tl });
       setReferred((m) => ({ ...m, [r.student_id]: true }));
       setActMsg({ ok: true, text: `حُوِّل ${r.full_name} إلى ${counselor.name || "الموجه الطلابي"} (${serial}).` });
-    } catch (e) { setActMsg({ ok: false, text: e.message }); }
+    } catch (e) { setActMsg({ ok: false, text: friendlyError(e.message) }); }
     setBusy(null);
   };
 
@@ -596,7 +598,7 @@ export function DevicesTab() {
         ]);
         setData({ today, devices: dv.data ?? [], punches, enr, unmatched: un.data ?? [], unErr: un.error });
       } catch (e) {
-        setErr(e.message ?? String(e));
+        setErr(friendlyError(e));
       }
     })();
   }, []);
@@ -710,7 +712,7 @@ export function DevicesTab() {
           <p className="px-4 py-4 text-sm text-muted">لم تصل بصمة لأي فصل خلال المدة.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <MobileCards><table className="w-full text-sm">
               <thead className="bg-canvas text-xs text-muted">
                 <tr>
                   <th className="px-4 py-2 text-right font-medium">الفصل</th>
@@ -738,7 +740,7 @@ export function DevicesTab() {
                   );
                 })}
               </tbody>
-            </table>
+            </table></MobileCards>
           </div>
         )}
       </section>

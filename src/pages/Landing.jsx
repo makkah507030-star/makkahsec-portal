@@ -7,6 +7,7 @@ import NewsSlider from "../components/NewsSlider.jsx";
 import TrialBanner from "../components/TrialBanner.jsx";
 import ExamCountdown from "../components/ExamCountdown.jsx";
 import StudyWeekCard from "../components/StudyWeekCard.jsx";
+import PageIntro from "../components/PageIntro.jsx";
 
 const SECTIONS = [
   {
@@ -95,10 +96,10 @@ export default function Landing() {
               <br />
               في بوابة واحدة
             </h1>
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-muted">
+            <PageIntro className="mt-5 max-w-xl text-base leading-relaxed text-muted">
               بوابة إلكترونية لمجتمع مدرسة مكة الثانوية — الكادر التعليمي والإداري
               وأولياء الأمور والطلاب — لمتابعة الحضور والجداول والتقارير في مكان واحد.
-            </p>
+            </PageIntro>
 
             {/* بلا زر دخول مكرّر هنا — الزر الوحيد ثابت في الشريط العلوي */}
             <div className="mt-8 flex flex-wrap gap-3">

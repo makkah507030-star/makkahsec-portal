@@ -8,8 +8,8 @@ import SadeedLink from "./SadeedLink";
 import ReportViewer from "./report/ReportViewer.jsx";
 import { perfReportPages } from "./PerfReportDoc.jsx";
 import {
-  ACCEPT, AUTO_SOURCE, ITEM_HINT, PORTAL_TAG, SOURCE_LABEL, activeYear, loadAutoCounts, elementColor, elementSummary, itemStatus, loadEvidence,
-  loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile,
+  ACCEPT, AUTO_SOURCE, ITEM_HINT, PORTAL_TAG, SOURCE_LABEL, PERF_TRACKS, activeYear, loadAutoCounts, elementColor, elementSummary, itemStatus, loadEvidence,
+  loadPerfReference, loadSupportVisits, loadTeacherInfo, openEvidenceFile, loadOwnerRoles,
   removeEvidenceFile, uploadEvidenceFile,
 } from "../lib/performance";
 import Loader from "./Loader.jsx";
@@ -25,6 +25,7 @@ const PD_ITEM_SRC = {
   e02_06: { to: "/plc", what: "شارك في جلسات مجتمع التعلم في قسمك ووقّع على محاضرها" },
 };
 import { useBackStep } from "../lib/backStep.js";
+import { ADMIN_ROLE_LABEL } from "../lib/session.jsx";
 
 /* =====================================================================
    ملف الأداء الوظيفي للمعلم — يفتحه المعلم لملفه، ومدير المدرسة لملف أي
@@ -99,7 +100,7 @@ function InfoBox({ info, name, role }) {
       <div className="min-w-0">
         <p className="font-bold text-ink">{info?.full_name ?? name ?? "—"}</p>
         <p className="mt-0.5 text-sm leading-relaxed text-muted">
-          {role ? role.desc : <>{[
+          {role && !role.teacher ? role.desc : <>{[
             info?.specialization,
             info?.subjects?.length ? info.subjects.join("، ") : null,
             info?.classes?.length ? `${info.classes.length} فصول` : null,
@@ -285,7 +286,8 @@ function AutoDetails({ uid, year, itemKey, track }) {
     (async () => {
       // بنود الأنشطة لها دالتها (supabase/activities_4.sql)
       // وبند الإنتاج المعرفي من بنك الأسئلة (supabase/qbank_3.sql)
-      const fn = track === "lab" ? "lab_perf_details" : ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
+      // بنود الموجه والوكيل ورائد النشاط (supabase/staff_perf_5.sql)
+      const fn = track === "lab" ? "lab_perf_details" : /^m\d+_/.test(itemKey) ? "principal_perf_details" : itemKey === "e02_12" ? "cult_perf_details" : /^s\d+_/.test(itemKey) ? "sci_perf_details" : /^(g|d|a1)\d+_/.test(itemKey) ? "staff_perf_details" : ACT_ITEMS.includes(itemKey) ? "perf_activity_details" : itemKey === "e02_08" ? "perf_qbank_details" : "perf_auto_details";
       const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year, p_item: itemKey });
       if (error) setErr(error.message?.includes(fn) ? "عرض التفاصيل غير مفعّل بعد في قاعدة البيانات." : "تعذّر تحميل التفاصيل.");
       setRows(data ?? []);
@@ -367,7 +369,7 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
         </div>
         {el.evaluator_only && (
           <p className="mt-3 rounded-sm2 bg-canvas px-3 py-2 text-sm text-muted">
-            هذا العنصر يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد في ملف {role?.who ?? "المعلم"}.
+            هذا العنصر يقيّمه {role?.evaluator ?? "مدير المدرسة"} مباشرة، ولا يحتاج شواهد في ملف {role?.who ?? "المعلم"}.
           </p>
         )}
         {el.evaluator_only && readOnly && !role && <DutyIndicators uid={uid} year={year} />}
@@ -384,11 +386,17 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                       style={{ background: elementColor(el.key) }}>{n + 1}</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium leading-relaxed text-ink">{it.title}</p>
-                  {(PORTAL_TAG[it.portal] ?? (it.is_record ? PORTAL_TAG.record : null)) && (
-                    <span className={`mt-1 inline-block rounded-pill px-2.5 py-0.5 text-xs ${(PORTAL_TAG[it.portal] ?? PORTAL_TAG.record).c}`}>
-                      {(PORTAL_TAG[it.portal] ?? PORTAL_TAG.record).t}
+                  {(() => {
+                    // بند السجل لغير المعلمين (l g d m s) يُرفع يدويًا، فلا يُنسب إلى «سجل التطوير المهني»
+                    const rec = it.portal === "record" || (!it.portal && it.is_record)
+                      ? (/^[lgdms]\d/.test(it.key) ? PORTAL_TAG.recordManual : PORTAL_TAG.record) : null;
+                    const tag = rec ?? PORTAL_TAG[it.portal];
+                    return tag && (
+                    <span className={`mt-1 inline-block rounded-pill px-2.5 py-0.5 text-xs ${tag.c}`}>
+                      {tag.t}
                     </span>
-                  )}
+                    );
+                  })()}
                   {!readOnly && !el.evaluator_only && ITEM_HINT[it.key] && (
                     <p className="mt-1.5 text-xs leading-relaxed text-muted">
                       <span className="font-semibold text-mint-deep">كيف أجمعه؟ </span>{ITEM_HINT[it.key]}
@@ -571,8 +579,26 @@ const LAB_ROLE = {
     note: "الشواهد كما في ملف المحضر بالبوابة: المرفوعة، والآلية من عمل المعمل (الحجوزات والاستخدام والأجهزة والبلاغات والسلامة والدروس)." },
 };
 
+/* نصوص ملفات الموظفين الآخرين من نموذج وظيفتهم في الدليل (PERF_TRACKS في lib/performance.js) */
+function roleOf(track, job) {
+  if (track === "lab") return LAB_ROLE;
+  const base = PERF_TRACKS[track];
+  if (!base) return null;
+  // الوكيل باسم مجاله (وكيل الشؤون التعليمية مثلًا)، والنموذج واحد للوكلاء الثلاثة
+  const t = job ? { ...base, label: job } : base;
+  return {
+    // مدير المدرسة يقيّم عنصره الأول رئيسه المباشر، وبقية الموظفين مدير المدرسة
+    evaluator: track === "principal" ? "الرئيس المباشر" : "مدير المدرسة",
+    who: t.who, teacher: !!t.teacher, desc: `${t.label} · نموذج «${t.form.replace(/ \(\d+\)$/, "")}» في دليل الأداء الوظيفي`,
+    report: { who: t.who, signTitle: t.label, solo: track === "principal", tag: `ملف الأداء الوظيفي ل${t.label}`,
+      rows: [["book", "الوظيفة", t.label], ["cap", "النموذج", `${t.form} · الإصدار الثاني`]],
+      note: `الشواهد كما في ملف ${t.who} بالبوابة: المرفوعة، والآلية من عمله في البوابة.` },
+  };
+}
+
 export default function PerformanceFile({ uid, name, readOnly = false, track = "teacher" }) {
-  const role = track === "lab" ? LAB_ROLE : null;
+  const [job, setJob] = useState(null);       // مجال الوكيل من أدواره
+  const role = useMemo(() => roleOf(track, job), [track, job]);
   const [elements, setElements] = useState(null);
   const [evidence, setEvidence] = useState([]);
   const [auto, setAuto] = useState({});      // الشواهد الآلية: { [بند]: { cnt, last } }
@@ -586,10 +612,14 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
   const reload = useCallback(async () => {
     try {
       const y = await activeYear();
-      const lab = track === "lab";
-      const [els, ev, vs, inf, au] = await Promise.all([
-        loadPerfReference(track), loadEvidence(uid, y), lab ? [] : loadSupportVisits(uid), lab ? null : loadTeacherInfo(uid), loadAutoCounts(uid, y, track),
+      // المعلم ورائد النشاط (معلم) بزيارات الدعم وبيانات التدريس، وبقية الموظفين دونها
+      const lab = !!role && !role.teacher;
+      const [all, ev, vs, inf, au] = await Promise.all([
+        loadOwnerRoles(uid).then((tags) => loadPerfReference(track, tags).then((els) => ({ els, tags }))), loadEvidence(uid, y), lab ? [] : loadSupportVisits(uid), lab ? null : loadTeacherInfo(uid), loadAutoCounts(uid, y, track),
       ]);
+      // البنود بعلامات صاحب الملف: الوكيل بمجاله، وعضو فريق الثقافة ببند أعماله (perf_items.roles)
+      const { els, tags: roles } = all;
+      if (track === "deputy") setJob(roles.map((r) => ADMIN_ROLE_LABEL[r]).find((l) => l?.startsWith("وكيل")) ?? null);
       // شواهد هذا الملف وحده: من يجمع ملف المعلم وملف المحضر لا تختلط شواهدهما
       const keys = new Set(els.flatMap((e) => e.items.map((i) => i.key)));
       setYear(y); setElements(els); setEvidence(ev.filter((e) => keys.has(e.item_key))); setVisits(vs); setInfo(inf); setAuto(au[uid] ?? {});
@@ -597,7 +627,7 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
       setErr(e.message?.includes("perf_") ? "ملف الأداء غير مفعّل بعد في قاعدة البيانات." : (e.message ?? "تعذّر التحميل."));
       setElements([]);
     }
-  }, [uid, track]);
+  }, [uid, track]);   // eslint-disable-line react-hooks/exhaustive-deps -- role مشتق من track
 
   useEffect(() => { setElements(null); setView("cards"); setCurrent(null); reload(); }, [reload]);
 
@@ -650,7 +680,7 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
                         style={{ background: elementColor(el.key) }}>{el.weight}%</span>
                 </div>
                 {el.evaluator_only ? (
-                  <p className="text-sm leading-relaxed text-muted">يقيّمه مدير المدرسة مباشرة، ولا يحتاج شواهد.</p>
+                  <p className="text-sm leading-relaxed text-muted">يقيّمه {role?.evaluator ?? "مدير المدرسة"} مباشرة، ولا يحتاج شواهد.</p>
                 ) : (
                   <CountBoxes {...elementSummary(el, evidence, auto)} color={elementColor(el.key)} />
                 )}
@@ -658,7 +688,7 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
             ))}
           </div>
 
-          {!role && <section className="card p-4">
+          {(!role || role.teacher) && <section className="card p-4">
             <h2 className="font-bold text-ink">زيارات الدعم</h2>
             <p className="mt-0.5 text-sm text-muted">تصل تلقائيًا من الوكلاء ومدير المدرسة.</p>
             {visits.length === 0 ? (

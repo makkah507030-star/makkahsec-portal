@@ -6,14 +6,14 @@
    اسم النظام بلونه بدلًا منه.
    ===================================================================== */
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import MadrasatiAlert from "./MadrasatiAlert.jsx";
 
 const SYSTEMS = [
   { key: "madrasati", name: "منصة مدرستي", desc: "الدروس والواجبات والاختبارات والفصول الافتراضية",
     url: "https://schools.madrasati.sa/", logo: "/brands/madrasati.png", color: "#1B8354" },
   { key: "noor", name: "نظام نور", desc: "النتائج والشهادات والتسجيل وبيانات الطالب",
     url: "https://noor.moe.gov.sa/", logo: "/brands/noor.png", color: "#1D5C96" },
-  { key: "support", name: "دعم منصة مدرستي", desc: "بوابة دعم من المدرسة لمشكلات منصة مدرستي: تذاكر ومتابعة ومصادر",
-    url: "https://makkah507030.netlify.app/", icon: true, color: "#1B8354" },
 ];
 
 function Logo({ s }) {
@@ -31,11 +31,16 @@ function Logo({ s }) {
   );
 }
 
-export default function OfficialLinks() {
+// دعم منصة مدرستي صار داخل البوابة (مركز الدعم والمساندة) للطالب، بدل الموقع الملحق
+const SUPPORT = { key: "support", name: "دعم منصة مدرستي", desc: "كلمة مرور جديدة أو تغيير الفصل أو مشكلة أخرى: اطلبها من الدعم الفني",
+                  icon: true, color: "#1B8354" };
+
+export default function OfficialLinks({ student = false }) {
   return (
     <section className="card p-4">
       <p className="text-sm font-bold text-ink">المنصات والدعم</p>
-      <p className="text-xs text-muted">مدرستي ونور تسجّل الدخول فيهما بحسابك الرسمي (النفاذ الوطني)، ودعم مدرستي بوابة تديرها المدرسة لمساعدتك.</p>
+      <p className="text-xs text-muted">مدرستي ونور تسجّل الدخول فيهما بحسابك الرسمي (النفاذ الوطني){student ? "، ولمشكلات منصة مدرستي اطلب المساعدة من الدعم الفني في البوابة" : ""}.</p>
+      <MadrasatiAlert className="mt-3" />
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {SYSTEMS.map((s) => (
           <a key={s.key} href={s.url} target="_blank" rel="noopener noreferrer"
@@ -49,6 +54,17 @@ export default function OfficialLinks() {
               <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
           </a>
         ))}
+        {student && (
+          <Link to="/contact#madrasati"
+                className="flex items-center gap-3 rounded-card border border-line bg-white p-3 transition hover:border-mint-light hover:shadow-card">
+            <Logo s={SUPPORT} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-ink">{SUPPORT.name}</span>
+              <span className="block text-[11px] leading-snug text-muted">{SUPPORT.desc}</span>
+            </span>
+            <span className="shrink-0 text-faint">←</span>
+          </Link>
+        )}
       </div>
     </section>
   );

@@ -10,6 +10,7 @@ import { notifyUsers } from "../lib/referrals";
 import { refreshNavBadges } from "../lib/navBadges.js";
 import { MAX_PHOTOS, uploadPhotos, useSignedPhotos, Thumbs } from "./globe/shared.jsx";
 import Loader from "../components/Loader.jsx";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    بلاغات الصيانة (supabase/maint_1.sql): يرفع المعلم أو الإداري بلاغًا بمكان العطل ونوعه
@@ -156,7 +157,7 @@ function Ticket({ r, manage, me, urls, setMsg, onChange }) {
       status, resolution: note.trim() || null, handler_name: me?.full_name ?? null, updated_at: new Date().toISOString(),
       resolved_at: status === "resolved" ? r.resolved_at ?? new Date().toISOString() : null,
     }).eq("id", r.id);
-    if (error) { setMsg({ ok: false, text: error.message }); setBusy(false); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); setBusy(false); return; }
     if (status !== r.status || (note.trim() && note.trim() !== (r.resolution ?? ""))) {
       await notifyUsers([r.reported_by], `بلاغ الصيانة رقم ${r.id}: ${MAINT_STATUS[status].t}`,
         [`${r.category} · ${r.place_kind}${r.place ? ` · ${r.place}` : ""}`, note.trim()].filter(Boolean).join(" — "), `/repairs?tab=mine&open=${r.id}`);
@@ -167,7 +168,7 @@ function Ticket({ r, manage, me, urls, setMsg, onChange }) {
     if (!(await confirmDanger({ title: `حذف بلاغ الصيانة رقم ${r.id}`, impact: ["يُحذف البلاغ وصوره."], confirmLabel: "حذف" }))) return;
     if (r.photos?.length) await supabase.storage.from(MAINT_BUCKET).remove(r.photos);
     const { error } = await supabase.from("maint_tickets").delete().eq("id", r.id);
-    if (error) setMsg({ ok: false, text: error.message }); else onChange();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onChange();
   };
   const canDelete = r.reported_by === me?.id ? r.status === "new" : false;
   return (

@@ -5,6 +5,7 @@ import { AUDIENCES, audienceLabel, fmtSize } from "../../lib/guidesMeta";
 import ColorLegend from "../../components/ColorLegend.jsx";
 import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 // الصيغ المقبولة: ملف PDF أو صورة منشور تعريفي
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -108,7 +109,7 @@ export default function GuidesAdmin() {
       : await supabase.from("guides").insert(payload);
 
     setSaving(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
 
     setMsg({ ok: true, text: form.id ? "حُدّث الدليل." : "أُضيف الدليل." });
     setForm(empty);

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { CARDS_BUCKET } from "../lib/quizCards.js";
 import { confirmDanger } from "../lib/danger";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    حذف صور بطاقات الإجابة بنهاية الفصل — للدعم الفني (supabase/quiz_cards_2.sql).
@@ -36,7 +37,7 @@ export default function QuizCardsCleanup() {
     }))) return;
     setBusy(true); setDone(""); setErr("");
     const { data, error } = await supabase.rpc("quiz_cards_old");
-    if (error) { setBusy(false); setErr(error.message); return; }
+    if (error) { setBusy(false); setErr(friendlyError(error.message)); return; }
     let n = 0;
     for (let i = 0; i < (data ?? []).length; i += 100) {
       const part = data.slice(i, i + 100);

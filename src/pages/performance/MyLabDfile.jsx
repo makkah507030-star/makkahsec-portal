@@ -3,15 +3,26 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useSession } from "../../lib/session.jsx";
 import { useBackStep } from "../../lib/backStep.js";
-import { LabDfileReport } from "../../components/dfile/DfileReport.jsx";
+import { LabDfileReport, StaffDfileReport } from "../../components/dfile/DfileReport.jsx";
 import DfileShare from "../../components/dfile/DfileShare.jsx";
-import { COLORS, LAB_PARTS, dfileError, loadPublic } from "../../lib/dfile.js";
+import { COLORS, LAB_PARTS, STAFF_PARTS, dfileError, loadPublic } from "../../lib/dfile.js";
+import { PERF_TRACKS, perfTrackOf } from "../../lib/performance.js";
 
 /* =====================================================================
    لوحة ملف محضر المعمل الرقمي — بنظام لوحة ملف المعلم نفسه (supabase/lab_dfile_*.sql):
    التفعيل مرة واحدة، واللون، والبيانات، والأقسام الظاهرة، والإنجازات، والرابط وبطاقته وسجل
    الزوار، و«معاينة كما يراها الزائر». كل تعديل يُحفظ فورًا.
+   kind = "staff": الملف الرقمي للوكيل والموجه الطلابي ومحضر مختبر العلوم بالنظام نفسه (supabase/staff_dfile_*.sql).
    ===================================================================== */
+
+const KINDS = {
+  lab: { table: "lab_dfiles", sql: "lab_dfile_1.sql وlab_dfile_2.sql", title: "ملف محضر المعمل الرقمي", parts: LAB_PARTS, Report: LabDfileReport,
+    perf: "/lab-performance", perfT: "شواهد أداء محضر المعمل", winPh: "الإنجاز، مثل: تجهيز معمل…",
+    desc: "تقرير تفاعلي عن عملك في معمل الحاسب الآلي يُبنى لحظة فتحه من بيانات البوابة: التشغيل والأجهزة والصيانة والسلامة والمعمل الرقمي وعناصر الأداء." },
+  staff: { table: "staff_dfiles", sql: "staff_dfile_1.sql وstaff_dfile_2.sql", title: "ملفي الرقمي", parts: STAFF_PARTS, Report: StaffDfileReport,
+    perf: "/my-staff-performance", perfT: "شواهد أدائي الوظيفي", winPh: "الإنجاز، مثل: مبادرة…",
+    desc: "تقرير تفاعلي عن عملك يُبنى لحظة فتحه من بيانات البوابة: ما وثّقته في البوابة ببنود نموذج وظيفتك في دليل الأداء الوظيفي، وإنجازاتك، وعناصر الأداء، وشواهدك." },
+};
 
 const Block = ({ title, sub, children }) => (
   <div className="card space-y-3 p-4">
@@ -20,8 +31,9 @@ const Block = ({ title, sub, children }) => (
   </div>
 );
 
-export default function MyLabDfile() {
-  const { session, profile } = useSession();
+export default function MyLabDfile({ kind = "lab" }) {
+  const K = KINDS[kind];
+  const { session, profile, adminRoles } = useSession();
   const uid = session.user.id;
   const [s, setS] = useState(undefined);       // undefined: يُحمَّل، null: لم يُفعَّل
   const [pub, setPub] = useState(null);        // بيانات الملف كما يراها الزائر
@@ -32,22 +44,22 @@ export default function MyLabDfile() {
   useBackStep(preview, () => setPreview(false), "لوحة الملف");
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase.from("lab_dfiles").select("*").eq("user_id", uid).maybeSingle();
-    if (error) { setErr(/lab_dfiles/.test(error.message) ? "ملف المحضر الرقمي يحتاج تشغيل الملفين lab_dfile_1.sql وlab_dfile_2.sql في Supabase." : dfileError(error)); setS(null); return; }
+    const { data, error } = await supabase.from(K.table).select("*").eq("user_id", uid).maybeSingle();
+    if (error) { setErr(error.message?.includes(K.table) ? `الملف الرقمي يحتاج تشغيل الملفين ${K.sql} في Supabase.` : dfileError(error)); setS(null); return; }
     setS(data ?? null);
     if (data) loadPublic(data.code).then((r) => setPub(r?.status === "ok" ? r : null), () => setPub(null));
-  }, [uid]);
+  }, [uid, K.table, K.sql]);
   useEffect(() => { load(); }, [load]);
 
   const save = async (patch) => {
     setS((o) => ({ ...o, ...patch }));
     setSaved("");
-    const { error } = await supabase.from("lab_dfiles").update(patch).eq("user_id", uid);
+    const { error } = await supabase.from(K.table).update(patch).eq("user_id", uid);
     if (error) setErr(dfileError(error)); else { setSaved("حُفظ"); load(); }
   };
   const enable = async () => {
     setErr("");
-    const { data, error } = await supabase.from("lab_dfiles").insert({ user_id: uid, code: "-" }).select().single();
+    const { data, error } = await supabase.from(K.table).insert({ user_id: uid, code: "-", ...(kind === "staff" ? { track: "-" } : {}) })   // الرمز والوظيفة يضعهما الخادم.select().single();
     if (error) setErr(dfileError(error)); else { setS(data); load(); }
   };
 
@@ -61,17 +73,16 @@ export default function MyLabDfile() {
           <button className="btn-ghost" onClick={() => setPreview(false)}>رجوع إلى اللوحة</button>
           <span className="text-sm text-muted">هكذا يرى الزائر ملفك</span>
         </div>
-        <LabDfileReport data={pub.data} settings={{ ...pub.settings, hidden: s.hidden }} code={s.code} />
+        <K.Report data={pub.data} settings={{ ...pub.settings, hidden: s.hidden }} code={s.code} />
       </div>
     );
   }
 
   const head = (
     <div>
-      <h1 className="text-lg font-bold text-ink">ملف محضر المعمل الرقمي</h1>
+      <h1 className="text-lg font-bold text-ink">{K.title}</h1>
       <p className="mt-1 text-sm leading-relaxed text-muted">
-        تقرير تفاعلي عن عملك في معمل الحاسب الآلي يُبنى لحظة فتحه من بيانات البوابة: التشغيل والأجهزة والصيانة والسلامة
-        والمعمل الرقمي وعناصر الأداء. تعرضه برمز على مشرف أو لجنة، ولا يعرض أسماء الطلاب. هذه الصفحة تراها أنت وحدك.
+        {K.desc} تعرضه برمز على مشرف أو لجنة، ولا يعرض أسماء الطلاب. هذه الصفحة تراها أنت وحدك.
       </p>
     </div>
   );
@@ -128,16 +139,16 @@ export default function MyLabDfile() {
                      save({ perf_rating: v >= 1 && v <= 5 ? Math.round(v * 100) / 100 : null, perf_year: v >= 1 && v <= 5 ? year - 1 : null });
                    }} /></div>
         </div>
-        <label className="flex cursor-pointer items-start gap-2 rounded-sm2 border border-line bg-white px-3 py-2 text-sm text-ink">
+        {kind === "lab" && <label className="flex cursor-pointer items-start gap-2 rounded-sm2 border border-line bg-white px-3 py-2 text-sm text-ink">
           <input type="checkbox" className="mt-1 accent-mint-deep" checked={!!s.lab_author} onChange={(e) => save({ lab_author: e.target.checked })} />
           <span>أنا من أعدّ دروس المعمل الرقمي في البوابة
             <span className="block text-[11.5px] text-muted">يعرض قسم «المعمل الرقمي» مكتبة الدروس التفاعلية بمحطاتها وتدريباتها باسمك.</span></span>
-        </label>
+        </label>}
       </Block>
 
       <Block title="ماذا يرى الزائر؟" sub="الأقسام غير المختارة لا تظهر في ملفك.">
         <div className="flex flex-wrap gap-2">
-          {LAB_PARTS.map((p) => (
+          {K.parts.map((p) => (
             <label key={p.key} className={`chip cursor-pointer gap-1.5 border ${hidden.has(p.key) ? "border-line bg-canvas text-muted line-through" : "border-mint-deep/40 bg-mint-tint text-mint-deep"}`}>
               <input type="checkbox" className="accent-mint-deep" checked={!hidden.has(p.key)}
                      onChange={(e) => save({ hidden: e.target.checked ? [...hidden].filter((k) => k !== p.key) : [...hidden, p.key] })} />
@@ -148,7 +159,7 @@ export default function MyLabDfile() {
         {pub && !(pub.data?.docs?.length) && !hidden.has("docs") && (
           <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
             «الشواهد من خارج البوابة» لا تظهر في ملفك لأنك لم ترفع شاهدًا بملف هذا العام. ارفعها من{" "}
-            <Link to="/lab-performance" className="font-semibold underline">شواهد أداء محضر المعمل</Link> ← العنصر ← «رفع شاهد» لتظهر للزائر.
+            <Link to={K.perf} className="font-semibold underline">{K.perfT}</Link> ← العنصر ← «رفع شاهد» لتظهر للزائر.
           </p>
         )}
       </Block>
@@ -170,7 +181,7 @@ export default function MyLabDfile() {
           save({ other_wins: [...wins, { t: win.t.trim(), ...(win.d.trim() ? { d: win.d.trim() } : {}) }] });
           setWin({ t: "", d: "" });
         }}>
-          <input className="field" placeholder="الإنجاز، مثل: تجهيز معمل…" value={win.t} onChange={(e) => setWin({ ...win, t: e.target.value })} />
+          <input className="field" placeholder={K.winPh} value={win.t} onChange={(e) => setWin({ ...win, t: e.target.value })} />
           <input className="field" placeholder="تفصيل اختياري" value={win.d} onChange={(e) => setWin({ ...win, d: e.target.value })} />
           <button className="btn-primary" type="submit">إضافة</button>
         </form>
@@ -178,7 +189,8 @@ export default function MyLabDfile() {
 
       <Block title="رابط ملفك" sub="رابط ثابت طوال العام، وبطاقته بهوية البوابة لتعرضها أو تطبعها.">
         {/* الاسم من الملف العام، وإلا من الحساب (حين يكون الملف مخفيًا عن الزوار أو لم يُحمَّل بعد) */}
-        <DfileShare uid={uid} s={s} d={{ ...(pub?.data ?? {}), name: pub?.data?.name || profile?.full_name || "" }} onSave={save} kind="lab" />
+        <DfileShare uid={uid} s={s} d={{ ...(pub?.data ?? {}), name: pub?.data?.name || profile?.full_name || "" }} onSave={save} kind={kind}
+                    spec={kind === "staff" ? pub?.data?.job ?? PERF_TRACKS[perfTrackOf(adminRoles)]?.label : undefined} />
       </Block>
     </div>
   );

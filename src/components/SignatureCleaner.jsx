@@ -1,6 +1,7 @@
 // src/components/SignatureCleaner.jsx
 import { useEffect, useState } from "react";
 import { cleanSignature, SIGNATURE_WEIGHTS } from "../lib/signatureClean.js";
+import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
    نافذة تحسين التوقيع — تعرض الصورة الأصلية بجانب التوقيع بعد تنظيفه
@@ -41,7 +42,7 @@ export default function SignatureCleaner({ file, onSave, onCancel, busy = false 
         made = r.url;
         if (alive) setResult(r); else URL.revokeObjectURL(r.url);
       } catch (e) {
-        if (alive) { setResult(null); setError(e.message); }
+        if (alive) { setResult(null); setError(friendlyError(e.message)); }
       } finally {
         if (alive) setWorking(false);
       }

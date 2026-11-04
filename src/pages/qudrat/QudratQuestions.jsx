@@ -6,6 +6,7 @@ import { useBackStep } from "../../lib/backStep";
 import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { SECS, SKILLS } from "../../qudrat-content/index.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    أسئلة المعلمين في مركز التدريب (القدرات): المعلم يضيف أسئلة بصيغة البنك
@@ -59,13 +60,13 @@ export default function QudratQuestions() {
     const { error } = form.id ? await supabase.from("qudrat_questions").update(row).eq("id", form.id)
       : await supabase.from("qudrat_questions").insert(row);
     setBusy(false);
-    if (error) return setErr(error.message);
+    if (error) return setErr(friendlyError(error.message));
     setForm(null); load();
   };
   const remove = async () => {
     if (!window.confirm("حذف السؤال نهائيًا؟")) return;
     const { error } = await supabase.from("qudrat_questions").delete().eq("id", form.id);
-    if (error) return setErr(error.message);
+    if (error) return setErr(friendlyError(error.message));
     setForm(null); load();
   };
 

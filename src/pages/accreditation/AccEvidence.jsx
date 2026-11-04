@@ -13,6 +13,7 @@ import {
 import { PORTAL_BY, loadPortalCounts, portalCount, portalKey, portalNoun, sourcesOf } from "../../lib/accPortal.js";
 import AccViewer from "./AccViewer.jsx";
 import Loader from "../../components/Loader.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    المؤشرات والشواهد (supabase/acc_3.sql): المؤشرات الـ47 بمعاييرها ومجالاتها، ونسبة كل مؤشر
@@ -122,7 +123,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
   const linkPortal = async (title, src) => {
     const { error } = await supabase.from("acc_evidence").insert({ code, academic_year: year, title: title.trim(), link: `portal:${src.k}`,
       notes: `من أعمال البوابة: ${src.t}`, created_by_name: by ?? null });
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setMsg({ ok: true, text: `رُبط «${title.trim()}» بـ«${src.t}».` }); onChange();
   };
   const [f, setF] = useState({ title: "", notes: "" });
@@ -147,7 +148,7 @@ function Indicator({ code, list, hints, me, year, counts, uid, by, onChange, set
     if (up.error) { setMsg({ ok: false, text: up.error.message }); return false; }
     const { error } = await supabase.from("acc_evidence").insert({ code, academic_year: year, title: title.trim(),
       notes: notes.trim() || null, file_path: up.path, created_by_name: by ?? null });
-    if (error) { setMsg({ ok: false, text: error.message }); return false; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return false; }
     setMsg({ ok: true, text: `رُفع «${title.trim()}».` }); onChange(); return true;
   };
   const add = async () => {
@@ -278,7 +279,7 @@ function EvCard({ e, color, thumb, me, uid, free = [], counts, onView, onChange,
     }
     const { error } = await supabase.from("acc_evidence").update({ title: x.title.trim(), notes: x.notes.trim() || null, file_path, link: file ? null : e.link }).eq("id", e.id);
     setBusy(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     if (file && e.file_path) supabase.storage.from(ACC_BUCKET).remove([e.file_path]);
     setEdit(false); setFile(null); setMsg({ ok: true, text: "حُفظ الشاهد." }); onChange();
   };
@@ -286,18 +287,18 @@ function EvCard({ e, color, thumb, me, uid, free = [], counts, onView, onChange,
     if (!(await confirmDanger({ title: `حذف الشاهد «${e.title}»`, impact: ["يُحذف الشاهد وملفه من القسم."], confirmLabel: "حذف" }))) return;
     if (e.file_path) await supabase.storage.from(ACC_BUCKET).remove([e.file_path]);
     const { error } = await supabase.from("acc_evidence").delete().eq("id", e.id);
-    if (error) setMsg({ ok: false, text: error.message }); else onChange();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onChange();
   };
   // احتساب شاهد إضافي لشاهد مطلوب: يأخذ عنوان المطلوب، ويبقى عنوانه الأصلي في الملاحظة
   const assign = async (t) => {
     if (!t) return;
     const notes = [e.notes, e.title.trim() !== t.trim() ? `العنوان السابق: ${e.title}` : ""].filter(Boolean).join(" · ") || null;
     const { error } = await supabase.from("acc_evidence").update({ title: t, notes }).eq("id", e.id);
-    if (error) setMsg({ ok: false, text: error.message }); else { setMsg({ ok: true, text: "احتُسب الشاهد للمطلوب في الخطة." }); onChange(); }
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else { setMsg({ ok: true, text: "احتُسب الشاهد للمطلوب في الخطة." }); onChange(); }
   };
   const setStatus = async (status) => {
     const { error } = await supabase.from("acc_evidence").update({ status }).eq("id", e.id);
-    if (error) setMsg({ ok: false, text: error.message }); else onChange();
+    if (error) setMsg({ ok: false, text: friendlyError(error.message) }); else onChange();
   };
   const viewIt = () => {
     if (e.file_path) onView();

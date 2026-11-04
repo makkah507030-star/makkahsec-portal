@@ -7,6 +7,7 @@ import Loader from "../../components/Loader.jsx";
 import { useNotice } from "../../lib/useNotice.js";
 import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 const ROLES = [
   { key: "admin",    label: "الإدارة" },
@@ -96,7 +97,7 @@ function ComposeForm({ onSent }) {
     });
 
     setSending(false);
-    if (error) { setMsg({ ok: false, text: error.message }); return; }
+    if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
 
     setMsg({ ok: true, text: "تم نشر الرسالة." });
     setTitle(""); setBody("");

@@ -25,6 +25,14 @@ import { useBackStep } from "../lib/backStep.js";
 import { AUDIENCE, GRADES, audienceOf, audienceLabel, audienceTitle, scopeOf, scopePlace, staffKinds, skipsConsent, eventReach, listCerts } from "../lib/eventAudience.js";
 import { useScoutLeader, issuesAsScout } from "../lib/scoutLeader.js";
 
+import { useCultMode } from "../lib/cultMode.js";
+import { friendlyError } from "../lib/friendlyError.js";
+const CULT_AMB_ROLE = "سفير الثقافة المؤسسية";
+
+/* صفة المعلم أو الإداري في كشف الحضور وشهادته: «معلم الرياضيات» بتخصصه، والإداري بمسمّى دوره */
+const staffRoleOf = (m) => (m.kind === "admin" ? (ADMIN_ROLE_LABEL[m.roles?.[0]] ?? "الإدارة").replace(/\s+\d+$/, "")
+  : m.spec ? (/^معلم/.test(m.spec) ? m.spec : `معلم ${m.spec}`) : "معلم");
+
 /* =====================================================================
    الأحداث والمناسبات — مسار متتابع، كل مرحلة تفتح التي بعدها.
    ① بيانات الحدث ② الطلاب المشاركون ③ موافقة ولي الأمر
@@ -235,6 +243,11 @@ export function CategoryPicker({ cats, value, onChange }) {
 function NewEvent({ uid, profile, roles, onDone }) {
   const { effectiveRole } = useSession();
   const scoutLeader = useScoutLeader(issuesAsScout(roles));
+  // سفير الثقافة المؤسسية: يختار صفته في الحدث، وفي مساحة السفير تكون «سفير الثقافة المؤسسية» ابتداءً (cult_6.sql)
+  const cultMode = useCultMode(uid);
+  const [cultAmb, setCultAmb] = useState(false);
+  const [asAmb, setAsAmb] = useState(cultMode);
+  useEffect(() => { supabase.rpc("cult_me").then(({ data }) => setCultAmb(!!data?.ambassador)); }, []);
   const [cats, setCats] = useState([]);
   const [f, setF] = useState({
     title: "", category: "", event_date: todayISO(), end_date: "",
@@ -258,6 +271,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
     // وأدوار الكشافة كلها (كنائب القائد) تُنظّم باسم القائد الكشفي وصفته (lib/scoutLeader.js)
     const asScout = effectiveRole !== "teacher" && issuesAsScout(roles) && !!scoutLeader;
     const roleLabel = asScout ? scoutLeader.label
+      : cultAmb && asAmb ? CULT_AMB_ROLE
       : roles.length && effectiveRole !== "teacher" ? (ADMIN_ROLE_LABEL[roles[0]] ?? "") : "معلم";
 
     const { data, error } = await supabase.from("school_events").insert({
@@ -283,7 +297,7 @@ function NewEvent({ uid, profile, roles, onDone }) {
     }).select("id").single();
 
     setBusy(false);
-    if (error) { onDone(null, { ok: false, text: error.message }); return; }
+    if (error) { onDone(null, { ok: false, text: friendlyError(error.message) }); return; }
     onDone(data.id, { ok: true, text: f.audience.length
       ? `أُنشئ الحدث ${serial} ${f.audience.some((k) => k === "students" || k === "guardians") ? `حدثًا عامًا ${scopePlace(f.scope)}` : "حدثًا عامًا"}. أضف المكرَّمين بالاسم إن وُجدوا، ثم تابع.`
       : `أُنشئ الحدث ${serial}. انتقل لاختيار الطلاب.` });
@@ -299,6 +313,18 @@ function NewEvent({ uid, profile, roles, onDone }) {
                placeholder="مثال: الاحتفاء باليوم الوطني ٩٦"
                onChange={(e) => setF((x) => ({ ...x, title: e.target.value }))} />
       </div>
+
+      {cultAmb && (
+        <div>
+          <label className="text-xs text-muted">صفتك في الحدث (تظهر تحت توقيعك في الشهادات والتقرير)</label>
+          <div className="mt-1 flex flex-wrap gap-2">
+            {[[true, CULT_AMB_ROLE], [false, roles.length && effectiveRole !== "teacher" ? (ADMIN_ROLE_LABEL[roles[0]] ?? "معلم") : "معلم"]].map(([v, t]) => (
+              <button key={t} type="button" onClick={() => setAsAmb(v)}
+                      className={`rounded-pill px-3.5 py-1.5 text-[13px] font-semibold ${asAmb === v ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`}>{t}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <CategoryPicker cats={cats} value={f.category} onChange={(c) => setF((x) => ({ ...x, category: c }))} />
 
@@ -428,7 +454,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
 
   const patch = async (fields, okText) => {
     const { error } = await supabase.from("school_events").update(fields).eq("id", e.id);
-    if (error) { onMsg({ ok: false, text: error.message }); return false; }
+    if (error) { onMsg({ ok: false, text: friendlyError(error.message) }); return false; }
     setE((x) => ({ ...x, ...fields }));
     if (okText) onMsg({ ok: true, text: okText });
     return true;
@@ -551,6 +577,7 @@ function EventWizard({ ev, uid, profile, isSupport, isPrincipal, startAtApproval
       {!cancelled && step === 4 && <StageAttendance e={e} parts={parts} reload={loadParts} skip={skip} patch={patch}
                                       onNext={() => advance("certificates", "انتقلنا للشهادات.")} />}
       {!cancelled && step === 5 && <StageCertificates e={e} parts={parts} patch={patch} reload={loadParts} isSupport={isSupport}
+                                        merge={(f) => setE((x) => ({ ...x, ...f }))}
                                         onNext={() => advance("report", "انتقلنا للتقرير.")} />}
       {!cancelled && step === 6 && <StageReport e={e} parts={parts} patch={patch} onMsg={onMsg}
                                                 onSubmitted={() => setStep(7)} />}
@@ -1305,7 +1332,7 @@ function StagePermission({ e, parts, uid, reload, onNext }) {
       created_by: uid,
     }).select("id").single();
 
-    if (error) { setDoneMsg({ ok: false, text: error.message }); setBusy(false); return; }
+    if (error) { setDoneMsg({ ok: false, text: friendlyError(error.message) }); setBusy(false); return; }
 
     const rows = approved.map((p) => ({ request_id: newReq.id, student_id: p.student_id }));
     const { error: e2 } = await supabase.from("permission_request_students").insert(rows);
@@ -1580,10 +1607,10 @@ function StaffAttendance({ e, patch }) {
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.rpc("ev_audience_members", { p_event: e.id, p_kinds: kinds });
-      if (error) { setErr(error.message); setMembers([]); return; }
+      if (error) { setErr(friendlyError(error.message)); setMembers([]); return; }
       setMembers((data ?? []).map((m) => ({
         key: m.key, name: m.full_name, kind: m.kind,
-        role: m.kind === "admin" ? (ADMIN_ROLE_LABEL[m.roles?.[0]] ?? "الإدارة") : "معلم",
+        role: staffRoleOf(m),
       })).sort((a, b) => cmpAr(a.name, b.name)));
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1700,7 +1727,7 @@ function usePrintWhenReady(id, trigger, onDone) {
 }
 
 /* ⑥ الشهادات */
-function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
+function StageCertificates({ e, parts, patch, reload, isSupport, onNext, merge }) {
   const [f, setF] = useState({
     cert_title: e.cert_title ?? "",
     cert_template: e.cert_template ?? (isNationalDay(e) ? "national" : "classic"),
@@ -1717,9 +1744,18 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
 
   const attended = useMemo(() => (parts ?? []).filter((p) => p.attended === true), [parts]);
   // المعلمون والإدارة الحاضرون في حدث للمدرسة كلها، بصيغة المشارك نفسها
+  // صفة كل حاضر محدَّثة من سجله (تخصص المعلم أو دور الإداري) لا كما حُفظت يوم الحضور (events_staff_title.sql)
+  const [titles, setTitles] = useState({});
+  useEffect(() => {
+    const kinds = staffKinds(e);
+    if (!kinds.length || !(e.audience_attended ?? []).length) return;
+    supabase.rpc("ev_audience_members", { p_event: e.id, p_kinds: kinds }).then(({ data }) =>
+      setTitles(Object.fromEntries((data ?? []).map((m) => [m.key, staffRoleOf(m)]))));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [e.id, (e.audience_attended ?? []).length]);
   const staff = useMemo(() => (e.audience_attended ?? []).map((x) => (
-    { id: `s-${x.key}`, key: x.key, student_name: x.name, class_label: x.role, staff: true, cert_issued_at: x.cert_at })),
-  [e.audience_attended]);
+    { id: `s-${x.key}`, key: x.key, student_name: x.name, class_label: titles[x.key] || x.role, staff: true, cert_issued_at: x.cert_at, doc_id: x.doc_id })),
+  [e.audience_attended, titles]);
   const serialOf = (p) => (p.staff
     ? `${e.serial}-M${String(staff.indexOf(p) + 1).padStart(3, "0")}`
     : `${e.serial}-${String(attended.indexOf(p) + 1).padStart(3, "0")}`);
@@ -1738,6 +1774,31 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
     await save();
     setPrinting(list);
     await markIssued(list);
+  };
+
+  // إصدار الشهادات إلى حسابات أصحابها (events_certs_deliver.sql): مستند في «نماذجي» للطالب وولي أمره،
+  // وللمعلم والإداري، بالقالب والنص والتوقيع نفسها، مع إشعار. ما صدر لا يُعاد إصداره.
+  const [dlv, setDlv] = useState({ busy: false, msg: null });
+  const undelivered = [...attended.filter((p) => !p.cert_doc_id), ...staff.filter((p) => !p.doc_id)];
+  const deliver = async () => {
+    if (!undelivered.length) return;
+    if (!window.confirm(`إصدار ${undelivered.length} شهادة إلى حسابات أصحابها؟\nتظهر في «نماذجي» للطالب وولي أمره وللمعلم، ويصلهم إشعار. ` +
+                        "تصدر بنص الشهادة الحالي، ولا تتغير بعد إصدارها.")) return;
+    if (!(await save())) return;
+    setDlv({ busy: true, msg: null });
+    const items = undelivered.map((p) => (p.staff ? { key: p.key, serial: serialOf(p), title: p.class_label }
+                                                  : { pid: p.id, serial: serialOf(p) }));
+    const { data, error } = await supabase.rpc("ev_issue_certs", { p_event: e.id, p_items: items, p_year: hijriYear() });
+    if (error) {
+      setDlv({ busy: false, msg: { ok: false, text: /ev_issue_certs|schema cache/.test(error.message)
+        ? "الإصدار إلى الحسابات يحتاج تنفيذ supabase/events_certs_deliver.sql في قاعدة البيانات مرة واحدة." : error.message } });
+      return;
+    }
+    if (data?.notification) { try { await sendPush(data.notification); } catch { /* الإشعار في البوابة وصل */ } }
+    await reload();
+    const { data: ev } = await supabase.from("school_events").select("audience_attended").eq("id", e.id).single();
+    if (ev) merge(ev);
+    setDlv({ busy: false, msg: { ok: true, text: `صدرت ${data?.issued ?? 0} شهادة إلى حسابات أصحابها، ووصلهم إشعار.` } });
   };
 
   // عدّاد الشهادات: تُسجَّل الطباعة الأولى لكل اسم، وإعادة الطباعة لا تغيّرها
@@ -1860,6 +1921,24 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
         </CertPreview>
       </section>
 
+      {/* الإصدار إلى الحسابات */}
+      {(attended.length + staff.length) > 0 && (
+        <section className="card space-y-2 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-ink">إصدار الشهادات إلى الحسابات</p>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                تصل شهادة كل حاضر إلى «نماذجي» في حسابه، وللطالب في حساب ولي أمره أيضًا، مع إشعار. الطباعة باقية كما هي.
+              </p>
+            </div>
+            <button className="btn-primary shrink-0" disabled={dlv.busy || !undelivered.length} onClick={deliver}>
+              {dlv.busy ? "جارٍ الإصدار…" : undelivered.length ? `إصدار إلى الحسابات (${undelivered.length})` : "صدرت كلها ✓"}
+            </button>
+          </div>
+          {dlv.msg && <p className={`rounded-sm2 px-3 py-2 text-xs ${dlv.msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{dlv.msg.text}</p>}
+        </section>
+      )}
+
       {/* الطلاب */}
       <section className="card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
@@ -1877,7 +1956,8 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
                 <p className="truncate text-sm font-medium text-ink">{p.student_name}</p>
                 <p className="num truncate text-xs text-faint">{p.class_label} · {serialOf(p)}</p>
               </div>
-              {p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
+              {p.cert_doc_id ? <span className="mr-auto shrink-0 text-xs text-present">في حسابه ✓</span>
+                : p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
               <button onClick={() => printList([p])}
                       className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
                 طباعة
@@ -1910,7 +1990,8 @@ function StageCertificates({ e, parts, patch, reload, isSupport, onNext }) {
                   <p className="truncate text-sm font-medium text-ink">{p.student_name}</p>
                   <p className="num truncate text-xs text-faint">{p.class_label} · {serialOf(p)}</p>
                 </div>
-                {p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
+                {p.doc_id ? <span className="mr-auto shrink-0 text-xs text-present">في حسابه ✓</span>
+                  : p.cert_issued_at && <span className="mr-auto shrink-0 text-xs text-present">طُبعت ✓</span>}
                 <button onClick={() => printList([p])}
                         className="shrink-0 rounded-pill border border-line px-3 py-1 text-xs text-muted hover:bg-canvas">
                   طباعة

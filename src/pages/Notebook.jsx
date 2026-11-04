@@ -8,6 +8,8 @@ import { NOTE_COLS, colorOf, dueState, noteTitle } from "../lib/notes.js";
 import { refreshNavBadges } from "../lib/navBadges.js";
 import NoteEditor from "../components/NoteEditor.jsx";
 import Loader from "../components/Loader.jsx";
+import PageIntro from "../components/PageIntro.jsx";
+import { Icon } from "../components/Layout.jsx";
 
 /* =====================================================================
    مفكرتي — ملاحظات ومهام شخصية للمعلمين والإداريين (supabase/staff_notes.sql).
@@ -81,7 +83,7 @@ export default function Notebook() {
   const done = shown.filter((n) => n.done_at);
   return (
     <div className="space-y-5">
-      <div className="rounded-card border border-mint-light bg-gradient-to-l from-mint-tint to-[#F7FCF9] px-5 py-4 text-center">
+      <div className="rounded-card border border-mint-light bg-gradient-to-l from-mint-tint to-[#F7FCF9] dark:to-paper px-5 py-4 text-center">
         <p className="text-lg font-semibold leading-loose text-mint-deep">
           ﴿ وَاذْكُر رَّبَّكَ إِذَا نَسِيتَ وَقُلْ عَسَىٰ أَن يَهْدِيَنِ رَبِّي لِأَقْرَبَ مِنْ هَٰذَا رَشَدًا ﴾
         </p>
@@ -89,10 +91,10 @@ export default function Notebook() {
       </div>
       <div>
         <h1 className="text-lg font-bold text-ink">مفكرتي</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           ملاحظاتك ومهامك الخاصة، لا يراها غيرك. ما حلّ موعده يظهر في «بانتظار إجرائك» في الرئيسية.
           وتضيف ملاحظة من أي صفحة بزر <b className="text-ink">✎</b> أسفل الشاشة، فتُربط بتلك الصفحة.
-        </p>
+        </PageIntro>
       </div>
 
       <section className="card p-4">
@@ -160,7 +162,7 @@ function NoteCard({ n, focus, editing, onEdit, onCancel, onSaved, onPatch, onRem
                     n.done_at ? "border-mint-deep bg-mint-deep text-white" : "border-line text-transparent hover:border-mint-deep"}`}>✓</button>
           <div className="min-w-0 flex-1">
             <p className={`text-sm font-semibold text-ink ${n.done_at ? "line-through" : ""}`}>
-              {n.pinned && <span title="مثبتة">📌 </span>}{noteTitle(n)}
+              {n.pinned && <span title="مثبتة" className="me-1 inline-block align-[-2px] text-mint-deep"><Icon name="pin" className="h-3.5 w-3.5" /></span>}{noteTitle(n)}
             </p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px]">
               {c && <span className="rounded-pill px-2 py-0.5 font-semibold" style={{ background: c.bg, color: c.c }}>{c.t}</span>}

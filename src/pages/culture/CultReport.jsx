@@ -20,6 +20,7 @@ const CFG = {
   kindPlural: Object.fromEntries(Object.entries(PROGRAMS).map(([k, p]) => [k, `في «${p.t}»`])),
   domainOf: (axis) => ({ t: axis || "—" }), colorOf: (k) => PROGRAMS[k]?.c,
   signer: "سفير الثقافة المؤسسية", membersLabel: "فريق الثقافة المؤسسية", membersNoun: "member", itemNoun: "activity",
+  photoAspect: 4 / 5,   // صور التوثيق كثيرًا ما تكون بطاقات الثقافة (540×675): تظهر بشكلها مصغّرة
   words: { pl: "أنشطة", al: "الأنشطة", sg: "النشاط", one: "نشاط", kind: "البرنامج", kindSg: "البرنامج", kindOf: "برامجها" },
 };
 const NOTES_KEY = "culture-plan-notes";
@@ -40,10 +41,12 @@ export default function CultReport({ go }) {
       supabase.from("cult_occasions").select("id", { count: "exact", head: true }).not("sent_at", "is", null),
       supabase.from("cult_onboard").select("id", { count: "exact", head: true }),
       supabase.from("cult_ideas").select("status"),
-    ]).then(([a, t, m, o, b, i]) => {
+      supabase.from("cult_messages").select("program"),
+      supabase.rpc("cult_team_works"),
+    ]).then(([a, t, m, o, b, i, g, w]) => {
       const team = t.data ?? [];
       const leader = team.find((x) => x.role === "ambassador")?.full_name ?? "";
-      setData({ acts: a.data ?? [], members: team.length, leader, meet: m.count ?? 0, care: o.count ?? 0, onb: b.count ?? 0, ideas: i.data ?? [] });
+      setData({ acts: a.data ?? [], members: team.length, leader, meet: m.count ?? 0, care: o.count ?? 0, onb: b.count ?? 0, ideas: i.data ?? [], msgs: g.data ?? [], works: w.data ?? [] });
       Promise.all([leader ? signatureByName(leader) : null, loadPrincipalSignature(), loadSchoolStamp()])
         .then(([l, p, s]) => setSigs({ leader: l, principal: p?.url ?? null, stamp: s }));
     });
@@ -62,6 +65,9 @@ export default function CultReport({ go }) {
         data.meet && `عُقد في «التواصل الملهم» ${few(data.meet, "لقاء واحد", "لقاءان", "لقاءات", "لقاءً")}.`,
         data.care && `أُرسل في «نهتم بك» ${few(data.care, "بطاقة واحدة", "بطاقتان", "بطاقات", "بطاقة")} لمناسبات الموظفين.`,
         data.onb && `هُيّئ في «حيّاك» ${few(data.onb, "موظف جديد واحد", "موظفان جديدان", "موظفين جدد", "موظفًا جديدًا")}.`,
+        data.msgs.length && `أُرسل للموظفين ${few(data.msgs.length, "رسالة واحدة", "رسالتان", "رسائل", "رسالة")} في برامج الثقافة المؤسسية.`,
+        (() => { const by = {}; data.works.forEach((x) => { by[x.full_name] = (by[x.full_name] ?? 0) + Number(x.n); });
+          const n = Object.keys(by).length; return n > 1 && `أسهم ${few(n, "عضو واحد", "عضوان", "أعضاء", "عضوًا")} من الفريق في التنفيذ.`; })(),
         data.ideas.length && `شارك الموظفون ${few(data.ideas.length, "فكرة واحدة", "فكرتين", "أفكار", "فكرة")}${adopted ? `، اعتُمد منها ${adopted}` : ""}.`,
       ].filter(Boolean),
     };

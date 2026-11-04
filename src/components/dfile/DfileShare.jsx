@@ -5,6 +5,7 @@ import { shrinkImage } from "../../lib/imageResize.js";
 import { fmtDateTime } from "../../lib/dates.js";
 import DfileCard from "./DfileCard.jsx";
 import { DFILE_PHOTOS, SHARE_MSG, dfileLink, loadVisits } from "../../lib/dfile.js";
+import { friendlyError } from "../../lib/friendlyError.js";
 
 /* =====================================================================
    «رابط ملفك» في لوحة المعلم: بطاقة الرمز، وصورة المعلم الاختيارية، وتنزيل
@@ -27,10 +28,12 @@ const dur = (s) => (s >= 60 ? `${Math.round(s / 60)} دقيقة` : s > 0 ? `${s}
 const KIND = {
   teacher: { title: "ملف المعلم الرقمي", owner: "المعلم" },
   lab: { title: "ملف محضر المعمل الرقمي", owner: "المحضر", spec: "محضر معمل الحاسب الآلي" },
+  staff: { title: "الملف الرقمي", owner: "الموظف" },   // الوكيل والموجه ومحضر العلوم (supabase/staff_dfile_*.sql)، والوظيفة في spec
 };
 
-export default function DfileShare({ uid, s, d, onSave, kind = "teacher" }) {
-  const K = KIND[kind];
+export default function DfileShare({ uid, s, d, onSave, kind = "teacher", spec }) {
+  const owner = kind === "staff" ? { principal: "المدير", deputy: "الوكيل", counselor: "الموجه", science: "المحضر" }[d?.track] : null;
+  const K = { ...KIND[kind], ...(spec ? { spec } : {}), ...(owner ? { owner } : {}) };
   const card = useRef(null);
   const [photo, setPhoto] = useState(null);
   const [busy, setBusy] = useState("");
@@ -47,7 +50,7 @@ export default function DfileShare({ uid, s, d, onSave, kind = "teacher" }) {
     const img = await shrinkImage(file, 600, 0.86, { jpeg: true });
     const path = `${uid}/photo-${Date.now()}.jpg`;
     const { error } = await supabase.storage.from(DFILE_PHOTOS).upload(path, img, { contentType: "image/jpeg" });
-    if (error) { setMsg(error.message); setBusy(""); return; }
+    if (error) { setMsg(friendlyError(error.message)); setBusy(""); return; }
     if (s.photo_path) supabase.storage.from(DFILE_PHOTOS).remove([s.photo_path]);
     await onSave({ photo_path: path });
     setBusy("");

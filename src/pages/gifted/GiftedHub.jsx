@@ -5,6 +5,7 @@ import MawhibaTracker from "./MawhibaTracker.jsx";
 import GiftedMembers from "./GiftedMembers.jsx";
 import GiftedReport from "./GiftedReport.jsx";
 import ProgramPlan from "../globe/ProgramPlan.jsx";
+import ProgramCards from "../studio/ProgramCards.jsx";
 import ReadOnlyZone, { useSupportReadOnly } from "../../components/ReadOnlyZone.jsx";
 import { GIFTED_KIND, GIFTED_PRESETS, GIFTED_DOMAINS, GIFTED_BUCKET, domainOf } from "../../lib/gifted.js";
 
@@ -20,7 +21,7 @@ export const GIFTED_PLAN = {
   targetHint: "الفئة المستهدفة (مثل: الطلاب الموهوبون، طلاب الأول الثانوي)", emoji: "⭐",
   outcomeHint: "الأثر والملاحظات: ما تحقق من أهداف البرنامج، ونتائج الطلاب ومشاركاتهم…",
 };
-const TABS = [["mawhiba", "مقياس موهبة"], ["members", "الطلاب الموهوبون"], ["plan", "خطة البرنامج"]];
+const TABS = [["mawhiba", "مقياس موهبة"], ["members", "الطلاب الموهوبون"], ["plan", "خطة البرنامج"], ["cards", "البطاقات"]];
 
 export default function GiftedHub() {
   const { profile } = useSession();
@@ -43,6 +44,8 @@ export default function GiftedHub() {
         {tab === "members" && <GiftedMembers />}
         {tab === "plan" && <ProgramPlan cfg={GIFTED_PLAN} me={profile?.full_name} onReport={() => setTab("report")} />}
       </ReadOnlyZone>
+      {/* بطاقات الطلاب الموهوبين داخل القسم (studio/ProgramCards.jsx) */}
+      {tab === "cards" && <ProgramCards tplKey="gifted-card" />}
     </div>
   );
 }
