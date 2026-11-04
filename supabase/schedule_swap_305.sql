@@ -37,7 +37,7 @@ end $$;
 
 -- الجدول بعد التبديل: صف 305 يوم الثلاثاء
 select s.period_no "الحصة", sub.name "المادة", u.full_name "المعلم", s.start_time "من", s.end_time "إلى"
-from public.schedule s join public.classes c on c.id = s.class_id join public.users u on u.id = s.teacher_id
+from public.schedule s join public.classes c on c.id = s.class_id join public.teachers u on u.id = s.teacher_id
 left join public.subjects sub on sub.id = s.subject_id
 where c.grade = 3 and c.class_no in (305, 5) and s.day_of_week = 3
   and s.academic_year = (select value from public.settings where key = 'active_year')
