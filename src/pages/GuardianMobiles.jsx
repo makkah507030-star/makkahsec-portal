@@ -155,7 +155,7 @@ export default function GuardianMobiles() {
                 )}
                 {editing === r.student_id && (
                   <div className="flex flex-wrap gap-2">
-                    <input className="field w-44 py-1 text-sm" dir="ltr" inputMode="tel" placeholder="بأي صيغة، مثل 0551234567" value={val} onChange={(e) => setVal(e.target.value)} />
+                    <input className="field w-44 py-1 text-sm" dir="ltr" inputMode="tel" placeholder="05xxxxxxxx" value={val} onChange={(e) => setVal(e.target.value)} />
                     <button type="button" className="btn-primary px-4 py-1 text-xs" onClick={() => setMobile(r)}>حفظ بعد التأكد هاتفيًا</button>
                     <button type="button" className="btn-ghost px-3 py-1 text-xs" onClick={() => setEditing(null)}>إلغاء</button>
                   </div>

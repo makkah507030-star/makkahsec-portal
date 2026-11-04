@@ -59,7 +59,7 @@ export default function GuardianMobileCard() {
       ) : (
         <div className="space-y-2">
           <input className="field" dir="ltr" inputMode="tel" placeholder="05xxxxxxxx" value={a} onChange={(e) => setA(e.target.value)} />
-          <p className="text-xs text-muted">اكتب الرقم بأي صيغة، مثل 0551234567 أو ‎+966 55 123 4567‎، وبالأرقام العربية أو الإنجليزية، وتحفظه البوابة بالصيغة الصحيحة.</p>
+          <p className="text-xs text-muted">اكتب رقم جوالك عشرة أرقام يبدأ بـ 05، مثل 0551234567.</p>
           <input className="field" dir="ltr" inputMode="tel" placeholder="أعد كتابة الرقم للتأكد" value={b} onChange={(e) => setB(e.target.value)} />
           <div className="flex flex-wrap gap-2">
             <button type="button" className="rounded-xl bg-absent px-5 py-2 text-sm font-semibold text-white hover:bg-absent/90 disabled:opacity-60" disabled={busy} onClick={() => save(a)}>حفظ الرقم الجديد</button>
