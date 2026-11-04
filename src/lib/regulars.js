@@ -36,6 +36,13 @@ export async function loadRegulars() {
     .map((s) => ({ ...s, late: late.get(s.student_id) ?? 0 }))
     .sort((a, b) => a.grade - b.grade || a.class_no - b.class_no || a.late - b.late
       || String(a.full_name).localeCompare(String(b.full_name), "ar"));
+  // أعداد طلاب كل فصل (للنسب)، ومن غاب يومًا واحدًا فقط أو يومين (قريبون من الانتظام)
+  const sizes = {}, absDays = new Map();
+  (roster ?? []).forEach((s) => { if (s.grade) sizes[`${s.grade}-${s.class_no}`] = (sizes[`${s.grade}-${s.class_no}`] ?? 0) + 1; });
+  marks.forEach((m) => { if (inDays.has(m.attend_date) && (m.status === "absent" || m.status === "excused"))
+    absDays.set(m.student_id, (absDays.get(m.student_id) ?? 0) + 1); });
+  const near = (roster ?? []).filter((s) => s.grade && absDays.get(s.student_id) <= 2)
+    .map((s) => ({ grade: s.grade, class_no: s.class_no, abs: absDays.get(s.student_id) }));
   return { year, term, days: dates.length, from: dates[0] ?? null, to: dates[dates.length - 1] ?? null,
-           total: (roster ?? []).length, rows };
+           total: (roster ?? []).length, sizes, near, rows };
 }
