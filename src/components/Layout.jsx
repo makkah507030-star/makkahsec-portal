@@ -96,6 +96,7 @@ export const ADMIN_GROUPS = [
       { to: "/qbank",             label: "بنك الأسئلة", roles: ["principal", "deputy_academic", "tech_support"], icon: "database", kw: "اسئلة مشاركة اختبار مواد" },
       { to: "/quiz-cycles",       label: "متابعة دورات الاختبار", roles: ["principal", "deputy_academic", "tech_support"], icon: "refresh", kw: "الدورات غير المكتملة اختبارات خطة علاجية" },
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
+      { to: "/supervision",       label: "الإشراف اليومي",     roles: ["principal", "tech_support", "deputy_school", "deputy_students"], icon: "eye", kw: "إشراف فسحة مشرف متابع حضور تقرير" },
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
       { to: "/activities", label: "بنك الأنشطة", roles: ["deputy_academic", "principal", "tech_support"], icon: "sparkles", kw: "حقيبة حصص الانتظار الأنشطة الصفية العاب" },

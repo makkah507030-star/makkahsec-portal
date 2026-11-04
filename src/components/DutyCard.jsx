@@ -1,5 +1,6 @@
 // src/components/DutyCard.jsx
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { todayISO, todayDow, DAY_NAMES } from "../lib/schoolTime";
@@ -270,6 +271,11 @@ export default function DutyCard({ personal = false }) {
                 </div>
               )}
             </div>
+            {followToday && (
+              <Link to="/supervision" className="mt-3 flex items-center justify-center gap-1.5 rounded-pill bg-mint-deep px-4 py-2 text-xs font-bold text-white hover:opacity-90">
+                سجل الإشراف اليوم: الحضور والملاحظات والاعتماد ←
+              </Link>
+            )}
           </Block>
         )}
 
