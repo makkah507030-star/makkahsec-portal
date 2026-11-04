@@ -2,7 +2,7 @@
 // سجل المناوبة اليومية (supabase/duty_log_1..2.sql): المناوبون يسجلون بداية اليوم ونهايته، والطلاب المتأخرين
 // وسببه، والمواقف على الطلاب، وملاحظاتهم، ثم يرفعونه للوكيل. والوكيل يسجل حضورهم (الأصل حاضر) وملاحظة لكل
 // منهم وملاحظاته ويذكّرهم عبر واتساب، ثم يعتمد: يُقفل ويصير تقرير اليوم، ويصل أولياء أمور المتأخرين تنبيه.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { todayISO, DAY_NAMES } from "../lib/schoolTime";
@@ -36,23 +36,37 @@ const short = (n) => { const w = String(n ?? "").split(" ").filter((x) => x && x
 const t12 = (v) => { if (!/^\d{1,2}:\d{2}/.test(v ?? "")) return ""; const [h, m] = v.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "ص" : "م"}`; };
 const L = ({ children }) => <p className="mb-1.5 text-sm font-semibold text-ink">{children}</p>;
 
-/* بحث عن طالب بالاسم من الطلاب النشطين */
+/* بحث عن طالب بالاسم من الطلاب النشطين. القائمة تُغلق بالاختيار، أو بالضغط خارجها، أو بـEsc، أو بمسح البحث */
 function StudentPick({ onPick }) {
-  const [q, setQ] = useState(""); const [res, setRes] = useState([]);
+  const [q, setQ] = useState(""); const [res, setRes] = useState([]); const [open, setOpen] = useState(false);
+  const box = useRef(null);
   useEffect(() => {
     const t = q.trim(); if (t.length < 3) { setRes([]); return undefined; }
     const h = setTimeout(() => supabase.from("v_active_students").select("student_id, full_name, class_no").ilike("full_name", `%${t}%`).limit(8)
-      .then(({ data }) => setRes(data ?? [])), 300);
+      .then(({ data }) => { setRes(data ?? []); setOpen(true); }), 300);
     return () => clearTimeout(h);
   }, [q]);
+  useEffect(() => {
+    if (!open) return undefined;
+    const out = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    const esc = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", out); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("pointerdown", out); document.removeEventListener("keydown", esc); };
+  }, [open]);
+  const shown = open && q.trim().length >= 3;
   return (
-    <div className="relative">
-      <input className="field w-full py-1.5 text-sm" placeholder="ابحث باسم الطالب (3 أحرف فأكثر)" value={q} onChange={(e) => setQ(e.target.value)} />
-      {res.length > 0 && (
+    <div ref={box} className="relative">
+      <input className="field w-full py-1.5 text-sm" placeholder="ابحث باسم الطالب (3 أحرف فأكثر)" value={q}
+             onChange={(e) => setQ(e.target.value)} onFocus={() => res.length && setOpen(true)} onClick={() => res.length && setOpen(true)} />
+      {shown && (
         <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-sm2 border border-line bg-white shadow-card">
+          <div className="flex items-center justify-between border-b border-line bg-canvas px-3 py-1.5 text-[11.5px] text-muted">
+            <span>{res.length ? `${res.length === 8 ? "أول 8 نتائج، اكتب أكثر للتدقيق" : `${res.length} نتائج`}` : "لا طالب بهذا الاسم"}</span>
+            <button type="button" className="font-semibold text-ink hover:underline" onClick={() => setOpen(false)}>إغلاق ✕</button>
+          </div>
           {res.map((s) => (
             <button key={s.student_id} type="button" className="flex w-full items-center justify-between px-3 py-2 text-start text-sm hover:bg-canvas"
-                    onClick={() => { onPick({ student_id: s.student_id, name: s.full_name, class_no: s.class_no }); setQ(""); setRes([]); }}>
+                    onClick={() => { onPick({ student_id: s.student_id, name: s.full_name, class_no: s.class_no }); setQ(""); setRes([]); setOpen(false); }}>
               <span>{s.full_name}</span><span className="num text-[11.5px] text-muted">{s.class_no}</span></button>))}
         </div>
       )}
