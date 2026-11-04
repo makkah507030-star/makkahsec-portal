@@ -39,15 +39,15 @@ export const elementColor = (key) => {
 };
 
 /* ملفات الأداء غير المعلم (supabase/lab_perf_*.sql و staff_perf_*.sql): نموذج كل وظيفة في الدليل وأدوارها.
-   activity: رائد النشاط معلم، فعناصر المعلم نفسها بشواهدها وبأوزان نموذج «معلم مسند له نشاط طالبي»،
-   ومعها العناصر الأربعة الخاصة بالنشاط. */
+   activity: رائد النشاط متفرغ للنشاط ويعامل معاملة الإداريين: الجزء العام من نموذجه (عناصر المعلم الأحد عشر، 70%)
+   بطاقة واحدة يقدّرها مدير المدرسة دون شواهد، والعناصر الأربعة الخاصة بالنشاط (30%) بشواهدها. */
 export const PERF_TRACKS = {
   principal: { roles: ["principal"], label: "مدير المدرسة", who: "المدير", form: "مدير المدرسة (8)" },
   lab:       { roles: ["computer_lab"], label: "محضر معمل الحاسب الآلي", who: "المحضر", form: "محضر المختبر (5)" },
   science:   { roles: ["science_labs", "science_labs_2", "science_labs_3"], label: "محضر مختبر العلوم", who: "المحضر", form: "محضر المختبر (5)" },
   counselor: { roles: ["counselor_1", "counselor_2", "counselor_3"], label: "الموجه الطلابي", who: "الموجه", form: "الموجه الطلابي (6)" },
   deputy:    { roles: ["deputy_academic", "deputy_school", "deputy_students"], label: "وكيل المدرسة", who: "الوكيل", form: "وكيل المدرسة (7)" },
-  activity:  { roles: ["activity_leader"], label: "رائد النشاط", who: "رائد النشاط", form: "معلم مسند له نشاط طالبي (2)", teacher: true },
+  activity:  { roles: ["activity_leader"], label: "رائد النشاط", who: "رائد النشاط", form: "معلم مسند له نشاط طالبي (2)" },
 };
 // أوزان عناصر المعلم في نموذج رائد النشاط (2)
 const ACTIVITY_WEIGHTS = { e01: 10, e02: 10, e03: 10, e04: 5, e05: 5, e06: 5, e07: 5, e08: 5, e09: 5, e10: 5, e11: 5 };
@@ -87,9 +87,13 @@ export function loadPerfReference(track = "teacher", tags = []) {
     // البنود الخاصة بأدوار (roles) لا تظهر إلا لمن يحمل أحدها في علاماته (tags)
     const pick = (list) => itemsForRoles(list, tags);
     if (track !== "activity") return pick(els.filter((e) => (e.track ?? "teacher") === track));
-    // رائد النشاط: عناصر المعلم بأوزان نموذجه، ثم العناصر الخاصة بالنشاط
+    // رائد النشاط: الجزء العام بطاقة واحدة للمقيِّم (بنودها عناصر المعلم بأوزانها للاطلاع)، ثم عناصر النشاط بشواهدها
+    const general = els.filter((e) => (e.track ?? "teacher") === "teacher");
     return pick([
-      ...els.filter((e) => (e.track ?? "teacher") === "teacher").map((e) => ({ ...e, weight: ACTIVITY_WEIGHTS[e.key] ?? e.weight })),
+      { key: "a00", title: "عناصر الأداء العامة", weight: general.reduce((a, e) => a + (ACTIVITY_WEIGHTS[e.key] ?? 0), 0),
+        sort_order: 0, evaluator_only: true, track: "activity",
+        items: general.map((e, i) => ({ key: `a00_${String(i + 1).padStart(2, "0")}`, element_key: "a00", sort_order: i + 1,
+          title: `${e.title} (${ACTIVITY_WEIGHTS[e.key] ?? e.weight}%)`, source: "school", is_record: false, portal: "judge" })) },
       ...els.filter((e) => e.track === "activity"),
     ]);
   });
@@ -276,7 +280,7 @@ export async function loadAutoCounts(uid, year, track = "teacher") {
   // من عملهم في البوابة (supabase/staff_perf_4.sql)؛ ومحضر مختبر العلوم بلا شواهد آلية بعد
   // وأعمال فريق الثقافة المؤسسية لأعضائه من المعلمين (supabase/cult_7.sql)
   const fns = track === "lab" ? ["lab_perf_auto"] : track === "teacher" ? ["perf_auto_counts", "cult_perf_auto"]
-    : track === "activity" ? ["perf_auto_counts", "staff_perf_auto", "cult_perf_auto"] : ["staff_perf_auto"];
+    : ["staff_perf_auto"];   // رائد النشاط والموظفون: من عملهم في البوابة وحده (لا تدريس ولا تطوير مهني)
   const m = {};
   for (const fn of fns) {
     const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year });
