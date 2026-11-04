@@ -666,3 +666,26 @@
 .stu-gcard .ft { width: 100%; display: flex; justify-content: space-between; padding: 5px 11px 9px; font-size: 7px; color: var(--stu-text2);
   border-top: .8px solid var(--stu-div); direction: ltr; }
 .stu-gcard .ft .site { font-weight: 700; color: var(--stu-accent); }
+
+/* ----------------------------- لوحة الانضباط ----------------------------- */
+.stu-honor .hn-lead { margin-top: 10px; font-size: 17px; color: var(--stu-text2); }
+.stu-honor .hn-lead b { color: var(--stu-text); font-weight: 700; }
+.stu-honor .hn-count { display: flex; align-items: baseline; gap: 10px; margin-top: 18px; }
+.stu-honor .hn-count b { font-size: 46px; font-weight: 700; color: var(--stu-accent); line-height: 1; }
+.stu-honor .hn-count span { font-size: 18px; font-weight: 600; color: var(--stu-text2); }
+.stu-honor .hn-list { list-style: none; margin-top: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 14px; align-content: start; flex: 1; }
+.stu-honor .hn-list li { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 5px 14px 5px 12px;
+  background: var(--stu-card); border: 1.5px solid var(--stu-cardB); border-radius: 12px; }
+.stu-honor .hn-list i { font-style: normal; width: 26px; height: 26px; border-radius: 50%; background: var(--stu-accent); color: #fff;
+  display: grid; place-items: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.stu-dark.stu-honor .hn-list i { color: #193326; }
+.stu-honor .hn-list .nm { flex: 1; min-width: 0; font-size: 15.5px; font-weight: 600; line-height: 1.3; }
+.stu-honor .hn-list.one { grid-template-columns: minmax(0, 1fr); width: 560px; margin-inline: auto; gap: 11px; }
+.stu-honor .hn-list.one li { min-height: 52px; }
+.stu-honor .hn-list.one .nm { font-size: 19px; }
+.stu-honor .hn-list .cl { flex-shrink: 0; font-size: 13px; color: var(--stu-text2); border: 1px solid var(--stu-cardB); border-radius: 999px; padding: 1px 9px; }
+.stu-honor .hn-thanks { margin-top: 14px; font-size: 16px; font-weight: 600; color: var(--stu-gold); text-align: center; }
+.stu-honor .hn-sign { justify-content: space-between; margin-top: 16px; }
+.stu-honor .hn-sign .who { min-width: 230px; }
+.stu-honor .hn-sign b { white-space: nowrap; font-size: 19px; }
+.stu-honor .hn-list li { min-width: 0; }

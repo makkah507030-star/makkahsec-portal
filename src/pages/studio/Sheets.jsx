@@ -842,3 +842,42 @@ export function Notice({ theme = "light", d }) {
     </div>
   );
 }
+
+/* ----------------------------- لوحة الانضباط (تكريم المنتظمين) ----------------------------- */
+/* d: { year, grade, termLabel, days, from, to, students: [{ no, name, cls }], total, page, pages, counselor, principal, stamp } */
+export function HonorRoll({ theme = "light", d }) {
+  const gradeName = GRADE_NAMES_S[d.grade] ?? "";
+  return (
+    <div className={`stu stu-circular stu-honor stu-${theme} stu-portrait sheet`}>
+      <Decor />
+      <div className="stu-page">
+        <Head theme={theme} year={d.year} />
+        <div className="stu-cmeta">
+          <span className="stu-tag">{ICONS.trophy}لوحة الانضباط</span>
+          <div className="refs">
+            {d.termLabel && <span>{d.termLabel}</span>}
+            {d.pages > 1 && <span>الصفحة <b className="num">{d.page} من {d.pages}</b></span>}
+          </div>
+        </div>
+        <div className="stu-subj">{STAGE}</div>
+        <div className="stu-h1" style={{ fontSize: 40 }}>طلاب {gradeName} المنضبطون</div>
+        <div className="hn-lead">بلا غياب ولا تأخر صباحي في <b className="num">{d.days}</b> يومًا دراسيًا معتمدًا
+          {d.from && <> من <b className="num">{d.from}</b> إلى <b className="num">{d.to}</b></>}</div>
+        <div className="stu-grule" />
+        <div className="hn-count"><b className="num">{d.total}</b><span>{d.total === 1 ? "طالب" : d.total === 2 ? "طالبان" : d.total <= 10 ? "طلاب" : "طالبًا"}</span></div>
+        <ol className={`hn-list${d.total <= 8 ? " one" : ""}`}>
+          {d.students.map((s) => (
+            <li key={s.no}><i className="num">{s.no}</i><span className="nm">{s.name}</span><span className="cl num">{s.cls}</span></li>
+          ))}
+        </ol>
+        <div className="hn-thanks">شكرًا لالتزامكم، فالانضباط أول طريق التميّز.</div>
+        <div className="stu-sign hn-sign">
+          <div className="who"><small>موجه {gradeName}</small><b>{d.counselor || " "}</b><span className="line">التوقيع</span></div>
+          <div className="who"><small>مدير المدرسة</small><b>{d.principal}</b><span className="line">التوقيع</span></div>
+          <Stamp show={d.stamp !== "off"} />
+        </div>
+        <Foot />
+      </div>
+    </div>
+  );
+}
