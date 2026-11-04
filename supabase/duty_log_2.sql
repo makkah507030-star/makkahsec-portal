@@ -14,7 +14,7 @@ begin
     insert into notifications (title, body, kind, is_auto, created_by, sender_name)
     values ('تنبيه تأخر: ' || coalesce(x ->> 'name', 'ابنكم'),
             'سُجّل في المناوبة تأخر ابنكم ' || coalesce(x ->> 'name', '') ||
-            case x ->> 'kind' when 'pickup' then ' في الانصراف (الاستلام)' else ' في الحضور الصباحي' end ||
+            case x ->> 'kind' when 'morning' then ' في الحضور الصباحي' else ' في الانصراف (الاستلام)' end ||
             ' يوم ' || to_char(p_date, 'DD/MM/YYYY') || coalesce(' الساعة ' || nullif(x ->> 'time', ''), '') ||
             coalesce('، والسبب: ' || nullif(x ->> 'reason', ''), '') || '. نرجو الحرص على الانضباط في المواعيد.',
             'general', true, auth.uid(), 'المناوبة اليومية')

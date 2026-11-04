@@ -22,7 +22,7 @@ const STATUS = {
   absent: { t: "غائب", c: "bg-absent text-white", r: "#A23B3B" },
   excused: { t: "مستأذن", c: "bg-excused text-white", r: "#3F6B99" },
 };
-const KIND = { morning: "صباحي", pickup: "في الانصراف" };
+// التأخر الصباحي له إجراءاته مع البصمة، فالمناوبة تسجل التأخر في الانصراف (الاستلام) وحده
 const ST = { draft: ["مسودة", "bg-canvas text-muted"], submitted: ["مرفوع للوكيل", "bg-warning-light text-warning"], approved: ["معتمد", "bg-present/10 text-present"] };
 const dowOf = (d) => { const n = new Date(`${d}T12:00:00`).getDay() + 1; return n >= 1 && n <= 5 ? n : 0; };
 const waNumber = (m) => { const d = String(m ?? "").replace(/\D/g, ""); return d.startsWith("05") ? `966${d.slice(1)}` : d.startsWith("5") ? `966${d}` : d; };
@@ -67,7 +67,7 @@ export default function DutyLog() {
   const [list, setList] = useState([]);
   const [busy, setBusy] = useState(false);
   const [report, setReport] = useState(false);
-  const [late, setLate] = useState({ kind: "morning", time: "", reason: "" });
+  const [late, setLate] = useState({ kind: "pickup", time: "", reason: "" });
   const [inc, setInc] = useState("");
   const [msg, setMsg] = useNotice(null);
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
@@ -135,7 +135,7 @@ export default function DutyLog() {
       <div>
         <h1 className="text-lg font-bold text-ink">المناوبة اليومية</h1>
         <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
-          المناوبون يسجلون بداية اليوم ونهايته، والطلاب المتأخرين وسبب التأخر، والمواقف على الطلاب، ثم يرفعون السجل للوكيل.
+          المناوبون يسجلون بداية اليوم ونهايته، والطلاب المتأخرين في الانصراف وسبب التأخر، والمواقف على الطلاب، ثم يرفعون السجل للوكيل.
           والوكيل يسجل حضورهم (الأصل حاضر) وملاحظاته ويعتمد، فيصير تقرير اليوم ويصل أولياء أمور المتأخرين تنبيه في حساباتهم.
         </PageIntro>
       </div>
@@ -180,21 +180,19 @@ export default function DutyLog() {
           </div>
 
           <div className="card space-y-2 p-4">
-            <L>الطلاب المتأخرون <span className="text-[11.5px] font-normal text-muted">· يصل ولي الأمر تنبيه في حسابه بالبوابة عند الاعتماد</span></L>
+            <L>الطلاب المتأخرون في الانصراف <span className="text-[11.5px] font-normal text-muted">· يصل ولي الأمر تنبيه في حسابه بالبوابة عند الاعتماد</span></L>
             {f.lates.map((x, i) => (
               <div key={i} className="flex flex-wrap items-center gap-2 rounded-sm2 bg-canvas px-3 py-2 text-[13px]">
                 <b className="text-ink">{x.name}</b><span className="num text-muted">{x.class_no}</span>
-                <span className="chip bg-late/10 text-late">{KIND[x.kind]}{x.time ? ` · ${x.time}` : ""}</span>
+                {x.time && <span className="num chip bg-late/10 text-late">{x.time}</span>}
                 <span className="min-w-0 flex-1 text-muted">{x.reason || "—"}</span>
                 {canAny && <button className="text-[12px] text-absent" onClick={() => set("lates", f.lates.filter((_, j) => j !== i))}>حذف</button>}
               </div>))}
             {canAny && (
-              <div className="grid gap-2 sm:grid-cols-[1fr_120px_100px]">
-                <StudentPick onPick={(s) => { set("lates", [...f.lates, { ...s, ...late }]); setLate({ kind: late.kind, time: "", reason: "" }); }} />
-                <select className="field py-1.5 text-sm" value={late.kind} onChange={(e) => setLate({ ...late, kind: e.target.value })}>
-                  <option value="morning">تأخر صباحي</option><option value="pickup">تأخر في الانصراف</option></select>
-                <input className="field py-1.5 text-sm" placeholder="الوقت" maxLength={10} value={late.time} onChange={(e) => setLate({ ...late, time: e.target.value })} />
-                <input className="field py-1.5 text-sm sm:col-span-3" placeholder="سبب التأخر (يُكتب قبل اختيار الطالب)" maxLength={160} value={late.reason} onChange={(e) => setLate({ ...late, reason: e.target.value })} />
+              <div className="grid gap-2 sm:grid-cols-[1fr_110px]">
+                <StudentPick onPick={(s) => { set("lates", [...f.lates, { ...s, ...late }]); setLate({ kind: "pickup", time: "", reason: "" }); }} />
+                <input className="field py-1.5 text-sm" placeholder="وقت المغادرة" maxLength={10} value={late.time} onChange={(e) => setLate({ ...late, time: e.target.value })} />
+                <input className="field py-1.5 text-sm sm:col-span-2" placeholder="سبب التأخر (يُكتب قبل اختيار الطالب)" maxLength={160} value={late.reason} onChange={(e) => setLate({ ...late, reason: e.target.value })} />
               </div>)}
           </div>
 
@@ -267,7 +265,7 @@ function DutyReport({ log, onBack }) {
     <Page key="p" theme={theme} doc={doc} page={1} total={1} sec={{ no: 1, title: `المناوبة اليومية — ${day}`, sub: `${dmy(log.duty_date)} · المناوبين: ${ms.map((m) => m.name).join(" و")}` }}>
       <Kpis items={[
         { ic: "users", t: "المناوبين", v: ms.length, s: ms.map((m) => STATUS[m.status]?.t).join(" · ") },
-        { ic: "alert", t: "طلاب متأخرون", v: lates.length, c: "#C08A1E" },
+        { ic: "alert", t: "متأخرون في الانصراف", v: lates.length, c: "#C08A1E" },
         { ic: "list", t: "مواقف على الطلاب", v: inc.length, c: "#A23B3B" },
         { ic: "check", t: "الاعتماد", v: "معتمد", s: log.approved_by_name, c: "#4E7D66" },
       ]} />
@@ -276,8 +274,8 @@ function DutyReport({ log, onBack }) {
         <Box icon="list" title="نهاية اليوم"><p style={{ fontSize: 12, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{log.end_note || "—"}</p></Box>
       </div>
       <T head={["المناوب", "الحالة", "ملاحظة الوكيل"]} rows={ms.map((m) => <tr key={m.name}><td>{m.name}</td><td style={{ color: STATUS[m.status]?.r, fontWeight: 700 }}>{STATUS[m.status]?.t}</td><td>{m.note || "—"}</td></tr>)} />
-      {lates.length > 0 && <T head={["الطالب المتأخر", "الفصل", "التأخر", "الوقت", "السبب"]}
-        rows={lates.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td>{KIND[x.kind]}</td><td className="num">{x.time || "—"}</td><td>{x.reason || "—"}</td></tr>)} />}
+      {lates.length > 0 && <T head={["المتأخر في الانصراف", "الفصل", "وقت المغادرة", "السبب"]}
+        rows={lates.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td className="num">{x.time || "—"}</td><td>{x.reason || "—"}</td></tr>)} />}
       {inc.length > 0 && <T head={["الطالب", "الفصل", "الموقف أو الملاحظة"]}
         rows={inc.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td>{x.text}</td></tr>)} />}
       <div className="mr-row c2">

@@ -10,7 +10,7 @@ create table if not exists public.duty_log (
   duty_date date not null unique,
   members jsonb not null default '[]',     -- المناوبون: [{ user_id, name, status: present|late|absent|excused, note }]
   start_note text, end_note text,          -- بداية اليوم ونهايته
-  lates jsonb not null default '[]',       -- [{ student_id, name, class_no, kind: morning|pickup, time, reason }]
+  lates jsonb not null default '[]',       -- المتأخرون في الانصراف: [{ student_id, name, class_no, kind: pickup, time, reason }] (الصباحي مع البصمة)
   incidents jsonb not null default '[]',   -- [{ student_id, name, class_no, text }]
   duty_note text, deputy_note text,
   status text not null default 'draft' check (status in ('draft', 'submitted', 'approved')),
