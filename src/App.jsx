@@ -122,6 +122,7 @@ const Referrals = lazy(() => import("./pages/Referrals.jsx"));
 const Guidance = lazy(() => import("./pages/Guidance.jsx"));
 const RegularsPage = lazy(() => import("./pages/RegularsPage.jsx"));
 const SupervisionLog = lazy(() => import("./pages/SupervisionLog.jsx"));
+const DutyLog = lazy(() => import("./pages/DutyLog.jsx"));
 const StudentRequests = lazy(() => import("./pages/StudentRequests.jsx"));
 const MyWeek = lazy(() => import("./pages/MyWeek.jsx"));
 const AbsenceExcuses = lazy(() => import("./pages/AbsenceExcuses.jsx"));
@@ -577,6 +578,7 @@ export default function App() {
           <Route path="/guidance" element={<Guidance />} />
           <Route path="/regulars" element={<RegularsPage />} />
           <Route path="/supervision" element={<SupervisionLog />} />
+          <Route path="/duty-log" element={<DutyLog />} />
           {effectiveRole === "admin" && <Route path="/student-requests" element={<StudentRequests />} />}
           {effectiveRole === "admin" && <Route path="/absence-excuses" element={<AbsenceExcuses />} />}
           {/* ملف الطالب الشامل — الصفحة تحصر الطلاب في صفوف المستخدم، والدوال تفرض الصلاحية */}

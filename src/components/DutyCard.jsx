@@ -279,6 +279,17 @@ export default function DutyCard({ personal = false }) {
           </Block>
         )}
 
+        {/* المناوب: سجل المناوبة اليوم، وفي غير يومه سجلاته السابقة */}
+        {myDuty ? (
+          <Link to="/duty-log" className="flex items-center justify-center gap-1.5 rounded-pill bg-absent px-4 py-2 text-xs font-bold text-white hover:opacity-90">
+            سجل المناوبة اليوم: بداية اليوم ونهايته والمتأخرون والمواقف ←
+          </Link>
+        ) : data.next && (
+          <Link to="/duty-log" className="flex items-center justify-between gap-2 rounded-xl2 border border-mint-light bg-white/80 px-3.5 py-2.5 text-xs font-semibold text-mint-deep hover:bg-mint-tint">
+            <span>سجلاتي في المناوبة اليومية: أيامي السابقة وتقاريرها</span><span aria-hidden="true">←</span>
+          </Link>
+        )}
+
         {/* المشرف المتابع في غير يوم إشرافه: سجلاته السابقة وما لم يُعتمد وتقاريرها */}
         {!followToday && data.sup.some((s) => s.kind === "supervisor") && (
           <Link to="/supervision" className="flex items-center justify-between gap-2 rounded-xl2 border border-mint-light bg-white/80 px-3.5 py-2.5 text-xs font-semibold text-mint-deep hover:bg-mint-tint">
