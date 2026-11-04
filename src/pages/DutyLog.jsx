@@ -32,6 +32,8 @@ const byAt = (a) => [...(a ?? [])].sort((x, y) => (x.at ?? 0) - (y.at ?? 0));
 const norm = (l) => ({ ...l, person_notes: l.person_notes ?? {}, lates: byAt(l.lates), incidents: byAt(l.incidents) });
 // الاسم الأول والعائلة («بندر بن معيض الحارثي» ← «بندر الحارثي»)
 const short = (n) => { const w = String(n ?? "").split(" ").filter((x) => x && x !== "بن"); return w.length > 1 ? `${w[0]} ${w[w.length - 1]}` : w[0] ?? ""; };
+// الوقت من منتقي الوقت (13:50) بصيغة واحدة للعرض والتنبيه (1:50 م)
+const t12 = (v) => { if (!/^\d{1,2}:\d{2}/.test(v ?? "")) return ""; const [h, m] = v.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "ص" : "م"}`; };
 const L = ({ children }) => <p className="mb-1.5 text-sm font-semibold text-ink">{children}</p>;
 
 /* بحث عن طالب بالاسم من الطلاب النشطين */
@@ -207,16 +209,17 @@ export default function DutyLog() {
             {f.lates.map((x, i) => (
               <div key={i} className="flex flex-wrap items-center gap-2 rounded-sm2 bg-canvas px-3 py-2 text-[13px]">
                 <b className="text-ink">{x.name}</b><span className="num text-muted">{x.class_no}</span>
-                {x.time && <span className="num chip bg-late/10 text-late">{x.time}</span>}
+                {x.time && <span dir="rtl" className="chip whitespace-nowrap bg-late/10 text-late">{x.time}</span>}
                 <span className="min-w-0 flex-1 text-muted">{x.reason || "—"}</span>
                 {x.added_by_name && <span className="text-[11px] text-faint">أضافه: {short(x.added_by_name)}</span>}
                 {mineItem(x) && <button className="text-[12px] text-absent" onClick={() => set("lates", f.lates.filter((_, j) => j !== i))}>حذف</button>}
               </div>))}
             {canAny && (
-              <div className="grid gap-2 sm:grid-cols-[1fr_110px]">
-                <StudentPick onPick={(s) => { set("lates", [...f.lates, { ...s, ...late, ...by() }]); setLate({ kind: "pickup", time: "", reason: "" }); }} />
-                <input className="field py-1.5 text-sm" placeholder="وقت المغادرة" maxLength={10} value={late.time} onChange={(e) => setLate({ ...late, time: e.target.value })} />
-                <input className="field py-1.5 text-sm sm:col-span-2" placeholder="سبب التأخر (يُكتب قبل اختيار الطالب)" maxLength={160} value={late.reason} onChange={(e) => setLate({ ...late, reason: e.target.value })} />
+              <div className="grid gap-2 sm:grid-cols-[1fr_190px]">
+                <StudentPick onPick={(s) => { set("lates", [...f.lates, { ...s, kind: "pickup", time: t12(late.time), reason: late.reason, ...by() }]); setLate({ kind: "pickup", time: late.time, reason: "" }); }} />
+                <label className="flex items-center gap-1.5 text-[12px] text-muted"><span className="shrink-0">وقت المغادرة</span>
+                  <input type="time" className="field w-full py-1.5 text-sm" step={60} value={late.time} onChange={(e) => setLate({ ...late, time: e.target.value })} /></label>
+                <input className="field py-1.5 text-sm sm:col-span-2" placeholder="سبب التأخر (يُكتب مع الوقت قبل اختيار الطالب)" maxLength={160} value={late.reason} onChange={(e) => setLate({ ...late, reason: e.target.value })} />
               </div>)}
           </div>
 
@@ -312,7 +315,7 @@ function DutyReport({ log, onBack }) {
       </div>
       <T head={["المناوب", "الحالة", "ملاحظة الوكيل"]} rows={ms.map((m) => <tr key={m.name}><td>{m.name}</td><td style={{ color: STATUS[m.status]?.r, fontWeight: 700 }}>{STATUS[m.status]?.t}</td><td>{m.note || "—"}</td></tr>)} />
       {lates.length > 0 && <T head={["المتأخر في الانصراف", "الفصل", "وقت المغادرة", "السبب"]}
-        rows={lates.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td className="num">{x.time || "—"}</td><td>{x.reason || "—"}</td></tr>)} />}
+        rows={lates.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td dir="rtl" style={{ whiteSpace: "nowrap" }}>{x.time || "—"}</td><td>{x.reason || "—"}</td></tr>)} />}
       {inc.length > 0 && <T head={["الطالب", "الفصل", "الموقف أو الملاحظة"]}
         rows={inc.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td>{x.text}</td></tr>)} />}
       <div className="mr-row c2">

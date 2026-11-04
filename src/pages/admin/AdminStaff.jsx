@@ -75,7 +75,13 @@ function Members() {
         .in("user_id", ids);
       (rs ?? []).forEach((r) => { (roleMap[r.user_id] ??= []).push(r.role_type); });
     }
-    setList((admins ?? []).map((a) => ({ ...a, roles: roleMap[a.id] ?? [] })).sort(byName()));
+    // جوالات الإداريين لتذكيرات واتساب في المناوبة والإشراف (supabase/staff_mobiles.sql)
+    const mob = {};
+    if (ids.length) {
+      const { data: cs } = await supabase.from("staff_contacts").select("user_id, mobile").in("user_id", ids);
+      (cs ?? []).forEach((c) => { mob[c.user_id] = c.mobile ?? ""; });
+    }
+    setList((admins ?? []).map((a) => ({ ...a, roles: roleMap[a.id] ?? [], mobile: mob[a.id] ?? "" })).sort(byName()));
   };
 
   useEffect(() => { load(); }, []);
@@ -262,6 +268,22 @@ function MemberRow({ member, onSave, onReload }) {
   };
   const self = member.id === session?.user?.id;
 
+  // جوال الإداري: 05 وثمانية أرقام، أو فارغ للحذف
+  const [mob, setMob] = useState(member.mobile ?? "");
+  const [mobMsg, setMobMsg] = useState("");
+  const mobDirty = mob.trim() !== (member.mobile ?? "");
+  const saveMobile = async () => {
+    const v = mob.replace(/\D/g, "");
+    if (v && !/^05\d{8}$/.test(v)) { setMobMsg("الجوال 10 أرقام يبدأ بـ 05."); return; }
+    setBusy(true); setMobMsg("");
+    const { error } = v
+      ? await supabase.from("staff_contacts").upsert({ user_id: member.id, mobile: v, updated_at: new Date().toISOString() })
+      : await supabase.from("staff_contacts").delete().eq("user_id", member.id);
+    setBusy(false);
+    if (error) { setMobMsg(/staff_contacts|schema cache/i.test(error.message) ? "نفّذ supabase/staff_mobiles.sql أولًا." : friendlyError(error.message)); return; }
+    setMob(v); member.mobile = v; setMobMsg("حُفظ ✓");
+  };
+
   return (
     <div className={`px-4 py-3 ${member.is_active ? "" : "bg-canvas/60"}`}>
       <div className="flex flex-wrap items-center gap-2">
@@ -270,6 +292,13 @@ function MemberRow({ member, onSave, onReload }) {
             {member.full_name ?? member.username}
           </p>
           <p className="num text-right text-xs text-muted">{member.username}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <input className="field num w-36 py-1 text-xs" dir="ltr" inputMode="numeric" maxLength={10} placeholder="05xxxxxxxx"
+                   aria-label="الجوال" value={mob} onChange={(e) => { setMob(e.target.value); setMobMsg(""); }} />
+            {mobDirty && <button className="text-xs font-semibold text-mint-deep hover:underline" disabled={busy} onClick={saveMobile}>حفظ الجوال</button>}
+            {mobMsg && <span className={`text-[11px] ${mobMsg.includes("✓") ? "text-present" : "text-absent"}`}>{mobMsg}</span>}
+            {!mob && !mobMsg && <span className="text-[11px] text-faint">الجوال لتذكيرات واتساب في المناوبة والإشراف</span>}
+          </div>
         </div>
 
         {!editing && (
