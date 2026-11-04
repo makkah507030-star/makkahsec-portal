@@ -99,7 +99,7 @@ function useMonitor() {
         supT: uniqNames((supervision.data ?? []).filter((r) => r.kind !== "supervisor")),
         events: (events.data ?? []).filter((e) => e.event_date === date || (e.end_date && e.end_date >= date)),
         quizzes, notes,
-        comm: { toGuardians, absenceNotes, invites, guardianForms, circs }, nextEvents: nextEvents.data ?? [], nextQuizzes, at: new Date(),
+        comm: { toGuardians, guardiansReached: mc?.guardiansReached ?? null, absenceNotes, invites, guardianForms, circs }, nextEvents: nextEvents.data ?? [], nextQuizzes, at: new Date(),
       });
     })();
     return () => { live = false; };
@@ -237,7 +237,8 @@ export default function MonitorScreen() {
               {d.events.slice(0, 2).map((e) => <p key={e.title} className="mt-2 truncate text-xs text-[var(--m-sub)]">• {e.title}</p>)}
             </Panel>
             <Panel title="التواصل" icon="bell">
-              <Mini rows={[["إشعارات البوابة اليوم", d.notes], ["وصلت أولياء الأمور", d.comm.toGuardians],
+              <Mini rows={[["إشعارات أُنشئت اليوم", d.notes], ["تسليمات لأولياء الأمور", d.comm.toGuardians],
+                ["أولياء أمور وصلهم إشعار", d.comm.guardiansReached],
                 ["إشعارات غياب لأولياء الأمور", d.comm.absenceNotes], ["دعوات وإشعارات سلوكية", d.comm.invites],
                 ["استدعاء أو مقابلة ولي أمر", d.comm.guardianForms], ["تعاميم أُرسلت", d.comm.circs]].filter((r) => r[1] != null)} small />
             </Panel>
