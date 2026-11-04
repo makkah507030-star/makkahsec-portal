@@ -67,8 +67,10 @@ export default function AttendanceLog({ studentId, fp, excuse = false }) {
       if (r.official === "absent") s.official += 1;
       if (r.official === "excused") s.excused += 1;
       if (morningOk(r.attend_date) && r.late_minutes > 0) s.morning += 1;
+      // حصص يوم الغياب الرسمي (بعذر أو بدونه) محسوبة في أيامه، فلا تُعد مرة ثانية في «حصص الغياب»
+      const offDay = r.official === "absent" || r.official === "excused";
       (r.periods ?? []).forEach((p) => {
-        if (p.status === "absent") s.periods += 1;
+        if (p.status === "absent") { if (!offDay) s.periods += 1; }
         else if (p.status === "late") s.late += 1;
         else if (p.status === "excused") s.permits += 1;
       });
@@ -79,7 +81,7 @@ export default function AttendanceLog({ studentId, fp, excuse = false }) {
   const cards = [
     { k: "official", t: "أيام الغياب الرسمي", c: "text-absent" },
     { k: "excused",  t: "أيام الغياب بعذر",   c: "text-excused" },
-    { k: "periods",  t: "حصص الغياب",          c: "text-absent" },
+    { k: "periods",  t: "حصص الغياب في أيام الحضور", c: "text-absent" },
     { k: "late",     t: "حصص التأخر",          c: "text-late" },
     ...(showMorning ? [{ k: "morning", t: "أيام التأخر الصباحي", c: "text-late" }] : []),
   ];
