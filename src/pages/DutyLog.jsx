@@ -282,7 +282,7 @@ export default function DutyLog() {
                   log?.created_by_name ? `بدأه ${short(log.created_by_name)}` : "لم يُحفظ بعد", st === "draft"],
                 ["2", "يرفع المناوبون للوكيل", "بعد الرفع لا يعدّله المناوبون، ويصل للوكيل ليراجعه.",
                   log?.submitted_at ? `رُفع ${new Date(log.submitted_at).toLocaleTimeString("ar-SA-u-nu-latn", { hour: "numeric", minute: "2-digit" })}` : "لم يُرفع بعد", st === "submitted"],
-                ["3", "يعتمد المشرف على المتابعة", "يسجل حضور المناوبين وملاحظاته ويعتمد: يُقفل، ويصير تقرير اليوم، ويصل أولياء أمور المتأخرين التنبيه.",
+                ["3", "يعتمد الوكيل", "يسجل حضور المناوبين وملاحظاته ويعتمد: يُقفل، ويصير تقرير اليوم، ويصل أولياء أمور المتأخرين التنبيه.",
                   log?.approved_by_name ? `اعتمده ${short(log.approved_by_name)}` : "لم يُعتمد بعد", st === "approved"],
               ].map(([n, t, d, who, cur]) => (
                 <li key={n} className={`rounded-sm2 border px-3 py-2.5 ${cur ? "border-mint-deep bg-mint-tint" : "border-line bg-white"}`}>
@@ -293,7 +293,7 @@ export default function DutyLog() {
                 </li>
               ))}
             </ol>
-            <p className="mt-2 text-[11.5px] text-faint">المشرف على متابعة المناوبة: وكيل الشؤون التعليمية. ويعتمد كذلك وكيل الشؤون المدرسية، ووكيل شؤون الطلاب، والمدير، والدعم الفني.</p>
+            <p className="mt-2 text-[11.5px] text-faint">يعتمد: وكيل الشؤون التعليمية، ووكيل الشؤون المدرسية، ووكيل شؤون الطلاب، والمدير، والدعم الفني.</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -364,7 +364,7 @@ function DutyReport({ log, onBack }) {
         </Box>
         <Box icon="list" title="ملاحظات الوكيل"><p style={{ fontSize: 12, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{log.deputy_note || "—"}</p></Box>
       </div>
-      <Signs stamp={sigs.stamp} people={[{ title: "المشرف على المتابعة", name: log.approved_by_name }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
+      <Signs stamp={sigs.stamp} people={[{ title: "الوكيل", name: log.approved_by_name }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
     </Page>,
   ];
   return <ReportViewer id="duty-report-print" pages={pages} theme={theme} setTheme={setTheme} fileTitle={`تقرير المناوبة ${log.duty_date}`}

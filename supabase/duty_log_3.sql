@@ -5,7 +5,7 @@
 -- =====================================================================
 alter table public.duty_log add column if not exists person_notes jsonb not null default '{}';   -- { user_id: ملاحظاته }
 
--- المعتمدون: وكيل الشؤون التعليمية (المشرف على متابعة المناوبة)، ووكيلا الشؤون المدرسية وشؤون الطلاب، والمدير والدعم الفني
+-- المعتمدون: وكلاء الشؤون التعليمية والمدرسية وشؤون الطلاب، والمدير والدعم الفني
 create or replace function public.duty_approver() returns boolean
 language sql stable security definer set search_path = public as $$
   select public.has_admin_role(array['principal', 'tech_support', 'deputy_academic', 'deputy_school', 'deputy_students']);
