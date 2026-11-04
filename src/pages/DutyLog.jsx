@@ -26,6 +26,11 @@ const STATUS = {
 const ST = { draft: ["مسودة", "bg-canvas text-muted"], submitted: ["مرفوع للوكيل", "bg-warning-light text-warning"], approved: ["معتمد", "bg-present/10 text-present"] };
 const dowOf = (d) => { const n = new Date(`${d}T12:00:00`).getDay() + 1; return n >= 1 && n <= 5 ? n : 0; };
 const waNumber = (m) => { const d = String(m ?? "").replace(/\D/g, ""); return d.startsWith("05") ? `966${d.slice(1)}` : d.startsWith("5") ? `966${d}` : d; };
+// المتأخرون والمواقف بترتيب إضافتها (الخادم يدمج نصيب كل مناوب فقد يتغيّر ترتيبها)
+const byAt = (a) => [...(a ?? [])].sort((x, y) => (x.at ?? 0) - (y.at ?? 0));
+const norm = (l) => ({ ...l, person_notes: l.person_notes ?? {}, lates: byAt(l.lates), incidents: byAt(l.incidents) });
+// الاسم الأول والعائلة («بندر بن معيض الحارثي» ← «بندر الحارثي»)
+const short = (n) => { const w = String(n ?? "").split(" ").filter((x) => x && x !== "بن"); return w.length > 1 ? `${w[0]} ${w[w.length - 1]}` : w[0] ?? ""; };
 const L = ({ children }) => <p className="mb-1.5 text-sm font-semibold text-ink">{children}</p>;
 
 /* بحث عن طالب بالاسم من الطلاب النشطين */
@@ -71,6 +76,8 @@ export default function DutyLog() {
   const [inc, setInc] = useState("");
   const [msg, setMsg] = useNotice(null);
   const set = (k, v) => setF((x) => ({ ...x, [k]: v }));
+  const by = () => ({ added_by: uid, added_by_name: profile?.full_name ?? "", at: Date.now() });
+  const mineItem = (x) => canDeputy || (canDuty && x.added_by === uid);
 
   useEffect(() => {
     if (!uid) return;
@@ -90,7 +97,7 @@ export default function DutyLog() {
       if (error && /duty_log|schema cache/i.test(error.message)) setMsg({ ok: false, text: "نفّذ supabase/duty_log_1.sql وduty_log_2.sql في قاعدة البيانات أولًا." });
       setRoster(r ?? null); setLog(l ?? null);
       const base = r ? [[r.user_a, r.name_a], [r.user_b, r.name_b]].filter(([, n]) => n).map(([u, n]) => ({ user_id: u, name: n, status: "present", note: "" })) : [];
-      setF(l ? { ...l } : { members: base, start_note: "", end_note: "", lates: [], incidents: [], duty_note: "", deputy_note: "", status: "draft" });
+      setF(l ? norm(l) : { members: base, start_note: "", end_note: "", lates: [], incidents: [], person_notes: {}, duty_note: "", deputy_note: "", status: "draft" });
     });
     supabase.rpc("duty_mobiles", { p_date: date }).then(({ data }) => setMobiles(Object.fromEntries((data ?? []).map((x) => [x.user_id, x.mobile]))));
   }, [date]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -110,11 +117,24 @@ export default function DutyLog() {
     }
     setBusy(true);
     const row = { duty_date: date, members: f.members, start_note: f.start_note?.trim() || null, end_note: f.end_note?.trim() || null,
-      lates: f.lates, incidents: f.incidents, duty_note: f.duty_note?.trim() || null, deputy_note: f.deputy_note?.trim() || null, status };
-    const { data, error } = await supabase.from("duty_log").upsert(row, { onConflict: "duty_date" }).select().single();
+      lates: f.lates, incidents: f.incidents, person_notes: f.person_notes, duty_note: f.duty_note?.trim() || null,
+      deputy_note: f.deputy_note?.trim() || null, status };
+    // يُرسل ما تغيّر وحده، فلا يمحو ما حفظه الزميل في الأثناء (والخادم يأخذ من كل مناوب نصيبه)
+    const patchOf = (base) => Object.fromEntries(Object.entries(row).filter(([k, v]) => k !== "duty_date" && JSON.stringify(v ?? null) !== JSON.stringify(base?.[k] ?? null)));
+    let res;
+    if (log) res = await supabase.from("duty_log").update(patchOf(log)).eq("id", log.id).select().single();
+    else {
+      res = await supabase.from("duty_log").insert(row).select().single();
+      if (res.error && /duplicate|23505/.test(res.error.message)) {   // أنشأه الزميل للتو
+        const { data: cur } = await supabase.from("duty_log").select("*").eq("duty_date", date).maybeSingle();
+        const blank = { members: [], start_note: null, end_note: null, lates: [], incidents: [], person_notes: {}, duty_note: null, deputy_note: null, status: "draft" };
+        if (cur) res = await supabase.from("duty_log").update(patchOf({ ...cur, ...blank, members: cur.members, status: cur.status })).eq("id", cur.id).select().single();
+      }
+    }
     setBusy(false);
+    const { data, error } = res;
     if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
-    setLog(data); setF({ ...data }); loadList();
+    setLog(data); setF(norm(data)); loadList();
     setMsg({ ok: true, text: { draft: "حُفظ السجل.", submitted: "رُفع السجل للوكيل.", approved: "اعتُمد السجل، ووصل أولياء أمور المتأخرين التنبيه." }[status] });
   };
 
@@ -186,11 +206,12 @@ export default function DutyLog() {
                 <b className="text-ink">{x.name}</b><span className="num text-muted">{x.class_no}</span>
                 {x.time && <span className="num chip bg-late/10 text-late">{x.time}</span>}
                 <span className="min-w-0 flex-1 text-muted">{x.reason || "—"}</span>
-                {canAny && <button className="text-[12px] text-absent" onClick={() => set("lates", f.lates.filter((_, j) => j !== i))}>حذف</button>}
+                {x.added_by_name && <span className="text-[11px] text-faint">أضافه: {short(x.added_by_name)}</span>}
+                {mineItem(x) && <button className="text-[12px] text-absent" onClick={() => set("lates", f.lates.filter((_, j) => j !== i))}>حذف</button>}
               </div>))}
             {canAny && (
               <div className="grid gap-2 sm:grid-cols-[1fr_110px]">
-                <StudentPick onPick={(s) => { set("lates", [...f.lates, { ...s, ...late }]); setLate({ kind: "pickup", time: "", reason: "" }); }} />
+                <StudentPick onPick={(s) => { set("lates", [...f.lates, { ...s, ...late, ...by() }]); setLate({ kind: "pickup", time: "", reason: "" }); }} />
                 <input className="field py-1.5 text-sm" placeholder="وقت المغادرة" maxLength={10} value={late.time} onChange={(e) => setLate({ ...late, time: e.target.value })} />
                 <input className="field py-1.5 text-sm sm:col-span-2" placeholder="سبب التأخر (يُكتب قبل اختيار الطالب)" maxLength={160} value={late.reason} onChange={(e) => setLate({ ...late, reason: e.target.value })} />
               </div>)}
@@ -201,19 +222,32 @@ export default function DutyLog() {
             {f.incidents.map((x, i) => (
               <div key={i} className="flex flex-wrap items-start gap-2 rounded-sm2 bg-canvas px-3 py-2 text-[13px]">
                 <b className="text-ink">{x.name}</b><span className="num text-muted">{x.class_no}</span><span className="min-w-0 flex-1 text-muted">{x.text}</span>
-                {canAny && <button className="text-[12px] text-absent" onClick={() => set("incidents", f.incidents.filter((_, j) => j !== i))}>حذف</button>}
+                {x.added_by_name && <span className="text-[11px] text-faint">أضافه: {short(x.added_by_name)}</span>}
+                {mineItem(x) && <button className="text-[12px] text-absent" onClick={() => set("incidents", f.incidents.filter((_, j) => j !== i))}>حذف</button>}
               </div>))}
             {canAny && (
               <div className="grid gap-2 sm:grid-cols-[1fr_1.4fr]">
                 <input className="field py-1.5 text-sm" placeholder="الموقف أو الملاحظة (يُكتب أولًا)" maxLength={300} value={inc} onChange={(e) => setInc(e.target.value)} />
-                <StudentPick onPick={(s) => { if (!inc.trim()) { setMsg({ ok: false, text: "اكتب الموقف أولًا ثم اختر الطالب." }); return; } set("incidents", [...f.incidents, { ...s, text: inc.trim() }]); setInc(""); }} />
+                <StudentPick onPick={(s) => { if (!inc.trim()) { setMsg({ ok: false, text: "اكتب الموقف أولًا ثم اختر الطالب." }); return; } set("incidents", [...f.incidents, { ...s, text: inc.trim(), ...by() }]); setInc(""); }} />
               </div>)}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="card p-4"><L>ملاحظات المناوبين</L>
-              {canAny ? <textarea className="field min-h-[70px] w-full text-sm" maxLength={1500} value={f.duty_note ?? ""} onChange={(e) => set("duty_note", e.target.value)} />
-                : <p className="text-sm text-muted">{f.duty_note || "—"}</p>}</div>
+            <div className="card space-y-3 p-4"><L>ملاحظات المناوبين <span className="text-[11.5px] font-normal text-muted">· كلٌّ يكتب ملاحظاته ويرى ملاحظات زميله</span></L>
+              {f.members.map((m) => {
+                const key = m.user_id ?? m.name, val = f.person_notes?.[key] ?? "";
+                const edit = (canDuty && m.user_id === uid) || canDeputy;
+                return (
+                  <div key={key}>
+                    <p className="mb-1 text-[12px] font-semibold text-muted">{m.name}{m.user_id === uid ? " (أنت)" : ""}</p>
+                    {edit ? <textarea className="field min-h-[60px] w-full text-sm" maxLength={1500} value={val}
+                                      onChange={(e) => set("person_notes", { ...(f.person_notes ?? {}), [key]: e.target.value })} />
+                      : <p className="rounded-sm2 bg-canvas px-3 py-2 text-sm text-muted">{val || "—"}</p>}
+                  </div>
+                );
+              })}
+              {f.duty_note && <p className="text-[12px] text-muted">ملاحظات سابقة: {f.duty_note}</p>}
+            </div>
             <div className="card p-4"><L>ملاحظات الوكيل</L>
               {canDeputy ? <textarea className="field min-h-[70px] w-full text-sm" maxLength={1500} value={f.deputy_note ?? ""} onChange={(e) => set("deputy_note", e.target.value)} />
                 : <p className="text-sm text-muted">{f.deputy_note || "—"}</p>}</div>
@@ -279,7 +313,12 @@ function DutyReport({ log, onBack }) {
       {inc.length > 0 && <T head={["الطالب", "الفصل", "الموقف أو الملاحظة"]}
         rows={inc.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td>{x.text}</td></tr>)} />}
       <div className="mr-row c2">
-        <Box icon="list" title="ملاحظات المناوبين"><p style={{ fontSize: 12, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{log.duty_note || "—"}</p></Box>
+        <Box icon="list" title="ملاحظات المناوبين">
+          {ms.map((m) => (
+            <p key={m.name} style={{ fontSize: 12, lineHeight: 1.8, whiteSpace: "pre-wrap", marginBottom: 4 }}>
+              <b>{short(m.name)}:</b> {log.person_notes?.[m.user_id ?? m.name] || "—"}</p>))}
+          {log.duty_note && <p style={{ fontSize: 12, lineHeight: 1.8 }}>{log.duty_note}</p>}
+        </Box>
         <Box icon="list" title="ملاحظات الوكيل"><p style={{ fontSize: 12, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{log.deputy_note || "—"}</p></Box>
       </div>
       <Signs stamp={sigs.stamp} people={[{ title: "الوكيل", name: log.approved_by_name }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />
