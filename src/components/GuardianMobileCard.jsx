@@ -39,9 +39,12 @@ export default function GuardianMobileCard() {
   };
 
   return (
-    <section className="card space-y-3 border-2 border-late/40 p-4">
+    <section className="card space-y-3 border-2 border-absent bg-absent/5 p-4">
       <div>
-        <p className="text-sm font-bold text-ink">تأكيد رقم جوالك لرسائل المدرسة</p>
+        <p className="flex items-center gap-2 text-sm font-bold text-absent">
+          <span className="rounded-full bg-absent px-2 py-0.5 text-[11px] text-white">مهم</span>
+          تأكيد رقم جوالك لرسائل المدرسة
+        </p>
         <p className="mt-1 text-sm leading-relaxed text-muted">
           {st.mobile ? <>رقم جوالك المسجل لدى المدرسة: <b dir="ltr" className="num text-ink">{norm(st.mobile)}</b>. هل هو رقمك الحالي المتاح على واتساب؟</>
             : "لا يوجد رقم جوال مسجل لك لدى المدرسة، فنأمل إضافته."}
@@ -50,7 +53,7 @@ export default function GuardianMobileCard() {
       </div>
       {!edit ? (
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-primary px-5 py-2 text-sm" disabled={busy} onClick={() => save(null)}>نعم، رقمي صحيح</button>
+          <button type="button" className="rounded-xl bg-absent px-5 py-2 text-sm font-semibold text-white hover:bg-absent/90 disabled:opacity-60" disabled={busy} onClick={() => save(null)}>نعم، رقمي صحيح</button>
           <button type="button" className="btn-ghost px-5 py-2 text-sm" disabled={busy} onClick={() => setEdit(true)}>تعديل الرقم</button>
         </div>
       ) : (
@@ -58,7 +61,7 @@ export default function GuardianMobileCard() {
           <input className="field" dir="ltr" inputMode="numeric" placeholder="05xxxxxxxx" value={a} onChange={(e) => setA(e.target.value)} />
           <input className="field" dir="ltr" inputMode="numeric" placeholder="أعد كتابة الرقم للتأكد" value={b} onChange={(e) => setB(e.target.value)} />
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="btn-primary px-5 py-2 text-sm" disabled={busy} onClick={() => save(a)}>حفظ الرقم الجديد</button>
+            <button type="button" className="rounded-xl bg-absent px-5 py-2 text-sm font-semibold text-white hover:bg-absent/90 disabled:opacity-60" disabled={busy} onClick={() => save(a)}>حفظ الرقم الجديد</button>
             <button type="button" className="btn-ghost px-5 py-2 text-sm" disabled={busy} onClick={() => { setEdit(false); setErr(""); }} hidden={!st.mobile}>إلغاء</button>
           </div>
         </div>
