@@ -16,7 +16,8 @@ begin
             'سُجّل في المناوبة تأخر ابنكم ' || coalesce(x ->> 'name', '') ||
             case x ->> 'kind' when 'morning' then ' في الحضور الصباحي' else ' في الانصراف (الاستلام)' end ||
             ' يوم ' || to_char(p_date, 'DD/MM/YYYY') || coalesce(' الساعة ' || nullif(x ->> 'time', ''), '') ||
-            coalesce('، والسبب: ' || nullif(x ->> 'reason', ''), '') || '. نرجو الحرص على الانضباط في المواعيد.',
+            coalesce('، والسبب: ' || nullif(x ->> 'reason', ''), '') ||
+            '. بقاء الطالب في المدرسة بعد الانصراف يضرّه ويعرّضه للخطر ويرهقه، فنرجو الحرص على استلامه في موعده.',
             'general', true, auth.uid(), 'المناوبة اليومية')
     returning id into nid;
     insert into notification_recipients (notification_id, user_id)
