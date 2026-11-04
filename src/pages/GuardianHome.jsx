@@ -17,6 +17,7 @@ import OfficialLinks from "../components/OfficialLinks.jsx";
 import TasksBox from "../components/TasksBox.jsx";
 import PollsCard from "../components/PollsCard.jsx";
 import PhotoConsentCard from "../components/PhotoConsentCard.jsx";
+import GuardianMobileCard from "../components/GuardianMobileCard.jsx";
 import QuizResults from "../components/QuizResults.jsx";
 import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
@@ -160,6 +161,8 @@ export default function GuardianHome() {
       <ExamDayCard />
 
       {/* الترتيب بالأولوية: ما ينتظر ولي الأمر، ثم حضور ابنه، ثم نتائجه، ثم يومه، ثم المرجع */}
+      <GuardianMobileCard />
+
       <TasksBox />
 
       <PollsCard />

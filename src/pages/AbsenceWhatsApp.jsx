@@ -100,7 +100,7 @@ export default function AbsenceWhatsApp() {
       <div className="flex gap-1.5">
         {[["send", "الإرسال"], ["log", "السجل والتقرير"]].map(([k, t]) => (
           <button key={k} type="button" onClick={() => setTab(k)}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold ${tab === k ? "bg-mint text-white" : "bg-canvas text-muted"}`}>{t}</button>
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold ${tab === k ? "bg-mint-deep text-white" : "bg-canvas text-muted"}`}>{t}</button>
         ))}
       </div>
 
@@ -113,7 +113,7 @@ export default function AbsenceWhatsApp() {
           <div className="flex flex-wrap gap-1.5">
             {[0, ...grades].map((g) => (
               <button key={g} type="button" onClick={() => setGrade(g)}
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${grade === g ? "bg-mint text-white" : "bg-canvas text-muted"}`}>
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${grade === g ? "bg-mint-deep text-white" : "bg-canvas text-muted"}`}>
                 {g ? GRADE_NAMES[g] : "الكل"}
               </button>
             ))}

@@ -71,6 +71,7 @@ export const ADMIN_GROUPS = [
       { to: "/behavior", label: "نماذج السلوك والمواظبة", roles: COUNSEL, icon: "flag", kw: "مخالفات غياب" },
       { to: "/absence-excuses", label: "أعذار الغياب", roles: ["principal", "deputy_students", "clerk", "clerk_2", "tech_support"], icon: "idcard", kw: "عذر غياب طبي تقرير مرضي ولي أمر" },
       { to: "/absence-whatsapp", label: "رسائل الغياب بواتساب", roles: ["principal", "deputy_students", "clerk", "clerk_2", "tech_support"], icon: "send", kw: "واتساب ولي أمر غائب رسالة تنبيه" },
+      { to: "/guardian-mobiles", label: "حملة تحديث جوال ولي الأمر", roles: ["principal", "deputy_students", "clerk", "clerk_2", "tech_support"], icon: "idcard", kw: "جوال رقم ولي أمر تحديث تأكيد واتساب نور" },
       { to: "/scout-reports", label: "بلاغات الفريق الكشفي", roles: ["principal", "deputy_students", "tech_support"], icon: "flag", kw: "كشافة بلاغ قائد ملاحظة تنظيم" },
       { to: "/student-requests", label: "طلبات التواصل مع الوكيل", roles: ["principal", "deputy_students", "tech_support"], icon: "send", kw: "مقابلة ولي أمر طالب سؤال استفسار وكيل" },
       { to: "/student-affairs", label: "تقارير شؤون الطلاب", perm: "reports", icon: "chart", kw: "غياب" },
@@ -84,6 +85,7 @@ export const ADMIN_GROUPS = [
       { to: "/guidance", label: "الإنذار المبكر والحالات", roles: ["principal", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], icon: "heart", kw: "موجه حالة إرشادية جلسة" },
       { to: "/regulars", label: "المنتظمون في صفي", roles: ["counselor_1", "counselor_2", "counselor_3"], icon: "award", kw: "تكريم منتظم بلا غياب انضباط لوحة شرف" },
       { to: "/absence-whatsapp", label: "رسائل الغياب بواتساب", roles: ["counselor_1", "counselor_2", "counselor_3"], icon: "send", kw: "واتساب ولي أمر غائب رسالة تنبيه" },
+      { to: "/guardian-mobiles", label: "حملة تحديث جوال ولي الأمر", roles: ["counselor_1", "counselor_2", "counselor_3"], icon: "idcard", kw: "جوال رقم ولي أمر تحديث تأكيد واتساب نور" },
     ],
   },
   {
