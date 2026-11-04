@@ -386,11 +386,17 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                       style={{ background: elementColor(el.key) }}>{n + 1}</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium leading-relaxed text-ink">{it.title}</p>
-                  {(PORTAL_TAG[it.portal] ?? (it.is_record ? PORTAL_TAG.record : null)) && (
-                    <span className={`mt-1 inline-block rounded-pill px-2.5 py-0.5 text-xs ${(PORTAL_TAG[it.portal] ?? PORTAL_TAG.record).c}`}>
-                      {(PORTAL_TAG[it.portal] ?? PORTAL_TAG.record).t}
+                  {(() => {
+                    // بند السجل لغير المعلمين (l g d m s) يُرفع يدويًا، فلا يُنسب إلى «سجل التطوير المهني»
+                    const rec = it.portal === "record" || (!it.portal && it.is_record)
+                      ? (/^[lgdms]\d/.test(it.key) ? PORTAL_TAG.recordManual : PORTAL_TAG.record) : null;
+                    const tag = rec ?? PORTAL_TAG[it.portal];
+                    return tag && (
+                    <span className={`mt-1 inline-block rounded-pill px-2.5 py-0.5 text-xs ${tag.c}`}>
+                      {tag.t}
                     </span>
-                  )}
+                    );
+                  })()}
                   {!readOnly && !el.evaluator_only && ITEM_HINT[it.key] && (
                     <p className="mt-1.5 text-xs leading-relaxed text-muted">
                       <span className="font-semibold text-mint-deep">كيف أجمعه؟ </span>{ITEM_HINT[it.key]}
