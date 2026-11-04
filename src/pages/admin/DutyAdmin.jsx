@@ -12,33 +12,40 @@ import { byName } from "../../lib/sortAr.js";
 import { normName } from "../../lib/userSignatures.js";
 import { friendlyError } from "../../lib/friendlyError.js";
 
-/* ربط اسم مكتوب نصًّا (من الجدول المستورد) بحساب موظف: تطابق تام بعد توحيد الكتابة
-   («بن» والهمزات)، وإلا الاسم المختصر: أوله يطابق أول اسم الموظف بالترتيب (الاسم ثم الأب…)
-   وآخره يطابق العائلة، في موظف واحد فقط («فهد المعبدي» ← «فهد بن نايف ماطر المعبدي»).
-   كان يكفي أن تأتي الكلمات متفرقة في الاسم، فرُبط «محمد سعيد الحازمي» بـ«محمد بن حسن بن سعيد الحازمي». */
-export function nameFits(name, full) {
-  const w = normName(name).split(" ").filter(Boolean), f = normName(full).split(" ").filter(Boolean);
-  if (!w.length || !f.length || w.length > f.length) return false;
-  if (w.length === 1) return w[0] === f[0] && f.length === 1;
-  if (w[w.length - 1] !== f[f.length - 1]) return false;
-  return w.slice(0, -1).every((x, i) => x === f[i]);
-}
+/* ربط اسم مكتوب نصًّا (من الجدول المستورد) بحساب موظف، على درجات، ويُقبل حساب واحد فقط في كل درجة:
+   1) تطابق تام بعد توحيد الكتابة («بن» والهمزات، و«أبو بكر» = «أبوبكر»، و«جار الله» = «جارالله»).
+   2) بالترتيب: أول الاسم يطابق أول اسم الموظف (الاسم ثم الأب…) وآخره العائلة
+      («فهد المعبدي» ← «فهد بن نايف ماطر المعبدي»).
+   3) إن لم يطابق أحد في (2): الاسم الأول نفسه وبقية الكلمات بترتيبها في الاسم
+      («عاطف مسعود المولد» ← «عاطف بن عطية بن مسعود المولد»، و«نعيم حامد الأحمدي» ← «… الأحمدي الحربي»).
+   كانت (3) وحدها تكفي، فرُبط «محمد سعيد الحازمي» بـ«محمد بن حسن بن سعيد الحازمي» مع وجود «محمد بن سعيد…». */
+const nm = (s) => normName(s).replace(/(^| )(ابو|عبد) /g, "$1$2").replace(/ (الله|الدين|الرحمن)(?= |$)/g, "$1")
+  .split(" ").filter(Boolean);
+const strictFit = (w, f) => w.length >= 2 && w.length <= f.length && w[w.length - 1] === f[f.length - 1]
+  && w.slice(0, -1).every((x, i) => x === f[i]);
+const looseFit = (w, f) => {
+  if (w.length < 2 || w[0] !== f[0]) return false;
+  let i = 1;
+  for (const x of f.slice(1)) if (x === w[i]) i++;
+  return i === w.length;
+};
 function matchStaff(name, staff) {
-  const n = normName(name);
-  if (!n) return null;
-  const exact = staff.filter((s) => normName(s.full_name) === n);
-  if (exact.length === 1) return exact[0].id;
-  if (exact.length > 1) return null;
-  const hits = n.split(" ").length >= 2 ? staff.filter((s) => nameFits(n, s.full_name)) : [];
-  return hits.length === 1 ? hits[0].id : null;
+  const w = nm(name);
+  if (!w.length) return null;
+  const one = (fit) => { const h = staff.filter((s) => fit(w, nm(s.full_name))); return h.length === 1 ? h[0].id : h.length ? false : null; };
+  const exact = one((a, b) => a.join(" ") === b.join(" "));
+  if (exact !== null) return exact || null;
+  const st = one(strictFit);
+  if (st !== null) return st || null;
+  return one(looseFit) || null;
 }
 // ربط سابق لا يوافق الاسم المكتوب (من المطابقة القديمة): يُصحَّح إلى الصحيح أو يُفك
 const fixLink = (name, uid, staff) => {
   if (!name) return undefined;
   const cur = uid && staff.find((s) => s.id === uid);
   if (uid && !cur) return undefined;              // حساب خارج القائمة: لا نغيّره
-  if (cur && nameFits(name, cur.full_name)) return undefined;
   const id = matchStaff(name, staff);
+  if (cur && looseFit(nm(name), nm(cur.full_name)) && (!id || id === uid)) return undefined;
   return id === (uid ?? null) ? undefined : id;
 };
 
