@@ -8,7 +8,8 @@
 //
 //  المنطق: يقرأ أوقات الحصص للتوقيت الفعّال، فيحدّد الحصة الجارية،
 //  وبعد مرور مهلة (افتراضيًا ربع ساعة) من بدايتها يرسل تذكيرًا لمن لم يحضّر فقط،
-//  مرة واحدة فقط لكل حصة في اليوم.
+//  مرة واحدة فقط لكل حصة في اليوم، وتذكيرًا واحدًا للمعلم ولو درّس فيها أكثر من فصل.
+//  يُحجز التذكير في attendance_reminders قبل إرساله، فلا يُرسل مرتين ولو فشل التسجيل أو تزامن تشغيلان.
 // =====================================================================
 
 import { createClient } from "@supabase/supabase-js";
@@ -102,32 +103,43 @@ export const handler = async () => {
     );
     if (!pending.length) return { statusCode: 200, body: "all marked" };
 
-    // ⑥ إرسال تذكير لكل معلم
-    let sentCount = 0;
+    // ⑥ تذكير واحد لكل معلم في الحصة، ولو درّس فيها أكثر من فصل
+    const byTeacher = new Map();
     for (const row of pending) {
-      const cls = row.classes?.class_no ?? "";
-      const subj = row.subjects?.name ?? "";
-      const body =
-        `الحصة ${row.period_no}${cls ? ` — فصل ${cls}` : ""}${subj ? ` — ${subj}` : ""}` +
-        ` لم يُرصد تحضيرها بعد. افتح البوابة لرصد الحضور.`;
+      const uid = row.teachers.user_id;
+      if (!byTeacher.has(uid)) byTeacher.set(uid, []);
+      byTeacher.get(uid).push(row);
+    }
+
+    let sentCount = 0;
+    for (const [uid, rows] of byTeacher) {
+      // الحجز قبل الإرسال: يُسجَّل التذكير أولًا، ولا يُرسل إلا ما حُجز الآن فعلًا. فإن فشل التسجيل
+      // أو سبقه تشغيل آخر متزامن لم يُرسل شيء، فلا يتكرر التذكير كل خمس دقائق خلال الحصة
+      const { data: got, error: rErr } = await db.from("attendance_reminders")
+        .upsert(rows.map((r) => ({ schedule_id: r.id, remind_date: today, teacher_id: r.teacher_id })),
+                { onConflict: "schedule_id,remind_date", ignoreDuplicates: true })
+        .select("schedule_id");
+      if (rErr) { console.error("reserve:", rErr.message); continue; }
+      const mine = new Set((got || []).map((x) => x.schedule_id));
+      const list = rows.filter((r) => mine.has(r.id));
+      if (!list.length) continue;
+
+      const what = list.map((r) => [r.classes?.class_no ? `فصل ${r.classes.class_no}` : "", r.subjects?.name ?? ""]
+        .filter(Boolean).join(" — ")).filter(Boolean).join("، ");
+      const body = `الحصة ${slot.period_no}${what ? ` — ${what}` : ""} لم يُرصد تحضيرها بعد. افتح البوابة لرصد الحضور.`;
 
       const { data: nid, error } = await db.rpc("send_notification", {
         p_title: "تذكير برصد التحضير",
         p_body: body,
         p_kind: "general",
-        p_link: `/attendance?s=${row.id}`,   // يفتح صفحة التحضير على هذه الحصة
+        p_link: `/attendance?s=${list[0].id}`,   // يفتح صفحة التحضير على هذه الحصة
         p_roles: null,
-        p_user_ids: [row.teachers.user_id],
+        p_user_ids: [uid],
         p_grade: null,
         p_class_no: null,
         p_is_auto: true,
       });
-
       if (error) { console.error("notify:", error.message); continue; }
-
-      await db.from("attendance_reminders").insert({
-        schedule_id: row.id, remind_date: today, teacher_id: row.teacher_id,
-      });
 
       if (nid) {
         try {
