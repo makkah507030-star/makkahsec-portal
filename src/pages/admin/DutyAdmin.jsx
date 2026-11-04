@@ -13,23 +13,34 @@ import { normName } from "../../lib/userSignatures.js";
 import { friendlyError } from "../../lib/friendlyError.js";
 
 /* ربط اسم مكتوب نصًّا (من الجدول المستورد) بحساب موظف: تطابق تام بعد توحيد الكتابة
-   («بن» والهمزات)، وإلا أن تأتي كلمات الاسم كلها بترتيبها في اسم موظف واحد فقط
-   («فهد المعبدي» ← «فهد بن نايف ماطر المعبدي»). يعيد معرّف الحساب أو null. */
+   («بن» والهمزات)، وإلا الاسم المختصر: أوله يطابق أول اسم الموظف بالترتيب (الاسم ثم الأب…)
+   وآخره يطابق العائلة، في موظف واحد فقط («فهد المعبدي» ← «فهد بن نايف ماطر المعبدي»).
+   كان يكفي أن تأتي الكلمات متفرقة في الاسم، فرُبط «محمد سعيد الحازمي» بـ«محمد بن حسن بن سعيد الحازمي». */
+export function nameFits(name, full) {
+  const w = normName(name).split(" ").filter(Boolean), f = normName(full).split(" ").filter(Boolean);
+  if (!w.length || !f.length || w.length > f.length) return false;
+  if (w.length === 1) return w[0] === f[0] && f.length === 1;
+  if (w[w.length - 1] !== f[f.length - 1]) return false;
+  return w.slice(0, -1).every((x, i) => x === f[i]);
+}
 function matchStaff(name, staff) {
   const n = normName(name);
   if (!n) return null;
   const exact = staff.filter((s) => normName(s.full_name) === n);
   if (exact.length === 1) return exact[0].id;
   if (exact.length > 1) return null;
-  const words = n.split(" ");
-  const inOrder = (full) => {
-    let i = 0;
-    for (const w of normName(full).split(" ")) if (w === words[i]) i++;
-    return i === words.length;
-  };
-  const hits = words.length >= 2 ? staff.filter((s) => inOrder(s.full_name)) : [];
+  const hits = n.split(" ").length >= 2 ? staff.filter((s) => nameFits(n, s.full_name)) : [];
   return hits.length === 1 ? hits[0].id : null;
 }
+// ربط سابق لا يوافق الاسم المكتوب (من المطابقة القديمة): يُصحَّح إلى الصحيح أو يُفك
+const fixLink = (name, uid, staff) => {
+  if (!name) return undefined;
+  const cur = uid && staff.find((s) => s.id === uid);
+  if (uid && !cur) return undefined;              // حساب خارج القائمة: لا نغيّره
+  if (cur && nameFits(name, cur.full_name)) return undefined;
+  const id = matchStaff(name, staff);
+  return id === (uid ?? null) ? undefined : id;
+};
 
 /* =====================================================================
    إدارة المناوبة والإشراف.
@@ -194,14 +205,15 @@ function DutyTab({ staff }) {
 
   useEffect(() => { load(); }, [from]);
 
-  // ربط تلقائي لمن بقي اسمه «غير مربوط» متى وُجد حسابه بالاسم
+  // ربط تلقائي لمن بقي اسمه «غير مربوط» متى وُجد حسابه بالاسم، وتصحيح الربط الذي لا يوافق الاسم
   useEffect(() => {
     if (!rows?.length || !staff.length) return;
     const todo = [];
     rows.forEach((r) => {
       const f = {};
-      if (!r.user_a && r.name_a) { const id = matchStaff(r.name_a, staff); if (id) f.user_a = id; }
-      if (!r.user_b && r.name_b) { const id = matchStaff(r.name_b, staff); if (id) f.user_b = id; }
+      const a = fixLink(r.name_a, r.user_a, staff), b = fixLink(r.name_b, r.user_b, staff);
+      if (a !== undefined) f.user_a = a;
+      if (b !== undefined) f.user_b = b;
       if (Object.keys(f).length) todo.push([r, f]);
     });
     if (!todo.length) return;
@@ -209,7 +221,7 @@ function DutyTab({ staff }) {
       for (const [r, f] of todo) await supabase.from("duty_roster").update(f).eq("id", r.id);
       const byId = new Map(todo.map(([r, f]) => [r.id, f]));
       setRows((rs) => rs.map((r) => (byId.has(r.id) ? { ...r, ...byId.get(r.id) } : r)));
-      setMsg({ ok: true, text: `رُبط ${todo.length === 1 ? "يوم واحد" : `${todo.length} أيام`} بحسابات أصحابها تلقائيًا بالاسم.` });
+      setMsg({ ok: true, text: `رُبط أو صُحّح ${todo.length === 1 ? "يوم واحد" : `${todo.length} أيام`} بحسابات أصحابها تلقائيًا بالاسم.` });
     })();
   }, [rows, staff]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -451,14 +463,13 @@ function SupTab({ staff }) {
   // ربط تلقائي لمن بقي اسمه «غير مربوط» متى وُجد حسابه بالاسم
   useEffect(() => {
     if (!rows?.length || !staff.length) return;
-    const todo = rows.filter((r) => !r.user_id && r.person_name)
-      .map((r) => [r, matchStaff(r.person_name, staff)]).filter(([, id]) => id);
+    const todo = rows.map((r) => [r, fixLink(r.person_name, r.user_id, staff)]).filter(([, id]) => id !== undefined);
     if (!todo.length) return;
     (async () => {
       for (const [r, id] of todo) await supabase.from("supervision_duty").update({ user_id: id }).eq("id", r.id);
       const byId = new Map(todo.map(([r, id]) => [r.id, id]));
       setRows((rs) => rs.map((r) => (byId.has(r.id) ? { ...r, user_id: byId.get(r.id) } : r)));
-      setMsg({ ok: true, text: `رُبط ${todo.length} من المشرفين بحساباتهم تلقائيًا بالاسم.` });
+      setMsg({ ok: true, text: `رُبط أو صُحّح ${todo.length} من المشرفين بحساباتهم تلقائيًا بالاسم.` });
     })();
   }, [rows, staff]); // eslint-disable-line react-hooks/exhaustive-deps
 
