@@ -273,6 +273,29 @@ export default function DutyLog() {
                 : <p className="text-sm text-muted">{f.deputy_note || "—"}</p>}</div>
           </div>
 
+          {/* من يحفظ ومن يرفع ومن يعتمد: الخطوة الحالية بارزة، ومن قام بها ومتى */}
+          <div className="card p-4">
+            <p className="mb-2 text-sm font-semibold text-ink">خطوات السجل</p>
+            <ol className="grid gap-2 sm:grid-cols-3">
+              {[
+                ["1", "يحفظ المناوبون", "أيٌّ من المناوبين يسجل ويحفظ ما شاء قبل الرفع، وكلٌّ يرى ما كتبه زميله.",
+                  log?.created_by_name ? `بدأه ${short(log.created_by_name)}` : "لم يُحفظ بعد", st === "draft"],
+                ["2", "يرفع المناوبون للوكيل", "بعد الرفع لا يعدّله المناوبون، ويصل للوكيل ليراجعه.",
+                  log?.submitted_at ? `رُفع ${new Date(log.submitted_at).toLocaleTimeString("ar-SA-u-nu-latn", { hour: "numeric", minute: "2-digit" })}` : "لم يُرفع بعد", st === "submitted"],
+                ["3", "يعتمد الوكيل", "يسجل حضور المناوبين وملاحظاته ويعتمد: يُقفل، ويصير تقرير اليوم، ويصل أولياء أمور المتأخرين التنبيه.",
+                  log?.approved_by_name ? `اعتمده ${short(log.approved_by_name)}` : "لم يُعتمد بعد", st === "approved"],
+              ].map(([n, t, d, who, cur]) => (
+                <li key={n} className={`rounded-sm2 border px-3 py-2.5 ${cur ? "border-mint-deep bg-mint-tint" : "border-line bg-white"}`}>
+                  <p className="flex items-center gap-2 text-[13px] font-bold text-ink">
+                    <span className={`grid h-5 w-5 place-items-center rounded-full text-[11px] text-white ${cur ? "bg-mint-deep" : "bg-faint"}`}>{n}</span>{t}</p>
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-muted">{d}</p>
+                  <p className={`mt-1.5 text-[11.5px] font-semibold ${cur ? "text-mint-deep" : "text-faint"}`}>{who}</p>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-2 text-[11.5px] text-faint">يعتمد: وكيل الشؤون المدرسية، ووكيل شؤون الطلاب، والمدير، والدعم الفني.</p>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             {canDuty && !approver && <button className="btn-ghost px-4 py-1.5 text-sm" disabled={busy} onClick={() => save("draft")}>حفظ</button>}
             {canDuty && !approver && <button className="btn-primary px-4 py-1.5 text-sm" disabled={busy} onClick={() => save("submitted")}>رفع للوكيل</button>}
