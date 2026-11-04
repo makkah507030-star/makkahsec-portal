@@ -1,5 +1,5 @@
 // src/pages/GuardianMobiles.jsx
-// متابعة حملة تحديث جوال ولي الأمر (supabase/guardian_mobile.sql): نسبة التأكيد لكل صف وفصل، وقوائم من لم يؤكد
+// تحديث أرقام تواصل أولياء الأمور (supabase/guardian_mobile.sql): نسبة التأكيد لكل صف وفصل، وقوائم من لم يؤكد
 // أو بلا جوال صحيح أو بلا حساب، وتعديل الرقم يدويًا بعد التأكد هاتفيًا، وتعليم ما حُدّث في نور (يدويًا هناك).
 // لشؤون الطلاب والكتّاب بالصفوف كلها، وللموجه الطلابي بصفه وحده.
 import { useEffect, useMemo, useState } from "react";
@@ -23,13 +23,15 @@ const FILTERS = [
 ];
 
 export const CAMPAIGN_TEXT = [
+  "السلام عليكم ورحمة الله وبركاته",
   "ولي أمر الطالب الكريم،",
-  "حرصًا على وصول رسائل الغياب والتنبيهات إليك بواتساب، نأمل تأكيد رقم جوالك أو تحديثه في بوابة المدرسة:",
-  "1. ادخل makkahsec.com بحساب ولي الأمر.",
-  "2. ستظهر لك في الرئيسية بطاقة «تأكيد رقم جوالك».",
-  "3. اضغط «نعم، رقمي صحيح» أو «تعديل الرقم» واكتب رقمك الجديد.",
-  "واحفظ رقم المدرسة في جهات الاتصال لتصلك رسائلها.",
-  "شاكرين تعاونكم — مدرسة مكة الثانوية",
+  "حرصًا على التواصل معكم أولًا بأول، وإبلاغكم بغياب ابنكم والتنبيهات المهمة عبر واتساب، نأمل منكم تأكيد رقم جوالكم في بوابة المدرسة:",
+  "1. ادخلوا makkahsec.com بحساب ولي الأمر.",
+  "2. تظهر لكم في أعلى الصفحة الرئيسية بطاقة «تأكيد رقم جوالك».",
+  "3. اضغطوا «نعم، رقمي صحيح»، أو «تعديل الرقم» واكتبوا الرقم الصحيح.",
+  "كما نأمل حفظ رقم المدرسة في جهات الاتصال لديكم، لتصلكم رسائلها دون انقطاع.",
+  "شاكرين لكم تعاونكم،",
+  "مدرسة مكة الثانوية",
 ].join("\n");
 
 export default function GuardianMobiles() {
@@ -76,7 +78,7 @@ export default function GuardianMobiles() {
     setRows((rs) => rs.map((x) => (x.guardian_id === r.guardian_id ? { ...x, noor_updated_at: new Date().toISOString() } : x)));
   };
   const copyText = async () => {
-    try { await navigator.clipboard.writeText(CAMPAIGN_TEXT); setMsg({ ok: true, text: "نُسخت رسالة الحملة، الصقها في مجموعات الفصول." }); }
+    try { await navigator.clipboard.writeText(CAMPAIGN_TEXT); setMsg({ ok: true, text: "نُسخت رسالة أولياء الأمور، ويمكنك لصقها في مجموعات الفصول." }); }
     catch { setMsg({ ok: false, text: "تعذّر النسخ، انسخ النص يدويًا." }); }
   };
 
@@ -84,11 +86,11 @@ export default function GuardianMobiles() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-ink">حملة تحديث جوال ولي الأمر</h1>
+        <h1 className="text-lg font-bold text-ink">تحديث أرقام تواصل أولياء الأمور</h1>
         <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
-          يظهر لولي الأمر في رئيسيته طلب تأكيد رقمه أو تعديله مرة كل فصل دراسي. تابع هنا النسب لكل فصل، ومن لم يؤكد،
-          ومن بلا جوال صحيح أو بلا حساب. ويمكنك تعديل الرقم بعد التأكد هاتفيًا. الأرقام المعدّلة تُحدَّث في نور يدويًا،
-          ثم يُضغط «حُدّث في نور» أمامها.
+          عند دخول ولي الأمر إلى البوابة تظهر له في أعلى صفحته الرئيسية بطاقة يؤكد فيها رقم جواله أو يعدّله، مرة في كل فصل دراسي.
+          تابع هنا نسبة التأكيد في كل فصل، وأسماء من لم يؤكد بعد، ومن ليس له رقم صحيح أو حساب في البوابة، لمتابعتهم.
+          ويمكنك تعديل الرقم بنفسك بعد التواصل مع ولي الأمر والتأكد منه. وكل رقم يُعدَّل يُحدَّث في نور يدويًا، ثم يُضغط «حُدّث في نور» أمامه.
         </PageIntro>
       </div>
 
@@ -107,7 +109,7 @@ export default function GuardianMobiles() {
                 <button key={g} type="button" onClick={() => { setGrade(g); setCls(0); }}
                   className={`rounded-full px-3 py-1 text-xs font-semibold ${grade === g ? "bg-mint-deep text-white" : "bg-canvas text-muted"}`}>{g ? GRADE_NAMES[g] : "كل الصفوف"}</button>
               ))}
-              <button type="button" className="btn-ghost ms-auto px-3 py-1 text-xs" onClick={copyText}>نسخ رسالة الحملة</button>
+              <button type="button" className="btn-ghost ms-auto px-3 py-1 text-xs" onClick={copyText}>نسخ رسالة لأولياء الأمور</button>
             </div>
             <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
               {byClass.map((c) => (

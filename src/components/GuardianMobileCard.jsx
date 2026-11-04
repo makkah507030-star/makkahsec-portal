@@ -1,5 +1,5 @@
 // src/components/GuardianMobileCard.jsx
-// حملة تحديث جوال ولي الأمر (supabase/guardian_mobile.sql): يسأل ولي الأمر مرة كل فصل دراسي هل رقمه المسجل
+// بطاقة تأكيد رقم جوال ولي الأمر (supabase/guardian_mobile.sql): يسأل ولي الأمر مرة كل فصل دراسي هل رقمه المسجل
 // صحيح ومتاح على واتساب، فيؤكده أو يعدّله. تختفي البطاقة بعد الرد، ولا يظهر شيء قبل تشغيل الملف.
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
@@ -35,7 +35,7 @@ export default function GuardianMobileCard() {
     const { data, error } = await supabase.rpc("gm_confirm", { p_mobile: mobile });
     setBusy(false);
     if (error) { setErr(friendlyError(error.message)); return; }
-    setDone(mobile == null ? "شكرًا لك، تأكد رقم جوالك. ستصلك عليه رسائل المدرسة." : `شكرًا لك، حُدّث رقم جوالك إلى ${data}. ستصلك عليه رسائل المدرسة.`);
+    setDone(mobile == null ? "شكرًا لك، تم تأكيد رقم جوالك، وعليه تصلك رسائل المدرسة." : `شكرًا لك، تم تحديث رقم جوالك إلى ${data}، وعليه تصلك رسائل المدرسة.`);
   };
 
   return (
@@ -43,8 +43,9 @@ export default function GuardianMobileCard() {
       <div>
         <p className="text-sm font-bold text-ink">تأكيد رقم جوالك لرسائل المدرسة</p>
         <p className="mt-1 text-sm leading-relaxed text-muted">
-          رقم جوالك المسجل في المدرسة: <b dir="ltr" className="num text-ink">{st.mobile ? norm(st.mobile) : "لا يوجد"}</b>.
-          هل هو رقمك الصحيح ومتاح على واتساب؟ عليه تصلك رسائل الغياب والتنبيهات.
+          {st.mobile ? <>رقم جوالك المسجل لدى المدرسة: <b dir="ltr" className="num text-ink">{norm(st.mobile)}</b>. هل هو رقمك الحالي المتاح على واتساب؟</>
+            : "لا يوجد رقم جوال مسجل لك لدى المدرسة، فنأمل إضافته."}
+          {" "}عليه نبلغك بغياب ابنك والتنبيهات المهمة.
         </p>
       </div>
       {!edit ? (
