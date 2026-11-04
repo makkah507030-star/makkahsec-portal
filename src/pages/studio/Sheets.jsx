@@ -872,8 +872,8 @@ export function HonorRoll({ theme = "light", d }) {
         </ol>
         <div className="hn-thanks">شكرًا لالتزامكم، فالانضباط أول طريق التميّز.</div>
         <div className="stu-sign hn-sign">
-          <div className="who"><small>موجه {gradeName}</small><b>{d.counselor || " "}</b><span className="line">التوقيع</span></div>
-          <div className="who"><small>مدير المدرسة</small><b>{d.principal}</b><span className="line">التوقيع</span></div>
+          <div className="who"><small>موجه {gradeName}</small><b>{d.counselor || " "}</b>{d.signLine !== "off" && <span className="line">التوقيع</span>}</div>
+          <div className="who"><small>مدير المدرسة</small><b>{d.principal}</b>{d.signLine !== "off" && <span className="line">التوقيع</span>}</div>
           <Stamp show={d.stamp !== "off"} />
         </div>
         <Foot />
