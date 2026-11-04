@@ -268,13 +268,14 @@ function MemberRow({ member, onSave, onReload }) {
   };
   const self = member.id === session?.user?.id;
 
-  // جوال الإداري: 05 وثمانية أرقام، أو فارغ للحذف
+  // جوال الإداري بأي صيغة (05… أو 5… أو 966… أو +966 بمسافات) ويُحفظ 05 وثمانية أرقام، أو فارغ للحذف
   const [mob, setMob] = useState(member.mobile ?? "");
   const [mobMsg, setMobMsg] = useState("");
   const mobDirty = mob.trim() !== (member.mobile ?? "");
   const saveMobile = async () => {
-    const v = mob.replace(/\D/g, "");
-    if (v && !/^05\d{8}$/.test(v)) { setMobMsg("الجوال 10 أرقام يبدأ بـ 05."); return; }
+    const d = mob.replace(/[٠-٩]/g, (c) => "٠١٢٣٤٥٦٧٨٩".indexOf(c)).replace(/\D/g, "");
+    const v = /^9665\d{8}$/.test(d) ? `0${d.slice(3)}` : /^009665\d{8}$/.test(d) ? `0${d.slice(5)}` : /^5\d{8}$/.test(d) ? `0${d}` : d;
+    if (v && !/^05\d{8}$/.test(v)) { setMobMsg("رقم جوال سعودي غير صحيح، مثل 0551234567."); return; }
     setBusy(true); setMobMsg("");
     const { error } = v
       ? await supabase.from("staff_contacts").upsert({ user_id: member.id, mobile: v, updated_at: new Date().toISOString() })
@@ -293,7 +294,7 @@ function MemberRow({ member, onSave, onReload }) {
           </p>
           <p className="num text-right text-xs text-muted">{member.username}</p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <input className="field num w-36 py-1 text-xs" dir="ltr" inputMode="numeric" maxLength={10} placeholder="05xxxxxxxx"
+            <input className="field num w-36 py-1 text-xs" dir="ltr" inputMode="tel" maxLength={20} placeholder="05xxxxxxxx"
                    aria-label="الجوال" value={mob} onChange={(e) => { setMob(e.target.value); setMobMsg(""); }} />
             {mobDirty && <button className="text-xs font-semibold text-mint-deep hover:underline" disabled={busy} onClick={saveMobile}>حفظ الجوال</button>}
             {mobMsg && <span className={`text-[11px] ${mobMsg.includes("✓") ? "text-present" : "text-absent"}`}>{mobMsg}</span>}
