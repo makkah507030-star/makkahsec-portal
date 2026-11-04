@@ -10,6 +10,7 @@ import { useNotice } from "../lib/useNotice.js";
 import { friendlyError } from "../lib/friendlyError.js";
 import Loader from "../components/Loader.jsx";
 import PageIntro from "../components/PageIntro.jsx";
+import AbsenceWaLog from "./AbsenceWaLog.jsx";
 
 const waNumber = (m) => { const d = String(m ?? "").replace(/\D/g, ""); return d.startsWith("05") ? `966${d.slice(1)}` : d.startsWith("5") ? `966${d}` : d; };
 const validMobile = (m) => /^9665\d{8}$/.test(waNumber(m));
@@ -43,6 +44,7 @@ export default function AbsenceWhatsApp() {
   const [hidePush, setHidePush] = useState(false);
   const [skipped, setSkipped] = useState([]);
   const [msg, setMsg] = useNotice(null);
+  const [tab, setTab] = useState("send");
 
   const load = useCallback(async () => {
     setRows(null); setSkipped([]);
@@ -96,6 +98,14 @@ export default function AbsenceWhatsApp() {
         </PageIntro>
       </div>
 
+      <div className="flex gap-1.5">
+        {[["send", "الإرسال"], ["log", "السجل والتقرير"]].map(([k, t]) => (
+          <button key={k} type="button" onClick={() => setTab(k)}
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold ${tab === k ? "bg-mint text-white" : "bg-canvas text-muted"}`}>{t}</button>
+        ))}
+      </div>
+
+      {tab === "log" ? <AbsenceWaLog /> : <>
       <div className="card flex flex-wrap items-center gap-3 p-3">
         <label className="flex items-center gap-2 text-sm text-ink">اليوم
           <input type="date" className="field w-auto py-1 text-sm" value={date} max={todayISO()} onChange={(e) => e.target.value && setDate(e.target.value)} />
@@ -175,6 +185,7 @@ export default function AbsenceWhatsApp() {
           </div>
         </>
       )}
+      </>}
     </div>
   );
 }

@@ -61,11 +61,29 @@ begin
   end if;
 end $$;
 
+-- سجل الرسائل لمدة (حتى 190 يومًا): الغائبون بلا عذر، ومن أُرسل له ثم قُبل عذره، مع من أرسل ومتى
+create or replace function public.absence_wa_range(p_from date, p_to date)
+returns table (attend_date date, student_id uuid, full_name text, grade int, class_no int, status text,
+               has_mobile boolean, sent_at timestamptz, sent_by_name text)
+language sql stable security definer set search_path = public as $$
+  select m.attend_date, m.student_id, m.full_name, m.grade, m.class_no, m.status,
+         exists (select 1 from guardian_student gs join guardians gd on gd.id = gs.guardian_id
+                 where gs.student_id = m.student_id and gd.is_active and coalesce(gd.mobile, '') <> ''),
+         w.sent_at, w.sent_by_name
+  from official_day_marks m
+  left join absence_wa_sent w on w.student_id = m.student_id and w.attend_date = m.attend_date
+  where m.attend_date between p_from and least(p_to, p_from + 190)
+    and (m.status = 'absent' or w.sent_at is not null) and m.grade = any (public.absence_wa_grades())
+  order by m.attend_date desc, m.grade, m.class_no, m.full_name;
+$$;
+
 revoke execute on function public.absence_wa_grades() from public, anon;
 revoke execute on function public.absence_wa_list(date) from public, anon;
 revoke execute on function public.absence_wa_mark(uuid, date, boolean) from public, anon;
+revoke execute on function public.absence_wa_range(date, date) from public, anon;
 grant execute on function public.absence_wa_grades() to authenticated;
 grant execute on function public.absence_wa_list(date) to authenticated;
 grant execute on function public.absence_wa_mark(uuid, date, boolean) to authenticated;
+grant execute on function public.absence_wa_range(date, date) to authenticated;
 
 -- نهاية الجزء 1
