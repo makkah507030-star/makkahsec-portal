@@ -16,6 +16,7 @@ import { StudioAssets } from "../studio/assets";
 import { THEMES, TERM_LABEL, academicYearLabel, useFontsReady } from "../studio/lib";
 import { HonorRoll } from "../studio/Sheets.jsx";
 import { Fit } from "../studio/ProgramCards.jsx";
+import DisciplineReport from "./DisciplineReport.jsx";
 
 const GRADE = { 1: "الأول الثانوي", 2: "الثاني الثانوي", 3: "الثالث الثانوي" };
 const PER = 20;   // طالب في الورقة: عمودان في عشرة صفوف
@@ -46,6 +47,7 @@ export default function Regulars({ grades = [1, 2, 3] }) {
   const [grade, setGrade] = useState(grades.length === 1 ? grades[0] : 0);
   const [q, setQ] = useState("");
   const [report, setReport] = useState(false);
+  const [full, setFull] = useState(false);   // تقرير الانضباط الكامل
   const gkey = grades.join(",");
 
   useEffect(() => { loadRegulars().then(setData).catch((e) => { setErr(friendlyError(e)); setData({ rows: [], near: [], sizes: {} }); }); }, []);
@@ -80,6 +82,7 @@ export default function Regulars({ grades = [1, 2, 3] }) {
 
   if (!data) return <Loading />;
   if (report) return <HonorReport data={data} grades={grades} onBack={() => setReport(false)} />;
+  if (full) return <DisciplineReport data={data} grades={grade ? [grade] : grades} onBack={() => setFull(false)} />;
 
   const scope = grade ? GRADE[grade] : "المدرسة";
   const title = mode === "clean" ? `المنضبطون بلا غياب ولا تأخر — ${scope}` : `المنتظمون بلا غياب — ${scope}`;
@@ -172,7 +175,9 @@ export default function Regulars({ grades = [1, 2, 3] }) {
       <div className="flex flex-wrap items-center gap-1.5">
         <Pill on={mode === "clean"} onClick={() => setMode("clean")}>بلا غياب ولا تأخر <span className="num">({stats.clean})</span></Pill>
         <Pill on={mode === "all"} onClick={() => setMode("all")}>بلا غياب (مع التأخر) <span className="num">({stats.reg})</span></Pill>
-        <button className="btn-primary ms-auto px-4 py-1.5 text-xs" disabled={!stats.clean} onClick={() => setReport(true)}>
+        <button className="btn-primary ms-auto px-4 py-1.5 text-xs" disabled={!data.all?.length} onClick={() => setFull(true)}>
+          تقرير الانضباط بالصف</button>
+        <button className="btn-ghost px-4 py-1.5 text-xs" disabled={!stats.clean} onClick={() => setReport(true)}>
           لوحة الانضباط بهوية الاستوديو</button>
       </div>
       <div className="flex flex-wrap items-center gap-2">

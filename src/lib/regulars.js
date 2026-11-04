@@ -44,5 +44,8 @@ export async function loadRegulars() {
   const near = (roster ?? []).filter((s) => s.grade && absDays.get(s.student_id) <= 2)
     .map((s) => ({ grade: s.grade, class_no: s.class_no, abs: absDays.get(s.student_id) }));
   return { year, term, days: dates.length, from: dates[0] ?? null, to: dates[dates.length - 1] ?? null,
-           total: (roster ?? []).length, sizes, near, rows };
+           total: (roster ?? []).length, sizes, near, rows,
+           // كل الطلاب بأيام غيابهم ومرات تأخرهم (لتقرير الانضباط بالصف والفصل)
+           all: (roster ?? []).filter((s) => s.grade).map((s) => ({ student_id: s.student_id, full_name: s.full_name, grade: s.grade,
+             class_no: s.class_no, abs: absDays.get(s.student_id) ?? 0, late: late.get(s.student_id) ?? 0 })) };
 }
