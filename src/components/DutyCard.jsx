@@ -279,6 +279,13 @@ export default function DutyCard({ personal = false }) {
           </Block>
         )}
 
+        {/* المشرف المتابع في غير يوم إشرافه: سجلاته السابقة وما لم يُعتمد وتقاريرها */}
+        {!followToday && data.sup.some((s) => s.kind === "supervisor") && (
+          <Link to="/supervision" className="flex items-center justify-between gap-2 rounded-xl2 border border-mint-light bg-white/80 px-3.5 py-2.5 text-xs font-semibold text-mint-deep hover:bg-mint-tint">
+            <span>سجلاتي في الإشراف اليومي: أيامي السابقة وتقاريرها</span><span aria-hidden="true">←</span>
+          </Link>
+        )}
+
         {/* مناوبو اليوم + الشريط الشخصي */}
         <div className={`grid gap-3 ${personal ? "sm:grid-cols-2" : "md:grid-cols-2"}`}>
           {!personal && dow > 0 && (

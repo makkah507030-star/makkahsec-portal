@@ -30,7 +30,7 @@ const count = (ms, k) => ms.filter((m) => m.status === k).length;
 export default function SupervisionLog() {
   const { session, profile, hasAdminRole } = useSession();
   const uid = session?.user?.id;
-  const manager = hasAdminRole("principal", "tech_support", "deputy_school", "deputy_students");
+  const manager = hasAdminRole("principal", "tech_support", "deputy_academic", "deputy_school", "deputy_students");
   const editor = hasAdminRole("principal", "tech_support");
   const [date, setDate] = useState(todayISO());
   const [duty, setDuty] = useState(null);        // جدول الإشراف كله
@@ -52,9 +52,10 @@ export default function SupervisionLog() {
   const dayTeachers = useMemo(() => (duty ?? []).filter((r) => r.day_of_week === dow && r.kind === "teacher"), [duty, dow]);
   const dayFollowers = (duty ?? []).filter((r) => r.day_of_week === dow && r.kind === "supervisor").map((r) => r.person_name);
 
-  const loadList = () => manager && supabase.from("supervision_log").select("id, log_date, day_of_week, members, status, supervisor_name")
+  // الإدارة: كل الأيام؛ والمشرف المتابع: سجلات أيامه (سياسة القراءة تقصره عليها)
+  const loadList = () => (manager || myDays.length) && supabase.from("supervision_log").select("id, log_date, day_of_week, members, status, supervisor_name")
     .order("log_date", { ascending: false }).limit(60).then(({ data }) => setList(data ?? []));
-  useEffect(() => { loadList(); }, [manager]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadList(); }, [manager, myDays.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!duty) return;
@@ -170,9 +171,9 @@ export default function SupervisionLog() {
         </>
       )}
 
-      {manager && list.length > 0 && (
+      {list.length > 0 && (
         <div className="card overflow-x-auto">
-          <p className="px-4 pt-3 text-sm font-bold text-ink">سجلات الإشراف</p>
+          <p className="px-4 pt-3 text-sm font-bold text-ink">{manager ? "سجلات الإشراف" : "سجلاتي في الإشراف اليومي"} <span className="text-[11.5px] font-normal text-muted">· اضغط اليوم لفتحه وتقريره</span></p>
           <table className="mt-2 w-full text-sm">
             <thead className="bg-canvas text-xs text-muted"><tr>
               <th className="px-3 py-2 text-start">التاريخ</th><th className="px-3 py-2 text-start">اليوم</th><th className="px-3 py-2 text-start">المشرف المتابع</th>

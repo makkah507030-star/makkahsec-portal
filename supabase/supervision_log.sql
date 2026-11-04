@@ -1,7 +1,7 @@
 -- =====================================================================
 -- سجل الإشراف اليومي (4 نوفمبر 2026): المشرف المتابع يسجل حضور المعلمين المشرفين معه في يومه
 -- (الأصل حاضر) وملاحظة لكل عضو وملاحظاته، ثم يعتمده فيُقفل ويصير تقرير ذلك اليوم.
--- يقرؤه المشرف المتابع ليومه، والمدير والدعم الفني ووكيل الشؤون المدرسية ووكيل شؤون الطلاب.
+-- يقرؤه المشرف المتابع ليومه، والمدير والدعم الفني ووكلاء الشؤون التعليمية والمدرسية وشؤون الطلاب.
 -- بعد الاعتماد لا يعدّله إلا المدير والدعم الفني. تكرار التنفيذ آمن.
 -- =====================================================================
 create table if not exists public.supervision_log (
@@ -28,7 +28,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 create or replace function public.sup_manager() returns boolean
 language sql stable security definer set search_path = public as $$
-  select public.has_admin_role(array['principal', 'tech_support', 'deputy_school', 'deputy_students']);
+  select public.has_admin_role(array['principal', 'tech_support', 'deputy_academic', 'deputy_school', 'deputy_students']);
 $$;
 create or replace function public.sup_editor() returns boolean
 language sql stable security definer set search_path = public as $$
