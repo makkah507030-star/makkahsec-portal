@@ -1,7 +1,7 @@
 // src/pages/DutyLog.jsx
-// سجل المناوبة اليومية (supabase/duty_log_1..2.sql): المناوبان يسجلان بداية اليوم ونهايته، والطلاب المتأخرين
-// وسببه، والمواقف على الطلاب، وملاحظاتهما، ثم يرفعانه للوكيل. والوكيل يسجل حضورهما (الأصل حاضر) وملاحظة لكل
-// منهما وملاحظاته ويذكّرهما عبر واتساب، ثم يعتمد: يُقفل ويصير تقرير اليوم، ويصل أولياء أمور المتأخرين تنبيه.
+// سجل المناوبة اليومية (supabase/duty_log_1..2.sql): المناوبون يسجلون بداية اليوم ونهايته، والطلاب المتأخرين
+// وسببه، والمواقف على الطلاب، وملاحظاتهم، ثم يرفعونه للوكيل. والوكيل يسجل حضورهم (الأصل حاضر) وملاحظة لكل
+// منهم وملاحظاته ويذكّرهم عبر واتساب، ثم يعتمد: يُقفل ويصير تقرير اليوم، ويصل أولياء أمور المتأخرين تنبيه.
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
@@ -135,8 +135,8 @@ export default function DutyLog() {
       <div>
         <h1 className="text-lg font-bold text-ink">المناوبة اليومية</h1>
         <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
-          المناوبان يسجلان بداية اليوم ونهايته، والطلاب المتأخرين وسبب التأخر، والمواقف على الطلاب، ثم يرفعان السجل للوكيل.
-          والوكيل يسجل حضورهما (الأصل حاضر) وملاحظاته ويعتمد، فيصير تقرير اليوم ويصل أولياء أمور المتأخرين تنبيه في حساباتهم.
+          المناوبون يسجلون بداية اليوم ونهايته، والطلاب المتأخرين وسبب التأخر، والمواقف على الطلاب، ثم يرفعون السجل للوكيل.
+          والوكيل يسجل حضورهم (الأصل حاضر) وملاحظاته ويعتمد، فيصير تقرير اليوم ويصل أولياء أمور المتأخرين تنبيه في حساباتهم.
         </PageIntro>
       </div>
 
@@ -151,7 +151,7 @@ export default function DutyLog() {
         : !person && !reader ? <p className="card px-4 py-6 text-center text-sm text-muted">ليس من أيام مناوبتك.</p> : (
         <>
           <div className="card space-y-2 p-4">
-            <L>المناوبان {!approver && <span className="text-[11.5px] font-normal text-muted">· الحضور يسجله الوكيل</span>}</L>
+            <L>المناوبين {!approver && <span className="text-[11.5px] font-normal text-muted">· الحضور يسجله الوكيل</span>}</L>
             {f.members.map((m, i) => {
               const wa = waLink(m);
               return (
@@ -213,7 +213,7 @@ export default function DutyLog() {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="card p-4"><L>ملاحظات المناوبَين</L>
+            <div className="card p-4"><L>ملاحظات المناوبين</L>
               {canAny ? <textarea className="field min-h-[70px] w-full text-sm" maxLength={1500} value={f.duty_note ?? ""} onChange={(e) => set("duty_note", e.target.value)} />
                 : <p className="text-sm text-muted">{f.duty_note || "—"}</p>}</div>
             <div className="card p-4"><L>ملاحظات الوكيل</L>
@@ -237,7 +237,7 @@ export default function DutyLog() {
           <p className="px-4 pt-3 text-sm font-bold text-ink">{reader ? "سجلات المناوبة" : "سجلاتي في المناوبة"} <span className="text-[11.5px] font-normal text-muted">· اضغط اليوم لفتحه</span></p>
           <table className="mt-2 w-full text-sm">
             <thead className="bg-canvas text-xs text-muted"><tr>
-              <th className="px-3 py-2 text-start">التاريخ</th><th className="px-3 py-2 text-start">المناوبان</th><th className="px-3 py-2 text-start">متأخرون</th>
+              <th className="px-3 py-2 text-start">التاريخ</th><th className="px-3 py-2 text-start">المناوبين</th><th className="px-3 py-2 text-start">متأخرون</th>
               <th className="px-3 py-2 text-start">مواقف</th><th className="px-3 py-2 text-start">الحالة</th></tr></thead>
             <tbody className="divide-y divide-line">{list.map((r) => (
               <tr key={r.id} className="cursor-pointer hover:bg-canvas" onClick={() => { setDate(r.duty_date); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
@@ -264,9 +264,9 @@ function DutyReport({ log, onBack }) {
   const T = ({ head, rows }) => (
     <table className="mr-table" style={{ fontSize: 11 }}><thead><tr>{head.map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{rows}</tbody></table>);
   const pages = [
-    <Page key="p" theme={theme} doc={doc} page={1} total={1} sec={{ no: 1, title: `المناوبة اليومية — ${day}`, sub: `${dmy(log.duty_date)} · المناوبان: ${ms.map((m) => m.name).join(" و")}` }}>
+    <Page key="p" theme={theme} doc={doc} page={1} total={1} sec={{ no: 1, title: `المناوبة اليومية — ${day}`, sub: `${dmy(log.duty_date)} · المناوبين: ${ms.map((m) => m.name).join(" و")}` }}>
       <Kpis items={[
-        { ic: "users", t: "المناوبان", v: ms.length, s: ms.map((m) => STATUS[m.status]?.t).join(" · ") },
+        { ic: "users", t: "المناوبين", v: ms.length, s: ms.map((m) => STATUS[m.status]?.t).join(" · ") },
         { ic: "alert", t: "طلاب متأخرون", v: lates.length, c: "#C08A1E" },
         { ic: "list", t: "مواقف على الطلاب", v: inc.length, c: "#A23B3B" },
         { ic: "check", t: "الاعتماد", v: "معتمد", s: log.approved_by_name, c: "#4E7D66" },
@@ -281,7 +281,7 @@ function DutyReport({ log, onBack }) {
       {inc.length > 0 && <T head={["الطالب", "الفصل", "الموقف أو الملاحظة"]}
         rows={inc.map((x, i) => <tr key={i}><td>{x.name}</td><td className="num">{x.class_no}</td><td>{x.text}</td></tr>)} />}
       <div className="mr-row c2">
-        <Box icon="list" title="ملاحظات المناوبَين"><p style={{ fontSize: 12, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{log.duty_note || "—"}</p></Box>
+        <Box icon="list" title="ملاحظات المناوبين"><p style={{ fontSize: 12, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{log.duty_note || "—"}</p></Box>
         <Box icon="list" title="ملاحظات الوكيل"><p style={{ fontSize: 12, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{log.deputy_note || "—"}</p></Box>
       </div>
       <Signs stamp={sigs.stamp} people={[{ title: "الوكيل", name: log.approved_by_name }, { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />

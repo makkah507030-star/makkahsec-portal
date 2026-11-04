@@ -1,14 +1,14 @@
 -- =====================================================================
--- سجل المناوبة اليومية (1 من 2، 4 نوفمبر 2026): المناوبان (من جدول المناوبة duty_roster) يسجلان بداية اليوم
--- ونهايته، والطلاب المتأخرين وسببه، والمواقف على الطلاب وملاحظاتهما، ثم يرفعانه للوكيل. والوكيل يسجل حضورهما
--- (الأصل حاضر) وملاحظة لكل منهما وملاحظاته ويعتمد، فيُقفل ويصير تقرير اليوم ويصل أولياء أمور المتأخرين تنبيه.
+-- سجل المناوبة اليومية (1 من 2، 4 نوفمبر 2026): المناوبون (من جدول المناوبة duty_roster) يسجلون بداية اليوم
+-- ونهايته، والطلاب المتأخرين وسببه، والمواقف على الطلاب وملاحظاتهم، ثم يرفعونه للوكيل. والوكيل يسجل حضورهم
+-- (الأصل حاضر) وملاحظة لكل منهم وملاحظاته ويعتمد، فيُقفل ويصير تقرير اليوم ويصل أولياء أمور المتأخرين تنبيه.
 -- يعتمد: المدير والدعم الفني ووكيلا الشؤون المدرسية وشؤون الطلاب، ويقرأ معهم وكيل الشؤون التعليمية.
 -- يُنفَّذ قبل duty_log_2.sql. تكرار التنفيذ آمن.
 -- =====================================================================
 create table if not exists public.duty_log (
   id uuid primary key default gen_random_uuid(),
   duty_date date not null unique,
-  members jsonb not null default '[]',     -- المناوبان: [{ user_id, name, status: present|late|absent|excused, note }]
+  members jsonb not null default '[]',     -- المناوبون: [{ user_id, name, status: present|late|absent|excused, note }]
   start_note text, end_note text,          -- بداية اليوم ونهايته
   lates jsonb not null default '[]',       -- [{ student_id, name, class_no, kind: morning|pickup, time, reason }]
   incidents jsonb not null default '[]',   -- [{ student_id, name, class_no, text }]
@@ -47,7 +47,7 @@ begin
     if tg_op = 'UPDATE' and old.status <> 'draft' then raise exception 'رُفع السجل للوكيل، فلا يُعدَّل'; end if;
     if new.status = 'approved' then raise exception 'الاعتماد للوكيل'; end if;
     new.deputy_note := case when tg_op = 'UPDATE' then old.deputy_note end;
-    if tg_op = 'UPDATE' then new.members := old.members; end if;   -- حضور المناوبَين يسجله الوكيل
+    if tg_op = 'UPDATE' then new.members := old.members; end if;   -- حضور المناوبين يسجله الوكيل
   end if;
   if new.status = 'submitted' and (tg_op = 'INSERT' or old.status = 'draft') then new.submitted_at := now(); end if;
   if new.status = 'approved' and (tg_op = 'INSERT' or old.status <> 'approved') then
@@ -79,7 +79,7 @@ drop policy if exists duty_log_delete on public.duty_log;
 create policy duty_log_delete on public.duty_log for delete to authenticated using (public.has_admin_role(array['principal', 'tech_support']));
 grant select, insert, update, delete on public.duty_log to authenticated;
 
--- جوالات المناوبَين لتذكيرهما عبر واتساب: للوكيل والإدارة، وللمناوب عن زميله
+-- جوالات المناوبين لتذكيرهم عبر واتساب: للوكيل والإدارة، وللمناوب عن زميله
 create or replace function public.duty_mobiles(p_date date)
 returns table (user_id uuid, mobile text)
 language sql stable security definer set search_path = public as $$
