@@ -22,7 +22,6 @@ export const LINK_PAGES = [
   ["/my-documents", "نماذجي"],
   ["/my-circulars", "التعاميم"],
   ["/news", "الأخبار والمقالات"],
-  ["/contact#madrasati", "منصة مدرستي (دعم الطلاب)"],
 ];
 
 export const bannerImage = (path) => (path ? supabase.storage.from(BANNER_BUCKET).getPublicUrl(path).data.publicUrl : null);
