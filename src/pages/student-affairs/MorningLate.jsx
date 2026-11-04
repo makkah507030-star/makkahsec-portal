@@ -12,6 +12,7 @@ import {
   useFingerprint, FingerprintLockedNote,
 } from "./shared.jsx";
 import { cmpAr } from "../../lib/sortAr.js";
+import NameSearch, { matchQ } from "../../components/NameSearch.jsx";
 
 export default function MorningLate() {
   const [mode, setMode] = useState("day");
@@ -32,6 +33,7 @@ export default function MorningLate() {
 function DayLate() {
   const [date, setDate] = useState(todayISO());
   const [grade, setGrade] = useState(0);
+  const [q, setQ] = useState("");
   const { live, error } = useDay(date);
 
   const list = useMemo(() => {
@@ -53,6 +55,7 @@ function DayLate() {
     [list]
   );
 
+  const lateShown = lateList.filter((r) => matchQ(q, r.full_name, r.class_no));
   const deadline = lateDeadlineLabel(live?.dayStart);
   const headers = ["م", "اسم الطالب", "الصف", "الفصل", "وقت البصمة", "دقائق التأخر"];
   const table = () => lateList.map((r, i) => [
@@ -89,11 +92,12 @@ function DayLate() {
           <ExportBar disabled={!lateList.length}
             onPrint={() => printReport({ title: "تقرير التأخر الصباحي", subtitle: subtitle(), headers, rows: table(), ...logos(), signatures: SIGNS })}
             onExcel={() => exportStyledExcel({ title: "تقرير التأخر الصباحي", subtitle: subtitle(), headers, rows: table(), fileName: `التأخر-الصباحي-${date}`, sheetName: "التأخر", signatures: SIGNS })} />
-          {lateList.length === 0 ? (
+          <NameSearch value={q} onChange={setQ} placeholder="ابحث باسم الطالب أو رقم الفصل…" count={lateShown.length} total={lateList.length} />
+          {lateShown.length === 0 ? (
             <Empty tone="good">لا حالات تأخر صباحي في هذا اليوم.</Empty>
           ) : (
             <div className="card divide-y divide-line overflow-hidden">
-              {lateList.map((r) => (
+              {lateShown.map((r) => (
                 <div key={r.student_id} className="flex items-center justify-between gap-3 px-4 py-2.5">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-ink">{r.full_name}</p>
@@ -120,6 +124,7 @@ function RangeLate() {
   const [from, setFrom] = useState(null);
   const [to, setTo] = useState(todayISO());
   const [grade, setGrade] = useState(0);
+  const [q, setQ] = useState("");
   const [min, setMin] = useState(3);
   const [rows, setRows] = useState(null);
   const [missing, setMissing] = useState(false);
@@ -162,6 +167,7 @@ function RangeLate() {
   }, [rows, grade, min]);
 
   const headers = ["م", "اسم الطالب", "الصف", "الفصل", "أيام التأخر", "مجموع الدقائق", "منها بلا وقت", "آخر تأخر"];
+  const studentsShown = students.filter((s) => matchQ(q, s.full_name, s.class_no));
   const table = () => students.map((s, i) => [
     i + 1, s.full_name, s.grade, s.class_no, s.days, s.minutes, s.noTime, fmtDate(s.dates[s.dates.length - 1] + "T00:00:00"),
   ]);
@@ -188,11 +194,12 @@ function RangeLate() {
       <ExportBar disabled={!students.length}
         onPrint={() => printReport({ title: "تكرار التأخر الصباحي", subtitle: subtitle(), headers, rows: table(), ...logos(), signatures: SIGNS })}
         onExcel={() => exportStyledExcel({ title: "تكرار التأخر الصباحي", subtitle: subtitle(), headers, rows: table(), fileName: `تكرار-التأخر-${from}_${to}`, sheetName: "التأخر", signatures: SIGNS })} />
-      {!rows ? <Loading /> : students.length === 0 ? (
+      <NameSearch value={q} onChange={setQ} placeholder="ابحث باسم الطالب أو رقم الفصل…" count={studentsShown.length} total={students.length} />
+      {!rows ? <Loading /> : studentsShown.length === 0 ? (
         <Empty>لا طلاب مطابقون.</Empty>
       ) : (
         <div className="card divide-y divide-line overflow-hidden">
-          {students.map((s) => (
+          {studentsShown.map((s) => (
             <div key={s.student_id} className="flex items-center justify-between gap-3 px-4 py-2.5">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-ink">{s.full_name}</p>

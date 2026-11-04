@@ -6,6 +6,7 @@ import { GRADE_NAMES } from "../lib/schoolTime";
 import Loader from "../components/Loader.jsx";
 import { EXCUSE_KIND, EXCUSE_STATUS, EXCUSE_BUCKET, dayLabel, deciderText, openExcuseFile, caseOf, REPLY_CARDS, fillReply, ExcuseGuide, CasePicker } from "../components/AbsenceExcuse.jsx";
 import { friendlyError } from "../lib/friendlyError.js";
+import NameSearch, { matchQ } from "../components/NameSearch.jsx";
 
 /* =====================================================================
    أعذار الغياب — لوكيل شؤون الطلاب والمساعدَين الإداريَّين 1 و2 (ومعهم المدير والدعم الفني):
@@ -145,6 +146,7 @@ export default function AbsenceExcuses() {
   const [busy, setBusy] = useState(null);
   const [msg, setMsg] = useState(null);
   const [manual, setManual] = useState(false);
+  const [find, setFind] = useState("");     // البحث باسم الطالب أو فصله
 
   const load = async () => {
     let q = supabase.from("absence_excuses").select("*, students(full_name)").order("created_at", { ascending: tab === "pending" });
@@ -173,6 +175,7 @@ export default function AbsenceExcuses() {
     load();
   };
 
+  const shown = (rows ?? []).filter((r) => matchQ(find, r.students?.full_name, cls[r.student_id]?.class_no));
   const pill = (on) => `rounded-pill px-4 py-1.5 text-sm font-medium ${on ? "bg-mint-deep text-white" : "border border-line bg-white text-muted hover:bg-canvas"}`;
 
   return (
@@ -189,11 +192,13 @@ export default function AbsenceExcuses() {
       </div>
       {manual && <ManualExcuse onDone={(t) => { setManual(false); setMsg({ ok: true, text: t }); load(); }} />}
       {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.text}</p>}
-      {!rows ? <Loader /> : rows.length === 0 ? (
-        <p className="card px-4 py-8 text-center text-sm text-muted">{tab === "pending" ? "لا أعذار بانتظار القرار." : "لا قرارات بعد."}</p>
+      {rows?.length > 0 && <NameSearch value={find} onChange={setFind} placeholder="ابحث باسم الطالب أو رقم الفصل…"
+                                    count={shown.length} total={rows.length} />}
+      {!rows ? <Loader /> : shown.length === 0 ? (
+        <p className="card px-4 py-8 text-center text-sm text-muted">{rows.length && find ? "لا نتائج مطابقة للبحث." : tab === "pending" ? "لا أعذار بانتظار القرار." : "لا قرارات بعد."}</p>
       ) : (
         <div className="space-y-2.5">
-          {rows.map((r) => {
+          {shown.map((r) => {
             const c = cls[r.student_id];
             const st = EXCUSE_STATUS[r.status] ?? EXCUSE_STATUS.pending;
             return (

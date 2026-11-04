@@ -17,6 +17,7 @@ import { confirmDanger } from "../../lib/danger";
 import DangerZone from "../../components/DangerZone.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 import { friendlyError } from "../../lib/friendlyError.js";
+import NameSearch, { matchQ } from "../../components/NameSearch.jsx";
 
 const TONE = {
   present: "bg-present/10 text-present",
@@ -29,6 +30,7 @@ export default function OfficialAbsence({ initialDate }) {
   const [date, setDate] = useState(initialDate ?? todayISO());
   const { live, approval, error, reload } = useDay(date);
   const [grade, setGrade] = useState(0);
+  const [q, setQ] = useState("");   // البحث بالاسم أو الفصل في القائمة المعروضة
   const [view, setView] = useState("absent");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useNotice(null);
@@ -84,6 +86,7 @@ export default function OfficialAbsence({ initialDate }) {
   const excusable = useMemo(
     () => (day && canExcuse ? filtered.slice(0, 400).filter((r) => r.shown === "absent" || r.shown === "excused") : []),
     [day, canExcuse, filtered]);
+  const shown = useMemo(() => filtered.filter((r) => matchQ(q, r.full_name, r.class_no)), [filtered, q]);
   const pickedRows = excusable.filter((r) => picked.has(r.student_id));
   const toExcuse = pickedRows.filter((r) => r.shown === "absent");
   const toAbsent = pickedRows.filter((r) => r.shown === "excused");
@@ -239,6 +242,7 @@ export default function OfficialAbsence({ initialDate }) {
           </div>
 
           <GradePills grade={grade} setGrade={setGrade} />
+          <NameSearch value={q} onChange={setQ} placeholder="ابحث باسم الطالب أو رقم الفصل…" count={shown.length} total={filtered.length} />
           <div className="flex flex-wrap gap-1.5">
             <Pill on={view === "absent"} onClick={() => setView("absent")}>غائب <span className="num">({sum.absent})</span></Pill>
             {live.fingerprint && <Pill on={view === "conflict"} onClick={() => setView("conflict")}>بصم ولم يحضر <span className="num">({conflicts})</span></Pill>}
@@ -274,11 +278,11 @@ export default function OfficialAbsence({ initialDate }) {
             </div>
           )}
 
-          {filtered.length === 0 ? (
+          {shown.length === 0 ? (
             <Empty>لا نتائج مطابقة.</Empty>
           ) : (
             <div className="card divide-y divide-line overflow-hidden">
-              {filtered.slice(0, 400).map((r) => (
+              {shown.slice(0, 400).map((r) => (
                 <div key={r.student_id} className="px-4 py-2.5">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
