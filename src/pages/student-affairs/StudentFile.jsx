@@ -378,14 +378,14 @@ function Attendance({ m, att, fp }) {
         <Stat v={m.absent.length} l="غياب بلا عذر" c="text-absent" />
         <Stat v={m.excusedDays.length} l="غياب بعذر" c="text-excused" />
         <Stat v={fp ? m.late.length : "—"} l="تأخر صباحي" c="text-late" />
-        <Stat v={m.pAbsent.length} l="حصص غياب" c="text-absent" />
+        <Stat v={m.pAbsent.length} l="حصص غياب في أيام حضوره" c="text-absent" />
         <Stat v={(att?.permissions ?? []).length} l="استئذان" />
       </div>
       <Heatmap schoolDays={m.schoolDays} days={m.days} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2"><Sub>الغياب حسب أيام الأسبوع</Sub>
           {m.absent.length ? <Bars rows={weekday} /> : <Empty>لا غياب بلا عذر.</Empty>}</div>
-        <div className="space-y-2"><Sub>غياب الحصص حسب المادة</Sub>
+        <div className="space-y-2"><Sub>غياب الحصص حسب المادة (في أيام حضوره)</Sub>
           {m.bySubject.length ? <Bars rows={m.bySubject.slice(0, 6)} color="bg-late" /> : <Empty>لا غياب حصص.</Empty>}</div>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -704,7 +704,7 @@ function printFile({ s, st, m, data, from, to, fp, kpis }) {
     ${block("الغياب الرسمي", [...m.absent, ...m.excusedDays].sort((a, b) => a.d.localeCompare(b.d)).map((d) =>
       [`${weekdayOf(d.d)} ${day(d.d)}`, d.s === "absent" ? "غائب بلا عذر" : "غائب بعذر", d.punched ? "بصم ولم يحضر الحصص" : ""]), ["اليوم والتاريخ", "الحالة", "ملاحظة"], "لا غياب رسمي في الفترة.")}
     ${fp ? block("التأخر الصباحي", m.late.map((d) => [`${weekdayOf(d.d)} ${day(d.d)}`, d.late]), ["اليوم والتاريخ", "دقائق التأخر"], "لا تأخر في الفترة.") : ""}
-    ${block("غياب الحصص حسب المادة", m.bySubject, ["المادة", "عدد الحصص"], "لا غياب حصص.")}
+    ${block("غياب الحصص حسب المادة (في أيام حضوره)", m.bySubject, ["المادة", "عدد الحصص"], "لا غياب حصص.")}
     ${block("الأعذار والاستئذان", [...(att.excused ?? []).map((e) => ["عذر", `${day(e.from)}${e.to !== e.from ? ` — ${day(e.to)}` : ""}`, e.excuse || e.reason || ""]),
       ...(att.permissions ?? []).map((p) => ["استئذان", day(p.d), p.note ?? ""])], ["النوع", "التاريخ", "التفاصيل"], "لا أعذار ولا استئذان.")}
     ${block("السلوك والانضباط", [...m.behavior.map((b) => [FORM_KINDS[b.kind]?.short ?? "نموذج", b.degree ?? "—", b.type || b.text || "", day(b.d), b.ack ? "اطّلع" : "لم يطّلع"]),

@@ -58,7 +58,8 @@ alter table public.outreach_items enable row level security; alter table public.
 alter table public.outreach_answers enable row level security;
 drop policy if exists outreach_items_read on public.outreach_items;
 create policy outreach_items_read on public.outreach_items for select to authenticated
-  using (public.outreach_owner(id) or (sent_at is not null and public.outreach_recipient(id)));
+  using (created_by = auth.uid() or public.has_admin_role(array['principal', 'tech_support'])
+         or (sent_at is not null and public.outreach_recipient(id)));   -- لا outreach_owner: لا يرى السطر الجديد (outreach_3.sql)
 drop policy if exists outreach_items_insert on public.outreach_items;
 create policy outreach_items_insert on public.outreach_items for insert to authenticated
   with check (created_by = auth.uid() and public.has_permission('outreach'));

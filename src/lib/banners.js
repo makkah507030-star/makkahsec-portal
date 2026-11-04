@@ -22,6 +22,20 @@ export const LINK_PAGES = [
   ["/my-documents", "نماذجي"],
   ["/my-circulars", "التعاميم"],
   ["/news", "الأخبار والمقالات"],
+  ["/my-outreach", "النشرات والاستبانات"],
+  ["/polls", "التصويت والاستطلاعات"],
+  ["/media", "معرض المدرسة"],
+  ["/media-contact", "تواصل مع المركز الإعلامي"],
+  ["/contact", "مركز الدعم والمساندة"],
+  ["/help", "دليل الاستخدام"],
+  // للطلاب
+  ["/contact#madrasati", "منصة مدرستي (للطلاب)"],
+  ["/my-qiyas", "نتائج قياس (للطلاب)"],
+  // للمعلمين والإداريين
+  ["/plc", "التطوير المهني (للمنسوبين)"],
+  ["/my-performance", "شواهد الأداء الوظيفي (للمنسوبين)"],
+  ["/culture", "الثقافة المؤسسية (للمنسوبين)"],
+  ["/ethics", "ميثاق أخلاقيات المهنة (للمنسوبين)"],
 ];
 
 export const bannerImage = (path) => (path ? supabase.storage.from(BANNER_BUCKET).getPublicUrl(path).data.publicUrl : null);

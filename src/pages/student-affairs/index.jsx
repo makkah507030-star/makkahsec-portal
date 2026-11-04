@@ -19,6 +19,7 @@ const Statistics = lazy(() => import("./Statistics.jsx"));
 const Warnings = lazy(() => import("./Warnings.jsx"));
 const MonthlyAffairs = lazy(() => import("./MonthlyAffairs.jsx"));
 const AttendanceFix = lazy(() => import("./AttendanceFix.jsx"));
+const Regulars = lazy(() => import("./Regulars.jsx"));
 const Devices = lazy(() =>
   import("../admin/AttendanceOverview.jsx").then((m) => ({ default: m.DevicesTab })));
 
@@ -32,6 +33,7 @@ const GROUPS = [
     tabs: [
       { key: "late", label: "التأخر الصباحي" },
       { key: "official", label: "الغياب الرسمي" },
+      { key: "regulars", label: "المنتظمون" },
       { key: "follow", label: "المتابعة" },
       { key: "periods", label: "غياب الحصص" },
       { key: "detailed", label: "تقارير مفصلة" },
@@ -114,6 +116,7 @@ export default function StudentAffairs() {
         {tab === "today" && <TodayBoard go={go} />}
         {tab === "late" && <MorningLate />}
         {tab === "official" && <OfficialAbsence />}
+        {tab === "regulars" && <Regulars />}
         {tab === "follow" && <FollowUp />}
         {tab === "periods" && <PeriodReports />}
         {tab === "detailed" && <DetailedReports />}

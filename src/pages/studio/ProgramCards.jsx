@@ -37,7 +37,7 @@ function squarePhoto(file, done) {
 }
 
 /* الورقة مصغّرة بعرض الشاشة */
-function Fit({ children }) {
+export function Fit({ children }) {
   const box = useRef(null);
   const inner = useRef(null);
   const [s, setS] = useState(0.5);

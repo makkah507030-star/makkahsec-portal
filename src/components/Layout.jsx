@@ -73,6 +73,7 @@ export const ADMIN_GROUPS = [
       { to: "/scout-reports", label: "بلاغات الفريق الكشفي", roles: ["principal", "deputy_students", "tech_support"], icon: "flag", kw: "كشافة بلاغ قائد ملاحظة تنظيم" },
       { to: "/student-requests", label: "طلبات التواصل مع الوكيل", roles: ["principal", "deputy_students", "tech_support"], icon: "send", kw: "مقابلة ولي أمر طالب سؤال استفسار وكيل" },
       { to: "/student-affairs", label: "تقارير شؤون الطلاب", perm: "reports", icon: "chart", kw: "غياب" },
+      { to: "/regulars", label: "المنتظمون والانضباط", roles: ["principal", "deputy_students", "tech_support"], icon: "award", kw: "تكريم منتظم بلا غياب انضباط لوحة شرف" },
     ],
   },
   {
@@ -80,6 +81,7 @@ export const ADMIN_GROUPS = [
     title: "التوجيه الطلابي",
     items: [
       { to: "/guidance", label: "الإنذار المبكر والحالات", roles: ["principal", "deputy_students", "tech_support", "counselor_1", "counselor_2", "counselor_3"], icon: "heart", kw: "موجه حالة إرشادية جلسة" },
+      { to: "/regulars", label: "المنتظمون في صفي", roles: ["counselor_1", "counselor_2", "counselor_3"], icon: "award", kw: "تكريم منتظم بلا غياب انضباط لوحة شرف" },
     ],
   },
   {
@@ -94,6 +96,8 @@ export const ADMIN_GROUPS = [
       { to: "/qbank",             label: "بنك الأسئلة", roles: ["principal", "deputy_academic", "tech_support"], icon: "database", kw: "اسئلة مشاركة اختبار مواد" },
       { to: "/quiz-cycles",       label: "متابعة دورات الاختبار", roles: ["principal", "deputy_academic", "tech_support"], icon: "refresh", kw: "الدورات غير المكتملة اختبارات خطة علاجية" },
       { to: "/duty",              label: "المناوبة والإشراف",  perm: "staff",  icon: "whistle" },
+      { to: "/duty-log",          label: "المناوبة اليومية",   roles: ["principal", "tech_support", "deputy_academic", "deputy_school", "deputy_students"], icon: "whistle", kw: "مناوبة متأخر انصراف استقبال تقرير" },
+      { to: "/supervision",       label: "الإشراف اليومي",     roles: ["principal", "tech_support", "deputy_academic", "deputy_school", "deputy_students"], icon: "eye", kw: "إشراف فسحة مشرف متابع حضور تقرير" },
       { to: "/ethics-report", label: "ميثاق أخلاقيات المهنة", roles: ["principal", "deputy_academic", "tech_support"], icon: "shield", kw: "مدونة السلوك الوظيفي اقرار" },
       { to: "/plc-departments", label: "رؤساء الأقسام", roles: ["principal", "deputy_academic", "tech_support"], icon: "users", kw: "الأقسام وأعضاؤها" },
       { to: "/activities", label: "بنك الأنشطة", roles: ["deputy_academic", "principal", "tech_support"], icon: "sparkles", kw: "حقيبة حصص الانتظار الأنشطة الصفية العاب" },

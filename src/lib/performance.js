@@ -279,8 +279,8 @@ export async function loadAutoCounts(uid, year, track = "teacher") {
   // المعلم ورائد النشاط من عمل المعلم، ومحضر المعمل من عمل المعمل، والموجه والوكيل ورائد النشاط
   // من عملهم في البوابة (supabase/staff_perf_4.sql)؛ ومحضر مختبر العلوم بلا شواهد آلية بعد
   // وأعمال فريق الثقافة المؤسسية لأعضائه من المعلمين (supabase/cult_7.sql)
-  const fns = track === "lab" ? ["lab_perf_auto"] : track === "teacher" ? ["perf_auto_counts", "cult_perf_auto"]
-    : ["staff_perf_auto"];   // رائد النشاط والموظفون: من عملهم في البوابة وحده (لا تدريس ولا تطوير مهني)
+  const fns = track === "lab" ? ["lab_perf_auto"] : track === "teacher" ? ["perf_auto_counts", "cult_perf_auto", "sup_perf_auto"]
+    : ["staff_perf_auto", "sup_perf_auto"];   // والإشراف اليومي (supabase/supervision_perf.sql)   // رائد النشاط والموظفون: من عملهم في البوابة وحده (لا تدريس ولا تطوير مهني)
   const m = {};
   for (const fn of fns) {
     const { data, error } = await supabase.rpc(fn, { p_uid: uid, p_year: year });
