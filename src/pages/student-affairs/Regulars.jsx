@@ -1,7 +1,7 @@
 // src/pages/student-affairs/Regulars.jsx
 // المنتظمون: طلاب بلا أي غياب رسمي (بعذر أو بدونه) في الفصل الحالي، للتكريم (src/lib/regulars.js).
 // الكشف بالاسم والفصل ومرات التأخر مع تصدير Excel، و«لوحة الانضباط» بهوية الاستوديو:
-// ورقة لكل صف بالطلاب بلا غياب ولا تأخر، باسم موجه الصف ومدير المدرسة والختم.
+// ورقة لكل صف بالطلاب بلا غياب ولا تأخر، باسم الموجه الطلابي للصف ومدير المدرسة والختم.
 import { useEffect, useMemo, useState } from "react";
 import { loadRegulars } from "../../lib/regulars";
 import { gradeCounselor } from "../../lib/deputyReferral";
@@ -256,7 +256,7 @@ function HonorReport({ data, grades, onBack }) {
             طباعة / حفظ PDF <span className="num">({pages.length} {pages.length === 1 ? "ورقة" : "أوراق"})</span></button>
         </div>
         <p className="text-xs leading-relaxed text-muted">
-          ورقة لكل صف بطلابه بلا غياب ولا تأخر، باسم موجه الصف من «الأدوار الإدارية» ومدير المدرسة وختمها. اطبعها A4 بالحجم الفعلي.
+          ورقة لكل صف بطلابه بلا غياب ولا تأخر، باسم الموجه الطلابي للصف من «الأدوار الإدارية» ومدير المدرسة وختمها. اطبعها A4 بالحجم الفعلي.
         </p>
         {pages.length === 0 ? <Empty>لا طلاب بلا غياب ولا تأخر بعد.</Empty>
           : pages.map((d, i) => <div key={i} className="card overflow-hidden p-2"><Fit><HonorRoll theme={theme} d={d} /></Fit></div>)}

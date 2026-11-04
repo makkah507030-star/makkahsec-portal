@@ -1,6 +1,6 @@
 // src/pages/RegularsPage.jsx
 // صفحة «المنتظمون والانضباط» المستقلة: لشؤون الطلاب (الوكيل والمدير والدعم الفني ومن له صلاحية التقارير)
-// بالصفوف كلها، ولموجه الصف بصفه وحده (counselor_1..3). المحتوى نفسه في تبويب «المنتظمون» بمركز التقارير.
+// بالصفوف كلها، وللموجه الطلابي 1 و2 و3 بصفه وحده (counselor_1..3). المحتوى نفسه في تبويب «المنتظمون» بمركز التقارير.
 import { lazy, Suspense } from "react";
 import { useSession } from "../lib/session.jsx";
 import Loader from "../components/Loader.jsx";
@@ -16,14 +16,14 @@ export function regularsGrades({ isSuper, adminRoles = [], can }) {
 export default function RegularsPage() {
   const session = useSession();
   const grades = regularsGrades(session);
-  if (!grades.length) return <p className="card px-4 py-8 text-center text-sm text-muted">هذه الصفحة لشؤون الطلاب وموجهي الصفوف.</p>;
+  if (!grades.length) return <p className="card px-4 py-8 text-center text-sm text-muted">هذه الصفحة لشؤون الطلاب والموجهين الطلابيين.</p>;
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-lg font-bold text-ink">المنتظمون والانضباط</h1>
         <PageIntro className="mt-1 text-sm leading-relaxed text-muted">
           {grades.length === 1 ? "طلاب صفك" : "طلاب المدرسة"} بلا أي غياب رسمي في الفصل الحالي، ومن لم يتأخر منهم أيضًا، بالنسب لكل صف وفصل،
-          مع كشف للتصدير ولوحة انضباط بهوية الاستوديو للتكريم باسم موجه الصف ومدير المدرسة.
+          مع كشف للتصدير ولوحة انضباط بهوية الاستوديو للتكريم باسم الموجه الطلابي ومدير المدرسة.
         </PageIntro>
       </div>
       <Suspense fallback={<Loader />}><Regulars grades={grades} /></Suspense>

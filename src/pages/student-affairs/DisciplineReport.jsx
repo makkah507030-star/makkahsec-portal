@@ -46,7 +46,7 @@ function pages({ data, g, theme, sigs, counselor }) {
   const regList = [...reg].sort((a, b) => a.class_no - b.class_no || a.late - b.late || cleanName(a.full_name).localeCompare(cleanName(b.full_name), "ar"));
   const chunks = regList.length ? paginate(regList, (s) => (cleanName(s.full_name).length > 30 ? 2 : 1), 28, 34) : [];
   const total = 2 + chunks.length;
-  const signs = <Signs stamp={sigs.stamp} people={[{ title: `موجه ${GRADE[g]}`, name: counselor?.name, sig: sigs.counselor },
+  const signs = <Signs stamp={sigs.stamp} people={[{ title: `الموجه الطلابي ${g}`, name: counselor?.name, sig: sigs.counselor },
                                                       { title: "مدير المدرسة", name: PRINCIPAL_NAME, sig: sigs.principal }]} />;
 
   return [
