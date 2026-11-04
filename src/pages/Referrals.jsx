@@ -301,7 +301,7 @@ function NewBehaviorReferral({ uid, profile, onDone }) {
           <select className="field mt-1 w-full" value={counselor} onChange={(e) => setCounselor(e.target.value)}>
             <option value="">اختر الموجه الطلابي…</option>
             {counselors.map((x) => (
-              <option key={x.id} value={x.id}>{x.name} — {x.role}{student && x.grade === student.grade ? " (موجه الصف)" : ""}</option>
+              <option key={x.id} value={x.id}>{x.name} — {x.role}{student && x.grade === student.grade ? " (الموجه الطلابي لصفه)" : ""}</option>
             ))}
           </select>
         </div>
@@ -1272,7 +1272,7 @@ function ReferralRow({ r, uid, profile, roles, isDeputy, isCounselor, onOpen, on
                   {counselors.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} — {c.role}
-                      {c.grade === r.grade ? " (موجه الصف)" : ""}
+                      {c.grade === r.grade ? " (الموجه الطلابي لصفه)" : ""}
                     </option>
                   ))}
                 </select>
