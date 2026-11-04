@@ -41,7 +41,6 @@ export default function AbsenceWhatsApp() {
   const [rows, setRows] = useState(null);
   const [approved, setApproved] = useState(true);
   const [grade, setGrade] = useState(0);
-  const [hidePush, setHidePush] = useState(false);
   const [skipped, setSkipped] = useState([]);
   const [msg, setMsg] = useNotice(null);
   const [tab, setTab] = useState("send");
@@ -62,11 +61,11 @@ export default function AbsenceWhatsApp() {
   useEffect(() => { load(); }, [load]);
 
   const grades = useMemo(() => [...new Set((rows ?? []).map((r) => r.grade))].sort(), [rows]);
-  const shown = useMemo(() => (rows ?? []).filter((r) => (!grade || r.grade === grade) && (!hidePush || !r.has_push)), [rows, grade, hidePush]);
-  // الطابور: من لم تُرسل له رسالة وجواله صالح، ومن يصله إشعار البوابة في آخره، والمتخطّى بعد الجميع
+  const shown = useMemo(() => (rows ?? []).filter((r) => !grade || r.grade === grade), [rows, grade]);
+  // الطابور: كل الغائبين الذين لم تُرسل لهم رسالة وجوالاتهم صالحة، والمتخطّى في آخره
   const queue = useMemo(() => {
     const q = shown.filter((r) => !r.sent_at && !blocker(r));
-    const rank = (r) => (skipped.includes(r.student_id) ? 2 : r.has_push ? 1 : 0);
+    const rank = (r) => (skipped.includes(r.student_id) ? 1 : 0);
     return [...q].sort((a, b) => rank(a) - rank(b));
   }, [shown, skipped]);
   const cur = queue[0];
@@ -120,10 +119,6 @@ export default function AbsenceWhatsApp() {
             ))}
           </div>
         )}
-        <label className="flex items-center gap-2 text-xs text-muted">
-          <input type="checkbox" checked={hidePush} onChange={(e) => setHidePush(e.target.checked)} />
-          إخفاء من يصل وليَّ أمره إشعار البوابة
-        </label>
       </div>
 
       {rows === null ? <Loader /> : !approved ? (
@@ -144,8 +139,7 @@ export default function AbsenceWhatsApp() {
               <div className="rounded-xl border border-line bg-canvas/50 p-3">
                 <p className="text-xs text-muted">{sentCount ? "التالي" : "الأول"}: {GRADE_NAMES[cur.grade]} · فصل <span className="num">{cur.class_no}</span></p>
                 <p className="mt-1 text-base font-bold text-ink">{cur.full_name}</p>
-                <p className="mt-0.5 text-sm text-muted">ولي الأمر: {cur.guardian_name ?? "—"} · <span dir="ltr" className="num">{cur.mobile}</span>
-                  {cur.has_push && <span className="ms-2 rounded-full bg-present/10 px-2 py-0.5 text-[11px] text-present">يصله إشعار البوابة</span>}</p>
+                <p className="mt-0.5 text-sm text-muted">ولي الأمر: {cur.guardian_name ?? "—"} · <span dir="ltr" className="num">{cur.mobile}</span></p>
                 <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-white p-2 font-sans text-xs leading-relaxed text-ink">{absenceText(cur, date)}</pre>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button type="button" className="btn-primary flex-1" onClick={() => send(cur)}>
@@ -166,8 +160,7 @@ export default function AbsenceWhatsApp() {
                 <div key={r.student_id} className="flex flex-wrap items-center gap-2 px-3 py-2.5 text-sm">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold text-ink">{r.full_name}</p>
-                    <p className="text-xs text-muted">{GRADE_NAMES[r.grade]} · فصل <span className="num">{r.class_no}</span>
-                      {r.has_push && " · يصله إشعار البوابة"}</p>
+                    <p className="text-xs text-muted">{GRADE_NAMES[r.grade]} · فصل <span className="num">{r.class_no}</span></p>
                   </div>
                   {r.sent_at ? (
                     <>
