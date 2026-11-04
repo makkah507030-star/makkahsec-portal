@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { friendlyError } from "../lib/friendlyError.js";
 
-const norm = (v) => { const d = String(v ?? "").replace(/\D/g, ""); return /^9665\d{8}$/.test(d) ? `0${d.slice(3)}` : /^5\d{8}$/.test(d) ? `0${d}` : d; };
+import { normMobile as norm, isMobile } from "../lib/mobile.js";
 
 export default function GuardianMobileCard() {
   const [st, setSt] = useState(null);
@@ -28,11 +28,11 @@ export default function GuardianMobileCard() {
   const save = async (mobile) => {
     setErr("");
     if (mobile != null) {
-      if (!/^05\d{8}$/.test(norm(a))) { setErr("اكتب الرقم بصيغة 05xxxxxxxx (عشرة أرقام)."); return; }
+      if (!isMobile(a)) { setErr("الرقم غير صحيح، تأكد أنه رقم جوال سعودي مثل 0551234567."); return; }
       if (norm(a) !== norm(b)) { setErr("الرقمان غير متطابقين، اكتبه مرة أخرى."); return; }
     }
     setBusy(true);
-    const { data, error } = await supabase.rpc("gm_confirm", { p_mobile: mobile });
+    const { data, error } = await supabase.rpc("gm_confirm", { p_mobile: mobile == null ? null : norm(mobile) });
     setBusy(false);
     if (error) { setErr(friendlyError(error.message)); return; }
     setDone(mobile == null ? "شكرًا لك، تم تأكيد رقم جوالك، وعليه تصلك رسائل المدرسة." : `شكرًا لك، تم تحديث رقم جوالك إلى ${data}، وعليه تصلك رسائل المدرسة.`);
@@ -58,8 +58,9 @@ export default function GuardianMobileCard() {
         </div>
       ) : (
         <div className="space-y-2">
-          <input className="field" dir="ltr" inputMode="numeric" placeholder="05xxxxxxxx" value={a} onChange={(e) => setA(e.target.value)} />
-          <input className="field" dir="ltr" inputMode="numeric" placeholder="أعد كتابة الرقم للتأكد" value={b} onChange={(e) => setB(e.target.value)} />
+          <input className="field" dir="ltr" inputMode="tel" placeholder="05xxxxxxxx" value={a} onChange={(e) => setA(e.target.value)} />
+          <p className="text-xs text-muted">اكتب الرقم بأي صيغة، مثل 0551234567 أو ‎+966 55 123 4567‎، وبالأرقام العربية أو الإنجليزية، وتحفظه البوابة بالصيغة الصحيحة.</p>
+          <input className="field" dir="ltr" inputMode="tel" placeholder="أعد كتابة الرقم للتأكد" value={b} onChange={(e) => setB(e.target.value)} />
           <div className="flex flex-wrap gap-2">
             <button type="button" className="rounded-xl bg-absent px-5 py-2 text-sm font-semibold text-white hover:bg-absent/90 disabled:opacity-60" disabled={busy} onClick={() => save(a)}>حفظ الرقم الجديد</button>
             <button type="button" className="btn-ghost px-5 py-2 text-sm" disabled={busy} onClick={() => { setEdit(false); setErr(""); }} hidden={!st.mobile}>إلغاء</button>
