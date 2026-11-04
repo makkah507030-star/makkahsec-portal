@@ -35,7 +35,12 @@ export function buildModel(att, con, aca, today) {
   const absent = days.filter((d) => d.s === "absent");
   const excusedDays = days.filter((d) => d.s === "excused");
   const late = days.filter((d) => d.late > 0);
-  const pAbsent = (att?.periods ?? []).filter((p) => p.s === "absent");
+  // غياب الحصص في أيام حضر فيها (التسرّب من الحصص)؛ حصص يوم الغياب الكامل (رسمي بعذر أو بدونه)
+  // محسوبة في «الغياب بلا عذر» فلا تُعد مرة ثانية هنا
+  const offDays = new Set([...absent, ...excusedDays].map((d) => d.d));
+  const pAbsentAll = (att?.periods ?? []).filter((p) => p.s === "absent");
+  const pAbsent = pAbsentAll.filter((p) => !offDays.has(p.d));
+  const pInOff = pAbsentAll.length - pAbsent.length;
   const pLate = (att?.periods ?? []).filter((p) => p.s === "late");
   const present = Math.max(0, schoolDays.length - absent.length - excusedDays.length);
   const attendPct = pct(present, schoolDays.length);
@@ -73,7 +78,8 @@ export function buildModel(att, con, aca, today) {
       sub: late.length ? `${countAr(late.length, "time")} · ${countAr(late.reduce((a, d) => a + d.late, 0), "minute")} إجمالًا` : "لا تأخر",
       tone: late.length > 5 ? "bad" : late.length > 2 ? "warn" : "ok" },
     { key: "periods", label: "غياب الحصص", icon: "grid", value: pAbsent.length,
-      sub: bySubject[0] ? `أكثرها: ${bySubject[0][0]} (${bySubject[0][1]})` : `تأخر عن ${pLate.length} حصة`,
+      sub: [bySubject[0] ? `أكثرها: ${bySubject[0][0]} (${bySubject[0][1]})` : `تأخر عن ${pLate.length} حصة`,
+            pInOff ? `دون ${pInOff} في أيام الغياب` : null].filter(Boolean).join(" · "),
       tone: pAbsent.length > 10 ? "bad" : pAbsent.length > 3 ? "warn" : "ok" },
     { key: "behavior", label: "السلوك", icon: "flag", value: behavior.length + actions.length,
       sub: maxDeg ? `أعلى درجة مخالفة: ${maxDeg}` : "لا مخالفات",
@@ -134,7 +140,7 @@ export function buildModel(att, con, aca, today) {
   attended.forEach((e) => push(e.d, "فعالية", e.title, "ok"));
   tl.sort((a, b) => b.d.localeCompare(a.d));
 
-  return { schoolDays, days, absent, excusedDays, late, pAbsent, pLate, attendPct, bySubject, byWeekday, warnings,
+  return { schoolDays, days, absent, excusedDays, late, pAbsent, pAbsentAll, pInOff, pLate, attendPct, bySubject, byWeekday, warnings,
     behavior, actions, maxDeg, referrals, openRefs, quizzes, quizAvg, classAvgPct, result, docs, certs, events, attended,
     leaguePts, kpis, score, overall, alerts, timeline: tl };
 }
