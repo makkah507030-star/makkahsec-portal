@@ -17,6 +17,17 @@ const TOOLS = [
   ["/accreditation", "التقويم والاعتماد", "أعمال الثقافة شواهدُ جاهزة لمؤشرات المجتمع المدرسي والمناخ الآمن"],
 ];
 
+// أعمال كل برنامج في البوابة خارج أنشطة الخطة: الرسائل للموظفين، واللقاءات، وبطاقات «نهتم بك»، وتهيئة الجدد، والأفكار
+const WORK_OF = {
+  comm: (d) => d.meet.length + d.msgs.filter((m) => m.program === "comm").length,
+  care: (d) => d.occ.filter((x) => x.sent_at).length + d.msgs.filter((m) => m.program === "care").length,
+  hayyak: (d) => d.onb.length + d.msgs.filter((m) => m.program === "hayyak").length,
+  innov: (d) => d.ideas.length + d.msgs.filter((m) => m.program === "innov").length,
+};
+["rafah", "takafu", "values", "mazaya", "ohi"].forEach((k) => { WORK_OF[k] = (d) => d.msgs.filter((m) => m.program === k).length; });
+const WORK_LABEL = { comm: "اللقاءات والرسائل", care: "البطاقات والرسائل", hayyak: "الموظفون الجدد والرسائل", innov: "الأفكار والرسائل",
+  rafah: "الرسائل", takafu: "الرسائل", values: "الرسائل", mazaya: "الرسائل", ohi: "الرسائل" };
+
 export default function CultDash({ go }) {
   const [d, setD] = useState(null);
   const [err, setErr] = useState("");
@@ -77,17 +88,44 @@ export default function CultDash({ go }) {
         </section>
       )}
 
+      {/* إنجاز البرامج: الشريط بكل حالات أنشطة الخطة (المكتمل بلون البرنامج، وقيد التنفيذ بدرجته الفاتحة،
+          والمتعثر والمؤجل بلونيهما)، والنسبة للمكتمل، وتحتها ما يحتاج متابعة وأعمال البرنامج في البوابة */}
       <section className="card overflow-hidden">
-        <h2 className="border-b border-line px-4 py-2.5 text-sm font-bold text-ink">إنجاز البرامج</h2>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-4 py-2.5">
+          <h2 className="me-auto text-sm font-bold text-ink">إنجاز البرامج</h2>
+          {[["مكتمل", 1], ["قيد التنفيذ", 0.4]].map(([t, o]) => (
+            <span key={t} className="flex items-center gap-1 text-[11px] text-muted"><i className="inline-block h-2 w-3 rounded-full bg-mint-deep" style={{ opacity: o }} />{t}</span>))}
+          {["stuck", "later"].map((k) => (
+            <span key={k} className="flex items-center gap-1 text-[11px] text-muted"><i className="inline-block h-2 w-3 rounded-full" style={{ background: STATUS[k].bar }} />{STATUS[k].t}</span>))}
+        </div>
         <div className="divide-y divide-line/70">{Object.entries(PROGRAMS).map(([k, p]) => {
           const xs = acts.filter((x) => x.program === k); if (!xs.length) return null;
-          const done = xs.filter((x) => x.status === "done").length, v = Math.round((done / xs.length) * 100);
+          const c = (st) => xs.filter((x) => x.status === st).length;
+          const done = c("done"), v = Math.round((done / xs.length) * 100);
+          const seg = [["done", p.c, 1], ["doing", p.c, 0.4], ["stuck", STATUS.stuck.bar, 1], ["later", STATUS.later.bar, 1]];
+          const lateN = xs.filter((x) => overdue(x)).length;
+          const work = WORK_OF[k]?.(d) ?? 0;
+          const notes = [c("doing") && `قيد التنفيذ: ${c("doing")}`, c("stuck") && `متعثر: ${c("stuck")}`,
+                         lateN && `فات موعده: ${lateN}`, work && `${WORK_LABEL[k]}: ${work}`].filter(Boolean);
           return (
-            <div key={k} className="flex items-center gap-3 px-4 py-2.5">
-              <span className="w-28 shrink-0 text-sm font-bold" style={{ color: p.c }}>{p.t}</span>
-              <span className="h-2 flex-1 overflow-hidden rounded-pill bg-canvas"><span className="block h-full rounded-pill" style={{ width: `${v}%`, background: p.c }} /></span>
-              <span className="w-20 shrink-0 text-end text-xs text-muted"><b className="num text-ink">{done}</b> من <span className="num">{xs.length}</span></span>
-            </div>
+            <button key={k} type="button" onClick={() => go("plan")} className="block w-full px-4 py-2.5 text-start hover:bg-canvas/60">
+              <span className="flex items-center gap-3">
+                <span className="w-28 shrink-0 text-sm font-bold" style={{ color: p.c }}>{p.t}</span>
+                <span className="flex h-2.5 flex-1 overflow-hidden rounded-pill bg-canvas">
+                  {seg.map(([st, col, o]) => c(st) ? <span key={st} title={`${STATUS[st].t}: ${c(st)}`}
+                    style={{ width: `${(c(st) / xs.length) * 100}%`, background: col, opacity: o }} /> : null)}
+                </span>
+                <span className="flex w-16 shrink-0 flex-col items-end leading-tight">
+                  <b className="num text-[14px]" style={{ color: v ? p.c : "rgb(var(--c-muted))" }}>{v}%</b>
+                  <span className="text-[11px] text-muted"><span className="num">{done}</span> من <span className="num">{xs.length}</span></span>
+                </span>
+              </span>
+              {notes.length > 0 && (
+                <span className="mt-1 block text-[11px] text-muted sm:ps-[7.75rem]">
+                  {notes.map((t, i) => <span key={t} className={/متعثر|فات/.test(t) ? "text-absent" : ""}>{i ? " · " : ""}{t}</span>)}
+                </span>
+              )}
+            </button>
           );
         })}</div>
       </section>
