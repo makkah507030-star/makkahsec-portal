@@ -4,7 +4,7 @@
 -- يبدّل رقم الحصة ووقتها في الصفين نفسيهما، فيبقى لكل معلم سجل حضوره.
 -- إن لم يجد الحصتين بالضبط يتوقف ويذكر ما وجده في ثلاثاء صف 305. الثلاثاء = 3 في الجدول.
 do $$
-declare v_year text; v_term int; a uuid; b uuid; na int; nb int; seen text;
+declare v_year text; v_term int; a uuid; b uuid; na int; nb int; seen text; a_st time; a_en time; b_st time; b_en time;
 begin
   select value into v_year from public.settings where key = 'active_year';
   select value::int into v_term from public.settings where key = 'active_term';
@@ -27,9 +27,12 @@ begin
       na, nb, v_year, v_term, coalesce(seen, 'لا شيء');
   end if;
 
-  update public.schedule t set period_no = case when t.id = a then 3 else 2 end,
-         start_time = o.start_time, end_time = o.end_time
-  from public.schedule o where t.id in (a, b) and o.id = case when t.id = a then b else a end;
+  -- قيد uq_schedule_slot يمنع حصتين في خانة واحدة ويُفحص صفًّا صفًّا، فتُخرج حصة النشاط من العام مؤقتًا
+  select start_time, end_time into a_st, a_en from public.schedule where id = a;
+  select start_time, end_time into b_st, b_en from public.schedule where id = b;
+  update public.schedule set academic_year = v_year || '~نقل' where id = a;
+  update public.schedule set period_no = 2, start_time = a_st, end_time = a_en where id = b;
+  update public.schedule set period_no = 3, start_time = b_st, end_time = b_en, academic_year = v_year where id = a;
 end $$;
 
 -- الجدول بعد التبديل: صف 305 يوم الثلاثاء
