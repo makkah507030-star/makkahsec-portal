@@ -13,6 +13,7 @@ import { loadPrincipalSignature, loadSchoolStamp } from "../lib/principalSignatu
 import { PRINCIPAL_NAME } from "../lib/exportUtils";
 import Loader from "../components/Loader.jsx";
 import PageIntro from "../components/PageIntro.jsx";
+import DutyGuide from "../components/DutyGuide.jsx";
 import ReportViewer from "../components/report/ReportViewer.jsx";
 import { Page, Kpis, Box, Signs, dmy } from "../components/report/ReportKit.jsx";
 
@@ -159,6 +160,8 @@ export default function DutyLog() {
           والوكيل يسجل حضورهم (الأصل حاضر) وملاحظاته ويعتمد، فيصير تقرير اليوم ويصل أولياء أمور المتأخرين تنبيه في حساباتهم.
         </PageIntro>
       </div>
+
+      {(person || mine.length > 0) && <DutyGuide dow={dowOf(date)} />}
 
       <div className="card flex flex-wrap items-center gap-3 p-3">
         <label className="flex items-center gap-2 text-sm text-muted">التاريخ

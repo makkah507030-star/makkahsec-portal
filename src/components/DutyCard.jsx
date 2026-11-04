@@ -1,6 +1,7 @@
 // src/components/DutyCard.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import DutyGuide from "./DutyGuide.jsx";
 import { supabase } from "../lib/supabase";
 import { useSession } from "../lib/session.jsx";
 import { todayISO, todayDow, DAY_NAMES } from "../lib/schoolTime";
@@ -237,6 +238,7 @@ export default function DutyCard({ personal = false }) {
                   ? (partner ? `المناوبة مع: ${partner}` : "تابع الطلاب في بداية اليوم ونهايته.")
                   : "تابع مواقع الإشراف في الفسحة وبداية اليوم."}
               </p>
+              {myDuty && <DutyGuide dow={dow} compact />}
               {personal && follower && (
                 <p className="mt-0.5 text-sm leading-relaxed text-muted">المشرف المتابع: {follower}</p>
               )}
