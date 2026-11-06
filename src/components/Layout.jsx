@@ -328,7 +328,7 @@ export const TEACHER_GROUPS = [
       { to: "/achievement",    label: "مركز تحليل النتائج", achMember: true, icon: "chart", achGate: true, kw: "تحليل النتائج" },
       { to: "/qiyas",          label: "اختبارات قياس",      achMember: true, icon: "target", kw: "قدرات تحصيلي step" },
       { to: "/ach-committee",  label: "لجنة التحصيل",       achMember: true, icon: "users", kw: "محاضر" },
-      { to: "/qudrat",         label: "مركز التدريب",      icon: "target", exact: true, kw: "قياس قدرات تحصيلي تدريب اسئلة" },
+      { to: "/qudrat/questions", label: "أسئلة المعلمين (القدرات)", icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة اضافة" },
       { to: "/qudrat/asks",    label: "أسئلة الطلاب (القدرات)", icon: "chat", kw: "قدرات استفسار طالب" },
     ],
   },

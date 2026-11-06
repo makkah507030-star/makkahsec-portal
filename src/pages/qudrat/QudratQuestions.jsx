@@ -141,7 +141,7 @@ export default function QudratQuestions() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <Link to="/qudrat" className="text-xs font-semibold text-mint-deep">مركز التدريب</Link>
+          {effectiveRole === "admin" && <Link to="/qudrat" className="text-xs font-semibold text-mint-deep">مركز التدريب</Link>}
           <h1 className="text-lg font-bold text-ink">أسئلة المعلمين</h1>
           <p className="mt-1 text-sm text-muted">أضف أسئلة على مهارات القدرات لتظهر لطلاب المدرسة في التدريب مع الأسئلة الرسمية.</p>
         </div>

@@ -12,7 +12,7 @@ import { VoicePlayer } from "../../components/Voice.jsx";
    ===================================================================== */
 
 /* زر «اسأل معلمك» تحت السؤال بعد حله */
-export function AskButton({ q }) {
+export function AskButton({ q, picked = null }) {
   const [open, setOpen] = useState(false);
   const [body, setBody] = useState("");
   const [state, setState] = useState("");   // "" | "busy" | "sent" | رسالة خطأ
@@ -21,13 +21,15 @@ export function AskButton({ q }) {
   const send = async () => {
     if (body.trim().length < 2) return;
     setState("busy");
-    const { error } = await supabase.from("qudrat_asks").insert({
-      sec: q.sec, skill: q.skill, qkey: q.key, q_text: q.q.slice(0, 600), body: body.trim() });
+    const row = { sec: q.sec, skill: q.skill, qkey: q.key, q_text: q.q.slice(0, 600), body: body.trim() };
+    // اختيار الطالب يصل للمعلم مع السؤال (qudrat_7.sql)؛ وقبل تشغيل الملف يُرسل السؤال بدونه
+    let { error } = await supabase.from("qudrat_asks").insert(picked == null ? row : { ...row, picked });
+    if (error && picked != null && /picked/.test(error.message)) ({ error } = await supabase.from("qudrat_asks").insert(row));
     setState(error ? (/qudrat_asks/.test(error.message) ? "الخدمة غير مفعّلة بعد." : error.message) : "sent");
   };
   return (
     <div className="space-y-2 rounded-sm2 border border-line px-3 py-2.5">
-      <p className="text-xs text-muted">يصل سؤالك إلى معلم {q.sec === "quant" ? "الرياضيات" : "اللغة العربية"} في فصلك مع نص السؤال.</p>
+      <p className="text-xs text-muted">يصل سؤالك إلى معلم {q.sec === "quant" ? "الرياضيات" : "اللغة العربية"} في فصلك مع السؤال كاملًا وخياراته وإجابتك، ليشرحه لك.</p>
       <textarea className="field min-h-[4.5rem]" maxLength={1000} value={body} onChange={(e) => setBody(e.target.value)}
                 placeholder="ما الذي لم تفهمه؟ مثال: لم أفهم لماذا قسمنا على 12" />
       {state && state !== "busy" && <p className="text-xs text-absent">{state}</p>}
