@@ -112,9 +112,11 @@ export default function SubjectAbsenceReport() {
         if (ids.length) {
           rows = await fetchAllPaged(() =>
             supabase.from("class_attendance")
-              .select("id, student_id, schedule_id, attend_date, status, students(full_name)")
+              .select("id, student_id, schedule_id, attend_date, status, students(full_name, is_active)")
               .in("schedule_id", ids).eq("academic_year", year)
               .order("id", { ascending: true }));
+          // الطالب المطوي قيده لا يدخل التقرير (ولا يقرأ المعلم اسمه فكان يظهر «-»)
+          rows = rows.filter((r) => r.students && r.students.is_active !== false);
         }
         setState({ loading: false, me, sched: sched ?? [], rows, year, yearLabel, term, error: "" });
       } catch (e) {
