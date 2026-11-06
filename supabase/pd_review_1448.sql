@@ -2,11 +2,14 @@
 -- مراجعة نماذج التطوير المهني المعتمدة (العام 1448–1449) بقرار مدير المدرسة:
 -- • «revoke»: يُلغى اعتماده (أُلغي اعتماده)، ويخرج شاهده من سجل الأداء لصاحبه وللموقّعين،
 --   وتُكتب عليه الملاحظة. • «return»: يُعاد لصاحبه ليرفق الشاهد، ويخرج شاهده حتى يُعتمد من جديد.
+-- • يصل صاحب النموذج (ومن خرج شاهد حضوره) إشعار بالقرار وسببه في الجرس والجوال.
 -- يُنفَّذ بعد pd_integrity_1.sql و2. يمسّ النماذج المعتمدة المذكورة فقط، وتكرار التنفيذ آمن.
 -- =====================================================================
-select set_config('pd.allow', '1', false);
-
-with d(serial, act, note) as (values
+do $$
+declare d record; r pd_reports; nid uuid; who uuid[];
+begin
+  perform set_config('pd.allow', '1', true);
+  for d in select * from (values
   ('PD-1448-1449-0005', 'revoke', 'عدم مطابقته للشروط: الدرس التطبيقي نفسه مسجّل مرتين، بلا مرفق ولا خطة قبل التنفيذ.'),
   ('PD-1448-1449-0003', 'revoke', 'عدم مطابقته للشروط: الدرس التطبيقي نفسه مسجّل مرتين، بلا مرفق ولا خطة قبل التنفيذ.'),
   ('PD-1448-1449-0043', 'revoke', 'عدم مطابقته للشروط: تنفيذ البرنامج التدريبي يعتمده المعهد الوطني ولا يُعتمد في المدرسة، وبلا مرفق.'),
@@ -25,19 +28,23 @@ with d(serial, act, note) as (values
   ('PD-1448-1449-0052', 'revoke', 'عدم مطابقته للشروط: وُثّق قبل تاريخ تنفيذه.'),
   ('PD-1448-1449-0053', 'return', 'عدم مطابقته للشروط: أرفق الشاهد ثم ارفعه للاعتماد، فالمرفق صار شرطًا للاعتماد.'),
   ('PD-1448-1449-0066', 'return', 'عدم مطابقته للشروط: أرفق الشاهد ثم ارفعه للاعتماد، فالمرفق صار شرطًا للاعتماد.'),
-  ('PD-1448-1449-0071', 'return', 'عدم مطابقته للشروط: أرفق الشاهد ثم ارفعه للاعتماد، فالمرفق صار شرطًا للاعتماد.')
-), u as (
-  update public.pd_reports r set
-    status = case d.act when 'revoke' then 'revoked' else 'returned' end,
-    decision_note = d.note, decided_name = 'مدير المدرسة (مراجعة الشواهد)', decided_at = now(), updated_at = now()
-    from d where r.serial = d.serial and r.status = 'approved'
-  returning r.id, r.serial, r.owner_name, r.status
-), e as (
-  delete from public.perf_evidence pe using u where pe.pd_report_id = u.id returning pe.pd_report_id
-)
-select u.serial as "الرقم", u.owner_name as "صاحبه", case u.status when 'revoked' then 'أُلغي اعتماده' else 'أُعيد لإرفاق الشاهد' end as "الإجراء",
-       (select count(*) from e where e.pd_report_id = u.id) as "شواهد خرجت من السجل"
-  from u order by u.serial;
+  ('PD-1448-1449-0071', 'return', 'عدم مطابقته للشروط: أرفق الشاهد ثم ارفعه للاعتماد، فالمرفق صار شرطًا للاعتماد.')) v(serial, act, note) loop
+    update pd_reports set status = case d.act when 'revoke' then 'revoked' else 'returned' end,
+           decision_note = d.note, decided_name = 'مدير المدرسة (مراجعة الشواهد)', decided_at = now(), updated_at = now()
+     where serial = d.serial and status = 'approved' returning * into r;
+    continue when not found;   -- غير معتمد (أو نُفّذ عليه القرار من قبل): لا شيء ولا إشعار
+    delete from perf_evidence where pd_report_id = r.id;
+    who := array_remove(array_append(array(select (a->>'user_id')::uuid from jsonb_array_elements(r.attendees) a), r.owner_user_id), null);
+    nid := public.send_notification(
+      case d.act when 'revoke' then 'أُلغي اعتماد نموذج تطوير مهني' else 'أُعيد نموذج تطوير مهني لإرفاق الشاهد' end,
+      '«' || coalesce(r.data->>'title', '') || '» (' || r.serial || '): ' || d.note, 'general', '/pd/' || r.id, null,
+      case d.act when 'revoke' then who else array[r.owner_user_id] end, null, null, true);
+    begin perform public.push_notification(nid); exception when others then null; end;
+  end loop;
+end $$;
 
-select set_config('pd.allow', '', false);
+-- النتيجة: النماذج بقراراتها
+select r.serial as "الرقم", r.owner_name as "صاحبه", case r.status when 'revoked' then 'أُلغي اعتماده' when 'returned' then 'أُعيد لإرفاق الشاهد' else r.status end as "الحالة",
+       r.decided_at::date as "تاريخ القرار"
+  from public.pd_reports r where r.decided_name = 'مدير المدرسة (مراجعة الشواهد)' order by r.serial;
 -- نهاية الجزء 1
