@@ -140,7 +140,8 @@ export function schoolPages({ d, info, theme = "light", notes, sigs = {} }) {
       </div>
       <Box icon="award" title="التطوير المهني" aside={`الأنشطة ${n(pdAll)} بتاريخ تنفيذها`}>
         <Bars full items={[
-          ...Object.entries(PD_KINDS).map(([k, v]) => ({ t: v.short ?? v.t, v: d.pd.byKind[k] ?? 0, c: S[0] })),
+          // أنواع النماذج التي فيها نشاط هذا الشهر فقط (الأنواع خمسة عشر نشاطًا في الدليل)
+          ...Object.entries(PD_KINDS).map(([k, v]) => ({ t: v.short ?? v.t, v: d.pd.byKind[k] ?? 0, c: S[0] })).filter((x) => x.v > 0),
           { t: "جلسات مجتمعات التعلم المهني", v: d.pd.plc, c: S[2] }, { t: "الزيارات التبادلية", v: d.pd.visits, c: S[2] },
         ]} />
         {pdAll > 0 && (
