@@ -8,6 +8,10 @@ select r.serial as "الرقم", r.owner_name as "صاحبه", r.kind as "الن
          case when r.kind in ('training', 'research', 'field_visit') then 'نشاط خارجي لا يُعتمد في المدرسة' end,
          case when r.kind in ('workshop', 'applied', 'lesson_study') and r.plan_approved_at is null then 'بلا خطة قبل التنفيذ' end,
          case when (r.data->>'date') is not null and r.created_at::date - (r.data->>'date')::date > 30 then 'وُثّق بعد التنفيذ بأكثر من شهر' end,
+         case when (r.data->>'date')::date < (select min(start_date) from public.academic_calendar where academic_year = r.academic_year) then 'تاريخه قبل بداية العام الدراسي' end,
+         case when (r.data->>'date')::date > r.created_at::date then 'وُثّق قبل تاريخ تنفيذه' end,
+         case when exists (select 1 from public.pd_reports x where x.id <> r.id and x.owner_user_id = r.owner_user_id and x.kind = r.kind
+                  and x.status = 'approved' and x.data->>'date' = r.data->>'date' and trim(x.data->>'title') = trim(r.data->>'title')) then 'مكرر' end,
          case when (select count(*) from public.pd_reports x where x.owner_user_id = r.owner_user_id and x.status = 'approved'
                      and x.decided_at::date = r.decided_at::date) >= 4 then 'أربعة نماذج أو أكثر اعتُمدت له في يوم واحد' end
        ) as "علامات للمراجعة"

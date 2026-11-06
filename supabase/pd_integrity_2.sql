@@ -1,6 +1,6 @@
 -- =====================================================================
 -- نماذج التطوير المهني — منع الشواهد الصورية (2 من 2): شروط الرفع، والاعتماد، وإلغاؤه.
--- • لا يُرفع نموذج بلا مرفق شاهد، ولا نشاط خارجي لا يُعتمد في المدرسة (تنفيذ برنامج تدريبي،
+-- • لا يُرفع نموذج بلا مرفق شاهد، ولا بتاريخ تنفيذ خارج العام الدراسي الحالي أو بعد اليوم، ولا مكرر، ولا نشاط خارجي لا يُعتمد في المدرسة (تنفيذ برنامج تدريبي،
 --   والبحث الإجرائي، والزيارة الميدانية)، ولا ورشة أو درس تطبيقي أو بحث درس بلا خطة موافق عليها قبل تنفيذه.
 -- • pd_revoke: إلغاء اعتماد نموذج ثبت أنه صوري، بملاحظة، فيسقط شاهده من سجل الأداء لصاحبه وللموقّعين.
 -- يُنفَّذ بعد الجزء 1. تكرار التنفيذ آمن.
@@ -13,6 +13,18 @@ begin
   if r.owner_user_id is distinct from auth.uid() or r.status not in ('draft', 'signing', 'returned') then raise exception 'غير مصرّح'; end if;
   if r.kind in ('training', 'research', 'field_visit') then raise exception 'هذا النشاط يعتمده المعهد أو اللجنة المختصة في الإدارة، ولا يُوثَّق في البوابة'; end if;
   if jsonb_array_length(coalesce(r.files, '[]'::jsonb)) = 0 then raise exception 'أرفق شاهدًا واحدًا على الأقل (شهادة أو صور التنفيذ أو الخطة)'; end if;
+  -- تاريخ التنفيذ: داخل العام الدراسي الحالي (من أول يوم في تقويمه)، ولا بعد اليوم
+  if coalesce(r.data->>'date', '') = '' then raise exception 'اكتب تاريخ التنفيذ'; end if;
+  if (r.data->>'date')::date > current_date then raise exception 'تاريخ التنفيذ بعد اليوم: يُوثَّق النشاط بعد تنفيذه'; end if;
+  if (r.data->>'date')::date < coalesce((select min(start_date) from academic_calendar where academic_year = r.academic_year), current_date - 365) then
+    raise exception 'تاريخ التنفيذ قبل بداية العام الدراسي الحالي، فلا يُوثَّق في سجل هذا العام';
+  end if;
+  -- لا نموذجان لصاحبهما من النوع نفسه بالعنوان نفسه والتاريخ نفسه
+  if exists (select 1 from pd_reports x where x.id <> p_id and x.owner_user_id = r.owner_user_id and x.kind = r.kind
+               and x.status not in ('draft', 'revoked') and x.data->>'date' = r.data->>'date'
+               and lower(regexp_replace(trim(x.data->>'title'), '\s+', ' ', 'g')) = lower(regexp_replace(trim(r.data->>'title'), '\s+', ' ', 'g'))) then
+    raise exception 'لك نموذج من النوع نفسه بالعنوان نفسه والتاريخ نفسه، فلا يُكرَّر';
+  end if;
   if r.kind in ('workshop', 'applied', 'lesson_study') then
     if r.plan_approved_at is null then raise exception 'لم يُوافَق على خطة النشاط قبل تنفيذه'; end if;
     if coalesce(r.data->>'date', '') = '' or (r.data->>'date')::date < r.plan_approved_at::date then
