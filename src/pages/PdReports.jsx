@@ -13,7 +13,7 @@ import { useSignerImages } from "../lib/userSignatures.js";
 import SignedMark from "../components/SignedMark.jsx";
 import moeLogo from "../assets/moe-logo.png";
 import { useMyDepartment, loadDeptTeachers, plcNotify } from "../lib/plc";
-import { PD_KINDS, PD_KIND_KEYS, PD_STATUS, PD_BUCKET, PD_MAX_FILES, PD_META, PD_GROUPS, pdStages, pdMissing } from "../lib/pd";
+import { PD_KINDS, PD_KIND_KEYS, PD_STATUS, PD_BUCKET, PD_MAX_FILES, PD_META, PD_GROUPS, PD_PLAN_KINDS, PD_NO_CREATE, PD_PLAN_FIELD, pdStages, pdMissing } from "../lib/pd";
 import PdNote from "../components/PdNote.jsx";
 import { HeadTag, useRoles, Chips, StageBar, C } from "./Plc.jsx";
 import { byName } from "../lib/sortAr.js";
@@ -58,6 +58,8 @@ function ReportList() {
   const attended = (r) => (r.attendees ?? []).some((a) => a.user_id === uid);
   const signed = (r) => (r.pd_signatures ?? []).some((g) => g.user_id === uid);
   const toSign = (r) => attended(r) && r.status === "signing" && !signed(r);
+  // بانتظار الاعتماد: النموذج المرفوع، أو خطة نشاط بانتظار الموافقة قبل تنفيذه
+  const waiting = (r) => r.status === "pending" || (!!r.plan_submitted_at && !r.plan_approved_at);
   const tabs = [
     isTeacher && { k: "mine", t: "نماذجي" },
     isTeacher && { k: "sign", t: "للتوقيع" },
@@ -73,8 +75,8 @@ function ReportList() {
   const cur = tab ?? linked ?? (roles.isDeputy ? "pending" : roles.seesAll ? "all" : tabs[0]?.k);
   const list = (rows ?? []).filter((r) => cur === "mine" ? r.owner_user_id === uid || attended(r)
     : cur === "sign" ? toSign(r) : cur === "dept" ? r.department_id === dept?.department_id
-    : cur === "pending" ? r.status === "pending" : true);
-  const count = (k) => (rows ?? []).filter((r) => k === "sign" ? toSign(r) : k === "pending" && r.status === "pending").length;
+    : cur === "pending" ? waiting(r) : true);
+  const count = (k) => (rows ?? []).filter((r) => k === "sign" ? toSign(r) : k === "pending" && waiting(r)).length;
 
   const create = async (kind) => {
     // مسودة فارغة من النوع نفسه موجودة؟ تُفتح هي بدل إنشاء أخرى (كل ضغطة كانت تنشئ مسودة)
@@ -111,7 +113,7 @@ function ReportList() {
         <div key={g} className="space-y-1.5">
           <p className={`text-xs font-bold ${["edu", "inst"].includes(g) ? "text-warning" : "text-mint-deep"}`}>{PD_GROUPS[g].t}</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {PD_KIND_KEYS.filter((k) => PD_META[k].group === g).map((k) => (
+            {PD_KIND_KEYS.filter((k) => PD_META[k].group === g && !PD_NO_CREATE.includes(k)).map((k) => (
               <button key={k} type="button" onClick={() => create(k)} ref={(el) => k === wantKind && el?.scrollIntoView({ block: "center" })}
                       className={`card flex flex-col items-start gap-1 p-3 text-right hover:bg-mint-tint/40 ${k === wantKind ? "ring-2 ring-mint-deep" : ""} ${["edu", "inst"].includes(g) ? "border-warning/30" : ""}`}>
                 <span className="flex items-center gap-2">
@@ -119,7 +121,7 @@ function ReportList() {
                   <span className="text-sm font-semibold text-ink">{PD_KINDS[k].short}</span>
                 </span>
                 <span className="text-[11.5px] leading-relaxed text-muted">الاعتماد: {PD_META[k].by}</span>
-                <span className={`mt-1 text-xs font-semibold ${["edu", "inst"].includes(g) ? "text-warning" : "text-mint-deep"}`}>{g === "edu" || k === "training" ? "+ توثيق بعد الاعتماد" : "+ نموذج جديد"}</span>
+                <span className={`mt-1 text-xs font-semibold ${["edu", "inst"].includes(g) ? "text-warning" : "text-mint-deep"}`}>+ نموذج جديد</span>
               </button>
             ))}
           </div>
@@ -178,7 +180,72 @@ function Report({ id }) {
   if (!r) return <Loader />;
   const editable = ((r.owner_user_id === uid && ["draft", "signing", "returned"].includes(r.status)) || roles.isTech)
     && !["pending", "approved"].includes(r.status);
+  if (editable && PD_PLAN_KINDS.includes(r.kind) && !r.plan_approved_at && r.owner_user_id === uid)
+    return <PlanEditor r={r} setR={setR} reload={load} />;
   return editable ? <Editor r={r} setR={setR} sigs={sigs} reload={load} /> : <Viewer r={r} sigs={sigs} reload={load} uid={uid} roles={roles} />;
+}
+
+/* خطة النشاط قبل تنفيذه (ورشة العمل، والدرس التطبيقي، ودورة بحث الدرس): يرفعها صاحبها، ويوافق عليها
+   وكيل الشؤون التعليمية أو المدير، ثم يُكمل التقرير بعد التنفيذ. لا يُقبل تقرير بلا خطة موافق عليها قبل تاريخه. */
+function PlanEditor({ r, setR, reload }) {
+  const k = PD_KINDS[r.kind];
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const sent = !!r.plan_submitted_at;
+  const fields = [...k.info.filter((f) => ["title", "date", "hours", "place", "target", "class_label", "type"].includes(f.key)), PD_PLAN_FIELD];
+  const setData = (key, v) => setR((x) => ({ ...x, data: { ...x.data, [key]: v } }));
+  const save = async () => {
+    const { error } = await supabase.from("pd_reports").update({ data: r.data, updated_at: new Date().toISOString() }).eq("id", r.id);
+    if (error) setMsg({ ok: false, t: error.message }); return !error;
+  };
+  const submitPlan = async () => {
+    setBusy(true); setMsg(null);
+    if (await save()) {
+      const { error } = await supabase.rpc("pd_plan_submit", { p_id: r.id });
+      if (error) setMsg({ ok: false, t: error.message });
+      else {
+        const { data: dep } = await supabase.from("admin_roles").select("user_id").eq("role_type", "deputy_academic");
+        await plcNotify((dep ?? []).map((d) => d.user_id), "خطة نشاط تطوير مهني بانتظار موافقتك",
+          `رفع ${r.owner_name} خطة «${k.short}: ${r.data?.title ?? ""}» قبل تنفيذها.`, `/pd/${r.id}`);
+        reload();
+      }
+    }
+    setBusy(false);
+  };
+  return (
+    <div className="space-y-4">
+      <div>
+        <Link to="/plc" className="text-xs text-muted hover:underline">التطوير المهني ← نماذج سجل التطوير المهني</Link>
+        <h1 className="mt-0.5 text-lg font-bold text-ink">{k.t}</h1>
+        <p className="mt-1 text-xs text-muted">الخطوة الأولى: خطة النشاط قبل تنفيذه. بعد الموافقة عليها تنفّذه، ثم تُكمل التقرير والحاضرين والشواهد.</p>
+      </div>
+      {PD_META[r.kind] && <PdNote by={PD_META[r.kind].by} notes={PD_META[r.kind].notes} />}
+      {r.plan_note && !sent && <p className="rounded-sm2 bg-absent/5 px-3 py-2 text-sm text-absent"><b>أُعيدت الخطة: </b>{r.plan_note}</p>}
+      {sent ? (
+        <section className="card space-y-2 p-4">
+          <p className="text-sm font-semibold text-warning">الخطة بانتظار موافقة وكيل الشؤون التعليمية</p>
+          <p className="text-[12.5px] text-muted">رُفعت في <span className="num">{fmtDate(r.plan_submitted_at)}</span>، وتصلك إشعار بالموافقة أو الإعادة.</p>
+          <p className="whitespace-pre-line rounded-sm2 bg-canvas px-3 py-2 text-[13px] text-ink">{r.data?.plan}</p>
+        </section>
+      ) : (
+        <section className="card space-y-4 p-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {fields.filter((f) => f.key !== "plan").map((f) => <Field key={f.key} f={f} value={r.data?.[f.key]} onChange={(v) => setData(f.key, v)} />)}
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-ink">{PD_PLAN_FIELD.t}<span className="text-absent"> *</span></label>
+            <textarea className="field mt-1 min-h-[140px] w-full" value={r.data?.plan ?? ""} onChange={(e) => setData("plan", e.target.value)} />
+          </div>
+          <p className="text-[11.5px] text-faint">تاريخ التنفيذ يكون بعد اليوم، فالخطة تُرفع قبل التنفيذ لا بعده.</p>
+          {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/5 text-absent"}`}>{msg.t}</p>}
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-primary" disabled={busy} onClick={submitPlan}>{busy ? "…" : "رفع الخطة للموافقة"}</button>
+            <button className="btn-ghost" disabled={busy} onClick={async () => { if (await save()) setMsg({ ok: true, t: "حُفظت المسودة." }); }}>حفظ المسودة</button>
+          </div>
+        </section>
+      )}
+    </div>
+  );
 }
 
 function Field({ f, value, onChange }) {
@@ -279,7 +346,9 @@ function Editor({ r, setR, sigs, reload }) {
     await plcNotify((dep ?? []).map((d) => d.user_id), "نموذج تطوير مهني بانتظار اعتمادك",
       `رفع ${r.owner_name} «${k.short}: ${r.data?.title ?? ""}» للاعتماد.`, `/pd/${r.id}`);
   };
+  const needFile = () => { if (!(r.files ?? []).length) { setMsg({ ok: false, t: "أرفق شاهدًا واحدًا على الأقل (شهادة أو صور التنفيذ أو الخطة) من مرحلة الشواهد." }); return true; } return false; };
   const sendSign = async () => {
+    if (needFile()) return;
     setBusy(true);
     if (await save({ data: r.data, status: "signing", sent_at: new Date().toISOString() })) {
       await plcNotify(r.attendees.map((a) => a.user_id), `${k.t} للتوقيع`,
@@ -294,6 +363,7 @@ function Editor({ r, setR, sigs, reload }) {
     setMsg({ ok: true, t: `أُرسل التذكير إلى ${left.length}.` });
   };
   const submit = async () => {
+    if (needFile()) return;
     setBusy(true); setMsg(null);
     await save({ data: r.data });
     const { error } = await supabase.rpc("pd_submit", { p_id: r.id });
@@ -323,6 +393,9 @@ function Editor({ r, setR, sigs, reload }) {
         </p>
       </div>
       {PD_META[r.kind] && <PdNote by={PD_META[r.kind].by} notes={PD_META[r.kind].notes} edu={["edu", "inst"].includes(PD_META[r.kind].group)} />}
+      {r.plan_approved_at && (
+        <p className="rounded-sm2 bg-present/10 px-3 py-2 text-xs text-present">وُوفق على الخطة في <span className="num">{fmtDate(r.plan_approved_at)}</span>{r.plan_approved_name ? ` (${r.plan_approved_name})` : ""}. تاريخ التنفيذ يكون من هذا اليوم فما بعده.</p>
+      )}
       {r.status === "returned" && r.decision_note && (
         <p className="rounded-sm2 bg-absent/5 px-3 py-2 text-sm text-absent"><b>ملاحظة وكيل الشؤون التعليمية: </b>{r.decision_note}</p>
       )}
@@ -468,6 +541,24 @@ function Viewer({ r, sigs, reload, uid, roles }) {
     }
   };
   const savePrincipal = () => run(() => supabase.rpc("pd_principal_note", { p_id: r.id, p_note: pnote }), "حُفظت ملاحظتك.");
+  // الموافقة على خطة النشاط قبل تنفيذه، أو إعادتها بملاحظة
+  const planDecide = async (approve) => {
+    if (await run(() => supabase.rpc("pd_plan_decide", { p_id: r.id, p_approve: approve, p_note: note }),
+      approve ? "وُوفق على الخطة، ويمكن لصاحبها التنفيذ ثم إكمال التقرير." : "أُعيدت الخطة لصاحبها بملاحظتك.")) {
+      await plcNotify([r.owner_user_id], approve ? `وُوفق على خطة «${k.short}»` : "أُعيدت خطة نشاط التطوير المهني",
+        approve ? `يمكنك تنفيذ «${r.data?.title ?? ""}» ثم إكمال تقريره وشواهده.` : `«${r.data?.title ?? ""}»: ${note}`, `/pd/${r.id}`);
+    }
+  };
+  // إلغاء اعتماد نموذج ثبت أنه صوري: يسقط شاهده من سجل الأداء لصاحبه وللموقّعين
+  const revoke = async () => {
+    const why = window.prompt("سبب إلغاء الاعتماد (يصل صاحب النموذج):");
+    if (!why?.trim()) return;
+    if (await run(() => supabase.rpc("pd_revoke", { p_id: r.id, p_note: why.trim() }), "أُلغي الاعتماد، وسقط الشاهد من سجل الأداء.")) {
+      await plcNotify([r.owner_user_id, ...(r.attendees ?? []).map((a) => a.user_id)], `أُلغي اعتماد «${k.short}»`,
+        `أُلغي اعتماد «${r.data?.title ?? ""}»: ${why.trim()}`, `/pd/${r.id}`);
+    }
+  };
+  const canDecide = roles.isDeputy || roles.isPrincipal;
 
   return (
     <div className="space-y-4">
@@ -487,6 +578,27 @@ function Viewer({ r, sigs, reload, uid, roles }) {
         </section>
       )}
       {mine && signed && <p className="rounded-sm2 bg-present/10 px-3 py-2 text-sm text-present">وقّعت حضورك.</p>}
+      {r.plan_approved_at && (
+        <p className="rounded-sm2 bg-present/10 px-3 py-2 text-xs text-present">وُوفق على خطة النشاط قبل تنفيذه: {r.plan_approved_name ?? ""} · <span className="num">{fmtDate(r.plan_approved_at)}</span></p>
+      )}
+      {r.status === "revoked" && r.decision_note && (
+        <p className="rounded-sm2 bg-absent/5 px-3 py-2 text-sm text-absent"><b>أُلغي اعتماده: </b>{r.decision_note}{r.decided_name ? ` — ${r.decided_name}` : ""}</p>
+      )}
+      {canDecide && r.plan_submitted_at && !r.plan_approved_at && (
+        <section className="card space-y-2 border-warning/40 p-4">
+          <p className="text-sm font-semibold text-ink">خطة النشاط قبل تنفيذه</p>
+          <p className="text-[12.5px] text-muted">موعد التنفيذ المقترح: <span className="num">{r.data?.date ? fmtDate(r.data.date) : "—"}</span>{r.data?.hours ? ` · ${r.data.hours} ساعة` : ""}</p>
+          <p className="whitespace-pre-line rounded-sm2 bg-canvas px-3 py-2 text-[13px] text-ink">{r.data?.plan}</p>
+          <textarea rows={2} className="field w-full" value={note} onChange={(e) => setNote(e.target.value)} placeholder="ملاحظة (مطلوبة عند الإعادة)" />
+          <div className="flex flex-wrap gap-2">
+            <button className="btn-primary flex-1" disabled={busy} onClick={() => planDecide(true)}>الموافقة على الخطة</button>
+            <button className="flex-1 rounded-pill border border-absent/40 py-2 text-sm font-semibold text-absent" disabled={busy || !note.trim()} onClick={() => planDecide(false)}>إعادة لصاحبها</button>
+          </div>
+        </section>
+      )}
+      {canDecide && r.status === "approved" && (
+        <button className="text-xs font-semibold text-absent underline" disabled={busy} onClick={revoke}>إلغاء الاعتماد (ثبت أن النشاط صوري)</button>
+      )}
       {roles.isDeputy && r.status === "pending" && (
         <section className="card space-y-2 p-4">
           <p className="text-sm font-semibold text-ink">الاعتماد</p>

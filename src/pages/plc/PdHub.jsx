@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useSession } from "../../lib/session.jsx";
 import { useMyDepartment } from "../../lib/plc";
 import { useNavBadges } from "../../lib/navBadges.js";
-import { PD_KINDS, PD_KIND_KEYS, PD_META, PD_GROUPS, PD_LEVELS, PD_SCHOOL_EXTRA } from "../../lib/pd";
+import { PD_KINDS, PD_KIND_KEYS, PD_META, PD_GROUPS, PD_LEVELS, PD_SCHOOL_EXTRA, PD_NO_CREATE, PD_PLAN_KINDS } from "../../lib/pd";
 import { newPdReport } from "../../lib/pdCreate.js";
 import { friendlyError } from "../../lib/friendlyError.js";
 import PdNote from "../../components/PdNote.jsx";
@@ -56,10 +56,13 @@ export default function PdHub() {
   };
   const isEdu = (k) => PD_META[k].group === "edu" || k === "training";
   const btn = (edu) => `rounded-pill px-4 py-1.5 text-xs font-semibold ${edu ? "border border-warning/50 bg-white text-warning" : "bg-mint-deep text-white"}`;
-  const newBtn = (k) => isTeacher && (
-    <button className={btn(isEdu(k))} disabled={!!busy} onClick={() => create(k)}>
-      {busy === k ? "…" : isEdu(k) ? "توثيق بعد الاعتماد" : "+ نموذج جديد"}
-    </button>);
+  // الأنشطة الخارجية للتعريف فقط، والأنشطة ذات الخطة تبدأ بخطة قبل التنفيذ
+  const newBtn = (k) => PD_NO_CREATE.includes(k)
+    ? <p className="rounded-sm2 bg-canvas px-3 py-1.5 text-[11.5px] text-muted">للتعريف فقط: لا يُوثَّق في البوابة، فاعتماده من الجهة المختصة.</p>
+    : isTeacher && (
+      <button className={btn(isEdu(k))} disabled={!!busy} onClick={() => create(k)}>
+        {busy === k ? "…" : PD_PLAN_KINDS.includes(k) ? "+ خطة قبل التنفيذ" : "+ نموذج جديد"}
+      </button>);
   const kindCard = (k) => (
     <Card key={k} item={PD_KINDS[k].item} title={PD_KINDS[k].short} hint={PD_KINDS[k].hint} meta={PD_META[k]} edu={!!PRE[PD_META[k].group]} action={newBtn(k)} />);
   const group = (g) => PD_KIND_KEYS.filter((k) => PD_META[k].group === g);
