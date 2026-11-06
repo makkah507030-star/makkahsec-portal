@@ -70,6 +70,9 @@ const LabBig = ({ v, t }) => <span><b className="df-num">{v}</b>{t}</span>;
 function LabPart({ x, L }) {
   const used = new Map((x.by_lesson ?? []).map((r) => [r.id, r]));
   const shown = x.author ? L.list : L.list.filter((l) => used.has(l.id));
+  // الصفوف بترتيبها في المكتبة (الأول الثانوي، الثالث الثانوي…)، والدروس مجمّعة بصفها
+  const grades = [...new Set(L.list.map((l) => l.grade))];
+  const byGrade = [...new Set(shown.map((l) => l.grade))].map((g) => [g, shown.filter((l) => l.grade === g)]);
   const lab = x.lab;
   return (
     <Section id="lab" title="المعمل الرقمي ومعمل الحاسب" sub={x.author ? "دروس تفاعلية أعدّها، والتدريس بها، وتشغيل المعمل" : "التدريس في معمل الحاسب ونتائجه"}>
@@ -77,7 +80,7 @@ function LabPart({ x, L }) {
         <div className="df-card df-lab">
           <div className="df-lab-hero df-cols">
             <div><p className="df-lab-k">مكتبة المعمل الرقمي</p>
-              <h3>{L.lessons} دروس تفاعلية مطابقة لكتاب «التقنية الرقمية» · {L.list[0]?.grade} (طبعة 1448)</h3>
+              <h3>{L.lessons} {L.lessons <= 10 ? "دروس تفاعلية" : "درسًا تفاعليًا"} مطابقة لكتب «التقنية الرقمية» · {grades.join(" و")} (طبعة 1448)</h3>
               <p className="df-lab-s">أعدّها في البوابة درسًا درسًا من صفحات الكتاب، ويعمل بها معلمو الحاسب في المعمل.</p></div>
             <div className="df-lab-big">
               <LabBig v={L.stations} t="محطة تعلم" /><LabBig v={L.tasks} t="تدريبًا عمليًا" /><LabBig v={L.questions} t="سؤالًا وتحققًا" />
@@ -90,7 +93,10 @@ function LabPart({ x, L }) {
       {shown.length > 0 && (
         <div className="df-card">
           <CardH title={x.author ? "الدروس" : "الدروس التي درّسها في المعمل"} sub={`${[...new Set(shown.map((l) => l.unit.title))].join("، ")} · ${shown.length} ${shown.length <= 10 ? "دروس" : "درسًا"}`} src="من البوابة" srcKind="mix" />
-          <div className="df-lcards df-lab-ls">{shown.map((l) => {
+          {byGrade.map(([g, list]) => (
+            <div key={g}>
+              {byGrade.length > 1 && <p className="df-lab-k" style={{ margin: "10px 0 6px" }}>{g} · {list.length} {list.length <= 10 ? "دروس" : "درسًا"}</p>}
+            <div className="df-lcards df-lab-ls">{list.map((l) => {
             const u = used.get(l.id);
             const k = l.stations.reduce((a, s) => ({ ...a, [s.type]: (a[s.type] ?? 0) + 1 }), {});
             return (
@@ -100,7 +106,9 @@ function LabPart({ x, L }) {
                 <small className="df-num">{l.stations.length} محطات: {k.concept ?? 0} مفهوم، {(k.practice ?? 0) + (k.steps ?? 0)} تدريب، {k.quiz ?? 0} اختبار</small>
                 {u && <small className="df-lab-u df-num">نُفّذ في {u.n} {u.n === 1 ? "حصة" : u.n === 2 ? "حصتين" : u.n <= 10 ? "حصص" : "حصة"}{u.st ? ` · ${u.st} نتيجة طالب` : ""}{u.m != null ? ` · إتقان ${pc(u.m)}` : ""}</small>}
               </div>);
-          })}</div>
+            })}</div>
+            </div>
+          ))}
         </div>
       )}
       {(x.periods > 0 || x.sessions > 0) && (
