@@ -107,19 +107,19 @@ function ReportList() {
 
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 
-      {isTeacher && ["school", "edu", "record"].map((g) => (
+      {isTeacher && ["school", "edu", "inst", "record"].map((g) => (
         <div key={g} className="space-y-1.5">
-          <p className={`text-xs font-bold ${g === "edu" ? "text-warning" : "text-mint-deep"}`}>{PD_GROUPS[g].t}</p>
+          <p className={`text-xs font-bold ${["edu", "inst"].includes(g) ? "text-warning" : "text-mint-deep"}`}>{PD_GROUPS[g].t}</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {PD_KIND_KEYS.filter((k) => PD_META[k].group === g).map((k) => (
               <button key={k} type="button" onClick={() => create(k)} ref={(el) => k === wantKind && el?.scrollIntoView({ block: "center" })}
-                      className={`card flex flex-col items-start gap-1 p-3 text-right hover:bg-mint-tint/40 ${k === wantKind ? "ring-2 ring-mint-deep" : ""} ${g === "edu" ? "border-warning/30" : ""}`}>
+                      className={`card flex flex-col items-start gap-1 p-3 text-right hover:bg-mint-tint/40 ${k === wantKind ? "ring-2 ring-mint-deep" : ""} ${["edu", "inst"].includes(g) ? "border-warning/30" : ""}`}>
                 <span className="flex items-center gap-2">
                   <span dir="ltr" className="num rounded-pill bg-mint-light px-2 text-[11px] font-bold text-mint-deep">{PD_KINDS[k].item}</span>
                   <span className="text-sm font-semibold text-ink">{PD_KINDS[k].short}</span>
                 </span>
                 <span className="text-[11.5px] leading-relaxed text-muted">الاعتماد: {PD_META[k].by}</span>
-                <span className={`mt-1 text-xs font-semibold ${g === "edu" ? "text-warning" : "text-mint-deep"}`}>{g === "edu" ? "+ توثيق بعد الاعتماد" : "+ نموذج جديد"}</span>
+                <span className={`mt-1 text-xs font-semibold ${["edu", "inst"].includes(g) ? "text-warning" : "text-mint-deep"}`}>{g === "edu" || k === "training" ? "+ توثيق بعد الاعتماد" : "+ نموذج جديد"}</span>
               </button>
             ))}
           </div>
@@ -322,7 +322,7 @@ function Editor({ r, setR, sigs, reload }) {
           <span className={`chip ${PD_STATUS[r.status]?.c}`}>{PD_STATUS[r.status]?.t}</span>
         </p>
       </div>
-      {PD_META[r.kind] && <PdNote by={PD_META[r.kind].by} notes={PD_META[r.kind].notes} edu={PD_META[r.kind].group === "edu"} />}
+      {PD_META[r.kind] && <PdNote by={PD_META[r.kind].by} notes={PD_META[r.kind].notes} edu={["edu", "inst"].includes(PD_META[r.kind].group)} />}
       {r.status === "returned" && r.decision_note && (
         <p className="rounded-sm2 bg-absent/5 px-3 py-2 text-sm text-absent"><b>ملاحظة وكيل الشؤون التعليمية: </b>{r.decision_note}</p>
       )}
@@ -479,7 +479,7 @@ function Viewer({ r, sigs, reload, uid, roles }) {
         </p>
       </div>
       {/* للمعتمد: من يعتمد هذا النشاط وما يشترط له، ليراجع النموذج على أساسه */}
-      {roles.isDeputy && r.status === "pending" && PD_META[r.kind] && <PdNote by={PD_META[r.kind].by} notes={PD_META[r.kind].notes} edu={PD_META[r.kind].group === "edu"} />}
+      {roles.isDeputy && r.status === "pending" && PD_META[r.kind] && <PdNote by={PD_META[r.kind].by} notes={PD_META[r.kind].notes} edu={["edu", "inst"].includes(PD_META[r.kind].group)} />}
       {mine && r.status === "signing" && !signed && (
         <section className="card space-y-2 p-4">
           <p className="text-sm text-ink">اطّلع على النموذج أدناه، ثم وقّع حضورك.</p>

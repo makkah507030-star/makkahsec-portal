@@ -14,12 +14,12 @@ import { HeadTag, useRoles } from "../Plc.jsx";
 /* =====================================================================
    التطوير المهني — الصفحة الرئيسة (/plc): ما ينتظر إجراءك، ثم الأنشطة بمستوى اعتمادها
    وفق «دليل اعتماد وتنفيذ أنشطة التطوير المهني التعليمي»:
-   • تُعتمد في المدرسة: حضور برنامج تدريبي، وورشة عمل، وجلسة تعلم مهني (رئيس القسم)، والزيارات التبادلية.
-   • خاضعة لشروط واعتماد الإدارة العامة للتعليم بمنطقة مكة المكرمة: الدرس التطبيقي، وتنفيذ البرنامج
-     التدريبي، وحضور المؤتمر.
-   ولكل نموذج ملاحظة: من يعتمده وما يشترط له. وقوائم الجلسات والنماذج والزيارات في صفحاتها.
+   تُعتمد في المدرسة، أو من اللجنة المختصة في إدارة التعليم، أو حقائب يعتمدها المعهد، ثم ممارسات
+   سجل الأداء (مجتمع التعلم والزيارات التبادلية والإنتاج المعرفي). ولكل نموذج ملاحظة من الدليل:
+   من يعتمده، واشتراطاته، وسلسلة إجراءاته. وقوائم الجلسات والنماذج والزيارات في صفحاتها.
    ===================================================================== */
 
+const PRE = { edu: true, inst: true };   // تعتمدها جهة خارج المدرسة
 const PD_TASKS = ["plcSign", "pdSign", "xvHost", "plcPending", "pdPending", "xvPending", "plcBack", "pdBack", "xvBack"];
 
 function Card({ item, title, hint, meta, edu, action }) {
@@ -54,13 +54,14 @@ export default function PdHub() {
     setBusy("");
     if (r.error) setErr(friendlyError(r.error.message)); else navigate(`/pd/${r.id}`);
   };
+  const isEdu = (k) => PD_META[k].group === "edu" || k === "training";
   const btn = (edu) => `rounded-pill px-4 py-1.5 text-xs font-semibold ${edu ? "border border-warning/50 bg-white text-warning" : "bg-mint-deep text-white"}`;
   const newBtn = (k) => isTeacher && (
-    <button className={btn(PD_META[k].group === "edu")} disabled={!!busy} onClick={() => create(k)}>
-      {busy === k ? "…" : PD_META[k].group === "edu" ? "توثيق بعد الاعتماد" : "+ نموذج جديد"}
+    <button className={btn(isEdu(k))} disabled={!!busy} onClick={() => create(k)}>
+      {busy === k ? "…" : isEdu(k) ? "توثيق بعد الاعتماد" : "+ نموذج جديد"}
     </button>);
   const kindCard = (k) => (
-    <Card key={k} item={PD_KINDS[k].item} title={PD_KINDS[k].short} hint={PD_KINDS[k].hint} meta={PD_META[k]} edu={PD_META[k].group === "edu"} action={newBtn(k)} />);
+    <Card key={k} item={PD_KINDS[k].item} title={PD_KINDS[k].short} hint={PD_KINDS[k].hint} meta={PD_META[k]} edu={!!PRE[PD_META[k].group]} action={newBtn(k)} />);
   const group = (g) => PD_KIND_KEYS.filter((k) => PD_META[k].group === g);
   const link = (to, t, n) => (
     <Link key={to} to={to} className="rounded-pill border border-line bg-white px-3.5 py-1.5 text-xs font-semibold text-ink hover:bg-canvas">
@@ -103,28 +104,25 @@ export default function PdHub() {
 
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 
-      {/* يُعتمد في المدرسة */}
+      {/* أنشطة الدليل بمستوى اعتمادها، ثم ممارسات سجل الأداء */}
+      {["school", "edu", "inst"].map((g) => (
+        <section key={g} className="space-y-2.5">
+          <div><h2 className={`text-[15px] font-bold ${PRE[g] ? "text-warning" : "text-mint-deep"}`}>{PD_GROUPS[g].t}</h2>
+            <p className="text-[12px] leading-relaxed text-muted">{PD_GROUPS[g].sub}</p></div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{group(g).map(kindCard)}</div>
+        </section>
+      ))}
+
       <section className="space-y-2.5">
-        <div><h2 className="text-[15px] font-bold text-mint-deep">{PD_GROUPS.school.t}</h2><p className="text-[12px] text-muted">{PD_GROUPS.school.sub}</p></div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {group("school").map(kindCard)}
+        <div><h2 className="text-[15px] font-bold text-ink">{PD_GROUPS.record.t}</h2><p className="text-[12px] text-muted">{PD_GROUPS.record.sub}</p></div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Card item={PD_SCHOOL_EXTRA.plc.item} title={PD_SCHOOL_EXTRA.plc.t} meta={PD_SCHOOL_EXTRA.plc}
             hint={dept?.is_head ? `أنت رئيس قسم ${dept.department_name}: أصدر جلسات قسمك ووثّقها.` : "يصدرها رئيس القسم، وتوقّع حضورك فيها."}
             action={<Link className={btn(false)} to={dept?.is_head ? "/plc?tab=mine" : "/plc?tab=sign"}>{dept?.is_head ? "جلسات قسمي" : "جلسات للتوقيع"}</Link>} />
           <Card item={PD_SCHOOL_EXTRA.xvisits.item} title={PD_SCHOOL_EXTRA.xvisits.t} meta={PD_SCHOOL_EXTRA.xvisits}
             action={<Link className={btn(false)} to="/xvisits">{isTeacher ? "زيارة جديدة أو متابعة" : "فتح الزيارات"}</Link>} />
+          {group("record").map(kindCard)}
         </div>
-      </section>
-
-      {/* خاضع لشروط واعتماد الإدارة العامة للتعليم */}
-      <section className="space-y-2.5">
-        <div><h2 className="text-[15px] font-bold text-warning">{PD_GROUPS.edu.t}</h2><p className="text-[12px] text-muted">{PD_GROUPS.edu.sub}</p></div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{group("edu").map(kindCard)}</div>
-      </section>
-
-      <section className="space-y-2.5">
-        <div><h2 className="text-[15px] font-bold text-ink">{PD_GROUPS.record.t}</h2><p className="text-[12px] text-muted">{PD_GROUPS.record.sub}</p></div>
-        <div className="grid gap-3 sm:grid-cols-2">{group("record").map(kindCard)}</div>
       </section>
 
       {/* مستويات الاعتماد في الدليل */}
@@ -140,8 +138,8 @@ export default function PdHub() {
                 <span className="text-[12px] leading-relaxed text-muted">{l.items}</span></span>
             </div>))}
             <p className="text-[11.5px] leading-relaxed text-faint">
-              والمعتمد في مدرستنا: حضور البرامج التدريبية، وورش العمل المنفّذة داخلها، وجلسات التعلم المهني، والزيارات التبادلية.
-              أما الدرس التطبيقي وتنفيذ البرنامج التدريبي فخاضعان لشروط واعتماد الإدارة العامة للتعليم بمنطقة مكة المكرمة.
+              المصدر: دليل اعتماد وتنفيذ أنشطة التطوير المهني التعليمي، المعهد الوطني للتطوير المهني التعليمي (الإصدار 1). ومستوى
+              كل نشاط في بطاقته كما في قسم «مستوى الاعتماد» منه.
             </p>
           </div>
         )}

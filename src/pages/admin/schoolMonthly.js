@@ -105,7 +105,7 @@ export async function loadSchoolMonthly(month) {
         // دون ساعات من نفّذ البرنامج
         hours: R.reduce((a, r) => {
           const h = Number(r.data?.hours) || 0;
-          return a + (["training", "workshop"].includes(r.kind) ? h * (r.attendees?.length ?? 0) : ["attend", "conference"].includes(r.kind) ? h : 0);
+          return a + (["training", "workshop"].includes(r.kind) ? h * (r.attendees?.length ?? 0) : ["attend", "conference", "lecture", "seminar", "edu_meeting", "field_visit", "reading"].includes(r.kind) ? h : 0);
         }, 0),
         evidence: evidence.count ?? 0,
       };
