@@ -80,6 +80,28 @@ export default function PdHub() {
         </p>
       </div>
 
+      {/* الدليل ومستويات الاعتماد أولًا: مرجع كل ما في الصفحة */}
+      <NiepdLink />
+      {/* مستويات الاعتماد في الدليل */}
+      <section className="card p-4">
+        <button className="flex w-full items-center justify-between text-sm font-bold text-ink" onClick={() => setLevels(!levels)}>
+          مستويات اعتماد أنشطة التطوير المهني في الدليل <span className="text-xs font-semibold text-mint-deep">{levels ? "إخفاء" : "عرض"}</span>
+        </button>
+        {levels && (
+          <div className="mt-3 space-y-2">{PD_LEVELS.map((l) => (
+            <div key={l.n} className="flex gap-3 rounded-sm2 border border-line bg-white px-3 py-2">
+              <span className="num grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint-tint text-xs font-bold text-mint-deep">{l.n}</span>
+              <span className="min-w-0"><b className="block text-[13px] text-ink">يعتمدها: {l.t}</b>
+                <span className="text-[12px] leading-relaxed text-muted">{l.items}</span></span>
+            </div>))}
+            <p className="text-[11.5px] leading-relaxed text-faint">
+              المصدر: دليل اعتماد وتنفيذ أنشطة التطوير المهني التعليمي، المعهد الوطني للتطوير المهني التعليمي (الإصدار 1). ومستوى
+              كل نشاط في بطاقته كما في قسم «مستوى الاعتماد» منه.
+            </p>
+          </div>
+        )}
+      </section>
+
       {/* ما ينتظر إجراءك: التوقيع، والاعتماد (لوكيل الشؤون التعليمية)، والمُعاد بملاحظة */}
       <section className="card space-y-2 p-4">
         <p className="text-sm font-bold text-ink">بانتظار إجرائك</p>
@@ -125,27 +147,6 @@ export default function PdHub() {
         </div>
       </section>
 
-      {/* مستويات الاعتماد في الدليل */}
-      <section className="card p-4">
-        <button className="flex w-full items-center justify-between text-sm font-bold text-ink" onClick={() => setLevels(!levels)}>
-          مستويات اعتماد أنشطة التطوير المهني في الدليل <span className="text-xs font-semibold text-mint-deep">{levels ? "إخفاء" : "عرض"}</span>
-        </button>
-        {levels && (
-          <div className="mt-3 space-y-2">{PD_LEVELS.map((l) => (
-            <div key={l.n} className="flex gap-3 rounded-sm2 border border-line bg-white px-3 py-2">
-              <span className="num grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint-tint text-xs font-bold text-mint-deep">{l.n}</span>
-              <span className="min-w-0"><b className="block text-[13px] text-ink">يعتمدها: {l.t}</b>
-                <span className="text-[12px] leading-relaxed text-muted">{l.items}</span></span>
-            </div>))}
-            <p className="text-[11.5px] leading-relaxed text-faint">
-              المصدر: دليل اعتماد وتنفيذ أنشطة التطوير المهني التعليمي، المعهد الوطني للتطوير المهني التعليمي (الإصدار 1). ومستوى
-              كل نشاط في بطاقته كما في قسم «مستوى الاعتماد» منه.
-            </p>
-          </div>
-        )}
-      </section>
-
-      <NiepdLink />
     </div>
   );
 }
