@@ -254,7 +254,7 @@ export const SECTIONS = [
 /* أقسام قائمة المعلم بالطريقة نفسها: كل قسم يجمع مجموعات من TEACHER_GROUPS ويفتح صفحة بطاقاتها،
    والقسم ذو الرابط الواحد يفتحه مباشرة. أي مجموعة جديدة في TEACHER_GROUPS يُضاف عنوانها هنا. */
 export const TEACHER_SECTIONS = [
-  { key: "daily", title: "المهام اليومية", icon: "userCheck", hint: "التحضير وحصص الانتظار والجدول والأنشطة والاستئذان والمعمل وبلاغات الصيانة",
+  { key: "daily", title: "المهام اليومية", icon: "userCheck", hint: "التحضير وحصص الانتظار والجدول والأنشطة والاستئذان والمعمل",
     groups: ["المهام اليومية", "المعامل والمختبرات"] },
   { key: "students", title: "طلابي", icon: "users", hint: "السجلات والمتابعة والغياب والإحالات والتقارير",
     groups: ["طلابي"] },
@@ -281,6 +281,8 @@ export const TEACHER_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home", kw: "يومي" },
+      // بلاغات الصيانة في أعلى القائمة مباشرة، لا داخل الأقسام (ليبلّغ المعلم عن العطل بأسرع وصول)
+      { to: "/repairs", label: "بلاغات الصيانة", icon: "wrench", kw: "عطل اعطال صيانة تكييف كهرباء سباكة اصلاح بلاغ" },
     ],
   },
   {
@@ -291,7 +293,6 @@ export const TEACHER_GROUPS = [
       { to: "/activities",  label: "الأنشطة والألعاب",       icon: "sparkles", kw: "حقيبة الانتظار الأنشطة الصفية دوري المادة كأس حروف مسابقة مؤقت" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
-      { to: "/repairs",     label: "بلاغات الصيانة",        icon: "wrench", kw: "عطل اعطال صيانة تكييف كهرباء سباكة اصلاح بلاغ" },
     ],
   },
   {

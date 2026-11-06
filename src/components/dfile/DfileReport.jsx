@@ -5,7 +5,7 @@ import { fmtDate, fmtHijri } from "../../lib/dates.js";
 import { countAr } from "../../lib/arabicCount.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
-  DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord, loadDfileLab,
+  DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord, loadDfileLab, loadDfileSci,
   LAB_PARTS, LAB_ELEMENTS, labElColor, STAFF_PARTS,
 } from "../../lib/dfile.js";
 import { AUTO_SOURCE, elementColor } from "../../lib/performance.js";
@@ -138,6 +138,33 @@ function LabPart({ x, L }) {
             <span><b className="df-num">{lab.acks}</b>طالبًا أقرّ بها</span>
             <span><b className="df-num">{lab.seats}</b>خريطة جلوس</span>
           </div>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+/* مختبرات العلوم لمعلمي الأحياء والكيمياء والفيزياء: الحجوزات والتجارب المنفّذة وآخرها — بلا أسماء طلاب (supabase/dfile_sci.sql) */
+const SCI_OUT = { lab: "في المختبر", virtual: "افتراضيًا" };
+function SciPart({ x }) {
+  const done = Number(x.lab) + Number(x.virtual), all = done + Number(x.not_done);
+  return (
+    <Section id="sci" title="مختبرات العلوم" sub="التجارب العملية في مختبرات المدرسة هذا العام">
+      <div className="df-card">
+        <CardH title="تنفيذ التجارب" sub={(x.labs ?? []).map((l) => l.name).join("، ") || "هذا العام"} src="تلقائي" />
+        <div className="df-tiles">
+          <span><b className="df-num">{x.lab}</b>تجربة في المختبر</span>
+          <span><b className="df-num">{x.virtual}</b>تجربة افتراضية</span>
+          <span><b className="df-num">{all ? pc((done / all) * 100) : "—"}</b>نسبة التنفيذ</span>
+          <span><b className="df-num">{x.classes}</b>فصلًا</span>
+          <span><b className="df-num">{x.bookings}</b>حجزًا للمختبر</span>
+        </div>
+      </div>
+      {(x.recent ?? []).length > 0 && (
+        <div className="df-card">
+          <CardH title="آخر التجارب المنفّذة" sub={`${x.recent.length} ${x.recent.length <= 10 ? "تجارب" : "تجربة"}`} src="من البوابة" srcKind="mix" />
+          <div className="df-tags">{x.recent.map((r, i) => (
+            <span key={i} className="df-tag"><Svg d={ICON.ok} strokeWidth="2.4" />{r.title} · {r.course} · {SCI_OUT[r.outcome] ?? ""}</span>))}</div>
         </div>
       )}
     </Section>
@@ -538,6 +565,9 @@ export default function DfileReport({ data: d, settings: s, code }) {
     });
     return () => { alive = false; };
   }, [code]);
+  // قسم مختبرات العلوم: يُجلب بكود الملف، ولا يظهر إلا لمن له تجارب أو حجوزات في مختبرات العلوم
+  const [sci, setSci] = useState(null);
+  useEffect(() => { let alive = true; loadDfileSci(code).then((x) => { if (alive) setSci(x); }); return () => { alive = false; }; }, [code]);
   // الشاهد يُعرض داخل الصفحة (DfileDocViewer)، فيراه الزائر في كل جهاز
   const [doc, setDoc] = useState(null);
   const closeDoc = useCallback(() => setDoc(null), [setDoc]);
@@ -555,6 +585,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
     teach: d.lessons > 0 || d.subs > 0 || madOn || actOn || lessons.length > 0,
     records: recAuto.length + recForms.length + recOwn.length > 0,
     lab: !!lab && (lab.author || lab.periods > 0 || lab.sessions > 0 || !!lab.lab),
+    sci: !!sci,
     results: (d.grades?.n ?? 0) > 0,
     assess: (d.quizzes?.length ?? 0) > 0,
     growth: true,
@@ -685,6 +716,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
           </Section>
         )}
         {show("lab") && has.lab && <LabPart x={lab} L={lab.L ?? { list: [] }} />}
+        {show("sci") && has.sci && <SciPart x={sci} />}
         {show("results") && has.results && <Results g={d.grades} />}
         {show("assess") && has.assess && <Assess d={d} />}
         {show("growth") && <Growth d={d} />}

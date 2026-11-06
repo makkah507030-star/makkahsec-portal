@@ -30,6 +30,7 @@ export const PARTS = [
   { key: "teach", t: "التخطيط والتدريس" },
   { key: "records", t: "السجلات والنماذج" },
   { key: "lab", t: "المعمل الرقمي" },
+  { key: "sci", t: "مختبرات العلوم" },
   { key: "results", t: "النتائج" },
   { key: "assess", t: "التقويم" },
   { key: "growth", t: "التطوير المهني" },
@@ -171,6 +172,13 @@ export async function loadDfile(uid) {
 export async function loadDfileLab(code) {
   if (!code) return null;
   const { data, error } = await supabase.rpc("dfile_lab", { p_code: code });
+  return error ? null : data;
+}
+
+/** قسم مختبرات العلوم (supabase/dfile_sci.sql) بكود الملف؛ null قبل تشغيل الملف أو بلا عمل في المختبر */
+export async function loadDfileSci(code) {
+  if (!code) return null;
+  const { data, error } = await supabase.rpc("dfile_sci", { p_code: code });
   return error ? null : data;
 }
 
