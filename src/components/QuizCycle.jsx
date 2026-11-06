@@ -10,6 +10,7 @@ import moeLogo from "../assets/moe-logo.png";
 import EvidenceTags from "./EvidenceTags.jsx";
 import { itemRates, correctness } from "../lib/quizItems.js";
 import { friendlyError } from "../lib/friendlyError.js";
+import { gradeBand } from "../lib/gradeBands";
 
 /* =====================================================================
    دورة الاختبار المتتابعة (التشخيصي واختبارا الفترتين) — مثل مراحل الأحداث:
@@ -215,60 +216,81 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
 
   const hasMiss = (plan.students ?? []).some((s) => s.miss?.length);
   const [showMiss, setShowMiss] = useState(false);
+  const lines = (t) => String(t ?? "").split("\n").map((x) => x.replace(/^[•\-\s]+/, "").trim()).filter(Boolean);
+  const skillsL = lines(plan.skills), procL = lines(plan.procedures);
+  const span = [plan.start_date && fmtDate(plan.start_date), plan.end_date && fmtDate(plan.end_date)].filter(Boolean).join(" إلى ") || "—";
+  const title = plan.round > 1 ? "الخطة العلاجية الثانية · دعم أعلى" : KIND_LABEL[plan.kind];
+  const band = (v) => gradeBand(v, "period");
+  const badge = (v) => { const b = band(v); return b ? rawHtml(`<span style="display:inline-block;padding:1px 8px;border-radius:99px;background:${b.bg};color:${b.text};font-weight:700">${escHtml(`${v}%`)}</span>`) : `${v}%`; };
+
+  // التقرير المطبوع: بيانات الخطة، ثم المهارات والإجراءات بنودًا مرقّمة، ثم الطلاب بنسبهم الملوّنة ومهارات كل طالب
   const print = () => printReport({
-    title: KIND_LABEL[plan.kind],
+    title,
     subtitle: `${q.title} · ${q.subject_name ?? ""}`,
     sections: [
       { title: "بيانات الخطة", headers: ["البند", "التفصيل"], rows: [
         ["الاختبار", `${q.title} (${q.period === "diagnostic" ? "تشخيصي" : q.period === "period1" ? "الفترة الأولى" : "الفترة الثانية"})`],
-        ["المهارات المستهدفة", plan.skills ?? ""],
-        ["الإجراءات والاستراتيجيات", plan.procedures ?? ""],
-        ["مدة التنفيذ", [plan.start_date && fmtDate(plan.start_date), plan.end_date && fmtDate(plan.end_date)].filter(Boolean).join(" إلى ") || "—"],
+        ["المادة", q.subject_name ?? "—"],
+        ["عدد الطلاب", countAr(plan.students?.length ?? 0, "student")],
+        ["مدة التنفيذ", span],
         ["الحالة", done ? `نُفّذت · ${fmtDate(plan.done_at)}${plan.done_note ? ` · ${plan.done_note}` : ""}` : "قيد التنفيذ"],
       ] },
-      { title: "الطلاب المستهدفون", headers: ["م", "الطالب", "الفصل", "النسبة"],
-        rows: (plan.students ?? []).map((s, i) => [i + 1, s.name, s.cls ?? "", `${s.avg}٪`]) },
-      ...(hasMiss ? [{ title: "مهارات كل طالب (الفقرات التي أخفق فيها)", headers: ["م", "الطالب", "الفقرات"],
-        rows: (plan.students ?? []).map((s, i) => [i + 1, s.name, rawHtml((s.miss ?? []).map((x) => escHtml(`ف${x.n}: ${x.t}`)).join("<br>") || "—")]) }] : []),
+      { title: "المهارات المستهدفة", headers: ["م", "المهارة"], rows: skillsL.map((t, k) => [k + 1, t]) },
+      { title: "الإجراءات والاستراتيجيات", headers: ["م", "الإجراء"], rows: procL.map((t, k) => [k + 1, t]) },
+      { title: "الطلاب المستهدفون", headers: hasMiss ? ["م", "الطالب", "الفصل", "النسبة", "الفقرات التي أخفق فيها"] : ["م", "الطالب", "الفصل", "النسبة"],
+        rows: (plan.students ?? []).map((s, k) => [k + 1, s.name, s.cls ?? "", badge(s.avg),
+          ...(hasMiss ? [rawHtml((s.miss ?? []).map((x) => escHtml(`ف${x.n}: ${x.t}`)).join("<br>") || "—")] : [])]) },
     ],
     logoUrl: new URL(logoIcon, window.location.origin).href,
     moeLogoUrl: new URL(moeLogo, window.location.origin).href,
     signatures: [{ title: "المعلم", name: teacherName ?? "" }, { title: "مدير المدرسة", name: PRINCIPAL_NAME }],
   });
 
+  const Block = ({ t, n, children }) => (
+    <div className="rounded-sm2 border border-line/70 bg-white p-3">
+      <p className="mb-1.5 text-xs font-bold text-mint-deep">{t}{n != null && <span className="num font-normal text-muted"> ({n})</span>}</p>
+      {children}
+    </div>
+  );
+  const ol = (list) => (
+    <ol className="space-y-1">{list.map((t, k) => (
+      <li key={k} className="flex gap-2 text-[13px] leading-relaxed text-ink">
+        <span className="num grid h-5 w-5 shrink-0 place-items-center rounded-full bg-mint-tint text-[10.5px] font-bold text-mint-deep">{k + 1}</span><span>{t}</span>
+      </li>))}</ol>
+  );
+
   return (
-    <div className="rounded-sm2 border border-line/60 bg-paper p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="flex-1 font-semibold text-ink">
-          {plan.round > 1 ? "الخطة العلاجية الثانية · دعم أعلى" : KIND_LABEL[plan.kind]}
-        </p>
-        <span className={`chip w-28 justify-center ${done ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>
-          {done ? "نُفّذت" : "قيد التنفيذ"}
-        </span>
+    <div className="overflow-hidden rounded-card border border-line/70 bg-paper">
+      <div className="flex flex-wrap items-center gap-2 border-b border-line/60 bg-mint-tint/40 px-3 py-2.5">
+        <p className="min-w-0 flex-1 font-bold text-ink">{title}</p>
+        <span className="text-xs text-muted">{countAr(plan.students?.length ?? 0, "student")} · <span className="num">{span}</span></span>
+        <span className={`chip justify-center ${done ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>{done ? "نُفّذت" : "قيد التنفيذ"}</span>
       </div>
-      <p className="mt-1 text-sm text-muted">
-        {countAr(plan.students?.length ?? 0, "student")} · {plan.skills}
-      </p>
-      {plan.procedures && <p className="mt-1 text-sm text-muted">الإجراءات: {plan.procedures}</p>}
-      {hasMiss && (
-        <div className="mt-2">
-          <button className="text-sm font-semibold text-mint-deep" onClick={() => setShowMiss(!showMiss)}>{showMiss ? "إخفاء" : "عرض"} مهارات كل طالب</button>
-          {showMiss && (
+      <div className="space-y-2.5 p-3">
+        <Block t="الطلاب المستهدفون" n={plan.students?.length ?? 0}>
+          <div className="flex flex-wrap gap-1.5">{(plan.students ?? []).map((s) => { const b = band(s.avg); return (
+            <span key={s.id} className="chip gap-1.5 border border-line bg-white text-ink">{s.name}
+              <span className="num rounded-pill px-1.5 text-[11px] font-bold" style={b ? { background: b.bg, color: b.text } : undefined}>{s.avg}%</span></span>); })}</div>
+          {hasMiss && <button className="mt-2 text-xs font-semibold text-mint-deep" onClick={() => setShowMiss(!showMiss)}>{showMiss ? "إخفاء" : "عرض"} مهارات كل طالب</button>}
+          {hasMiss && showMiss && (
             <div className="mt-1.5 divide-y divide-line/60 rounded-sm2 border border-line/60">{(plan.students ?? []).map((s) => (
               <div key={s.id} className="px-3 py-2 text-sm">
-                <p className="font-semibold text-ink">{s.name} <span className="num text-xs font-normal text-muted">{s.avg}%</span></p>
+                <p className="font-semibold text-ink">{s.name}</p>
                 {s.miss?.length ? <ul className="mt-0.5 space-y-0.5 text-xs text-muted">{s.miss.map((x) => <li key={x.n}><b className="num text-absent">ف{x.n}</b>: {x.t}</li>)}</ul>
                   : <p className="text-xs text-faint">لا فقرات مسجلة له.</p>}
               </div>))}</div>
           )}
+        </Block>
+        <div className="grid gap-2.5 md:grid-cols-2">
+          <Block t="المهارات المستهدفة" n={skillsL.length}>{skillsL.length ? ol(skillsL) : <p className="text-xs text-faint">—</p>}</Block>
+          <Block t="الإجراءات والاستراتيجيات" n={procL.length}>{procL.length ? ol(procL) : <p className="text-xs text-faint">—</p>}</Block>
         </div>
-      )}
-      {done && plan.done_note && <p className="mt-1 text-sm text-muted">ملاحظة التنفيذ: {plan.done_note}</p>}
-      <div className="mt-2 flex flex-wrap gap-3 text-sm">
-        <button className="text-mint-deep underline" onClick={print}>طباعة الخطة</button>
-        {!done && !ro && <button className="text-ink underline" onClick={onEdit}>تعديل</button>}
-        {!done && !asking && !ro && <button className="text-mint-deep underline" onClick={() => setAsking(true)}>تم التنفيذ</button>}
-      </div>
+        {done && plan.done_note && <p className="rounded-sm2 bg-mint-tint/50 px-3 py-2 text-sm text-ink"><b className="text-mint-deep">ملاحظة التنفيذ: </b>{plan.done_note}</p>}
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-ghost px-4 py-1.5 text-sm" onClick={print}>طباعة الخطة</button>
+          {!done && !ro && <button className="btn-ghost px-4 py-1.5 text-sm" onClick={onEdit}>تعديل</button>}
+          {!done && !asking && !ro && <button className="btn-primary px-4 py-1.5 text-sm" onClick={() => setAsking(true)}>تم التنفيذ</button>}
+        </div>
       {asking && (
         <div className="mt-2 space-y-2">
           <textarea className="field min-h-[60px]" value={note} onChange={(e) => setNote(e.target.value)}
@@ -280,6 +302,7 @@ function PlanCard({ q, plan, teacherName, onEdit, onChanged }) {
           <EvidenceTags items={[plan.kind === "remedial" ? "e06_04" : "e06_05"]} />
         </div>
       )}
+      </div>
     </div>
   );
 }

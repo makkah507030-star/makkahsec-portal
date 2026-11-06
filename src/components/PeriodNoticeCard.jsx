@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { fmtDateTime } from "../lib/dates";
 import { NOOR_NOTE } from "../lib/periodNotice";
+import { gradeBand } from "../lib/gradeBands";
 
 function Notice({ n, open, onToggle, staff }) {
   // أصناف التقويم كما وردت في المواد، بترتيب ظهورها
@@ -44,8 +45,15 @@ function Notice({ n, open, onToggle, staff }) {
                     <tr key={s.name}>
                       <td className="sticky right-0 min-w-[8rem] bg-white px-3 py-2 font-medium text-ink">{s.name}
                         {s.note && <span className="block text-[11px] font-normal text-warning">{s.note}</span>}</td>
-                      {kinds.map((k) => <td key={k} className="num px-2 py-2 text-center text-ink">{v[k] ?? <span className="text-faint">—</span>}</td>)}
-                      <td className="num whitespace-nowrap bg-mint-tint/30 px-3 py-2 text-center font-bold text-ink">{s.total}<span className="text-xs font-normal text-muted"> / {s.max}</span></td>
+                      {kinds.map((k) => <td key={k} className="num px-2 py-2 text-center text-ink">{v[k] ?? <span className="whitespace-nowrap text-[10.5px] text-faint">لم يرصد المعلم</span>}</td>)}
+                      {/* المجموع بلون تقديره (ممتاز، جيد جدًا، جيد، مقبول، ضعيف) */}
+                      {(() => { const b = s.max ? gradeBand((Number(s.total) / Number(s.max)) * 100, "period") : null;
+                        return (
+                          <td className="whitespace-nowrap px-3 py-2 text-center" style={b ? { background: b.bg, color: b.text } : undefined}>
+                            <span className="num font-bold">{s.total}</span><span className="num text-xs font-normal opacity-70"> / {s.max}</span>
+                            {b && <span className="block text-[10.5px] font-semibold">{b.label}</span>}
+                          </td>);
+                      })()}
                     </tr>
                   );
                 })}
@@ -62,6 +70,9 @@ function Notice({ n, open, onToggle, staff }) {
               ))}
             </div>
           )}
+          <p className="flex flex-wrap items-center gap-1.5 text-[10.5px] text-muted">التقدير:
+            {[95, 85, 75, 65, 40].map((x) => { const b = gradeBand(x, "period"); return <span key={b.label} className="rounded-pill px-2 py-0.5 font-semibold" style={{ background: b.bg, color: b.text }}>{b.label}</span>; })}
+          </p>
           <p className="rounded-sm2 bg-canvas px-3 py-2 text-[11px] leading-relaxed text-muted">{NOOR_NOTE(n.title)}</p>
         </div>
       )}
