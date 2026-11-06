@@ -13,7 +13,8 @@ import { useSignerImages } from "../lib/userSignatures.js";
 import SignedMark from "../components/SignedMark.jsx";
 import moeLogo from "../assets/moe-logo.png";
 import { useMyDepartment, loadDeptTeachers, plcNotify } from "../lib/plc";
-import { PD_KINDS, PD_KIND_KEYS, PD_STATUS, PD_BUCKET, PD_MAX_FILES, pdStages, pdMissing } from "../lib/pd";
+import { PD_KINDS, PD_KIND_KEYS, PD_STATUS, PD_BUCKET, PD_MAX_FILES, PD_META, PD_GROUPS, pdStages, pdMissing } from "../lib/pd";
+import PdNote from "../components/PdNote.jsx";
 import { HeadTag, useRoles, Chips, StageBar, C } from "./Plc.jsx";
 import { byName } from "../lib/sortAr.js";
 import NiepdLink from "../components/NiepdLink.jsx";
@@ -84,7 +85,7 @@ function ReportList() {
     const { year } = await loadActiveTerm();
     const { data, error } = await supabase.from("pd_reports").insert({
       kind, owner_user_id: uid, owner_name: profile?.full_name ?? "", academic_year: year,
-      department_id: dept?.department_id ?? null, data: kind === "training" ? { provider: "مدرسة مكة الثانوية" } : {},
+      department_id: dept?.department_id ?? null, data: ["training", "workshop"].includes(kind) ? { provider: "مدرسة مكة الثانوية" } : {},
     }).select("id").single();
     if (error) { setErr(friendlyError(error.message)); return; }
     navigate(`/pd/${data.id}`);
@@ -93,7 +94,7 @@ function ReportList() {
   return (
     <div className="space-y-5">
       <div>
-        <Link to="/plc" className="text-xs text-muted hover:underline">النماذج ← التطوير المهني</Link>
+        <Link to="/plc" className="text-xs text-muted hover:underline">التطوير المهني ← النماذج</Link>
         <div className="mt-0.5 flex flex-wrap items-center gap-2">
           <h1 className="text-lg font-bold text-ink">نماذج سجل التطوير المهني</h1>
           <HeadTag d={dept} />
@@ -106,21 +107,24 @@ function ReportList() {
 
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
 
-      {isTeacher && (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {PD_KIND_KEYS.map((k) => (
-            <button key={k} type="button" onClick={() => create(k)} ref={(el) => k === wantKind && el?.scrollIntoView({ block: "center" })}
-                    className={`card flex flex-col items-start gap-1 p-3 text-right hover:bg-mint-tint/40 ${k === wantKind ? "ring-2 ring-mint-deep" : ""}`}>
-              <span className="flex items-center gap-2">
-                <span dir="ltr" className="num rounded-pill bg-mint-light px-2 text-[11px] font-bold text-mint-deep">{PD_KINDS[k].item}</span>
-                <span className="text-sm font-semibold text-ink">{PD_KINDS[k].short}</span>
-              </span>
-              <span className="text-[11.5px] leading-relaxed text-muted">{PD_KINDS[k].hint}</span>
-              <span className="mt-1 text-xs font-semibold text-mint-deep">+ نموذج جديد</span>
-            </button>
-          ))}
+      {isTeacher && ["school", "edu", "record"].map((g) => (
+        <div key={g} className="space-y-1.5">
+          <p className={`text-xs font-bold ${g === "edu" ? "text-warning" : "text-mint-deep"}`}>{PD_GROUPS[g].t}</p>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {PD_KIND_KEYS.filter((k) => PD_META[k].group === g).map((k) => (
+              <button key={k} type="button" onClick={() => create(k)} ref={(el) => k === wantKind && el?.scrollIntoView({ block: "center" })}
+                      className={`card flex flex-col items-start gap-1 p-3 text-right hover:bg-mint-tint/40 ${k === wantKind ? "ring-2 ring-mint-deep" : ""} ${g === "edu" ? "border-warning/30" : ""}`}>
+                <span className="flex items-center gap-2">
+                  <span dir="ltr" className="num rounded-pill bg-mint-light px-2 text-[11px] font-bold text-mint-deep">{PD_KINDS[k].item}</span>
+                  <span className="text-sm font-semibold text-ink">{PD_KINDS[k].short}</span>
+                </span>
+                <span className="text-[11.5px] leading-relaxed text-muted">الاعتماد: {PD_META[k].by}</span>
+                <span className={`mt-1 text-xs font-semibold ${g === "edu" ? "text-warning" : "text-mint-deep"}`}>{g === "edu" ? "+ توثيق بعد الاعتماد" : "+ نموذج جديد"}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      )}
+      ))}
 
       <div className="flex flex-wrap gap-1.5">
         {tabs.map((t) => (
@@ -310,7 +314,7 @@ function Editor({ r, setR, sigs, reload }) {
   return (
     <div className="space-y-4">
       <div>
-        <Link to="/pd" className="text-xs text-muted hover:underline">التطوير المهني ← نماذج سجل التطوير المهني</Link>
+        <Link to="/plc" className="text-xs text-muted hover:underline">التطوير المهني ← نماذج سجل التطوير المهني</Link>
         <h1 className="mt-0.5 text-lg font-bold text-ink">{k.t}</h1>
         <p className="num mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
           {r.serial} · يُحتسب في البند <span dir="ltr">{k.item}</span>
@@ -318,6 +322,7 @@ function Editor({ r, setR, sigs, reload }) {
           <span className={`chip ${PD_STATUS[r.status]?.c}`}>{PD_STATUS[r.status]?.t}</span>
         </p>
       </div>
+      {PD_META[r.kind] && <PdNote by={PD_META[r.kind].by} notes={PD_META[r.kind].notes} edu={PD_META[r.kind].group === "edu"} />}
       {r.status === "returned" && r.decision_note && (
         <p className="rounded-sm2 bg-absent/5 px-3 py-2 text-sm text-absent"><b>ملاحظة وكيل الشؤون التعليمية: </b>{r.decision_note}</p>
       )}
@@ -467,12 +472,14 @@ function Viewer({ r, sigs, reload, uid, roles }) {
   return (
     <div className="space-y-4">
       <div>
-        <Link to="/pd" className="text-xs text-muted hover:underline">التطوير المهني ← نماذج سجل التطوير المهني</Link>
+        <Link to="/plc" className="text-xs text-muted hover:underline">التطوير المهني ← نماذج سجل التطوير المهني</Link>
         <h1 className="mt-0.5 text-lg font-bold text-ink">{r.data?.title || k.t}</h1>
         <p className="num mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
           {r.serial} · {k.short} · {r.owner_name} <span className={`chip ${st.c}`}>{st.t}</span>
         </p>
       </div>
+      {/* للمعتمد: من يعتمد هذا النشاط وما يشترط له، ليراجع النموذج على أساسه */}
+      {roles.isDeputy && r.status === "pending" && PD_META[r.kind] && <PdNote by={PD_META[r.kind].by} notes={PD_META[r.kind].notes} edu={PD_META[r.kind].group === "edu"} />}
       {mine && r.status === "signing" && !signed && (
         <section className="card space-y-2 p-4">
           <p className="text-sm text-ink">اطّلع على النموذج أدناه، ثم وقّع حضورك.</p>
