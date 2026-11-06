@@ -11,9 +11,7 @@ select r.serial as "الرقم", r.owner_name as "صاحبه", r.kind as "الن
          case when (r.data->>'date')::date < (select min(start_date) from public.academic_calendar where academic_year = r.academic_year) then 'تاريخه قبل بداية العام الدراسي' end,
          case when (r.data->>'date')::date > r.created_at::date then 'وُثّق قبل تاريخ تنفيذه' end,
          case when exists (select 1 from public.pd_reports x where x.id <> r.id and x.owner_user_id = r.owner_user_id and x.kind = r.kind
-                  and x.status = 'approved' and x.data->>'date' = r.data->>'date' and trim(x.data->>'title') = trim(r.data->>'title')) then 'مكرر' end,
-         case when (select count(*) from public.pd_reports x where x.owner_user_id = r.owner_user_id and x.status = 'approved'
-                     and x.decided_at::date = r.decided_at::date) >= 4 then 'أربعة نماذج أو أكثر اعتُمدت له في يوم واحد' end
+                  and x.status = 'approved' and x.data->>'date' = r.data->>'date' and trim(x.data->>'title') = trim(r.data->>'title')) then 'مكرر' end
        ) as "علامات للمراجعة"
   from public.pd_reports r
  where r.status = 'approved' and r.academic_year = (select value from public.settings where key = 'active_year')
