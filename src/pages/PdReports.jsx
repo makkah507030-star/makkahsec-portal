@@ -397,7 +397,7 @@ function Editor({ r, setR, sigs, reload }) {
         <p className="rounded-sm2 bg-present/10 px-3 py-2 text-xs text-present">وُوفق على الخطة في <span className="num">{fmtDate(r.plan_approved_at)}</span>{r.plan_approved_name ? ` (${r.plan_approved_name})` : ""}. تاريخ التنفيذ يكون من هذا اليوم فما بعده.</p>
       )}
       {r.status === "returned" && r.decision_note && (
-        <p className="rounded-sm2 bg-absent/5 px-3 py-2 text-sm text-absent"><b>ملاحظة وكيل الشؤون التعليمية: </b>{r.decision_note}</p>
+        <p className="rounded-sm2 bg-absent/5 px-3 py-2 text-sm text-absent"><b>ملاحظة {r.decided_name || "وكيل الشؤون التعليمية"}: </b>{r.decision_note}</p>
       )}
       <StageBar stage={stage} reached={reached} onPick={go} stages={stages} />
 
@@ -620,7 +620,7 @@ function Viewer({ r, sigs, reload, uid, roles }) {
       {!roles.isPrincipal && r.principal_note && (
         <p className="rounded-sm2 bg-mint-tint px-3 py-2 text-sm text-ink"><b className="text-mint-deep">ملاحظة مدير المدرسة: </b>{r.principal_note}</p>
       )}
-      {r.decision_note && <p className="rounded-sm2 bg-canvas px-3 py-2 text-sm text-ink"><b>ملاحظة وكيل الشؤون التعليمية: </b>{r.decision_note}</p>}
+      {r.decision_note && <p className="rounded-sm2 bg-canvas px-3 py-2 text-sm text-ink"><b>ملاحظة {r.decided_name || "وكيل الشؤون التعليمية"}: </b>{r.decision_note}</p>}
       {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-absent/10 text-absent"}`}>{msg.t}</p>}
       <SheetPreview r={r} sigs={sigs} />
     </div>
