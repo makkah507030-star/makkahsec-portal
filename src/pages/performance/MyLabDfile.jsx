@@ -125,6 +125,24 @@ export default function MyLabDfile({ kind = "lab" }) {
         </div>
       </Block>
 
+      <Block title="ماذا يرى الزائر؟" sub="الأقسام غير المختارة لا تظهر في ملفك.">
+        <div className="flex flex-wrap gap-2">
+          {K.parts.map((p) => (
+            <label key={p.key} className={`chip cursor-pointer gap-1.5 border ${hidden.has(p.key) ? "border-line bg-canvas text-muted line-through" : "border-mint-deep/40 bg-mint-tint text-mint-deep"}`}>
+              <input type="checkbox" className="accent-mint-deep" checked={!hidden.has(p.key)}
+                     onChange={(e) => save({ hidden: e.target.checked ? [...hidden].filter((k) => k !== p.key) : [...hidden, p.key] })} />
+              {p.t}
+            </label>
+          ))}
+        </div>
+        {pub && !(pub.data?.docs?.length) && !hidden.has("docs") && (
+          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
+            «الشواهد من خارج البوابة» لا تظهر في ملفك لأنك لم ترفع شاهدًا بملف هذا العام. ارفعها من{" "}
+            <Link to={K.perf} className="font-semibold underline">{K.perfT}</Link> ← العنصر ← «رفع شاهد» لتظهر للزائر.
+          </p>
+        )}
+      </Block>
+
       <Block title="بياناتك" sub="تُدخل مرة واحدة، وما تتركه فارغًا لا يظهر.">
         <div className="grid gap-3 sm:grid-cols-2">
           <div><label className="label">سنة التعيين (هجري)</label>
@@ -144,24 +162,6 @@ export default function MyLabDfile({ kind = "lab" }) {
           <span>أنا من أعدّ دروس المعمل الرقمي في البوابة
             <span className="block text-[11.5px] text-muted">يعرض قسم «المعمل الرقمي» مكتبة الدروس التفاعلية بمحطاتها وتدريباتها باسمك.</span></span>
         </label>}
-      </Block>
-
-      <Block title="ماذا يرى الزائر؟" sub="الأقسام غير المختارة لا تظهر في ملفك.">
-        <div className="flex flex-wrap gap-2">
-          {K.parts.map((p) => (
-            <label key={p.key} className={`chip cursor-pointer gap-1.5 border ${hidden.has(p.key) ? "border-line bg-canvas text-muted line-through" : "border-mint-deep/40 bg-mint-tint text-mint-deep"}`}>
-              <input type="checkbox" className="accent-mint-deep" checked={!hidden.has(p.key)}
-                     onChange={(e) => save({ hidden: e.target.checked ? [...hidden].filter((k) => k !== p.key) : [...hidden, p.key] })} />
-              {p.t}
-            </label>
-          ))}
-        </div>
-        {pub && !(pub.data?.docs?.length) && !hidden.has("docs") && (
-          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
-            «الشواهد من خارج البوابة» لا تظهر في ملفك لأنك لم ترفع شاهدًا بملف هذا العام. ارفعها من{" "}
-            <Link to={K.perf} className="font-semibold underline">{K.perfT}</Link> ← العنصر ← «رفع شاهد» لتظهر للزائر.
-          </p>
-        )}
       </Block>
 
       <Block title="إنجازات أخرى" sub="ما تكتبه هنا يظهر في قسم الإنجازات. اذكر المستوى (المنطقة أو المملكة) إن وُجد.">
