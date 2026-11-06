@@ -136,7 +136,8 @@ export const ADMIN_GROUPS = [
     title: "المعامل والمختبرات",
     items: [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
-      { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab", "principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
+      // للمحضر وحده: المدير والدعم الفني يطّلعون على ملفه من «شواهد أداء الموظفين»
+      { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
       { to: "/my-lab-dfile", label: "ملف المحضر الرقمي", roles: ["computer_lab"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف محضر" },
       { to: "/science-labs", label: "مختبرات العلوم", roles: ["science_labs", "science_labs_2", "science_labs_3", "principal", "tech_support", "deputy_school"], icon: "flask", kw: "مختبر احياء كيمياء فيزياء تجارب عهدة حجز" },
     ],
