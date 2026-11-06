@@ -26,7 +26,8 @@ const Block = ({ title, sub, children }) => (
 );
 
 export default function MyDfile() {
-  const { session } = useSession();
+  const { session, adminRoles } = useSession();
+  const labPrep = (adminRoles ?? []).includes("computer_lab");   // خيار مؤلف دروس المعمل لمحضر المعمل وحده
   const uid = session.user.id;
   const [s, setS] = useState(undefined);       // undefined: يُحمَّل، null: لم يُفعَّل
   const [d, setD] = useState(null);
@@ -275,7 +276,7 @@ export default function MyDfile() {
             </label>
           ))}
         </div>
-        {"lab_author" in s && (
+        {"lab_author" in s && labPrep && (
           <label className="flex cursor-pointer items-start gap-2 rounded-sm2 border border-line bg-white px-3 py-2 text-sm text-ink">
             <input type="checkbox" className="mt-1 accent-mint-deep" checked={!!s.lab_author} onChange={(e) => save({ lab_author: e.target.checked })} />
             <span>أنا من أعدّ دروس المعمل الرقمي في البوابة
