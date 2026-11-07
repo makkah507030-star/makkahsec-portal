@@ -31,6 +31,7 @@ export const SHOTS = {
     { name: "contact", to: "/contact" },
     { name: "lab", to: "/lab", late: true },
     { name: "science-labs", to: "/science-labs" },
+    { name: "events", to: "/events" },
   ],
   student: [
     { name: "home", to: "/" }, { name: "my-week", to: "/my-week" }, { name: "exams", to: "/exams" },
@@ -41,5 +42,6 @@ export const SHOTS = {
     { name: "absence-excuses", to: "/absence-excuses" }, { name: "repairs", to: "/repairs" }],
   counselor: [{ name: "guidance", to: "/guidance" }, { name: "student-notes", to: "/student-notes" }, { name: "outreach", to: "/outreach" }],
   scilab: [{ name: "sci-booking", to: "/science-labs" }, { name: "sci-plan", to: "/science-labs?tab=plan" }, { name: "sci-inventory", to: "/science-labs?tab=inventory" }],
+  principal: [{ name: "staff-performance", to: "/staff-performance" }, { name: "pd-pending", to: "/pd?tab=pending" }],
   globe: [{ name: "globe", to: "/globe" }], gifted: [{ name: "gifted", to: "/gifted" }], scouts: [{ name: "scouts", to: "/scouts" }],
 };

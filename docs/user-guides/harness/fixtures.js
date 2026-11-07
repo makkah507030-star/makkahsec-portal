@@ -14,6 +14,7 @@ export const USERS = {
   scilab:    { id: "u-a4", username: "1020304053", full_name: "نايف سعد الجهني", role: "admin", roles: ["science_labs"] },
   globe:     { id: "u-a5", username: "1020304054", full_name: "عمر ناصر السلمي", role: "admin", roles: ["globe_program"] },
   gifted:    { id: "u-a6", username: "1020304055", full_name: "طلال فهد الهذلي", role: "admin", roles: ["gifted_program"] },
+  principal: { id: "u-p1", username: "1020304060", full_name: "عبدالرحمن صالح الزهراني", role: "admin", roles: ["principal"] },
   scouts:    { id: "u-a7", username: "1020304056", full_name: "بدر صالح القرشي", role: "admin", roles: ["custom_1"] },
 };
 Object.values(USERS).forEach((u) => { u.is_active = true; u.must_change_pw = false; });

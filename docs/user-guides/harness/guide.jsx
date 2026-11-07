@@ -12,7 +12,10 @@ const g = GUIDES[new URLSearchParams(location.search).get("g") ?? "teacher"];
 const img = (n) => `/img/${g.shotsOf ?? g.key}/${n}.png`;
 const FIRST = "الدخول والحساب";
 // إجراءات الفئة وحدها: ما يخص أدوارًا أو عضويات أخرى يُستبعد (skip وskipCats)، ونص الإجراء قد يُكيَّف للفئة (edit)
-const list = PROCS.filter((p) => (!g.noBase && p.who.includes("الجميع")) || p.who.some((w) => g.who.includes(w)) || (g.pick ?? []).includes(p.title))
+// pickCats: أقسام تُضم إجراءاتها الإدارية العامة (who: الإدارة) لهذا الدور
+const ADMIN_WHO = ["الإدارة", "الإداريون"];
+const list = PROCS.filter((p) => (!g.noBase && p.who.includes("الجميع")) || p.who.some((w) => g.who.includes(w)) || (g.pick ?? []).includes(p.title)
+    || ((g.pickCats ?? []).includes(p.cat) && p.who.some((w) => ADMIN_WHO.includes(w))))
   .filter((p) => !g.onlyCats || g.onlyCats.includes(p.cat))
   .filter((p) => !(g.skipCats ?? []).includes(p.cat) && !(g.skip ?? []).includes(p.title))
   .map((p) => { const e = g.edit?.[p.title]; return e ? { ...p, ...(typeof e === "function" ? e(p) : e) } : p; });
@@ -27,7 +30,7 @@ function Decor() {
 }
 
 function Proc({ p, n }) {
-  const shot = g.shots[p.title];
+  const shot = g.shots?.[p.title];
   return (
     <article className={`proc ${shot ? "has-shot" : ""}`}>
       {shot && <figure className="phone"><img src={img(shot)} /></figure>}
