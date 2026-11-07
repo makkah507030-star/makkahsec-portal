@@ -41,7 +41,9 @@ import Loader from "../../components/Loader.jsx";
 import { countAr } from "../../lib/arabicCount.js";
 
 export default function Dashboard() {
-  const { can, profile, adminRoles } = useSession();
+  const { can, profile, adminRoles, focusLimited } = useSession();
+  // حساب بدورين في وضع محضر المعمل: المناوبة والإشراف من عمل الدور الآخر (الدعم الفني)، فلا تظهر هنا
+  const showDuty = !focusLimited;
   // الحساب المساند: كل أدواره ضمن قائمة الحسابات المساندة — يُحجب عنه كل
   // شيء في اللوحة الرئيسية ويرى بطاقة ترحيب فقط. أما من له دور أساسي
   // (مدير/وكيل/موجّه/مساعد إداري) فتُطبَّق عليه القاعدة بحسب صلاحياته.
@@ -130,7 +132,7 @@ export default function Dashboard() {
         <TasksBox />
         <StaffCallsCard />
         <PollsCard />
-        <DutyCard />
+        {showDuty && <DutyCard />}
         <section className="card px-6 py-12 text-center">
           <p className="text-lg font-bold text-ink">
             مرحبًا{profile?.full_name ? `، ${profile.full_name}` : ""}
@@ -244,7 +246,7 @@ export default function Dashboard() {
 
       {canReports && dow > 0 && <OfficialStatusBox date={date} />}
 
-      <DutyCard />
+      {showDuty && <DutyCard />}
     </div>
   );
 }

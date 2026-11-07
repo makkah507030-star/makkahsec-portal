@@ -192,7 +192,7 @@ const pageFallback = (
 );
 
 export default function App() {
-  const { session, profile, loading, profileLoading, can, adminRoles, effectiveRole, signOut } = useSession();
+  const { session, profile, loading, profileLoading, can, adminRoles, effectiveRole, signOut, focusRoles } = useSession();
   const { hidden: hiddenTabs } = useTeacherHiddenTabs();
   const { granted: grantedTabs } = useTeacherGrantedTabs();
   const maintenance = useMaintenance(session);
@@ -316,7 +316,8 @@ export default function App() {
     );
   }
   const isTechSupport = adminRoles.includes("tech_support");
-  if (maintenance.enabled && !isTechSupport) {
+  // وفي وضع محضر المعمل يبقى للحساب نفسه تجاوز الصيانة ليعود إلى دور الدعم الفني
+  if (maintenance.enabled && !isTechSupport && !focusRoles?.includes("tech_support")) {
     return <MaintenanceScreen message={maintenance.message} />;
   }
 
