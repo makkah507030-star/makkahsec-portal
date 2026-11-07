@@ -25,7 +25,7 @@ const PD_ITEM_SRC = {
   e02_06: { to: "/plc", what: "شارك في جلسات مجتمع التعلم في قسمك ووقّع على محاضرها" },
 };
 import { useBackStep } from "../lib/backStep.js";
-import { ADMIN_ROLE_LABEL } from "../lib/session.jsx";
+import { ADMIN_ROLE_LABEL, useSession } from "../lib/session.jsx";
 
 /* =====================================================================
    ملف الأداء الوظيفي للمعلم — يفتحه المعلم لملفه، ومدير المدرسة لملف أي
@@ -208,7 +208,7 @@ function EvidenceForm({ uid, year, item, existing, onDone, onCancel }) {
   );
 }
 
-function EvidenceRow({ ev, item, readOnly, onEdit, onDelete }) {
+function EvidenceRow({ ev, item, readOnly, onEdit, onDelete, onReject }) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-sm2 border border-line/60 bg-paper px-3 py-2">
       <span className={`chip w-20 justify-center ${ev.source !== "upload" ? "bg-mint-light text-mint-deep" : "bg-warning-light text-warning"}`}>
@@ -246,6 +246,7 @@ function EvidenceRow({ ev, item, readOnly, onEdit, onDelete }) {
           <button className="text-sm text-danger underline" onClick={onDelete}>حذف</button>
         </>
       )}
+      {onReject && <button className="text-sm font-semibold text-absent underline" onClick={onReject}>إلغاء الشاهد</button>}
     </div>
   );
 }
@@ -339,7 +340,17 @@ function AutoDetails({ uid, year, itemKey, track }) {
   );
 }
 
-function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChanged, track, role }) {
+function ElementView({ el, evidence, rejected = [], auto, uid, year, readOnly, onBack, onChanged, track, role }) {
+  // مدير المدرسة ووكيل الشؤون التعليمية والدعم الفني يلغون شاهدًا لا يتوافق مع المتطلبات، بملاحظة للموظف (perf_reject.sql)
+  const { session, adminRoles } = useSession();
+  const canReject = session?.user?.id !== uid && (adminRoles ?? []).some((r) => ["principal", "deputy_academic", "tech_support"].includes(r));
+  const reject = async (ev) => {
+    const note = window.prompt(`سبب إلغاء الشاهد «${ev.title}» (يصل الموظف):`);
+    if (!note?.trim()) return;
+    const { error } = await supabase.rpc("perf_reject", { p_id: ev.id, p_note: note.trim() });
+    if (error) alert(/perf_reject|schema cache/.test(error.message) ? "الإلغاء يحتاج تشغيل supabase/perf_reject.sql." : error.message);
+    else onChanged();
+  };
   const [open, setOpen] = useState(null);   // { key, mode: "add" | "edit", ev }
   const sum = elementSummary(el, evidence, auto);
   const [shown, setShown] = useState(null);   // البند الآلي المفتوحة تفاصيله
@@ -433,7 +444,15 @@ function ElementView({ el, evidence, auto, uid, year, readOnly, onBack, onChange
                   {st.list.map((ev) => (
                     <EvidenceRow key={ev.id} ev={ev} item={it} readOnly={readOnly}
                                  onEdit={() => setOpen({ key: it.key, mode: "edit", ev })}
-                                 onDelete={() => del(ev)} />
+                                 onDelete={() => del(ev)} onReject={canReject ? () => reject(ev) : null} />
+                  ))}
+                  {/* الشواهد الملغاة بملاحظة المقيِّم: لا تُحتسب، ويراها الموظف ليعرف السبب */}
+                  {rejected.filter((x) => x.item_key === it.key).map((x) => (
+                    <div key={x.id} className="rounded-sm2 border border-absent/30 bg-absent/5 px-3 py-2 text-sm">
+                      <p className="font-medium text-absent line-through decoration-absent/40">{x.title}</p>
+                      <p className="mt-0.5 text-xs text-ink"><b className="text-absent">أُلغي: </b>{x.reject_note}</p>
+                      <p className="mt-0.5 text-[11px] text-faint">{x.rejected_by_name ?? ""} · <span className="num">{fmtDate(x.rejected_at)}</span></p>
+                    </div>
                   ))}
                   {!st.ok && (readOnly || !ITEM_HINT[it.key]) && (
                     <p className="text-xs leading-relaxed text-muted">
@@ -601,6 +620,7 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
   const role = useMemo(() => roleOf(track, job), [track, job]);
   const [elements, setElements] = useState(null);
   const [evidence, setEvidence] = useState([]);
+  const [rejected, setRejected] = useState([]);   // الشواهد الملغاة بملاحظاتها
   const [auto, setAuto] = useState({});      // الشواهد الآلية: { [بند]: { cnt, last } }
   const [visits, setVisits] = useState([]);
   const [info, setInfo] = useState(null);
@@ -623,6 +643,10 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
       // شواهد هذا الملف وحده: من يجمع ملف المعلم وملف المحضر لا تختلط شواهدهما
       const keys = new Set(els.flatMap((e) => e.items.map((i) => i.key)));
       setYear(y); setElements(els); setEvidence(ev.filter((e) => keys.has(e.item_key))); setVisits(vs); setInfo(inf); setAuto(au[uid] ?? {});
+      // قبل perf_reject.sql يفشل الاستعلام فلا تظهر ملغاة
+      const { data: rj } = await supabase.from("perf_evidence_rejected").select("id, item_key, title, reject_note, rejected_by_name, rejected_at")
+        .eq("teacher_user_id", uid).eq("academic_year", y).order("rejected_at", { ascending: false });
+      setRejected((rj ?? []).filter((x) => keys.has(x.item_key)));
     } catch (e) {
       setErr(e.message?.includes("perf_") ? "ملف الأداء غير مفعّل بعد في قاعدة البيانات." : (e.message ?? "تعذّر التحميل."));
       setElements([]);
@@ -639,7 +663,7 @@ export default function PerformanceFile({ uid, name, readOnly = false, track = "
   if (current) {
     const el = elements.find((e) => e.key === current);
     return (
-      <ElementView el={el} evidence={evidence} auto={auto} uid={uid} year={year} readOnly={readOnly}
+      <ElementView el={el} evidence={evidence} rejected={rejected} auto={auto} uid={uid} year={year} readOnly={readOnly}
                    onBack={() => setCurrent(null)} onChanged={reload} track={track} role={role} />
     );
   }
