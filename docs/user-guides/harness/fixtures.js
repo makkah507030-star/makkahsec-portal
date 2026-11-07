@@ -119,6 +119,13 @@ export const TABLES = {
     ["quant", "algebra", "إذا كان 2س + 3 = 11، فما قيمة س؟", ["3", "4", "5", "7"], 1],
     ["verbal", "analogy", "قلم : كتابة", ["مقص : قص", "ورق : شجر", "باب : بيت", "ماء : نهر"], 0]]
     .map(([sec, skill, q, o, a], i) => ({ id: `qq${i}`, sec, skill, q, o, a, published: true, created_by: "u-t1", created_at: `2026-11-0${5 - i}T08:00:00Z` })),
+  period_notices: [{ id: "pn1", student_id: "s000", academic_year: "1448", published: true, title: "إشعار فترة أولى", term: "الفصل الأول", grade_name: "الأول الثانوي", section: "عام",
+    updated_at: "2026-11-04T05:07:00Z", attendance: null, behavior_excellent: null, behavior_positive: null,
+    subjects: [{ name: "التقنية الرقمية", max: 100, total: 40, parts: [{ label: "تقويمات تحريرية وتطبيقات عملية", value: 20 }, { label: "المهام الأدائية والمشاركة والتفاعل", value: 20 }] },
+      { name: "الفيزياء", max: 60, total: 58, parts: [{ label: "تقويمات تحريرية وتطبيقات عملية", value: 18 }, { label: "المهام الأدائية والمشاركة والتفاعل", value: 40 }] },
+      { name: "الرياضيات", max: 60, total: 39, parts: [{ label: "المهام الأدائية والمشاركة والتفاعل", value: 39 }] },
+      { name: "الكيمياء", max: 60, total: 15, parts: [{ label: "تقويمات تحريرية", value: 15 }] },
+      { name: "التربية الصحية والبدنية", max: 100, total: 100, parts: [{ label: "المهام الأدائية والمشاركة والتفاعل", value: 40 }, { label: "تقويمات تحريرية وأدوات تقويم متنوعة", value: 60 }] }] }],
   quizzes: QUIZZES, circular_recipients: CIRCULARS, form_templates: TEMPLATES, activity_cards: CARDS,
   class_attendance: SCHEDULE.flatMap((sc, k) => STUDENTS.filter((st) => st.class_id === sc.class_id).slice(0, 3).map((st, j) => ({
     schedule_id: sc.id, student_id: st.id, status: j === 2 ? "late" : "absent", attend_date: `2026-11-0${(k % 8) + 1}`, students: st, schedule: sc }))),
@@ -126,6 +133,11 @@ export const TABLES = {
     { kind: "exam", start_date: "2027-01-03", end_date: "2027-01-14", is_active: true, title: "الاختبارات النهائية" }],
 };
 export const RPC = {
+  // الرياضيات عمودها «تقويمات تحريرية» عند زملاء الصف، فيظهر للطالب الذي لم تُرصد له «لم يرصد المعلم»
+  period_notice_labels: [["الرياضيات", "تقويمات تحريرية"], ["الرياضيات", "المهام الأدائية والمشاركة والتفاعل"], ["الفيزياء", "تقويمات تحريرية وتطبيقات عملية"],
+    ["الفيزياء", "المهام الأدائية والمشاركة والتفاعل"], ["التقنية الرقمية", "تقويمات تحريرية وتطبيقات عملية"], ["التقنية الرقمية", "المهام الأدائية والمشاركة والتفاعل"],
+    ["التربية الصحية والبدنية", "المهام الأدائية والمشاركة والتفاعل"], ["التربية الصحية والبدنية", "تقويمات تحريرية وأدوات تقويم متنوعة"],
+    ["الرياضيات", "تقويمات تحريرية"]].map(([subject, label]) => ({ subject, label })),
   sci_teacher_labs: (me) => (me.role === "teacher" ? ["bio"] : []), sci_manager: true,
   perf_auto_counts: PERF_AUTO, cult_me: { staff: true, member: false, amb: false, all: false },
   my_department: { department_id: "d1", department_name: "الرياضيات", is_head: false },

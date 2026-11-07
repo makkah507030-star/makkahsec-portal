@@ -36,7 +36,7 @@ export const SHOTS = {
     { name: "qudrat-questions", to: "/qudrat/questions" },
   ],
   student: [
-    { name: "home", to: "/" }, { name: "my-week", to: "/my-week" }, { name: "exams", to: "/exams" },
+    { name: "home", to: "/" }, { name: "period-notice", to: "/", wide: true, sel: "section:has(h2:text('درجات الفترة'))" }, { name: "my-week", to: "/my-week" }, { name: "exams", to: "/exams" },
     { name: "qudrat", to: "/qudrat" }, { name: "my-documents", to: "/my-documents" }, { name: "opportunities", to: "/opportunities" },
   ],
   guardian: [{ name: "home", to: "/" }, { name: "my-documents", to: "/my-documents" }, { name: "my-circulars", to: "/my-circulars" }],
