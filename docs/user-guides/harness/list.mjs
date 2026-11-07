@@ -32,6 +32,8 @@ export const SHOTS = {
     { name: "lab", to: "/lab", late: true },
     { name: "science-labs", to: "/science-labs" },
     { name: "events", to: "/events" },
+    { name: "qudrat-section", to: "/s/qudrat", late: true },
+    { name: "qudrat-questions", to: "/qudrat/questions" },
   ],
   student: [
     { name: "home", to: "/" }, { name: "my-week", to: "/my-week" }, { name: "exams", to: "/exams" },

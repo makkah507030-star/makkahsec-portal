@@ -10,6 +10,7 @@ import { useTeacherGrantedTabs } from "../lib/useTeacherGrantedTabs.js";
 import logoIcon from "../assets/icon-mint.png";
 import TrialBanner from "./TrialBanner.jsx";
 import { STUDENT_FILE_ROLES } from "./StudentFileLink.jsx";
+import { useQudratSecs } from "../lib/qudratTeacher.js";
 import { NavContext } from "../lib/navContext.js";
 import NotificationBell from "./NotificationBell.jsx";
 import AnnouncementModal from "./AnnouncementModal.jsx";
@@ -262,8 +263,10 @@ export const TEACHER_SECTIONS = [
     groups: ["المهام اليومية", "المعامل والمختبرات"] },
   { key: "students", title: "طلابي", icon: "users", hint: "السجلات والمتابعة والغياب والإحالات والتقارير",
     groups: ["طلابي"] },
-  { key: "exams", title: "الاختبارات والتحصيل", icon: "quiz", hint: "اختباراتي والتصحيح والتحليل وبنك الأسئلة ومركز التدريب",
+  { key: "exams", title: "الاختبارات والتحصيل", icon: "quiz", hint: "اختباراتي والتصحيح والتحليل وبنك الأسئلة",
     groups: ["الاختبارات"] },
+  { key: "qudrat", title: "مركز التدريب (القدرات)", icon: "target", hint: "إضافة أسئلة قسمك للمركز والرد على أسئلة طلابك",
+    groups: ["مركز التدريب (القدرات)"] },
   { key: "accreditation", title: "التقويم والاعتماد", icon: "award", hint: "لجنة التميز وشواهد المؤشرات وخطة التحسين",
     groups: ["التقويم والاعتماد المدرسي"] },
   { key: "culture", title: "الثقافة المؤسسية", icon: "heart", hint: "سفير الثقافة وبرامج الثقافة المؤسسية وقيمنا ومشاركة الأفكار",
@@ -334,8 +337,15 @@ export const TEACHER_GROUPS = [
       { to: "/achievement",    label: "مركز تحليل النتائج", achMember: true, icon: "chart", achGate: true, kw: "تحليل النتائج" },
       { to: "/qiyas",          label: "اختبارات قياس",      achMember: true, icon: "target", kw: "قدرات تحصيلي step" },
       { to: "/ach-committee",  label: "لجنة التحصيل",       achMember: true, icon: "users", kw: "محاضر" },
-      { to: "/qudrat/questions", label: "أسئلة المعلمين (القدرات)", icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة اضافة" },
-      { to: "/qudrat/asks",    label: "أسئلة الطلاب (القدرات)", icon: "chat", kw: "قدرات استفسار طالب" },
+    ],
+  },
+  {
+    // مركز التدريب (القدرات): لمعلم الرياضيات (الكمي) ومعلم اللغة العربية (اللفظي) وحدهما (lib/qudratTeacher.js)،
+    // يضيف أسئلة قسمه ويرد على أسئلة طلابه، دون بيانات استخدام الطلاب للمركز
+    title: "مركز التدريب (القدرات)",
+    items: [
+      { to: "/qudrat/questions", label: "إضافة أسئلة للمركز", qudratTeacher: true, icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة اضافة مركز" },
+      { to: "/qudrat/asks",    label: "أسئلة الطلاب (القدرات)", qudratTeacher: true, icon: "chat", kw: "قدرات استفسار طالب" },
     ],
   },
   {
@@ -618,6 +628,9 @@ export default function Layout({ children }) {
   }, [effectiveRole, session?.user?.id]);
   // معلم الأحياء أو الكيمياء أو الفيزياء بتخصصه أو جدوله: تظهر «مختبرات العلوم» (sci_lab_1.sql)
   const [sciTeacher, setSciTeacher] = useState(false);
+  // معلم الرياضيات أو اللغة العربية: يظهر له «مركز التدريب (القدرات)»
+  const qudratSecs = useQudratSecs(session?.user?.id, effectiveRole === "teacher");
+  const qudratTeacher = (qudratSecs ?? []).length > 0;
   useEffect(() => {
     if (effectiveRole !== "teacher") { setSciTeacher(false); return; }
     supabase.rpc("sci_teacher_labs").then(({ data, error }) => setSciTeacher(!error && (data ?? []).length > 0));
@@ -658,6 +671,7 @@ export default function Layout({ children }) {
     if (i.mediaMember && !mediaMember) return false;
     if (i.accMember && !accMember) return false;
     if (i.sciTeacher && !sciTeacher) return false;
+    if (i.qudratTeacher && !qudratTeacher) return false;
     // ما وصلني من نشرات واستبانات: لمن وصله شيء منها فقط
     if (i.inbox && !outreachInbox) return false;
     if (i.guardianOnly && effectiveRole !== "guardian") return false;
@@ -690,7 +704,7 @@ export default function Layout({ children }) {
     const src = isAdmin ? ADMIN_GROUPS : effectiveRole === "teacher" ? TEACHER_GROUPS : BASIC_GROUPS;
     return src.map((g) => ({ ...g, items: g.items.filter(visible) })).filter((g) => g.items.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox, sciTeacher, cultMode]);
+  }, [isAdmin, effectiveRole, adminRoles, can, grantedTabs, hiddenTabs, hiddenNav, achMember, achOpen, scoutMember, globeMember, mediaMember, accMember, outreachInbox, sciTeacher, qudratTeacher, cultMode]);
   const footer = FOOTER.filter(visible);
 
   // الأقسام العامة للإدارة والمعلم بما يراه المستخدم منها فقط (القسم بلا روابط له لا يظهر)

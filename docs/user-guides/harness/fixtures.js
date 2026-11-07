@@ -115,6 +115,10 @@ export const TABLES = {
   schedule: SCHEDULE,
   student_enrollment: STUDENTS.map((s) => ({ student_id: s.id, class_id: s.class_id, status: "active", students: s, classes: s.classes })),
   perf_elements: PERF_ELEMENTS, perf_items: PERF_ITEMS, perf_evidence: PERF_EVIDENCE,
+  qudrat_questions: [["quant", "arith", "إذا كان ثمن 3 أقلام 12 ريالًا، فما ثمن 5 أقلام؟", ["15", "18", "20", "24"], 2],
+    ["quant", "algebra", "إذا كان 2س + 3 = 11، فما قيمة س؟", ["3", "4", "5", "7"], 1],
+    ["verbal", "analogy", "قلم : كتابة", ["مقص : قص", "ورق : شجر", "باب : بيت", "ماء : نهر"], 0]]
+    .map(([sec, skill, q, o, a], i) => ({ id: `qq${i}`, sec, skill, q, o, a, published: true, created_by: "u-t1", created_at: `2026-11-0${5 - i}T08:00:00Z` })),
   quizzes: QUIZZES, circular_recipients: CIRCULARS, form_templates: TEMPLATES, activity_cards: CARDS,
   class_attendance: SCHEDULE.flatMap((sc, k) => STUDENTS.filter((st) => st.class_id === sc.class_id).slice(0, 3).map((st, j) => ({
     schedule_id: sc.id, student_id: st.id, status: j === 2 ? "late" : "absent", attend_date: `2026-11-0${(k % 8) + 1}`, students: st, schedule: sc }))),
