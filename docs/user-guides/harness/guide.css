@@ -1,0 +1,78 @@
+/* هوية استوديو البوابة الفاتحة (src/lib/studioTheme.jsx: STUDIO.light) بصفحات A4 */
+:root { --bg: #F4FAF6; --card: #FFFFFF; --line: #D5E7DC; --ink: #1C3328; --sub: #5E7268; --acc: #3E8A62; --deep: #2F5442;
+  --mint: #89D7AD; --tint: #E6F5EC; --gold: #B8912F; --goldbg: #FBF5E6; }
+@page { size: A4; margin: 15mm 14mm 17mm; background: var(--bg);
+  @bottom-center { content: "دليل الاستخدام · بوابة مكة الثانوية الرقمية   —   " counter(page); font: 8pt "IBM Plex Sans Arabic"; color: #7F948A; }
+}
+@page :first { margin: 0; @bottom-center { content: none; } }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); }
+body { font-family: "IBM Plex Sans Arabic", sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.75;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+img { display: block; }
+
+/* الغلاف */
+.cover { position: relative; width: 210mm; height: 297mm; overflow: hidden; padding: 18mm 17mm 14mm; display: flex; flex-direction: column;
+  background: radial-gradient(ellipse 90% 55% at 95% 0%, #DDF3E6 0%, transparent 60%), linear-gradient(160deg, #F2FAF5 0%, #F8FBF9 45%, #EDF6F0 100%);
+  break-after: page; }
+.decor { position: absolute; inset: 0; pointer-events: none; }
+.decor .lines { position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(62,99,80,.05) 0 1.5px, transparent 1.5px 22px); }
+.decor .blob { position: absolute; width: 95mm; height: 95mm; border-radius: 50%; background: rgba(137,215,173,.45); filter: blur(70px); left: 10mm; top: 6mm; }
+.decor .cube { position: absolute; width: 70mm; height: 70mm; border-radius: 14mm; background: rgba(62,99,80,.08); transform: rotate(32deg) skewX(-14deg); }
+.decor .cube.a { left: -26mm; bottom: -32mm; } .decor .cube.b { left: -12mm; bottom: -58mm; opacity: .7; }
+.brand { position: relative; display: flex; align-items: center; gap: 4mm; }
+.brand img { width: 15mm; height: 15mm; object-fit: contain; }
+.brand b { display: block; font-size: 13pt; } .brand small { color: var(--sub); font-size: 9pt; }
+.cv-main { position: relative; flex: 1; display: flex; align-items: center; gap: 10mm; }
+.cv-text { flex: 1; }
+.kicker { display: inline-block; border: 1px solid var(--line); background: rgba(255,255,255,.85); color: var(--acc); font-weight: 700;
+  border-radius: 99px; padding: 1mm 5mm; font-size: 10pt; }
+.cover h1 { font-size: 40pt; line-height: 1.25; margin: 5mm 0 3mm; letter-spacing: -.5px; }
+.cover h1::after { content: ""; display: block; width: 26mm; height: 1.4mm; border-radius: 1mm; margin-top: 4mm; background: linear-gradient(90deg, var(--gold), #E3C877); }
+.lead { color: var(--sub); font-size: 11.5pt; line-height: 1.9; max-width: 98mm; }
+.cover ul { list-style: none; margin-top: 6mm; display: grid; gap: 2.2mm; }
+.cover li { display: flex; align-items: center; gap: 3mm; font-weight: 600; font-size: 10.5pt; }
+.cover li::before { content: ""; width: 2.6mm; height: 2.6mm; border-radius: 50%; background: var(--acc); box-shadow: 0 0 0 1.2mm var(--tint); flex: none; }
+.cv-foot { position: relative; display: flex; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 4mm; color: var(--sub); font-size: 9pt; }
+
+/* إطار الجوال للصور */
+.phone { flex: none; width: 50mm; padding: 1.6mm; border-radius: 6.5mm; background: #fff; border: 1px solid var(--line);
+  box-shadow: 0 3mm 7mm -4mm rgba(28,51,40,.35); }
+.phone img { width: 100%; border-radius: 5mm; aspect-ratio: 390 / 760; object-fit: cover; object-position: top; }
+.phone.big { width: 66mm; transform: rotate(-3deg); }
+
+/* المحتويات */
+.toc { break-after: page; }
+h2.sec { font-size: 18pt; margin-bottom: 6mm; }
+h2.sec::after { content: ""; display: block; width: 18mm; height: 1.2mm; border-radius: 1mm; background: var(--gold); margin-top: 2mm; }
+.toc ol { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5mm 5mm; }
+.toc li { display: flex; align-items: center; gap: 3mm; background: var(--card); border: 1px solid var(--line); border-radius: 3.5mm; padding: 2.4mm 3.5mm; }
+.toc li i { font-style: normal; width: 8mm; height: 8mm; border-radius: 2.5mm; background: var(--tint); color: var(--acc); font-weight: 700; display: grid; place-items: center; flex: none; }
+.toc li span { flex: 1; font-weight: 600; } .toc li small { color: var(--sub); font-size: 8.5pt; }
+.howto { margin-top: 8mm; background: var(--card); border: 1px solid var(--line); border-inline-start: 1.5mm solid var(--acc); border-radius: 4mm; padding: 4mm 5mm; }
+.howto b { display: block; font-size: 11.5pt; margin-bottom: 1mm; } .howto p { color: var(--sub); margin-top: 1mm; }
+.chip { display: inline-block; background: var(--tint); color: var(--deep); border-radius: 99px; padding: 0 2.5mm; font-weight: 600; font-size: 9pt; }
+
+/* الفصول */
+.chapter { break-before: page; }
+.ch-head { display: flex; align-items: center; gap: 4mm; margin-bottom: 5mm; padding: 4mm 5mm; border-radius: 5mm; position: relative; overflow: hidden;
+  background: radial-gradient(ellipse 70% 120% at 100% 0%, #DDF3E6 0%, transparent 70%), linear-gradient(160deg, #FFFFFF, #F2FAF5); border: 1px solid var(--line); }
+.ch-head::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, rgba(62,99,80,.05) 0 1.5px, transparent 1.5px 18px); }
+.ch-n { position: relative; width: 13mm; height: 13mm; border-radius: 4mm; background: var(--acc); color: #fff; font-size: 16pt; font-weight: 700; display: grid; place-items: center; flex: none; }
+.ch-head div { position: relative; } .ch-head small { color: var(--gold); font-weight: 700; font-size: 9pt; } .ch-head h2 { font-size: 16pt; line-height: 1.4; }
+
+.proc { background: var(--card); border: 1px solid var(--line); border-radius: 4.5mm; padding: 4mm 5mm; margin-bottom: 4mm; break-inside: avoid; display: flow-root; }
+.proc.has-shot .phone { float: left; margin: 0 4mm 2mm 0; }
+.proc header { display: flex; align-items: center; gap: 2.5mm; margin-bottom: 1.5mm; }
+.pn { font-size: 8.5pt; font-weight: 700; color: var(--acc); background: var(--tint); border-radius: 99px; padding: 0 2.2mm; direction: ltr; }
+.proc h3 { font-size: 12pt; line-height: 1.5; }
+.path { font-size: 9pt; color: var(--deep); background: var(--tint); border-radius: 2.5mm; padding: 1mm 3mm; margin-bottom: 2mm; display: inline-block; }
+.path b { color: var(--acc); margin-inline-end: 2mm; }
+.steps { list-style: none; display: grid; gap: 1.4mm; }
+.steps li { display: flex; gap: 2.5mm; align-items: flex-start; }
+.steps li i { font-style: normal; flex: none; width: 5.6mm; height: 5.6mm; margin-top: .6mm; border-radius: 50%; border: 1.2px solid var(--acc); color: var(--acc); font-size: 8pt; font-weight: 700; display: grid; place-items: center; }
+.note, .warn { margin-top: 2.5mm; font-size: 9.2pt; border-radius: 3mm; padding: 1.8mm 3mm; }
+.note { background: #F1F8F4; color: #33493E; } .note b { color: var(--acc); margin-inline-end: 2mm; }
+.warn { background: var(--goldbg); color: #6E5420; } .warn b { color: var(--gold); margin-inline-end: 2mm; }
+.d { color: var(--sub); }
+.start .proc { min-height: 0; }
