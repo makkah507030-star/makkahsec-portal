@@ -1,11 +1,13 @@
 // src/pages/Help.jsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fmtDate } from "../lib/dates";
 import { useSession } from "../lib/session.jsx";
 import logoIcon from "../assets/icon-mint.png";
 import moeLogo from "../assets/moe-logo.png";
 import PrintPortal from "../components/PrintPortal.jsx";
 import { OFFLINE_NOTE, OFFLINE_SCENARIO } from "../lib/offlineQuizGuide.js";
+import { ROLE_PROCS, ROLE_WHO } from "../lib/roleProcs.js";
+import { myTeacherLabs } from "../lib/sciLab.js";
 
 /* =====================================================================
    دليل الاستخدام — إجراءات البوابة بخطواتها.
@@ -13,7 +15,7 @@ import { OFFLINE_NOTE, OFFLINE_SCENARIO } from "../lib/offlineQuizGuide.js";
    ===================================================================== */
 
 // تُصدَّر لدليل البوابة الإجرائي (docs/portal-guide) فيبقى الدليلان على نص واحد
-export const PROCS = [
+const BASE_PROCS = [
   { cat: "الدخول والحساب", who: ["الجميع"], title: "الدخول لأول مرة", path: "makkahsec.com ← الدخول للبوابة", steps: ["افتح makkahsec.com واضغط «الدخول للبوابة».", "المعلم والإداري والطالب: اكتب رقم الهوية في خانتَي اسم المستخدم وكلمة المرور معًا.", "ولي الأمر: اكتب رقم جواله المسجّل في الخانتين معًا، بصيغة 966XXXXXXXXX.", "اضغط «دخول»، فتُطلب كلمة مرور جديدة إلزاميًا.", "اكتب كلمة مرور من ٨ خانات فأكثر، لا تطابق رقم الهوية، ثم «حفظ ومتابعة»."], note: "كلمة المرور الأولى هي رقم الدخول نفسه. وتغييرها إجباري عند أول دخول." },
   { cat: "الدخول والحساب", who: ["الجميع"], title: "نسيت كلمة المرور", path: "راجع الدعم الفني", steps: ["تواصل مع الدعم الفني أو إدارة المدرسة.", "يفتح الدعم الفني: الدعم الفني ← استعادة كلمة المرور.", "يبحث عن الحساب ويعيد تعيين كلمة المرور.", "تدخل بها ثم تُطلب منك كلمة مرور جديدة."] },
   { cat: "الدخول والحساب", who: ["الجميع"], title: "شكل البوابة: الهوية الرسمية أو الكلاسيكي", path: "القائمة ← أعلاها فوق البحث", steps: ["تظهر البوابة بالهوية الرسمية للمدرسة: ألوان خضراء هادئة وخط ذهبي تحت الشريط العلوي.", "لتفضيل الشكل الكلاسيكي الرمادي اضغط «الكلاسيكي» في المربع أعلى القائمة فوق البحث.", "للعودة اضغط «الهوية الرسمية» في المربع نفسه.", "يبقى اختيارك محفوظًا في جهازك حتى تغيّره."], note: "الاختيار لك وحدك ولا يغيّر شيئًا لغيرك. والتقارير والنماذج المطبوعة لا تتغير بأي من الشكلين." },
@@ -232,11 +234,13 @@ export const PROCS = [
   { after: true, cat: "المعلم", who: ["المعلم"], title: "تقرير غياب طلاب مادتي", path: "القائمة ← طلابي ← تقرير غياب مادتي", steps: ["يعرض غياب طلابك وتأخرهم واستئذانهم في حصصك للفصل الدراسي.", "صفِّ بالمادة أو الفصل من أعلى الصفحة.", "تابع «غياب متتابع يحتاج متابعة» و«الطلاب الأكثر غيابًا»، ونسبة الغياب حسب الفصل والحصة."] },
   { after: true, cat: "المعلم", who: ["المعلم"], title: "الإبلاغ عن طالب منقطع", path: "القائمة ← طلابي ← الإبلاغ عن طالب منقطع", steps: ["اختر الفصل ثم الطالب، ويظهر عدد أيام غيابه.", "اختر سبب الانقطاع، واكتب ملاحظتك (مثل: تواصلت مع ولي الأمر وأفاد بسفر الأسرة).", "اضغط «إرسال البلاغ لوكيل شؤون الطلاب»، و«طباعة البطاقة» عند الحاجة."], note: "الطالب الغائب خمسة أيام فأكثر يُختار له سبب الغياب تلقائيًا." },
 ];
+// إجراءات الأدوار الإدارية والبرامج (lib/roleProcs.js)
+export const PROCS = [...BASE_PROCS, ...ROLE_PROCS];
 
 const ALL_WHO = ["المعلم", "الطالب", "ولي الأمر", "الإدارة", "الدعم الفني", "مدير المدرسة", "محضر المعمل"];
 
 /* أدوار المستخدم الحالي — يُصفّى الدليل عليها افتراضيًا */
-function myRoles(effectiveRole, adminRoles = []) {
+function myRoles(effectiveRole, adminRoles = [], sciTeacher = false) {
   const out = new Set();
   if (effectiveRole === "teacher") out.add("المعلم");
   if (effectiveRole === "student") out.add("الطالب");
@@ -246,7 +250,10 @@ function myRoles(effectiveRole, adminRoles = []) {
     if (adminRoles.includes("tech_support")) out.add("الدعم الفني");
     if (adminRoles.includes("principal")) out.add("مدير المدرسة");
     if (adminRoles.includes("computer_lab")) out.add("محضر المعمل");
+    adminRoles.forEach((r) => { if (ROLE_WHO[r]) out.add(ROLE_WHO[r]); });
   }
+  // المعلم الذي يحجز مختبرات العلوم يرى إجراءاتها
+  if (effectiveRole === "teacher" && sciTeacher) out.add("معلم العلوم");
   return out;
 }
 
@@ -403,7 +410,9 @@ function CatTile({ label, count, on, onClick }) {
 
 export default function Help() {
   const { effectiveRole, adminRoles, profile } = useSession();
-  const mine = useMemo(() => myRoles(effectiveRole, adminRoles ?? []), [effectiveRole, adminRoles]);
+  const [sciTeacher, setSciTeacher] = useState(false);
+  useEffect(() => { if (effectiveRole === "teacher") myTeacherLabs().then((l) => setSciTeacher(l.length > 0)); }, [effectiveRole]);
+  const mine = useMemo(() => myRoles(effectiveRole, adminRoles ?? [], sciTeacher), [effectiveRole, adminRoles, sciTeacher]);
 
   const [cat, setCat] = useState("");
   const [q, setQ] = useState("");

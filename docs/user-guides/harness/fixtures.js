@@ -8,7 +8,15 @@ export const USERS = {
   teacher:  { id: "u-t1", username: "1010101010", full_name: "أحمد بن محمد العتيبي", role: "teacher", is_active: true, must_change_pw: false },
   student:  { id: "u-s1", username: "1122334455", full_name: "عبدالله خالد الحربي", role: "student", is_active: true, must_change_pw: false },
   guardian: { id: "u-g1", username: "0551234567", full_name: "خالد سعد الحربي", role: "guardian", is_active: true, must_change_pw: false },
+  clerk:     { id: "u-a1", username: "1020304050", full_name: "سامي عبدالله المالكي", role: "admin", roles: ["clerk", "clerk_3"] },
+  counselor: { id: "u-a2", username: "1020304051", full_name: "فهد علي الشهري", role: "admin", roles: ["counselor_1"] },
+  health:    { id: "u-a3", username: "1020304052", full_name: "ماجد حسن الثقفي", role: "admin", roles: ["health_counselor"] },
+  scilab:    { id: "u-a4", username: "1020304053", full_name: "نايف سعد الجهني", role: "admin", roles: ["science_labs"] },
+  globe:     { id: "u-a5", username: "1020304054", full_name: "عمر ناصر السلمي", role: "admin", roles: ["globe_program"] },
+  gifted:    { id: "u-a6", username: "1020304055", full_name: "طلال فهد الهذلي", role: "admin", roles: ["gifted_program"] },
+  scouts:    { id: "u-a7", username: "1020304056", full_name: "بدر صالح القرشي", role: "admin", roles: ["custom_1"] },
 };
+Object.values(USERS).forEach((u) => { u.is_active = true; u.must_change_pw = false; });
 
 const FIRST = ["عبدالله", "محمد", "فيصل", "سعود", "عبدالرحمن", "يوسف", "تركي", "خالد", "ريان", "عمر", "بندر", "ماجد", "نواف", "سلطان", "مشاري", "زياد", "حمزة", "إبراهيم", "أنس", "مهند", "راكان", "عبدالعزيز", "سامي", "ياسر"];
 const FATHER = ["خالد", "سعد", "ناصر", "عبدالله", "فهد", "علي", "حسن", "صالح"];
@@ -83,7 +91,21 @@ const CARDS = [["⏱", "دقيقة واحدة", "أنشطة سريعة لبدا�
 export const TABLES = {
   users: (me) => [me],
   teachers: (me) => (me.role === "teacher" ? [T1, ...TEACHERS.slice(1)] : TEACHERS),
-  admin_roles: [], guardians: [], custom_roles: [],
+  admin_roles: (me) => (me.roles ?? []).map((role_type) => ({ user_id: me.id, role_type })),
+  guardian_student: [{ guardian_id: "gd1", student_id: "s000", relation: "أب", students: STUDENTS[0] }],
+  teacher_granted_tabs: [{ teacher_id: "t1", tab_key: "computer_lab" }],
+  guardians: (me) => (me.role === "guardian" ? [{ id: "gd1", user_id: "u-g1", student_id: "s000", full_name: me.full_name, mobile: "0551234567", is_active: true, students: STUDENTS[0] }] : []), custom_roles: [{ role_type: "custom_1", label: "قائد الفريق الكشفي", external: false }],
+  // صلاحيات الأدوار غير الكاملة (role_permissions)
+  role_permissions: [["clerk", "staff"], ["clerk_3", "staff"], ["counselor_1", "outreach"], ["counselor_1", "staff"], ["health_counselor", "outreach"],
+    ["globe_program", "globe"], ["gifted_program", "gifted"], ["custom_1", "scouts"], ["science_labs", "staff"]].map(([role_type, permission]) => ({ role_type, permission })),
+  sci_experiments: [["الأحياء 1", 1, "فحص الخلية النباتية بالمجهر", "مجهر ضوئي، شرائح زجاجية، بصل"], ["الأحياء 1", 2, "الكشف عن النشا في الأغذية", "محلول اليود، أنابيب اختبار"],
+    ["الأحياء 1", 3, "انتشار المواد عبر الغشاء", "كيس ديلزة، محلول سكري"], ["الأحياء 2", 1, "تشريح القلب", "أدوات تشريح، قلب خروف"]]
+    .map(([course, no, title, tools], i) => ({ id: i + 1, lab: "bio", course, grade: course.endsWith("1") ? 1 : 2, no, title, tools, page: 20 + i * 7, week: i + 3, kind: "lab", is_active: true })),
+  sci_bookings: [[0, 2, 0, 1, "ready"], [1, 4, 1, 2, null], [2, 3, 2, 3, "missing"]].map(([d, p, c, e, prep], i) => ({ id: `sb${i}`, lab: "bio",
+    booking_date: `2026-11-${String(9 + d).padStart(2, "0")}`, period_no: p, teacher_id: "t1", class_id: CLASSES[c].id, experiment_id: e, prep,
+    teachers: { full_name: "سعيد عمر الغامدي" }, classes: CLASSES[c] })),
+  sci_inventory: [["مجهر ضوئي", "جهاز", 12, "قطعة", "جيد", null], ["محلول اليود", "مادة", 3, "لتر", "جيد", "2027-03-01"], ["شرائح زجاجية", "أداة", 200, "قطعة", "جيد", null],
+    ["كحول إيثيلي", "مادة", 2, "لتر", "جيد", "2026-12-01"]].map(([name, kind, qty, unit, status, expiry], i) => ({ id: i + 1, lab: "bio", name, kind, qty, unit, status, expiry, location: "خزانة " + (i + 1) })),
   settings: SETTINGS,
   period_times: PT,
   classes: CLASSES,
@@ -99,6 +121,7 @@ export const TABLES = {
     { kind: "exam", start_date: "2027-01-03", end_date: "2027-01-14", is_active: true, title: "الاختبارات النهائية" }],
 };
 export const RPC = {
+  sci_teacher_labs: (me) => (me.role === "teacher" ? ["bio"] : []), sci_manager: true,
   perf_auto_counts: PERF_AUTO, cult_me: { staff: true, member: false, amb: false, all: false },
   my_department: { department_id: "d1", department_name: "الرياضيات", is_head: false },
 };

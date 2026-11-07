@@ -7,11 +7,13 @@ import logo from "../../../src/assets/icon-mint.png";
 import "../../../src/fonts.css";
 import "./guide.css";
 
+window.__all = PROCS.map((p) => `${p.cat} | ${p.who.join("،")} | ${p.title} | ${p.path}`);
 const g = GUIDES[new URLSearchParams(location.search).get("g") ?? "teacher"];
-const img = (n) => `/img/${g.key}/${n}.png`;
+const img = (n) => `/img/${g.shotsOf ?? g.key}/${n}.png`;
 const FIRST = "الدخول والحساب";
 // إجراءات الفئة وحدها: ما يخص أدوارًا أو عضويات أخرى يُستبعد (skip وskipCats)، ونص الإجراء قد يُكيَّف للفئة (edit)
-const list = PROCS.filter((p) => p.who.includes("الجميع") || p.who.some((w) => g.who.includes(w)))
+const list = PROCS.filter((p) => (!g.noBase && p.who.includes("الجميع")) || p.who.some((w) => g.who.includes(w)) || (g.pick ?? []).includes(p.title))
+  .filter((p) => !g.onlyCats || g.onlyCats.includes(p.cat))
   .filter((p) => !(g.skipCats ?? []).includes(p.cat) && !(g.skip ?? []).includes(p.title))
   .map((p) => { const e = g.edit?.[p.title]; return e ? { ...p, ...(typeof e === "function" ? e(p) : e) } : p; });
 const rank = (c) => { const i = (g.order ?? [FIRST]).indexOf(c); return i < 0 ? 99 : i; };
@@ -46,7 +48,7 @@ function Guide() {
         <div className="brand"><img src={logo} /><span><b>بوابة مكة الثانوية الرقمية</b><small>مدرسة مكة الثانوية</small></span></div>
         <div className="cv-main">
           <div className="cv-text">
-            <span className="kicker">دليل الاستخدام</span>
+            <span className="kicker">{g.kicker ?? "دليل الاستخدام"}</span>
             <h1>{g.title}</h1>
             <p className="lead">{g.lead}</p>
             <ul>{g.points.map((t) => <li key={t}>{t}</li>)}</ul>
@@ -59,22 +61,22 @@ function Guide() {
       <section className="toc">
         <h2 className="sec">محتويات الدليل</h2>
         <ol>
-          <li><i>0</i><span>البداية: الرئيسية والقائمة</span></li>
+          {g.start && <li><i>0</i><span>البداية: الرئيسية والقائمة</span></li>}
           {chapters.map((ch, i) => <li key={ch.c}><i>{i + 1}</i><span>{g.cats?.[ch.c] ?? ch.c}</span><small>{ch.items.length} إجراء</small></li>)}
         </ol>
         <div className="howto">
           <b>كيف تقرأ الدليل؟</b>
           <p>كل إجراء في بطاقة: عنوانه، ثم <span className="chip">المسار</span> إليه في القائمة، ثم خطواته مرقّمة، ثم ملاحظة أو تنبيه إن وُجد. والصور من البوابة نفسها ببيانات تجريبية.</p>
-          <p>تجد الدليل نفسه داخل البوابة محدّثًا دائمًا: القائمة ← «دليل الاستخدام».</p>
+          <p>{g.appendix ? `هذا ملحق ${g.appendix}، يُقرأ مع الدليل الأساسي.` : "تجد الدليل نفسه داخل البوابة محدّثًا دائمًا: القائمة ← «دليل الاستخدام»."}</p>
         </div>
       </section>
 
-      <section className="chapter">
+      {g.start && <section className="chapter">
         <div className="ch-head"><span className="ch-n">0</span><div><small>البداية</small><h2>الرئيسية والقائمة</h2></div></div>
         <div className="start">{g.start.map((s) => (
           <article key={s.t} className="proc has-shot"><figure className="phone"><img src={img(s.shot)} /></figure>
             <header><h3>{s.t}</h3></header><p className="d">{s.d}</p></article>))}</div>
-      </section>
+      </section>}
 
       {chapters.map((ch, i) => (
         <section key={ch.c} className="chapter">

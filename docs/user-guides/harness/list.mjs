@@ -29,5 +29,17 @@ export const SHOTS = {
     { name: "culture", to: "/culture" },
     { name: "signature", to: "/my-signature" },
     { name: "contact", to: "/contact" },
+    { name: "lab", to: "/lab", late: true },
+    { name: "science-labs", to: "/science-labs" },
   ],
+  student: [
+    { name: "home", to: "/" }, { name: "my-week", to: "/my-week" }, { name: "exams", to: "/exams" },
+    { name: "qudrat", to: "/qudrat" }, { name: "my-documents", to: "/my-documents" }, { name: "opportunities", to: "/opportunities" },
+  ],
+  guardian: [{ name: "home", to: "/" }, { name: "my-documents", to: "/my-documents" }, { name: "my-circulars", to: "/my-circulars" }],
+  clerk: [{ name: "absence-whatsapp", to: "/absence-whatsapp" }, { name: "guardian-mobiles", to: "/guardian-mobiles" },
+    { name: "absence-excuses", to: "/absence-excuses" }, { name: "repairs", to: "/repairs" }],
+  counselor: [{ name: "guidance", to: "/guidance" }, { name: "student-notes", to: "/student-notes" }, { name: "outreach", to: "/outreach" }],
+  scilab: [{ name: "sci-booking", to: "/science-labs" }, { name: "sci-plan", to: "/science-labs?tab=plan" }, { name: "sci-inventory", to: "/science-labs?tab=inventory" }],
+  globe: [{ name: "globe", to: "/globe" }], gifted: [{ name: "gifted", to: "/gifted" }], scouts: [{ name: "scouts", to: "/scouts" }],
 };

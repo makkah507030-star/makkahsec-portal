@@ -30,7 +30,10 @@ try {
       document.head.appendChild(st);
     }));
     p.on("pageerror", (e) => console.log("  خطأ:", s.name, e.message));
-    await p.goto(`${base}${s.to}${s.to.includes("?") ? "&" : "?"}as=${as}`);
+    // late: صفحة تُسجَّل بعد تحميل صلاحيات الحساب، فتُفتح من الرئيسية بالتنقل داخل البوابة
+    await p.goto(`${base}${s.late ? "/" : s.to}${!s.late && s.to.includes("?") ? "&" : "?"}as=${as}`);
+    if (s.late) { await p.waitForTimeout(400); await p.clock.runFor(2500);
+      await p.evaluate((to) => { history.pushState({}, "", to); dispatchEvent(new PopStateEvent("popstate")); }, s.to); }
     await p.waitForTimeout(400); await p.clock.runFor(2500);
     await p.waitForLoadState("networkidle").catch(() => null);
     await p.evaluate(() => document.fonts.ready);
