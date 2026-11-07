@@ -22,11 +22,13 @@ import { friendlyError } from "../../../lib/friendlyError.js";
 const NO_IMAGES = {};
 const tab = (on) => `w-28 shrink-0 rounded-sm2 py-2 text-sm font-semibold ${on ? "bg-mint-deep text-white" : "border border-line bg-paper text-ink"}`;
 
-export default function ExamPage({ exam: initial, onBack, onDeleted }) {
+export default function ExamPage({ exam: initial, onBack, onDeleted, readOnly = false }) {
   const [exam, setExam] = useState(initial);
   const theory = exam.kind === "theory";
   const hasDevice = theory || exam.body?.autoMarks > 0;
-  const TABS = [["content", "المحتوى"], ["print", "الطباعة"], ...(hasDevice ? [["device", "الأجهزة"]] : []), ["record", "الرصد"]];
+  // الاطلاع (الدعم الفني): المحتوى والرصد عرضًا، دون الطباعة وملف الأجهزة والحذف والتصحيح
+  const TABS = readOnly ? [["content", "المحتوى"], ["record", "الرصد"]]
+    : [["content", "المحتوى"], ["print", "الطباعة"], ...(hasDevice ? [["device", "الأجهزة"]] : []), ["record", "الرصد"]];
   const [t, setT] = useState("content");
   const [classes, setClasses] = useState([]);
   useEffect(() => { gradeClasses(exam.grade, exam.lab_id).then((c) => setClasses(c.filter((x) => exam.classes.includes(x.class_id)))); }, [exam]);
@@ -42,7 +44,7 @@ export default function ExamPage({ exam: initial, onBack, onDeleted }) {
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className="btn-ghost" onClick={onBack}>رجوع</button>
         <span className="flex-1" />
-        <button type="button" className="text-sm text-danger" onClick={remove}>حذف</button>
+        {!readOnly && <button type="button" className="text-sm text-danger" onClick={remove}>حذف</button>}
       </div>
       <div>
         <p className="text-[12px] font-semibold text-muted">{theory ? "نظري" : `عملي · ${PRACTICAL_MODES[exam.body?.mode]?.t}`} · {EXAM_GRADES[exam.grade]?.t} · من <span className="num">{exam.total}</span>{exam.duration ? <> · <span className="num">{exam.duration}</span> دقيقة</> : null}</p>
@@ -53,7 +55,7 @@ export default function ExamPage({ exam: initial, onBack, onDeleted }) {
       {t === "content" && (theory ? <TheoryContent exam={exam} /> : <PracticalContent exam={exam} />)}
       {t === "print" && <PrintTab exam={exam} classes={classes} />}
       {t === "device" && <DeviceTab exam={exam} classes={classes} onExam={setExam} />}
-      {t === "record" && <ExamRecord exam={exam} classes={classes} />}
+      {t === "record" && <ExamRecord exam={exam} classes={classes} readOnly={readOnly} />}
     </div>
   );
 }

@@ -17,7 +17,7 @@ import ExamPage from "./ExamPage.jsx";
 
 const pill = (on) => `rounded-pill px-3.5 py-1.5 text-xs font-medium transition-colors ${on ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted hover:bg-canvas"}`;
 
-export default function LabExams({ lab, canCreate }) {
+export default function LabExams({ lab, canCreate, readOnly = false }) {
   const [part, setPart] = useState("exams");
   const [list, setList] = useState(null);
   const [err, setErr] = useState("");
@@ -31,7 +31,7 @@ export default function LabExams({ lab, canCreate }) {
   useEffect(() => { load(); }, []);
 
   if (creating) return <ExamCreate kind={creating} lab={lab} onCancel={() => setCreating(null)} onSaved={(e) => { setCreating(null); load(); setOpen(e); }} />;
-  if (open) return <ExamPage exam={open} onBack={() => { setOpen(null); load(); }} onDeleted={() => { setOpen(null); load(); }} />;
+  if (open) return <ExamPage exam={open} readOnly={readOnly} onBack={() => { setOpen(null); load(); }} onDeleted={() => { setOpen(null); load(); }} />;
 
   return (
     <div className="space-y-4">
@@ -47,6 +47,7 @@ export default function LabExams({ lab, canCreate }) {
         </div>
       </div>
 
+      {readOnly && <p className="rounded-card bg-canvas px-3 py-2 text-[12.5px] text-muted">اطّلاع للدعم الفني لتقديم الدعم: عرض الاختبارات ورصدها دون إنشاء أو تعديل أو طباعة.</p>}
       {err && <p className="rounded-card bg-warning-light px-3 py-2 text-sm text-late">{err}</p>}
       {part === "bank" ? <ExamBank canEdit={canCreate} /> : (
         <>

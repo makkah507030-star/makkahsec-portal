@@ -18,7 +18,7 @@ import { friendlyError } from "../../../lib/friendlyError.js";
 const noCard = async () => null;
 const SRC = { device: "الجهاز", paper: "الورقة", manual: "يدوي", rubric: "سلّم التقدير" };
 
-export default function ExamRecord({ exam, classes }) {
+export default function ExamRecord({ exam, classes, readOnly = false }) {
   const theory = exam.kind === "theory";
   const b = exam.body ?? {};
   const [cls, setCls] = useState(classes[0]?.class_id ?? null);
@@ -65,11 +65,11 @@ export default function ExamRecord({ exam, classes }) {
         <span className="ms-auto text-[12px] text-muted">رُصد <b className="num text-ink">{done}</b> من <span className="num">{students.length}</span>{done ? <> · المتوسط <b className="num text-ink">{avg.toFixed(1)}</b> من <span className="num">{exam.total}</span></> : null}</span>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {!readOnly && <div className="flex flex-wrap gap-2">
         {(theory || b.autoMarks > 0) && <button type="button" className="btn-primary" onClick={() => setMode("device")}>مسح رموز الأجهزة</button>}
         {theory && <button type="button" className="btn-ghost" onClick={() => setMode("scan")}>تصوير بطاقة طالب</button>}
         {theory && <button type="button" className="btn-ghost" onClick={() => setMode("batch")}>تصحيح بطاقات الفصل دفعة واحدة</button>}
-      </div>
+      </div>}
 
       <div className="card overflow-x-auto">
         <table className="w-full min-w-[560px] text-sm">
@@ -89,10 +89,10 @@ export default function ExamRecord({ exam, classes }) {
                 <td className="num p-2.5 font-bold text-mint-deep">{r?.absent ? <span className="text-absent">غائب</span> : r?.score ?? "—"}</td>
                 <td className="p-2.5 text-[11.5px] text-muted">{theory ? SRC[d.src] ?? "" : [d.auto != null && "الجهاز", d.rubric != null && "سلّم التقدير"].filter(Boolean).join(" + ")}{d.seat ? ` · PC-${String(d.seat).padStart(2, "0")}` : ""}</td>
                 <td className="p-2.5 text-left">
-                  <div className="flex justify-end gap-2 text-xs">
+                  {!readOnly && <div className="flex justify-end gap-2 text-xs">
                     {card && <button type="button" className="font-semibold text-mint-deep" onClick={() => setMode({ rubric: s, card })}>التقدير</button>}
                     <button type="button" className="text-muted" onClick={() => setMode({ manual: s })}>يدوي</button>
-                  </div>
+                  </div>}
                 </td>
               </tr>);
           })}</tbody>
