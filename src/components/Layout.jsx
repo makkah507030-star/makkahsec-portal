@@ -136,7 +136,8 @@ export const ADMIN_GROUPS = [
     title: "المعامل والمختبرات",
     items: [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
-      { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab", "principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
+      // للمحضر وحده: المدير والدعم الفني يطّلعون على ملفه من «شواهد أداء الموظفين»
+      { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
       { to: "/my-lab-dfile", label: "ملف المحضر الرقمي", roles: ["computer_lab"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف محضر" },
       { to: "/science-labs", label: "مختبرات العلوم", roles: ["science_labs", "science_labs_2", "science_labs_3", "principal", "tech_support", "deputy_school"], icon: "flask", kw: "مختبر احياء كيمياء فيزياء تجارب عهدة حجز" },
     ],
@@ -253,7 +254,7 @@ export const SECTIONS = [
 /* أقسام قائمة المعلم بالطريقة نفسها: كل قسم يجمع مجموعات من TEACHER_GROUPS ويفتح صفحة بطاقاتها،
    والقسم ذو الرابط الواحد يفتحه مباشرة. أي مجموعة جديدة في TEACHER_GROUPS يُضاف عنوانها هنا. */
 export const TEACHER_SECTIONS = [
-  { key: "daily", title: "المهام اليومية", icon: "userCheck", hint: "التحضير وحصص الانتظار والجدول والأنشطة والاستئذان والمعمل وبلاغات الصيانة",
+  { key: "daily", title: "المهام اليومية", icon: "userCheck", hint: "التحضير وحصص الانتظار والجدول والأنشطة والاستئذان والمعمل",
     groups: ["المهام اليومية", "المعامل والمختبرات"] },
   { key: "students", title: "طلابي", icon: "users", hint: "السجلات والمتابعة والغياب والإحالات والتقارير",
     groups: ["طلابي"] },
@@ -280,6 +281,8 @@ export const TEACHER_GROUPS = [
     title: null,
     items: [
       { to: "/", label: "الرئيسية", icon: "home", kw: "يومي" },
+      // بلاغات الصيانة في أعلى القائمة مباشرة، لا داخل الأقسام (ليبلّغ المعلم عن العطل بأسرع وصول)
+      { to: "/repairs", label: "بلاغات الصيانة", icon: "wrench", kw: "عطل اعطال صيانة تكييف كهرباء سباكة اصلاح بلاغ" },
     ],
   },
   {
@@ -290,7 +293,6 @@ export const TEACHER_GROUPS = [
       { to: "/activities",  label: "الأنشطة والألعاب",       icon: "sparkles", kw: "حقيبة الانتظار الأنشطة الصفية دوري المادة كأس حروف مسابقة مؤقت" },
       { to: "/schedule",    label: "جدولي",                 tabKey: "schedule",   icon: "grid" },
       { to: "/permissions", label: "الاستئذان",             extraTabKey: "permissions", icon: "ticket", kw: "خروج" },
-      { to: "/repairs",     label: "بلاغات الصيانة",        icon: "wrench", kw: "عطل اعطال صيانة تكييف كهرباء سباكة اصلاح بلاغ" },
     ],
   },
   {
@@ -328,7 +330,7 @@ export const TEACHER_GROUPS = [
       { to: "/achievement",    label: "مركز تحليل النتائج", achMember: true, icon: "chart", achGate: true, kw: "تحليل النتائج" },
       { to: "/qiyas",          label: "اختبارات قياس",      achMember: true, icon: "target", kw: "قدرات تحصيلي step" },
       { to: "/ach-committee",  label: "لجنة التحصيل",       achMember: true, icon: "users", kw: "محاضر" },
-      { to: "/qudrat",         label: "مركز التدريب",      icon: "target", exact: true, kw: "قياس قدرات تحصيلي تدريب اسئلة" },
+      { to: "/qudrat/questions", label: "أسئلة المعلمين (القدرات)", icon: "target", kw: "قياس قدرات تحصيلي تدريب اسئلة اضافة" },
       { to: "/qudrat/asks",    label: "أسئلة الطلاب (القدرات)", icon: "chat", kw: "قدرات استفسار طالب" },
     ],
   },

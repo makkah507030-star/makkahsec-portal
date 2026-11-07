@@ -5,7 +5,7 @@ import { fmtDate, fmtHijri } from "../../lib/dates.js";
 import { countAr } from "../../lib/arabicCount.js";
 import {
   BANDS, BAND_COLOR, ELEMENTS, MADRASATI, actTotal, MODE_COLOR, MODE_LABEL, MODE_ORDER, PARTS, PERIOD_LABEL, RATING_LABEL,
-  DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord, loadDfileLab,
+  DAYS, RECORD_AUTO, OPINION_ROLE, avgGain, subjectsOf, experience, hours, pc, pct, pickedSentences, weekWord, loadDfileLab, loadDfileSci,
   LAB_PARTS, LAB_ELEMENTS, labElColor, STAFF_PARTS,
 } from "../../lib/dfile.js";
 import { AUTO_SOURCE, elementColor } from "../../lib/performance.js";
@@ -70,6 +70,9 @@ const LabBig = ({ v, t }) => <span><b className="df-num">{v}</b>{t}</span>;
 function LabPart({ x, L }) {
   const used = new Map((x.by_lesson ?? []).map((r) => [r.id, r]));
   const shown = x.author ? L.list : L.list.filter((l) => used.has(l.id));
+  // الصفوف بترتيبها في المكتبة (الأول الثانوي، الثالث الثانوي…)، والدروس مجمّعة بصفها
+  const grades = [...new Set(L.list.map((l) => l.grade))];
+  const byGrade = [...new Set(shown.map((l) => l.grade))].map((g) => [g, shown.filter((l) => l.grade === g)]);
   const lab = x.lab;
   return (
     <Section id="lab" title="المعمل الرقمي ومعمل الحاسب" sub={x.author ? "دروس تفاعلية أعدّها، والتدريس بها، وتشغيل المعمل" : "التدريس في معمل الحاسب ونتائجه"}>
@@ -77,7 +80,7 @@ function LabPart({ x, L }) {
         <div className="df-card df-lab">
           <div className="df-lab-hero df-cols">
             <div><p className="df-lab-k">مكتبة المعمل الرقمي</p>
-              <h3>{L.lessons} دروس تفاعلية مطابقة لكتاب «التقنية الرقمية» · {L.list[0]?.grade} (طبعة 1448)</h3>
+              <h3>{L.lessons} {L.lessons <= 10 ? "دروس تفاعلية" : "درسًا تفاعليًا"} مطابقة لكتب «التقنية الرقمية» · {grades.join(" و")} (طبعة 1448)</h3>
               <p className="df-lab-s">أعدّها في البوابة درسًا درسًا من صفحات الكتاب، ويعمل بها معلمو الحاسب في المعمل.</p></div>
             <div className="df-lab-big">
               <LabBig v={L.stations} t="محطة تعلم" /><LabBig v={L.tasks} t="تدريبًا عمليًا" /><LabBig v={L.questions} t="سؤالًا وتحققًا" />
@@ -90,7 +93,10 @@ function LabPart({ x, L }) {
       {shown.length > 0 && (
         <div className="df-card">
           <CardH title={x.author ? "الدروس" : "الدروس التي درّسها في المعمل"} sub={`${[...new Set(shown.map((l) => l.unit.title))].join("، ")} · ${shown.length} ${shown.length <= 10 ? "دروس" : "درسًا"}`} src="من البوابة" srcKind="mix" />
-          <div className="df-lcards df-lab-ls">{shown.map((l) => {
+          {byGrade.map(([g, list]) => (
+            <div key={g}>
+              {byGrade.length > 1 && <p className="df-lab-k" style={{ margin: "10px 0 6px" }}>{g} · {list.length} {list.length <= 10 ? "دروس" : "درسًا"}</p>}
+            <div className="df-lcards df-lab-ls">{list.map((l) => {
             const u = used.get(l.id);
             const k = l.stations.reduce((a, s) => ({ ...a, [s.type]: (a[s.type] ?? 0) + 1 }), {});
             return (
@@ -100,7 +106,9 @@ function LabPart({ x, L }) {
                 <small className="df-num">{l.stations.length} محطات: {k.concept ?? 0} مفهوم، {(k.practice ?? 0) + (k.steps ?? 0)} تدريب، {k.quiz ?? 0} اختبار</small>
                 {u && <small className="df-lab-u df-num">نُفّذ في {u.n} {u.n === 1 ? "حصة" : u.n === 2 ? "حصتين" : u.n <= 10 ? "حصص" : "حصة"}{u.st ? ` · ${u.st} نتيجة طالب` : ""}{u.m != null ? ` · إتقان ${pc(u.m)}` : ""}</small>}
               </div>);
-          })}</div>
+            })}</div>
+            </div>
+          ))}
         </div>
       )}
       {(x.periods > 0 || x.sessions > 0) && (
@@ -130,6 +138,33 @@ function LabPart({ x, L }) {
             <span><b className="df-num">{lab.acks}</b>طالبًا أقرّ بها</span>
             <span><b className="df-num">{lab.seats}</b>خريطة جلوس</span>
           </div>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+/* مختبرات العلوم لمعلمي الأحياء والكيمياء والفيزياء: الحجوزات والتجارب المنفّذة وآخرها — بلا أسماء طلاب (supabase/dfile_sci.sql) */
+const SCI_OUT = { lab: "في المختبر", virtual: "افتراضيًا" };
+function SciPart({ x }) {
+  const done = Number(x.lab) + Number(x.virtual), all = done + Number(x.not_done);
+  return (
+    <Section id="sci" title="مختبرات العلوم" sub="التجارب العملية في مختبرات المدرسة هذا العام">
+      <div className="df-card">
+        <CardH title="تنفيذ التجارب" sub={(x.labs ?? []).map((l) => l.name).join("، ") || "هذا العام"} src="تلقائي" />
+        <div className="df-tiles">
+          <span><b className="df-num">{x.lab}</b>تجربة في المختبر</span>
+          <span><b className="df-num">{x.virtual}</b>تجربة افتراضية</span>
+          <span><b className="df-num">{all ? pc((done / all) * 100) : "—"}</b>نسبة التنفيذ</span>
+          <span><b className="df-num">{x.classes}</b>فصلًا</span>
+          <span><b className="df-num">{x.bookings}</b>حجزًا للمختبر</span>
+        </div>
+      </div>
+      {(x.recent ?? []).length > 0 && (
+        <div className="df-card">
+          <CardH title="آخر التجارب المنفّذة" sub={`${x.recent.length} ${x.recent.length <= 10 ? "تجارب" : "تجربة"}`} src="من البوابة" srcKind="mix" />
+          <div className="df-tags">{x.recent.map((r, i) => (
+            <span key={i} className="df-tag"><Svg d={ICON.ok} strokeWidth="2.4" />{r.title} · {r.course} · {SCI_OUT[r.outcome] ?? ""}</span>))}</div>
         </div>
       )}
     </Section>
@@ -530,6 +565,9 @@ export default function DfileReport({ data: d, settings: s, code }) {
     });
     return () => { alive = false; };
   }, [code]);
+  // قسم مختبرات العلوم: يُجلب بكود الملف، ولا يظهر إلا لمن له تجارب أو حجوزات في مختبرات العلوم
+  const [sci, setSci] = useState(null);
+  useEffect(() => { let alive = true; loadDfileSci(code).then((x) => { if (alive) setSci(x); }); return () => { alive = false; }; }, [code]);
   // الشاهد يُعرض داخل الصفحة (DfileDocViewer)، فيراه الزائر في كل جهاز
   const [doc, setDoc] = useState(null);
   const closeDoc = useCallback(() => setDoc(null), [setDoc]);
@@ -547,6 +585,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
     teach: d.lessons > 0 || d.subs > 0 || madOn || actOn || lessons.length > 0,
     records: recAuto.length + recForms.length + recOwn.length > 0,
     lab: !!lab && (lab.author || lab.periods > 0 || lab.sessions > 0 || !!lab.lab),
+    sci: !!sci,
     results: (d.grades?.n ?? 0) > 0,
     assess: (d.quizzes?.length ?? 0) > 0,
     growth: true,
@@ -677,6 +716,7 @@ export default function DfileReport({ data: d, settings: s, code }) {
           </Section>
         )}
         {show("lab") && has.lab && <LabPart x={lab} L={lab.L ?? { list: [] }} />}
+        {show("sci") && has.sci && <SciPart x={sci} />}
         {show("results") && has.results && <Results g={d.grades} />}
         {show("assess") && has.assess && <Assess d={d} />}
         {show("growth") && <Growth d={d} />}

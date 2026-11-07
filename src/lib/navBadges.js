@@ -134,7 +134,10 @@ async function load() {
     staff ? rowsOf(supabase.from("exchange_visits").select("id, visitor_name")
       .eq("status", "hosting").eq("host_user_id", uid).limit(50)) : noRows,
     isAcademic ? rowsOf(supabase.from("plc_sessions").select("id, head_name").eq("status", "pending").limit(50)) : noRows,
-    isAcademic ? rowsOf(supabase.from("pd_reports").select("id, owner_name").eq("status", "pending").limit(50)) : noRows,
+    // النماذج المرفوعة، وخطط الأنشطة بانتظار الموافقة قبل تنفيذها (pd_integrity_1.sql)
+    isAcademic ? rowsOf(supabase.from("pd_reports").select("id, owner_name")
+      .or("status.eq.pending,and(plan_submitted_at.not.is.null,plan_approved_at.is.null)").limit(50))
+      .then((r) => (r.length ? r : rowsOf(supabase.from("pd_reports").select("id, owner_name").eq("status", "pending").limit(50)))) : noRows,
     isAcademic ? rowsOf(supabase.from("exchange_visits").select("id, visitor_name").eq("status", "pending").limit(50)) : noRows,
     staff ? rowsOf(supabase.from("plc_sessions").select("id").eq("status", "returned").eq("head_user_id", uid).limit(50)) : noRows,
     staff ? rowsOf(supabase.from("pd_reports").select("id").eq("status", "returned").eq("owner_user_id", uid).limit(50)) : noRows,

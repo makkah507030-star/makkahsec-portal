@@ -668,8 +668,10 @@ export default function App() {
           <Route path="/quiz-analytics" element={<QuizAnalytics />} />
           {/* الاختبار الإلكتروني — يؤدّيه الطالب المُسند إليه (الصفحة تتحقق) */}
           <Route path="/quiz/:id" element={<QuizTake />} />
-          {/* مركز التدريب (القدرات) — لكل الصفوف ولكل حساب عدا ولي الأمر، وأسئلة المعلمين للمعلم والإدارة */}
-          {effectiveRole !== "guardian" && <Route path="/qudrat" element={<Qudrat />} />}
+          {/* مركز التدريب (القدرات) — للطلاب وحدهم، ولإدارة المتابعة (المدير ووكيل الشؤون التعليمية والدعم الفني) للاطلاع.
+              والمعلم يصله سؤال الطالب بتفاصيله في «أسئلة الطلاب»، ويضيف أسئلته من «أسئلة المعلمين» */}
+          {(effectiveRole === "student" || (effectiveRole === "admin" && ["principal", "deputy_academic", "tech_support"].some((r) => adminRoles.includes(r))))
+            && <Route path="/qudrat" element={<Qudrat />} />}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qudrat/questions" element={<QudratQuestions />} />}
           {/* أسئلة الطلاب لمعلم المادة، ولوحة المتابعة للإدارة؛ القاعدة تفرض من يرى ماذا */}
           {(effectiveRole === "teacher" || effectiveRole === "admin") && <Route path="/qudrat/asks" element={<QudratAsks />} />}

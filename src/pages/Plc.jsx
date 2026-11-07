@@ -22,6 +22,7 @@ import {
 } from "../lib/plc";
 import { byName } from "../lib/sortAr.js";
 import NiepdLink from "../components/NiepdLink.jsx";
+import PdHub from "./plc/PdHub.jsx";
 import { friendlyError } from "../lib/friendlyError.js";
 
 /* =====================================================================
@@ -45,7 +46,9 @@ export function useRoles() {
 /* ------------------------------ القائمة ------------------------------ */
 export default function Plc() {
   const { id } = useParams();
-  return id ? <Session id={id} /> : <SessionList />;
+  const [params] = useSearchParams();
+  // /plc وحدها: الصفحة الرئيسة للتطوير المهني؛ و/plc?tab=… قائمة جلسات مجتمع التعلم
+  return id ? <Session id={id} /> : params.get("tab") ? <SessionList /> : <PdHub />;
 }
 
 function SessionList() {
@@ -104,7 +107,7 @@ function SessionList() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-xs text-muted">النماذج ← التطوير المهني</p>
+        <Link to="/plc" className="text-xs text-muted hover:underline">التطوير المهني ← جلسات مجتمع التعلم</Link>
         <div className="mt-0.5 flex flex-wrap items-center gap-2">
           <h1 className="text-lg font-bold text-ink">تقارير جلسات مجتمع التعلم المهني</h1>
           <HeadTag d={dept} />

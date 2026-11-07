@@ -7,6 +7,8 @@ import Loader from "../../components/Loader.jsx";
 import { useBackStep } from "../../lib/backStep.js";
 import PerformanceAdmin from "./PerformanceAdmin.jsx";
 import PageIntro from "../../components/PageIntro.jsx";
+import { loadDfileCodes } from "../../lib/dfile.js";
+import StaffRowButtons from "./StaffRowButtons.jsx";
 
 /* =====================================================================
    شواهد الأداء الوظيفي للموظفين من غير المعلمين، بنظام ملف أداء المعلم نفسه وتصميمه
@@ -60,6 +62,8 @@ function StaffList() {
   const [track, setTrack] = useState(() => { try { return sessionStorage.getItem("staffPerfTrack") || "teacher"; } catch { return "teacher"; } });
   const [picked, setPicked] = useState(null);
   const [teacherOpen, setTeacherOpen] = useState(false);   // ملف معلم مفتوح داخل تبويب المعلمين
+  const [codes, setCodes] = useState(() => new Map());       // رموز الملفات الرقمية
+  useEffect(() => { loadDfileCodes().then(setCodes).catch(() => {}); }, []);
   const pick = (k) => { setTrack(k); try { sessionStorage.setItem("staffPerfTrack", k); } catch { /* تجاهل */ } };
   useBackStep(!!picked, () => setPicked(null), "قائمة الموظفين");
 
@@ -108,15 +112,18 @@ function StaffList() {
           <p className="text-xs text-muted">النموذج: {labelOf(track).form} · الإصدار الثاني</p>
         </>
       )}
-      {track === "teacher" ? <PerformanceAdmin embedded onOpen={setTeacherOpen} /> : rows === null ? <Loader /> : list.length === 0 ? (
+      {track === "teacher" ? <PerformanceAdmin embedded onOpen={setTeacherOpen} codes={codes} /> : rows === null ? <Loader /> : list.length === 0 ? (
         <p className="card px-4 py-6 text-sm text-muted">لم تُسند هذه الوظيفة لأحد بعد.</p>
       ) : (
         <div className="card divide-y divide-line overflow-hidden">
           {list.map((r) => (
-            <button key={r.user_id} onClick={() => setPicked(r)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right hover:bg-canvas">
-              <span className="text-sm font-semibold text-ink">{r.users?.full_name ?? "—"}</span>
-              <span className="text-xs text-muted">{ADMIN_ROLE_LABEL[r.role_type] ?? r.role_type}</span>
-            </button>
+            <div key={r.user_id} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-ink">{r.users?.full_name ?? "—"}</span>
+                <span className="block text-xs text-muted">{ADMIN_ROLE_LABEL[r.role_type] ?? r.role_type}</span>
+              </span>
+              <StaffRowButtons code={codes.get(r.user_id)} onEvidence={() => setPicked(r)} />
+            </div>
           ))}
         </div>
       )}

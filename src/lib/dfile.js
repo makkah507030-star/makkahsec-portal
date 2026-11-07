@@ -30,6 +30,7 @@ export const PARTS = [
   { key: "teach", t: "التخطيط والتدريس" },
   { key: "records", t: "السجلات والنماذج" },
   { key: "lab", t: "المعمل الرقمي" },
+  { key: "sci", t: "مختبرات العلوم" },
   { key: "results", t: "النتائج" },
   { key: "assess", t: "التقويم" },
   { key: "growth", t: "التطوير المهني" },
@@ -174,6 +175,13 @@ export async function loadDfileLab(code) {
   return error ? null : data;
 }
 
+/** قسم مختبرات العلوم (supabase/dfile_sci.sql) بكود الملف؛ null قبل تشغيل الملف أو بلا عمل في المختبر */
+export async function loadDfileSci(code) {
+  if (!code) return null;
+  const { data, error } = await supabase.rpc("dfile_sci", { p_code: code });
+  return error ? null : data;
+}
+
 export async function loadDfileData(uid) {
   const { data, error } = await supabase.rpc("dfile_data", { p_uid: uid });
   if (error) throw error;
@@ -275,3 +283,18 @@ const GRADE = { 1: "الأول الثانوي", 2: "الثاني الثانوي"
 /* اسم المادة كما في الجدول، ومعه الصف إن لم يكن في الاسم رقم يدل عليه */
 export const courseLabel = (c) => (/\d/.test(c.subject) ? c.subject : `${c.subject} (${GRADE[c.grade] ?? ""})`);
 export const subjectsOf = (d) => [...new Set((d?.courses ?? []).map(courseLabel))];
+
+/* رموز الملفات الرقمية لكل الموظفين (المعلم، ومحضر المعمل، والوكيل والموجه ومحضر العلوم): معرّف المستخدم ← رمزه.
+   للمدير والدعم الفني (سياسات القراءة)، ويُستثنى الملف الموقوف. يستعمله «شواهد أداء الموظفين» لزر الملف الرقمي. */
+export async function loadDfileCodes() {
+  const pick = (r) => !r.disabled_at;
+  const [t, l, s] = await Promise.all([
+    supabase.from("teacher_dfiles").select("teacher_user_id, code, disabled_at"),
+    supabase.from("lab_dfiles").select("*"),
+    supabase.from("staff_dfiles").select("*"),
+  ]);
+  const m = new Map();
+  (t.data ?? []).filter(pick).forEach((r) => m.set(r.teacher_user_id, r.code));
+  [...(l.data ?? []), ...(s.data ?? [])].filter(pick).forEach((r) => { if (!m.has(r.user_id)) m.set(r.user_id, r.code); });
+  return m;
+}

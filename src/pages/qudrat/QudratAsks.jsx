@@ -4,10 +4,11 @@ import { Link } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { fmtHijri } from "../../lib/dates";
 import Loader from "../../components/Loader.jsx";
-import { CMP, SECS, SKILLS, loadBank } from "../../qudrat-content/index.js";
+import { CMP, SECS, SKILLS, loadBank, fromRow } from "../../qudrat-content/index.js";
 import { LETTERS, Stem } from "./shared.jsx";
 import { VoicePlayer, VoiceRecorder, uploadVoice } from "../../components/Voice.jsx";
 import { friendlyError } from "../../lib/friendlyError.js";
+import { useSession } from "../../lib/session.jsx";
 
 /* =====================================================================
    أسئلة الطلاب في مركز التدريب (القدرات): يرى المعلم ما وصله من طلاب فصوله
@@ -18,6 +19,7 @@ import { friendlyError } from "../../lib/friendlyError.js";
    ===================================================================== */
 
 export default function QudratAsks() {
+  const { effectiveRole } = useSession();
   const [rows, setRows] = useState(null);
   const [names, setNames] = useState({});
   const [bank, setBank] = useState({});
@@ -30,7 +32,10 @@ export default function QudratAsks() {
       loadBank(),
     ]);
     if (error) setErr(/qudrat_asks/.test(error.message) ? "الخدمة غير مفعّلة بعد: يلزم تشغيل ملفي supabase/qudrat_3.sql و qudrat_4.sql." : error.message);
-    setBank(Object.fromEntries(official.map((q) => [q.key, q])));
+    // أسئلة المعلمين (t:<id>) من جدولها، لتظهر بتفاصيلها كالأسئلة الرسمية
+    const tq = [...new Set((data ?? []).map((r) => r.qkey).filter((k) => k?.startsWith("t:")).map((k) => k.slice(2)))];
+    const { data: own } = tq.length ? await supabase.from("qudrat_questions").select("*").in("id", tq) : { data: [] };
+    setBank(Object.fromEntries([...official, ...(own ?? []).map(fromRow)].map((q) => [q.key, q])));
     const sids = [...new Set((data ?? []).map((r) => r.student_id).filter(Boolean))];
     const tids = [...new Set((data ?? []).map((r) => r.teacher_id).filter(Boolean))];
     const [{ data: ss }, { data: ts }] = await Promise.all([
@@ -51,7 +56,7 @@ export default function QudratAsks() {
   return (
     <div className="space-y-4">
       <div>
-        <Link to="/qudrat" className="text-xs font-semibold text-mint-deep">مركز التدريب</Link>
+        {effectiveRole === "admin" && <Link to="/qudrat" className="text-xs font-semibold text-mint-deep">مركز التدريب</Link>}
         <h1 className="text-lg font-bold text-ink">أسئلة الطلاب</h1>
         <p className="mt-1 text-sm text-muted">ما سأل عنه طلابك في تدريب القدرات، مع السؤال الأصلي وطريقة حله. ردّك يصل إلى الطالب بإشعار.</p>
       </div>
@@ -73,7 +78,7 @@ export default function QudratAsks() {
 }
 
 function AskCard({ r, st, teacher, q, onReplied }) {
-  const [show, setShow] = useState(false);
+  const [show, setShow] = useState(true);
   const [text, setText] = useState("");
   const [voice, setVoice] = useState(null);   // { blob, secs, ext }
   const [busy, setBusy] = useState(false);
@@ -102,18 +107,42 @@ function AskCard({ r, st, teacher, q, onReplied }) {
       {(q || r.q_text) && (
         <div className="rounded-sm2 bg-canvas px-3 py-2">
           <button className="flex w-full justify-between text-right text-xs font-semibold text-muted" onClick={() => setShow((x) => !x)}>
-            <span className="line-clamp-1">السؤال: {q?.q ?? r.q_text}</span><span className="shrink-0 text-mint-deep">{show ? "إخفاء" : "عرض"}</span>
+            <span className="line-clamp-1">{show ? "السؤال كما ظهر للطالب" : `السؤال: ${q?.q ?? r.q_text}`}</span><span className="shrink-0 text-mint-deep">{show ? "إخفاء" : "عرض"}</span>
           </button>
           {show && q && (
-            <div className="mt-2 space-y-2 text-sm">
+            <div className="mt-2 space-y-2.5 text-sm">
+              {q.passage && (
+                <div className="rounded-sm2 border border-line bg-white px-3 py-2 leading-loose text-ink">
+                  <p className="text-xs font-semibold text-muted">{q.passage.title ? `القطعة: ${q.passage.title}` : "المعطيات"}</p>
+                  {q.passage.text.map((t, i) => <p key={i}>{t}</p>)}
+                  {q.passage.img && <img src={q.passage.img} alt="شكل المعطيات" className="mx-auto mt-2 max-h-72 rounded-sm2 bg-white p-2" />}
+                </div>
+              )}
               <Stem q={q} />
-              <p><span className="text-muted">الإجابة الصحيحة: </span><b className="text-present">({LETTERS[q.a]}) {opts[q.a]}</b></p>
+              {/* الخيارات الأربعة: الصحيحة بالأخضر، واختيار الطالب الخاطئ بالأحمر */}
+              <div className="grid gap-1.5">
+                {opts.map((o, k) => {
+                  const right = k === q.a, mine = k === r.picked;
+                  return (
+                    <div key={k} className={`flex items-center gap-2.5 rounded-sm2 border-2 px-3 py-2 ${right ? "border-present bg-present/10" : mine ? "border-absent bg-absent/10" : "border-line bg-white"}`}>
+                      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold ${right ? "bg-present text-white" : mine ? "bg-absent text-white" : "bg-canvas text-ink"}`}>{LETTERS[k]}</span>
+                      <span className="flex-1 text-ink">{o}</span>
+                      {right && <span className="text-xs font-semibold text-present">الصحيحة</span>}
+                      {mine && <span className={`text-xs font-semibold ${right ? "text-present" : "text-absent"}`}>اختيار الطالب</span>}
+                    </div>
+                  );
+                })}
+              </div>
+              {r.picked == null && <p className="text-xs text-faint">لم يُسجَّل اختيار الطالب (سؤال أُرسل قبل هذه الميزة).</p>}
+              {q.hint && <p className="leading-loose text-ink"><b className="text-mint-deep">التلميح: </b>{q.hint}</p>}
               {q.method && <p className="leading-loose text-ink"><b className="text-mint-deep">طريقة الحل في البنك: </b>{q.method}</p>}
+              <p className="text-[11px] text-faint">{q.setTitle}{q.n ? ` · السؤال ${q.n}` : ""}</p>
             </div>
           )}
+          {show && !q && r.q_text && <p className="mt-2 whitespace-pre-wrap text-sm leading-loose text-ink">{r.q_text}</p>}
         </div>
       )}
-      <p className="text-[15px] leading-relaxed text-ink">{r.body}</p>
+      <p className="text-[15px] leading-relaxed text-ink"><b className="text-muted">استفسار الطالب: </b>{r.body}</p>
       {r.replied_at ? (
         <div className="space-y-2 rounded-sm2 bg-mint-tint px-3 py-2 text-sm leading-relaxed text-ink">
           {r.reply && <p><b className="text-mint-deep">الرد: </b>{r.reply}</p>}

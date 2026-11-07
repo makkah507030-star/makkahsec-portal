@@ -238,7 +238,7 @@ function MockResult({ qs, row, answers, prev, saveErr, onExit }) {
                     <b className={ok ? "text-present" : "text-absent"}>{mine == null ? "لم تُجب" : `(${LETTERS[mine]}) ${opts[mine]}`}</b></p>
                   {!ok && <p className="text-sm"><span className="text-muted">الصحيحة: </span><b className="text-present">({LETTERS[q.a]}) {opts[q.a]}</b></p>}
                   {q.method && <p className="rounded-sm2 bg-canvas px-3 py-2 text-sm leading-loose text-ink"><b className="text-mint-deep">طريقة الحل: </b>{q.method}</p>}
-                  <AskButton q={q} />
+                  <AskButton q={q} picked={mine ?? null} />
                 </div>
               )}
             </div>

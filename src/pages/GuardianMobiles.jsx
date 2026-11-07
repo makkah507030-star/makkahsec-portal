@@ -9,6 +9,7 @@ import { useNotice } from "../lib/useNotice.js";
 import { friendlyError } from "../lib/friendlyError.js";
 import Loader from "../components/Loader.jsx";
 import PageIntro from "../components/PageIntro.jsx";
+import { normMobile } from "../lib/mobile.js";
 
 const dmy = (ts) => (ts ? new Date(ts).toLocaleDateString("ar-SA-u-nu-latn-ca-gregory", { day: "numeric", month: "numeric", year: "numeric", timeZone: "Asia/Riyadh" }) : "");
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
@@ -67,7 +68,7 @@ export default function GuardianMobiles() {
   }, [rows, grade]);
 
   const setMobile = async (r) => {
-    const { error } = await supabase.rpc("gm_admin_set", { p_guardian: r.guardian_id, p_mobile: val });
+    const { error } = await supabase.rpc("gm_admin_set", { p_guardian: r.guardian_id, p_mobile: normMobile(val) });
     if (error) { setMsg({ ok: false, text: friendlyError(error.message) }); return; }
     setEditing(null); setVal(""); setMsg({ ok: true, text: "حُفظ الرقم وتأكد. حدّثه في نور يدويًا ثم اضغط «حُدّث في نور»." });
     load();
@@ -154,7 +155,7 @@ export default function GuardianMobiles() {
                 )}
                 {editing === r.student_id && (
                   <div className="flex flex-wrap gap-2">
-                    <input className="field w-44 py-1 text-sm" dir="ltr" inputMode="numeric" placeholder="05xxxxxxxx" value={val} onChange={(e) => setVal(e.target.value)} />
+                    <input className="field w-44 py-1 text-sm" dir="ltr" inputMode="tel" placeholder="05xxxxxxxx" value={val} onChange={(e) => setVal(e.target.value)} />
                     <button type="button" className="btn-primary px-4 py-1 text-xs" onClick={() => setMobile(r)}>حفظ بعد التأكد هاتفيًا</button>
                     <button type="button" className="btn-ghost px-3 py-1 text-xs" onClick={() => setEditing(null)}>إلغاء</button>
                   </div>

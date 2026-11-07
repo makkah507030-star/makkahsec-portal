@@ -24,7 +24,7 @@ const TABS = [
   { key: "booking", label: "حجز المختبر" },
   { key: "plan", label: "الخطة الفصلية" },
   { key: "runs", label: "سجل التنفيذ" },
-  { key: "inventory", label: "العهدة" },
+  { key: "inventory", label: "العهدة", manager: true },   // للمحضر (ومتابعيه)، لا للمعلمين
   { key: "reports", label: "التقارير", manager: true },
 ];
 const pill = (on) => `rounded-pill px-3.5 py-1.5 text-[13px] font-semibold ${on ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted"}`;
@@ -104,7 +104,7 @@ export default function ScienceLabs() {
           {tab === "booking" && <SciBooking lab={lab} exps={exps} classes={classes} myTeacher={myTeacher} isManager={isManager} canBook={canBook} />}
           {tab === "plan" && <SciPlan key={lab} lab={lab} exps={exps} isManager={isManager} onChanged={loadExps} onPrint={print.plan} />}
           {tab === "runs" && <SciRuns key={lab} lab={lab} exps={exps} classes={classes} myTeacher={myTeacher} isManager={isManager} onPrint={print.runs} />}
-          {tab === "inventory" && <SciInventory key={lab} lab={lab} isManager={isManager} onPrint={print.inventory} />}
+          {tab === "inventory" && isManager && <SciInventory key={lab} lab={lab} isManager={isManager} onPrint={print.inventory} />}
           {tab === "reports" && isManager && <SciReports key={lab} lab={lab} exps={exps} classes={classes} onPrint={setDoc} prep={prep} />}
         </>
       )}

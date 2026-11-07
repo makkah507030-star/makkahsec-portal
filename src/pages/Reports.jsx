@@ -12,6 +12,10 @@ import Loader from "../components/Loader.jsx";
 import { countAr } from "../lib/arabicCount.js";
 import { byName } from "../lib/sortAr.js";
 
+// الطالب المطوي قيده (أو المنقطع بعد الطي) لا يدخل التقارير: سجلاته تبقى في القاعدة ولا تُعرض، ومنها ما لا
+// يقرؤه المعلم أصلًا فيظهر بلا اسم
+const activeAtt = (rows) => (rows ?? []).filter((r) => r.students && r.students.is_active !== false);
+
 const TAB_GROUPS = [
   {
     title: "تقارير اليوم الدراسي",
@@ -168,13 +172,13 @@ export function DailyReport({ scopeIds }) {
         const data = await fetchAllPaged(() => {
           let q = supabase
             .from("class_attendance")
-            .select("student_id, status, students(full_name, national_id), schedule(period_no, classes(class_no, grade), subjects(name))")
+            .select("student_id, status, students(full_name, national_id, is_active), schedule(period_no, classes(class_no, grade), subjects(name))")
             .eq("attend_date", date)
             .in("status", NON_PRESENT)
             .order("id", { ascending: true });
           return applyScope(q, scopeIds);
         });
-        setRows(data);
+        setRows(activeAtt(data));
       } catch (e) { console.error("DailyReport:", e); setRows([]); }
     })();
   }, [date, scopeIds]);
@@ -487,14 +491,14 @@ export function PeriodReport({ scopeIds }) {
         const data = await fetchAllPaged(() => {
           let q = supabase
             .from("class_attendance")
-            .select("student_id, status, students(full_name, national_id), schedule(classes(class_no, grade))")
+            .select("student_id, status, students(full_name, national_id, is_active), schedule(classes(class_no, grade))")
             .gte("attend_date", from)
             .lte("attend_date", to)
             .in("status", NON_PRESENT)
             .order("id", { ascending: true });
           return applyScope(q, scopeIds);
         });
-        setRows(data);
+        setRows(activeAtt(data));
       } catch (e) { console.error("PeriodReport:", e); setRows([]); }
     })();
   }, [from, to, scopeIds]);
@@ -823,7 +827,7 @@ export function AbsenceDaysReport({ scopeIds }) {
         data = await fetchAllPaged(() => {
           let q = supabase
             .from("class_attendance")
-            .select("student_id, attend_date, status, students(full_name, national_id), schedule(classes(class_no, grade))")
+            .select("student_id, attend_date, status, students(full_name, national_id, is_active), schedule(classes(class_no, grade))")
             .gte("attend_date", from)
             .lte("attend_date", to)
             .order("id", { ascending: true });
@@ -834,7 +838,7 @@ export function AbsenceDaysReport({ scopeIds }) {
       // تجميع: لكل طالب ولكل يوم — هل غاب كل حصصه؟
       const byStudent = new Map();
 
-      (data ?? []).forEach((r) => {
+      activeAtt(data).forEach((r) => {
         const id = r.student_id;
         if (!byStudent.has(id)) {
           byStudent.set(id, {
@@ -1082,7 +1086,7 @@ export function TeacherSheetsReport() {
         pageReqs.push(
           supabase
             .from("class_attendance")
-            .select("schedule_id, student_id, status, recorded_by, students(full_name, national_id)")
+            .select("schedule_id, student_id, status, recorded_by, students(full_name, national_id, is_active)")
             .eq("attend_date", date)
             .order("schedule_id", { ascending: true })
             .range(i * PAGE, i * PAGE + PAGE - 1)
@@ -1096,6 +1100,7 @@ export function TeacherSheetsReport() {
         list = list.concat(p.data ?? []);
       }
       if (fetchErr) { console.error("teacher_sheets:", fetchErr); setErr(fetchErr.message); setRows({ att: [], meta: {}, recorders: {} }); return; }
+      list = activeAtt(list);
       if (!list.length) { setRows({ att: [], meta: {}, recorders: {} }); return; }
 
       // استعلاما بيانات الحصص وأسماء من رصد فعليًا — بالتوازي

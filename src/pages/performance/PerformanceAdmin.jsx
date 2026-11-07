@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { activeYear, loadAutoCounts, loadPerfReference } from "../../lib/performance";
 import { useSession } from "../../lib/session.jsx";
 import PerformanceFile from "../../components/PerformanceFile.jsx";
+import StaffRowButtons from "./StaffRowButtons.jsx";
 import { ReviewEditor } from "../../components/PerformanceReview.jsx";
 import Loader from "../../components/Loader.jsx";
 import { byName } from "../../lib/sortAr.js";
@@ -17,7 +18,7 @@ import PageIntro from "../../components/PageIntro.jsx";
    ===================================================================== */
 
 /* embedded: داخل «شواهد أداء الموظفين» (StaffPerformance) تبويبًا للمعلمين؛ onOpen يُبلغها بفتح ملف معلم لتُخفي رأسها */
-export default function PerformanceAdmin({ embedded = false, onOpen }) {
+export default function PerformanceAdmin({ embedded = false, onOpen, codes }) {
   const { adminRoles } = useSession();
   const principal = adminRoles.includes("principal");
   const [fileTab, setFileTab] = useState("file");
@@ -102,9 +103,8 @@ export default function PerformanceAdmin({ embedded = false, onOpen }) {
         {shown.map((t) => {
           const ok = counts[t.user_id] ?? 0;
           return (
-            <button key={t.user_id} onClick={() => setPicked(t)}
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-right hover:bg-canvas">
-              <span className="min-w-0">
+            <div key={t.user_id} className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <span className="min-w-0 flex-1">
                 <span className="block font-medium text-ink">{t.full_name}</span>
                 {t.specialization && <span className="block text-xs text-muted">{t.specialization}</span>}
               </span>
@@ -112,7 +112,9 @@ export default function PerformanceAdmin({ embedded = false, onOpen }) {
                 <span className="chip w-24 justify-center bg-mint-light text-mint-deep">متوفر <span className="num mr-1">{ok}</span></span>
                 <span className="chip w-28 justify-center bg-warning-light text-warning">غير متوفر <span className="num mr-1">{total - ok}</span></span>
               </span>
-            </button>
+              {codes ? <StaffRowButtons code={codes.get(t.user_id)} onEvidence={() => setPicked(t)} />
+                : <button className="rounded-pill bg-mint-deep px-3 py-1.5 text-xs font-semibold text-white" onClick={() => setPicked(t)}>الشواهد</button>}
+            </div>
           );
         })}
         {shown.length === 0 && <p className="px-4 py-3 text-sm text-faint">لا نتائج.</p>}

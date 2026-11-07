@@ -26,7 +26,8 @@ const Block = ({ title, sub, children }) => (
 );
 
 export default function MyDfile() {
-  const { session } = useSession();
+  const { session, adminRoles } = useSession();
+  const labPrep = (adminRoles ?? []).includes("computer_lab");   // خيار مؤلف دروس المعمل لمحضر المعمل وحده
   const uid = session.user.id;
   const [s, setS] = useState(undefined);       // undefined: يُحمَّل، null: لم يُفعَّل
   const [d, setD] = useState(null);
@@ -143,6 +144,37 @@ export default function MyDfile() {
             </button>
           ))}
         </div>
+      </Block>
+
+      <Block title="ماذا يرى الزائر؟" sub="الأقسام غير المختارة لا تظهر في ملفك.">
+        <div className="flex flex-wrap gap-2">
+          {PARTS.map((p) => (
+            <label key={p.key} className={`chip cursor-pointer gap-1.5 border ${hidden.has(p.key) ? "border-line bg-canvas text-muted line-through" : "border-mint-deep/40 bg-mint-tint text-mint-deep"}`}>
+              <input type="checkbox" className="accent-mint-deep" checked={!hidden.has(p.key)}
+                     onChange={(e) => save({ hidden: e.target.checked ? [...hidden].filter((k) => k !== p.key) : [...hidden, p.key] })} />
+              {p.t}
+            </label>
+          ))}
+        </div>
+        {"lab_author" in s && labPrep && (
+          <label className="flex cursor-pointer items-start gap-2 rounded-sm2 border border-line bg-white px-3 py-2 text-sm text-ink">
+            <input type="checkbox" className="mt-1 accent-mint-deep" checked={!!s.lab_author} onChange={(e) => save({ lab_author: e.target.checked })} />
+            <span>أنا من أعدّ دروس المعمل الرقمي في البوابة
+              <span className="block text-[11.5px] text-muted">يعرض قسم «المعمل الرقمي» مكتبة الدروس التفاعلية بمحطاتها وتدريباتها باسمك، مع حصصك ونتائجها في المعمل.</span></span>
+          </label>
+        )}
+        {!(d?.quizzes?.length) && (
+          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
+            نتائج طلابك لا تظهر لأنه لا اختبارات لك هذا العام. أضف اختبارك من «اختباراتي» ← «اختبار من خارج البوابة» وارصد درجات طلابك لتظهر.
+          </p>
+        )}
+        {d && !(d.docs?.length) && !hidden.has("docs") && (
+          // القسم يختفي عن الزائر ما دام فارغًا، فيُنبَّه المعلم وحده إلى سبب غيابه وطريقة رفعها
+          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
+            «الشواهد من خارج البوابة» لا تظهر في ملفك لأنك لم ترفع شاهدًا بملف هذا العام. ارفعها من{" "}
+            <Link to="/my-performance" className="font-semibold underline">ملف الأداء</Link> ← العنصر ← «رفع شاهد» (PDF أو صورة) لتظهر للزائر.
+          </p>
+        )}
       </Block>
 
       {ops.length > 0 && (
@@ -263,37 +295,6 @@ export default function MyDfile() {
             <button className="btn-ghost" type="submit">إضافة</button>
           </form>
         </div>
-      </Block>
-
-      <Block title="ماذا يرى الزائر؟" sub="الأقسام غير المختارة لا تظهر في ملفك.">
-        <div className="flex flex-wrap gap-2">
-          {PARTS.map((p) => (
-            <label key={p.key} className={`chip cursor-pointer gap-1.5 border ${hidden.has(p.key) ? "border-line bg-canvas text-muted line-through" : "border-mint-deep/40 bg-mint-tint text-mint-deep"}`}>
-              <input type="checkbox" className="accent-mint-deep" checked={!hidden.has(p.key)}
-                     onChange={(e) => save({ hidden: e.target.checked ? [...hidden].filter((k) => k !== p.key) : [...hidden, p.key] })} />
-              {p.t}
-            </label>
-          ))}
-        </div>
-        {"lab_author" in s && (
-          <label className="flex cursor-pointer items-start gap-2 rounded-sm2 border border-line bg-white px-3 py-2 text-sm text-ink">
-            <input type="checkbox" className="mt-1 accent-mint-deep" checked={!!s.lab_author} onChange={(e) => save({ lab_author: e.target.checked })} />
-            <span>أنا من أعدّ دروس المعمل الرقمي في البوابة
-              <span className="block text-[11.5px] text-muted">يعرض قسم «المعمل الرقمي» مكتبة الدروس التفاعلية بمحطاتها وتدريباتها باسمك، مع حصصك ونتائجها في المعمل.</span></span>
-          </label>
-        )}
-        {!(d?.quizzes?.length) && (
-          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
-            نتائج طلابك لا تظهر لأنه لا اختبارات لك هذا العام. أضف اختبارك من «اختباراتي» ← «اختبار من خارج البوابة» وارصد درجات طلابك لتظهر.
-          </p>
-        )}
-        {d && !(d.docs?.length) && !hidden.has("docs") && (
-          // القسم يختفي عن الزائر ما دام فارغًا، فيُنبَّه المعلم وحده إلى سبب غيابه وطريقة رفعها
-          <p className="rounded-sm2 bg-warning-light px-3 py-2 text-sm leading-relaxed text-warning">
-            «الشواهد من خارج البوابة» لا تظهر في ملفك لأنك لم ترفع شاهدًا بملف هذا العام. ارفعها من{" "}
-            <Link to="/my-performance" className="font-semibold underline">ملف الأداء</Link> ← العنصر ← «رفع شاهد» (PDF أو صورة) لتظهر للزائر.
-          </p>
-        )}
       </Block>
 
       <Block title="قراءة في 30 ثانية" sub="اختر 3 جمل تظهر للزائر. تظهر هنا الجمل التي تستحقها بياناتك فقط، وأرقامها تتحدّث تلقائيًا. إن لم تختر تظهر أعلاها أولوية.">

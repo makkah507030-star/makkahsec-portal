@@ -303,7 +303,7 @@ function Practice({ round, onAnswer, onExit, onRetry }) {
                 <p className="mt-1 text-sm leading-loose text-ink">{q.method}</p>
               </div>
             )}
-            <AskButton key={q.key} q={q} />
+            <AskButton key={q.key} q={q} picked={sel} />
             {saveErr && <p className="text-xs text-absent">{saveErr}</p>}
             <button className="btn-primary w-full" onClick={next}>{i + 1 < list.length ? "السؤال التالي" : "عرض النتيجة"}</button>
           </div>
