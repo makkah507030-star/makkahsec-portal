@@ -24,12 +24,13 @@ const TABS = [
   { key: "record", label: "سجل التطبيقات" },
   { key: "booking", label: "حجز المعمل" },
   { key: "seating", label: "خريطة الجلوس" },
-  { key: "devices", label: "سجل الأجهزة" },
+  // سجل الأجهزة وقواعد السلامة واستوديو المعمل من أعمال المحضر (ومتابعيه)، لا للمعلمين
+  { key: "devices", label: "سجل الأجهزة", manager: true },
   { key: "tickets", label: "البلاغات" },
-  { key: "rules", label: "قواعد السلامة" },
+  { key: "rules", label: "قواعد السلامة", manager: true },
   { key: "usage", label: "سجل الاستخدام" },
-  // استوديو المعمل: اللوحات الإرشادية وبطاقات الأجهزة وخلفيات سطح المكتب — لمن يدير المعمل أو يحجزه
-  { key: "studio", label: "استوديو المعمل", studio: true },
+  // استوديو المعمل: اللوحات الإرشادية وبطاقات الأجهزة وخلفيات سطح المكتب — لمن يدير المعمل
+  { key: "studio", label: "استوديو المعمل", manager: true },
   // مركز اختبارات التقنية الرقمية: النهائي النظري والعملي وبنك الأسئلة (exams/LabExams.jsx)
   { key: "exams", label: "مركز الاختبارات", studio: true },
 ];
@@ -72,7 +73,7 @@ export default function Lab() {
       <div>
         <h1 className="text-lg font-bold text-ink">معمل الحاسب الآلي</h1>
         <p className="mt-0.5 text-sm text-muted">
-          {isManager ? "متابعة حجوزات المعمل وحالة الأجهزة." : "احجز حصتك في المعمل، واطّلع على حالة الأجهزة."}
+          {isManager ? "متابعة حجوزات المعمل وحالة الأجهزة." : "احجز حصتك في المعمل، ونفّذ دروسه، وأبلغ عن أعطال الأجهزة."}
         </p>
       </div>
 

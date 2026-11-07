@@ -150,7 +150,7 @@ export default function LabUsage({ lab, canBook, isManager }) {
         </div>
         <div className="ms-auto flex gap-2">
           {canBook && <button type="button" className="btn-ghost py-2" onClick={() => setAdding(true)}>تسجيل استخدام بلا حجز</button>}
-          <button type="button" className="btn-primary py-2" disabled={!stats} onClick={printIt}>طباعة التقرير</button>
+          {isManager && <button type="button" className="btn-primary py-2" disabled={!stats} onClick={printIt}>طباعة التقرير</button>}
         </div>
       </div>
 

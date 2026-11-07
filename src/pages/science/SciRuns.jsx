@@ -71,7 +71,7 @@ export default function SciRuns({ lab, exps, classes, myTeacher, isManager, onPr
             {cls.map((c) => <option key={c.class_id} value={c.class_id}>فصل {c.class_no} · {c.teacher_name}</option>)}
           </select>
           {runs && <span className="text-xs text-muted">نُفّذ <b className="num text-ink">{done}</b> من <span className="num">{list.length}</span> تجربة</span>}
-          <button className="btn-primary ms-auto px-4 py-1.5 text-sm" disabled={!runs} onClick={() => onPrint(course, klass)}>طباعة السجل</button>
+          {isManager && <button className="btn-primary ms-auto px-4 py-1.5 text-sm" disabled={!runs} onClick={() => onPrint(course, klass)}>طباعة السجل</button>}
         </div>
       )}
       {msg && <p className={`rounded-sm2 px-3 py-2 text-sm ${msg.ok ? "bg-present/10 text-present" : "bg-danger-light text-danger"}`}>{msg.text}</p>}

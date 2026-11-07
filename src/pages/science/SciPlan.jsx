@@ -42,7 +42,7 @@ export default function SciPlan({ lab, exps, isManager, onChanged, onPrint }) {
         {courses.map((c) => <button key={c} className={pill(c === course)} onClick={() => { setCourse(c); setEdit(null); }}>{c}</button>)}
         <span className="ms-auto flex gap-2">
           {isManager && !edit && <button className="btn-ghost px-3 py-1.5 text-sm" onClick={() => setEdit(blank)}>+ تجربة</button>}
-          <button className="btn-primary px-4 py-1.5 text-sm" onClick={() => onPrint(course)}>طباعة الخطة</button>
+          {isManager && <button className="btn-primary px-4 py-1.5 text-sm" onClick={() => onPrint(course)}>طباعة الخطة</button>}
         </span>
       </div>
       <p className="text-xs text-muted">
