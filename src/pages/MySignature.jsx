@@ -55,7 +55,7 @@ export default function MySignature() {
 
   const upload = async (file) => {
     if (file.size > MAX_KB * 1024) {
-      setMsg({ ok: false, text: `حجم التوقيع بعد التحسين يتجاوز ${MAX_KB} كيلوبايت. اقتصّ الصورة حول التوقيع وأعد المحاولة.` });
+      setMsg({ ok: false, text: `حجم التوقيع بعد التحسين يتجاوز ${MAX_KB} كيلوبايت. قُصّ الصورة ليظهر التوقيع وحده، وأعد المحاولة.` });
       setRaw(null); return;
     }
     setBusy(true); setMsg(null);

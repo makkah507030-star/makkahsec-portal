@@ -10,11 +10,14 @@ import "./guide.css";
 const g = GUIDES[new URLSearchParams(location.search).get("g") ?? "teacher"];
 const img = (n) => `/img/${g.key}/${n}.png`;
 const FIRST = "الدخول والحساب";
-const list = PROCS.filter((p) => p.who.includes("الجميع") || p.who.some((w) => g.who.includes(w)));
+// إجراءات الفئة وحدها: ما يخص أدوارًا أو عضويات أخرى يُستبعد (skip وskipCats)، ونص الإجراء قد يُكيَّف للفئة (edit)
+const list = PROCS.filter((p) => p.who.includes("الجميع") || p.who.some((w) => g.who.includes(w)))
+  .filter((p) => !(g.skipCats ?? []).includes(p.cat) && !(g.skip ?? []).includes(p.title))
+  .map((p) => { const e = g.edit?.[p.title]; return e ? { ...p, ...(typeof e === "function" ? e(p) : e) } : p; });
 const rank = (c) => { const i = (g.order ?? [FIRST]).indexOf(c); return i < 0 ? 99 : i; };
 const cats = [...new Set(list.map((p) => p.cat))].sort((a, b) => rank(a) - rank(b));
 const chapters = cats.map((c) => ({ c, items: list.filter((p) => p.cat === c) }));
-window.__list = chapters.map((c) => c.c + ": " + c.items.map((p) => p.title).join(" / "));
+window.__list = chapters.map((c) => "## " + c.c + "\n" + c.items.map((p) => `# ${p.title} [${p.path}]\n` + p.steps.map((x) => "- " + x).join("\n") + (p.note ? "\nملاحظة: " + p.note : "") + (p.warn ? "\nتنبيه: " + p.warn : "")).join("\n"));
 const today = new Intl.DateTimeFormat("ar-SA-u-ca-islamic-umalqura-nu-latn", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
 
 function Decor() {

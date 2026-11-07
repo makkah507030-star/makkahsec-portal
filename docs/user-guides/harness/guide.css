@@ -67,12 +67,12 @@ h2.sec::after { content: ""; display: block; width: 18mm; height: 1.2mm; border-
 .pn { font-size: 8.5pt; font-weight: 700; color: var(--acc); background: var(--tint); border-radius: 99px; padding: 0 2.2mm; direction: ltr; }
 .proc h3 { font-size: 12pt; line-height: 1.5; }
 .path { font-size: 9pt; color: var(--deep); background: var(--tint); border-radius: 2.5mm; padding: 1mm 3mm; margin-bottom: 2mm; display: inline-block; }
-.path b { color: var(--acc); margin-inline-end: 2mm; }
+.path b { color: var(--acc); margin-inline-end: 2mm; display: inline-block; }
 .steps { list-style: none; display: grid; gap: 1.4mm; }
 .steps li { display: flex; gap: 2.5mm; align-items: flex-start; }
 .steps li i { font-style: normal; flex: none; width: 5.6mm; height: 5.6mm; margin-top: .6mm; border-radius: 50%; border: 1.2px solid var(--acc); color: var(--acc); font-size: 8pt; font-weight: 700; display: grid; place-items: center; }
 .note, .warn { margin-top: 2.5mm; font-size: 9.2pt; border-radius: 3mm; padding: 1.8mm 3mm; }
-.note { background: #F1F8F4; color: #33493E; } .note b { color: var(--acc); margin-inline-end: 2mm; }
-.warn { background: var(--goldbg); color: #6E5420; } .warn b { color: var(--gold); margin-inline-end: 2mm; }
+.note { background: #F1F8F4; color: #33493E; } .note b { color: var(--acc); margin-inline-end: 2mm; display: inline-block; }
+.warn { background: var(--goldbg); color: #6E5420; } .warn b { color: var(--gold); margin-inline-end: 2mm; display: inline-block; }
 .d { color: var(--sub); }
 .start .proc { min-height: 0; }
