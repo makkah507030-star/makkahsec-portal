@@ -136,9 +136,6 @@ export const ADMIN_GROUPS = [
     title: "المعامل والمختبرات",
     items: [
       { to: "/lab", label: "معمل الحاسب الآلي", roles: ["computer_lab", "principal", "tech_support"], icon: "monitor", kw: "حجز اجهزة اعطال" },
-      // للمحضر وحده: المدير والدعم الفني يطّلعون على ملفه من «شواهد أداء الموظفين»
-      { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
-      { to: "/my-lab-dfile", label: "ملف المحضر الرقمي", roles: ["computer_lab"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف محضر" },
       { to: "/science-labs", label: "مختبرات العلوم", roles: ["science_labs", "science_labs_2", "science_labs_3", "principal", "tech_support", "deputy_school"], icon: "flask", kw: "مختبر احياء كيمياء فيزياء تجارب عهدة حجز" },
     ],
   },
@@ -156,6 +153,9 @@ export const ADMIN_GROUPS = [
   {
     title: "الأداء الوظيفي",
     items: [
+      // محضر معمل الحاسب: شواهده وملفه الرقمي هنا لا في المعامل (المدير والدعم الفني يطّلعون من «شواهد أداء الموظفين»)
+      { to: "/lab-performance", label: "شواهد أداء محضر المعمل", roles: ["computer_lab"], icon: "award", kw: "شواهد تقييم أداء محضر مختبر" },
+      { to: "/my-lab-dfile", label: "ملف المحضر الرقمي", roles: ["computer_lab"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف محضر" },
       { to: "/staff-performance", label: "شواهد أداء الموظفين", roles: ["principal", "tech_support"], icon: "award", kw: "شواهد تقييم أداء معلم وكيل موجه محضر رائد نشاط" },
       { to: "/my-staff-performance", label: "شواهد أدائي الوظيفي", roles: ["principal", "deputy_academic", "deputy_school", "deputy_students", "counselor_1", "counselor_2", "counselor_3", "science_labs", "science_labs_2", "science_labs_3", "activity_leader"], icon: "award", kw: "شواهد تقييم أداء وكيل موجه محضر رائد" },
       { to: "/my-staff-dfile", label: "ملفي الرقمي", roles: ["principal", "deputy_academic", "deputy_school", "deputy_students", "counselor_1", "counselor_2", "counselor_3", "science_labs", "science_labs_2", "science_labs_3"], icon: "idcard", kw: "ملف رقمي رمز qr زائر مشرف وكيل موجه محضر" },
@@ -235,16 +235,20 @@ export const ADMIN_GROUPS = [
 export const SECTIONS = [
   { key: "students", title: "الطلاب", icon: "users", hint: "شؤون الطلاب والسلوك والمواظبة والتوجيه",
     groups: ["شؤون الطلاب", "السلوك والمواظبة", "التوجيه الطلابي"] },
-  { key: "academic", title: "الشؤون التعليمية", icon: "book", hint: "الجداول والرصد والاختبارات والأنشطة والمعامل",
-    groups: ["الشؤون التعليمية", "المعامل والمختبرات"] },
+  { key: "academic", title: "الشؤون التعليمية", icon: "book", hint: "الجداول والرصد والاختبارات والأنشطة",
+    groups: ["الشؤون التعليمية"] },
+  { key: "labs", title: "المعامل والمختبرات", icon: "monitor", hint: "معمل الحاسب الآلي ومختبرات العلوم",
+    groups: ["المعامل والمختبرات"] },
   { key: "achievement", title: "التحصيل الدراسي", icon: "chart", hint: "تحليل النتائج والملاحظات والخطط العلاجية واختبارات قياس",
     groups: ["التحصيل الدراسي"] },
   { key: "accreditation", title: "التقويم والاعتماد", icon: "award", hint: "لجنة التميز والتقويم الذاتي والخارجي وخطة التحسين وشواهد المؤشرات",
     groups: ["التقويم والاعتماد المدرسي"] },
   { key: "culture", title: "الثقافة المؤسسية", icon: "heart", hint: "سفير الثقافة وبرامج الثقافة المؤسسية وقيمنا ومشاركة الأفكار",
     groups: ["الثقافة المؤسسية"] },
-  { key: "forms", title: "النماذج والأداء", icon: "certificate", hint: "النماذج والشهادات والأداء الوظيفي والتطوير المهني",
-    groups: ["النماذج", "الأداء الوظيفي"] },
+  { key: "forms", title: "النماذج", icon: "certificate", hint: "النماذج والشهادات والتعاميم والتطوير المهني",
+    groups: ["النماذج"] },
+  { key: "performance", title: "الأداء الوظيفي", icon: "award", hint: "شواهد الأداء والملف الرقمي وخطط التطوير",
+    groups: ["الأداء الوظيفي"] },
   { key: "comms", title: "التواصل والفعاليات", icon: "megaphone", hint: "الإشعارات والأخبار والأحداث والمركز الإعلامي والتصويت وبرامج الطلاب",
     groups: ["التواصل والمحتوى"] },
   { key: "settings", title: "الإعدادات والدعم الفني", icon: "sliders", hint: "بلاغات الصيانة والحسابات والصلاحيات والتقويم والاستيراد والدعم",
