@@ -24,14 +24,16 @@ const TABS = [
   { key: "record", label: "سجل التطبيقات" },
   { key: "booking", label: "حجز المعمل" },
   { key: "seating", label: "خريطة الجلوس" },
-  { key: "devices", label: "سجل الأجهزة" },
+  // سجل الأجهزة وقواعد السلامة واستوديو المعمل من أعمال المحضر (ومتابعيه)، لا للمعلمين
+  { key: "devices", label: "سجل الأجهزة", manager: true },
   { key: "tickets", label: "البلاغات" },
-  { key: "rules", label: "قواعد السلامة" },
+  { key: "rules", label: "قواعد السلامة", manager: true },
   { key: "usage", label: "سجل الاستخدام" },
-  // استوديو المعمل: اللوحات الإرشادية وبطاقات الأجهزة وخلفيات سطح المكتب — لمن يدير المعمل أو يحجزه
-  { key: "studio", label: "استوديو المعمل", studio: true },
-  // مركز اختبارات التقنية الرقمية: النهائي النظري والعملي وبنك الأسئلة (exams/LabExams.jsx)
-  { key: "exams", label: "مركز الاختبارات", studio: true },
+  // استوديو المعمل: اللوحات الإرشادية وبطاقات الأجهزة وخلفيات سطح المكتب — لمن يدير المعمل
+  { key: "studio", label: "استوديو المعمل", manager: true },
+  // مركز اختبارات التقنية الرقمية: النهائي النظري والعملي وبنك الأسئلة (exams/LabExams.jsx) — لمعلم المادة،
+  // وللدعم الفني اطلاعًا لتقديم الدعم، لا لمدير المدرسة ولا لمحضر المعمل (lab_exam_private.sql)
+  { key: "exams", label: "مركز الاختبارات", exams: true },
 ];
 
 export default function Lab() {
@@ -43,7 +45,8 @@ export default function Lab() {
   const reportSeat = /^\d+$/.test(params.get("report") ?? "") ? Number(params.get("report")) : null;
   const isManager = effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r));
   const canBook = effectiveRole === "teacher" && granted.has("computer_lab");
-  const tabs = TABS.filter((t) => (!t.manager || isManager) && (!t.studio || isManager || canBook));
+  const examSupport = effectiveRole === "admin" && adminRoles.includes("tech_support");
+  const tabs = TABS.filter((t) => (!t.manager || isManager) && (!t.studio || isManager || canBook) && (!t.exams || canBook || examSupport));
   const [tab, setTab] = useState(() =>
     reportSeat != null ? "tickets" : tabs.some((t) => t.key === params.get("tab")) ? params.get("tab") : "booking");
 
@@ -72,7 +75,7 @@ export default function Lab() {
       <div>
         <h1 className="text-lg font-bold text-ink">معمل الحاسب الآلي</h1>
         <p className="mt-0.5 text-sm text-muted">
-          {isManager ? "متابعة حجوزات المعمل وحالة الأجهزة." : "احجز حصتك في المعمل، واطّلع على حالة الأجهزة."}
+          {isManager ? "متابعة حجوزات المعمل وحالة الأجهزة." : "احجز حصتك في المعمل، ونفّذ دروسه، وأبلغ عن أعطال الأجهزة."}
         </p>
       </div>
 
@@ -107,7 +110,7 @@ export default function Lab() {
       {tab === "rules" && <LabRules key={lab} lab={lab} isManager={isManager} />}
       {tab === "usage" && <LabUsage key={lab} lab={lab} canBook={canBook} isManager={isManager} />}
       {tab === "studio" && <LabStudio key={lab} lab={lab} />}
-      {tab === "exams" && <LabExams key={lab} lab={lab} canCreate={canBook} />}
+      {tab === "exams" && <LabExams key={lab} lab={lab} canCreate={canBook} readOnly={!canBook} />}
       {tab === "tickets" && (
         <LabTickets key={lab} lab={lab} canReport={canBook || isManager} isManager={isManager}
                     reportSeat={reportSeat} onReportDone={() => reportSeat != null && setParams({}, { replace: true })} />

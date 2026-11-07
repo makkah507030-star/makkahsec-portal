@@ -7,12 +7,15 @@ import { useSession } from "../../lib/session.jsx";
 import Loader from "../../components/Loader.jsx";
 import { SECS, SKILLS } from "../../qudrat-content/index.js";
 import { friendlyError } from "../../lib/friendlyError.js";
+import { useQudratSecs } from "../../lib/qudratTeacher.js";
 
 /* =====================================================================
    أسئلة المعلمين في مركز التدريب (القدرات): المعلم يضيف أسئلة بصيغة البنك
    (نص وأربعة خيارات وتلميح وطريقة حل، وقيمتا المقارنة أو نص قطعة إن لزم)،
    فتظهر للطلاب في التدريب مع الأسئلة الرسمية. يعدّل أسئلته ويخفيها،
    والمدير ووكيل الشؤون التعليمية والدعم الفني يديرون الكل (qudrat_1.sql).
+   والمعلم هنا معلم الرياضيات أو اللغة العربية وحده (lib/qudratTeacher.js): يضيف أسئلة قسمه
+   (الكمي أو اللفظي)، ويرى أسئلته وأسئلة زملائه في القسم، ولا يرى بيانات استخدام الطلاب للمركز.
    ===================================================================== */
 
 const LETTERS = ["أ", "ب", "ج", "د"];
@@ -22,6 +25,10 @@ export default function QudratQuestions() {
   const { session, effectiveRole, adminRoles } = useSession();
   const uid = session?.user?.id;
   const manager = effectiveRole === "admin" && ["principal", "deputy_academic", "tech_support"].some((r) => adminRoles.includes(r));
+  // أقسام المعلم (الكمي/اللفظي) بمادته في جدوله؛ ولغير المعلم كل الأقسام
+  const teacherSecs = useQudratSecs(uid, effectiveRole === "teacher");
+  const secs = effectiveRole === "teacher" ? teacherSecs : Object.keys(SECS);
+  const firstSkill = (secs ?? []).length ? Object.keys(SKILLS).find((k) => secs.includes(SKILLS[k].sec)) : "arith";
   const [rows, setRows] = useState(null);
   const [names, setNames] = useState({});
   const [form, setForm] = useState(null);   // null = القائمة
@@ -41,7 +48,12 @@ export default function QudratQuestions() {
   };
   useEffect(() => { load(); }, []);
 
-  if (rows === null) return <Loader />;
+  if (rows === null || secs === null) return <Loader />;
+  if (!secs.length) {
+    return <p className="card px-4 py-8 text-center text-sm leading-relaxed text-muted">
+      إضافة الأسئلة لمركز التدريب (القدرات) لمعلم الرياضيات (القسم الكمي) ومعلم اللغة العربية (القسم اللفظي).</p>;
+  }
+  const shown = rows.filter((r) => secs.includes(r.sec));
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const isCmp = form?.skill === "compare";
 
@@ -79,7 +91,7 @@ export default function QudratQuestions() {
           <label className="block text-sm">
             <span className="text-muted">المهارة</span>
             <select className="field mt-1" value={form.skill} onChange={(e) => set("skill", e.target.value)}>
-              {Object.entries(SECS).map(([s, S]) => (
+              {Object.entries(SECS).filter(([s]) => secs.includes(s)).map(([s, S]) => (
                 <optgroup key={s} label={`القسم ${S.t}`}>
                   {Object.entries(SKILLS).filter(([, k]) => k.sec === s).map(([k, v]) => <option key={k} value={k}>{v.t}</option>)}
                 </optgroup>
@@ -143,16 +155,17 @@ export default function QudratQuestions() {
         <div>
           {effectiveRole === "admin" && <Link to="/qudrat" className="text-xs font-semibold text-mint-deep">مركز التدريب</Link>}
           <h1 className="text-lg font-bold text-ink">أسئلة المعلمين</h1>
-          <p className="mt-1 text-sm text-muted">أضف أسئلة على مهارات القدرات لتظهر لطلاب المدرسة في التدريب مع الأسئلة الرسمية.</p>
+          <p className="mt-1 text-sm text-muted">
+            أضف أسئلة على مهارات {secs.length === 1 ? `القسم ${SECS[secs[0]].t}` : "القدرات"} لتظهر لطلاب المدرسة في التدريب مع الأسئلة الرسمية.</p>
         </div>
-        <button className="btn-primary" onClick={() => setForm({ ...EMPTY })}>سؤال جديد</button>
+        <button className="btn-primary" onClick={() => setForm({ ...EMPTY, skill: firstSkill, sec: SKILLS[firstSkill].sec })}>سؤال جديد</button>
       </div>
       {err && <p className="rounded-sm2 bg-absent/10 px-3 py-2 text-sm text-absent">{err}</p>}
-      {!rows.length ? (
+      {!shown.length ? (
         <p className="card px-4 py-8 text-center text-sm text-muted">لا أسئلة بعد. ابدأ بإضافة سؤال.</p>
       ) : (
         <div className="card divide-y divide-line/60">
-          {rows.map((r) => (
+          {shown.map((r) => (
             <button key={r.id} className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 text-right hover:bg-canvas"
                     disabled={r.created_by !== uid && !manager}
                     onClick={() => setForm({ ...EMPTY, ...r, hint: r.hint ?? "", method: r.method ?? "", passage: r.passage ?? "", cmp: r.cmp ?? ["", ""] })}>

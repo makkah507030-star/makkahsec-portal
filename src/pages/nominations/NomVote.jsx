@@ -65,7 +65,7 @@ function Create({ call, apps, say, by, onDone }) {
     })));
     setBusy(false);
     if (e2) { say(false, e2.message); return; }
-    say(true, `فُتح التصويت لـ${list.length} مرشحين حتى ${fmtDateTime(new Date(closes))}، ويظهر للطلاب في «التصويت والاستطلاعات» وفي رئيسيتهم.`);
+    say(true, `فُتح التصويت لـ${list.length} مرشحين حتى ${fmtDateTime(new Date(closes))}، ويظهر للطلاب في «التصويت والاستطلاعات» وفي صفحتهم الرئيسية.`);
     onDone();
   };
 
