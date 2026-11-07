@@ -17,7 +17,7 @@ import ExamPage from "./ExamPage.jsx";
 
 const pill = (on) => `rounded-pill px-3.5 py-1.5 text-xs font-medium transition-colors ${on ? "bg-mint-deep text-white" : "border border-line bg-paper text-muted hover:bg-canvas"}`;
 
-export default function LabExams({ lab, canCreate, readOnly = false }) {
+export default function LabExams({ lab, canCreate, readOnly = false, practicalOnly = false }) {
   const [part, setPart] = useState("exams");
   const [list, setList] = useState(null);
   const [err, setErr] = useState("");
@@ -26,7 +26,7 @@ export default function LabExams({ lab, canCreate, readOnly = false }) {
   const load = async () => {
     const { data, error } = await supabase.from("lab_exams").select("*").order("created_at", { ascending: false });
     if (error) { setErr(setupMsg(error)); setList([]); return; }
-    setErr(""); setList(data ?? []);
+    setErr(""); setList((data ?? []).filter((e) => !practicalOnly || e.kind === "practical"));
   };
   useEffect(() => { load(); }, []);
 
@@ -43,11 +43,13 @@ export default function LabExams({ lab, canCreate, readOnly = false }) {
         </p>
         <div className="mt-3 flex flex-wrap gap-1.5">
           <button type="button" className={pill(part === "exams")} onClick={() => setPart("exams")}>الاختبارات</button>
-          <button type="button" className={pill(part === "bank")} onClick={() => setPart("bank")}>بنك الأسئلة</button>
+          {!practicalOnly && <button type="button" className={pill(part === "bank")} onClick={() => setPart("bank")}>بنك الأسئلة</button>}
         </div>
       </div>
 
-      {readOnly && <p className="rounded-card bg-canvas px-3 py-2 text-[12.5px] text-muted">اطّلاع للدعم الفني لتقديم الدعم: عرض الاختبارات ورصدها دون إنشاء أو تعديل أو طباعة.</p>}
+      {readOnly && <p className="rounded-card bg-canvas px-3 py-2 text-[12.5px] text-muted">{practicalOnly
+        ? "اطّلاع لمحضر المعمل على الاختبارات العملية للمساهمة في تجهيزها، دون إنشاء أو تعديل أو طباعة."
+        : "اطّلاع للدعم الفني لتقديم الدعم: عرض الاختبارات ورصدها دون إنشاء أو تعديل أو طباعة."}</p>}
       {err && <p className="rounded-card bg-warning-light px-3 py-2 text-sm text-late">{err}</p>}
       {part === "bank" ? <ExamBank canEdit={canCreate} /> : (
         <>

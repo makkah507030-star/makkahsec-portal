@@ -46,7 +46,9 @@ export default function Lab() {
   const isManager = effectiveRole === "admin" && LAB_MANAGER_ROLES.some((r) => adminRoles.includes(r));
   const canBook = effectiveRole === "teacher" && granted.has("computer_lab");
   const examSupport = effectiveRole === "admin" && adminRoles.includes("tech_support");
-  const tabs = TABS.filter((t) => (!t.manager || isManager) && (!t.studio || isManager || canBook) && (!t.exams || canBook || examSupport));
+  // محضر المعمل: يطّلع على الاختبارات العملية وحدها ليساهم في تجهيزها (lab_exam_tech.sql)
+  const examTech = effectiveRole === "admin" && adminRoles.includes("computer_lab") && !examSupport;
+  const tabs = TABS.filter((t) => (!t.manager || isManager) && (!t.studio || isManager || canBook) && (!t.exams || canBook || examSupport || examTech));
   const [tab, setTab] = useState(() =>
     reportSeat != null ? "tickets" : tabs.some((t) => t.key === params.get("tab")) ? params.get("tab") : "booking");
 
@@ -110,7 +112,7 @@ export default function Lab() {
       {tab === "rules" && <LabRules key={lab} lab={lab} isManager={isManager} />}
       {tab === "usage" && <LabUsage key={lab} lab={lab} canBook={canBook} isManager={isManager} />}
       {tab === "studio" && <LabStudio key={lab} lab={lab} />}
-      {tab === "exams" && <LabExams key={lab} lab={lab} canCreate={canBook} readOnly={!canBook} />}
+      {tab === "exams" && <LabExams key={lab} lab={lab} canCreate={canBook} readOnly={!canBook} practicalOnly={!canBook && examTech} />}
       {tab === "tickets" && (
         <LabTickets key={lab} lab={lab} canReport={canBook || isManager} isManager={isManager}
                     reportSeat={reportSeat} onReportDone={() => reportSeat != null && setParams({}, { replace: true })} />
